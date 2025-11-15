@@ -1,247 +1,238 @@
-# VibeWatch
+# VibeWatch 🎬
 
-A modern iOS app to discover, track, and enjoy your favorite movies and TV series with an innovative clips feature.
+A modern iOS app to discover, track, and enjoy your favorite movies and TV series with an innovative TikTok-style clips feature.
 
-## Features
+![iOS](https://img.shields.io/badge/iOS-17.0+-blue.svg)
+![Swift](https://img.shields.io/badge/Swift-5.9-orange.svg)
+![SwiftUI](https://img.shields.io/badge/SwiftUI-✓-green.svg)
+![License](https://img.shields.io/badge/License-MIT-yellow.svg)
+
+## ✨ Features
 
 ### 🎬 Discovery
-- Mood-based movie recommendations
-- "For You" personalized content
-- Viral/Trending movies and shows
-- Beautiful carousel interface
-- Search functionality
+- **Mood-based recommendations** - Browse movies based on your current vibe
+- **For You section** - Personalized content
+- **Viral/Trending** - See what's hot right now
+- **Beautiful carousel** - Swipe through top-rated movies
+- **Real-time data** - Powered by TMDB API
 
-### 📱 Clips
-- TikTok-style full-screen video player
-- Short scenes from movies and TV shows
-- Like, comment, and share functionality
-- Add clips to your lists
+### 📱 Clips (TikTok-Style)
+- **Full-screen video player** - Immersive viewing experience
+- **Vertical scrolling** - Swipe to next clip
+- **Interactive buttons** - Like, comment, add to list, share
+- **Scene highlights** - Best moments from movies and TV shows
 
 ### 📋 Lists
-- Create and manage custom lists
-- Filter by All, Movies, or TV Series
-- Track watched content
-- Share lists with friends
+- **Create custom lists** - Organize your favorites
+- **Smart filters** - View All, Movies only, or TV Series only
+- **Track watched content** - Never lose track of what you've seen
+- **Shareable lists** - Share with friends (coming soon)
 
-### 👤 Profile
-- User authentication
-- Personalized recommendations
-- Manage streaming service preferences
-- Settings and notifications
+### 👤 Profile & Auth
+- **User authentication** - Secure login with Supabase
+- **Personalized experience** - Your data synced across devices
+- **Settings & preferences** - Customize your experience
 
-## Tech Stack
+## 🎨 Design
 
-- **SwiftUI** - Modern declarative UI framework
-- **TMDB API** - Movie and TV show data
-- **Supabase** - Authentication and database
-- **OpenAI API** - AI-powered clip descriptions
-- **AVKit** - Video playback
+- **Dark theme** - Easy on the eyes
+- **Liquid glass navigation** - Beautiful frosted glass bottom bar
+- **Smooth animations** - Polished transitions throughout
+- **Modern UI** - Clean, minimalist design
+- **High-quality images** - Crisp movie posters and backdrops
 
-## Architecture
-
-The app follows **MVVM (Model-View-ViewModel)** architecture with:
-
-- **Features-based structure** - Organized by app features
-- **Repository pattern** - Centralized data management
-- **Offline-first** - Local caching with URLCache
-- **Rate limiting** - Smart API request throttling (40 req/10s)
-
-## Project Structure
-
-```
-VibeWatch/
-├── App/
-│   ├── VibeWatchApp.swift
-│   └── MainTabView.swift
-├── Core/
-│   ├── Network/
-│   │   ├── TMDBService.swift
-│   │   └── OpenAIService.swift
-│   ├── Database/
-│   │   └── CacheManager.swift
-│   ├── Supabase/
-│   │   └── SupabaseClient.swift
-│   └── Models/
-│       ├── User.swift
-│       ├── Movie.swift
-│       ├── Clip.swift
-│       └── MediaList.swift
-├── Features/
-│   ├── Discovery/
-│   │   ├── Views/
-│   │   └── ViewModels/
-│   ├── Clips/
-│   │   ├── Views/
-│   │   └── ViewModels/
-│   ├── Lists/
-│   │   ├── Views/
-│   │   └── ViewModels/
-│   └── Profile/
-│       ├── Views/
-│       └── ViewModels/
-├── Shared/
-│   ├── Components/
-│   │   ├── AsyncImageView.swift
-│   │   └── LiquidGlassView.swift
-│   ├── Extensions/
-│   │   └── Color+Theme.swift
-│   └── Utilities/
-└── Resources/
-    └── Info.plist
-```
-
-## Setup
+## 🚀 Quick Start
 
 ### Prerequisites
-- Xcode 15.0+
-- iOS 16.0+
-- Swift 5.9+
 
-### API Keys Required
-
-1. **TMDB API Key**
-   - Sign up at [themoviedb.org](https://www.themoviedb.org)
-   - Get your API key from account settings
-   - Add to `TMDBService.swift`:
-     ```swift
-     private let apiKey = "YOUR_TMDB_API_KEY"
-     ```
-
-2. **Supabase Credentials**
-   - Create project at [supabase.com](https://supabase.com)
-   - Get URL and anon key from project settings
-   - Add to `SupabaseClient.swift`:
-     ```swift
-     private let supabaseURL = "YOUR_SUPABASE_URL"
-     private let supabaseKey = "YOUR_SUPABASE_KEY"
-     ```
-
-3. **OpenAI API Key** (Optional - for AI clip descriptions)
-   - Get key from [platform.openai.com](https://platform.openai.com)
-   - Add to `OpenAIService.swift`:
-     ```swift
-     private let apiKey = "YOUR_OPENAI_API_KEY"
-     ```
-
-### Database Schema (Supabase)
-
-Run these SQL commands in your Supabase SQL editor:
-
-```sql
--- Users table (extends Supabase auth.users)
-CREATE TABLE users (
-  id UUID REFERENCES auth.users PRIMARY KEY,
-  email TEXT NOT NULL,
-  display_name TEXT,
-  avatar_url TEXT,
-  selected_providers TEXT[],
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Lists table
-CREATE TABLE lists (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-  title TEXT NOT NULL,
-  description TEXT,
-  visibility TEXT NOT NULL DEFAULT 'private',
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- List items table
-CREATE TABLE list_items (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  list_id UUID REFERENCES lists(id) ON DELETE CASCADE,
-  tmdb_id INTEGER NOT NULL,
-  type TEXT NOT NULL CHECK (type IN ('movie', 'tv')),
-  position INTEGER NOT NULL,
-  notes TEXT,
-  watched BOOLEAN DEFAULT false,
-  added_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Clips table
-CREATE TABLE clips (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  movie_id INTEGER,
-  tv_show_id INTEGER,
-  title TEXT NOT NULL,
-  description TEXT NOT NULL,
-  video_url TEXT NOT NULL,
-  thumbnail_url TEXT,
-  duration INTEGER NOT NULL,
-  likes INTEGER DEFAULT 0,
-  comments INTEGER DEFAULT 0,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Enable Row Level Security
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE lists ENABLE ROW LEVEL SECURITY;
-ALTER TABLE list_items ENABLE ROW LEVEL SECURITY;
-ALTER TABLE clips ENABLE ROW LEVEL SECURITY;
-
--- Create policies
-CREATE POLICY "Users can view own data" ON users FOR SELECT USING (auth.uid() = id);
-CREATE POLICY "Users can update own data" ON users FOR UPDATE USING (auth.uid() = id);
-
-CREATE POLICY "Users can view own lists" ON lists FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can create own lists" ON lists FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Users can update own lists" ON lists FOR UPDATE USING (auth.uid() = user_id);
-CREATE POLICY "Users can delete own lists" ON lists FOR DELETE USING (auth.uid() = user_id);
-
-CREATE POLICY "Anyone can view clips" ON clips FOR SELECT TO authenticated USING (true);
-```
+- **Xcode 15.0+**
+- **iOS 17.0+**
+- **Swift 5.9+**
 
 ### Installation
 
-1. Clone the repository
-2. Open `VibeWatch.xcodeproj` in Xcode
-3. Add your API keys (see above)
-4. Build and run (⌘R)
+1. **Clone the repository**
+```bash
+git clone https://github.com/yourusername/VibeWatch.git
+cd VibeWatch
+```
 
-## Design System
+2. **Get API Keys**
 
-Based on the CineStream design system:
+#### TMDB (Required)
+- Sign up at [themoviedb.org](https://www.themoviedb.org)
+- Go to Settings → API
+- Copy your API key (v3)
 
-- **Colors**:
-  - Background: `#0c0d10` (deep dark gray)
-  - Accent: `#fb7f33` (vibrant orange)
-  - Text Primary: `#ffffff`
-  - Text Secondary: `#b0b0b0`
+#### Supabase (Optional - for auth & lists)
+- Create project at [supabase.com](https://supabase.com)
+- Copy your Project URL and anon key
 
-- **Typography**: San Francisco (system font)
-  - Hero: Large, bold
-  - Headlines: Medium-large, 600-700 weight
-  - Body: Medium, 400 weight
+3. **Add Your API Keys**
 
-- **Components**:
-  - Liquid glass bottom navigation
-  - Gradient overlays
-  - Rounded corners (12px)
-  - Card-based layouts
+Open `VibeWatchApp/Core/Network/TMDBService.swift` and add:
+```swift
+private let apiKey = "YOUR_TMDB_API_KEY"
+```
 
-## Roadmap
+For Supabase, edit `VibeWatchApp/Core/Supabase/SupabaseClient.swift`:
+```swift
+private let supabaseURL = "YOUR_SUPABASE_URL"
+private let supabaseKey = "YOUR_SUPABASE_ANON_KEY"
+```
 
-- [ ] Add TMDB API key configuration
-- [ ] Complete Supabase integration
-- [ ] Implement OpenAI clip generation
-- [ ] Add video caching
-- [ ] Implement search functionality
-- [ ] Add social features (comments, sharing)
-- [ ] Offline mode improvements
+4. **Open in Xcode**
+```bash
+open VibeWatchApp.xcodeproj
+```
+
+5. **Build & Run**
+- Select an iPhone simulator
+- Press **⌘R** or click the Run button
+- Enjoy! 🎉
+
+## 📱 Screenshots
+
+*Coming soon - screenshots will be added after app is running*
+
+## 🏗️ Architecture
+
+**Pattern**: MVVM (Model-View-ViewModel)
+
+```
+┌──────────────┐
+│  Views       │  SwiftUI UI components
+└──────┬───────┘
+       │
+┌──────▼───────┐
+│ ViewModels   │  @Published state, business logic
+└──────┬───────┘
+       │
+┌──────▼───────┐
+│  Services    │  API calls, data fetching
+└──────┬───────┘
+       │
+┌──────▼───────┐
+│   Models     │  Data structures
+└──────────────┘
+```
+
+### Key Technologies
+
+- **SwiftUI** - Modern declarative UI
+- **Async/Await** - Structured concurrency
+- **TMDB API** - Movie & TV data
+- **Supabase** - Backend & authentication
+- **AVKit** - Video playback
+- **URLCache** - Smart caching strategy
+
+### Performance Features
+
+- **Rate limiting** - 40 requests per 10 seconds to TMDB
+- **Response caching** - 50MB memory + 100MB disk
+- **Lazy loading** - Efficient list rendering
+- **Parallel requests** - Faster initial loads
+
+## 📁 Project Structure
+
+```
+VibeWatchApp/
+├── App/                      # App entry & main tab view
+├── Core/
+│   ├── Models/              # Data models (Movie, User, Clip, List)
+│   ├── Network/             # API services (TMDB, OpenAI)
+│   └── Supabase/            # Backend client
+├── Features/
+│   ├── Discovery/           # Main discovery page
+│   ├── Clips/               # TikTok-style clips
+│   ├── Lists/               # User lists
+│   └── Profile/             # Auth & profile
+├── Shared/
+│   ├── Components/          # Reusable UI components
+│   └── Extensions/          # Swift extensions & theme
+└── Resources/               # Assets & config
+```
+
+## 🎯 Roadmap
+
+### v1.0 (Current)
+- ✅ Discovery page with TMDB integration
+- ✅ Clips page structure
+- ✅ Lists management
+- ✅ Profile & authentication
+- ✅ Liquid glass navigation
+
+### v1.1 (Planned)
+- [ ] Search functionality
+- [ ] Comments on clips
+- [ ] Social sharing
 - [ ] Push notifications
-- [ ] Analytics integration
 
-## Contributing
+### v2.0 (Future)
+- [ ] Offline mode with local database
+- [ ] AI-powered recommendations
+- [ ] Watch party feature
+- [ ] iPad optimization
+- [ ] Widgets
 
-This is a personal project, but suggestions and feedback are welcome!
+## 🛠️ Development
 
-## License
+### Build from Source
 
-MIT License - See LICENSE file for details
+```bash
+# Clone the repo
+git clone https://github.com/yourusername/VibeWatch.git
+
+# Open in Xcode
+cd VibeWatch
+open VibeWatchApp.xcodeproj
+
+# Add your API keys (see Installation section)
+
+# Build and run
+# Select simulator and press ⌘R
+```
+
+### Running Tests
+
+```bash
+# In Xcode
+⌘U or Product → Test
+```
+
+### Code Style
+
+- Follow Swift naming conventions
+- Use SwiftUI best practices
+- Keep ViewModels testable
+- Document complex logic
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- **TMDB** - Movie and TV show data
+- **Supabase** - Backend infrastructure
+- **SwiftUI** - Powerful UI framework
+
+## 📧 Contact
+
+For questions or feedback, please open an issue on GitHub.
 
 ---
 
-Built with ❤️ using SwiftUI
+**Built with ❤️ using SwiftUI**
+
+⭐️ If you like this project, please give it a star!
