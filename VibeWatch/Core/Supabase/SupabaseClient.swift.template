@@ -1,0 +1,26 @@
+import Foundation
+import Supabase
+
+class SupabaseClient {
+    static let shared = SupabaseClient()
+    
+    private let supabaseURL = "YOUR_SUPABASE_PROJECT_URL" // e.g., https://xxxxx.supabase.co
+    private let supabaseKey = "YOUR_SUPABASE_ANON_KEY" // Get from Supabase dashboard
+    
+    lazy var client: SupabaseClient? = {
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else {
+            print("⚠️ Supabase credentials not configured")
+            return nil
+        }
+        
+        return SupabaseClient(
+            supabaseURL: URL(string: supabaseURL)!,
+            supabaseKey: supabaseKey
+        )
+    }()
+    
+    private init() {}
+    
+    // Copy the rest of the implementation from the actual file
+    // This template is for reference only
+}

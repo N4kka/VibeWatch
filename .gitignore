@@ -1,0 +1,53 @@
+# Xcode
+*.xcodeproj/*
+!*.xcodeproj/project.pbxproj
+!*.xcodeproj/xcshareddata/
+!*.xcworkspace/contents.xcworkspacedata
+*.xcworkspace/*
+!*.xcworkspace/contents.xcworkspacedata
+!*.xcworkspace/xcshareddata/
+
+# Build
+build/
+DerivedData/
+*.build/
+.build/
+
+# Swift Package Manager
+.swiftpm/
+Packages/
+Package.resolved
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Thumbnails
+._*
+
+# Secrets and API Keys
+*.p8
+*.pem
+*.key
+generate_apple_jwt.py
+TestApp.swift
+VibeWatch/Core/Network/TMDBService.swift
+VibeWatch/Core/Supabase/SupabaseClient.swift
+
+# Screenshots (not needed in repo)
+*.png
+*.jpg
+*.jpeg
+
+# Build/setup scripts (local use only)
+generate_project.sh
+open_xcode.sh
+
+# IDE
+.vscode/
+.idea/
+
+# Temporary files
+*.swp
+*~
