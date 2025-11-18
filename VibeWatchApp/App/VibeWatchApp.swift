@@ -4,11 +4,18 @@ import SwiftUI
 struct VibeWatchApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var appState = AppState()
+    @StateObject private var localizationManager = LocalizationManager.shared
+    
+    init() {
+        // Force load localizations before any views are created
+        _ = LocalizationManager.shared
+    }
     
     var body: some Scene {
         WindowGroup {
             MainTabView()
                 .environmentObject(appState)
+                .environmentObject(localizationManager)
                 .preferredColorScheme(.dark)
                 .onOpenURL { url in
                     // Handle deep links

@@ -13,9 +13,19 @@ class DiscoveryViewModel: ObservableObject {
     private let tmdbService = TMDBService.shared
     private let cacheManager = ContentCacheManager.shared
     
-    func loadContent() async {
-        // Check if we have cached content from today
-        if !cacheManager.shouldUpdateDiscoveryContent() {
+    // Track the language/country used for current content
+    private var cachedLanguage: String?
+    private var cachedCountry: String?
+    
+    func loadContent(forceRefresh: Bool = false) async {
+        let currentLanguage = LocalizationManager.shared.currentLanguage.id
+        let currentCountry = LocalizationManager.shared.currentCountry.id
+        
+        // Check if language or country changed
+        let languageChanged = cachedLanguage != currentLanguage || cachedCountry != currentCountry
+        
+        // Check if we have cached content from today and language hasn't changed
+        if !forceRefresh && !languageChanged && !cacheManager.shouldUpdateDiscoveryContent() {
             if let cachedMovies = cacheManager.getCachedDiscoveryMovies(),
                let cachedTVShows = cacheManager.getCachedDiscoveryTVShows() {
                 // Use cached content - same content for the whole day
@@ -28,7 +38,11 @@ class DiscoveryViewModel: ObservableObject {
             }
         }
         
-        // Need to fetch fresh content for today
+        // Need to fetch fresh content (either new day or language changed)
+        if languageChanged {
+            print("🌍 Language changed to \(currentLanguage)-\(currentCountry), fetching new content")
+        }
+        
         isLoading = true
         errorMessage = nil
         
@@ -67,8 +81,12 @@ class DiscoveryViewModel: ObservableObject {
                 )
             }
             
-            // Cache for today
+            // Cache for today with current language
             cacheManager.cacheDiscoveryContent(movies: allMovies, tvShows: tvShows)
+            
+            // Update tracked language/country
+            cachedLanguage = currentLanguage
+            cachedCountry = currentCountry
             
             // Shuffle and split
             allMovies.shuffle()
@@ -77,7 +95,7 @@ class DiscoveryViewModel: ObservableObject {
             self.viralMovies = Array(allMovies.dropFirst(40).prefix(20))
             self.forYouTVShows = tvShows.shuffled()
             
-            print("✅ Fetched and cached new discovery content for today")
+            print("✅ Fetched and cached new discovery content for \(currentLanguage)-\(currentCountry)")
         } catch {
             errorMessage = error.localizedDescription
             print("Error loading content: \(error)")

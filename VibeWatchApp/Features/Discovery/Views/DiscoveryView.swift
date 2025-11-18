@@ -3,6 +3,7 @@ import SwiftUI
 struct DiscoveryView: View {
     @StateObject private var viewModel = DiscoveryViewModel()
     @EnvironmentObject var appState: AppState
+    @ObservedObject var localizationManager = LocalizationManager.shared
     @State private var showProfile = false
     @State private var showSearch = false
     @Binding var selectedMovie: Movie?
@@ -72,6 +73,12 @@ struct DiscoveryView: View {
         .background(Color.theme.background.ignoresSafeArea())
         .task {
             await viewModel.loadContent()
+        }
+        .onChange(of: localizationManager.localeDidChange) { _ in
+            // Reload content when language/country changes
+            Task {
+                await viewModel.loadContent()
+            }
         }
         .sheet(isPresented: $showProfile) {
             ProfileView()

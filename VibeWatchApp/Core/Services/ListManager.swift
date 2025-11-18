@@ -9,14 +9,14 @@ class ListManager: ObservableObject {
     @Published var seenList: MediaList
     @Published var likedList: MediaList
     @Published var dislikedList: MediaList
-    
+
     private init() {
         // Initialize default lists
-        self.watchlist = MediaList(name: "Watchlist", type: .watchlist)
-        self.seenList = MediaList(name: "Seen", type: .seen)
-        self.likedList = MediaList(name: "Liked", type: .liked)
-        self.dislikedList = MediaList(name: "Disliked", type: .disliked)
-        
+        self.watchlist = MediaList(name: "lists.watchlist".localized, type: .watchlist)
+        self.seenList = MediaList(name: "lists.seen".localized, type: .seen)
+        self.likedList = MediaList(name: "lists.liked".localized, type: .liked)
+        self.dislikedList = MediaList(name: "lists.disliked".localized, type: .disliked)
+
         loadLists()
     }
     

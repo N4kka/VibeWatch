@@ -41,6 +41,18 @@ class TMDBService {
         
         var items = queryItems
         items.append(URLQueryItem(name: "api_key", value: apiKey))
+        
+        // Add language and region from LocalizationManager
+        let localizationManager = LocalizationManager.shared
+        let language = localizationManager.currentLanguage.id // e.g., "it", "en"
+        let region = localizationManager.currentCountry.id // e.g., "IT", "US"
+        
+        // Combine language and region in TMDb format (e.g., "it-IT", "en-US")
+        let languageParam = "\(language)-\(region)"
+        
+        items.append(URLQueryItem(name: "language", value: languageParam))
+        items.append(URLQueryItem(name: "region", value: region))
+        
         components.queryItems = items
         
         guard let url = components.url else {
