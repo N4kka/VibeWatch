@@ -65,7 +65,7 @@ struct ListsView: View {
                                     }
                                 } label: {
                                     HStack {
-                                        Text(option.rawValue)
+                                        Text(option.displayName)
                                             .font(.system(size: 16, weight: .medium))
                                             .foregroundColor(selectedSort == option ? .theme.accentOrange : .theme.textPrimary)
                                         Spacer()
@@ -1006,7 +1006,7 @@ struct CreateListView: View {
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(.theme.textSecondary)
                         
-                        TextField("Enter list name", text: $listName)
+                        TextField("lists.listNamePlaceholder".localized, text: $listName)
                             .font(.system(size: 16))
                             .foregroundColor(.theme.textPrimary)
                             .padding()
@@ -1020,7 +1020,7 @@ struct CreateListView: View {
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(.theme.textSecondary)
                         
-                        TextField("Enter description", text: $listDescription)
+                        TextField("lists.descriptionPlaceholder".localized, text: $listDescription)
                             .font(.system(size: 16))
                             .foregroundColor(.theme.textPrimary)
                             .padding()

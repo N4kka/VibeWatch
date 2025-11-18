@@ -35,7 +35,11 @@ class MovieDetailViewModel: ObservableObject {
             movie = movieData
             credits = creditsData
             videos = videosData.results.filter { $0.type == "Trailer" && $0.site == "YouTube" }
-            watchProviders = providersData.results?["US"]
+            
+            // Use current country for watch providers
+            let country = LocalizationManager.shared.currentCountry.id
+            watchProviders = providersData.results?[country]
+            
             similarMovies = Array(similarData.results.prefix(10))
         } catch {
             errorMessage = "Failed to load movie details: \(error.localizedDescription)"
@@ -92,7 +96,11 @@ class TVShowDetailViewModel: ObservableObject {
             tvShow = tvShowData
             credits = creditsData
             videos = videosData.results.filter { $0.type == "Trailer" && $0.site == "YouTube" }
-            watchProviders = providersData.results?["US"]
+            
+            // Use current country for watch providers
+            let country = LocalizationManager.shared.currentCountry.id
+            watchProviders = providersData.results?[country]
+            
             similarShows = Array(similarData.results.prefix(10))
         } catch {
             errorMessage = "Failed to load TV show details: \(error.localizedDescription)"

@@ -3,6 +3,10 @@ import Supabase
 
 class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
+        // Initialize LocalizationManager early to ensure translations are loaded before UI
+        _ = LocalizationManager.shared
+        print("✅ LocalizationManager initialized: \(LocalizationManager.shared.currentLanguage.name)")
+        
         return true
     }
     

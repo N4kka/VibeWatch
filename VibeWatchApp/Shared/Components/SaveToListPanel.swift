@@ -85,12 +85,12 @@ struct SaveToListPanel: View {
         .frame(maxHeight: UIScreen.main.bounds.height * 0.5)
         .background(Color.theme.background)
         .clipShape(RoundedRectangle(cornerRadius: 20))
-        .alert("Create New List", isPresented: $showCreateList) {
-            TextField("List Name", text: $newListName)
-            Button("Cancel", role: .cancel) {
+        .alert("lists.createList".localized, isPresented: $showCreateList) {
+            TextField("lists.listNamePlaceholder".localized, text: $newListName)
+            Button("common.cancel".localized, role: .cancel) {
                 newListName = ""
             }
-            Button("Create") {
+            Button("common.save".localized) {
                 if !newListName.isEmpty {
                     listManager.createList(name: newListName)
                     newListName = ""

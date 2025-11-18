@@ -32,11 +32,11 @@ struct MediaFilterSwitcher: View {
     private func filterTitle(for filter: MediaFilter) -> String {
         switch filter {
         case .all:
-            return "ALL"
+            return "list.all".localized
         case .movies:
-            return "MOVIES"
+            return "list.movies".localized
         case .tvSeries:
-            return "TV"
+            return "list.tvShows".localized
         }
     }
 }

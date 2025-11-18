@@ -51,7 +51,7 @@ struct ProfileView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
+                    Button("profile.done".localized) {
                         dismiss()
                     }
                     .foregroundColor(.theme.textPrimary)
