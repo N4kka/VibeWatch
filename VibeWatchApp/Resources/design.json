@@ -1,0 +1,363 @@
+{
+  "designSystem": {
+    "name": "CineStream Design System",
+    "version": "1.0.0",
+    "description": "High-level design guidelines for a modern streaming platform with dark theme and vibrant accents",
+    
+    "designPrinciples": {
+      "overall": [
+        "Dark-first design with vibrant accent colors for visual interest",
+        "Clean, modern aesthetic with minimal visual clutter",
+        "Content-first approach - let media thumbnails and imagery shine",
+        "Clear visual hierarchy through typography scale and spacing",
+        "Accessible contrast ratios for readability on dark backgrounds",
+        "Responsive grid-based layouts for content organization"
+      ],
+      "visualStyle": "Modern, sleek, premium streaming platform aesthetic with cinematic feel"
+    },
+
+    "colorPalette": {
+      "primary": {
+        "background": {
+          "main": "#0c0d10",
+          "description": "Deep dark-gray, primary background color",
+          "variants": {
+            "dark": "#0c0d10"
+          }
+        },
+        "accent": {
+          "orange": "#fb7f33",
+          "description": "Vibrant orange for primary CTAs and highlights",
+          "usage": "Call-to-action buttons, active states, important highlights"
+        }
+      },
+      "text": {
+        "primary": "#ffffff",
+        "description": "Pure white for primary text on dark backgrounds",
+        "secondary": "#b0b0b0",
+        "description": "Light gray for secondary text and labels"
+      },
+      "ui": {
+        "navigation": {
+          "background": "#0c0d10",
+          "description": "Dark gray for navigation bar, slightly lighter than main background"
+        },
+        "cards": {
+          "background": "transparent",
+          "description": "Content cards use transparent backgrounds to showcase imagery"
+        },
+        "borders": {
+          "default": "#ffffff",
+          "description": "White borders for outlined buttons and dividers"
+        }
+      },
+      "gradients": {
+        "background": {
+          "description": "Subtle gradient from dark blue (#1a1a2e) at top to lighter blue-purple (#2a2a4e) at bottom",
+          "usage": "Page backgrounds for depth and visual interest"
+        },
+        "content": {
+          "description": "Vibrant gradients used in content thumbnails (blue-purple, yellow, green-blue)",
+          "usage": "Backgrounds for content cards and hero sections"
+        }
+      }
+    },
+
+    "typography": {
+      "fontFamily": {
+        "primary": "sans-serif",
+        "description": "Clean, modern sans-serif font stack (system fonts or similar)",
+        "fallback": "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+      },
+      "scale": {
+        "hero": {
+          "size": "large",
+          "weight": "bold",
+          "description": "Large, bold white text for hero headlines",
+          "usage": "Main page headlines, hero section titles"
+        },
+        "headline": {
+          "size": "medium-large",
+          "weight": "600-700",
+          "description": "Bold headlines for content cards and sections",
+          "usage": "Content titles, section headers"
+        },
+        "body": {
+          "size": "medium",
+          "weight": "400",
+          "description": "Regular body text for descriptions",
+          "usage": "Sub-headlines, descriptions, metadata"
+        },
+        "navigation": {
+          "size": "medium",
+          "weight": "400-500",
+          "description": "Navigation links and menu items",
+          "usage": "Header navigation, menu items"
+        },
+        "metadata": {
+          "size": "small",
+          "weight": "400",
+          "description": "Small text for ratings, dates, languages",
+          "usage": "Content metadata, labels, timestamps"
+        }
+      },
+      "color": {
+        "primary": "#ffffff",
+        "secondary": "#b0b0b0"
+      }
+    },
+
+    "spacing": {
+      "system": "8px base unit",
+      "scale": {
+        "xs": "4px",
+        "sm": "8px",
+        "md": "16px",
+        "lg": "24px",
+        "xl": "32px",
+        "2xl": "48px",
+        "3xl": "64px"
+      },
+      "guidelines": {
+        "section": "Large spacing (48-64px) between major sections",
+        "component": "Medium spacing (24-32px) between components within sections",
+        "element": "Small spacing (8-16px) between related elements",
+        "tight": "Minimal spacing (4-8px) for tightly grouped items"
+      }
+    },
+
+    "layout": {
+      "structure": {
+        "container": {
+          "maxWidth": "full viewport",
+          "padding": "responsive horizontal padding",
+          "description": "Full-width containers with responsive padding"
+        },
+        "grid": {
+          "type": "responsive grid system",
+          "columns": "3 columns for desktop content cards",
+          "gap": "24-32px between grid items",
+          "description": "Flexible grid for content thumbnails and cards"
+        }
+      },
+      "sections": {
+        "header": {
+          "height": "fixed/normal",
+          "position": "sticky or fixed at top",
+          "background": "dark gray navigation background",
+          "padding": "horizontal padding, vertical padding for comfortable touch targets"
+        },
+        "hero": {
+          "height": "large vertical space",
+          "alignment": "centered content",
+          "background": "gradient or dark background with subtle patterns",
+          "padding": "generous vertical padding (64px+)"
+        },
+        "content": {
+          "layout": "horizontal scrolling or grid",
+          "spacing": "consistent gaps between cards",
+          "padding": "section padding top and bottom"
+        }
+      }
+    },
+
+    "components": {
+      "header": {
+        "structure": {
+          "layout": "horizontal flex layout",
+          "sections": ["logo (left)", "navigation (center-left)", "actions (right)"]
+        },
+        "logo": {
+          "style": "white text, uppercase, bold, sans-serif",
+          "size": "large",
+          "position": "far left"
+        },
+        "navigation": {
+          "links": {
+            "style": "white text, medium weight",
+            "active": "highlighted/underlined or different color",
+            "spacing": "horizontal spacing between links",
+            "hover": "subtle color change or underline"
+          }
+        },
+        "actions": {
+          "search": {
+            "style": "circular icon button",
+            "icon": "magnifying glass",
+            "background": "white with yellow accent icon",
+            "size": "medium circular button"
+          },
+          "login": {
+            "style": "text button or outlined button",
+            "text": "white",
+            "background": "transparent or dark",
+            "padding": "comfortable padding for clickability"
+          }
+        }
+      },
+
+      "hero": {
+        "structure": {
+          "layout": "centered vertical stack",
+          "alignment": "center",
+          "spacing": "generous vertical spacing between elements"
+        },
+        "headline": {
+          "style": "large, bold, white text",
+          "alignment": "center",
+          "maxWidth": "constrained for readability"
+        },
+        "subheadline": {
+          "style": "medium, regular weight, white/gray text",
+          "alignment": "center",
+          "maxWidth": "constrained for readability"
+        },
+        "ctaButtons": {
+          "layout": "horizontal, centered",
+          "spacing": "gap between buttons",
+          "primary": {
+            "background": "yellow accent color",
+            "text": "dark text",
+            "style": "solid button, rounded corners",
+            "padding": "generous padding (horizontal and vertical)"
+          },
+          "secondary": {
+            "background": "transparent",
+            "border": "white border",
+            "text": "white text",
+            "style": "outlined button, rounded corners",
+            "padding": "generous padding matching primary"
+          }
+        }
+      },
+
+      "contentCard": {
+        "structure": {
+          "layout": "vertical stack",
+          "aspectRatio": "landscape (wider than tall)",
+          "overflow": "hidden for image"
+        },
+        "image": {
+          "style": "full width, maintains aspect ratio",
+          "overlay": "optional gradient overlay for text readability",
+          "position": "cover or contain based on content"
+        },
+        "title": {
+          "position": "overlay on image or below image",
+          "style": "white text, bold, medium-large size",
+          "background": "optional semi-transparent background for readability"
+        },
+        "metadata": {
+          "layout": "horizontal row of icons and text",
+          "items": ["play icon", "rating (star + number)", "year (clock + number)", "language (globe + text)"],
+          "style": "small icons and text, white or light gray",
+          "spacing": "small gaps between metadata items"
+        },
+        "hover": {
+          "effect": "subtle scale or shadow effect",
+          "description": "Interactive feedback on hover"
+        }
+      },
+
+      "buttons": {
+        "primary": {
+          "background": "yellow accent (#ffd700)",
+          "text": "dark text",
+          "padding": "generous (16px horizontal, 12px vertical minimum)",
+          "borderRadius": "rounded (4-8px)",
+          "fontWeight": "medium to bold"
+        },
+        "secondary": {
+          "background": "transparent",
+          "border": "white, 1-2px solid",
+          "text": "white",
+          "padding": "matches primary",
+          "borderRadius": "matches primary"
+        },
+        "icon": {
+          "style": "circular or square",
+          "background": "white or dark with icon",
+          "size": "consistent icon button size",
+          "padding": "equal padding all around"
+        }
+      },
+
+      "icons": {
+        "style": "clean, minimal line icons",
+        "color": "white or yellow for accents",
+        "size": "consistent sizing within context",
+        "usage": ["search (magnifying glass)", "play", "star (ratings)", "clock (time/year)", "globe (language)", "camera"]
+      }
+    },
+
+    "visualEffects": {
+      "shadows": {
+        "description": "Subtle shadows for depth (minimal on dark backgrounds)",
+        "usage": "Content cards, buttons on hover"
+      },
+      "gradients": {
+        "description": "Subtle gradients for backgrounds and vibrant gradients for content",
+        "usage": "Page backgrounds, content card backgrounds"
+      },
+      "overlays": {
+        "description": "Semi-transparent overlays on images for text readability",
+        "usage": "Content card titles over images"
+      },
+      "transitions": {
+        "description": "Smooth transitions for interactive elements",
+        "duration": "200-300ms",
+        "easing": "ease-in-out"
+      }
+    },
+
+    "responsiveDesign": {
+      "breakpoints": {
+        "mobile": "up to 768px",
+        "tablet": "769px - 1024px",
+        "desktop": "1025px and above"
+      },
+      "guidelines": {
+        "grid": "Responsive columns (1 mobile, 2 tablet, 3+ desktop)",
+        "typography": "Scalable font sizes",
+        "spacing": "Proportional spacing adjustments",
+        "navigation": "Collapsible menu on mobile"
+      }
+    },
+
+    "accessibility": {
+      "contrast": {
+        "description": "High contrast ratios for text on dark backgrounds",
+        "minimum": "WCAG AA compliance (4.5:1 for normal text)"
+      },
+      "interactive": {
+        "touchTargets": "Minimum 44x44px for mobile",
+        "focus": "Visible focus states for keyboard navigation"
+      }
+    },
+
+    "implementationNotes": {
+      "general": [
+        "Use CSS custom properties (variables) for colors and spacing",
+        "Implement dark theme as default",
+        "Ensure all text has sufficient contrast on dark backgrounds",
+        "Use semantic HTML with appropriate ARIA labels",
+        "Optimize images for performance (lazy loading, appropriate formats)",
+        "Maintain consistent spacing using the 8px base unit system"
+      ],
+      "contentCards": [
+        "Use aspect-ratio CSS for consistent card proportions",
+        "Implement lazy loading for images below the fold",
+        "Add loading states and placeholders",
+        "Ensure metadata icons are accessible (alt text, ARIA labels)"
+      ],
+      "navigation": [
+        "Implement sticky/fixed header for easy access",
+        "Ensure active state is clearly visible",
+        "Mobile: consider hamburger menu or bottom navigation"
+      ]
+    }
+  }
+}
+
+
+
