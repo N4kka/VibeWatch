@@ -175,7 +175,7 @@ struct ClipPlayerView: View {
                 
                 ClipActionButton(
                     icon: "plus",
-                    text: "Add to List",
+                    text: "clips.addToList".localized,
                     color: .white
                 ) {
                     showAddToList = true
@@ -489,7 +489,7 @@ struct CommentsView: View {
                 HStack {
                     Spacer()
                     
-                    Text("\(totalCommentsCount) Comment\(totalCommentsCount == 1 ? "" : "s")")
+                    Text("\(totalCommentsCount) clips.comment\(totalCommentsCount == 1 ? "" : "clips.comments")".localized)
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(.white)
                     
@@ -617,7 +617,7 @@ struct CommentsView: View {
                         
                         // Input Field
                         HStack {
-                            TextField(replyingTo != nil ? "Add a reply..." : "Add a comment...", text: $commentText)
+                            TextField(replyingTo != nil ? "clips.replyPlaceholder".localized : "clips.commentPlaceholder".localized, text: $commentText)
                                 .font(.system(size: 15))
                                 .foregroundColor(.white)
                                 .tint(.white)
@@ -782,7 +782,7 @@ struct CommentRow: View {
                                 }
                             } label: {
                                 HStack(spacing: 4) {
-                                    Text("\(showReplies ? "Hide" : "View") \(comment.repliesCount) repl\(comment.repliesCount == 1 ? "y" : "ies")")
+                                    Text("\(showReplies ? "clips.hideReplies" : "clips.viewReplies") \(comment.repliesCount) repl\(comment.repliesCount == 1 ? "y" : "ies")".localized)
                                         .font(.system(size: 13, weight: .medium))
                                         .foregroundColor(.gray)
                                     

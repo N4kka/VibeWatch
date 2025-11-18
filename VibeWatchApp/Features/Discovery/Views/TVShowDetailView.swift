@@ -41,80 +41,17 @@ struct TVShowDetailView: View {
         ScrollView {
             VStack(spacing: 0) {
                 if let tvShow = viewModel.tvShow {
-                    TVShowDetailHeaderView(
-                        tvShow: tvShow,
-                        onDismiss: { dismiss() },
-                        onSearch: { showSearch = true },
-                        onShare: {
-                            Task {
-                                await handleShare(tvShow: tvShow)
-                            }
-                        }
-                    )
+                    let tvShowMovie = tvShowToMovie(tvShow)
+                    
+                    headerView(tvShow: tvShow)
                     
                     VStack(spacing: 24) {
-                        TVShowInfoSection(tvShow: tvShow)
-                        
-                        ActionButtonsSection(
-                            movie: tvShowToMovie(tvShow),
-                            mediaType: .tv,
-                            onSaveTap: { showSavePanel = true },
-                            onSeenTap: {
-                                if listManager.isInList(listId: listManager.seenList.id, mediaId: tvShow.id, mediaType: .tv) {
-                                    if let item = listManager.seenList.items.first(where: { $0.mediaId == tvShow.id && $0.mediaType == .tv }) {
-                                        listManager.removeFromList(listId: listManager.seenList.id, itemId: item.id)
-                                    }
-                                } else {
-                                    let movie = tvShowToMovie(tvShow)
-                                    listManager.addToList(listId: listManager.seenList.id, movie: movie, mediaType: .tv)
-                                }
-                            },
-                            onLikedTap: {
-                                if listManager.isInList(listId: listManager.likedList.id, mediaId: tvShow.id, mediaType: .tv) {
-                                    if let item = listManager.likedList.items.first(where: { $0.mediaId == tvShow.id && $0.mediaType == .tv }) {
-                                        listManager.removeFromList(listId: listManager.likedList.id, itemId: item.id)
-                                    }
-                                } else {
-                                    if let dislikedItem = listManager.dislikedList.items.first(where: { $0.mediaId == tvShow.id && $0.mediaType == .tv }) {
-                                        listManager.removeFromList(listId: listManager.dislikedList.id, itemId: dislikedItem.id)
-                                    }
-                                    let movie = tvShowToMovie(tvShow)
-                                    listManager.addToList(listId: listManager.likedList.id, movie: movie, mediaType: .tv)
-                                }
-                            },
-                            onDislikedTap: {
-                                if listManager.isInList(listId: listManager.dislikedList.id, mediaId: tvShow.id, mediaType: .tv) {
-                                    if let item = listManager.dislikedList.items.first(where: { $0.mediaId == tvShow.id && $0.mediaType == .tv }) {
-                                        listManager.removeFromList(listId: listManager.dislikedList.id, itemId: item.id)
-                                    }
-                                } else {
-                                    if let likedItem = listManager.likedList.items.first(where: { $0.mediaId == tvShow.id && $0.mediaType == .tv }) {
-                                        listManager.removeFromList(listId: listManager.likedList.id, itemId: likedItem.id)
-                                    }
-                                    let movie = tvShowToMovie(tvShow)
-                                    listManager.addToList(listId: listManager.dislikedList.id, movie: movie, mediaType: .tv)
-                                }
-                            }
-                        )
-                        
-                        if let providers = viewModel.watchProviders {
-                            WatchNowSection(providers: providers)
-                        }
-                        
-                        if let trailer = viewModel.trailer {
-                            TrailerSection(trailer: trailer)
-                        }
-                        
-                        if !viewModel.mainCast.isEmpty {
-                            TVShowCreditsSection(
-                                cast: viewModel.mainCast,
-                                tvShow: tvShow
-                            )
-                        }
-                        
-                        if !viewModel.similarShows.isEmpty {
-                            SimilarTVShowsSection(tvShows: viewModel.similarShows)
-                        }
+                        infoView(tvShow: tvShow)
+                        actionsView(tvShow: tvShow, movie: tvShowMovie)
+                        providersView
+                        trailerView
+                        creditsView(tvShow: tvShow)
+                        similarView
                     }
                     .padding(.horizontal, 50)
                     .padding(.bottom, 40)
@@ -168,11 +105,108 @@ struct TVShowDetailView: View {
         }
     }
     
+    // MARK: - Subviews (computed)
+    
+    private func headerView(tvShow: TVShow) -> some View {
+        TVShowDetailHeaderView(
+            tvShow: tvShow,
+            onDismiss: { dismiss() },
+            onSearch: { showSearch = true },
+            onShare: {
+                Task { await handleShare(tvShow: tvShow) }
+            }
+        )
+    }
+    
+    private func infoView(tvShow: TVShow) -> some View {
+        TVShowInfoSection(tvShow: tvShow)
+    }
+    
+    private func actionsView(tvShow: TVShow, movie: Movie) -> some View {
+        ActionButtonsSection(
+            movie: movie,
+            mediaType: .tv,
+            onSaveTap: { showSavePanel = true },
+            onSeenTap: { handleSeenTap(tvShow: tvShow, movie: movie) },
+            onLikedTap: { handleLikedTap(tvShow: tvShow, movie: movie) },
+            onDislikedTap: { handleDislikedTap(tvShow: tvShow, movie: movie) }
+        )
+    }
+    
+    @ViewBuilder
+    private var providersView: some View {
+        if let providers = viewModel.watchProviders {
+            WatchNowSection(providers: providers)
+        }
+    }
+    
+    @ViewBuilder
+    private var trailerView: some View {
+        if let trailer = viewModel.trailer {
+            TrailerSection(trailer: trailer)
+        }
+    }
+    
+    @ViewBuilder
+    private func creditsView(tvShow: TVShow) -> some View {
+        if !viewModel.mainCast.isEmpty {
+            TVShowCreditsSection(
+                cast: viewModel.mainCast,
+                tvShow: tvShow
+            )
+        }
+    }
+    
+    @ViewBuilder
+    private var similarView: some View {
+        if !viewModel.similarShows.isEmpty {
+            SimilarTVShowsSection(tvShows: viewModel.similarShows)
+        }
+    }
+    
+    // MARK: - Actions
+    
+    private func handleSeenTap(tvShow: TVShow, movie: Movie) {
+        if listManager.isInList(listId: listManager.seenList.id, mediaId: tvShow.id, mediaType: .tv) {
+            if let item = listManager.seenList.items.first(where: { $0.mediaId == tvShow.id && $0.mediaType == .tv }) {
+                listManager.removeFromList(listId: listManager.seenList.id, itemId: item.id)
+            }
+        } else {
+            listManager.addToList(listId: listManager.seenList.id, movie: movie, mediaType: .tv)
+        }
+    }
+    
+    private func handleLikedTap(tvShow: TVShow, movie: Movie) {
+        if listManager.isInList(listId: listManager.likedList.id, mediaId: tvShow.id, mediaType: .tv) {
+            if let item = listManager.likedList.items.first(where: { $0.mediaId == tvShow.id && $0.mediaType == .tv }) {
+                listManager.removeFromList(listId: listManager.likedList.id, itemId: item.id)
+            }
+        } else {
+            if let dislikedItem = listManager.dislikedList.items.first(where: { $0.mediaId == tvShow.id && $0.mediaType == .tv }) {
+                listManager.removeFromList(listId: listManager.dislikedList.id, itemId: dislikedItem.id)
+            }
+            listManager.addToList(listId: listManager.likedList.id, movie: movie, mediaType: .tv)
+        }
+    }
+    
+    private func handleDislikedTap(tvShow: TVShow, movie: Movie) {
+        if listManager.isInList(listId: listManager.dislikedList.id, mediaId: tvShow.id, mediaType: .tv) {
+            if let item = listManager.dislikedList.items.first(where: { $0.mediaId == tvShow.id && $0.mediaType == .tv }) {
+                listManager.removeFromList(listId: listManager.dislikedList.id, itemId: item.id)
+            }
+        } else {
+            if let likedItem = listManager.likedList.items.first(where: { $0.mediaId == tvShow.id && $0.mediaType == .tv }) {
+                listManager.removeFromList(listId: listManager.likedList.id, itemId: likedItem.id)
+            }
+            listManager.addToList(listId: listManager.dislikedList.id, movie: movie, mediaType: .tv)
+        }
+    }
+    
+    // MARK: - Sharing
+    
     private func handleShare(tvShow: TVShow) async {
         isPreparingShare = true
-        
         await prepareShareItems(tvShow: tvShow)
-        
         if !shareItems.isEmpty {
             await MainActor.run {
                 isPreparingShare = false
@@ -190,28 +224,16 @@ struct TVShowDetailView: View {
         
         if let posterPath = tvShow.posterPath {
             let posterURLString = "https://image.tmdb.org/t/p/w500\(posterPath)"
-            print("📸 Loading poster from: \(posterURLString)")
-            
             if let url = URL(string: posterURLString) {
                 do {
-                    let (data, response) = try await URLSession.shared.data(from: url)
-                    
-                    if let httpResponse = response as? HTTPURLResponse {
-                        print("✅ Response status: \(httpResponse.statusCode)")
-                    }
-                    
+                    let (data, _) = try await URLSession.shared.data(from: url)
                     if let image = UIImage(data: data) {
-                        print("✅ Image loaded successfully: \(image.size)")
                         items.append(image)
-                    } else {
-                        print("❌ Failed to create UIImage from data")
                     }
                 } catch {
-                    print("❌ Failed to load poster image for sharing: \(error.localizedDescription)")
+                    // silently ignore for sharing
                 }
             }
-        } else {
-            print("❌ No poster path available for TV show: \(tvShow.name)")
         }
         
         var text = "Check out \(tvShow.name)"
@@ -222,8 +244,6 @@ struct TVShowDetailView: View {
             text += "\n\n\(tvShow.overview)"
         }
         items.append(text)
-        
-        print("📦 Total share items prepared: \(items.count)")
         
         await MainActor.run {
             shareItems = items
@@ -317,7 +337,7 @@ struct TVShowInfoSection: View {
                     Text("\(Int(tvShow.voteAverage * 10))%")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(.theme.accentOrange)
-                    Text("(\(tvShow.voteCount) ratings)")
+                    Text("(\(tvShow.voteCount) \("movieDetail.ratings".localized))")
                         .font(.system(size: 14))
                         .foregroundColor(.theme.textSecondary)
                 }

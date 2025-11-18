@@ -58,14 +58,22 @@ struct MediaListItem: Identifiable, Codable {
 }
 
 enum SortOption: String, CaseIterable {
-    case dateAdded = "Date Added"
-    case title = "Title"
-    case releaseDate = "Release Date"
-    case rating = "Rating"
+    case dateAdded = "sort.dateAdded"
+    case title = "sort.title"
+    case releaseDate = "sort.releaseDate"
+    case rating = "sort.rating"
+    
+    var displayName: String {
+        rawValue.localized
+    }
 }
 
 enum FilterOption: String, CaseIterable {
-    case all = "All"
-    case movies = "Movies"
-    case tvShows = "TV Shows"
+    case all = "filter.all"
+    case movies = "filter.movies"
+    case tvShows = "filter.tvSeries"
+    
+    var displayName: String {
+        rawValue.localized
+    }
 }

@@ -13,7 +13,7 @@ struct MainTabView: View {
                     .transition(.opacity)
                     .onAppear {
                         // Hide splash screen after 3 seconds
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 6.0) {
                             withAnimation(.easeOut(duration: 0.5)) {
                                 isLoading = false
                             }
@@ -65,7 +65,7 @@ struct LiquidGlassBottomBar: View {
         HStack(spacing: 0) {
             TabBarButton(
                 icon: "house.fill",
-                title: "Discovery",
+                title: "tab.discovery".localized,
                 isSelected: selectedTab == 0
             ) {
                 selectedTab = 0
@@ -73,7 +73,7 @@ struct LiquidGlassBottomBar: View {
             
             TabBarButton(
                 icon: "play.rectangle.fill",
-                title: "Clips",
+                title: "tab.clips".localized,
                 isSelected: selectedTab == 1
             ) {
                 selectedTab = 1
@@ -81,7 +81,7 @@ struct LiquidGlassBottomBar: View {
             
             TabBarButton(
                 icon: "list.bullet",
-                title: "Lists",
+                title: "tab.lists".localized,
                 isSelected: selectedTab == 2
             ) {
                 selectedTab = 2

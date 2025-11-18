@@ -38,7 +38,7 @@ struct SignInView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Cancel") {
+                    Button("profile.cancel".localized) {
                         dismiss()
                     }
                     .foregroundColor(.theme.textPrimary)
@@ -66,12 +66,12 @@ struct SignInView: View {
     
     private var inputFields: some View {
         VStack(spacing: 16) {
-            TextField("Email or Username", text: $emailOrUsername)
+            TextField("profile.userNamePlaceholder".localized, text: $emailOrUsername)
                 .textFieldStyle(CustomTextFieldStyle())
                 .autocapitalization(.none)
                 .textContentType(.username)
             
-            SecureField("Password", text: $password)
+            SecureField("profile.passwordPlaceholder".localized, text: $password)
                 .textFieldStyle(CustomTextFieldStyle())
                 .textContentType(.password)
             

@@ -293,7 +293,7 @@ struct MovieInfoSection: View {
                     Text("\(movie.ratingPercentage)%")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(.theme.accentOrange)
-                    Text("(\(movie.voteCount) ratings)")
+                    Text("(\(movie.voteCount) \("movieDetail.ratings".localized))")
                         .font(.system(size: 14))
                         .foregroundColor(.theme.textSecondary)
                 }
@@ -357,7 +357,7 @@ struct ActionButtonsSection: View {
         HStack(spacing: 12) {
             ActionButton(
                 icon: "bookmark.fill",
-                title: "Save",
+                title: "movieDetail.save".localized,
                 isActive: isInAnyList
             ) {
                 onSaveTap()
@@ -365,7 +365,7 @@ struct ActionButtonsSection: View {
             
             ActionButton(
                 icon: "eye.fill",
-                title: "Seen",
+                title: "movieDetail.seen".localized,
                 isActive: isInSeen
             ) {
                 withAnimation {
@@ -440,15 +440,15 @@ struct WatchNowSection: View {
                 .foregroundColor(.theme.textPrimary)
             
             if let flatrate = providers.flatrate, !flatrate.isEmpty {
-                ProviderGroup(title: "Stream", providers: flatrate)
+                ProviderGroup(title: "platforms.streaming".localized, providers: flatrate)
             }
             
             if let rent = providers.rent, !rent.isEmpty {
-                ProviderGroup(title: "Rent", providers: rent)
+                ProviderGroup(title: "platforms.rent".localized, providers: rent)
             }
             
             if let buy = providers.buy, !buy.isEmpty {
-                ProviderGroup(title: "Buy", providers: buy)
+                ProviderGroup(title: "platforms.buy".localized, providers: buy)
             }
             
             Button {
@@ -611,23 +611,23 @@ struct MovieCreditsSection: View {
                 
                 VStack(alignment: .leading, spacing: 12) {
                     if movie.ratingPercentage > 0 {
-                        InfoRow(title: "Rating", value: "\(movie.ratingPercentage)%")
+                        InfoRow(title: "movieDetail.rating".localized, value: "\(movie.ratingPercentage)%")
                     }
                     
                     if let genres = movie.genres, !genres.isEmpty {
-                        InfoRow(title: "Genres", value: genres.map { $0.name }.joined(separator: ", "))
+                        InfoRow(title: "movieDetail.genres".localized, value: genres.map { $0.name }.joined(separator: ", "))
                     }
                     
                     if let runtime = movie.formattedRuntime {
-                        InfoRow(title: "Runtime", value: runtime)
+                        InfoRow(title: "movieDetail.runtime".localized, value: runtime)
                     }
                     
                     if let countries = movie.productionCountries, !countries.isEmpty {
-                        InfoRow(title: "Country", value: countries.first?.name ?? "")
+                        InfoRow(title: "movieDetail.country".localized, value: countries.first?.name ?? "")
                     }
                     
                     if let director = director {
-                        InfoRow(title: "Director", value: director.name)
+                        InfoRow(title: "movieDetail.director".localized, value: director.name)
                     }
                 }
             }

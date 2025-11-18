@@ -53,7 +53,7 @@ struct SignUpView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Cancel") {
+                    Button("profile.cancel".localized) {
                         dismiss()
                     }
                     .foregroundColor(.theme.textPrimary)
@@ -83,7 +83,7 @@ struct SignUpView: View {
         VStack(spacing: 16) {
             // Username
             VStack(alignment: .leading, spacing: 4) {
-                TextField("Username", text: $username)
+                TextField("auth.usernamePlaceholder".localized, text: $username)
                     .textFieldStyle(CustomTextFieldStyle())
                     .autocapitalization(.none)
                     .textContentType(.username)
@@ -91,7 +91,7 @@ struct SignUpView: View {
             
             // Email with validation
             VStack(alignment: .leading, spacing: 4) {
-                TextField("Email", text: $email)
+                TextField("auth.emailPlaceholder".localized, text: $email)
                     .textFieldStyle(CustomTextFieldStyle())
                     .autocapitalization(.none)
                     .keyboardType(.emailAddress)
@@ -110,7 +110,7 @@ struct SignUpView: View {
             
             // Password with validation
             VStack(alignment: .leading, spacing: 4) {
-                SecureField("Password", text: $password)
+                SecureField("auth.passwordPlaceholder".localized, text: $password)
                     .textFieldStyle(CustomTextFieldStyle())
                     .textContentType(.newPassword)
                     .onChange(of: password) { _ in
@@ -127,7 +127,7 @@ struct SignUpView: View {
             
             // Confirm Password with validation
             VStack(alignment: .leading, spacing: 4) {
-                SecureField("Confirm Password", text: $confirmPassword)
+                SecureField("auth.confirmPasswordPlaceholder".localized, text: $confirmPassword)
                     .textFieldStyle(CustomTextFieldStyle())
                     .textContentType(.newPassword)
                     .onChange(of: confirmPassword) { _ in

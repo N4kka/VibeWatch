@@ -1,10 +1,14 @@
 import SwiftUI
 
 enum ListViewType: String, CaseIterable {
-    case myLists = "My Lists"
-    case watchlist = "Watchlist"
-    case seen = "Seen"
-    case liked = "Liked"
+    case myLists = "lists.myLists"
+    case watchlist = "lists.watchlist"
+    case seen = "lists.seen"
+    case liked = "lists.liked"
+    
+    var displayName: String {
+        rawValue.localized
+    }
 }
 
 struct ListTypeSwitcher: View {
@@ -18,7 +22,7 @@ struct ListTypeSwitcher: View {
                         selectedType = type
                     }
                 } label: {
-                    Text(type.rawValue)
+                    Text(type.displayName)
                         .font(.system(size: 13, weight: selectedType == type ? .semibold : .medium))
                         .foregroundColor(selectedType == type ? .theme.accentOrange : .theme.textSecondary)
                         .padding(.horizontal, 16)
