@@ -38,3 +38,7 @@ extension View {
         modifier(LiquidGlassModifier())
     }
 }
+
+#Preview {
+    LiquidGlassView()
+}

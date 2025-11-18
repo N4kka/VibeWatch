@@ -2,8 +2,11 @@ import SwiftUI
 
 struct DiscoveryView: View {
     @StateObject private var viewModel = DiscoveryViewModel()
+    @EnvironmentObject var appState: AppState
     @State private var showProfile = false
-    @State private var searchText = ""
+    @State private var showSearch = false
+    @Binding var selectedMovie: Movie?
+    @Binding var selectedMediaType: MediaType
     
     var body: some View {
         ZStack(alignment: .top) {
@@ -13,31 +16,43 @@ struct DiscoveryView: View {
                         .frame(height: 60)
                     
                     if !viewModel.moodMovies.isEmpty {
-                        MoodCarouselSection(movies: viewModel.moodMovies)
+                        MoodCarouselSection(movies: viewModel.moodMovies) { movie in
+                            selectedMovie = movie
+                            selectedMediaType = .movie
+                        }
                     }
                     
                     if !viewModel.forYouMovies.isEmpty {
                         MediaSection(
-                            title: "For You",
+                            title: "discovery.forYou".localized,
                             items: viewModel.forYouMovies,
                             type: .movie
-                        )
+                        ) { movie in
+                            selectedMovie = movie
+                            selectedMediaType = .movie
+                        }
                     }
                     
                     if !viewModel.viralMovies.isEmpty {
                         MediaSection(
-                            title: "Viral Now",
+                            title: "discovery.trending".localized,
                             items: viewModel.viralMovies,
                             type: .movie
-                        )
+                        ) { movie in
+                            selectedMovie = movie
+                            selectedMediaType = .movie
+                        }
                     }
                     
                     if !viewModel.forYouTVShows.isEmpty {
                         MediaSection(
-                            title: "TV Shows For You",
+                            title: "discovery.tvShows".localized,
                             items: viewModel.forYouTVShows,
                             type: .tv
-                        )
+                        ) { movie in
+                            selectedMovie = movie
+                            selectedMediaType = .tv
+                        }
                     }
                     
                     Color.clear
@@ -49,8 +64,9 @@ struct DiscoveryView: View {
             }
             
             DiscoveryHeaderView(
-                searchText: $searchText,
-                onProfileTap: { showProfile = true }
+                onSearchTap: { showSearch = true },
+                onProfileTap: { showProfile = true },
+                avatarURL: appState.currentUser?.avatarURL
             )
         }
         .background(Color.theme.background.ignoresSafeArea())
@@ -60,21 +76,27 @@ struct DiscoveryView: View {
         .sheet(isPresented: $showProfile) {
             ProfileView()
         }
+        .fullScreenCover(isPresented: $showSearch) {
+            SearchView()
+        }
+        .toast(isShowing: $appState.showSuccessToast, message: appState.toastMessage, type: .success)
+        .toast(isShowing: $appState.showErrorToast, message: appState.toastMessage, type: .error)
     }
 }
 
 struct DiscoveryHeaderView: View {
-    @Binding var searchText: String
+    let onSearchTap: () -> Void
     let onProfileTap: () -> Void
+    let avatarURL: String?
     
     var body: some View {
         HStack(spacing: 16) {
             HStack(spacing: 8) {
-                Image(systemName: "film")
+                Image("logo_56x56")
                     .font(.system(size: 24, weight: .bold))
                     .foregroundColor(.theme.accentOrange)
                 
-                Text("VibeWatch")
+                Text("discovery.vibeWatch".localized)
                     .font(.system(size: 20, weight: .bold))
                     .foregroundColor(.theme.textPrimary)
             }
@@ -82,9 +104,7 @@ struct DiscoveryHeaderView: View {
             Spacer()
             
             HStack(spacing: 12) {
-                Button {
-                    // TODO: Implement search
-                } label: {
+                Button(action: onSearchTap) {
                     Image(systemName: "magnifyingglass")
                         .font(.system(size: 18, weight: .medium))
                         .foregroundColor(.theme.textPrimary)
@@ -94,9 +114,23 @@ struct DiscoveryHeaderView: View {
                 }
                 
                 Button(action: onProfileTap) {
-                    Image(systemName: "person.circle.fill")
-                        .font(.system(size: 32))
-                        .foregroundColor(.theme.textSecondary)
+                    if let avatarURL = avatarURL, let url = URL(string: avatarURL) {
+                        AsyncImage(url: url) { image in
+                            image
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 32, height: 32)
+                                .clipShape(Circle())
+                        } placeholder: {
+                            Image(systemName: "person.circle.fill")
+                                .font(.system(size: 32))
+                                .foregroundColor(.theme.textSecondary)
+                        }
+                    } else {
+                        Image(systemName: "person.circle.fill")
+                            .font(.system(size: 32))
+                            .foregroundColor(.theme.textSecondary)
+                    }
                 }
             }
         }
@@ -112,106 +146,102 @@ struct DiscoveryHeaderView: View {
 
 struct MoodCarouselSection: View {
     let movies: [Movie]
+    let onMovieTap: (Movie) -> Void
     @State private var currentIndex = 0
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Based on Your Mood")
+        VStack(alignment: .leading, spacing: 0) {
+            Text("discovery.basedOnMood".localized)
                 .font(.system(size: 24, weight: .bold))
                 .foregroundColor(.theme.textPrimary)
                 .padding(.horizontal, 20)
+                .padding(.bottom, 16)
             
             TabView(selection: $currentIndex) {
                 ForEach(Array(movies.prefix(5).enumerated()), id: \.element.id) { index, movie in
-                    MoodCarouselCard(movie: movie)
-                        .tag(index)
+                    MoodCarouselCard(movie: movie) {
+                        onMovieTap(movie)
+                    }
+                    .tag(index)
                 }
             }
             .frame(height: 500)
-            .tabViewStyle(.page(indexDisplayMode: .automatic))
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            
+            HStack(spacing: 6) {
+                ForEach(0..<min(5, movies.count), id: \.self) { index in
+                    Circle()
+                        .fill(index == currentIndex ? Color.theme.accentOrange : Color.white.opacity(0.3))
+                        .frame(width: 6, height: 6)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.top, 16)
         }
     }
 }
 
 struct MoodCarouselCard: View {
     let movie: Movie
+    let onTap: () -> Void
     
     var body: some View {
-        ZStack(alignment: .bottom) {
-            AsyncImageView(url: movie.backdropURL, contentMode: .fill)
-                .frame(height: 500)
-                .clipped()
-                .overlay {
-                    LinearGradient(
-                        colors: [
-                            .clear,
-                            .clear,
-                            Color.black.opacity(0.6),
-                            Color.black.opacity(0.9)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                }
-            
-            VStack(alignment: .leading, spacing: 8) {
-                Text(movie.title)
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundColor(.white)
-                
-                HStack(spacing: 12) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "star.fill")
-                            .foregroundColor(.theme.accentOrange)
-                        Text(movie.rating)
-                            .foregroundColor(.white)
-                    }
-                    
-                    if let year = movie.year {
-                        Text(year)
-                            .foregroundColor(.theme.textSecondary)
-                    }
-                }
-                .font(.system(size: 14))
-                
-                Text(movie.overview)
-                    .font(.system(size: 14))
-                    .foregroundColor(.theme.textSecondary)
-                    .lineLimit(3)
-                
-                HStack(spacing: 12) {
-                    Button {
-                        // TODO: Add to list
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: "plus")
-                            Text("Add to List")
+        Button(action: onTap) {
+            GeometryReader { geometry in
+                ZStack(alignment: .bottom) {
+                    AsyncImageView(url: movie.backdropURL, contentMode: .fill)
+                        .frame(width: geometry.size.width, height: 500)
+                        .clipped()
+                        .overlay {
+                            LinearGradient(
+                                colors: [
+                                    .clear,
+                                    Color.black.opacity(0.3),
+                                    Color.black.opacity(0.7),
+                                    Color.black.opacity(0.95)
+                                ],
+                                startPoint: .center,
+                                endPoint: .bottom
+                            )
                         }
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 12)
-                        .background(Color.theme.accentOrange)
-                        .clipShape(RoundedRectangle(cornerRadius: 25))
-                    }
                     
-                    Button {
-                        // TODO: View details
-                    } label: {
-                        Image(systemName: "info.circle")
-                            .font(.system(size: 20))
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(movie.title)
+                            .font(.system(size: 24, weight: .bold))
                             .foregroundColor(.white)
-                            .frame(width: 44, height: 44)
-                            .background(Color.white.opacity(0.2))
-                            .clipShape(Circle())
+                            .lineLimit(2)
+                        
+                        HStack(spacing: 12) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "star.fill")
+                                    .foregroundColor(.theme.accentOrange)
+                                Text(movie.rating)
+                                    .foregroundColor(.white)
+                            }
+                            
+                            if let year = movie.year {
+                                Text(year)
+                                    .foregroundColor(.theme.textSecondary)
+                            }
+                        }
+                        .font(.system(size: 13))
+                        
+                        Text(movie.overview)
+                            .font(.system(size: 13))
+                            .foregroundColor(.theme.textSecondary)
+                            .lineLimit(2)
+                            .lineSpacing(2)
                     }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 20)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .padding(.top, 8)
+                .frame(width: geometry.size.width, height: 500)
+                .clipShape(RoundedRectangle(cornerRadius: 20))
             }
-            .padding(20)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(height: 500)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .buttonStyle(PlainButtonStyle())
         .padding(.horizontal, 20)
     }
 }
@@ -220,6 +250,7 @@ struct MediaSection: View {
     let title: String
     let items: [Movie]
     let type: MediaType
+    let onMovieTap: (Movie) -> Void
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -232,6 +263,9 @@ struct MediaSection: View {
                 HStack(spacing: 12) {
                     ForEach(items) { movie in
                         MediaCard(movie: movie)
+                            .onTapGesture {
+                                onMovieTap(movie)
+                            }
                     }
                 }
                 .padding(.horizontal, 20)
@@ -265,4 +299,8 @@ struct MediaCard: View {
             }
         }
     }
+}
+
+#Preview {
+    MainTabView()
 }
