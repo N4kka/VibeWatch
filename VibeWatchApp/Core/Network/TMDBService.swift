@@ -4,7 +4,7 @@ class TMDBService {
     static let shared = TMDBService()
     
     private let baseURL = "https://api.themoviedb.org/3"
-    private let apiKey = "" // TODO: Add your TMDB API key here or use Config.swift
+    private let apiKey = "e42f888f287ca2fbe26c9a6e70351fb7"
     private let session: URLSession
     private let cache: URLCache
     
@@ -21,7 +21,7 @@ class TMDBService {
     }
     
     private func rateLimit() async {
-        await requestQueue.sync {
+        requestQueue.sync {
             if let lastTime = lastRequestTime {
                 let elapsed = Date().timeIntervalSince(lastTime)
                 if elapsed < rateLimitInterval {
@@ -144,6 +144,128 @@ class TMDBService {
             URLQueryItem(name: "query", value: query),
             URLQueryItem(name: "page", value: "\(page)")
         ])
+    }
+    
+    // MARK: - Multi Search
+    
+    func searchMulti(query: String, page: Int = 1) async throws -> TMDBMultiResponse {
+        try await request("/search/multi", queryItems: [
+            URLQueryItem(name: "query", value: query),
+            URLQueryItem(name: "page", value: "\(page)")
+        ])
+    }
+    
+    // MARK: - Movie Details
+    
+    func getMovieDetails(id: Int) async throws -> Movie {
+        try await request("/movie/\(id)")
+    }
+    
+    func getMovieCredits(id: Int) async throws -> Credits {
+        try await request("/movie/\(id)/credits")
+    }
+    
+    func getMovieVideos(id: Int) async throws -> TMDBVideosResponse {
+        try await request("/movie/\(id)/videos")
+    }
+    
+    func getMovieWatchProviders(id: Int) async throws -> WatchProvider {
+        try await request("/movie/\(id)/watch/providers")
+    }
+    
+    func getSimilarMovies(id: Int, page: Int = 1) async throws -> TMDBResponse<Movie> {
+        try await request("/movie/\(id)/similar", queryItems: [
+            URLQueryItem(name: "page", value: "\(page)")
+        ])
+    }
+    
+    // MARK: - TV Details
+    
+    func getTVShowDetails(id: Int) async throws -> TVShow {
+        try await request("/tv/\(id)")
+    }
+    
+    func getTVShowCredits(id: Int) async throws -> Credits {
+        try await request("/tv/\(id)/credits")
+    }
+    
+    func getTVShowVideos(id: Int) async throws -> TMDBVideosResponse {
+        try await request("/tv/\(id)/videos")
+    }
+    
+    func getTVShowWatchProviders(id: Int) async throws -> WatchProvider {
+        try await request("/tv/\(id)/watch/providers")
+    }
+    
+    func getSimilarTVShows(id: Int, page: Int = 1) async throws -> TMDBResponse<TVShow> {
+        try await request("/tv/\(id)/similar", queryItems: [
+            URLQueryItem(name: "page", value: "\(page)")
+        ])
+    }
+}
+
+struct TMDBVideosResponse: Codable {
+    let results: [Video]
+}
+
+struct TMDBMultiResponse: Codable {
+    let page: Int
+    let results: [SearchResult]
+    let totalPages: Int
+    let totalResults: Int
+    
+    enum CodingKeys: String, CodingKey {
+        case page, results
+        case totalPages = "total_pages"
+        case totalResults = "total_results"
+    }
+}
+
+struct SearchResult: Codable, Identifiable, Hashable {
+    let id: Int
+    let mediaType: String
+    let title: String?
+    let name: String?
+    let overview: String?
+    let posterPath: String?
+    let backdropPath: String?
+    let releaseDate: String?
+    let firstAirDate: String?
+    let voteAverage: Double?
+    let voteCount: Int?
+    
+    enum CodingKeys: String, CodingKey {
+        case id, overview, title, name
+        case mediaType = "media_type"
+        case posterPath = "poster_path"
+        case backdropPath = "backdrop_path"
+        case releaseDate = "release_date"
+        case firstAirDate = "first_air_date"
+        case voteAverage = "vote_average"
+        case voteCount = "vote_count"
+    }
+    
+    var displayTitle: String {
+        title ?? name ?? "Unknown"
+    }
+    
+    var year: String? {
+        if let releaseDate = releaseDate {
+            return String(releaseDate.prefix(4))
+        } else if let firstAirDate = firstAirDate {
+            return String(firstAirDate.prefix(4))
+        }
+        return nil
+    }
+    
+    var posterURL: URL? {
+        guard let posterPath = posterPath else { return nil }
+        return URL(string: "https://image.tmdb.org/t/p/w500\(posterPath)")
+    }
+    
+    var rating: String {
+        guard let voteAverage = voteAverage else { return "N/A" }
+        return String(format: "%.1f", voteAverage)
     }
 }
 

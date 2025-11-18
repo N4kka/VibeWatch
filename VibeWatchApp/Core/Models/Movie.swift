@@ -9,13 +9,18 @@ struct Movie: Codable, Identifiable, Hashable {
     let releaseDate: String?
     let voteAverage: Double
     let voteCount: Int
-    let genreIds: [Int]
+    let genreIds: [Int]?
+    let genres: [Genre]?
     let adult: Bool
     let originalLanguage: String
     let popularity: Double
+    let runtime: Int?
+    let status: String?
+    let tagline: String?
+    let productionCountries: [ProductionCountry]?
     
     enum CodingKeys: String, CodingKey {
-        case id, title, overview, adult, popularity
+        case id, title, overview, adult, popularity, runtime, status, tagline, genres
         case posterPath = "poster_path"
         case backdropPath = "backdrop_path"
         case releaseDate = "release_date"
@@ -23,6 +28,7 @@ struct Movie: Codable, Identifiable, Hashable {
         case voteCount = "vote_count"
         case genreIds = "genre_ids"
         case originalLanguage = "original_language"
+        case productionCountries = "production_countries"
     }
     
     var posterURL: URL? {
@@ -43,6 +49,120 @@ struct Movie: Codable, Identifiable, Hashable {
     var rating: String {
         String(format: "%.1f", voteAverage)
     }
+    
+    var ratingPercentage: Int {
+        Int(voteAverage * 10)
+    }
+    
+    var formattedRuntime: String? {
+        guard let runtime = runtime else { return nil }
+        let hours = runtime / 60
+        let minutes = runtime % 60
+        if hours > 0 {
+            return "\(hours)h \(minutes)m"
+        } else {
+            return "\(minutes)m"
+        }
+    }
+}
+
+struct Genre: Codable, Identifiable, Hashable {
+    let id: Int
+    let name: String
+}
+
+struct ProductionCountry: Codable, Hashable {
+    let iso: String
+    let name: String
+    
+    enum CodingKeys: String, CodingKey {
+        case iso = "iso_3166_1"
+        case name
+    }
+}
+
+struct Credits: Codable {
+    let cast: [Cast]
+    let crew: [Crew]
+}
+
+struct Cast: Codable, Identifiable, Hashable {
+    let id: Int
+    let name: String
+    let character: String
+    let profilePath: String?
+    let order: Int
+    
+    enum CodingKeys: String, CodingKey {
+        case id, name, character, order
+        case profilePath = "profile_path"
+    }
+    
+    var profileURL: URL? {
+        guard let profilePath = profilePath else { return nil }
+        return URL(string: "https://image.tmdb.org/t/p/w185\(profilePath)")
+    }
+}
+
+struct Crew: Codable, Identifiable, Hashable {
+    let id: Int
+    let name: String
+    let job: String
+    let department: String
+    let profilePath: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case id, name, job, department
+        case profilePath = "profile_path"
+    }
+}
+
+struct Video: Codable, Identifiable, Hashable {
+    let id: String
+    let key: String
+    let name: String
+    let site: String
+    let type: String
+    let official: Bool
+    
+    var youtubeURL: URL? {
+        guard site == "YouTube" else { return nil }
+        return URL(string: "https://www.youtube.com/watch?v=\(key)")
+    }
+    
+    var thumbnailURL: URL? {
+        guard site == "YouTube" else { return nil }
+        return URL(string: "https://img.youtube.com/vi/\(key)/hqdefault.jpg")
+    }
+}
+
+struct WatchProvider: Codable {
+    let results: [String: CountryProviders]?
+}
+
+struct CountryProviders: Codable {
+    let link: String?
+    let flatrate: [Provider]?
+    let rent: [Provider]?
+    let buy: [Provider]?
+}
+
+struct Provider: Codable, Identifiable, Hashable {
+    let providerId: Int
+    let providerName: String
+    let logoPath: String
+    
+    enum CodingKeys: String, CodingKey {
+        case providerId = "provider_id"
+        case providerName = "provider_name"
+        case logoPath = "logo_path"
+    }
+    
+    var id: Int { providerId }
+    
+    var logoURL: URL? {
+        URL(string: "https://image.tmdb.org/t/p/w92\(logoPath)")
+    }
 }
 
 struct TVShow: Codable, Identifiable, Hashable {
@@ -54,12 +174,16 @@ struct TVShow: Codable, Identifiable, Hashable {
     let firstAirDate: String?
     let voteAverage: Double
     let voteCount: Int
-    let genreIds: [Int]
+    let genreIds: [Int]?
+    let genres: [Genre]?
     let originalLanguage: String
     let popularity: Double
+    let status: String?
+    let tagline: String?
+    let productionCountries: [ProductionCountry]?
     
     enum CodingKeys: String, CodingKey {
-        case id, name, overview, popularity
+        case id, name, overview, popularity, status, tagline, genres
         case posterPath = "poster_path"
         case backdropPath = "backdrop_path"
         case firstAirDate = "first_air_date"
@@ -67,6 +191,7 @@ struct TVShow: Codable, Identifiable, Hashable {
         case voteCount = "vote_count"
         case genreIds = "genre_ids"
         case originalLanguage = "original_language"
+        case productionCountries = "production_countries"
     }
     
     var posterURL: URL? {
