@@ -211,7 +211,6 @@ class LocalizationManager: ObservableObject {
             "tab.profile": "Profilo",
             
             // Discovery
-            "discovery.trending": "Di Tendenza",
             "discovery.popular": "Popolari",
             "discovery.topRated": "Più Votati",
             "discovery.upcoming": "In Arrivo",
@@ -313,10 +312,15 @@ class LocalizationManager: ObservableObject {
             "clips.createNewList": "Crea Nuova Lista",
             
             // Discovery
-            "discovery.basedOnMood": "In Base al Tuo Umore",
             "discovery.vibeWatch": "VibeWatch",
+
+            "discovery.basedOnMood": "In Base al Tuo Umore",
+            "discovery.forYou": "Per te",
+            "discovery.trending": "Di tendenza",
+            "discovery.tvShows": "Serie TV",
             
             // Search
+            "search.placeholder": "Cerca film, serie TV...",
             "search.trendingSearches": "Ricerche di Tendenza",
             "search.noResultsFound": "Nessun risultato trovato",
             "search.results": "Risultati",

@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		B318DCEE2EC6939A00DB1A9A /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = B318DCED2EC6939A00DB1A9A /* Auth */; };
+		B3E30E122ECCB7AA008A3B6C /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = B3E30E112ECCB7AA008A3B6C /* PostgREST */; };
+		B3E30E142ECCB7AA008A3B6C /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = B3E30E132ECCB7AA008A3B6C /* Supabase */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -27,7 +29,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B3E30E122ECCB7AA008A3B6C /* PostgREST in Frameworks */,
 				B318DCEE2EC6939A00DB1A9A /* Auth in Frameworks */,
+				B3E30E142ECCB7AA008A3B6C /* Supabase in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -38,6 +42,7 @@
 			isa = PBXGroup;
 			children = (
 				B318DC8C2EC6920500DB1A9A /* VibeWatchApp */,
+				B3E30E102ECCB7AA008A3B6C /* Frameworks */,
 				B318DC8B2EC6920500DB1A9A /* Products */,
 			);
 			sourceTree = "<group>";
@@ -48,6 +53,13 @@
 				B318DC8A2EC6920500DB1A9A /* VibeWatchApp.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		B3E30E102ECCB7AA008A3B6C /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -71,6 +83,8 @@
 			name = VibeWatchApp;
 			packageProductDependencies = (
 				B318DCED2EC6939A00DB1A9A /* Auth */,
+				B3E30E112ECCB7AA008A3B6C /* PostgREST */,
+				B3E30E132ECCB7AA008A3B6C /* Supabase */,
 			);
 			productName = VibeWatchApp;
 			productReference = B318DC8A2EC6920500DB1A9A /* VibeWatchApp.app */;
@@ -360,6 +374,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = B318DCEC2EC6939A00DB1A9A /* XCRemoteSwiftPackageReference "supabase-swift" */;
 			productName = Auth;
+		};
+		B3E30E112ECCB7AA008A3B6C /* PostgREST */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B318DCEC2EC6939A00DB1A9A /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = PostgREST;
+		};
+		B3E30E132ECCB7AA008A3B6C /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B318DCEC2EC6939A00DB1A9A /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

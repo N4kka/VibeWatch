@@ -2,26 +2,59 @@ import SwiftUI
 
 struct MainTabView: View {
     @State private var selectedTab = 0
+    @State private var selectedMovie: Movie?
+    @State private var selectedMediaType: MediaType = .movie
+    @State private var isLoading = true
     
     var body: some View {
-        ZStack(alignment: .bottom) {
-            TabView(selection: $selectedTab) {
-                DiscoveryView()
-                    .tag(0)
+        ZStack {
+            if isLoading {
+                SplashScreen()
+                    .transition(.opacity)
+                    .onAppear {
+                        // Hide splash screen after 3 seconds
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                            withAnimation(.easeOut(duration: 0.5)) {
+                                isLoading = false
+                            }
+                        }
+                    }
+            } else {
+                NavigationStack {
+                    ZStack(alignment: .bottom) {
+                        TabView(selection: $selectedTab) {
+                            DiscoveryView(selectedMovie: $selectedMovie, selectedMediaType: $selectedMediaType)
+                            .tag(0)
+                    
+                    ClipsView()
+                        .tag(1)
+                    
+                    ListsView()
+                        .tag(2)
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
                 
-                ClipsView()
-                    .tag(1)
-                
-                ListsView()
-                    .tag(2)
+                // Hide bottom bar when on Clips tab
+                if selectedTab != 1 {
+                    LiquidGlassBottomBar(selectedTab: $selectedTab)
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 10)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+                    }
+                    .background(Color.theme.background.ignoresSafeArea())
+                    .navigationBarHidden(true)
+                    .navigationDestination(item: $selectedMovie) { movie in
+                        if selectedMediaType == .movie {
+                            MovieDetailView(movieId: movie.id)
+                        } else {
+                            TVShowDetailView(tvShowId: movie.id)
+                        }
+                    }
+                }
+                .transition(.opacity)
             }
-            .tabViewStyle(.page(indexDisplayMode: .never))
-            
-            LiquidGlassBottomBar(selectedTab: $selectedTab)
-                .padding(.horizontal, 20)
-                .padding(.bottom, 10)
         }
-        .background(Color.theme.background.ignoresSafeArea())
     }
 }
 

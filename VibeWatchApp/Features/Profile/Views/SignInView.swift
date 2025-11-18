@@ -1,0 +1,247 @@
+import SwiftUI
+
+struct SignInView: View {
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var appState: AppState
+    @State private var emailOrUsername = ""
+    @State private var password = ""
+    @State private var isLoading = false
+    @State private var errorMessage: String?
+    @State private var showSignUp = false
+    
+    var body: some View {
+        NavigationView {
+            ZStack {
+                Color.theme.background.ignoresSafeArea()
+                
+                ScrollView {
+                    VStack(spacing: 24) {
+                        headerView
+                        
+                        inputFields
+                        
+                        forgotPasswordButton
+                        
+                        signInButton
+                        
+                        dividerView
+                        
+                        socialButtons
+                        
+                        bottomLink
+                        
+                        Spacer()
+                    }
+                    .padding(.vertical, 20)
+                }
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                    .foregroundColor(.theme.textPrimary)
+                }
+            }
+            .sheet(isPresented: $showSignUp) {
+                SignUpView()
+                    .environmentObject(appState)
+            }
+        }
+    }
+    
+    private var headerView: some View {
+        VStack(spacing: 12) {
+            Text("auth.welcomeBack".localized)
+                .font(.system(size: 32, weight: .bold))
+                .foregroundColor(.theme.textPrimary)
+            
+            Text("auth.signInContinue".localized)
+                .font(.system(size: 16))
+                .foregroundColor(.theme.textSecondary)
+        }
+        .padding(.top, 20)
+    }
+    
+    private var inputFields: some View {
+        VStack(spacing: 16) {
+            TextField("Email or Username", text: $emailOrUsername)
+                .textFieldStyle(CustomTextFieldStyle())
+                .autocapitalization(.none)
+                .textContentType(.username)
+            
+            SecureField("Password", text: $password)
+                .textFieldStyle(CustomTextFieldStyle())
+                .textContentType(.password)
+            
+            if let errorMessage = errorMessage {
+                Text(errorMessage)
+                    .font(.system(size: 14))
+                    .foregroundColor(.red)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+            }
+        }
+        .padding(.horizontal, 20)
+    }
+    
+    private var forgotPasswordButton: some View {
+        Button {
+            // TODO: Implement forgot password
+        } label: {
+            Text("auth.forgotPassword".localized)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.theme.accentOrange)
+        }
+        .frame(maxWidth: .infinity, alignment: .trailing)
+        .padding(.horizontal, 20)
+    }
+    
+    private var signInButton: some View {
+        Button {
+            Task {
+                await handleSignIn()
+            }
+        } label: {
+            HStack {
+                if isLoading {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                } else {
+                    Text("auth.signIn".localized)
+                        .font(.system(size: 16, weight: .semibold))
+                }
+            }
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .frame(height: 56)
+            .background(isFormValid ? Color.theme.accentOrange : Color.theme.accentOrange.opacity(0.5))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .padding(.horizontal, 20)
+        .disabled(!isFormValid || isLoading)
+    }
+    
+    private var dividerView: some View {
+        HStack {
+            Rectangle()
+                .fill(Color.white.opacity(0.2))
+                .frame(height: 1)
+            
+            Text("common.or".localized)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.theme.textSecondary)
+                .padding(.horizontal, 12)
+            
+            Rectangle()
+                .fill(Color.white.opacity(0.2))
+                .frame(height: 1)
+        }
+        .padding(.horizontal, 20)
+    }
+    
+    private var socialButtons: some View {
+        VStack(spacing: 12) {
+            SocialButton(
+                icon: "apple.logo",
+                title: "Continue with Apple",
+                action: {
+                    Task {
+                        await handleAppleSignIn()
+                    }
+                }
+            )
+            
+            SocialButton(
+                icon: "g.circle.fill",
+                title: "Continue with Google",
+                action: {
+                    Task {
+                        await handleGoogleSignIn()
+                    }
+                }
+            )
+        }
+        .padding(.horizontal, 20)
+    }
+    
+    private var bottomLink: some View {
+        Button {
+            dismiss()
+            showSignUp = true
+        } label: {
+            HStack(spacing: 4) {
+                Text("auth.dontHaveAccount".localized)
+                    .font(.system(size: 14))
+                    .foregroundColor(.theme.textSecondary)
+                
+                Text("auth.signUp".localized)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.theme.accentOrange)
+            }
+        }
+        .padding(.top, 8)
+    }
+    
+    private var isFormValid: Bool {
+        !emailOrUsername.isEmpty &&
+        !password.isEmpty &&
+        password.count >= 6
+    }
+    
+    private func handleSignIn() async {
+        errorMessage = nil
+        isLoading = true
+        
+        do {
+            let user = try await AuthService.shared.signIn(
+                emailOrUsername: emailOrUsername,
+                password: password
+            )
+            
+            appState.currentUser = user
+            appState.isAuthenticated = true
+            
+            dismiss()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        
+        isLoading = false
+    }
+    
+    private func handleAppleSignIn() async {
+        isLoading = true
+        errorMessage = nil
+        
+        do {
+            let user = try await AuthService.shared.signInWithApple()
+            appState.currentUser = user
+            appState.isAuthenticated = true
+            dismiss()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        
+        isLoading = false
+    }
+    
+    private func handleGoogleSignIn() async {
+        isLoading = true
+        errorMessage = nil
+        
+        do {
+            let user = try await AuthService.shared.signInWithGoogle()
+            appState.currentUser = user
+            appState.isAuthenticated = true
+            dismiss()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        
+        isLoading = false
+    }
+    
+
+}
