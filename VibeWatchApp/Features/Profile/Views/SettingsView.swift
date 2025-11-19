@@ -3,8 +3,6 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var localizationManager = LocalizationManager.shared
-    @State private var showCountrySelector = false
-    @State private var showLanguageSelector = false
     
     var body: some View {
         ZStack {
@@ -42,37 +40,20 @@ struct SettingsView: View {
                 
                 ScrollView {
                     VStack(spacing: 16) {
-                        // Country Setting
-                        SettingItemView(
-                            icon: "globe",
-                            title: "settings.country".localized,
-                            value: "\(localizationManager.currentCountry.flag) \(localizationManager.currentCountry.name)",
-                            action: {
-                                showCountrySelector = true
-                            }
-                        )
+                        // Settings content will be added here
+                        // Country and Language are now auto-detected from device
+                        // and can be changed via the language selector in ProfileView toolbar
                         
-                        // Language Setting
-                        SettingItemView(
-                            icon: "globe.badge",
-                            title: "settings.language".localized,
-                            value: localizationManager.currentLanguage.nativeName,
-                            action: {
-                                showLanguageSelector = true
-                            }
-                        )
+                        Text("More settings coming soon...")
+                            .font(.system(size: 14))
+                            .foregroundColor(.theme.textSecondary)
+                            .padding(.top, 40)
                     }
                     .padding(20)
                 }
             }
         }
         .navigationBarHidden(true)
-        .sheet(isPresented: $showCountrySelector) {
-            CountrySelectorView()
-        }
-        .sheet(isPresented: $showLanguageSelector) {
-            LanguageSelectorView()
-        }
     }
 }
 
