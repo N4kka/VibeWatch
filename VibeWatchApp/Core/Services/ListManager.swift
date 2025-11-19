@@ -52,8 +52,8 @@ class ListManager: ObservableObject {
         }
     }
     
-    func createList(name: String) {
-        let newList = MediaList(name: name, type: .custom)
+    func createList(name: String, description: String? = nil) {
+        let newList = MediaList(name: name, description: description, type: .custom)
         lists.append(newList)
         saveLists()
     }

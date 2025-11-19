@@ -26,13 +26,15 @@ enum ListType: String, Codable, CaseIterable {
 struct MediaList: Identifiable, Codable {
     let id: String
     let name: String
+    let description: String?
     let type: ListType
     let createdAt: Date
     var items: [MediaListItem]
-    
-    init(id: String = UUID().uuidString, name: String, type: ListType, createdAt: Date = Date(), items: [MediaListItem] = []) {
+
+    init(id: String = UUID().uuidString, name: String, description: String? = nil, type: ListType, createdAt: Date = Date(), items: [MediaListItem] = []) {
         self.id = id
         self.name = name
+        self.description = description
         self.type = type
         self.createdAt = createdAt
         self.items = items

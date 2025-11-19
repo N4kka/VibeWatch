@@ -958,6 +958,7 @@ struct ReplyRow: View {
 struct AddToListView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var listManager = ListManager.shared
+    @StateObject private var listsViewModel = ListsViewModel()
     @State private var showCreateList = false
     let movieId: Int?
     let tvShowId: Int?
@@ -1071,7 +1072,7 @@ struct AddToListView: View {
             }
         }
         .sheet(isPresented: $showCreateList) {
-            CreateListView()
+            CreateListView(viewModel: listsViewModel)
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
         }

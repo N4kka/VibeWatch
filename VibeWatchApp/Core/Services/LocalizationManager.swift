@@ -119,6 +119,7 @@ class LocalizationManager: ObservableObject {
             "lists.listName": "List Name",
             "lists.listNamePlaceholder": "New List",
             "lists.description": "Description (Optional)",
+            "lists.descriptionPlaceholder": "Add a description... (Optional)",
             "lists.listDescriptionPlaceholder": "Add a description...",
             "lists.noItems": "No items yet",
             "list.all": "All",

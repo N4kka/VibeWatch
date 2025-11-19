@@ -3,6 +3,7 @@ import SwiftUI
 struct ListsView: View {
     @StateObject private var viewModel = ListsViewModel()
     @StateObject private var listManager = ListManager.shared
+    @ObservedObject var localizationManager = LocalizationManager.shared
     @State private var selectedFilter: MediaFilter = .all
     @AppStorage("selectedPlatforms") private var selectedPlatformsData: Data = Data()
     @State private var selectedListType: ListViewType = .watchlist
@@ -10,6 +11,7 @@ struct ListsView: View {
     @State private var showCreateList = false
     @State private var showSortMenu = false
     @State private var showPlatformSelector = false
+    @State private var refreshID = UUID()
     
     private var selectedPlatforms: Set<StreamingPlatform> {
         get {
@@ -181,8 +183,13 @@ struct ListsView: View {
         .task {
             await viewModel.loadLists()
         }
+        .onChange(of: localizationManager.localeDidChange) { _ in
+            // Trigger view refresh to update all localized strings
+            refreshID = UUID()
+        }
+        .id(refreshID)
         .sheet(isPresented: $showCreateList) {
-            CreateListView()
+            CreateListView(viewModel: viewModel)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
                 .presentationBackground(Color.theme.backgroundDark.opacity(0.98))
@@ -449,67 +456,18 @@ struct ListsView: View {
     
     private var listsGrid: some View {
         ScrollView {
-            LazyVStack(spacing: 24) {
+            LazyVGrid(columns: [
+                GridItem(.flexible(), spacing: 16),
+                GridItem(.flexible(), spacing: 16)
+            ], spacing: 20) {
                 ForEach(filteredAndSortedLists) { list in
-                    VStack(alignment: .leading, spacing: 12) {
-                        // List header
-                        Text(list.name)
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(.theme.textPrimary)
-                            .padding(.horizontal, 20)
-                        
-                        // Horizontal scroll of items
-                        if !list.items.isEmpty {
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 12) {
-                                    ForEach(list.items) { item in
-                                        NavigationLink(
-                                            destination: item.mediaType == .movie
-                                                ? AnyView(MovieDetailView(movieId: item.mediaId))
-                                                : AnyView(TVShowDetailView(tvShowId: item.mediaId))
-                                        ) {
-                                            VStack(alignment: .leading, spacing: 8) {
-                                                if let posterPath = item.posterPath,
-                                                   let url = URL(string: "https://image.tmdb.org/t/p/w342\(posterPath)") {
-                                                    AsyncImage(url: url) { image in
-                                                        image
-                                                            .resizable()
-                                                            .aspectRatio(2/3, contentMode: .fill)
-                                                    } placeholder: {
-                                                        Rectangle()
-                                                            .fill(Color.theme.backgroundDark.opacity(0.5))
-                                                            .aspectRatio(2/3, contentMode: .fit)
-                                                    }
-                                                    .frame(width: 140, height: 210)
-                                                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                                                } else {
-                                                    Rectangle()
-                                                        .fill(Color.theme.backgroundDark.opacity(0.5))
-                                                        .frame(width: 140, height: 210)
-                                                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                                                }
-                                                
-                                                Text(item.title)
-                                                    .font(.system(size: 14, weight: .semibold))
-                                                    .foregroundColor(.theme.textPrimary)
-                                                    .lineLimit(2)
-                                                    .frame(width: 140, alignment: .leading)
-                                            }
-                                        }
-                                    }
-                                }
-                                .padding(.horizontal, 20)
-                            }
-                        } else {
-                            Text("lists.noItems".localized)
-                                .font(.system(size: 14))
-                                .foregroundColor(.theme.textSecondary)
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 40)
-                        }
+                    NavigationLink(destination: CustomListDetailView(list: list)) {
+                        ListCard(list: list)
                     }
+                    .buttonStyle(PlainButtonStyle())
                 }
             }
+            .padding(.horizontal, 20)
             .padding(.bottom, 100)
         }
     }
@@ -856,10 +814,212 @@ struct MediaItemRow: View {
     }
 }
 
+struct CustomListDetailView: View {
+    let list: MediaList
+    @StateObject private var listManager = ListManager.shared
+    @State private var selectedFilter: MediaFilter = .all
+    @State private var selectedSort: SortOption = .dateAdded
+    @State private var showSortMenu = false
+    @Environment(\.dismiss) private var dismiss
+
+    private var filteredAndSortedItems: [MediaListItem] {
+        var items = list.items
+
+        // Apply filter
+        switch selectedFilter {
+        case .all:
+            break
+        case .movies:
+            items = items.filter { $0.mediaType == .movie }
+        case .tvSeries:
+            items = items.filter { $0.mediaType == .tv }
+        }
+
+        // Apply sorting
+        switch selectedSort {
+        case .dateAdded:
+            items.sort { $0.addedAt > $1.addedAt }
+        case .title:
+            items.sort { $0.title < $1.title }
+        case .releaseDate, .rating:
+            break
+        }
+
+        return items
+    }
+
+    var body: some View {
+        ZStack(alignment: .top) {
+            Color.theme.background.ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                // Filter and sort bar
+                HStack(spacing: 8) {
+                    MediaFilterSwitcher(selectedFilter: $selectedFilter)
+
+                    Spacer()
+
+                    // Sort button
+                    Button {
+                        withAnimation {
+                            showSortMenu = true
+                        }
+                    } label: {
+                        ZStack {
+                            Circle()
+                                .fill(Color.white.opacity(0.1))
+                                .frame(width: 40, height: 40)
+
+                            Image(systemName: "arrow.up.arrow.down")
+                                .font(.system(size: 14))
+                                .foregroundColor(.theme.textPrimary)
+                        }
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+
+                // Items list
+                if filteredAndSortedItems.isEmpty {
+                    VStack(spacing: 16) {
+                        Image(systemName: "list.bullet")
+                            .font(.system(size: 60))
+                            .foregroundColor(.theme.textSecondary)
+
+                        Text("lists.noItems".localized)
+                            .font(.system(size: 16))
+                            .foregroundColor(.theme.textSecondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 20) {
+                            ForEach(filteredAndSortedItems) { item in
+                                MediaItemRow(
+                                    item: item,
+                                    isInSeenList: false,
+                                    onMarkAsSeen: {
+                                        // Remove from current list
+                                        listManager.removeFromList(listId: list.id, itemId: item.id)
+
+                                        // Add to seen list
+                                        let movie = Movie(
+                                            id: item.mediaId,
+                                            title: item.title,
+                                            overview: "",
+                                            posterPath: item.posterPath,
+                                            backdropPath: nil,
+                                            releaseDate: nil,
+                                            voteAverage: 0.0,
+                                            voteCount: 0,
+                                            genreIds: nil,
+                                            genres: nil,
+                                            adult: false,
+                                            originalLanguage: "",
+                                            popularity: 0.0,
+                                            runtime: nil,
+                                            status: nil,
+                                            tagline: nil,
+                                            productionCountries: nil
+                                        )
+                                        listManager.addToList(listId: listManager.seenList.id, movie: movie, mediaType: item.mediaType)
+                                    },
+                                    onDelete: {
+                                        listManager.removeFromList(listId: list.id, itemId: item.id)
+                                    }
+                                )
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 100)
+                    }
+                }
+            }
+        }
+        .navigationTitle(list.name)
+        .navigationBarTitleDisplayMode(.large)
+        .overlay {
+            if showSortMenu {
+                ZStack {
+                    Color.black.opacity(0.4)
+                        .ignoresSafeArea()
+                        .onTapGesture {
+                            withAnimation {
+                                showSortMenu = false
+                            }
+                        }
+
+                    VStack(spacing: 0) {
+                        Spacer()
+
+                        VStack(spacing: 0) {
+                            // Header
+                            HStack {
+                                Text("sort.sortBy".localized)
+                                    .font(.system(size: 20, weight: .bold))
+                                    .foregroundColor(.theme.textPrimary)
+
+                                Spacer()
+
+                                Button {
+                                    withAnimation {
+                                        showSortMenu = false
+                                    }
+                                } label: {
+                                    Image(systemName: "xmark")
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundColor(.theme.textSecondary)
+                                }
+                            }
+                            .padding(20)
+
+                            Divider()
+                                .background(Color.white.opacity(0.1))
+
+                            // Sort options
+                            VStack(spacing: 0) {
+                                ForEach(SortOption.allCases, id: \.self) { option in
+                                    Button {
+                                        withAnimation {
+                                            selectedSort = option
+                                            showSortMenu = false
+                                        }
+                                    } label: {
+                                        HStack {
+                                            Text(option.displayName)
+                                                .font(.system(size: 16, weight: .medium))
+                                                .foregroundColor(selectedSort == option ? .theme.accentOrange : .theme.textPrimary)
+                                            Spacer()
+                                            if selectedSort == option {
+                                                Image(systemName: "checkmark")
+                                                    .foregroundColor(.theme.accentOrange)
+                                            }
+                                        }
+                                        .padding(.horizontal, 20)
+                                        .padding(.vertical, 16)
+                                    }
+
+                                    if option != SortOption.allCases.last {
+                                        Divider()
+                                            .background(Color.white.opacity(0.1))
+                                    }
+                                }
+                            }
+                        }
+                        .background(Color.theme.backgroundDark)
+                        .clipShape(RoundedRectangle(cornerRadius: 20))
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 40)
+                    }
+                }
+            }
+        }
+    }
+}
+
 struct ListCard: View {
     let list: MediaList
-    @State private var navigateToDetail = false
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             // Show thumbnail based on number of items
@@ -881,7 +1041,7 @@ struct ListCard: View {
                     AsyncImage(url: url) { image in
                         image
                             .resizable()
-                            .aspectRatio(2/3, contentMode: .fill)
+                            .aspectRatio(2/3, contentMode: .fit)
                     } placeholder: {
                         Rectangle()
                             .fill(Color.theme.backgroundDark.opacity(0.5))
@@ -900,7 +1060,7 @@ struct ListCard: View {
                 GeometryReader { geometry in
                     let itemWidth = (geometry.size.width - 2) / 2  // 2px gap in middle
                     let itemHeight = itemWidth * 1.5  // 2:3 aspect ratio
-                    
+
                     LazyVGrid(columns: [
                         GridItem(.flexible(), spacing: 2),
                         GridItem(.flexible(), spacing: 2)
@@ -911,9 +1071,8 @@ struct ListCard: View {
                                 AsyncImage(url: url) { image in
                                     image
                                         .resizable()
-                                        .aspectRatio(contentMode: .fill)
+                                        .aspectRatio(2/3, contentMode: .fit)
                                         .frame(width: itemWidth, height: itemHeight)
-                                        .clipped()
                                 } placeholder: {
                                     Rectangle()
                                         .fill(Color.theme.backgroundDark.opacity(0.5))
@@ -930,47 +1089,22 @@ struct ListCard: View {
                 .aspectRatio(2/3, contentMode: .fit)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
-            
+
             Text(list.name)
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundColor(.theme.textPrimary)
                 .lineLimit(2)
-            
+
             Text("\(list.items.count) \("common.items".localized)")
                 .font(.system(size: 12))
                 .foregroundColor(.theme.textSecondary)
-        }
-        .onTapGesture {
-            if list.items.first != nil {
-                navigateToDetail = true
-            }
-        }
-        .background(
-            NavigationLink(
-                destination: destinationView,
-                isActive: $navigateToDetail
-            ) {
-                EmptyView()
-            }
-            .hidden()
-        )
-    }
-    
-    @ViewBuilder
-    private var destinationView: some View {
-        if let firstItem = list.items.first {
-            if firstItem.mediaType == .movie {
-                MovieDetailView(movieId: firstItem.mediaId)
-            } else {
-                TVShowDetailView(tvShowId: firstItem.mediaId)
-            }
         }
     }
 }
 
 struct CreateListView: View {
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var listManager = ListManager.shared
+    @ObservedObject var viewModel: ListsViewModel
     @State private var listName = ""
     @State private var listDescription = ""
     
@@ -1034,8 +1168,9 @@ struct CreateListView: View {
                 
                 // Create Button
                 Button {
-                    // TODO: Create list with listManager
-                    // listManager.createList(name: listName, description: listDescription)
+                    Task {
+                        await viewModel.createList(title: listName, description: listDescription.isEmpty ? nil : listDescription)
+                    }
                     dismiss()
                 } label: {
                     Text("lists.createList".localized)
