@@ -56,7 +56,8 @@ class DiscoveryViewModel: ObservableObject {
                     runtime: nil,
                     status: tvShow.status,
                     tagline: tvShow.tagline,
-                    productionCountries: tvShow.productionCountries
+                    productionCountries: tvShow.productionCountries,
+                    imdbId: tvShow.imdbId
                 )
             }
             
@@ -102,7 +103,8 @@ class DiscoveryViewModel: ObservableObject {
                     runtime: nil,
                     status: tvShow.status,
                     tagline: tvShow.tagline,
-                    productionCountries: tvShow.productionCountries
+                    productionCountries: tvShow.productionCountries,
+                    imdbId: tvShow.imdbId
                 )
             }
             

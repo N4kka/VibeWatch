@@ -73,7 +73,7 @@ struct MovieDetailView: View {
                         )
                         
                         if let providers = viewModel.watchProviders {
-                            WatchNowSection(providers: providers)
+                            WatchNowSection(providers: providers, mediaType: .movie, title: movie.title, year: movie.year, imdbId: viewModel.imdbId)
                         }
                         
                         if let trailer = viewModel.trailer {
@@ -432,6 +432,10 @@ struct ActionButton: View {
 
 struct WatchNowSection: View {
     let providers: CountryProviders
+    let mediaType: MediaType
+    let title: String
+    let year: String?
+    let imdbId: String?
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -440,15 +444,15 @@ struct WatchNowSection: View {
                 .foregroundColor(.theme.textPrimary)
             
             if let flatrate = providers.flatrate, !flatrate.isEmpty {
-                ProviderGroup(title: "platforms.streaming".localized, providers: flatrate)
+                ProviderGroup(title: "platforms.streaming".localized, providers: flatrate, justWatchLink: providers.link, mediaTitle: title)
             }
             
             if let rent = providers.rent, !rent.isEmpty {
-                ProviderGroup(title: "platforms.rent".localized, providers: rent)
+                ProviderGroup(title: "platforms.rent".localized, providers: rent, justWatchLink: providers.link, mediaTitle: title)
             }
             
             if let buy = providers.buy, !buy.isEmpty {
-                ProviderGroup(title: "platforms.buy".localized, providers: buy)
+                ProviderGroup(title: "platforms.buy".localized, providers: buy, justWatchLink: providers.link, mediaTitle: title)
             }
             
             Button {
@@ -472,6 +476,8 @@ struct WatchNowSection: View {
 struct ProviderGroup: View {
     let title: String
     let providers: [Provider]
+    let justWatchLink: String?
+    let mediaTitle: String
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -483,10 +489,14 @@ struct ProviderGroup: View {
                 GridItem(.adaptive(minimum: 60), spacing: 12)
             ], spacing: 12) {
                 ForEach(providers) { provider in
-                    AsyncImageView(url: provider.logoURL, contentMode: .fit)
-                        .frame(width: 60, height: 60)
-                        .background(Color.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                    Button {
+                        PlatformDeepLinkHelper.openPlatform(provider: provider, justWatchLink: justWatchLink, title: mediaTitle)
+                    } label: {
+                        AsyncImageView(url: provider.logoURL, contentMode: .fit)
+                            .frame(width: 60, height: 60)
+                            .background(Color.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
                 }
             }
         }

@@ -7,6 +7,7 @@ class MovieDetailViewModel: ObservableObject {
     @Published var videos: [Video] = []
     @Published var watchProviders: CountryProviders?
     @Published var similarMovies: [Movie] = []
+    @Published var imdbId: String?
     @Published var isLoading = false
     @Published var errorMessage: String?
     
@@ -26,21 +27,26 @@ class MovieDetailViewModel: ObservableObject {
         async let videosTask = tmdbService.getMovieVideos(id: movieId)
         async let providersTask = tmdbService.getMovieWatchProviders(id: movieId)
         async let similarTask = tmdbService.getSimilarMovies(id: movieId)
+        async let externalIdsTask = tmdbService.getMovieExternalIds(id: movieId)
         
         do {
-            let (movieData, creditsData, videosData, providersData, similarData) = try await (
-                movieTask, creditsTask, videosTask, providersTask, similarTask
+            let (movieData, creditsData, videosData, providersData, similarData, externalIdsData) = try await (
+                movieTask, creditsTask, videosTask, providersTask, similarTask, externalIdsTask
             )
             
             movie = movieData
             credits = creditsData
             videos = videosData.results.filter { $0.type == "Trailer" && $0.site == "YouTube" }
+            imdbId = externalIdsData.imdbId
             
             // Use current country for watch providers
             let country = LocalizationManager.shared.currentCountry.id
             watchProviders = providersData.results?[country]
             
             similarMovies = Array(similarData.results.prefix(10))
+            
+            print("🎬 [MovieDetail] IMDB ID: \(imdbId ?? "nil")")
+            print("🔗 [MovieDetail] JustWatch Link: \(watchProviders?.link ?? "nil")")
         } catch {
             errorMessage = "Failed to load movie details: \(error.localizedDescription)"
         }
@@ -68,6 +74,7 @@ class TVShowDetailViewModel: ObservableObject {
     @Published var videos: [Video] = []
     @Published var watchProviders: CountryProviders?
     @Published var similarShows: [TVShow] = []
+    @Published var imdbId: String?
     @Published var isLoading = false
     @Published var errorMessage: String?
     
@@ -87,21 +94,26 @@ class TVShowDetailViewModel: ObservableObject {
         async let videosTask = tmdbService.getTVShowVideos(id: tvShowId)
         async let providersTask = tmdbService.getTVShowWatchProviders(id: tvShowId)
         async let similarTask = tmdbService.getSimilarTVShows(id: tvShowId)
+        async let externalIdsTask = tmdbService.getTVShowExternalIds(id: tvShowId)
         
         do {
-            let (tvShowData, creditsData, videosData, providersData, similarData) = try await (
-                tvShowTask, creditsTask, videosTask, providersTask, similarTask
+            let (tvShowData, creditsData, videosData, providersData, similarData, externalIdsData) = try await (
+                tvShowTask, creditsTask, videosTask, providersTask, similarTask, externalIdsTask
             )
             
             tvShow = tvShowData
             credits = creditsData
             videos = videosData.results.filter { $0.type == "Trailer" && $0.site == "YouTube" }
+            imdbId = externalIdsData.imdbId
             
             // Use current country for watch providers
             let country = LocalizationManager.shared.currentCountry.id
             watchProviders = providersData.results?[country]
             
             similarShows = Array(similarData.results.prefix(10))
+            
+            print("📺 [TVShowDetail] IMDB ID: \(imdbId ?? "nil")")
+            print("🔗 [TVShowDetail] JustWatch Link: \(watchProviders?.link ?? "nil")")
         } catch {
             errorMessage = "Failed to load TV show details: \(error.localizedDescription)"
         }

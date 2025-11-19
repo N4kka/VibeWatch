@@ -1115,7 +1115,8 @@ struct AddToListView: View {
                             runtime: nil,
                             status: nil,
                             tagline: nil,
-                            productionCountries: nil
+                            productionCountries: nil,
+                            imdbId: nil
                         )
                         listManager.addToList(listId: list.id, movie: movie, mediaType: .tv)
                     }

@@ -386,7 +386,8 @@ struct ListsView: View {
                                 runtime: nil,
                                 status: nil,
                                 tagline: nil,
-                                productionCountries: nil
+                                productionCountries: nil,
+                                imdbId: nil
                             )
                             listManager.addToList(listId: listManager.seenList.id, movie: movie, mediaType: item.mediaType)
                         },
@@ -920,7 +921,8 @@ struct CustomListDetailView: View {
                                             runtime: nil,
                                             status: nil,
                                             tagline: nil,
-                                            productionCountries: nil
+                                            productionCountries: nil,
+                                            imdbId: nil
                                         )
                                         listManager.addToList(listId: listManager.seenList.id, movie: movie, mediaType: item.mediaType)
                                     },

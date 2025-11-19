@@ -228,6 +228,16 @@ class TMDBService {
             URLQueryItem(name: "page", value: "\(page)")
         ])
     }
+    
+    // MARK: - External IDs
+    
+    func getMovieExternalIds(id: Int) async throws -> ExternalIds {
+        try await request("/movie/\(id)/external_ids")
+    }
+    
+    func getTVShowExternalIds(id: Int) async throws -> ExternalIds {
+        try await request("/tv/\(id)/external_ids")
+    }
 }
 
 struct TMDBVideosResponse: Codable {

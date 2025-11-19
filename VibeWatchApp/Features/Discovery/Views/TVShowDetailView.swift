@@ -33,7 +33,8 @@ struct TVShowDetailView: View {
             runtime: nil,
             status: nil,
             tagline: nil,
-            productionCountries: nil
+            productionCountries: nil,
+            imdbId: tvShow.imdbId
         )
     }
     
@@ -135,8 +136,8 @@ struct TVShowDetailView: View {
     
     @ViewBuilder
     private var providersView: some View {
-        if let providers = viewModel.watchProviders {
-            WatchNowSection(providers: providers)
+        if let providers = viewModel.watchProviders, let tvShow = viewModel.tvShow {
+            WatchNowSection(providers: providers, mediaType: .tv, title: tvShow.name, year: tvShow.year, imdbId: viewModel.imdbId)
         }
     }
     

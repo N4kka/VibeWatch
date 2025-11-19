@@ -18,6 +18,7 @@ struct Movie: Codable, Identifiable, Hashable {
     let status: String?
     let tagline: String?
     let productionCountries: [ProductionCountry]?
+    let imdbId: String?
     
     enum CodingKeys: String, CodingKey {
         case id, title, overview, adult, popularity, runtime, status, tagline, genres
@@ -29,6 +30,7 @@ struct Movie: Codable, Identifiable, Hashable {
         case genreIds = "genre_ids"
         case originalLanguage = "original_language"
         case productionCountries = "production_countries"
+        case imdbId = "imdb_id"
     }
     
     var posterURL: URL? {
@@ -182,6 +184,7 @@ struct TVShow: Codable, Identifiable, Hashable {
     let status: String?
     let tagline: String?
     let productionCountries: [ProductionCountry]?
+    let imdbId: String?
     
     enum CodingKeys: String, CodingKey {
         case id, name, overview, popularity, status, tagline, genres
@@ -193,6 +196,7 @@ struct TVShow: Codable, Identifiable, Hashable {
         case genreIds = "genre_ids"
         case originalLanguage = "original_language"
         case productionCountries = "production_countries"
+        case imdbId = "imdb_id"
     }
     
     var posterURL: URL? {
@@ -225,5 +229,19 @@ struct TMDBResponse<T: Codable>: Codable {
         case page, results
         case totalPages = "total_pages"
         case totalResults = "total_results"
+    }
+}
+
+struct ExternalIds: Codable {
+    let imdbId: String?
+    let facebookId: String?
+    let instagramId: String?
+    let twitterId: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case imdbId = "imdb_id"
+        case facebookId = "facebook_id"
+        case instagramId = "instagram_id"
+        case twitterId = "twitter_id"
     }
 }
