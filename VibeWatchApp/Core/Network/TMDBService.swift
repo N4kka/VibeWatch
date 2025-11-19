@@ -8,28 +8,36 @@ class TMDBService {
     private let session: URLSession
     private let cache: URLCache
     
-    private let requestQueue = DispatchQueue(label: "com.vibewatch.tmdb.queue")
-    private var lastRequestTime: Date?
-    private let rateLimitInterval: TimeInterval = 0.25 // 4 requests per second (40 per 10s)
+    // Rate limiting actor to serialize requests
+    private actor RequestSerializer {
+        private var lastRequestTime: Date = .distantPast
+        private let interval: TimeInterval = 0.25 // 4 requests per second
+        
+        func proceed() async {
+            let now = Date()
+            // Reserve the next available slot
+            let targetTime = max(now, lastRequestTime.addingTimeInterval(interval))
+            lastRequestTime = targetTime
+            
+            let delay = targetTime.timeIntervalSince(now)
+            if delay > 0 {
+                try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+            }
+        }
+    }
+    
+    private let serializer = RequestSerializer()
     
     private init() {
         let config = URLSessionConfiguration.default
         cache = URLCache(memoryCapacity: 50_000_000, diskCapacity: 100_000_000)
         config.urlCache = cache
-        config.requestCachePolicy = .returnCacheDataElseLoad
+        config.requestCachePolicy = .useProtocolCachePolicy
         session = URLSession(configuration: config)
     }
     
     private func rateLimit() async {
-        requestQueue.sync {
-            if let lastTime = lastRequestTime {
-                let elapsed = Date().timeIntervalSince(lastTime)
-                if elapsed < rateLimitInterval {
-                    Thread.sleep(forTimeInterval: rateLimitInterval - elapsed)
-                }
-            }
-            lastRequestTime = Date()
-        }
+        await serializer.proceed()
     }
     
     private func request<T: Codable>(_ endpoint: String, queryItems: [URLQueryItem] = []) async throws -> T {
@@ -66,6 +74,11 @@ class TMDBService {
         }
         
         guard (200...299).contains(httpResponse.statusCode) else {
+            if httpResponse.statusCode == 429 {
+                print("⚠️ TMDB Rate Limit Exceeded! Backing off...")
+                try? await Task.sleep(nanoseconds: 1_000_000_000) // Wait 1s
+            }
+            print("❌ TMDB Error: \(httpResponse.statusCode) for \(endpoint)")
             throw TMDBError.httpError(httpResponse.statusCode)
         }
         
@@ -74,6 +87,7 @@ class TMDBService {
             decoder.dateDecodingStrategy = .iso8601
             return try decoder.decode(T.self, from: data)
         } catch {
+            print("❌ Decoding Error for \(endpoint): \(error)")
             throw TMDBError.decodingError(error)
         }
     }

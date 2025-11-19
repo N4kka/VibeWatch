@@ -37,14 +37,17 @@ struct VibeWatchApp: App {
 
 @MainActor
 class AppState: ObservableObject {
+    static let shared = AppState() // Singleton for global access if needed
+    
     @Published var isAuthenticated = false
     @Published var currentUser: User?
     @Published var showSuccessToast = false
     @Published var showErrorToast = false
     @Published var toastMessage = ""
+    @Published var isPreloading = true // Track splash state
     
     private let authService = AuthService.shared
-    private let cacheManager = ContentCacheManager.shared
+    private let dataCoordinator = DataCoordinator.shared
     
     init() {
         Task {
@@ -60,12 +63,13 @@ class AppState: ObservableObject {
     }
     
     private func preloadContent() async {
-        // FORCE CLEAR CACHE - testing new YouTube-only algorithm
-        print("🔄 FORCE CLEAR: Clearing clips cache to test YouTube-only algorithm...")
-        cacheManager.clearClipsCache()
+        isPreloading = true
         
-        // Pre-load first 2 clips for instant display when user opens Clips tab
-        print("🚀 Pre-loading clips on app launch...")
-        await cacheManager.preloadClips()
+        // Optimized parallel preload: Discovery content + 5 initial clips
+        // Then background task for 20 more clips
+        print("🚀 Starting optimized preload (parallel tasks)...")
+        await dataCoordinator.initializeApp()
+        
+        isPreloading = false
     }
 }

@@ -70,58 +70,55 @@ class ContentCacheManager: ObservableObject {
         userDefaults.set(Date(), forKey: lastUpdateDateKey)
     }
     
-    // MARK: - Clips Pre-loading
+    // MARK: - Shared Preload Logic (The "One Source of Truth")
     
-    func preloadClips() async {
-        guard cachedClips.isEmpty else {
-            print("⏭️ Skipping pre-load: \(cachedClips.count) clips already cached")
-            return
-        }
-        
-        print("🚀 Starting clips pre-load from Discovery trending...")
-        isPreloadingClips = true
+    /// Orchestrates the main app launch preload:
+    /// 1. Fetches Trending Movies (used by BOTH Discovery & Clips)
+    /// 2. Picks top 5 movies and preloads clips in parallel
+    /// 3. Caches everything
+    func performSmartPreload() async {
+        print("🚀 START: Unified Smart Preload")
+        let startTime = Date()
         
         do {
-            // SMART: Use Discovery's already-fetched trending data!
-            let tmdbService = TMDBService.shared
-            let algorithmEngine = await ClipsAlgorithmEngine.shared
+            // Step 1: Fetch Trending Movies (Source of Truth)
+            let moviesResponse = try await TMDBService.shared.getTrendingMovies(timeWindow: .week, page: 1)
+            let movies = moviesResponse.results
             
-            // Get trending movies (already cached in Discovery)
-            let moviesResponse = try await tmdbService.getTrendingMovies(timeWindow: .week, page: 1)
-            
-            var clips: [Clip] = []
-            var tried = 0
-            
-            // Try to get 5 clips from top trending movies
-            for movie in moviesResponse.results.prefix(10) {
-                tried += 1
-                
-                if let enhancedClips = try? await algorithmEngine.fetchBestClipForMovie(movie),
-                   let clip = enhancedClips.first {
-                    clips.append(clip.clip)
-                    print("✅ Cached clip \(clips.count) from: \(movie.title)")
-                    
-                    if clips.count >= 5 {
-                        print("🎯 Target reached: 5 clips from Discovery!")
-                        break
-                    }
-                }
+            // Step 2: Cache for Discovery View (so it doesn't re-fetch)
+            // We store this in memory/disk so DiscoveryViewModel can pick it up instantly
+            if let moviesData = try? JSONEncoder().encode(movies) {
+                userDefaults.set(moviesData, forKey: cachedMoviesKey)
+                userDefaults.set(Date(), forKey: lastUpdateDateKey) // Mark as fresh
             }
+            print("✅ Step 1: Cached \(movies.count) trending movies for Discovery")
             
-            cachedClips = clips
+            // Step 3: Preload 5 Clips from these SAME movies (Parallel)
+            // This ensures the first 5 clips match the "Trending" vibe and load instantly
+            let preloadedClips = await SimplifiedClipsAlgorithm.shared.preloadClips(from: movies, count: 5)
             
-            // Save to UserDefaults
-            if let clipsData = try? JSONEncoder().encode(clips) {
+            // Store in memory for immediate access
+            self.cachedClips = preloadedClips
+            
+            // Persist backup
+            if let clipsData = try? JSONEncoder().encode(preloadedClips) {
                 userDefaults.set(clipsData, forKey: cachedClipsKey)
-                print("💾 Saved \(clips.count) clips to cache")
             }
             
-            print("✅ Pre-load complete: \(clips.count) clips ready (tried \(tried) movies)")
+            let duration = Date().timeIntervalSince(startTime)
+            print("✅ PRELOAD COMPLETE in \(String(format: "%.3f", duration))s")
+            
         } catch {
-            print("❌ Error pre-loading clips: \(error)")
+            print("❌ Preload failed: \(error.localizedDescription)")
         }
         
         isPreloadingClips = false
+    }
+
+    // MARK: - Clips Pre-loading (Legacy/Fallback)
+    
+    func preloadClips() async {
+        await performSmartPreload()
     }
     
     private func loadCachedClips() {

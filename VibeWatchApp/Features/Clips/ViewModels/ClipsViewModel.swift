@@ -1,55 +1,71 @@
 import Foundation
 import SwiftUI
 
-/// Refactored ClipsViewModel - Instant loading, no wait time, proper deduplication
+/// Optimized ClipsViewModel - Uses DataCoordinator for efficient loading
 @MainActor
 class ClipsViewModel: ObservableObject {
     @Published var clips: [Clip] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
     
-    private let algorithm = SimplifiedClipsAlgorithm.shared
+    private let dataCoordinator = DataCoordinator.shared
     private let engagementTracker = UserEngagementTracker.shared
     
     private var isLoadingMore = false
     
-    // MARK: - Instant Loading (No Wait Time)
+    // MARK: - Instant Loading (Uses Preloaded Clips)
     
-    /// Load clips INSTANTLY - no progressive loading, no wait time
+    /// Load clips INSTANTLY - uses preloaded clips from DataCoordinator
     func loadClips() async {
         guard !isLoading else { return }
         
-        print("⚡ INSTANT LOAD - User opened Clips view")
-        isLoading = true
-        errorMessage = nil
+        print("🎬 [ClipsViewModel] Loading clips...")
         
-        // Reset deduplication for fresh session
-        algorithm.resetDeduplication()
+        // Check if any clips are available (initial OR additional)
+        let hasAnyClips = !dataCoordinator.initialClips.isEmpty || !dataCoordinator.additionalClips.isEmpty
         
-        do {
-            // Fetch 30 clips instantly
-            let fetchedClips = try await algorithm.generateFeed(count: 30)
+        if hasAnyClips {
+            // Use available clips immediately
+            var allClips = dataCoordinator.initialClips + dataCoordinator.additionalClips
             
-            // Apply like status from local storage
-            var processedClips = fetchedClips.map { clip in
+            // Apply like status
+            allClips = allClips.map { clip in
                 var updatedClip = clip
                 updatedClip.isLiked = ClipsService.shared.isClipLiked(clip.id)
                 return updatedClip
             }
             
-            // Filter by 3-minute max duration
-            processedClips = processedClips.filter { $0.duration <= 180 }
+            self.clips = allClips
+            print("✅ [ClipsViewModel] Ready: \(clips.count) clips (initial: \(dataCoordinator.initialClips.count), additional: \(dataCoordinator.additionalClips.count))")
+            return
+        }
+        
+        // Fallback: Wait for clips to load (initial or additional)
+        print("⚠️ [ClipsViewModel] No clips ready, waiting for background fetch...")
+        isLoading = true
+        
+        // Wait up to 10 seconds for clips (background task is fetching)
+        var attempts = 0
+        while dataCoordinator.initialClips.isEmpty && dataCoordinator.additionalClips.isEmpty && attempts < 100 {
+            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1s
+            attempts += 1
+        }
+        
+        // Get whatever clips are available
+        let allClips = dataCoordinator.initialClips + dataCoordinator.additionalClips
+        
+        if !allClips.isEmpty {
+            // Apply like status
+            self.clips = allClips.map { clip in
+                var updatedClip = clip
+                updatedClip.isLiked = ClipsService.shared.isClipLiked(clip.id)
+                return updatedClip
+            }
             
-            clips = processedClips
-            
-            print("✅ INSTANT LOAD complete: \(clips.count) clips ready")
-            
-            // Track clip impressions for user taste learning
-            trackClipImpressions(processedClips)
-            
-        } catch {
-            print("❌ Error loading clips: \(error)")
-            errorMessage = error.localizedDescription
+            print("✅ [ClipsViewModel] Loaded after wait: \(clips.count) clips")
+        } else {
+            print("❌ [ClipsViewModel] Failed to load clips after \(attempts * 100)ms")
+            errorMessage = "Failed to load clips. Please try again."
         }
         
         isLoading = false
@@ -57,44 +73,34 @@ class ClipsViewModel: ObservableObject {
     
     /// Refresh feed - reset and reload
     func refreshFeed() async {
-        algorithm.resetDeduplication()
+        print("🔄 [ClipsViewModel] Refreshing feed...")
         clips = []
         await loadClips()
     }
     
     // MARK: - Infinite Scroll
     
-    /// Load more clips when user scrolls to bottom
+    /// Load more clips when user scrolls to bottom (pagination)
     func loadMoreClips() async {
         guard !isLoadingMore && !isLoading else { return }
         
+        print("🎬 [ClipsViewModel] Loading more clips (pagination)...")
         isLoadingMore = true
         
-        do {
-            // Fetch next batch (30 more clips, deduplicated)
-            let moreClips = try await algorithm.loadMore(count: 30)
-            
-            // Apply like status
-            var processedClips = moreClips.map { clip in
-                var updatedClip = clip
-                updatedClip.isLiked = ClipsService.shared.isClipLiked(clip.id)
-                return updatedClip
-            }
-            
-            // Filter by 3-minute max duration
-            processedClips = processedClips.filter { $0.duration <= 180 }
-            
-            // Append to existing clips
-            clips.append(contentsOf: processedClips)
-            
-            print("✅ Loaded \(processedClips.count) more clips. Total: \(clips.count)")
-            
-            // Track impressions
-            trackClipImpressions(processedClips)
-            
-        } catch {
-            print("❌ Error loading more: \(error)")
+        // Fetch next batch from DataCoordinator (handles pagination)
+        let moreClips = await dataCoordinator.fetchMoreClips(count: 20)
+        
+        // Apply like status
+        let processedClips = moreClips.map { clip in
+            var updatedClip = clip
+            updatedClip.isLiked = ClipsService.shared.isClipLiked(clip.id)
+            return updatedClip
         }
+        
+        // Append to existing clips
+        clips.append(contentsOf: processedClips)
+        
+        print("✅ [ClipsViewModel] Pagination: Added \(processedClips.count) clips. Total: \(clips.count)")
         
         isLoadingMore = false
     }
@@ -162,9 +168,8 @@ class ClipsViewModel: ObservableObject {
     
     // MARK: - Utility
     
-    /// Get algorithm stats for debugging
+    /// Get stats for debugging
     func getStats() -> String {
-        let (cached, shown) = algorithm.getStats()
-        return "Cached: \(cached) | Shown: \(shown) | Current: \(clips.count)"
+        dataCoordinator.getStats()
     }
 }

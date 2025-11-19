@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct MainTabView: View {
+    @EnvironmentObject var appState: AppState // Injected from App
     @State private var selectedTab = 0
     @State private var selectedMovie: Movie?
     @State private var selectedMediaType: MediaType = .movie
@@ -11,12 +12,19 @@ struct MainTabView: View {
             if isLoading {
                 SplashScreen()
                     .transition(.opacity)
-                    .onAppear {
-                        // Hide splash screen after 3 seconds
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 6.0) {
-                            withAnimation(.easeOut(duration: 0.5)) {
-                                isLoading = false
-                            }
+                    .task {
+                        // REAL WORK: Wait for the AppState to signal ready
+                        // This replaces the fake timer
+                        // We give it a minimum 1.5s just so the logo animation isn't jarring
+                        try? await Task.sleep(nanoseconds: 1_500_000_000)
+                        
+                        // Wait for actual preload if it's still running
+                        while appState.isPreloading {
+                            try? await Task.sleep(nanoseconds: 100_000_000) // Check every 0.1s
+                        }
+                        
+                        withAnimation(.easeOut(duration: 0.5)) {
+                            isLoading = false
                         }
                     }
             } else {
