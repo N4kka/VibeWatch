@@ -77,7 +77,7 @@ struct DiscoveryView: View {
         .onChange(of: localizationManager.localeDidChange) { _ in
             // Reload content when language/country changes
             Task {
-                await viewModel.loadContent()
+                await viewModel.loadContent(forceRefresh: true)
             }
         }
         .sheet(isPresented: $showProfile) {
@@ -155,7 +155,8 @@ struct MoodCarouselSection: View {
     let movies: [Movie]
     let onMovieTap: (Movie) -> Void
     @State private var currentIndex = 0
-    
+    @ObservedObject var localizationManager = LocalizationManager.shared
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("discovery.basedOnMood".localized)

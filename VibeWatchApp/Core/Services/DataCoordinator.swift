@@ -69,8 +69,6 @@ class DataCoordinator: ObservableObject {
     
     /// Fetch all discovery content - called once on app launch
     private func fetchDiscoveryContent() async {
-        guard !discoveryFetched else { return }
-        
         print("📺 [DataCoordinator] Fetching discovery content...")
         
         do {
@@ -95,6 +93,13 @@ class DataCoordinator: ObservableObject {
         } catch {
             print("❌ [DataCoordinator] Failed to fetch discovery: \(error)")
         }
+    }
+    
+    /// Refresh discovery content (e.g., when language changes)
+    func refreshDiscoveryContent() async {
+        print("🔄 [DataCoordinator] Refreshing discovery content...")
+        discoveryFetched = false
+        await fetchDiscoveryContent()
     }
     
     /// Get discovery content for DiscoveryViewModel (instant, no API calls)

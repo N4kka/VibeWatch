@@ -123,7 +123,7 @@ class LocalizationManager: ObservableObject {
             "lists.noItems": "No items yet",
             "list.all": "All",
             "list.movies": "Movies",
-            "list.tvShows": "TV Series",
+            "list.tvShows": "TV",
             
             // Profile
             "profile.done": "Done",

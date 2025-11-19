@@ -15,10 +15,20 @@ class DiscoveryViewModel: ObservableObject {
     
     /// Load content - uses shared data from DataCoordinator (no API calls needed!)
     func loadContent(forceRefresh: Bool = false) async {
-        print("📺 [DiscoveryViewModel] Loading content...")
+        print("📺 [DiscoveryViewModel] Loading content... forceRefresh: \(forceRefresh)")
         
         isLoading = true
         errorMessage = nil
+        
+        // If forceRefresh is true (e.g., language changed), fetch fresh content
+        if forceRefresh {
+            print("🔄 [DiscoveryViewModel] Force refresh requested, fetching fresh content...")
+            await fetchFreshContent()
+            // Also refresh the DataCoordinator cache so other views get updated data
+            await dataCoordinator.refreshDiscoveryContent()
+            isLoading = false
+            return
+        }
         
         // Get shared data from DataCoordinator (already fetched on app launch)
         if let sharedContent = await dataCoordinator.getDiscoveryContent() {
