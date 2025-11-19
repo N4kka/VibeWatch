@@ -61,7 +61,7 @@ class ClipsService {
     
     // MARK: - YouTube API
     
-    private func searchYouTubeClips(query: String) async throws -> [YouTubeVideo] {
+    private func searchYouTubeClips(query: String) async throws -> [YouTubeSearchItem] {
         var components = URLComponents(string: "https://www.googleapis.com/youtube/v3/search")!
         components.queryItems = [
             URLQueryItem(name: "part", value: "snippet"),
@@ -196,29 +196,4 @@ struct MediaItem {
     }
 }
 
-struct YouTubeSearchResponse: Codable {
-    let items: [YouTubeVideo]
-}
-
-struct YouTubeVideo: Codable {
-    let id: VideoId
-    let snippet: Snippet
-    
-    struct VideoId: Codable {
-        let videoId: String
-    }
-    
-    struct Snippet: Codable {
-        let title: String
-        let description: String
-        let thumbnails: Thumbnails
-        
-        struct Thumbnails: Codable {
-            let high: Thumbnail
-            
-            struct Thumbnail: Codable {
-                let url: String
-            }
-        }
-    }
-}
+// YouTube models are now in Core/Models/YouTubeModels.swift

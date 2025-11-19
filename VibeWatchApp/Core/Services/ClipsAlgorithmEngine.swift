@@ -647,8 +647,8 @@ class ClipsAlgorithmEngine {
     private func calculateQualityScore(clip: Video, movie: Movie) -> Double {
         var score: Double = 0
         
-        // Prefer official clips
-        if clip.official {
+        // Prefer official clips (safely unwrap optional)
+        if clip.official == true {
             score += 2
         }
         
@@ -667,7 +667,8 @@ class ClipsAlgorithmEngine {
     private func calculateQualityScore(clip: Video, tvShow: TVShow) -> Double {
         var score: Double = 0
         
-        if clip.official {
+        // Prefer official clips (safely unwrap optional)
+        if clip.official == true {
             score += 2
         }
         

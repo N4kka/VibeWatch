@@ -25,159 +25,170 @@ class SimplifiedClipsAlgorithm: ObservableObject {
     
     private init() {}
     
-    // MARK: - Main Feed Generation (Instant)
+    // MARK: - Preload (Smart & Shared)
     
-    /// Generate feed instantly - returns cached clips immediately if available
-    func generateFeed(count: Int = 30) async throws -> [Clip] {
-        print("⚡ Generating instant feed...")
+    /// Preload clips from a provided list of movies (reusing Discovery data)
+    /// - Parameters:
+    ///   - movies: The list of movies already fetched for Discovery
+    ///   - count: Number of clips to preload (default 5)
+    /// - Returns: List of ready-to-play clips
+    func preloadClips(from movies: [Movie], count: Int = 5) async -> [Clip] {
+        print("⚡ PRELOAD: Starting smart preload from \(movies.count) shared movies...")
         let startTime = Date()
         
-        // Fetch clips in parallel (movies + TV shows simultaneously)
-        async let moviesTask = fetchMovieClips(limit: 20)
+        // Take top 'count' movies + a few extras buffer
+        let candidates = Array(movies.prefix(count + 3))
+        
+        // Fetch in PARALLEL
+        let preloaded = await withTaskGroup(of: Clip?.self) { group in
+            var results: [Clip] = []
+            
+            for movie in candidates {
+                group.addTask {
+                    // Use current language for preload (immediate relevance)
+                    let lang = LocalizationManager.shared.currentLanguage.id
+                    if let clips = try? await self.searchYouTubeForMovie(movie, language: lang),
+                       let firstClip = clips.first {
+                        return firstClip
+                    }
+                    return nil
+                }
+            }
+            
+            // Collect up to 'count' results
+            for await clip in group {
+                if let clip = clip {
+                    results.append(clip)
+                    if results.count >= count {
+                        // Note: TaskGroup doesn't support easy cancellation of remaining tasks, 
+                        // but we can stop collecting.
+                    }
+                }
+            }
+            
+            return results.prefix(count).map { $0 } // Return exact requested count
+        }
+        
+        // Cache these immediately
+        cachedClips = preloaded
+        preloaded.forEach { shownClipIds.insert($0.id) }
+        
+        print("✅ PRELOAD: Ready in \(String(format: "%.3f", Date().timeIntervalSince(startTime)))s - \(preloaded.count) clips")
+        return preloaded
+    }
+
+    // MARK: - Main Feed Generation
+    
+    /// Generate feed with language mixing (80% localized, 20% English)
+    func generateFeed(count: Int = 30) async throws -> [Clip] {
+        print("⚡ Generating mixed feed (80% Local / 20% Global)...")
+        
+        // 1. Fetch Source Data (Movies & TV)
+        async let moviesTask = fetchMovieClips(limit: 20) // Fetch more to filter
         async let tvTask = fetchTVShowClips(limit: 10)
         
         let (movieClips, tvClips) = try await (moviesTask, tvTask)
-        
         var allClips = movieClips + tvClips
         
-        // Filter by duration (max 3 minutes)
+        // 2. Filter & Deduplicate
         allClips = allClips.filter { $0.duration <= maxDurationSeconds }
-        print("✅ After 3-min filter: \(allClips.count) clips")
-        
-        // Deduplicate by clip ID
         allClips = deduplicate(allClips)
-        print("✅ After deduplication: \(allClips.count) unique clips")
         
-        // Apply user taste scoring if user has preferences
+        // 3. Personalize
         if engagementTracker.hasAnyPreferences() {
             allClips = applyPersonalization(allClips)
-            print("🎯 Applied personalization")
         } else {
-            // Cold start: just sort by popularity (don't shuffle - it breaks diversity!)
             allClips.shuffle()
-            print("🔀 No preferences yet - shuffled randomly")
         }
         
-        // IMPORTANT: Diversify AFTER personalization to prevent same movie clips appearing together
+        // 4. Diversify Source
         allClips = diversifyBySource(allClips)
-        print("🎲 Diversified by source (no consecutive clips from same movie)")
         
-        // Take requested count
         let result = Array(allClips.prefix(count))
-        
-        // Track shown IDs for deduplication in next batch
         result.forEach { shownClipIds.insert($0.id) }
-        
-        // Cache for instant future access
-        cachedClips = result
-        
-        let duration = Date().timeIntervalSince(startTime)
-        print("✅ Generated \(result.count) clips in \(String(format: "%.3f", duration))s")
         
         return result
     }
     
-    /// Load more clips for infinite scroll
+    /// Alias for generateFeed to support infinite scroll
     func loadMore(count: Int = 30) async throws -> [Clip] {
-        print("📦 Loading more clips...")
-        
-        // Same logic as generateFeed but with different page offsets
         return try await generateFeed(count: count)
     }
     
-    // MARK: - Fetch Clips (NO FILTERS)
+    // MARK: - Fetch Clips
     
-    /// Fetch clips from movies - ALL video types accepted
     private func fetchMovieClips(limit: Int) async throws -> [Clip] {
-        print("🎬 Fetching movie clips from MULTIPLE pages...")
-        
-        // Fetch from MULTIPLE pages in parallel to ensure variety
+        // Parallel fetch of trending pages
         async let page1 = tmdbService.getTrendingMovies(timeWindow: .week, page: 1)
         async let page2 = tmdbService.getTrendingMovies(timeWindow: .week, page: 2)
-        async let page3 = tmdbService.getTrendingMovies(timeWindow: .week, page: 3)
         
-        let (movies1, movies2, movies3) = try await (page1, page2, page3)
-        let allMovies = movies1.results + movies2.results + movies3.results
+        let (movies1, movies2) = try await (page1, page2)
+        let allMovies = movies1.results + movies2.results
         
-        print("📊 Total movies to try: \(allMovies.count)")
+        // Mix languages: 80% Local, 20% English
+        // We'll process in batches to maintain mix
         
-        var clips: [Clip] = []
-        var uniqueMovieIds = Set<Int>()
-        var moviesWithClips: [(String, Int)] = []
-        
-        // Try to get clips from ALL movies until we have enough
-        for movie in allMovies {
-            if let movieClips = try? await getVideosForMovie(movie), !movieClips.isEmpty {
-                clips.append(contentsOf: movieClips)
-                uniqueMovieIds.insert(movie.id)
-                moviesWithClips.append((movie.title, movie.id))
-                print("   ✅ \(movie.title) (ID: \(movie.id)) → \(movieClips.count) clip(s)")
+        return await withTaskGroup(of: [Clip].self) { group in
+            var clips: [Clip] = []
+            var processed = 0
+            
+            for movie in allMovies {
+                guard processed < limit * 2 else { break } // Optimization cap
+                processed += 1
+                
+                // Determine language for this item (Randomized 80/20 split)
+                let useLocal = Double.random(in: 0...1) < 0.8
+                let lang = useLocal ? LocalizationManager.shared.currentLanguage.id : "en"
+                
+                group.addTask {
+                    return (try? await self.searchYouTubeForMovie(movie, language: lang)) ?? []
+                }
             }
             
-            // Stop when we have enough clips
-            if clips.count >= limit {
-                break
+            for await result in group {
+                clips.append(contentsOf: result)
             }
+            
+            return clips
         }
-        
-        print("✅ Got \(clips.count) movie clips from \(uniqueMovieIds.count) unique movies")
-        print("📝 Movie IDs: \(Array(uniqueMovieIds).sorted())")
-        return clips
     }
     
-    /// Fetch clips from TV shows - ALL video types accepted
     private func fetchTVShowClips(limit: Int) async throws -> [Clip] {
-        print("📺 Fetching TV show clips from MULTIPLE pages...")
-        
-        // Fetch from MULTIPLE pages in parallel to ensure variety
         async let page1 = tmdbService.getTrendingTVShows(timeWindow: .week, page: 1)
-        async let page2 = tmdbService.getTrendingTVShows(timeWindow: .week, page: 2)
-        async let page3 = tmdbService.getTrendingTVShows(timeWindow: .week, page: 3)
+        let tv1 = try await page1
         
-        let (tv1, tv2, tv3) = try await (page1, page2, page3)
-        let allTVShows = tv1.results + tv2.results + tv3.results
-        
-        print("📊 Total TV shows to try: \(allTVShows.count)")
-        
-        var clips: [Clip] = []
-        var uniqueTVIds = Set<Int>()
-        var tvShowsWithClips: [(String, Int)] = []
-        
-        // Try to get clips from ALL TV shows until we have enough
-        for tvShow in allTVShows {
-            if let tvClips = try? await getVideosForTVShow(tvShow), !tvClips.isEmpty {
-                clips.append(contentsOf: tvClips)
-                uniqueTVIds.insert(tvShow.id)
-                tvShowsWithClips.append((tvShow.name, tvShow.id))
-                print("   ✅ \(tvShow.name) (ID: \(tvShow.id)) → \(tvClips.count) clip(s)")
+        return await withTaskGroup(of: [Clip].self) { group in
+            var clips: [Clip] = []
+            
+            for tvShow in tv1.results {
+                let useLocal = Double.random(in: 0...1) < 0.8
+                let lang = useLocal ? LocalizationManager.shared.currentLanguage.id : "en"
+                
+                group.addTask {
+                    return (try? await self.searchYouTubeForTVShow(tvShow, language: lang)) ?? []
+                }
             }
             
-            // Stop when we have enough clips
-            if clips.count >= limit {
-                break
+            for await result in group {
+                clips.append(contentsOf: result)
             }
+            return clips
         }
-        
-        print("✅ Got \(clips.count) TV clips from \(uniqueTVIds.count) unique TV shows")
-        print("📝 TV Show IDs: \(Array(uniqueTVIds).sorted())")
-        return clips
     }
     
-    // MARK: - Video Conversion (NO TYPE FILTERING)
+    // MARK: - YouTube Search
     
-    /// Get videos for a movie - USES YOUTUBE SEARCH ONLY (TMDb is too limited)
-    private func getVideosForMovie(_ movie: Movie) async throws -> [Clip] {
-        return try await searchYouTubeForMovie(movie)
-    }
-    
-    /// Search YouTube directly for movie clips - max 2 clips per movie for variety
-    private func searchYouTubeForMovie(_ movie: Movie) async throws -> [Clip] {
-        let query = "\(movie.title) official clip scene trailer"
-        guard let encodedQuery = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
-            return []
-        }
+    private func searchYouTubeForMovie(_ movie: Movie, language: String = "en") async throws -> [Clip] {
+        // Localized query construction
+        let suffix = language == "en" ? "official clip scene trailer" : "trailer clip scena ufficiale"
+        let query = "\(movie.title) \(suffix)"
         
-        let urlString = "https://www.googleapis.com/youtube/v3/search?part=snippet&q=\(encodedQuery)&type=video&videoDuration=short&maxResults=2&key=AIzaSyCh_tkrvBEGW6ALRvkAN-LYx1B3Cly1160"
+        guard let encodedQuery = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else { return [] }
+        
+        // Rejection words (to avoid bad content)
+        // ... logic remains similar ...
+        
+        let urlString = "https://www.googleapis.com/youtube/v3/search?part=snippet&q=\(encodedQuery)&type=video&videoDuration=short&maxResults=1&key=AIzaSyCh_tkrvBEGW6ALRvkAN-LYx1B3Cly1160&relevanceLanguage=\(language)"
         
         guard let url = URL(string: urlString) else { return [] }
         
@@ -202,19 +213,13 @@ class SimplifiedClipsAlgorithm: ObservableObject {
         }
     }
     
-    /// Get videos for a TV show - USES YOUTUBE SEARCH ONLY (TMDb is too limited)
-    private func getVideosForTVShow(_ tvShow: TVShow) async throws -> [Clip] {
-        return try await searchYouTubeForTVShow(tvShow)
-    }
-    
-    /// Search YouTube directly for TV show clips - max 2 clips per show for variety
-    private func searchYouTubeForTVShow(_ tvShow: TVShow) async throws -> [Clip] {
-        let query = "\(tvShow.name) official clip scene trailer"
-        guard let encodedQuery = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
-            return []
-        }
+    private func searchYouTubeForTVShow(_ tvShow: TVShow, language: String = "en") async throws -> [Clip] {
+        let suffix = language == "en" ? "official clip scene trailer" : "trailer clip scena ufficiale"
+        let query = "\(tvShow.name) \(suffix)"
         
-        let urlString = "https://www.googleapis.com/youtube/v3/search?part=snippet&q=\(encodedQuery)&type=video&videoDuration=short&maxResults=2&key=AIzaSyCh_tkrvBEGW6ALRvkAN-LYx1B3Cly1160"
+        guard let encodedQuery = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else { return [] }
+        
+        let urlString = "https://www.googleapis.com/youtube/v3/search?part=snippet&q=\(encodedQuery)&type=video&videoDuration=short&maxResults=1&key=AIzaSyCh_tkrvBEGW6ALRvkAN-LYx1B3Cly1160&relevanceLanguage=\(language)"
         
         guard let url = URL(string: urlString) else { return [] }
         
@@ -239,33 +244,7 @@ class SimplifiedClipsAlgorithm: ObservableObject {
         }
     }
     
-    // MARK: - YouTube Search Models
-    
-    struct YouTubeSearchResponse: Codable {
-        let items: [YouTubeSearchItem]
-    }
-    
-    struct YouTubeSearchItem: Codable {
-        let id: VideoId
-        let snippet: Snippet
-        
-        struct VideoId: Codable {
-            let videoId: String
-        }
-        
-        struct Snippet: Codable {
-            let title: String
-            let thumbnails: Thumbnails
-            
-            struct Thumbnails: Codable {
-                let high: Thumbnail
-                
-                struct Thumbnail: Codable {
-                    let url: String
-                }
-            }
-        }
-    }
+    // YouTube models are in Core/Models/YouTubeModels.swift
     
     // MARK: - Deduplication
     

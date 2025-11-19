@@ -123,7 +123,8 @@ struct Video: Codable, Identifiable, Hashable {
     let name: String
     let site: String
     let type: String
-    let official: Bool
+    let official: Bool?
+    let size: Int?
     
     var youtubeURL: URL? {
         guard site == "YouTube" else { return nil }

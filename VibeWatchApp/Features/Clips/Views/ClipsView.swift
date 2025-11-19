@@ -52,8 +52,9 @@ struct ClipsView: View {
                             .frame(width: geometry.size.width, height: geometry.size.height)
                             .id(index)
                             .onAppear {
-                                // Trigger loading 10 clips before the end
-                                if index >= viewModel.clips.count - 10 {
+                                // Smart pagination: Load more when 5 clips away from end
+                                let remainingClips = viewModel.clips.count - index - 1
+                                if remainingClips <= 5 {
                                     Task {
                                         await viewModel.loadMoreClips()
                                     }

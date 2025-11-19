@@ -10,56 +10,25 @@ class DiscoveryViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     
+    private let dataCoordinator = DataCoordinator.shared
     private let tmdbService = TMDBService.shared
-    private let cacheManager = ContentCacheManager.shared
     
-    // Track the language/country used for current content
-    private var cachedLanguage: String?
-    private var cachedCountry: String?
-    
+    /// Load content - uses shared data from DataCoordinator (no API calls needed!)
     func loadContent(forceRefresh: Bool = false) async {
-        let currentLanguage = LocalizationManager.shared.currentLanguage.id
-        let currentCountry = LocalizationManager.shared.currentCountry.id
-        
-        // Check if language or country changed
-        let languageChanged = cachedLanguage != currentLanguage || cachedCountry != currentCountry
-        
-        // Check if we have cached content from today and language hasn't changed
-        if !forceRefresh && !languageChanged && !cacheManager.shouldUpdateDiscoveryContent() {
-            if let cachedMovies = cacheManager.getCachedDiscoveryMovies(),
-               let cachedTVShows = cacheManager.getCachedDiscoveryTVShows() {
-                // Use cached content - same content for the whole day
-                self.moodMovies = Array(cachedMovies.prefix(20))
-                self.forYouMovies = Array(cachedMovies.dropFirst(20).prefix(20))
-                self.viralMovies = Array(cachedMovies.dropFirst(40).prefix(20))
-                self.forYouTVShows = cachedTVShows
-                print("✅ Using cached discovery content from today")
-                return
-            }
-        }
-        
-        // Need to fetch fresh content (either new day or language changed)
-        if languageChanged {
-            print("🌍 Language changed to \(currentLanguage)-\(currentCountry), fetching new content")
-        }
+        print("📺 [DiscoveryViewModel] Loading content...")
         
         isLoading = true
         errorMessage = nil
         
-        do {
-            // Fetch more movies for better randomization
-            async let moodResponse = tmdbService.getTopRatedMovies(page: 1)
-            async let forYouResponse = tmdbService.getPopularMovies(page: 1)
-            async let viralResponse = tmdbService.getTrendingMovies(timeWindow: .week, page: 1)
-            async let tvResponse = tmdbService.getPopularTVShows(page: 1)
+        // Get shared data from DataCoordinator (already fetched on app launch)
+        if let sharedContent = await dataCoordinator.getDiscoveryContent() {
+            // Use preloaded data - INSTANT, no API calls!
+            self.viralMovies = Array(sharedContent.movies.prefix(20))
+            self.moodMovies = Array(sharedContent.topRated.prefix(20))
+            self.forYouMovies = Array(sharedContent.popular.prefix(20))
             
-            let (mood, forYou, viral, tv) = try await (moodResponse, forYouResponse, viralResponse, tvResponse)
-            
-            // Combine all movies for randomization
-            var allMovies = mood.results + forYou.results + viral.results
-            
-            // Convert TV shows
-            let tvShows = tv.results.map { tvShow in
+            // Convert TV shows to Movie format for display
+            self.forYouTVShows = sharedContent.tvShows.prefix(20).map { tvShow in
                 Movie(
                     id: tvShow.id,
                     title: tvShow.name,
@@ -81,26 +50,56 @@ class DiscoveryViewModel: ObservableObject {
                 )
             }
             
-            // Cache for today with current language
-            cacheManager.cacheDiscoveryContent(movies: allMovies, tvShows: tvShows)
-            
-            // Update tracked language/country
-            cachedLanguage = currentLanguage
-            cachedCountry = currentCountry
-            
-            // Shuffle and split
-            allMovies.shuffle()
-            self.moodMovies = Array(allMovies.prefix(20))
-            self.forYouMovies = Array(allMovies.dropFirst(20).prefix(20))
-            self.viralMovies = Array(allMovies.dropFirst(40).prefix(20))
-            self.forYouTVShows = tvShows.shuffled()
-            
-            print("✅ Fetched and cached new discovery content for \(currentLanguage)-\(currentCountry)")
-        } catch {
-            errorMessage = error.localizedDescription
-            print("Error loading content: \(error)")
+            print("✅ [DiscoveryViewModel] Loaded from shared cache (0 API calls)")
+        } else {
+            // Fallback: fetch fresh if coordinator hasn't loaded yet
+            print("⚠️ [DiscoveryViewModel] Shared cache not ready, fetching fresh...")
+            await fetchFreshContent()
         }
         
         isLoading = false
+    }
+    
+    /// Fallback method to fetch fresh content if needed
+    private func fetchFreshContent() async {
+        do {
+            async let trending = tmdbService.getTrendingMovies(timeWindow: .week, page: 1)
+            async let topRated = tmdbService.getTopRatedMovies(page: 1)
+            async let popular = tmdbService.getPopularMovies(page: 1)
+            async let tv = tmdbService.getTrendingTVShows(timeWindow: .week, page: 1)
+            
+            let (trendingRes, topRatedRes, popularRes, tvRes) = try await (trending, topRated, popular, tv)
+            
+            self.viralMovies = Array(trendingRes.results.prefix(20))
+            self.moodMovies = Array(topRatedRes.results.prefix(20))
+            self.forYouMovies = Array(popularRes.results.prefix(20))
+            
+            self.forYouTVShows = tvRes.results.prefix(20).map { tvShow in
+                Movie(
+                    id: tvShow.id,
+                    title: tvShow.name,
+                    overview: tvShow.overview,
+                    posterPath: tvShow.posterPath,
+                    backdropPath: tvShow.backdropPath,
+                    releaseDate: tvShow.firstAirDate,
+                    voteAverage: tvShow.voteAverage,
+                    voteCount: tvShow.voteCount,
+                    genreIds: tvShow.genreIds,
+                    genres: tvShow.genres,
+                    adult: false,
+                    originalLanguage: tvShow.originalLanguage,
+                    popularity: tvShow.popularity,
+                    runtime: nil,
+                    status: tvShow.status,
+                    tagline: tvShow.tagline,
+                    productionCountries: tvShow.productionCountries
+                )
+            }
+            
+            print("✅ [DiscoveryViewModel] Fetched fresh content")
+        } catch {
+            errorMessage = error.localizedDescription
+            print("❌ [DiscoveryViewModel] Failed to fetch fresh content: \(error)")
+        }
     }
 }
