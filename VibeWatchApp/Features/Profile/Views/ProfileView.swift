@@ -1,5 +1,65 @@
 import SwiftUI
 
+struct LanguageSelector: View {
+    @StateObject private var localizationManager = LocalizationManager.shared
+    
+    // Map language codes to flag emojis
+    private func flagForLanguage(_ languageCode: String) -> String {
+        switch languageCode {
+            case "en": return "🇺🇸 ".localized
+            case "it": return "🇮🇹 ".localized
+            case "es": return "🇪🇸 ".localized
+            case "fr": return "🇫🇷 ".localized
+            case "de": return "🇩🇪 ".localized
+            case "ja": return "🇯🇵 ".localized
+            case "ko": return "🇰🇷 ".localized
+            case "zh": return "🇨🇳 ".localized
+            case "pt": return "🇵🇹 ".localized
+            case "hi": return "🇮🇳 ".localized
+            case "ru": return "🇷🇺 ".localized
+            case "nl": return "🇳🇱 ".localized
+            case "sv": return "🇸🇪 ".localized
+            case "no": return "🇳🇴 ".localized
+            case "da": return "🇩🇰 ".localized
+            case "fi": return "🇫🇮 ".localized
+            case "pl": return "🇵🇱 ".localized
+            case "tr": return "🇹🇷 ".localized
+            case "el": return "🇬🇷 ".localized
+            default: return "🌐 ".localized
+        }
+    }
+    
+    var body: some View {
+        Menu {
+            ForEach(Language.all, id: \.id) { language in
+                Button(action: {
+                    localizationManager.setLanguage(language)
+                }) {
+                    HStack {
+                        Text(flagForLanguage(language.id) + language.nativeName)
+                        
+                        Spacer()
+                        
+                        if localizationManager.currentLanguage.id == language.id {
+                            Image(systemName: "checkmark")
+                                .foregroundColor(.theme.accentOrange)
+                        }
+                    }
+                }
+            }
+        } label: {
+            ZStack {
+                Circle()
+                    .fill(Color.theme.accentOrange.opacity(0.2))
+                    .frame(width: 32, height: 32)
+                
+                Text(flagForLanguage(localizationManager.currentLanguage.id))
+                    .font(.system(size: 16))
+            }
+        }
+    }
+}
+
 struct ProfileView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var appState: AppState
@@ -50,6 +110,10 @@ struct ProfileView: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    LanguageSelector()
+                }
+                
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("profile.done".localized) {
                         dismiss()

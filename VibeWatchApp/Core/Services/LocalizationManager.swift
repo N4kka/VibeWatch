@@ -97,6 +97,18 @@ class LocalizationManager: ObservableObject {
             "tab.lists": "Lists",
             "tab.profile": "Profile",
             
+            // Onboarding
+            "onboarding.page1.title": "Track & Save Your Favorites",
+            "onboarding.page1.description": "Discover and save movies and TV series you love. Keep track of what you've watched and what you want to watch next.",
+            "onboarding.page2.title": "Organize with Lists",
+            "onboarding.page2.description": "Create custom lists to organize your content. From watchlists to mood-based collections, make it yours.",
+            "onboarding.page3.title": "Discover Through Clips",
+            "onboarding.page3.description": "Watch exciting clips from movies and TV shows. Join the community, comment, save to lists, and share with friends.",
+            "onboarding.page4.title": "Ready to Start?",
+            "onboarding.page4.description": "Create an account to sync your lists and preferences across all your devices.",
+            "onboarding.page4.createAccount": "Create Account",
+            "onboarding.page4.skip": "Skip for now",
+            
             // Discovery
             "discovery.trending": "Trending Now",
             "discovery.popular": "Popular",
@@ -138,6 +150,8 @@ class LocalizationManager: ObservableObject {
             "profile.createAccount": "Create Account",
             "profile.signInToVibeWatch": "Sign in to VibeWatch",
             "profile.signInDescription": "Create lists, save clips, and personalize your experience",
+            "profile.userNamePlaceholder": "Email or Username",
+            "profile.passwordPlaceholder": "Password",
             
             // Settings
             "settings.title": "Settings",
@@ -182,8 +196,6 @@ class LocalizationManager: ObservableObject {
             // Common
             "common.done": "Done",
             "common.cancel": "Cancel",
-            "profile.userNamePlaceholder": "Email or Username",
-            "profile.passwordPlaceholder": "Password",
             "common.save": "Save",
             "common.delete": "Delete",
             "common.edit": "Edit",
@@ -246,6 +258,7 @@ class LocalizationManager: ObservableObject {
             "notifications.disableButton": "Disable Notifications",
             
             // Misc
+            "misc.language": "English",
             "misc.somethingWrong": "Something wrong?",
             "misc.letUsKnow": "Let us know",
             "misc.selected": "selected",
@@ -260,18 +273,30 @@ class LocalizationManager: ObservableObject {
             "tab.lists": "Liste",
             "tab.profile": "Profilo",
             
+            // Onboarding
+            "onboarding.page1.title": "Traccia e Salva i Tuoi Preferiti",
+            "onboarding.page1.description": "Scopri e salva film e serie TV che ami. Tieni traccia di ciò che hai visto e di ciò che vuoi vedere.",
+            "onboarding.page2.title": "Organizza con le Liste",
+            "onboarding.page2.description": "Crea liste personalizzate per organizzare i tuoi contenuti. Da liste di visione a collezioni basate sull'umore, rendilo tuo.",
+            "onboarding.page3.title": "Scopri Attraverso i Clip",
+            "onboarding.page3.description": "Guarda clip emozionanti da film e serie TV. Unisciti alla community, commenta, salva nelle liste e condividi con gli amici.",
+            "onboarding.page4.title": "Pronto per Iniziare?",
+            "onboarding.page4.description": "Crea un account per sincronizzare le tue liste e preferenze su tutti i tuoi dispositivi.",
+            "onboarding.page4.createAccount": "Crea Account",
+            "onboarding.page4.skip": "Salta per ora",
+            
             // Discovery
+            "discovery.trending": "Di Tendenza",
             "discovery.popular": "Popolari",
             "discovery.topRated": "Più Votati",
-            "discovery.upcoming": "In Arrivo",
-            "discovery.vibeWatch": "VibeWatch",
             "discovery.basedOnMood": "In Base al Tuo Umore",
-            "discovery.forYou": "Per te",
-            "discovery.trending": "Di tendenza",
+            "discovery.vibeWatch": "VibeWatch",
+            "discovery.upcoming": "In Arrivo",
+            "discovery.forYou": "Per Te",
             "discovery.tvShows": "Serie TV",
             
             // Lists
-            "lists.myLists": "Le mie Liste",
+            "lists.myLists": "Le Mie Liste",
             "lists.watchlist": "Da Vedere",
             "lists.seen": "Visti",
             "lists.liked": "Piaciuti",
@@ -282,7 +307,8 @@ class LocalizationManager: ObservableObject {
             "lists.listName": "Nome Lista",
             "lists.listNamePlaceholder": "Nuova Lista",
             "lists.description": "Descrizione (Opzionale)",
-            "lists.descriptionPlaceholder": "Aggiungi una descrizione per questa lista",
+            "lists.descriptionPlaceholder": "Aggiungi una descrizione... (Opzionale)",
+            "lists.listDescriptionPlaceholder": "Aggiungi una descrizione...",
             "lists.noItems": "Nessun elemento",
             "list.all": "Tutti",
             "list.movies": "Film",
@@ -291,8 +317,6 @@ class LocalizationManager: ObservableObject {
             // Profile
             "profile.done": "Fatto",
             "profile.cancel": "Annulla",
-            "profile.userNamePlaceholder": "Email o username",
-            "profile.passwordPlaceholder": "Password",
             "profile.notifications": "Notifiche",
             "profile.streamingServices": "Servizi di Streaming",
             "profile.settings": "Impostazioni",
@@ -302,6 +326,8 @@ class LocalizationManager: ObservableObject {
             "profile.createAccount": "Crea Account",
             "profile.signInToVibeWatch": "Accedi a VibeWatch",
             "profile.signInDescription": "Crea liste, salva clip e personalizza la tua esperienza",
+            "profile.userNamePlaceholder": "Email o Username",
+            "profile.passwordPlaceholder": "Password",
             
             // Settings
             "settings.title": "Impostazioni",
@@ -311,15 +337,13 @@ class LocalizationManager: ObservableObject {
             "settings.selectLanguage": "Seleziona Lingua",
             
             // Movie Detail
-            "movieDetail.ratings": "valutazioni",
             "movieDetail.save": "Salva",
             "movieDetail.seen": "Visto",
             "movieDetail.watchNow": "Guarda Ora",
-            "movieDetail.rent": "Noleggia",
-            "movieDetail.buy": "Compra",
             "movieDetail.trailer": "Trailer",
             "movieDetail.information": "Informazioni",
             "movieDetail.rating": "Valutazione",
+            "movieDetail.ratings": "valutazioni",
             "movieDetail.genres": "Generi",
             "movieDetail.runtime": "Durata",
             "movieDetail.country": "Paese",
@@ -333,12 +357,11 @@ class LocalizationManager: ObservableObject {
             "filter.tvSeries": "Serie TV",
             
             // Sort
-            "sort.releaseDate": "Data di Uscita",
-            "sort.sortBy": "Ordina Per",
-            "sort.creationDate": "Data di creazione",
+            "sort.dateAdded": "Data di Aggiunta",
             "sort.title": "Titolo",
-            "sort.dateAdded": "Data di aggiunta",
+            "sort.releaseDate": "Data di Uscita",
             "sort.rating": "Valutazione",
+            "sort.sortBy": "Ordina Per",
             
             // Platforms
             "platforms.title": "Piattaforme",
@@ -369,10 +392,8 @@ class LocalizationManager: ObservableObject {
             "clips.comments": "Commenti",
             "clips.noComments": "Nessun commento",
             "clips.beFirstToComment": "Sii il primo a commentare",
-            "clips.commentPlaceholder": "Aggiungi un commento...",
             "clips.replyingTo": "Risposta a",
             "clips.reply": "Rispondi",
-            "clips.replyPlaceholder": "Aggiungi una tua risposta...",
             "clips.replies": "risposte",
             "clips.viewReplies": "Mostra",
             "clips.hideReplies": "Nascondi",
@@ -382,7 +403,6 @@ class LocalizationManager: ObservableObject {
             "clips.createNewList": "Crea Nuova Lista",
             
             // Search
-            "search.placeholder": "Cerca film, serie TV...",
             "search.trendingSearches": "Ricerche di Tendenza",
             "search.noResultsFound": "Nessun risultato trovato",
             "search.results": "Risultati",
@@ -414,10 +434,11 @@ class LocalizationManager: ObservableObject {
             "notifications.disableButton": "Disabilita Notifiche",
             
             // Misc
+            "misc.language": "Italiano",
             "misc.somethingWrong": "Qualcosa non va?",
             "misc.letUsKnow": "Faccelo sapere",
             "misc.selected": "selezionati",
-            "misc.of": "di",
+            "misc.of": "di"
         ]
         
         // Spanish (Español)
@@ -428,13 +449,25 @@ class LocalizationManager: ObservableObject {
             "tab.lists": "Listas",
             "tab.profile": "Perfil",
             
+            // Onboarding
+            "onboarding.page1.title": "Rastrea y Guarda Tus Favoritos",
+            "onboarding.page1.description": "Descubre y guarda películas y series de TV que amas. Mantén un registro de lo que has visto y lo que quieres ver a continuación.",
+            "onboarding.page2.title": "Organiza con Listas",
+            "onboarding.page2.description": "Crea listas personalizadas para organizar tu contenido. Desde listas de reproducción hasta colecciones basadas en el estado de ánimo, hazlo tuyo.",
+            "onboarding.page3.title": "Descubre a Través de Clips",
+            "onboarding.page3.description": "Mira clips emocionantes de películas y programas de TV. Únete a la comunidad, comenta, guarda en listas y comparte con amigos.",
+            "onboarding.page4.title": "¿Listo para Empezar?",
+            "onboarding.page4.description": "Crea una cuenta para sincronizar tus listas y preferencias en todos tus dispositivos.",
+            "onboarding.page4.createAccount": "Crear Cuenta",
+            "onboarding.page4.skip": "Saltar por ahora",
+            
             // Discovery
-            "discovery.trending": "Tendencias",
+            "discovery.trending": "Tendencias Ahora",
             "discovery.popular": "Populares",
             "discovery.topRated": "Mejor Valoradas",
-            "discovery.upcoming": "Próximamente",
-            "discovery.vibeWatch": "VibeWatch",
             "discovery.basedOnMood": "Según Tu Estado de Ánimo",
+            "discovery.vibeWatch": "VibeWatch",
+            "discovery.upcoming": "Próximamente",
             "discovery.forYou": "Para Ti",
             "discovery.tvShows": "Series de TV",
             
@@ -444,14 +477,15 @@ class LocalizationManager: ObservableObject {
             "lists.seen": "Vistas",
             "lists.liked": "Me Gusta",
             "lists.disliked": "No Me Gusta",
-            "lists.empty": "Sin Listas",
+            "lists.empty": "Sin Listas Aún",
             "lists.emptyDescription": "Crea tu primera lista para organizar tu contenido favorito",
             "lists.createList": "Crear Lista",
             "lists.listName": "Nombre de Lista",
             "lists.listNamePlaceholder": "Nueva Lista",
             "lists.description": "Descripción (Opcional)",
-            "lists.descriptionPlaceholder": "Añade una descripción para esta lista",
-            "lists.noItems": "Sin elementos",
+            "lists.descriptionPlaceholder": "Añade una descripción... (Opcional)",
+            "lists.listDescriptionPlaceholder": "Añade una descripción...",
+            "lists.noItems": "Sin elementos aún",
             "list.all": "Todos",
             "list.movies": "Películas",
             "list.tvShows": "Series de TV",
@@ -459,8 +493,6 @@ class LocalizationManager: ObservableObject {
             // Profile
             "profile.done": "Hecho",
             "profile.cancel": "Cancelar",
-            "profile.userNamePlaceholder": "Email o usuario",
-            "profile.passwordPlaceholder": "Contraseña",
             "profile.notifications": "Notificaciones",
             "profile.streamingServices": "Servicios de Streaming",
             "profile.settings": "Configuración",
@@ -470,6 +502,8 @@ class LocalizationManager: ObservableObject {
             "profile.createAccount": "Crear Cuenta",
             "profile.signInToVibeWatch": "Inicia sesión en VibeWatch",
             "profile.signInDescription": "Crea listas, guarda clips y personaliza tu experiencia",
+            "profile.userNamePlaceholder": "Email o Usuario",
+            "profile.passwordPlaceholder": "Contraseña",
             
             // Settings
             "settings.title": "Configuración",
@@ -479,15 +513,13 @@ class LocalizationManager: ObservableObject {
             "settings.selectLanguage": "Seleccionar Idioma",
             
             // Movie Detail
-            "movieDetail.ratings": "valoraciones",
             "movieDetail.save": "Guardar",
             "movieDetail.seen": "Vista",
             "movieDetail.watchNow": "Ver Ahora",
-            "movieDetail.rent": "Alquilar",
-            "movieDetail.buy": "Comprar",
             "movieDetail.trailer": "Tráiler",
             "movieDetail.information": "Información",
             "movieDetail.rating": "Valoración",
+            "movieDetail.ratings": "valoraciones",
             "movieDetail.genres": "Géneros",
             "movieDetail.runtime": "Duración",
             "movieDetail.country": "País",
@@ -534,22 +566,19 @@ class LocalizationManager: ObservableObject {
             "clips.noClipsDescription": "Vuelve más tarde para ver escenas emocionantes de tus películas y series favoritas",
             "clips.comment": "Comentario",
             "clips.comments": "Comentarios",
-            "clips.noComments": "Sin comentarios",
+            "clips.noComments": "Sin comentarios aún",
             "clips.beFirstToComment": "Sé el primero en comentar",
-            "clips.commentPlaceholder": "Añade un comentario...",
             "clips.replyingTo": "Respondiendo a",
             "clips.reply": "Responder",
-            "clips.replyPlaceholder": "Añade tu respuesta...",
             "clips.replies": "respuestas",
             "clips.viewReplies": "Ver",
             "clips.hideReplies": "Ocultar",
             "clips.addToList": "Añadir a Lista",
-            "clips.noListsYet": "Sin listas",
+            "clips.noListsYet": "Sin listas aún",
             "clips.createFirstList": "Crea tu primera lista para guardar contenido",
             "clips.createNewList": "Crear Nueva Lista",
             
             // Search
-            "search.placeholder": "Buscar películas, series...",
             "search.trendingSearches": "Búsquedas Populares",
             "search.noResultsFound": "No se encontraron resultados",
             "search.results": "Resultados",
@@ -581,6 +610,7 @@ class LocalizationManager: ObservableObject {
             "notifications.disableButton": "Desactivar Notificaciones",
             
             // Misc
+            "misc.language": "Español",
             "misc.somethingWrong": "¿Algo va mal?",
             "misc.letUsKnow": "Haznos saber",
             "misc.selected": "seleccionados",
@@ -595,13 +625,25 @@ class LocalizationManager: ObservableObject {
             "tab.lists": "Listes",
             "tab.profile": "Profil",
             
+            // Onboarding
+            "onboarding.page1.title": "Suivez et Sauvegardez Vos Favoris",
+            "onboarding.page1.description": "Découvrez et sauvegardez les films et séries TV que vous aimez. Gardez une trace de ce que vous avez regardé et de ce que vous voulez regarder ensuite.",
+            "onboarding.page2.title": "Organisez avec des Listes",
+            "onboarding.page2.description": "Créez des listes personnalisées pour organiser votre contenu. Des listes de lecture aux collections basées sur l'humeur, faites-en le vôtre.",
+            "onboarding.page3.title": "Découvrez à Travers les Clips",
+            "onboarding.page3.description": "Regardez des clips passionnants de films et d'émissions de télévision. Rejoignez la communauté, commentez, enregistrez dans des listes et partagez avec des amis.",
+            "onboarding.page4.title": "Prêt à Commencer?",
+            "onboarding.page4.description": "Créez un compte pour synchroniser vos listes et préférences sur tous vos appareils.",
+            "onboarding.page4.createAccount": "Créer un Compte",
+            "onboarding.page4.skip": "Passer pour l'instant",
+            
             // Discovery
-            "discovery.trending": "Tendances",
+            "discovery.trending": "Tendances Actuelles",
             "discovery.popular": "Populaires",
             "discovery.topRated": "Mieux Notés",
-            "discovery.upcoming": "À Venir",
-            "discovery.vibeWatch": "VibeWatch",
             "discovery.basedOnMood": "Selon Votre Humeur",
+            "discovery.vibeWatch": "VibeWatch",
+            "discovery.upcoming": "À Venir",
             "discovery.forYou": "Pour Vous",
             "discovery.tvShows": "Séries TV",
             
@@ -611,14 +653,15 @@ class LocalizationManager: ObservableObject {
             "lists.seen": "Vus",
             "lists.liked": "Aimés",
             "lists.disliked": "Non Aimés",
-            "lists.empty": "Aucune Liste",
+            "lists.empty": "Aucune Liste Encore",
             "lists.emptyDescription": "Créez votre première liste pour organiser votre contenu préféré",
             "lists.createList": "Créer une Liste",
             "lists.listName": "Nom de la Liste",
             "lists.listNamePlaceholder": "Nouvelle Liste",
             "lists.description": "Description (Optionnel)",
-            "lists.descriptionPlaceholder": "Ajouter une description",
-            "lists.noItems": "Aucun élément",
+            "lists.descriptionPlaceholder": "Ajouter une description... (Optionnel)",
+            "lists.listDescriptionPlaceholder": "Ajouter une description...",
+            "lists.noItems": "Aucun élément encore",
             "list.all": "Tous",
             "list.movies": "Films",
             "list.tvShows": "Séries TV",
@@ -626,8 +669,6 @@ class LocalizationManager: ObservableObject {
             // Profile
             "profile.done": "Terminé",
             "profile.cancel": "Annuler",
-            "profile.userNamePlaceholder": "Email ou nom d'utilisateur",
-            "profile.passwordPlaceholder": "Mot de passe",
             "profile.notifications": "Notifications",
             "profile.streamingServices": "Services de Streaming",
             "profile.settings": "Paramètres",
@@ -637,6 +678,8 @@ class LocalizationManager: ObservableObject {
             "profile.createAccount": "Créer un Compte",
             "profile.signInToVibeWatch": "Connectez-vous à VibeWatch",
             "profile.signInDescription": "Créez des listes, enregistrez des clips et personnalisez votre expérience",
+            "profile.userNamePlaceholder": "Email ou Nom d'utilisateur",
+            "profile.passwordPlaceholder": "Mot de passe",
             
             // Settings
             "settings.title": "Paramètres",
@@ -646,15 +689,13 @@ class LocalizationManager: ObservableObject {
             "settings.selectLanguage": "Sélectionner une Langue",
             
             // Movie Detail
-            "movieDetail.ratings": "évaluations",
             "movieDetail.save": "Enregistrer",
             "movieDetail.seen": "Vu",
             "movieDetail.watchNow": "Regarder Maintenant",
-            "movieDetail.rent": "Louer",
-            "movieDetail.buy": "Acheter",
             "movieDetail.trailer": "Bande-annonce",
             "movieDetail.information": "Informations",
             "movieDetail.rating": "Note",
+            "movieDetail.ratings": "évaluations",
             "movieDetail.genres": "Genres",
             "movieDetail.runtime": "Durée",
             "movieDetail.country": "Pays",
@@ -701,22 +742,19 @@ class LocalizationManager: ObservableObject {
             "clips.noClipsDescription": "Revenez plus tard pour des scènes passionnantes de vos films et séries préférés",
             "clips.comment": "Commentaire",
             "clips.comments": "Commentaires",
-            "clips.noComments": "Aucun commentaire",
+            "clips.noComments": "Aucun commentaire encore",
             "clips.beFirstToComment": "Soyez le premier à commenter",
-            "clips.commentPlaceholder": "Ajouter un commentaire...",
             "clips.replyingTo": "Répondre à",
             "clips.reply": "Répondre",
-            "clips.replyPlaceholder": "Ajoutez votre réponse...",
             "clips.replies": "réponses",
             "clips.viewReplies": "Voir",
             "clips.hideReplies": "Masquer",
             "clips.addToList": "Ajouter à la Liste",
-            "clips.noListsYet": "Aucune liste",
+            "clips.noListsYet": "Aucune liste encore",
             "clips.createFirstList": "Créez votre première liste pour sauvegarder du contenu",
             "clips.createNewList": "Créer une Nouvelle Liste",
             
             // Search
-            "search.placeholder": "Rechercher films, séries...",
             "search.trendingSearches": "Recherches Populaires",
             "search.noResultsFound": "Aucun résultat trouvé",
             "search.results": "Résultats",
@@ -748,6 +786,7 @@ class LocalizationManager: ObservableObject {
             "notifications.disableButton": "Désactiver les Notifications",
             
             // Misc
+            "misc.language": "Français",
             "misc.somethingWrong": "Un problème?",
             "misc.letUsKnow": "Faites-nous savoir",
             "misc.selected": "sélectionnés",
@@ -762,13 +801,25 @@ class LocalizationManager: ObservableObject {
             "tab.lists": "Listen",
             "tab.profile": "Profil",
             
+            // Onboarding
+            "onboarding.page1.title": "Verfolgen & Speichern Sie Ihre Favoriten",
+            "onboarding.page1.description": "Entdecken und speichern Sie Filme und TV-Serien, die Sie lieben. Behalten Sie den Überblick darüber, was Sie gesehen haben und was Sie als Nächstes sehen möchten.",
+            "onboarding.page2.title": "Organisieren mit Listen",
+            "onboarding.page2.description": "Erstellen Sie benutzerdefinierte Listen, um Ihre Inhalte zu organisieren. Von Watchlists bis hin zu stimmungsbasierten Sammlungen, machen Sie es zu Ihrem.",
+            "onboarding.page3.title": "Entdecken Sie durch Clips",
+            "onboarding.page3.description": "Sehen Sie aufregende Clips aus Filmen und TV-Sendungen. Treten Sie der Community bei, kommentieren Sie, speichern Sie in Listen und teilen Sie mit Freunden.",
+            "onboarding.page4.title": "Bereit zu Starten?",
+            "onboarding.page4.description": "Erstellen Sie ein Konto, um Ihre Listen und Einstellungen auf allen Ihren Geräten zu synchronisieren.",
+            "onboarding.page4.createAccount": "Konto Erstellen",
+            "onboarding.page4.skip": "Vorerst Überspringen",
+            
             // Discovery
-            "discovery.trending": "Trends",
+            "discovery.trending": "Aktuell im Trend",
             "discovery.popular": "Beliebt",
             "discovery.topRated": "Bestbewertet",
-            "discovery.upcoming": "Demnächst",
-            "discovery.vibeWatch": "VibeWatch",
             "discovery.basedOnMood": "Basierend auf Ihrer Stimmung",
+            "discovery.vibeWatch": "VibeWatch",
+            "discovery.upcoming": "Demnächst",
             "discovery.forYou": "Für Sie",
             "discovery.tvShows": "Serien",
             
@@ -778,14 +829,15 @@ class LocalizationManager: ObservableObject {
             "lists.seen": "Gesehen",
             "lists.liked": "Gefällt mir",
             "lists.disliked": "Gefällt mir nicht",
-            "lists.empty": "Keine Listen",
+            "lists.empty": "Noch Keine Listen",
             "lists.emptyDescription": "Erstellen Sie Ihre erste Liste, um Ihre Lieblingsinhalte zu organisieren",
             "lists.createList": "Liste Erstellen",
             "lists.listName": "Listenname",
             "lists.listNamePlaceholder": "Neue Liste",
             "lists.description": "Beschreibung (Optional)",
-            "lists.descriptionPlaceholder": "Beschreibung hinzufügen",
-            "lists.noItems": "Keine Elemente",
+            "lists.descriptionPlaceholder": "Beschreibung hinzufügen... (Optional)",
+            "lists.listDescriptionPlaceholder": "Beschreibung hinzufügen...",
+            "lists.noItems": "Noch keine Elemente",
             "list.all": "Alle",
             "list.movies": "Filme",
             "list.tvShows": "Serien",
@@ -793,8 +845,6 @@ class LocalizationManager: ObservableObject {
             // Profile
             "profile.done": "Fertig",
             "profile.cancel": "Abbrechen",
-            "profile.userNamePlaceholder": "E-Mail oder Benutzername",
-            "profile.passwordPlaceholder": "Passwort",
             "profile.notifications": "Benachrichtigungen",
             "profile.streamingServices": "Streaming-Dienste",
             "profile.settings": "Einstellungen",
@@ -804,6 +854,8 @@ class LocalizationManager: ObservableObject {
             "profile.createAccount": "Konto Erstellen",
             "profile.signInToVibeWatch": "Bei VibeWatch anmelden",
             "profile.signInDescription": "Listen erstellen, Clips speichern und Ihr Erlebnis personalisieren",
+            "profile.userNamePlaceholder": "E-Mail oder Benutzername",
+            "profile.passwordPlaceholder": "Passwort",
             
             // Settings
             "settings.title": "Einstellungen",
@@ -813,15 +865,13 @@ class LocalizationManager: ObservableObject {
             "settings.selectLanguage": "Sprache Wählen",
             
             // Movie Detail
-            "movieDetail.ratings": "Bewertungen",
             "movieDetail.save": "Speichern",
             "movieDetail.seen": "Gesehen",
             "movieDetail.watchNow": "Jetzt Ansehen",
-            "movieDetail.rent": "Ausleihen",
-            "movieDetail.buy": "Kaufen",
             "movieDetail.trailer": "Trailer",
             "movieDetail.information": "Informationen",
             "movieDetail.rating": "Bewertung",
+            "movieDetail.ratings": "Bewertungen",
             "movieDetail.genres": "Genres",
             "movieDetail.runtime": "Laufzeit",
             "movieDetail.country": "Land",
@@ -868,12 +918,10 @@ class LocalizationManager: ObservableObject {
             "clips.noClipsDescription": "Schauen Sie später vorbei für spannende Szenen aus Ihren Lieblingsfilmen und -serien",
             "clips.comment": "Kommentar",
             "clips.comments": "Kommentare",
-            "clips.noComments": "Keine Kommentare",
+            "clips.noComments": "Noch keine Kommentare",
             "clips.beFirstToComment": "Sei der Erste, der kommentiert",
-            "clips.commentPlaceholder": "Kommentar hinzufügen...",
             "clips.replyingTo": "Antworten an",
             "clips.reply": "Antworten",
-            "clips.replyPlaceholder": "Ihre Antwort hinzufügen...",
             "clips.replies": "Antworten",
             "clips.viewReplies": "Anzeigen",
             "clips.hideReplies": "Verbergen",
@@ -883,7 +931,6 @@ class LocalizationManager: ObservableObject {
             "clips.createNewList": "Neue Liste Erstellen",
             
             // Search
-            "search.placeholder": "Filme, Serien suchen...",
             "search.trendingSearches": "Beliebte Suchen",
             "search.noResultsFound": "Keine Ergebnisse gefunden",
             "search.results": "Ergebnisse",
@@ -915,6 +962,7 @@ class LocalizationManager: ObservableObject {
             "notifications.disableButton": "Benachrichtigungen Deaktivieren",
             
             // Misc
+            "misc.language": "Deutsch",
             "misc.somethingWrong": "Etwas stimmt nicht?",
             "misc.letUsKnow": "Sagen Sie uns Bescheid",
             "misc.selected": "ausgewählt",
@@ -929,13 +977,25 @@ class LocalizationManager: ObservableObject {
             "tab.lists": "Listas",
             "tab.profile": "Perfil",
             
+            // Onboarding
+            "onboarding.page1.title": "Rastreie e Salve Seus Favoritos",
+            "onboarding.page1.description": "Descubra e salve filmes e séries de TV que você ama. Acompanhe o que você assistiu e o que deseja assistir a seguir.",
+            "onboarding.page2.title": "Organize com Listas",
+            "onboarding.page2.description": "Crie listas personalizadas para organizar seu conteúdo. De listas de observação a coleções baseadas em humor, faça do seu jeito.",
+            "onboarding.page3.title": "Descubra Através de Clips",
+            "onboarding.page3.description": "Assista a clips emocionantes de filmes e programas de TV. Junte-se à comunidade, comente, salve em listas e compartilhe com amigos.",
+            "onboarding.page4.title": "Pronto para Começar?",
+            "onboarding.page4.description": "Crie uma conta para sincronizar suas listas e preferências em todos os seus dispositivos.",
+            "onboarding.page4.createAccount": "Criar Conta",
+            "onboarding.page4.skip": "Pular por enquanto",
+            
             // Discovery
-            "discovery.trending": "Em Alta",
+            "discovery.trending": "Em Alta Agora",
             "discovery.popular": "Populares",
             "discovery.topRated": "Mais Bem Avaliados",
-            "discovery.upcoming": "Em Breve",
-            "discovery.vibeWatch": "VibeWatch",
             "discovery.basedOnMood": "Baseado no Seu Humor",
+            "discovery.vibeWatch": "VibeWatch",
+            "discovery.upcoming": "Em Breve",
             "discovery.forYou": "Para Você",
             "discovery.tvShows": "Séries de TV",
             
@@ -945,14 +1005,15 @@ class LocalizationManager: ObservableObject {
             "lists.seen": "Vistos",
             "lists.liked": "Gostei",
             "lists.disliked": "Não Gostei",
-            "lists.empty": "Sem Listas",
+            "lists.empty": "Ainda Sem Listas",
             "lists.emptyDescription": "Crie sua primeira lista para organizar seu conteúdo favorito",
             "lists.createList": "Criar Lista",
             "lists.listName": "Nome da Lista",
             "lists.listNamePlaceholder": "Nova Lista",
             "lists.description": "Descrição (Opcional)",
-            "lists.descriptionPlaceholder": "Adicionar uma descrição",
-            "lists.noItems": "Sem itens",
+            "lists.descriptionPlaceholder": "Adicionar uma descrição... (Opcional)",
+            "lists.listDescriptionPlaceholder": "Adicionar uma descrição...",
+            "lists.noItems": "Ainda sem itens",
             "list.all": "Todos",
             "list.movies": "Filmes",
             "list.tvShows": "Séries de TV",
@@ -960,8 +1021,6 @@ class LocalizationManager: ObservableObject {
             // Profile
             "profile.done": "Concluído",
             "profile.cancel": "Cancelar",
-            "profile.userNamePlaceholder": "Email ou nome de usuário",
-            "profile.passwordPlaceholder": "Senha",
             "profile.notifications": "Notificações",
             "profile.streamingServices": "Serviços de Streaming",
             "profile.settings": "Configurações",
@@ -971,6 +1030,8 @@ class LocalizationManager: ObservableObject {
             "profile.createAccount": "Criar Conta",
             "profile.signInToVibeWatch": "Entre no VibeWatch",
             "profile.signInDescription": "Crie listas, salve clips e personalize sua experiência",
+            "profile.userNamePlaceholder": "Email ou Nome de usuário",
+            "profile.passwordPlaceholder": "Senha",
             
             // Settings
             "settings.title": "Configurações",
@@ -980,15 +1041,13 @@ class LocalizationManager: ObservableObject {
             "settings.selectLanguage": "Selecionar Idioma",
             
             // Movie Detail
-            "movieDetail.ratings": "avaliações",
             "movieDetail.save": "Salvar",
             "movieDetail.seen": "Visto",
             "movieDetail.watchNow": "Assistir Agora",
-            "movieDetail.rent": "Alugar",
-            "movieDetail.buy": "Comprar",
             "movieDetail.trailer": "Trailer",
             "movieDetail.information": "Informações",
             "movieDetail.rating": "Avaliação",
+            "movieDetail.ratings": "avaliações",
             "movieDetail.genres": "Gêneros",
             "movieDetail.runtime": "Duração",
             "movieDetail.country": "País",
@@ -1035,22 +1094,19 @@ class LocalizationManager: ObservableObject {
             "clips.noClipsDescription": "Volte mais tarde para cenas emocionantes dos seus filmes e séries favoritos",
             "clips.comment": "Comentário",
             "clips.comments": "Comentários",
-            "clips.noComments": "Sem comentários",
+            "clips.noComments": "Ainda sem comentários",
             "clips.beFirstToComment": "Seja o primeiro a comentar",
-            "clips.commentPlaceholder": "Adicionar um comentário...",
             "clips.replyingTo": "Respondendo a",
             "clips.reply": "Responder",
-            "clips.replyPlaceholder": "Adicione sua resposta...",
             "clips.replies": "respostas",
             "clips.viewReplies": "Ver",
             "clips.hideReplies": "Ocultar",
             "clips.addToList": "Adicionar à Lista",
-            "clips.noListsYet": "Sem listas",
+            "clips.noListsYet": "Ainda sem listas",
             "clips.createFirstList": "Crie sua primeira lista para salvar conteúdo",
             "clips.createNewList": "Criar Nova Lista",
             
             // Search
-            "search.placeholder": "Pesquisar filmes, séries...",
             "search.trendingSearches": "Pesquisas Populares",
             "search.noResultsFound": "Nenhum resultado encontrado",
             "search.results": "Resultados",
@@ -1082,6 +1138,7 @@ class LocalizationManager: ObservableObject {
             "notifications.disableButton": "Desativar Notificações",
             
             // Misc
+            "misc.language": "Português",
             "misc.somethingWrong": "Algo errado?",
             "misc.letUsKnow": "Nos avise",
             "misc.selected": "selecionados",

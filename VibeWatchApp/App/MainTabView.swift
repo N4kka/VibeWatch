@@ -6,6 +6,7 @@ struct MainTabView: View {
     @State private var selectedMovie: Movie?
     @State private var selectedMediaType: MediaType = .movie
     @State private var isLoading = true
+    @State private var showOnboarding = !UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
     
     var body: some View {
         ZStack {
@@ -25,6 +26,15 @@ struct MainTabView: View {
                         
                         withAnimation(.easeOut(duration: 0.5)) {
                             isLoading = false
+                        }
+                    }
+            } else if showOnboarding {
+                OnboardingView(showOnboarding: $showOnboarding)
+                    .transition(.opacity)
+                    .onChange(of: showOnboarding) { newValue in
+                        print("🔵 [MainTabView] showOnboarding changed to: \(newValue)")
+                        if !newValue {
+                            print("🔵 [MainTabView] Onboarding completed, showing main app")
                         }
                     }
             } else {
