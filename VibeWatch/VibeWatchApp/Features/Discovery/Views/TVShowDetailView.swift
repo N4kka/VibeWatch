@@ -173,7 +173,7 @@ struct TVShowDetailView: View {
                 listManager.removeFromList(listId: listManager.seenList.id, itemId: item.id)
             }
         } else {
-            listManager.addToList(listId: listManager.seenList.id, movie: movie, mediaType: .tv)
+            _ = listManager.addToList(listId: listManager.seenList.id, movie: movie, mediaType: .tv)
         }
     }
     
@@ -186,7 +186,7 @@ struct TVShowDetailView: View {
             if let dislikedItem = listManager.dislikedList.items.first(where: { $0.mediaId == tvShow.id && $0.mediaType == .tv }) {
                 listManager.removeFromList(listId: listManager.dislikedList.id, itemId: dislikedItem.id)
             }
-            listManager.addToList(listId: listManager.likedList.id, movie: movie, mediaType: .tv)
+            _ = listManager.addToList(listId: listManager.likedList.id, movie: movie, mediaType: .tv)
         }
     }
     
@@ -199,7 +199,7 @@ struct TVShowDetailView: View {
             if let likedItem = listManager.likedList.items.first(where: { $0.mediaId == tvShow.id && $0.mediaType == .tv }) {
                 listManager.removeFromList(listId: listManager.likedList.id, itemId: likedItem.id)
             }
-            listManager.addToList(listId: listManager.dislikedList.id, movie: movie, mediaType: .tv)
+            _ = listManager.addToList(listId: listManager.dislikedList.id, movie: movie, mediaType: .tv)
         }
     }
     

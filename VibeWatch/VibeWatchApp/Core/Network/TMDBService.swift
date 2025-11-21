@@ -112,7 +112,15 @@ class TMDBService {
         ])
     }
     
-    func discoverMovies(withGenre genreId: Int? = nil, sortBy: String = "popularity.desc", page: Int = 1) async throws -> TMDBResponse<Movie> {
+    func discoverMovies(
+        withGenre genreId: Int? = nil,
+        sortBy: String = "popularity.desc",
+        page: Int = 1,
+        minRuntime: Int? = nil,
+        maxRuntime: Int? = nil,
+        minRating: Double? = nil,
+        country: String? = nil
+    ) async throws -> TMDBResponse<Movie> {
         var items = [
             URLQueryItem(name: "sort_by", value: sortBy),
             URLQueryItem(name: "page", value: "\(page)")
@@ -120,6 +128,24 @@ class TMDBService {
         
         if let genreId = genreId {
             items.append(URLQueryItem(name: "with_genres", value: "\(genreId)"))
+        }
+        
+        if let minRuntime = minRuntime {
+            items.append(URLQueryItem(name: "with_runtime.gte", value: "\(minRuntime)"))
+        }
+        
+        if let maxRuntime = maxRuntime {
+            items.append(URLQueryItem(name: "with_runtime.lte", value: "\(maxRuntime)"))
+        }
+        
+        if let minRating = minRating {
+            items.append(URLQueryItem(name: "vote_average.gte", value: "\(minRating)"))
+            // Only show movies with enough votes to be meaningful
+            items.append(URLQueryItem(name: "vote_count.gte", value: "100"))
+        }
+        
+        if let country = country {
+            items.append(URLQueryItem(name: "with_origin_country", value: country))
         }
         
         return try await request("/discover/movie", queryItems: items)
@@ -152,7 +178,13 @@ class TMDBService {
         ])
     }
     
-    func discoverTVShows(withGenre genreId: Int? = nil, sortBy: String = "popularity.desc", page: Int = 1) async throws -> TMDBResponse<TVShow> {
+    func discoverTVShows(
+        withGenre genreId: Int? = nil,
+        sortBy: String = "popularity.desc",
+        page: Int = 1,
+        minRating: Double? = nil,
+        country: String? = nil
+    ) async throws -> TMDBResponse<TVShow> {
         var items = [
             URLQueryItem(name: "sort_by", value: sortBy),
             URLQueryItem(name: "page", value: "\(page)")
@@ -160,6 +192,16 @@ class TMDBService {
         
         if let genreId = genreId {
             items.append(URLQueryItem(name: "with_genres", value: "\(genreId)"))
+        }
+        
+        if let minRating = minRating {
+            items.append(URLQueryItem(name: "vote_average.gte", value: "\(minRating)"))
+            // Only show shows with enough votes to be meaningful
+            items.append(URLQueryItem(name: "vote_count.gte", value: "100"))
+        }
+        
+        if let country = country {
+            items.append(URLQueryItem(name: "with_origin_country", value: country))
         }
         
         return try await request("/discover/tv", queryItems: items)

@@ -6,6 +6,7 @@ struct DiscoveryView: View {
     @ObservedObject var localizationManager = LocalizationManager.shared
     @State private var showProfile = false
     @State private var showSearch = false
+    @State private var showFilters = false
     @Binding var selectedMovie: Movie?
     @Binding var selectedMediaType: MediaType
     
@@ -56,12 +57,38 @@ struct DiscoveryView: View {
                         }
                     }
                     
+                    // Browse with Filters Section
+                    BrowseSection(viewModel: viewModel, onFilterTap: {
+                        showFilters = true
+                    }, onMovieTap: { movie, type in
+                        selectedMovie = movie
+                        selectedMediaType = type
+                    })
+                    
                     Color.clear
                         .frame(height: 80)
                 }
             }
             .refreshable {
                 await viewModel.loadContent()
+            }
+            .overlay {
+                if showFilters {
+                    AdvancedFiltersPanel(
+                        filters: $viewModel.filters,
+                        showRuntimeFilter: viewModel.selectedBrowseType == .movie,
+                        onDismiss: {
+                            withAnimation {
+                                showFilters = false
+                            }
+                        },
+                        onApply: { _ in
+                            Task {
+                                await viewModel.browseWithFilters()
+                            }
+                        }
+                    )
+                }
             }
             
             DiscoveryHeaderView(
@@ -304,6 +331,124 @@ struct MediaCard: View {
                 Text(movie.rating)
                     .font(.system(size: 12))
                     .foregroundColor(.theme.textSecondary)
+            }
+        }
+    }
+}
+
+struct BrowseSection: View {
+    @ObservedObject var viewModel: DiscoveryViewModel
+    let onFilterTap: () -> Void
+    let onMovieTap: (Movie, MediaType) -> Void
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Header with Media Type Switcher and Filter Button
+            HStack(spacing: 12) {
+                Text("browse.title".localized)
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(.theme.textPrimary)
+                
+                // Media Type Switcher
+                HStack(spacing: 12) {
+                    ForEach([MediaType.movie, MediaType.tv], id: \.self) { type in
+                        Button {
+                            withAnimation {
+                                viewModel.selectedBrowseType = type
+                            }
+                            Task {
+                                await viewModel.browseWithFilters()
+                            }
+                        } label: {
+                            Text(type == .movie ? "browse.movies".localized : "browse.tvShows".localized)
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(viewModel.selectedBrowseType == type ? .white : .theme.textSecondary)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(
+                                    viewModel.selectedBrowseType == type ?
+                                    Color.theme.accentOrange :
+                                    Color.white.opacity(0.1)
+                                )
+                                .clipShape(Capsule())
+                        }
+                    }
+                }
+                
+                Spacer()
+                
+                // Filter Button with indicator
+                Button(action: onFilterTap) {
+                    ZStack(alignment: .topTrailing) {
+                        Image(systemName: "slider.horizontal.3")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.theme.textPrimary)
+                            .frame(width: 40, height: 40)
+                            .background(Color.white.opacity(0.1))
+                            .clipShape(Circle())
+                        
+                        if viewModel.filters.isActive {
+                            Circle()
+                                .fill(Color.theme.accentOrange)
+                                .frame(width: 10, height: 10)
+                                .offset(x: 2, y: 2)
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+            
+            // Content
+            if viewModel.isBrowseLoading {
+                HStack {
+                    Spacer()
+                    ProgressView()
+                        .tint(.theme.accentOrange)
+                    Spacer()
+                }
+                .frame(height: 210)
+            } else if viewModel.selectedBrowseType == .movie && !viewModel.browseMovies.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(viewModel.browseMovies) { movie in
+                            MediaCard(movie: movie)
+                                .onTapGesture {
+                                    onMovieTap(movie, .movie)
+                                }
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                }
+            } else if viewModel.selectedBrowseType == .tv && !viewModel.browseTVShows.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(viewModel.browseTVShows) { tvShow in
+                            MediaCard(movie: tvShow)
+                                .onTapGesture {
+                                    onMovieTap(tvShow, .tv)
+                                }
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                }
+            } else {
+                VStack(spacing: 12) {
+                    Image(systemName: "film.stack")
+                        .font(.system(size: 40))
+                        .foregroundColor(.theme.textSecondary)
+                    
+                    Text("browse.emptyMessage".localized)
+                        .font(.system(size: 14))
+                        .foregroundColor(.theme.textSecondary)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 210)
+            }
+        }
+        .task {
+            // Load default browse results
+            if viewModel.browseMovies.isEmpty && viewModel.browseTVShows.isEmpty {
+                await viewModel.browseWithFilters()
             }
         }
     }

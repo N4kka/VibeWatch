@@ -28,16 +28,24 @@ class ListsViewModel: ObservableObject {
         isLoading = false
     }
 
-    func createList(title: String, description: String?) async {
+    func createList(title: String, description: String?) async -> Result<Void, ListError> {
         guard !title.isEmpty else {
             errorMessage = "List title cannot be empty"
-            return
+            return .failure(.listNotFound) // Reusing error type
         }
 
         // Create list via ListManager (saves to UserDefaults)
-        listManager.createList(name: title, description: description)
+        let result = listManager.createList(name: title, description: description)
+        
+        switch result {
+        case .success:
+            errorMessage = nil
+        case .failure(let error):
+            errorMessage = error.localizedDescription
+        }
 
         // Lists are automatically updated via the publisher binding
+        return result
     }
 
     func deleteList(_ list: MediaList) async {

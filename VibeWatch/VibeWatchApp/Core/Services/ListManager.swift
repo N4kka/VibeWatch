@@ -1,8 +1,32 @@
 import Foundation
 
+enum ListError: Error {
+    case maxListsReached(limit: Int)
+    case maxItemsReached(limit: Int)
+    case listNotFound
+    case itemAlreadyInList
+    
+    var localizedDescription: String {
+        switch self {
+        case .maxListsReached(let limit):
+            return "lists.error.maxListsReached".localized.replacingOccurrences(of: "{limit}", with: "\(limit)")
+        case .maxItemsReached(let limit):
+            return "lists.error.maxItemsReached".localized.replacingOccurrences(of: "{limit}", with: "\(limit)")
+        case .listNotFound:
+            return "lists.error.listNotFound".localized
+        case .itemAlreadyInList:
+            return "lists.error.itemAlreadyInList".localized
+        }
+    }
+}
+
 @MainActor
 class ListManager: ObservableObject {
     static let shared = ListManager()
+    
+    // Limits for free tier
+    static let maxCustomLists = 2
+    static let maxItemsPerList = 25
     
     @Published var lists: [MediaList] = []
     @Published var watchlist: MediaList
@@ -52,10 +76,26 @@ class ListManager: ObservableObject {
         }
     }
     
-    func createList(name: String, description: String? = nil) {
+    func createList(name: String, description: String? = nil) -> Result<Void, ListError> {
+        // Check if custom list limit reached
+        let customListCount = lists.filter { $0.type == .custom }.count
+        guard customListCount < Self.maxCustomLists else {
+            return .failure(.maxListsReached(limit: Self.maxCustomLists))
+        }
+        
         let newList = MediaList(name: name, description: description, type: .custom)
         lists.append(newList)
         saveLists()
+        return .success(())
+    }
+    
+    func canCreateList() -> Bool {
+        let customListCount = lists.filter { $0.type == .custom }.count
+        return customListCount < Self.maxCustomLists
+    }
+    
+    func customListsCount() -> Int {
+        lists.filter { $0.type == .custom }.count
     }
     
     func deleteList(_ list: MediaList) {
@@ -63,34 +103,65 @@ class ListManager: ObservableObject {
         saveLists()
     }
     
-    func addToList(listId: String, movie: Movie, mediaType: MediaType) {
-        guard let index = lists.firstIndex(where: { $0.id == listId }) else { return }
+    func addToList(listId: String, movie: Movie, mediaType: MediaType) -> Result<Void, ListError> {
+        guard let index = lists.firstIndex(where: { $0.id == listId }) else {
+            return .failure(.listNotFound)
+        }
+        
+        // Check if already in list
+        if lists[index].items.contains(where: { $0.mediaId == movie.id && $0.mediaType == mediaType }) {
+            return .failure(.itemAlreadyInList)
+        }
+        
+        // Check item limit for custom lists
+        if lists[index].type == .custom && lists[index].items.count >= Self.maxItemsPerList {
+            return .failure(.maxItemsReached(limit: Self.maxItemsPerList))
+        }
+        
+        // Extract origin country codes from production countries
+        let originCountry = movie.productionCountries?.map { $0.iso }
+        
+        // Get genre IDs from either genreIds or genres array
+        let genreIds = movie.genreIds ?? movie.genres?.map { $0.id }
         
         let item = MediaListItem(
             mediaId: movie.id,
             mediaType: mediaType,
             title: movie.title,
-            posterPath: movie.posterPath
+            posterPath: movie.posterPath,
+            runtime: movie.runtime,
+            voteAverage: movie.voteAverage,
+            voteCount: movie.voteCount,
+            originCountry: originCountry,
+            releaseDate: movie.releaseDate,
+            genres: genreIds,
+            overview: movie.overview
         )
         
-        // Check if already in list
-        if !lists[index].items.contains(where: { $0.mediaId == movie.id && $0.mediaType == mediaType }) {
-            objectWillChange.send()
-            lists[index].items.append(item)
-            
-            // Update special lists
-            if lists[index].type == .watchlist {
-                watchlist = lists[index]
-            } else if lists[index].type == .seen {
-                seenList = lists[index]
-            } else if lists[index].type == .liked {
-                likedList = lists[index]
-            } else if lists[index].type == .disliked {
-                dislikedList = lists[index]
-            }
-            
-            saveLists()
+        objectWillChange.send()
+        lists[index].items.append(item)
+        
+        // Update special lists
+        if lists[index].type == .watchlist {
+            watchlist = lists[index]
+        } else if lists[index].type == .seen {
+            seenList = lists[index]
+        } else if lists[index].type == .liked {
+            likedList = lists[index]
+        } else if lists[index].type == .disliked {
+            dislikedList = lists[index]
         }
+        
+        saveLists()
+        return .success(())
+    }
+    
+    func canAddToList(listId: String) -> Bool {
+        guard let list = lists.first(where: { $0.id == listId }) else { return false }
+        if list.type == .custom {
+            return list.items.count < Self.maxItemsPerList
+        }
+        return true // No limit for default lists
     }
     
     func removeFromList(listId: String, itemId: String) {

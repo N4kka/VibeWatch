@@ -43,7 +43,7 @@ struct MovieDetailView: View {
                                         listManager.removeFromList(listId: listManager.seenList.id, itemId: item.id)
                                     }
                                 } else {
-                                    listManager.addToList(listId: listManager.seenList.id, movie: movie, mediaType: .movie)
+                                    _ = listManager.addToList(listId: listManager.seenList.id, movie: movie, mediaType: .movie)
                                 }
                             },
                             onLikedTap: {
@@ -55,7 +55,7 @@ struct MovieDetailView: View {
                                     if let dislikedItem = listManager.dislikedList.items.first(where: { $0.mediaId == movie.id && $0.mediaType == .movie }) {
                                         listManager.removeFromList(listId: listManager.dislikedList.id, itemId: dislikedItem.id)
                                     }
-                                    listManager.addToList(listId: listManager.likedList.id, movie: movie, mediaType: .movie)
+                                    _ = listManager.addToList(listId: listManager.likedList.id, movie: movie, mediaType: .movie)
                                 }
                             },
                             onDislikedTap: {
@@ -67,7 +67,7 @@ struct MovieDetailView: View {
                                     if let likedItem = listManager.likedList.items.first(where: { $0.mediaId == movie.id && $0.mediaType == .movie }) {
                                         listManager.removeFromList(listId: listManager.likedList.id, itemId: likedItem.id)
                                     }
-                                    listManager.addToList(listId: listManager.dislikedList.id, movie: movie, mediaType: .movie)
+                                    _ = listManager.addToList(listId: listManager.dislikedList.id, movie: movie, mediaType: .movie)
                                 }
                             }
                         )
@@ -486,16 +486,42 @@ struct ProviderGroup: View {
                 .foregroundColor(.theme.textPrimary)
             
             LazyVGrid(columns: [
-                GridItem(.adaptive(minimum: 60), spacing: 12)
-            ], spacing: 12) {
+                GridItem(.adaptive(minimum: 80), spacing: 16)
+            ], spacing: 16) {
                 ForEach(providers) { provider in
                     Button {
                         PlatformDeepLinkHelper.openPlatform(provider: provider, justWatchLink: justWatchLink, title: mediaTitle)
                     } label: {
-                        AsyncImageView(url: provider.logoURL, contentMode: .fit)
-                            .frame(width: 60, height: 60)
-                            .background(Color.white)
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                        VStack(spacing: 6) {
+                            AsyncImageView(url: provider.logoURL, contentMode: .fit)
+                                .frame(width: 60, height: 60)
+                                .background(Color.white)
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                            
+                            // Price and Quality info
+                            if let price = provider.price?.displayPrice {
+                                HStack(spacing: 4) {
+                                    Text(price)
+                                        .font(.system(size: 18, weight: .semibold))
+                                        .foregroundColor(.theme.accentOrange)
+                                    
+                                    if let quality = provider.formattedQuality {
+                                        Text("•")
+                                            .font(.system(size: 10))
+                                            .foregroundColor(.theme.textSecondary)
+                                        
+                                        Text(quality)
+                                            .font(.system(size: 10, weight: .medium))
+                                            .foregroundColor(.theme.textSecondary)
+                                    }
+                                }
+                            } else if let quality = provider.formattedQuality {
+                                Text(quality)
+                                    .font(.system(size: 10, weight: .medium))
+                                    .foregroundColor(.theme.textSecondary)
+                            }
+                        }
+                        .frame(width: 80)
                     }
                 }
             }

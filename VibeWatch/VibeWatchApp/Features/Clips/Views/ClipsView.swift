@@ -1095,7 +1095,7 @@ struct AddToListView: View {
                 do {
                     if mediaType == .movie, let movieId = movieId {
                         let movieDetails = try await TMDBService.shared.getMovieDetails(id: movieId)
-                        listManager.addToList(listId: list.id, movie: movieDetails, mediaType: .movie)
+                        _ = listManager.addToList(listId: list.id, movie: movieDetails, mediaType: .movie)
                     } else if mediaType == .tv, let tvShowId = tvShowId {
                         let tvDetails = try await TMDBService.shared.getTVShowDetails(id: tvShowId)
                         let movie = Movie(

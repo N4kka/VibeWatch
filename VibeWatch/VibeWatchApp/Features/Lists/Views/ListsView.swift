@@ -7,11 +7,11 @@ struct ListsView: View {
     @State private var selectedFilter: MediaFilter = .all
     @AppStorage("selectedPlatforms") private var selectedPlatformsData: Data = Data()
     @State private var selectedListType: ListViewType = .watchlist
-    @State private var selectedSort: SortOption = .dateAdded
     @State private var showCreateList = false
-    @State private var showSortMenu = false
-    @State private var showPlatformSelector = false
+    @State private var showFilters = false
     @State private var refreshID = UUID()
+    @State private var filters = DiscoveryFilters()
+    @State private var filterRefreshTrigger = false
     
     private var selectedPlatforms: Set<StreamingPlatform> {
         get {
@@ -56,127 +56,20 @@ struct ListsView: View {
             }
             .navigationBarHidden(true)
             .overlay {
-                if showSortMenu {
-                    bottomPanel(title: "sort.sortBy".localized, content: {
-                        VStack(spacing: 0) {
-                            ForEach(SortOption.allCases, id: \.self) { option in
-                                Button {
-                                    withAnimation {
-                                        selectedSort = option
-                                        showSortMenu = false
-                                    }
-                                } label: {
-                                    HStack {
-                                        Text(option.displayName)
-                                            .font(.system(size: 16, weight: .medium))
-                                            .foregroundColor(selectedSort == option ? .theme.accentOrange : .theme.textPrimary)
-                                        Spacer()
-                                        if selectedSort == option {
-                                            Image(systemName: "checkmark")
-                                                .foregroundColor(.theme.accentOrange)
-                                        }
-                                    }
-                                    .padding(.horizontal, 20)
-                                    .padding(.vertical, 16)
-                                }
-                                
-                                if option != SortOption.allCases.last {
-                                    Divider()
-                                        .background(Color.white.opacity(0.1))
-                                }
+                if showFilters {
+                    AdvancedFiltersPanel(
+                        filters: $filters,
+                        showRuntimeFilter: false, // Lists don't have runtime metadata
+                        onDismiss: {
+                            withAnimation {
+                                showFilters = false
                             }
+                        },
+                        onApply: { _ in
+                            // Force view refresh when filters are applied
+                            filterRefreshTrigger.toggle()
                         }
-                    }, onDismiss: {
-                        withAnimation {
-                            showSortMenu = false
-                        }
-                    })
-                }
-                
-                if showPlatformSelector {
-                    bottomPanel(title: "platforms.title".localized, content: {
-                        VStack(spacing: 0) {
-                            // Streaming Section
-                            VStack(alignment: .leading, spacing: 12) {
-                                Text("platforms.streaming".localized)
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundColor(.theme.textPrimary)
-                                    .padding(.horizontal, 20)
-                                    .padding(.top, 16)
-                                
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    HStack(spacing: 12) {
-                                        ForEach([StreamingPlatform.netflix, .disney, .prime, .hbo, .apple, .paramount, .hulu, .peacock, .max]) { platform in
-                                            PlatformChip(
-                                                platform: platform,
-                                                isSelected: selectedPlatforms.contains(platform)
-                                            ) {
-                                                togglePlatform(platform)
-                                            }
-                                        }
-                                    }
-                                    .padding(.horizontal, 20)
-                                }
-                            }
-                            
-                            Divider()
-                                .background(Color.white.opacity(0.1))
-                                .padding(.vertical, 16)
-                            
-                            // Rent Section
-                            VStack(alignment: .leading, spacing: 12) {
-                                Text("platforms.rent".localized)
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundColor(.theme.textPrimary)
-                                    .padding(.horizontal, 20)
-                                
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    HStack(spacing: 12) {
-                                        ForEach([StreamingPlatform.prime, .apple, .youtube, .plex]) { platform in
-                                            PlatformChip(
-                                                platform: platform,
-                                                isSelected: selectedPlatforms.contains(platform)
-                                            ) {
-                                                togglePlatform(platform)
-                                            }
-                                        }
-                                    }
-                                    .padding(.horizontal, 20)
-                                }
-                            }
-                            
-                            Divider()
-                                .background(Color.white.opacity(0.1))
-                                .padding(.vertical, 16)
-                            
-                            // Buy Section
-                            VStack(alignment: .leading, spacing: 12) {
-                                Text("platforms.buy".localized)
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundColor(.theme.textPrimary)
-                                    .padding(.horizontal, 20)
-                                
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    HStack(spacing: 12) {
-                                        ForEach([StreamingPlatform.prime, .apple, .youtube]) { platform in
-                                            PlatformChip(
-                                                platform: platform,
-                                                isSelected: selectedPlatforms.contains(platform)
-                                            ) {
-                                                togglePlatform(platform)
-                                            }
-                                        }
-                                    }
-                                    .padding(.horizontal, 20)
-                                    .padding(.bottom, 16)
-                                }
-                            }
-                        }
-                    }, onDismiss: {
-                        withAnimation {
-                            showPlatformSelector = false
-                        }
-                    })
+                    )
                 }
             }
         }
@@ -234,115 +127,42 @@ struct ListsView: View {
     }
     
     private var combinedFiltersRow: some View {
-        GeometryReader { geometry in
-            let availableWidth = geometry.size.width - 40 // Account for horizontal padding
-            let filterWidth = availableWidth * 0.6
-            let actionWidth = availableWidth * 0.4
-            let circleSize: CGFloat = 40
-            let circleSpacing = (actionWidth - (circleSize * 3)) / 4 // Space for 3 circles + 4 gaps
+        HStack(spacing: 12) {
+            // Media filter switcher
+            MediaFilterSwitcher(selectedFilter: $selectedFilter)
             
-            HStack(spacing: 0) {
-                // Media filter switcher - 60% of width
-                MediaFilterSwitcher(selectedFilter: $selectedFilter)
-                    .frame(width: filterWidth)
-                
-                Spacer()
-                
-                // Action circles - remaining 40%
-                HStack(spacing: circleSpacing) {
-                    Spacer()
-                    
-                    // Platform selector circle
-                    Button {
-                        withAnimation {
-                            showPlatformSelector = true
-                        }
-                    } label: {
-                        ZStack {
-                            Circle()
-                                .fill(Color.white.opacity(0.1))
-                                .frame(width: circleSize, height: circleSize)
-                            
-                            Image(systemName: "tv")
-                                .font(.system(size: 16))
-                                .foregroundColor(.theme.textPrimary)
-                        }
+            Spacer()
+            
+            // Advanced Filters Button with indicator
+            Button {
+                withAnimation {
+                    showFilters = true
+                }
+            } label: {
+                ZStack(alignment: .topTrailing) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "slider.horizontal.3")
+                            .font(.system(size: 14))
+                        Text("filters.title".localized)
+                            .font(.system(size: 14, weight: .medium))
                     }
+                    .foregroundColor(.theme.textPrimary)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(Color.white.opacity(0.1))
+                    .clipShape(Capsule())
                     
-                    // Sort circle
-                    Button {
-                        withAnimation {
-                            showSortMenu = true
-                        }
-                    } label: {
-                        ZStack {
-                            Circle()
-                                .fill(Color.white.opacity(0.1))
-                                .frame(width: circleSize, height: circleSize)
-                            
-                            Image(systemName: "arrow.up.arrow.down")
-                                .font(.system(size: 14))
-                                .foregroundColor(.theme.textPrimary)
-                        }
+                    if filters.isActive {
+                        Circle()
+                            .fill(Color.theme.accentOrange)
+                            .frame(width: 10, height: 10)
+                            .offset(x: 4, y: -2)
                     }
                 }
-                .frame(width: actionWidth)
             }
-            .padding(.horizontal, 20)
         }
-        .frame(height: 48)
+        .padding(.horizontal, 20)
         .padding(.bottom, 20)
-    }
-    
-    @ViewBuilder
-    private func bottomPanel<Content: View>(
-        title: String,
-        @ViewBuilder content: () -> Content,
-        onDismiss: @escaping () -> Void
-    ) -> some View {
-        ZStack {
-            Color.black.opacity(0.4)
-                .ignoresSafeArea()
-                .onTapGesture {
-                    onDismiss()
-                }
-            
-            VStack(spacing: 0) {
-                Spacer()
-                
-                VStack(spacing: 0) {
-                    // Header
-                    HStack {
-                        Text(title)
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(.theme.textPrimary)
-                        
-                        Spacer()
-                        
-                        Button {
-                            onDismiss()
-                        } label: {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(.theme.textSecondary)
-                        }
-                    }
-                    .padding(20)
-                    
-                    Divider()
-                        .background(Color.white.opacity(0.1))
-                    
-                    // Content
-                    content()
-                }
-                .frame(maxHeight: UIScreen.main.bounds.height * 0.6)
-                .background(Color.theme.backgroundDark.opacity(0.98))
-                .clipShape(RoundedRectangle(cornerRadius: 20))
-                .padding(.bottom, 0)
-            }
-            .ignoresSafeArea(edges: .bottom)
-        }
-        .transition(.move(edge: .bottom).combined(with: .opacity))
     }
     
     private var contentView: some View {
@@ -402,23 +222,46 @@ struct ListsView: View {
             .padding(.horizontal, 20)
             .padding(.bottom, 100)
         }
+        .id(filterRefreshTrigger) // Force refresh when filters change
     }
     
     private var filteredAndSortedItems: [MediaListItem] {
         guard let list = currentLists.first else { return [] }
         var items = list.items
         
-        // Apply sorting
-        switch selectedSort {
-        case .dateAdded:
-            items.sort { $0.addedAt > $1.addedAt }
-        case .title:
-            items.sort { $0.title < $1.title }
-        case .releaseDate, .rating:
-            break
+        // Apply runtime filter (movies only)
+        if filters.runtimeRange != .any {
+            items = items.filter { item in
+                guard item.mediaType == .movie, let runtime = item.runtime else { return false }
+                
+                if let minRuntime = filters.runtimeRange.minRuntime, runtime < minRuntime {
+                    return false
+                }
+                if let maxRuntime = filters.runtimeRange.maxRuntime, runtime > maxRuntime {
+                    return false
+                }
+                return true
+            }
         }
         
-        // Apply filter
+        // Apply rating filter
+        if filters.ratingRange != .any {
+            items = items.filter { item in
+                guard let voteAverage = item.voteAverage,
+                      let minRating = filters.ratingRange.minRating else { return false }
+                return voteAverage >= minRating
+            }
+        }
+        
+        // Apply country filter
+        if let selectedCountry = filters.country {
+            items = items.filter { item in
+                guard let originCountry = item.originCountry else { return false }
+                return originCountry.contains(selectedCountry)
+            }
+        }
+        
+        // Apply media type filter
         switch selectedFilter {
         case .all:
             break
@@ -428,28 +271,59 @@ struct ListsView: View {
             items = items.filter { $0.mediaType == .tv }
         }
         
+        // Apply sorting
+        switch filters.sortBy {
+        case .popularityDesc, .popularityAsc:
+            // Sort by date added as fallback (no popularity data stored)
+            items.sort { $0.addedAt > $1.addedAt }
+        case .ratingDesc:
+            items.sort { ($0.voteAverage ?? 0) > ($1.voteAverage ?? 0) }
+        case .ratingAsc:
+            items.sort { ($0.voteAverage ?? 0) < ($1.voteAverage ?? 0) }
+        case .releaseDateDesc:
+            items.sort { ($0.releaseDate ?? "") > ($1.releaseDate ?? "") }
+        case .releaseDateAsc:
+            items.sort { ($0.releaseDate ?? "") < ($1.releaseDate ?? "") }
+        }
+        
         return items
     }
     
     private var filteredAndSortedLists: [MediaList] {
         var lists = currentLists
         
-        // Apply sorting
-        switch selectedSort {
-        case .dateAdded:
+        // Apply sorting to list items within each list
+        switch filters.sortBy {
+        case .popularityDesc, .popularityAsc:
             lists = lists.map { list in
                 var sortedList = list
                 sortedList.items.sort { $0.addedAt > $1.addedAt }
                 return sortedList
             }
-        case .title:
+        case .ratingDesc:
             lists = lists.map { list in
                 var sortedList = list
-                sortedList.items.sort { $0.title < $1.title }
+                sortedList.items.sort { ($0.voteAverage ?? 0) > ($1.voteAverage ?? 0) }
                 return sortedList
             }
-        case .releaseDate, .rating:
-            break
+        case .ratingAsc:
+            lists = lists.map { list in
+                var sortedList = list
+                sortedList.items.sort { ($0.voteAverage ?? 0) < ($1.voteAverage ?? 0) }
+                return sortedList
+            }
+        case .releaseDateDesc:
+            lists = lists.map { list in
+                var sortedList = list
+                sortedList.items.sort { ($0.releaseDate ?? "") > ($1.releaseDate ?? "") }
+                return sortedList
+            }
+        case .releaseDateAsc:
+            lists = lists.map { list in
+                var sortedList = list
+                sortedList.items.sort { ($0.releaseDate ?? "") < ($1.releaseDate ?? "") }
+                return sortedList
+            }
         }
         
         return lists
@@ -819,14 +693,65 @@ struct CustomListDetailView: View {
     let list: MediaList
     @StateObject private var listManager = ListManager.shared
     @State private var selectedFilter: MediaFilter = .all
-    @State private var selectedSort: SortOption = .dateAdded
-    @State private var showSortMenu = false
+    @State private var filters = DiscoveryFilters()
+    @State private var showFilters = false
+    @State private var filterRefreshTrigger = false
     @Environment(\.dismiss) private var dismiss
 
+    // Sort the single list’s items according to filters.sortBy (used if needed elsewhere)
+    private var filteredAndSortedLists: [MediaList] {
+        var sortedList = list
+        sortedList.items.sort { item1, item2 in
+            switch filters.sortBy {
+            case .popularityDesc:
+                return item1.addedAt > item2.addedAt
+            case .popularityAsc:
+                return item1.addedAt < item2.addedAt
+            case .ratingDesc:
+                return (item1.voteAverage ?? 0) > (item2.voteAverage ?? 0)
+            case .ratingAsc:
+                return (item1.voteAverage ?? 0) < (item2.voteAverage ?? 0)
+            case .releaseDateDesc:
+                return (item1.releaseDate ?? "") > (item2.releaseDate ?? "")
+            case .releaseDateAsc:
+                return (item1.releaseDate ?? "") < (item2.releaseDate ?? "")
+            }
+        }
+        return [sortedList]
+    }
+    
+    // Full filter + sort for the visible items in this list
     private var filteredAndSortedItems: [MediaListItem] {
         var items = list.items
-
-        // Apply filter
+        
+        // Runtime filter (movies only)
+        if filters.runtimeRange != .any {
+            items = items.filter { item in
+                guard item.mediaType == .movie, let runtime = item.runtime else { return false }
+                if let minRuntime = filters.runtimeRange.minRuntime, runtime < minRuntime { return false }
+                if let maxRuntime = filters.runtimeRange.maxRuntime, runtime > maxRuntime { return false }
+                return true
+            }
+        }
+        
+        // Rating filter
+        if filters.ratingRange != .any {
+            items = items.filter { item in
+                guard let voteAverage = item.voteAverage,
+                      let minRating = filters.ratingRange.minRating else { return false }
+                return voteAverage >= minRating
+            }
+        }
+        
+        // Country filter
+        if let selectedCountry = filters.country {
+            items = items.filter { item in
+                guard let originCountry = item.originCountry else { return false }
+                return originCountry.contains(selectedCountry)
+            }
+        }
+        
+        // Media type filter
         switch selectedFilter {
         case .all:
             break
@@ -835,17 +760,21 @@ struct CustomListDetailView: View {
         case .tvSeries:
             items = items.filter { $0.mediaType == .tv }
         }
-
-        // Apply sorting
-        switch selectedSort {
-        case .dateAdded:
+        
+        // Sorting
+        switch filters.sortBy {
+        case .popularityDesc, .popularityAsc:
             items.sort { $0.addedAt > $1.addedAt }
-        case .title:
-            items.sort { $0.title < $1.title }
-        case .releaseDate, .rating:
-            break
+        case .ratingDesc:
+            items.sort { ($0.voteAverage ?? 0) > ($1.voteAverage ?? 0) }
+        case .ratingAsc:
+            items.sort { ($0.voteAverage ?? 0) < ($1.voteAverage ?? 0) }
+        case .releaseDateDesc:
+            items.sort { ($0.releaseDate ?? "") > ($1.releaseDate ?? "") }
+        case .releaseDateAsc:
+            items.sort { ($0.releaseDate ?? "") < ($1.releaseDate ?? "") }
         }
-
+        
         return items
     }
 
@@ -854,26 +783,37 @@ struct CustomListDetailView: View {
             Color.theme.background.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // Filter and sort bar
-                HStack(spacing: 8) {
+                // Filter bar
+                HStack(spacing: 12) {
                     MediaFilterSwitcher(selectedFilter: $selectedFilter)
 
                     Spacer()
 
-                    // Sort button
+                    // Advanced Filters Button
                     Button {
                         withAnimation {
-                            showSortMenu = true
+                            showFilters = true
                         }
                     } label: {
-                        ZStack {
-                            Circle()
-                                .fill(Color.white.opacity(0.1))
-                                .frame(width: 40, height: 40)
-
-                            Image(systemName: "arrow.up.arrow.down")
-                                .font(.system(size: 14))
-                                .foregroundColor(.theme.textPrimary)
+                        ZStack(alignment: .topTrailing) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "slider.horizontal.3")
+                                    .font(.system(size: 14))
+                                Text("filters.title".localized)
+                                    .font(.system(size: 14, weight: .medium))
+                            }
+                            .foregroundColor(.theme.textPrimary)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                            .background(Color.white.opacity(0.1))
+                            .clipShape(Capsule())
+                            
+                            if filters.isActive {
+                                Circle()
+                                    .fill(Color.theme.accentOrange)
+                                    .frame(width: 10, height: 10)
+                                    .offset(x: 4, y: -2)
+                            }
                         }
                     }
                 }
@@ -935,85 +875,27 @@ struct CustomListDetailView: View {
                         .padding(.horizontal, 20)
                         .padding(.bottom, 100)
                     }
+                    .id(filterRefreshTrigger) // Force refresh when filters change
                 }
             }
         }
         .navigationTitle(list.name)
         .navigationBarTitleDisplayMode(.large)
         .overlay {
-            if showSortMenu {
-                ZStack {
-                    Color.black.opacity(0.4)
-                        .ignoresSafeArea()
-                        .onTapGesture {
-                            withAnimation {
-                                showSortMenu = false
-                            }
+            if showFilters {
+                AdvancedFiltersPanel(
+                    filters: $filters,
+                    showRuntimeFilter: false,
+                    onDismiss: {
+                        withAnimation {
+                            showFilters = false
                         }
-
-                    VStack(spacing: 0) {
-                        Spacer()
-
-                        VStack(spacing: 0) {
-                            // Header
-                            HStack {
-                                Text("sort.sortBy".localized)
-                                    .font(.system(size: 20, weight: .bold))
-                                    .foregroundColor(.theme.textPrimary)
-
-                                Spacer()
-
-                                Button {
-                                    withAnimation {
-                                        showSortMenu = false
-                                    }
-                                } label: {
-                                    Image(systemName: "xmark")
-                                        .font(.system(size: 16, weight: .semibold))
-                                        .foregroundColor(.theme.textSecondary)
-                                }
-                            }
-                            .padding(20)
-
-                            Divider()
-                                .background(Color.white.opacity(0.1))
-
-                            // Sort options
-                            VStack(spacing: 0) {
-                                ForEach(SortOption.allCases, id: \.self) { option in
-                                    Button {
-                                        withAnimation {
-                                            selectedSort = option
-                                            showSortMenu = false
-                                        }
-                                    } label: {
-                                        HStack {
-                                            Text(option.displayName)
-                                                .font(.system(size: 16, weight: .medium))
-                                                .foregroundColor(selectedSort == option ? .theme.accentOrange : .theme.textPrimary)
-                                            Spacer()
-                                            if selectedSort == option {
-                                                Image(systemName: "checkmark")
-                                                    .foregroundColor(.theme.accentOrange)
-                                            }
-                                        }
-                                        .padding(.horizontal, 20)
-                                        .padding(.vertical, 16)
-                                    }
-
-                                    if option != SortOption.allCases.last {
-                                        Divider()
-                                            .background(Color.white.opacity(0.1))
-                                    }
-                                }
-                            }
-                        }
-                        .background(Color.theme.backgroundDark)
-                        .clipShape(RoundedRectangle(cornerRadius: 20))
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 40)
+                    },
+                    onApply: { _ in
+                        // Force view refresh when filters are applied
+                        filterRefreshTrigger.toggle()
                     }
-                }
+                )
             }
         }
     }
@@ -1107,8 +989,11 @@ struct ListCard: View {
 struct CreateListView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: ListsViewModel
+    @StateObject private var listManager = ListManager.shared
     @State private var listName = ""
     @State private var listDescription = ""
+    @State private var showError = false
+    @State private var errorMessage = ""
     
     var body: some View {
         VStack(spacing: 0) {
@@ -1136,6 +1021,17 @@ struct CreateListView: View {
             // Content
             VStack(spacing: 0) {
                 VStack(alignment: .leading, spacing: 16) {
+                    // Limit Info
+                    HStack {
+                        Text("lists.limitInfo".localized
+                            .replacingOccurrences(of: "{count}", with: "\(listManager.customListsCount())")
+                            .replacingOccurrences(of: "{limit}", with: "\(ListManager.maxCustomLists)"))
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(listManager.canCreateList() ? .theme.textSecondary : .theme.accentOrange)
+                        
+                        Spacer()
+                    }
+                    
                     // List Name Field
                     VStack(alignment: .leading, spacing: 8) {
                         Text("lists.listName".localized)
@@ -1171,22 +1067,33 @@ struct CreateListView: View {
                 // Create Button
                 Button {
                     Task {
-                        await viewModel.createList(title: listName, description: listDescription.isEmpty ? nil : listDescription)
+                        let result = await viewModel.createList(title: listName, description: listDescription.isEmpty ? nil : listDescription)
+                        switch result {
+                        case .success:
+                            dismiss()
+                        case .failure(let error):
+                            errorMessage = error.localizedDescription
+                            showError = true
+                        }
                     }
-                    dismiss()
                 } label: {
                     Text("lists.createList".localized)
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
-                        .background(listName.isEmpty ? Color.gray.opacity(0.3) : Color.theme.accentOrange)
+                        .background(listName.isEmpty || !listManager.canCreateList() ? Color.gray.opacity(0.3) : Color.theme.accentOrange)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
-                .disabled(listName.isEmpty)
+                .disabled(listName.isEmpty || !listManager.canCreateList())
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)
             }
+        }
+        .alert("Error", isPresented: $showError) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(errorMessage)
         }
     }
 }

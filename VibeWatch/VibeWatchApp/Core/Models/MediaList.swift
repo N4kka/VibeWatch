@@ -49,13 +49,43 @@ struct MediaListItem: Identifiable, Codable {
     let posterPath: String?
     let addedAt: Date
     
-    init(id: String = UUID().uuidString, mediaId: Int, mediaType: MediaType, title: String, posterPath: String?, addedAt: Date = Date()) {
+    // Extended metadata for filtering and display
+    let runtime: Int?              // Movie runtime in minutes
+    let voteAverage: Double?       // TMDb rating (0-10)
+    let voteCount: Int?            // Number of votes
+    let originCountry: [String]?   // ISO country codes (e.g., ["US", "GB"])
+    let releaseDate: String?       // Release/first air date (YYYY-MM-DD)
+    let genres: [Int]?             // Genre IDs
+    let overview: String?          // Description/synopsis
+    
+    init(
+        id: String = UUID().uuidString,
+        mediaId: Int,
+        mediaType: MediaType,
+        title: String,
+        posterPath: String?,
+        addedAt: Date = Date(),
+        runtime: Int? = nil,
+        voteAverage: Double? = nil,
+        voteCount: Int? = nil,
+        originCountry: [String]? = nil,
+        releaseDate: String? = nil,
+        genres: [Int]? = nil,
+        overview: String? = nil
+    ) {
         self.id = id
         self.mediaId = mediaId
         self.mediaType = mediaType
         self.title = title
         self.posterPath = posterPath
         self.addedAt = addedAt
+        self.runtime = runtime
+        self.voteAverage = voteAverage
+        self.voteCount = voteCount
+        self.originCountry = originCountry
+        self.releaseDate = releaseDate
+        self.genres = genres
+        self.overview = overview
     }
 }
 

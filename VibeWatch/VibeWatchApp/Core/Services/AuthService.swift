@@ -83,9 +83,7 @@ class AuthService: ObservableObject {
                 id: userId,
                 email: email,
                 displayName: username,
-                avatarURL: nil,
-                selectedProviders: [],
-                createdAt: Date()
+                avatarURL: nil
             )
             
             // Update the existing row instead of inserting
@@ -293,9 +291,7 @@ class AuthService: ObservableObject {
                     id: authUser.id.uuidString,
                     email: authUser.email ?? "",
                     displayName: displayName,
-                    avatarURL: avatarURL,
-                    selectedProviders: [],
-                    createdAt: Date()
+                    avatarURL: avatarURL
                 )
                 
                 // Try to update the existing row (created by trigger)
