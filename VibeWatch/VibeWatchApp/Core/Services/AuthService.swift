@@ -65,10 +65,11 @@ class AuthService: ObservableObject {
         do {
             print("📝 Attempting to sign up user: \(email)")
             
-            // Sign up with email and password
+            // FIX: Pass username as metadata so the DB trigger can use it
             let response = try await client.auth.signUp(
                 email: email,
-                password: password
+                password: password,
+                data: ["display_name": .string(username)]
             )
             
             let userId = response.user.id.uuidString
@@ -93,20 +94,17 @@ class AuthService: ObservableObject {
                 do {
                     // Upsert the profile
                     try await updateUserProfileDirectly(user: newUser)
-                    print("✅ Profile created successfully")
+                    print("✅ Profile created manually successfully")
                     
                     self.currentUser = newUser
                     self.isAuthenticated = true
                 } catch {
-                    print("❌ Error creating profile: \(error)")
-                    print("❌ Error details: \(error.localizedDescription)")
+                    print("❌ Error creating profile manually: \(error)")
                     throw AuthError.databaseError
                 }
-            } else if let user = currentUser, user.displayName == nil && !username.isEmpty {
-                // Profile exists but needs username
+            } else if let user = currentUser, (user.displayName == nil || user.displayName == "") {
+                // Profile exists but needs username (Trigger might have failed to copy metadata)
                 print("📝 Updating existing profile with username")
-                var updatedUser = user
-                updatedUser.displayName = username
                 try await updateUserProfile(displayName: username, avatarURL: nil)
             }
             
@@ -122,7 +120,6 @@ class AuthService: ObservableObject {
             throw error
         } catch {
             print("❌ Unexpected error during signup: \(error)")
-            print("❌ Error type: \(type(of: error))")
             throw AuthError.signUpFailed
         }
     }
@@ -230,141 +227,65 @@ class AuthService: ObservableObject {
         return user
     }
     
-
     
     // MARK: - User Profile Management
-    
     private func fetchUserProfile(userId: String) async {
-        guard let client = client else { return }
-        
-        // Wait a bit for the trigger to create the profile
-        try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
-        
-        do {
-            let response: User = try await client
-                .from("profiles")
-                .select()
-                .eq("id", value: userId)
-                .single()
-                .execute()
-                .value
-            
-            self.currentUser = response
-            self.isAuthenticated = true
-            print("✅ User profile fetched successfully")
-            
-            // Check if display_name is missing and update from auth metadata
-            if response.displayName == nil || response.displayName?.isEmpty == true {
-                print("⚠️ Display name is missing, extracting from auth metadata...")
-                await updateDisplayNameFromMetadata(userId: userId)
+            guard let client = client else { 
+                print("❌ Client not configured in fetchUserProfile")
+                return 
             }
-        } catch {
-            print("⚠️ Error fetching user profile: \(error.localizedDescription)")
-            print("⚠️ Attempting to update existing profile...")
             
-            // Profile exists but fetch failed, or needs to be created
-            // Try updating instead of inserting
-            do {
-                let session = try await client.auth.session
-                let authUser = session.user
-                
-                // Debug: Print all metadata
-                print("📋 User metadata: \(authUser.userMetadata)")
-                print("📋 Metadata type: \(type(of: authUser.userMetadata))")
-                
-                // Extract name from auth metadata (try multiple fields)
-                // The metadata might be AnyJSON, need to handle properly
-                var displayName: String? = nil
-                
-                // Try extracting from different possible keys
-                if let fullName = authUser.userMetadata["full_name"] {
-                    displayName = String(describing: fullName)
-                    print("🔍 Found full_name: \(fullName)")
-                } else if let name = authUser.userMetadata["name"] {
-                    displayName = String(describing: name)
-                    print("🔍 Found name: \(name)")
-                } else if let userName = authUser.userMetadata["user_name"] {
-                    displayName = String(describing: userName)
-                    print("🔍 Found user_name: \(userName)")
-                } else if let email = authUser.email {
-                    // Fallback: use email prefix for Apple users (Apple often doesn't provide name)
-                    displayName = email.split(separator: "@").first.map(String.init)
-                    print("🔍 Using email prefix as name: \(displayName ?? "nil")")
-                }
-                
-                print("📝 Extracted display name: \(displayName ?? "nil")")
-                
-                // Extract avatar URL from metadata (try multiple fields)
-                var avatarURL: String? = nil
-                
-                if let picture = authUser.userMetadata["picture"] {
-                    avatarURL = String(describing: picture)
-                    print("🔍 Found picture: \(picture)")
-                } else if let avatarUrl = authUser.userMetadata["avatar_url"] {
-                    avatarURL = String(describing: avatarUrl)
-                    print("🔍 Found avatar_url: \(avatarUrl)")
-                }
-                
-                print("📝 Extracted avatar URL: \(avatarURL ?? "nil")")
-                
-                let newUser = User(
-                    id: authUser.id.uuidString,
-                    email: authUser.email ?? "",
-                    displayName: displayName,
-                    avatarURL: avatarURL
-                )
-                
-                // Try to update the existing row (created by trigger)
-                var updateData: [String: String] = [
-                    "email": authUser.email ?? ""
-                ]
-                
-                if let name = displayName {
-                    updateData["display_name"] = name
-                }
-                
-                if let avatar = avatarURL {
-                    updateData["avatar_url"] = avatar
-                }
-                
-                try await client
-                    .from("profiles")
-                    .update(updateData)
-                    .eq("id", value: authUser.id.uuidString)
-                    .execute()
-                
-                self.currentUser = newUser
-                self.isAuthenticated = true
-                print("✅ User profile updated successfully")
-                
-                // Try fetching again to confirm
-                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
-                if let profile: User = try? await client
+            print("📥 Fetching profile for user ID: \(userId)")
+            
+            // Wait a bit for the trigger to create the profile
+            try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+            
+            // Defined inner function to perform the actual fetch
+            func performFetch() async throws -> User {
+                return try await client
                     .from("profiles")
                     .select()
                     .eq("id", value: userId)
                     .single()
                     .execute()
-                    .value {
-                    self.currentUser = profile
+                    .value
+            }
+            
+            do {
+                // Attempt 1: Standard Fetch
+                print("🔍 Attempting to fetch profile from database...")
+                let response = try await performFetch()
+                self.currentUser = response
+                self.isAuthenticated = true
+                print("✅ User profile fetched successfully: \(response.email)")
+                print("   Display name: \(response.displayName ?? "nil")")
+                print("   Avatar URL: \(response.avatarURL ?? "nil")")
+                
+                if response.displayName == nil || response.displayName?.isEmpty == true {
+                    await updateDisplayNameFromMetadata(userId: userId)
                 }
-            } catch {
-                print("❌ Error updating user profile: \(error.localizedDescription)")
-                print("❌ Full error: \(error)")
+            } catch let fetchError {
+                print("❌ First fetch failed: \(fetchError)")
+                print("⚠️ Attempting metadata sync/recovery...")
+                
+                // Attempt 2: Run the metadata sync to fix missing display names
+                await updateDisplayNameFromMetadata(userId: userId)
+                
+                // Attempt 3: Try fetching ONE MORE TIME after the sync
+                do {
+                    print("🔍 Retrying profile fetch after metadata sync...")
+                    let retryResponse = try await performFetch()
+                    self.currentUser = retryResponse
+                    self.isAuthenticated = true
+                    print("✅ User profile fetched after recovery: \(retryResponse.email)")
+                } catch let retryError {
+                    print("❌ Final fetch failed: \(retryError)")
+                    print("❌ This will cause 'User not found' error in sign in")
+                    // Ensure currentUser is nil so signUp knows to try manual creation
+                    self.currentUser = nil
+                }
             }
         }
-    }
-    
-    private func createUserProfile(user: User) async throws {
-        guard let client = client else {
-            throw AuthError.notConfigured
-        }
-        
-        try await client
-            .from("profiles")
-            .insert(user)
-            .execute()
-    }
     
     private func getEmailFromUsername(_ username: String) async throws -> String {
         guard let client = client else {
@@ -372,6 +293,9 @@ class AuthService: ObservableObject {
         }
         
         do {
+            print("🔍 Looking up email for username: '\(username)'")
+            
+            // Try exact match first
             let response: User = try await client
                 .from("profiles")
                 .select()
@@ -380,10 +304,31 @@ class AuthService: ObservableObject {
                 .execute()
                 .value
             
+            print("✅ Found email for username: \(response.email)")
             return response.email
-        } catch {
-            print("❌ User not found with username: \(username)")
-            throw AuthError.userNotFound
+        } catch let exactError {
+            print("❌ Exact match failed for username: '\(username)'")
+            print("❌ Error details: \(exactError)")
+            
+            // Try case-insensitive search as fallback
+            do {
+                print("🔍 Trying case-insensitive search...")
+                
+                let response: User = try await client
+                    .from("profiles")
+                    .select()
+                    .ilike("display_name", pattern: username)
+                    .single()
+                    .execute()
+                    .value
+                
+                print("✅ Found email with case-insensitive search: \(response.email)")
+                return response.email
+            } catch {
+                print("❌ Case-insensitive search also failed")
+                print("❌ Error details: \(error)")
+                throw AuthError.userNotFound
+            }
         }
     }
     
@@ -396,21 +341,31 @@ class AuthService: ObservableObject {
             throw AuthError.userNotFound
         }
         
+        // Prepare update data dictionary
+        var updateData: [String: String] = [:]
+        
         if let displayName = displayName {
             user.displayName = displayName
+            updateData["display_name"] = displayName
         }
         
         if let avatarURL = avatarURL {
             user.avatarURL = avatarURL
+            updateData["avatar_url"] = avatarURL
         }
+        
+        guard !updateData.isEmpty else { return }
+        
+        print("📝 Updating profile for user \(user.id) with data: \(updateData)")
         
         try await client
             .from("profiles")
-            .update(user)
+            .update(updateData)
             .eq("id", value: user.id)
             .execute()
         
         self.currentUser = user
+        print("✅ Profile updated successfully in database")
     }
     
     func uploadAvatar(imageData: Data) async throws -> String {
@@ -427,22 +382,31 @@ class AuthService: ObservableObject {
         
         print("📤 Uploading avatar: \(fileName)")
         
-        // Upload to Supabase Storage
-        try await client.storage
-            .from("avatars")
-            .upload(fileName, data: imageData, options: .init(contentType: "image/jpeg", upsert: true))
-        
-        // Get public URL
-        let publicURL = try client.storage
-            .from("avatars")
-            .getPublicURL(path: fileName)
-        
-        print("✅ Avatar uploaded successfully: \(publicURL)")
-        
-        // Update user profile with new avatar URL
-        try await updateUserProfile(displayName: nil, avatarURL: publicURL.absoluteString)
-        
-        return publicURL.absoluteString
+        do {
+            // Upload to Supabase Storage
+            try await client.storage
+                .from("avatars")
+                .upload(fileName, data: imageData, options: .init(contentType: "image/jpeg", upsert: true))
+            
+            print("✅ Avatar file uploaded to storage")
+            
+            // Get public URL
+            let publicURL = try client.storage
+                .from("avatars")
+                .getPublicURL(path: fileName)
+            
+            print("✅ Avatar public URL generated: \(publicURL)")
+            
+            // Update user profile with new avatar URL
+            try await updateUserProfile(displayName: nil, avatarURL: publicURL.absoluteString)
+            
+            print("✅ Avatar upload complete and profile updated")
+            
+            return publicURL.absoluteString
+        } catch {
+            print("❌ Error uploading avatar: \(error)")
+            throw error
+        }
     }
     
     private func updateUserProfileDirectly(user: User) async throws {
@@ -484,7 +448,10 @@ class AuthService: ObservableObject {
             // Extract name from auth metadata (try multiple fields)
             var displayName: String? = nil
             
-            if let fullName = authUser.userMetadata["full_name"] {
+            // Check common metadata keys
+            if let metaDisplay = authUser.userMetadata["display_name"] {
+                displayName = String(describing: metaDisplay)
+            } else if let fullName = authUser.userMetadata["full_name"] {
                 displayName = String(describing: fullName)
             } else if let name = authUser.userMetadata["name"] {
                 displayName = String(describing: name)
@@ -494,18 +461,16 @@ class AuthService: ObservableObject {
             
             print("📝 Extracted display name: \(displayName ?? "nil")")
             
-            // Extract avatar URL from metadata (try multiple fields)
+            // Extract avatar URL
             var avatarURL: String? = nil
-            
             if let picture = authUser.userMetadata["picture"] {
                 avatarURL = String(describing: picture)
-                print("🔍 Found picture: \(picture)")
             } else if let avatarUrl = authUser.userMetadata["avatar_url"] {
                 avatarURL = String(describing: avatarUrl)
-                print("🔍 Found avatar_url: \(avatarUrl)")
             }
             
-            print("📝 Extracted avatar URL: \(avatarURL ?? "nil")")
+            // If we found nothing, we can't update
+            if displayName == nil && avatarURL == nil { return }
             
             // Build update data
             var updateData: [String: String] = [:]
@@ -518,27 +483,24 @@ class AuthService: ObservableObject {
                 updateData["avatar_url"] = avatar
             }
             
-            if !updateData.isEmpty {
-                // Update database
-                try await client
-                    .from("profiles")
-                    .update(updateData)
-                    .eq("id", value: userId)
-                    .execute()
-                
-                // Update local state
-                if let name = displayName {
-                    self.currentUser?.displayName = name
-                    print("✅ Display name updated to: \(name)")
-                }
-                
-                if let avatar = avatarURL {
-                    self.currentUser?.avatarURL = avatar
-                    print("✅ Avatar URL updated to: \(avatar)")
-                }
+            // Update database
+            try await client
+                .from("profiles")
+                .update(updateData)
+                .eq("id", value: userId)
+                .execute()
+            
+            // Update local state
+            if let name = displayName {
+                self.currentUser?.displayName = name
             }
+            if let avatar = avatarURL {
+                self.currentUser?.avatarURL = avatar
+            }
+            print("✅ Synced profile from metadata")
+            
         } catch {
-            print("❌ Error updating display name: \(error.localizedDescription)")
+            print("❌ Error syncing from metadata: \(error.localizedDescription)")
         }
     }
 }

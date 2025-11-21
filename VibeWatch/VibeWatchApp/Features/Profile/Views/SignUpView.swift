@@ -304,8 +304,6 @@ struct SignUpView: View {
         
         isLoading = false
     }
-    
-
 }
 
 struct SocialButton: View {
