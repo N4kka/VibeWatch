@@ -222,7 +222,7 @@ class AuthService: ObservableObject {
         
         do {
             let response: User = try await client
-                .from("users")
+                .from("profiles")
                 .select()
                 .eq("id", value: userId)
                 .single()
@@ -308,7 +308,7 @@ class AuthService: ObservableObject {
                 }
                 
                 try await client
-                    .from("users")
+                    .from("profiles")
                     .update(updateData)
                     .eq("id", value: authUser.id.uuidString)
                     .execute()
@@ -320,7 +320,7 @@ class AuthService: ObservableObject {
                 // Try fetching again to confirm
                 try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
                 if let profile: User = try? await client
-                    .from("users")
+                    .from("profiles")
                     .select()
                     .eq("id", value: userId)
                     .single()
@@ -341,7 +341,7 @@ class AuthService: ObservableObject {
         }
         
         try await client
-            .from("users")
+            .from("profiles")
             .insert(user)
             .execute()
     }
@@ -352,7 +352,7 @@ class AuthService: ObservableObject {
         }
         
         let response: User = try await client
-            .from("users")
+            .from("profiles")
             .select()
             .eq("display_name", value: username)
             .single()
@@ -380,7 +380,7 @@ class AuthService: ObservableObject {
         }
         
         try await client
-            .from("users")
+            .from("profiles")
             .update(user)
             .eq("id", value: user.id)
             .execute()
@@ -427,7 +427,7 @@ class AuthService: ObservableObject {
         }
         
         try await client
-            .from("users")
+            .from("profiles")
             .update(user)
             .eq("id", value: user.id)
             .execute()
@@ -483,7 +483,7 @@ class AuthService: ObservableObject {
             if !updateData.isEmpty {
                 // Update database
                 try await client
-                    .from("users")
+                    .from("profiles")
                     .update(updateData)
                     .eq("id", value: userId)
                     .execute()
