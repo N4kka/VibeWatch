@@ -1,41 +1,63 @@
 import SwiftUI
 
 struct LiquidGlassView: View {
+    var cornerRadius: CGFloat = 0
+    var opacity: Double = 1.0
+    
     var body: some View {
-        Rectangle()
-            .fill(.ultraThinMaterial)
-            .overlay {
-                Rectangle()
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color.white.opacity(0.05),
-                                Color.white.opacity(0.02)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
+        ZStack {
+            // Base frosted glass effect
+            RoundedRectangle(cornerRadius: cornerRadius)
+                .fill(.ultraThinMaterial)
+                .opacity(opacity)
+            
+            // Subtle gradient overlay for depth
+            RoundedRectangle(cornerRadius: cornerRadius)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.15),
+                            Color.white.opacity(0.05),
+                            Color.white.opacity(0.08)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
                     )
-            }
-            .overlay {
-                RoundedRectangle(cornerRadius: 0)
-                    .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
-            }
+                )
+            
+            // Border highlight
+            RoundedRectangle(cornerRadius: cornerRadius)
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.3),
+                            Color.white.opacity(0.1),
+                            Color.white.opacity(0.2)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+        }
     }
 }
 
 struct LiquidGlassModifier: ViewModifier {
+    var cornerRadius: CGFloat = 0
+    var opacity: Double = 1.0
+    
     func body(content: Content) -> some View {
         content
             .background {
-                LiquidGlassView()
+                LiquidGlassView(cornerRadius: cornerRadius, opacity: opacity)
             }
     }
 }
 
 extension View {
-    func liquidGlass() -> some View {
-        modifier(LiquidGlassModifier())
+    func liquidGlass(cornerRadius: CGFloat = 0, opacity: Double = 1.0) -> some View {
+        modifier(LiquidGlassModifier(cornerRadius: cornerRadius, opacity: opacity))
     }
 }
 
