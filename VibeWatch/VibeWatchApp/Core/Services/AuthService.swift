@@ -62,49 +62,69 @@ class AuthService: ObservableObject {
             throw AuthError.notConfigured
         }
         
-        // Sign up with email and password
-        let response = try await client.auth.signUp(
-            email: email,
-            password: password
-        )
-        
-        let userId = response.user.id.uuidString
-        
-        // Wait a moment for the trigger to create the user profile
-        try await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
-        
-        // Try to fetch the profile created by the trigger
-        await fetchUserProfile(userId: userId)
-        
-        // If profile wasn't created by trigger, create it manually
-        if currentUser == nil {
-            print("⚠️ Trigger didn't create profile, creating manually...")
-            let newUser = User(
-                id: userId,
+        do {
+            print("📝 Attempting to sign up user: \(email)")
+            
+            // Sign up with email and password
+            let response = try await client.auth.signUp(
                 email: email,
-                displayName: username,
-                avatarURL: nil
+                password: password
             )
             
-            // Update the existing row instead of inserting
-            try await updateUserProfileDirectly(user: newUser)
+            let userId = response.user.id.uuidString
+            print("✅ Auth user created with ID: \(userId)")
             
-            self.currentUser = newUser
-            self.isAuthenticated = true
-        } else if let user = currentUser, user.displayName == nil && !username.isEmpty {
-            // Profile exists but needs username
-            var updatedUser = user
-            updatedUser.displayName = username
-            try await updateUserProfile(displayName: username, avatarURL: nil)
+            // Wait a moment for the trigger to create the user profile
+            try await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+            
+            // Try to fetch the profile created by the trigger
+            await fetchUserProfile(userId: userId)
+            
+            // If profile wasn't created by trigger, create it manually
+            if currentUser == nil {
+                print("⚠️ Trigger didn't create profile, creating manually...")
+                let newUser = User(
+                    id: userId,
+                    email: email,
+                    displayName: username,
+                    avatarURL: nil
+                )
+                
+                do {
+                    // Upsert the profile
+                    try await updateUserProfileDirectly(user: newUser)
+                    print("✅ Profile created successfully")
+                    
+                    self.currentUser = newUser
+                    self.isAuthenticated = true
+                } catch {
+                    print("❌ Error creating profile: \(error)")
+                    print("❌ Error details: \(error.localizedDescription)")
+                    throw AuthError.databaseError
+                }
+            } else if let user = currentUser, user.displayName == nil && !username.isEmpty {
+                // Profile exists but needs username
+                print("📝 Updating existing profile with username")
+                var updatedUser = user
+                updatedUser.displayName = username
+                try await updateUserProfile(displayName: username, avatarURL: nil)
+            }
+            
+            print("✅ User created successfully with Supabase")
+            
+            guard let user = currentUser else {
+                throw AuthError.userNotFound
+            }
+            
+            return user
+        } catch let error as AuthError {
+            print("❌ AuthError: \(error)")
+            throw error
+        } catch {
+            print("❌ Unexpected error during signup: \(error)")
+            print("❌ Error type: \(type(of: error))")
+            throw AuthError.signUpFailed
         }
-        
-        print("✅ User created successfully with Supabase")
-        
-        guard let user = currentUser else {
-            throw AuthError.userNotFound
-        }
-        
-        return user
     }
     
     func signIn(emailOrUsername: String, password: String) async throws -> User {
@@ -525,6 +545,8 @@ enum AuthError: LocalizedError {
     case userNotFound
     case invalidCredentials
     case networkError
+    case databaseError
+    case signUpFailed
     
     var errorDescription: String? {
         switch self {
@@ -538,6 +560,10 @@ enum AuthError: LocalizedError {
             return "Invalid email or password."
         case .networkError:
             return "Network error. Please check your connection."
+        case .databaseError:
+            return "Database error saving user profile. Please try again."
+        case .signUpFailed:
+            return "Sign up failed. Please try again."
         }
     }
 }
