@@ -426,10 +426,24 @@ class AuthService: ObservableObject {
             throw AuthError.notConfigured
         }
         
+        // Use upsert to create or update the profile
+        struct ProfileUpdate: Encodable {
+            let id: String
+            let email: String
+            let display_name: String?
+            let avatar_url: String?
+        }
+        
+        let profileData = ProfileUpdate(
+            id: user.id,
+            email: user.email,
+            display_name: user.displayName,
+            avatar_url: user.avatarURL
+        )
+        
         try await client
             .from("profiles")
-            .update(user)
-            .eq("id", value: user.id)
+            .upsert(profileData)
             .execute()
     }
     
