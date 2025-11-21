@@ -1,0 +1,760 @@
+import SwiftUI
+import WebKit
+
+struct MovieDetailView: View {
+    @Environment(\.dismiss) var dismiss
+    @StateObject private var viewModel: MovieDetailViewModel
+    @StateObject private var listManager = ListManager.shared
+    @State private var showSavePanel = false
+    @State private var showSearch = false
+    @State private var showShareSheet = false
+    @State private var shareItems: [Any] = []
+    @State private var isPreparingShare = false
+    
+    init(movieId: Int) {
+        _viewModel = StateObject(wrappedValue: MovieDetailViewModel(movieId: movieId))
+    }
+    
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                if let movie = viewModel.movie {
+                    MovieDetailHeaderView(
+                        movie: movie,
+                        onDismiss: { dismiss() },
+                        onSearch: { showSearch = true },
+                        onShare: {
+                            Task {
+                                await handleShare(movie: movie)
+                            }
+                        }
+                    )
+
+                    VStack(spacing: 24) {
+                        MovieInfoSection(movie: movie)
+                        
+                        ActionButtonsSection(
+                            movie: movie,
+                            mediaType: .movie,
+                            onSaveTap: { showSavePanel = true },
+                            onSeenTap: {
+                                if listManager.isInList(listId: listManager.seenList.id, mediaId: movie.id, mediaType: .movie) {
+                                    if let item = listManager.seenList.items.first(where: { $0.mediaId == movie.id && $0.mediaType == .movie }) {
+                                        listManager.removeFromList(listId: listManager.seenList.id, itemId: item.id)
+                                    }
+                                } else {
+                                    _ = listManager.addToList(listId: listManager.seenList.id, movie: movie, mediaType: .movie)
+                                }
+                            },
+                            onLikedTap: {
+                                if listManager.isInList(listId: listManager.likedList.id, mediaId: movie.id, mediaType: .movie) {
+                                    if let item = listManager.likedList.items.first(where: { $0.mediaId == movie.id && $0.mediaType == .movie }) {
+                                        listManager.removeFromList(listId: listManager.likedList.id, itemId: item.id)
+                                    }
+                                } else {
+                                    if let dislikedItem = listManager.dislikedList.items.first(where: { $0.mediaId == movie.id && $0.mediaType == .movie }) {
+                                        listManager.removeFromList(listId: listManager.dislikedList.id, itemId: dislikedItem.id)
+                                    }
+                                    _ = listManager.addToList(listId: listManager.likedList.id, movie: movie, mediaType: .movie)
+                                }
+                            },
+                            onDislikedTap: {
+                                if listManager.isInList(listId: listManager.dislikedList.id, mediaId: movie.id, mediaType: .movie) {
+                                    if let item = listManager.dislikedList.items.first(where: { $0.mediaId == movie.id && $0.mediaType == .movie }) {
+                                        listManager.removeFromList(listId: listManager.dislikedList.id, itemId: item.id)
+                                    }
+                                } else {
+                                    if let likedItem = listManager.likedList.items.first(where: { $0.mediaId == movie.id && $0.mediaType == .movie }) {
+                                        listManager.removeFromList(listId: listManager.likedList.id, itemId: likedItem.id)
+                                    }
+                                    _ = listManager.addToList(listId: listManager.dislikedList.id, movie: movie, mediaType: .movie)
+                                }
+                            }
+                        )
+                        
+                        if let providers = viewModel.watchProviders {
+                            WatchNowSection(providers: providers, mediaType: .movie, title: movie.title, year: movie.year, imdbId: viewModel.imdbId)
+                        }
+                        
+                        if let trailer = viewModel.trailer {
+                            TrailerSection(trailer: trailer)
+                        }
+                        
+                        if !viewModel.mainCast.isEmpty || viewModel.director != nil {
+                            MovieCreditsSection(
+                                director: viewModel.director,
+                                cast: viewModel.mainCast,
+                                movie: movie
+                            )
+                        }
+                        
+                        if !viewModel.similarMovies.isEmpty {
+                            SimilarMoviesSection(movies: viewModel.similarMovies)
+                        }
+                    }
+                    .padding(.horizontal, 50)
+                    .padding(.bottom, 40)
+                } else if viewModel.isLoading {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .padding(.top, 100)
+                }
+            }
+        }
+        .background(Color.theme.background.ignoresSafeArea())
+        .navigationBarHidden(true)
+        .gesture(
+            DragGesture(minimumDistance: 20, coordinateSpace: .local)
+                .onEnded { value in
+                    if value.translation.width > 100 && abs(value.translation.height) < 50 {
+                        dismiss()
+                    }
+                }
+        )
+        .sheet(isPresented: $showSavePanel) {
+            if let movie = viewModel.movie {
+                SaveToListPanel(movie: movie, mediaType: .movie)
+                    .presentationDetents([.medium])
+                    .presentationDragIndicator(.visible)
+            }
+        }
+        .task {
+            await viewModel.loadMovieDetails()
+        }
+        .sheet(isPresented: $showSearch) {
+            SearchView()
+        }
+        .sheet(isPresented: $showShareSheet) {
+            ShareSheet(items: shareItems)
+                .onDisappear {
+                    shareItems = []
+                }
+        }
+        .overlay {
+            if isPreparingShare {
+                ZStack {
+                    Color.black.opacity(0.3)
+                        .ignoresSafeArea()
+                    
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        .scaleEffect(1.5)
+                }
+            }
+        }
+    }
+    
+    private func handleShare(movie: Movie) async {
+        isPreparingShare = true
+        
+        await prepareShareItems(movie: movie)
+        
+        if !shareItems.isEmpty {
+            await MainActor.run {
+                isPreparingShare = false
+                showShareSheet = true
+            }
+        } else {
+            await MainActor.run {
+                isPreparingShare = false
+            }
+        }
+    }
+    
+    private func prepareShareItems(movie: Movie) async {
+        var items: [Any] = []
+        
+        if let posterPath = movie.posterPath {
+            let posterURLString = "https://image.tmdb.org/t/p/w500\(posterPath)"
+            print("📸 Loading poster from: \(posterURLString)")
+            
+            if let url = URL(string: posterURLString) {
+                do {
+                    let (data, response) = try await URLSession.shared.data(from: url)
+                    
+                    if let httpResponse = response as? HTTPURLResponse {
+                        print("✅ Response status: \(httpResponse.statusCode)")
+                    }
+                    
+                    if let image = UIImage(data: data) {
+                        print("✅ Image loaded successfully: \(image.size)")
+                        items.append(image)
+                    } else {
+                        print("❌ Failed to create UIImage from data")
+                    }
+                } catch {
+                    print("❌ Failed to load poster image for sharing: \(error.localizedDescription)")
+                }
+            }
+        } else {
+            print("❌ No poster path available for movie: \(movie.title)")
+        }
+        
+        var text = "Check out \(movie.title)"
+        if let year = movie.year {
+            text += " (\(year))"
+        }
+        if !movie.overview.isEmpty {
+            text += "\n\n\(movie.overview)"
+        }
+        items.append(text)
+        
+        print("📦 Total share items prepared: \(items.count)")
+        
+        await MainActor.run {
+            shareItems = items
+        }
+    }
+}
+
+struct MovieDetailHeaderView: View {
+    let movie: Movie
+    let onDismiss: () -> Void
+    let onSearch: () -> Void
+    let onShare: () -> Void
+    
+    var body: some View {
+        ZStack(alignment: .top) {
+            AsyncImageView(url: movie.backdropURL, contentMode: .fill)
+                .frame(maxWidth: .infinity, maxHeight: 300)
+                .clipped()
+                .overlay {
+                    LinearGradient(
+                        colors: [
+                            .clear,
+                            Color.theme.background.opacity(0.8),
+                            Color.theme.background
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                }
+            
+            HStack {
+                Button(action: onDismiss) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(width: 40, height: 40)
+                        .background(Color.black.opacity(0.5))
+                        .clipShape(Circle())
+                }
+                
+                Spacer()
+                
+                Text(movie.title)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+                
+                Spacer()
+                
+                HStack(spacing: 12) {
+                    Button(action: onSearch) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.white)
+                            .frame(width: 40, height: 40)
+                            .background(Color.black.opacity(0.5))
+                            .clipShape(Circle())
+                    }
+                    
+                    Button(action: onShare) {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.white)
+                            .frame(width: 40, height: 40)
+                            .background(Color.black.opacity(0.5))
+                            .clipShape(Circle())
+                    }
+                }
+            }
+            .padding(.horizontal, 64)
+            .padding(.top, 30)
+        }
+        .frame(height: 300)
+        .frame(maxWidth: .infinity)
+    }
+}
+
+struct MovieInfoSection: View {
+    let movie: Movie
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 16) {
+                if let year = movie.year {
+                    Text(year)
+                        .font(.system(size: 14))
+                        .foregroundColor(.theme.textSecondary)
+                }
+                
+                HStack(spacing: 4) {
+                    Text("\(movie.ratingPercentage)%")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.theme.accentOrange)
+                    Text("(\(movie.voteCount) \("movieDetail.ratings".localized))")
+                        .font(.system(size: 14))
+                        .foregroundColor(.theme.textSecondary)
+                }
+            }
+            
+            Text(movie.title)
+                .font(.system(size: 28, weight: .bold))
+                .foregroundColor(.theme.textPrimary)
+            
+            if !movie.overview.isEmpty {
+                Text(movie.overview)
+                    .font(.system(size: 14))
+                    .foregroundColor(.theme.textSecondary)
+                    .lineSpacing(4)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 20)
+    }
+}
+
+struct ActionButtonsSection: View {
+    @StateObject private var listManager = ListManager.shared
+    
+    let movie: Movie
+    let mediaType: MediaType
+    let onSaveTap: () -> Void
+    let onSeenTap: () -> Void
+    let onLikedTap: () -> Void
+    let onDislikedTap: () -> Void
+    
+    private var isInAnyList: Bool {
+        listManager.lists.contains { list in
+            list.items.contains { $0.mediaId == movie.id && $0.mediaType == mediaType }
+        }
+    }
+    
+    private var isInSeen: Bool {
+        listManager.isInList(listId: listManager.seenList.id, mediaId: movie.id, mediaType: mediaType)
+    }
+    
+    private var isInLiked: Bool {
+        listManager.isInList(listId: listManager.likedList.id, mediaId: movie.id, mediaType: mediaType)
+    }
+    
+    private var isInDisliked: Bool {
+        listManager.isInList(listId: listManager.dislikedList.id, mediaId: movie.id, mediaType: mediaType)
+    }
+    
+    // Count likes for this specific movie/show
+    private var likesCount: Int {
+        listManager.likedList.items.filter { $0.mediaId == movie.id && $0.mediaType == mediaType }.count
+    }
+    
+    // Count dislikes for this specific movie/show
+    private var dislikesCount: Int {
+        listManager.dislikedList.items.filter { $0.mediaId == movie.id && $0.mediaType == mediaType }.count
+    }
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            ActionButton(
+                icon: "bookmark.fill",
+                title: "movieDetail.save".localized,
+                isActive: isInAnyList
+            ) {
+                onSaveTap()
+            }
+            
+            ActionButton(
+                icon: "eye.fill",
+                title: "movieDetail.seen".localized,
+                isActive: isInSeen
+            ) {
+                withAnimation {
+                    onSeenTap()
+                }
+            }
+            
+            ActionButton(
+                icon: "hand.thumbsup.fill",
+                title: "",
+                isActive: isInLiked,
+                count: likesCount
+            ) {
+                withAnimation {
+                    onLikedTap()
+                }
+            }
+            
+            ActionButton(
+                icon: "hand.thumbsdown.fill",
+                title: "",
+                isActive: isInDisliked,
+                count: dislikesCount
+            ) {
+                withAnimation {
+                    onDislikedTap()
+                }
+            }
+        }
+        .padding(.horizontal, 20)
+    }
+}
+
+struct ActionButton: View {
+    let icon: String
+    let title: String?
+    let isActive: Bool
+    var count: Int? = nil
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 20))
+                if let title = title, !title.isEmpty {
+                    Text(title)
+                        .font(.system(size: 12, weight: .medium))
+                }
+                if let count = count {
+                    Text("\(count)")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(isActive ? .theme.accentOrange : .theme.textSecondary)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 60)
+            .foregroundColor(isActive ? .theme.accentOrange : .theme.textPrimary)
+            .background(isActive ? Color.theme.accentOrange.opacity(0.2) : Color.white.opacity(0.1))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+    }
+}
+
+struct WatchNowSection: View {
+    let providers: CountryProviders
+    let mediaType: MediaType
+    let title: String
+    let year: String?
+    let imdbId: String?
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("movieDetail.watchNow".localized)
+                .font(.system(size: 20, weight: .bold))
+                .foregroundColor(.theme.textPrimary)
+            
+            if let flatrate = providers.flatrate, !flatrate.isEmpty {
+                ProviderGroup(title: "platforms.streaming".localized, providers: flatrate, justWatchLink: providers.link, mediaTitle: title)
+            }
+            
+            if let rent = providers.rent, !rent.isEmpty {
+                ProviderGroup(title: "platforms.rent".localized, providers: rent, justWatchLink: providers.link, mediaTitle: title)
+            }
+            
+            if let buy = providers.buy, !buy.isEmpty {
+                ProviderGroup(title: "platforms.buy".localized, providers: buy, justWatchLink: providers.link, mediaTitle: title)
+            }
+            
+            Button {
+                // TODO: Report issue
+            } label: {
+                HStack(spacing: 8) {
+                    Text("misc.somethingWrong".localized)
+                        .font(.system(size: 14))
+                        .foregroundColor(.theme.textSecondary)
+                    Text("misc.letUsKnow".localized)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.theme.accentOrange)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 20)
+    }
+}
+
+struct ProviderGroup: View {
+    let title: String
+    let providers: [Provider]
+    let justWatchLink: String?
+    let mediaTitle: String
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(.theme.textPrimary)
+            
+            LazyVGrid(columns: [
+                GridItem(.adaptive(minimum: 80), spacing: 16)
+            ], spacing: 16) {
+                ForEach(providers) { provider in
+                    Button {
+                        PlatformDeepLinkHelper.openPlatform(provider: provider, justWatchLink: justWatchLink, title: mediaTitle)
+                    } label: {
+                        VStack(spacing: 6) {
+                            AsyncImageView(url: provider.logoURL, contentMode: .fit)
+                                .frame(width: 60, height: 60)
+                                .background(Color.white)
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                            
+                            // Price and Quality info
+                            if let price = provider.price?.displayPrice {
+                                HStack(spacing: 4) {
+                                    Text(price)
+                                        .font(.system(size: 18, weight: .semibold))
+                                        .foregroundColor(.theme.accentOrange)
+                                    
+                                    if let quality = provider.formattedQuality {
+                                        Text("•")
+                                            .font(.system(size: 10))
+                                            .foregroundColor(.theme.textSecondary)
+                                        
+                                        Text(quality)
+                                            .font(.system(size: 10, weight: .medium))
+                                            .foregroundColor(.theme.textSecondary)
+                                    }
+                                }
+                            } else if let quality = provider.formattedQuality {
+                                Text(quality)
+                                    .font(.system(size: 10, weight: .medium))
+                                    .foregroundColor(.theme.textSecondary)
+                            }
+                        }
+                        .frame(width: 80)
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct TrailerSection: View {
+    let trailer: Video
+    @State private var isPlaying = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("movieDetail.trailer".localized)
+                .font(.system(size: 20, weight: .bold))
+                .foregroundColor(.theme.textPrimary)
+            
+            ZStack {
+                if !isPlaying {
+                    Button {
+                        isPlaying = true
+                    } label: {
+                        AsyncImageView(url: trailer.thumbnailURL, contentMode: .fill)
+                            .frame(height: 200)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .overlay {
+                                Image(systemName: "play.circle.fill")
+                                    .font(.system(size: 60))
+                                    .foregroundColor(.white)
+                                    .shadow(radius: 10)
+                            }
+                    }
+                } else {
+                    YouTubePlayerView(videoId: trailer.key)
+                        .frame(height: 200)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+            }
+            .frame(height: 200)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 20)
+    }
+}
+
+struct YouTubePlayerView: UIViewRepresentable {
+    let videoId: String
+    
+    func makeUIView(context: Context) -> WKWebView {
+        let configuration = WKWebViewConfiguration()
+        configuration.allowsInlineMediaPlayback = true
+        configuration.mediaTypesRequiringUserActionForPlayback = []
+        
+        let preferences = WKWebpagePreferences()
+        preferences.allowsContentJavaScript = true
+        configuration.defaultWebpagePreferences = preferences
+        
+        let webView = WKWebView(frame: .zero, configuration: configuration)
+        webView.scrollView.isScrollEnabled = false
+        webView.scrollView.bounces = false
+        webView.isOpaque = false
+        webView.backgroundColor = .black
+        webView.navigationDelegate = context.coordinator
+        return webView
+    }
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+    
+    class Coordinator: NSObject, WKNavigationDelegate {
+        func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+            if let url = navigationAction.request.url {
+                if url.absoluteString.contains("youtube://") ||
+                   url.absoluteString.contains("itms-apps://") {
+                    decisionHandler(.cancel)
+                    return
+                }
+            }
+            decisionHandler(.allow)
+        }
+    }
+    
+    func updateUIView(_ webView: WKWebView, context: Context) {
+        let embedHTML = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+            <style>
+                * { margin: 0; padding: 0; }
+                html, body { width: 100%; height: 100%; background: #000; overflow: hidden; }
+                .video-container { position: relative; width: 100%; padding-bottom: 56.25%; height: 0; overflow: hidden; }
+                .video-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
+            </style>
+        </head>
+        <body>
+            <div class="video-container">
+                <iframe 
+                    src="https://www.youtube-nocookie.com/embed/\(videoId)?playsinline=1&autoplay=0&rel=0&modestbranding=1&controls=1&enablejsapi=1&origin=https://www.vibewatch.app&widget_referrer=https://www.vibewatch.app"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowfullscreen frameborder="0" webkitallowfullscreen mozallowfullscreen>
+                </iframe>
+            </div>
+        </body>
+        </html>
+        """
+        webView.loadHTMLString(embedHTML, baseURL: URL(string: "https://www.vibewatch.app"))
+    }
+}
+
+struct MovieCreditsSection: View {
+    let director: Crew?
+    let cast: [Cast]
+    let movie: Movie
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("movieDetail.information".localized)
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(.theme.textPrimary)
+                
+                VStack(alignment: .leading, spacing: 12) {
+                    if movie.ratingPercentage > 0 {
+                        InfoRow(title: "movieDetail.rating".localized, value: "\(movie.ratingPercentage)%")
+                    }
+                    
+                    if let genres = movie.genres, !genres.isEmpty {
+                        InfoRow(title: "movieDetail.genres".localized, value: genres.map { $0.name }.joined(separator: ", "))
+                    }
+                    
+                    if let runtime = movie.formattedRuntime {
+                        InfoRow(title: "movieDetail.runtime".localized, value: runtime)
+                    }
+                    
+                    if let countries = movie.productionCountries, !countries.isEmpty {
+                        InfoRow(title: "movieDetail.country".localized, value: countries.first?.name ?? "")
+                    }
+                    
+                    if let director = director {
+                        InfoRow(title: "movieDetail.director".localized, value: director.name)
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+            
+            if !cast.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("movieDetail.cast".localized)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.theme.textPrimary)
+                        .padding(.horizontal, 20)
+                    
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
+                            ForEach(cast) { actor in
+                                CastMemberCard(actor: actor)
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct InfoRow: View {
+    let title: String
+    let value: String
+    
+    var body: some View {
+        HStack(alignment: .top) {
+            Text(title)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.theme.textSecondary)
+                .frame(width: 100, alignment: .leading)
+            
+            Text(value)
+                .font(.system(size: 14))
+                .foregroundColor(.theme.textPrimary)
+            
+            Spacer()
+        }
+    }
+}
+
+struct CastMemberCard: View {
+    let actor: Cast
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            AsyncImageView(url: actor.profileURL, contentMode: .fill)
+                .frame(width: 80, height: 80)
+                .clipShape(Circle())
+            
+            VStack(spacing: 2) {
+                Text(actor.name)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.theme.textPrimary)
+                    .lineLimit(1)
+                
+                Text(actor.character)
+                    .font(.system(size: 10))
+                    .foregroundColor(.theme.textSecondary)
+                    .lineLimit(1)
+            }
+            .frame(width: 80)
+        }
+    }
+}
+
+struct SimilarMoviesSection: View {
+    let movies: [Movie]
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("movieDetail.similar".localized)
+                .font(.system(size: 20, weight: .bold))
+                .foregroundColor(.theme.textPrimary)
+                .padding(.horizontal, 20)
+            
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(movies) { movie in
+                        NavigationLink(destination: MovieDetailView(movieId: movie.id)) {
+                            MediaCard(movie: movie)
+                        }
+                    }
+                }
+                .padding(.horizontal, 20)
+            }
+        }
+    }
+}
