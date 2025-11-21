@@ -371,15 +371,20 @@ class AuthService: ObservableObject {
             throw AuthError.notConfigured
         }
         
-        let response: User = try await client
-            .from("profiles")
-            .select()
-            .eq("display_name", value: username)
-            .single()
-            .execute()
-            .value
-        
-        return response.email
+        do {
+            let response: User = try await client
+                .from("profiles")
+                .select()
+                .eq("display_name", value: username)
+                .single()
+                .execute()
+                .value
+            
+            return response.email
+        } catch {
+            print("❌ User not found with username: \(username)")
+            throw AuthError.userNotFound
+        }
     }
     
     func updateUserProfile(displayName: String?, avatarURL: String?) async throws {
@@ -419,19 +424,18 @@ class AuthService: ObservableObject {
         
         // Generate unique file name
         let fileName = "\(userId)-\(UUID().uuidString).jpg"
-        let filePath = "avatars/\(fileName)"
         
-        print("📤 Uploading avatar to: \(filePath)")
+        print("📤 Uploading avatar: \(fileName)")
         
         // Upload to Supabase Storage
         try await client.storage
             .from("avatars")
-            .upload(filePath, data: imageData, options: .init(contentType: "image/jpeg"))
+            .upload(fileName, data: imageData, options: .init(contentType: "image/jpeg", upsert: true))
         
         // Get public URL
         let publicURL = try client.storage
             .from("avatars")
-            .getPublicURL(path: filePath)
+            .getPublicURL(path: fileName)
         
         print("✅ Avatar uploaded successfully: \(publicURL)")
         
