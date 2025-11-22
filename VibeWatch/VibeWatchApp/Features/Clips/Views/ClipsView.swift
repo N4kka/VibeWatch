@@ -18,6 +18,7 @@ struct ClipsView: View {
             }
         }
         .background(Color.black.ignoresSafeArea())
+        .ignoresSafeArea(.all, edges: .bottom) // Respect top safe area (notch/status bar), ignore bottom
         .task {
             await viewModel.loadClips()
         }
@@ -36,6 +37,9 @@ struct ClipsView: View {
     private var clipsScrollView: some View {
         GeometryReader { geometry in
             ScrollViewReader { proxy in
+                let screenHeight = UIScreen.main.bounds.height
+                let screenWidth = geometry.size.width
+                
                 ScrollView(.vertical, showsIndicators: false) {
                     LazyVStack(spacing: 0) {
                         ForEach(Array(viewModel.clips.enumerated()), id: \.element.id) { index, clip in
@@ -49,7 +53,7 @@ struct ClipsView: View {
                                     viewModel.toggleLike(for: clip.id, isLiked: isLiked)
                                 }
                             )
-                            .frame(width: geometry.size.width, height: geometry.size.height)
+                            .frame(width: screenWidth, height: screenHeight)
                             .id(index)
                             .onAppear {
                                 // Smart pagination: Load more when 5 clips away from end
@@ -65,12 +69,20 @@ struct ClipsView: View {
                     .scrollTargetLayout()
                 }
                 .scrollTargetBehavior(.paging)
-                .ignoresSafeArea()
+                .scrollPosition(id: .init(get: {
+                    return currentIndex
+                }, set: { newValue in
+                    if let newIndex = newValue as? Int {
+                        currentIndex = newIndex
+                    }
+                }))
+                .ignoresSafeArea(.all) // Ignore all safe areas for proper paging
                 .onAppear {
                     proxy.scrollTo(0, anchor: .top)
                 }
             }
         }
+        .ignoresSafeArea(.all) // Full screen scroll view
     }
     
     private var loadingView: some View {
@@ -115,6 +127,7 @@ struct ClipPlayerView: View {
     @State private var showComments = false
     @State private var showAddToList = false
     @State private var hasAppeared = false
+    @State private var isFullyVisible = false
     @State private var showControls = false
     @State private var controlsTimer: Timer?
     
@@ -133,22 +146,52 @@ struct ClipPlayerView: View {
     }
     
     var body: some View {
+        let screenWidth = UIScreen.main.bounds.width
+        let screenHeight = UIScreen.main.bounds.height
+        // Get safe area from window scene (more reliable when ignoring safe areas)
+        let safeAreaTop = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .first?.windows.first?.safeAreaInsets.top ?? 0
+        
+        let _ = print("🔍 [ClipPlayerView] Safe Area Top: \(safeAreaTop)px for clip: \(clip.title)")
+        
         ZStack(alignment: .bottomTrailing) {
+            // Full-screen YouTube player (iframe offset by safe area internally)
             VerticalYouTubePlayer(
                 clipId: clip.id,
                 videoId: clip.videoId,
-                shouldPlay: isCurrentClip && hasAppeared
+                shouldPlay: isCurrentClip && isFullyVisible,
+                safeAreaTop: safeAreaTop
             )
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .frame(width: screenWidth, height: screenHeight)
+            .background(Color.black)
             .clipped()
-            .ignoresSafeArea()
+            .edgesIgnoringSafeArea(.all)
             .contentShape(Rectangle())
-            .simultaneousGesture(
-                TapGesture()
-                    .onEnded { _ in
-                        handleTap()
-                    }
+            .background(
+                GeometryReader { innerGeometry in
+                    Color.clear
+                        .preference(key: ViewOffsetKey.self, value: innerGeometry.frame(in: .global).minY)
+                }
             )
+            .onPreferenceChange(ViewOffsetKey.self) { offset in
+                // Check if clip is fully visible (within threshold)
+                let threshold: CGFloat = 50 // Allow small offset
+                let newIsFullyVisible = abs(offset) < threshold
+                
+                if newIsFullyVisible != isFullyVisible {
+                    isFullyVisible = newIsFullyVisible
+                    if isFullyVisible && isCurrentClip {
+                        onBecomeVisible()
+                    }
+                }
+            }
+                .simultaneousGesture(
+                    TapGesture()
+                        .onEnded { _ in
+                            handleTap()
+                        }
+                )
             
             // Action buttons on the right
             VStack(alignment: .trailing, spacing: 20) {
@@ -218,7 +261,6 @@ struct ClipPlayerView: View {
         }
         .onAppear {
             hasAppeared = true
-            onBecomeVisible()
             
             // Start tracking watch time
             watchStartTime = Date()
@@ -226,6 +268,7 @@ struct ClipPlayerView: View {
         }
         .onDisappear {
             hasAppeared = false
+            isFullyVisible = false
             controlsTimer?.invalidate()
             
             // End tracking and save engagement data
@@ -289,6 +332,7 @@ struct VerticalYouTubePlayer: UIViewRepresentable {
     let clipId: String  // UNIQUE identifier for each clip (includes movie ID)
     let videoId: String // YouTube video ID (can be duplicate across clips)
     let shouldPlay: Bool
+    let safeAreaTop: CGFloat // Top safe area inset to offset YouTube controls
     
     // CRITICAL: Shared WebView pool to prevent multiple instances
     private static var webViewPool: [WKWebView] = []
@@ -385,10 +429,40 @@ struct VerticalYouTubePlayer: UIViewRepresentable {
         <head>
             <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
             <style>
-                * { margin: 0; padding: 0; overflow: hidden; -webkit-user-select: none; -webkit-touch-callout: none; }
-                html, body { width: 100%; height: 100%; background: #000; }
-                #player-container { position: relative; width: 100%; height: 100%; background: #000; }
-                #player { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100vw; height: 177.78vw; max-height: 100vh; pointer-events: auto; }
+                * { margin: 0; padding: 0; box-sizing: border-box; -webkit-user-select: none; -webkit-touch-callout: none; }
+                html, body { 
+                    width: 100%; 
+                    height: 100%; 
+                    background: #000; 
+                    overflow: hidden;
+                    position: fixed;
+                }
+                #player-container { 
+                    position: fixed; 
+                    top: \(safeAreaTop)px; 
+                    left: 0; 
+                    width: 100%; 
+                    height: calc(100% - \(safeAreaTop)px); 
+                    background: #000;
+                    overflow: hidden;
+                }
+                #player { 
+                    position: absolute; 
+                    top: 0; 
+                    left: 0; 
+                    width: 100%; 
+                    height: 100%; 
+                    border: none;
+                    pointer-events: auto; 
+                }
+                iframe { 
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    border: none;
+                }
             </style>
         </head>
         <body>
@@ -398,9 +472,33 @@ struct VerticalYouTubePlayer: UIViewRepresentable {
                 var player;
                 function onYouTubeIframeAPIReady() {
                     player = new YT.Player('player', {
-                        height: '100%', width: '100%', videoId: '\(videoId)',
-                        playerVars: { 'playsinline': 1, 'autoplay': 1, 'mute': 0, 'loop': 1, 'playlist': '\(videoId)', 'controls': 1, 'showinfo': 1, 'rel': 0, 'fs': 1, 'modestbranding': 1, 'iv_load_policy': 3, 'cc_load_policy': 1, 'enablejsapi': 1, 'origin': window.location.origin },
-                        events: { 'onReady': function(e) { console.log('Ready'); }, 'onStateChange': function(e) { if (e.data === YT.PlayerState.ENDED) player.playVideo(); } }
+                        height: '100%', 
+                        width: '100%', 
+                        videoId: '\(videoId)',
+                        playerVars: { 
+                            'playsinline': 1, 
+                            'autoplay': 1, 
+                            'mute': 0, 
+                            'loop': 1, 
+                            'playlist': '\(videoId)', 
+                            'controls': 1, 
+                            'showinfo': 1, 
+                            'rel': 0, 
+                            'fs': 1, 
+                            'modestbranding': 1, 
+                            'iv_load_policy': 3, 
+                            'cc_load_policy': 1, 
+                            'enablejsapi': 1, 
+                            'origin': window.location.origin 
+                        },
+                        events: { 
+                            'onReady': function(e) { 
+                                console.log('Player Ready');
+                            }, 
+                            'onStateChange': function(e) { 
+                                if (e.data === YT.PlayerState.ENDED) player.playVideo(); 
+                            } 
+                        }
                     });
                 }
                 document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
@@ -1213,6 +1311,14 @@ struct Reply: Identifiable, Codable {
 
 extension Notification.Name {
     static let pauseAllClips = Notification.Name("pauseAllClips")
+}
+
+// Preference key for tracking view offset
+struct ViewOffsetKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
 }
 
 #Preview {
