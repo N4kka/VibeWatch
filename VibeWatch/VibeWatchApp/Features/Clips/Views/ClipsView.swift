@@ -4,21 +4,32 @@ import WebKit
 
 struct ClipsView: View {
     @StateObject private var viewModel = ClipsViewModel()
+    @StateObject private var quotaManager = DailyQuotaManager.shared
     @State private var currentIndex = 0
+    @State private var showPaywall = false
     @Environment(\.scenePhase) private var scenePhase
     
     var body: some View {
         ZStack {
             if viewModel.isLoading && viewModel.clips.isEmpty {
                 loadingView
+            } else if let error = viewModel.errorMessage {
+                errorView(error)
             } else if viewModel.clips.isEmpty {
                 emptyStateView
             } else {
                 clipsScrollView
             }
+            
+            // Paywall bottom sheet overlay
+            if showPaywall {
+                PaywallBottomSheet(isPresented: $showPaywall)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .zIndex(100)
+            }
         }
         .background(Color.black.ignoresSafeArea())
-        .ignoresSafeArea(.all, edges: .bottom) // Respect top safe area (notch/status bar), ignore bottom
+        .ignoresSafeArea(.all, edges: .bottom)
         .task {
             await viewModel.loadClips()
         }
@@ -31,6 +42,24 @@ struct ClipsView: View {
             if scenePhase != .active {
                 NotificationCenter.default.post(name: .pauseAllClips, object: nil)
             }
+        }
+        .onChange(of: currentIndex) { oldValue, newValue in
+            // Check quota when user scrolls to next clip
+            checkQuotaLimit(for: newValue)
+        }
+    }
+    
+    // MARK: - Quota Check
+    
+    private func checkQuotaLimit(for index: Int) {
+        // Record clip watched
+        if index > 0 { // Don't count first clip
+            quotaManager.recordClipWatched()
+        }
+        
+        // Show paywall if limit reached
+        if quotaManager.hasReachedLimit && !showPaywall {
+            showPaywall = true
         }
     }
     
@@ -72,7 +101,7 @@ struct ClipsView: View {
                 .scrollPosition(id: .init(get: {
                     return currentIndex
                 }, set: { newValue in
-                    if let newIndex = newValue as? Int {
+                    if let newIndex = newValue {
                         currentIndex = newIndex
                     }
                 }))
@@ -86,15 +115,33 @@ struct ClipsView: View {
     }
     
     private var loadingView: some View {
-        VStack(spacing: 16) {
-            ProgressView()
-                .tint(.white)
-                .scaleEffect(1.5)
+        VStack(spacing: 24) {
+            // Stars image with pulsing animation
+            Image("stars")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 120, height: 120)
+                .opacity(0.9)
+                .scaleEffect(1.0)
+                .animation(
+                    .easeInOut(duration: 1.5)
+                    .repeatForever(autoreverses: true),
+                    value: viewModel.isLoading
+                )
             
-            Text("clips.loadingClips".localized)
-                .font(.system(size: 16))
-                .foregroundColor(.white)
+            VStack(spacing: 8) {
+                Text("✨ Curating your personalized feed")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(.white)
+                
+                Text("Finding the perfect clips for you...")
+                    .font(.system(size: 15))
+                    .foregroundColor(.gray)
+            }
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 40)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     
     private var emptyStateView: some View {
@@ -112,6 +159,38 @@ struct ClipsView: View {
                 .foregroundColor(.gray)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
+        }
+    }
+    
+    private func errorView(_ error: String) -> some View {
+        VStack(spacing: 20) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 60))
+                .foregroundColor(.orange)
+            
+            Text("Oops!")
+                .font(.system(size: 24, weight: .bold))
+                .foregroundColor(.white)
+            
+            Text(error)
+                .font(.system(size: 16))
+                .foregroundColor(.gray)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+            
+            Button {
+                Task {
+                    viewModel.errorMessage = nil
+                    await viewModel.loadClips()
+                }
+            } label: {
+                Text("Try Again")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(width: 200, height: 50)
+                    .background(Color.orange)
+                    .cornerRadius(25)
+            }
         }
     }
 }
@@ -152,9 +231,7 @@ struct ClipPlayerView: View {
         let safeAreaTop = UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }
             .first?.windows.first?.safeAreaInsets.top ?? 0
-        
-        let _ = print("🔍 [ClipPlayerView] Safe Area Top: \(safeAreaTop)px for clip: \(clip.title)")
-        
+                
         ZStack(alignment: .bottomTrailing) {
             // Full-screen YouTube player (iframe offset by safe area internally)
             VerticalYouTubePlayer(
@@ -219,7 +296,6 @@ struct ClipPlayerView: View {
                 
                 ClipActionButton(
                     icon: "plus",
-                    text: "clips.addToList".localized,
                     color: .white
                 ) {
                     showAddToList = true
@@ -233,7 +309,7 @@ struct ClipPlayerView: View {
                 }
             }
             .padding(.trailing, 16)
-            .padding(.bottom, showControls ? 200 : 100)
+            .padding(.bottom, showControls ? 130 : 100)
             .animation(.easeInOut(duration: 0.2), value: showControls)
             
             // Title and description on the left bottom
@@ -255,7 +331,7 @@ struct ClipPlayerView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 16)
-            .padding(.bottom, showControls ? 200 : 100)
+            .padding(.bottom, showControls ? 130 : 100)
             .padding(.trailing, 80)
             .animation(.bouncy, value: showControls)
         }
