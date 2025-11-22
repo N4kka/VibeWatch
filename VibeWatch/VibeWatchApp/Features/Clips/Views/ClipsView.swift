@@ -9,31 +9,96 @@ struct ClipsView: View {
     @State private var showPaywall = false
     @State private var navigateToDiscovery = false
     @Environment(\.scenePhase) private var scenePhase
+    
+    // Interactive swipe navigation
+    @State private var horizontalOffset: CGFloat = 0
+    @State private var isDraggingHorizontally = false
 
     var body: some View {
-        ZStack {
-            if viewModel.isLoading && viewModel.clips.isEmpty {
-                loadingView
-            } else if let error = viewModel.errorMessage {
-                errorView(error)
-            } else if viewModel.clips.isEmpty {
-                emptyStateView
-            } else {
-                clipsScrollView
-            }
+        GeometryReader { geometry in
+            ZStack {
+                // Left view - Discovery (visible when swiping right)
+                if horizontalOffset > 0 {
+                    DiscoveryView(selectedMovie: .constant(nil), selectedMediaType: .constant(.movie))
+                        .offset(x: -geometry.size.width + horizontalOffset)
+                }
+                
+                // Right view - Lists (visible when swiping left)
+                if horizontalOffset < 0 {
+                    ListsView()
+                        .offset(x: geometry.size.width + horizontalOffset)
+                }
+                
+                // Main content - Clips
+                ZStack {
+                    if viewModel.isLoading {
+                        loadingView
+                            .transition(.opacity)
+                    } else if let error = viewModel.errorMessage {
+                        errorView(error)
+                            .transition(.opacity)
+                    } else if viewModel.clips.isEmpty {
+                        emptyStateView
+                            .transition(.opacity)
+                    } else {
+                        clipsScrollView
+                            .transition(.opacity)
+                    }
 
-            // Paywall bottom sheet overlay
-            if showPaywall {
-                // Pass closure to handle "Come back tomorrow" action
-                PaywallBottomSheet(isPresented: $showPaywall, onComeBack: {
-                    // Hide paywall and navigate to Discovery tab
-                    showPaywall = false
-                    // Send notification to MainTabView to switch to Discovery tab
-                    NotificationCenter.default.post(name: .navigateToDiscoveryTab, object: nil)
-                })
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-                .zIndex(100)
+                    // Paywall bottom sheet overlay
+                    if showPaywall {
+                        PaywallBottomSheet(isPresented: $showPaywall, onComeBack: {
+                            showPaywall = false
+                            NotificationCenter.default.post(name: .navigateToDiscoveryTab, object: nil)
+                        })
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .zIndex(100)
+                    }
+                }
+                .animation(.easeInOut(duration: 0.3), value: viewModel.isLoading)
+                .animation(.easeInOut(duration: 0.3), value: viewModel.clips.isEmpty)
+                .offset(x: horizontalOffset)
             }
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 5)
+                    .onChanged { value in
+                        let horizontalMovement = abs(value.translation.width)
+                        let verticalMovement = abs(value.translation.height)
+                        
+                        // Start tracking horizontal if it's clearly more horizontal than vertical
+                        if !isDraggingHorizontally && horizontalMovement > verticalMovement && horizontalMovement > 20 {
+                            isDraggingHorizontally = true
+                        }
+                        
+                        // Update offset if we're in horizontal drag mode
+                        if isDraggingHorizontally {
+                            horizontalOffset = value.translation.width
+                        }
+                    }
+                    .onEnded { value in
+                        guard isDraggingHorizontally else { return }
+                        
+                        let threshold: CGFloat = geometry.size.width * 0.3
+                        
+                        if horizontalOffset > threshold {
+                            // Swiped right - go to Discovery
+                            NotificationCenter.default.post(name: .navigateToDiscoveryTab, object: nil)
+                            horizontalOffset = 0
+                            isDraggingHorizontally = false
+                        } else if horizontalOffset < -threshold {
+                            // Swiped left - go to Lists
+                            NotificationCenter.default.post(name: .navigateToListsTab, object: nil)
+                            horizontalOffset = 0
+                            isDraggingHorizontally = false
+                        } else {
+                            // Reset with animation if threshold not met
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                horizontalOffset = 0
+                            }
+                            isDraggingHorizontally = false
+                        }
+                    }
+            )
         }
         .background(Color.black.ignoresSafeArea())
         .ignoresSafeArea(.all, edges: .bottom)
@@ -122,32 +187,70 @@ struct ClipsView: View {
     }
 
     private var loadingView: some View {
-        VStack(spacing: 24) {
-            Image("stars")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 120, height: 120)
-                .opacity(0.9)
-                .scaleEffect(1.0)
-                .animation(
-                    .easeInOut(duration: 1.5)
-                    .repeatForever(autoreverses: true),
-                    value: viewModel.isLoading
-                )
-
-            VStack(spacing: 8) {
-                Text("✨ Curating your personalized feed")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(.white)
-
-                Text("Finding the perfect clips for you...")
-                    .font(.system(size: 15))
-                    .foregroundColor(.gray)
+        GeometryReader { geometry in
+            ZStack {
+                // Skeleton clip cards (no background, just transparent skeletons)
+                VStack(spacing: 0) {
+                    ForEach(0..<3, id: \.self) { index in
+                        SkeletonClipCard()
+                            .frame(height: geometry.size.height / 3)
+                    }
+                }
+                .ignoresSafeArea()
+                
+                // Center content overlay
+                VStack(spacing: 24) {
+                    // Animated icon
+                    Image("stars")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 100, height: 100)
+                        .opacity(0.95)
+                        .scaleEffect(viewModel.isLoading ? 1.15 : 1.0)
+                        .rotationEffect(.degrees(viewModel.isLoading ? 360 : 0))
+                        .animation(
+                            .easeInOut(duration: 2.0)
+                            .repeatForever(autoreverses: false),
+                            value: viewModel.isLoading
+                        )
+                    
+                    VStack(spacing: 12) {
+                        // Main message
+                        Text("Crafting Your Perfect Feed")
+                            .font(.system(size: 26, weight: .bold))
+                            .foregroundColor(.white)
+                            .multilineTextAlignment(.center)
+                        
+                        // Subtext
+                        Text("We're handpicking the best clips just for you ✨")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.white.opacity(0.8))
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 32)
+                        
+                        // Animated dots
+                        HStack(spacing: 8) {
+                            ForEach(0..<3) { dot in
+                                Circle()
+                                    .fill(Color.theme.accentOrange)
+                                    .frame(width: 10, height: 10)
+                                    .scaleEffect(viewModel.isLoading ? 1.2 : 0.6)
+                                    .opacity(viewModel.isLoading ? 1.0 : 0.5)
+                                    .animation(
+                                        .easeInOut(duration: 0.8)
+                                        .repeatForever(autoreverses: true)
+                                        .delay(Double(dot) * 0.25),
+                                        value: viewModel.isLoading
+                                    )
+                            }
+                        }
+                        .padding(.top, 12)
+                    }
+                }
+                .padding(.horizontal, 24)
             }
-            .multilineTextAlignment(.center)
-            .padding(.horizontal, 40)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.black.ignoresSafeArea())
     }
 
     private var emptyStateView: some View {
@@ -1368,6 +1471,112 @@ struct ListSelectionRow: View {
     }
 }
 
+// MARK: - Skeleton Loading Card
+struct SkeletonClipCard: View {
+    @State private var isAnimating = false
+    
+    var body: some View {
+        ZStack(alignment: .bottomLeading) {
+            // Background shimmer
+            LinearGradient(
+                colors: [
+                    Color(white: 0.15),
+                    Color(white: 0.2),
+                    Color(white: 0.15)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .opacity(isAnimating ? 0.6 : 0.3)
+            
+            // Shimmer effect overlay
+            GeometryReader { geometry in
+                LinearGradient(
+                    colors: [
+                        Color.clear,
+                        Color.white.opacity(0.1),
+                        Color.clear
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                .frame(width: geometry.size.width * 0.3)
+                .offset(x: isAnimating ? geometry.size.width : -geometry.size.width * 0.3)
+            }
+            
+            // Skeleton UI elements on the right (like real clips)
+            HStack {
+                Spacer()
+                
+                VStack(spacing: 24) {
+                    Spacer()
+                    
+                    // Like button skeleton
+                    VStack(spacing: 6) {
+                        Circle()
+                            .fill(Color.white.opacity(0.15))
+                            .frame(width: 48, height: 48)
+                        
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color.white.opacity(0.15))
+                            .frame(width: 30, height: 12)
+                    }
+                    
+                    // Comment button skeleton
+                    VStack(spacing: 6) {
+                        Circle()
+                            .fill(Color.white.opacity(0.15))
+                            .frame(width: 48, height: 48)
+                        
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color.white.opacity(0.15))
+                            .frame(width: 30, height: 12)
+                    }
+                    
+                    // Add to list button skeleton
+                    Circle()
+                        .fill(Color.white.opacity(0.15))
+                        .frame(width: 48, height: 48)
+                    
+                    // Share button skeleton
+                    Circle()
+                        .fill(Color.white.opacity(0.15))
+                        .frame(width: 48, height: 48)
+                    
+                    Spacer()
+                        .frame(height: 100) // Safe area spacing
+                }
+                .padding(.trailing, 12)
+            }
+            
+            // Bottom title/description skeleton
+            VStack(alignment: .leading, spacing: 8) {
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.white.opacity(0.2))
+                    .frame(width: 200, height: 20)
+                
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.white.opacity(0.15))
+                    .frame(width: 280, height: 14)
+                
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.white.opacity(0.15))
+                    .frame(width: 150, height: 14)
+            }
+            .padding(.leading, 16)
+            .padding(.bottom, 120) // Safe area spacing
+        }
+        .onAppear {
+            withAnimation(
+                .easeInOut(duration: 1.5)
+                .repeatForever(autoreverses: false)
+            ) {
+                isAnimating = true
+            }
+        }
+    }
+}
+
 // Models
 struct Comment: Identifiable, Codable {
     let id: String
@@ -1394,6 +1603,8 @@ struct Reply: Identifiable, Codable {
 extension Notification.Name {
     static let pauseAllClips = Notification.Name("pauseAllClips")
     static let navigateToDiscoveryTab = Notification.Name("navigateToDiscoveryTab")
+    static let navigateToClipsTab = Notification.Name("navigateToClipsTab")
+    static let navigateToListsTab = Notification.Name("navigateToListsTab")
 }
 
 // Preference key for tracking view offset

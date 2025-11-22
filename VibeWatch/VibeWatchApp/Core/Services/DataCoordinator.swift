@@ -65,30 +65,33 @@ class DataCoordinator: ObservableObject {
         }
     }
     
-    // MARK: - Discovery Content (Shared Data)
+    // MARK: - Discovery Content (Database Cache)
     
-    /// Fetch all discovery content - called once on app launch
+    /// Fetch all discovery content - uses database cache, refreshes if needed
     private func fetchDiscoveryContent() async {
-        print("📺 [DataCoordinator] Fetching discovery content...")
+        print("📺 [DataCoordinator] Checking discovery cache...")
+        
+        let discoveryCache = DiscoveryCacheService.shared
         
         do {
-            // Fetch all sections in parallel
-            async let trending = tmdbService.getTrendingMovies(timeWindow: .week, page: 1)
-            async let popular = tmdbService.getPopularMovies(page: 1)
-            async let topRated = tmdbService.getTopRatedMovies(page: 1)
-            async let tv = tmdbService.getTrendingTVShows(timeWindow: .week, page: 1)
+            // Check if cache needs refresh
+            if await discoveryCache.needsRefresh() {
+                print("🔄 [DataCoordinator] Cache expired, refreshing from TMDB...")
+                try await discoveryCache.refreshContent()
+            }
             
-            let (trendingRes, popularRes, topRatedRes, tvRes) = try await (trending, popular, topRated, tv)
+            // Get from cache (either DB or fresh)
+            let content = try await discoveryCache.getDiscoveryContent()
             
-            // Store for reuse
-            self.trendingMovies = trendingRes.results
-            self.popularMovies = popularRes.results
-            self.topRatedMovies = topRatedRes.results
-            self.trendingTVShows = tvRes.results
+            // Store for DataCoordinator's internal use (legacy support)
+            self.trendingMovies = content.trending
+            self.popularMovies = content.popular
+            self.topRatedMovies = content.topRated
+            self.trendingTVShows = content.tv
             
             discoveryFetched = true
             
-            print("✅ [DataCoordinator] Discovery content cached")
+            print("✅ [DataCoordinator] Discovery content ready from cache")
             
         } catch {
             print("❌ [DataCoordinator] Failed to fetch discovery: \(error)")
@@ -114,45 +117,50 @@ class DataCoordinator: ObservableObject {
         return (trendingMovies, topRatedMovies, popularMovies, trendingTVShows)
     }
     
-    // MARK: - Initial Clips (5 for instant playback)
+    // MARK: - Initial Clips (5 for instant playback from DATABASE)
     
-    /// Fetch 2-3 clips for INSTANT playback (minimal wait)
+    /// Fetch 5 clips from DATABASE for INSTANT playback (super fast!)
     private func fetchInitialClips() async {
-        print("🎬 [DataCoordinator] Fetching initial clips...")
+        print("🎬 [DataCoordinator] Fetching initial clips from DATABASE...")
         
-        // Wait for discovery to populate movies (ensure we have at least 10 movies)
-        var attempts = 0
-        while trendingMovies.count < 10 && attempts < 30 {
-            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1s
-            attempts += 1
+        do {
+            // Fetch directly from database (should be instant!)
+            let dbService = DatabaseClipsService.shared
+            let clips = try await dbService.fetchPersonalizedClips(count: 5)
+            
+            initialClips = clips
+            
+            if !clips.isEmpty {
+                print("✅ [DataCoordinator] Initial clips ready from DB: \(clips.count)")
+            } else {
+                print("⚠️ [DataCoordinator] No clips in database yet")
+            }
+        } catch {
+            print("❌ [DataCoordinator] Failed to fetch initial clips from DB: \(error)")
+            initialClips = []
         }
-        
-        if trendingMovies.isEmpty {
-            print("⚠️ [DataCoordinator] No movies available for initial clips")
-            return
-        }
-        
-        print("📊 [DataCoordinator] Fetching from \(trendingMovies.count) movies")
-        
-        // Only fetch 3 clips for instant display (rest come from background)
-        let clips = await fetchClipsBatch(count: 3, fromMovies: trendingMovies, fromTV: trendingTVShows)
-        initialClips = clips
-        
-        print("✅ [DataCoordinator] Initial clips ready: \(clips.count)")
     }
     
-    // MARK: - Additional Clips (20 for background preload)
+    // MARK: - Additional Clips (20 for background preload from DATABASE)
     
-    /// Fetch more clips in background while user explores Discovery
+    /// Fetch more clips from DATABASE in background while user explores Discovery
     private func fetchAdditionalClips() async {
-        print("🎬 [DataCoordinator] Fetching additional clips (background)...")
+        print("🎬 [DataCoordinator] Fetching additional clips from DATABASE (background)...")
         
-        // Fetch 25 clips in background (user has 3 to start with)
-        let clips = await fetchClipsBatch(count: 25, fromMovies: trendingMovies + popularMovies, fromTV: trendingTVShows)
-        
-        await MainActor.run {
-            self.additionalClips = clips
-            print("✅ [DataCoordinator] Additional clips ready: \(clips.count) (total: \(self.initialClips.count + clips.count))")
+        do {
+            // Fetch from database (fast!)
+            let dbService = DatabaseClipsService.shared
+            let clips = try await dbService.fetchPersonalizedClips(count: 20)
+            
+            await MainActor.run {
+                self.additionalClips = clips
+                print("✅ [DataCoordinator] Additional clips ready from DB: \(clips.count) (total: \(self.initialClips.count + clips.count))")
+            }
+        } catch {
+            print("❌ [DataCoordinator] Failed to fetch additional clips from DB: \(error)")
+            await MainActor.run {
+                self.additionalClips = []
+            }
         }
     }
     

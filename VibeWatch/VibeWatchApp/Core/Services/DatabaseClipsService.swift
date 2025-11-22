@@ -25,31 +25,23 @@ class DatabaseClipsService {
     
     // MARK: - Main Fetch Function
     
-    /// Fetch personalized clips (DB-first with gradual rollout)
+    /// Fetch personalized clips (DB-first, always!)
     func fetchPersonalizedClips(count: Int = 20) async throws -> [Clip] {
-        // Determine if we should use DB based on rollout schedule
-        let shouldUseDB = shouldFetchFromDatabase()
+        print("📊 [DatabaseClips] Attempting to fetch from Supabase DB")
         
-        if shouldUseDB {
-            print("📊 [DatabaseClips] Attempting to fetch from Supabase DB")
+        do {
+            let clips = try await fetchFromDatabase(count: count)
             
-            do {
-                let clips = try await fetchFromDatabase(count: count)
-                
-                // If DB returns clips, use them
-                if !clips.isEmpty {
-                    print("✅ [DatabaseClips] Successfully fetched \(clips.count) clips from DB")
-                    return clips
-                } else {
-                    print("⚠️ [DatabaseClips] DB is empty, falling back to YouTube API")
-                    return try await fetchFromYouTubeAPI(count: count)
-                }
-            } catch {
-                print("❌ [DatabaseClips] DB fetch failed: \(error), falling back to YouTube API")
+            // If DB returns clips, use them
+            if !clips.isEmpty {
+                print("✅ [DatabaseClips] Successfully fetched \(clips.count) clips from DB")
+                return clips
+            } else {
+                print("⚠️ [DatabaseClips] DB is empty, falling back to YouTube API")
                 return try await fetchFromYouTubeAPI(count: count)
             }
-        } else {
-            print("🔄 [DatabaseClips] Using YouTube API (rollout schedule)")
+        } catch {
+            print("❌ [DatabaseClips] DB fetch failed: \(error), falling back to YouTube API")
             return try await fetchFromYouTubeAPI(count: count)
         }
     }

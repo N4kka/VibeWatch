@@ -17,33 +17,32 @@ class DiscoveryViewModel: ObservableObject {
     
     private let dataCoordinator = DataCoordinator.shared
     private let tmdbService = TMDBService.shared
+    private let discoveryCache = DiscoveryCacheService.shared
     
-    /// Load content - uses shared data from DataCoordinator (no API calls needed!)
+    /// Load content - uses database cache for instant loading!
     func loadContent(forceRefresh: Bool = false) async {
         print("📺 [DiscoveryViewModel] Loading content... forceRefresh: \(forceRefresh)")
         
         isLoading = true
         errorMessage = nil
         
-        // If forceRefresh is true (e.g., language changed), fetch fresh content
-        if forceRefresh {
-            print("🔄 [DiscoveryViewModel] Force refresh requested, fetching fresh content...")
-            await fetchFreshContent()
-            // Also refresh the DataCoordinator cache so other views get updated data
-            await dataCoordinator.refreshDiscoveryContent()
-            isLoading = false
-            return
-        }
-        
-        // Get shared data from DataCoordinator (already fetched on app launch)
-        if let sharedContent = await dataCoordinator.getDiscoveryContent() {
-            // Use preloaded data - INSTANT, no API calls!
-            self.viralMovies = Array(sharedContent.movies.prefix(20))
-            self.moodMovies = Array(sharedContent.topRated.prefix(20))
-            self.forYouMovies = Array(sharedContent.popular.prefix(20))
+        do {
+            // If forceRefresh is true (e.g., language changed), fetch fresh and update cache
+            if forceRefresh {
+                print("🔄 [DiscoveryViewModel] Force refresh requested...")
+                try await discoveryCache.refreshContent()
+            }
+            
+            // Get content from cache (DB or in-memory) - INSTANT!
+            let content = try await discoveryCache.getDiscoveryContent()
+            
+            // Assign to published properties
+            self.viralMovies = Array(content.trending.prefix(20))
+            self.moodMovies = Array(content.topRated.prefix(20))
+            self.forYouMovies = Array(content.popular.prefix(20))
             
             // Convert TV shows to Movie format for display
-            self.forYouTVShows = sharedContent.tvShows.prefix(20).map { tvShow in
+            self.forYouTVShows = content.tv.prefix(20).map { tvShow in
                 Movie(
                     id: tvShow.id,
                     title: tvShow.name,
@@ -66,11 +65,11 @@ class DiscoveryViewModel: ObservableObject {
                 )
             }
             
-            print("✅ [DiscoveryViewModel] Loaded from shared cache (0 API calls)")
-        } else {
-            // Fallback: fetch fresh if coordinator hasn't loaded yet
-            print("⚠️ [DiscoveryViewModel] Shared cache not ready, fetching fresh...")
-            await fetchFreshContent()
+            print("✅ [DiscoveryViewModel] Loaded from cache (instant!)")
+            
+        } catch {
+            print("❌ [DiscoveryViewModel] Failed to load from cache: \(error)")
+            errorMessage = "Failed to load content. Please try again."
         }
         
         isLoading = false

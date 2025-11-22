@@ -11,11 +11,13 @@ class ClipsViewModel: ObservableObject {
     private let databaseClipsService = DatabaseClipsService.shared
     private let engagementTracker = UserEngagementTracker.shared
     private let prefetchService = ClipsPrefetchService.shared
+    private let dataCoordinator = DataCoordinator.shared
     
     private var isLoadingMore = false
     private var loadStartTime: Date?
+    private var hasUsedPreloadedClips = false
     
-    // MARK: - Smart Loading (Database-First with 2s Minimum)
+    // MARK: - Smart Loading (Pre-loaded clips first, then database)
     
     /// Load clips with minimum 2-second loading screen for better UX
     func loadClips() async {
@@ -25,20 +27,57 @@ class ClipsViewModel: ObservableObject {
         loadStartTime = Date()
         print("🎬 [ClipsViewModel] Loading clips...")
         
-        // Check if we need to prefetch clips today
-        if prefetchService.shouldFetchToday() {
-            print("📅 [ClipsViewModel] Triggering daily clips pre-fetch...")
-            Task {
-                try? await prefetchService.prefetchClips(targetCount: 800)
-            }
-        }
-        
         do {
+            // STEP 1: Check for pre-loaded clips from DataCoordinator (INSTANT!)
+            if !hasUsedPreloadedClips && !dataCoordinator.initialClips.isEmpty {
+                print("⚡️ [ClipsViewModel] Using \(dataCoordinator.initialClips.count) pre-loaded clips!")
+                
+                // Get initial clips + additional clips if ready
+                var allPreloadedClips = dataCoordinator.initialClips
+                if !dataCoordinator.additionalClips.isEmpty {
+                    allPreloadedClips += dataCoordinator.additionalClips
+                    print("   + \(dataCoordinator.additionalClips.count) additional clips")
+                }
+                
+                // Apply like status
+                let processedClips = allPreloadedClips.map { clip in
+                    var updatedClip = clip
+                    updatedClip.isLiked = ClipsService.shared.isClipLiked(clip.id)
+                    return updatedClip
+                }
+                
+                // Ensure minimum 2-second loading time for UX
+                await ensureMinimumLoadingTime()
+                
+                self.clips = processedClips
+                hasUsedPreloadedClips = true
+                
+                print("✅ [ClipsViewModel] Displayed \(clips.count) pre-loaded clips instantly!")
+                
+                // Continue fetching from database in background for more variety
+                Task {
+                    await loadMoreFromDatabase()
+                }
+                
+                isLoading = false
+                return
+            }
+            
+            // STEP 2: Fallback to database if no pre-loaded clips
+            print("🔍 [ClipsViewModel] No pre-loaded clips, fetching from database...")
+            
+            // Check if we need to prefetch clips today
+            if prefetchService.shouldFetchToday() {
+                print("📅 [ClipsViewModel] Triggering daily clips pre-fetch...")
+                Task {
+                    try? await prefetchService.prefetchClips(targetCount: 800)
+                }
+            }
+            
             // Fetch 20 clips from database/API
-            print("🔍 [ClipsViewModel] Calling fetchPersonalizedClips...")
             let fetchedClips = try await databaseClipsService.fetchPersonalizedClips(count: 20)
             
-            print("📦 [ClipsViewModel] Received \(fetchedClips.count) clips from service")
+            print("📦 [ClipsViewModel] Received \(fetchedClips.count) clips from database")
             
             if fetchedClips.isEmpty {
                 print("⚠️ [ClipsViewModel] No clips returned from service!")
@@ -59,12 +98,7 @@ class ClipsViewModel: ObservableObject {
             await ensureMinimumLoadingTime()
             
             self.clips = processedClips
-            print("✅ [ClipsViewModel] Successfully loaded \(clips.count) personalized clips")
-            
-            // Pre-fetch next 15 in background
-            Task {
-                await preloadMoreClips()
-            }
+            print("✅ [ClipsViewModel] Successfully loaded \(clips.count) clips from database")
             
         } catch {
             print("❌ [ClipsViewModel] Error loading clips: \(error)")
@@ -75,6 +109,29 @@ class ClipsViewModel: ObservableObject {
         }
         
         isLoading = false
+    }
+    
+    /// Load more clips from database in background (after pre-loaded clips are shown)
+    private func loadMoreFromDatabase() async {
+        print("🔄 [ClipsViewModel] Loading more from database in background...")
+        
+        do {
+            let fetchedClips = try await databaseClipsService.fetchPersonalizedClips(count: 20)
+            
+            if !fetchedClips.isEmpty {
+                let processedClips = fetchedClips.map { clip in
+                    var updatedClip = clip
+                    updatedClip.isLiked = ClipsService.shared.isClipLiked(clip.id)
+                    return updatedClip
+                }
+                
+                // Append to existing clips (don't replace)
+                self.clips.append(contentsOf: processedClips)
+                print("✅ [ClipsViewModel] Added \(processedClips.count) more clips (total: \(clips.count))")
+            }
+        } catch {
+            print("⚠️ [ClipsViewModel] Background fetch failed: \(error)")
+        }
     }
     
     /// Ensure loading screen shows for minimum 2 seconds

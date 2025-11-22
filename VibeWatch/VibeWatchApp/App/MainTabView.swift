@@ -156,11 +156,25 @@ struct MainTabView: View {
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .navigateToDiscoveryTab)) { _ in
-            // Navigate to Discovery tab when paywall "Come back tomorrow" is tapped
+            // Navigate to Discovery tab
             withAnimation {
                 selectedTab = 0
             }
-            print("🏠 [MainTabView] Navigated to Discovery tab from paywall")
+            print("🏠 [MainTabView] Navigated to Discovery tab")
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .navigateToClipsTab)) { _ in
+            // Navigate to Clips tab
+            withAnimation {
+                selectedTab = 1
+            }
+            print("🎬 [MainTabView] Navigated to Clips tab")
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .navigateToListsTab)) { _ in
+            // Navigate to Lists tab
+            withAnimation {
+                selectedTab = 2
+            }
+            print("📝 [MainTabView] Navigated to Lists tab")
         }
     }
 }

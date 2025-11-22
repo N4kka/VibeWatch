@@ -11,6 +11,10 @@ struct ListsView: View {
     @State private var showFilters = false
     @State private var refreshID = UUID()
     @State private var filters = DiscoveryFilters()
+    
+    // Swipe navigation
+    @State private var horizontalOffset: CGFloat = 0
+    @State private var isDraggingHorizontally = false
     @State private var filterRefreshTrigger = false
     
     private var selectedPlatforms: Set<StreamingPlatform> {
@@ -35,57 +39,102 @@ struct ListsView: View {
     }
     
     var body: some View {
-        NavigationView {
+        GeometryReader { geometry in
+            let screenWidth = geometry.size.width
+            
             ZStack {
-                Color.theme.background.ignoresSafeArea()
+                // Left view - Clips (visible when swiping right)
+                if horizontalOffset > 0 {
+                    ClipsView()
+                        .offset(x: -screenWidth + horizontalOffset)
+                }
                 
-                VStack(spacing: 0) {
-                    headerView
-                    
-                    ListTypeSwitcher(selectedType: $selectedListType)
-                        .padding(.bottom, 16)
-                    
-                    combinedFiltersRow
-                    
-                    if currentLists.isEmpty {
-                        emptyStateView
-                    } else {
-                        contentView
+                // Main content - Lists
+                NavigationView {
+                    ZStack {
+                        Color.theme.background.ignoresSafeArea()
+                        
+                        VStack(spacing: 0) {
+                            headerView
+                            
+                            ListTypeSwitcher(selectedType: $selectedListType)
+                                .padding(.bottom, 16)
+                            
+                            combinedFiltersRow
+                            
+                            if currentLists.isEmpty {
+                                emptyStateView
+                            } else {
+                                contentView
+                            }
+                        }
+                    }
+                    .navigationBarHidden(true)
+                    .overlay {
+                        if showFilters {
+                            AdvancedFiltersPanel(
+                                filters: $filters,
+                                showRuntimeFilter: false,
+                                onDismiss: {
+                                    withAnimation {
+                                        showFilters = false
+                                    }
+                                },
+                                onApply: { _ in
+                                    filterRefreshTrigger.toggle()
+                                }
+                            )
+                        }
                     }
                 }
-            }
-            .navigationBarHidden(true)
-            .overlay {
-                if showFilters {
-                    AdvancedFiltersPanel(
-                        filters: $filters,
-                        showRuntimeFilter: false, // Lists don't have runtime metadata
-                        onDismiss: {
-                            withAnimation {
-                                showFilters = false
-                            }
-                        },
-                        onApply: { _ in
-                            // Force view refresh when filters are applied
-                            filterRefreshTrigger.toggle()
-                        }
-                    )
+                .task {
+                    await viewModel.loadLists()
                 }
+                .onChange(of: localizationManager.localeDidChange) { _ in
+                    refreshID = UUID()
+                }
+                .id(refreshID)
+                .sheet(isPresented: $showCreateList) {
+                    CreateListView(viewModel: viewModel)
+                        .presentationDetents([.medium, .large])
+                        .presentationDragIndicator(.visible)
+                        .presentationBackground(Color.theme.backgroundDark.opacity(0.98))
+                }
+                .offset(x: horizontalOffset)
             }
-        }
-        .task {
-            await viewModel.loadLists()
-        }
-        .onChange(of: localizationManager.localeDidChange) { _ in
-            // Trigger view refresh to update all localized strings
-            refreshID = UUID()
-        }
-        .id(refreshID)
-        .sheet(isPresented: $showCreateList) {
-            CreateListView(viewModel: viewModel)
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
-                .presentationBackground(Color.theme.backgroundDark.opacity(0.98))
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 5)
+                    .onChanged { value in
+                        let horizontalMovement = abs(value.translation.width)
+                        let verticalMovement = abs(value.translation.height)
+                        
+                        // Only allow swipe right (to Clips), not left
+                        if !isDraggingHorizontally && horizontalMovement > verticalMovement && horizontalMovement > 20 && value.translation.width > 0 {
+                            isDraggingHorizontally = true
+                        }
+                        
+                        if isDraggingHorizontally && value.translation.width > 0 {
+                            horizontalOffset = value.translation.width
+                        }
+                    }
+                    .onEnded { value in
+                        guard isDraggingHorizontally else { return }
+                        
+                        // Threshold: 30% of screen width (~100-130px)
+                        if horizontalOffset > 100 {
+                            // Swiped right - go to Clips
+                            NotificationCenter.default.post(name: .navigateToClipsTab, object: nil)
+                            horizontalOffset = 0
+                            isDraggingHorizontally = false
+                        } else {
+                            // Reset with animation
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                horizontalOffset = 0
+                            }
+                            isDraggingHorizontally = false
+                        }
+                    }
+            )
         }
     }
     
@@ -397,8 +446,6 @@ struct ListsView: View {
         }
     }
 }
-
-
 
 struct MediaItemRow: View {
     let item: MediaListItem

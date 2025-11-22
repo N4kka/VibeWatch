@@ -10,7 +10,62 @@ struct DiscoveryView: View {
     @Binding var selectedMovie: Movie?
     @Binding var selectedMediaType: MediaType
     
+    // Swipe navigation
+    @State private var horizontalOffset: CGFloat = 0
+    @State private var isDraggingHorizontally = false
+    
     var body: some View {
+        GeometryReader { geometry in
+            let screenWidth = geometry.size.width
+            
+            ZStack {
+                // Right view - Clips (visible when swiping left)
+                if horizontalOffset < 0 {
+                    ClipsView()
+                        .offset(x: screenWidth + horizontalOffset)
+                }
+                
+                // Main content - Discovery
+                discoveryMainView
+                    .offset(x: horizontalOffset)
+            }
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 5)
+                    .onChanged { value in
+                        let horizontalMovement = abs(value.translation.width)
+                        let verticalMovement = abs(value.translation.height)
+                        
+                        // Only allow swipe left (to Clips), not right
+                        if !isDraggingHorizontally && horizontalMovement > verticalMovement && horizontalMovement > 20 && value.translation.width < 0 {
+                            isDraggingHorizontally = true
+                        }
+                        
+                        if isDraggingHorizontally && value.translation.width < 0 {
+                            horizontalOffset = value.translation.width
+                        }
+                    }
+                    .onEnded { value in
+                        guard isDraggingHorizontally else { return }
+                        
+                        // Threshold: 30% of screen width
+                        if horizontalOffset < -100 {
+                            // Swiped left - go to Clips
+                            NotificationCenter.default.post(name: .navigateToClipsTab, object: nil)
+                            horizontalOffset = 0
+                            isDraggingHorizontally = false
+                        } else {
+                            // Reset with animation
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                horizontalOffset = 0
+                            }
+                            isDraggingHorizontally = false
+                        }
+                    }
+            )
+        }
+    }
+    
+    private var discoveryMainView: some View {
         ZStack(alignment: .top) {
             ScrollView {
                 VStack(spacing: 32) {
@@ -115,8 +170,8 @@ struct DiscoveryView: View {
         }
         .toast(isShowing: $appState.showSuccessToast, message: appState.toastMessage, type: .success)
         .toast(isShowing: $appState.showErrorToast, message: appState.toastMessage, type: .error)
+        }
     }
-}
 
 struct DiscoveryHeaderView: View {
     let onSearchTap: () -> Void
