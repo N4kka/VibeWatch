@@ -33,6 +33,16 @@ class DailyQuotaManager: ObservableObject {
     private init() {
         loadQuotaData()
         checkAndResetIfNeeded()
+        
+        #if DEBUG
+        // Auto-enable Pro mode in Debug builds
+        if !isProUser {
+            print("🛠️ [DailyQuota] DEBUG MODE: Auto-enabling Pro user (unlimited clips)")
+            isProUser = true
+            hasReachedLimit = false
+            saveQuotaData()
+        }
+        #endif
     }
     
     // MARK: - Public Methods

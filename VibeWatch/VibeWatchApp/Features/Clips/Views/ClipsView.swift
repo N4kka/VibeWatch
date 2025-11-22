@@ -7,8 +7,9 @@ struct ClipsView: View {
     @StateObject private var quotaManager = DailyQuotaManager.shared
     @State private var currentIndex = 0
     @State private var showPaywall = false
+    @State private var navigateToDiscovery = false
     @Environment(\.scenePhase) private var scenePhase
-    
+
     var body: some View {
         ZStack {
             if viewModel.isLoading && viewModel.clips.isEmpty {
@@ -20,12 +21,18 @@ struct ClipsView: View {
             } else {
                 clipsScrollView
             }
-            
+
             // Paywall bottom sheet overlay
             if showPaywall {
-                PaywallBottomSheet(isPresented: $showPaywall)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .zIndex(100)
+                // Pass closure to handle "Come back tomorrow" action
+                PaywallBottomSheet(isPresented: $showPaywall, onComeBack: {
+                    // Hide paywall and navigate to Discovery tab
+                    showPaywall = false
+                    // Send notification to MainTabView to switch to Discovery tab
+                    NotificationCenter.default.post(name: .navigateToDiscoveryTab, object: nil)
+                })
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .zIndex(100)
             }
         }
         .background(Color.black.ignoresSafeArea())
@@ -37,7 +44,7 @@ struct ClipsView: View {
             // Pause all clips when leaving the Clips tab
             NotificationCenter.default.post(name: .pauseAllClips, object: nil)
         }
-        .onChange(of: scenePhase) {
+        .onChange(of: scenePhase) { _ in
             // Pause all clips when app goes to background
             if scenePhase != .active {
                 NotificationCenter.default.post(name: .pauseAllClips, object: nil)
@@ -48,27 +55,27 @@ struct ClipsView: View {
             checkQuotaLimit(for: newValue)
         }
     }
-    
+
     // MARK: - Quota Check
-    
+
     private func checkQuotaLimit(for index: Int) {
         // Record clip watched
         if index > 0 { // Don't count first clip
             quotaManager.recordClipWatched()
         }
-        
+
         // Show paywall if limit reached
         if quotaManager.hasReachedLimit && !showPaywall {
             showPaywall = true
         }
     }
-    
+
     private var clipsScrollView: some View {
         GeometryReader { geometry in
             ScrollViewReader { proxy in
                 let screenHeight = UIScreen.main.bounds.height
                 let screenWidth = geometry.size.width
-                
+
                 ScrollView(.vertical, showsIndicators: false) {
                     LazyVStack(spacing: 0) {
                         ForEach(Array(viewModel.clips.enumerated()), id: \.element.id) { index, clip in
@@ -113,10 +120,9 @@ struct ClipsView: View {
         }
         .ignoresSafeArea(.all) // Full screen scroll view
     }
-    
+
     private var loadingView: some View {
         VStack(spacing: 24) {
-            // Stars image with pulsing animation
             Image("stars")
                 .resizable()
                 .scaledToFit()
@@ -128,12 +134,12 @@ struct ClipsView: View {
                     .repeatForever(autoreverses: true),
                     value: viewModel.isLoading
                 )
-            
+
             VStack(spacing: 8) {
                 Text("✨ Curating your personalized feed")
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundColor(.white)
-                
+
                 Text("Finding the perfect clips for you...")
                     .font(.system(size: 15))
                     .foregroundColor(.gray)
@@ -143,17 +149,17 @@ struct ClipsView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-    
+
     private var emptyStateView: some View {
         VStack(spacing: 16) {
             Image(systemName: "film.stack")
                 .font(.system(size: 60))
                 .foregroundColor(.gray)
-            
+
             Text("clips.noClipsAvailable".localized)
                 .font(.system(size: 24, weight: .bold))
                 .foregroundColor(.white)
-            
+
             Text("clips.noClipsDescription".localized)
                 .font(.system(size: 16))
                 .foregroundColor(.gray)
@@ -161,23 +167,23 @@ struct ClipsView: View {
                 .padding(.horizontal, 40)
         }
     }
-    
+
     private func errorView(_ error: String) -> some View {
         VStack(spacing: 20) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 60))
                 .foregroundColor(.orange)
-            
+
             Text("Oops!")
                 .font(.system(size: 24, weight: .bold))
                 .foregroundColor(.white)
-            
+
             Text(error)
                 .font(.system(size: 16))
                 .foregroundColor(.gray)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
-            
+
             Button {
                 Task {
                     viewModel.errorMessage = nil
@@ -1122,7 +1128,7 @@ struct ReplyRow: View {
         } else if let minutes = components.minute, minutes > 0 {
             return "\(minutes)m"
         } else if let seconds = components.second, seconds > 0 {
-            return "\(seconds)s"
+                return "\(seconds)s"
         } else {
             return "now"
         }
@@ -1387,6 +1393,7 @@ struct Reply: Identifiable, Codable {
 
 extension Notification.Name {
     static let pauseAllClips = Notification.Name("pauseAllClips")
+    static let navigateToDiscoveryTab = Notification.Name("navigateToDiscoveryTab")
 }
 
 // Preference key for tracking view offset

@@ -155,6 +155,13 @@ struct MainTabView: View {
                 }
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .navigateToDiscoveryTab)) { _ in
+            // Navigate to Discovery tab when paywall "Come back tomorrow" is tapped
+            withAnimation {
+                selectedTab = 0
+            }
+            print("🏠 [MainTabView] Navigated to Discovery tab from paywall")
+        }
     }
 }
 
