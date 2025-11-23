@@ -1,105 +1,123 @@
 import Foundation
 import Supabase
 
-/// Service for fetching clips from Supabase database (instead of YouTube API)
+/// Service for fetching clips from local SQLite database (offline-first!)
 @MainActor
 class DatabaseClipsService {
     static let shared = DatabaseClipsService()
     
+    private let db = SQLiteService.shared
     private let supabase = SupabaseService.shared
     private let engagementTracker = UserEngagementTracker.shared
     private let quotaManager = DailyQuotaManager.shared
     
-    // Gradual rollout percentages (Day 1-7)
+    // Gradual rollout percentages (Day 1-7, then 100% DB)
     private let rolloutSchedule: [Int: Double] = [
         1: 0.3,  // Day 1: 30% from DB
-        2: 0.3,  // Day 2: 30% from DB
-        3: 0.6,  // Day 3: 60% from DB
+        2: 0.4,  // Day 2: 40% from DB
+        3: 0.5,  // Day 3: 50% from DB
         4: 0.6,  // Day 4: 60% from DB
-        5: 0.9,  // Day 5: 90% from DB
-        6: 0.9,  // Day 6: 90% from DB
-        7: 0.9   // Day 7: 90% from DB
+        5: 0.7,  // Day 5: 70% from DB
+        6: 0.85, // Day 6: 85% from DB
+        7: 1.0   // Day 7: 100% from DB (full transition)
     ]
     
     private init() {}
     
     // MARK: - Main Fetch Function
     
-    /// Fetch personalized clips (DB-first, always!)
+    /// Fetch personalized clips (SQLite-first, offline-capable!)
     func fetchPersonalizedClips(count: Int = 20) async throws -> [Clip] {
-        print("📊 [DatabaseClips] Attempting to fetch from Supabase DB")
+        print("📊 [DatabaseClips] Fetching from local SQLite database")
         
         do {
-            let clips = try await fetchFromDatabase(count: count)
+            let clips = try await fetchFromLocalDatabase(count: count)
             
-            // If DB returns clips, use them
+            // If local DB returns clips, use them
             if !clips.isEmpty {
-                print("✅ [DatabaseClips] Successfully fetched \(clips.count) clips from DB")
+                print("✅ [DatabaseClips] Successfully fetched \(clips.count) clips from local SQLite")
                 return clips
             } else {
-                print("⚠️ [DatabaseClips] DB is empty, falling back to YouTube API")
+                print("⚠️ [DatabaseClips] Local DB is empty, falling back to YouTube API")
                 return try await fetchFromYouTubeAPI(count: count)
             }
         } catch {
-            print("❌ [DatabaseClips] DB fetch failed: \(error), falling back to YouTube API")
+            print("❌ [DatabaseClips] Local DB fetch failed: \(error), falling back to YouTube API")
             return try await fetchFromYouTubeAPI(count: count)
         }
     }
     
-    // MARK: - Database Fetching
+    // MARK: - Local SQLite Fetching
     
-    private func fetchFromDatabase(count: Int) async throws -> [Clip] {
-        guard let client = supabase.client else {
-            throw DatabaseError.supabaseNotConfigured
-        }
-        
+    private func fetchFromLocalDatabase(count: Int) async throws -> [Clip] {
         // Get user preferences for personalization
         let topGenres = engagementTracker.getTopGenres(limit: 5)
         let deviceId = getDeviceId()
         
-        // Build query - use anon access (no auth required)
-        let response: [DatabaseClip]
-        do {
-            // Simple query first - just get active clips sorted by quality
-            response = try await client
-                .from("clips")
-                .select()
-                .eq("is_active", value: true)
-                .order("quality_score", ascending: false)
-                .limit(count * 2) // Fetch more than needed for filtering
-                .execute()
-                .value
-        } catch {
-            print("⚠️ [DatabaseClips] Supabase query failed: \(error)")
-            throw error
+        // Fetch ALL active clips from local SQLite, randomized
+        // RANDOMIZE clips on every fetch (app launch) - using SQLite's RANDOM()
+        let response: [[String: Any]] = try await db.queryRaw("""
+            SELECT * FROM clips
+            WHERE is_active = 1 AND deleted_at IS NULL
+            ORDER BY RANDOM()
+        """)
+        
+        print("🎲 [DatabaseClips] Fetched \(response.count) randomized clips from local SQLite")
+        
+        // Parse rows to Clip objects
+        var clips: [Clip] = response.compactMap { row in
+            guard
+                let clipId = row["clip_id"] as? String,
+                let videoId = row["video_id"] as? String,
+                let title = row["title"] as? String,
+                let videoUrl = row["video_url"] as? String
+            else { return nil }
+            
+            return Clip(
+                id: clipId,
+                movieId: row["movie_id"] as? Int,
+                tvShowId: row["tv_show_id"] as? Int,
+                title: title,
+                description: row["description"] as? String ?? "",
+                videoURL: videoUrl,
+                videoId: videoId,
+                thumbnailURL: row["thumbnail_url"] as? String ?? "",
+                duration: 0,
+                likes: row["likes"] as? Int ?? 0,
+                comments: row["comments"] as? Int ?? 0,
+                createdAt: Date(),
+                isLiked: false
+            )
         }
         
-        // Filter by genres in-memory if user has preferences
-        var filteredClips = response
+        // Filter by genres if user has preferences
         if !topGenres.isEmpty {
             let genreNames = Set(topGenres.compactMap { genreIdToName($0) })
-            filteredClips = response.filter { clip in
-                guard let clipGenres = clip.genres else { return false }
-                return !Set(clipGenres).isDisjoint(with: genreNames)
+            let genreFiltered = clips.filter { clip in
+                // Parse genres JSON string
+                guard let genresString = response.first(where: { ($0["clip_id"] as? String) == clip.id })?["genres"] as? String,
+                      let genresData = genresString.data(using: .utf8),
+                      let genres = try? JSONDecoder().decode([String].self, from: genresData) else {
+                    return false
+                }
+                return !Set(genres).isDisjoint(with: genreNames)
             }
-            // If filtering left us with too few, use all clips
-            if filteredClips.count < count {
-                filteredClips = response
+            
+            // Use filtered clips if we have enough
+            if genreFiltered.count >= count {
+                clips = genreFiltered
             }
         }
         
         // Filter out already-watched clips
-        let watchedClips = await getWatchedClipIds(deviceId: deviceId)
-        let unwatchedClips = filteredClips.filter { !watchedClips.contains($0.clipId) }
+        let watchedClips = await getWatchedClipIdsFromLocal(deviceId: deviceId)
+        let unwatchedClips = clips.filter { !watchedClips.contains($0.id) }
         
-        // Convert to Clip models and return limited count
-        let clips = Array(unwatchedClips.prefix(count)).map { $0.toClip() }
+        // Return limited count
+        let finalClips = Array(unwatchedClips.prefix(count))
         
-        // Record that these clips were served
-        await recordServedClips(clips)
-        
-        print("✅ [DatabaseClips] Fetched \(clips.count) personalized clips from DB")
-        return clips
+        print("✅ [DatabaseClips] Returning \(finalClips.count) personalized clips from local SQLite")
+        return finalClips
     }
     
     // MARK: - YouTube API Fallback
@@ -122,64 +140,38 @@ class DatabaseClipsService {
         let installDate = getInstallDate()
         let daysSinceInstall = Calendar.current.dateComponents([.day], from: installDate, to: Date()).day ?? 1
         
-        // After day 7, always use DB (100%)
-        if daysSinceInstall > 7 {
+        // After day 7 or on day 7, ALWAYS use DB (100%)
+        if daysSinceInstall >= 7 {
+            print("📅 [DatabaseClips] Day \(daysSinceInstall), Using DB: 100% (full transition)")
             return true
         }
         
-        // Get percentage for current day
+        // Get percentage for current day (Days 1-6)
         let dbPercentage = rolloutSchedule[daysSinceInstall] ?? 0.3
         
         // Random decision based on percentage
         let randomValue = Double.random(in: 0...1)
         let useDB = randomValue < dbPercentage
         
-        print("📅 [DatabaseClips] Day \(daysSinceInstall), DB%: \(dbPercentage * 100)%, Using DB: \(useDB)")
+        print("📅 [DatabaseClips] Day \(daysSinceInstall), DB%: \(Int(dbPercentage * 100))%, Random: \(String(format: "%.2f", randomValue)), Using DB: \(useDB)")
         
         return useDB
     }
     
     // MARK: - Helper Functions
     
-    private func getWatchedClipIds(deviceId: String) async -> Set<String> {
-        guard let client = supabase.client else {
-            return []
-        }
-        
+    private func getWatchedClipIdsFromLocal(deviceId: String) async -> Set<String> {
         do {
-            let response: [WatchedClipRow] = try await client
-                .from("user_clip_history")
-                .select("clip_id")
-                .eq("device_id", value: deviceId)
-                .execute()
-                .value
+            let rows = try await db.queryRaw("""
+                SELECT clip_id FROM user_clip_history
+                WHERE device_id = ? AND deleted_at IS NULL
+            """, parameters: [deviceId])
             
-            // Get clip_id strings from UUIDs
-            let clipUUIDs = response.map { $0.clipId }
-            
-            // Fetch clip_id strings
-            let clipsResponse: [ClipIdRow] = try await client
-                .from("clips")
-                .select("clip_id")
-                .in("id", values: clipUUIDs.map { $0.uuidString })
-                .execute()
-                .value
-            
-            return Set(clipsResponse.map { $0.clipId })
-            
+            return Set(rows.compactMap { $0["clip_id"] as? String })
         } catch {
-            print("⚠️ [DatabaseClips] Error fetching watched clips: \(error)")
+            print("⚠️ [DatabaseClips] Error fetching watched clips from local DB: \(error)")
             return []
         }
-    }
-    
-    private func recordServedClips(_ clips: [Clip]) async {
-        // Record served clips in background (non-critical)
-        // For now, just log - can implement view tracking later
-        print("📊 [DatabaseClips] Served \(clips.count) clips")
-        
-        // TODO: Implement view tracking when needed
-        // Could use client.rpc or direct update queries
     }
     
     private func getDeviceId() -> String {

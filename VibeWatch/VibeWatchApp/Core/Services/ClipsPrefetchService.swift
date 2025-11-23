@@ -9,6 +9,7 @@ class ClipsPrefetchService: ObservableObject {
     @Published var isFetching = false
     @Published var lastFetchDate: Date?
     @Published var cachedClipsCount: Int = 0
+    @Published var fetchProgress: Double = 0.0
     
     private let supabase = SupabaseService.shared
     private let tmdbService = TMDBService.shared
@@ -22,10 +23,62 @@ class ClipsPrefetchService: ObservableObject {
         loadLastFetchDate()
     }
     
+    // MARK: - YouTube Video Validation
+    
+    /// Validate if a YouTube video is playable and embeddable
+    private func isVideoValid(videoId: String) async -> Bool {
+        let urlString = "https://www.googleapis.com/youtube/v3/videos?part=status,contentDetails&id=\(videoId)&key=\(youtubeAPIKey)"
+        
+        guard let url = URL(string: urlString) else {
+            return false
+        }
+        
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            let response = try JSONDecoder().decode(YouTubeVideoResponse.self, from: data)
+            
+            guard let video = response.items.first else {
+                print("⚠️ [Validation] Video \(videoId): Not found")
+                return false
+            }
+            
+            // Check if video is embeddable
+            guard video.status.embeddable else {
+                print("⚠️ [Validation] Video \(videoId): Not embeddable")
+                return false
+            }
+            
+            // Check if video has age restrictions that block embedding
+            if let ageGated = video.contentDetails.contentRating.ytRating, ageGated == "ytAgeRestricted" {
+                print("⚠️ [Validation] Video \(videoId): Age restricted")
+                return false
+            }
+            
+            // Check upload status
+            guard video.status.uploadStatus == "processed" else {
+                print("⚠️ [Validation] Video \(videoId): Not processed (status: \(video.status.uploadStatus))")
+                return false
+            }
+            
+            // Check privacy status
+            guard video.status.privacyStatus == "public" else {
+                print("⚠️ [Validation] Video \(videoId): Not public (status: \(video.status.privacyStatus))")
+                return false
+            }
+            
+            print("✅ [Validation] Video \(videoId): Valid")
+            return true
+            
+        } catch {
+            print("❌ [Validation] Video \(videoId): Validation failed - \(error)")
+            return false
+        }
+    }
+    
     // MARK: - Main Pre-fetch Function
     
     /// Pre-fetch clips and store in Supabase
-    /// - Parameter targetCount: How many clips to fetch (500-1000 recommended)
+    /// - Parameter targetCount: How many VALID clips to store in DB (default: 800)
     /// - Returns: Number of clips successfully cached
     @discardableResult
     func prefetchClips(targetCount: Int = 800) async throws -> Int {
@@ -34,62 +87,124 @@ class ClipsPrefetchService: ObservableObject {
             return 0
         }
         
-        print("🚀 [ClipsPrefetch] Starting pre-fetch of \(targetCount) clips...")
+        print("🚀 [ClipsPrefetch] Starting pre-fetch - Target: \(targetCount) VALID clips in DB...")
         isFetching = true
-        
-        var fetchedClips: [CachedClip] = []
+        fetchProgress = 0.0
         
         do {
-            // 1. Get popular movies and TV shows from TMDB
-            let movies = try await fetchPopularMovies(count: targetCount / 2)
-            let tvShows = try await fetchPopularTVShows(count: targetCount / 2)
+            // 1. Check current DB count
+            let currentDBCount = try await getValidClipsCountInDB()
+            print("📊 [ClipsPrefetch] Current DB count: \(currentDBCount) / \(targetCount)")
+            
+            if currentDBCount >= targetCount {
+                print("✅ [ClipsPrefetch] Target already met! (\(currentDBCount) clips)")
+                isFetching = false
+                cachedClipsCount = currentDBCount
+                return currentDBCount
+            }
+            
+            let needed = targetCount - currentDBCount
+            print("🎯 [ClipsPrefetch] Need \(needed) more valid clips")
+            
+            // 2. Fetch and validate clips until we reach target
+            var validClipsStored = currentDBCount
+            var attemptedClips = 0
+            let maxAttempts = needed * 3 // Fetch up to 3x more to account for invalid videos
+            
+            // Fetch movies and TV shows
+            let movies = try await fetchPopularMovies(count: needed)
+            let tvShows = try await fetchPopularTVShows(count: needed)
             
             print("📺 [ClipsPrefetch] Fetched \(movies.count) movies, \(tvShows.count) TV shows")
             
-            // 2. Get clips for each movie/TV show
+            // Process movies
             for movie in movies {
-                let clips = try await fetchClipsForMovie(movie)
-                fetchedClips.append(contentsOf: clips)
+                if validClipsStored >= targetCount {
+                    break
+                }
                 
-                if fetchedClips.count >= targetCount {
+                let clips = try await fetchAndValidateClipsForMovie(movie)
+                if !clips.isEmpty {
+                    let stored = try await storeClipsInSupabase(clips)
+                    validClipsStored += stored
+                    
+                    fetchProgress = Double(validClipsStored) / Double(targetCount)
+                    print("📊 Progress: \(validClipsStored)/\(targetCount) (\(Int(fetchProgress * 100))%)")
+                }
+                
+                attemptedClips += 1
+                if attemptedClips >= maxAttempts {
                     break
                 }
             }
             
-            for tvShow in tvShows where fetchedClips.count < targetCount {
-                let clips = try await fetchClipsForTVShow(tvShow)
-                fetchedClips.append(contentsOf: clips)
+            // Process TV shows
+            for tvShow in tvShows {
+                if validClipsStored >= targetCount {
+                    break
+                }
                 
-                if fetchedClips.count >= targetCount {
+                let clips = try await fetchAndValidateClipsForTVShow(tvShow)
+                if !clips.isEmpty {
+                    let stored = try await storeClipsInSupabase(clips)
+                    validClipsStored += stored
+                    
+                    fetchProgress = Double(validClipsStored) / Double(targetCount)
+                    print("📊 Progress: \(validClipsStored)/\(targetCount) (\(Int(fetchProgress * 100))%)")
+                }
+                
+                attemptedClips += 1
+                if attemptedClips >= maxAttempts {
                     break
                 }
             }
             
-            print("🎬 [ClipsPrefetch] Generated \(fetchedClips.count) clips from API")
-            
-            // 3. Store in Supabase
-            let storedCount = try await storeClipsInSupabase(fetchedClips)
+            // 3. Final verification
+            let finalCount = try await getValidClipsCountInDB()
             
             // 4. Update metadata
             lastFetchDate = Date()
-            cachedClipsCount = storedCount
+            cachedClipsCount = finalCount
             saveLastFetchDate()
             
             isFetching = false
+            fetchProgress = 1.0
             
-            print("✅ [ClipsPrefetch] Successfully cached \(storedCount) clips!")
-            return storedCount
+            print("✅ [ClipsPrefetch] Completed! DB now has \(finalCount) valid clips")
+            print("   Target: \(targetCount), Achieved: \(finalCount), Success: \(finalCount >= targetCount ? "YES" : "NO")")
+            
+            return finalCount
             
         } catch {
             isFetching = false
+            fetchProgress = 0.0
             print("❌ [ClipsPrefetch] Error: \(error)")
             throw error
         }
     }
     
+    // MARK: - DB Count Verification
+    
+    /// Get actual count of valid clips in database
+    private func getValidClipsCountInDB() async throws -> Int {
+        guard let client = supabase.client else {
+            throw ClipsPrefetchError.supabaseNotConfigured
+        }
+        
+        let response: [ClipCountRow] = try await client
+            .from("clips")
+            .select("id", head: false, count: .exact)
+            .eq("is_active", value: true)
+            .execute()
+            .value
+        
+        // The count is in the response metadata, but we can also just count the array
+        return response.count
+    }
+    
     // MARK: - Check if Fetch Needed
     
-    /// Check if we need to fetch today
+    /// Check if we need to fetch today (daily 800 clips for first 7 days)
     func shouldFetchToday() -> Bool {
         guard let lastFetch = lastFetchDate else {
             return true // Never fetched before
@@ -97,7 +212,127 @@ class ClipsPrefetchService: ObservableObject {
         
         // Check if last fetch was yesterday or earlier
         let calendar = Calendar.current
-        return !calendar.isDateInToday(lastFetch)
+        let isToday = calendar.isDateInToday(lastFetch)
+        
+        // During first week: always return true if not fetched today
+        let installDate = getInstallDate()
+        let daysSinceInstall = calendar.dateComponents([.day], from: installDate, to: Date()).day ?? 1
+        
+        if daysSinceInstall <= 7 {
+            return !isToday // Fetch daily during first week
+        }
+        
+        // After first week: rely on weekly refresh
+        return false
+    }
+    
+    /// Get install date
+    private func getInstallDate() -> Date {
+        let key = "appInstallDate"
+        if let existing = UserDefaults.standard.object(forKey: key) as? Date {
+            return existing
+        }
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
+        UserDefaults.standard.set(yesterday, forKey: key)
+        return yesterday
+    }
+    
+    /// Check if we need a weekly refresh
+    func shouldRefreshWeekly() -> Bool {
+        guard let lastFetch = lastFetchDate else {
+            return true // Never fetched before
+        }
+        
+        let calendar = Calendar.current
+        let daysSinceLastFetch = calendar.dateComponents([.day], from: lastFetch, to: Date()).day ?? 0
+        
+        return daysSinceLastFetch >= 7
+    }
+    
+    /// Perform weekly refresh - add new clips without removing old ones
+    @discardableResult
+    func performWeeklyRefresh(additionalClips: Int = 200) async throws -> Int {
+        guard !isFetching else {
+            print("⚠️ [ClipsPrefetch] Already fetching, skipping weekly refresh...")
+            return 0
+        }
+        
+        print("🔄 [ClipsPrefetch] Starting weekly refresh - adding \(additionalClips) new clips...")
+        isFetching = true
+        fetchProgress = 0.0
+        
+        do {
+            var validClipsStored = 0
+            var attemptedClips = 0
+            let maxAttempts = additionalClips * 3
+            
+            // Fetch latest/trending movies and TV shows
+            let movies = try await fetchTrendingMovies(count: additionalClips / 2)
+            let tvShows = try await fetchTrendingTVShows(count: additionalClips / 2)
+            
+            print("📺 [WeeklyRefresh] Fetched \(movies.count) trending movies, \(tvShows.count) TV shows")
+            
+            // Process movies
+            for movie in movies {
+                if validClipsStored >= additionalClips {
+                    break
+                }
+                
+                let clips = try await fetchAndValidateClipsForMovie(movie)
+                if !clips.isEmpty {
+                    let stored = try await storeClipsInSupabase(clips)
+                    validClipsStored += stored
+                    
+                    fetchProgress = Double(validClipsStored) / Double(additionalClips)
+                    print("📊 Refresh Progress: \(validClipsStored)/\(additionalClips) (\(Int(fetchProgress * 100))%)")
+                }
+                
+                attemptedClips += 1
+                if attemptedClips >= maxAttempts {
+                    break
+                }
+            }
+            
+            // Process TV shows
+            for tvShow in tvShows {
+                if validClipsStored >= additionalClips {
+                    break
+                }
+                
+                let clips = try await fetchAndValidateClipsForTVShow(tvShow)
+                if !clips.isEmpty {
+                    let stored = try await storeClipsInSupabase(clips)
+                    validClipsStored += stored
+                    
+                    fetchProgress = Double(validClipsStored) / Double(additionalClips)
+                    print("📊 Refresh Progress: \(validClipsStored)/\(additionalClips) (\(Int(fetchProgress * 100))%)")
+                }
+                
+                attemptedClips += 1
+                if attemptedClips >= maxAttempts {
+                    break
+                }
+            }
+            
+            // Update metadata
+            let finalCount = try await getValidClipsCountInDB()
+            lastFetchDate = Date()
+            cachedClipsCount = finalCount
+            saveLastFetchDate()
+            
+            isFetching = false
+            fetchProgress = 1.0
+            
+            print("✅ [WeeklyRefresh] Completed! Added \(validClipsStored) new clips. Total in DB: \(finalCount)")
+            
+            return validClipsStored
+            
+        } catch {
+            isFetching = false
+            fetchProgress = 0.0
+            print("❌ [WeeklyRefresh] Error: \(error)")
+            throw error
+        }
     }
     
     // MARK: - Fetch Popular Content from TMDB
@@ -131,16 +366,56 @@ class ClipsPrefetchService: ObservableObject {
         return Array(allShows.prefix(count))
     }
     
-    // MARK: - Fetch Clips for Media
+    // MARK: - Trending Content (for weekly refresh)
     
-    private func fetchClipsForMovie(_ movie: Movie) async throws -> [CachedClip] {
-        var clips: [CachedClip] = []
+    private func fetchTrendingMovies(count: Int) async throws -> [Movie] {
+        var allMovies: [Movie] = []
+        let pages = min(count / 20, 10) // Fewer pages for trending
+        
+        for page in 1...pages {
+            // Use trending/movie/week endpoint for freshest content
+            let response = try await tmdbService.getTrendingMovies(timeWindow: .week, page: page)
+            allMovies.append(contentsOf: response.results)
+            
+            try? await Task.sleep(nanoseconds: 100_000_000)
+        }
+        
+        return Array(allMovies.prefix(count))
+    }
+    
+    private func fetchTrendingTVShows(count: Int) async throws -> [TVShow] {
+        var allShows: [TVShow] = []
+        let pages = min(count / 20, 10)
+        
+        for page in 1...pages {
+            let response = try await tmdbService.getTrendingTVShows(timeWindow: .week, page: page)
+            allShows.append(contentsOf: response.results)
+            
+            try? await Task.sleep(nanoseconds: 100_000_000)
+        }
+        
+        return Array(allShows.prefix(count))
+    }
+    
+    // MARK: - Fetch and Validate Clips for Media
+    
+    /// Fetch clips for a movie and validate each video
+    private func fetchAndValidateClipsForMovie(_ movie: Movie) async throws -> [CachedClip] {
+        var validClips: [CachedClip] = []
         
         // Get videos from TMDB
         let videosResponse = try await tmdbService.getMovieVideos(id: movie.id)
         let youtubeVideos = videosResponse.results.filter { $0.site == "YouTube" }
         
-        for video in youtubeVideos.prefix(3) { // Max 3 clips per movie
+        for video in youtubeVideos.prefix(5) { // Try up to 5, validate to get 2-3 valid ones
+            // Validate video before creating clip
+            let isValid = await isVideoValid(videoId: video.key)
+            
+            if !isValid {
+                print("⏭️ [ClipsPrefetch] Skipping invalid video: \(video.key) for movie: \(movie.title)")
+                continue
+            }
+            
             let cachedClip = CachedClip(
                 clipId: "movie_\(movie.id)_\(video.key)",
                 videoId: video.key,
@@ -153,23 +428,40 @@ class ClipsPrefetchService: ObservableObject {
                 mediaType: "movie",
                 genres: movie.genreIds?.compactMap { genreIdToName($0) } ?? [],
                 tmdbRating: movie.voteAverage,
-                youtubeViews: 0, // We'll skip fetching YouTube stats for speed
-                qualityScore: 0.5 // Default, will calculate
+                youtubeViews: 0,
+                qualityScore: 0.5
             )
             
-            clips.append(cachedClip)
+            validClips.append(cachedClip)
+            
+            // Stop after getting 2-3 valid clips per movie
+            if validClips.count >= 3 {
+                break
+            }
+            
+            // Small delay to avoid rate limiting YouTube API
+            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1s
         }
         
-        return clips
+        return validClips
     }
     
-    private func fetchClipsForTVShow(_ tvShow: TVShow) async throws -> [CachedClip] {
-        var clips: [CachedClip] = []
+    /// Fetch clips for a TV show and validate each video
+    private func fetchAndValidateClipsForTVShow(_ tvShow: TVShow) async throws -> [CachedClip] {
+        var validClips: [CachedClip] = []
         
         let videosResponse = try await tmdbService.getTVShowVideos(id: tvShow.id)
         let youtubeVideos = videosResponse.results.filter { $0.site == "YouTube" }
         
-        for video in youtubeVideos.prefix(3) {
+        for video in youtubeVideos.prefix(5) { // Try up to 5, validate to get 2-3 valid ones
+            // Validate video before creating clip
+            let isValid = await isVideoValid(videoId: video.key)
+            
+            if !isValid {
+                print("⏭️ [ClipsPrefetch] Skipping invalid video: \(video.key) for TV: \(tvShow.name)")
+                continue
+            }
+            
             let cachedClip = CachedClip(
                 clipId: "tv_\(tvShow.id)_\(video.key)",
                 videoId: video.key,
@@ -186,10 +478,18 @@ class ClipsPrefetchService: ObservableObject {
                 qualityScore: 0.5
             )
             
-            clips.append(cachedClip)
+            validClips.append(cachedClip)
+            
+            // Stop after getting 2-3 valid clips per TV show
+            if validClips.count >= 3 {
+                break
+            }
+            
+            // Small delay to avoid rate limiting
+            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1s
         }
         
-        return clips
+        return validClips
     }
     
     // MARK: - Store in Supabase
@@ -307,4 +607,35 @@ struct CachedClip: Codable {
 enum ClipsPrefetchError: Error {
     case supabaseNotConfigured
     case fetchFailed
+}
+
+// MARK: - YouTube Video Validation Models
+
+private struct YouTubeVideoResponse: Codable {
+    let items: [YouTubeVideoItem]
+}
+
+private struct YouTubeVideoItem: Codable {
+    let status: VideoStatus
+    let contentDetails: ContentDetails
+}
+
+private struct VideoStatus: Codable {
+    let uploadStatus: String
+    let privacyStatus: String
+    let embeddable: Bool
+}
+
+private struct ContentDetails: Codable {
+    let contentRating: ContentRating
+}
+
+private struct ContentRating: Codable {
+    let ytRating: String?
+}
+
+// MARK: - Database Count Model
+
+private struct ClipCountRow: Codable {
+    let id: UUID
 }

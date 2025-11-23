@@ -10,10 +10,12 @@ class DiscoveryViewModel: ObservableObject {
     @Published var browseMovies: [Movie] = []
     @Published var browseTVShows: [Movie] = []
     @Published var isLoading = false
+    @Published var isRefreshing = false
     @Published var isBrowseLoading = false
     @Published var errorMessage: String?
     @Published var filters = DiscoveryFilters()
     @Published var selectedBrowseType: MediaType = .movie
+    @Published var refreshToken = UUID()
     
     private let dataCoordinator = DataCoordinator.shared
     private let tmdbService = TMDBService.shared
@@ -23,7 +25,11 @@ class DiscoveryViewModel: ObservableObject {
     func loadContent(forceRefresh: Bool = false) async {
         print("📺 [DiscoveryViewModel] Loading content... forceRefresh: \(forceRefresh)")
         
-        isLoading = true
+        if forceRefresh {
+            isRefreshing = true
+        } else {
+            isLoading = true
+        }
         errorMessage = nil
         
         do {
@@ -73,6 +79,56 @@ class DiscoveryViewModel: ObservableObject {
         }
         
         isLoading = false
+        isRefreshing = false
+        refreshToken = UUID()
+    }
+    
+    /// Refresh content - called by pull-to-refresh gesture
+    func refreshContent() async {
+        print("🔄 [DiscoveryViewModel] Pull-to-refresh: Fetching fresh content from TMDB...")
+        
+        do {
+            // Force refresh from TMDB
+            try await discoveryCache.refreshContent()
+            
+            // Get updated content
+            let content = try await discoveryCache.getDiscoveryContent()
+            
+            // Update UI
+            self.viralMovies = Array(content.trending.prefix(20))
+            self.moodMovies = Array(content.topRated.prefix(20))
+            self.forYouMovies = Array(content.popular.prefix(20))
+            
+            self.forYouTVShows = content.tv.prefix(20).map { tvShow in
+                Movie(
+                    id: tvShow.id,
+                    title: tvShow.name,
+                    overview: tvShow.overview,
+                    posterPath: tvShow.posterPath,
+                    backdropPath: tvShow.backdropPath,
+                    releaseDate: tvShow.firstAirDate,
+                    voteAverage: tvShow.voteAverage,
+                    voteCount: tvShow.voteCount,
+                    genreIds: tvShow.genreIds,
+                    genres: tvShow.genres,
+                    adult: false,
+                    originalLanguage: tvShow.originalLanguage,
+                    popularity: tvShow.popularity,
+                    runtime: nil,
+                    status: tvShow.status,
+                    tagline: tvShow.tagline,
+                    productionCountries: tvShow.productionCountries,
+                    imdbId: tvShow.imdbId
+                )
+            }
+            
+            print("✅ [DiscoveryViewModel] Refresh complete!")
+            
+        } catch {
+            print("❌ [DiscoveryViewModel] Refresh failed: \(error)")
+            errorMessage = "Failed to refresh. Please try again."
+        }
+        refreshToken = UUID()
     }
     
     /// Browse with filters - uses TMDb discover endpoint

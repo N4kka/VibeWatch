@@ -201,7 +201,7 @@ struct ClipsView: View {
                 // Center content overlay
                 VStack(spacing: 24) {
                     // Animated icon
-                    Image("stars")
+                    Image("stars90x90")
                         .resizable()
                         .scaledToFit()
                         .frame(width: 100, height: 100)

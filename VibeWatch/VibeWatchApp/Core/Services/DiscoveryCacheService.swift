@@ -1,12 +1,13 @@
 import Foundation
 import Supabase
 
-/// Service for caching Discovery content in Supabase database
+/// Service for caching Discovery content in local SQLite database (offline-first!)
 /// Caches movies/TV for 24 hours, refreshes at midnight
 @MainActor
 class DiscoveryCacheService {
     static let shared = DiscoveryCacheService()
     
+    private let db = SQLiteService.shared
     private let supabase = SupabaseService.shared
     private let tmdbService = TMDBService.shared
     
@@ -21,7 +22,7 @@ class DiscoveryCacheService {
     
     // MARK: - Public API
     
-    /// Get discovery content (from cache if available, DB if not, TMDB as fallback)
+    /// Get discovery content (from cache if available, SQLite DB if not, TMDB as fallback)
     func getDiscoveryContent() async throws -> (trending: [Movie], popular: [Movie], topRated: [Movie], tv: [TVShow]) {
         // Step 1: Check in-memory cache (instant!)
         if let lastUpdate = lastCacheUpdate,
@@ -31,9 +32,9 @@ class DiscoveryCacheService {
             return (cachedMovies, cachedPopularMovies, cachedTopRatedMovies, cachedTVShows)
         }
         
-        // Step 2: Try database cache
-        if let cached = try? await fetchFromDatabase() {
-            print("📊 [DiscoveryCache] Using database cache")
+        // Step 2: Try local SQLite database cache (offline-capable!)
+        if let cached = try? await fetchFromLocalDatabase() {
+            print("📊 [DiscoveryCache] Using local SQLite cache")
             cacheInMemory(cached)
             return cached
         }
@@ -42,9 +43,9 @@ class DiscoveryCacheService {
         print("🔄 [DiscoveryCache] Fetching fresh from TMDB and caching...")
         let fresh = try await fetchFromTMDB()
         
-        // Save to database in background
+        // Save to local database in background
         Task.detached(priority: .background) {
-            await self.saveToDatabase(fresh)
+            await self.saveToLocalDatabase(fresh)
         }
         
         cacheInMemory(fresh)
@@ -55,27 +56,31 @@ class DiscoveryCacheService {
     func refreshContent() async throws {
         print("🔄 [DiscoveryCache] Force refreshing from TMDB...")
         let fresh = try await fetchFromTMDB()
-        await saveToDatabase(fresh)
+        await saveToLocalDatabase(fresh)
         cacheInMemory(fresh)
     }
     
     /// Check if cache needs refresh (older than 24 hours)
     func needsRefresh() async -> Bool {
-        guard let client = supabase.client else { return true }
-        
         do {
-            // Check if any cached item is older than 24 hours
-            let response: [DiscoveryCacheRow] = try await client
-                .from("discovery_cache")
-                .select("cached_at")
-                .order("cached_at", ascending: false)
-                .limit(1)
-                .execute()
-                .value
+            let rows = try await db.queryRaw("""
+                SELECT cached_at FROM discovery_cache
+                WHERE deleted_at IS NULL
+                ORDER BY cached_at DESC
+                LIMIT 1
+            """)
             
-            guard let latest = response.first else { return true }
+            guard let latestRow = rows.first,
+                  let cachedAtString = latestRow["cached_at"] as? String else {
+                return true
+            }
             
-            let age = Date().timeIntervalSince(latest.cachedAt)
+            let formatter = ISO8601DateFormatter()
+            guard let cachedAt = formatter.date(from: cachedAtString) else {
+                return true
+            }
+            
+            let age = Date().timeIntervalSince(cachedAt)
             return age > 86400 // 24 hours
         } catch {
             print("⚠️ [DiscoveryCache] Failed to check cache age: \(error)")
@@ -83,137 +88,240 @@ class DiscoveryCacheService {
         }
     }
     
-    // MARK: - Database Operations
+    // MARK: - Local SQLite Database Operations
     
-    private func fetchFromDatabase() async throws -> (trending: [Movie], popular: [Movie], topRated: [Movie], tv: [TVShow])? {
-        guard let client = supabase.client else {
-            print("⚠️ [DiscoveryCache] Supabase not configured")
-            return nil
-        }
-        
-        // Fetch all cached content that's not expired
-        let response: [DiscoveryCacheRow] = try await client
-            .from("discovery_cache")
-            .select()
-            .gt("expires_at", value: Date())
-            .execute()
-            .value
+    private func fetchFromLocalDatabase() async throws -> (trending: [Movie], popular: [Movie], topRated: [Movie], tv: [TVShow])? {
+        // Fetch all cached content from local SQLite that's not expired
+        let now = ISO8601DateFormatter().string(from: Date())
+        let response = try await db.queryRaw("""
+            SELECT * FROM discovery_cache
+            WHERE expires_at > ? AND deleted_at IS NULL
+        """, parameters: [now])
         
         guard !response.isEmpty else {
-            print("📭 [DiscoveryCache] Cache is empty or expired")
+            print("📭 [DiscoveryCache] Local cache is empty or expired")
             return nil
         }
         
+        // Check if we should randomize today (once daily)
+        let shouldRandomize = shouldRandomizeToday()
+        
         // Parse into categories
-        let trendingMovies = response
-            .filter { $0.contentType == "trending_movies" }
-            .map { $0.toMovie() }
+        var trendingMovies: [Movie] = []
+        var popularMovies: [Movie] = []
+        var topRatedMovies: [Movie] = []
+        var trendingTV: [TVShow] = []
         
-        let popularMovies = response
-            .filter { $0.contentType == "popular_movies" }
-            .map { $0.toMovie() }
+        for row in response {
+            guard let contentType = row["content_type"] as? String,
+                  let tmdbId = row["tmdb_id"] as? Int,
+                  let title = row["title"] as? String else {
+                continue
+            }
+            
+            switch contentType {
+            case "trending_movies":
+                trendingMovies.append(parseMovie(from: row, id: tmdbId, title: title))
+            case "popular_movies":
+                popularMovies.append(parseMovie(from: row, id: tmdbId, title: title))
+            case "top_rated_movies":
+                topRatedMovies.append(parseMovie(from: row, id: tmdbId, title: title))
+            case "trending_tv":
+                trendingTV.append(parseTVShow(from: row, id: tmdbId, title: title))
+            default:
+                break
+            }
+        }
         
-        let topRatedMovies = response
-            .filter { $0.contentType == "top_rated_movies" }
-            .map { $0.toMovie() }
+        // Randomize if needed (daily)
+        if shouldRandomize {
+            trendingMovies.shuffle()
+            popularMovies.shuffle()
+            topRatedMovies.shuffle()
+            trendingTV.shuffle()
+            updateLastRandomizationDate()
+            print("🎲 [DiscoveryCache] Randomized all content for today")
+        }
         
-        let trendingTV = response
-            .filter { $0.contentType == "trending_tv" }
-            .map { $0.toTVShow() }
-        
-        print("✅ [DiscoveryCache] Retrieved from DB: \(trendingMovies.count) trending, \(popularMovies.count) popular, \(topRatedMovies.count) top rated, \(trendingTV.count) TV")
+        print("✅ [DiscoveryCache] Retrieved from local SQLite: \(trendingMovies.count) trending, \(popularMovies.count) popular, \(topRatedMovies.count) top rated, \(trendingTV.count) TV")
         
         return (trendingMovies, popularMovies, topRatedMovies, trendingTV)
     }
     
-    private func saveToDatabase(_ content: (trending: [Movie], popular: [Movie], topRated: [Movie], tv: [TVShow])) async {
-        guard let client = supabase.client else {
-            print("⚠️ [DiscoveryCache] Supabase not configured, skipping save")
-            return
+    // Parse Movie from SQLite row
+    private func parseMovie(from row: [String: Any], id: Int, title: String) -> Movie {
+        let genresString = row["genres"] as? String ?? "[]"
+        let genresData = genresString.data(using: .utf8) ?? Data()
+        let genres = (try? JSONDecoder().decode([Int].self, from: genresData)) ?? []
+        
+        return Movie(
+            id: id,
+            title: title,
+            overview: row["overview"] as? String ?? "",
+            posterPath: row["poster_path"] as? String ?? "",
+            backdropPath: row["backdrop_path"] as? String ?? "",
+            releaseDate: row["release_date"] as? String ?? "",
+            voteAverage: row["vote_average"] as? Double ?? 0.0,
+            voteCount: 0,
+            genreIds: genres,
+            genres: nil,
+            adult: false,
+            originalLanguage: "",
+            popularity: 0.0,
+            runtime: nil,
+            status: nil,
+            tagline: nil,
+            productionCountries: nil,
+            imdbId: nil
+        )
+    }
+    
+    // Parse TVShow from SQLite row
+    private func parseTVShow(from row: [String: Any], id: Int, title: String) -> TVShow {
+        let genresString = row["genres"] as? String ?? "[]"
+        let genresData = genresString.data(using: .utf8) ?? Data()
+        let genres = (try? JSONDecoder().decode([Int].self, from: genresData)) ?? []
+        
+        return TVShow(
+            id: id,
+            name: title,
+            overview: row["overview"] as? String ?? "",
+            posterPath: row["poster_path"] as? String ?? "",
+            backdropPath: row["backdrop_path"] as? String ?? "",
+            firstAirDate: row["release_date"] as? String ?? "",
+            voteAverage: row["vote_average"] as? Double ?? 0.0,
+            voteCount: 0,
+            genreIds: genres,
+            genres: nil,
+            originalLanguage: "",
+            popularity: 0.0,
+            status: nil,
+            tagline: nil,
+            productionCountries: nil,
+            imdbId: nil
+        )
+    }
+    
+    // MARK: - Daily Randomization Logic
+    
+    private func shouldRandomizeToday() -> Bool {
+        let key = "lastDiscoveryRandomization"
+        guard let lastRandomization = UserDefaults.standard.object(forKey: key) as? Date else {
+            return true // Never randomized before
         }
+        
+        let calendar = Calendar.current
+        return !calendar.isDate(lastRandomization, inSameDayAs: Date())
+    }
+    
+    private func updateLastRandomizationDate() {
+        let key = "lastDiscoveryRandomization"
+        UserDefaults.standard.set(Date(), forKey: key)
+    }
+    
+    private func saveToLocalDatabase(_ content: (trending: [Movie], popular: [Movie], topRated: [Movie], tv: [TVShow])) async {
+        print("💾 [DiscoveryCache] Saving to local SQLite...")
         
         do {
             // Clear old cache first
-            try await client
-                .from("discovery_cache")
-                .delete()
-                .execute()
+            _ = try await db.queryRaw("DELETE FROM discovery_cache")
+            print("🗑️ [DiscoveryCache] Cleared old local cache")
             
-            print("🗑️ [DiscoveryCache] Cleared old cache")
-            
-            // Prepare rows for insertion
-            var rows: [DiscoveryCacheInsert] = []
-            
-            // Add trending movies
-            rows += content.trending.map { movie in
-                DiscoveryCacheInsert(
-                    contentType: "trending_movies",
-                    tmdbId: movie.id,
-                    title: movie.title,
-                    overview: movie.overview,
-                    posterPath: movie.posterPath,
-                    backdropPath: movie.backdropPath,
-                    voteAverage: movie.voteAverage,
-                    releaseDate: movie.releaseDate,
-                    genres: movie.genreIds
-                )
+            // Helper to convert genre IDs array to JSON string
+            let genresToJSON = { (genres: [Int]?) -> String in
+                guard let genres = genres,
+                      let data = try? JSONEncoder().encode(genres),
+                      let string = String(data: data, encoding: .utf8) else {
+                    return "[]"
+                }
+                return string
             }
             
-            // Add popular movies
-            rows += content.popular.map { movie in
-                DiscoveryCacheInsert(
-                    contentType: "popular_movies",
-                    tmdbId: movie.id,
-                    title: movie.title,
-                    overview: movie.overview,
-                    posterPath: movie.posterPath,
-                    backdropPath: movie.backdropPath,
-                    voteAverage: movie.voteAverage,
-                    releaseDate: movie.releaseDate,
-                    genres: movie.genreIds
-                )
+            let now = Date()
+            let expiresAt = Calendar.current.date(byAdding: .day, value: 1, to: now) ?? now
+            let formatter = ISO8601DateFormatter()
+            
+            // Insert trending movies
+            for movie in content.trending {
+                let values: [String: Any] = [
+                    "id": UUID().uuidString,
+                    "content_type": "trending_movies",
+                    "tmdb_id": movie.id,
+                    "title": movie.title,
+                    "overview": movie.overview ?? "",
+                    "poster_path": movie.posterPath ?? "",
+                    "backdrop_path": movie.backdropPath ?? "",
+                    "vote_average": movie.voteAverage ?? 0.0,
+                    "release_date": movie.releaseDate ?? "",
+                    "genres": genresToJSON(movie.genreIds),
+                    "cached_at": formatter.string(from: now),
+                    "expires_at": formatter.string(from: expiresAt)
+                ]
+                _ = try await db.insert("discovery_cache", values: values)
             }
             
-            // Add top rated movies
-            rows += content.topRated.map { movie in
-                DiscoveryCacheInsert(
-                    contentType: "top_rated_movies",
-                    tmdbId: movie.id,
-                    title: movie.title,
-                    overview: movie.overview,
-                    posterPath: movie.posterPath,
-                    backdropPath: movie.backdropPath,
-                    voteAverage: movie.voteAverage,
-                    releaseDate: movie.releaseDate,
-                    genres: movie.genreIds
-                )
+            // Insert popular movies
+            for movie in content.popular {
+                let values: [String: Any] = [
+                    "id": UUID().uuidString,
+                    "content_type": "popular_movies",
+                    "tmdb_id": movie.id,
+                    "title": movie.title,
+                    "overview": movie.overview ?? "",
+                    "poster_path": movie.posterPath ?? "",
+                    "backdrop_path": movie.backdropPath ?? "",
+                    "vote_average": movie.voteAverage ?? 0.0,
+                    "release_date": movie.releaseDate ?? "",
+                    "genres": genresToJSON(movie.genreIds),
+                    "cached_at": formatter.string(from: now),
+                    "expires_at": formatter.string(from: expiresAt)
+                ]
+                _ = try await db.insert("discovery_cache", values: values)
             }
             
-            // Add trending TV shows
-            rows += content.tv.map { tv in
-                DiscoveryCacheInsert(
-                    contentType: "trending_tv",
-                    tmdbId: tv.id,
-                    title: tv.name,
-                    overview: tv.overview,
-                    posterPath: tv.posterPath,
-                    backdropPath: tv.backdropPath,
-                    voteAverage: tv.voteAverage,
-                    releaseDate: tv.firstAirDate,
-                    genres: tv.genreIds
-                )
+            // Insert top rated movies
+            for movie in content.topRated {
+                let values: [String: Any] = [
+                    "id": UUID().uuidString,
+                    "content_type": "top_rated_movies",
+                    "tmdb_id": movie.id,
+                    "title": movie.title,
+                    "overview": movie.overview ?? "",
+                    "poster_path": movie.posterPath ?? "",
+                    "backdrop_path": movie.backdropPath ?? "",
+                    "vote_average": movie.voteAverage ?? 0.0,
+                    "release_date": movie.releaseDate ?? "",
+                    "genres": genresToJSON(movie.genreIds),
+                    "cached_at": formatter.string(from: now),
+                    "expires_at": formatter.string(from: expiresAt)
+                ]
+                _ = try await db.insert("discovery_cache", values: values)
             }
             
-            // Insert all at once
-            try await client
-                .from("discovery_cache")
-                .insert(rows)
-                .execute()
+            // Insert trending TV shows
+            for tv in content.tv {
+                let values: [String: Any] = [
+                    "id": UUID().uuidString,
+                    "content_type": "trending_tv",
+                    "tmdb_id": tv.id,
+                    "title": tv.name,
+                    "overview": tv.overview ?? "",
+                    "poster_path": tv.posterPath ?? "",
+                    "backdrop_path": tv.backdropPath ?? "",
+                    "vote_average": tv.voteAverage ?? 0.0,
+                    "release_date": tv.firstAirDate ?? "",
+                    "genres": genresToJSON(tv.genreIds),
+                    "cached_at": formatter.string(from: now),
+                    "expires_at": formatter.string(from: expiresAt)
+                ]
+                _ = try await db.insert("discovery_cache", values: values)
+            }
             
-            print("✅ [DiscoveryCache] Saved \(rows.count) items to database")
+            let totalItems = content.trending.count + content.popular.count + content.topRated.count + content.tv.count
+            print("✅ [DiscoveryCache] Saved \(totalItems) items to local SQLite")
             
         } catch {
-            print("❌ [DiscoveryCache] Failed to save to database: \(error)")
+            print("❌ [DiscoveryCache] Failed to save to local database: \(error)")
         }
     }
     

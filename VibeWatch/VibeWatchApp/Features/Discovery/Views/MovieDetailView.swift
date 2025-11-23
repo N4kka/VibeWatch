@@ -103,14 +103,9 @@ struct MovieDetailView: View {
         }
         .background(Color.theme.background.ignoresSafeArea())
         .navigationBarHidden(true)
-        .gesture(
-            DragGesture(minimumDistance: 20, coordinateSpace: .local)
-                .onEnded { value in
-                    if value.translation.width > 100 && abs(value.translation.height) < 50 {
-                        dismiss()
-                    }
-                }
-        )
+        .swipeBackGesture {
+            dismiss()
+        }
         .sheet(isPresented: $showSavePanel) {
             if let movie = viewModel.movie {
                 SaveToListPanel(movie: movie, mediaType: .movie)
