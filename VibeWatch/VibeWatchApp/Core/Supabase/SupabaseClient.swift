@@ -5,7 +5,12 @@ import Supabase
 class SupabaseService: ObservableObject {
     static let shared = SupabaseService()
     
-    private var client: SupabaseClient?
+    // Public accessor for database operations (auth not required for reads)
+    var client: SupabaseClient? {
+        return _client
+    }
+    
+    private var _client: SupabaseClient?
     @Published var currentUser: User?
     @Published var isAuthenticated = false
     
@@ -13,12 +18,12 @@ class SupabaseService: ObservableObject {
         // Initialize client if credentials are configured
         if let url = URL(string: Config.supabaseURL),
            !Config.supabaseAnonKey.isEmpty {
-            client = SupabaseClient(
+            _client = SupabaseClient(
                 supabaseURL: url,
                 supabaseKey: Config.supabaseAnonKey
             )
             
-            // Check for existing session
+            // Check for existing session (optional - works without auth for public tables)
             Task {
                 await checkSession()
             }
@@ -30,7 +35,7 @@ class SupabaseService: ObservableObject {
     // MARK: - Session Management
     
     private func checkSession() async {
-        guard let client = client else { return }
+        guard let client = _client else { return }
         
         do {
             let session = try await client.auth.session
@@ -51,7 +56,7 @@ class SupabaseService: ObservableObject {
     // MARK: - Authentication
     
     func signUp(email: String, password: String) async throws -> User {
-        guard let client = client else {
+        guard let client = _client else {
             throw SupabaseError.notConfigured
         }
         
@@ -72,7 +77,7 @@ class SupabaseService: ObservableObject {
     }
     
     func signIn(email: String, password: String) async throws -> User {
-        guard let client = client else {
+        guard let client = _client else {
             throw SupabaseError.notConfigured
         }
         
@@ -92,7 +97,7 @@ class SupabaseService: ObservableObject {
     }
     
     func signOut() async throws {
-        guard let client = client else {
+        guard let client = _client else {
             throw SupabaseError.notConfigured
         }
         

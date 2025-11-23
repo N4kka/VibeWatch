@@ -42,7 +42,7 @@ class MovieDetailViewModel: ObservableObject {
             
             // Use current country for watch providers
             let country = LocalizationManager.shared.currentCountry.id
-            var baseProviders = providersData.results?[country]
+            let baseProviders = providersData.results?[country]
             
             similarMovies = Array(similarData.results.prefix(10))
             
@@ -281,7 +281,7 @@ class TVShowDetailViewModel: ObservableObject {
             
             // Use current country for watch providers
             let country = LocalizationManager.shared.currentCountry.id
-            var baseProviders = providersData.results?[country]
+            let baseProviders = providersData.results?[country]
             
             similarShows = Array(similarData.results.prefix(10))
             

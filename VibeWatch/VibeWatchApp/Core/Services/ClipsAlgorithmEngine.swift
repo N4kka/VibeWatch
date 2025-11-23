@@ -383,7 +383,10 @@ class ClipsAlgorithmEngine {
     
     private func _fetchBestClipForMovie(_ movie: Movie) async throws -> [EnhancedClip] {
         let videosResponse = try await tmdbService.getMovieVideos(id: movie.id)
-        let clips = videosResponse.results.filter { $0.type == "Clip" && $0.site == "YouTube" }
+        // Accept Trailers, Teasers, AND Clips (not just "Clip" type!)
+        let clips = videosResponse.results.filter { 
+            $0.site == "YouTube" && ($0.type == "Trailer" || $0.type == "Teaser" || $0.type == "Clip")
+        }
         
         guard !clips.isEmpty else { return [] }
         
@@ -420,7 +423,10 @@ class ClipsAlgorithmEngine {
     
     private func fetchBestClipForTVShow(_ tvShow: TVShow) async throws -> [EnhancedClip] {
         let videosResponse = try await tmdbService.getTVShowVideos(id: tvShow.id)
-        let clips = videosResponse.results.filter { $0.type == "Clip" && $0.site == "YouTube" }
+        // Accept Trailers, Teasers, AND Clips (not just "Clip" type!)
+        let clips = videosResponse.results.filter { 
+            $0.site == "YouTube" && ($0.type == "Trailer" || $0.type == "Teaser" || $0.type == "Clip")
+        }
         
         guard !clips.isEmpty else { return [] }
         

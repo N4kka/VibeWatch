@@ -24,19 +24,19 @@ struct MainTabView: View {
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
                 
-                // Hide bottom bar when on Clips tab
-                if selectedTab != 1 {
-                    VStack(spacing: 0) {
-                        Spacer()
-                        
+                // Hide bottom bar when on Clips tab (swipe-only navigation)
+                VStack(spacing: 0) {
+                    Spacer()
+                    
+                    if selectedTab != 1 {
                         LiquidGlassBottomBar(selectedTab: $selectedTab)
                             .padding(.horizontal, 16)
                             .padding(.bottom, 20)
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
-                    .ignoresSafeArea(edges: .bottom)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .animation(.spring(response: 0.3, dampingFraction: 0.8), value: selectedTab)
                 }
+                .ignoresSafeArea(edges: .bottom)
+                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: selectedTab)
             }
             .background(Color.theme.background.ignoresSafeArea())
             .navigationBarHidden(true)
@@ -67,6 +67,7 @@ struct MainTabView: View {
                         Label("tab.clips".localized, systemImage: "play.rectangle.fill")
                     }
                     .tag(1)
+                    .toolbar(selectedTab == 1 ? .hidden : .visible, for: .tabBar)
                 
                 ListsView()
                     .tabItem {
@@ -153,6 +154,27 @@ struct MainTabView: View {
                     customTabBarView
                 }
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .navigateToDiscoveryTab)) { _ in
+            // Navigate to Discovery tab
+            withAnimation {
+                selectedTab = 0
+            }
+            print("🏠 [MainTabView] Navigated to Discovery tab")
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .navigateToClipsTab)) { _ in
+            // Navigate to Clips tab
+            withAnimation {
+                selectedTab = 1
+            }
+            print("🎬 [MainTabView] Navigated to Clips tab")
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .navigateToListsTab)) { _ in
+            // Navigate to Lists tab
+            withAnimation {
+                selectedTab = 2
+            }
+            print("📝 [MainTabView] Navigated to Lists tab")
         }
     }
 }

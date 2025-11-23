@@ -1,0 +1,731 @@
+import Foundation
+import SQLite3
+
+/// Local SQLite database service for offline-first architecture
+/// All app reads/writes go through this service
+class SQLiteService: ObservableObject {
+    static let shared = SQLiteService()
+    
+    @Published var isConnected = false
+    @Published var lastError: String?
+    
+    private var db: OpaquePointer?
+    private let dbPath: String
+    private let dbQueue = DispatchQueue(label: "com.vibewatch.sqlite", qos: .userInitiated)
+    
+    private init() {
+        // Store in app's Documents directory
+        let fileManager = FileManager.default
+        let urls = fileManager.urls(for: .documentDirectory, in: .userDomainMask)
+        dbPath = urls[0].appendingPathComponent("vibewatch_local.sqlite").path
+        
+        print("📂 [SQLite] Database path: \(dbPath)")
+        
+        openDatabase()
+        createTables()
+    }
+    
+    deinit {
+        if let db = db {
+            sqlite3_close(db)
+        }
+    }
+    
+    // MARK: - Connection Management
+    
+    private func openDatabase() {
+        if sqlite3_open(dbPath, &db) == SQLITE_OK {
+            isConnected = true
+            lastError = nil
+            
+            // Enable foreign keys
+            execute("PRAGMA foreign_keys = ON")
+            
+            // Enable WAL mode for better concurrency
+            execute("PRAGMA journal_mode = WAL")
+            
+            print("✅ [SQLite] Database opened successfully")
+        } else {
+            isConnected = false
+            lastError = String(cString: sqlite3_errmsg(db))
+            print("❌ [SQLite] Failed to open database: \(lastError ?? "unknown")")
+        }
+    }
+    
+    private func closeDatabase() {
+        if sqlite3_close(db) == SQLITE_OK {
+            print("✅ [SQLite] Database closed")
+        }
+    }
+    
+    /// Test database connection
+    func testConnection() async -> Bool {
+        do {
+            let result: [[String: Any]] = try await queryRaw("SELECT 1 as test")
+            return result.first?["test"] as? Int == 1
+        } catch {
+            print("❌ [SQLite] Connection test failed: \(error)")
+            return false
+        }
+    }
+    
+    // MARK: - Schema Creation
+    
+    private func createTables() {
+        // Read schema from file or create inline
+        let tables = [
+            createClipsTable(),
+            createDiscoveryCacheTable(),
+            createMediaDetailsTable(),
+            createTrailersTable(),
+            createProfilesTable(),
+            createListsTable(),
+            createListItemsTable(),
+            createUserClipHistoryTable(),
+            createUserPreferencesTable(),
+            createUserDailyQuotaTable(),
+            createSyncOutboxTable(),
+            createSyncLogTable(),
+            createDeviceInfoTable(),
+            createAppMetadataTable()
+        ]
+        
+        for table in tables {
+            execute(table)
+        }
+        
+        // Initialize metadata
+        execute("""
+            INSERT OR IGNORE INTO app_metadata (key_name, value_text) VALUES
+            ('app_install_date', datetime('now')),
+            ('db_schema_version', '1.0.0'),
+            ('last_full_sync', NULL)
+        """)
+        
+        print("✅ [SQLite] All tables created")
+    }
+    
+    // MARK: - SQL Execution
+    
+    /// Execute a SQL statement without returning results
+    @discardableResult
+    func execute(_ sql: String, parameters: [Any] = []) -> Bool {
+        var statement: OpaquePointer?
+        
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+            let error = String(cString: sqlite3_errmsg(db))
+            print("❌ [SQLite] Prepare failed: \(error)")
+            print("   SQL: \(sql)")
+            lastError = error
+            return false
+        }
+        
+        defer { sqlite3_finalize(statement) }
+        
+        // Bind parameters
+        for (index, param) in parameters.enumerated() {
+            bind(param, to: statement, at: Int32(index + 1))
+        }
+        
+        if sqlite3_step(statement) != SQLITE_DONE {
+            let error = String(cString: sqlite3_errmsg(db))
+            print("❌ [SQLite] Execute failed: \(error)")
+            print("   SQL: \(sql)")
+            lastError = error
+            return false
+        }
+        
+        return true
+    }
+    
+    /// Query and return rows as dictionaries
+    func queryRaw(_ sql: String, parameters: [Any] = []) async throws -> [[String: Any]] {
+        return try await withCheckedThrowingContinuation { continuation in
+            dbQueue.async { [weak self] in
+                guard let self = self else {
+                    continuation.resume(throwing: SQLiteError.notConnected)
+                    return
+                }
+                
+                var statement: OpaquePointer?
+                
+                guard sqlite3_prepare_v2(self.db, sql, -1, &statement, nil) == SQLITE_OK else {
+                    let error = String(cString: sqlite3_errmsg(self.db))
+                    continuation.resume(throwing: SQLiteError.queryFailed(error))
+                    return
+                }
+                
+                defer { sqlite3_finalize(statement) }
+                
+                // Bind parameters
+                for (index, param) in parameters.enumerated() {
+                    self.bind(param, to: statement, at: Int32(index + 1))
+                }
+                
+                var results: [[String: Any]] = []
+                
+                while sqlite3_step(statement) == SQLITE_ROW {
+                    var row: [String: Any] = [:]
+                    let columnCount = sqlite3_column_count(statement)
+                    
+                    for i in 0..<columnCount {
+                        let columnName = String(cString: sqlite3_column_name(statement, i))
+                        let value = self.getValue(from: statement, at: i)
+                        row[columnName] = value
+                    }
+                    
+                    results.append(row)
+                }
+                
+                continuation.resume(returning: results)
+            }
+        }
+    }
+    
+    /// Query and decode to Codable type
+    func query<T: Decodable>(_ sql: String, parameters: [Any] = []) async throws -> [T] {
+        let rows = try await queryRaw(sql, parameters: parameters)
+        let data = try JSONSerialization.data(withJSONObject: rows)
+        return try JSONDecoder().decode([T].self, from: data)
+    }
+    
+    // MARK: - Transaction Support
+    
+    func transaction(_ operations: () async throws -> Void) async throws {
+        execute("BEGIN TRANSACTION")
+        
+        do {
+            try await operations()
+            execute("COMMIT")
+        } catch {
+            execute("ROLLBACK")
+            throw error
+        }
+    }
+    
+    // MARK: - CRUD Helpers
+    
+    /// Insert a record and return the rowid
+    func insert(_ table: String, values: [String: Any]) async throws -> Int64 {
+        let columns = values.keys.joined(separator: ", ")
+        let placeholders = values.keys.map { _ in "?" }.joined(separator: ", ")
+        let sql = "INSERT INTO \(table) (\(columns)) VALUES (\(placeholders))"
+        
+        let parameters = Array(values.values)
+        
+        return try await withCheckedThrowingContinuation { continuation in
+            dbQueue.async { [weak self] in
+                guard let self = self else {
+                    continuation.resume(throwing: SQLiteError.notConnected)
+                    return
+                }
+                
+                var statement: OpaquePointer?
+                
+                guard sqlite3_prepare_v2(self.db, sql, -1, &statement, nil) == SQLITE_OK else {
+                    let error = String(cString: sqlite3_errmsg(self.db))
+                    continuation.resume(throwing: SQLiteError.queryFailed(error))
+                    return
+                }
+                
+                defer { sqlite3_finalize(statement) }
+                
+                // Bind parameters
+                for (index, param) in parameters.enumerated() {
+                    self.bind(param, to: statement, at: Int32(index + 1))
+                }
+                
+                if sqlite3_step(statement) == SQLITE_DONE {
+                    let rowid = sqlite3_last_insert_rowid(self.db)
+                    continuation.resume(returning: rowid)
+                } else {
+                    let error = String(cString: sqlite3_errmsg(self.db))
+                    continuation.resume(throwing: SQLiteError.queryFailed(error))
+                }
+            }
+        }
+    }
+    
+    /// Update records
+    func update(_ table: String, values: [String: Any], where condition: String, parameters: [Any] = []) async throws {
+        let setClause = values.keys.map { "\($0) = ?" }.joined(separator: ", ")
+        let sql = "UPDATE \(table) SET \(setClause) WHERE \(condition)"
+        
+        let valueParams = Array(values.values)
+        let allParams = valueParams + parameters
+        
+        _ = try await queryRaw(sql, parameters: allParams)
+    }
+    
+    /// Delete records (soft delete by default)
+    func delete(_ table: String, where condition: String, parameters: [Any] = [], hard: Bool = false) async throws {
+        if hard {
+            let sql = "DELETE FROM \(table) WHERE \(condition)"
+            _ = try await queryRaw(sql, parameters: parameters)
+        } else {
+            // Soft delete
+            let sql = "UPDATE \(table) SET deleted_at = datetime('now') WHERE \(condition)"
+            _ = try await queryRaw(sql, parameters: parameters)
+        }
+    }
+    
+    /// Select records
+    func select<T: Decodable>(
+        _ table: String,
+        where condition: String? = nil,
+        parameters: [Any] = [],
+        orderBy: String? = nil,
+        limit: Int? = nil
+    ) async throws -> [T] {
+        var sql = "SELECT * FROM \(table)"
+        
+        if let condition = condition {
+            sql += " WHERE \(condition)"
+        }
+        
+        if let orderBy = orderBy {
+            sql += " ORDER BY \(orderBy)"
+        }
+        
+        if let limit = limit {
+            sql += " LIMIT \(limit)"
+        }
+        
+        return try await query(sql, parameters: parameters)
+    }
+    
+    // MARK: - Utility Methods
+    
+    /// Count records
+    func count(_ table: String, where condition: String? = nil, parameters: [Any] = []) async throws -> Int {
+        var sql = "SELECT COUNT(*) as count FROM \(table)"
+        
+        if let condition = condition {
+            sql += " WHERE \(condition)"
+        }
+        
+        let result = try await queryRaw(sql, parameters: parameters)
+        return result.first?["count"] as? Int ?? 0
+    }
+    
+    /// Check if record exists
+    func exists(_ table: String, where condition: String, parameters: [Any] = []) async throws -> Bool {
+        let count = try await self.count(table, where: condition, parameters: parameters)
+        return count > 0
+    }
+    
+    /// Generate UUID
+    func generateUUID() -> String {
+        return UUID().uuidString.lowercased()
+    }
+    
+    /// Get last insert rowid
+    func lastInsertRowId() -> Int64 {
+        return sqlite3_last_insert_rowid(db)
+    }
+    
+    // MARK: - Helper Methods
+    
+    private func bind(_ value: Any, to statement: OpaquePointer?, at index: Int32) {
+        switch value {
+        case let val as String:
+            sqlite3_bind_text(statement, index, (val as NSString).utf8String, -1, nil)
+        case let val as Int:
+            sqlite3_bind_int64(statement, index, Int64(val))
+        case let val as Int64:
+            sqlite3_bind_int64(statement, index, val)
+        case let val as Double:
+            sqlite3_bind_double(statement, index, val)
+        case let val as Bool:
+            sqlite3_bind_int(statement, index, val ? 1 : 0)
+        case let val as Data:
+            val.withUnsafeBytes {
+                sqlite3_bind_blob(statement, index, $0.baseAddress, Int32(val.count), nil)
+            }
+        case let val as Date:
+            let formatter = ISO8601DateFormatter()
+            let dateString = formatter.string(from: val)
+            sqlite3_bind_text(statement, index, (dateString as NSString).utf8String, -1, nil)
+        case is NSNull:
+            sqlite3_bind_null(statement, index)
+        default:
+            // Try to encode as JSON
+            if let data = try? JSONEncoder().encode(AnyEncodable(value)),
+               let string = String(data: data, encoding: .utf8) {
+                sqlite3_bind_text(statement, index, (string as NSString).utf8String, -1, nil)
+            } else {
+                sqlite3_bind_null(statement, index)
+            }
+        }
+    }
+    
+    private func getValue(from statement: OpaquePointer?, at index: Int32) -> Any? {
+        let type = sqlite3_column_type(statement, index)
+        
+        switch type {
+        case SQLITE_INTEGER:
+            return Int(sqlite3_column_int64(statement, index))
+        case SQLITE_FLOAT:
+            return sqlite3_column_double(statement, index)
+        case SQLITE_TEXT:
+            return String(cString: sqlite3_column_text(statement, index))
+        case SQLITE_BLOB:
+            let bytes = sqlite3_column_blob(statement, index)
+            let count = sqlite3_column_bytes(statement, index)
+            return Data(bytes: bytes!, count: Int(count))
+        case SQLITE_NULL:
+            return nil
+        default:
+            return nil
+        }
+    }
+}
+
+// MARK: - Table Creation
+
+extension SQLiteService {
+    private func createClipsTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS clips (
+          id TEXT PRIMARY KEY,
+          clip_id TEXT UNIQUE NOT NULL,
+          video_id TEXT NOT NULL,
+          title TEXT NOT NULL,
+          description TEXT,
+          video_url TEXT NOT NULL,
+          thumbnail_url TEXT,
+          movie_id INTEGER,
+          tv_show_id INTEGER,
+          media_type TEXT,
+          genres TEXT,
+          actors TEXT,
+          mood TEXT,
+          keywords TEXT,
+          likes INTEGER DEFAULT 0,
+          comments INTEGER DEFAULT 0,
+          views INTEGER DEFAULT 0,
+          youtube_views INTEGER,
+          tmdb_rating REAL,
+          quality_score REAL,
+          is_active INTEGER DEFAULT 1,
+          is_premium INTEGER DEFAULT 0,
+          created_at TEXT DEFAULT (datetime('now')),
+          fetched_at TEXT DEFAULT (datetime('now')),
+          last_served_at TEXT,
+          updated_at TEXT DEFAULT (datetime('now')),
+          deleted_at TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_clips_active ON clips(is_active, deleted_at);
+        CREATE INDEX IF NOT EXISTS idx_clips_media_type ON clips(media_type);
+        CREATE INDEX IF NOT EXISTS idx_clips_quality ON clips(quality_score DESC);
+        CREATE INDEX IF NOT EXISTS idx_clips_created ON clips(created_at DESC);
+        """
+    }
+    
+    private func createDiscoveryCacheTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS discovery_cache (
+          id TEXT PRIMARY KEY,
+          content_type TEXT NOT NULL,
+          tmdb_id INTEGER NOT NULL,
+          title TEXT NOT NULL,
+          overview TEXT,
+          poster_path TEXT,
+          backdrop_path TEXT,
+          vote_average REAL,
+          release_date TEXT,
+          genres TEXT,
+          cached_at TEXT DEFAULT (datetime('now')),
+          expires_at TEXT NOT NULL,
+          updated_at TEXT DEFAULT (datetime('now')),
+          deleted_at TEXT,
+          UNIQUE(content_type, tmdb_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_discovery_content_type ON discovery_cache(content_type);
+        CREATE INDEX IF NOT EXISTS idx_discovery_expires ON discovery_cache(expires_at);
+        """
+    }
+    
+    private func createMediaDetailsTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS media_details_cache (
+          tmdb_id INTEGER NOT NULL,
+          media_type TEXT NOT NULL,
+          title TEXT NOT NULL,
+          overview TEXT,
+          poster_path TEXT,
+          backdrop_path TEXT,
+          cached_at TEXT DEFAULT (datetime('now')),
+          expires_at TEXT NOT NULL,
+          updated_at TEXT DEFAULT (datetime('now')),
+          deleted_at TEXT,
+          PRIMARY KEY (tmdb_id, media_type)
+        );
+        """
+    }
+    
+    private func createTrailersTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS trailers_cache (
+          tmdb_id INTEGER NOT NULL,
+          media_type TEXT NOT NULL,
+          youtube_id TEXT NOT NULL,
+          trailer_type TEXT,
+          name TEXT,
+          cached_at TEXT DEFAULT (datetime('now')),
+          updated_at TEXT DEFAULT (datetime('now')),
+          deleted_at TEXT,
+          PRIMARY KEY (tmdb_id, media_type, youtube_id)
+        );
+        """
+    }
+    
+    private func createProfilesTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS profiles (
+          id TEXT PRIMARY KEY,
+          email TEXT UNIQUE,
+          display_name TEXT,
+          avatar_url TEXT,
+          created_at TEXT DEFAULT (datetime('now')),
+          updated_at TEXT DEFAULT (datetime('now')),
+          deleted_at TEXT,
+          synced_at TEXT
+        );
+        """
+    }
+    
+    private func createListsTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS lists (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          name TEXT NOT NULL,
+          description TEXT,
+          type TEXT,
+          created_at TEXT DEFAULT (datetime('now')),
+          updated_at TEXT DEFAULT (datetime('now')),
+          deleted_at TEXT,
+          synced_at TEXT,
+          FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_lists_user_id ON lists(user_id);
+        CREATE INDEX IF NOT EXISTS idx_lists_deleted ON lists(deleted_at);
+        """
+    }
+    
+    private func createListItemsTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS list_items (
+          id TEXT PRIMARY KEY,
+          list_id TEXT NOT NULL,
+          user_id TEXT NOT NULL,
+          media_id INTEGER NOT NULL,
+          media_type TEXT NOT NULL,
+          title TEXT NOT NULL,
+          poster_path TEXT,
+          runtime INTEGER,
+          vote_average REAL,
+          vote_count INTEGER,
+          origin_country TEXT,
+          release_date TEXT,
+          genres TEXT,
+          overview TEXT,
+          added_at TEXT DEFAULT (datetime('now')),
+          updated_at TEXT DEFAULT (datetime('now')),
+          deleted_at TEXT,
+          synced_at TEXT,
+          UNIQUE(list_id, media_id, media_type),
+          FOREIGN KEY (list_id) REFERENCES lists(id) ON DELETE CASCADE,
+          FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_list_items_list_id ON list_items(list_id);
+        CREATE INDEX IF NOT EXISTS idx_list_items_user_id ON list_items(user_id);
+        """
+    }
+    
+    private func createUserClipHistoryTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS user_clip_history (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          device_id TEXT NOT NULL,
+          clip_id TEXT NOT NULL,
+          watched_at TEXT DEFAULT (datetime('now')),
+          watch_duration REAL,
+          total_duration REAL,
+          completion_rate REAL,
+          liked INTEGER DEFAULT 0,
+          commented INTEGER DEFAULT 0,
+          shared INTEGER DEFAULT 0,
+          added_to_list INTEGER DEFAULT 0,
+          engagement_score REAL,
+          updated_at TEXT DEFAULT (datetime('now')),
+          deleted_at TEXT,
+          synced_at TEXT,
+          UNIQUE(user_id, clip_id),
+          FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_clip_history_user_id ON user_clip_history(user_id);
+        CREATE INDEX IF NOT EXISTS idx_clip_history_watched_at ON user_clip_history(watched_at DESC);
+        """
+    }
+    
+    private func createUserPreferencesTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS user_preferences (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          device_id TEXT NOT NULL,
+          preference_type TEXT NOT NULL,
+          preference_id TEXT NOT NULL,
+          preference_name TEXT,
+          score REAL DEFAULT 0,
+          updated_at TEXT DEFAULT (datetime('now')),
+          deleted_at TEXT,
+          synced_at TEXT,
+          UNIQUE(user_id, preference_type, preference_id),
+          FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_preferences_user_id ON user_preferences(user_id);
+        """
+    }
+    
+    private func createUserDailyQuotaTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS user_daily_quota (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          device_id TEXT NOT NULL,
+          clips_watched_today INTEGER DEFAULT 0,
+          last_reset_at TEXT DEFAULT (datetime('now')),
+          is_pro INTEGER DEFAULT 0,
+          created_at TEXT DEFAULT (datetime('now')),
+          updated_at TEXT DEFAULT (datetime('now')),
+          deleted_at TEXT,
+          synced_at TEXT,
+          UNIQUE(user_id, device_id),
+          FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
+        );
+        """
+    }
+    
+    private func createSyncOutboxTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS sync_outbox (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          operation_id TEXT UNIQUE NOT NULL,
+          user_id TEXT NOT NULL,
+          table_name TEXT NOT NULL,
+          operation_type TEXT NOT NULL,
+          record_id TEXT NOT NULL,
+          payload TEXT NOT NULL,
+          status TEXT DEFAULT 'pending',
+          attempts INTEGER DEFAULT 0,
+          max_attempts INTEGER DEFAULT 5,
+          created_at TEXT DEFAULT (datetime('now')),
+          next_retry_at TEXT,
+          synced_at TEXT,
+          last_error TEXT,
+          depends_on_id INTEGER,
+          FOREIGN KEY (depends_on_id) REFERENCES sync_outbox(id) ON DELETE SET NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_outbox_status ON sync_outbox(status, next_retry_at);
+        CREATE INDEX IF NOT EXISTS idx_outbox_user_id ON sync_outbox(user_id);
+        """
+    }
+    
+    private func createSyncLogTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS sync_log (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          sync_batch_id TEXT NOT NULL,
+          operation_id TEXT NOT NULL,
+          user_id TEXT NOT NULL,
+          table_name TEXT NOT NULL,
+          operation_type TEXT NOT NULL,
+          status TEXT NOT NULL,
+          error_message TEXT,
+          synced_at TEXT DEFAULT (datetime('now'))
+        );
+        CREATE INDEX IF NOT EXISTS idx_sync_log_batch ON sync_log(sync_batch_id);
+        CREATE INDEX IF NOT EXISTS idx_sync_log_timestamp ON sync_log(synced_at DESC);
+        """
+    }
+    
+    private func createDeviceInfoTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS device_info (
+          device_id TEXT PRIMARY KEY,
+          user_id TEXT,
+          device_name TEXT,
+          platform TEXT,
+          app_version TEXT,
+          last_sync_at TEXT,
+          created_at TEXT DEFAULT (datetime('now')),
+          updated_at TEXT DEFAULT (datetime('now'))
+        );
+        """
+    }
+    
+    private func createAppMetadataTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS app_metadata (
+          key_name TEXT PRIMARY KEY,
+          value_text TEXT,
+          value_number REAL,
+          value_boolean INTEGER,
+          value_json TEXT,
+          updated_at TEXT DEFAULT (datetime('now'))
+        );
+        """
+    }
+}
+
+// MARK: - Helper Structures
+
+private struct AnyEncodable: Encodable {
+    let value: Any
+    
+    init(_ value: Any) {
+        self.value = value
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        
+        if let value = value as? String {
+            try container.encode(value)
+        } else if let value = value as? Int {
+            try container.encode(value)
+        } else if let value = value as? Double {
+            try container.encode(value)
+        } else if let value = value as? Bool {
+            try container.encode(value)
+        } else {
+            try container.encodeNil()
+        }
+    }
+}
+
+// MARK: - Error Types
+
+enum SQLiteError: LocalizedError {
+    case notConnected
+    case queryFailed(String)
+    case invalidData
+    case transactionFailed
+    
+    var errorDescription: String? {
+        switch self {
+        case .notConnected:
+            return "SQLite database not connected"
+        case .queryFailed(let message):
+            return "Query failed: \(message)"
+        case .invalidData:
+            return "Invalid data format"
+        case .transactionFailed:
+            return "Transaction failed"
+        }
+    }
+}

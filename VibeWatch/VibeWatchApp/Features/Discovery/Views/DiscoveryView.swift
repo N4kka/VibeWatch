@@ -11,93 +11,96 @@ struct DiscoveryView: View {
     @Binding var selectedMediaType: MediaType
     
     var body: some View {
-        ZStack(alignment: .top) {
-            ScrollView {
-                VStack(spacing: 32) {
-                    Color.clear
-                        .frame(height: 60)
-                    
-                    if !viewModel.moodMovies.isEmpty {
-                        MoodCarouselSection(movies: viewModel.moodMovies) { movie in
-                            selectedMovie = movie
-                            selectedMediaType = .movie
-                        }
-                    }
-                    
-                    if !viewModel.forYouMovies.isEmpty {
-                        MediaSection(
-                            title: "discovery.forYou".localized,
-                            items: viewModel.forYouMovies,
-                            type: .movie
-                        ) { movie in
-                            selectedMovie = movie
-                            selectedMediaType = .movie
-                        }
-                    }
-                    
-                    if !viewModel.viralMovies.isEmpty {
-                        MediaSection(
-                            title: "discovery.trending".localized,
-                            items: viewModel.viralMovies,
-                            type: .movie
-                        ) { movie in
-                            selectedMovie = movie
-                            selectedMediaType = .movie
-                        }
-                    }
-                    
-                    if !viewModel.forYouTVShows.isEmpty {
-                        MediaSection(
-                            title: "discovery.tvShows".localized,
-                            items: viewModel.forYouTVShows,
-                            type: .tv
-                        ) { movie in
-                            selectedMovie = movie
-                            selectedMediaType = .tv
-                        }
-                    }
-                    
-                    // Browse with Filters Section
-                    BrowseSection(viewModel: viewModel, onFilterTap: {
-                        showFilters = true
-                    }, onMovieTap: { movie, type in
+        discoveryMainView
+    }
+    
+    private var discoveryMainView: some View {
+        ScrollView {
+            VStack(spacing: 32) {
+                DiscoveryHeaderView(
+                    onSearchTap: { showSearch = true },
+                    onProfileTap: { showProfile = true },
+                    avatarURL: appState.currentUser?.avatarURL
+                )
+                .padding(.top, 4)
+                
+                if !viewModel.moodMovies.isEmpty {
+                    MoodCarouselSection(movies: viewModel.moodMovies) { movie in
                         selectedMovie = movie
-                        selectedMediaType = type
-                    })
-                    
-                    Color.clear
-                        .frame(height: 80)
+                        selectedMediaType = .movie
+                    }
                 }
-            }
-            .refreshable {
-                await viewModel.loadContent()
-            }
-            .overlay {
-                if showFilters {
-                    AdvancedFiltersPanel(
-                        filters: $viewModel.filters,
-                        showRuntimeFilter: viewModel.selectedBrowseType == .movie,
-                        onDismiss: {
-                            withAnimation {
-                                showFilters = false
-                            }
-                        },
-                        onApply: { _ in
-                            Task {
-                                await viewModel.browseWithFilters()
-                            }
-                        }
-                    )
+                
+                if !viewModel.forYouMovies.isEmpty {
+                    MediaSection(
+                        title: "discovery.forYou".localized,
+                        items: viewModel.forYouMovies,
+                        type: .movie
+                    ) { movie in
+                        selectedMovie = movie
+                        selectedMediaType = .movie
+                    }
                 }
+                
+                if !viewModel.viralMovies.isEmpty {
+                    MediaSection(
+                        title: "discovery.trending".localized,
+                        items: viewModel.viralMovies,
+                        type: .movie
+                    ) { movie in
+                        selectedMovie = movie
+                        selectedMediaType = .movie
+                    }
+                }
+                
+                if !viewModel.forYouTVShows.isEmpty {
+                    MediaSection(
+                        title: "discovery.tvShows".localized,
+                        items: viewModel.forYouTVShows,
+                        type: .tv
+                    ) { movie in
+                        selectedMovie = movie
+                        selectedMediaType = .tv
+                    }
+                }
+                
+                // Browse with Filters Section
+                BrowseSection(viewModel: viewModel, onFilterTap: {
+                    showFilters = true
+                }, onMovieTap: { movie, type in
+                    selectedMovie = movie
+                    selectedMediaType = type
+                })
+                
+                Color.clear
+                    .frame(height: 80)
             }
-            
-            DiscoveryHeaderView(
-                onSearchTap: { showSearch = true },
-                onProfileTap: { showProfile = true },
-                avatarURL: appState.currentUser?.avatarURL
-            )
+        }
+        .id(viewModel.refreshToken)
+        .refreshable {
+            // Force refresh from TMDB to get latest content and reload images
+            print("🔄 [DiscoveryView] Pull-to-refresh triggered")
+            await viewModel.refreshContent()
         }
         .background(Color.theme.background.ignoresSafeArea())
+        .overlay {
+            if showFilters {
+                AdvancedFiltersPanel(
+                    filters: $viewModel.filters,
+                    showRuntimeFilter: viewModel.selectedBrowseType == .movie,
+                    onDismiss: {
+                        withAnimation {
+                            showFilters = false
+                        }
+                    },
+                    onApply: { _ in
+                        Task {
+                            await viewModel.browseWithFilters()
+                        }
+                    }
+                )
+            }
+        }
         .task {
             await viewModel.loadContent()
         }
@@ -115,8 +118,8 @@ struct DiscoveryView: View {
         }
         .toast(isShowing: $appState.showSuccessToast, message: appState.toastMessage, type: .success)
         .toast(isShowing: $appState.showErrorToast, message: appState.toastMessage, type: .error)
+        }
     }
-}
 
 struct DiscoveryHeaderView: View {
     let onSearchTap: () -> Void

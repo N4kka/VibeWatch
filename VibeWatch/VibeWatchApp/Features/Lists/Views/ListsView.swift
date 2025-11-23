@@ -11,6 +11,7 @@ struct ListsView: View {
     @State private var showFilters = false
     @State private var refreshID = UUID()
     @State private var filters = DiscoveryFilters()
+    
     @State private var filterRefreshTrigger = false
     
     private var selectedPlatforms: Set<StreamingPlatform> {
@@ -59,14 +60,13 @@ struct ListsView: View {
                 if showFilters {
                     AdvancedFiltersPanel(
                         filters: $filters,
-                        showRuntimeFilter: false, // Lists don't have runtime metadata
+                        showRuntimeFilter: false,
                         onDismiss: {
                             withAnimation {
                                 showFilters = false
                             }
                         },
                         onApply: { _ in
-                            // Force view refresh when filters are applied
                             filterRefreshTrigger.toggle()
                         }
                     )
@@ -77,7 +77,6 @@ struct ListsView: View {
             await viewModel.loadLists()
         }
         .onChange(of: localizationManager.localeDidChange) { _ in
-            // Trigger view refresh to update all localized strings
             refreshID = UUID()
         }
         .id(refreshID)
@@ -397,8 +396,6 @@ struct ListsView: View {
         }
     }
 }
-
-
 
 struct MediaItemRow: View {
     let item: MediaListItem

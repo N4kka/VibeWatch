@@ -10,40 +10,45 @@ class DiscoveryViewModel: ObservableObject {
     @Published var browseMovies: [Movie] = []
     @Published var browseTVShows: [Movie] = []
     @Published var isLoading = false
+    @Published var isRefreshing = false
     @Published var isBrowseLoading = false
     @Published var errorMessage: String?
     @Published var filters = DiscoveryFilters()
     @Published var selectedBrowseType: MediaType = .movie
+    @Published var refreshToken = UUID()
     
     private let dataCoordinator = DataCoordinator.shared
     private let tmdbService = TMDBService.shared
+    private let discoveryCache = DiscoveryCacheService.shared
     
-    /// Load content - uses shared data from DataCoordinator (no API calls needed!)
+    /// Load content - uses database cache for instant loading!
     func loadContent(forceRefresh: Bool = false) async {
         print("📺 [DiscoveryViewModel] Loading content... forceRefresh: \(forceRefresh)")
         
-        isLoading = true
+        if forceRefresh {
+            isRefreshing = true
+        } else {
+            isLoading = true
+        }
         errorMessage = nil
         
-        // If forceRefresh is true (e.g., language changed), fetch fresh content
-        if forceRefresh {
-            print("🔄 [DiscoveryViewModel] Force refresh requested, fetching fresh content...")
-            await fetchFreshContent()
-            // Also refresh the DataCoordinator cache so other views get updated data
-            await dataCoordinator.refreshDiscoveryContent()
-            isLoading = false
-            return
-        }
-        
-        // Get shared data from DataCoordinator (already fetched on app launch)
-        if let sharedContent = await dataCoordinator.getDiscoveryContent() {
-            // Use preloaded data - INSTANT, no API calls!
-            self.viralMovies = Array(sharedContent.movies.prefix(20))
-            self.moodMovies = Array(sharedContent.topRated.prefix(20))
-            self.forYouMovies = Array(sharedContent.popular.prefix(20))
+        do {
+            // If forceRefresh is true (e.g., language changed), fetch fresh and update cache
+            if forceRefresh {
+                print("🔄 [DiscoveryViewModel] Force refresh requested...")
+                try await discoveryCache.refreshContent()
+            }
+            
+            // Get content from cache (DB or in-memory) - INSTANT!
+            let content = try await discoveryCache.getDiscoveryContent()
+            
+            // Assign to published properties
+            self.viralMovies = Array(content.trending.prefix(20))
+            self.moodMovies = Array(content.topRated.prefix(20))
+            self.forYouMovies = Array(content.popular.prefix(20))
             
             // Convert TV shows to Movie format for display
-            self.forYouTVShows = sharedContent.tvShows.prefix(20).map { tvShow in
+            self.forYouTVShows = content.tv.prefix(20).map { tvShow in
                 Movie(
                     id: tvShow.id,
                     title: tvShow.name,
@@ -66,14 +71,64 @@ class DiscoveryViewModel: ObservableObject {
                 )
             }
             
-            print("✅ [DiscoveryViewModel] Loaded from shared cache (0 API calls)")
-        } else {
-            // Fallback: fetch fresh if coordinator hasn't loaded yet
-            print("⚠️ [DiscoveryViewModel] Shared cache not ready, fetching fresh...")
-            await fetchFreshContent()
+            print("✅ [DiscoveryViewModel] Loaded from cache (instant!)")
+            
+        } catch {
+            print("❌ [DiscoveryViewModel] Failed to load from cache: \(error)")
+            errorMessage = "Failed to load content. Please try again."
         }
         
         isLoading = false
+        isRefreshing = false
+        refreshToken = UUID()
+    }
+    
+    /// Refresh content - called by pull-to-refresh gesture
+    func refreshContent() async {
+        print("🔄 [DiscoveryViewModel] Pull-to-refresh: Fetching fresh content from TMDB...")
+        
+        do {
+            // Force refresh from TMDB
+            try await discoveryCache.refreshContent()
+            
+            // Get updated content
+            let content = try await discoveryCache.getDiscoveryContent()
+            
+            // Update UI
+            self.viralMovies = Array(content.trending.prefix(20))
+            self.moodMovies = Array(content.topRated.prefix(20))
+            self.forYouMovies = Array(content.popular.prefix(20))
+            
+            self.forYouTVShows = content.tv.prefix(20).map { tvShow in
+                Movie(
+                    id: tvShow.id,
+                    title: tvShow.name,
+                    overview: tvShow.overview,
+                    posterPath: tvShow.posterPath,
+                    backdropPath: tvShow.backdropPath,
+                    releaseDate: tvShow.firstAirDate,
+                    voteAverage: tvShow.voteAverage,
+                    voteCount: tvShow.voteCount,
+                    genreIds: tvShow.genreIds,
+                    genres: tvShow.genres,
+                    adult: false,
+                    originalLanguage: tvShow.originalLanguage,
+                    popularity: tvShow.popularity,
+                    runtime: nil,
+                    status: tvShow.status,
+                    tagline: tvShow.tagline,
+                    productionCountries: tvShow.productionCountries,
+                    imdbId: tvShow.imdbId
+                )
+            }
+            
+            print("✅ [DiscoveryViewModel] Refresh complete!")
+            
+        } catch {
+            print("❌ [DiscoveryViewModel] Refresh failed: \(error)")
+            errorMessage = "Failed to refresh. Please try again."
+        }
+        refreshToken = UUID()
     }
     
     /// Browse with filters - uses TMDb discover endpoint
