@@ -38,36 +38,42 @@ struct MovieDetailView: View {
                             mediaType: .movie,
                             onSaveTap: { showSavePanel = true },
                             onSeenTap: {
-                                if listManager.isInList(listId: listManager.seenList.id, mediaId: movie.id, mediaType: .movie) {
-                                    if let item = listManager.seenList.items.first(where: { $0.mediaId == movie.id && $0.mediaType == .movie }) {
-                                        listManager.removeFromList(listId: listManager.seenList.id, itemId: item.id)
+                                Task {
+                                    if listManager.isInList(listId: listManager.seenList.id, mediaId: movie.id, mediaType: .movie) {
+                                        if let item = listManager.seenList.items.first(where: { $0.mediaId == movie.id && $0.mediaType == .movie }) {
+                                            try? await listManager.removeFromList(listId: listManager.seenList.id, itemId: item.id)
+                                        }
+                                    } else {
+                                        try? await listManager.addToList(listId: listManager.seenList.id, movie: movie, mediaType: .movie)
                                     }
-                                } else {
-                                    _ = listManager.addToList(listId: listManager.seenList.id, movie: movie, mediaType: .movie)
                                 }
                             },
                             onLikedTap: {
-                                if listManager.isInList(listId: listManager.likedList.id, mediaId: movie.id, mediaType: .movie) {
-                                    if let item = listManager.likedList.items.first(where: { $0.mediaId == movie.id && $0.mediaType == .movie }) {
-                                        listManager.removeFromList(listId: listManager.likedList.id, itemId: item.id)
+                                Task {
+                                    if listManager.isInList(listId: listManager.likedList.id, mediaId: movie.id, mediaType: .movie) {
+                                        if let item = listManager.likedList.items.first(where: { $0.mediaId == movie.id && $0.mediaType == .movie }) {
+                                            try? await listManager.removeFromList(listId: listManager.likedList.id, itemId: item.id)
+                                        }
+                                    } else {
+                                        if let dislikedItem = listManager.dislikedList.items.first(where: { $0.mediaId == movie.id && $0.mediaType == .movie }) {
+                                            try? await listManager.removeFromList(listId: listManager.dislikedList.id, itemId: dislikedItem.id)
+                                        }
+                                        try? await listManager.addToList(listId: listManager.likedList.id, movie: movie, mediaType: .movie)
                                     }
-                                } else {
-                                    if let dislikedItem = listManager.dislikedList.items.first(where: { $0.mediaId == movie.id && $0.mediaType == .movie }) {
-                                        listManager.removeFromList(listId: listManager.dislikedList.id, itemId: dislikedItem.id)
-                                    }
-                                    _ = listManager.addToList(listId: listManager.likedList.id, movie: movie, mediaType: .movie)
                                 }
                             },
                             onDislikedTap: {
-                                if listManager.isInList(listId: listManager.dislikedList.id, mediaId: movie.id, mediaType: .movie) {
-                                    if let item = listManager.dislikedList.items.first(where: { $0.mediaId == movie.id && $0.mediaType == .movie }) {
-                                        listManager.removeFromList(listId: listManager.dislikedList.id, itemId: item.id)
+                                Task {
+                                    if listManager.isInList(listId: listManager.dislikedList.id, mediaId: movie.id, mediaType: .movie) {
+                                        if let item = listManager.dislikedList.items.first(where: { $0.mediaId == movie.id && $0.mediaType == .movie }) {
+                                            try? await listManager.removeFromList(listId: listManager.dislikedList.id, itemId: item.id)
+                                        }
+                                    } else {
+                                        if let likedItem = listManager.likedList.items.first(where: { $0.mediaId == movie.id && $0.mediaType == .movie }) {
+                                            try? await listManager.removeFromList(listId: listManager.likedList.id, itemId: likedItem.id)
+                                        }
+                                        try? await listManager.addToList(listId: listManager.dislikedList.id, movie: movie, mediaType: .movie)
                                     }
-                                } else {
-                                    if let likedItem = listManager.likedList.items.first(where: { $0.mediaId == movie.id && $0.mediaType == .movie }) {
-                                        listManager.removeFromList(listId: listManager.likedList.id, itemId: likedItem.id)
-                                    }
-                                    _ = listManager.addToList(listId: listManager.dislikedList.id, movie: movie, mediaType: .movie)
                                 }
                             }
                         )

@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import Combine
 
 @MainActor
 class DiscoveryViewModel: ObservableObject {
@@ -20,7 +21,35 @@ class DiscoveryViewModel: ObservableObject {
     private let dataCoordinator = DataCoordinator.shared
     private let tmdbService = TMDBService.shared
     private let discoveryCache = DiscoveryCacheService.shared
+    private var cancellables = Set<AnyCancellable>()
     
+    init() {
+        subscribeToListChanges()
+    }
+    
+    private func subscribeToListChanges() {
+        ListManager.shared.$seenList
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.refilterBrowseResults()
+            }
+            .store(in: &cancellables)
+
+        ListManager.shared.$dislikedList
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.refilterBrowseResults()
+            }
+            .store(in: &cancellables)
+    }
+    
+    private func refilterBrowseResults() {
+        guard DailyQuotaManager.shared.isProUser else { return }
+
+        self.browseMovies = filterSeenAndDisliked(movies: self.browseMovies)
+        self.browseTVShows = filterSeenAndDisliked(movies: self.browseTVShows)
+    }
+
     /// Load content - uses database cache for instant loading!
     func loadContent(forceRefresh: Bool = false) async {
         print("📺 [DiscoveryViewModel] Loading content... forceRefresh: \(forceRefresh)")
@@ -71,6 +100,13 @@ class DiscoveryViewModel: ObservableObject {
                 )
             }
             
+            if DailyQuotaManager.shared.isProUser {
+                self.viralMovies = filterSeenAndDisliked(movies: self.viralMovies)
+                self.moodMovies = filterSeenAndDisliked(movies: self.moodMovies)
+                self.forYouMovies = filterSeenAndDisliked(movies: self.forYouMovies)
+                self.forYouTVShows = filterSeenAndDisliked(movies: self.forYouTVShows)
+            }
+            
             print("✅ [DiscoveryViewModel] Loaded from cache (instant!)")
             
         } catch {
@@ -81,6 +117,15 @@ class DiscoveryViewModel: ObservableObject {
         isLoading = false
         isRefreshing = false
         refreshToken = UUID()
+    }
+    
+    private func filterSeenAndDisliked(movies: [Movie]) -> [Movie] {
+        let listManager = ListManager.shared
+        let seenItems = Set(listManager.seenList.items.map { $0.mediaId })
+        let dislikedItems = Set(listManager.dislikedList.items.map { $0.mediaId })
+        let excludedItems = seenItems.union(dislikedItems)
+
+        return movies.filter { !excludedItems.contains($0.id) }
     }
     
     /// Refresh content - called by pull-to-refresh gesture
@@ -121,6 +166,13 @@ class DiscoveryViewModel: ObservableObject {
                     imdbId: tvShow.imdbId
                 )
             }
+
+            if DailyQuotaManager.shared.isProUser {
+                self.viralMovies = filterSeenAndDisliked(movies: self.viralMovies)
+                self.moodMovies = filterSeenAndDisliked(movies: self.moodMovies)
+                self.forYouMovies = filterSeenAndDisliked(movies: self.forYouMovies)
+                self.forYouTVShows = filterSeenAndDisliked(movies: self.forYouTVShows)
+            }
             
             print("✅ [DiscoveryViewModel] Refresh complete!")
             
@@ -148,7 +200,11 @@ class DiscoveryViewModel: ObservableObject {
                     minRating: filters.ratingRange.minRating,
                     country: filters.country
                 )
-                browseMovies = response.results
+                if DailyQuotaManager.shared.isProUser {
+                    browseMovies = filterSeenAndDisliked(movies: response.results)
+                } else {
+                    browseMovies = response.results
+                }
                 print("✅ [DiscoveryViewModel] Found \(browseMovies.count) movies")
             } else {
                 let response = try await tmdbService.discoverTVShows(
@@ -159,7 +215,7 @@ class DiscoveryViewModel: ObservableObject {
                     country: filters.country
                 )
                 // Convert TV shows to Movie format for display
-                browseTVShows = response.results.map { tvShow in
+                let showsAsMovies = response.results.map { tvShow in
                     Movie(
                         id: tvShow.id,
                         title: tvShow.name,
@@ -180,6 +236,11 @@ class DiscoveryViewModel: ObservableObject {
                         productionCountries: tvShow.productionCountries,
                         imdbId: tvShow.imdbId
                     )
+                }
+                if DailyQuotaManager.shared.isProUser {
+                    browseTVShows = filterSeenAndDisliked(movies: showsAsMovies)
+                } else {
+                    browseTVShows = showsAsMovies
                 }
                 print("✅ [DiscoveryViewModel] Found \(browseTVShows.count) TV shows")
             }

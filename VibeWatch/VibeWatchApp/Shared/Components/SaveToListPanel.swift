@@ -5,6 +5,9 @@ struct SaveToListPanel: View {
     @StateObject private var listManager = ListManager.shared
     @State private var showCreateList = false
     @State private var newListName = ""
+    @State private var showAlert = false
+    @State private var alertTitle = ""
+    @State private var alertMessage = ""
     
     let movie: Movie
     let mediaType: MediaType
@@ -45,14 +48,27 @@ struct SaveToListPanel: View {
                             list: list,
                             isInList: listManager.isInList(listId: list.id, mediaId: movie.id, mediaType: mediaType)
                         ) {
-                            if listManager.isInList(listId: list.id, mediaId: movie.id, mediaType: mediaType) {
-                                listManager.removeFromList(listId: list.id, itemId: list.items.first(where: { $0.mediaId == movie.id })?.id ?? "")
-                            } else {
-                                listManager.addToList(listId: list.id, movie: movie, mediaType: mediaType)
-                            }
-                            // Auto-close panel after selection
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                dismiss()
+                            Task {
+                                do {
+                                    if listManager.isInList(listId: list.id, mediaId: movie.id, mediaType: mediaType) {
+                                        if let existing = list.items.first(where: { $0.mediaId == movie.id }) {
+                                            try await listManager.removeFromList(listId: list.id, itemId: existing.id)
+                                        }
+                                    } else {
+                                        try await listManager.addToList(listId: list.id, movie: movie, mediaType: mediaType)
+                                    }
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                        dismiss()
+                                    }
+                                } catch {
+                                    if let listError = error as? ListError {
+                                        alertMessage = listError.localizedDescription
+                                    } else {
+                                        alertMessage = error.localizedDescription
+                                    }
+                                    alertTitle = "Error"
+                                    showAlert = true
+                                }
                             }
                         }
                     }
@@ -92,10 +108,28 @@ struct SaveToListPanel: View {
             }
             Button("common.save".localized) {
                 if !newListName.isEmpty {
-                    listManager.createList(name: newListName)
-                    newListName = ""
+                    Task {
+                        do {
+                            try await listManager.createList(name: newListName)
+                            newListName = ""
+                        } catch {
+                            print("⚠️ Failed to create list: \(error)")
+                        }
+                    }
                 }
             }
+        }
+        .alert(alertTitle, isPresented: $showAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(alertMessage)
+        }
+        .onChange(of: listManager.softLimitWarningMessage) { newValue in
+            guard let message = newValue else { return }
+            alertTitle = "Heads Up"
+            alertMessage = message
+            showAlert = true
+            listManager.softLimitWarningMessage = nil
         }
     }
 }

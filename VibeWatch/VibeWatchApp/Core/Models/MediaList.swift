@@ -21,6 +21,27 @@ enum ListType: String, Codable, CaseIterable {
         case .custom: return "list.bullet"
         }
     }
+
+    var databaseValue: String {
+        switch self {
+        case .watchlist: return "Watchlist"
+        case .seen: return "Seen"
+        case .liked: return "Liked"
+        case .disliked: return "Disliked"
+        case .custom: return "Custom"
+        }
+    }
+
+    init?(databaseValue: String) {
+        switch databaseValue.lowercased() {
+        case "watchlist": self = .watchlist
+        case "seen": self = .seen
+        case "liked": self = .liked
+        case "disliked": self = .disliked
+        case "custom": self = .custom
+        default: return nil
+        }
+    }
 }
 
 struct MediaList: Identifiable, Codable {

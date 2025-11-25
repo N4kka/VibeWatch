@@ -1,4 +1,5 @@
 import SwiftUI
+import RevenueCat
 
 @main
 struct VibeWatchApp: App {
@@ -7,13 +8,19 @@ struct VibeWatchApp: App {
     @StateObject private var localizationManager = LocalizationManager.shared
     @StateObject private var syncWorker = SyncWorker.shared
     @StateObject private var sqliteDB = SQLiteService.shared
+    @StateObject private var appNavigationManager = AppNavigationManager.shared // Inject AppNavigationManager
     
     init() {
+        // Configure RevenueCat
+        Purchases.logLevel = .debug // TODO: Set to .info in production
+        Purchases.configure(withAPIKey: Config.revenueCatAPIKey)
+        
         // Force load localizations before any views are created
         _ = LocalizationManager.shared
         
         // Initialize offline-first database
         print("🗄️ [App] Initializing SQLite database...")
+        print("✅ [RevenueCat] Configured with API key")
     }
     
     var body: some Scene {
@@ -22,6 +29,7 @@ struct VibeWatchApp: App {
                 .environmentObject(appState)
                 .environmentObject(localizationManager)
                 .environmentObject(syncWorker)
+                .environmentObject(appNavigationManager) // Pass AppNavigationManager to environment
                 .preferredColorScheme(.dark)
                 .task {
                     // Start background sync worker
@@ -29,8 +37,8 @@ struct VibeWatchApp: App {
                     print("🔄 [App] Background sync started")
                 }
                 .onOpenURL { url in
-                    // Handle deep links
-                    print("📱 Deep link received: \(url.absoluteString)")
+                    // Handle deep links from URL schemes (e.g., OAuth)
+                    print("📱 Deep link received via URL: \(url.absoluteString)")
                     Task {
                         do {
                             try await AuthService.shared.client?.auth.session(from: url)
@@ -38,8 +46,21 @@ struct VibeWatchApp: App {
                             appState.isAuthenticated = AuthService.shared.isAuthenticated
                             appState.currentUser = AuthService.shared.currentUser
                         } catch {
-                            print("❌ Error handling deep link: \(error.localizedDescription)")
+                            print("❌ Error handling deep link from URL: \(error.localizedDescription)")
                         }
+                    }
+                }
+                // Handle deep links from push notifications
+                .sheet(item: $appNavigationManager.deepLinkTarget) { target in
+                    Group {
+                        if target.mediaType == "movie" {
+                            MovieDetailView(movieId: target.mediaId)
+                        } else if target.mediaType == "tv" {
+                            TVShowDetailView(tvShowId: target.mediaId)
+                        }
+                    }
+                    .onDisappear {
+                        appNavigationManager.clearDeepLinkTarget()
                     }
                 }
         }
@@ -64,6 +85,7 @@ class AppState: ObservableObject {
         Task {
             await checkAuthState()
             await preloadContent()
+            await RevenueCatService.shared.refreshOfferings()
         }
     }
     

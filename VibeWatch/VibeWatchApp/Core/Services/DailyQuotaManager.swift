@@ -66,11 +66,11 @@ class DailyQuotaManager: ObservableObject {
     /// Increment clip count when user watches a clip
     func recordClipWatched() {
         guard !isProUser else { return }
-        
+
         clipsWatchedToday += 1
         hasReachedLimit = clipsWatchedToday >= freeUserLimit
         saveQuotaData()
-        
+
         // Sync to Supabase in background
         Task {
             await syncToSupabase()

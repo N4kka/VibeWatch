@@ -6,9 +6,11 @@ struct ClipsView: View {
     @StateObject private var viewModel = ClipsViewModel()
     @StateObject private var quotaManager = DailyQuotaManager.shared
     @State private var currentIndex = 0
-    @State private var showPaywall = false
+    @State private var showDailyPaywall = false
+    @State private var showAccountGate = false
     @State private var navigateToDiscovery = false
     @Environment(\.scenePhase) private var scenePhase
+    @EnvironmentObject private var appState: AppState
     
     // Interactive swipe navigation
     @State private var horizontalOffset: CGFloat = 0
@@ -45,10 +47,22 @@ struct ClipsView: View {
                             .transition(.opacity)
                     }
 
-                    // Paywall bottom sheet overlay
-                    if showPaywall {
-                        PaywallBottomSheet(isPresented: $showPaywall, onComeBack: {
-                            showPaywall = false
+                    if showAccountGate {
+                        AccountCreationGateView(
+                            isPresented: $showAccountGate,
+                            onComeBack: {
+                                NotificationCenter.default.post(name: .navigateToDiscoveryTab, object: nil)
+                            },
+                            onAccountCreated: {
+                                quotaManager.resetQuota()
+                            }
+                        )
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .zIndex(101)
+                    }
+
+                    if showDailyPaywall {
+                        DailyLimitPaywallView(isPresented: $showDailyPaywall, onComeBack: {
                             NotificationCenter.default.post(name: .navigateToDiscoveryTab, object: nil)
                         })
                         .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -119,19 +133,31 @@ struct ClipsView: View {
             // Check quota when user scrolls to next clip
             checkQuotaLimit(for: newValue)
         }
+        .onChange(of: appState.isAuthenticated) { oldValue, newValue in
+            guard newValue, newValue != oldValue else { return }
+            quotaManager.resetQuota()
+            showAccountGate = false
+            showDailyPaywall = false
+        }
     }
 
     // MARK: - Quota Check
 
     private func checkQuotaLimit(for index: Int) {
-        // Record clip watched
-        if index > 0 { // Don't count first clip
+        guard index > 0 else { return }
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 5_000_000)
             quotaManager.recordClipWatched()
-        }
 
-        // Show paywall if limit reached
-        if quotaManager.hasReachedLimit && !showPaywall {
-            showPaywall = true
+            guard quotaManager.hasReachedLimit else { return }
+
+            if appState.isAuthenticated {
+                if !showDailyPaywall {
+                    showDailyPaywall = true
+                }
+            } else if !showAccountGate {
+                showAccountGate = true
+            }
         }
     }
 
@@ -143,7 +169,7 @@ struct ClipsView: View {
 
                 ScrollView(.vertical, showsIndicators: false) {
                     LazyVStack(spacing: 0) {
-                        ForEach(Array(viewModel.clips.enumerated()), id: \.element.id) { index, clip in
+                        ForEach(Array(viewModel.clips.enumerated()), id: \.offset) { index, clip in
                             ClipPlayerView(
                                 clip: clip,
                                 isCurrentClip: currentIndex == index,
@@ -1369,16 +1395,17 @@ struct AddToListView: View {
     private func toggleListSelection(_ list: MediaList) {
         let itemId = movieId ?? tvShowId ?? 0
         
-        if isItemInList(list) {
-            if let item = list.items.first(where: { $0.mediaId == itemId }) {
-                listManager.removeFromList(listId: list.id, itemId: item.id)
-            }
-        } else {
-            Task {
+        Task {
+            if isItemInList(list) {
+                if let item = list.items.first(where: { $0.mediaId == itemId }) {
+                    try? await listManager.removeFromList(listId: list.id, itemId: item.id)
+                    dismiss()
+                }
+            } else {
                 do {
                     if mediaType == .movie, let movieId = movieId {
                         let movieDetails = try await TMDBService.shared.getMovieDetails(id: movieId)
-                        _ = listManager.addToList(listId: list.id, movie: movieDetails, mediaType: .movie)
+                        try? await listManager.addToList(listId: list.id, movie: movieDetails, mediaType: .movie)
                     } else if mediaType == .tv, let tvShowId = tvShowId {
                         let tvDetails = try await TMDBService.shared.getTVShowDetails(id: tvShowId)
                         let movie = Movie(
@@ -1401,7 +1428,7 @@ struct AddToListView: View {
                             productionCountries: nil,
                             imdbId: nil
                         )
-                        listManager.addToList(listId: list.id, movie: movie, mediaType: .tv)
+                        try? await listManager.addToList(listId: list.id, movie: movie, mediaType: .tv)
                     }
                     
                     dismiss()
@@ -1605,6 +1632,7 @@ extension Notification.Name {
     static let navigateToDiscoveryTab = Notification.Name("navigateToDiscoveryTab")
     static let navigateToClipsTab = Notification.Name("navigateToClipsTab")
     static let navigateToListsTab = Notification.Name("navigateToListsTab")
+    static let dailyQuotaLimitReached = Notification.Name("dailyQuotaLimitReached")
 }
 
 // Preference key for tracking view offset

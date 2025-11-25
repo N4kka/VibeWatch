@@ -6,13 +6,15 @@ struct ListsView: View {
     @ObservedObject var localizationManager = LocalizationManager.shared
     @State private var selectedFilter: MediaFilter = .all
     @AppStorage("selectedPlatforms") private var selectedPlatformsData: Data = Data()
-    @State private var selectedListType: ListViewType = .watchlist
+    @State private var selectedListType: ListViewType = .myLists
     @State private var showCreateList = false
+    @State private var showAuthGate = false
     @State private var showFilters = false
     @State private var refreshID = UUID()
     @State private var filters = DiscoveryFilters()
     
     @State private var filterRefreshTrigger = false
+    @State private var showingPaywall = false
     
     private var selectedPlatforms: Set<StreamingPlatform> {
         get {
@@ -86,6 +88,12 @@ struct ListsView: View {
                 .presentationDragIndicator(.visible)
                 .presentationBackground(Color.theme.backgroundDark.opacity(0.98))
         }
+        .sheet(isPresented: $showAuthGate) {
+            AuthenticationGateView(isPresented: $showAuthGate)
+        }
+        .fullScreenCover(isPresented: $showingPaywall) {
+            DailyLimitPaywallView(isPresented: $showingPaywall)
+        }
     }
     
     private var headerView: some View {
@@ -97,7 +105,15 @@ struct ListsView: View {
             Spacer()
             
             Button {
-                showCreateList = true
+                guard SupabaseService.shared.isAuthenticated else {
+                    showAuthGate = true
+                    return
+                }
+                if listManager.canCreateList() {
+                    showCreateList = true
+                } else {
+                    showingPaywall = true
+                }
             } label: {
                 Image(systemName: "plus.circle.fill")
                     .font(.system(size: 28))
@@ -121,7 +137,7 @@ struct ListsView: View {
         case .liked:
             lists = [listManager.likedList]
         }
-        
+
         return lists
     }
     
@@ -182,37 +198,39 @@ struct ListsView: View {
                         item: item,
                         isInSeenList: selectedListType == .seen,
                         onMarkAsSeen: {
-                            // Remove from current list
-                            if let currentList = currentLists.first {
-                                listManager.removeFromList(listId: currentList.id, itemId: item.id)
+                            Task {
+                                if let currentList = currentLists.first {
+                                    try? await listManager.removeFromList(listId: currentList.id, itemId: item.id)
+                                }
+                                
+                                let movie = Movie(
+                                    id: item.mediaId,
+                                    title: item.title,
+                                    overview: "",
+                                    posterPath: item.posterPath,
+                                    backdropPath: nil,
+                                    releaseDate: nil,
+                                    voteAverage: 0.0,
+                                    voteCount: 0,
+                                    genreIds: nil,
+                                    genres: nil,
+                                    adult: false,
+                                    originalLanguage: "",
+                                    popularity: 0.0,
+                                    runtime: nil,
+                                    status: nil,
+                                    tagline: nil,
+                                    productionCountries: nil,
+                                    imdbId: nil
+                                )
+                                try await listManager.addToList(listId: listManager.seenList.id, movie: movie, mediaType: item.mediaType)
                             }
-                            
-                            // Add to seen list
-                            let movie = Movie(
-                                id: item.mediaId,
-                                title: item.title,
-                                overview: "",
-                                posterPath: item.posterPath,
-                                backdropPath: nil,
-                                releaseDate: nil,
-                                voteAverage: 0.0,
-                                voteCount: 0,
-                                genreIds: nil,
-                                genres: nil,
-                                adult: false,
-                                originalLanguage: "",
-                                popularity: 0.0,
-                                runtime: nil,
-                                status: nil,
-                                tagline: nil,
-                                productionCountries: nil,
-                                imdbId: nil
-                            )
-                            listManager.addToList(listId: listManager.seenList.id, movie: movie, mediaType: item.mediaType)
                         },
                         onDelete: {
-                            if let currentList = currentLists.first {
-                                listManager.removeFromList(listId: currentList.id, itemId: item.id)
+                            Task {
+                                if let currentList = currentLists.first {
+                                    try? await listManager.removeFromList(listId: currentList.id, itemId: item.id)
+                                }
                             }
                         }
                     )
@@ -363,6 +381,10 @@ struct ListsView: View {
                 .padding(.horizontal, 40)
             
             Button {
+                guard SupabaseService.shared.isAuthenticated else {
+                    showAuthGate = true
+                    return
+                }
                 showCreateList = true
             } label: {
                 Text("lists.createList".localized)
@@ -564,7 +586,9 @@ struct MediaItemRow: View {
                         if isInSeenList {
                             // Remove from seen list
                             if let currentList = listManager.lists.first(where: { $0.type == .seen }) {
-                                listManager.removeFromList(listId: currentList.id, itemId: item.id)
+                                Task {
+                                    try? await listManager.removeFromList(listId: currentList.id, itemId: item.id)
+                                }
                             }
                         } else {
                             onMarkAsSeen()
@@ -693,35 +717,25 @@ struct CustomListDetailView: View {
     @State private var filters = DiscoveryFilters()
     @State private var showFilters = false
     @State private var filterRefreshTrigger = false
+    @State private var searchText = ""
+    @State private var itemsLimit = 100
+    @State private var showEditSheet = false
+    @State private var showDeleteAlert = false
+    @State private var showActionError = false
+    @State private var actionErrorMessage = ""
     @Environment(\.dismiss) private var dismiss
 
-    // Sort the single list’s items according to filters.sortBy (used if needed elsewhere)
-    private var filteredAndSortedLists: [MediaList] {
-        var sortedList = list
-        sortedList.items.sort { item1, item2 in
-            switch filters.sortBy {
-            case .popularityDesc:
-                return item1.addedAt > item2.addedAt
-            case .popularityAsc:
-                return item1.addedAt < item2.addedAt
-            case .ratingDesc:
-                return (item1.voteAverage ?? 0) > (item2.voteAverage ?? 0)
-            case .ratingAsc:
-                return (item1.voteAverage ?? 0) < (item2.voteAverage ?? 0)
-            case .releaseDateDesc:
-                return (item1.releaseDate ?? "") > (item2.releaseDate ?? "")
-            case .releaseDateAsc:
-                return (item1.releaseDate ?? "") < (item2.releaseDate ?? "")
-            }
-        }
-        return [sortedList]
+    private var currentList: MediaList {
+        listManager.lists.first(where: { $0.id == list.id }) ?? list
     }
-    
-    // Full filter + sort for the visible items in this list
+
     private var filteredAndSortedItems: [MediaListItem] {
-        var items = list.items
-        
-        // Runtime filter (movies only)
+        var items = currentList.items
+
+        if !searchText.isEmpty {
+            items = items.filter { $0.title.range(of: searchText, options: .caseInsensitive) != nil }
+        }
+
         if filters.runtimeRange != .any {
             items = items.filter { item in
                 guard item.mediaType == .movie, let runtime = item.runtime else { return false }
@@ -730,8 +744,7 @@ struct CustomListDetailView: View {
                 return true
             }
         }
-        
-        // Rating filter
+
         if filters.ratingRange != .any {
             items = items.filter { item in
                 guard let voteAverage = item.voteAverage,
@@ -739,16 +752,14 @@ struct CustomListDetailView: View {
                 return voteAverage >= minRating
             }
         }
-        
-        // Country filter
+
         if let selectedCountry = filters.country {
             items = items.filter { item in
                 guard let originCountry = item.originCountry else { return false }
                 return originCountry.contains(selectedCountry)
             }
         }
-        
-        // Media type filter
+
         switch selectedFilter {
         case .all:
             break
@@ -757,8 +768,7 @@ struct CustomListDetailView: View {
         case .tvSeries:
             items = items.filter { $0.mediaType == .tv }
         }
-        
-        // Sorting
+
         switch filters.sortBy {
         case .popularityDesc, .popularityAsc:
             items.sort { $0.addedAt > $1.addedAt }
@@ -771,8 +781,12 @@ struct CustomListDetailView: View {
         case .releaseDateAsc:
             items.sort { ($0.releaseDate ?? "") < ($1.releaseDate ?? "") }
         }
-        
+
         return items
+    }
+
+    private var paginatedItems: [MediaListItem] {
+        Array(filteredAndSortedItems.prefix(itemsLimit))
     }
 
     var body: some View {
@@ -780,17 +794,15 @@ struct CustomListDetailView: View {
             Color.theme.background.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // Filter bar
+                searchField
+                    .padding(.horizontal, 20)
+                    .padding(.top, 12)
+
                 HStack(spacing: 12) {
                     MediaFilterSwitcher(selectedFilter: $selectedFilter)
-
                     Spacer()
-
-                    // Advanced Filters Button
                     Button {
-                        withAnimation {
-                            showFilters = true
-                        }
+                        withAnimation { showFilters = true }
                     } label: {
                         ZStack(alignment: .topTrailing) {
                             HStack(spacing: 6) {
@@ -804,7 +816,7 @@ struct CustomListDetailView: View {
                             .padding(.vertical, 10)
                             .background(Color.white.opacity(0.1))
                             .clipShape(Capsule())
-                            
+
                             if filters.isActive {
                                 Circle()
                                     .fill(Color.theme.accentOrange)
@@ -817,7 +829,6 @@ struct CustomListDetailView: View {
                 .padding(.horizontal, 20)
                 .padding(.vertical, 12)
 
-                // Items list
                 if filteredAndSortedItems.isEmpty {
                     VStack(spacing: 16) {
                         Image(systemName: "list.bullet")
@@ -832,39 +843,41 @@ struct CustomListDetailView: View {
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 20) {
-                            ForEach(filteredAndSortedItems) { item in
+                            ForEach(paginatedItems) { item in
                                 MediaItemRow(
                                     item: item,
                                     isInSeenList: false,
                                     onMarkAsSeen: {
-                                        // Remove from current list
-                                        listManager.removeFromList(listId: list.id, itemId: item.id)
+                                        Task {
+                                            try? await listManager.removeFromList(listId: list.id, itemId: item.id)
 
-                                        // Add to seen list
-                                        let movie = Movie(
-                                            id: item.mediaId,
-                                            title: item.title,
-                                            overview: "",
-                                            posterPath: item.posterPath,
-                                            backdropPath: nil,
-                                            releaseDate: nil,
-                                            voteAverage: 0.0,
-                                            voteCount: 0,
-                                            genreIds: nil,
-                                            genres: nil,
-                                            adult: false,
-                                            originalLanguage: "",
-                                            popularity: 0.0,
-                                            runtime: nil,
-                                            status: nil,
-                                            tagline: nil,
-                                            productionCountries: nil,
-                                            imdbId: nil
-                                        )
-                                        listManager.addToList(listId: listManager.seenList.id, movie: movie, mediaType: item.mediaType)
+                                            let movie = Movie(
+                                                id: item.mediaId,
+                                                title: item.title,
+                                                overview: "",
+                                                posterPath: item.posterPath,
+                                                backdropPath: nil,
+                                                releaseDate: nil,
+                                                voteAverage: 0.0,
+                                                voteCount: 0,
+                                                genreIds: nil,
+                                                genres: nil,
+                                                adult: false,
+                                                originalLanguage: "",
+                                                popularity: 0.0,
+                                                runtime: nil,
+                                                status: nil,
+                                                tagline: nil,
+                                                productionCountries: nil,
+                                                imdbId: nil
+                                            )
+                                            try await listManager.addToList(listId: listManager.seenList.id, movie: movie, mediaType: item.mediaType)
+                                        }
                                     },
                                     onDelete: {
-                                        listManager.removeFromList(listId: list.id, itemId: item.id)
+                                        Task {
+                                            try? await listManager.removeFromList(listId: list.id, itemId: item.id)
+                                        }
                                     }
                                 )
                             }
@@ -872,11 +885,27 @@ struct CustomListDetailView: View {
                         .padding(.horizontal, 20)
                         .padding(.bottom, 100)
                     }
-                    .id(filterRefreshTrigger) // Force refresh when filters change
+                    .overlay(alignment: .bottom) {
+                        if filteredAndSortedItems.count > paginatedItems.count {
+                            Button {
+                                itemsLimit += 100
+                            } label: {
+                                Text("common.loadMore".localized)
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 32)
+                                    .padding(.vertical, 12)
+                                    .background(Color.theme.accentOrange)
+                                    .clipShape(Capsule())
+                            }
+                            .padding(.bottom, 24)
+                        }
+                    }
+                    .id(filterRefreshTrigger)
                 }
             }
         }
-        .navigationTitle(list.name)
+        .navigationTitle(currentList.name)
         .navigationBarTitleDisplayMode(.large)
         .overlay {
             if showFilters {
@@ -884,15 +913,69 @@ struct CustomListDetailView: View {
                     filters: $filters,
                     showRuntimeFilter: false,
                     onDismiss: {
-                        withAnimation {
-                            showFilters = false
-                        }
+                        withAnimation { showFilters = false }
                     },
                     onApply: { _ in
-                        // Force view refresh when filters are applied
                         filterRefreshTrigger.toggle()
                     }
                 )
+            }
+        }
+        .onChange(of: filters) { _ in itemsLimit = 100 }
+        .onChange(of: searchText) { _ in itemsLimit = 100 }
+        .toolbar {
+            ToolbarItemGroup(placement: .navigationBarTrailing) {
+                Button {
+                    showEditSheet = true
+                } label: {
+                    Image(systemName: "square.and.pencil")
+                }
+                Button(role: .destructive) {
+                    showDeleteAlert = true
+                } label: {
+                    Image(systemName: "trash")
+                }
+            }
+        }
+        .sheet(isPresented: $showEditSheet) {
+            EditListView(list: currentList)
+        }
+        .alert("Delete List", isPresented: $showDeleteAlert) {
+            Button("Delete", role: .destructive) {
+                Task { await deleteList() }
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("Are you sure you want to delete \(currentList.name)? This removes all items in this list.")
+        }
+        .alert("Error", isPresented: $showActionError) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(actionErrorMessage)
+        }
+    }
+
+    private var searchField: some View {
+        HStack {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(.theme.textSecondary)
+            TextField("lists.searchPlaceholder".localized, text: $searchText)
+                .textInputAutocapitalization(.words)
+                .disableAutocorrection(true)
+        }
+        .padding(12)
+        .background(Color.white.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func deleteList() async {
+        do {
+            try await listManager.deleteList(id: currentList.id)
+            await MainActor.run { dismiss() }
+        } catch {
+            await MainActor.run {
+                actionErrorMessage = error.localizedDescription
+                showActionError = true
             }
         }
     }
@@ -1022,7 +1105,7 @@ struct CreateListView: View {
                     HStack {
                         Text("lists.limitInfo".localized
                             .replacingOccurrences(of: "{count}", with: "\(listManager.customListsCount())")
-                            .replacingOccurrences(of: "{limit}", with: "\(ListManager.maxCustomLists)"))
+                            .replacingOccurrences(of: "{limit}", with: "\(listManager.currentCustomListLimit)"))
                             .font(.system(size: 13, weight: .medium))
                             .foregroundColor(listManager.canCreateList() ? .theme.textSecondary : .theme.accentOrange)
                         
@@ -1064,11 +1147,10 @@ struct CreateListView: View {
                 // Create Button
                 Button {
                     Task {
-                        let result = await viewModel.createList(title: listName, description: listDescription.isEmpty ? nil : listDescription)
-                        switch result {
-                        case .success:
+                        do {
+                            try await viewModel.createList(title: listName, description: listDescription.isEmpty ? nil : listDescription)
                             dismiss()
-                        case .failure(let error):
+                        } catch {
                             errorMessage = error.localizedDescription
                             showError = true
                         }
@@ -1091,6 +1173,168 @@ struct CreateListView: View {
             Button("OK", role: .cancel) { }
         } message: {
             Text(errorMessage)
+        }
+    }
+}
+
+struct AuthenticationGateView: View {
+    @Binding var isPresented: Bool
+    @State private var activeAuthSheet: AuthSheet?
+
+    var body: some View {
+        VStack(spacing: 24) {
+            Capsule()
+                .fill(Color.white.opacity(0.2))
+                .frame(width: 46, height: 5)
+                .padding(.top, 14)
+
+            VStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(LinearGradient(
+                            colors: [Color.orange, Color.pink],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ))
+                        .frame(width: 96, height: 96)
+                        .shadow(color: Color.orange.opacity(0.4), radius: 20, x: 0, y: 10)
+
+                    Image(systemName: "person.crop.circle.badge.plus")
+                        .font(.system(size: 40, weight: .bold))
+                        .foregroundColor(.white)
+                }
+
+                Text("Create an Account")
+                    .font(.system(size: 24, weight: .bold))
+                    .multilineTextAlignment(.center)
+
+                Text("You need an account to create custom lists and sync them across your devices.")
+                    .font(.system(size: 15))
+                    .foregroundColor(.gray)
+                    .multilineTextAlignment(.center)
+            }
+
+            VStack(spacing: 12) {
+                Button {
+                    activeAuthSheet = .signUp
+                } label: {
+                    Text("Create free account")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 56)
+                        .background(
+                            LinearGradient(
+                                colors: [Color.orange, Color.orange.opacity(0.85)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .cornerRadius(16)
+                        .shadow(color: Color.orange.opacity(0.3), radius: 10, x: 0, y: 5)
+                }
+
+                Button {
+                    activeAuthSheet = .signIn
+                } label: {
+                    Text("I already have an account")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.orange)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
+                        .background(Color.orange.opacity(0.12))
+                        .cornerRadius(14)
+                }
+            }
+            
+            Button {
+                isPresented = false
+            } label: {
+                Text("Skip for now")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.gray)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .background(Color.gray.opacity(0.15))
+                    .cornerRadius(14)
+            }
+        }
+        .padding(.horizontal, 24)
+        .padding(.bottom, 20)
+        .sheet(item: $activeAuthSheet) { sheet in
+            switch sheet {
+            case .signUp:
+                SignUpView()
+            case .signIn:
+                SignInView()
+            }
+        }
+    }
+
+    private enum AuthSheet: Identifiable {
+        case signUp
+        case signIn
+        var id: Int { self == .signUp ? 0 : 1 }
+    }
+}
+
+
+struct EditListView: View {
+    @Environment(\.dismiss) private var dismiss
+    let list: MediaList
+    @StateObject private var listManager = ListManager.shared
+    @State private var name: String
+    @State private var description: String
+    @State private var showError = false
+    @State private var errorMessage = ""
+
+    init(list: MediaList) {
+        self.list = list
+        _name = State(initialValue: list.name)
+        _description = State(initialValue: list.description ?? "")
+    }
+
+    var body: some View {
+        NavigationView {
+            Form {
+                Section(header: Text("lists.listName".localized)) {
+                    TextField("lists.listNamePlaceholder".localized, text: $name)
+                }
+                Section(header: Text("lists.description".localized)) {
+                    TextField("lists.descriptionPlaceholder".localized, text: $description)
+                }
+            }
+            .navigationTitle("lists.editList".localized)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("common.cancel".localized) { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("common.save".localized) {
+                        Task { await saveChanges() }
+                    }
+                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+            .alert("Error", isPresented: $showError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(errorMessage)
+            }
+        }
+    }
+
+    private func saveChanges() async {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        do {
+            try await listManager.updateList(id: list.id, name: trimmed, description: description.isEmpty ? nil : description)
+            await MainActor.run { dismiss() }
+        } catch {
+            await MainActor.run {
+                errorMessage = error.localizedDescription
+                showError = true
+            }
         }
     }
 }

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var appState: AppState
     @StateObject private var localizationManager = LocalizationManager.shared
     
     var body: some View {
@@ -44,6 +45,8 @@ struct SettingsView: View {
                         // Country and Language are now auto-detected from device
                         // and can be changed via the language selector in ProfileView toolbar
                         
+                        developerSection
+                        
                         Text("More settings coming soon...")
                             .font(.system(size: 14))
                             .foregroundColor(.theme.textSecondary)
@@ -54,6 +57,43 @@ struct SettingsView: View {
             }
         }
         .navigationBarHidden(true)
+    }
+    
+    private var developerSection: some View {
+        VStack(alignment: .leading) {
+            Text("Developer")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundColor(.theme.textPrimary)
+                .padding(.bottom, 10)
+            
+            Button {
+                Task {
+                    await forceLogout()
+                }
+            } label: {
+                Text("Force Logout & Reset")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.red)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.red.opacity(0.1))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+        }
+        .padding()
+        .background(Color.white.opacity(0.05))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+    
+    private func forceLogout() async {
+        do {
+            try await AuthService.shared.signOut(force: true)
+            appState.isAuthenticated = false
+            appState.currentUser = nil
+            dismiss()
+        } catch {
+            print("Error forcing logout: \(error.localizedDescription)")
+        }
     }
 }
 

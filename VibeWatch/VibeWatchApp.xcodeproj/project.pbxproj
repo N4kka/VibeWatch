@@ -8,6 +8,10 @@
 
 /* Begin PBXBuildFile section */
 		B318DCEE2EC6939A00DB1A9A /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = B318DCED2EC6939A00DB1A9A /* Auth */; };
+		B32F71142ED399B5001779C5 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = B32F71132ED399B5001779C5 /* RevenueCat */; };
+		B32F71162ED399B5001779C5 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = B32F71152ED399B5001779C5 /* RevenueCatUI */; };
+		B3DF8FA82ED5CEC3007FD5D0 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = B3DF8FA72ED5CEC3007FD5D0 /* FirebaseCore */; };
+		B3DF8FAA2ED5CEC3007FD5D0 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = B3DF8FA92ED5CEC3007FD5D0 /* FirebaseMessaging */; };
 		B3E30E122ECCB7AA008A3B6C /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = B3E30E112ECCB7AA008A3B6C /* PostgREST */; };
 		B3E30E142ECCB7AA008A3B6C /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = B3E30E132ECCB7AA008A3B6C /* Supabase */; };
 /* End PBXBuildFile section */
@@ -42,8 +46,12 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B32F71142ED399B5001779C5 /* RevenueCat in Frameworks */,
 				B3E30E122ECCB7AA008A3B6C /* PostgREST in Frameworks */,
+				B3DF8FAA2ED5CEC3007FD5D0 /* FirebaseMessaging in Frameworks */,
 				B318DCEE2EC6939A00DB1A9A /* Auth in Frameworks */,
+				B32F71162ED399B5001779C5 /* RevenueCatUI in Frameworks */,
+				B3DF8FA82ED5CEC3007FD5D0 /* FirebaseCore in Frameworks */,
 				B3E30E142ECCB7AA008A3B6C /* Supabase in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -98,6 +106,10 @@
 				B318DCED2EC6939A00DB1A9A /* Auth */,
 				B3E30E112ECCB7AA008A3B6C /* PostgREST */,
 				B3E30E132ECCB7AA008A3B6C /* Supabase */,
+				B32F71132ED399B5001779C5 /* RevenueCat */,
+				B32F71152ED399B5001779C5 /* RevenueCatUI */,
+				B3DF8FA72ED5CEC3007FD5D0 /* FirebaseCore */,
+				B3DF8FA92ED5CEC3007FD5D0 /* FirebaseMessaging */,
 			);
 			productName = VibeWatchApp;
 			productReference = B318DC8A2EC6920500DB1A9A /* VibeWatchApp.app */;
@@ -129,6 +141,8 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				B318DCEC2EC6939A00DB1A9A /* XCRemoteSwiftPackageReference "supabase-swift" */,
+				B32F71122ED399B5001779C5 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
+				B3DC12CA2ED5CB0400B5A429 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = B318DC8B2EC6920500DB1A9A /* Products */;
@@ -289,6 +303,7 @@
 				"APP_DISPLAY_NAME[arch=*]" = "VibeWatch Beta";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 2;
@@ -297,6 +312,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = VibeWatchApp/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "$(APP_DISPLAY_NAME)";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.entertainment";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -330,12 +346,15 @@
 				"APP_DISPLAY_NAME[arch=*]" = VibeWatch;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = VibeWatchApp/VibeWatchAppRelease.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = 3V97GU3CCY;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = VibeWatchApp/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "$(APP_DISPLAY_NAME)";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.entertainment";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -350,6 +369,7 @@
 				MARKETING_VERSION = 1.02;
 				PRODUCT_BUNDLE_IDENTIFIER = com.vibewatch.VibeWatchApp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
@@ -392,6 +412,22 @@
 				minimumVersion = 2.5.1;
 			};
 		};
+		B32F71122ED399B5001779C5 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.49.0;
+			};
+		};
+		B3DC12CA2ED5CB0400B5A429 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.6.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -399,6 +435,26 @@
 			isa = XCSwiftPackageProductDependency;
 			package = B318DCEC2EC6939A00DB1A9A /* XCRemoteSwiftPackageReference "supabase-swift" */;
 			productName = Auth;
+		};
+		B32F71132ED399B5001779C5 /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B32F71122ED399B5001779C5 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCat;
+		};
+		B32F71152ED399B5001779C5 /* RevenueCatUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B32F71122ED399B5001779C5 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCatUI;
+		};
+		B3DF8FA72ED5CEC3007FD5D0 /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B3DC12CA2ED5CB0400B5A429 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+		B3DF8FA92ED5CEC3007FD5D0 /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B3DC12CA2ED5CB0400B5A429 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseMessaging;
 		};
 		B3E30E112ECCB7AA008A3B6C /* PostgREST */ = {
 			isa = XCSwiftPackageProductDependency;

@@ -155,6 +155,8 @@ class SupabaseService: ObservableObject {
             .from("lists")
             .select()
             .eq("user_id", value: userId)
+            .is("deleted_at", value: nil)
+            .order("created_at", ascending: true)
             .execute()
             .value
         
@@ -162,7 +164,7 @@ class SupabaseService: ObservableObject {
         var mediaLists: [MediaList] = []
         for listData in listsData {
             let items = try await fetchListItems(listId: listData.id)
-            let listType = ListType(rawValue: listData.type) ?? .custom
+            let listType = ListType(databaseValue: listData.type) ?? ListType(rawValue: listData.type) ?? .custom
             
             let mediaList = MediaList(
                 id: listData.id,
@@ -202,11 +204,12 @@ class SupabaseService: ObservableObject {
             let created_at: Date
         }
         
+        
         let request = CreateListRequest(
             user_id: userId,
             name: name,
             description: description,
-            type: type.rawValue
+            type: type.databaseValue
         )
         
         let response: CreateListResponse = try await client
@@ -235,6 +238,25 @@ class SupabaseService: ObservableObject {
         try await client
             .from("lists")
             .delete()
+            .eq("id", value: id)
+            .execute()
+    }
+
+    func updateList(id: String, name: String, description: String?) async throws {
+        guard let client = client else {
+            throw SupabaseError.notConfigured
+        }
+        
+        struct UpdateListRequest: Encodable {
+            let name: String
+            let description: String?
+        }
+        
+        let request = UpdateListRequest(name: name, description: description)
+        
+        try await client
+            .from("lists")
+            .update(request)
             .eq("id", value: id)
             .execute()
     }

@@ -20,38 +20,22 @@ class ListsViewModel: ObservableObject {
     func loadLists() async {
         isLoading = true
         errorMessage = nil
-
-        // Load from ListManager (local UserDefaults storage)
         listManager.loadLists()
         lists = listManager.lists
-
+        do {
+            try await listManager.fetchLists()
+            lists = listManager.lists
+        } catch {
+            errorMessage = error.localizedDescription
+        }
         isLoading = false
     }
 
-    func createList(title: String, description: String?) async -> Result<Void, ListError> {
-        guard !title.isEmpty else {
-            errorMessage = "List title cannot be empty"
-            return .failure(.listNotFound) // Reusing error type
-        }
-
-        // Create list via ListManager (saves to UserDefaults)
-        let result = listManager.createList(name: title, description: description)
-        
-        switch result {
-        case .success:
-            errorMessage = nil
-        case .failure(let error):
-            errorMessage = error.localizedDescription
-        }
-
-        // Lists are automatically updated via the publisher binding
-        return result
+    func createList(title: String, description: String?) async throws {
+        try await listManager.createList(name: title, description: description)
     }
 
-    func deleteList(_ list: MediaList) async {
-        // Delete from ListManager
-        listManager.deleteList(list)
-
-        // Lists are automatically updated via the publisher binding
+    func deleteList(_ list: MediaList) async throws {
+        try await listManager.deleteList(id: list.id)
     }
 }

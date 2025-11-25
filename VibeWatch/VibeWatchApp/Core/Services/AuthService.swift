@@ -2,6 +2,7 @@ import Foundation
 import Supabase
 import Auth
 import AuthenticationServices
+import RevenueCat
 
 @MainActor
 class AuthService: ObservableObject {
@@ -14,6 +15,7 @@ class AuthService: ObservableObject {
     private(set) var client: Supabase.SupabaseClient?
     @Published var currentUser: User?
     @Published var isAuthenticated = false
+    private var lastRevenueCatUserId: String?
     
     private init() {
         setupClient()
@@ -52,6 +54,7 @@ class AuthService: ObservableObject {
             print("No active session: \(error.localizedDescription)")
             self.currentUser = nil
             self.isAuthenticated = false
+            await syncRevenueCatUser(with: nil)
         }
     }
     
@@ -158,7 +161,7 @@ class AuthService: ObservableObject {
         return user
     }
     
-    func signOut() async throws {
+    func signOut(force: Bool = false) async throws {
         guard let client = client else {
             throw AuthError.notConfigured
         }
@@ -167,6 +170,7 @@ class AuthService: ObservableObject {
         
         self.currentUser = nil
         self.isAuthenticated = false
+        await syncRevenueCatUser(with: nil, forceReset: force)
         
         print("✅ User signed out successfully")
     }
@@ -257,9 +261,14 @@ class AuthService: ObservableObject {
                 let response = try await performFetch()
                 self.currentUser = response
                 self.isAuthenticated = true
+                
+                // Register for push notifications now that we have an authenticated user
+                NotificationService.shared.registerDeviceToken()
+                
                 print("✅ User profile fetched successfully: \(response.email)")
                 print("   Display name: \(response.displayName ?? "nil")")
                 print("   Avatar URL: \(response.avatarURL ?? "nil")")
+                await syncRevenueCatUser(with: userId)
                 
                 if response.displayName == nil || response.displayName?.isEmpty == true {
                     await updateDisplayNameFromMetadata(userId: userId)
@@ -277,15 +286,61 @@ class AuthService: ObservableObject {
                     let retryResponse = try await performFetch()
                     self.currentUser = retryResponse
                     self.isAuthenticated = true
+                    
+                    // Register for push notifications now that we have an authenticated user
+                    NotificationService.shared.registerDeviceToken()
+                    
                     print("✅ User profile fetched after recovery: \(retryResponse.email)")
+                    await syncRevenueCatUser(with: userId)
                 } catch let retryError {
                     print("❌ Final fetch failed: \(retryError)")
                     print("❌ This will cause 'User not found' error in sign in")
                     // Ensure currentUser is nil so signUp knows to try manual creation
                     self.currentUser = nil
+                    await syncRevenueCatUser(with: nil)
                 }
             }
         }
+
+    private func syncRevenueCatUser(with userId: String?, forceReset: Bool = false) async {
+        if forceReset {
+            do {
+                _ = try await Purchases.shared.logOut()
+                
+                await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+                    Purchases.shared.logOut { _, _ in
+                        print("🛑 [RevenueCat] SDK has been reset forcefully.")
+                        continuation.resume()
+                    }
+                }
+            } catch {
+                print("❌ [RevenueCat] Failed to log out before reset: \(error.localizedDescription)")
+            }
+            lastRevenueCatUserId = nil
+            return
+        }
+        
+        let trimmedId = userId?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let trimmedId, !trimmedId.isEmpty {
+            guard trimmedId != lastRevenueCatUserId else { return }
+            do {
+                let result = try await Purchases.shared.logIn(trimmedId)
+                lastRevenueCatUserId = trimmedId
+                print("💎 [RevenueCat] Logged in as \(result.customerInfo.originalAppUserId)")
+            } catch {
+                print("❌ [RevenueCat] Failed to log in app user: \(error.localizedDescription)")
+            }
+        } else {
+            guard lastRevenueCatUserId != nil else { return }
+            do {
+                _ = try await Purchases.shared.logOut()
+                print("↩️ [RevenueCat] Logged out app user")
+            } catch {
+                print("❌ [RevenueCat] Failed to log out app user: \(error.localizedDescription)")
+            }
+            lastRevenueCatUserId = nil
+        }
+    }
     
     private func getEmailFromUsername(_ username: String) async throws -> String {
         guard let client = client else {
@@ -501,6 +556,29 @@ class AuthService: ObservableObject {
             
         } catch {
             print("❌ Error syncing from metadata: \(error.localizedDescription)")
+        }
+    }
+
+    func upsertDeviceToken(_ token: String, platform: String = "ios") async throws {
+        guard let client = client else {
+            throw AuthError.notConfigured
+        }
+
+        struct DeviceParams: Encodable {
+            let p_fcm_token: String
+            let p_platform: String
+        }
+
+        do {
+            try await client
+                .rpc(
+                    "register_user_device",
+                    params: DeviceParams(p_fcm_token: token, p_platform: platform)
+                )
+                .execute()
+        } catch {
+            print("❌ Device token RPC failed: \(error)")
+            throw AuthError.databaseError
         }
     }
 }

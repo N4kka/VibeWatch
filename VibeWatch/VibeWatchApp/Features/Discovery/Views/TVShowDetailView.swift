@@ -119,14 +119,14 @@ struct TVShowDetailView: View {
     }
     
     private func actionsView(tvShow: TVShow, movie: Movie) -> some View {
-        ActionButtonsSection(
-            movie: movie,
-            mediaType: .tv,
-            onSaveTap: { showSavePanel = true },
-            onSeenTap: { handleSeenTap(tvShow: tvShow, movie: movie) },
-            onLikedTap: { handleLikedTap(tvShow: tvShow, movie: movie) },
-            onDislikedTap: { handleDislikedTap(tvShow: tvShow, movie: movie) }
-        )
+                        ActionButtonsSection(
+                            movie: movie,
+                            mediaType: .tv,
+                            onSaveTap: { showSavePanel = true },
+                            onSeenTap: { Task { await handleSeenTap(tvShow: tvShow, movie: movie) } },
+                            onLikedTap: { Task { await handleLikedTap(tvShow: tvShow, movie: movie) } },
+                            onDislikedTap: { Task { await handleDislikedTap(tvShow: tvShow, movie: movie) } }
+                        )
     }
     
     @ViewBuilder
@@ -162,39 +162,39 @@ struct TVShowDetailView: View {
     
     // MARK: - Actions
     
-    private func handleSeenTap(tvShow: TVShow, movie: Movie) {
+    private func handleSeenTap(tvShow: TVShow, movie: Movie) async {
         if listManager.isInList(listId: listManager.seenList.id, mediaId: tvShow.id, mediaType: .tv) {
             if let item = listManager.seenList.items.first(where: { $0.mediaId == tvShow.id && $0.mediaType == .tv }) {
-                listManager.removeFromList(listId: listManager.seenList.id, itemId: item.id)
+                try? await listManager.removeFromList(listId: listManager.seenList.id, itemId: item.id)
             }
         } else {
-            _ = listManager.addToList(listId: listManager.seenList.id, movie: movie, mediaType: .tv)
+            try? await listManager.addToList(listId: listManager.seenList.id, movie: movie, mediaType: .tv)
         }
     }
     
-    private func handleLikedTap(tvShow: TVShow, movie: Movie) {
+    private func handleLikedTap(tvShow: TVShow, movie: Movie) async {
         if listManager.isInList(listId: listManager.likedList.id, mediaId: tvShow.id, mediaType: .tv) {
             if let item = listManager.likedList.items.first(where: { $0.mediaId == tvShow.id && $0.mediaType == .tv }) {
-                listManager.removeFromList(listId: listManager.likedList.id, itemId: item.id)
+                try? await listManager.removeFromList(listId: listManager.likedList.id, itemId: item.id)
             }
         } else {
             if let dislikedItem = listManager.dislikedList.items.first(where: { $0.mediaId == tvShow.id && $0.mediaType == .tv }) {
-                listManager.removeFromList(listId: listManager.dislikedList.id, itemId: dislikedItem.id)
+                try? await listManager.removeFromList(listId: listManager.dislikedList.id, itemId: dislikedItem.id)
             }
-            _ = listManager.addToList(listId: listManager.likedList.id, movie: movie, mediaType: .tv)
+            try? await listManager.addToList(listId: listManager.likedList.id, movie: movie, mediaType: .tv)
         }
     }
     
-    private func handleDislikedTap(tvShow: TVShow, movie: Movie) {
+    private func handleDislikedTap(tvShow: TVShow, movie: Movie) async {
         if listManager.isInList(listId: listManager.dislikedList.id, mediaId: tvShow.id, mediaType: .tv) {
             if let item = listManager.dislikedList.items.first(where: { $0.mediaId == tvShow.id && $0.mediaType == .tv }) {
-                listManager.removeFromList(listId: listManager.dislikedList.id, itemId: item.id)
+                try? await listManager.removeFromList(listId: listManager.dislikedList.id, itemId: item.id)
             }
         } else {
             if let likedItem = listManager.likedList.items.first(where: { $0.mediaId == tvShow.id && $0.mediaType == .tv }) {
-                listManager.removeFromList(listId: listManager.likedList.id, itemId: likedItem.id)
+                try? await listManager.removeFromList(listId: listManager.likedList.id, itemId: likedItem.id)
             }
-            _ = listManager.addToList(listId: listManager.dislikedList.id, movie: movie, mediaType: .tv)
+            try? await listManager.addToList(listId: listManager.dislikedList.id, movie: movie, mediaType: .tv)
         }
     }
     
