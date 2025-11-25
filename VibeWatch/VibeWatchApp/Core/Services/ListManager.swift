@@ -261,6 +261,14 @@ class ListManager: ObservableObject {
         updateDefaultReferences(from: lists)
         notifySoftLimitIfNeeded(for: lists[index])
         saveLists()
+        
+        // Prefetch image for offline viewing (watchlist only, WiFi only)
+        if lists[index].type == .watchlist, let posterPath = item.posterPath {
+            Task.detached(priority: .utility) {
+                let imageURL = "https://image.tmdb.org/t/p/w500\(posterPath)"
+                await ImageCacheService.shared.prefetchImages([imageURL], onWiFiOnly: true)
+            }
+        }
     }
     
     func canAddToList(listId: String) -> Bool {

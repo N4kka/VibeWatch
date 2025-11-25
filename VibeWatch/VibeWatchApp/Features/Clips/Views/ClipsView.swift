@@ -33,18 +33,22 @@ struct ClipsView: View {
                 
                 // Main content - Clips
                 ZStack {
-                    if viewModel.isLoading {
-                        loadingView
-                            .transition(.opacity)
-                    } else if let error = viewModel.errorMessage {
-                        errorView(error)
-                            .transition(.opacity)
-                    } else if viewModel.clips.isEmpty {
-                        emptyStateView
-                            .transition(.opacity)
-                    } else {
-                        clipsScrollView
-                            .transition(.opacity)
+                    VStack(spacing: 0) {
+                        OfflineBanner()
+                        
+                        if viewModel.isLoading {
+                            loadingView
+                                .transition(.opacity)
+                        } else if let error = viewModel.errorMessage {
+                            errorView(error)
+                                .transition(.opacity)
+                        } else if viewModel.clips.isEmpty {
+                            emptyStateView
+                                .transition(.opacity)
+                        } else {
+                            clipsScrollView
+                                .transition(.opacity)
+                        }
                     }
 
                     if showAccountGate {
@@ -903,7 +907,7 @@ struct CommentsView: View {
                         // Avatar
                         if let avatarURL = appState.currentUser?.avatarURL,
                            let url = URL(string: avatarURL) {
-                            AsyncImage(url: url) { image in
+                            CachedAsyncImage(url: url) { image in
                                 image
                                     .resizable()
                                     .scaledToFill()
@@ -1035,7 +1039,7 @@ struct CommentRow: View {
             HStack(alignment: .top, spacing: 12) {
                 // Avatar
                 if let avatarURL = comment.avatarURL, let url = URL(string: avatarURL) {
-                    AsyncImage(url: url) { image in
+                    CachedAsyncImage(url: url) { image in
                         image
                             .resizable()
                             .scaledToFill()
@@ -1178,7 +1182,7 @@ struct ReplyRow: View {
         HStack(alignment: .top, spacing: 12) {
             // Avatar
             if let avatarURL = reply.avatarURL, let url = URL(string: avatarURL) {
-                AsyncImage(url: url) { image in
+                CachedAsyncImage(url: url) { image in
                     image
                         .resizable()
                         .scaledToFill()
@@ -1451,7 +1455,7 @@ struct ListSelectionRow: View {
                 if let firstItem = list.items.first,
                    let posterPath = firstItem.posterPath,
                    let url = URL(string: "https://image.tmdb.org/t/p/w154\(posterPath)") {
-                    AsyncImage(url: url) { image in
+                    CachedAsyncImage(url: url) { image in
                         image
                             .resizable()
                             .aspectRatio(contentMode: .fill)

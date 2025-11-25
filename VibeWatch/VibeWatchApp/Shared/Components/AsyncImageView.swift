@@ -12,19 +12,12 @@ struct AsyncImageView: View {
     var body: some View {
         Group {
             if let url = url {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .empty:
-                        placeholderView
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: contentMode)
-                    case .failure:
-                        placeholderView
-                    @unknown default:
-                        placeholderView
-                    }
+                CachedAsyncImage(url: url) { image in
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: contentMode)
+                } placeholder: {
+                    placeholderView
                 }
             } else {
                 placeholderView

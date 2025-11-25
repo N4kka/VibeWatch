@@ -15,9 +15,12 @@ struct DiscoveryView: View {
     }
     
     private var discoveryMainView: some View {
-        ScrollView {
-            VStack(spacing: 32) {
-                DiscoveryHeaderView(
+        VStack(spacing: 0) {
+            OfflineBanner()
+            
+            ScrollView {
+                VStack(spacing: 32) {
+                    DiscoveryHeaderView(
                     onSearchTap: { showSearch = true },
                     onProfileTap: { showProfile = true },
                     avatarURL: appState.currentUser?.avatarURL
@@ -72,17 +75,18 @@ struct DiscoveryView: View {
                     selectedMediaType = type
                 })
                 
-                Color.clear
-                    .frame(height: 80)
+                    Color.clear
+                        .frame(height: 80)
+                }
             }
+            .id(viewModel.refreshToken)
+            .refreshable {
+                // Force refresh from TMDB to get latest content and reload images
+                print("🔄 [DiscoveryView] Pull-to-refresh triggered")
+                await viewModel.refreshContent()
+            }
+            .background(Color.theme.background.ignoresSafeArea())
         }
-        .id(viewModel.refreshToken)
-        .refreshable {
-            // Force refresh from TMDB to get latest content and reload images
-            print("🔄 [DiscoveryView] Pull-to-refresh triggered")
-            await viewModel.refreshContent()
-        }
-        .background(Color.theme.background.ignoresSafeArea())
         .overlay {
             if showFilters {
                 AdvancedFiltersPanel(
@@ -152,7 +156,7 @@ struct DiscoveryHeaderView: View {
                 
                 Button(action: onProfileTap) {
                     if let avatarURL = avatarURL, let url = URL(string: avatarURL) {
-                        AsyncImage(url: url) { image in
+                        CachedAsyncImage(url: url) { image in
                             image
                                 .resizable()
                                 .scaledToFill()
