@@ -8,6 +8,7 @@ struct MainTabView: View {
     @State private var selectedMediaType: MediaType = .movie
     @State private var isLoading = true
     @State private var showOnboarding = !UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
+    @State private var hasClearedAuthOnFreshInstall = false
     
     // MARK: - Custom Tab Bar View (iOS 17-25)
     private var customTabBarView: some View {
@@ -179,6 +180,27 @@ struct MainTabView: View {
         }
         .background(scenePhaseMonitor) // Monitor app lifecycle for subscription status
         .withErrorHandling()
+        .task {
+            // On first launch, clear any persisted auth from keychain
+            if !hasClearedAuthOnFreshInstall && !UserDefaults.standard.bool(forKey: "hasLaunchedBefore") {
+                print("🆕 [MainTabView] Fresh install detected - clearing keychain auth")
+                hasClearedAuthOnFreshInstall = true
+                
+                // Mark as launched so we don't clear again on next launch
+                UserDefaults.standard.set(true, forKey: "hasLaunchedBefore")
+                
+                // Clear any persisted auth session from keychain
+                do {
+                    try await AuthService.shared.signOut(force: true)
+                    print("✅ [MainTabView] Keychain auth cleared for fresh install")
+                } catch {
+                    print("⚠️ [MainTabView] Could not clear auth on fresh install: \(error)")
+                }
+                
+                // Ensure app state reflects no auth
+                await appState.checkAuthState()
+            }
+        }
     }
 }
 

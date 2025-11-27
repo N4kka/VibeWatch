@@ -1,4 +1,5 @@
 import Foundation
+import Combine
 
 enum ListError: Error, Equatable {
     case maxListsReached(limit: Int)
@@ -49,8 +50,10 @@ class ListManager: ObservableObject {
     private let db = SQLiteService.shared
     private let sync = SyncWorker.shared
     private let supabase = SupabaseService.shared
+    private let authService = AuthService.shared
+    private var cancellables = Set<AnyCancellable>()
     private var userId: String {
-        getDeviceId() // Use device ID as user ID for now
+        authService.currentUser?.id ?? getDeviceId()
     }
 
     var currentCustomListLimit: Int {
@@ -66,6 +69,95 @@ class ListManager: ObservableObject {
         self.softLimitWarningMessage = nil
 
         loadLists()
+        
+        // Observe authentication state changes
+        authService.$isAuthenticated
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] isAuthenticated in
+                guard let self = self else { return }
+                Task {
+                    if isAuthenticated {
+                        await self.syncListsForAuthenticatedUser()
+                    } else {
+                        self.resetListsForLoggedOutUser()
+                    }
+                }
+            }
+            .store(in: &cancellables)
+    }
+    
+    // Call this when user logs in
+    func syncListsForAuthenticatedUser() async {
+        guard let authenticatedUserId = authService.currentUser?.id else {
+            print("⚠️ [ListManager] Not authenticated, cannot sync remote lists.")
+            return
+        }
+
+        print("🔄 [ListManager] Syncing lists for authenticated user: \(authenticatedUserId)")
+        
+        do {
+            // 1. Fetch remote lists for the authenticated user
+            var remoteLists = try await supabase.fetchLists()
+            print("✅ [ListManager] Fetched \(remoteLists.count) remote lists from Supabase.")
+            
+            // 2. Load current local lists (which might still contain anonymous lists)
+            let localListsBeforeSync = lists
+            
+            // 3. Merge/Prioritize: Remote lists become the primary source.
+            //    Ensure core lists are present in remote lists
+            remoteLists = ensureCoreLists(in: remoteLists)
+            
+            // 4. Handle custom local lists that might not be on Supabase yet
+            //    These are lists created by the user when they were anonymous on this device
+            for localList in localListsBeforeSync where localList.type == .custom {
+                if !remoteLists.contains(where: { $0.id == localList.id }) {
+                    // This custom list exists locally but not remotely. Try to upload it.
+                    do {
+                        // Create it on Supabase - using the local list's data
+                        _ = try await supabase.createList(id: localList.id, name: localList.name, description: localList.description, type: .custom)
+                        print("⬆️ [ListManager] Uploaded local custom list '\(localList.name)' to Supabase.")
+                        
+                        // Upload its items too
+                        for item in localList.items {
+                            _ = try await supabase.addItemToList(listId: localList.id, item: item)
+                            print("⬆️ [ListManager] Uploaded item '\(item.title)' to Supabase for list '\(localList.name)'.")
+                        }
+                        remoteLists.append(localList) // Add to our working set of lists
+                    } catch {
+                        print("❌ [ListManager] Failed to upload local custom list '\(localList.name)': \(error)")
+                    }
+                }
+            }
+            
+            // 5. Update local state with the merged lists
+            applyLists(remoteLists)
+            saveLists() // Save to UserDefaults (now containing authenticated lists)
+            
+            print("✅ [ListManager] Lists synced successfully for authenticated user.")
+            
+        } catch {
+            print("❌ [ListManager] Error syncing lists for authenticated user: \(error)")
+            // If fetching remote lists fails, perhaps revert to local only or show error
+            // For now, we'll just log and keep whatever local state was there
+        }
+    }
+    
+    // Call this when user logs out
+    func resetListsForLoggedOutUser() {
+        print("↩️ [ListManager] Resetting lists for logged out user.")
+        // When logged out, we should clear all authenticated user data
+        // and revert to only default lists and any custom lists created anonymously
+        
+        // Load the anonymous lists (this is effectively what loadLists() does by default)
+        loadLists()
+        
+        // Ensure that custom lists created while authenticated are removed if they were not merged
+        // For now, loadLists() effectively does this by overwriting with the anonymous default/local cache.
+        // We might need a more sophisticated approach if we allowed anonymous custom lists to persist
+        // after being logged in and then logged out without being merged.
+        // Given the current merge strategy, this should suffice.
+        
+        print("✅ [ListManager] Lists reset for logged out user.")
     }
     
     func loadLists() {
@@ -102,7 +194,7 @@ class ListManager: ObservableObject {
             await ensureListInSQLite(list)
             
             // Ensure in Supabase if authenticated
-            if supabase.currentUser != nil {
+            if authService.currentUser != nil {
                 do {
                     _ = try await supabase.createList(id: list.id, name: list.name, description: list.description, type: list.type)
                     print("✅ [ListManager] Ensured list '\(list.name)' exists in Supabase")
@@ -207,7 +299,7 @@ class ListManager: ObservableObject {
 
     @discardableResult
     func fetchLists() async throws -> [MediaList] {
-        guard supabase.currentUser != nil else {
+        guard authService.currentUser != nil else {
             loadLists()
             return lists
         }
@@ -227,7 +319,7 @@ class ListManager: ObservableObject {
             throw ListError.maxListsReached(limit: currentCustomListLimit)
         }
         
-        guard supabase.currentUser != nil else {
+        guard authService.currentUser != nil else {
             throw ListError.authenticationRequired
         }
         

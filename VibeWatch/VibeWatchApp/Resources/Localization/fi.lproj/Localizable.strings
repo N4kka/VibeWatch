@@ -1,0 +1,215 @@
+/// Tab Bar
+"tab.discovery" = "Tutustu";
+"tab.clips" = "Klipit";
+"tab.lists" = "Listat";
+"tab.profile" = "Profiili";
+
+// Onboarding
+"onboarding.page1.title" = "Seuraa ja tallenna suosikkisi";
+"onboarding.page1.description" = "Löydä ja tallenna elokuvia ja sarjoja, joista pidät. Pidä kirjaa siitä, mitä olet katsonut ja mitä haluat katsoa seuraavaksi.";
+"onboarding.page2.title" = "Järjestä listoilla";
+"onboarding.page2.description" = "Luo omia listoja sisällön järjestämiseen. Katselulistoista mielialaan perustuviin kokoelmiin – tee siitä oman näköisesi.";
+"onboarding.page3.title" = "Löydä klippien kautta";
+"onboarding.page3.description" = "Katso jännittäviä klippejä elokuvista ja sarjoista. Liity yhteisöön, kommentoi, tallenna listoihin ja jaa ystävien kanssa.";
+"onboarding.page4.title" = "Valmis aloittamaan?";
+"onboarding.page4.description" = "Luo tili synkronoidaksesi listat ja asetukset kaikilla laitteillasi.";
+"onboarding.page4.createAccount" = "Luo tili";
+"onboarding.page4.skip" = "Ohita toistaiseksi";
+
+// Discovery
+"discovery.trending" = "Trendaavat";
+"discovery.popular" = "Suosittu";
+"discovery.topRated" = "Parhaiten arvioidut";
+"discovery.basedOnMood" = "Valittu juuri sinulle";
+"discovery.vibeWatch" = "VibeWatch";
+"discovery.upcoming" = "Tulossa";
+"discovery.forYou" = "Sinulle";
+"discovery.tvShows" = "TV-sarjat";
+
+// Lists
+"lists.myLists" = "Omat listat";
+"lists.watchlist" = "Katselulista";
+"lists.seen" = "Katsottu";
+"lists.liked" = "Tykkätty";
+"lists.disliked" = "Ei tykätty";
+"lists.empty" = "Ei listoja vielä";
+"lists.emptyDescription" = "Luo ensimmäinen listasi aloittaaksesi suosikkisisällön järjestämisen";
+"lists.createList" = "Luo lista";
+"lists.listName" = "Listan nimi";
+"lists.listNamePlaceholder" = "Uusi lista";
+"lists.description" = "Kuvaus (valinnainen)";
+"lists.descriptionPlaceholder" = "Lisää kuvaus… (valinnainen)";
+"lists.listDescriptionPlaceholder" = "Lisää kuvaus…";
+"lists.noItems" = "Ei kohteita vielä";
+"lists.error.maxListsReached" = "Mukautettujen listojen enimmäismäärä {limit} saavutettu";
+"lists.error.maxItemsReached" = "Tämän listan enimmäismäärä {limit} kohdetta saavutettu";
+"lists.error.listNotFound" = "Listaa ei löytynyt";
+"lists.error.itemAlreadyInList" = "Kohde on jo tällä listalla";
+"lists.error.defaultImmutable" = "Tätä listaa ei voi muokata";
+"lists.error.invalidName" = "Kirjoita kelvollinen listan nimi";
+"lists.error.authRequired" = "Sinun täytyy olla kirjautunut luodaksesi mukautettuja listoja.";
+"lists.limitInfo" = "{count}/{limit}";
+"lists.softLimitWarning" = "\"{name}\" sisältää jo {limit} kohdetta. Harkitse uuden listan luomista järjestyksen säilyttämiseksi.";
+"lists.searchPlaceholder" = "Hae tältä listalta";
+"lists.editList" = "Muokkaa listaa";
+"list.all" = "Kaikki";
+"list.movies" = "Elokuvat";
+"list.tvShows" = "TV";
+
+// Profile
+"profile.done" = "Valmis";
+"profile.cancel" = "Peruuta";
+"profile.notifications" = "Ilmoitukset";
+"profile.streamingServices" = "Suoratoistopalvelut";
+"profile.settings" = "Asetukset";
+"profile.helpSupport" = "Ohje ja tuki";
+"profile.logout" = "Kirjaudu ulos";
+"profile.signIn" = "Kirjaudu sisään";
+"profile.createAccount" = "Luo tili";
+"profile.signInToVibeWatch" = "Kirjaudu VibeWatchiin";
+"profile.signInDescription" = "Luo listoja, tallenna klippejä ja personoi kokemuksesi";
+"profile.userNamePlaceholder" = "Sähköposti tai käyttäjänimi";
+"profile.passwordPlaceholder" = "Salasana";
+
+// Settings
+"settings.title" = "Asetukset";
+"settings.country" = "Maa";
+"settings.language" = "Kieli";
+"settings.selectCountry" = "Valitse maa";
+"settings.selectLanguage" = "Valitse kieli";
+
+// Movie Detail
+"movieDetail.save" = "Tallenna";
+"movieDetail.seen" = "Katsottu";
+"movieDetail.watchNow" = "Katso nyt";
+"movieDetail.trailer" = "Traileri";
+"movieDetail.information" = "Tiedot";
+"movieDetail.rating" = "Arvosana";
+"movieDetail.ratings" = "arvostelua";
+"movieDetail.genres" = "Genret";
+"movieDetail.runtime" = "Kesto";
+"movieDetail.country" = "Maa";
+"movieDetail.director" = "Ohjaaja";
+"movieDetail.cast" = "Näyttelijät";
+"movieDetail.similar" = "Näistä pitäneet ovat pitäneet myös näistä";
+
+// Filters
+"filter.all" = "Kaikki";
+"filter.movies" = "Elokuvat";
+"filter.tvSeries" = "TV-sarjat";
+
+// Sort
+"sort.dateAdded" = "Lisäyspäivä";
+"sort.title" = "Nimi";
+"sort.releaseDate" = "Julkaisupäivä";
+"sort.rating" = "Arvosana";
+"sort.sortBy" = "Lajittele";
+"sort.popularityDesc" = "Suosio ↓";
+"sort.popularityAsc" = "Suosio ↑";
+"sort.ratingDesc" = "Arvosana ↓";
+"sort.ratingAsc" = "Arvosana ↑";
+"sort.releaseDateDesc" = "Julkaisupäivä ↓";
+"sort.releaseDateAsc" = "Julkaisupäivä ↑";
+
+// Advanced Filters
+"filters.title" = "Suodattimet";
+"filters.reset" = "Nollaa";
+"filters.apply" = "Käytä";
+"filters.runtime" = "Kesto";
+"filters.minimumRating" = "Vähimmäisarvosana";
+"filters.country" = "Maa";
+"filters.sortBy" = "Lajittele";
+"filters.anyCountry" = "Mikä tahansa maa";
+"filters.runtimeAny" = "Mikä tahansa";
+"filters.runtimeShort" = "< 90 min";
+"filters.runtimeMedium" = "90–120 min";
+"filters.runtimeLong" = "> 120 min";
+"filters.ratingAny" = "Mikä tahansa";
+"filters.ratingGood" = "7.0+";
+"filters.ratingExcellent" = "8.0+";
+"filters.ratingMasterpiece" = "9.0+";
+
+// Browse
+"browse.title" = "Selaa";
+"browse.movies" = "Elokuvat";
+"browse.tvShows" = "TV-sarjat";
+"browse.emptyMessage" = "Selaa sisältöä napauttamalla suodatinpainiketta";
+
+// Platforms
+"platforms.title" = "Alustat";
+"platforms.streaming" = "Suoratoisto";
+"platforms.rent" = "Vuokraa";
+"platforms.buy" = "Osta";
+
+// Common
+"common.done" = "Valmis";
+"common.cancel" = "Peruuta";
+"common.save" = "Tallenna";
+"common.delete" = "Poista";
+"common.edit" = "Muokkaa";
+"common.search" = "Haku";
+"common.year" = "Vuosi";
+"common.loading" = "Ladataan…";
+"common.items" = "kohdetta";
+"common.item" = "kohde";
+"common.or" = "TAI";
+"common.reply" = "Vastaa";
+"common.uploading" = "Lähetetään…";
+"common.loadMore" = "Lataa lisää";
+
+// Clips
+"clips.loadingClips" = "Ladataan klippejä…";
+"clips.noClipsAvailable" = "Ei klippejä saatavilla";
+"clips.noClipsDescription" = "Tule myöhemmin takaisin nähdäksesi suosikkielokuviesi ja -sarjojesi parhaat kohtaukset";
+"clips.comment" = "Kommentti";
+"clips.comments" = "Kommentit";
+"clips.noComments" = "Ei kommentteja vielä";
+"clips.beFirstToComment" = "Ole ensimmäinen kommentoija";
+"clips.replyingTo" = "Vastataan käyttäjälle";
+"clips.reply" = "Vastaa";
+"clips.replies" = "vastaukset";
+"clips.viewReplies" = "Näytä";
+"clips.hideReplies" = "Piilota";
+"clips.addToList" = "Lisää listaan";
+"clips.noListsYet" = "Ei listoja vielä";
+"clips.createFirstList" = "Luo ensimmäinen lista tallentaaksesi sisältöä";
+"clips.createNewList" = "Luo uusi lista";
+
+// Search
+"search.trendingSearches" = "Trendaavat haut";
+"search.noResultsFound" = "Tuloksia ei löytynyt";
+"search.results" = "Tulokset";
+"search.placehodler" = "Hae TV-sarjaa tai elokuvaa...";
+
+// Auth
+"auth.welcomeBack" = "Tervetuloa takaisin";
+"auth.signInContinue" = "Kirjaudu sisään jatkaaksesi";
+"auth.forgotPassword" = "Unohditko salasanan?";
+"auth.signIn" = "Kirjaudu sisään";
+"auth.dontHaveAccount" = "Eikö sinulla ole tiliä?";
+"auth.signUp" = "Rekisteröidy";
+"auth.createAccount" = "Luo tili";
+"auth.joinVibeWatch" = "Liity VibeWatchiin ja aloita uusi löytöretki";
+"auth.invalidEmail" = "Virheellinen sähköpostiosoite";
+"auth.invalidPassword" = "Virheellinen salasana";
+"auth.passwordsDontMatch" = "Salasanat eivät täsmää";
+"auth.alreadyHaveAccount" = "Onko sinulla jo tili?";
+"auth.emailPlaceholder" = "Sähköposti";
+"auth.usernamePlaceholder" = "Käyttäjänimi";
+"auth.passwordPlaceholder" = "Salasana";
+"auth.confirmPasswordPlaceholder" = "Vahvista salasana";
+
+// Notifications
+"notifications.permissionRequired" = "Ilmoituslupa vaaditaan";
+"notifications.openSettings" = "Avaa asetukset";
+"notifications.enableInSettings" = "Ota ilmoitukset käyttöön Asetuksista saadaksesi tietoja uusista julkaisuista, hinnanmuutoksista ja muusta.";
+"notifications.disableConfirmation" = "Poistetaanko ilmoitukset käytöstä?";
+"notifications.disableMessage" = "Et enää saa ilmoituksia uusista julkaisuista, hinnanmuutoksista tai henkilökohtaisista suosituksista.";
+"notifications.disableButton" = "Poista ilmoitukset";
+
+// Misc
+"misc.language" = "Suomi";
+"misc.somethingWrong" = "Jokin meni pieleen?";
+"misc.letUsKnow" = "Kerro meille";
+"misc.selected" = "valittu";
+"misc.of" = "/";

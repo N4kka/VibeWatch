@@ -1,4 +1,4 @@
-// Tab Bar
+/// Tab Bar
 "tab.discovery" = "Discovery";
 "tab.clips" = "Clips";
 "tab.lists" = "Lists";
@@ -179,6 +179,7 @@
 "search.trendingSearches" = "Trending Searches";
 "search.noResultsFound" = "No results found";
 "search.results" = "Results";
+"search.placehodler" = "Search for a tv show or a movie...";
 
 // Auth
 "auth.welcomeBack" = "Welcome Back";

@@ -1,0 +1,215 @@
+/// Tab Bar
+"tab.discovery" = "Ontdek";
+"tab.clips" = "Clips";
+"tab.lists" = "Lijsten";
+"tab.profile" = "Profiel";
+
+// Onboarding
+"onboarding.page1.title" = "Volg & Bewaar je Favorieten";
+"onboarding.page1.description" = "Ontdek en bewaar films en series die je leuk vindt. Houd bij wat je hebt gekeken en wat je later wilt kijken.";
+"onboarding.page2.title" = "Organiseer met Lijsten";
+"onboarding.page2.description" = "Maak aangepaste lijsten om je content te organiseren. Van kijklijsten tot mood-based collecties — helemaal van jou.";
+"onboarding.page3.title" = "Ontdek via Clips";
+"onboarding.page3.description" = "Bekijk spannende clips uit films en series. Reageer, sla op in lijsten en deel met vrienden.";
+"onboarding.page4.title" = "Klaar om te beginnen?";
+"onboarding.page4.description" = "Maak een account aan om je lijsten en voorkeuren te synchroniseren op al je apparaten.";
+"onboarding.page4.createAccount" = "Account aanmaken";
+"onboarding.page4.skip" = "Sla over";
+
+// Discovery
+"discovery.trending" = "Trending";
+"discovery.popular" = "Populair";
+"discovery.topRated" = "Best beoordeeld";
+"discovery.basedOnMood" = "Speciaal voor jou";
+"discovery.vibeWatch" = "VibeWatch";
+"discovery.upcoming" = "Binnenkort";
+"discovery.forYou" = "Voor jou";
+"discovery.tvShows" = "Series";
+
+// Lists
+"lists.myLists" = "Mijn lijsten";
+"lists.watchlist" = "Kijklijst";
+"lists.seen" = "Gezien";
+"lists.liked" = "Leuk gevonden";
+"lists.disliked" = "Niet leuk";
+"lists.empty" = "Nog geen lijsten";
+"lists.emptyDescription" = "Maak je eerste lijst om je favoriete content te organiseren";
+"lists.createList" = "Lijst maken";
+"lists.listName" = "Lijstnaam";
+"lists.listNamePlaceholder" = "Nieuwe lijst";
+"lists.description" = "Beschrijving (optioneel)";
+"lists.descriptionPlaceholder" = "Voeg een beschrijving toe… (optioneel)";
+"lists.listDescriptionPlaceholder" = "Voeg een beschrijving toe…";
+"lists.noItems" = "Nog geen items";
+"lists.error.maxListsReached" = "Maximum van {limit} aangepaste lijsten bereikt";
+"lists.error.maxItemsReached" = "Maximum van {limit} items in deze lijst bereikt";
+"lists.error.listNotFound" = "Lijst niet gevonden";
+"lists.error.itemAlreadyInList" = "Item staat al in deze lijst";
+"lists.error.defaultImmutable" = "Deze lijst kan niet worden gewijzigd";
+"lists.error.invalidName" = "Voer een geldige lijstnaam in";
+"lists.error.authRequired" = "Je moet ingelogd zijn om aangepaste lijsten te maken.";
+"lists.limitInfo" = "{count}/{limit}";
+"lists.softLimitWarning" = "\"{name}\" heeft al {limit} items. Overweeg een nieuwe lijst te starten om georganiseerd te blijven.";
+"lists.searchPlaceholder" = "Zoek in deze lijst";
+"lists.editList" = "Lijst bewerken";
+"list.all" = "Alles";
+"list.movies" = "Films";
+"list.tvShows" = "Series";
+
+// Profile
+"profile.done" = "Gereed";
+"profile.cancel" = "Annuleren";
+"profile.notifications" = "Meldingen";
+"profile.streamingServices" = "Streamingdiensten";
+"profile.settings" = "Instellingen";
+"profile.helpSupport" = "Hulp & Support";
+"profile.logout" = "Uitloggen";
+"profile.signIn" = "Inloggen";
+"profile.createAccount" = "Account aanmaken";
+"profile.signInToVibeWatch" = "Log in op VibeWatch";
+"profile.signInDescription" = "Maak lijsten, bewaar clips en personaliseer je ervaring";
+"profile.userNamePlaceholder" = "E-mail of gebruikersnaam";
+"profile.passwordPlaceholder" = "Wachtwoord";
+
+// Settings
+"settings.title" = "Instellingen";
+"settings.country" = "Land";
+"settings.language" = "Taal";
+"settings.selectCountry" = "Selecteer een land";
+"settings.selectLanguage" = "Selecteer een taal";
+
+// Movie Detail
+"movieDetail.save" = "Opslaan";
+"movieDetail.seen" = "Gezien";
+"movieDetail.watchNow" = "Nu kijken";
+"movieDetail.trailer" = "Trailer";
+"movieDetail.information" = "Informatie";
+"movieDetail.rating" = "Beoordeling";
+"movieDetail.ratings" = "beoordelingen";
+"movieDetail.genres" = "Genres";
+"movieDetail.runtime" = "Speelduur";
+"movieDetail.country" = "Land";
+"movieDetail.director" = "Regisseur";
+"movieDetail.cast" = "Cast";
+"movieDetail.similar" = "Mensen die dit leuk vonden, vonden ook";
+
+// Filters
+"filter.all" = "Alles";
+"filter.movies" = "Films";
+"filter.tvSeries" = "Series";
+
+// Sort
+"sort.dateAdded" = "Datum toegevoegd";
+"sort.title" = "Titel";
+"sort.releaseDate" = "Releasedatum";
+"sort.rating" = "Beoordeling";
+"sort.sortBy" = "Sorteren op";
+"sort.popularityDesc" = "Populariteit ↓";
+"sort.popularityAsc" = "Populariteit ↑";
+"sort.ratingDesc" = "Beoordeling ↓";
+"sort.ratingAsc" = "Beoordeling ↑";
+"sort.releaseDateDesc" = "Releasedatum ↓";
+"sort.releaseDateAsc" = "Releasedatum ↑";
+
+// Advanced Filters
+"filters.title" = "Filters";
+"filters.reset" = "Resetten";
+"filters.apply" = "Toepassen";
+"filters.runtime" = "Speelduur";
+"filters.minimumRating" = "Minimale beoordeling";
+"filters.country" = "Land";
+"filters.sortBy" = "Sorteren";
+"filters.anyCountry" = "Elk land";
+"filters.runtimeAny" = "Elke";
+"filters.runtimeShort" = "< 90 min";
+"filters.runtimeMedium" = "90–120 min";
+"filters.runtimeLong" = "> 120 min";
+"filters.ratingAny" = "Iedereen";
+"filters.ratingGood" = "7.0+";
+"filters.ratingExcellent" = "8.0+";
+"filters.ratingMasterpiece" = "9.0+";
+
+// Browse
+"browse.title" = "Bladeren";
+"browse.movies" = "Films";
+"browse.tvShows" = "Series";
+"browse.emptyMessage" = "Tik op de filterknop om content te verkennen";
+
+// Platforms
+"platforms.title" = "Platforms";
+"platforms.streaming" = "Streaming";
+"platforms.rent" = "Huren";
+"platforms.buy" = "Kopen";
+
+// Common
+"common.done" = "Gereed";
+"common.cancel" = "Annuleren";
+"common.save" = "Opslaan";
+"common.delete" = "Verwijderen";
+"common.edit" = "Bewerken";
+"common.search" = "Zoeken";
+"common.year" = "Jaar";
+"common.loading" = "Laden...";
+"common.items" = "items";
+"common.item" = "item";
+"common.or" = "OF";
+"common.reply" = "Antwoorden";
+"common.uploading" = "Uploaden...";
+"common.loadMore" = "Meer laden";
+
+// Clips
+"clips.loadingClips" = "Clips worden geladen...";
+"clips.noClipsAvailable" = "Geen clips beschikbaar";
+"clips.noClipsDescription" = "Kom later terug voor spannende scènes uit je favoriete films en shows";
+"clips.comment" = "Reactie";
+"clips.comments" = "Reacties";
+"clips.noComments" = "Nog geen reacties";
+"clips.beFirstToComment" = "Wees de eerste die reageert";
+"clips.replyingTo" = "Reageren op";
+"clips.reply" = "Antwoorden";
+"clips.replies" = "reacties";
+"clips.viewReplies" = "Bekijken";
+"clips.hideReplies" = "Verbergen";
+"clips.addToList" = "Aan lijst toevoegen";
+"clips.noListsYet" = "Nog geen lijsten";
+"clips.createFirstList" = "Maak je eerste lijst om content op te slaan";
+"clips.createNewList" = "Nieuwe lijst maken";
+
+// Search
+"search.trendingSearches" = "Trending zoekopdrachten";
+"search.noResultsFound" = "Geen resultaten";
+"search.results" = "Resultaten";
+"search.placehodler" = "Zoek een serie of film...";
+
+// Auth
+"auth.welcomeBack" = "Welkom terug";
+"auth.signInContinue" = "Log in om verder te gaan";
+"auth.forgotPassword" = "Wachtwoord vergeten?";
+"auth.signIn" = "Inloggen";
+"auth.dontHaveAccount" = "Heb je geen account?";
+"auth.signUp" = "Registreren";
+"auth.createAccount" = "Account maken";
+"auth.joinVibeWatch" = "Word lid van VibeWatch en begin met ontdekken";
+"auth.invalidEmail" = "Ongeldig e-mailadres";
+"auth.invalidPassword" = "Ongeldig wachtwoord";
+"auth.passwordsDontMatch" = "Wachtwoorden komen niet overeen";
+"auth.alreadyHaveAccount" = "Heb je al een account?";
+"auth.emailPlaceholder" = "E-mail";
+"auth.usernamePlaceholder" = "Gebruikersnaam";
+"auth.passwordPlaceholder" = "Wachtwoord";
+"auth.confirmPasswordPlaceholder" = "Wachtwoord bevestigen";
+
+// Notifications
+"notifications.permissionRequired" = "Machtiging voor meldingen vereist";
+"notifications.openSettings" = "Open instellingen";
+"notifications.enableInSettings" = "Schakel meldingen in om updates te ontvangen over nieuwe releases, prijswijzigingen en meer.";
+"notifications.disableConfirmation" = "Meldingen uitschakelen?";
+"notifications.disableMessage" = "Je ontvangt geen meldingen meer over nieuwe releases en aanbevelingen.";
+"notifications.disableButton" = "Meldingen uitschakelen";
+
+// Misc
+"misc.language" = "Nederlands";
+"misc.somethingWrong" = "Gaat er iets mis?";
+"misc.letUsKnow" = "Laat het ons weten";
+"misc.selected" = "geselecteerd";
+"misc.of" = "van";

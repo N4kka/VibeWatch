@@ -1,0 +1,215 @@
+/// Tab Bar
+"tab.discovery" = "디스커버리";
+"tab.clips" = "클립";
+"tab.lists" = "리스트";
+"tab.profile" = "프로필";
+
+// Onboarding
+"onboarding.page1.title" = "좋아하는 작품을 추적하고 저장하세요";
+"onboarding.page1.description" = "마음에 드는 영화와 TV 시리즈를 발견하고 저장하세요. 이미 본 작품과 앞으로 보고 싶은 작품을 관리할 수 있습니다.";
+"onboarding.page2.title" = "리스트로 정리하기";
+"onboarding.page2.description" = "콘텐츠를 정리하기 위해 나만의 리스트를 만들어 보세요. 시청 목록부터 분위기별 컬렉션까지, 모두 당신만의 방식으로.";
+"onboarding.page3.title" = "클립으로 발견하기";
+"onboarding.page3.description" = "영화와 TV 쇼의 짜릿한 클립을 감상하세요. 커뮤니티에 참여하고, 댓글을 남기고, 리스트에 저장하고, 친구와 공유할 수 있습니다.";
+"onboarding.page4.title" = "시작할 준비 되셨나요?";
+"onboarding.page4.description" = "계정을 만들어 모든 기기에서 리스트와 설정을 동기화하세요.";
+"onboarding.page4.createAccount" = "계정 만들기";
+"onboarding.page4.skip" = "나중에 하기";
+
+// Discovery
+"discovery.trending" = "실시간 인기";
+"discovery.popular" = "인기";
+"discovery.topRated" = "최고 평점";
+"discovery.basedOnMood" = "당신을 위한 추천";
+"discovery.vibeWatch" = "VibeWatch";
+"discovery.upcoming" = "공개 예정";
+"discovery.forYou" = "회원님을 위해";
+"discovery.tvShows" = "TV 시리즈";
+
+// Lists
+"lists.myLists" = "내 리스트";
+"lists.watchlist" = "시청 예정";
+"lists.seen" = "시청함";
+"lists.liked" = "좋아요";
+"lists.disliked" = "별로예요";
+"lists.empty" = "아직 리스트가 없습니다";
+"lists.emptyDescription" = "첫 번째 리스트를 만들어 좋아하는 콘텐츠를 정리해 보세요";
+"lists.createList" = "리스트 만들기";
+"lists.listName" = "리스트 이름";
+"lists.listNamePlaceholder" = "새 리스트";
+"lists.description" = "설명 (선택 사항)";
+"lists.descriptionPlaceholder" = "설명을 추가하세요… (선택 사항)";
+"lists.listDescriptionPlaceholder" = "설명을 추가하세요…";
+"lists.noItems" = "아직 항목이 없습니다";
+"lists.error.maxListsReached" = "최대 {limit}개의 사용자 지정 리스트에 도달했습니다";
+"lists.error.maxItemsReached" = "이 리스트는 {limit}개 항목의 최대치에 도달했습니다";
+"lists.error.listNotFound" = "리스트를 찾을 수 없습니다";
+"lists.error.itemAlreadyInList" = "항목이 이미 이 리스트에 있습니다";
+"lists.error.defaultImmutable" = "이 리스트는 수정할 수 없습니다";
+"lists.error.invalidName" = "유효한 리스트 이름을 입력하세요";
+"lists.error.authRequired" = "사용자 지정 리스트를 만들려면 로그인해야 합니다.";
+"lists.limitInfo" = "{count}/{limit}";
+"lists.softLimitWarning" = "\"{name}\" 리스트에는 이미 {limit}개 항목이 있습니다. 정리를 위해 새 리스트 생성을 고려해 보세요.";
+"lists.searchPlaceholder" = "이 리스트에서 검색";
+"lists.editList" = "리스트 편집";
+"list.all" = "전체";
+"list.movies" = "영화";
+"list.tvShows" = "TV";
+
+// Profile
+"profile.done" = "완료";
+"profile.cancel" = "취소";
+"profile.notifications" = "알림";
+"profile.streamingServices" = "스트리밍 서비스";
+"profile.settings" = "설정";
+"profile.helpSupport" = "도움말 및 지원";
+"profile.logout" = "로그아웃";
+"profile.signIn" = "로그인";
+"profile.createAccount" = "계정 만들기";
+"profile.signInToVibeWatch" = "VibeWatch에 로그인";
+"profile.signInDescription" = "리스트를 만들고, 클립을 저장하고, 나만의 경험으로 커스터마이즈하세요";
+"profile.userNamePlaceholder" = "이메일 또는 사용자 이름";
+"profile.passwordPlaceholder" = "비밀번호";
+
+// Settings
+"settings.title" = "설정";
+"settings.country" = "국가";
+"settings.language" = "언어";
+"settings.selectCountry" = "국가 선택";
+"settings.selectLanguage" = "언어 선택";
+
+// Movie Detail
+"movieDetail.save" = "저장";
+"movieDetail.seen" = "시청함";
+"movieDetail.watchNow" = "지금 보기";
+"movieDetail.trailer" = "예고편";
+"movieDetail.information" = "정보";
+"movieDetail.rating" = "평점";
+"movieDetail.ratings" = "평점 수";
+"movieDetail.genres" = "장르";
+"movieDetail.runtime" = "러닝타임";
+"movieDetail.country" = "국가";
+"movieDetail.director" = "감독";
+"movieDetail.cast" = "출연";
+"movieDetail.similar" = "이 작품을 좋아한 사람들이 함께 본 작품";
+
+// Filters
+"filter.all" = "전체";
+"filter.movies" = "영화";
+"filter.tvSeries" = "TV 시리즈";
+
+// Sort
+"sort.dateAdded" = "추가된 날짜";
+"sort.title" = "제목";
+"sort.releaseDate" = "개봉일";
+"sort.rating" = "평점";
+"sort.sortBy" = "정렬 기준";
+"sort.popularityDesc" = "인기순 ↓";
+"sort.popularityAsc" = "인기순 ↑";
+"sort.ratingDesc" = "평점순 ↓";
+"sort.ratingAsc" = "평점순 ↑";
+"sort.releaseDateDesc" = "개봉일 ↓";
+"sort.releaseDateAsc" = "개봉일 ↑";
+
+// Advanced Filters
+"filters.title" = "필터";
+"filters.reset" = "초기화";
+"filters.apply" = "적용";
+"filters.runtime" = "러닝타임";
+"filters.minimumRating" = "최소 평점";
+"filters.country" = "국가";
+"filters.sortBy" = "정렬";
+"filters.anyCountry" = "모든 국가";
+"filters.runtimeAny" = "상관없음";
+"filters.runtimeShort" = "< 90분";
+"filters.runtimeMedium" = "90–120분";
+"filters.runtimeLong" = "> 120분";
+"filters.ratingAny" = "상관없음";
+"filters.ratingGood" = "7.0+";
+"filters.ratingExcellent" = "8.0+";
+"filters.ratingMasterpiece" = "9.0+";
+
+// Browse
+"browse.title" = "둘러보기";
+"browse.movies" = "영화";
+"browse.tvShows" = "TV 쇼";
+"browse.emptyMessage" = "콘텐츠를 탐색하려면 필터 버튼을 탭하세요";
+
+// Platforms
+"platforms.title" = "플랫폼";
+"platforms.streaming" = "스트리밍";
+"platforms.rent" = "대여";
+"platforms.buy" = "구매";
+
+// Common
+"common.done" = "완료";
+"common.cancel" = "취소";
+"common.save" = "저장";
+"common.delete" = "삭제";
+"common.edit" = "편집";
+"common.search" = "검색";
+"common.year" = "연도";
+"common.loading" = "불러오는 중...";
+"common.items" = "항목";
+"common.item" = "항목";
+"common.or" = "또는";
+"common.reply" = "답글";
+"common.uploading" = "업로드 중...";
+"common.loadMore" = "더 보기";
+
+// Clips
+"clips.loadingClips" = "클립을 불러오는 중...";
+"clips.noClipsAvailable" = "클립이 없습니다";
+"clips.noClipsDescription" = "나중에 다시 방문해 좋아하는 영화와 쇼의 멋진 장면들을 확인해 보세요";
+"clips.comment" = "댓글";
+"clips.comments" = "댓글";
+"clips.noComments" = "아직 댓글이 없습니다";
+"clips.beFirstToComment" = "첫 번째 댓글을 남겨보세요";
+"clips.replyingTo" = "답글 대상";
+"clips.reply" = "답글";
+"clips.replies" = "답글";
+"clips.viewReplies" = "보기";
+"clips.hideReplies" = "숨기기";
+"clips.addToList" = "리스트에 추가";
+"clips.noListsYet" = "아직 리스트가 없습니다";
+"clips.createFirstList" = "콘텐츠를 저장할 첫 번째 리스트를 만들어 보세요";
+"clips.createNewList" = "새 리스트 만들기";
+
+// Search
+"search.trendingSearches" = "인기 검색어";
+"search.noResultsFound" = "결과가 없습니다";
+"search.results" = "결과";
+"search.placehodler" = "TV 쇼나 영화를 검색하세요...";
+
+// Auth
+"auth.welcomeBack" = "다시 오신 것을 환영합니다";
+"auth.signInContinue" = "계속하려면 로그인하세요";
+"auth.forgotPassword" = "비밀번호를 잊으셨나요?";
+"auth.signIn" = "로그인";
+"auth.dontHaveAccount" = "계정이 없으신가요?";
+"auth.signUp" = "회원가입";
+"auth.createAccount" = "계정 만들기";
+"auth.joinVibeWatch" = "VibeWatch에 가입하고 새로운 작품을 발견하세요";
+"auth.invalidEmail" = "유효하지 않은 이메일입니다";
+"auth.invalidPassword" = "유효하지 않은 비밀번호입니다";
+"auth.passwordsDontMatch" = "비밀번호가 일치하지 않습니다";
+"auth.alreadyHaveAccount" = "이미 계정이 있으신가요?";
+"auth.emailPlaceholder" = "이메일";
+"auth.usernamePlaceholder" = "사용자 이름";
+"auth.passwordPlaceholder" = "비밀번호";
+"auth.confirmPasswordPlaceholder" = "비밀번호 확인";
+
+// Notifications
+"notifications.permissionRequired" = "알림 권한이 필요합니다";
+"notifications.openSettings" = "설정 열기";
+"notifications.enableInSettings" = "새로운 공개 작품, 가격 변경 및 더 많은 소식을 받으려면 설정에서 알림을 활성화하세요.";
+"notifications.disableConfirmation" = "알림을 끄시겠습니까?";
+"notifications.disableMessage" = "새로운 공개 작품, 가격 변경 및 맞춤 추천에 대한 알림을 더 이상 받지 않습니다.";
+"notifications.disableButton" = "알림 끄기";
+
+// Misc
+"misc.language" = "한국어";
+"misc.somethingWrong" = "문제가 있나요?";
+"misc.letUsKnow" = "우리에게 알려주세요";
+"misc.selected" = "선택됨";
+"misc.of" = "/";

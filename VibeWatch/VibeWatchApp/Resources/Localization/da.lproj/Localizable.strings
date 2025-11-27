@@ -1,0 +1,215 @@
+/// Tab Bar
+"tab.discovery" = "Opdag";
+"tab.clips" = "Klip";
+"tab.lists" = "Lister";
+"tab.profile" = "Profil";
+
+// Onboarding
+"onboarding.page1.title" = "Følg og gem dine favoritter";
+"onboarding.page1.description" = "Opdag og gem film og serier, du elsker. Hold styr på, hvad du har set, og hvad du vil se næste gang.";
+"onboarding.page2.title" = "Organisér med lister";
+"onboarding.page2.description" = "Opret brugerdefinerede lister for at organisere dit indhold. Fra watchlister til humørbaserede samlinger – gør det til dit eget.";
+"onboarding.page3.title" = "Opdag gennem klip";
+"onboarding.page3.description" = "Se spændende klip fra film og serier. Deltag i fællesskabet, kommenter, gem på lister og del med venner.";
+"onboarding.page4.title" = "Klar til at starte?";
+"onboarding.page4.description" = "Opret en konto for at synkronisere dine lister og præferencer på alle dine enheder.";
+"onboarding.page4.createAccount" = "Opret konto";
+"onboarding.page4.skip" = "Spring over";
+
+// Discovery
+"discovery.trending" = "Trender nu";
+"discovery.popular" = "Populært";
+"discovery.topRated" = "Bedst bedømte";
+"discovery.basedOnMood" = "Udvalgt til dig";
+"discovery.vibeWatch" = "VibeWatch";
+"discovery.upcoming" = "Kommende";
+"discovery.forYou" = "Til dig";
+"discovery.tvShows" = "TV-serier";
+
+// Lists
+"lists.myLists" = "Mine lister";
+"lists.watchlist" = "Watchlist";
+"lists.seen" = "Set";
+"lists.liked" = "Kunnet lide";
+"lists.disliked" = "Ikke kunnet lide";
+"lists.empty" = "Ingen lister endnu";
+"lists.emptyDescription" = "Opret din første liste for at begynde at organisere dit yndlingsindhold";
+"lists.createList" = "Opret liste";
+"lists.listName" = "Listenavn";
+"lists.listNamePlaceholder" = "Ny liste";
+"lists.description" = "Beskrivelse (valgfrit)";
+"lists.descriptionPlaceholder" = "Tilføj en beskrivelse… (valgfrit)";
+"lists.listDescriptionPlaceholder" = "Tilføj en beskrivelse…";
+"lists.noItems" = "Ingen elementer endnu";
+"lists.error.maxListsReached" = "Maksimalt {limit} brugerdefinerede lister nået";
+"lists.error.maxItemsReached" = "Maksimalt {limit} elementer i denne liste nået";
+"lists.error.listNotFound" = "Liste ikke fundet";
+"lists.error.itemAlreadyInList" = "Elementet er allerede i denne liste";
+"lists.error.defaultImmutable" = "Denne liste kan ikke ændres";
+"lists.error.invalidName" = "Indtast et gyldigt listenavn";
+"lists.error.authRequired" = "Du skal være logget ind for at oprette brugerdefinerede lister.";
+"lists.limitInfo" = "{count}/{limit}";
+"lists.softLimitWarning" = "\"{name}\" har allerede {limit} elementer. Overvej at oprette en ny liste for at holde det organiseret.";
+"lists.searchPlaceholder" = "Søg i denne liste";
+"lists.editList" = "Redigér liste";
+"list.all" = "Alle";
+"list.movies" = "Film";
+"list.tvShows" = "TV";
+
+// Profile
+"profile.done" = "Færdig";
+"profile.cancel" = "Annuller";
+"profile.notifications" = "Notifikationer";
+"profile.streamingServices" = "Streaming-tjenester";
+"profile.settings" = "Indstillinger";
+"profile.helpSupport" = "Hjælp & support";
+"profile.logout" = "Log ud";
+"profile.signIn" = "Log ind";
+"profile.createAccount" = "Opret konto";
+"profile.signInToVibeWatch" = "Log ind på VibeWatch";
+"profile.signInDescription" = "Opret lister, gem klip og tilpas din oplevelse";
+"profile.userNamePlaceholder" = "E-mail eller brugernavn";
+"profile.passwordPlaceholder" = "Adgangskode";
+
+// Settings
+"settings.title" = "Indstillinger";
+"settings.country" = "Land";
+"settings.language" = "Sprog";
+"settings.selectCountry" = "Vælg land";
+"settings.selectLanguage" = "Vælg sprog";
+
+// Movie Detail
+"movieDetail.save" = "Gem";
+"movieDetail.seen" = "Set";
+"movieDetail.watchNow" = "Se nu";
+"movieDetail.trailer" = "Trailer";
+"movieDetail.information" = "Information";
+"movieDetail.rating" = "Bedømmelse";
+"movieDetail.ratings" = "bedømmelser";
+"movieDetail.genres" = "Genrer";
+"movieDetail.runtime" = "Spilletid";
+"movieDetail.country" = "Land";
+"movieDetail.director" = "Instruktør";
+"movieDetail.cast" = "Medvirkende";
+"movieDetail.similar" = "Folk der kunne lide dette, kunne også lide";
+
+// Filters
+"filter.all" = "Alle";
+"filter.movies" = "Film";
+"filter.tvSeries" = "TV-serier";
+
+// Sort
+"sort.dateAdded" = "Dato tilføjet";
+"sort.title" = "Titel";
+"sort.releaseDate" = "Udgivelsesdato";
+"sort.rating" = "Bedømmelse";
+"sort.sortBy" = "Sortér efter";
+"sort.popularityDesc" = "Popularitet ↓";
+"sort.popularityAsc" = "Popularitet ↑";
+"sort.ratingDesc" = "Bedømmelse ↓";
+"sort.ratingAsc" = "Bedømmelse ↑";
+"sort.releaseDateDesc" = "Udgivelsesdato ↓";
+"sort.releaseDateAsc" = "Udgivelsesdato ↑";
+
+// Advanced Filters
+"filters.title" = "Filtre";
+"filters.reset" = "Nulstil";
+"filters.apply" = "Anvend";
+"filters.runtime" = "Spilletid";
+"filters.minimumRating" = "Minimumsbedømmelse";
+"filters.country" = "Land";
+"filters.sortBy" = "Sortér";
+"filters.anyCountry" = "Ethvert land";
+"filters.runtimeAny" = "Enhver";
+"filters.runtimeShort" = "< 90 min";
+"filters.runtimeMedium" = "90–120 min";
+"filters.runtimeLong" = "> 120 min";
+"filters.ratingAny" = "Enhver";
+"filters.ratingGood" = "7.0+";
+"filters.ratingExcellent" = "8.0+";
+"filters.ratingMasterpiece" = "9.0+";
+
+// Browse
+"browse.title" = "Gennemse";
+"browse.movies" = "Film";
+"browse.tvShows" = "TV-serier";
+"browse.emptyMessage" = "Tryk på filterknappen for at gennemse indhold";
+
+// Platforms
+"platforms.title" = "Platforme";
+"platforms.streaming" = "Streaming";
+"platforms.rent" = "Lej";
+"platforms.buy" = "Køb";
+
+// Common
+"common.done" = "Færdig";
+"common.cancel" = "Annuller";
+"common.save" = "Gem";
+"common.delete" = "Slet";
+"common.edit" = "Redigér";
+"common.search" = "Søg";
+"common.year" = "År";
+"common.loading" = "Indlæser...";
+"common.items" = "elementer";
+"common.item" = "element";
+"common.or" = "ELLER";
+"common.reply" = "Svar";
+"common.uploading" = "Uploader...";
+"common.loadMore" = "Indlæs mere";
+
+// Clips
+"clips.loadingClips" = "Indlæser klip...";
+"clips.noClipsAvailable" = "Ingen klip tilgængelige";
+"clips.noClipsDescription" = "Kom tilbage senere for spændende scener fra dine favoritfilm og -serier";
+"clips.comment" = "Kommentar";
+"clips.comments" = "Kommentarer";
+"clips.noComments" = "Ingen kommentarer endnu";
+"clips.beFirstToComment" = "Vær den første til at kommentere";
+"clips.replyingTo" = "Svarer";
+"clips.reply" = "Svar";
+"clips.replies" = "svar";
+"clips.viewReplies" = "Vis";
+"clips.hideReplies" = "Skjul";
+"clips.addToList" = "Tilføj til liste";
+"clips.noListsYet" = "Ingen lister endnu";
+"clips.createFirstList" = "Opret din første liste for at gemme indhold";
+"clips.createNewList" = "Opret ny liste";
+
+// Search
+"search.trendingSearches" = "Trender søgninger";
+"search.noResultsFound" = "Ingen resultater fundet";
+"search.results" = "Resultater";
+"search.placehodler" = "Søg efter en serie eller film...";
+
+// Auth
+"auth.welcomeBack" = "Velkommen tilbage";
+"auth.signInContinue" = "Log ind for at fortsætte";
+"auth.forgotPassword" = "Glemt adgangskode?";
+"auth.signIn" = "Log ind";
+"auth.dontHaveAccount" = "Har du ikke en konto?";
+"auth.signUp" = "Tilmeld dig";
+"auth.createAccount" = "Opret konto";
+"auth.joinVibeWatch" = "Bliv en del af VibeWatch og begynd at opdage";
+"auth.invalidEmail" = "Ugyldig e-mailadresse";
+"auth.invalidPassword" = "Ugyldig adgangskode";
+"auth.passwordsDontMatch" = "Adgangskoderne matcher ikke";
+"auth.alreadyHaveAccount" = "Har du allerede en konto?";
+"auth.emailPlaceholder" = "E-mail";
+"auth.usernamePlaceholder" = "Brugernavn";
+"auth.passwordPlaceholder" = "Adgangskode";
+"auth.confirmPasswordPlaceholder" = "Bekræft adgangskode";
+
+// Notifications
+"notifications.permissionRequired" = "Notifikations­tilladelse påkrævet";
+"notifications.openSettings" = "Åbn indstillinger";
+"notifications.enableInSettings" = "Aktivér notifikationer i Indstillinger for at modtage opdateringer om nye udgivelser, prisændringer og meget mere.";
+"notifications.disableConfirmation" = "Deaktivér notifikationer?";
+"notifications.disableMessage" = "Du vil ikke længere modtage notifikationer om nye udgivelser, prisændringer og personlige anbefalinger.";
+"notifications.disableButton" = "Deaktivér notifikationer";
+
+// Misc
+"misc.language" = "Dansk";
+"misc.somethingWrong" = "Er der noget galt?";
+"misc.letUsKnow" = "Giv os besked";
+"misc.selected" = "valgt";
+"misc.of" = "af";

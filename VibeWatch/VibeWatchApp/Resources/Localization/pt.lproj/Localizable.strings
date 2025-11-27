@@ -1,8 +1,10 @@
-// Portuguese
+/// Tab Bar
 "tab.discovery" = "Descobrir";
 "tab.clips" = "Clips";
 "tab.lists" = "Listas";
 "tab.profile" = "Perfil";
+
+// Onboarding
 "onboarding.page1.title" = "Rastreie e Salve Seus Favoritos";
 "onboarding.page1.description" = "Descubra e salve filmes e séries de TV que você ama. Acompanhe o que você assistiu e o que deseja assistir a seguir.";
 "onboarding.page2.title" = "Organize com Listas";
@@ -13,6 +15,8 @@
 "onboarding.page4.description" = "Crie uma conta para sincronizar suas listas e preferências em todos os seus dispositivos.";
 "onboarding.page4.createAccount" = "Criar Conta";
 "onboarding.page4.skip" = "Pular por enquanto";
+
+// Discovery
 "discovery.trending" = "Em Alta Agora";
 "discovery.popular" = "Populares";
 "discovery.topRated" = "Mais Bem Avaliados";
@@ -21,6 +25,8 @@
 "discovery.upcoming" = "Em Breve";
 "discovery.forYou" = "Para Você";
 "discovery.tvShows" = "Séries de TV";
+
+// Lists
 "lists.myLists" = "Minhas Listas";
 "lists.watchlist" = "Para Assistir";
 "lists.seen" = "Vistos";
@@ -49,6 +55,8 @@
 "list.all" = "Todos";
 "list.movies" = "Filmes";
 "list.tvShows" = "Séries de TV";
+
+// Profile
 "profile.done" = "Concluído";
 "profile.cancel" = "Cancelar";
 "profile.notifications" = "Notificações";
@@ -62,11 +70,15 @@
 "profile.signInDescription" = "Crie listas, salve clips e personalize sua experiência";
 "profile.userNamePlaceholder" = "Email ou Nome de usuário";
 "profile.passwordPlaceholder" = "Senha";
+
+// Settings
 "settings.title" = "Configurações";
 "settings.country" = "País";
 "settings.language" = "Idioma";
 "settings.selectCountry" = "Selecionar País";
 "settings.selectLanguage" = "Selecionar Idioma";
+
+// Movie Detail
 "movieDetail.save" = "Salvar";
 "movieDetail.seen" = "Visto";
 "movieDetail.watchNow" = "Assistir Agora";
@@ -80,9 +92,13 @@
 "movieDetail.director" = "Diretor";
 "movieDetail.cast" = "Elenco";
 "movieDetail.similar" = "Quem gostou disto também gostou";
+
+// Filters
 "filter.all" = "Todos";
 "filter.movies" = "Filmes";
 "filter.tvSeries" = "Séries de TV";
+
+// Sort
 "sort.dateAdded" = "Data de Adição";
 "sort.title" = "Título";
 "sort.releaseDate" = "Data de Lançamento";
@@ -94,6 +110,8 @@
 "sort.ratingAsc" = "Avaliação ↑";
 "sort.releaseDateDesc" = "Data Lançamento ↓";
 "sort.releaseDateAsc" = "Data Lançamento ↑";
+
+// Advanced Filters
 "filters.title" = "Filtros";
 "filters.reset" = "Redefinir";
 "filters.apply" = "Aplicar";
@@ -110,14 +128,20 @@
 "filters.ratingGood" = "7.0+";
 "filters.ratingExcellent" = "8.0+";
 "filters.ratingMasterpiece" = "9.0+";
+
+// Browse
 "browse.title" = "Navegar";
 "browse.movies" = "Filmes";
 "browse.tvShows" = "Séries de TV";
 "browse.emptyMessage" = "Toque no botão de filtro para navegar pelo conteúdo";
+
+// Platforms
 "platforms.title" = "Plataformas";
 "platforms.streaming" = "Streaming";
 "platforms.rent" = "Aluguel";
 "platforms.buy" = "Comprar";
+
+// Common
 "common.done" = "Concluído";
 "common.cancel" = "Cancelar";
 "common.save" = "Salvar";
@@ -132,6 +156,8 @@
 "common.reply" = "Responder";
 "common.uploading" = "Enviando...";
 "common.loadMore" = "Carregar mais";
+
+// Clips
 "clips.loadingClips" = "Carregando clips...";
 "clips.noClipsAvailable" = "Nenhum Clip Disponível";
 "clips.noClipsDescription" = "Volte mais tarde para cenas emocionantes dos seus filmes e séries favoritos";
@@ -148,9 +174,14 @@
 "clips.noListsYet" = "Ainda sem listas";
 "clips.createFirstList" = "Crie sua primeira lista para salvar conteúdo";
 "clips.createNewList" = "Criar Nova Lista";
+
+// Search
 "search.trendingSearches" = "Pesquisas Populares";
 "search.noResultsFound" = "Nenhum resultado encontrado";
 "search.results" = "Resultados";
+"search.placehodler" = "Procure uma série ou um filme...";
+
+// Auth
 "auth.welcomeBack" = "Bem-Vindo de Volta";
 "auth.signInContinue" = "Entre para continuar sua jornada";
 "auth.forgotPassword" = "Esqueceu a Senha?";
@@ -167,12 +198,16 @@
 "auth.usernamePlaceholder" = "Nome de usuário";
 "auth.passwordPlaceholder" = "Senha";
 "auth.confirmPasswordPlaceholder" = "Confirmar Senha";
+
+// Notifications
 "notifications.permissionRequired" = "Permissão de Notificação Necessária";
 "notifications.openSettings" = "Abrir Configurações";
 "notifications.enableInSettings" = "Por favor, ative as notificações nas Configurações para receber atualizações sobre novos lançamentos, mudanças de preço e mais.";
 "notifications.disableConfirmation" = "Desativar Notificações?";
 "notifications.disableMessage" = "Você não receberá notificações sobre novos lançamentos, mudanças de preço e recomendações personalizadas.";
 "notifications.disableButton" = "Desativar Notificações";
+
+// Misc
 "misc.language" = "Português";
 "misc.somethingWrong" = "Algo errado?";
 "misc.letUsKnow" = "Nos avise";

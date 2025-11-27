@@ -3,9 +3,11 @@ import WebKit
 
 struct MovieDetailView: View {
     @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var appState: AppState
     @StateObject private var viewModel: MovieDetailViewModel
     @StateObject private var listManager = ListManager.shared
     @State private var showSavePanel = false
+    @State private var showAuthGate = false
     @State private var showSearch = false
     @State private var showShareSheet = false
     @State private var shareItems: [Any] = []
@@ -42,7 +44,13 @@ struct MovieDetailView: View {
                         ActionButtonsSection(
                             movie: movie,
                             mediaType: .movie,
-                            onSaveTap: { showSavePanel = true },
+                            onSaveTap: {
+                                guard appState.isAuthenticated else {
+                                    showAuthGate = true
+                                    return
+                                }
+                                showSavePanel = true
+                            },
                             onSeenTap: {
                                 Task {
                                     do {
@@ -184,6 +192,9 @@ struct MovieDetailView: View {
                 .onDisappear {
                     shareItems = []
                 }
+        }
+        .sheet(isPresented: $showAuthGate) {
+            AuthenticationGateView(isPresented: $showAuthGate)
         }
         .overlay {
             if isPreparingShare {
@@ -578,7 +589,7 @@ struct ProviderGroup: View {
             LazyVGrid(columns: [
                 GridItem(.adaptive(minimum: 80), spacing: 16)
             ], spacing: 16) {
-                ForEach(providers) { provider in
+                ForEach(providers) { (provider: Provider) in
                     Button {
                         PlatformDeepLinkHelper.openPlatform(provider: provider, justWatchLink: justWatchLink, title: mediaTitle)
                     } label: {
@@ -589,28 +600,35 @@ struct ProviderGroup: View {
                                 .background(Color.white)
                                 .clipShape(RoundedRectangle(cornerRadius: 8))
                             
-                            // Price and Quality info
-                            if let price = provider.price?.displayPrice {
-                                HStack(spacing: 4) {
-                                    Text(price)
-                                        .font(.system(size: 18, weight: .semibold))
-                                        .foregroundColor(.theme.accentOrange)
-                                    
-                                    if let quality = provider.formattedQuality {
-                                        Text("•")
-                                            .font(.system(size: 10))
-                                            .foregroundColor(.theme.textSecondary)
+                            // Price and Quality info - ALWAYS take up space for alignment
+                            VStack(spacing: 2) {
+                                if let price = provider.price?.displayPrice {
+                                    HStack(spacing: 4) {
+                                        Text(price)
+                                            .font(.system(size: 12, weight: .semibold))
+                                            .foregroundColor(.theme.accentOrange)
                                         
-                                        Text(quality)
-                                            .font(.system(size: 10, weight: .medium))
-                                            .foregroundColor(.theme.textSecondary)
+                                        if let quality = provider.formattedQuality {
+                                            Text("•")
+                                                .font(.system(size: 10))
+                                                .foregroundColor(.theme.textSecondary)
+                                            
+                                            Text(quality)
+                                                .font(.system(size: 12, weight: .medium))
+                                                .foregroundColor(.theme.textSecondary)
+                                        }
                                     }
+                                } else if let quality = provider.formattedQuality {
+                                    Text(quality)
+                                        .font(.system(size: 10, weight: .medium))
+                                        .foregroundColor(.theme.textSecondary)
+                                } else {
+                                    // Empty spacer to maintain alignment
+                                    Text(" ")
+                                        .font(.system(size: 10))
                                 }
-                            } else if let quality = provider.formattedQuality {
-                                Text(quality)
-                                    .font(.system(size: 10, weight: .medium))
-                                    .foregroundColor(.theme.textSecondary)
                             }
+                            .frame(height: 16) // Fixed height for alignment
                         }
                         .frame(width: 80)
                     }

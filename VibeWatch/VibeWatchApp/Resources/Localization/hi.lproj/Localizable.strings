@@ -1,0 +1,215 @@
+/// Tab Bar
+"tab.discovery" = "डिस्कवरी";
+"tab.clips" = "क्लिप्स";
+"tab.lists" = "सूचियाँ";
+"tab.profile" = "प्रोफाइल";
+
+// Onboarding
+"onboarding.page1.title" = "अपने पसंदीदा ट्रैक करें और सेव करें";
+"onboarding.page1.description" = "फिल्में और टीवी सीरीज़ खोजें और सेव करें। आपने क्या देखा है और आगे क्या देखना चाहते हैं, उसका रिकॉर्ड रखें।";
+"onboarding.page2.title" = "सूचियों से व्यवस्थित करें";
+"onboarding.page2.description" = "अपनी सामग्री को व्यवस्थित करने के लिए कस्टम सूचियाँ बनाएं। वॉचलिस्ट से लेकर मूड-आधारित कलेक्शन तक — सब कुछ आपका।";
+"onboarding.page3.title" = "क्लिप्स के माध्यम से खोजें";
+"onboarding.page3.description" = "फिल्मों और टीवी शो के रोमांचक क्लिप्स देखें। कमेंट करें, लिस्ट में जोड़ें और दोस्तों के साथ साझा करें।";
+"onboarding.page4.title" = "क्या आप तैयार हैं?";
+"onboarding.page4.description" = "अपने सभी डिवाइस पर सूचियों और पसंद को सिंक करने के लिए अकाउंट बनाएं।";
+"onboarding.page4.createAccount" = "अकाउंट बनाएं";
+"onboarding.page4.skip" = "अभी के लिए छोड़ें";
+
+// Discovery
+"discovery.trending" = "ट्रेंडिंग";
+"discovery.popular" = "लोकप्रिय";
+"discovery.topRated" = "उच्च रेटेड";
+"discovery.basedOnMood" = "आपके लिए चुना गया";
+"discovery.vibeWatch" = "VibeWatch";
+"discovery.upcoming" = "आगामी";
+"discovery.forYou" = "आपके लिए";
+"discovery.tvShows" = "टीवी सीरीज़";
+
+// Lists
+"lists.myLists" = "मेरी सूचियाँ";
+"lists.watchlist" = "वॉचलिस्ट";
+"lists.seen" = "देखा हुआ";
+"lists.liked" = "पसंद किया";
+"lists.disliked" = "नापसंद";
+"lists.empty" = "अभी तक कोई सूची नहीं";
+"lists.emptyDescription" = "अपनी पसंद की सामग्री व्यवस्थित करने के लिए पहली सूची बनाएँ";
+"lists.createList" = "सूची बनाएं";
+"lists.listName" = "सूची का नाम";
+"lists.listNamePlaceholder" = "नई सूची";
+"lists.description" = "विवरण (वैकल्पिक)";
+"lists.descriptionPlaceholder" = "विवरण जोड़ें... (वैकल्पिक)";
+"lists.listDescriptionPlaceholder" = "विवरण जोड़ें...";
+"lists.noItems" = "अभी तक कोई आइटम नहीं";
+"lists.error.maxListsReached" = "अधिकतम {limit} कस्टम सूची बन चुकी हैं";
+"lists.error.maxItemsReached" = "इस सूची में {limit} आइटम की सीमा पूरी हो चुकी है";
+"lists.error.listNotFound" = "सूची नहीं मिली";
+"lists.error.itemAlreadyInList" = "आइटम पहले से सूची में मौजूद है";
+"lists.error.defaultImmutable" = "इस सूची को संशोधित नहीं किया जा सकता";
+"lists.error.invalidName" = "कृपया एक मान्य सूची नाम दर्ज करें";
+"lists.error.authRequired" = "कस्टम सूचियाँ बनाने के लिए साइन-इन आवश्यक है।";
+"lists.limitInfo" = "{count}/{limit}";
+"lists.softLimitWarning" = "\"{name}\" में पहले से {limit} आइटम हैं। व्यवस्थित रखने के लिए एक नई सूची बनाने पर विचार करें।";
+"lists.searchPlaceholder" = "सूची में खोजें";
+"lists.editList" = "सूची संपादित करें";
+"list.all" = "सभी";
+"list.movies" = "फिल्में";
+"list.tvShows" = "टीवी";
+
+// Profile
+"profile.done" = "पूर्ण";
+"profile.cancel" = "रद्द करें";
+"profile.notifications" = "सूचनाएँ";
+"profile.streamingServices" = "स्ट्रीमिंग सेवाएँ";
+"profile.settings" = "सेटिंग्स";
+"profile.helpSupport" = "मदद और समर्थन";
+"profile.logout" = "लॉग आउट";
+"profile.signIn" = "साइन इन";
+"profile.createAccount" = "अकाउंट बनाएं";
+"profile.signInToVibeWatch" = "VibeWatch में साइन इन करें";
+"profile.signInDescription" = "सूचियाँ बनाएँ, क्लिप्स सेव करें और अनुभव को पर्सनलाइज़ करें";
+"profile.userNamePlaceholder" = "ईमेल या यूज़रनेम";
+"profile.passwordPlaceholder" = "पासवर्ड";
+
+// Settings
+"settings.title" = "सेटिंग्स";
+"settings.country" = "देश";
+"settings.language" = "भाषा";
+"settings.selectCountry" = "देश चुनें";
+"settings.selectLanguage" = "भाषा चुनें";
+
+// Movie Detail
+"movieDetail.save" = "सेव करें";
+"movieDetail.seen" = "देखा हुआ";
+"movieDetail.watchNow" = "अभी देखें";
+"movieDetail.trailer" = "ट्रेलर";
+"movieDetail.information" = "जानकारी";
+"movieDetail.rating" = "रेटिंग";
+"movieDetail.ratings" = "रेटिंग्स";
+"movieDetail.genres" = "शैली";
+"movieDetail.runtime" = "रनटाइम";
+"movieDetail.country" = "देश";
+"movieDetail.director" = "निर्देशक";
+"movieDetail.cast" = "कलाकार";
+"movieDetail.similar" = "इसे पसंद करने वालों ने यह भी पसंद किया";
+
+// Filters
+"filter.all" = "सभी";
+"filter.movies" = "फिल्में";
+"filter.tvSeries" = "टीवी सीरीज़";
+
+// Sort
+"sort.dateAdded" = "जोड़े जाने की तिथि";
+"sort.title" = "शीर्षक";
+"sort.releaseDate" = "रिलीज़ तिथि";
+"sort.rating" = "रेटिंग";
+"sort.sortBy" = "क्रमबद्ध करें";
+"sort.popularityDesc" = "लोकप्रियता ↓";
+"sort.popularityAsc" = "लोकप्रियता ↑";
+"sort.ratingDesc" = "रेटिंग ↓";
+"sort.ratingAsc" = "रेटिंग ↑";
+"sort.releaseDateDesc" = "रिलीज़ तिथि ↓";
+"sort.releaseDateAsc" = "रिलीज़ तिथि ↑";
+
+// Advanced Filters
+"filters.title" = "फ़िल्टर्स";
+"filters.reset" = "रीसेट";
+"filters.apply" = "लागू करें";
+"filters.runtime" = "रनटाइम";
+"filters.minimumRating" = "न्यूनतम रेटिंग";
+"filters.country" = "देश";
+"filters.sortBy" = "क्रमबद्ध करें";
+"filters.anyCountry" = "कोई भी देश";
+"filters.runtimeAny" = "कोई भी";
+"filters.runtimeShort" = "< 90 मिनट";
+"filters.runtimeMedium" = "90-120 मिनट";
+"filters.runtimeLong" = "> 120 मिनट";
+"filters.ratingAny" = "कोई भी";
+"filters.ratingGood" = "7.0+";
+"filters.ratingExcellent" = "8.0+";
+"filters.ratingMasterpiece" = "9.0+";
+
+// Browse
+"browse.title" = "ब्राउज़";
+"browse.movies" = "फिल्में";
+"browse.tvShows" = "टीवी शो";
+"browse.emptyMessage" = "सामग्री ब्राउज़ करने के लिए फ़िल्टर बटन टैप करें";
+
+// Platforms
+"platforms.title" = "प्लेटफ़ॉर्म्स";
+"platforms.streaming" = "स्ट्रीमिंग";
+"platforms.rent" = "किराये पर लें";
+"platforms.buy" = "खरीदें";
+
+// Common
+"common.done" = "पूर्ण";
+"common.cancel" = "रद्द करें";
+"common.save" = "सेव करें";
+"common.delete" = "हटाएं";
+"common.edit" = "संपादित करें";
+"common.search" = "खोजें";
+"common.year" = "साल";
+"common.loading" = "लोड हो रहा है...";
+"common.items" = "आइटम्स";
+"common.item" = "आइटम";
+"common.or" = "या";
+"common.reply" = "उत्तर दें";
+"common.uploading" = "अपलोड हो रहा है...";
+"common.loadMore" = "और लोड करें";
+
+// Clips
+"clips.loadingClips" = "क्लिप्स लोड हो रहे हैं...";
+"clips.noClipsAvailable" = "कोई क्लिप उपलब्ध नहीं";
+"clips.noClipsDescription" = "अपनी पसंदीदा फिल्मों और शो के रोमांचक दृश्य बाद में देखें";
+"clips.comment" = "कमेंट";
+"clips.comments" = "कमेंट्स";
+"clips.noComments" = "अभी तक कोई कमेंट नहीं";
+"clips.beFirstToComment" = "पहला कमेंट करें";
+"clips.replyingTo" = "को जवाब दे रहे हैं";
+"clips.reply" = "उत्तर दें";
+"clips.replies" = "उत्तर";
+"clips.viewReplies" = "देखें";
+"clips.hideReplies" = "छिपाएँ";
+"clips.addToList" = "सूची में जोड़ें";
+"clips.noListsYet" = "अभी तक कोई सूची नहीं";
+"clips.createFirstList" = "सामग्री सेव करने के लिए अपनी पहली सूची बनाएँ";
+"clips.createNewList" = "नई सूची बनाएँ";
+
+// Search
+"search.trendingSearches" = "ट्रेंडिंग खोजें";
+"search.noResultsFound" = "कोई परिणाम नहीं मिला";
+"search.results" = "परिणाम";
+"search.placehodler" = "टीवी शो या फिल्म खोजें...";
+
+// Auth
+"auth.welcomeBack" = "वापसी पर स्वागत है";
+"auth.signInContinue" = "जारी रखने के लिए साइन इन करें";
+"auth.forgotPassword" = "पासवर्ड भूल गए?";
+"auth.signIn" = "साइन इन";
+"auth.dontHaveAccount" = "क्या आपका अकाउंट नहीं है?";
+"auth.signUp" = "साइन अप";
+"auth.createAccount" = "अकाउंट बनाएं";
+"auth.joinVibeWatch" = "VibeWatch से जुड़ें और खोज शुरू करें";
+"auth.invalidEmail" = "अमान्य ईमेल";
+"auth.invalidPassword" = "अमान्य पासवर्ड";
+"auth.passwordsDontMatch" = "पासवर्ड मेल नहीं खाते";
+"auth.alreadyHaveAccount" = "क्या आपका पहले से अकाउंट है?";
+"auth.emailPlaceholder" = "ईमेल";
+"auth.usernamePlaceholder" = "यूज़रनेम";
+"auth.passwordPlaceholder" = "पासवर्ड";
+"auth.confirmPasswordPlaceholder" = "पासवर्ड की पुष्टि करें";
+
+// Notifications
+"notifications.permissionRequired" = "सूचना अनुमति आवश्यक";
+"notifications.openSettings" = "सेटिंग्स खोलें";
+"notifications.enableInSettings" = "नई रिलीज़, कीमत में बदलाव और अधिक जानकारी पाने के लिए सेटिंग्स में सूचनाएँ सक्षम करें।";
+"notifications.disableConfirmation" = "सूचनाएँ बंद करें?";
+"notifications.disableMessage" = "आप नई रिलीज़, कीमत बदलाव और निजी अनुशंसाओं के बारे में सूचनाएँ प्राप्त नहीं करेंगे।";
+"notifications.disableButton" = "सूचनाएँ बंद करें";
+
+// Misc
+"misc.language" = "हिंदी";
+"misc.somethingWrong" = "कुछ गलत है?";
+"misc.letUsKnow" = "हमें बताएं";
+"misc.selected" = "चयनित";
+"misc.of" = "का";

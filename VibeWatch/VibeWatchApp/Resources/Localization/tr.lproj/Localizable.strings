@@ -1,0 +1,215 @@
+/// Tab Bar
+"tab.discovery" = "Keşfet";
+"tab.clips" = "Klipler";
+"tab.lists" = "Listeler";
+"tab.profile" = "Profil";
+
+// Onboarding
+"onboarding.page1.title" = "Favorilerini takip et ve kaydet";
+"onboarding.page1.description" = "Sevdiğin film ve dizileri keşfet ve kaydet. Ne izlediğini ve sırada ne olduğunu takip et.";
+"onboarding.page2.title" = "Listelerle organize ol";
+"onboarding.page2.description" = "İçeriğini düzenlemek için özel listeler oluştur. İzleme listelerinden moduna göre koleksiyonlara kadar hepsi sana ait.";
+"onboarding.page3.title" = "Kliplerle keşfet";
+"onboarding.page3.description" = "Filmlerden ve dizilerden heyecan verici klipler izle. Topluluğa katıl, yorum yap, listelerine kaydet ve arkadaşlarınla paylaş.";
+"onboarding.page4.title" = "Başlamaya hazır mısın?";
+"onboarding.page4.description" = "Listelerini ve tercihlerini tüm cihazlarında senkronize etmek için bir hesap oluştur.";
+"onboarding.page4.createAccount" = "Hesap oluştur";
+"onboarding.page4.skip" = "Şimdilik geç";
+
+// Discovery
+"discovery.trending" = "Trendler";
+"discovery.popular" = "Popüler";
+"discovery.topRated" = "En yüksek puanlı";
+"discovery.basedOnMood" = "Senin için seçildi";
+"discovery.vibeWatch" = "VibeWatch";
+"discovery.upcoming" = "Yakında";
+"discovery.forYou" = "Senin için";
+"discovery.tvShows" = "Diziler";
+
+// Lists
+"lists.myLists" = "Listelerim";
+"lists.watchlist" = "İzleme listesi";
+"lists.seen" = "İzlendi";
+"lists.liked" = "Beğenildi";
+"lists.disliked" = "Beğenilmedi";
+"lists.empty" = "Henüz liste yok";
+"lists.emptyDescription" = "Favori içeriklerini düzenlemek için ilk listeni oluştur";
+"lists.createList" = "Liste oluştur";
+"lists.listName" = "Liste adı";
+"lists.listNamePlaceholder" = "Yeni liste";
+"lists.description" = "Açıklama (isteğe bağlı)";
+"lists.descriptionPlaceholder" = "Açıklama ekle… (isteğe bağlı)";
+"lists.listDescriptionPlaceholder" = "Açıklama ekle…";
+"lists.noItems" = "Henüz öğe yok";
+"lists.error.maxListsReached" = "En fazla {limit} özel liste sınırına ulaşıldı";
+"lists.error.maxItemsReached" = "Bu liste için {limit} öğe sınırına ulaşıldı";
+"lists.error.listNotFound" = "Liste bulunamadı";
+"lists.error.itemAlreadyInList" = "Öğe zaten bu listede";
+"lists.error.defaultImmutable" = "Bu liste değiştirilemez";
+"lists.error.invalidName" = "Lütfen geçerli bir liste adı gir";
+"lists.error.authRequired" = "Özel listeler oluşturmak için oturum açman gerekiyor.";
+"lists.limitInfo" = "{count}/{limit}";
+"lists.softLimitWarning" = "\"{name}\" zaten {limit} öğeye sahip. Düzeni korumak için yeni bir liste oluşturmayı düşün.";
+"lists.searchPlaceholder" = "Bu listede ara";
+"lists.editList" = "Listeyi düzenle";
+"list.all" = "Tümü";
+"list.movies" = "Filmler";
+"list.tvShows" = "TV";
+
+// Profile
+"profile.done" = "Bitti";
+"profile.cancel" = "İptal";
+"profile.notifications" = "Bildirimler";
+"profile.streamingServices" = "Yayın servisleri";
+"profile.settings" = "Ayarlar";
+"profile.helpSupport" = "Yardım ve destek";
+"profile.logout" = "Çıkış yap";
+"profile.signIn" = "Giriş yap";
+"profile.createAccount" = "Hesap oluştur";
+"profile.signInToVibeWatch" = "VibeWatch'a giriş yap";
+"profile.signInDescription" = "Listeler oluştur, klipler kaydet ve deneyimini kişiselleştir";
+"profile.userNamePlaceholder" = "E-posta veya kullanıcı adı";
+"profile.passwordPlaceholder" = "Şifre";
+
+// Settings
+"settings.title" = "Ayarlar";
+"settings.country" = "Ülke";
+"settings.language" = "Dil";
+"settings.selectCountry" = "Ülke seç";
+"settings.selectLanguage" = "Dil seç";
+
+// Movie Detail
+"movieDetail.save" = "Kaydet";
+"movieDetail.seen" = "İzlendi";
+"movieDetail.watchNow" = "Şimdi izle";
+"movieDetail.trailer" = "Fragman";
+"movieDetail.information" = "Bilgiler";
+"movieDetail.rating" = "Puan";
+"movieDetail.ratings" = "puanlar";
+"movieDetail.genres" = "Türler";
+"movieDetail.runtime" = "Süre";
+"movieDetail.country" = "Ülke";
+"movieDetail.director" = "Yönetmen";
+"movieDetail.cast" = "Oyuncular";
+"movieDetail.similar" = "Bunu beğenenler şunları da beğendi";
+
+// Filters
+"filter.all" = "Tümü";
+"filter.movies" = "Filmler";
+"filter.tvSeries" = "Diziler";
+
+// Sort
+"sort.dateAdded" = "Eklenme tarihi";
+"sort.title" = "Başlık";
+"sort.releaseDate" = "Vizyon tarihi";
+"sort.rating" = "Puan";
+"sort.sortBy" = "Sırala";
+"sort.popularityDesc" = "Popülerlik ↓";
+"sort.popularityAsc" = "Popülerlik ↑";
+"sort.ratingDesc" = "Puan ↓";
+"sort.ratingAsc" = "Puan ↑";
+"sort.releaseDateDesc" = "Vizyon tarihi ↓";
+"sort.releaseDateAsc" = "Vizyon tarihi ↑";
+
+// Advanced Filters
+"filters.title" = "Filtreler";
+"filters.reset" = "Sıfırla";
+"filters.apply" = "Uygula";
+"filters.runtime" = "Süre";
+"filters.minimumRating" = "En düşük puan";
+"filters.country" = "Ülke";
+"filters.sortBy" = "Sırala";
+"filters.anyCountry" = "Herhangi bir ülke";
+"filters.runtimeAny" = "Fark etmez";
+"filters.runtimeShort" = "< 90 dk";
+"filters.runtimeMedium" = "90–120 dk";
+"filters.runtimeLong" = "> 120 dk";
+"filters.ratingAny" = "Fark etmez";
+"filters.ratingGood" = "7.0+";
+"filters.ratingExcellent" = "8.0+";
+"filters.ratingMasterpiece" = "9.0+";
+
+// Browse
+"browse.title" = "Göz at";
+"browse.movies" = "Filmler";
+"browse.tvShows" = "Diziler";
+"browse.emptyMessage" = "İçeriklere göz atmak için filtre butonuna dokun";
+
+// Platforms
+"platforms.title" = "Platformlar";
+"platforms.streaming" = "Yayın";
+"platforms.rent" = "Kirala";
+"platforms.buy" = "Satın al";
+
+// Common
+"common.done" = "Bitti";
+"common.cancel" = "İptal";
+"common.save" = "Kaydet";
+"common.delete" = "Sil";
+"common.edit" = "Düzenle";
+"common.search" = "Ara";
+"common.year" = "Yıl";
+"common.loading" = "Yükleniyor...";
+"common.items" = "öğe";
+"common.item" = "öğe";
+"common.or" = "VEYA";
+"common.reply" = "Yanıtla";
+"common.uploading" = "Yükleniyor...";
+"common.loadMore" = "Daha fazla yükle";
+
+// Clips
+"clips.loadingClips" = "Klipler yükleniyor...";
+"clips.noClipsAvailable" = "Klip yok";
+"clips.noClipsDescription" = "Favori film ve dizilerinden heyecanlı sahneler için daha sonra tekrar kontrol et";
+"clips.comment" = "Yorum";
+"clips.comments" = "Yorumlar";
+"clips.noComments" = "Henüz yorum yok";
+"clips.beFirstToComment" = "İlk yorum yapan sen ol";
+"clips.replyingTo" = "Şuna yanıt veriliyor";
+"clips.reply" = "Yanıtla";
+"clips.replies" = "yanıt";
+"clips.viewReplies" = "Göster";
+"clips.hideReplies" = "Gizle";
+"clips.addToList" = "Listeye ekle";
+"clips.noListsYet" = "Henüz liste yok";
+"clips.createFirstList" = "İçerik kaydetmek için ilk listeni oluştur";
+"clips.createNewList" = "Yeni liste oluştur";
+
+// Search
+"search.trendingSearches" = "Trend aramalar";
+"search.noResultsFound" = "Sonuç bulunamadı";
+"search.results" = "Sonuçlar";
+"search.placehodler" = "Bir dizi veya film ara...";
+
+// Auth
+"auth.welcomeBack" = "Tekrar hoş geldin";
+"auth.signInContinue" = "Devam etmek için giriş yap";
+"auth.forgotPassword" = "Şifreni mi unuttun?";
+"auth.signIn" = "Giriş yap";
+"auth.dontHaveAccount" = "Hesabın yok mu?";
+"auth.signUp" = "Kayıt ol";
+"auth.createAccount" = "Hesap oluştur";
+"auth.joinVibeWatch" = "VibeWatch'a katıl ve keşfetmeye başla";
+"auth.invalidEmail" = "Geçersiz e-posta";
+"auth.invalidPassword" = "Geçersiz şifre";
+"auth.passwordsDontMatch" = "Şifreler eşleşmiyor";
+"auth.alreadyHaveAccount" = "Zaten bir hesabın var mı?";
+"auth.emailPlaceholder" = "E-posta";
+"auth.usernamePlaceholder" = "Kullanıcı adı";
+"auth.passwordPlaceholder" = "Şifre";
+"auth.confirmPasswordPlaceholder" = "Şifreyi doğrula";
+
+// Notifications
+"notifications.permissionRequired" = "Bildirim izni gerekli";
+"notifications.openSettings" = "Ayarları aç";
+"notifications.enableInSettings" = "Yeni çıkışlar, fiyat değişiklikleri ve daha fazlası hakkında güncellemeler almak için Ayarlar'dan bildirimleri etkinleştir.";
+"notifications.disableConfirmation" = "Bildirimler devre dışı bırakılsın mı?";
+"notifications.disableMessage" = "Artık yeni çıkışlar, fiyat değişiklikleri ve kişisel öneriler hakkında bildirim almayacaksın.";
+"notifications.disableButton" = "Bildirimleri kapat";
+
+// Misc
+"misc.language" = "Türkçe";
+"misc.somethingWrong" = "Bir şey mi ters gitti?";
+"misc.letUsKnow" = "Bize bildir";
+"misc.selected" = "seçili";
+"misc.of" = "/";

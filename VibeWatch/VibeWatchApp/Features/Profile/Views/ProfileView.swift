@@ -75,6 +75,7 @@ struct ProfileView: View {
     @State private var showDisableConfirmation = false
     @State private var showPlatformSelector = false
     @State private var showSettings = false
+    @State private var pendingNotificationToggle = false
     @AppStorage("selectedPlatforms") private var selectedPlatformsData: Data = Data()
     
     private var selectedPlatforms: Set<StreamingPlatform> {
@@ -431,26 +432,16 @@ struct ProfileView: View {
                 
                 Spacer()
                 
+                // Use default iOS toggle (iOS 26+ has new design automatically)
                 Toggle("", isOn: $notificationService.notificationsEnabled)
                     .labelsHidden()
                     .tint(.theme.accentOrange)
-                    .onChange(of: notificationService.notificationsEnabled) { newValue in
-                        Task {
-                            if newValue {
-                                // User wants to enable notifications
-                                let success = await notificationService.enableNotifications()
-                                
-                                if !success {
-                                    // Permission denied - reset toggle and show alert
-                                    notificationService.notificationsEnabled = false
-                                    showNotificationAlert = true
-                                }
-                            } else {
-                                // User wants to disable notifications - show confirmation
-                                showDisableConfirmation = true
-                            }
-                        }
-                    }
+            }
+            .onChange(of: notificationService.notificationsEnabled) { newValue in
+                if !pendingNotificationToggle {
+                    pendingNotificationToggle = true
+                    handleNotificationToggle()
+                }
             }
             .padding()
             
@@ -510,6 +501,30 @@ struct ProfileView: View {
             }
         } message: {
             Text("notifications.disableMessage".localized)
+        }
+    }
+    
+    private func handleNotificationToggle() {
+        Task {
+            defer { pendingNotificationToggle = false }
+            
+            if notificationService.notificationsEnabled {
+                // User wants to enable notifications
+                let success = await notificationService.enableNotifications()
+                
+                if !success {
+                    // Permission denied - reset toggle and show alert
+                    await MainActor.run {
+                        notificationService.notificationsEnabled = false
+                        showNotificationAlert = true
+                    }
+                }
+            } else {
+                // User wants to disable notifications - show confirmation
+                await MainActor.run {
+                    showDisableConfirmation = true
+                }
+            }
         }
     }
     

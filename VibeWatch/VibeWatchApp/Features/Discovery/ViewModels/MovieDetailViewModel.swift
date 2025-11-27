@@ -42,14 +42,17 @@ class MovieDetailViewModel: ObservableObject {
             
             // Use current country for watch providers
             let country = LocalizationManager.shared.currentCountry.id
-            let baseProviders = providersData.results?[country]
+            let baseProviders = providersData.results[country]
             
             similarMovies = Array(similarData.results.prefix(10))
             
             print("🎬 [MovieDetail] IMDB ID: \(imdbId ?? "nil")")
             print("🔗 [MovieDetail] JustWatch Link: \(baseProviders?.link ?? "nil")")
             
-            // Fetch streaming availability pricing and quality data
+            // Fetch streaming availability pricing and quality data (non-blocking)
+            // Always set watchProviders first to prevent errors
+            watchProviders = baseProviders
+            
             do {
                 let watchmodeSources = try await watchmodeService.getStreamingSources(
                     tmdbId: movieId,
@@ -63,13 +66,10 @@ class MovieDetailViewModel: ObservableObject {
                 if var providers = baseProviders {
                     providers = mergeWatchmodeData(providers: providers, sources: watchmodeSources)
                     watchProviders = providers
-                } else {
-                    watchProviders = baseProviders
                 }
             } catch {
                 print("⚠️ [Watchmode] Failed to fetch pricing data: \(error.localizedDescription)")
-                // Fall back to TMDb providers without pricing
-                watchProviders = baseProviders
+                // Already set watchProviders above, so we're good
             }
             
             // Debug: Print provider information including price and quality
@@ -281,14 +281,17 @@ class TVShowDetailViewModel: ObservableObject {
             
             // Use current country for watch providers
             let country = LocalizationManager.shared.currentCountry.id
-            let baseProviders = providersData.results?[country]
+            let baseProviders = providersData.results[country]
             
             similarShows = Array(similarData.results.prefix(10))
             
             print("📺 [TVShowDetail] IMDB ID: \(imdbId ?? "nil")")
             print("🔗 [TVShowDetail] JustWatch Link: \(baseProviders?.link ?? "nil")")
             
-            // Fetch streaming availability pricing and quality data
+            // Fetch streaming availability pricing and quality data (non-blocking)
+            // Always set watchProviders first to prevent errors
+            watchProviders = baseProviders
+            
             do {
                 let watchmodeSources = try await watchmodeService.getStreamingSources(
                     tmdbId: tvShowId,
@@ -302,13 +305,10 @@ class TVShowDetailViewModel: ObservableObject {
                 if var providers = baseProviders {
                     providers = mergeWatchmodeData(providers: providers, sources: watchmodeSources)
                     watchProviders = providers
-                } else {
-                    watchProviders = baseProviders
                 }
             } catch {
                 print("⚠️ [Watchmode] Failed to fetch pricing data: \(error.localizedDescription)")
-                // Fall back to TMDb providers without pricing
-                watchProviders = baseProviders
+                // Already set watchProviders above, so we're good
             }
             
             // Debug: Print provider information including price and quality

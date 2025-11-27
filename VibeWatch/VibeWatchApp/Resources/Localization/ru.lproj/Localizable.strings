@@ -1,0 +1,215 @@
+/// Tab Bar
+"tab.discovery" = "Обзор";
+"tab.clips" = "Клипы";
+"tab.lists" = "Списки";
+"tab.profile" = "Профиль";
+
+// Onboarding
+"onboarding.page1.title" = "Отслеживайте и сохраняйте избранное";
+"onboarding.page1.description" = "Открывайте и сохраняйте фильмы и сериалы, которые вам нравятся. Следите за тем, что вы уже посмотрели и что хотите посмотреть.";
+"onboarding.page2.title" = "Организуйте с помощью списков";
+"onboarding.page2.description" = "Создавайте собственные списки, чтобы организовать контент. От списков «Посмотреть позже» до коллекций по настроению — всё под вашим контролем.";
+"onboarding.page3.title" = "Открывайте через клипы";
+"onboarding.page3.description" = "Смотрите захватывающие клипы из фильмов и сериалов. Общайтесь, комментируйте, добавляйте в списки и делитесь с друзьями.";
+"onboarding.page4.title" = "Готовы начать?";
+"onboarding.page4.description" = "Создайте аккаунт, чтобы синхронизировать списки и предпочтения на всех устройствах.";
+"onboarding.page4.createAccount" = "Создать аккаунт";
+"onboarding.page4.skip" = "Пропустить";
+
+// Discovery
+"discovery.trending" = "В тренде";
+"discovery.popular" = "Популярное";
+"discovery.topRated" = "Лучшие";
+"discovery.basedOnMood" = "Подобрано для вас";
+"discovery.vibeWatch" = "VibeWatch";
+"discovery.upcoming" = "Скоро выходит";
+"discovery.forYou" = "Для вас";
+"discovery.tvShows" = "Сериалы";
+
+// Lists
+"lists.myLists" = "Мои списки";
+"lists.watchlist" = "Посмотреть позже";
+"lists.seen" = "Просмотрено";
+"lists.liked" = "Понравилось";
+"lists.disliked" = "Не понравилось";
+"lists.empty" = "Списков пока нет";
+"lists.emptyDescription" = "Создайте первый список, чтобы начать организовывать любимый контент";
+"lists.createList" = "Создать список";
+"lists.listName" = "Название списка";
+"lists.listNamePlaceholder" = "Новый список";
+"lists.description" = "Описание (необязательно)";
+"lists.descriptionPlaceholder" = "Добавьте описание… (необязательно)";
+"lists.listDescriptionPlaceholder" = "Добавьте описание…";
+"lists.noItems" = "Пока нет элементов";
+"lists.error.maxListsReached" = "Достигнут максимум — {limit} списков";
+"lists.error.maxItemsReached" = "Достигнут предел — {limit} элементов в этом списке";
+"lists.error.listNotFound" = "Список не найден";
+"lists.error.itemAlreadyInList" = "Элемент уже в списке";
+"lists.error.defaultImmutable" = "Этот список нельзя изменять";
+"lists.error.invalidName" = "Введите корректное название";
+"lists.error.authRequired" = "Необходимо войти, чтобы создавать списки.";
+"lists.limitInfo" = "{count}/{limit}";
+"lists.softLimitWarning" = "«{name}» уже содержит {limit} элементов. Рассмотрите возможность создания нового списка.";
+"lists.searchPlaceholder" = "Поиск по списку";
+"lists.editList" = "Редактировать список";
+"list.all" = "Все";
+"list.movies" = "Фильмы";
+"list.tvShows" = "Сериалы";
+
+// Profile
+"profile.done" = "Готово";
+"profile.cancel" = "Отмена";
+"profile.notifications" = "Уведомления";
+"profile.streamingServices" = "Стриминг-сервисы";
+"profile.settings" = "Настройки";
+"profile.helpSupport" = "Помощь и поддержка";
+"profile.logout" = "Выйти";
+"profile.signIn" = "Войти";
+"profile.createAccount" = "Создать аккаунт";
+"profile.signInToVibeWatch" = "Войти в VibeWatch";
+"profile.signInDescription" = "Создавайте списки, сохраняйте клипы и персонализируйте свой опыт";
+"profile.userNamePlaceholder" = "Email или имя пользователя";
+"profile.passwordPlaceholder" = "Пароль";
+
+// Settings
+"settings.title" = "Настройки";
+"settings.country" = "Страна";
+"settings.language" = "Язык";
+"settings.selectCountry" = "Выберите страну";
+"settings.selectLanguage" = "Выберите язык";
+
+// Movie Detail
+"movieDetail.save" = "Сохранить";
+"movieDetail.seen" = "Просмотрено";
+"movieDetail.watchNow" = "Смотреть сейчас";
+"movieDetail.trailer" = "Трейлер";
+"movieDetail.information" = "Информация";
+"movieDetail.rating" = "Рейтинг";
+"movieDetail.ratings" = "рейтинги";
+"movieDetail.genres" = "Жанры";
+"movieDetail.runtime" = "Длительность";
+"movieDetail.country" = "Страна";
+"movieDetail.director" = "Режиссёр";
+"movieDetail.cast" = "Актёры";
+"movieDetail.similar" = "Похожие пользователи также понравилось";
+
+// Filters
+"filter.all" = "Все";
+"filter.movies" = "Фильмы";
+"filter.tvSeries" = "Сериалы";
+
+// Sort
+"sort.dateAdded" = "Дата добавления";
+"sort.title" = "Название";
+"sort.releaseDate" = "Дата выхода";
+"sort.rating" = "Рейтинг";
+"sort.sortBy" = "Сортировать по";
+"sort.popularityDesc" = "Популярность ↓";
+"sort.popularityAsc" = "Популярность ↑";
+"sort.ratingDesc" = "Рейтинг ↓";
+"sort.ratingAsc" = "Рейтинг ↑";
+"sort.releaseDateDesc" = "Дата выхода ↓";
+"sort.releaseDateAsc" = "Дата выхода ↑";
+
+// Advanced Filters
+"filters.title" = "Фильтры";
+"filters.reset" = "Сбросить";
+"filters.apply" = "Применить";
+"filters.runtime" = "Длительность";
+"filters.minimumRating" = "Минимальный рейтинг";
+"filters.country" = "Страна";
+"filters.sortBy" = "Сортировка";
+"filters.anyCountry" = "Любая страна";
+"filters.runtimeAny" = "Любая";
+"filters.runtimeShort" = "< 90 мин";
+"filters.runtimeMedium" = "90–120 мин";
+"filters.runtimeLong" = "> 120 мин";
+"filters.ratingAny" = "Любой";
+"filters.ratingGood" = "7.0+";
+"filters.ratingExcellent" = "8.0+";
+"filters.ratingMasterpiece" = "9.0+";
+
+// Browse
+"browse.title" = "Обзор";
+"browse.movies" = "Фильмы";
+"browse.tvShows" = "Сериалы";
+"browse.emptyMessage" = "Нажмите на кнопку фильтров, чтобы просматривать контент";
+
+// Platforms
+"platforms.title" = "Платформы";
+"platforms.streaming" = "Стриминг";
+"platforms.rent" = "Аренда";
+"platforms.buy" = "Покупка";
+
+// Common
+"common.done" = "Готово";
+"common.cancel" = "Отмена";
+"common.save" = "Сохранить";
+"common.delete" = "Удалить";
+"common.edit" = "Редактировать";
+"common.search" = "Поиск";
+"common.year" = "Год";
+"common.loading" = "Загрузка...";
+"common.items" = "элементов";
+"common.item" = "элемент";
+"common.or" = "или";
+"common.reply" = "Ответить";
+"common.uploading" = "Загрузка...";
+"common.loadMore" = "Показать ещё";
+
+// Clips
+"clips.loadingClips" = "Загрузка клипов...";
+"clips.noClipsAvailable" = "Клипы недоступны";
+"clips.noClipsDescription" = "Загляните позже, чтобы увидеть новые сцены из любимых фильмов и сериалов";
+"clips.comment" = "Комментарий";
+"clips.comments" = "Комментарии";
+"clips.noComments" = "Комментариев пока нет";
+"clips.beFirstToComment" = "Оставьте первый комментарий";
+"clips.replyingTo" = "Ответ пользователю";
+"clips.reply" = "Ответить";
+"clips.replies" = "ответов";
+"clips.viewReplies" = "Показать";
+"clips.hideReplies" = "Скрыть";
+"clips.addToList" = "Добавить в список";
+"clips.noListsYet" = "Списков пока нет";
+"clips.createFirstList" = "Создайте первый список, чтобы сохранять контент";
+"clips.createNewList" = "Создать новый список";
+
+// Search
+"search.trendingSearches" = "Популярные запросы";
+"search.noResultsFound" = "Ничего не найдено";
+"search.results" = "Результаты";
+"search.placehodler" = "Искать фильм или сериал...";
+
+// Auth
+"auth.welcomeBack" = "С возвращением";
+"auth.signInContinue" = "Войдите, чтобы продолжить";
+"auth.forgotPassword" = "Забыли пароль?";
+"auth.signIn" = "Войти";
+"auth.dontHaveAccount" = "Нет аккаунта?";
+"auth.signUp" = "Регистрация";
+"auth.createAccount" = "Создать аккаунт";
+"auth.joinVibeWatch" = "Присоединяйтесь к VibeWatch и начните открывать новое";
+"auth.invalidEmail" = "Некорректный email";
+"auth.invalidPassword" = "Некорректный пароль";
+"auth.passwordsDontMatch" = "Пароли не совпадают";
+"auth.alreadyHaveAccount" = "Уже есть аккаунт?";
+"auth.emailPlaceholder" = "Email";
+"auth.usernamePlaceholder" = "Имя пользователя";
+"auth.passwordPlaceholder" = "Пароль";
+"auth.confirmPasswordPlaceholder" = "Подтвердите пароль";
+
+// Notifications
+"notifications.permissionRequired" = "Требуется разрешение на уведомления";
+"notifications.openSettings" = "Открыть настройки";
+"notifications.enableInSettings" = "Включите уведомления, чтобы получать новости о новых релизах, изменениях цен и рекомендациях.";
+"notifications.disableConfirmation" = "Отключить уведомления?";
+"notifications.disableMessage" = "Вы не будете получать уведомления о новых релизах и персональных рекомендациях.";
+"notifications.disableButton" = "Отключить уведомления";
+
+// Misc
+"misc.language" = "Русский";
+"misc.somethingWrong" = "Что-то пошло не так?";
+"misc.letUsKnow" = "Сообщите нам";
+"misc.selected" = "выбрано";
+"misc.of" = "из";

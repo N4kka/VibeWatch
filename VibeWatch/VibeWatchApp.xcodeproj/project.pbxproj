@@ -141,6 +141,20 @@
 				fr,
 				de,
 				pt,
+				zh,
+				ru,
+				ja,
+				hi,
+				ko,
+				nl,
+				pl,
+				fi,
+				da,
+				el,
+				no,
+				tr,
+				nb,
+				sv,
 			);
 			mainGroup = B318DC812EC6920500DB1A9A;
 			minimizedProjectReferenceProxies = 1;

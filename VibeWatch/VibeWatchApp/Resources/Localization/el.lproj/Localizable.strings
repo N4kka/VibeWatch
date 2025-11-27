@@ -1,0 +1,215 @@
+/// Tab Bar
+"tab.discovery" = "Ανακάλυψη";
+"tab.clips" = "Κλιπ";
+"tab.lists" = "Λίστες";
+"tab.profile" = "Προφίλ";
+
+// Onboarding
+"onboarding.page1.title" = "Παρακολούθησε και αποθήκευσε τα αγαπημένα σου";
+"onboarding.page1.description" = "Ανακάλυψε και αποθήκευσε ταινίες και σειρές που αγαπάς. Παρακολούθησε τι έχεις δει και τι θέλεις να δεις στη συνέχεια.";
+"onboarding.page2.title" = "Οργάνωσε με λίστες";
+"onboarding.page2.description" = "Δημιούργησε προσαρμοσμένες λίστες για να οργανώσεις το περιεχόμενό σου. Από watchlists μέχρι συλλογές ανά διάθεση – όπως σε βολεύει.";
+"onboarding.page3.title" = "Ανακάλυψε μέσω κλιπ";
+"onboarding.page3.description" = "Δες εντυπωσιακά κλιπ από ταινίες και σειρές. Μπες στην κοινότητα, σχολίασε, αποθήκευσε σε λίστες και μοιράσου με φίλους.";
+"onboarding.page4.title" = "Έτοιμος να ξεκινήσεις;";
+"onboarding.page4.description" = "Δημιούργησε λογαριασμό για να συγχρονίζεις λίστες και προτιμήσεις σε όλες τις συσκευές σου.";
+"onboarding.page4.createAccount" = "Δημιουργία λογαριασμού";
+"onboarding.page4.skip" = "Παράλειψη προς το παρόν";
+
+// Discovery
+"discovery.trending" = "Τάσεις τώρα";
+"discovery.popular" = "Δημοφιλή";
+"discovery.topRated" = "Υψηλότερη βαθμολογία";
+"discovery.basedOnMood" = "Επιλογή μόνο για σένα";
+"discovery.vibeWatch" = "VibeWatch";
+"discovery.upcoming" = "Επερχόμενα";
+"discovery.forYou" = "Για σένα";
+"discovery.tvShows" = "Σειρές";
+
+// Lists
+"lists.myLists" = "Οι λίστες μου";
+"lists.watchlist" = "Watchlist";
+"lists.seen" = "Είδα";
+"lists.liked" = "Μου άρεσε";
+"lists.disliked" = "Δεν μου άρεσε";
+"lists.empty" = "Καμία λίστα ακόμα";
+"lists.emptyDescription" = "Δημιούργησε την πρώτη σου λίστα για να οργανώσεις το αγαπημένο σου περιεχόμενο";
+"lists.createList" = "Δημιουργία λίστας";
+"lists.listName" = "Όνομα λίστας";
+"lists.listNamePlaceholder" = "Νέα λίστα";
+"lists.description" = "Περιγραφή (προαιρετικό)";
+"lists.descriptionPlaceholder" = "Πρόσθεσε περιγραφή… (προαιρετικό)";
+"lists.listDescriptionPlaceholder" = "Πρόσθεσε περιγραφή…";
+"lists.noItems" = "Καμία εγγραφή ακόμα";
+"lists.error.maxListsReached" = "Έχεις φτάσει το μέγιστο των {limit} προσαρμοσμένων λιστών";
+"lists.error.maxItemsReached" = "Έχεις φτάσει το όριο των {limit} εγγραφών για αυτή τη λίστα";
+"lists.error.listNotFound" = "Η λίστα δεν βρέθηκε";
+"lists.error.itemAlreadyInList" = "Το στοιχείο υπάρχει ήδη σε αυτή τη λίστα";
+"lists.error.defaultImmutable" = "Αυτή η λίστα δεν μπορεί να τροποποιηθεί";
+"lists.error.invalidName" = "Εισήγαγε ένα έγκυρο όνομα λίστας";
+"lists.error.authRequired" = "Πρέπει να είσαι συνδεδεμένος για να δημιουργήσεις προσαρμοσμένες λίστες.";
+"lists.limitInfo" = "{count}/{limit}";
+"lists.softLimitWarning" = "Η \"{name}\" έχει ήδη {limit} εγγραφές. Σκέψου να δημιουργήσεις άλλη λίστα για να διατηρήσεις την οργάνωση.";
+"lists.searchPlaceholder" = "Αναζήτηση σε αυτή τη λίστα";
+"lists.editList" = "Επεξεργασία λίστας";
+"list.all" = "Όλα";
+"list.movies" = "Ταινίες";
+"list.tvShows" = "TV";
+
+// Profile
+"profile.done" = "Τέλος";
+"profile.cancel" = "Άκυρο";
+"profile.notifications" = "Ειδοποιήσεις";
+"profile.streamingServices" = "Υπηρεσίες streaming";
+"profile.settings" = "Ρυθμίσεις";
+"profile.helpSupport" = "Βοήθεια & υποστήριξη";
+"profile.logout" = "Αποσύνδεση";
+"profile.signIn" = "Σύνδεση";
+"profile.createAccount" = "Δημιουργία λογαριασμού";
+"profile.signInToVibeWatch" = "Σύνδεση στο VibeWatch";
+"profile.signInDescription" = "Δημιούργησε λίστες, αποθήκευσε κλιπ και προσαρμόσε την εμπειρία σου";
+"profile.userNamePlaceholder" = "Email ή όνομα χρήστη";
+"profile.passwordPlaceholder" = "Κωδικός πρόσβασης";
+
+// Settings
+"settings.title" = "Ρυθμίσεις";
+"settings.country" = "Χώρα";
+"settings.language" = "Γλώσσα";
+"settings.selectCountry" = "Επίλεξε χώρα";
+"settings.selectLanguage" = "Επίλεξε γλώσσα";
+
+// Movie Detail
+"movieDetail.save" = "Αποθήκευση";
+"movieDetail.seen" = "Το είδα";
+"movieDetail.watchNow" = "Δες τώρα";
+"movieDetail.trailer" = "Τρέιλερ";
+"movieDetail.information" = "Πληροφορίες";
+"movieDetail.rating" = "Βαθμολογία";
+"movieDetail.ratings" = "βαθμολογίες";
+"movieDetail.genres" = "Είδη";
+"movieDetail.runtime" = "Διάρκεια";
+"movieDetail.country" = "Χώρα";
+"movieDetail.director" = "Σκηνοθέτης";
+"movieDetail.cast" = "Ηθοποιοί";
+"movieDetail.similar" = "Όσοι το αγάπησαν, αγάπησαν επίσης";
+
+// Filters
+"filter.all" = "Όλα";
+"filter.movies" = "Ταινίες";
+"filter.tvSeries" = "Σειρές";
+
+// Sort
+"sort.dateAdded" = "Ημερομηνία προσθήκης";
+"sort.title" = "Τίτλος";
+"sort.releaseDate" = "Ημερομηνία κυκλοφορίας";
+"sort.rating" = "Βαθμολογία";
+"sort.sortBy" = "Ταξινόμηση κατά";
+"sort.popularityDesc" = "Δημοτικότητα ↓";
+"sort.popularityAsc" = "Δημοτικότητα ↑";
+"sort.ratingDesc" = "Βαθμολογία ↓";
+"sort.ratingAsc" = "Βαθμολογία ↑";
+"sort.releaseDateDesc" = "Ημερομηνία κυκλοφορίας ↓";
+"sort.releaseDateAsc" = "Ημερομηνία κυκλοφορίας ↑";
+
+// Advanced Filters
+"filters.title" = "Φίλτρα";
+"filters.reset" = "Επαναφορά";
+"filters.apply" = "Εφαρμογή";
+"filters.runtime" = "Διάρκεια";
+"filters.minimumRating" = "Ελάχιστη βαθμολογία";
+"filters.country" = "Χώρα";
+"filters.sortBy" = "Ταξινόμηση";
+"filters.anyCountry" = "Οποιαδήποτε χώρα";
+"filters.runtimeAny" = "Οποιαδήποτε";
+"filters.runtimeShort" = "< 90 λεπτά";
+"filters.runtimeMedium" = "90–120 λεπτά";
+"filters.runtimeLong" = "> 120 λεπτά";
+"filters.ratingAny" = "Οποιαδήποτε";
+"filters.ratingGood" = "7.0+";
+"filters.ratingExcellent" = "8.0+";
+"filters.ratingMasterpiece" = "9.0+";
+
+// Browse
+"browse.title" = "Περιήγηση";
+"browse.movies" = "Ταινίες";
+"browse.tvShows" = "Σειρές";
+"browse.emptyMessage" = "Πάτα το κουμπί φίλτρων για να περιηγηθείς στο περιεχόμενο";
+
+// Platforms
+"platforms.title" = "Πλατφόρμες";
+"platforms.streaming" = "Streaming";
+"platforms.rent" = "Ενοικίαση";
+"platforms.buy" = "Αγορά";
+
+// Common
+"common.done" = "Τέλος";
+"common.cancel" = "Άκυρο";
+"common.save" = "Αποθήκευση";
+"common.delete" = "Διαγραφή";
+"common.edit" = "Επεξεργασία";
+"common.search" = "Αναζήτηση";
+"common.year" = "Έτος";
+"common.loading" = "Φόρτωση...";
+"common.items" = "στοιχεία";
+"common.item" = "στοιχείο";
+"common.or" = "Ή";
+"common.reply" = "Απάντηση";
+"common.uploading" = "Γίνεται μεταφόρτωση...";
+"common.loadMore" = "Φόρτωσε περισσότερα";
+
+// Clips
+"clips.loadingClips" = "Γίνεται φόρτωση κλιπ...";
+"clips.noClipsAvailable" = "Δεν υπάρχουν διαθέσιμα κλιπ";
+"clips.noClipsDescription" = "Έλα ξανά αργότερα για εντυπωσιακές σκηνές από τις αγαπημένες σου ταινίες και σειρές";
+"clips.comment" = "Σχόλιο";
+"clips.comments" = "Σχόλια";
+"clips.noComments" = "Δεν υπάρχουν σχόλια ακόμα";
+"clips.beFirstToComment" = "Γίνε ο πρώτος που σχολιάζει";
+"clips.replyingTo" = "Απάντηση σε";
+"clips.reply" = "Απάντηση";
+"clips.replies" = "απαντήσεις";
+"clips.viewReplies" = "Προβολή";
+"clips.hideReplies" = "Απόκρυψη";
+"clips.addToList" = "Προσθήκη στη λίστα";
+"clips.noListsYet" = "Καμία λίστα ακόμα";
+"clips.createFirstList" = "Δημιούργησε την πρώτη σου λίστα για να αποθηκεύεις περιεχόμενο";
+"clips.createNewList" = "Δημιουργία νέας λίστας";
+
+// Search
+"search.trendingSearches" = "Δημοφιλείς αναζητήσεις";
+"search.noResultsFound" = "Δεν βρέθηκαν αποτελέσματα";
+"search.results" = "Αποτελέσματα";
+"search.placehodler" = "Αναζήτησε μια σειρά ή ταινία...";
+
+// Auth
+"auth.welcomeBack" = "Καλώς ήρθες ξανά";
+"auth.signInContinue" = "Συνδέσου για να συνεχίσεις";
+"auth.forgotPassword" = "Ξέχασες τον κωδικό;";
+"auth.signIn" = "Σύνδεση";
+"auth.dontHaveAccount" = "Δεν έχεις λογαριασμό;";
+"auth.signUp" = "Εγγραφή";
+"auth.createAccount" = "Δημιουργία λογαριασμού";
+"auth.joinVibeWatch" = "Μπες στο VibeWatch και ξεκίνα την ανακάλυψη";
+"auth.invalidEmail" = "Μη έγκυρο email";
+"auth.invalidPassword" = "Μη έγκυρος κωδικός";
+"auth.passwordsDontMatch" = "Οι κωδικοί δεν ταιριάζουν";
+"auth.alreadyHaveAccount" = "Έχεις ήδη λογαριασμό;";
+"auth.emailPlaceholder" = "Email";
+"auth.usernamePlaceholder" = "Όνομα χρήστη";
+"auth.passwordPlaceholder" = "Κωδικός πρόσβασης";
+"auth.confirmPasswordPlaceholder" = "Επιβεβαίωση κωδικού";
+
+// Notifications
+"notifications.permissionRequired" = "Απαιτείται άδεια ειδοποιήσεων";
+"notifications.openSettings" = "Άνοιγμα ρυθμίσεων";
+"notifications.enableInSettings" = "Ενεργοποίησε τις ειδοποιήσεις στις Ρυθμίσεις για να λαμβάνεις ενημερώσεις για νέες κυκλοφορίες, αλλαγές τιμών και άλλα.";
+"notifications.disableConfirmation" = "Να απενεργοποιηθούν οι ειδοποιήσεις;";
+"notifications.disableMessage" = "Δεν θα λαμβάνεις πλέον ειδοποιήσεις για νέες κυκλοφορίες, αλλαγές τιμών ή προσωπικές προτάσεις.";
+"notifications.disableButton" = "Απενεργοποίηση ειδοποιήσεων";
+
+// Misc
+"misc.language" = "Ελληνικά";
+"misc.somethingWrong" = "Κάτι δεν πήγε καλά;";
+"misc.letUsKnow" = "Ενημέρωσέ μας";
+"misc.selected" = "επιλεγμένα";
+"misc.of" = "από";

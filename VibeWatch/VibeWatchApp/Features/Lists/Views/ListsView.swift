@@ -5,6 +5,7 @@ struct ListsView: View {
     @StateObject private var listManager = ListManager.shared
     @ObservedObject var localizationManager = LocalizationManager.shared
     @EnvironmentObject var quotaManager: DailyQuotaManager
+    @EnvironmentObject var appState: AppState
     @State private var selectedFilter: MediaFilter = .all
     @AppStorage("selectedPlatforms") private var selectedPlatformsData: Data = Data()
     @State private var selectedListType: ListViewType = .myLists
@@ -40,44 +41,42 @@ struct ListsView: View {
     }
     
     var body: some View {
-        NavigationView {
-            ZStack {
-                Color.theme.background.ignoresSafeArea()
+        ZStack {
+            Color.theme.background.ignoresSafeArea()
+            
+            VStack(spacing: 0) {
+                OfflineBanner()
                 
-                VStack(spacing: 0) {
-                    OfflineBanner()
-                    
-                    headerView
-                    
-                    ListTypeSwitcher(selectedType: $selectedListType)
-                        .padding(.bottom, 16)
-                    
-                    combinedFiltersRow
-                    
-                    if currentLists.isEmpty {
-                        emptyStateView
-                    } else {
-                        contentView
-                    }
+                headerView
+                
+                ListTypeSwitcher(selectedType: $selectedListType)
+                    .padding(.bottom, 16)
+                
+                combinedFiltersRow
+                
+                if currentLists.isEmpty {
+                    emptyStateView
+                } else {
+                    contentView
                 }
             }
-            .navigationBarHidden(true)
-            .overlay {
-                if showFilters {
-                    AdvancedFiltersPanel(
-                        filters: $filters,
-                        showRuntimeFilter: false,
-                        onDismiss: {
-                            withAnimation {
-                                showFilters = false
-                            }
-                        },
-                        onApply: { _ in
-                            filterRefreshTrigger.toggle()
+        }
+        .navigationBarHidden(true)
+        .overlay {
+            if showFilters {
+                AdvancedFiltersPanel(
+                    filters: $filters,
+                    showRuntimeFilter: false,
+                    onDismiss: {
+                        withAnimation {
+                            showFilters = false
                         }
-                    )
-                    .environmentObject(quotaManager)
-                }
+                    },
+                    onApply: { _ in
+                        filterRefreshTrigger.toggle()
+                    }
+                )
+                .environmentObject(quotaManager)
             }
         }
         .task {
@@ -107,7 +106,6 @@ struct ListsView: View {
             itemsLimit = 50
         }
     }
-    
     private var headerView: some View {
         HStack {
             Text("lists.myLists".localized)
@@ -117,7 +115,7 @@ struct ListsView: View {
             Spacer()
             
             Button {
-                guard SupabaseService.shared.isAuthenticated else {
+                guard appState.isAuthenticated else {
                     showAuthGate = true
                     return
                 }
@@ -403,7 +401,7 @@ struct ListsView: View {
                 .padding(.horizontal, 40)
             
             Button {
-                guard SupabaseService.shared.isAuthenticated else {
+                guard appState.isAuthenticated else {
                     showAuthGate = true
                     return
                 }
@@ -705,6 +703,15 @@ struct MediaItemRow: View {
         }
     }
     
+    @ViewBuilder
+    private var destinationView: some View {
+        if item.mediaType == .movie {
+            MovieDetailView(movieId: item.mediaId)
+        } else {
+            TVShowDetailView(tvShowId: item.mediaId)
+        }
+    }
+    
     private func loadDetails() async {
         guard !isLoadingDetails else { return }
         isLoadingDetails = true
@@ -716,19 +723,10 @@ struct MediaItemRow: View {
                 tvShowDetails = try await tmdbService.getTVShowDetails(id: item.mediaId)
             }
         } catch {
-            print("Error loading details: \(error)")
+            print("❌ Error loading details: \(error.localizedDescription)")
         }
         
         isLoadingDetails = false
-    }
-    
-    @ViewBuilder
-    private var destinationView: some View {
-        if item.mediaType == .movie {
-            MovieDetailView(movieId: item.mediaId)
-        } else {
-            TVShowDetailView(tvShowId: item.mediaId)
-        }
     }
 }
 

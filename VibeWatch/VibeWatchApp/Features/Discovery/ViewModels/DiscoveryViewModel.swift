@@ -18,11 +18,16 @@ class DiscoveryViewModel: ObservableObject {
     @Published var selectedBrowseType: MediaType = .movie
     @Published var refreshToken = UUID()
     
+    var hasNoContent: Bool {
+        moodMovies.isEmpty && forYouMovies.isEmpty && viralMovies.isEmpty && forYouTVShows.isEmpty
+    }
+    
     private let dataCoordinator = DataCoordinator.shared
     private let tmdbService: TMDBServiceProtocol
     private let discoveryCache = DiscoveryCacheService.shared
     private let quotaManager: DailyQuotaManager
     private var cancellables = Set<AnyCancellable>()
+    private var browseTask: Task<Void, Never>?
     
     init(
         tmdbService: TMDBServiceProtocol = TMDBService.shared,
@@ -191,10 +196,36 @@ class DiscoveryViewModel: ObservableObject {
     
     /// Browse with filters - uses TMDb discover endpoint
     func browseWithFilters() async {
+        // Cancel any existing browse task
+        browseTask?.cancel()
+        
         print("🔍 [DiscoveryViewModel] Browsing with filters: \(filters)")
         
         isBrowseLoading = true
         
+        // Create new task and store it
+        browseTask = Task {
+            do {
+                try Task.checkCancellation()
+                try await performBrowse()
+            } catch is CancellationError {
+                print("⚠️ [DiscoveryViewModel] Browse task was cancelled")
+            } catch {
+                await MainActor.run {
+                    self.error = AppError.network(error)
+                    print("❌ [DiscoveryViewModel] Failed to browse: \(error)")
+                }
+            }
+            
+            await MainActor.run {
+                self.isBrowseLoading = false
+            }
+        }
+        
+        await browseTask?.value
+    }
+    
+    private func performBrowse() async throws {
         do {
             if selectedBrowseType == .movie {
                 let response = try await tmdbService.discoverMovies(
@@ -251,11 +282,8 @@ class DiscoveryViewModel: ObservableObject {
                 print("✅ [DiscoveryViewModel] Found \(browseTVShows.count) TV shows")
             }
         } catch {
-            self.error = AppError.network(error)
-            print("❌ [DiscoveryViewModel] Failed to browse: \(error)")
+            throw error
         }
-        
-        isBrowseLoading = false
     }
     
     /// Fallback method to fetch fresh content if needed

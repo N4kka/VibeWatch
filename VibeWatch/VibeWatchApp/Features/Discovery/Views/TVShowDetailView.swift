@@ -3,9 +3,11 @@ import WebKit
 
 struct TVShowDetailView: View {
     @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var appState: AppState
     @StateObject private var viewModel: TVShowDetailViewModel
     @StateObject private var listManager = ListManager.shared
     @State private var showSavePanel = false
+    @State private var showAuthGate = false
     @State private var showSearch = false
     @State private var showShareSheet = false
     @State private var shareItems: [Any] = []
@@ -90,6 +92,9 @@ struct TVShowDetailView: View {
                     shareItems = []
                 }
         }
+        .sheet(isPresented: $showAuthGate) {
+            AuthenticationGateView(isPresented: $showAuthGate)
+        }
         .overlay {
             if isPreparingShare {
                 ZStack {
@@ -161,7 +166,13 @@ struct TVShowDetailView: View {
                         ActionButtonsSection(
                             movie: movie,
                             mediaType: .tv,
-                            onSaveTap: { showSavePanel = true },
+                            onSaveTap: {
+                                guard appState.isAuthenticated else {
+                                    showAuthGate = true
+                                    return
+                                }
+                                showSavePanel = true
+                            },
                             onSeenTap: { Task { await handleSeenTap(tvShow: tvShow, movie: movie) } },
                             onLikedTap: { Task { await handleLikedTap(tvShow: tvShow, movie: movie) } },
                             onDislikedTap: { Task { await handleDislikedTap(tvShow: tvShow, movie: movie) } }
