@@ -28,21 +28,21 @@ class DatabaseClipsService {
     
     /// Fetch personalized clips (SQLite-first, offline-capable!)
     func fetchPersonalizedClips(count: Int = 20) async throws -> [Clip] {
-        print("📊 [DatabaseClips] Fetching from local SQLite database")
+        Logger.info("[DatabaseClips] Fetching from local SQLite database")
         
         do {
             let clips = try await fetchFromLocalDatabase(count: count)
             
             // If local DB returns clips, use them
             if !clips.isEmpty {
-                print("✅ [DatabaseClips] Successfully fetched \(clips.count) clips from local SQLite")
+                Logger.info("[DatabaseClips] Successfully fetched \(clips.count) clips from local SQLite")
                 return clips
             } else {
-                print("⚠️ [DatabaseClips] Local DB is empty, falling back to YouTube API")
+                Logger.warning("[DatabaseClips] Local DB is empty, falling back to YouTube API")
                 return try await fetchFromYouTubeAPI(count: count)
             }
         } catch {
-            print("❌ [DatabaseClips] Local DB fetch failed: \(error), falling back to YouTube API")
+            Logger.error("[DatabaseClips] Local DB fetch failed: \(error), falling back to YouTube API", error: error)
             return try await fetchFromYouTubeAPI(count: count)
         }
     }
@@ -62,7 +62,7 @@ class DatabaseClipsService {
             ORDER BY RANDOM()
         """)
         
-        print("🎲 [DatabaseClips] Fetched \(response.count) randomized clips from local SQLite")
+        Logger.debug("[DatabaseClips] Fetched \(response.count) randomized clips from local SQLite")
         
         // Parse rows to Clip objects
         var clips: [Clip] = response.compactMap { row in
@@ -113,23 +113,30 @@ class DatabaseClipsService {
         let watchedClips = await getWatchedClipIdsFromLocal(deviceId: deviceId)
         let unwatchedClips = clips.filter { !watchedClips.contains($0.id) }
         
-        // Return limited count
-        let finalClips = Array(unwatchedClips.prefix(count))
+        // Get liked status in one go
+        let likedClipIds = ClipsService.shared.getLikedClipIds()
         
-        print("✅ [DatabaseClips] Returning \(finalClips.count) personalized clips from local SQLite")
+        // Map to final model, setting isLiked status
+        let finalClips = unwatchedClips.prefix(count).map { clip -> Clip in
+            var mutableClip = clip
+            mutableClip.isLiked = likedClipIds.contains(clip.id)
+            return mutableClip
+        }
+        
+        Logger.info("[DatabaseClips] Returning \(finalClips.count) personalized clips from local SQLite")
         return finalClips
     }
     
     // MARK: - YouTube API Fallback
     
     private func fetchFromYouTubeAPI(count: Int) async throws -> [Clip] {
-        print("🎬 [DatabaseClips] Fetching from YouTube API via ClipsService")
+        Logger.info("[DatabaseClips] Fetching from YouTube API via ClipsService")
         
         // Use existing ClipsService for YouTube API fetching
         let clipsService = ClipsService.shared
         let clips = try await clipsService.fetchTrendingClips(page: 1, limit: count)
         
-        print("✅ [DatabaseClips] Fetched \(clips.count) clips from YouTube API")
+        Logger.info("[DatabaseClips] Fetched \(clips.count) clips from YouTube API")
         return clips
     }
     
@@ -142,7 +149,7 @@ class DatabaseClipsService {
         
         // After day 7 or on day 7, ALWAYS use DB (100%)
         if daysSinceInstall >= 7 {
-            print("📅 [DatabaseClips] Day \(daysSinceInstall), Using DB: 100% (full transition)")
+            Logger.debug("[DatabaseClips] Day \(daysSinceInstall), Using DB: 100% (full transition)")
             return true
         }
         
@@ -153,7 +160,7 @@ class DatabaseClipsService {
         let randomValue = Double.random(in: 0...1)
         let useDB = randomValue < dbPercentage
         
-        print("📅 [DatabaseClips] Day \(daysSinceInstall), DB%: \(Int(dbPercentage * 100))%, Random: \(String(format: "%.2f", randomValue)), Using DB: \(useDB)")
+        Logger.debug("[DatabaseClips] Day \(daysSinceInstall), DB%: \(Int(dbPercentage * 100))%, Random: \(String(format: "%.2f", randomValue)), Using DB: \(useDB)")
         
         return useDB
     }
@@ -169,7 +176,7 @@ class DatabaseClipsService {
             
             return Set(rows.compactMap { $0["clip_id"] as? String })
         } catch {
-            print("⚠️ [DatabaseClips] Error fetching watched clips from local DB: \(error)")
+            Logger.warning("[DatabaseClips] Error fetching watched clips from local DB: \(error.localizedDescription)")
             return []
         }
     }

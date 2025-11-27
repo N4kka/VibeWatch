@@ -1,8 +1,12 @@
 import Foundation
 
+/// Core algorithm service responsible for generating personalized and diverse clip feeds.
+/// It fetches clips from various sources, scores them based on user engagement and preferences,
+/// applies diversity rules, and can inject thematic or classic content.
+/// Designed to provide both quick-start feeds and extended feeds for continuous viewing.
 @MainActor
-class ClipsAlgorithmEngine {
-    static let shared = ClipsAlgorithmEngine()
+class PersonalizedClipsService {
+    static let shared = PersonalizedClipsService()
     
     private let tmdbService = TMDBService.shared
     private let engagementTracker = UserEngagementTracker.shared
@@ -50,9 +54,13 @@ class ClipsAlgorithmEngine {
     
     // MARK: - Main Algorithm
     
-    /// Fast version: Generate just 2 clips for instant display
+    /// Generates a lightning-fast quick-start feed of 2 diverse clips for instant display.
+    /// This method prioritizes speed over extensive personalization, trying to get 2 valid clips
+    /// from trending movies as quickly as possible.
+    /// - Returns: An array of `EnhancedClip` objects, typically 2, for immediate playback.
+    /// - Throws: An error if TMDb service is unavailable or no clips can be found.
     func generateQuickStartFeed() async throws -> [EnhancedClip] {
-        print("⚡ Generating quick start feed (targeting 2 clips)...")
+        Logger.info("⚡ Generating quick start feed (targeting 2 clips)...")
         let startTime = Date()
         
         // Fetch just trending movies and keep trying until we get 2 clips
@@ -90,9 +98,13 @@ class ClipsAlgorithmEngine {
         return clips
     }
     
-    /// Tier 2: Fast feed - 20 clips in max 10 seconds with VARIETY
+    /// Generates a fast feed of ~20 diverse and personalized clips.
+    /// This method fetches from multiple trending and popular pages to ensure variety,
+    /// applies quick scoring based on user profile and thematic boosts, and enforces diversity rules.
+    /// - Returns: An array of `EnhancedClip` objects, typically 20, for a fast-loading, engaging feed.
+    /// - Throws: An error if TMDb service is unavailable or clips cannot be fetched.
     func generateFastFeed() async throws -> [EnhancedClip] {
-        print("⚡ Fast feed: Targeting 20 clips from diverse sources...")
+        Logger.info("⚡ Fast feed: Targeting 20 clips from diverse sources...")
         let startTime = Date()
         
         let todayTheme = getThematicDayBoost()
@@ -132,10 +144,14 @@ class ClipsAlgorithmEngine {
         return Array(diverseFeed.prefix(20))
     }
     
-    /// Tier 3: Extended feed - 50 clips for deep scrolling
+    /// Generates an extended feed of ~50 diverse and personalized clips for deeper scrolling.
+    /// This method fetches from new pages to provide fresh content, applies scoring,
+    /// and enforces diversity rules. It also manages page tracking for continuous fetching.
+    /// - Returns: An array of `EnhancedClip` objects, typically 50, for an extended viewing session.
+    /// - Throws: An error if TMDb service is unavailable or clips cannot be fetched.
     func generateExtendedFeed() async throws -> [EnhancedClip] {
-        print("⚡ Extended feed: Generating 50 clips from NEW pages...")
-        print("📄 Next pages: Movies \(nextMoviePage)-\(nextMoviePage+2), TV \(nextTVPage)-\(nextTVPage+2)")
+        Logger.info("⚡ Extended feed: Generating 50 clips from NEW pages...")
+        Logger.debug("📄 Next pages: Movies \(nextMoviePage)-\(nextMoviePage+2), TV \(nextTVPage)-\(nextTVPage+2)")
         let startTime = Date()
         
         let todayTheme = getThematicDayBoost()
@@ -188,7 +204,11 @@ class ClipsAlgorithmEngine {
         return Array(diverseFeed.prefix(50))
     }
     
-    /// Legacy method for compatibility
+    /// Legacy method for compatibility or simpler use.
+    /// Redirects to `generateFastFeed()` for now.
+    /// - Parameter count: The desired number of clips (currently ignored, defaults to 20 from `generateFastFeed`).
+    /// - Returns: An array of `EnhancedClip` objects.
+    /// - Throws: An error from `generateFastFeed()`.
     func generateSmartFeed(count: Int = 20) async throws -> [EnhancedClip] {
         // Redirect to fast feed for now
         return try await generateFastFeed()
@@ -209,11 +229,16 @@ class ClipsAlgorithmEngine {
         return allClips
     }
     
-    /// Optimized movie fetching (PARALLEL)
+    /// Fetches and processes a batch of trending movies, extracting and validating associated clips in parallel.
+    /// - Parameters:
+    ///   - page: The TMDb page number to fetch.
+    ///   - count: The number of movies to process from the fetched page.
+    /// - Returns: An array of `EnhancedClip` objects for the movies.
+    /// - Throws: An error if TMDb service is unavailable.
     private func fetchMoviesOptimized(page: Int = 1, count: Int = 5) async throws -> [EnhancedClip] {
         let moviesResponse = try await tmdbService.getTrendingMovies(timeWindow: .week, page: page)
         
-        print("🎬 [Page \(page)] Fetched \(moviesResponse.results.count) trending movies")
+        Logger.debug("🎬 [Page \(page)] Fetched \(moviesResponse.results.count) trending movies")
         
         // Take requested count
         let moviesToFetch = Array(moviesResponse.results.prefix(count))
@@ -245,11 +270,16 @@ class ClipsAlgorithmEngine {
         }
     }
     
-    /// Optimized TV fetching (PARALLEL)
+    /// Fetches and processes a batch of trending TV shows, extracting and validating associated clips in parallel.
+    /// - Parameters:
+    ///   - page: The TMDb page number to fetch.
+    ///   - count: The number of TV shows to process from the fetched page.
+    /// - Returns: An array of `EnhancedClip` objects for the TV shows.
+    /// - Throws: An error if TMDb service is unavailable.
     private func fetchTVShowsOptimized(page: Int = 1, count: Int = 5) async throws -> [EnhancedClip] {
         let tvResponse = try await tmdbService.getTrendingTVShows(timeWindow: .week, page: page)
         
-        print("📺 [Page \(page)] Fetched \(tvResponse.results.count) trending TV shows")
+        Logger.debug("📺 [Page \(page)] Fetched \(tvResponse.results.count) trending TV shows")
         
         // Take requested count
         let tvShowsToFetch = Array(tvResponse.results.prefix(count))
@@ -286,7 +316,13 @@ class ClipsAlgorithmEngine {
         return try await _fetchBestClipForMovie(movie)
     }
     
-    /// Quick scoring - simplified for speed (no complex calculations)
+    /// Applies a quick scoring mechanism to a list of clips for initial sorting.
+    /// This is a simplified scoring, prioritizing speed for fast-loading feeds.
+    /// - Parameters:
+    ///   - clips: The array of `EnhancedClip` to score.
+    ///   - userProfile: The user's profile containing preferences.
+    ///   - themeBoost: The current thematic day's boost.
+    /// - Returns: A new array of `EnhancedClip`s sorted by their calculated `algorithmScore`.
     private func quickScore(_ clips: [EnhancedClip], userProfile: UserProfile, themeBoost: ThematicDay) -> [EnhancedClip] {
         return clips.map { enhancedClip in
             var score: Double = 0
@@ -514,8 +550,13 @@ class ClipsAlgorithmEngine {
         }.sorted { $0.algorithmScore > $1.algorithmScore }
     }
     
-    // MARK: - Diversity Enforcement
-    
+    /// Enforces diversity rules on a list of scored clips to prevent repetitive content.
+    /// Rules include limiting clips from the same genre or movie/show within a short sequence,
+    /// and balancing the ratio of movies to TV shows.
+    /// - Parameters:
+    ///   - clips: An array of `EnhancedClip` objects, already scored and sorted.
+    ///   - targetCount: The desired number of diverse clips in the final feed.
+    /// - Returns: A new array of `EnhancedClip` objects that adhere to the diversity rules.
     private func enforceDiversity(_ clips: [EnhancedClip], targetCount: Int) -> [EnhancedClip] {
         var diverseFeed: [EnhancedClip] = []
         var recentGenres: [Int] = []
@@ -564,8 +605,11 @@ class ClipsAlgorithmEngine {
         return diverseFeed
     }
     
-    // MARK: - Classic Injection
-    
+    /// Injects classic movie clips into the feed at regular intervals to introduce variety.
+    /// - Parameters:
+    ///   - clips: The current array of `EnhancedClip` objects in the feed.
+    ///   - every: The interval (e.g., every 5 clips) at which to insert a classic clip.
+    /// - Returns: A modified array of `EnhancedClip` objects with classic clips injected.
     private func injectClassics(_ clips: [EnhancedClip], every: Int) -> [EnhancedClip] {
         var finalFeed = clips
         var insertionIndex = every - 1
@@ -602,8 +646,9 @@ class ClipsAlgorithmEngine {
         return finalFeed
     }
     
-    // MARK: - Thematic Days
-    
+    /// Determines the thematic boost for the current day of the week.
+    /// This can be used to inject more content of a certain genre (e.g., Action Monday).
+    /// - Returns: A `ThematicDay` struct containing the name, relevant genre IDs, and boost amount.
     private func getThematicDayBoost() -> ThematicDay {
         let calendar = Calendar.current
         let weekday = calendar.component(.weekday, from: Date())
@@ -753,3 +798,4 @@ enum DemographicGroup {
     case genX
     case mixed
 }
+

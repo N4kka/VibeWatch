@@ -9,7 +9,7 @@ class MovieDetailViewModel: ObservableObject {
     @Published var similarMovies: [Movie] = []
     @Published var imdbId: String?
     @Published var isLoading = false
-    @Published var errorMessage: String?
+    @Published var error: AppError?
     
     private let tmdbService = TMDBService.shared
     private let watchmodeService = WatchmodeService.shared
@@ -21,13 +21,13 @@ class MovieDetailViewModel: ObservableObject {
     
     func loadMovieDetails() async {
         isLoading = true
-        errorMessage = nil
+        error = nil
         
         async let movieTask = tmdbService.getMovieDetails(id: movieId)
         async let creditsTask = tmdbService.getMovieCredits(id: movieId)
         async let videosTask = tmdbService.getMovieVideos(id: movieId)
         async let providersTask = tmdbService.getMovieWatchProviders(id: movieId)
-        async let similarTask = tmdbService.getSimilarMovies(id: movieId)
+        async let similarTask = tmdbService.getSimilarMovies(id: movieId, page: 1)
         async let externalIdsTask = tmdbService.getMovieExternalIds(id: movieId)
         
         do {
@@ -94,7 +94,7 @@ class MovieDetailViewModel: ObservableObject {
                 }
             }
         } catch {
-            errorMessage = "Failed to load movie details: \(error.localizedDescription)"
+            self.error = AppError.network(error)
         }
         
         isLoading = false
@@ -248,7 +248,7 @@ class TVShowDetailViewModel: ObservableObject {
     @Published var similarShows: [TVShow] = []
     @Published var imdbId: String?
     @Published var isLoading = false
-    @Published var errorMessage: String?
+    @Published var error: AppError?
     
     private let tmdbService = TMDBService.shared
     private let watchmodeService = WatchmodeService.shared
@@ -260,13 +260,13 @@ class TVShowDetailViewModel: ObservableObject {
     
     func loadTVShowDetails() async {
         isLoading = true
-        errorMessage = nil
+        error = nil
         
         async let tvShowTask = tmdbService.getTVShowDetails(id: tvShowId)
         async let creditsTask = tmdbService.getTVShowCredits(id: tvShowId)
         async let videosTask = tmdbService.getTVShowVideos(id: tvShowId)
         async let providersTask = tmdbService.getTVShowWatchProviders(id: tvShowId)
-        async let similarTask = tmdbService.getSimilarTVShows(id: tvShowId)
+        async let similarTask = tmdbService.getSimilarTVShows(id: tvShowId, page: 1)
         async let externalIdsTask = tmdbService.getTVShowExternalIds(id: tvShowId)
         
         do {
@@ -333,7 +333,7 @@ class TVShowDetailViewModel: ObservableObject {
                 }
             }
         } catch {
-            errorMessage = "Failed to load TV show details: \(error.localizedDescription)"
+            self.error = AppError.network(error)
         }
         
         isLoading = false

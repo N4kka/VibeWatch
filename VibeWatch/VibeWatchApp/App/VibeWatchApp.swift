@@ -8,11 +8,17 @@ struct VibeWatchApp: App {
     @StateObject private var localizationManager = LocalizationManager.shared
     @StateObject private var syncWorker = SyncWorker.shared
     @StateObject private var sqliteDB = SQLiteService.shared
-    @StateObject private var appNavigationManager = AppNavigationManager.shared // Inject AppNavigationManager
+    @StateObject private var appNavigationManager = AppNavigationManager.shared
+    @StateObject private var authService = AuthService.shared
+    @StateObject private var quotaManager = DailyQuotaManager.shared
     
     init() {
-        // Configure RevenueCat
-        Purchases.logLevel = .debug // TODO: Set to .info in production
+        // Configure RevenueCat with appropriate log level
+        #if DEBUG
+        Purchases.logLevel = .debug
+        #else
+        Purchases.logLevel = .info
+        #endif
         Purchases.configure(withAPIKey: Config.revenueCatAPIKey)
         
         // Force load localizations before any views are created
@@ -29,7 +35,9 @@ struct VibeWatchApp: App {
                 .environmentObject(appState)
                 .environmentObject(localizationManager)
                 .environmentObject(syncWorker)
-                .environmentObject(appNavigationManager) // Pass AppNavigationManager to environment
+                .environmentObject(appNavigationManager)
+                .environmentObject(authService)
+                .environmentObject(quotaManager)
                 .preferredColorScheme(.dark)
                 .task {
                     // Start background sync worker
@@ -78,10 +86,11 @@ class AppState: ObservableObject {
     @Published var toastMessage = ""
     @Published var isPreloading = true // Track splash state
     
-    private let authService = AuthService.shared
+    private let authService: AuthService
     private let dataCoordinator = DataCoordinator.shared
     
-    init() {
+    init(authService: AuthService = .shared) {
+        self.authService = authService
         Task {
             await checkAuthState()
             await preloadContent()

@@ -22,20 +22,21 @@ class DatabaseMigrationService {
         }
         
         do {
-            // Migrate clips (this is the most important)
-            await migrateClips()
-            
-            // Migrate discovery cache
-            await migrateDiscoveryCache()
-            
-            // Mark as completed
-            UserDefaults.standard.set(true, forKey: "initialDataPopulated")
-            UserDefaults.standard.set(Date(), forKey: "initialDataMigratedDate")
-            
-            print("✅ [Migration] Initial data migration complete!")
-            
+            try await DatabaseUtilities.retryOnFailure(maxAttempts: 3) {
+                // Migrate clips (this is the most important)
+                await self.migrateClips()
+                
+                // Migrate discovery cache
+                await self.migrateDiscoveryCache()
+                
+                // Mark as completed
+                UserDefaults.standard.set(true, forKey: "initialDataPopulated")
+                UserDefaults.standard.set(Date(), forKey: "initialDataMigratedDate")
+                
+                print("✅ [Migration] Initial data migration complete!")
+            }
         } catch {
-            print("❌ [Migration] Migration failed: \(error)")
+            print("❌ [Migration] Migration failed after retries: \(error)")
         }
     }
     
@@ -66,35 +67,37 @@ class DatabaseMigrationService {
             let batchSize = 100
             
             for batch in clips.chunked(into: batchSize) {
-                try await db.transaction {
-                    for clip in batch {
-                        let values: [String: Any] = [
-                            "id": clip.id,
-                            "clip_id": clip.clipId,
-                            "video_id": clip.videoId,
-                            "title": clip.title,
-                            "description": clip.description ?? "",
-                            "video_url": clip.videoUrl,
-                            "thumbnail_url": clip.thumbnailUrl ?? "",
-                            "movie_id": clip.movieId as Any,
-                            "tv_show_id": clip.tvShowId as Any,
-                            "media_type": clip.mediaType ?? "",
-                            "genres": jsonString(from: clip.genres) ?? "[]",
-                            "actors": jsonString(from: clip.actors) ?? "[]",
-                            "mood": clip.mood ?? "",
-                            "keywords": jsonString(from: clip.keywords) ?? "[]",
-                            "likes": clip.likes ?? 0,
-                            "comments": clip.comments ?? 0,
-                            "views": clip.views ?? 0,
-                            "youtube_views": clip.youtubeViews as Any,
-                            "tmdb_rating": clip.tmdbRating as Any,
-                            "quality_score": clip.qualityScore as Any,
-                            "is_active": true,
-                            "is_premium": clip.isPremium ?? false
-                        ]
-                        
-                        _ = try await db.insert("clips", values: values)
-                        insertedCount += 1
+                try await DatabaseUtilities.executeInTransaction {
+                    try await db.transaction {
+                        for clip in batch {
+                            let values: [String: Any] = [
+                                "id": clip.id,
+                                "clip_id": clip.clipId,
+                                "video_id": clip.videoId,
+                                "title": clip.title,
+                                "description": clip.description ?? "",
+                                "video_url": clip.videoUrl,
+                                "thumbnail_url": clip.thumbnailUrl ?? "",
+                                "movie_id": clip.movieId as Any,
+                                "tv_show_id": clip.tvShowId as Any,
+                                "media_type": clip.mediaType ?? "",
+                                "genres": jsonString(from: clip.genres) ?? "[]",
+                                "actors": jsonString(from: clip.actors) ?? "[]",
+                                "mood": clip.mood ?? "",
+                                "keywords": jsonString(from: clip.keywords) ?? "[]",
+                                "likes": clip.likes ?? 0,
+                                "comments": clip.comments ?? 0,
+                                "views": clip.views ?? 0,
+                                "youtube_views": clip.youtubeViews as Any,
+                                "tmdb_rating": clip.tmdbRating as Any,
+                                "quality_score": clip.qualityScore as Any,
+                                "is_active": true,
+                                "is_premium": clip.isPremium ?? false
+                            ]
+                            
+                            _ = try await db.insert("clips", values: values)
+                            insertedCount += 1
+                        }
                     }
                 }
                 
@@ -130,23 +133,25 @@ class DatabaseMigrationService {
             print("📦 [Migration] Fetched \(cacheItems.count) discovery cache items")
             
             // Insert into local SQLite
-            for item in cacheItems {
-                let values: [String: Any] = [
-                    "id": item.id,
-                    "content_type": item.contentType,
-                    "tmdb_id": item.tmdbId,
-                    "title": item.title,
-                    "overview": item.overview ?? "",
-                    "poster_path": item.posterPath ?? "",
-                    "backdrop_path": item.backdropPath ?? "",
-                    "vote_average": item.voteAverage as Any,
-                    "release_date": item.releaseDate ?? "",
-                    "genres": jsonString(from: item.genres) ?? "[]",
-                    "cached_at": ISO8601DateFormatter().string(from: item.cachedAt),
-                    "expires_at": ISO8601DateFormatter().string(from: item.expiresAt)
-                ]
-                
-                _ = try await db.insert("discovery_cache", values: values)
+            try await DatabaseUtilities.executeInTransaction {
+                for item in cacheItems {
+                    let values: [String: Any] = [
+                        "id": item.id,
+                        "content_type": item.contentType,
+                        "tmdb_id": item.tmdbId,
+                        "title": item.title,
+                        "overview": item.overview ?? "",
+                        "poster_path": item.posterPath ?? "",
+                        "backdrop_path": item.backdropPath ?? "",
+                        "vote_average": item.voteAverage as Any,
+                        "release_date": item.releaseDate ?? "",
+                        "genres": jsonString(from: item.genres) ?? "[]",
+                        "cached_at": ISO8601DateFormatter().string(from: item.cachedAt),
+                        "expires_at": ISO8601DateFormatter().string(from: item.expiresAt)
+                    ]
+                    
+                    _ = try await db.insert("discovery_cache", values: values)
+                }
             }
             
             print("✅ [Migration] Successfully migrated \(cacheItems.count) discovery cache items")

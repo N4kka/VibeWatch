@@ -7,7 +7,7 @@ class SearchViewModel: ObservableObject {
     @Published var searchResults: [SearchResult] = []
     @Published var trendingSearches: [SearchResult] = []
     @Published var isLoading = false
-    @Published var errorMessage: String?
+    @Published var error: AppError?
     
     private var searchTask: Task<Void, Never>?
     private let tmdbService = TMDBService.shared
@@ -26,10 +26,10 @@ class SearchViewModel: ObservableObject {
         
         searchTask = Task {
             isLoading = true
-            errorMessage = nil
+            error = nil
             
             do {
-                let response = try await tmdbService.searchMulti(query: searchQuery)
+                let response = try await tmdbService.searchMulti(query: searchQuery, page: 1)
                 if !Task.isCancelled {
                     searchResults = response.results.filter { result in
                         result.mediaType == "movie" || result.mediaType == "tv"
@@ -37,7 +37,7 @@ class SearchViewModel: ObservableObject {
                 }
             } catch {
                 if !Task.isCancelled {
-                    errorMessage = "Failed to search: \(error.localizedDescription)"
+                    self.error = AppError.network(error)
                 }
             }
             
@@ -48,8 +48,8 @@ class SearchViewModel: ObservableObject {
     func loadTrendingSearches() {
         Task {
             do {
-                let moviesResponse = try await tmdbService.getTrendingMovies()
-                let tvResponse = try await tmdbService.getTrendingTVShows()
+                let moviesResponse = try await tmdbService.getTrendingMovies(timeWindow: .week, page: 1)
+                let tvResponse = try await tmdbService.getTrendingTVShows(timeWindow: .week, page: 1)
                 
                 let movieResults = moviesResponse.results.prefix(5).map { movie in
                     SearchResult(
@@ -85,7 +85,7 @@ class SearchViewModel: ObservableObject {
                 
                 trendingSearches = Array(movieResults + tvResults)
             } catch {
-                errorMessage = "Failed to load trending: \(error.localizedDescription)"
+                self.error = AppError.network(error)
             }
         }
     }

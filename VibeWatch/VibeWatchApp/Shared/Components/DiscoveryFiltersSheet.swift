@@ -6,7 +6,7 @@ struct AdvancedFiltersPanel: View {
     let showRuntimeFilter: Bool // Only for movies in Discovery
     let onDismiss: () -> Void
     let onApply: (DiscoveryFilters) -> Void
-    @StateObject private var quotaManager = DailyQuotaManager.shared
+    @EnvironmentObject var quotaManager: DailyQuotaManager
     
     init(
         filters: Binding<DiscoveryFilters>,
@@ -194,7 +194,7 @@ struct DiscoveryFiltersSheet: View {
     @Binding var filters: DiscoveryFilters
     @State private var localFilters: DiscoveryFilters
     @ObservedObject var localizationManager = LocalizationManager.shared
-    @StateObject private var quotaManager = DailyQuotaManager.shared
+    @EnvironmentObject var quotaManager: DailyQuotaManager
     let onApply: (DiscoveryFilters) -> Void
     
     init(filters: Binding<DiscoveryFilters>, onApply: @escaping (DiscoveryFilters) -> Void) {

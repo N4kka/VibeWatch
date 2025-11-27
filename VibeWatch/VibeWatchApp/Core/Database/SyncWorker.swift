@@ -57,7 +57,7 @@ class SyncWorker: ObservableObject {
             }
         }
         
-        print("🔄 [SyncWorker] Periodic sync started (every \(syncInterval)s)")
+        Logger.info("[SyncWorker] Periodic sync started (every \(syncInterval)s)")
         
         // Initial sync
         await syncIfNeeded()
@@ -71,7 +71,7 @@ class SyncWorker: ObservableObject {
     
     /// Force sync now (manual trigger)
     func forceSyncNow() async {
-        print("🔄 [SyncWorker] Force sync triggered")
+        Logger.info("[SyncWorker] Force sync triggered")
         await performSync()
     }
     
@@ -111,7 +111,7 @@ class SyncWorker: ObservableObject {
         // Update pending count
         await updateCounts()
         
-        print("➕ [SyncWorker] Queued \(operationType) on \(tableName) for \(recordId)")
+        Logger.info("[SyncWorker] Queued \(operationType) on \(tableName) for \(recordId)")
         
         // Trigger sync if batch size reached
         if pendingCount >= batchSize {
@@ -129,7 +129,7 @@ class SyncWorker: ObservableObject {
                 where: "status IN ('pending', 'failed')"
             )
         } catch {
-            print("⚠️ [SyncWorker] Failed to get pending count: \(error)")
+            Logger.warning("[SyncWorker] Failed to get pending count: \(error.localizedDescription)")
             return 0
         }
     }
@@ -142,7 +142,7 @@ class SyncWorker: ObservableObject {
                 where: "status = 'stuck'"
             )
         } catch {
-            print("⚠️ [SyncWorker] Failed to get stuck count: \(error)")
+            Logger.warning("[SyncWorker] Failed to get stuck count: \(error.localizedDescription)")
             return 0
         }
     }
@@ -160,25 +160,26 @@ class SyncWorker: ObservableObject {
             """)
             
             await updateCounts()
-            print("✅ [SyncWorker] Reset all stuck operations")
+            Logger.info("[SyncWorker] Reset all stuck operations")
             
         } catch {
-            print("❌ [SyncWorker] Failed to reset stuck operations: \(error)")
+            Logger.error("[SyncWorker] Failed to reset stuck operations", error: error)
         }
     }
     
     /// View pending operations (for debugging)
     func getPendingOperations() async -> [[String: Any]] {
         do {
-            return try await localDB.queryRaw("""
+            let rows = try await localDB.queryRaw("""
                 SELECT id, table_name, operation_type, record_id, attempts, last_error
                 FROM sync_outbox
                 WHERE status IN ('pending', 'failed', 'stuck')
                 ORDER BY created_at DESC
                 LIMIT 50
             """)
+            return rows
         } catch {
-            print("⚠️ [SyncWorker] Failed to get pending operations: \(error)")
+            Logger.warning("[SyncWorker] Failed to get pending operations: \(error.localizedDescription)")
             return []
         }
     }
@@ -219,7 +220,7 @@ class SyncWorker: ObservableObject {
                 return
             }
             
-            print("🔄 [SyncWorker] Syncing \(operations.count) operations...")
+            Logger.info("[SyncWorker] Syncing \(operations.count) operations...")
             
             // Group by user_id for transactional integrity
             let grouped = Dictionary(grouping: operations, by: { $0.userId })
@@ -231,10 +232,10 @@ class SyncWorker: ObservableObject {
                 do {
                     try await syncUserBatch(userId: userId, operations: userOps)
                     successCount += userOps.count
-                    print("✅ [SyncWorker] Synced \(userOps.count) operations for user \(userId)")
+                    Logger.info("[SyncWorker] Synced \(userOps.count) operations for user \(userId)")
                 } catch {
                     failCount += userOps.count
-                    print("❌ [SyncWorker] Failed to sync user \(userId): \(error)")
+                    Logger.error("[SyncWorker] Failed to sync user \(userId)", error: error)
                     await handleBatchFailure(operations: userOps, error: error)
                 }
             }
@@ -242,11 +243,11 @@ class SyncWorker: ObservableObject {
             lastSyncDate = Date()
             await updateCounts()
             
-            print("✅ [SyncWorker] Sync complete: \(successCount) success, \(failCount) failed")
+            Logger.info("[SyncWorker] Sync complete: \(successCount) success, \(failCount) failed")
             
         } catch {
             lastError = error.localizedDescription
-            print("❌ [SyncWorker] Sync failed: \(error)")
+            Logger.error("[SyncWorker] Sync failed", error: error)
         }
     }
     
@@ -359,10 +360,10 @@ class SyncWorker: ObservableObject {
                     throw SyncError.unknownOperation(op.operationType)
                 }
                 
-                print("  ✓ Synced \(op.operationType) on \(op.tableName)")
+                Logger.debug("  ✓ Synced \(op.operationType) on \(op.tableName)")
                 
             } catch {
-                print("  ✗ Failed \(op.operationType) on \(op.tableName): \(error)")
+                Logger.error("  ✗ Failed \(op.operationType) on \(op.tableName)", error: error)
                 throw error
             }
         }
@@ -386,7 +387,7 @@ class SyncWorker: ObservableObject {
             return true
             
         } catch {
-            print("⚠️ [SyncWorker] Health check failed: \(error)")
+            Logger.warning("[SyncWorker] Health check failed: \(error.localizedDescription)")
             return false
         }
     }
@@ -403,13 +404,13 @@ class SyncWorker: ObservableObject {
                 // Mark as stuck
                 _ = try? await localDB.queryRaw("""
                     UPDATE sync_outbox
-                    SET status = 'stuck',
+                    SET status = "stuck",
                         attempts = \(newAttempts),
-                        last_error = '\(errorMsg)'
+                    last_error = "\(errorMsg)"
                     WHERE id = \(op.id)
                 """)
                 
-                print("⚠️ [SyncWorker] Operation \(op.id) stuck after \(maxAttempts) attempts")
+                Logger.warning("[SyncWorker] Operation \(op.id) stuck after \(maxAttempts) attempts")
                 
             } else {
                 // Schedule retry
@@ -426,7 +427,7 @@ class SyncWorker: ObservableObject {
                     WHERE id = \(op.id)
                 """)
                 
-                print("🔄 [SyncWorker] Will retry operation \(op.id) at \(nextRetry)")
+                Logger.debug("[SyncWorker] Will retry operation \(op.id) at \(nextRetry)")
             }
         }
     }
@@ -490,7 +491,7 @@ class SyncWorker: ObservableObject {
     
     @objc private func appWillBackground() {
         Task {
-            print("📱 [SyncWorker] App backgrounding - forcing sync...")
+            Logger.info("[SyncWorker] App backgrounding - forcing sync...")
             await forceSyncNow()
         }
     }
@@ -498,70 +499,7 @@ class SyncWorker: ObservableObject {
 
 // MARK: - Models
 
-struct SyncOperation {
-    let id: Int
-    let operationId: String
-    let userId: String
-    let tableName: String
-    let operationType: String
-    let recordId: String
-    let payload: [String: Any]
-    let attempts: Int
-    let status: String
-    let nextRetryAt: Date?
-    
-    init?(row: [String: Any]) {
-        guard
-            let id = row["id"] as? Int,
-            let operationId = row["operation_id"] as? String,
-            let userId = row["user_id"] as? String,
-            let tableName = row["table_name"] as? String,
-            let operationType = row["operation_type"] as? String,
-            let recordId = row["record_id"] as? String,
-            let payloadString = row["payload"] as? String,
-            let payloadData = payloadString.data(using: .utf8),
-            let payload = try? JSONSerialization.jsonObject(with: payloadData) as? [String: Any],
-            let status = row["status"] as? String
-        else {
-            print("⚠️ Failed to parse sync operation row")
-            return nil
-        }
-        
-        self.id = id
-        self.operationId = operationId
-        self.userId = userId
-        self.tableName = tableName
-        self.operationType = operationType
-        self.recordId = recordId
-        self.payload = payload
-        self.attempts = row["attempts"] as? Int ?? 0
-        self.status = status
-        
-        // Parse next_retry_at if present
-        if let retryString = row["next_retry_at"] as? String {
-            let formatter = ISO8601DateFormatter()
-            self.nextRetryAt = formatter.date(from: retryString)
-        } else {
-            self.nextRetryAt = nil
-        }
-    }
-}
 
-// MARK: - Error Types
-
-enum SyncError: LocalizedError {
-    case remoteUnavailable
-    case unknownOperation(String)
-    case invalidPayload
-    
-    var errorDescription: String? {
-        switch self {
-        case .remoteUnavailable:
-            return "Remote database is unavailable"
-        case .unknownOperation(let type):
-            return "Unknown operation type: \(type)"
-        case .invalidPayload:
-            return "Invalid operation payload"
-        }
-    }
-}
+// Note: SyncOperation and SyncError are defined in separate files:
+// - Core/Database/SyncOperation.swift
+// - Core/Database/SyncError.swift

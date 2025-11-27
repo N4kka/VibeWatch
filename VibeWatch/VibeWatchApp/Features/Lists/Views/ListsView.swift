@@ -4,6 +4,7 @@ struct ListsView: View {
     @StateObject private var viewModel = ListsViewModel()
     @StateObject private var listManager = ListManager.shared
     @ObservedObject var localizationManager = LocalizationManager.shared
+    @EnvironmentObject var quotaManager: DailyQuotaManager
     @State private var selectedFilter: MediaFilter = .all
     @AppStorage("selectedPlatforms") private var selectedPlatformsData: Data = Data()
     @State private var selectedListType: ListViewType = .myLists
@@ -15,6 +16,7 @@ struct ListsView: View {
     
     @State private var filterRefreshTrigger = false
     @State private var showingPaywall = false
+    @State private var itemsLimit = 50 // State for pagination
     
     private var selectedPlatforms: Set<StreamingPlatform> {
         get {
@@ -74,11 +76,15 @@ struct ListsView: View {
                             filterRefreshTrigger.toggle()
                         }
                     )
+                    .environmentObject(quotaManager)
                 }
             }
         }
         .task {
             await viewModel.loadLists()
+            
+            // Analytics: Track screen view
+            AnalyticsService.shared.logScreenView(screenName: "Lists", screenClass: "ListsView")
         }
         .onChange(of: localizationManager.localeDidChange) { _ in
             refreshID = UUID()
@@ -95,6 +101,10 @@ struct ListsView: View {
         }
         .fullScreenCover(isPresented: $showingPaywall) {
             DailyLimitPaywallView(isPresented: $showingPaywall)
+        }
+        .onChange(of: selectedListType) {
+            // Reset limit when switching lists
+            itemsLimit = 50
         }
     }
     
@@ -195,7 +205,7 @@ struct ListsView: View {
     private var itemsGrid: some View {
         ScrollView {
             LazyVStack(spacing: 20) {
-                ForEach(filteredAndSortedItems) { item in
+                ForEach(paginatedItems) { item in
                     MediaItemRow(
                         item: item,
                         isInSeenList: selectedListType == .seen,
@@ -236,12 +246,22 @@ struct ListsView: View {
                             }
                         }
                     )
+                    .onAppear {
+                        // When the last item appears, load more
+                        if item.id == paginatedItems.last?.id {
+                            itemsLimit += 50
+                        }
+                    }
                 }
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 100)
         }
         .id(filterRefreshTrigger) // Force refresh when filters change
+    }
+    
+    private var paginatedItems: [MediaListItem] {
+        Array(filteredAndSortedItems.prefix(itemsLimit))
     }
     
     private var filteredAndSortedItems: [MediaListItem] {
@@ -723,8 +743,7 @@ struct CustomListDetailView: View {
     @State private var itemsLimit = 100
     @State private var showEditSheet = false
     @State private var showDeleteAlert = false
-    @State private var showActionError = false
-    @State private var actionErrorMessage = ""
+    @State private var error: AppError?
     @Environment(\.dismiss) private var dismiss
 
     private var currentList: MediaList {
@@ -950,10 +969,12 @@ struct CustomListDetailView: View {
         } message: {
             Text("Are you sure you want to delete \(currentList.name)? This removes all items in this list.")
         }
-        .alert("Error", isPresented: $showActionError) {
-            Button("OK", role: .cancel) { }
-        } message: {
-            Text(actionErrorMessage)
+        .alert(item: $error) { appError in
+            Alert(
+                title: Text(appError.errorDescription ?? "Error"),
+                message: Text(appError.recoverySuggestion ?? "Please try again."),
+                dismissButton: .default(Text("OK"))
+            )
         }
     }
 
@@ -976,8 +997,7 @@ struct CustomListDetailView: View {
             await MainActor.run { dismiss() }
         } catch {
             await MainActor.run {
-                actionErrorMessage = error.localizedDescription
-                showActionError = true
+                self.error = .database(error)
             }
         }
     }
@@ -1074,8 +1094,7 @@ struct CreateListView: View {
     @StateObject private var listManager = ListManager.shared
     @State private var listName = ""
     @State private var listDescription = ""
-    @State private var showError = false
-    @State private var errorMessage = ""
+    @State private var error: AppError?
     
     var body: some View {
         VStack(spacing: 0) {
@@ -1153,8 +1172,7 @@ struct CreateListView: View {
                             try await viewModel.createList(title: listName, description: listDescription.isEmpty ? nil : listDescription)
                             dismiss()
                         } catch {
-                            errorMessage = error.localizedDescription
-                            showError = true
+                            self.error = .database(error)
                         }
                     }
                 } label: {
@@ -1171,10 +1189,12 @@ struct CreateListView: View {
                 .padding(.bottom, 20)
             }
         }
-        .alert("Error", isPresented: $showError) {
-            Button("OK", role: .cancel) { }
-        } message: {
-            Text(errorMessage)
+        .alert(item: $error) { appError in
+            Alert(
+                title: Text(appError.errorDescription ?? "Error"),
+                message: Text(appError.recoverySuggestion ?? "Please try again."),
+                dismissButton: .default(Text("OK"))
+            )
         }
     }
 }

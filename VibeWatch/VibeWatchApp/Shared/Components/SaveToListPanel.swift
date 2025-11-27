@@ -61,13 +61,7 @@ struct SaveToListPanel: View {
                                         dismiss()
                                     }
                                 } catch {
-                                    if let listError = error as? ListError {
-                                        alertMessage = listError.localizedDescription
-                                    } else {
-                                        alertMessage = error.localizedDescription
-                                    }
-                                    alertTitle = "Error"
-                                    showAlert = true
+                                    ErrorHandler.shared.handle(error, context: "Save to list")
                                 }
                             }
                         }

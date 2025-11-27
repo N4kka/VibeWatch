@@ -6,11 +6,11 @@ enum MediaType: String, Codable {
 }
 
 enum ListType: String, Codable, CaseIterable {
-    case watchlist = "Watchlist"
-    case seen = "Seen"
-    case liked = "Liked"
-    case disliked = "Disliked"
-    case custom = "Custom"
+    case watchlist = "watchlist"
+    case seen = "seen"
+    case liked = "liked"
+    case disliked = "disliked"
+    case custom = "custom"
     
     var icon: String {
         switch self {
@@ -22,7 +22,7 @@ enum ListType: String, Codable, CaseIterable {
         }
     }
 
-    var databaseValue: String {
+    var displayName: String {
         switch self {
         case .watchlist: return "Watchlist"
         case .seen: return "Seen"

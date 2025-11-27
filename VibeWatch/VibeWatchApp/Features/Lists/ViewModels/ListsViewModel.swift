@@ -6,7 +6,7 @@ import Combine
 class ListsViewModel: ObservableObject {
     @Published var lists: [MediaList] = []
     @Published var isLoading = false
-    @Published var errorMessage: String?
+    @Published var error: AppError?
 
     private let listManager = ListManager.shared
     private var cancellables = Set<AnyCancellable>()
@@ -18,17 +18,14 @@ class ListsViewModel: ObservableObject {
     }
 
     func loadLists() async {
-        isLoading = true
-        errorMessage = nil
-        listManager.loadLists()
-        lists = listManager.lists
-        do {
-            try await listManager.fetchLists()
-            lists = listManager.lists
-        } catch {
-            errorMessage = error.localizedDescription
-        }
+        // No need to reload - ViewModel already observes listManager.$lists
+        // which automatically updates when lists change
+        
+        // Just mark as loaded
         isLoading = false
+        
+        // Lists are already synced via the Combine publisher (line 16-17)
+        // Any changes to listManager.lists automatically update this.lists
     }
 
     func createList(title: String, description: String?) async throws {

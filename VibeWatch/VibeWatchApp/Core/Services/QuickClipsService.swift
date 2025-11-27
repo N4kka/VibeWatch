@@ -7,21 +7,21 @@ import Foundation
 /// - User taste tracking for personalization
 /// - Instant loading with aggressive caching
 @MainActor
-class SimplifiedClipsAlgorithm: ObservableObject {
-    static let shared = SimplifiedClipsAlgorithm()
+class QuickClipsService: ObservableObject {
+    static let shared = QuickClipsService()
     
     private let tmdbService = TMDBService.shared
     private let engagementTracker = UserEngagementTracker.shared
     
     // Constants
-    private let maxDurationSeconds = 180 // 3 minutes
+    private let maxDurationSeconds = AppConstants.Clips.maxClipDurationSeconds // 3 minutes
     private let targetBatchSize = 30
     
     // Deduplication tracking
     private var shownClipIds = Set<String>()
     
     // Cache for instant loading
-    @Published var cachedClips: [Clip] = []
+    private var cachedClips: [Clip] = []
     
     private init() {}
     

@@ -117,12 +117,18 @@ class AuthService: ObservableObject {
                 throw AuthError.userNotFound
             }
             
+            // Analytics: Track account creation
+            AnalyticsService.shared.logAccountCreated(method: "email")
+            AnalyticsService.shared.setUserId(user.id)
+            
             return user
         } catch let error as AuthError {
             print("❌ AuthError: \(error)")
+            ErrorHandler.shared.logOnly(error, context: "Sign up")
             throw error
         } catch {
             print("❌ Unexpected error during signup: \(error)")
+            ErrorHandler.shared.logOnly(error, context: "Sign up")
             throw AuthError.signUpFailed
         }
     }
@@ -158,6 +164,10 @@ class AuthService: ObservableObject {
         
         print("✅ User signed in successfully with Supabase")
         
+        // Analytics: Track sign in
+        AnalyticsService.shared.logSignIn(method: "email")
+        AnalyticsService.shared.setUserId(user.id)
+        
         return user
     }
     
@@ -171,6 +181,9 @@ class AuthService: ObservableObject {
         self.currentUser = nil
         self.isAuthenticated = false
         await syncRevenueCatUser(with: nil, forceReset: force)
+        
+        // Analytics: Clear user ID
+        AnalyticsService.shared.setUserId(nil)
         
         print("✅ User signed out successfully")
     }

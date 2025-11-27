@@ -3,6 +3,7 @@ import SwiftUI
 struct DiscoveryView: View {
     @StateObject private var viewModel = DiscoveryViewModel()
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject var quotaManager: DailyQuotaManager
     @ObservedObject var localizationManager = LocalizationManager.shared
     @State private var showProfile = false
     @State private var showSearch = false
@@ -11,7 +12,72 @@ struct DiscoveryView: View {
     @Binding var selectedMediaType: MediaType
     
     var body: some View {
-        discoveryMainView
+        ZStack {
+            if viewModel.isLoading {
+                ProgressView()
+            } else if let error = viewModel.error {
+                errorView(error)
+            } else {
+                discoveryMainView
+            }
+        }
+        .background(Color.theme.background.ignoresSafeArea())
+        .task {
+            await viewModel.loadContent()
+            
+            // Analytics: Track screen view
+            AnalyticsService.shared.logScreenView(screenName: "Discovery", screenClass: "DiscoveryView")
+            
+            // Debug: Print reaction counts
+            await SQLiteService.shared.debugPrintReactionCounts()
+        }
+        .onChange(of: localizationManager.localeDidChange) { _ in
+            // Reload content when language/country changes
+            Task {
+                await viewModel.loadContent(forceRefresh: true)
+            }
+        }
+        .sheet(isPresented: $showProfile) {
+            ProfileView()
+        }
+        .fullScreenCover(isPresented: $showSearch) {
+            SearchView()
+        }
+        .toast(isShowing: $appState.showSuccessToast, message: appState.toastMessage, type: .success)
+        .toast(isShowing: $appState.showErrorToast, message: appState.toastMessage, type: .error)
+    }
+    
+    private func errorView(_ error: AppError) -> some View {
+        VStack(spacing: 20) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 60))
+                .foregroundColor(.orange)
+
+            Text(error.errorDescription ?? "Oops!")
+                .font(.system(size: 24, weight: .bold))
+                .foregroundColor(.white)
+
+            if let recoverySuggestion = error.recoverySuggestion {
+                Text(recoverySuggestion)
+                    .font(.system(size: 16))
+                    .foregroundColor(.gray)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
+            }
+
+            Button {
+                Task {
+                    await viewModel.loadContent(forceRefresh: true)
+                }
+            } label: {
+                Text("Try Again")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(width: 200, height: 50)
+                    .background(Color.orange)
+                    .cornerRadius(25)
+            }
+        }
     }
     
     private var discoveryMainView: some View {
@@ -103,10 +169,17 @@ struct DiscoveryView: View {
                         }
                     }
                 )
+                .environmentObject(quotaManager)
             }
         }
         .task {
             await viewModel.loadContent()
+            
+            // Analytics: Track screen view
+            AnalyticsService.shared.logScreenView(screenName: "Discovery", screenClass: "DiscoveryView")
+            
+            // Debug: Print reaction counts
+            await SQLiteService.shared.debugPrintReactionCounts()
         }
         .onChange(of: localizationManager.localeDidChange) { _ in
             // Reload content when language/country changes
@@ -231,7 +304,8 @@ struct MoodCarouselCard: View {
         Button(action: onTap) {
             GeometryReader { geometry in
                 ZStack(alignment: .bottom) {
-                    AsyncImageView(url: movie.backdropURL, contentMode: .fill)
+                    CachedAsyncImage(url: movie.backdropURL)
+                        .aspectRatio(contentMode: .fill)
                         .frame(width: geometry.size.width, height: 500)
                         .clipped()
                         .overlay {
@@ -321,7 +395,8 @@ struct MediaCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            AsyncImageView(url: movie.posterURL, contentMode: .fill)
+            CachedAsyncImage(url: movie.posterURL)
+                .aspectRatio(contentMode: .fill)
                 .frame(width: 140, height: 210)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             

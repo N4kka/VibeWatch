@@ -3,6 +3,7 @@ import SwiftUI
 struct SignUpView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject var authService: AuthService
     @State private var username = ""
     @State private var email = ""
     @State private var password = ""
@@ -62,6 +63,7 @@ struct SignUpView: View {
             .sheet(isPresented: $showSignIn) {
                 SignInView()
                     .environmentObject(appState)
+                    .environmentObject(authService)
             }
         }
     }
@@ -252,7 +254,7 @@ struct SignUpView: View {
         isLoading = true
         
         do {
-            let user = try await AuthService.shared.signUp(
+            let user = try await authService.signUp(
                 username: username,
                 email: email,
                 password: password
@@ -278,7 +280,7 @@ struct SignUpView: View {
         errorMessage = nil
         
         do {
-            let user = try await AuthService.shared.signInWithApple()
+            let user = try await authService.signInWithApple()
             appState.currentUser = user
             appState.isAuthenticated = true
             dismiss()
@@ -294,7 +296,7 @@ struct SignUpView: View {
         errorMessage = nil
         
         do {
-            let user = try await AuthService.shared.signInWithGoogle()
+            let user = try await authService.signInWithGoogle()
             appState.currentUser = user
             appState.isAuthenticated = true
             dismiss()

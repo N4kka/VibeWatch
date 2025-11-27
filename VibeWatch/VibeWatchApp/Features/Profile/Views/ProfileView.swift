@@ -63,6 +63,7 @@ struct LanguageSelector: View {
 struct ProfileView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject var authService: AuthService
     @StateObject private var notificationService = NotificationService.shared
     @StateObject private var localizationManager = LocalizationManager.shared
     @State private var showSignUp = false
@@ -130,14 +131,17 @@ struct ProfileView: View {
         .sheet(isPresented: $showSignUp) {
             SignUpView()
                 .environmentObject(appState)
+                .environmentObject(authService)
         }
         .sheet(isPresented: $showSignIn) {
             SignInView()
                 .environmentObject(appState)
+                .environmentObject(authService)
         }
         .sheet(isPresented: $showSettings) {
             SettingsView()
                 .environmentObject(appState)
+                .environmentObject(authService)
         }
     }
     
@@ -511,7 +515,7 @@ struct ProfileView: View {
     
     private func handleLogout() async {
         do {
-            try await AuthService.shared.signOut()
+            try await authService.signOut()
             appState.isAuthenticated = false
             appState.currentUser = nil
             
@@ -534,7 +538,7 @@ struct ProfileView: View {
             }
             
             // Upload to Supabase Storage
-            let avatarURL = try await AuthService.shared.uploadAvatar(imageData: imageData)
+            let avatarURL = try await authService.uploadAvatar(imageData: imageData)
             
             // Update app state
             appState.currentUser?.avatarURL = avatarURL

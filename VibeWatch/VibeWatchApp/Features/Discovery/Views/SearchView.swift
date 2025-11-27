@@ -36,6 +36,7 @@ struct SearchView: View {
                                 SearchResultsSection(
                                     results: viewModel.searchResults,
                                     isLoading: viewModel.isLoading,
+                                    error: viewModel.error,
                                     onTap: { result in
                                         selectedResult = result
                                     }
@@ -126,6 +127,7 @@ struct TrendingSearchesSection: View {
 struct SearchResultsSection: View {
     let results: [SearchResult]
     let isLoading: Bool
+    let error: AppError?
     let onTap: (SearchResult) -> Void
     
     var body: some View {
@@ -134,6 +136,11 @@ struct SearchResultsSection: View {
                 ProgressView()
                     .frame(maxWidth: .infinity)
                     .padding(.top, 40)
+            } else if let error = error {
+                Text(error.errorDescription ?? "An error occurred")
+                    .foregroundColor(.theme.textSecondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 60)
             } else if results.isEmpty {
                 VStack(spacing: 12) {
                     Image(systemName: "magnifyingglass")
@@ -170,7 +177,8 @@ struct SearchResultRow: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            AsyncImageView(url: result.posterURL, contentMode: .fill)
+            CachedAsyncImage(url: result.posterURL)
+                .aspectRatio(contentMode: .fill)
                 .frame(width: 80, height: 120)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
             

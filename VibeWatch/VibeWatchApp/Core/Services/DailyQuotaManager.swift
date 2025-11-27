@@ -11,7 +11,7 @@ class DailyQuotaManager: ObservableObject {
     @Published var lastResetDate: Date = Date()
     @Published var hasReachedLimit: Bool = false
     
-    private let freeUserLimit = 15
+    private let freeUserLimit = AppConstants.Clips.freeUserDailyLimit
     private let userDefaults = UserDefaults.standard
     
     // Keys for local storage
@@ -113,6 +113,24 @@ class DailyQuotaManager: ObservableObject {
         }
         
         print("✨ [DailyQuota] User upgraded to Pro!")
+    }
+    
+    /// Downgrade to Free (restores limits)
+    func downgradeToFree() {
+        isProUser = false
+        hasReachedLimit = clipsWatchedToday >= freeUserLimit
+        saveQuotaData()
+        
+        Task {
+            await syncToSupabase()
+        }
+        
+        let remaining = remainingClips()
+        print("⬇️ [DailyQuota] Downgraded to Free - \(remaining) clips remaining today")
+        
+        if remaining == 0 {
+            print("🚫 [DailyQuota] Daily limit already reached - user will see paywall")
+        }
     }
     
     /// Reset quota (for testing or manual reset)

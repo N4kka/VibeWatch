@@ -6,10 +6,10 @@ import Supabase
 class ClipsPrefetchService: ObservableObject {
     static let shared = ClipsPrefetchService()
     
-    @Published var isFetching = false
-    @Published var lastFetchDate: Date?
-    @Published var cachedClipsCount: Int = 0
-    @Published var fetchProgress: Double = 0.0
+    var isFetching = false
+    var lastFetchDate: Date?
+    var cachedClipsCount: Int = 0
+    private var fetchProgress: Double = 0.0
     
     private let supabase = SupabaseService.shared
     private let tmdbService = TMDBService.shared
@@ -607,31 +607,6 @@ struct CachedClip: Codable {
 enum ClipsPrefetchError: Error {
     case supabaseNotConfigured
     case fetchFailed
-}
-
-// MARK: - YouTube Video Validation Models
-
-private struct YouTubeVideoResponse: Codable {
-    let items: [YouTubeVideoItem]
-}
-
-private struct YouTubeVideoItem: Codable {
-    let status: VideoStatus
-    let contentDetails: ContentDetails
-}
-
-private struct VideoStatus: Codable {
-    let uploadStatus: String
-    let privacyStatus: String
-    let embeddable: Bool
-}
-
-private struct ContentDetails: Codable {
-    let contentRating: ContentRating
-}
-
-private struct ContentRating: Codable {
-    let ytRating: String?
 }
 
 // MARK: - Database Count Model

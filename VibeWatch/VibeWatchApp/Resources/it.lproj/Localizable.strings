@@ -1,0 +1,214 @@
+// Tab Bar
+"tab.discovery" = "Scopri";
+"tab.clips" = "Clip";
+"tab.lists" = "Liste";
+"tab.profile" = "Profilo";
+
+// Onboarding
+"onboarding.page1.title" = "Traccia e Salva i Tuoi Preferiti";
+"onboarding.page1.description" = "Scopri e salva film e serie TV che ami. Tieni traccia di ciò che hai visto e di ciò che vuoi vedere.";
+"onboarding.page2.title" = "Organizza con le Liste";
+"onboarding.page2.description" = "Crea liste personalizzate per organizzare i tuoi contenuti. Da liste di visione a collezioni basate sull'umore, rendilo tuo.";
+"onboarding.page3.title" = "Scopri Attraverso i Clip";
+"onboarding.page3.description" = "Guarda clip emozionanti da film e serie TV. Unisciti alla community, commenta, salva nelle liste e condividi con gli amici.";
+"onboarding.page4.title" = "Pronto per Iniziare?";
+"onboarding.page4.description" = "Crea un account per sincronizzare le tue liste e preferenze su tutti i tuoi dispositivi.";
+"onboarding.page4.createAccount" = "Crea Account";
+"onboarding.page4.skip" = "Salta per ora";
+
+// Discovery
+"discovery.trending" = "Di Tendenza";
+"discovery.popular" = "Popolari";
+"discovery.topRated" = "Più Votati";
+"discovery.basedOnMood" = "Scelti Apposta per Te";
+"discovery.vibeWatch" = "VibeWatch";
+"discovery.upcoming" = "In Arrivo";
+"discovery.forYou" = "Per Te";
+"discovery.tvShows" = "Serie TV";
+
+// Lists
+"lists.myLists" = "Le Mie Liste";
+"lists.watchlist" = "Da Vedere";
+"lists.seen" = "Visti";
+"lists.liked" = "Piaciuti";
+"lists.disliked" = "Non Piaciuti";
+"lists.empty" = "Nessuna Lista";
+"lists.emptyDescription" = "Crea la tua prima lista per iniziare a organizzare i tuoi contenuti preferiti";
+"lists.createList" = "Crea Lista";
+"lists.listName" = "Nome Lista";
+"lists.listNamePlaceholder" = "Nuova Lista";
+"lists.description" = "Descrizione (Opzionale)";
+"lists.descriptionPlaceholder" = "Aggiungi una descrizione... (Opzionale)";
+"lists.listDescriptionPlaceholder" = "Aggiungi una descrizione...";
+"lists.noItems" = "Nessun elemento";
+"lists.error.maxListsReached" = "Limite di {limit} liste personalizzate raggiunto";
+"lists.error.maxItemsReached" = "Limite di {limit} elementi raggiunto per questa lista";
+"lists.error.listNotFound" = "Lista non trovata";
+"lists.error.itemAlreadyInList" = "Elemento già presente in questa lista";
+"lists.error.defaultImmutable" = "Questa lista non può essere modificata";
+"lists.error.invalidName" = "Inserisci un nome valido per la lista";
+"lists.error.authRequired" = "Devi aver effettuato l'accesso per creare liste personalizzate.";
+"lists.limitInfo" = "{count}/{limit}";
+"lists.softLimitWarning" = "La lista \"{name}\" ha già {limit} elementi. Valuta di crearne una nuova per mantenere tutto ordinato.";
+"lists.searchPlaceholder" = "Cerca in questa lista";
+"lists.editList" = "Modifica Lista";
+"list.all" = "Tutti";
+"list.movies" = "Film";
+"list.tvShows" = "Serie TV";
+
+// Profile
+"profile.done" = "Fatto";
+"profile.cancel" = "Annulla";
+"profile.notifications" = "Notifiche";
+"profile.streamingServices" = "Servizi di Streaming";
+"profile.settings" = "Impostazioni";
+"profile.helpSupport" = "Aiuto e Supporto";
+"profile.logout" = "Esci";
+"profile.signIn" = "Accedi";
+"profile.createAccount" = "Crea Account";
+"profile.signInToVibeWatch" = "Accedi a VibeWatch";
+"profile.signInDescription" = "Crea liste, salva clip e personalizza la tua esperienza";
+"profile.userNamePlaceholder" = "Email o Username";
+"profile.passwordPlaceholder" = "Password";
+
+// Settings
+"settings.title" = "Impostazioni";
+"settings.country" = "Paese";
+"settings.language" = "Lingua";
+"settings.selectCountry" = "Seleziona Paese";
+"settings.selectLanguage" = "Seleziona Lingua";
+
+// Movie Detail
+"movieDetail.save" = "Salva";
+"movieDetail.seen" = "Visto";
+"movieDetail.watchNow" = "Guarda Ora";
+"movieDetail.trailer" = "Trailer";
+"movieDetail.information" = "Informazioni";
+"movieDetail.rating" = "Valutazione";
+"movieDetail.ratings" = "valutazioni";
+"movieDetail.genres" = "Generi";
+"movieDetail.runtime" = "Durata";
+"movieDetail.country" = "Paese";
+"movieDetail.director" = "Regista";
+"movieDetail.cast" = "Cast";
+"movieDetail.similar" = "A chi è piaciuto questo è piaciuto anche";
+
+// Filters
+"filter.all" = "Tutti";
+"filter.movies" = "Film";
+"filter.tvSeries" = "Serie TV";
+
+// Sort
+"sort.dateAdded" = "Data di Aggiunta";
+"sort.title" = "Titolo";
+"sort.releaseDate" = "Data di Uscita";
+"sort.rating" = "Valutazione";
+"sort.sortBy" = "Ordina Per";
+"sort.popularityDesc" = "Popolarità ↓";
+"sort.popularityAsc" = "Popolarità ↑";
+"sort.ratingDesc" = "Valutazione ↓";
+"sort.ratingAsc" = "Valutazione ↑";
+"sort.releaseDateDesc" = "Data Uscita ↓";
+"sort.releaseDateAsc" = "Data Uscita ↑";
+
+// Advanced Filters
+"filters.title" = "Filtri";
+"filters.reset" = "Resetta";
+"filters.apply" = "Applica";
+"filters.runtime" = "Durata";
+"filters.minimumRating" = "Valutazione Minima";
+"filters.country" = "Paese";
+"filters.sortBy" = "Ordina Per";
+"filters.anyCountry" = "Qualsiasi Paese";
+"filters.runtimeAny" = "Qualsiasi";
+"filters.runtimeShort" = "< 90 min";
+"filters.runtimeMedium" = "90-120 min";
+"filters.runtimeLong" = "> 120 min";
+"filters.ratingAny" = "Qualsiasi";
+"filters.ratingGood" = "7.0+";
+"filters.ratingExcellent" = "8.0+";
+"filters.ratingMasterpiece" = "9.0+";
+
+// Browse
+"browse.title" = "Sfoglia";
+"browse.movies" = "Film";
+"browse.tvShows" = "Serie TV";
+"browse.emptyMessage" = "Tocca il pulsante filtro per sfogliare i contenuti";
+
+// Platforms
+"platforms.title" = "Piattaforme";
+"platforms.streaming" = "Streaming";
+"platforms.rent" = "Noleggio";
+"platforms.buy" = "Acquisto";
+
+// Common
+"common.done" = "Fatto";
+"common.cancel" = "Annulla";
+"common.save" = "Salva";
+"common.delete" = "Elimina";
+"common.edit" = "Modifica";
+"common.search" = "Cerca";
+"common.year" = "Anno";
+"common.loading" = "Caricamento...";
+"common.items" = "elementi";
+"common.item" = "elemento";
+"common.or" = "O";
+"common.reply" = "Rispondi";
+"common.uploading" = "Caricamento...";
+"common.loadMore" = "Carica altro";
+
+// Clips
+"clips.loadingClips" = "Caricamento clip...";
+"clips.noClipsAvailable" = "Nessuna Clip Disponibile";
+"clips.noClipsDescription" = "Torna più tardi per scene emozionanti dai tuoi film e serie preferiti";
+"clips.comment" = "Commento";
+"clips.comments" = "Commenti";
+"clips.noComments" = "Nessun commento";
+"clips.beFirstToComment" = "Sii il primo a commentare";
+"clips.replyingTo" = "Risposta a";
+"clips.reply" = "Rispondi";
+"clips.replies" = "risposte";
+"clips.viewReplies" = "Mostra";
+"clips.hideReplies" = "Nascondi";
+"clips.addToList" = "Aggiungi a Lista";
+"clips.noListsYet" = "Nessuna lista";
+"clips.createFirstList" = "Crea la tua prima lista per salvare contenuti";
+"clips.createNewList" = "Crea Nuova Lista";
+
+// Search
+"search.trendingSearches" = "Ricerche di Tendenza";
+"search.noResultsFound" = "Nessun risultato trovato";
+"search.results" = "Risultati";
+
+// Auth
+"auth.welcomeBack" = "Bentornato";
+"auth.signInContinue" = "Accedi per continuare il tuo viaggio";
+"auth.forgotPassword" = "Password Dimenticata?";
+"auth.signIn" = "Accedi";
+"auth.dontHaveAccount" = "Non hai un account?";
+"auth.signUp" = "Registrati";
+"auth.createAccount" = "Crea Account";
+"auth.joinVibeWatch" = "Unisciti a VibeWatch e inizia a scoprire";
+"auth.invalidEmail" = "Email non valida";
+"auth.invalidPassword" = "Password non valida";
+"auth.passwordsDontMatch" = "Le password non corrispondono";
+"auth.alreadyHaveAccount" = "Hai già un account?";
+"auth.emailPlaceholder" = "Email";
+"auth.usernamePlaceholder" = "Nome utente";
+"auth.passwordPlaceholder" = "Password";
+"auth.confirmPasswordPlaceholder" = "Conferma Password";
+
+// Notifications
+"notifications.permissionRequired" = "Permesso Notifiche Richiesto";
+"notifications.openSettings" = "Apri Impostazioni";
+"notifications.enableInSettings" = "Abilita le notifiche nelle Impostazioni per ricevere aggiornamenti su nuove uscite, cambi di prezzo e altro.";
+"notifications.disableConfirmation" = "Disabilitare le Notifiche?";
+"notifications.disableMessage" = "Non riceverai notifiche su nuove uscite, cambi di prezzo e raccomandazioni personalizzate.";
+"notifications.disableButton" = "Disabilita Notifiche";
+
+// Misc
+"misc.language" = "Italiano";
+"misc.somethingWrong" = "Qualcosa non va?";
+"misc.letUsKnow" = "Faccelo sapere";
+"misc.selected" = "selezionati";
+"misc.of" = "de";

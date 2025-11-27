@@ -180,7 +180,7 @@ class SupabaseService: ObservableObject {
         return mediaLists
     }
     
-    func createList(name: String, description: String?, type: ListType) async throws -> MediaList {
+    func createList(id: String, name: String, description: String?, type: ListType) async throws -> MediaList {
         guard let client = client else {
             throw SupabaseError.notConfigured
         }
@@ -190,6 +190,7 @@ class SupabaseService: ObservableObject {
         }
         
         struct CreateListRequest: Encodable {
+            let id: String  // Use our local ID
             let user_id: String
             let name: String
             let description: String?
@@ -206,10 +207,11 @@ class SupabaseService: ObservableObject {
         
         
         let request = CreateListRequest(
+            id: id,  // Pass our local ID
             user_id: userId,
             name: name,
             description: description,
-            type: type.databaseValue
+            type: type.rawValue
         )
         
         let response: CreateListResponse = try await client
@@ -399,8 +401,9 @@ class SupabaseService: ObservableObject {
     func syncLocalToCloud(lists: [MediaList]) async throws {
         // Upload all local lists and items to cloud
         for list in lists {
-            // Create the list
+            // Create the list with the same local ID
             let cloudList = try await createList(
+                id: list.id,  // Use same ID as local
                 name: list.name,
                 description: list.description,
                 type: list.type

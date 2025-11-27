@@ -13,17 +13,23 @@ class DiscoveryViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var isRefreshing = false
     @Published var isBrowseLoading = false
-    @Published var errorMessage: String?
+    @Published var error: AppError?
     @Published var filters = DiscoveryFilters()
     @Published var selectedBrowseType: MediaType = .movie
     @Published var refreshToken = UUID()
     
     private let dataCoordinator = DataCoordinator.shared
-    private let tmdbService = TMDBService.shared
+    private let tmdbService: TMDBServiceProtocol
     private let discoveryCache = DiscoveryCacheService.shared
+    private let quotaManager: DailyQuotaManager
     private var cancellables = Set<AnyCancellable>()
     
-    init() {
+    init(
+        tmdbService: TMDBServiceProtocol = TMDBService.shared,
+        quotaManager: DailyQuotaManager = .shared
+    ) {
+        self.tmdbService = tmdbService
+        self.quotaManager = quotaManager
         subscribeToListChanges()
     }
     
@@ -44,7 +50,7 @@ class DiscoveryViewModel: ObservableObject {
     }
     
     private func refilterBrowseResults() {
-        guard DailyQuotaManager.shared.isProUser else { return }
+        guard quotaManager.isProUser else { return }
 
         self.browseMovies = filterSeenAndDisliked(movies: self.browseMovies)
         self.browseTVShows = filterSeenAndDisliked(movies: self.browseTVShows)
@@ -59,7 +65,7 @@ class DiscoveryViewModel: ObservableObject {
         } else {
             isLoading = true
         }
-        errorMessage = nil
+        error = nil
         
         do {
             // If forceRefresh is true (e.g., language changed), fetch fresh and update cache
@@ -100,7 +106,7 @@ class DiscoveryViewModel: ObservableObject {
                 )
             }
             
-            if DailyQuotaManager.shared.isProUser {
+            if quotaManager.isProUser {
                 self.viralMovies = filterSeenAndDisliked(movies: self.viralMovies)
                 self.moodMovies = filterSeenAndDisliked(movies: self.moodMovies)
                 self.forYouMovies = filterSeenAndDisliked(movies: self.forYouMovies)
@@ -111,7 +117,7 @@ class DiscoveryViewModel: ObservableObject {
             
         } catch {
             print("❌ [DiscoveryViewModel] Failed to load from cache: \(error)")
-            errorMessage = "Failed to load content. Please try again."
+            self.error = AppError.database(error)
         }
         
         isLoading = false
@@ -167,7 +173,7 @@ class DiscoveryViewModel: ObservableObject {
                 )
             }
 
-            if DailyQuotaManager.shared.isProUser {
+            if quotaManager.isProUser {
                 self.viralMovies = filterSeenAndDisliked(movies: self.viralMovies)
                 self.moodMovies = filterSeenAndDisliked(movies: self.moodMovies)
                 self.forYouMovies = filterSeenAndDisliked(movies: self.forYouMovies)
@@ -178,7 +184,7 @@ class DiscoveryViewModel: ObservableObject {
             
         } catch {
             print("❌ [DiscoveryViewModel] Refresh failed: \(error)")
-            errorMessage = "Failed to refresh. Please try again."
+            self.error = AppError.network(error)
         }
         refreshToken = UUID()
     }
@@ -200,7 +206,7 @@ class DiscoveryViewModel: ObservableObject {
                     minRating: filters.ratingRange.minRating,
                     country: filters.country
                 )
-                if DailyQuotaManager.shared.isProUser {
+                if quotaManager.isProUser {
                     browseMovies = filterSeenAndDisliked(movies: response.results)
                 } else {
                     browseMovies = response.results
@@ -237,7 +243,7 @@ class DiscoveryViewModel: ObservableObject {
                         imdbId: tvShow.imdbId
                     )
                 }
-                if DailyQuotaManager.shared.isProUser {
+                if quotaManager.isProUser {
                     browseTVShows = filterSeenAndDisliked(movies: showsAsMovies)
                 } else {
                     browseTVShows = showsAsMovies
@@ -245,7 +251,7 @@ class DiscoveryViewModel: ObservableObject {
                 print("✅ [DiscoveryViewModel] Found \(browseTVShows.count) TV shows")
             }
         } catch {
-            errorMessage = error.localizedDescription
+            self.error = AppError.network(error)
             print("❌ [DiscoveryViewModel] Failed to browse: \(error)")
         }
         
@@ -291,7 +297,7 @@ class DiscoveryViewModel: ObservableObject {
             
             print("✅ [DiscoveryViewModel] Fetched fresh content")
         } catch {
-            errorMessage = error.localizedDescription
+            self.error = AppError.network(error)
             print("❌ [DiscoveryViewModel] Failed to fetch fresh content: \(error)")
         }
     }

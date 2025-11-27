@@ -4,7 +4,7 @@ import WebKit
 
 struct ClipsView: View {
     @StateObject private var viewModel = ClipsViewModel()
-    @StateObject private var quotaManager = DailyQuotaManager.shared
+    @EnvironmentObject var quotaManager: DailyQuotaManager
     @State private var currentIndex = 0
     @State private var showDailyPaywall = false
     @State private var showAccountGate = false
@@ -39,7 +39,7 @@ struct ClipsView: View {
                         if viewModel.isLoading {
                             loadingView
                                 .transition(.opacity)
-                        } else if let error = viewModel.errorMessage {
+                        } else if let error = viewModel.error {
                             errorView(error)
                                 .transition(.opacity)
                         } else if viewModel.clips.isEmpty {
@@ -61,6 +61,7 @@ struct ClipsView: View {
                                 quotaManager.resetQuota()
                             }
                         )
+                        .environmentObject(quotaManager)
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                         .zIndex(101)
                     }
@@ -69,6 +70,7 @@ struct ClipsView: View {
                         DailyLimitPaywallView(isPresented: $showDailyPaywall, onComeBack: {
                             NotificationCenter.default.post(name: .navigateToDiscoveryTab, object: nil)
                         })
+                        .environmentObject(quotaManager)
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                         .zIndex(100)
                     }
@@ -121,17 +123,14 @@ struct ClipsView: View {
         .background(Color.black.ignoresSafeArea())
         .ignoresSafeArea(.all, edges: .bottom)
         .task {
-            await viewModel.loadClips()
+            await handleViewAppearance()
         }
         .onDisappear {
             // Pause all clips when leaving the Clips tab
             NotificationCenter.default.post(name: .pauseAllClips, object: nil)
         }
-        .onChange(of: scenePhase) { _ in
-            // Pause all clips when app goes to background
-            if scenePhase != .active {
-                NotificationCenter.default.post(name: .pauseAllClips, object: nil)
-            }
+        .onChange(of: scenePhase) { oldPhase, newPhase in
+            handleScenePhaseChange(from: oldPhase, to: newPhase)
         }
         .onChange(of: currentIndex) { oldValue, newValue in
             // Check quota when user scrolls to next clip
@@ -142,6 +141,27 @@ struct ClipsView: View {
             quotaManager.resetQuota()
             showAccountGate = false
             showDailyPaywall = false
+        }
+    }
+
+    // MARK: - Lifecycle Handlers
+    private func handleViewAppearance() async {
+        await viewModel.loadClips()
+        AnalyticsService.shared.logScreenView(screenName: "Clips", screenClass: "ClipsView")
+    }
+
+    private func handleScenePhaseChange(from old: ScenePhase, to new: ScenePhase) {
+        guard old != new else { return }
+        
+        switch (old, new) {
+        case (_, .active):
+            // Resumed from background/inactive, no specific action needed for now
+            break
+        case (.active, _):
+            // Moved to background/inactive
+            NotificationCenter.default.post(name: .pauseAllClips, object: nil)
+        default:
+            break
         }
     }
 
@@ -189,7 +209,7 @@ struct ClipsView: View {
                             .onAppear {
                                 // Smart pagination: Load more when 5 clips away from end
                                 let remainingClips = viewModel.clips.count - index - 1
-                                if remainingClips <= 5 {
+                                if remainingClips <= AppConstants.Clips.paginationThreshold {
                                     Task {
                                         await viewModel.loadMoreClips()
                                     }
@@ -301,25 +321,27 @@ struct ClipsView: View {
         }
     }
 
-    private func errorView(_ error: String) -> some View {
+    private func errorView(_ error: AppError) -> some View {
         VStack(spacing: 20) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 60))
                 .foregroundColor(.orange)
 
-            Text("Oops!")
+            Text(error.errorDescription ?? "Oops!")
                 .font(.system(size: 24, weight: .bold))
                 .foregroundColor(.white)
 
-            Text(error)
-                .font(.system(size: 16))
-                .foregroundColor(.gray)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
+            if let recoverySuggestion = error.recoverySuggestion {
+                Text(recoverySuggestion)
+                    .font(.system(size: 16))
+                    .foregroundColor(.gray)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
+            }
 
             Button {
                 Task {
-                    viewModel.errorMessage = nil
+                    viewModel.error = nil
                     await viewModel.loadClips()
                 }
             } label: {
@@ -505,7 +527,7 @@ struct ClipPlayerView: View {
         .sheet(isPresented: $showAddToList) {
             AddToListView(
                 movieId: clip.movieId,
-                tvShowId: clip.tvShowId,
+                tvShowId: clip.tvShowId, 
                 mediaType: clip.movieId != nil ? .movie : .tv
             )
             .presentationDetents([.medium, .large])
@@ -789,237 +811,33 @@ struct CommentsView: View {
     let clipId: String
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var appState: AppState
-    @State private var commentText = ""
-    @State private var comments: [Comment] = []
-    @State private var replyingTo: Comment?
-    @FocusState private var isInputFocused: Bool
     
     var body: some View {
-        ZStack(alignment: .top) {
-            Color.theme.backgroundDark.opacity(0.98)
-            
+        NavigationView {
             VStack(spacing: 0) {
-                // Header
-                HStack {
-                    Spacer()
-                    
-                    Text("\(totalCommentsCount) clips.comment\(totalCommentsCount == 1 ? "" : "clips.comments")".localized)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.white)
-                    
-                    Spacer()
-                    
+                // Use our new CommentsListView
+                CommentsListView(
+                    clipId: clipId,
+                    userId: appState.currentUser?.id ?? "guest"
+                )
+            }
+            .navigationTitle("Comments")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         dismiss()
                     } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(width: 44, height: 44)
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.secondary)
                     }
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .background(Color.theme.backgroundDark.opacity(0.98))
-                
-                Divider()
-                    .background(Color.gray.opacity(0.3))
-                
-                // Comments List
-                if comments.isEmpty {
-                    Spacer()
-                    
-                    VStack(spacing: 12) {
-                        Image(systemName: "text.bubble")
-                            .font(.system(size: 50))
-                            .foregroundColor(.gray)
-                        
-                        Text("clips.noComments".localized)
-                            .font(.system(size: 16))
-                            .foregroundColor(.gray)
-                        
-                        Text("clips.beFirstToComment".localized)
-                            .font(.system(size: 14))
-                            .foregroundColor(.gray.opacity(0.7))
-                    }
-                    
-                    Spacer()
-                } else {
-                    ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 0) {
-                            ForEach($comments) { $comment in
-                                CommentRow(
-                                    comment: $comment,
-                                    onReply: { comment in
-                                        replyingTo = comment
-                                        isInputFocused = true
-                                    }
-                                )
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 12)
-                            }
-                        }
-                        .padding(.bottom, 80)
-                    }
-                }
-                
-                Spacer(minLength: 0)
-            }
-            
-            // Comment Input - Fixed at bottom
-            VStack {
-                Spacer()
-                
-                VStack(spacing: 0) {
-                    // Reply indicator - only show when keyboard is NOT focused
-                    if let replyingTo = replyingTo, !isInputFocused {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("\("clips.replyingTo".localized) \(replyingTo.username)")
-                                    .font(.system(size: 13, weight: .medium))
-                                    .foregroundColor(.white)
-                                
-                                Text(replyingTo.text)
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.gray)
-                                    .lineLimit(1)
-                            }
-                            
-                            Spacer()
-                            
-                            Button {
-                                self.replyingTo = nil
-                            } label: {
-                                Image(systemName: "xmark")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(.gray)
-                            }
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(Color.gray.opacity(0.2))
-                    }
-                    
-                    Divider()
-                        .background(Color.gray.opacity(0.3))
-                    
-                    HStack(spacing: 12) {
-                        // Avatar
-                        if let avatarURL = appState.currentUser?.avatarURL,
-                           let url = URL(string: avatarURL) {
-                            CachedAsyncImage(url: url) { image in
-                                image
-                                    .resizable()
-                                    .scaledToFill()
-                            } placeholder: {
-                                Image(systemName: "person.fill")
-                                    .font(.system(size: 16))
-                                    .foregroundColor(.gray)
-                            }
-                            .frame(width: 36, height: 36)
-                            .clipShape(Circle())
-                        } else {
-                            Circle()
-                                .fill(Color.gray.opacity(0.3))
-                                .frame(width: 36, height: 36)
-                                .overlay(
-                                    Image(systemName: "person.fill")
-                                        .font(.system(size: 16))
-                                        .foregroundColor(.gray)
-                                )
-                        }
-                        
-                        // Input Field
-                        HStack {
-                            TextField(replyingTo != nil ? "clips.replyPlaceholder".localized : "clips.commentPlaceholder".localized, text: $commentText)
-                                .font(.system(size: 15))
-                                .foregroundColor(.white)
-                                .tint(.white)
-                                .focused($isInputFocused)
-                                .submitLabel(.send)
-                                .onSubmit {
-                                    submitComment()
-                                }
-                            
-                            if !commentText.isEmpty {
-                                Button {
-                                    submitComment()
-                                } label: {
-                                    Image(systemName: "arrow.up.circle.fill")
-                                        .font(.system(size: 24))
-                                        .foregroundColor(.blue)
-                                }
-                            }
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
-                        .background(Color.gray.opacity(0.2))
-                        .cornerRadius(20)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(Color.theme.backgroundDark.opacity(0.98))
                 }
             }
         }
-        .onAppear {
-            loadComments()
-        }
-    }
-    
-    private var totalCommentsCount: Int {
-        comments.count + comments.reduce(0) { $0 + $1.replies.count }
-    }
-    
-    private func loadComments() {
-        // TODO: Load actual comments from backend
-        comments = []
-    }
-    
-    private func submitComment() {
-        guard !commentText.trimmingCharacters(in: .whitespaces).isEmpty else { return }
-        
-        if let replyingTo = replyingTo {
-            // Add as reply
-            let reply = Reply(
-                id: UUID().uuidString,
-                userId: appState.currentUser?.id ?? "guest",
-                username: appState.currentUser?.displayName ?? "Guest",
-                avatarURL: appState.currentUser?.avatarURL,
-                text: commentText,
-                likes: 0,
-                timestamp: Date()
-            )
-            
-            if let index = comments.firstIndex(where: { $0.id == replyingTo.id }) {
-                comments[index].replies.append(reply)
-                comments[index].repliesCount = comments[index].replies.count
-            }
-            
-            self.replyingTo = nil
-        } else {
-            // Add as new comment
-            let newComment = Comment(
-                id: UUID().uuidString,
-                userId: appState.currentUser?.id ?? "guest",
-                username: appState.currentUser?.displayName ?? "Guest",
-                avatarURL: appState.currentUser?.avatarURL,
-                text: commentText,
-                likes: 0,
-                timestamp: Date(),
-                repliesCount: 0,
-                replies: []
-            )
-            
-            comments.insert(newComment, at: 0)
-        }
-        
-        commentText = ""
-        isInputFocused = false
-        
-        // TODO: Send comment/reply to backend
+        .presentationCornerRadius(20)
     }
 }
+
 
 struct CommentRow: View {
     @Binding var comment: Comment

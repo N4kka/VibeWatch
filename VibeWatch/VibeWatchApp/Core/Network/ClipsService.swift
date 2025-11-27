@@ -24,7 +24,7 @@ class ClipsService {
     
     func fetchTrendingClips(page: Int = 1, limit: Int = 20) async throws -> [Clip] {
         // Use the smart algorithm engine
-        let algorithmEngine = await ClipsAlgorithmEngine.shared
+        let algorithmEngine = await PersonalizedClipsService.shared
         let enhancedClips = try await algorithmEngine.generateSmartFeed(count: limit)
         
         // Convert EnhancedClip back to Clip
@@ -148,6 +148,10 @@ class ClipsService {
     
     func isClipLiked(_ clipId: String) -> Bool {
         return likedClips.contains(clipId)
+    }
+    
+    func getLikedClipIds() -> Set<String> {
+        return likedClips
     }
     
     func updateLikeCount(clipId: String, newCount: Int) {

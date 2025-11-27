@@ -3,6 +3,7 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject var authService: AuthService
     @StateObject private var localizationManager = LocalizationManager.shared
     
     var body: some View {
@@ -87,7 +88,7 @@ struct SettingsView: View {
     
     private func forceLogout() async {
         do {
-            try await AuthService.shared.signOut(force: true)
+            try await authService.signOut(force: true)
             appState.isAuthenticated = false
             appState.currentUser = nil
             dismiss()

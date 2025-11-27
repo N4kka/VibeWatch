@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MainTabView: View {
     @EnvironmentObject var appState: AppState // Injected from App
+    @Environment(\.scenePhase) private var scenePhase // Monitor app lifecycle
     @State private var selectedTab = 0
     @State private var selectedMovie: Movie?
     @State private var selectedMediaType: MediaType = .movie
@@ -176,6 +177,8 @@ struct MainTabView: View {
             }
             print("📝 [MainTabView] Navigated to Lists tab")
         }
+        .background(scenePhaseMonitor) // Monitor app lifecycle for subscription status
+        .withErrorHandling()
     }
 }
 
@@ -261,5 +264,21 @@ struct TabButtonStyle: ButtonStyle {
         configuration.label
             .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
             .animation(.easeInOut(duration: 0.15), value: configuration.isPressed)
+    }
+}
+
+// MARK: - Scene Phase Monitoring Extension
+extension MainTabView {
+    /// Monitor app lifecycle to check subscription status when app becomes active
+    var scenePhaseMonitor: some View {
+        Color.clear
+            .onChange(of: scenePhase) { oldPhase, newPhase in
+                if newPhase == .active && oldPhase != .active {
+                    print("🔍 [App] App became active - checking subscription status")
+                    Task {
+                        await ClipQuotaService.shared.checkIsProUser()
+                    }
+                }
+            }
     }
 }

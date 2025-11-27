@@ -1,32 +1,58 @@
 import Foundation
 
-// MARK: - YouTube API Response Models
+// MARK: - YouTube API Search Response Models
 
-struct YouTubeSearchResponse: Codable {
-    let items: [YouTubeSearchItem]
+public struct YouTubeSearchResponse: Codable {
+    public let items: [YouTubeSearchItem]
 }
 
-struct YouTubeSearchItem: Codable {
-    let id: VideoId
-    let snippet: Snippet
+public struct YouTubeSearchItem: Codable {
+    public let id: VideoId
+    public let snippet: Snippet
     
-    struct VideoId: Codable {
-        let videoId: String
+    public struct VideoId: Codable {
+        public let videoId: String
     }
     
-    struct Snippet: Codable {
-        let title: String
-        let thumbnails: Thumbnails
+    public struct Snippet: Codable {
+        public let title: String
+        public let thumbnails: Thumbnails
         
-        struct Thumbnails: Codable {
-            let high: Thumbnail
+        public struct Thumbnails: Codable {
+            public let high: Thumbnail
             
-            struct Thumbnail: Codable {
-                let url: String
+            public struct Thumbnail: Codable {
+                public let url: String
             }
         }
     }
 }
+
+// MARK: - YouTube API Video Details Models (for validation)
+
+public struct YouTubeVideoResponse: Codable {
+    public let items: [YouTubeVideoItem]
+}
+
+public struct YouTubeVideoItem: Codable {
+    public let status: VideoStatus
+    public let contentDetails: ContentDetails
+}
+
+public struct VideoStatus: Codable {
+    public let uploadStatus: String
+    public let privacyStatus: String
+    public let embeddable: Bool
+}
+
+public struct ContentDetails: Codable {
+    public let contentRating: ContentRating
+}
+
+public struct ContentRating: Codable {
+    public let ytRating: String?
+}
+
 
 // MARK: - Legacy Compatibility (for ClipsService)
 

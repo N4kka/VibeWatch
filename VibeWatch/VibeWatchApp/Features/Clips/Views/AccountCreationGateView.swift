@@ -3,13 +3,13 @@ import SwiftUI
 /// Gate displayed after anonymous users exhaust their daily clip allowance.
 struct AccountCreationGateView: View {
     @EnvironmentObject private var appState: AppState
-    @StateObject private var quotaManager = DailyQuotaManager.shared
+    @EnvironmentObject var quotaManager: DailyQuotaManager
     @Binding var isPresented: Bool
     var onComeBack: (() -> Void)?
     var onAccountCreated: (() -> Void)?
 
     @State private var activeAuthSheet: AuthSheet?
-    @State private var countdownText = DailyQuotaManager.shared.timeUntilResetFormatted()
+    @State private var countdownText = ""
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
@@ -56,11 +56,14 @@ struct AccountCreationGateView: View {
                 .padding(.horizontal, 24)
                 .background(
                     RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .fill(Color(UIColor.systemBackground))
+                        .fill(Color(red: 28/255, green: 28/255, blue: 30/255))
                         .shadow(color: .black.opacity(0.25), radius: 20, x: 0, y: -8)
                 )
             }
             .ignoresSafeArea(edges: .bottom)
+        }
+        .onAppear {
+            countdownText = quotaManager.timeUntilResetFormatted()
         }
         .sheet(item: $activeAuthSheet) { sheet in
             switch sheet {
@@ -111,10 +114,10 @@ struct AccountCreationGateView: View {
     }
 
     private var benefitsList: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            BenefitRow(icon: "person.crop.circle.badge.plus", title: "Save your favorite clips")
-            BenefitRow(icon: "cloud.sync", title: "Sync across all your devices")
-            BenefitRow(icon: "sparkles", title: "Get personalized recommendations")
+        VStack(alignment: .leading, spacing: 14) {
+            BenefitRow(text: "Save your favorite clips")
+            BenefitRow(text: "Sync across all your devices")
+            BenefitRow(text: "Get personalized recommendations")
         }
         .padding(.top, 8)
     }
@@ -131,13 +134,12 @@ struct AccountCreationGateView: View {
                     .frame(height: 56)
                     .background(
                         LinearGradient(
-                            colors: [Color.orange, Color.orange.opacity(0.85)],
+                            colors: [Color(red: 1, green: 0.6, blue: 0.3), Color.orange],
                             startPoint: .leading,
                             endPoint: .trailing
                         )
                     )
-                    .cornerRadius(16)
-                    .shadow(color: Color.orange.opacity(0.3), radius: 10, x: 0, y: 5)
+                    .cornerRadius(28)
             }
 
             Button {
@@ -182,25 +184,27 @@ struct AccountCreationGateView: View {
     }
 
     private struct BenefitRow: View {
-        let icon: String
-        let title: String
+        let text: String
 
         var body: some View {
-            HStack(alignment: .center, spacing: 12) {
-                Image(systemName: icon)
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(.orange)
-                    .frame(width: 30)
+            HStack(spacing: 12) {
+                // Orange checkmark circle matching paywall style
+                ZStack {
+                    Circle()
+                        .fill(Color(red: 1, green: 0.55, blue: 0.2))
+                        .frame(width: 22, height: 22)
 
-                Text(title)
-                    .font(.system(size: 15, weight: .medium))
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.black)
+                }
+
+                Text(text)
+                    .font(.system(size: 15))
                     .foregroundColor(.white)
 
                 Spacer()
             }
-            .padding()
-            .background(Color.orange.opacity(0.08))
-            .cornerRadius(14)
         }
     }
 }

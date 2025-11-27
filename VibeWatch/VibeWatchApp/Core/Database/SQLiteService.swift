@@ -19,7 +19,7 @@ class SQLiteService: ObservableObject {
         let urls = fileManager.urls(for: .documentDirectory, in: .userDomainMask)
         dbPath = urls[0].appendingPathComponent("vibewatch_local.sqlite").path
         
-        print("📂 [SQLite] Database path: \(dbPath)")
+        Logger.info("[SQLite] Database path: \(dbPath)")
         
         openDatabase()
         createTables()
@@ -44,17 +44,17 @@ class SQLiteService: ObservableObject {
             // Enable WAL mode for better concurrency
             execute("PRAGMA journal_mode = WAL")
             
-            print("✅ [SQLite] Database opened successfully")
+            Logger.info("[SQLite] Database opened successfully")
         } else {
             isConnected = false
             lastError = String(cString: sqlite3_errmsg(db))
-            print("❌ [SQLite] Failed to open database: \(lastError ?? "unknown")")
+            Logger.error("[SQLite] Failed to open database: \(lastError ?? "unknown")")
         }
     }
     
     private func closeDatabase() {
         if sqlite3_close(db) == SQLITE_OK {
-            print("✅ [SQLite] Database closed")
+            Logger.info("[SQLite] Database closed")
         }
     }
     
@@ -64,8 +64,54 @@ class SQLiteService: ObservableObject {
             let result: [[String: Any]] = try await queryRaw("SELECT 1 as test")
             return result.first?["test"] as? Int == 1
         } catch {
-            print("❌ [SQLite] Connection test failed: \(error)")
+            Logger.error("[SQLite] Connection test failed", error: error)
             return false
+        }
+    }
+    
+    /// Debug: Print all reaction counts
+    func debugPrintReactionCounts() async {
+        do {
+            let counts: [[String: Any]] = try await queryRaw("""
+                SELECT media_id, media_type, like_count, dislike_count, updated_at
+                FROM movie_reaction_counts
+                ORDER BY updated_at DESC
+            """)
+            
+            Logger.debug("📊 [SQLite] Reaction Counts:")
+            Logger.debug("============================================================")
+            for row in counts {
+                let mediaId = row["media_id"] as? Int ?? 0
+                let mediaType = row["media_type"] as? String ?? ""
+                let likes = row["like_count"] as? Int ?? 0
+                let dislikes = row["dislike_count"] as? Int ?? 0
+                let updated = row["updated_at"] as? String ?? ""
+                Logger.debug("  \(mediaType) #\(mediaId): 👍 \(likes) | 👎 \(dislikes) (updated: \(updated))")
+            }
+            Logger.debug("============================================================")
+            Logger.debug("Total: \(counts.count) movies/shows with reactions")
+        } catch {
+            Logger.error("[SQLite] Failed to fetch reaction counts", error: error)
+        }
+    }
+    
+    /// Debug: Print all tables
+    func debugPrintAllTables() async {
+        do {
+            let tables: [[String: Any]] = try await queryRaw("""
+                SELECT name FROM sqlite_master 
+                WHERE type='table' 
+                ORDER BY name
+            """)
+            
+            Logger.debug("📋 [SQLite] All Tables:")
+            for table in tables {
+                if let name = table["name"] as? String {
+                    Logger.debug("  - \(name)")
+                }
+            }
+        } catch {
+            Logger.error("[SQLite] Failed to list tables", error: error)
         }
     }
     
@@ -87,7 +133,13 @@ class SQLiteService: ObservableObject {
             createSyncOutboxTable(),
             createSyncLogTable(),
             createDeviceInfoTable(),
-            createAppMetadataTable()
+            createAppMetadataTable(),
+            // Reactions & Comments tables
+            createMovieReactionsTable(),
+            createMovieReactionCountsTable(),
+            createClipReactionsTable(),
+            createClipCommentsTable(),
+            createClipCommentLikesTable()
         ]
         
         for table in tables {
@@ -102,7 +154,70 @@ class SQLiteService: ObservableObject {
             ('last_full_sync', NULL)
         """)
         
-        print("✅ [SQLite] All tables created")
+        Logger.info("[SQLite] All tables created")
+        
+        // Run migrations
+        runMigrations()
+    }
+    
+    private func runMigrations() {
+        // Check if migrations have already been run using synchronous execute
+        var migrationVersion = "0"
+        var statement: OpaquePointer?
+        
+        if sqlite3_prepare_v2(db, "SELECT value_text FROM app_metadata WHERE key_name = 'migration_version'", -1, &statement, nil) == SQLITE_OK {
+            if sqlite3_step(statement) == SQLITE_ROW {
+                if let versionPtr = sqlite3_column_text(statement, 0) {
+                    migrationVersion = String(cString: versionPtr)
+                }
+            }
+            sqlite3_finalize(statement)
+        }
+        
+        // Only run migrations if not already at latest version
+        if migrationVersion == "1" {
+            Logger.info("[SQLite] Migrations already applied (version \(migrationVersion))")
+            return
+        }
+        
+        Logger.info("[SQLite] Running migrations from version \(migrationVersion) to version 1...")
+        
+        // Temporarily disable foreign keys for migration
+        execute("PRAGMA foreign_keys = OFF")
+        
+        // Migration 1: Fix clip_comments foreign key constraints
+        Logger.info("[SQLite] Running migration: Recreating clip_comments table...")
+        
+        // Drop the old table (will cascade delete all comments)
+        execute("DROP TABLE IF EXISTS clip_comments")
+        execute("DROP INDEX IF EXISTS idx_clip_comments_clip")
+        execute("DROP INDEX IF EXISTS idx_clip_comments_parent")
+        execute("DROP INDEX IF EXISTS idx_clip_comments_user")
+        
+        // Recreate with new schema
+        execute(createClipCommentsTable())
+        
+        Logger.info("[SQLite] Migration 1 complete: clip_comments table recreated")
+        
+        // Migration 2: Fix clip_reactions foreign key constraints
+        Logger.info("[SQLite] Running migration: Recreating clip_reactions table...")
+        
+        // Drop the old table (will cascade delete all reactions)
+        execute("DROP TABLE IF EXISTS clip_reactions")
+        execute("DROP INDEX IF EXISTS idx_clip_reactions_user")
+        execute("DROP INDEX IF EXISTS idx_clip_reactions_clip")
+        
+        // Recreate with new schema
+        execute(createClipReactionsTable())
+        
+        Logger.info("[SQLite] Migration 2 complete: clip_reactions table recreated")
+        
+        // Re-enable foreign keys
+        execute("PRAGMA foreign_keys = ON")
+        
+        // Mark migration as complete
+        execute("INSERT OR REPLACE INTO app_metadata (key_name, value_text) VALUES ('migration_version', '1')")
+        Logger.info("[SQLite] Migrations complete - now at version 1")
     }
     
     // MARK: - SQL Execution
@@ -114,9 +229,10 @@ class SQLiteService: ObservableObject {
         
         guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
             let error = String(cString: sqlite3_errmsg(db))
-            print("❌ [SQLite] Prepare failed: \(error)")
-            print("   SQL: \(sql)")
-            lastError = error
+            Logger.error("[SQLite] Prepare failed: \(error). SQL: \(sql)")
+            DispatchQueue.main.async { [weak self] in
+                self?.lastError = error
+            }
             return false
         }
         
@@ -129,9 +245,10 @@ class SQLiteService: ObservableObject {
         
         if sqlite3_step(statement) != SQLITE_DONE {
             let error = String(cString: sqlite3_errmsg(db))
-            print("❌ [SQLite] Execute failed: \(error)")
-            print("   SQL: \(sql)")
-            lastError = error
+            Logger.error("[SQLite] Execute failed: \(error). SQL: \(sql)")
+            DispatchQueue.main.async { [weak self] in
+                self?.lastError = error
+            }
             return false
         }
         
@@ -192,14 +309,15 @@ class SQLiteService: ObservableObject {
     // MARK: - Transaction Support
     
     func transaction(_ operations: () async throws -> Void) async throws {
-        execute("BEGIN TRANSACTION")
-        
-        do {
-            try await operations()
-            execute("COMMIT")
-        } catch {
-            execute("ROLLBACK")
-            throw error
+        try await DatabaseUtilities.executeInTransaction {
+            self.execute("BEGIN TRANSACTION")
+            do {
+                try await operations()
+                self.execute("COMMIT")
+            } catch {
+                self.execute("ROLLBACK")
+                throw error
+            }
         }
     }
     
@@ -678,6 +796,91 @@ extension SQLiteService {
           value_json TEXT,
           updated_at TEXT DEFAULT (datetime('now'))
         );
+        """
+    }
+    
+    // MARK: - Reactions & Comments Tables
+    
+    private func createMovieReactionsTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS movie_reactions (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          media_id INTEGER NOT NULL,
+          media_type TEXT NOT NULL,
+          reaction_type TEXT NOT NULL,
+          created_at TEXT DEFAULT (datetime('now')),
+          updated_at TEXT DEFAULT (datetime('now')),
+          UNIQUE(user_id, media_id, media_type),
+          FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_movie_reactions_user ON movie_reactions(user_id);
+        CREATE INDEX IF NOT EXISTS idx_movie_reactions_media ON movie_reactions(media_id, media_type);
+        """
+    }
+    
+    private func createMovieReactionCountsTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS movie_reaction_counts (
+          media_id INTEGER NOT NULL,
+          media_type TEXT NOT NULL,
+          like_count INTEGER DEFAULT 0,
+          dislike_count INTEGER DEFAULT 0,
+          updated_at TEXT DEFAULT (datetime('now')),
+          PRIMARY KEY (media_id, media_type)
+        );
+        """
+    }
+    
+    private func createClipReactionsTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS clip_reactions (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          clip_id TEXT NOT NULL,
+          reaction_type TEXT NOT NULL DEFAULT 'like',
+          created_at TEXT DEFAULT (datetime('now')),
+          UNIQUE(user_id, clip_id, reaction_type)
+        );
+        CREATE INDEX IF NOT EXISTS idx_clip_reactions_user ON clip_reactions(user_id);
+        CREATE INDEX IF NOT EXISTS idx_clip_reactions_clip ON clip_reactions(clip_id);
+        """
+    }
+    
+    private func createClipCommentsTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS clip_comments (
+          id TEXT PRIMARY KEY,
+          clip_id TEXT NOT NULL,
+          user_id TEXT NOT NULL,
+          parent_comment_id TEXT,
+          content TEXT NOT NULL,
+          like_count INTEGER DEFAULT 0,
+          reply_count INTEGER DEFAULT 0,
+          created_at TEXT DEFAULT (datetime('now')),
+          updated_at TEXT DEFAULT (datetime('now')),
+          deleted_at TEXT,
+          FOREIGN KEY (parent_comment_id) REFERENCES clip_comments(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_clip_comments_clip ON clip_comments(clip_id, deleted_at);
+        CREATE INDEX IF NOT EXISTS idx_clip_comments_parent ON clip_comments(parent_comment_id);
+        CREATE INDEX IF NOT EXISTS idx_clip_comments_user ON clip_comments(user_id);
+        """
+    }
+    
+    private func createClipCommentLikesTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS clip_comment_likes (
+          id TEXT PRIMARY KEY,
+          comment_id TEXT NOT NULL,
+          user_id TEXT NOT NULL,
+          created_at TEXT DEFAULT (datetime('now')),
+          UNIQUE(user_id, comment_id),
+          FOREIGN KEY (comment_id) REFERENCES clip_comments(id) ON DELETE CASCADE,
+          FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_clip_comment_likes_comment ON clip_comment_likes(comment_id);
+        CREATE INDEX IF NOT EXISTS idx_clip_comment_likes_user ON clip_comment_likes(user_id);
         """
     }
 }
