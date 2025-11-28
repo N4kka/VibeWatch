@@ -13,11 +13,12 @@ struct DailyLimitPaywallView: View {
     @State private var showAlert = false
     @State private var alertTitle = ""
     @State private var alertMessage = ""
+    @State private var dragOffset: CGFloat = 0
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
         ZStack {
-            Color.black.opacity(0.45)
+            Color.black.opacity(max(0, 0.45 * (1 - dragOffset / 400)))
                 .ignoresSafeArea()
                 .onTapGesture { }
 
@@ -73,6 +74,24 @@ struct DailyLimitPaywallView: View {
                     RoundedRectangle(cornerRadius: 28, style: .continuous)
                         .fill(Color(UIColor.systemBackground))
                         .shadow(color: .black.opacity(0.25), radius: 20, x: 0, y: -8)
+                )
+                .offset(y: dragOffset)
+                .gesture(
+                    DragGesture()
+                        .onChanged { value in
+                            if value.translation.height > 0 {
+                                dragOffset = value.translation.height
+                            }
+                        }
+                        .onEnded { value in
+                            if value.translation.height > 100 {
+                                dismiss()
+                            } else {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                    dragOffset = 0
+                                }
+                            }
+                        }
                 )
             }
             .ignoresSafeArea(edges: .bottom)
