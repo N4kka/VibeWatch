@@ -1,7 +1,7 @@
 import Foundation
 import Combine
 
-enum ListError: Error, Equatable {
+enum ListError: LocalizedError, Equatable {
     case maxListsReached(limit: Int)
     case maxItemsReached(limit: Int)
     case listNotFound
@@ -10,7 +10,7 @@ enum ListError: Error, Equatable {
     case invalidName
     case authenticationRequired
     
-    var localizedDescription: String {
+    var errorDescription: String? {
         switch self {
         case .maxListsReached(let limit):
             return "lists.error.maxListsReached".localized.replacingOccurrences(of: "{limit}", with: "\(limit)")

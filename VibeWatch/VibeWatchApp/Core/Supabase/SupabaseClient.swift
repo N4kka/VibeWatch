@@ -5,126 +5,20 @@ import Supabase
 class SupabaseService: ObservableObject {
     static let shared = SupabaseService()
     
-    // Public accessor for database operations (auth not required for reads)
+    // Delegate to AuthService for the client and user state
     var client: SupabaseClient? {
-        return _client
+        return AuthService.shared.client
     }
     
-    private var _client: SupabaseClient?
-    @Published var currentUser: User?
-    @Published var isAuthenticated = false
-    
-    private init() {
-        // Initialize client if credentials are configured
-        if let url = URL(string: Config.supabaseURL),
-           !Config.supabaseAnonKey.isEmpty {
-            _client = SupabaseClient(
-                supabaseURL: url,
-                supabaseKey: Config.supabaseAnonKey
-            )
-            
-            // Check for existing session (optional - works without auth for public tables)
-            Task {
-                await checkSession()
-            }
-        } else {
-            print("⚠️ Supabase not configured. Add credentials to Config.swift")
-        }
+    var currentUser: User? {
+        return AuthService.shared.currentUser
     }
     
-    // MARK: - Session Management
-    
-    private func checkSession() async {
-        guard let client = _client else { return }
-        
-        do {
-            let session = try await client.auth.session
-            let user = session.user
-            currentUser = User(
-                id: user.id.uuidString,
-                email: user.email ?? "",
-                displayName: nil,
-                avatarURL: nil
-            )
-            isAuthenticated = true
-        } catch {
-            print("No active session: \(error)")
-            isAuthenticated = false
-        }
+    var isAuthenticated: Bool {
+        return AuthService.shared.isAuthenticated
     }
     
-    // MARK: - Authentication
-    
-    func signUp(email: String, password: String) async throws -> User {
-        guard let client = _client else {
-            throw SupabaseError.notConfigured
-        }
-        
-        let response = try await client.auth.signUp(email: email, password: password)
-        let user = response.user
-        
-        let newUser = User(
-            id: user.id.uuidString,
-            email: email,
-            displayName: nil,
-            avatarURL: nil
-        )
-        
-        currentUser = newUser
-        isAuthenticated = true
-        
-        return newUser
-    }
-    
-    func signIn(email: String, password: String) async throws -> User {
-        guard let client = _client else {
-            throw SupabaseError.notConfigured
-        }
-        
-        let response = try await client.auth.signIn(email: email, password: password)
-        
-        let user = User(
-            id: response.user.id.uuidString,
-            email: email,
-            displayName: nil,
-            avatarURL: nil
-        )
-        
-        currentUser = user
-        isAuthenticated = true
-        
-        return user
-    }
-    
-    func signOut() async throws {
-        guard let client = _client else {
-            throw SupabaseError.notConfigured
-        }
-        
-        try await client.auth.signOut()
-        currentUser = nil
-        isAuthenticated = false
-    }
-    
-    func getCurrentUser() async throws -> User? {
-        guard let client = client else {
-            throw SupabaseError.notConfigured
-        }
-        
-        let session = try await client.auth.session
-        
-        let user = User(
-            id: session.user.id.uuidString,
-            email: session.user.email ?? "",
-            displayName: nil,
-            avatarURL: nil
-        )
-        
-        currentUser = user
-        isAuthenticated = true
-        
-        return user
-    }
+    private init() {}
     
     // MARK: - Lists
     

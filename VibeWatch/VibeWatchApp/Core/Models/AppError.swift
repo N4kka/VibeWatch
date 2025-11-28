@@ -16,7 +16,8 @@ enum AppError: LocalizedError, Identifiable {
     var errorDescription: String? {
         switch self {
         case .network: return "Network connection failed"
-        case .database: return "Failed to load data"
+        case .database(let error):
+            return (error as? LocalizedError)?.errorDescription ?? "Failed to load data"
         case .unauthorized: return "Please sign in to continue"
         case .quotaExceeded: return "You've reached your daily limit"
         case .subscriptionExpired: return "Your Pro subscription has expired"
