@@ -213,3 +213,58 @@
 "misc.letUsKnow" = "Giv os besked";
 "misc.selected" = "valgt";
 "misc.of" = "af";
+
+"common.dismiss" = "Luk";
+"common.retry" = "Prøv igen";
+"common.offline" = "Du er offline. Viser cachet indhold.";
+"common.tryAgain" = "Prøv igen";
+"common.pro" = "PRO";
+"common.terms" = "Vilkår";
+"common.privacy" = "Privatliv";
+"common.liked" = "syntes godt om";
+
+"platform.selectionCount" = "%d af %d valgt";
+"platform.title" = "Streamingplatforme";
+
+"clips.comments.loading" = "Indlæser kommentarer...";
+"clips.comments.deleteConfirmation" = "Er du sikker på, at du vil slette denne kommentar? Denne handling kan ikke fortrydes.";
+"clips.comments.replying" = "Svarer...";
+"clips.feed.craftingTitle" = "Skaber dit perfekte feed";
+"clips.feed.craftingSubtitle" = "Vi håndplukker de bedste klip kun til dig ✨";
+
+"auth.gate.description" = "Du skal bruge en konto for at oprette brugerdefinerede lister og synkronisere dem mellem dine enheder.";
+"auth.gate.createFree" = "Opret gratis konto";
+"auth.gate.haveAccount" = "Jeg har allerede en konto";
+"auth.gate.accountRequired" = "Konto påkrævet";
+"auth.gate.signupFree" = "Tilmelding er gratis og tager under ét minut.";
+"auth.gate.createTitle" = "Opret din gratis VibeWatch-konto";
+"auth.gate.limitMessage" = "Du har set dine 15 gratis klip for i dag. Tilmeld dig for at synkronisere dine fremskridt og låse morgendagens klip op med det samme.";
+
+"ai.describeVibe" = "Beskriv din stemning";
+"ai.subtitle" = "Fortæl mig, hvad du er i humør til, så finder jeg det perfekte at se.";
+"ai.tryAsking" = "Prøv at spørge efter...";
+"ai.thinking" = "Tænker...";
+"ai.placeholder" = "Fx \"sci-fi med plottwist\"";
+"ai.editMessage" = "Rediger besked";
+"ai.saveRegenerate" = "Gem & generér igen";
+"ai.resultsTitle" = "Her er, hvad jeg fandt:";
+
+"settings.comingSoon" = "Flere indstillinger kommer snart...";
+
+"paywall.daily.title" = "Kom tilbage i morgen";
+"paywall.restore" = "Gendan køb";
+"paywall.proDescription" = "Med Pro får du ubegrænsede klip, gemte præferencer og mere.";
+"paywall.daily.limitReached" = "Du har nået dagens grænse";
+"paywall.daily.limitDescription" = "Gratis brugere kan se 15 klip om dagen. Opgradér til Pro for ubegrænsede klip og premiumfunktioner.";
+"paywall.daily.nextReset" = "Næste nulstilling om";
+"paywall.daily.resetIn" = "Nulstilles om";
+"paywall.foundingMember" = "Founding Member-pris";
+"paywall.upgrade" = "Opgradér til Pro";
+"paywall.unlockUnlimited" = "Lås ubegrænsede klip op";
+"paywall.ensurePro" = "Sikr dig din Pro-plan!";
+"paywall.bestValue" = "BEDSTE VÆRDI";
+
+"lists.watchOn" = "Se på";
+"lists.deleteList" = "Slet liste";
+"lists.deleteConfirmation" = "Er du sikker på, at du vil slette %@? Alle elementer i denne liste bliver fjernet.";
+

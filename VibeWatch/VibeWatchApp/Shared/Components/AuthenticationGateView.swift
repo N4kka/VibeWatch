@@ -40,12 +40,12 @@ struct AuthenticationGateView: View {
                             }
 
                             VStack(spacing: 8) {
-                                Text("Create an Account")
+                                Text("auth.gate.createTitle".localized)
                                     .font(.system(size: 24, weight: .bold))
                                     .multilineTextAlignment(.center)
                                     .foregroundColor(.primary)
 
-                                Text("You need an account to create custom lists and sync them across your devices.")
+                                Text("auth.gate.description".localized)
                                     .font(.system(size: 15))
                                     .foregroundColor(.secondary)
                                     .multilineTextAlignment(.center)
@@ -57,7 +57,7 @@ struct AuthenticationGateView: View {
                             Button {
                                 activeAuthSheet = .signUp
                             } label: {
-                                Text("Create free account")
+                                Text("auth.gate.createFree".localized)
                                     .font(.system(size: 17, weight: .bold))
                                     .foregroundColor(.white)
                                     .frame(maxWidth: .infinity)
@@ -76,7 +76,7 @@ struct AuthenticationGateView: View {
                             Button {
                                 activeAuthSheet = .signIn
                             } label: {
-                                Text("I already have an account")
+                                Text("auth.gate.haveAccount".localized)
                                     .font(.system(size: 16, weight: .medium))
                                     .foregroundColor(.orange)
                                     .frame(maxWidth: .infinity)
@@ -89,7 +89,7 @@ struct AuthenticationGateView: View {
                         Button {
                             isPresented = false
                         } label: {
-                            Text("Skip for now")
+                            Text("onboarding.page4.skip".localized)
                                 .font(.system(size: 16, weight: .medium))
                                 .foregroundColor(.secondary)
                                 .frame(maxWidth: .infinity)

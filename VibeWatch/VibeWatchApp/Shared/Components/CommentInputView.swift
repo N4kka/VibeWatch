@@ -34,13 +34,13 @@ struct CommentInputView: View {
             // Reply indicator
             if parentCommentId != nil {
                 HStack {
-                    Text("Replying...")
+                    Text("clips.comments.replying".localized)
                         .font(.caption)
                         .foregroundColor(.secondary)
                     
                     Spacer()
                     
-                    Button("Cancel") {
+                    Button("common.cancel".localized) {
                         onCancel?()
                     }
                     .font(.caption)

@@ -213,3 +213,58 @@
 "misc.letUsKnow" = "Laat het ons weten";
 "misc.selected" = "geselecteerd";
 "misc.of" = "van";
+
+"common.dismiss" = "Sluiten";
+"common.retry" = "Opnieuw proberen";
+"common.offline" = "Je bent offline. Gecachte inhoud wordt weergegeven.";
+"common.tryAgain" = "Opnieuw proberen";
+"common.pro" = "PRO";
+"common.terms" = "Voorwaarden";
+"common.privacy" = "Privacy";
+"common.liked" = "leuk gevonden";
+
+"platform.selectionCount" = "%d van %d geselecteerd";
+"platform.title" = "Streamingplatforms";
+
+"clips.comments.loading" = "Reacties worden geladen...";
+"clips.comments.deleteConfirmation" = "Weet je zeker dat je deze reactie wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.";
+"clips.comments.replying" = "Beantwoorden...";
+"clips.feed.craftingTitle" = "Je perfecte feed wordt samengesteld";
+"clips.feed.craftingSubtitle" = "We kiezen de beste clips speciaal voor jou ✨";
+
+"auth.gate.description" = "Je hebt een account nodig om aangepaste lijsten te maken en ze tussen je apparaten te synchroniseren.";
+"auth.gate.createFree" = "Gratis account aanmaken";
+"auth.gate.haveAccount" = "Ik heb al een account";
+"auth.gate.accountRequired" = "Account vereist";
+"auth.gate.signupFree" = "Aanmelden is gratis en duurt minder dan een minuut.";
+"auth.gate.createTitle" = "Maak je gratis VibeWatch-account";
+"auth.gate.limitMessage" = "Je hebt vandaag al 15 gratis clips bekeken. Meld je aan om je voortgang te synchroniseren en de clips van morgen direct te ontgrendelen.";
+
+"ai.describeVibe" = "Beschrijf je vibe";
+"ai.subtitle" = "Vertel me waar je zin in hebt, dan vind ik de perfecte titel.";
+"ai.tryAsking" = "Probeer te vragen om...";
+"ai.thinking" = "Bezig met nadenken...";
+"ai.placeholder" = "Bijv. 'Sci-fi met een plottwist'";
+"ai.editMessage" = "Bericht bewerken";
+"ai.saveRegenerate" = "Opslaan & opnieuw genereren";
+"ai.resultsTitle" = "Dit heb ik gevonden:";
+
+"settings.comingSoon" = "Meer instellingen binnenkort beschikbaar...";
+
+"paywall.daily.title" = "Kom morgen terug";
+"paywall.restore" = "Aankopen herstellen";
+"paywall.proDescription" = "Met Pro krijg je onbeperkte clips, opgeslagen voorkeuren en meer.";
+"paywall.daily.limitReached" = "Je hebt de limiet voor vandaag bereikt";
+"paywall.daily.limitDescription" = "Gratis leden kunnen 15 clips per dag bekijken. Upgrade naar Pro voor onbeperkte clips en premiumfuncties.";
+"paywall.daily.nextReset" = "Volgende reset over";
+"paywall.daily.resetIn" = "Reset over";
+"paywall.foundingMember" = "Founding Member-tarief";
+"paywall.upgrade" = "Upgrade naar Pro";
+"paywall.unlockUnlimited" = "Ontgrendel onbeperkte clips";
+"paywall.ensurePro" = "Zorg dat je je Pro-abonnement veiligstelt!";
+"paywall.bestValue" = "BESTE DEAL";
+
+"lists.watchOn" = "Kijken op";
+"lists.deleteList" = "Lijst verwijderen";
+"lists.deleteConfirmation" = "Weet je zeker dat je %@ wilt verwijderen? Alle items in deze lijst worden verwijderd.";
+

@@ -23,100 +23,118 @@ struct AIRecommendationsView: View {
                     .padding(.top, 10)
                 
                 // Content Area
-                ScrollView {
-                    VStack(spacing: 24) {
-                        // Introduction / Empty State
-                        if viewModel.responseText.isEmpty && !viewModel.isLoading {
-                            VStack(spacing: 16) {
-                                Image(systemName: "sparkles.tv")
-                                    .font(.system(size: 60))
-                                    .foregroundStyle(Color.theme.textSecondary.opacity(0.5))
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(spacing: 24) {
+                            // Introduction / Empty State
+                            if viewModel.messages.isEmpty && !viewModel.isLoading {
+                                VStack(spacing: 16) {
+                                    Image(systemName: "sparkles.tv")
+                                        .font(.system(size: 60))
+                                        .foregroundStyle(Color.theme.textSecondary.opacity(0.5))
+                                    
+                                    Text("ai.describeVibe".localized)
+                                        .font(.headline)
+                                        .foregroundStyle(Color.theme.textPrimary)
+                                    
+                                    Text("ai.subtitle".localized)
+                                        .font(.subheadline)
+                                        .foregroundStyle(Color.theme.textSecondary)
+                                        .multilineTextAlignment(.center)
+                                        .padding(.horizontal)
+                                }
+                                .padding(.top, 40)
                                 
-                                Text("Describe your vibe")
-                                    .font(.headline)
-                                    .foregroundStyle(Color.theme.textPrimary)
-                                
-                                Text("Tell me what you're in the mood for, and I'll find the perfect watch.")
-                                    .font(.subheadline)
-                                    .foregroundStyle(Color.theme.textSecondary)
-                                    .multilineTextAlignment(.center)
-                                    .padding(.horizontal)
-                            }
-                            .padding(.top, 40)
-                            
-                            // Suggestion Chips
-                            VStack(alignment: .leading, spacing: 12) {
-                                Text("Try asking for...")
-                                    .font(.caption)
-                                    .foregroundStyle(Color.theme.textSecondary)
-                                    .padding(.leading, 4)
-                                
-                                FlowLayout(spacing: 10) {
-                                    ForEach(viewModel.suggestionChips, id: \.self) { chip in
-                                        Button(action: {
-                                            viewModel.applySuggestion(chip)
-                                        }) {
-                                            Text(chip)
-                                                .font(.system(size: 14, weight: .medium))
-                                                .padding(.horizontal, 16)
-                                                .padding(.vertical, 10)
-                                                .background(Color.theme.cardBackground)
-                                                .foregroundStyle(Color.theme.textPrimary)
-                                                .clipShape(Capsule())
-                                                .overlay(
-                                                    Capsule()
-                                                        .stroke(Color.theme.separator, lineWidth: 1)
-                                                )
+                                // Suggestion Chips
+                                VStack(alignment: .leading, spacing: 12) {
+                                    Text("ai.tryAsking".localized)
+                                        .font(.caption)
+                                        .foregroundStyle(Color.theme.textSecondary)
+                                        .padding(.leading, 4)
+                                    
+                                    FlowLayout(spacing: 10) {
+                                        ForEach(viewModel.suggestionChips, id: \.self) { chip in
+                                            Button(action: {
+                                                viewModel.applySuggestion(chip)
+                                            }) {
+                                                Text(chip)
+                                                    .font(.system(size: 14, weight: .medium))
+                                                    .padding(.horizontal, 16)
+                                                    .padding(.vertical, 10)
+                                                    .background(Color.theme.cardBackground)
+                                                    .foregroundStyle(Color.theme.textPrimary)
+                                                    .clipShape(Capsule())
+                                                    .overlay(
+                                                        Capsule()
+                                                            .stroke(Color.theme.separator, lineWidth: 1)
+                                                    )
+                                            }
                                         }
                                     }
+                                }
+                                .padding(.horizontal)
+                            }
+                            
+                            // Chat Messages
+                            LazyVStack(spacing: 16) {
+                                ForEach($viewModel.messages) { $message in
+                                    MessageBubble(
+                                        message: $message,
+                                        onRegenerate: { newContent in
+                                            Task {
+                                                await viewModel.regenerateResponse(for: message.id, newContent: newContent)
+                                            }
+                                        },
+                                        onToggleEdit: {
+                                            viewModel.toggleEdit(for: message.id)
+                                        }
+                                    )
+                                    .id(message.id)
+                                }
+                                
+                                // Loading State
+                                if viewModel.isLoading {
+                                    HStack {
+                                        ProgressView()
+                                            .tint(Color.theme.accentOrange)
+                                            .scaleEffect(1.0)
+                                        Text("ai.thinking".localized)
+                                            .font(.caption)
+                                            .foregroundStyle(Color.theme.textSecondary)
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.leading, 20)
+                                    .id("loading")
+                                }
+                                
+                                // Error
+                                if let error = viewModel.error {
+                                    Text(error)
+                                        .foregroundStyle(.red)
+                                        .font(.caption)
+                                        .padding()
                                 }
                             }
                             .padding(.horizontal)
                         }
-                        
-                        // Loading State
-                        if viewModel.isLoading {
-                            VStack(spacing: 16) {
-                                ProgressView()
-                                    .tint(Color.theme.accentOrange)
-                                    .scaleEffect(1.5)
-                                
-                                Text("Finding the best matches...")
-                                    .font(.subheadline)
-                                    .foregroundStyle(Color.theme.textSecondary)
+                        .padding(.bottom, 100) // Spacing for input area
+                    }
+                    .scrollDismissesKeyboard(.interactively)
+                    .onChange(of: viewModel.messages.count) {
+                        if let lastId = viewModel.messages.last?.id {
+                            withAnimation {
+                                proxy.scrollTo(lastId, anchor: .bottom)
                             }
-                            .frame(maxWidth: .infinity, minHeight: 200)
-                        }
-                        
-                        // Response
-                        if !viewModel.responseText.isEmpty {
-                            VStack(alignment: .leading, spacing: 16) {
-                                Text("Here's what I found:")
-                                    .font(.headline)
-                                    .foregroundStyle(Color.theme.textSecondary)
-                                
-                                Text(viewModel.responseText)
-                                    .font(.body)
-                                    .lineSpacing(6)
-                                    .foregroundStyle(Color.theme.textPrimary)
-                                    .padding()
-                                    .background(Color.theme.cardBackground)
-                                    .cornerRadius(16)
-                            }
-                            .padding(.horizontal)
-                        }
-                        
-                        // Error
-                        if let error = viewModel.error {
-                            Text(error)
-                                .foregroundStyle(.red)
-                                .font(.caption)
-                                .padding()
                         }
                     }
-                    .padding(.bottom, 100) // Spacing for input area
+                    .onChange(of: viewModel.isLoading) { _, newValue in
+                        if newValue {
+                            withAnimation {
+                                proxy.scrollTo("loading", anchor: .bottom)
+                            }
+                        }
+                    }
                 }
-                .scrollDismissesKeyboard(.interactively)
                 
                 Spacer()
                 
@@ -126,7 +144,7 @@ struct AIRecommendationsView: View {
                         .background(Color.theme.separator)
                     
                     HStack(spacing: 12) {
-                        TextField("E.g. 'Sci-fi with a plot twist'", text: $viewModel.prompt)
+                        TextField("ai.placeholder".localized, text: $viewModel.prompt)
                             .focused($isInputFocused)
                             .padding()
                             .background(Color.theme.cardBackground)
@@ -135,13 +153,13 @@ struct AIRecommendationsView: View {
                             .submitLabel(.send)
                             .onSubmit {
                                 Task {
-                                    await viewModel.getRecommendations()
+                                    await viewModel.sendMessage()
                                 }
                             }
                         
                         Button(action: {
                             Task {
-                                await viewModel.getRecommendations()
+                                await viewModel.sendMessage()
                                 isInputFocused = false
                             }
                         }) {
@@ -158,6 +176,99 @@ struct AIRecommendationsView: View {
                 }
             }
         }
+    }
+}
+
+struct MessageBubble: View {
+    @Binding var message: AIMessage
+    let onRegenerate: (String) -> Void
+    let onToggleEdit: () -> Void
+    
+    @State private var editedContent: String = ""
+    
+    var body: some View {
+        HStack {
+            if message.isUser {
+                Spacer()
+                
+                if message.isEditing {
+                    VStack(alignment: .trailing, spacing: 8) {
+                        TextField("ai.editMessage".localized, text: $editedContent)
+                            .padding(10)
+                            .background(Color.theme.cardBackground)
+                            .cornerRadius(12)
+                            .foregroundStyle(Color.theme.textPrimary)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.theme.accentOrange, lineWidth: 1)
+                            )
+                        
+                        HStack {
+                            Button("common.cancel".localized) {
+                                onToggleEdit()
+                            }
+                            .font(.caption)
+                            .foregroundStyle(Color.theme.textSecondary)
+                            
+                            Button("ai.saveRegenerate".localized) {
+                                onRegenerate(editedContent)
+                            }
+                            .font(.caption.bold())
+                            .foregroundStyle(Color.theme.accentOrange)
+                        }
+                    }
+                    .frame(maxWidth: 300)
+                    .onAppear {
+                        editedContent = message.content
+                    }
+                } else {
+                    Text(message.content)
+                        .padding(12)
+                        .background(
+                            LinearGradient(
+                                colors: [Color.theme.accentOrange, Color.purple],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .foregroundStyle(.white)
+                        .cornerRadius(16, corners: [.topLeft, .topRight, .bottomLeft])
+                        .onLongPressGesture {
+                            onToggleEdit()
+                        }
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(message.content)
+                        .padding(16)
+                        .background(Color.theme.cardBackground)
+                        .foregroundStyle(Color.theme.textPrimary)
+                        .cornerRadius(16, corners: [.topLeft, .topRight, .bottomRight])
+                        .lineSpacing(4)
+                }
+                Spacer()
+            }
+        }
+    }
+}
+
+extension View {
+    func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
+        clipShape(RoundedCorner(radius: radius, corners: corners))
+    }
+}
+
+struct RoundedCorner: Shape {
+    var radius: CGFloat = .infinity
+    var corners: UIRectCorner = .allCorners
+
+    func path(in rect: CGRect) -> Path {
+        let path = UIBezierPath(
+            roundedRect: rect,
+            byRoundingCorners: corners,
+            cornerRadii: CGSize(width: radius, height: radius)
+        )
+        return Path(path.cgPath)
     }
 }
 

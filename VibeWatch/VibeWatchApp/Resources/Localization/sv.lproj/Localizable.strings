@@ -213,3 +213,39 @@
 "misc.letUsKnow" = "Berätta för oss";
 "misc.selected" = "valda";
 "misc.of" = "av";
+
+"common.dismiss" = "Stäng";
+"common.retry" = "Försök igen";
+"common.offline" = "Du är offline. Visar cachelagrat innehåll.";
+"common.tryAgain" = "Försök igen";
+"common.pro" = "PRO";
+"common.terms" = "Villkor";
+"common.privacy" = "Integritet";
+"common.liked" = "gillad";
+
+"platform.selectionCount" = "%d av %d valda";
+"platform.title" = "Streamingplattformar";
+
+"clips.comments.loading" = "Laddar kommentarer...";
+"clips.comments.deleteConfirmation" = "Är du säker på att du vill ta bort den här kommentaren? Detta kan inte ångras.";
+"clips.comments.replying" = "Svarar...";
+"clips.feed.craftingTitle" = "Skapar ditt perfekta flöde";
+"clips.feed.craftingSubtitle" = "Vi handplockar de bästa klippen bara för dig ✨";
+
+"auth.gate.description" = "Du behöver ett konto för att skapa anpassade listor och synka dem mellan dina enheter.";
+"auth.gate.createFree" = "Skapa gratis konto";
+"auth.gate.haveAccount" = "Jag har redan ett konto";
+"auth.gate.accountRequired" = "Konto krävs";
+"auth.gate.signupFree" = "Att registrera sig är gratis och tar mindre än en minut.";
+"auth.gate.createTitle" = "Skapa ditt kostnadsfria VibeWatch-konto";
+"auth.gate.limitMessage" = "Du har tittat på dagens 15 gratis klipp. Registrera dig för att synka din historik och låsa upp morgondagens klipp direkt.";
+
+"ai.describeVibe" = "Beskriv din känsla";
+"ai.subtitle" = "Berätta vilket humör du är på så hittar jag något perfekt att se.";
+"ai.tryAsking" = "Prova att fråga efter...";
+"ai.thinking" = "Tänker...";
+"ai.placeholder" = "T.ex. \"Sci-fi med plottwist\"";
+"ai.editMessage" = "Redigera meddelande";
+"ai.saveRegenerate" = "Spara & generera igen";
+"a
+

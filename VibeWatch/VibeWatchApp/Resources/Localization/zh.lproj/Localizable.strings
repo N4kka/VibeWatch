@@ -213,3 +213,58 @@
 "misc.letUsKnow" = "告诉我们";
 "misc.selected" = "已选择";
 "misc.of" = "的";
+
+"common.dismiss" = "关闭";
+"common.retry" = "重试";
+"common.offline" = "您已离线，正在显示缓存内容。";
+"common.tryAgain" = "再试一次";
+"common.pro" = "专业版";
+"common.terms" = "条款";
+"common.privacy" = "隐私";
+"common.liked" = "已点赞";
+
+"platform.selectionCount" = "%d / %d 已选择";
+"platform.title" = "流媒体平台";
+
+"clips.comments.loading" = "正在加载评论...";
+"clips.comments.deleteConfirmation" = "确定要删除此评论吗？此操作无法撤销。";
+"clips.comments.replying" = "正在回复…";
+"clips.feed.craftingTitle" = "为你打造完美的内容流";
+"clips.feed.craftingSubtitle" = "我们正在为你精挑细选最佳片段 ✨";
+
+"auth.gate.description" = "您需要一个账户来创建自定义列表并在设备间同步。";
+"auth.gate.createFree" = "创建免费账户";
+"auth.gate.haveAccount" = "我已有账户";
+"auth.gate.accountRequired" = "需要账户";
+"auth.gate.signupFree" = "注册免费，且不到一分钟即可完成。";
+"auth.gate.createTitle" = "创建你的免费 VibeWatch 账号";
+"auth.gate.limitMessage" = "你已经观看了今日 15 个免费片段。注册即可同步进度并立即解锁明天的内容。";
+
+"ai.describeVibe" = "描述你的观影氛围";
+"ai.subtitle" = "告诉我你的心情，我会为你找到完美的影片。";
+"ai.tryAsking" = "试着这样问…";
+"ai.thinking" = "思考中…";
+"ai.placeholder" = "例如 “带反转情节的科幻片”";
+"ai.editMessage" = "编辑消息";
+"ai.saveRegenerate" = "保存并重新生成";
+"ai.resultsTitle" = "我找到这些：";
+
+"settings.comingSoon" = "更多设置即将推出…";
+
+"paywall.daily.title" = "明天再来";
+"paywall.restore" = "恢复购买";
+"paywall.proDescription" = "Pro 版为你提供无限片段、保存偏好设置等更多内容。";
+"paywall.daily.limitReached" = "你已达到今日的观看上限";
+"paywall.daily.limitDescription" = "免费用户每天可观看 15 个片段。升级到 Pro 可解锁无限观看和高级功能。";
+"paywall.daily.nextReset" = "下次重置时间";
+"paywall.daily.resetIn" = "将在…重置";
+"paywall.foundingMember" = "创始会员价格";
+"paywall.upgrade" = "升级到 Pro";
+"paywall.unlockUnlimited" = "解锁无限片段";
+"paywall.ensurePro" = "确保你的 Pro 计划！";
+"paywall.bestValue" = "最佳价值";
+
+"lists.watchOn" = "观看途径";
+"lists.deleteList" = "删除列表";
+"lists.deleteConfirmation" = "确定要删除 %@ 吗？这将移除列表中的所有项目。";
+

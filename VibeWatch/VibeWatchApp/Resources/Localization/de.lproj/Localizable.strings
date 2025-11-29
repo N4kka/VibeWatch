@@ -213,3 +213,58 @@
 "misc.letUsKnow" = "Sagen Sie uns Bescheid";
 "misc.selected" = "ausgewählt";
 "misc.of" = "von";
+
+"common.dismiss" = "Schließen";
+"common.retry" = "Erneut versuchen";
+"common.offline" = "Du bist offline. Zwischengespeicherte Inhalte werden angezeigt.";
+"common.tryAgain" = "Erneut versuchen";
+"common.pro" = "PRO";
+"common.terms" = "Bedingungen";
+"common.privacy" = "Datenschutz";
+"common.liked" = "gefällt mir";
+
+"platform.selectionCount" = "%d von %d ausgewählt";
+"platform.title" = "Streaming-Plattformen";
+
+"clips.comments.loading" = "Kommentare werden geladen...";
+"clips.comments.deleteConfirmation" = "Möchtest du diesen Kommentar wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.";
+"clips.comments.replying" = "Antwort wird verfasst...";
+"clips.feed.craftingTitle" = "Wir erstellen deinen perfekten Feed";
+"clips.feed.craftingSubtitle" = "Wir wählen die besten Clips nur für dich aus ✨";
+
+"auth.gate.description" = "Du benötigst ein Konto, um eigene Listen zu erstellen und sie zwischen deinen Geräten zu synchronisieren.";
+"auth.gate.createFree" = "Kostenloses Konto erstellen";
+"auth.gate.haveAccount" = "Ich habe bereits ein Konto";
+"auth.gate.accountRequired" = "Konto erforderlich";
+"auth.gate.signupFree" = "Die Registrierung ist kostenlos und dauert weniger als eine Minute.";
+"auth.gate.createTitle" = "Erstelle dein kostenloses VibeWatch-Konto";
+"auth.gate.limitMessage" = "Du hast heute bereits 15 kostenlose Clips angesehen. Registriere dich, um deinen Fortschritt zu synchronisieren und die Clips von morgen sofort freizuschalten.";
+
+"ai.describeVibe" = "Beschreibe deine Stimmung";
+"ai.subtitle" = "Sag mir, worauf du Lust hast, und ich finde den perfekten Film oder die perfekte Serie.";
+"ai.tryAsking" = "Versuche zu fragen nach...";
+"ai.thinking" = "Ich denke nach...";
+"ai.placeholder" = "Z. B. „Sci-Fi mit Plottwist“";
+"ai.editMessage" = "Nachricht bearbeiten";
+"ai.saveRegenerate" = "Speichern & neu generieren";
+"ai.resultsTitle" = "Das habe ich gefunden:";
+
+"settings.comingSoon" = "Weitere Einstellungen folgen in Kürze...";
+
+"paywall.daily.title" = "Komm morgen wieder";
+"paywall.restore" = "Käufe wiederherstellen";
+"paywall.proDescription" = "Mit Pro erhältst du unbegrenzte Clips, gespeicherte Präferenzen und mehr.";
+"paywall.daily.limitReached" = "Du hast das Tageslimit erreicht";
+"paywall.daily.limitDescription" = "Kostenlose Nutzer können 15 Clips pro Tag ansehen. Upgrade auf Pro für unbegrenzte Clips und Premium-Funktionen.";
+"paywall.daily.nextReset" = "Nächster Reset in";
+"paywall.daily.resetIn" = "Reset in";
+"paywall.foundingMember" = "Founding-Member-Preis";
+"paywall.upgrade" = "Upgrade auf Pro";
+"paywall.unlockUnlimited" = "Unbegrenzte Clips freischalten";
+"paywall.ensurePro" = "Sichere dir deinen Pro-Plan!";
+"paywall.bestValue" = "BESTES ANGEBOT";
+
+"lists.watchOn" = "ANSCHAUEN AUF";
+"lists.deleteList" = "Liste löschen";
+"lists.deleteConfirmation" = "Möchtest du %@ wirklich löschen? Alle Elemente in dieser Liste werden entfernt.";
+

@@ -65,7 +65,7 @@ struct PricingCard: View {
                     .foregroundColor(.white)
 
                 if isBestValue {
-                    Text("BEST VALUE")
+                    Text("paywall.bestValue".localized)
                         .font(.system(size: 11, weight: .black))
                         .foregroundColor(accentColor)
                         .padding(.vertical, 4)

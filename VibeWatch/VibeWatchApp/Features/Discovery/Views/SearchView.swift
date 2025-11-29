@@ -57,7 +57,13 @@ struct SearchView: View {
         }
         .onAppear {
             isSearchFocused = true
+            Task { await viewModel.loadLatestVisitedItems() }
         }
+    }
+    
+    private func saveAndNavigate(result: SearchResult) {
+        viewModel.saveVisitedItem(id: result.id, mediaType: result.mediaType)
+        selectedResult = result
     }
 }
 
@@ -96,6 +102,30 @@ struct SearchBarView: View {
             .padding(.vertical, 12)
             .background(Color.white.opacity(0.1))
             .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+    }
+}
+
+struct LatestVisitedSection: View {
+    let results: [SearchResult]
+    let onTap: (SearchResult) -> Void
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("search.latestVisited".localized)
+                .font(.system(size: 20, weight: .bold))
+                .foregroundColor(.theme.textPrimary)
+                .padding(.horizontal, 20)
+            
+            LazyVStack(spacing: 12) {
+                ForEach(results) { result in
+                    SearchResultRow(result: result)
+                        .onTapGesture {
+                            onTap(result)
+                        }
+                }
+            }
+            .padding(.horizontal, 20)
         }
     }
 }

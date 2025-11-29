@@ -59,7 +59,7 @@ struct PlatformSelectorSheet: View {
                         
                         Spacer()
                         
-                        Text("\(selectedPlatforms.count) of 30 selected")
+                        Text(String(format: "platform.selectionCount".localized, selectedPlatforms.count, 30))
                             .font(.system(size: 14))
                             .foregroundColor(.theme.textSecondary)
                     }
@@ -90,11 +90,11 @@ struct PlatformSelectorSheet: View {
                 }
             }
             .background(Color.theme.background)
-            .navigationTitle("Streaming Platforms")
+            .navigationTitle("platform.title".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
+                    Button("common.done".localized) {
                         dismiss()
                     }
                     .foregroundColor(.theme.accentOrange)

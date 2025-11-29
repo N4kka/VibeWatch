@@ -110,7 +110,7 @@ struct ProPaywallView: View {
                 )
 
             // Title
-            Text("Ensure your Pro Plan!")
+            Text("paywall.ensurePro".localized)
                 .font(.system(size: 24, weight: .bold))
                 .foregroundColor(.white)
         }
@@ -250,20 +250,20 @@ struct ProPaywallView: View {
     private var bottomLinks: some View {
         HStack(spacing: 28) {
             Button(action: restorePurchases) {
-                Text("Restore Purchases")
+                Text("paywall.restore".localized)
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(Color.white.opacity(0.6))
             }
             .disabled(isRestoring)
 
             Button(action: { /* Terms */ }) {
-                Text("Terms")
+                Text("common.terms".localized)
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(Color.white.opacity(0.6))
             }
 
             Button(action: { /* Privacy */ }) {
-                Text("Privacy")
+                Text("common.privacy".localized)
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(Color.white.opacity(0.6))
             }

@@ -213,3 +213,58 @@
 "misc.letUsKnow" = "Bize bildir";
 "misc.selected" = "seçili";
 "misc.of" = "/";
+
+"common.dismiss" = "Kapat";
+"common.retry" = "Tekrar dene";
+"common.offline" = "Çevrimdışısın. Önbelleğe alınmış içerik gösteriliyor.";
+"common.tryAgain" = "Tekrar dene";
+"common.pro" = "PRO";
+"common.terms" = "Şartlar";
+"common.privacy" = "Gizlilik";
+"common.liked" = "beğenildi";
+
+"platform.selectionCount" = "%d / %d seçildi";
+"platform.title" = "Yayın platformları";
+
+"clips.comments.loading" = "Yorumlar yükleniyor...";
+"clips.comments.deleteConfirmation" = "Bu yorumu silmek istediğinden emin misin? Bu işlem geri alınamaz.";
+"clips.comments.replying" = "Yanıtlanıyor...";
+"clips.feed.craftingTitle" = "Senin için mükemmel akış hazırlanıyor";
+"clips.feed.craftingSubtitle" = "Sadece senin için en iyi klipleri seçiyoruz ✨";
+
+"auth.gate.description" = "Özel listeler oluşturmak ve bunları cihazların arasında senkronize etmek için bir hesaba ihtiyacın var.";
+"auth.gate.createFree" = "Ücretsiz hesap oluştur";
+"auth.gate.haveAccount" = "Zaten bir hesabım var";
+"auth.gate.accountRequired" = "Hesap gerekli";
+"auth.gate.signupFree" = "Kayıt ücretsizdir ve bir dakikadan kısa sürer.";
+"auth.gate.createTitle" = "Ücretsiz VibeWatch hesabını oluştur";
+"auth.gate.limitMessage" = "Bugünkü 15 ücretsiz klibi izledin. İlerlemeni senkronize etmek ve yarının kliplerini anında açmak için kaydol.";
+
+"ai.describeVibe" = "Modunu tarif et";
+"ai.subtitle" = "Nasıl bir şey izlemek istediğini söyle, senin için en uygun seçeneği bulayım.";
+"ai.tryAsking" = "Şöyle sorabilirsin...";
+"ai.thinking" = "Düşünüyorum...";
+"ai.placeholder" = "Örn: \"Sürpriz sonlu bilim kurgu\"";
+"ai.editMessage" = "Mesajı düzenle";
+"ai.saveRegenerate" = "Kaydet ve yeniden üret";
+"ai.resultsTitle" = "Bunları buldum:";
+
+"settings.comingSoon" = "Yakında daha fazla ayar geliyor...";
+
+"paywall.daily.title" = "Yarın tekrar gel";
+"paywall.restore" = "Satın alımları geri yükle";
+"paywall.proDescription" = "Pro sana sınırsız klip, kayıtlı tercihlerin ve daha fazlasını sunar.";
+"paywall.daily.limitReached" = "Bugünkü sınırına ulaştın";
+"paywall.daily.limitDescription" = "Ücretsiz üyeler günde 15 klip izleyebilir. Sınırsız klip ve premium özellikler için Pro’ya yükselt.";
+"paywall.daily.nextReset" = "Sonraki sıfırlama";
+"paywall.daily.resetIn" = "Şu kadar süre sonra sıfırlanacak";
+"paywall.foundingMember" = "Kurucu Üye fiyatı";
+"paywall.upgrade" = "Pro’ya yükselt";
+"paywall.unlockUnlimited" = "Sınırsız klipleri aç";
+"paywall.ensurePro" = "Pro planını garanti altına al!";
+"paywall.bestValue" = "EN İYİ FIRSAT";
+
+"lists.watchOn" = "Şuradan izle";
+"lists.deleteList" = "Listeyi sil";
+"lists.deleteConfirmation" = "%@ listesini silmek istediğinden emin misin? Bu listedeki tüm öğeler kaldırılacak.";
+

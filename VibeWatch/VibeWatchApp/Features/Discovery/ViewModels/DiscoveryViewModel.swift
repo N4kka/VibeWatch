@@ -60,6 +60,11 @@ class DiscoveryViewModel: ObservableObject {
         self.browseMovies = filterSeenAndDisliked(movies: self.browseMovies)
         self.browseTVShows = filterSeenAndDisliked(movies: self.browseTVShows)
     }
+    
+    // Alias for loadContent to fix call site compatibility
+    func loadDiscoveryContent() async {
+        await loadContent()
+    }
 
     /// Load content - uses database cache for instant loading!
     func loadContent(forceRefresh: Bool = false) async {

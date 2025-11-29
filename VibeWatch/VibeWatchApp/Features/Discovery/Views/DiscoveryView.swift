@@ -71,10 +71,10 @@ struct DiscoveryView: View {
 
             Button {
                 Task {
-                    await viewModel.loadContent(forceRefresh: true)
+                    await viewModel.loadDiscoveryContent()
                 }
             } label: {
-                Text("Try Again")
+                Text("common.tryAgain".localized)
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.white)
                     .frame(width: 200, height: 50)

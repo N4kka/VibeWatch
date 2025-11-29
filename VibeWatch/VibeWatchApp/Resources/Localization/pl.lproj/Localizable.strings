@@ -213,3 +213,58 @@
 "misc.letUsKnow" = "Daj nam znać";
 "misc.selected" = "wybrano";
 "misc.of" = "z";
+
+"common.dismiss" = "Zamknij";
+"common.retry" = "Spróbuj ponownie";
+"common.offline" = "Jesteś offline. Wyświetlamy zapisane w pamięci treści.";
+"common.tryAgain" = "Spróbuj ponownie";
+"common.pro" = "PRO";
+"common.terms" = "Warunki";
+"common.privacy" = "Prywatność";
+"common.liked" = "polubiono";
+
+"platform.selectionCount" = "Wybrano %d z %d";
+"platform.title" = "Platformy streamingowe";
+
+"clips.comments.loading" = "Ładowanie komentarzy...";
+"clips.comments.deleteConfirmation" = "Na pewno chcesz usunąć ten komentarz? Tej operacji nie można cofnąć.";
+"clips.comments.replying" = "Odpowiadanie...";
+"clips.feed.craftingTitle" = "Tworzymy Twój idealny feed";
+"clips.feed.craftingSubtitle" = "Ręcznie wybieramy najlepsze klipy specjalnie dla Ciebie ✨";
+
+"auth.gate.description" = "Potrzebujesz konta, aby tworzyć własne listy i synchronizować je między urządzeniami.";
+"auth.gate.createFree" = "Utwórz darmowe konto";
+"auth.gate.haveAccount" = "Mam już konto";
+"auth.gate.accountRequired" = "Wymagane konto";
+"auth.gate.signupFree" = "Rejestracja jest darmowa i zajmuje mniej niż minutę.";
+"auth.gate.createTitle" = "Utwórz darmowe konto VibeWatch";
+"auth.gate.limitMessage" = "Wykorzystałeś dziś 15 darmowych klipów. Zarejestruj się, aby zsynchronizować postępy i natychmiast odblokować jutrzejsze klipy.";
+
+"ai.describeVibe" = "Opisz swój nastrój";
+"ai.subtitle" = "Powiedz mi, na co masz ochotę, a znajdę coś idealnego do obejrzenia.";
+"ai.tryAsking" = "Spróbuj zapytać o...";
+"ai.thinking" = "Myślę...";
+"ai.placeholder" = "Np. „sci-fi z zwrotem akcji”";
+"ai.editMessage" = "Edytuj wiadomość";
+"ai.saveRegenerate" = "Zapisz i wygeneruj ponownie";
+"ai.resultsTitle" = "Oto, co znalazłem:";
+
+"settings.comingSoon" = "Więcej ustawień już wkrótce...";
+
+"paywall.daily.title" = "Wróć jutro";
+"paywall.restore" = "Przywróć zakupy";
+"paywall.proDescription" = "Pro daje Ci nielimitowane klipy, zapisane preferencje i wiele więcej.";
+"paywall.daily.limitReached" = "Osiągnięto dzienny limit";
+"paywall.daily.limitDescription" = "Darmowi użytkownicy mogą oglądać 15 klipów dziennie. Uaktualnij do Pro, aby mieć nielimitowane klipy i funkcje premium.";
+"paywall.daily.nextReset" = "Następny reset za";
+"paywall.daily.resetIn" = "Reset za";
+"paywall.foundingMember" = "Cena dla członków założycieli";
+"paywall.upgrade" = "Uaktualnij do Pro";
+"paywall.unlockUnlimited" = "Odblokuj nielimitowane klipy";
+"paywall.ensurePro" = "Zabezpiecz swój plan Pro!";
+"paywall.bestValue" = "NAJLEPSZA OFERTA";
+
+"lists.watchOn" = "Oglądaj na";
+"lists.deleteList" = "Usuń listę";
+"lists.deleteConfirmation" = "Czy na pewno chcesz usunąć %@? Wszystkie elementy z tej listy zostaną usunięte.";
+

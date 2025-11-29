@@ -198,6 +198,13 @@
 "auth.usernamePlaceholder" = "Brukernavn";
 "auth.passwordPlaceholder" = "Passord";
 "auth.confirmPasswordPlaceholder" = "Bekreft passord";
+"auth.gate.description" = "Du trenger en konto for å lage egne lister og synkronisere dem mellom enhetene dine.";
+"auth.gate.createFree" = "Opprett gratis konto";
+"auth.gate.haveAccount" = "Jeg har allerede en konto";
+"auth.gate.accountRequired" = "Konto kreves";
+"auth.gate.signupFree" = "Registrering er gratis og tar under ett minutt.";
+"auth.gate.createTitle" = "Opprett din gratis VibeWatch-konto";
+"auth.gate.limitMessage" = "Du har sett dagens 15 gratis klipp. Registrer deg for å synkronisere fremgangen din og låse opp morgendagens klipp med én gang.";
 
 // Notifications
 "notifications.permissionRequired" = "Varslingstillatelse kreves";
@@ -213,3 +220,57 @@
 "misc.letUsKnow" = "Gi oss beskjed";
 "misc.selected" = "valgt";
 "misc.of" = "av";
+
+// Common
+"common.dismiss" = "Lukk";
+"common.retry" = "Prøv igjen";
+"common.offline" = "Du er frakoblet. Viser hurtiglagret innhold.";
+"common.tryAgain" = "Prøv igjen";
+"common.pro" = "PRO";
+"common.terms" = "Vilkår";
+"common.privacy" = "Personvern";
+"common.liked" = "likt";
+
+// Platform
+"platform.selectionCount" = "%d av %d valgt";
+"platform.title" = "Strømmetjenester";
+
+// Clips
+"clips.comments.loading" = "Laster inn kommentarer...";
+"clips.comments.deleteConfirmation" = "Er du sikker på at du vil slette denne kommentaren? Dette kan ikke angres.";
+"clips.comments.replying" = "Svarer...";
+"clips.feed.craftingTitle" = "Setter sammen din perfekte feed";
+"clips.feed.craftingSubtitle" = "Vi håndplukker de beste klippene bare for deg ✨";
+
+// AI
+"ai.describeVibe" = "Beskriv stemningen din";
+"ai.subtitle" = "Fortell meg hva du er i humør til, så finner jeg det perfekte å se på.";
+"ai.tryAsking" = "Prøv å spørre etter...";
+"ai.thinking" = "Tenker...";
+"ai.placeholder" = "F.eks. «sci-fi med plottwist»";
+"ai.editMessage" = "Rediger melding";
+"ai.saveRegenerate" = "Lagre og generer på nytt";
+"ai.resultsTitle" = "Her er det jeg fant:";
+
+// Settings
+"settings.comingSoon" = "Flere innstillinger kommer snart...";
+
+// Paywall
+"paywall.daily.title" = "Kom tilbake i morgen";
+"paywall.restore" = "Gjenopprett kjøp";
+"paywall.proDescription" = "Pro gir deg ubegrensede klipp, lagrede preferanser og mer.";
+"paywall.daily.limitReached" = "Du har nådd dagens grense";
+"paywall.daily.limitDescription" = "Gratisbrukere kan se 15 klipp per dag. Oppgrader til Pro for ubegrensede klipp og premiumfunksjoner.";
+"paywall.daily.nextReset" = "Neste tilbakestilling om";
+"paywall.daily.resetIn" = "Tilbakestilles om";
+"paywall.foundingMember" = "Grunnlegger-pris";
+"paywall.upgrade" = "Oppgrader til Pro";
+"paywall.unlockUnlimited" = "Lås opp ubegrensede klipp";
+"paywall.ensurePro" = "Sikre deg Pro-abonnementet ditt!";
+"paywall.bestValue" = "BEST VERDI";
+
+// Lists
+"lists.watchOn" = "Se på";
+"lists.deleteList" = "Slett liste";
+"lists.deleteConfirmation" = "Er du sikker på at du vil slette %@? Alle elementene i denne listen blir fjernet.";
+

@@ -334,7 +334,7 @@ struct ProFeatureLocker: ViewModifier {
             if !isPro {
                 HStack(spacing: 8) {
                     Image(systemName: "lock.fill")
-                    Text("PRO")
+                    Text("common.pro".localized)
                         .font(.system(size: 14, weight: .bold))
                 }
                 .padding(.horizontal, 12)

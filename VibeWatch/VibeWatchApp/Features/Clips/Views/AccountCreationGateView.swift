@@ -41,7 +41,7 @@ struct AccountCreationGateView: View {
                             dismissGate()
                             onComeBack?()
                         } label: {
-                            Text("Come back tomorrow")
+                            Text("paywall.daily.title".localized)
                                 .font(.system(size: 16, weight: .medium))
                                 .foregroundColor(.gray)
                                 .frame(maxWidth: .infinity)
@@ -50,7 +50,7 @@ struct AccountCreationGateView: View {
                                 .cornerRadius(14)
                         }
 
-                        Text("Signing up is free and takes less than a minute.")
+                        Text("auth.gate.signupFree".localized)
                             .font(.system(size: 12))
                             .foregroundColor(.gray)
                             .padding(.bottom, 20)
@@ -127,11 +127,11 @@ struct AccountCreationGateView: View {
                     .foregroundColor(.white)
             }
 
-            Text("Create your free VibeWatch account")
+            Text("auth.gate.createTitle".localized)
                 .font(.system(size: 24, weight: .bold))
                 .multilineTextAlignment(.center)
 
-            Text("You’ve enjoyed today’s 15 free clips. Sign up to sync your progress and unlock tomorrow’s drops instantly.")
+            Text("auth.gate.limitMessage".localized)
                 .font(.system(size: 15))
                 .foregroundColor(.gray)
                 .multilineTextAlignment(.center)
@@ -152,7 +152,7 @@ struct AccountCreationGateView: View {
             Button {
                 activeAuthSheet = .signUp
             } label: {
-                Text("Create free account")
+                Text("auth.gate.createFree".localized)
                     .font(.system(size: 18, weight: .bold))
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
@@ -170,13 +170,13 @@ struct AccountCreationGateView: View {
             Button {
                 activeAuthSheet = .signIn
             } label: {
-                Text("I already have an account")
+                Text("auth.gate.haveAccount".localized)
                     .font(.system(size: 16, weight: .medium))
                     .foregroundColor(.orange)
                     .frame(maxWidth: .infinity)
                     .frame(height: 52)
                     .background(Color.orange.opacity(0.12))
-                    .cornerRadius(14)
+                    .cornerRadius(28)
             }
         }
     }
@@ -187,7 +187,7 @@ struct AccountCreationGateView: View {
                 .font(.system(size: 14))
                 .foregroundColor(.gray)
 
-            Text("Reset in \(countdownText)")
+            Text("\( "paywall.daily.resetIn".localized ) \(countdownText)")
                 .font(.system(size: 13, weight: .medium))
                 .foregroundColor(.gray)
 

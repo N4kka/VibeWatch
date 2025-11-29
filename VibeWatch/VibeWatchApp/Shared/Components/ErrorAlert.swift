@@ -57,7 +57,7 @@ struct ErrorAlert: View {
                 HStack(spacing: 0) {
                     // Dismiss button (always present)
                     Button(action: onDismiss) {
-                        Text("Dismiss")
+                        Text("common.dismiss".localized)
                             .font(.system(size: 17, weight: .medium))
                             .foregroundColor(.theme.textPrimary)
                             .frame(maxWidth: .infinity)
@@ -73,7 +73,7 @@ struct ErrorAlert: View {
                         }) {
                             HStack {
                                 Image(systemName: "arrow.clockwise")
-                                Text("Retry")
+                                Text("common.retry".localized)
                             }
                             .font(.system(size: 17, weight: .semibold))
                             .foregroundColor(.theme.accentOrange)

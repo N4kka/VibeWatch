@@ -59,16 +59,17 @@ struct MovieReactionView: View {
             // Percentage indicator (if there are reactions)
             if let counts = counts, counts.totalReactions > 0 {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("\(counts.likePercentage)%")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(.theme.textPrimary)
-                    
-                    Text("liked")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.theme.textSecondary)
+                        Text("\(counts.likePercentage)%")
+                            .font(.caption)
+                            .fontWeight(.bold)
+                            .foregroundColor(.theme.accentOrange)
+                        
+                        Text("common.liked".localized)
+                            .font(.caption2)
+                            .foregroundColor(.theme.textSecondary)
+                    }
                 }
             }
-        }
         .task {
             await loadReactions()
         }

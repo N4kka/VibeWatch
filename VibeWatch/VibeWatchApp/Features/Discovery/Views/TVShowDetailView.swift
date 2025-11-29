@@ -143,7 +143,7 @@ struct TVShowDetailView: View {
                     await viewModel.loadTVShowDetails()
                 }
             } label: {
-                Text("Try Again")
+                Text("common.tryAgain".localized)
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.white)
                     .frame(width: 200, height: 50)

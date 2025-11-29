@@ -16,14 +16,14 @@ struct CommentsListView: View {
         VStack(spacing: 0) {
             // Header
             HStack {
-                Text("Comments")
+                Text("clips.comments".localized)
                     .font(.headline)
-                    .fontWeight(.bold)
+                    .foregroundColor(.white)
                 
                 if !comments.isEmpty {
                     Text("(\(comments.count))")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.gray)
                 }
                 
                 Spacer()
@@ -108,7 +108,7 @@ struct CommentsListView: View {
                                     Image(systemName: expandedComments.contains(comment.id) ? "chevron.up" : "chevron.down")
                                         .font(.caption)
                                     
-                                    Text(expandedComments.contains(comment.id) ? "Hide replies" : "View \(comment.replyCount) \(comment.replyCount == 1 ? "reply" : "replies")")
+                                    Text(expandedComments.contains(comment.id) ? "clips.hideReplies".localized : "\(String(format: "clips.viewReplies".localized, comment.replyCount))")
                                         .font(.caption)
                                         .fontWeight(.semibold)
                                 }
@@ -161,7 +161,7 @@ struct CommentsListView: View {
     private var loadingView: some View {
         VStack(spacing: 16) {
             ProgressView()
-            Text("Loading comments...")
+            Text("clips.comments.loading".localized)
                 .font(.subheadline)
                 .foregroundColor(.secondary)
         }
@@ -180,7 +180,7 @@ struct CommentsListView: View {
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
             
-            Button("Try Again") {
+            Button("common.tryAgain".localized) {
                 Task {
                     await loadComments()
                 }
@@ -197,10 +197,10 @@ struct CommentsListView: View {
                 .font(.largeTitle)
                 .foregroundColor(.secondary)
             
-            Text("No comments yet")
+            Text("clips.noComments".localized)
                 .font(.headline)
             
-            Text("Be the first to comment!")
+            Text("clips.beFirstToComment".localized)
                 .font(.subheadline)
                 .foregroundColor(.secondary)
         }

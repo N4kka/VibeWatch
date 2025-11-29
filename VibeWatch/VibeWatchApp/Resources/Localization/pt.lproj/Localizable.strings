@@ -213,3 +213,58 @@
 "misc.letUsKnow" = "Nos avise";
 "misc.selected" = "selecionados";
 "misc.of" = "de";
+
+"common.dismiss" = "Fechar";
+"common.retry" = "Tentar novamente";
+"common.offline" = "Você está offline. Exibindo conteúdo em cache.";
+"common.tryAgain" = "Tentar novamente";
+"common.pro" = "PRO";
+"common.terms" = "Termos";
+"common.privacy" = "Privacidade";
+"common.liked" = "curtido";
+
+"platform.selectionCount" = "%d de %d selecionados";
+"platform.title" = "Plataformas de streaming";
+
+"clips.comments.loading" = "Carregando comentários...";
+"clips.comments.deleteConfirmation" = "Tem certeza de que deseja excluir este comentário? Esta ação não pode ser desfeita.";
+"clips.comments.replying" = "Respondendo...";
+"clips.feed.craftingTitle" = "Criando o seu feed perfeito";
+"clips.feed.craftingSubtitle" = "Estamos selecionando os melhores clips só para você ✨";
+
+"auth.gate.description" = "Você precisa de uma conta para criar listas personalizadas e sincronizá-las entre seus dispositivos.";
+"auth.gate.createFree" = "Criar conta gratuita";
+"auth.gate.haveAccount" = "Já tenho uma conta";
+"auth.gate.accountRequired" = "Conta necessária";
+"auth.gate.signupFree" = "Cadastrar-se é grátis e leva menos de um minuto.";
+"auth.gate.createTitle" = "Crie sua conta gratuita VibeWatch";
+"auth.gate.limitMessage" = "Você já aproveitou os 15 clips gratuitos de hoje. Cadastre-se para sincronizar seu progresso e desbloquear instantaneamente os lançamentos de amanhã.";
+
+"ai.describeVibe" = "Descreva a sua vibe";
+"ai.subtitle" = "Conte-me qual é o seu humor e eu encontro o que assistir.";
+"ai.tryAsking" = "Tente pedir algo como...";
+"ai.thinking" = "Pensando...";
+"ai.placeholder" = "Ex.: \"sci-fi com reviravolta\"";
+"ai.editMessage" = "Editar mensagem";
+"ai.saveRegenerate" = "Salvar & regenerar";
+"ai.resultsTitle" = "Veja o que eu encontrei:";
+
+"settings.comingSoon" = "Mais configurações em breve...";
+
+"paywall.daily.title" = "Volte amanhã";
+"paywall.restore" = "Restaurar compras";
+"paywall.proDescription" = "O Pro oferece clips ilimitados, preferências salvas e muito mais.";
+"paywall.daily.limitReached" = "Você atingiu o limite de hoje";
+"paywall.daily.limitDescription" = "Membros gratuitos podem assistir a 15 clips por dia. Faça upgrade para Pro e tenha clips ilimitados e recursos premium.";
+"paywall.daily.nextReset" = "Próxima redefinição em";
+"paywall.daily.resetIn" = "Redefine em";
+"paywall.foundingMember" = "Preço de Membro Fundador";
+"paywall.upgrade" = "Fazer upgrade para Pro";
+"paywall.unlockUnlimited" = "Desbloquear clips ilimitados";
+"paywall.ensurePro" = "Garanta o seu plano Pro!";
+"paywall.bestValue" = "MELHOR CUSTO-BENEFÍCIO";
+
+"lists.watchOn" = "ASSISTIR EM";
+"lists.deleteList" = "Excluir lista";
+"lists.deleteConfirmation" = "Tem certeza que deseja excluir %@? Isso removerá todos os itens desta lista.";
+

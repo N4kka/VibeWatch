@@ -190,9 +190,16 @@ struct MainTabView: View {
         .onReceive(NotificationCenter.default.publisher(for: .navigateToListsTab)) { _ in
             // Navigate to Lists tab
             withAnimation {
-                selectedTab = 2
+                selectedTab = 3
             }
             print("📝 [MainTabView] Navigated to Lists tab")
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .navigateToAITab)) { _ in
+            // Navigate to AI tab
+            withAnimation {
+                selectedTab = 2
+            }
+            print("🤖 [MainTabView] Navigated to AI tab")
         }
         .background(scenePhaseMonitor) // Monitor app lifecycle for subscription status
         .withErrorHandling()
@@ -244,16 +251,16 @@ struct LiquidGlassBottomBar: View {
             }
             
             TabBarButton(
-                icon: "list.bullet",
-                title: "tab.lists".localized,
+                icon: "sparkles",
+                title: "AI",
                 isSelected: selectedTab == 2
             ) {
                 selectedTab = 2
             }
             
             TabBarButton(
-                icon: "sparkles",
-                title: "AI",
+                icon: "list.bullet",
+                title: "tab.lists".localized,
                 isSelected: selectedTab == 3
             ) {
                 selectedTab = 3

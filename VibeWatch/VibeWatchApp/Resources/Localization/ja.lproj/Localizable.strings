@@ -213,3 +213,58 @@
 "misc.letUsKnow" = "お知らせください";
 "misc.selected" = "選択中";
 "misc.of" = "／";
+
+"common.dismiss" = "閉じる";
+"common.retry" = "再試行";
+"common.offline" = "オフラインです。キャッシュされたコンテンツを表示しています。";
+"common.tryAgain" = "もう一度試す";
+"common.pro" = "プロ";
+"common.terms" = "利用規約";
+"common.privacy" = "プライバシー";
+"common.liked" = "いいね";
+
+"platform.selectionCount" = "%d / %d 選択済み";
+"platform.title" = "配信プラットフォーム";
+
+"clips.comments.loading" = "コメントを読み込み中...";
+"clips.comments.deleteConfirmation" = "このコメントを削除しますか？ この操作は元に戻せません。";
+"clips.comments.replying" = "返信中…";
+"clips.feed.craftingTitle" = "あなたのためのフィードを作成中";
+"clips.feed.craftingSubtitle" = "最高のクリップを厳選しています ✨";
+
+"auth.gate.description" = "カスタムリストを作成し、デバイス間で同期するにはアカウントが必要です。";
+"auth.gate.createFree" = "無料アカウントを作成";
+"auth.gate.haveAccount" = "すでにアカウントがあります";
+"auth.gate.accountRequired" = "アカウントが必要です";
+"auth.gate.signupFree" = "登録は無料で、1分もかかりません。";
+"auth.gate.createTitle" = "無料の VibeWatch アカウントを作成";
+"auth.gate.limitMessage" = "今日の無料クリップ15件をすべて視聴しました。登録すると進行状況を同期し、明日のクリップをすぐに解放できます。";
+
+"ai.describeVibe" = "気分を教えてください";
+"ai.subtitle" = "今の気分に合う作品をおすすめします。";
+"ai.tryAsking" = "こんな聞き方も…";
+"ai.thinking" = "考え中…";
+"ai.placeholder" = "例：「どんでん返しのあるSF」";
+"ai.editMessage" = "メッセージを編集";
+"ai.saveRegenerate" = "保存して再生成";
+"ai.resultsTitle" = "見つけた作品はこちら：";
+
+"settings.comingSoon" = "さらに多くの設定が近日追加予定…";
+
+"paywall.daily.title" = "明日また来てください";
+"paywall.restore" = "購入を復元";
+"paywall.proDescription" = "Proでは無制限のクリップ、保存設定などが利用できます。";
+"paywall.daily.limitReached" = "本日の上限に達しました";
+"paywall.daily.limitDescription" = "無料ユーザーは1日15件まで視聴できます。Proにアップグレードすると無制限視聴が可能です。";
+"paywall.daily.nextReset" = "次のリセットまで";
+"paywall.daily.resetIn" = "リセットまで";
+"paywall.foundingMember" = "創設メンバー価格";
+"paywall.upgrade" = "Proにアップグレード";
+"paywall.unlockUnlimited" = "無制限クリップを解放";
+"paywall.ensurePro" = "Proプランを確保しましょう！";
+"paywall.bestValue" = "最もお得";
+
+"lists.watchOn" = "視聴先";
+"lists.deleteList" = "リストを削除";
+"lists.deleteConfirmation" = "%@ を削除しますか？ このリスト内のすべての項目が削除されます。";
+

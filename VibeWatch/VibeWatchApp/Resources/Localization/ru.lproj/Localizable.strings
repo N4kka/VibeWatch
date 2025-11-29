@@ -213,3 +213,58 @@
 "misc.letUsKnow" = "Сообщите нам";
 "misc.selected" = "выбрано";
 "misc.of" = "из";
+
+"common.dismiss" = "Закрыть";
+"common.retry" = "Повторить";
+"common.offline" = "Вы офлайн. Показано кэшированное содержимое.";
+"common.tryAgain" = "Попробовать снова";
+"common.pro" = "PRO";
+"common.terms" = "Условия";
+"common.privacy" = "Конфиденциальность";
+"common.liked" = "понравилось";
+
+"platform.selectionCount" = "Выбрано %d из %d";
+"platform.title" = "Стриминговые платформы";
+
+"clips.comments.loading" = "Загрузка комментариев...";
+"clips.comments.deleteConfirmation" = "Вы уверены, что хотите удалить этот комментарий? Это действие нельзя отменить.";
+"clips.comments.replying" = "Отправка ответа...";
+"clips.feed.craftingTitle" = "Формируем вашу идеальную ленту";
+"clips.feed.craftingSubtitle" = "Мы подбираем лучшие клипы специально для вас ✨";
+
+"auth.gate.description" = "Для создания собственных списков и их синхронизации между устройствами нужен аккаунт.";
+"auth.gate.createFree" = "Создать бесплатный аккаунт";
+"auth.gate.haveAccount" = "У меня уже есть аккаунт";
+"auth.gate.accountRequired" = "Требуется аккаунт";
+"auth.gate.signupFree" = "Регистрация бесплатна и займет меньше минуты.";
+"auth.gate.createTitle" = "Создайте бесплатный аккаунт VibeWatch";
+"auth.gate.limitMessage" = "Вы уже посмотрели 15 бесплатных клипов за сегодня. Зарегистрируйтесь, чтобы синхронизировать прогресс и мгновенно получить доступ к завтрашним клипам.";
+
+"ai.describeVibe" = "Опишите своё настроение";
+"ai.subtitle" = "Расскажите, на что вы настроены, и я подберу идеальный фильм или сериал.";
+"ai.tryAsking" = "Попробуйте спросить, например...";
+"ai.thinking" = "Думаю...";
+"ai.placeholder" = "Например: «фантастика с неожиданным финалом»";
+"ai.editMessage" = "Изменить сообщение";
+"ai.saveRegenerate" = "Сохранить и обновить";
+"ai.resultsTitle" = "Вот что я нашёл:";
+
+"settings.comingSoon" = "Скоро появятся новые настройки...";
+
+"paywall.daily.title" = "Загляните завтра";
+"paywall.restore" = "Восстановить покупки";
+"paywall.proDescription" = "Pro открывает безлимитные клипы, сохранённые настройки и многое другое.";
+"paywall.daily.limitReached" = "Вы исчерпали дневной лимит";
+"paywall.daily.limitDescription" = "Бесплатные пользователи могут смотреть до 15 клипов в день. Обновитесь до Pro, чтобы получить безлимитные клипы и премиум-функции.";
+"paywall.daily.nextReset" = "Следующий сброс через";
+"paywall.daily.resetIn" = "Сброс через";
+"paywall.foundingMember" = "Цена для участников-основателей";
+"paywall.upgrade" = "Обновить до Pro";
+"paywall.unlockUnlimited" = "Открыть безлимитные клипы";
+"paywall.ensurePro" = "Зафиксируйте свой Pro-тариф!";
+"paywall.bestValue" = "ЛУЧШЕЕ ПРЕДЛОЖЕНИЕ";
+
+"lists.watchOn" = "Смотреть на";
+"lists.deleteList" = "Удалить список";
+"lists.deleteConfirmation" = "Удалить %@? Все элементы в этом списке будут также удалены.";
+

@@ -180,6 +180,7 @@
 "search.noResultsFound" = "No results found";
 "search.results" = "Results";
 "search.placeholder" = "Search for a tv show or a movie...";
+"search.latestVisited" = "Latest Visited";
 
 // Auth
 "auth.welcomeBack" = "Welcome Back";
@@ -213,3 +214,65 @@
 "misc.letUsKnow" = "Let us know";
 "misc.selected" = "selected";
 "misc.of" = "of";
+
+// Common
+"common.dismiss" = "Dismiss";
+"common.retry" = "Retry";
+"common.offline" = "You're offline. Showing cached content.";
+"common.tryAgain" = "Try Again";
+"common.pro" = "PRO";
+"common.terms" = "Terms";
+"common.privacy" = "Privacy";
+"common.liked" = "liked";
+
+// Platform
+"platform.selectionCount" = "%d of %d selected";
+"platform.title" = "Streaming Platforms";
+
+// Clips / Comments
+"clips.comments.loading" = "Loading comments...";
+"clips.comments.deleteConfirmation" = "Are you sure you want to delete this comment? This action cannot be undone.";
+"clips.comments.replying" = "Replying...";
+"clips.feed.craftingTitle" = "Crafting Your Perfect Feed";
+"clips.feed.craftingSubtitle" = "We're handpicking the best clips just for you ✨";
+
+// Auth / Gate
+"auth.gate.description" = "You need an account to create custom lists and sync them across your devices.";
+"auth.gate.createFree" = "Create free account";
+"auth.gate.haveAccount" = "I already have an account";
+"auth.gate.accountRequired" = "Account required";
+"auth.gate.signupFree" = "Signing up is free and takes less than a minute.";
+"auth.gate.createTitle" = "Create your free VibeWatch account";
+"auth.gate.limitMessage" = "You’ve enjoyed today’s 15 free clips. Sign up to sync your progress and unlock tomorrow’s drops instantly.";
+
+// AI
+"ai.describeVibe" = "Describe your vibe";
+"ai.subtitle" = "Tell me what you're in the mood for, and I'll find the perfect watch.";
+"ai.tryAsking" = "Try asking for...";
+"ai.thinking" = "Thinking...";
+"ai.placeholder" = "E.g. 'Sci-fi with a plot twist'";
+"ai.editMessage" = "Edit message";
+"ai.saveRegenerate" = "Save & Regenerate";
+"ai.resultsTitle" = "Here's what I found:";
+
+// Settings
+"settings.comingSoon" = "More settings coming soon...";
+
+// Paywall
+"paywall.daily.title" = "Come back tomorrow";
+"paywall.restore" = "Restore purchases";
+"paywall.proDescription" = "Pro gives you unlimited clips, saved preferences, and more.";
+"paywall.daily.limitReached" = "You've reached today's limit";
+"paywall.daily.limitDescription" = "Free members can watch 15 clips per day. Upgrade to Pro for unlimited clips and premium features.";
+"paywall.daily.nextReset" = "Next reset in";
+"paywall.daily.resetIn" = "Reset in";
+"paywall.foundingMember" = "Founding Member pricing";
+"paywall.upgrade" = "Upgrade to Pro";
+"paywall.unlockUnlimited" = "Unlock unlimited clips";
+"paywall.ensurePro" = "Ensure your Pro Plan!";
+"paywall.bestValue" = "BEST VALUE";
+
+// Lists
+"lists.watchOn" = "WATCH ON";
+"lists.deleteList" = "Delete List";
+"lists.deleteConfirmation" = "Are you sure you want to delete %@? This removes all items in this list.";

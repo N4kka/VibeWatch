@@ -213,3 +213,58 @@
 "misc.letUsKnow" = "हमें बताएं";
 "misc.selected" = "चयनित";
 "misc.of" = "का";
+
+"common.dismiss" = "बंद करें";
+"common.retry" = "पुनः प्रयास करें";
+"common.offline" = "आप ऑफ़लाइन हैं। कैश की गई सामग्री दिखा रहे हैं।";
+"common.tryAgain" = "फिर से प्रयास करें";
+"common.pro" = "प्रो";
+"common.terms" = "नियम";
+"common.privacy" = "गोपनीयता";
+"common.liked" = "पसंद किया";
+
+"platform.selectionCount" = "%d में से %d चयनित";
+"platform.title" = "स्ट्रीमिंग प्लेटफ़ॉर्म";
+
+"clips.comments.loading" = "टिप्पणियां लोड हो रही हैं...";
+"clips.comments.deleteConfirmation" = "क्या आप वाकई इस टिप्पणी को हटाना चाहते हैं? यह क्रिया वापस नहीं की जा सकती।";
+"clips.comments.replying" = "जवाब दे रहे हैं…";
+"clips.feed.craftingTitle" = "आपके लिए परफेक्ट फ़ीड तैयार की जा रही है";
+"clips.feed.craftingSubtitle" = "हम आपके लिए बेहतरीन क्लिप्स चुन रहे हैं ✨";
+
+"auth.gate.description" = "कस्टम लिस्ट बनाने और उन्हें अपने डिवाइसों में सिंक करने के लिए आपको एक अकाउंट चाहिए।";
+"auth.gate.createFree" = "फ्री अकाउंट बनाएँ";
+"auth.gate.haveAccount" = "मेरे पास पहले से अकाउंट है";
+"auth.gate.accountRequired" = "अकाउंट आवश्यक";
+"auth.gate.signupFree" = "साइनअप फ्री है और एक मिनट से भी कम समय लेता है।";
+"auth.gate.createTitle" = "अपना फ्री VibeWatch अकाउंट बनाएँ";
+"auth.gate.limitMessage" = "आपने आज की 15 मुफ्त क्लिप्स देख ली हैं। प्रगति को सिंक करने और कल की क्लिप्स तुरंत अनलॉक करने के लिए साइनअप करें।";
+
+"ai.describeVibe" = "अपनी वाइब बताएं";
+"ai.subtitle" = "बताएं आपका मूड कैसा है, मैं आपके लिए परफेक्ट शो ढूंढ दूँगा।";
+"ai.tryAsking" = "ऐसे पूछकर देखें...";
+"ai.thinking" = "सोच रहा हूँ...";
+"ai.placeholder" = "जैसे: 'ट्विस्ट वाली साइ-फाइ'";
+"ai.editMessage" = "मैसेज संपादित करें";
+"ai.saveRegenerate" = "सहेजें और पुनः जनरेट करें";
+"ai.resultsTitle" = "ये परिणाम मिले:";
+
+"settings.comingSoon" = "और सेटिंग्स जल्द ही आ रही हैं…";
+
+"paywall.daily.title" = "कल वापस आएँ";
+"paywall.restore" = "खरीदारी पुनर्स्थापित करें";
+"paywall.proDescription" = "Pro आपको अनलिमिटेड क्लिप्स, सेव्ड प्रेफरेंसेज़ और अधिक देता है।";
+"paywall.daily.limitReached" = "आप आज की सीमा तक पहुँच चुके हैं";
+"paywall.daily.limitDescription" = "फ्री यूज़र प्रतिदिन 15 क्लिप्स देख सकते हैं। Pro में अपग्रेड करने पर अनलिमिटेड क्लिप्स मिलते हैं।";
+"paywall.daily.nextReset" = "अगला रीसेट";
+"paywall.daily.resetIn" = "इतने समय में रीसेट";
+"paywall.foundingMember" = "फ़ाउंडिंग मेंबर कीमत";
+"paywall.upgrade" = "Pro में अपग्रेड करें";
+"paywall.unlockUnlimited" = "अनलिमिटेड क्लिप्स अनलॉक करें";
+"paywall.ensurePro" = "अपना Pro प्लान सुनिश्चित करें!";
+"paywall.bestValue" = "सबसे अच्छा मूल्य";
+
+"lists.watchOn" = "देखें:";
+"lists.deleteList" = "लिस्ट हटाएँ";
+"lists.deleteConfirmation" = "क्या आप वाकई %@ हटाना चाहते हैं? यह लिस्ट के सभी आइटम्स हटाएगा।";
+

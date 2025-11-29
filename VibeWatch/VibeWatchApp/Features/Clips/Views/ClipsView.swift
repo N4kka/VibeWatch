@@ -11,6 +11,7 @@ struct ClipsView: View {
     @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var appState: AppState
     @State private var hasScrolledToSavedPosition = false // Track if we've restored scroll position
+    @State private var dragOffset: CGFloat = 0 // For manual swipe navigation
 
     var body: some View {
         // Main content - Clips
@@ -32,6 +33,40 @@ struct ClipsView: View {
                         .transition(.opacity)
                 }
             }
+            .offset(x: dragOffset) // Apply drag offset
+            .highPriorityGesture(
+                DragGesture()
+                    .onChanged { value in
+                        // Only allow horizontal drag if it dominates vertical
+                        if abs(value.translation.width) > abs(value.translation.height) {
+                            dragOffset = value.translation.width
+                        }
+                    }
+                    .onEnded { value in
+                        let screenWidth = UIScreen.main.bounds.width
+                        let threshold = screenWidth * 0.5
+                        
+                        if value.translation.width < -threshold {
+                            // Swipe Left -> Go to AI (Tab 2)
+                            NotificationCenter.default.post(name: .navigateToAITab, object: nil)
+                            // Reset offset after a delay to allow transition
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                dragOffset = 0
+                            }
+                        } else if value.translation.width > threshold {
+                            // Swipe Right -> Go to Discovery (Tab 0)
+                            NotificationCenter.default.post(name: .navigateToDiscoveryTab, object: nil)
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                dragOffset = 0
+                            }
+                        } else {
+                            // Snap back
+                            withAnimation(.spring()) {
+                                dragOffset = 0
+                            }
+                        }
+                    }
+            )
 
             if showAccountGate {
                 AccountCreationGateView(
@@ -209,13 +244,13 @@ struct ClipsView: View {
                     
                     VStack(spacing: 12) {
                         // Main message
-                        Text("Crafting Your Perfect Feed")
+                        Text("clips.feed.craftingTitle".localized)
                             .font(.system(size: 26, weight: .bold))
                             .foregroundColor(.white)
                             .multilineTextAlignment(.center)
                         
                         // Subtext
-                        Text("We're handpicking the best clips just for you ✨")
+                        Text("clips.feed.craftingSubtitle".localized)
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(.white.opacity(0.8))
                             .multilineTextAlignment(.center)
@@ -288,7 +323,7 @@ struct ClipsView: View {
                     await viewModel.loadClips()
                 }
             } label: {
-                Text("Try Again")
+                Text("common.tryAgain".localized)
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.white)
                     .frame(width: 200, height: 50)
@@ -338,12 +373,25 @@ struct ClipPlayerView: View {
                 
         ZStack(alignment: .bottomTrailing) {
             // Full-screen YouTube player (iframe offset by safe area internally)
-            VerticalYouTubePlayer(
-                clipId: clip.id,
-                videoId: clip.videoId,
-                shouldPlay: isCurrentClip && isFullyVisible,
-                safeAreaTop: safeAreaTop
-            )
+            ZStack {
+                VerticalYouTubePlayer(
+                    clipId: clip.id,
+                    videoId: clip.videoId,
+                    shouldPlay: isCurrentClip && isFullyVisible,
+                    safeAreaTop: safeAreaTop
+                )
+                
+                // Edge gesture areas to ensure swipe works even over WebView
+                HStack {
+                    Color.clear
+                        .frame(width: 20)
+                        .contentShape(Rectangle())
+                    Spacer()
+                    Color.clear
+                        .frame(width: 20)
+                        .contentShape(Rectangle())
+                }
+            }
             .frame(width: screenWidth, height: screenHeight)
             .background(Color.black)
             .clipped()
@@ -537,6 +585,7 @@ struct VerticalYouTubePlayer: UIViewRepresentable {
             
             webView = WKWebView(frame: .zero, configuration: configuration)
             webView.scrollView.isScrollEnabled = false
+            webView.allowsBackForwardNavigationGestures = false // Prevent back/forward swipes
             webView.isOpaque = false
             webView.backgroundColor = .black
             webView.scrollView.backgroundColor = .black

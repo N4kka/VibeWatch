@@ -213,3 +213,58 @@
 "misc.letUsKnow" = "Ενημέρωσέ μας";
 "misc.selected" = "επιλεγμένα";
 "misc.of" = "από";
+
+"common.dismiss" = "Κλείσιμο";
+"common.retry" = "Ξανά προσπάθεια";
+"common.offline" = "Είσαι εκτός σύνδεσης. Εμφανίζεται αποθηκευμένο περιεχόμενο.";
+"common.tryAgain" = "Δοκίμασε ξανά";
+"common.pro" = "PRO";
+"common.terms" = "Όροι";
+"common.privacy" = "Απόρρητο";
+"common.liked" = "μου άρεσε";
+
+"platform.selectionCount" = "%d από %d επιλεγμένα";
+"platform.title" = "Πλατφόρμες streaming";
+
+"clips.comments.loading" = "Φόρτωση σχολίων...";
+"clips.comments.deleteConfirmation" = "Είσαι σίγουρος ότι θέλεις να διαγράψεις αυτό το σχόλιο; Η ενέργεια δεν μπορεί να αναιρεθεί.";
+"clips.comments.replying" = "Απάντηση...";
+"clips.feed.craftingTitle" = "Δημιουργούμε το τέλειο feed σου";
+"clips.feed.craftingSubtitle" = "Διαλέγουμε τα καλύτερα κλιπ μόνο για σένα ✨";
+
+"auth.gate.description" = "Χρειάζεσαι λογαριασμό για να δημιουργήσεις προσαρμοσμένες λίστες και να τις συγχρονίζεις σε όλες τις συσκευές σου.";
+"auth.gate.createFree" = "Δημιουργία δωρεάν λογαριασμού";
+"auth.gate.haveAccount" = "Έχω ήδη λογαριασμό";
+"auth.gate.accountRequired" = "Απαιτείται λογαριασμός";
+"auth.gate.signupFree" = "Η εγγραφή είναι δωρεάν και διαρκεί λιγότερο από ένα λεπτό.";
+"auth.gate.createTitle" = "Δημιούργησε τον δωρεάν λογαριασμό σου στο VibeWatch";
+"auth.gate.limitMessage" = "Απόλαυσες ήδη τα 15 δωρεάν κλιπ της ημέρας. Κάνε εγγραφή για να συγχρονίζεις την πρόοδό σου και να ξεκλειδώνεις τα αυριανά κλιπ αμέσως.";
+
+"ai.describeVibe" = "Περιέγραψε το mood σου";
+"ai.subtitle" = "Πες μου τι κέφι έχεις να δεις και θα βρω την ιδανική επιλογή.";
+"ai.tryAsking" = "Δοκίμασε να ζητήσεις...";
+"ai.thinking" = "Σκέφτομαι...";
+"ai.placeholder" = "Π.χ. «sci-fi με ανατροπή»";
+"ai.editMessage" = "Επεξεργασία μηνύματος";
+"ai.saveRegenerate" = "Αποθήκευση & νέα πρόταση";
+"ai.resultsTitle" = "Ιδού τι βρήκα:";
+
+"settings.comingSoon" = "Περισσότερες ρυθμίσεις σύντομα...";
+
+"paywall.daily.title" = "Έλα ξανά αύριο";
+"paywall.restore" = "Επαναφορά αγορών";
+"paywall.proDescription" = "Το Pro σου δίνει απεριόριστα κλιπ, αποθηκευμένες προτιμήσεις και πολλά ακόμη.";
+"paywall.daily.limitReached" = "Έφτασες το σημερινό όριο";
+"paywall.daily.limitDescription" = "Οι δωρεάν χρήστες μπορούν να δουν 15 κλιπ την ημέρα. Κάνε αναβάθμιση σε Pro για απεριόριστα κλιπ και premium δυνατότητες.";
+"paywall.daily.nextReset" = "Επόμενη επαναφορά σε";
+"paywall.daily.resetIn" = "Επαναφορά σε";
+"paywall.foundingMember" = "Τιμή για Founding Member";
+"paywall.upgrade" = "Αναβάθμιση σε Pro";
+"paywall.unlockUnlimited" = "Ξεκλείδωσε απεριόριστα κλιπ";
+"paywall.ensurePro" = "Εξασφάλισε τώρα το Pro πλάνο σου!";
+"paywall.bestValue" = "ΚΑΛΥΤΕΡΗ ΑΞΙΑ";
+
+"lists.watchOn" = "Δες το σε";
+"lists.deleteList" = "Διαγραφή λίστας";
+"lists.deleteConfirmation" = "Είσαι σίγουρος ότι θέλεις να διαγράψεις το %@; Όλα τα στοιχεία αυτής της λίστας θα αφαιρεθούν.";
+

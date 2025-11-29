@@ -213,3 +213,58 @@
 "misc.letUsKnow" = "Kerro meille";
 "misc.selected" = "valittu";
 "misc.of" = "/";
+
+"common.dismiss" = "Sulje";
+"common.retry" = "Yritä uudelleen";
+"common.offline" = "Olet offline-tilassa. Näytetään välimuistissa olevaa sisältöä.";
+"common.tryAgain" = "Yritä uudelleen";
+"common.pro" = "PRO";
+"common.terms" = "Ehdot";
+"common.privacy" = "Tietosuoja";
+"common.liked" = "tykätty";
+
+"platform.selectionCount" = "%d / %d valittu";
+"platform.title" = "Suoratoistoalustat";
+
+"clips.comments.loading" = "Ladataan kommentteja...";
+"clips.comments.deleteConfirmation" = "Haluatko varmasti poistaa tämän kommentin? Toimintoa ei voi perua.";
+"clips.comments.replying" = "Vastataan...";
+"clips.feed.craftingTitle" = "Muokataan täydellistä syötettäsi";
+"clips.feed.craftingSubtitle" = "Valitsemme parhaat klipit juuri sinulle ✨";
+
+"auth.gate.description" = "Tarvitset tilin luodaksesi omia listoja ja synkronoidaksesi ne laitteidesi välillä.";
+"auth.gate.createFree" = "Luo ilmainen tili";
+"auth.gate.haveAccount" = "Minulla on jo tili";
+"auth.gate.accountRequired" = "Tili vaaditaan";
+"auth.gate.signupFree" = "Rekisteröityminen on ilmaista ja vie alle minuutin.";
+"auth.gate.createTitle" = "Luo ilmainen VibeWatch-tilisi";
+"auth.gate.limitMessage" = "Olet katsonut tämän päivän 15 ilmaista klippiä. Rekisteröidy synkronoidaksesi edistymisesi ja avataksesi huomisen klipit heti.";
+
+"ai.describeVibe" = "Kuvaile fiilistäsi";
+"ai.subtitle" = "Kerro, millä tuulella olet, niin etsin sinulle täydellisen katsottavan.";
+"ai.tryAsking" = "Kokeile kysyä esimerkiksi...";
+"ai.thinking" = "Ajatellaan...";
+"ai.placeholder" = "Esim. \"scifiä juonenkäänteellä\"";
+"ai.editMessage" = "Muokkaa viestiä";
+"ai.saveRegenerate" = "Tallenna ja luo uudelleen";
+"ai.resultsTitle" = "Tässä, mitä löysin:";
+
+"settings.comingSoon" = "Lisää asetuksia tulossa pian...";
+
+"paywall.daily.title" = "Palaa huomenna";
+"paywall.restore" = "Palauta ostot";
+"paywall.proDescription" = "Pro tarjoaa rajattomasti klippejä, tallennetut asetukset ja paljon muuta.";
+"paywall.daily.limitReached" = "Olet saavuttanut tämän päivän rajan";
+"paywall.daily.limitDescription" = "Ilmaiset käyttäjät voivat katsoa 15 klippiä päivässä. Päivitä Pro-versioon saadaksesi rajattomasti klippejä ja premium-ominaisuuksia.";
+"paywall.daily.nextReset" = "Seuraava nollaus";
+"paywall.daily.resetIn" = "Nollaus ajan kuluttua";
+"paywall.foundingMember" = "Perustajajäsen-hinta";
+"paywall.upgrade" = "Päivitä Pro-versioon";
+"paywall.unlockUnlimited" = "Avaa rajattomat klipit";
+"paywall.ensurePro" = "Varmista Pro-pakettisi!";
+"paywall.bestValue" = "PARAS ARVO";
+
+"lists.watchOn" = "Katso palvelussa";
+"lists.deleteList" = "Poista lista";
+"lists.deleteConfirmation" = "Haluatko varmasti poistaa kohteen %@? Kaikki tämän listan kohteet poistetaan.";
+

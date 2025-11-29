@@ -213,3 +213,58 @@
 "misc.letUsKnow" = "우리에게 알려주세요";
 "misc.selected" = "선택됨";
 "misc.of" = "/";
+
+"common.dismiss" = "닫기";
+"common.retry" = "다시 시도";
+"common.offline" = "오프라인 상태입니다. 캐시된 콘텐츠를 표시합니다.";
+"common.tryAgain" = "다시 시도";
+"common.pro" = "프로";
+"common.terms" = "약관";
+"common.privacy" = "개인정보";
+"common.liked" = "좋아요";
+
+"platform.selectionCount" = "%d / %d 선택됨";
+"platform.title" = "스트리밍 플랫폼";
+
+"clips.comments.loading" = "댓글 불러오는 중...";
+"clips.comments.deleteConfirmation" = "이 댓글을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.";
+"clips.comments.replying" = "답글 작성 중…";
+"clips.feed.craftingTitle" = "맞춤 피드를 제작 중";
+"clips.feed.craftingSubtitle" = "당신을 위한 최고의 클립을 엄선하고 있어요 ✨";
+
+"auth.gate.description" = "맞춤 리스트를 만들고 기기 간에 동기화하려면 계정이 필요합니다.";
+"auth.gate.createFree" = "무료 계정 만들기";
+"auth.gate.haveAccount" = "이미 계정이 있습니다";
+"auth.gate.accountRequired" = "계정 필요";
+"auth.gate.signupFree" = "가입은 무료이며 1분도 걸리지 않습니다.";
+"auth.gate.createTitle" = "무료 VibeWatch 계정 만들기";
+"auth.gate.limitMessage" = "오늘의 15개 무료 클립을 모두 시청했습니다. 가입하면 진행 상황을 동기화하고 내일의 콘텐츠를 즉시 잠금 해제할 수 있습니다.";
+
+"ai.describeVibe" = "당신의 무드를 알려주세요";
+"ai.subtitle" = "지금 보고 싶은 분위기를 말해주면 완벽한 작품을 찾아드릴게요.";
+"ai.tryAsking" = "이렇게 요청해보세요...";
+"ai.thinking" = "생각 중...";
+"ai.placeholder" = "예: '반전이 있는 SF 영화'";
+"ai.editMessage" = "메시지 수정";
+"ai.saveRegenerate" = "저장 & 재생성";
+"ai.resultsTitle" = "이런 작품을 찾았어요:";
+
+"settings.comingSoon" = "더 많은 설정이 곧 추가됩니다…";
+
+"paywall.daily.title" = "내일 다시 오세요";
+"paywall.restore" = "구매 복원";
+"paywall.proDescription" = "Pro는 무제한 클립, 저장된 설정 등 더 많은 기능을 제공합니다.";
+"paywall.daily.limitReached" = "오늘의 제한에 도달했습니다";
+"paywall.daily.limitDescription" = "무료 회원은 하루 15개의 클립을 시청할 수 있습니다. Pro로 업그레이드하면 무제한 시청이 가능합니다.";
+"paywall.daily.nextReset" = "다음 초기화까지";
+"paywall.daily.resetIn" = "초기화까지";
+"paywall.foundingMember" = "창립 멤버 가격";
+"paywall.upgrade" = "Pro로 업그레이드";
+"paywall.unlockUnlimited" = "무제한 클립 잠금 해제";
+"paywall.ensurePro" = "Pro 플랜을 확보하세요!";
+"paywall.bestValue" = "최고의 가치";
+
+"lists.watchOn" = "시청 가능한 플랫폼";
+"lists.deleteList" = "리스트 삭제";
+"lists.deleteConfirmation" = "%@을(를) 삭제하시겠습니까? 이 리스트의 모든 항목이 제거됩니다.";
+

@@ -90,7 +90,7 @@ struct SaveToListPanel: View {
                                     .foregroundColor(.theme.textPrimary)
                                 
                                 if !appState.isAuthenticated {
-                                    Text("Account required")
+                                    Text("auth.gate.accountRequired".localized)
                                         .font(.system(size: 12))
                                         .foregroundColor(.theme.textSecondary)
                                 }

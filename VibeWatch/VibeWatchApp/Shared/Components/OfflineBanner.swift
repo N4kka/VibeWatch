@@ -8,19 +8,15 @@ struct OfflineBanner: View {
         if !networkMonitor.isConnected {
             HStack(spacing: 8) {
                 Image(systemName: "wifi.slash")
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.system(size: 14))
                 
-                Text("You're offline. Showing cached content.")
-                    .font(.system(size: 14, weight: .medium))
-                
-                Spacer()
+                Text("common.offline".localized)
+                    .font(.system(size: 12, weight: .medium))
             }
             .foregroundColor(.white)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(Color.orange.opacity(0.9))
-            .transition(.move(edge: .top).combined(with: .opacity))
-            .animation(.spring(), value: networkMonitor.isConnected)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .background(Color.orange)
         }
     }
 }

@@ -63,7 +63,7 @@ struct CommentRowView: View {
                             Button(role: .destructive) {
                                 showDeleteConfirm = true
                             } label: {
-                                Label("Delete", systemImage: "trash")
+                                Label("common.delete".localized, systemImage: "trash")
                             }
                         } label: {
                             Image(systemName: "ellipsis")
@@ -120,16 +120,16 @@ struct CommentRowView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
         .confirmationDialog(
-            "Delete Comment",
+            "clips.comments.deleteConfirmation".localized,
             isPresented: $showDeleteConfirm,
             titleVisibility: .visible
         ) {
-            Button("Delete", role: .destructive) {
+            Button("common.delete".localized, role: .destructive) {
                 onDeleteTap?()
             }
-            Button("Cancel", role: .cancel) {}
+            Button("common.cancel".localized, role: .cancel) {}
         } message: {
-            Text("Are you sure you want to delete this comment? This action cannot be undone.")
+            Text("clips.comments.deleteConfirmation".localized)
         }
     }
     

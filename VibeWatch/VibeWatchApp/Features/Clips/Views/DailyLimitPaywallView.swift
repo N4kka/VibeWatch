@@ -43,33 +43,32 @@ struct DailyLimitPaywallView: View {
 
                     upgradeButton
 
-                    Button {
-                        dismiss()
-                        onComeBack?()
-                    } label: {
-                        Text("Come back tomorrow")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.gray)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 52)
-                            .background(Color.gray.opacity(0.15))
-                            .cornerRadius(14)
-                    }
-
-                    Button {
-                        Task { await restorePurchases() }
-                    } label: {
-                        Text("Restore purchases")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.gray)
-                    }
-
-                    Text("Pro gives you unlimited clips, saved preferences, and more.")
-                        .font(.system(size: 12))
-                        .foregroundColor(.gray)
-                        .padding(.bottom, 20)
-                }
-                .padding(.horizontal, 24)
+                                            Button {
+                                                dismiss()
+                                                onComeBack?()
+                                            } label: {
+                                                Text("paywall.daily.title".localized)
+                                                    .font(.system(size: 16, weight: .medium))
+                                                    .foregroundColor(.gray)
+                                                    .frame(maxWidth: .infinity)
+                                                    .frame(height: 52)
+                                                    .background(Color.gray.opacity(0.15))
+                                                    .cornerRadius(14)
+                                            }
+                    
+                                            Button {
+                                                Task { await restorePurchases() }
+                                            } label: {
+                                                Text("paywall.restore".localized)
+                                                    .font(.system(size: 14, weight: .medium))
+                                                    .foregroundColor(.gray)
+                                            }
+                    
+                                            Text("paywall.proDescription".localized)
+                                                .font(.system(size: 12))
+                                                .foregroundColor(.gray)
+                                                .padding(.bottom, 20)
+                                        }                .padding(.horizontal, 24)
                 .background(
                     RoundedRectangle(cornerRadius: 28, style: .continuous)
                         .fill(Color(UIColor.systemBackground))
@@ -130,11 +129,11 @@ struct DailyLimitPaywallView: View {
                     .foregroundColor(.white)
             }
 
-            Text("You've reached today's limit")
+            Text("paywall.daily.limitReached".localized)
                 .font(.system(size: 24, weight: .bold))
                 .multilineTextAlignment(.center)
 
-            Text("Free members can watch 15 clips per day. Upgrade to Pro for unlimited clips and premium features.")
+            Text("paywall.daily.limitDescription".localized)
                 .font(.system(size: 15))
                 .foregroundColor(.gray)
                 .multilineTextAlignment(.center)
@@ -148,7 +147,7 @@ struct DailyLimitPaywallView: View {
                 .foregroundColor(.orange)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Next reset in")
+                Text("paywall.daily.nextReset".localized)
                     .font(.system(size: 12))
                     .foregroundColor(.gray)
 
@@ -171,7 +170,7 @@ struct DailyLimitPaywallView: View {
                 .foregroundColor(.orange)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Founding Member pricing")
+                Text("paywall.foundingMember".localized)
                     .font(.system(size: 12))
                     .foregroundColor(.gray)
 
@@ -192,9 +191,9 @@ struct DailyLimitPaywallView: View {
             showProPaywall = true
         } label: {
             VStack(spacing: 6) {
-                Text("Upgrade to Pro")
+                Text("paywall.upgrade".localized)
                     .font(.system(size: 18, weight: .bold))
-                Text("Unlock unlimited clips")
+                Text("paywall.unlockUnlimited".localized)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.white.opacity(0.8))
             }
