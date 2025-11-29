@@ -12,6 +12,8 @@ struct ColorTheme {
     let textSecondary = Color(hex: "b0b0b0")
     let navigationBackground = Color(hex: "0c0d10")
     let borderDefault = Color.white
+    let cardBackground = Color(hex: "1c1d20")
+    let separator = Color(hex: "2c2d30")
 }
 
 extension Color {

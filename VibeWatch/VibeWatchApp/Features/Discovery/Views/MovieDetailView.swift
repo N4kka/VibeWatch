@@ -45,10 +45,9 @@ struct MovieDetailView: View {
                             movie: movie,
                             mediaType: .movie,
                             onSaveTap: {
-                                guard appState.isAuthenticated else {
-                                    showAuthGate = true
-                                    return
-                                }
+                                // Allow anonymous users to open save panel
+                                // They can save to watchlist without authentication
+                                // Auth gate will show when they try to create custom lists
                                 showSavePanel = true
                             },
                             onSeenTap: {
@@ -193,7 +192,7 @@ struct MovieDetailView: View {
                     shareItems = []
                 }
         }
-        .sheet(isPresented: $showAuthGate) {
+        .fullScreenCover(isPresented: $showAuthGate) {
             AuthenticationGateView(isPresented: $showAuthGate)
         }
         .overlay {

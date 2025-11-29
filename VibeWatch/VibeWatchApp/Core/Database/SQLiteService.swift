@@ -442,6 +442,87 @@ class SQLiteService: ObservableObject {
         return sqlite3_last_insert_rowid(db)
     }
     
+    // MARK: - Batch Operations
+    
+    func performBatchInsert(table: String, records: [[String: Any]]) async -> Bool {
+        guard !records.isEmpty else { return true }
+        
+        let columns = records[0].keys.joined(separator: ", ")
+        let placeholders = "(" + Array(repeating: "?", count: records[0].keys.count).joined(separator: ", ") + ")"
+        let query = "INSERT OR REPLACE INTO \(table) (\(columns)) VALUES \(placeholders)"
+        
+        return await withCheckedContinuation { continuation in
+            dbQueue.async { [weak self] in
+                guard let self = self, let db = self.db else {
+                    continuation.resume(returning: false)
+                    return
+                }
+                
+                var success = true
+                var statement: OpaquePointer?
+                
+                // Use C-API directly for transaction
+                let beginResult = sqlite3_exec(db, "BEGIN TRANSACTION", nil, nil, nil)
+                if beginResult != SQLITE_OK {
+                    let error = String(cString: sqlite3_errmsg(db))
+                    print("❌ Batch insert transaction begin failed: \(error)")
+                    continuation.resume(returning: false)
+                    return
+                }
+                
+                do {
+                    // Prepare statement once
+                    if sqlite3_prepare_v2(db, query, -1, &statement, nil) != SQLITE_OK {
+                         let error = String(cString: sqlite3_errmsg(db))
+                         print("❌ Batch insert prepare failed: \(error)")
+                         sqlite3_exec(db, "ROLLBACK", nil, nil, nil)
+                         continuation.resume(returning: false)
+                         return
+                    }
+                    
+                    // Sort keys to ensure order matches columns
+                    let sortedKeys = records[0].keys
+                    
+                    for record in records {
+                        // Reset statement for reuse
+                        sqlite3_reset(statement)
+                        sqlite3_clear_bindings(statement)
+                        
+                        // Bind parameters
+                        for (index, key) in sortedKeys.enumerated() {
+                            // Use existing helper to bind values
+                            // index is 1-based in SQLite
+                            self.bind(record[key] ?? NSNull(), to: statement, at: Int32(index + 1))
+                        }
+                        
+                        if sqlite3_step(statement) != SQLITE_DONE {
+                            let error = String(cString: sqlite3_errmsg(db))
+                            print("❌ Batch insert step failed: \(error)")
+                            throw SQLiteError.queryFailed(error)
+                        }
+                    }
+                    
+                    sqlite3_finalize(statement)
+                    
+                    // Commit transaction
+                    if sqlite3_exec(db, "COMMIT", nil, nil, nil) != SQLITE_OK {
+                         let error = String(cString: sqlite3_errmsg(db))
+                         print("❌ Batch insert commit failed: \(error)")
+                         throw SQLiteError.transactionFailed
+                    }
+                    
+                } catch {
+                    print("❌ Batch insert failed: \(error)")
+                    sqlite3_finalize(statement)
+                    sqlite3_exec(db, "ROLLBACK", nil, nil, nil)
+                    success = false
+                }
+                
+                continuation.resume(returning: success)
+            }
+        }
+    }
+
     // MARK: - Helper Methods
     
     private func bind(_ value: Any, to statement: OpaquePointer?, at index: Int32) {

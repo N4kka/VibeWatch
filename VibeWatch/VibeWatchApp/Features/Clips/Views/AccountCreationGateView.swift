@@ -10,78 +10,103 @@ struct AccountCreationGateView: View {
 
     @State private var activeAuthSheet: AuthSheet?
     @State private var countdownText = ""
+    @State private var dragOffset: CGFloat = 0
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
-        ZStack {
-            Color.black.opacity(0.45)
-                .ignoresSafeArea()
-                .onTapGesture { }
-
-            VStack {
-                Spacer()
-
-                VStack(spacing: 24) {
-                    Capsule()
-                        .fill(Color.white.opacity(0.2))
-                        .frame(width: 46, height: 5)
-                        .padding(.top, 14)
-
-                    heroSection
-
-                    benefitsList
-
-                    actionButtons
-
-                    countdownView
-
-                    Button {
+        GeometryReader { outerGeometry in
+            ZStack {
+                Color.black.opacity(max(0, 0.45 * (1.0 - Double(dragOffset) / 400.0)))
+                    .ignoresSafeArea()
+                    .onTapGesture {
                         dismissGate()
-                        onComeBack?()
-                    } label: {
-                        Text("Come back tomorrow")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.gray)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 52)
-                            .background(Color.gray.opacity(0.15))
-                            .cornerRadius(14)
                     }
 
-                    Text("Signing up is free and takes less than a minute.")
-                        .font(.system(size: 12))
-                        .foregroundColor(.gray)
-                        .padding(.bottom, 20)
+                VStack { // This is the outermost VStack, taking full height, pushing content to bottom
+                    VStack(spacing: 24) { // This is the actual panel content
+                        Capsule()
+                            .fill(Color.white.opacity(0.2))
+                            .frame(width: 46, height: 5)
+                            .padding(.top, 14)
+
+                        heroSection
+
+                        benefitsList
+
+                        actionButtons
+
+                        countdownView
+
+                        Button {
+                            dismissGate()
+                            onComeBack?()
+                        } label: {
+                            Text("Come back tomorrow")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(.gray)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 52)
+                                .background(Color.gray.opacity(0.15))
+                                .cornerRadius(14)
+                        }
+
+                        Text("Signing up is free and takes less than a minute.")
+                            .font(.system(size: 12))
+                            .foregroundColor(.gray)
+                            .padding(.bottom, 20)
+                    }
+                    .padding(.horizontal, 24)
+                    .background(
+                        RoundedRectangle(cornerRadius: 28, style: .continuous)
+                            .fill(Color(red: 28/255, green: 28/255, blue: 30/255))
+                            .shadow(color: .black.opacity(0.25), radius: 20, x: 0, y: -8)
+                    )
+                    .offset(y: max(0, dragOffset))
+                    .gesture(
+                        DragGesture()
+                            .onChanged { value in
+                                if value.translation.height > 0 {
+                                    dragOffset = value.translation.height
+                                }
+                            }
+                            .onEnded { value in
+                                if value.translation.height > 150 {
+                                    withAnimation(.easeOut(duration: 0.25)) {
+                                        dismissGate()
+                                    }
+                                } else {
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                        dragOffset = 0
+                                    }
+                                }
+                            }
+                    )
+                    .frame(height: outerGeometry.size.height / 2)
                 }
-                .padding(.horizontal, 24)
-                .background(
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .fill(Color(red: 28/255, green: 28/255, blue: 30/255))
-                        .shadow(color: .black.opacity(0.25), radius: 20, x: 0, y: -8)
-                )
+                .frame(maxHeight: .infinity, alignment: .bottom)
+                .ignoresSafeArea(edges: .bottom)
             }
-            .ignoresSafeArea(edges: .bottom)
-        }
-        .onAppear {
-            countdownText = quotaManager.timeUntilResetFormatted()
-        }
-        .sheet(item: $activeAuthSheet) { sheet in
-            switch sheet {
-            case .signUp:
-                SignUpView()
-                    .environmentObject(appState)
-            case .signIn:
-                SignInView()
-                    .environmentObject(appState)
+            .onAppear {
+                countdownText = quotaManager.timeUntilResetFormatted()
             }
-        }
-        .onReceive(timer) { _ in
-            countdownText = quotaManager.timeUntilResetFormatted()
-        }
-        .onChange(of: appState.isAuthenticated) { _, isAuthenticated in
-            guard isAuthenticated else { return }
-            dismissGate()
-            onAccountCreated?()
+            .sheet(item: $activeAuthSheet) { sheet in
+                switch sheet {
+                case .signUp:
+                    SignUpView()
+                        .environmentObject(appState)
+                case .signIn:
+                    SignInView()
+                        .environmentObject(appState)
+                }
+            }
+            .onReceive(timer) { _ in
+                countdownText = quotaManager.timeUntilResetFormatted()
+            }
+            .onChange(of: appState.isAuthenticated) { _, isAuthenticated in
+                guard isAuthenticated else { return }
+                dismissGate()
+                onAccountCreated?()
+            }
         }
     }
 

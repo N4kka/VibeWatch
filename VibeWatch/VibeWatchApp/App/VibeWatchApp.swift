@@ -113,6 +113,10 @@ class AppState: ObservableObject {
             await DatabaseMigrationService.shared.migrateInitialData()
         }
         
+        // Sync new content from Supabase (incremental sync)
+        print("🔄 [App] Syncing new content from Supabase...")
+        try? await SyncService.shared.syncNewContent()
+        
         // Optimized parallel preload: Discovery content + 5 initial clips
         // Then background task for 20 more clips
         print("🚀 Starting optimized preload (parallel tasks)...")

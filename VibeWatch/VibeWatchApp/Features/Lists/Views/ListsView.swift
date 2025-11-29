@@ -638,7 +638,7 @@ struct MediaItemRow: View {
                     navigateToDetail = true
                 }
             }
-            .gesture(
+            .simultaneousGesture(
                 DragGesture(minimumDistance: 20)
                     .onChanged { gesture in
                         // Only activate swipe if horizontal movement is significantly more than vertical
@@ -1200,97 +1200,144 @@ struct CreateListView: View {
 struct AuthenticationGateView: View {
     @Binding var isPresented: Bool
     @State private var activeAuthSheet: AuthSheet?
+    @State private var dragOffset: CGFloat = 0 // Added dragOffset
 
     var body: some View {
-        VStack(spacing: 24) {
-            Capsule()
-                .fill(Color.white.opacity(0.2))
-                .frame(width: 46, height: 5)
-                .padding(.top, 14)
+        GeometryReader { outerGeometry in // Added GeometryReader
+            ZStack {
+                // Background overlay with opacity based on drag
+                Color.black.opacity(max(0, 0.45 * (1.0 - Double(dragOffset) / 400.0)))
+                    .ignoresSafeArea()
+                    .onTapGesture {
+                        isPresented = false // Allows tapping background to dismiss
+                    }
+                
+                VStack { // This VStack will hold the half-height content, pushed to bottom
+                    VStack(spacing: 0) { // This is the actual panel content
+                        // Drag indicator
+                        Capsule()
+                            .fill(Color.white.opacity(0.2))
+                            .frame(width: 46, height: 5)
+                            .padding(.top, 14)
+                            .padding(.bottom, 20)
 
-            VStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(LinearGradient(
-                            colors: [Color.orange, Color.pink],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ))
-                        .frame(width: 96, height: 96)
-                        .shadow(color: Color.orange.opacity(0.4), radius: 20, x: 0, y: 10)
+                        VStack(spacing: 12) { // hero section
+                            ZStack {
+                                Circle()
+                                    .fill(LinearGradient(
+                                        colors: [Color.orange, Color.pink],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ))
+                                    .frame(width: 96, height: 96)
+                                    .shadow(color: Color.orange.opacity(0.4), radius: 20, x: 0, y: 10)
 
-                    Image(systemName: "person.crop.circle.badge.plus")
-                        .font(.system(size: 40, weight: .bold))
-                        .foregroundColor(.white)
+                                Image(systemName: "person.crop.circle.badge.plus")
+                                    .font(.system(size: 40, weight: .bold))
+                                    .foregroundColor(.white)
+                            }
+
+                            Text("Create an Account")
+                                .font(.system(size: 24, weight: .bold))
+                                .multilineTextAlignment(.center)
+
+                            Text("You need an account to create custom lists and sync them across your devices.")
+                                .font(.system(size: 15))
+                                .foregroundColor(.gray)
+                                .multilineTextAlignment(.center)
+                        }
+                        .padding(.bottom, 12)
+
+                        VStack(spacing: 12) { // action buttons
+                            Button {
+                                activeAuthSheet = .signUp
+                            } label: {
+                                Text("Create free account")
+                                    .font(.system(size: 18, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 56)
+                                    .background(
+                                        LinearGradient(
+                                            colors: [Color.orange, Color.orange.opacity(0.85)],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                                    .cornerRadius(16)
+                                    .shadow(color: Color.orange.opacity(0.3), radius: 10, x: 0, y: 5)
+                            }
+
+                            Button {
+                                activeAuthSheet = .signIn
+                            } label: {
+                                Text("I already have an account")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(.orange)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 52)
+                                    .background(Color.orange.opacity(0.12))
+                                    .cornerRadius(14)
+                            }
+                        }
+                        
+                        Button {
+                            isPresented = false
+                        } label: {
+                            Text("Skip for now")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(.gray)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 52)
+                                .background(Color.gray.opacity(0.15))
+                                .cornerRadius(14)
+                        }
+                        
+                        Spacer(minLength: 20)
+                    }
+                    .padding(.horizontal, 24)
+                    .frame(maxWidth: .infinity) // Ensure it takes full width
+                    .background(
+                        RoundedRectangle(cornerRadius: 28, style: .continuous)
+                            .fill(Color(UIColor.systemBackground))
+                            .shadow(color: .black.opacity(0.25), radius: 20, x: 0, y: -8)
+                    )
+                    .offset(y: max(0, dragOffset)) // Apply drag offset
+                    .gesture( // Add drag gesture
+                        DragGesture()
+                            .onChanged { value in
+                                if value.translation.height > 0 {
+                                    dragOffset = value.translation.height
+                                }
+                            }
+                            .onEnded { value in
+                                if value.translation.height > 150 { // Dismiss if dragged enough
+                                    withAnimation(.easeOut(duration: 0.25)) {
+                                        isPresented = false
+                                    }
+                                } else { // Snap back
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                        dragOffset = 0
+                                    }
+                                }
+                            }
+                    )
+                    .frame(height: outerGeometry.size.height / 2) // Set half screen height
                 }
-
-                Text("Create an Account")
-                    .font(.system(size: 24, weight: .bold))
-                    .multilineTextAlignment(.center)
-
-                Text("You need an account to create custom lists and sync them across your devices.")
-                    .font(.system(size: 15))
-                    .foregroundColor(.gray)
-                    .multilineTextAlignment(.center)
+                .frame(maxHeight: .infinity, alignment: .bottom) // Push to bottom
+                .ignoresSafeArea(edges: .bottom) // Ignore safe area at the bottom
             }
-
-            VStack(spacing: 12) {
-                Button {
-                    activeAuthSheet = .signUp
-                } label: {
-                    Text("Create free account")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 56)
-                        .background(
-                            LinearGradient(
-                                colors: [Color.orange, Color.orange.opacity(0.85)],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .cornerRadius(16)
-                        .shadow(color: Color.orange.opacity(0.3), radius: 10, x: 0, y: 5)
+            .sheet(item: $activeAuthSheet) { sheet in
+                switch sheet {
+                case .signUp:
+                    SignUpView()
+                case .signIn:
+                    SignInView()
                 }
-
-                Button {
-                    activeAuthSheet = .signIn
-                } label: {
-                    Text("I already have an account")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.orange)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 52)
-                        .background(Color.orange.opacity(0.12))
-                        .cornerRadius(14)
-                }
-            }
-            
-            Button {
-                isPresented = false
-            } label: {
-                Text("Skip for now")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.gray)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 52)
-                    .background(Color.gray.opacity(0.15))
-                    .cornerRadius(14)
-            }
-        }
-        .padding(.horizontal, 24)
-        .padding(.bottom, 20)
-        .sheet(item: $activeAuthSheet) { sheet in
-            switch sheet {
-            case .signUp:
-                SignUpView()
-            case .signIn:
-                SignInView()
             }
         }
     }
-
+    
     private enum AuthSheet: Identifiable {
         case signUp
         case signIn

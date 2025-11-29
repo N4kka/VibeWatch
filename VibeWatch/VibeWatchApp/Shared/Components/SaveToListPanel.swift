@@ -3,7 +3,9 @@ import SwiftUI
 struct SaveToListPanel: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var listManager = ListManager.shared
+    @EnvironmentObject var appState: AppState
     @State private var showCreateList = false
+    @State private var showAuthGate = false
     @State private var newListName = ""
     @State private var showAlert = false
     @State private var alertTitle = ""
@@ -46,7 +48,8 @@ struct SaveToListPanel: View {
                     ForEach(listManager.lists.filter { $0.type != .seen && $0.type != .liked && $0.type != .disliked }) { list in
                         ListRow(
                             list: list,
-                            isInList: listManager.isInList(listId: list.id, mediaId: movie.id, mediaType: mediaType)
+                            isInList: listManager.isInList(listId: list.id, mediaId: movie.id, mediaType: mediaType),
+                            isLocked: list.type == .custom && !appState.isAuthenticated
                         ) {
                             Task {
                                 do {
@@ -61,7 +64,12 @@ struct SaveToListPanel: View {
                                         dismiss()
                                     }
                                 } catch {
-                                    ErrorHandler.shared.handle(error, context: "Save to list")
+                                    // Check if it's an authentication error
+                                    if let listError = error as? ListError, listError == .authenticationRequired {
+                                        showAuthGate = true
+                                    } else {
+                                        ErrorHandler.shared.handle(error, context: "Save to list")
+                                    }
                                 }
                             }
                         }
@@ -69,18 +77,38 @@ struct SaveToListPanel: View {
                     
                     // Create New List Button
                     Button {
-                        showCreateList = true
+                        // Check if user is authenticated
+                        if appState.isAuthenticated {
+                            showCreateList = true
+                        } else {
+                            // Show authentication gate for anonymous users
+                            showAuthGate = true
+                        }
                     } label: {
                         HStack {
                             Image(systemName: "plus.circle.fill")
                                 .font(.system(size: 24))
                                 .foregroundColor(.theme.accentOrange)
                             
-                            Text("clips.createNewList".localized)
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(.theme.textPrimary)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("clips.createNewList".localized)
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(.theme.textPrimary)
+                                
+                                if !appState.isAuthenticated {
+                                    Text("Account required")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.theme.textSecondary)
+                                }
+                            }
                             
                             Spacer()
+                            
+                            if !appState.isAuthenticated {
+                                Image(systemName: "lock.fill")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.theme.textSecondary)
+                            }
                         }
                         .padding()
                         .background(Color.white.opacity(0.05))
@@ -118,6 +146,9 @@ struct SaveToListPanel: View {
         } message: {
             Text(alertMessage)
         }
+        .fullScreenCover(isPresented: $showAuthGate) {
+            AuthenticationGateView(isPresented: $showAuthGate)
+        }
         .onChange(of: listManager.softLimitWarningMessage) { newValue in
             guard let message = newValue else { return }
             alertTitle = "Heads Up"
@@ -131,6 +162,7 @@ struct SaveToListPanel: View {
 struct ListRow: View {
     let list: MediaList
     let isInList: Bool
+    let isLocked: Bool
     let action: () -> Void
     
     var body: some View {
@@ -142,9 +174,17 @@ struct ListRow: View {
                     .frame(width: 28)
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(list.name)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.theme.textPrimary)
+                    HStack(spacing: 6) {
+                        Text(list.name)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.theme.textPrimary)
+                        
+                        if isLocked {
+                            Image(systemName: "lock.fill")
+                                .font(.system(size: 12))
+                                .foregroundColor(.theme.textSecondary)
+                        }
+                    }
                     
                     Text("\(list.items.count) \("common.items".localized)")
                         .font(.system(size: 12))
@@ -156,11 +196,14 @@ struct ListRow: View {
                 Image(systemName: isInList ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 24))
                     .foregroundColor(isInList ? .theme.accentOrange : .theme.textSecondary)
+                    .opacity(isLocked ? 0.5 : 1.0)
             }
             .padding()
-            .background(Color.white.opacity(0.05))
+            .background(Color.white.opacity(isLocked ? 0.03 : 0.05))
             .clipShape(RoundedRectangle(cornerRadius: 12))
+            .opacity(isLocked ? 0.6 : 1.0)
         }
         .padding(.horizontal, 20)
+        .disabled(isLocked && !isInList) // Can't add to locked lists, but can remove if already in
     }
 }

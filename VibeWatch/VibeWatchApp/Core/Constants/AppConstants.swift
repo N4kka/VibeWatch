@@ -19,4 +19,23 @@ enum AppConstants {
         static let minimumLoadingDuration: TimeInterval = 2.0
         static let defaultAnimationDuration: TimeInterval = 0.3
     }
+    
+    /// RevenueCat subscription and entitlement identifiers
+    enum RevenueCat {
+        /// The entitlement identifier for Pro features
+        /// This must match the entitlement configured in RevenueCat dashboard
+        static let proEntitlementID = "StartingVibe Pro"
+        
+        /// Offering identifiers
+        enum Offerings {
+            static let foundingMember = "founding_member"
+            static let standard = "default"
+        }
+        
+        /// Product identifiers (if you need to reference specific products)
+        enum Products {
+            // Example: static let monthlyPro = "monthly_pro"
+            // Example: static let annualPro = "annual_pro"
+        }
+    }
 }

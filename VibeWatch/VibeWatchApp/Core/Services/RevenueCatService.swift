@@ -37,6 +37,46 @@ final class RevenueCatService: ObservableObject {
         return offerings?.current
     }
     
+    /// Helper to get trial information from a package
+    func getTrialInfo(for package: Package) -> TrialInfo? {
+        guard let discount = package.storeProduct.introductoryDiscount else {
+            return nil
+        }
+        
+        // Only consider free trials (not intro pricing)
+        guard discount.paymentMode == .freeTrial else {
+            return nil
+        }
+        
+        let period = discount.subscriptionPeriod
+        return TrialInfo(
+            duration: period.value,
+            unit: period.unit,
+            localizedDuration: formatTrialDuration(period)
+        )
+    }
+    
+    /// Format trial duration for display (e.g., "7 days", "1 month")
+    private func formatTrialDuration(_ period: SubscriptionPeriod) -> String {
+        let value = period.value
+        let unitName: String
+        
+        switch period.unit {
+        case .day:
+            unitName = value == 1 ? "day" : "days"
+        case .week:
+            unitName = value == 1 ? "week" : "weeks"
+        case .month:
+            unitName = value == 1 ? "month" : "months"
+        case .year:
+            unitName = value == 1 ? "year" : "years"
+        @unknown default:
+            unitName = "period"
+        }
+        
+        return "\(value) \(unitName)"
+    }
+    
     /// Prints a human-friendly summary of offerings and packages.
     private func debugPrintOfferings(_ offerings: Offerings) {
         print("\n================ RevenueCat Offerings ================")
@@ -52,11 +92,30 @@ final class RevenueCatService: ObservableObject {
                 print("    - Product ID: \(product.productIdentifier)")
                 print("    - Price: \(product.localizedPriceString)")
                 print("    - Subscription period: \(product.subscriptionPeriod?.unit.description ?? "n/a")")
+                
+                // Show trial info if available
+                if let trial = getTrialInfo(for: package) {
+                    print("    - 🎁 FREE TRIAL: \(trial.localizedDuration)")
+                }
+                
+                // Show intro pricing if available (but not free trial)
+                if let discount = product.introductoryDiscount,
+                   discount.paymentMode != .freeTrial {
+                    print("    - 💰 INTRO PRICE: \(discount.price) for \(formatTrialDuration(discount.subscriptionPeriod))")
+                }
             }
         }
         print("=====================================================\n")
     }
 }
+
+/// Information about a free trial offer
+struct TrialInfo {
+    let duration: Int
+    let unit: SubscriptionPeriod.Unit
+    let localizedDuration: String // e.g., "7 days", "1 month"
+}
+
 
 private extension SubscriptionPeriod.Unit {
     var description: String {

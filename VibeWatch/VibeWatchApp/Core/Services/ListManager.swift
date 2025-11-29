@@ -145,19 +145,25 @@ class ListManager: ObservableObject {
     // Call this when user logs out
     func resetListsForLoggedOutUser() {
         print("↩️ [ListManager] Resetting lists for logged out user.")
-        // When logged out, we should clear all authenticated user data
-        // and revert to only default lists and any custom lists created anonymously
         
-        // Load the anonymous lists (this is effectively what loadLists() does by default)
-        loadLists()
+        // Clear all lists and revert to empty default lists only
+        // This ensures no authenticated user data remains visible
+        let emptyWatchlist = MediaList(name: "lists.watchlist".localized, type: .watchlist)
+        let emptySeenList = MediaList(name: "lists.seen".localized, type: .seen)
+        let emptyLikedList = MediaList(name: "lists.liked".localized, type: .liked)
+        let emptyDislikedList = MediaList(name: "lists.disliked".localized, type: .disliked)
         
-        // Ensure that custom lists created while authenticated are removed if they were not merged
-        // For now, loadLists() effectively does this by overwriting with the anonymous default/local cache.
-        // We might need a more sophisticated approach if we allowed anonymous custom lists to persist
-        // after being logged in and then logged out without being merged.
-        // Given the current merge strategy, this should suffice.
+        // Set lists to only empty default lists
+        self.lists = [emptyWatchlist, emptySeenList, emptyLikedList, emptyDislikedList]
+        self.watchlist = emptyWatchlist
+        self.seenList = emptySeenList
+        self.likedList = emptyLikedList
+        self.dislikedList = emptyDislikedList
         
-        print("✅ [ListManager] Lists reset for logged out user.")
+        // Save the empty state
+        saveLists()
+        
+        print("✅ [ListManager] Lists cleared for logged out user - showing empty defaults only.")
     }
     
     func loadLists() {
@@ -399,6 +405,12 @@ class ListManager: ObservableObject {
     func addToList(listId: String, movie: Movie, mediaType: MediaType) async throws {
         guard let index = lists.firstIndex(where: { $0.id == listId }) else {
             throw ListError.listNotFound
+        }
+        
+        // Check if user is authenticated for custom lists
+        // Anonymous users can only add to watchlist
+        if lists[index].type == .custom && authService.currentUser == nil {
+            throw ListError.authenticationRequired
         }
 
         if lists[index].items.contains(where: { $0.mediaId == movie.id && $0.mediaType == mediaType }) {

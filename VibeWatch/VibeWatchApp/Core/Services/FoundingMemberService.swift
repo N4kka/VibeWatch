@@ -16,7 +16,7 @@ final class FoundingMemberService: ObservableObject {
 
     private init() {
         // Set the promo end date to November 25, 2025, at midnight
-        let launchDate = DateComponents(calendar: .current, year: 2025, month: 10, day: 27).date!
+        let launchDate = DateComponents(calendar: .current, year: 2025, month: 10, day: 30).date!
         self.promoEndDate = launchDate.addingTimeInterval(30 * 24 * 60 * 60) // 30 days
         
         self.promoStatus = PromoStatus(isPromoActive: false, timeRemaining: 0)

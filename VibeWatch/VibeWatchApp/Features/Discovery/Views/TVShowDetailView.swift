@@ -92,7 +92,7 @@ struct TVShowDetailView: View {
                     shareItems = []
                 }
         }
-        .sheet(isPresented: $showAuthGate) {
+        .fullScreenCover(isPresented: $showAuthGate) {
             AuthenticationGateView(isPresented: $showAuthGate)
         }
         .overlay {
@@ -167,10 +167,9 @@ struct TVShowDetailView: View {
                             movie: movie,
                             mediaType: .tv,
                             onSaveTap: {
-                                guard appState.isAuthenticated else {
-                                    showAuthGate = true
-                                    return
-                                }
+                                // Allow anonymous users to open save panel
+                                // They can save to watchlist without authentication
+                                // Auth gate will show when they try to create custom lists
                                 showSavePanel = true
                             },
                             onSeenTap: { Task { await handleSeenTap(tvShow: tvShow, movie: movie) } },

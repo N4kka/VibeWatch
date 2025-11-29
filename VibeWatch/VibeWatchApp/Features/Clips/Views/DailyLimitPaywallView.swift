@@ -18,7 +18,7 @@ struct DailyLimitPaywallView: View {
 
     var body: some View {
         ZStack {
-            Color.black.opacity(max(0, 0.45 * (1 - dragOffset / 400)))
+            Color.black.opacity(max(0, 0.45 * (1.0 - Double(dragOffset) / 400.0)))
                 .ignoresSafeArea()
                 .onTapGesture { }
 
@@ -75,17 +75,19 @@ struct DailyLimitPaywallView: View {
                         .fill(Color(UIColor.systemBackground))
                         .shadow(color: .black.opacity(0.25), radius: 20, x: 0, y: -8)
                 )
-                .offset(y: dragOffset)
-                .gesture(
-                    DragGesture()
+                .offset(y: max(0, dragOffset))
+                .highPriorityGesture(
+                    DragGesture(minimumDistance: 10)
                         .onChanged { value in
                             if value.translation.height > 0 {
                                 dragOffset = value.translation.height
                             }
                         }
                         .onEnded { value in
-                            if value.translation.height > 100 {
-                                dismiss()
+                            if value.translation.height > 150 {
+                                withAnimation(.easeOut(duration: 0.25)) {
+                                    dismiss()
+                                }
                             } else {
                                 withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                                     dragOffset = 0

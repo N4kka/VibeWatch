@@ -5,123 +5,62 @@ import WebKit
 struct ClipsView: View {
     @StateObject private var viewModel = ClipsViewModel()
     @EnvironmentObject var quotaManager: DailyQuotaManager
-    @State private var currentIndex = 0
     @State private var showDailyPaywall = false
     @State private var showAccountGate = false
     @State private var navigateToDiscovery = false
     @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var appState: AppState
-    
-    // Interactive swipe navigation
-    @State private var horizontalOffset: CGFloat = 0
-    @State private var isDraggingHorizontally = false
+    @State private var hasScrolledToSavedPosition = false // Track if we've restored scroll position
 
     var body: some View {
-        GeometryReader { geometry in
-            ZStack {
-                // Left view - Discovery (visible when swiping right)
-                if horizontalOffset > 0 {
-                    DiscoveryView(selectedMovie: .constant(nil), selectedMediaType: .constant(.movie))
-                        .offset(x: -geometry.size.width + horizontalOffset)
-                }
+        // Main content - Clips
+        ZStack {
+            VStack(spacing: 0) {
+                OfflineBanner()
                 
-                // Right view - Lists (visible when swiping left)
-                if horizontalOffset < 0 {
-                    ListsView()
-                        .offset(x: geometry.size.width + horizontalOffset)
+                if viewModel.isLoading {
+                    loadingView
+                        .transition(.opacity)
+                } else if let error = viewModel.error {
+                    errorView(error)
+                        .transition(.opacity)
+                } else if viewModel.clips.isEmpty {
+                    emptyStateView
+                        .transition(.opacity)
+                } else {
+                    clipsScrollView
+                        .transition(.opacity)
                 }
-                
-                // Main content - Clips
-                ZStack {
-                    VStack(spacing: 0) {
-                        OfflineBanner()
-                        
-                        if viewModel.isLoading {
-                            loadingView
-                                .transition(.opacity)
-                        } else if let error = viewModel.error {
-                            errorView(error)
-                                .transition(.opacity)
-                        } else if viewModel.clips.isEmpty {
-                            emptyStateView
-                                .transition(.opacity)
-                        } else {
-                            clipsScrollView
-                                .transition(.opacity)
-                        }
-                    }
-
-                    if showAccountGate {
-                        AccountCreationGateView(
-                            isPresented: $showAccountGate,
-                            onComeBack: {
-                                NotificationCenter.default.post(name: .navigateToDiscoveryTab, object: nil)
-                            },
-                            onAccountCreated: {
-                                quotaManager.resetQuota()
-                            }
-                        )
-                        .environmentObject(quotaManager)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                        .zIndex(101)
-                    }
-
-                    if showDailyPaywall {
-                        DailyLimitPaywallView(isPresented: $showDailyPaywall, onComeBack: {
-                            NotificationCenter.default.post(name: .navigateToDiscoveryTab, object: nil)
-                        })
-                        .environmentObject(quotaManager)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                        .zIndex(100)
-                    }
-                }
-                .animation(.easeInOut(duration: 0.3), value: viewModel.isLoading)
-                .animation(.easeInOut(duration: 0.3), value: viewModel.clips.isEmpty)
-                .offset(x: horizontalOffset)
             }
-            .simultaneousGesture(
-                DragGesture(minimumDistance: 5)
-                    .onChanged { value in
-                        let horizontalMovement = abs(value.translation.width)
-                        let verticalMovement = abs(value.translation.height)
-                        
-                        // Start tracking horizontal if it's clearly more horizontal than vertical
-                        if !isDraggingHorizontally && horizontalMovement > verticalMovement && horizontalMovement > 20 {
-                            isDraggingHorizontally = true
-                        }
-                        
-                        // Update offset if we're in horizontal drag mode
-                        if isDraggingHorizontally {
-                            horizontalOffset = value.translation.width
-                        }
+
+            if showAccountGate {
+                AccountCreationGateView(
+                    isPresented: $showAccountGate,
+                    onComeBack: {
+                        NotificationCenter.default.post(name: .navigateToDiscoveryTab, object: nil)
+                    },
+                    onAccountCreated: {
+                        quotaManager.resetQuota()
                     }
-                    .onEnded { value in
-                        guard isDraggingHorizontally else { return }
-                        
-                        let threshold: CGFloat = geometry.size.width * 0.3
-                        
-                        if horizontalOffset > threshold {
-                            // Swiped right - go to Discovery
-                            NotificationCenter.default.post(name: .navigateToDiscoveryTab, object: nil)
-                            horizontalOffset = 0
-                            isDraggingHorizontally = false
-                        } else if horizontalOffset < -threshold {
-                            // Swiped left - go to Lists
-                            NotificationCenter.default.post(name: .navigateToListsTab, object: nil)
-                            horizontalOffset = 0
-                            isDraggingHorizontally = false
-                        } else {
-                            // Reset with animation if threshold not met
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                                horizontalOffset = 0
-                            }
-                            isDraggingHorizontally = false
-                        }
-                    }
-            )
+                )
+                .environmentObject(quotaManager)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .zIndex(101)
+            }
+
+            if showDailyPaywall {
+                DailyLimitPaywallView(isPresented: $showDailyPaywall, onComeBack: {
+                    NotificationCenter.default.post(name: .navigateToDiscoveryTab, object: nil)
+                })
+                .environmentObject(quotaManager)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .zIndex(100)
+            }
         }
         .background(Color.black.ignoresSafeArea())
         .ignoresSafeArea(.all, edges: .bottom)
+        .animation(.easeInOut(duration: 0.3), value: viewModel.isLoading)
+        .animation(.easeInOut(duration: 0.3), value: viewModel.clips.isEmpty)
         .task {
             await handleViewAppearance()
         }
@@ -132,7 +71,7 @@ struct ClipsView: View {
         .onChange(of: scenePhase) { oldPhase, newPhase in
             handleScenePhaseChange(from: oldPhase, to: newPhase)
         }
-        .onChange(of: currentIndex) { oldValue, newValue in
+        .onChange(of: viewModel.currentIndex) { oldValue, newValue in
             // Check quota when user scrolls to next clip
             checkQuotaLimit(for: newValue)
         }
@@ -196,9 +135,9 @@ struct ClipsView: View {
                         ForEach(Array(viewModel.clips.enumerated()), id: \.offset) { index, clip in
                             ClipPlayerView(
                                 clip: clip,
-                                isCurrentClip: currentIndex == index,
+                                isCurrentClip: viewModel.currentIndex == index,
                                 onBecomeVisible: {
-                                    currentIndex = index
+                                    viewModel.currentIndex = index
                                 },
                                 onLikeToggle: { isLiked in
                                     viewModel.toggleLike(for: clip.id, isLiked: isLiked)
@@ -221,15 +160,19 @@ struct ClipsView: View {
                 }
                 .scrollTargetBehavior(.paging)
                 .scrollPosition(id: .init(get: {
-                    return currentIndex
+                    return viewModel.currentIndex
                 }, set: { newValue in
                     if let newIndex = newValue {
-                        currentIndex = newIndex
+                        viewModel.currentIndex = newIndex
                     }
                 }))
                 .ignoresSafeArea(.all) // Ignore all safe areas for proper paging
                 .onAppear {
-                    proxy.scrollTo(0, anchor: .top)
+                    // Only scroll to saved position on first appearance
+                    if !hasScrolledToSavedPosition {
+                        proxy.scrollTo(viewModel.currentIndex, anchor: .top)
+                        hasScrolledToSavedPosition = true
+                    }
                 }
             }
         }

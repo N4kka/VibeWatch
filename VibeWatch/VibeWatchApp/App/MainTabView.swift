@@ -14,19 +14,31 @@ struct MainTabView: View {
     private var customTabBarView: some View {
         NavigationStack {
             ZStack(alignment: .bottom) {
-                TabView(selection: $selectedTab) {
-                    DiscoveryView(selectedMovie: $selectedMovie, selectedMediaType: $selectedMediaType)
-                        .tag(0)
+                // Simple tab container - no swipe navigation
+                ZStack {
+                    if selectedTab == 0 {
+                        DiscoveryView(selectedMovie: $selectedMovie, selectedMediaType: $selectedMediaType)
+                            .transition(.opacity)
+                    }
                     
-                    ClipsView()
-                        .tag(1)
+                    if selectedTab == 1 {
+                        ClipsView()
+                            .transition(.opacity)
+                    }
                     
-                    ListsView()
-                        .tag(2)
+                    if selectedTab == 2 {
+                        AIRecommendationsView()
+                            .transition(.opacity)
+                    }
+                    
+                    if selectedTab == 3 {
+                        ListsView()
+                            .transition(.opacity)
+                    }
                 }
-                .tabViewStyle(.page(indexDisplayMode: .never))
+                .animation(.easeInOut(duration: 0.3), value: selectedTab)
                 
-                // Hide bottom bar when on Clips tab (swipe-only navigation)
+                // Hide bottom bar when on Clips tab
                 VStack(spacing: 0) {
                     Spacer()
                     
@@ -71,11 +83,17 @@ struct MainTabView: View {
                     .tag(1)
                     .toolbar(selectedTab == 1 ? .hidden : .visible, for: .tabBar)
                 
+                AIRecommendationsView()
+                    .tabItem {
+                        Label("AI", systemImage: "sparkles")
+                    }
+                    .tag(2)
+                
                 ListsView()
                     .tabItem {
                         Label("tab.lists".localized, systemImage: "list.bullet")
                     }
-                    .tag(2)
+                    .tag(3)
             }
             .tint(.theme.accentOrange)
             .background(Color.theme.background.ignoresSafeArea())
@@ -126,8 +144,6 @@ struct MainTabView: View {
                     .transition(.opacity)
                     .task {
                         // REAL WORK: Wait for the AppState to signal ready
-                        // This replaces the fake timer
-                        // We give it a minimum 1.5s just so the logo animation isn't jarring
                         try? await Task.sleep(nanoseconds: 1_500_000_000)
                         
                         // Wait for actual preload if it's still running
@@ -233,6 +249,14 @@ struct LiquidGlassBottomBar: View {
                 isSelected: selectedTab == 2
             ) {
                 selectedTab = 2
+            }
+            
+            TabBarButton(
+                icon: "sparkles",
+                title: "AI",
+                isSelected: selectedTab == 3
+            ) {
+                selectedTab = 3
             }
         }
         .frame(height: 70)

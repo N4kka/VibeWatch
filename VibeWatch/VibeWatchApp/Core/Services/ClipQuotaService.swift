@@ -80,12 +80,12 @@ final class ClipQuotaService: ObservableObject {
     
     // MARK: - RevenueCat Pro Status
     
-    /// Returns true if the RevenueCat "StartingVibe Pro" entitlement is active.
+    /// Returns true if the RevenueCat Pro entitlement is active.
     @discardableResult
     func checkIsProUser() async -> Bool {
         do {
             let info = try await Purchases.shared.customerInfo()
-            let isPro = info.entitlements["StartingVibe Pro"]?.isActive == true
+            let isPro = info.entitlements[AppConstants.RevenueCat.proEntitlementID]?.isActive == true
             
             updateProStatus(isPro)
             return isPro
@@ -102,7 +102,7 @@ final class ClipQuotaService: ObservableObject {
         customerInfoStreamTask?.cancel()
         customerInfoStreamTask = Task { [weak self] in
             for await info in Purchases.shared.customerInfoStream {
-                let isPro = info.entitlements["StartingVibe Pro"]?.isActive == true
+                let isPro = info.entitlements[AppConstants.RevenueCat.proEntitlementID]?.isActive == true
                 await MainActor.run {
                     self?.updateProStatus(isPro)
                 }

@@ -7,6 +7,7 @@ class ClipsViewModel: ObservableObject {
     @Published var clips: [Clip] = []
     @Published var isLoading = false
     @Published var error: AppError?
+    @Published var currentIndex: Int = 0 // Persist current clip index across tab switches
     
     private let repository: ClipsRepository
     private let engagementTracker = UserEngagementTracker.shared
@@ -14,6 +15,7 @@ class ClipsViewModel: ObservableObject {
     
     private var isLoadingMore = false
     private var loadStartTime: Date?
+    private var hasLoadedInSession = false // Track if clips loaded in this app session
     
     init(repository: ClipsRepository = ClipsRepository()) {
         self.repository = repository
@@ -25,9 +27,14 @@ class ClipsViewModel: ObservableObject {
     func loadClips() async {
         guard !isLoading else { return }
         
-        isLoading = true
-        loadStartTime = Date()
-        Logger.info("🎬 [ClipsViewModel] Loading clips...")
+        // Only show loading screen on first load in session
+        if !hasLoadedInSession {
+            isLoading = true
+            loadStartTime = Date()
+            Logger.info("🎬 [ClipsViewModel] Loading clips (first time in session)...")
+        } else {
+            Logger.info("🎬 [ClipsViewModel] Loading clips (already loaded in session, skipping loading screen)...")
+        }
         
         do {
             // Check if we need to prefetch clips today
@@ -52,6 +59,7 @@ class ClipsViewModel: ObservableObject {
             await ensureMinimumLoadingTime()
             
             self.clips = fetchedClips
+            hasLoadedInSession = true // Mark as loaded in this session
             Logger.info("✅ [ClipsViewModel] Successfully loaded \(clips.count) clips")
             
         } catch {

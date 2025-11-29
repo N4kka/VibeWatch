@@ -15,15 +15,24 @@ struct ProPaywallView: View {
     @State private var alertTitle = ""
     @State private var alertMessage = ""
     @State private var showAlert = false
+    @State private var dragOffset: CGFloat = 0
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
             // Dark background matching new design
             Color(red: 18/255, green: 18/255, blue: 20/255)
                 .ignoresSafeArea()
+                .onTapGesture { }
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
+                    // Drag indicator
+                    Capsule()
+                        .fill(Color.white.opacity(0.2))
+                        .frame(width: 46, height: 5)
+                        .padding(.top, 14)
+                        .padding(.bottom, 20)
+                    
                     hero
 
                     featuresList
@@ -39,8 +48,29 @@ struct ProPaywallView: View {
                     bottomLinks
                         .padding(.bottom, 40)
                 }
-                .padding(.top, 60)
+                .padding(.top, 20)
             }
+            .offset(y: max(0, dragOffset))
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 20)
+                    .onChanged { value in
+                        // Only drag when scrolled to top
+                        if value.translation.height > 0 {
+                            dragOffset = value.translation.height
+                        }
+                    }
+                    .onEnded { value in
+                        if value.translation.height > 150 {
+                            withAnimation(.easeOut(duration: 0.25)) {
+                                dismiss()
+                            }
+                        } else {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                dragOffset = 0
+                            }
+                        }
+                    }
+            )
 
             // Close button
             Button {
@@ -110,7 +140,8 @@ struct ProPaywallView: View {
                 planName: "Annual",
                 price: annualPriceText,
                 pricePerMonth: annualPerMonthText,
-                discountBadge: "33% OFF",
+                discountBadge: annualDiscountBadge,
+                trialBadge: annualTrialBadge,
                 isSelected: selectedPackage?.storeProduct.subscriptionPeriod?.unit == .year,
                 isPrimary: true
             ) {
@@ -123,6 +154,7 @@ struct ProPaywallView: View {
                 price: nil,
                 pricePerMonth: monthlyPerMonthText,
                 discountBadge: nil,
+                trialBadge: monthlyTrialBadge,
                 isSelected: selectedPackage?.storeProduct.subscriptionPeriod?.unit == .month,
                 isPrimary: false
             ) {
@@ -153,6 +185,31 @@ struct ProPaywallView: View {
         }
         return monthly.storeProduct.localizedPriceString + "/mo"
     }
+    
+    // MARK: - Trial badges
+    
+    private var annualTrialBadge: String? {
+        guard let annual = availablePackages.first(where: { $0.storeProduct.subscriptionPeriod?.unit == .year }),
+              let trial = revenueService.getTrialInfo(for: annual) else {
+            return nil
+        }
+        return "\(trial.localizedDuration) free"
+    }
+    
+    private var monthlyTrialBadge: String? {
+        guard let monthly = availablePackages.first(where: { $0.storeProduct.subscriptionPeriod?.unit == .month }),
+              let trial = revenueService.getTrialInfo(for: monthly) else {
+            return nil
+        }
+        return "\(trial.localizedDuration) free"
+    }
+    
+    private var annualDiscountBadge: String? {
+        // Only show discount badge if there's no trial
+        // (otherwise the card gets too crowded)
+        guard annualTrialBadge == nil else { return nil }
+        return "33% OFF"
+    }
 
     // MARK: - Continue button
 
@@ -163,7 +220,7 @@ struct ProPaywallView: View {
                     ProgressView()
                         .tint(.white)
                 } else {
-                    Text("Continue")
+                    Text(continueButtonText)
                         .font(.system(size: 18, weight: .bold))
                         .foregroundColor(.white)
                 }
@@ -175,6 +232,17 @@ struct ProPaywallView: View {
         }
         .disabled(selectedPackage == nil || isPurchasing)
         .padding(.horizontal, 24)
+    }
+    
+    private var continueButtonText: String {
+        guard let package = selectedPackage else { return "Select a plan" }
+        
+        // Check if package has a free trial
+        if let trial = revenueService.getTrialInfo(for: package) {
+            return "Start \(trial.localizedDuration) Free Trial"
+        }
+        
+        return "Continue"
     }
 
     // MARK: - Bottom links
@@ -311,7 +379,7 @@ struct ProPaywallView: View {
                 let result = try await Purchases.shared.purchase(package: package)
 
                 // Check multiple indicators of successful purchase
-                let hasActiveEntitlement = result.customerInfo.entitlements["StartingVibe Pro"]?.isActive == true
+                let hasActiveEntitlement = result.customerInfo.entitlements[AppConstants.RevenueCat.proEntitlementID]?.isActive == true
                 let hasRecentTransaction = !result.customerInfo.nonSubscriptionTransactions.isEmpty ||
                                           result.customerInfo.activeSubscriptions.contains(package.storeProduct.productIdentifier)
                 let userCancelled = result.userCancelled
@@ -333,6 +401,17 @@ struct ProPaywallView: View {
                             productId: package.storeProduct.productIdentifier,
                             userId: SupabaseService.shared.currentUser?.id
                         )
+                        
+                        // Log trial started if this was a trial purchase
+                        if let trial = revenueService.getTrialInfo(for: package) {
+                            let price = (package.storeProduct.price as NSDecimalNumber).doubleValue
+                            AnalyticsService.shared.logTrialStarted(
+                                productId: package.storeProduct.productIdentifier,
+                                price: price
+                            )
+                            print("🎁 [Trial] Started \(trial.localizedDuration) free trial for \(package.storeProduct.productIdentifier)")
+                        }
+                        
                         onPurchased?()
                         dismiss()
                     } else if !userCancelled {
@@ -360,9 +439,9 @@ struct ProPaywallView: View {
                 let info = try await Purchases.shared.restorePurchases()
                 await MainActor.run {
                     isRestoring = false
-                    if info.entitlements["StartingVibe Pro"]?.isActive == true {
+                    if info.entitlements[AppConstants.RevenueCat.proEntitlementID]?.isActive == true {
                         quotaManager.upgradeToPro()
-                        if let productId = info.entitlements["StartingVibe Pro"]?.productIdentifier {
+                        if let productId = info.entitlements[AppConstants.RevenueCat.proEntitlementID]?.productIdentifier {
                             FoundingMemberService.shared.markAsFoundingMember(
                                 productId: productId,
                                 userId: SupabaseService.shared.currentUser?.id
@@ -440,56 +519,82 @@ private struct PlanOptionCard: View {
     let price: String?
     let pricePerMonth: String
     let discountBadge: String?
+    let trialBadge: String?
     let isSelected: Bool
     let isPrimary: Bool
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            ZStack(alignment: .topTrailing) {
-                HStack(spacing: 14) {
-                    // Radio
-                    PlanRadio(isSelected: isSelected)
-
-                    // Inner big label box (left side)
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(planName)
-                            .font(.system(size: 17, weight: .semibold))
+            VStack(alignment: .leading, spacing: 0) {
+                // Trial badge at the top (if present)
+                if let trial = trialBadge {
+                    HStack {
+                        Spacer()
+                        Text("🎁 \(trial)")
+                            .font(.system(size: 13, weight: .bold))
                             .foregroundColor(.white)
-
-                        if let price = price {
-                            Text(price)
-                                .font(.system(size: 17, weight: .bold))
-                                .foregroundColor(.white)
-                        }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 6)
+                            .background(
+                                LinearGradient(
+                                    colors: [Color.green.opacity(0.8), Color.green],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .cornerRadius(12)
+                        Spacer()
                     }
-                    .padding(.vertical, 12)
-                    .padding(.horizontal, 14)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .cornerRadius(25)
-
-                    // Right per-month price
-                    Text(pricePerMonth)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(.white)
+                    .padding(.bottom, 8)
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 16)
-                .background(
-                    Color(red: 36/255, green: 36/255, blue: 38/255)
-                )
-                .cornerRadius(26)
+                
+                ZStack(alignment: .topTrailing) {
+                    HStack(spacing: 14) {
+                        // Radio
+                        PlanRadio(isSelected: isSelected)
 
-                if let discount = discountBadge {
-                    Text(discount)
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundColor(.black)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 4)
-                        .background(Color(red: 1, green: 0.55, blue: 0.2))
-                        .cornerRadius(16)
-                        .padding(.trailing, 18)
-                        .padding(.top, -12)
+                        // Inner big label box (left side)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(planName)
+                                .font(.system(size: 17, weight: .semibold))
+                                .foregroundColor(.white)
+
+                            if let price = price {
+                                Text(price)
+                                    .font(.system(size: 17, weight: .bold))
+                                    .foregroundColor(.white)
+                            }
+                        }
+                        .padding(.vertical, 12)
+                        .padding(.horizontal, 14)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .cornerRadius(25)
+
+                        // Right per-month price
+                        Text(pricePerMonth)
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(.white)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 16)
+                    .background(
+                        Color(red: 36/255, green: 36/255, blue: 38/255)
+                    )
+                    .cornerRadius(26)
+
+                    // Discount badge (only shown if no trial)
+                    if let discount = discountBadge, trialBadge == nil {
+                        Text(discount)
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(.black)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 4)
+                            .background(Color(red: 1, green: 0.55, blue: 0.2))
+                            .cornerRadius(16)
+                            .padding(.trailing, 18)
+                            .padding(.top, -12)
+                    }
                 }
             }
         }

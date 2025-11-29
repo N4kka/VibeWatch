@@ -175,46 +175,6 @@ class DatabaseMigrationService {
 
 // MARK: - Models
 
-struct SupabaseClip: Codable {
-    let id: String
-    let clipId: String
-    let videoId: String
-    let title: String
-    let description: String?
-    let videoUrl: String
-    let thumbnailUrl: String?
-    let movieId: Int?
-    let tvShowId: Int?
-    let mediaType: String?
-    let genres: [String]?
-    let actors: [String]?
-    let mood: String?
-    let keywords: [String]?
-    let likes: Int?
-    let comments: Int?
-    let views: Int?
-    let youtubeViews: Int?
-    let tmdbRating: Double?
-    let qualityScore: Double?
-    let isPremium: Bool?
-    
-    enum CodingKeys: String, CodingKey {
-        case id, title, description, genres, actors, mood, keywords
-        case likes, comments, views
-        case clipId = "clip_id"
-        case videoId = "video_id"
-        case videoUrl = "video_url"
-        case thumbnailUrl = "thumbnail_url"
-        case movieId = "movie_id"
-        case tvShowId = "tv_show_id"
-        case mediaType = "media_type"
-        case youtubeViews = "youtube_views"
-        case tmdbRating = "tmdb_rating"
-        case qualityScore = "quality_score"
-        case isPremium = "is_premium"
-    }
-}
-
 struct SupabaseDiscoveryCache: Codable {
     let id: String
     let contentType: String
@@ -239,15 +199,5 @@ struct SupabaseDiscoveryCache: Codable {
         case releaseDate = "release_date"
         case cachedAt = "cached_at"
         case expiresAt = "expires_at"
-    }
-}
-
-// MARK: - Array Extension
-
-extension Array {
-    func chunked(into size: Int) -> [[Element]] {
-        stride(from: 0, to: count, by: size).map {
-            Array(self[$0..<Swift.min($0 + size, count)])
-        }
     }
 }

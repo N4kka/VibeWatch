@@ -259,13 +259,34 @@ class AuthService: ObservableObject {
             
             // Defined inner function to perform the actual fetch
             func performFetch() async throws -> User {
-                return try await client
-                    .from("profiles")
-                    .select()
-                    .eq("id", value: userId)
-                    .single()
-                    .execute()
-                    .value
+                // Try to fetch with .single() first
+                do {
+                    return try await client
+                        .from("profiles")
+                        .select()
+                        .eq("id", value: userId)
+                        .single()
+                        .execute()
+                        .value
+                } catch {
+                    // If .single() fails (e.g., duplicate profiles), fetch array and take first
+                    print("⚠️ Single fetch failed (possibly duplicates), trying array fetch...")
+                    let profiles: [User] = try await client
+                        .from("profiles")
+                        .select()
+                        .eq("id", value: userId)
+                        .order("created_at", ascending: false) // Get most recent first
+                        .limit(1)
+                        .execute()
+                        .value
+                    
+                    guard let profile = profiles.first else {
+                        throw NSError(domain: "AuthService", code: 404, userInfo: [NSLocalizedDescriptionKey: "No profile found"])
+                    }
+                    
+                    print("⚠️ Found \(profiles.count) profile(s) for user. Using most recent.")
+                    return profile
+                }
             }
             
             do {
@@ -540,22 +561,25 @@ class AuthService: ObservableObject {
             // If we found nothing, we can't update
             if displayName == nil && avatarURL == nil { return }
             
-            // Build update data
-            var updateData: [String: String] = [:]
-            
-            if let name = displayName {
-                updateData["display_name"] = name
+            // Build upsert data - must include id and email for creation
+            struct ProfileUpsert: Encodable {
+                let id: String
+                let email: String
+                let display_name: String?
+                let avatar_url: String?
             }
             
-            if let avatar = avatarURL {
-                updateData["avatar_url"] = avatar
-            }
+            let profileData = ProfileUpsert(
+                id: userId,
+                email: authUser.email ?? "",
+                display_name: displayName,
+                avatar_url: avatarURL
+            )
             
-            // Update database
+            // Upsert (create or update) profile in database
             try await client
                 .from("profiles")
-                .update(updateData)
-                .eq("id", value: userId)
+                .upsert(profileData)
                 .execute()
             
             // Update local state
