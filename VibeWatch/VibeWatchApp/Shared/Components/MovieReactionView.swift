@@ -72,7 +72,7 @@ struct MovieReactionView: View {
         .task {
             await loadReactions()
         }
-        .onChange(of: mediaId) { _ in
+        .onChange(of: mediaId) {_, _ in
             Task { await loadReactions() }
         }
     }

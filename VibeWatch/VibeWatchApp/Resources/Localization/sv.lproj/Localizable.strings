@@ -179,7 +179,7 @@
 "search.trendingSearches" = "Trendande sökningar";
 "search.noResultsFound" = "Inga resultat hittades";
 "search.results" = "Resultat";
-"search.placehodler" = "Sök efter en serie eller film...";
+"search.placeholder" = "Sök efter en serie eller film...";
 
 // Auth
 "auth.welcomeBack" = "Välkommen tillbaka";

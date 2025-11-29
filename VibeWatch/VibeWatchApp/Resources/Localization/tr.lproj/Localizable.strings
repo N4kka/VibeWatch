@@ -179,7 +179,7 @@
 "search.trendingSearches" = "Trend aramalar";
 "search.noResultsFound" = "Sonuç bulunamadı";
 "search.results" = "Sonuçlar";
-"search.placehodler" = "Bir dizi veya film ara...";
+"search.placeholder" = "Bir dizi veya film ara...";
 
 // Auth
 "auth.welcomeBack" = "Tekrar hoş geldin";

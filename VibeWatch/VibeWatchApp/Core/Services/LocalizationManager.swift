@@ -2,7 +2,7 @@ import Foundation
 import SwiftUI
 
 class LocalizationManager: ObservableObject {
-    static let shared = LocalizationManager()
+    @MainActor static let shared = LocalizationManager()
 
     @Published var currentCountry: Country
     @Published var currentLanguage: Language

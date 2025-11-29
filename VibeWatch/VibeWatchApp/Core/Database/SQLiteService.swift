@@ -4,7 +4,7 @@ import SQLite3
 /// Local SQLite database service for offline-first architecture
 /// All app reads/writes go through this service
 class SQLiteService: ObservableObject {
-    static let shared = SQLiteService()
+    @MainActor static let shared = SQLiteService()
     
     @Published var isConnected = false
     @Published var lastError: String?
@@ -538,7 +538,7 @@ class SQLiteService: ObservableObject {
         case let val as Bool:
             sqlite3_bind_int(statement, index, val ? 1 : 0)
         case let val as Data:
-            val.withUnsafeBytes {
+            _ = val.withUnsafeBytes {
                 sqlite3_bind_blob(statement, index, $0.baseAddress, Int32(val.count), nil)
             }
         case let val as Date:

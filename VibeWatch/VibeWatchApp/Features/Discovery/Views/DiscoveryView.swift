@@ -35,7 +35,7 @@ struct DiscoveryView: View {
             // Debug: Print reaction counts
             await SQLiteService.shared.debugPrintReactionCounts()
         }
-        .onChange(of: localizationManager.localeDidChange) { _ in
+        .onChange(of: localizationManager.localeDidChange) {_, _ in
             // Reload content when language/country changes
             Task {
                 await viewModel.loadContent(forceRefresh: true)
@@ -197,7 +197,7 @@ struct DiscoveryView: View {
                         hasRestoredScroll = true
                     }
                 }
-                .onChange(of: selectedMovie) { newValue in
+                .onChange(of: selectedMovie) {_, newValue in
                     // Reset flag when navigating away so we can restore again
                     if newValue != nil {
                         hasRestoredScroll = false
@@ -597,7 +597,7 @@ struct BrowseSection: View {
                 hasLoaded = true
             }
         }
-        .onChange(of: viewModel.selectedBrowseType) { _ in
+        .onChange(of: viewModel.selectedBrowseType) {_, _ in
             // Only browse if already loaded (don't trigger on initial load)
             if hasLoaded {
                 Task {

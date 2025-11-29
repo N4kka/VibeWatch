@@ -16,12 +16,6 @@ struct SaveToListPanel: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Handle
-            RoundedRectangle(cornerRadius: 3)
-                .fill(Color.white.opacity(0.3))
-                .frame(width: 40, height: 4)
-                .padding(.top, 12)
-            
             // Header
             HStack {
                 Text("movieDetail.save".localized)
@@ -120,9 +114,6 @@ struct SaveToListPanel: View {
                 .padding(.vertical, 12)
             }
         }
-        .frame(maxHeight: UIScreen.main.bounds.height * 0.5)
-        .background(Color.theme.background)
-        .clipShape(RoundedRectangle(cornerRadius: 20))
         .alert("lists.createList".localized, isPresented: $showCreateList) {
             TextField("lists.listNamePlaceholder".localized, text: $newListName)
             Button("common.cancel".localized, role: .cancel) {
@@ -148,8 +139,9 @@ struct SaveToListPanel: View {
         }
         .fullScreenCover(isPresented: $showAuthGate) {
             AuthenticationGateView(isPresented: $showAuthGate)
+                .presentationBackground(.clear)
         }
-        .onChange(of: listManager.softLimitWarningMessage) { newValue in
+        .onChange(of: listManager.softLimitWarningMessage) {_, newValue in
             guard let message = newValue else { return }
             alertTitle = "Heads Up"
             alertMessage = message
@@ -204,6 +196,6 @@ struct ListRow: View {
             .opacity(isLocked ? 0.6 : 1.0)
         }
         .padding(.horizontal, 20)
-        .disabled(isLocked && !isInList) // Can't add to locked lists, but can remove if already in
+        .disabled(isLocked && !isInList)
     }
 }

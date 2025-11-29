@@ -158,7 +158,7 @@ struct MainTabView: View {
             } else if showOnboarding {
                 OnboardingView(showOnboarding: $showOnboarding)
                     .transition(.opacity)
-                    .onChange(of: showOnboarding) { newValue in
+                    .onChange(of: showOnboarding) {_, newValue in
                         print("🔵 [MainTabView] showOnboarding changed to: \(newValue)")
                         if !newValue {
                             print("🔵 [MainTabView] Onboarding completed, showing main app")

@@ -179,7 +179,7 @@
 "search.trendingSearches" = "Trender søgninger";
 "search.noResultsFound" = "Ingen resultater fundet";
 "search.results" = "Resultater";
-"search.placehodler" = "Søg efter en serie eller film...";
+"search.placeholder" = "Søg efter en serie eller film...";
 
 // Auth
 "auth.welcomeBack" = "Velkommen tilbage";

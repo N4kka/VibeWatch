@@ -699,7 +699,7 @@ struct VerticalYouTubePlayer: UIViewRepresentable {
             self.parent = parent
         }
         
-        func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        private func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
             if let url = navigationAction.request.url {
                 if url.scheme == "youtube" || url.host?.contains("youtube.com") == true && navigationAction.navigationType == .linkActivated {
                     decisionHandler(.cancel)
@@ -1402,7 +1402,7 @@ extension Notification.Name {
 
 // Preference key for tracking view offset
 struct ViewOffsetKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
+    static let defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
         value = nextValue()
     }

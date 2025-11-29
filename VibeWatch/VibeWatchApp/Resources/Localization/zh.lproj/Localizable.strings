@@ -179,7 +179,7 @@
 "search.trendingSearches" = "热门搜索";
 "search.noResultsFound" = "未找到结果";
 "search.results" = "结果";
-"search.placehodler" = "搜索电视剧或电影…";
+"search.placeholder" = "搜索电视剧或电影…";
 
 // Auth
 "auth.welcomeBack" = "欢迎回来";

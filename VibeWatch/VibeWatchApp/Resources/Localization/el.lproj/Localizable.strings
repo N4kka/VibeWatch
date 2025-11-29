@@ -179,7 +179,7 @@
 "search.trendingSearches" = "Δημοφιλείς αναζητήσεις";
 "search.noResultsFound" = "Δεν βρέθηκαν αποτελέσματα";
 "search.results" = "Αποτελέσματα";
-"search.placehodler" = "Αναζήτησε μια σειρά ή ταινία...";
+"search.placeholder" = "Αναζήτησε μια σειρά ή ταινία...";
 
 // Auth
 "auth.welcomeBack" = "Καλώς ήρθες ξανά";

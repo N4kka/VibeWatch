@@ -2,7 +2,7 @@ import Foundation
 import SwiftUI
 
 class UserEngagementTracker: ObservableObject {
-    static let shared = UserEngagementTracker()
+    @MainActor static let shared = UserEngagementTracker()
     
     // Watch time tracking
     private var watchHistory: [String: ClipEngagement] = [:] // clipId -> engagement

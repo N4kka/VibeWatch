@@ -179,7 +179,7 @@
 "search.trendingSearches" = "Beliebte Suchen";
 "search.noResultsFound" = "Keine Ergebnisse gefunden";
 "search.results" = "Ergebnisse";
-"search.placehodler" = "Suche nach einer Serie oder einem Film...";
+"search.placeholder" = "Suche nach einer Serie oder einem Film...";
 
 // Auth
 "auth.welcomeBack" = "Willkommen Zurück";

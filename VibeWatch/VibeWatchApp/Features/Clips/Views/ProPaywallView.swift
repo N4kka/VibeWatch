@@ -380,7 +380,7 @@ struct ProPaywallView: View {
 
                 // Check multiple indicators of successful purchase
                 let hasActiveEntitlement = result.customerInfo.entitlements[AppConstants.RevenueCat.proEntitlementID]?.isActive == true
-                let hasRecentTransaction = !result.customerInfo.nonSubscriptionTransactions.isEmpty ||
+                let hasRecentTransaction = !result.customerInfo.nonSubscriptions.isEmpty ||
                                           result.customerInfo.activeSubscriptions.contains(package.storeProduct.productIdentifier)
                 let userCancelled = result.userCancelled
 

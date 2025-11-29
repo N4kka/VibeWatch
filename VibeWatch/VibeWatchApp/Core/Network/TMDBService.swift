@@ -41,7 +41,7 @@ protocol TMDBServiceProtocol {
 }
 
 class TMDBService: TMDBServiceProtocol {
-    static let shared: TMDBServiceProtocol = TMDBService()
+    @MainActor static let shared: TMDBServiceProtocol = TMDBService()
     
     private let baseURL = "https://api.themoviedb.org/3"
     private let apiKey = "e42f888f287ca2fbe26c9a6e70351fb7"
@@ -91,7 +91,7 @@ class TMDBService: TMDBServiceProtocol {
         items.append(URLQueryItem(name: "api_key", value: apiKey))
         
         // Add language and region from LocalizationManager
-        let localizationManager = LocalizationManager.shared
+        let localizationManager = await LocalizationManager.shared
         let language = localizationManager.currentLanguage.id // e.g., "it", "en"
         let region = localizationManager.currentCountry.id // e.g., "IT", "US"
         

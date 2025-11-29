@@ -98,7 +98,7 @@ struct SignUpView: View {
                     .autocapitalization(.none)
                     .keyboardType(.emailAddress)
                     .textContentType(.emailAddress)
-                    .onChange(of: email) { _ in
+                    .onChange(of: email) {_, _ in
                         emailTouched = true
                     }
                 
@@ -115,7 +115,7 @@ struct SignUpView: View {
                 SecureField("auth.passwordPlaceholder".localized, text: $password)
                     .textFieldStyle(CustomTextFieldStyle())
                     .textContentType(.newPassword)
-                    .onChange(of: password) { _ in
+                    .onChange(of: password) {_, _ in
                         passwordTouched = true
                     }
                 
@@ -132,7 +132,7 @@ struct SignUpView: View {
                 SecureField("auth.confirmPasswordPlaceholder".localized, text: $confirmPassword)
                     .textFieldStyle(CustomTextFieldStyle())
                     .textContentType(.newPassword)
-                    .onChange(of: confirmPassword) { _ in
+                    .onChange(of: confirmPassword) {_, _ in
                         confirmPasswordTouched = true
                     }
                 

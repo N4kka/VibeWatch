@@ -179,7 +179,7 @@
 "search.trendingSearches" = "Trending zoekopdrachten";
 "search.noResultsFound" = "Geen resultaten";
 "search.results" = "Resultaten";
-"search.placehodler" = "Zoek een serie of film...";
+"search.placeholder" = "Zoek een serie of film...";
 
 // Auth
 "auth.welcomeBack" = "Welkom terug";

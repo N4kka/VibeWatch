@@ -221,7 +221,7 @@ class ListManager: ObservableObject {
             userId,
             "device@local",
             "Local User",
-            nil as String?
+            nil as String? as Any
         ])
         
         if success {

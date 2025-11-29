@@ -65,7 +65,7 @@ struct CerebrasUsage: Codable {
 }
 
 class CerebrasService {
-    static let shared = CerebrasService()
+    @MainActor static let shared = CerebrasService()
     
     private let baseURL = "https://api.cerebras.ai/v1/chat/completions"
     // Llama 3.1 8B is a good default for speed/efficiency on the free tier

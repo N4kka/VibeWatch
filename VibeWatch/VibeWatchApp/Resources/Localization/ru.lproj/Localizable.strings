@@ -179,7 +179,7 @@
 "search.trendingSearches" = "Популярные запросы";
 "search.noResultsFound" = "Ничего не найдено";
 "search.results" = "Результаты";
-"search.placehodler" = "Искать фильм или сериал...";
+"search.placeholder" = "Искать фильм или сериал...";
 
 // Auth
 "auth.welcomeBack" = "С возвращением";

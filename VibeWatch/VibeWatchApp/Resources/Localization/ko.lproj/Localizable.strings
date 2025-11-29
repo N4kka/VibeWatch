@@ -179,7 +179,7 @@
 "search.trendingSearches" = "인기 검색어";
 "search.noResultsFound" = "결과가 없습니다";
 "search.results" = "결과";
-"search.placehodler" = "TV 쇼나 영화를 검색하세요...";
+"search.placeholder" = "TV 쇼나 영화를 검색하세요...";
 
 // Auth
 "auth.welcomeBack" = "다시 오신 것을 환영합니다";

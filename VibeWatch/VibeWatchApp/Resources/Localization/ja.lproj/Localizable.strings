@@ -179,7 +179,7 @@
 "search.trendingSearches" = "人気の検索";
 "search.noResultsFound" = "結果が見つかりません";
 "search.results" = "結果";
-"search.placehodler" = "映画またはドラマを検索…";
+"search.placeholder" = "映画またはドラマを検索…";
 
 // Auth
 "auth.welcomeBack" = "お帰りなさい";

@@ -409,7 +409,7 @@ struct ProfileView: View {
         .sheet(isPresented: $showImagePicker) {
             ImagePicker(selectedImage: $selectedImage)
         }
-        .onChange(of: selectedImage) { newImage in
+        .onChange(of: selectedImage) {_, newImage in
             if let image = newImage {
                 Task {
                     await uploadAvatar(image)
@@ -437,7 +437,7 @@ struct ProfileView: View {
                     .labelsHidden()
                     .tint(.theme.accentOrange)
             }
-            .onChange(of: notificationService.notificationsEnabled) { newValue in
+            .onChange(of: notificationService.notificationsEnabled) {_, newValue in
                 if !pendingNotificationToggle {
                     pendingNotificationToggle = true
                     handleNotificationToggle()

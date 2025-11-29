@@ -179,7 +179,7 @@
 "search.trendingSearches" = "Trendaavat haut";
 "search.noResultsFound" = "Tuloksia ei löytynyt";
 "search.results" = "Tulokset";
-"search.placehodler" = "Hae TV-sarjaa tai elokuvaa...";
+"search.placeholder" = "Hae TV-sarjaa tai elokuvaa...";
 
 // Auth
 "auth.welcomeBack" = "Tervetuloa takaisin";

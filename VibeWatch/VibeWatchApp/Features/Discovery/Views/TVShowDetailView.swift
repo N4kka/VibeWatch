@@ -52,7 +52,14 @@ struct TVShowDetailView: View {
                 } else if let tvShow = viewModel.tvShow {
                     let tvShowMovie = tvShowToMovie(tvShow)
                     
-                    headerView(tvShow: tvShow)
+                    TVShowDetailHeaderView(
+                        tvShow: tvShow,
+                        onDismiss: { dismiss() },
+                        onSearch: { showSearch = true },
+                        onShare: {
+                            Task { await handleShare(tvShow: tvShow) }
+                        }
+                    )
                     
                     VStack(spacing: 24) {
                         infoView(tvShow: tvShow)
@@ -78,6 +85,7 @@ struct TVShowDetailView: View {
                 SaveToListPanel(movie: tvShowToMovie(tvShow), mediaType: .tv)
                     .presentationDetents([.medium])
                     .presentationDragIndicator(.visible)
+                    .presentationBackground(Color.theme.background)
             }
         }
         .task {
@@ -94,6 +102,7 @@ struct TVShowDetailView: View {
         }
         .fullScreenCover(isPresented: $showAuthGate) {
             AuthenticationGateView(isPresented: $showAuthGate)
+                .presentationBackground(.clear)
         }
         .overlay {
             if isPreparingShare {
@@ -143,19 +152,6 @@ struct TVShowDetailView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-    
-    // MARK: - Subviews (computed)
-    
-    private func headerView(tvShow: TVShow) -> some View {
-        TVShowDetailHeaderView(
-            tvShow: tvShow,
-            onDismiss: { dismiss() },
-            onSearch: { showSearch = true },
-            onShare: {
-                Task { await handleShare(tvShow: tvShow) }
-            }
-        )
     }
     
     private func infoView(tvShow: TVShow) -> some View {

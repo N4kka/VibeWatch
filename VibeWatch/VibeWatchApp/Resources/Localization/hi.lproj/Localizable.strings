@@ -179,7 +179,7 @@
 "search.trendingSearches" = "ट्रेंडिंग खोजें";
 "search.noResultsFound" = "कोई परिणाम नहीं मिला";
 "search.results" = "परिणाम";
-"search.placehodler" = "टीवी शो या फिल्म खोजें...";
+"search.placeholder" = "टीवी शो या फिल्म खोजें...";
 
 // Auth
 "auth.welcomeBack" = "वापसी पर स्वागत है";
