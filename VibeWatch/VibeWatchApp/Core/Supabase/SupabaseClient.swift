@@ -19,6 +19,149 @@ class SupabaseService: ObservableObject {
     }
     
     private init() {}
+
+    private let localDB = SQLiteService.shared
+    
+    private enum PullConflictPolicy {
+        case serverWins
+        case lastModified
+    }
+
+    private func conflictPolicy(for table: String) -> PullConflictPolicy {
+        switch table {
+        case "lists", "list_items", "user_preferences", "profiles":
+            return .lastModified
+        default:
+            return .serverWins
+        }
+    }
+
+    private func parseDate(_ value: Any?) -> Date? {
+        guard let string = value as? String else { return nil }
+        let iso = ISO8601DateFormatter()
+        if let d = iso.date(from: string) { return d }
+        let df = DateFormatter()
+        df.locale = Locale(identifier: "en_US_POSIX")
+        df.timeZone = TimeZone(secondsFromGMT: 0)
+        df.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        return df.date(from: string)
+    }
+
+    /// Check if the remote row is newer than local (by updated_at). If no local row, treat as newer.
+    private func isRemoteNewer(table: String, id: String, remoteUpdatedAt: Date?) async -> Bool {
+        guard let remoteUpdatedAt else { return true }
+        do {
+            let rows = try await localDB.queryRaw("SELECT updated_at FROM \(table) WHERE id = ? LIMIT 1", parameters: [id])
+            guard let localUpdatedRaw = rows.first?["updated_at"] else { return true }
+            if let localDate = parseDate(localUpdatedRaw) {
+                return remoteUpdatedAt > localDate
+            }
+            return true
+        } catch {
+            return true
+        }
+    }
+
+    // MARK: - Generic pull helper (stub for automated sync)
+    /// Fetch latest rows for a table, optionally filtered by user_id, and upsert into local DB.
+    func pullTable(name: String, userId: String?) async throws {
+        guard let client = client else {
+            throw SupabaseError.notConfigured
+        }
+        
+        var query = client.from(name).select("*")
+        if let userId {
+            query = query.eq("user_id", value: userId)
+        }
+        
+        let data = try await query.execute().data
+
+        // Decode raw JSON into [String: Any]
+        guard let rows = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return }
+
+        // Normalize rows per table (media_type, JSON fields)
+        let normalized: [[String: Any]] = rows.map { row in
+            var r = row
+
+            // Ensure media_type is valid
+            if name == "clips" || name == "list_items" {
+                if let mt = r["media_type"] as? String, !["movie", "tv"].contains(mt) {
+                    r["media_type"] = "movie"
+                }
+            }
+
+            // Convert Postgres array (decoded as [Any]) to JSON string for local JSON columns
+            func normalizeArray(_ key: String) {
+                if let arr = r[key] as? [Any] {
+                    if let data = try? JSONSerialization.data(withJSONObject: arr),
+                       let str = String(data: data, encoding: .utf8) {
+                        r[key] = str
+                    }
+                }
+            }
+
+            normalizeArray("genres")
+            normalizeArray("actors")
+            normalizeArray("keywords")
+            normalizeArray("origin_country")
+
+            return r
+        }
+
+        // Conflict handling
+        let policy = conflictPolicy(for: name)
+        var rowsToUpsert: [[String: Any]] = []
+
+        switch policy {
+        case .serverWins:
+            rowsToUpsert = normalized
+        case .lastModified:
+            for row in normalized {
+                guard let idAny = row["id"] else { continue }
+                let idString = String(describing: idAny)
+                let remoteDate = parseDate(row["updated_at"])
+                let newer = await isRemoteNewer(table: name, id: idString, remoteUpdatedAt: remoteDate)
+                if newer {
+                    rowsToUpsert.append(row)
+                }
+            }
+        }
+
+        try await SQLiteService.shared.upsert(table: name, rows: rowsToUpsert)
+    }
+
+    // MARK: - Push (batch) via RPC
+
+    /// Applies a batch of mutations atomically using the `apply_mutations` RPC on Supabase.
+    /// Each mutation should include: op ('INSERT'|'UPDATE'|'DELETE'), table, id, record (JSON object).
+    func applyMutations(_ batch: [[String: Any]]) async throws {
+        guard let client = client else {
+            throw SupabaseError.notConfigured
+        }
+        // Manually call RPC endpoint to avoid Encodable/Any issues
+        guard let baseURL = URL(string: Config.supabaseURL) else {
+            throw SupabaseError.notConfigured
+        }
+        let url = baseURL
+            .appendingPathComponent("rest")
+            .appendingPathComponent("v1")
+            .appendingPathComponent("rpc")
+            .appendingPathComponent("apply_mutations")
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(Config.supabaseAnonKey)", forHTTPHeaderField: "Authorization")
+
+        let body = try JSONSerialization.data(withJSONObject: ["batch": batch], options: [])
+        request.httpBody = body
+
+        let (_, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+            throw SupabaseError.networkError
+        }
+    }
     
     // MARK: - Lists
     
@@ -308,6 +451,38 @@ class SupabaseService: ObservableObject {
                 _ = try await addItemToList(listId: cloudList.id, item: item)
             }
         }
+    }
+    // MARK: - AI Token Usage
+    
+    func logAITokenUsage(userId: UUID, tokensConsumed: Int) async throws -> Int {
+        guard let client = client else {
+            throw SupabaseError.notConfigured
+        }
+        
+        struct LogUsageRequest: Encodable {
+            let p_user_id: UUID
+            let p_tokens_consumed: Int
+        }
+        
+        let request = LogUsageRequest(p_user_id: userId, p_tokens_consumed: tokensConsumed)
+        
+        let newTotalTokens: Int = try await client.rpc("log_ai_token_usage", params: request).execute().value
+        return newTotalTokens
+    }
+    
+    func getAITokenUsage(userId: UUID) async throws -> Int {
+        guard let client = client else {
+            throw SupabaseError.notConfigured
+        }
+        
+        struct GetUsageRequest: Encodable {
+            let p_user_id: UUID
+        }
+        
+        let request = GetUsageRequest(p_user_id: userId)
+        
+        let totalTokens: Int = try await client.rpc("get_ai_token_usage", params: request).execute().value
+        return totalTokens
     }
 }
 

@@ -83,7 +83,7 @@ class CerebrasService {
         prompt: String,
         systemPrompt: String = "You are a helpful assistant for a movie and TV show discovery app called VibeWatch.",
         model: String? = nil
-    ) async throws -> String {
+    ) async throws -> CerebrasChatResponse { // Return CerebrasChatResponse
         
         guard let url = URL(string: baseURL) else {
             throw CerebrasError.invalidURL
@@ -128,10 +128,7 @@ class CerebrasService {
         
         do {
             let decodedResponse = try JSONDecoder().decode(CerebrasChatResponse.self, from: data)
-            guard let content = decodedResponse.choices.first?.message.content else {
-                throw CerebrasError.noData
-            }
-            return content
+            return decodedResponse // Return the full response
         } catch {
             print("Cerebras Decoding Error: \(error)")
             throw CerebrasError.decodingError

@@ -35,9 +35,11 @@ class DailyQuotaManager: ObservableObject {
         checkAndResetIfNeeded()
         
         #if DEBUG
-        // Auto-enable Pro mode in Debug builds
-        if !isProUser {
-            print("🛠️ [DailyQuota] DEBUG MODE: Auto-enabling Pro user (unlimited clips)")
+        // Debug-only: force Pro to allow AI feature testing.
+        // Toggle off by setting this flag to false if you need to re-enable paywalls in Debug.
+        let forcePro = true
+        if forcePro && !isProUser {
+            print("🛠️ [DailyQuota] DEBUG MODE: Forcing Pro user for testing")
             isProUser = true
             hasReachedLimit = false
             saveQuotaData()

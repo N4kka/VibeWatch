@@ -381,44 +381,40 @@ class AuthService: ObservableObject {
             throw AuthError.notConfigured
         }
         
-        do {
-            print("🔍 Looking up email for username: '\(username)'")
-            
-            // Try exact match first
-            let response: User = try await client
-                .from("profiles")
-                .select()
-                .eq("display_name", value: username)
-                .single()
-                .execute()
-                .value
-            
-            print("✅ Found email for username: \(response.email)")
-            return response.email
-        } catch let exactError {
-            print("❌ Exact match failed for username: '\(username)'")
-            print("❌ Error details: \(exactError)")
-            
-            // Try case-insensitive search as fallback
-            do {
-                print("🔍 Trying case-insensitive search...")
-                
-                let response: User = try await client
+        struct EmailRow: Decodable { let email: String }
+        
+        func fetchEmail(filter: (PostgrestFilterBuilder) -> PostgrestFilterBuilder) async throws -> String? {
+            let rows: [EmailRow] = try await filter(
+                client
                     .from("profiles")
-                    .select()
-                    .ilike("display_name", pattern: username)
-                    .single()
-                    .execute()
-                    .value
-                
-                print("✅ Found email with case-insensitive search: \(response.email)")
-                return response.email
-            } catch {
-                print("❌ Case-insensitive search also failed")
-                print("❌ Error details: \(error)")
-                throw AuthError.userNotFound
+                    .select("email")
+            )
+            .limit(1)
+            .execute()
+            .value
+            return rows.first?.email
+        }
+        
+        let normalized = username.trimmingCharacters(in: .whitespacesAndNewlines)
+        print("🔍 Looking up email for username: '\(normalized)'")
+        
+        // Try filters in order: exact, case-insensitive, fuzzy
+        let likePattern = "%\(normalized)%"
+        let filters: [(PostgrestFilterBuilder) -> PostgrestFilterBuilder] = [
+            { $0.eq("display_name", value: normalized) },
+            { $0.ilike("display_name", pattern: normalized) },
+            { $0.ilike("display_name", pattern: likePattern) }
+        ]
+        
+        for filter in filters {
+            if let emailFound = try? await fetchEmail(filter: filter) {
+                print("✅ Found email for username: \(emailFound)")
+                return emailFound
             }
         }
+        
+        print("❌ Username lookup failed: userNotFound")
+        throw AuthError.userNotFound
     }
     
     func updateUserProfile(displayName: String?, avatarURL: String?) async throws {

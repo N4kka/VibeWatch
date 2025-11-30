@@ -26,10 +26,18 @@ struct SearchView: View {
                     ScrollView {
                         VStack(spacing: 24) {
                             if viewModel.searchQuery.isEmpty {
+                                if !viewModel.latestVisitedItems.isEmpty {
+                                    LatestVisitedSection(
+                                        results: viewModel.latestVisitedItems,
+                                        onTap: { result in
+                                            saveAndNavigate(result: result)
+                                        }
+                                    )
+                                }
                                 TrendingSearchesSection(
                                     results: viewModel.trendingSearches,
                                     onTap: { result in
-                                        selectedResult = result
+                                        saveAndNavigate(result: result)
                                     }
                                 )
                             } else {
@@ -38,7 +46,7 @@ struct SearchView: View {
                                     isLoading: viewModel.isLoading,
                                     error: viewModel.error,
                                     onTap: { result in
-                                        selectedResult = result
+                                        saveAndNavigate(result: result)
                                     }
                                 )
                             }

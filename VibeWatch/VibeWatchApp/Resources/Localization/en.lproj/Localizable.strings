@@ -255,6 +255,10 @@
 "ai.saveRegenerate" = "Save & Regenerate";
 "ai.resultsTitle" = "Here's what I found:";
 
+"ai.paywall.benefit.unlimited" = "Unlimited AI recommendations";
+"ai.paywall.benefit.smarter" = "Smarter content discovery";
+"ai.paywall.benefit.personalized" = "Personalized watchlists";
+
 // Settings
 "settings.comingSoon" = "More settings coming soon...";
 

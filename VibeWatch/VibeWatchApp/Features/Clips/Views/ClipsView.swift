@@ -34,7 +34,8 @@ struct ClipsView: View {
                 }
             }
             .offset(x: dragOffset) // Apply drag offset
-            .highPriorityGesture(
+            // Horizontal swipe navigation (AI / Discovery) without blocking vertical scroll
+            .simultaneousGesture(
                 DragGesture()
                     .onChanged { value in
                         // Only allow horizontal drag if it dominates vertical

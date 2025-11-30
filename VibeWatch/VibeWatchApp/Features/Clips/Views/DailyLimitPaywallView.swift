@@ -1,11 +1,52 @@
 import SwiftUI
 import RevenueCat
 
+enum PaywallType {
+    case clipsQuota
+    case aiQuota
+    
+    var title: String {
+        switch self {
+        case .clipsQuota: return "paywall.daily.limitReached".localized
+        case .aiQuota: return "ai.paywall.title".localized
+        }
+    }
+    
+    var description: String {
+        switch self {
+        case .clipsQuota: return "paywall.daily.limitDescription".localized
+        case .aiQuota: return "ai.paywall.description".localized
+        }
+    }
+    
+    var upgradeButtonText: String {
+        switch self {
+        case .clipsQuota: return "paywall.upgrade".localized
+        case .aiQuota: return "ai.paywall.actionButton".localized
+        }
+    }
+    
+    var unlockMessage: String {
+        switch self {
+        case .clipsQuota: return "paywall.unlockUnlimited".localized
+        case .aiQuota: return "ai.paywall.unlockAI".localized // New key needed
+        }
+    }
+    
+    var heroImage: String {
+        switch self {
+        case .clipsQuota: return "clock.badge.exclamationmark"
+        case .aiQuota: return "sparkles.tv"
+        }
+    }
+}
+
 /// Paywall presented when logged-in free users watch 15 clips in a day.
 struct DailyLimitPaywallView: View {
     @Binding var isPresented: Bool
     var onComeBack: (() -> Void)?
-
+    let paywallType: PaywallType // New property
+    
     @StateObject private var quotaManager = DailyQuotaManager.shared
     @ObservedObject private var foundingService = FoundingMemberService.shared
     @State private var countdownText = DailyQuotaManager.shared.timeUntilResetFormatted()
@@ -15,6 +56,12 @@ struct DailyLimitPaywallView: View {
     @State private var alertMessage = ""
     @State private var dragOffset: CGFloat = 0
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+
+    init(isPresented: Binding<Bool>, onComeBack: (() -> Void)? = nil, paywallType: PaywallType = .clipsQuota) {
+        self._isPresented = isPresented
+        self.onComeBack = onComeBack
+        self.paywallType = paywallType
+    }
 
     var body: some View {
         ZStack {
@@ -33,42 +80,45 @@ struct DailyLimitPaywallView: View {
 
                     heroSection
 
-                    BenefitList()
+                    BenefitList(paywallType: paywallType) // Pass paywallType
 
                     if foundingService.promoStatus.isPromoActive {
                         promoCountdownBanner
                     }
 
-                    countdownBanner
+                    if paywallType == .clipsQuota { // Only show countdown for clips quota
+                        countdownBanner
+                    }
 
                     upgradeButton
 
-                                            Button {
-                                                dismiss()
-                                                onComeBack?()
-                                            } label: {
-                                                Text("paywall.daily.title".localized)
-                                                    .font(.system(size: 16, weight: .medium))
-                                                    .foregroundColor(.gray)
-                                                    .frame(maxWidth: .infinity)
-                                                    .frame(height: 52)
-                                                    .background(Color.gray.opacity(0.15))
-                                                    .cornerRadius(14)
-                                            }
-                    
-                                            Button {
-                                                Task { await restorePurchases() }
-                                            } label: {
-                                                Text("paywall.restore".localized)
-                                                    .font(.system(size: 14, weight: .medium))
-                                                    .foregroundColor(.gray)
-                                            }
-                    
-                                            Text("paywall.proDescription".localized)
-                                                .font(.system(size: 12))
-                                                .foregroundColor(.gray)
-                                                .padding(.bottom, 20)
-                                        }                .padding(.horizontal, 24)
+                    Button {
+                        dismiss()
+                        onComeBack?()
+                    } label: {
+                        Text("paywall.daily.title".localized)
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.gray)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 52)
+                            .background(Color.gray.opacity(0.15))
+                            .cornerRadius(14)
+                    }
+
+                    Button {
+                        Task { await restorePurchases() }
+                    } label: {
+                        Text("paywall.restore".localized)
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.gray)
+                    }
+
+                    Text("paywall.proDescription".localized)
+                        .font(.system(size: 12))
+                        .foregroundColor(.gray)
+                        .padding(.bottom, 20)
+                }
+                .padding(.horizontal, 24)
                 .background(
                     RoundedRectangle(cornerRadius: 28, style: .continuous)
                         .fill(Color(UIColor.systemBackground))
@@ -98,7 +148,9 @@ struct DailyLimitPaywallView: View {
             .ignoresSafeArea(edges: .bottom)
         }
         .onReceive(timer) { _ in
-            countdownText = quotaManager.timeUntilResetFormatted()
+            if paywallType == .clipsQuota { // Only update countdown for clips
+                countdownText = quotaManager.timeUntilResetFormatted()
+            }
         }
         .alert(alertTitle, isPresented: $showAlert) {
             Button("OK", role: .cancel) { alertMessage = "" }
@@ -124,16 +176,16 @@ struct DailyLimitPaywallView: View {
                     .frame(width: 110, height: 110)
                     .shadow(color: Color.orange.opacity(0.3), radius: 22, x: 0, y: 10)
 
-                Image(systemName: "clock.badge.exclamationmark")
+                Image(systemName: paywallType.heroImage)
                     .font(.system(size: 44, weight: .bold))
                     .foregroundColor(.white)
             }
 
-            Text("paywall.daily.limitReached".localized)
+            Text(paywallType.title)
                 .font(.system(size: 24, weight: .bold))
                 .multilineTextAlignment(.center)
 
-            Text("paywall.daily.limitDescription".localized)
+            Text(paywallType.description)
                 .font(.system(size: 15))
                 .foregroundColor(.gray)
                 .multilineTextAlignment(.center)
@@ -191,9 +243,9 @@ struct DailyLimitPaywallView: View {
             showProPaywall = true
         } label: {
             VStack(spacing: 6) {
-                Text("paywall.upgrade".localized)
+                Text(paywallType.upgradeButtonText)
                     .font(.system(size: 18, weight: .bold))
-                Text("paywall.unlockUnlimited".localized)
+                Text(paywallType.unlockMessage)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.white.opacity(0.8))
             }
@@ -250,11 +302,21 @@ struct DailyLimitPaywallView: View {
     }
 
     private struct BenefitList: View {
+        let paywallType: PaywallType // New property
+
         var body: some View {
             VStack(alignment: .leading, spacing: 14) {
-                BenefitRow(icon: "infinity", text: "Unlimited clips every day")
-                BenefitRow(icon: "wand.and.stars", text: "Personalized watchlists")
-                BenefitRow(icon: "sparkles", text: "Early feature access")
+                // Benefits are dynamic based on paywallType
+                switch paywallType {
+                case .clipsQuota:
+                    BenefitRow(icon: "infinity", text: "Unlimited clips every day")
+                    BenefitRow(icon: "wand.and.stars", text: "Personalized watchlists")
+                    BenefitRow(icon: "sparkles", text: "Early feature access")
+                case .aiQuota:
+                    BenefitRow(icon: "brain.head.profile", text: "ai.paywall.benefit.unlimited".localized)
+                    BenefitRow(icon: "sparkles.tv", text: "ai.paywall.benefit.smarter".localized)
+                    BenefitRow(icon: "wand.and.stars", text: "ai.paywall.benefit.personalized".localized)
+                }
             }
         }
     }
@@ -282,4 +344,5 @@ struct DailyLimitPaywallView: View {
         }
     }
 }
+
 

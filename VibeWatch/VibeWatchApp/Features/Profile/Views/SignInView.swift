@@ -9,6 +9,8 @@ struct SignInView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var showSignUp = false
+    @State private var emailTouched = false
+    @State private var passwordTouched = false
     
     var body: some View {
         NavigationView {
@@ -72,10 +74,32 @@ struct SignInView: View {
                 .textFieldStyle(CustomTextFieldStyle())
                 .autocapitalization(.none)
                 .textContentType(.username)
+                .onChange(of: emailOrUsername) {_, _ in
+                    emailTouched = true
+                }
             
             SecureField("profile.passwordPlaceholder".localized, text: $password)
                 .textFieldStyle(CustomTextFieldStyle())
                 .textContentType(.password)
+                .onChange(of: password) {_, _ in
+                    passwordTouched = true
+                }
+            
+            if emailTouched && emailOrUsername.contains("@") && !emailOrUsername.isEmpty && !isEmailOrUsernameValid {
+                Text("auth.invalidEmail".localized)
+                    .font(.system(size: 12))
+                    .foregroundColor(.red)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.leading, 16)
+            }
+            
+            if passwordTouched && !password.isEmpty && !isPasswordValid {
+                Text("auth.invalidPassword".localized)
+                    .font(.system(size: 12))
+                    .foregroundColor(.red)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.leading, 16)
+            }
             
             if let errorMessage = errorMessage {
                 Text(errorMessage)
@@ -187,9 +211,20 @@ struct SignInView: View {
     }
     
     private var isFormValid: Bool {
-        !emailOrUsername.isEmpty &&
-        !password.isEmpty &&
-        password.count >= 6
+        isEmailOrUsernameValid && isPasswordValid
+    }
+    
+    private var isEmailOrUsernameValid: Bool {
+        let trimmed = emailOrUsername.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.contains("@") {
+            return ValidationHelper.isValidEmail(trimmed)
+        } else {
+            return !trimmed.isEmpty
+        }
+    }
+    
+    private var isPasswordValid: Bool {
+        ValidationHelper.isValidPassword(password)
     }
     
     private func handleSignIn() async {
@@ -197,8 +232,9 @@ struct SignInView: View {
         isLoading = true
         
         do {
+            let credential = emailOrUsername.trimmingCharacters(in: .whitespacesAndNewlines)
             let user = try await authService.signIn(
-                emailOrUsername: emailOrUsername,
+                emailOrUsername: credential,
                 password: password
             )
             

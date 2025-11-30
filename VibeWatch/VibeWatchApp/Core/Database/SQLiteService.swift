@@ -225,34 +225,42 @@ class SQLiteService: ObservableObject {
     /// Execute a SQL statement without returning results
     @discardableResult
     func execute(_ sql: String, parameters: [Any] = []) -> Bool {
-        var statement: OpaquePointer?
-        
-        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
-            let error = String(cString: sqlite3_errmsg(db))
-            Logger.error("[SQLite] Prepare failed: \(error). SQL: \(sql)")
-            DispatchQueue.main.async { [weak self] in
-                self?.lastError = error
+        var success = false
+
+        dbQueue.sync { [weak self] in
+            guard let self = self else { return }
+
+            var statement: OpaquePointer?
+
+            guard sqlite3_prepare_v2(self.db, sql, -1, &statement, nil) == SQLITE_OK else {
+                let error = String(cString: sqlite3_errmsg(self.db))
+                Logger.error("[SQLite] Prepare failed: \(error). SQL: \(sql)")
+                DispatchQueue.main.async { [weak self] in
+                    self?.lastError = error
+                }
+                return
             }
-            return false
-        }
-        
-        defer { sqlite3_finalize(statement) }
-        
-        // Bind parameters
-        for (index, param) in parameters.enumerated() {
-            bind(param, to: statement, at: Int32(index + 1))
-        }
-        
-        if sqlite3_step(statement) != SQLITE_DONE {
-            let error = String(cString: sqlite3_errmsg(db))
-            Logger.error("[SQLite] Execute failed: \(error). SQL: \(sql)")
-            DispatchQueue.main.async { [weak self] in
-                self?.lastError = error
+
+            defer { sqlite3_finalize(statement) }
+
+            // Bind parameters
+            for (index, param) in parameters.enumerated() {
+                bind(param, to: statement, at: Int32(index + 1))
             }
-            return false
+
+            if sqlite3_step(statement) != SQLITE_DONE {
+                let error = String(cString: sqlite3_errmsg(self.db))
+                Logger.error("[SQLite] Execute failed: \(error). SQL: \(sql)")
+                DispatchQueue.main.async { [weak self] in
+                    self?.lastError = error
+                }
+                return
+            }
+
+            success = true
         }
-        
-        return true
+
+        return success
     }
     
     /// Query and return rows as dictionaries
@@ -296,6 +304,52 @@ class SQLiteService: ObservableObject {
                 
                 continuation.resume(returning: results)
             }
+        }
+    }
+
+    // MARK: - Generic Upsert Helpers
+
+    /// Simple in-memory cache of table columns to avoid repeated PRAGMA calls.
+    private var tableColumnsCache: [String: [String]] = [:]
+
+    /// Fetch column names for a table.
+    private func columns(for table: String) async throws -> [String] {
+        if let cached = tableColumnsCache[table] { return cached }
+        let pragmaRows = try await queryRaw("PRAGMA table_info(\(table))")
+        let names = pragmaRows.compactMap { $0["name"] as? String }
+        tableColumnsCache[table] = names
+        return names
+    }
+
+    /// REPLACE INTO upsert for arbitrary rows. Only columns existing in the table are written.
+    /// If the table has a synced_at column and it's missing, it's set to now().
+    func upsert(table: String, rows: [[String: Any]]) async throws {
+        guard !rows.isEmpty else { return }
+        let cols = try await columns(for: table)
+        guard !cols.isEmpty else { return }
+
+        let hasSyncedAt = cols.contains("synced_at")
+        let now = ISO8601DateFormatter().string(from: Date())
+
+        for row in rows {
+            var filtered: [String: Any] = [:]
+            for col in cols {
+                if let v = row[col], !(v is NSNull) {
+                    filtered[col] = v
+                }
+            }
+            if hasSyncedAt, filtered["synced_at"] == nil {
+                filtered["synced_at"] = now
+            }
+
+            let keys = Array(filtered.keys)
+            guard !keys.isEmpty else { continue }
+
+            let placeholders = Array(repeating: "?", count: keys.count).joined(separator: ",")
+            let colsJoined = keys.joined(separator: ",")
+            let sql = "REPLACE INTO \(table) (\(colsJoined)) VALUES (\(placeholders))"
+            let params = keys.map { filtered[$0] ?? NSNull() }
+            _ = try await queryRaw(sql, parameters: params)
         }
     }
     
