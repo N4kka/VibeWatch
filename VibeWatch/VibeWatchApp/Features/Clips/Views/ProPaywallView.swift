@@ -116,18 +116,26 @@ struct ProPaywallView: View {
         }
         .frame(maxWidth: .infinity)
     }
+    
+    private var featureKeys: [String] {
+        [
+            "paywall.feature.aiAssistant",
+            "paywall.feature.unlimitedClips",
+            "paywall.feature.offlineMode",
+            "paywall.feature.lists",
+            "paywall.feature.advancedFilters",
+            "paywall.feature.noAds",
+            "paywall.feature.releaseAlerts"
+        ]
+    }
 
     // MARK: - Features
 
     private var featuresList: some View {
         VStack(spacing: 14) {
-            FeatureCheckRow(text: "🤖 AI-Assistant recommendations")
-            FeatureCheckRow(text: "▶️ Unlimited clips")
-            FeatureCheckRow(text: "📵 Offline mode")
-            FeatureCheckRow(text: "📋 Up to 100 lists")
-            FeatureCheckRow(text: "🔎 Advanced filters")
-            FeatureCheckRow(text: "❌ No ADs")
-            FeatureCheckRow(text: "🔔 Release alerts")
+            ForEach(featureKeys, id: \.self) { key in
+                FeatureCheckRow(text: key.localized)
+            }
         }
         .padding(.horizontal, 32)
     }
@@ -138,7 +146,7 @@ struct ProPaywallView: View {
         VStack(spacing: 12) {
             // Annual plan
             PlanOptionCard(
-                planName: "Annual",
+                planName: "paywall.plan.annual".localized,
                 price: annualPriceText,
                 pricePerMonth: annualPerMonthText,
                 discountBadge: annualDiscountBadge,
@@ -151,7 +159,7 @@ struct ProPaywallView: View {
 
             // Monthly plan
             PlanOptionCard(
-                planName: "Month",
+                planName: "paywall.plan.monthly".localized,
                 price: nil,
                 pricePerMonth: monthlyPerMonthText,
                 discountBadge: nil,
@@ -173,18 +181,17 @@ struct ProPaywallView: View {
     }
 
     private var annualPerMonthText: String {
-        // simple: use localized price string if we have it, otherwise mock
         guard let annual = availablePackages.first(where: { $0.storeProduct.subscriptionPeriod?.unit == .year }) else {
-            return "9,99€/mo"
+            return String(format: "paywall.price.perMonth".localized, "9,99€")
         }
-        return annual.storeProduct.localizedPriceString + "/yr"
+        return formattedPerMonthPrice(for: annual.storeProduct, months: 12)
     }
 
     private var monthlyPerMonthText: String {
         guard let monthly = availablePackages.first(where: { $0.storeProduct.subscriptionPeriod?.unit == .month }) else {
-            return "9,99€/mo"
+            return String(format: "paywall.price.perMonth".localized, "9,99€")
         }
-        return monthly.storeProduct.localizedPriceString + "/mo"
+        return formattedPerMonthPrice(for: monthly.storeProduct, months: 1)
     }
     
     // MARK: - Trial badges
@@ -194,7 +201,7 @@ struct ProPaywallView: View {
               let trial = revenueService.getTrialInfo(for: annual) else {
             return nil
         }
-        return "\(trial.localizedDuration) free"
+        return String(format: "paywall.trial.badge".localized, trial.localizedDuration)
     }
     
     private var monthlyTrialBadge: String? {
@@ -202,14 +209,14 @@ struct ProPaywallView: View {
               let trial = revenueService.getTrialInfo(for: monthly) else {
             return nil
         }
-        return "\(trial.localizedDuration) free"
+        return String(format: "paywall.trial.badge".localized, trial.localizedDuration)
     }
     
     private var annualDiscountBadge: String? {
         // Only show discount badge if there's no trial
         // (otherwise the card gets too crowded)
         guard annualTrialBadge == nil else { return nil }
-        return "33% OFF"
+        return "paywall.discount.annual".localized
     }
 
     // MARK: - Continue button
@@ -236,14 +243,14 @@ struct ProPaywallView: View {
     }
     
     private var continueButtonText: String {
-        guard let package = selectedPackage else { return "Select a plan" }
+        guard let package = selectedPackage else { return "paywall.cta.selectPlan".localized }
         
         // Check if package has a free trial
         if let trial = revenueService.getTrialInfo(for: package) {
-            return "Start \(trial.localizedDuration) Free Trial"
+            return String(format: "paywall.cta.startTrial".localized, trial.localizedDuration)
         }
         
-        return "Continue"
+        return "paywall.cta.continue".localized
     }
 
     // MARK: - Bottom links
@@ -345,6 +352,24 @@ struct ProPaywallView: View {
         @unknown default:
             return package.storeProduct.localizedPriceString
         }
+    }
+    
+    private func formattedPerMonthPrice(for product: StoreProduct, months: Int) -> String {
+        let divisor = NSDecimalNumber(value: months)
+        let monthlyPriceDecimal = (product.price as NSDecimalNumber).dividing(by: divisor)
+        let formattedPrice = formatPrice(monthlyPriceDecimal.decimalValue, for: product)
+        return String(format: "paywall.price.perMonth".localized, formattedPrice)
+    }
+    
+    private func formatPrice(_ price: Decimal, for product: StoreProduct) -> String {
+        let number = NSDecimalNumber(decimal: price)
+        if let formatter = product.priceFormatter {
+            return formatter.string(from: number) ?? product.localizedPriceString
+        }
+        
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        return formatter.string(from: number) ?? product.localizedPriceString
     }
 
     @MainActor

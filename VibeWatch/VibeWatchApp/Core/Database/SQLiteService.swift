@@ -130,6 +130,7 @@ class SQLiteService: ObservableObject {
             createUserClipHistoryTable(),
             createUserPreferencesTable(),
             createUserDailyQuotaTable(),
+            createUserAITokenUsageTable(),
             createSyncOutboxTable(),
             createSyncLogTable(),
             createDeviceInfoTable(),
@@ -859,6 +860,17 @@ extension SQLiteService {
           synced_at TEXT,
           UNIQUE(user_id, device_id),
           FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
+        );
+        """
+    }
+    
+    private func createUserAITokenUsageTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS user_ai_token_usage (
+          user_id TEXT PRIMARY KEY,
+          tokens_used_today INTEGER DEFAULT 0,
+          updated_at TEXT DEFAULT (datetime('now')),
+          synced_at TEXT
         );
         """
     }

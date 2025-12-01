@@ -1,280 +1,295 @@
 /// Tab Bar
-"tab.discovery" = "डिस्कवरी";
 "tab.clips" = "क्लिप्स";
+"tab.discovery" = "खोजें";
 "tab.lists" = "सूचियाँ";
-"tab.profile" = "प्रोफाइल";
+"tab.profile" = "प्रोफ़ाइल";
 
 // Onboarding
-"onboarding.page1.title" = "अपने पसंदीदा ट्रैक करें और सेव करें";
-"onboarding.page1.description" = "फिल्में और टीवी सीरीज़ खोजें और सेव करें। आपने क्या देखा है और आगे क्या देखना चाहते हैं, उसका रिकॉर्ड रखें।";
-"onboarding.page2.title" = "सूचियों से व्यवस्थित करें";
-"onboarding.page2.description" = "अपनी सामग्री को व्यवस्थित करने के लिए कस्टम सूचियाँ बनाएं। वॉचलिस्ट से लेकर मूड-आधारित कलेक्शन तक — सब कुछ आपका।";
+"onboarding.page1.description" = "अपनी पसंदीदा फ़िल्में और टीवी सीरीज़ खोजें और सेव करें। आपने क्या देखा है और आगे क्या देखना चाहते हैं, इसका ट्रैक रखें।";
+"onboarding.page1.title" = "अपनी पसंद को ट्रैक करें और सेव करें";
+"onboarding.page2.description" = "अपनी सामग्री को व्यवस्थित करने के लिए कस्टम सूचियाँ बनाएं। वॉचलिस्ट से लेकर मूड-बेस्ड कलेक्शंस तक—सब कुछ आपका।";
+"onboarding.page2.title" = "सूचियों के साथ व्यवस्थित करें";
+"onboarding.page3.description" = "फ़िल्मों और टीवी शो के रोमांचक क्लिप देखें। समुदाय में शामिल हों, टिप्पणी करें, सूचियों में सेव करें और दोस्तों के साथ साझा करें।";
 "onboarding.page3.title" = "क्लिप्स के माध्यम से खोजें";
-"onboarding.page3.description" = "फिल्मों और टीवी शो के रोमांचक क्लिप्स देखें। कमेंट करें, लिस्ट में जोड़ें और दोस्तों के साथ साझा करें।";
-"onboarding.page4.title" = "क्या आप तैयार हैं?";
-"onboarding.page4.description" = "अपने सभी डिवाइस पर सूचियों और पसंद को सिंक करने के लिए अकाउंट बनाएं।";
-"onboarding.page4.createAccount" = "अकाउंट बनाएं";
+"onboarding.page4.createAccount" = "खाता बनाएँ";
+"onboarding.page4.description" = "अपनी सूचियों और प्राथमिकताओं को सभी उपकरणों पर सिंक करने के लिए खाता बनाएँ।";
 "onboarding.page4.skip" = "अभी के लिए छोड़ें";
+"onboarding.page4.title" = "क्या आप तैयार हैं?";
 
 // Discovery
-"discovery.trending" = "ट्रेंडिंग";
-"discovery.popular" = "लोकप्रिय";
-"discovery.topRated" = "उच्च रेटेड";
-"discovery.basedOnMood" = "आपके लिए चुना गया";
-"discovery.vibeWatch" = "VibeWatch";
-"discovery.upcoming" = "आगामी";
+"discovery.basedOnMood" = "सिर्फ आपके लिए चुना गया";
 "discovery.forYou" = "आपके लिए";
+"discovery.popular" = "लोकप्रिय";
+"discovery.topRated" = "उच्च रेटिंग";
+"discovery.trending" = "ट्रेंडिंग";
 "discovery.tvShows" = "टीवी सीरीज़";
+"discovery.upcoming" = "जल्द आ रहा है";
+"discovery.vibeWatch" = "VibeWatch";
+
+// Browse
+"browse.emptyMessage" = "कॉन्टेंट ब्राउज़ करने के लिए फ़िल्टर बटन टैप करें";
+"browse.movies" = "फ़िल्में";
+"browse.title" = "ब्राउज़ करें";
+"browse.tvShows" = "टीवी शो";
 
 // Lists
-"lists.myLists" = "मेरी सूचियाँ";
-"lists.watchlist" = "वॉचलिस्ट";
-"lists.seen" = "देखा हुआ";
-"lists.liked" = "पसंद किया";
-"lists.disliked" = "नापसंद";
-"lists.empty" = "अभी तक कोई सूची नहीं";
-"lists.emptyDescription" = "अपनी पसंद की सामग्री व्यवस्थित करने के लिए पहली सूची बनाएँ";
-"lists.createList" = "सूची बनाएं";
-"lists.listName" = "सूची का नाम";
-"lists.listNamePlaceholder" = "नई सूची";
+"list.all" = "सभी";
+"list.movies" = "फ़िल्में";
+"list.tvShows" = "टीवी";
+"lists.createList" = "सूची बनाएँ";
+"lists.deleteConfirmation" = "क्या आप %@ को हटाना चाहते हैं? इससे इस सूची के सभी आइटम हट जाएंगे।";
+"lists.deleteList" = "सूची हटाएँ";
 "lists.description" = "विवरण (वैकल्पिक)";
 "lists.descriptionPlaceholder" = "विवरण जोड़ें... (वैकल्पिक)";
-"lists.listDescriptionPlaceholder" = "विवरण जोड़ें...";
-"lists.noItems" = "अभी तक कोई आइटम नहीं";
-"lists.error.maxListsReached" = "अधिकतम {limit} कस्टम सूची बन चुकी हैं";
-"lists.error.maxItemsReached" = "इस सूची में {limit} आइटम की सीमा पूरी हो चुकी है";
-"lists.error.listNotFound" = "सूची नहीं मिली";
-"lists.error.itemAlreadyInList" = "आइटम पहले से सूची में मौजूद है";
-"lists.error.defaultImmutable" = "इस सूची को संशोधित नहीं किया जा सकता";
-"lists.error.invalidName" = "कृपया एक मान्य सूची नाम दर्ज करें";
-"lists.error.authRequired" = "कस्टम सूचियाँ बनाने के लिए साइन-इन आवश्यक है।";
-"lists.limitInfo" = "{count}/{limit}";
-"lists.softLimitWarning" = "\"{name}\" में पहले से {limit} आइटम हैं। व्यवस्थित रखने के लिए एक नई सूची बनाने पर विचार करें।";
-"lists.searchPlaceholder" = "सूची में खोजें";
+"lists.disliked" = "ना पसंद";
 "lists.editList" = "सूची संपादित करें";
-"list.all" = "सभी";
-"list.movies" = "फिल्में";
-"list.tvShows" = "टीवी";
+"lists.empty" = "अभी तक कोई सूची नहीं";
+"lists.emptyDescription" = "अपनी पहली सूची बनाएँ और अपनी पसंदीदा सामग्री को व्यवस्थित करें";
+"lists.error.authRequired" = "कस्टम सूची बनाने के लिए आपको लॉग इन करना होगा।";
+"lists.error.defaultImmutable" = "इस सूची को बदला नहीं जा सकता";
+"lists.error.invalidName" = "कृपया एक मान्य सूची नाम दर्ज करें";
+"lists.error.itemAlreadyInList" = "आइटम पहले से सूची में मौजूद है";
+"lists.error.listNotFound" = "सूची नहीं मिली";
+"lists.error.maxItemsReached" = "इस सूची में {limit} आइटम की सीमा पूरी हो गई है";
+"lists.error.maxListsReached" = "आप {limit} कस्टम सूचियों की सीमा तक पहुँच चुके हैं";
+"lists.liked" = "पसंद किया";
+"lists.limitInfo" = "{count}/{limit}";
+"lists.listDescriptionPlaceholder" = "विवरण जोड़ें...";
+"lists.listName" = "सूची का नाम";
+"lists.listNamePlaceholder" = "नई सूची";
+"lists.myLists" = "मेरी सूचियाँ";
+"lists.noItems" = "अभी कोई आइटम नहीं";
+"lists.searchPlaceholder" = "इस सूची में खोजें";
+"lists.seen" = "देखा हुआ";
+"lists.softLimitWarning" = "\"{name}\" में पहले से {limit} आइटम हैं। व्यवस्थित रखने के लिए नई सूची बनाने पर विचार करें।";
+"lists.watchlist" = "वॉचलिस्ट";
+"lists.watchOn" = "देखें किस पर";
+
+// Movie Detail
+"movieDetail.cast" = "कलाकार";
+"movieDetail.country" = "देश";
+"movieDetail.director" = "निर्देशक";
+"movieDetail.genres" = "शैलियाँ";
+"movieDetail.information" = "जानकारी";
+"movieDetail.rating" = "रेटिंग";
+"movieDetail.ratings" = "रेटिंग्स";
+"movieDetail.runtime" = "अवधि";
+"movieDetail.save" = "सेव करें";
+"movieDetail.seen" = "देखा हुआ";
+"movieDetail.similar" = "जिन्होंने इसे पसंद किया, उन्होंने ये भी पसंद किए";
+"movieDetail.trailer" = "ट्रेलर";
+"movieDetail.watchNow" = "अभी देखें";
+
+// Filters
+"filter.all" = "सभी";
+"filter.movies" = "फ़िल्में";
+"filter.tvSeries" = "टीवी सीरीज़";
+
+// Sort
+"sort.dateAdded" = "जोड़े जाने की तारीख";
+"sort.popularityAsc" = "लोकप्रियता ↑";
+"sort.popularityDesc" = "लोकप्रियता ↓";
+"sort.rating" = "रेटिंग";
+"sort.ratingAsc" = "रेटिंग ↑";
+"sort.ratingDesc" = "रेटिंग ↓";
+"sort.releaseDate" = "रिलीज़ की तारीख";
+"sort.releaseDateAsc" = "रिलीज़ ↑";
+"sort.releaseDateDesc" = "रिलीज़ ↓";
+"sort.sortBy" = "क्रमबद्ध करें";
+"sort.title" = "शीर्षक";
+
+// Advanced Filters
+"filters.anyCountry" = "कोई भी देश";
+"filters.apply" = "लागू करें";
+"filters.country" = "देश";
+"filters.minimumRating" = "न्यूनतम रेटिंग";
+"filters.ratingAny" = "कोई भी";
+"filters.ratingExcellent" = "8.0+";
+"filters.ratingGood" = "7.0+";
+"filters.ratingMasterpiece" = "9.0+";
+"filters.reset" = "रीसेट";
+"filters.runtime" = "अवधि";
+"filters.runtimeAny" = "कोई भी";
+"filters.runtimeLong" = "> 120 मिनट";
+"filters.runtimeMedium" = "90–120 मिनट";
+"filters.runtimeShort" = "< 90 मिनट";
+"filters.sortBy" = "क्रमबद्ध करें";
+"filters.title" = "फ़िल्टर";
+
+// Clips
+"clips.addToList" = "सूची में जोड़ें";
+"clips.beFirstToComment" = "सबसे पहले टिप्पणी करें";
+"clips.comment" = "टिप्पणी";
+"clips.comments" = "टिप्पणियाँ";
+"clips.comments.deleteConfirmation" = "क्या आप इस टिप्पणी को हटाना चाहते हैं? यह कार्रवाई पूर्ववत नहीं की जा सकती।";
+"clips.comments.loading" = "टिप्पणियाँ लोड हो रही हैं...";
+"clips.comments.replying" = "जवाब दे रहे हैं...";
+"clips.createFirstList" = "कॉन्टेंट सेव करने के लिए अपनी पहली सूची बनाएँ";
+"clips.createNewList" = "नई सूची बनाएँ";
+"clips.feed.craftingSubtitle" = "हम आपके लिए सबसे अच्छे क्लिप चुन रहे हैं ✨";
+"clips.feed.craftingTitle" = "आपके लिए परफेक्ट फ़ीड तैयार हो रहा है";
+"clips.hideReplies" = "छिपाएँ";
+"clips.loadingClips" = "क्लिप लोड हो रहे हैं...";
+"clips.noClipsAvailable" = "कोई क्लिप उपलब्ध नहीं";
+"clips.noClipsDescription" = "अपनी पसंदीदा फ़िल्मों और शो के रोमांचक दृश्यों के लिए बाद में वापस आएँ";
+"clips.noComments" = "अभी कोई टिप्पणी नहीं";
+"clips.noListsYet" = "अभी कोई सूची नहीं";
+"clips.reply" = "जवाब दें";
+"clips.replies" = "जवाब";
+"clips.replyingTo" = "उत्तर दे रहे हैं:";
+"clips.viewReplies" = "देखें";
+
+// Search
+"search.latestVisited" = "हाल ही में देखा गया";
+"search.noResultsFound" = "कोई परिणाम नहीं मिला";
+"search.placeholder" = "टीवी शो या फ़िल्म खोजें...";
+"search.results" = "परिणाम";
+"search.trendingSearches" = "ट्रेंडिंग खोजें";
 
 // Profile
-"profile.done" = "पूर्ण";
 "profile.cancel" = "रद्द करें";
-"profile.notifications" = "सूचनाएँ";
-"profile.streamingServices" = "स्ट्रीमिंग सेवाएँ";
-"profile.settings" = "सेटिंग्स";
+"profile.createAccount" = "खाता बनाएँ";
+"profile.done" = "पूर्ण";
 "profile.helpSupport" = "मदद और समर्थन";
 "profile.logout" = "लॉग आउट";
-"profile.signIn" = "साइन इन";
-"profile.createAccount" = "अकाउंट बनाएं";
-"profile.signInToVibeWatch" = "VibeWatch में साइन इन करें";
-"profile.signInDescription" = "सूचियाँ बनाएँ, क्लिप्स सेव करें और अनुभव को पर्सनलाइज़ करें";
-"profile.userNamePlaceholder" = "ईमेल या यूज़रनेम";
+"profile.notifications" = "सूचनाएँ";
 "profile.passwordPlaceholder" = "पासवर्ड";
+"profile.settings" = "सेटिंग्स";
+"profile.signIn" = "साइन इन";
+"profile.signInDescription" = "सूचियाँ बनाएँ, क्लिप सेव करें, और अपने अनुभव को व्यक्तिगत बनाएं";
+"profile.signInToVibeWatch" = "VibeWatch में साइन इन करें";
+"profile.streamingServices" = "स्ट्रीमिंग सेवाएँ";
+"profile.userNamePlaceholder" = "ईमेल या उपयोगकर्ता नाम";
 
 // Settings
-"settings.title" = "सेटिंग्स";
+"settings.comingSoon" = "और सेटिंग्स जल्द ही आ रही हैं...";
 "settings.country" = "देश";
 "settings.language" = "भाषा";
 "settings.selectCountry" = "देश चुनें";
 "settings.selectLanguage" = "भाषा चुनें";
-
-// Movie Detail
-"movieDetail.save" = "सेव करें";
-"movieDetail.seen" = "देखा हुआ";
-"movieDetail.watchNow" = "अभी देखें";
-"movieDetail.trailer" = "ट्रेलर";
-"movieDetail.information" = "जानकारी";
-"movieDetail.rating" = "रेटिंग";
-"movieDetail.ratings" = "रेटिंग्स";
-"movieDetail.genres" = "शैली";
-"movieDetail.runtime" = "रनटाइम";
-"movieDetail.country" = "देश";
-"movieDetail.director" = "निर्देशक";
-"movieDetail.cast" = "कलाकार";
-"movieDetail.similar" = "इसे पसंद करने वालों ने यह भी पसंद किया";
-
-// Filters
-"filter.all" = "सभी";
-"filter.movies" = "फिल्में";
-"filter.tvSeries" = "टीवी सीरीज़";
-
-// Sort
-"sort.dateAdded" = "जोड़े जाने की तिथि";
-"sort.title" = "शीर्षक";
-"sort.releaseDate" = "रिलीज़ तिथि";
-"sort.rating" = "रेटिंग";
-"sort.sortBy" = "क्रमबद्ध करें";
-"sort.popularityDesc" = "लोकप्रियता ↓";
-"sort.popularityAsc" = "लोकप्रियता ↑";
-"sort.ratingDesc" = "रेटिंग ↓";
-"sort.ratingAsc" = "रेटिंग ↑";
-"sort.releaseDateDesc" = "रिलीज़ तिथि ↓";
-"sort.releaseDateAsc" = "रिलीज़ तिथि ↑";
-
-// Advanced Filters
-"filters.title" = "फ़िल्टर्स";
-"filters.reset" = "रीसेट";
-"filters.apply" = "लागू करें";
-"filters.runtime" = "रनटाइम";
-"filters.minimumRating" = "न्यूनतम रेटिंग";
-"filters.country" = "देश";
-"filters.sortBy" = "क्रमबद्ध करें";
-"filters.anyCountry" = "कोई भी देश";
-"filters.runtimeAny" = "कोई भी";
-"filters.runtimeShort" = "< 90 मिनट";
-"filters.runtimeMedium" = "90-120 मिनट";
-"filters.runtimeLong" = "> 120 मिनट";
-"filters.ratingAny" = "कोई भी";
-"filters.ratingGood" = "7.0+";
-"filters.ratingExcellent" = "8.0+";
-"filters.ratingMasterpiece" = "9.0+";
-
-// Browse
-"browse.title" = "ब्राउज़";
-"browse.movies" = "फिल्में";
-"browse.tvShows" = "टीवी शो";
-"browse.emptyMessage" = "सामग्री ब्राउज़ करने के लिए फ़िल्टर बटन टैप करें";
+"settings.title" = "सेटिंग्स";
 
 // Platforms
-"platforms.title" = "प्लेटफ़ॉर्म्स";
-"platforms.streaming" = "स्ट्रीमिंग";
-"platforms.rent" = "किराये पर लें";
+"platform.selectionCount" = "%d / %d चुने गए";
+"platform.title" = "स्ट्रीमिंग प्लेटफ़ॉर्म";
 "platforms.buy" = "खरीदें";
-
-// Common
-"common.done" = "पूर्ण";
-"common.cancel" = "रद्द करें";
-"common.save" = "सेव करें";
-"common.delete" = "हटाएं";
-"common.edit" = "संपादित करें";
-"common.search" = "खोजें";
-"common.year" = "साल";
-"common.loading" = "लोड हो रहा है...";
-"common.items" = "आइटम्स";
-"common.item" = "आइटम";
-"common.or" = "या";
-"common.reply" = "उत्तर दें";
-"common.uploading" = "अपलोड हो रहा है...";
-"common.loadMore" = "और लोड करें";
-
-// Clips
-"clips.loadingClips" = "क्लिप्स लोड हो रहे हैं...";
-"clips.noClipsAvailable" = "कोई क्लिप उपलब्ध नहीं";
-"clips.noClipsDescription" = "अपनी पसंदीदा फिल्मों और शो के रोमांचक दृश्य बाद में देखें";
-"clips.comment" = "कमेंट";
-"clips.comments" = "कमेंट्स";
-"clips.noComments" = "अभी तक कोई कमेंट नहीं";
-"clips.beFirstToComment" = "पहला कमेंट करें";
-"clips.replyingTo" = "को जवाब दे रहे हैं";
-"clips.reply" = "उत्तर दें";
-"clips.replies" = "उत्तर";
-"clips.viewReplies" = "देखें";
-"clips.hideReplies" = "छिपाएँ";
-"clips.addToList" = "सूची में जोड़ें";
-"clips.noListsYet" = "अभी तक कोई सूची नहीं";
-"clips.createFirstList" = "सामग्री सेव करने के लिए अपनी पहली सूची बनाएँ";
-"clips.createNewList" = "नई सूची बनाएँ";
-
-// Search
-"search.trendingSearches" = "ट्रेंडिंग खोजें";
-"search.noResultsFound" = "कोई परिणाम नहीं मिला";
-"search.results" = "परिणाम";
-"search.placeholder" = "टीवी शो या फिल्म खोजें...";
-
-// Auth
-"auth.welcomeBack" = "वापसी पर स्वागत है";
-"auth.signInContinue" = "जारी रखने के लिए साइन इन करें";
-"auth.forgotPassword" = "पासवर्ड भूल गए?";
-"auth.signIn" = "साइन इन";
-"auth.dontHaveAccount" = "क्या आपका अकाउंट नहीं है?";
-"auth.signUp" = "साइन अप";
-"auth.createAccount" = "अकाउंट बनाएं";
-"auth.joinVibeWatch" = "VibeWatch से जुड़ें और खोज शुरू करें";
-"auth.invalidEmail" = "अमान्य ईमेल";
-"auth.invalidPassword" = "अमान्य पासवर्ड";
-"auth.passwordsDontMatch" = "पासवर्ड मेल नहीं खाते";
-"auth.alreadyHaveAccount" = "क्या आपका पहले से अकाउंट है?";
-"auth.emailPlaceholder" = "ईमेल";
-"auth.usernamePlaceholder" = "यूज़रनेम";
-"auth.passwordPlaceholder" = "पासवर्ड";
-"auth.confirmPasswordPlaceholder" = "पासवर्ड की पुष्टि करें";
+"platforms.rent" = "किराए पर लें";
+"platforms.streaming" = "स्ट्रीमिंग";
+"platforms.title" = "प्लेटफ़ॉर्म";
 
 // Notifications
-"notifications.permissionRequired" = "सूचना अनुमति आवश्यक";
-"notifications.openSettings" = "सेटिंग्स खोलें";
-"notifications.enableInSettings" = "नई रिलीज़, कीमत में बदलाव और अधिक जानकारी पाने के लिए सेटिंग्स में सूचनाएँ सक्षम करें।";
-"notifications.disableConfirmation" = "सूचनाएँ बंद करें?";
-"notifications.disableMessage" = "आप नई रिलीज़, कीमत बदलाव और निजी अनुशंसाओं के बारे में सूचनाएँ प्राप्त नहीं करेंगे।";
 "notifications.disableButton" = "सूचनाएँ बंद करें";
+"notifications.disableConfirmation" = "सूचनाएँ बंद करें?";
+"notifications.disableMessage" = "आप नई रिलीज़, मूल्य परिवर्तन और व्यक्तिगत अनुशंसाओं के बारे में सूचनाएँ प्राप्त नहीं करेंगे।";
+"notifications.enableInSettings" = "कृपया सेटिंग्स में सूचनाएँ सक्षम करें ताकि आप नए अपडेट पा सकें।";
+"notifications.openSettings" = "सेटिंग्स खोलें";
+"notifications.permissionRequired" = "सूचना अनुमति आवश्यक";
+
+// Auth
+"auth.alreadyHaveAccount" = "क्या आपका पहले से खाता है?";
+"auth.confirmPasswordPlaceholder" = "पासवर्ड की पुष्टि करें";
+"auth.createAccount" = "खाता बनाएँ";
+"auth.dontHaveAccount" = "खाता नहीं है?";
+"auth.emailPlaceholder" = "ईमेल";
+"auth.forgotPassword" = "पासवर्ड भूल गए?";
+"auth.gate.accountRequired" = "खाता आवश्यक है";
+"auth.gate.authRequiredAI" = "AI चैट का उपयोग करने के लिए आपको खाता चाहिए।";
+"auth.gate.createFree" = "मुफ़्त खाता बनाएँ";
+"auth.gate.createTitle" = "अपना मुफ़्त VibeWatch खाता बनाएँ";
+"auth.gate.description" = "कस्टम सूचियाँ बनाने और उन्हें सिंक करने के लिए आपको खाता चाहिए।";
+"auth.gate.haveAccount" = "मेरे पास पहले से खाता है";
+"auth.gate.limitMessage" = "आपने आज के 15 मुफ़्त क्लिप देख लिए हैं। प्रगति सिंक करने और कल के क्लिप प्राप्त करने के लिए साइन अप करें।";
+"auth.gate.signupFree" = "साइन अप मुफ़्त है और एक मिनट से भी कम में हो जाता है।";
+"auth.invalidEmail" = "अमान्य ईमेल";
+"auth.invalidPassword" = "अमान्य पासवर्ड";
+"auth.joinVibeWatch" = "VibeWatch से जुड़ें और नई सामग्री खोजें";
+"auth.passwordPlaceholder" = "पासवर्ड";
+"auth.passwordsDontMatch" = "पासवर्ड मेल नहीं खाते";
+"auth.signIn" = "साइन इन";
+"auth.signInContinue" = "जारी रखने के लिए साइन इन करें";
+"auth.signUp" = "साइन अप";
+"auth.usernamePlaceholder" = "उपयोगकर्ता नाम";
+"auth.welcomeBack" = "वापसी पर स्वागत है";
+
+// AI
+"ai.describeVibe" = "अपना मूड बताइए";
+"ai.editMessage" = "संदेश संपादित करें";
+"ai.hardLimitMessage" = "आपने आज की AI सीमा तक पहुँच प्राप्त कर ली है। कृपया कल वापस आएँ।";
+"ai.paywall.benefit.personalized" = "व्यक्तिगत वॉचलिस्ट";
+"ai.paywall.benefit.smarter" = "स्मार्ट सामग्री खोज";
+"ai.paywall.benefit.unlimited" = "असीमित AI अनुशंसाएँ";
+"ai.paywall.description" = "परफ़ेक्ट विकल्प पाने के लिए स्मार्ट सुझाव प्राप्त करें!";
+"ai.paywall.goBack" = "वापस जाएँ";
+"ai.paywall.title" = "अपने AI मूवी साथी को अनलॉक करें";
+"ai.paywall.unlockAI" = "AI चैट अनलॉक करें";
+"ai.placeholder" = "उदा.: 'प्लॉट ट्विस्ट वाली साइ-फ़ाय'";
+"ai.proRequired" = "AI चैट केवल Pro सदस्यों के लिए उपलब्ध है।";
+"ai.resultsTitle" = "यहाँ आपको मिल सकता है:";
+"ai.saveRegenerate" = "सेव करें और फिर से बनाएँ";
+"ai.softLimitMessage" = "आप आज की AI सीमा के करीब हैं। कृपया संदेश संक्षिप्त रखें।";
+"ai.subtitle" = "बताइए आप किस मूड में हैं, मैं आपके लिए सही विकल्प ढूँढूँगा।";
+"ai.suggestion.chips1" = "💖 आरामदायक और प्यारी रोमांस";
+"ai.suggestion.chips2" = "💥 आइकॉनिक 80s एक्शन–कॉमेडी ✨";
+"ai.suggestion.chips3" = "🕵️‍♂️ प्लॉट ट्विस्ट के साथ अंडररेटेड थ्रिलर";
+"ai.suggestion.chips4" = "🌀 दिमाग हिला देने वाली साइ-फ़ाय";
+"ai.usage.left" = "शेष";
+
+// Paywall
+"paywall.bestValue" = "सबसे बेहतर मूल्य";
+"paywall.cta.continue" = "जारी रखें";
+"paywall.cta.selectPlan" = "प्लान चुनें";
+"paywall.cta.startTrial" = "%@ मुफ़्त ट्रायल शुरू करें";
+"paywall.daily.limitDescription" = "मुफ़्त सदस्य प्रतिदिन 15 क्लिप देख सकते हैं। Pro में अपग्रेड करें और असीमित क्लिप पाएं।";
+"paywall.daily.limitReached" = "आज की सीमा पूरी हो गई है";
+"paywall.daily.nextReset" = "अगला रीसेट";
+"paywall.daily.resetIn" = "रीसेट में";
+"paywall.daily.title" = "कल वापस आइए";
+"paywall.discount.annual" = "33% छूट";
+"paywall.ensurePro" = "अपनी Pro योजना सुनिश्चित करें!";
+"paywall.feature.advancedFilters" = "🔎 उन्नत फ़िल्टर";
+"paywall.feature.aiAssistant" = "🤖 AI-असिस्टेंट अनुशंसाएँ";
+"paywall.feature.lists" = "📋 अधिकतम 100 सूचियाँ";
+"paywall.feature.noAds" = "❌ बिना विज्ञापन";
+"paywall.feature.offlineMode" = "📵 ऑफलाइन मोड";
+"paywall.feature.releaseAlerts" = "🔔 रिलीज़ अलर्ट";
+"paywall.feature.unlimitedClips" = "▶️ असीमित क्लिप्स";
+"paywall.foundingMember" = "संस्थापक सदस्य मूल्य";
+"paywall.plan.annual" = "वार्षिक";
+"paywall.plan.monthly" = "मासिक";
+"paywall.price.perMonth" = "%@/माह";
+"paywall.proDescription" = "Pro में आपको असीमित क्लिप्स और अधिक सुविधाएँ मिलती हैं।";
+"paywall.restore" = "खरीदारी पुनर्स्थापित करें";
+"paywall.trial.badge" = "%@ मुफ़्त";
+"paywall.unlockUnlimited" = "असीमित क्लिप्स अनलॉक करें";
+"paywall.upgrade" = "Pro में अपग्रेड करें";
+
+// Common
+"common.cancel" = "रद्द करें";
+"common.delete" = "हटाएँ";
+"common.dismiss" = "बंद करें";
+"common.done" = "पूर्ण";
+"common.edit" = "संपादित करें";
+"common.items" = "आइटम";
+"common.item" = "आइटम";
+"common.loadMore" = "और लोड करें";
+"common.loading" = "लोड हो रहा है...";
+"common.liked" = "पसंद किया गया";
+"common.offline" = "आप ऑफ़लाइन हैं। कैश किया गया कंटेंट दिखाया जा रहा है।";
+"common.or" = "या";
+"common.privacy" = "गोपनीयता";
+"common.pro" = "PRO";
+"common.reply" = "जवाब दें";
+"common.retry" = "फिर से प्रयास करें";
+"common.save" = "सेव करें";
+"common.search" = "खोजें";
+"common.terms" = "शर्तें";
+"common.tryAgain" = "फिर से प्रयास करें";
+"common.uploading" = "अपलोड हो रहा है...";
+"common.year" = "साल";
 
 // Misc
-"misc.language" = "हिंदी";
-"misc.somethingWrong" = "कुछ गलत है?";
+"misc.language" = "हिन्दी";
 "misc.letUsKnow" = "हमें बताएं";
+"misc.of" = "में से";
 "misc.selected" = "चयनित";
-"misc.of" = "का";
-
-"common.dismiss" = "बंद करें";
-"common.retry" = "पुनः प्रयास करें";
-"common.offline" = "आप ऑफ़लाइन हैं। कैश की गई सामग्री दिखा रहे हैं।";
-"common.tryAgain" = "फिर से प्रयास करें";
-"common.pro" = "प्रो";
-"common.terms" = "नियम";
-"common.privacy" = "गोपनीयता";
-"common.liked" = "पसंद किया";
-
-"platform.selectionCount" = "%d में से %d चयनित";
-"platform.title" = "स्ट्रीमिंग प्लेटफ़ॉर्म";
-
-"clips.comments.loading" = "टिप्पणियां लोड हो रही हैं...";
-"clips.comments.deleteConfirmation" = "क्या आप वाकई इस टिप्पणी को हटाना चाहते हैं? यह क्रिया वापस नहीं की जा सकती।";
-"clips.comments.replying" = "जवाब दे रहे हैं…";
-"clips.feed.craftingTitle" = "आपके लिए परफेक्ट फ़ीड तैयार की जा रही है";
-"clips.feed.craftingSubtitle" = "हम आपके लिए बेहतरीन क्लिप्स चुन रहे हैं ✨";
-
-"auth.gate.description" = "कस्टम लिस्ट बनाने और उन्हें अपने डिवाइसों में सिंक करने के लिए आपको एक अकाउंट चाहिए।";
-"auth.gate.createFree" = "फ्री अकाउंट बनाएँ";
-"auth.gate.haveAccount" = "मेरे पास पहले से अकाउंट है";
-"auth.gate.accountRequired" = "अकाउंट आवश्यक";
-"auth.gate.signupFree" = "साइनअप फ्री है और एक मिनट से भी कम समय लेता है।";
-"auth.gate.createTitle" = "अपना फ्री VibeWatch अकाउंट बनाएँ";
-"auth.gate.limitMessage" = "आपने आज की 15 मुफ्त क्लिप्स देख ली हैं। प्रगति को सिंक करने और कल की क्लिप्स तुरंत अनलॉक करने के लिए साइनअप करें।";
-
-"ai.paywall.unlockAI" = "AI चैट अनलॉक करें";
-"ai.describeVibe" = "अपनी वाइब बताइए";
-"ai.subtitle" = "बताइए आप किस मूड में हैं, मैं आपके लिए देखने के लिए एकदम सही चीज़ ढूँढूँगा।";
-"ai.tryAsking" = "ऐसा पूछकर देखें...";
-"ai.thinking" = "सोच रहा हूँ...";
-"ai.placeholder" = "जैसे: 'ट्विस्ट वाली साइ-फाइ'";
-"ai.editMessage" = "संदेश संपादित करें";
-"ai.saveRegenerate" = "सहेजें और दोबारा जनरेट करें";
-"ai.resultsTitle" = "मैंने यह पाया है:";
-
-"ai.paywall.title" = "अपना AI मूवी साथी अनलॉक करें";
-"ai.paywall.description" = "स्मार्ट सुझाव पाएं और अपने लिए परफेक्ट विकल्प खोजें!";
-"ai.paywall.goBack" = "वापस जाएँ";
-"ai.paywall.unlockAI" = "AI चैट अनलॉक करें";
-"ai.paywall.benefit.unlimited" = "अनलिमिटेड AI सुझाव";
-"ai.paywall.benefit.smarter" = "ज़्यादा स्मार्ट कंटेंट डिस्कवरी";
-"ai.paywall.benefit.personalized" = "पर्सनलाइज़्ड वॉचलिस्ट";
-
-
-"settings.comingSoon" = "और सेटिंग्स जल्द ही आ रही हैं…";
-
-"paywall.daily.title" = "कल वापस आएँ";
-"paywall.restore" = "खरीदारी पुनर्स्थापित करें";
-"paywall.proDescription" = "Pro आपको अनलिमिटेड क्लिप्स, सेव्ड प्रेफरेंसेज़ और अधिक देता है।";
-"paywall.daily.limitReached" = "आप आज की सीमा तक पहुँच चुके हैं";
-"paywall.daily.limitDescription" = "फ्री यूज़र प्रतिदिन 15 क्लिप्स देख सकते हैं। Pro में अपग्रेड करने पर अनलिमिटेड क्लिप्स मिलते हैं।";
-"paywall.daily.nextReset" = "अगला रीसेट";
-"paywall.daily.resetIn" = "इतने समय में रीसेट";
-"paywall.foundingMember" = "फ़ाउंडिंग मेंबर कीमत";
-"paywall.upgrade" = "Pro में अपग्रेड करें";
-"paywall.unlockUnlimited" = "अनलिमिटेड क्लिप्स अनलॉक करें";
-"paywall.ensurePro" = "अपना Pro प्लान सुनिश्चित करें!";
-"paywall.bestValue" = "सबसे अच्छा मूल्य";
-
-"lists.watchOn" = "देखें:";
-"lists.deleteList" = "लिस्ट हटाएँ";
-"lists.deleteConfirmation" = "क्या आप वाकई %@ हटाना चाहते हैं? यह लिस्ट के सभी आइटम्स हटाएगा।";
-
+"misc.somethingWrong" = "कुछ गलत है?";

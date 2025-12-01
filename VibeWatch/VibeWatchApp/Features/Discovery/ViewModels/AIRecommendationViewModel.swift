@@ -1,6 +1,6 @@
 import Foundation
 import SwiftUI
-import NaturalLanguage // Import NaturalLanguage for NLLanguageRecognizer
+import NaturalLanguage
 
 struct AIMessage: Identifiable, Equatable {
     let id = UUID()
@@ -18,25 +18,20 @@ class AIRecommendationViewModel: ObservableObject {
     
     // Token Quota Management
     @Published var tokensUsedToday: Int = 0
-    let aiTokenLimit = 8000
+    let aiTokenLimit = AppConstants.AI.dailyTokenLimit
     var tokensRemaining: Int { aiTokenLimit - tokensUsedToday }
     var softLimitReached: Bool { tokensUsedToday >= Int(Double(aiTokenLimit) * 0.75) && tokensUsedToday < aiTokenLimit }
     var hardLimitReached: Bool { tokensUsedToday >= aiTokenLimit }
+    var usageProgress: Double {
+        guard aiTokenLimit > 0 else { return 0 }
+        return Double(tokensUsedToday) / Double(aiTokenLimit)
+    }
     
     // Dependencies
     private let authService = AuthService.shared
     private let supabaseService = SupabaseService.shared
     private let quotaManager = DailyQuotaManager.shared
-    private let languageDetector = LanguageDetector.shared // New: Language Detector
-    
-    // Pre-defined suggestions to help the user get started
-    let suggestionChips = [
-        "Sad movie in space",
-        "80s action comedy",
-        "Hidden gem thriller",
-        "Cyberpunk anime",
-        "Feel-good romance"
-    ]
+    private let languageDetector = LanguageDetector.shared
     
     init() {
         // Fetch token usage on init
@@ -45,11 +40,23 @@ class AIRecommendationViewModel: ObservableObject {
     
     func fetchDailyTokenUsage() async {
         guard let userId = authService.currentUser?.id else {
-            tokensUsedToday = 0 // Reset if not logged in
+            // If not authenticated, keep whatever was there (UI is gated anyway)
             return
         }
+        
+        // Show cached local usage immediately (if any)
+        let cached = await supabaseService.getLocalAITokenUsage(userId: userId)
+        if let cached {
+            tokensUsedToday = cached
+        }
+        
         do {
             tokensUsedToday = try await supabaseService.getAITokenUsage(userId: UUID(uuidString: userId)!)
+            if let cached, cached > tokensUsedToday {
+                // Prefer the higher of cached vs remote to avoid regressions if server lags
+                tokensUsedToday = cached
+            }
+            await supabaseService.saveLocalAITokenUsage(userId: userId, tokensUsed: tokensUsedToday)
         } catch {
             print("❌ Failed to fetch daily AI token usage: \(error)")
             self.error = "Failed to load token usage."
@@ -62,11 +69,11 @@ class AIRecommendationViewModel: ObservableObject {
         
         // --- PRO Check & Quota Enforcement ---
         guard authService.isAuthenticated else {
-            self.error = "auth.gate.authRequiredAI".localized // New key needed
+            self.error = "auth.gate.authRequiredAI".localized
             return
         }
         guard quotaManager.isProUser else {
-            self.error = "ai.proRequired".localized // New key needed
+            self.error = "ai.proRequired".localized
             return
         }
         guard !hardLimitReached else {
@@ -164,20 +171,23 @@ class AIRecommendationViewModel: ObservableObject {
             messages.append(aiMessage)
             
             // Log token usage
-            if let totalTokens = cerebrasResponse.usage?.totalTokens,
-               let userId = authService.currentUser?.id {
-                #if DEBUG
-                print("ℹ️ [Debug] Skipping Supabase AI token log (totalTokens=\(totalTokens))")
-                #else
+            if let totalTokens = cerebrasResponse.usage?.totalTokens {
+                if let userId = authService.currentUser?.id {
                 do {
                     let updatedTotal = try await supabaseService.logAITokenUsage(userId: UUID(uuidString: userId)!, tokensConsumed: totalTokens)
                     tokensUsedToday = updatedTotal
+                    await supabaseService.saveLocalAITokenUsage(userId: userId, tokensUsed: tokensUsedToday)
                     print("✅ AI Tokens used today: \(tokensUsedToday)/\(aiTokenLimit)")
                 } catch {
+                    // Still update locally so UI reflects usage even if logging fails
+                    tokensUsedToday = min(aiTokenLimit, tokensUsedToday + totalTokens)
+                    await supabaseService.saveLocalAITokenUsage(userId: userId, tokensUsed: tokensUsedToday)
                     // Logging failure should not block responses; just report and continue
                     print("⚠️ Failed to log AI token usage: \(error)")
                 }
-                #endif
+                } else {
+                    tokensUsedToday = min(aiTokenLimit, tokensUsedToday + totalTokens)
+                }
             }
             
         } catch {
@@ -190,6 +200,11 @@ class AIRecommendationViewModel: ObservableObject {
     
     func applySuggestion(_ suggestion: String) {
         prompt = suggestion
+    }
+    
+    func sendSuggestion(_ suggestion: String) async {
+        prompt = suggestion
+        await sendMessage()
     }
     
     func toggleEdit(for messageId: UUID) {

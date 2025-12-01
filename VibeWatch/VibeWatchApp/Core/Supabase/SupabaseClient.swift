@@ -71,7 +71,11 @@ class SupabaseService: ObservableObject {
         
         var query = client.from(name).select("*")
         if let userId {
-            query = query.eq("user_id", value: userId)
+            if name == "profiles" {
+                query = query.eq("id", value: userId) // profiles table uses id, not user_id
+            } else {
+                query = query.eq("user_id", value: userId)
+            }
         }
         
         let data = try await query.execute().data
@@ -459,15 +463,27 @@ class SupabaseService: ObservableObject {
             throw SupabaseError.notConfigured
         }
         
+        // Try to use remote RPC first; if it fails (e.g., missing function in debug), fall back to local cache.
+        let normalizedUserId = userId.uuidString.lowercased()
+        
         struct LogUsageRequest: Encodable {
             let p_user_id: UUID
             let p_tokens_consumed: Int
         }
         
         let request = LogUsageRequest(p_user_id: userId, p_tokens_consumed: tokensConsumed)
-        
-        let newTotalTokens: Int = try await client.rpc("log_ai_token_usage", params: request).execute().value
-        return newTotalTokens
+        do {
+            let newTotalTokens: Int = try await client.rpc("log_ai_token_usage", params: request).execute().value
+            await saveLocalAITokenUsage(userId: normalizedUserId, tokensUsed: newTotalTokens)
+            return newTotalTokens
+        } catch {
+            // Fallback: update local cache so UI stays consistent even if RPC is unavailable (common in debug).
+            let currentLocal = await getLocalAITokenUsage(userId: normalizedUserId) ?? 0
+            let fallbackTotal = currentLocal + tokensConsumed
+            await saveLocalAITokenUsage(userId: normalizedUserId, tokensUsed: fallbackTotal)
+            Logger.warning("[Supabase] log_ai_token_usage RPC failed; using local fallback. Error: \(error.localizedDescription)")
+            return fallbackTotal
+        }
     }
     
     func getAITokenUsage(userId: UUID) async throws -> Int {
@@ -482,7 +498,41 @@ class SupabaseService: ObservableObject {
         let request = GetUsageRequest(p_user_id: userId)
         
         let totalTokens: Int = try await client.rpc("get_ai_token_usage", params: request).execute().value
+        
+        // Cache locally for offline state (normalize casing)
+        await saveLocalAITokenUsage(userId: userId.uuidString, tokensUsed: totalTokens)
         return totalTokens
+    }
+    
+    /// Cache AI token usage locally so the UI can reflect changes immediately/offline.
+    func saveLocalAITokenUsage(userId: String, tokensUsed: Int) async {
+        let normalizedUserId = userId.lowercased()
+        let now = ISO8601DateFormatter().string(from: Date())
+        let row: [String: Any] = [
+            "user_id": normalizedUserId,
+            "tokens_used_today": tokensUsed,
+            "updated_at": now
+        ]
+        do {
+            try await localDB.upsert(table: "user_ai_token_usage", rows: [row])
+            Logger.debug("[SQLite] Cached AI tokens: \(tokensUsed) for user \(normalizedUserId)")
+        } catch {
+            Logger.warning("[SQLite] Failed to cache AI token usage locally: \(error.localizedDescription)")
+        }
+    }
+    
+    /// Read cached AI token usage from local SQLite (if available).
+    func getLocalAITokenUsage(userId: String) async -> Int? {
+        do {
+            let rows = try await localDB.queryRaw(
+                "SELECT tokens_used_today FROM user_ai_token_usage WHERE user_id = ? LIMIT 1",
+                parameters: [userId.lowercased()]
+            )
+            return rows.first?["tokens_used_today"] as? Int
+        } catch {
+            Logger.warning("[SQLite] Failed to read cached AI token usage: \(error.localizedDescription)")
+            return nil
+        }
     }
 }
 

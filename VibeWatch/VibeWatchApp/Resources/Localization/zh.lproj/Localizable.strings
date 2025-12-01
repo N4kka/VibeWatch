@@ -1,97 +1,84 @@
-// Tab Bar
-"tab.discovery" = "发现";
+/// Tab Bar
 "tab.clips" = "剪辑";
+"tab.discovery" = "发现";
 "tab.lists" = "列表";
 "tab.profile" = "个人资料";
 
 // Onboarding
-"onboarding.page1.title" = "追踪并保存你的最爱";
-"onboarding.page1.description" = "发现并保存你喜欢的电影和电视剧。记录你看过的内容以及接下来想看的内容。";
-"onboarding.page2.title" = "用列表组织内容";
-"onboarding.page2.description" = "创建自定义列表来组织你的内容。从观看清单到基于心情的合集，一切由你决定。";
-"onboarding.page3.title" = "通过剪辑发现内容";
-"onboarding.page3.description" = "观看电影和电视剧的精彩片段。加入社区、评论、加入列表并与朋友分享。";
-"onboarding.page4.title" = "准备开始了吗？";
-"onboarding.page4.description" = "创建账户以同步你的列表和偏好设置到所有设备。";
-"onboarding.page4.createAccount" = "创建账户";
+"onboarding.page1.description" = "发现并收藏你喜欢的电影和电视剧。随时掌握你看过的内容和接下来想看的作品。";
+"onboarding.page1.title" = "追踪并收藏你的最爱";
+"onboarding.page2.description" = "创建自定义列表来整理你的内容。从观影清单到情绪主题合集，一切由你定义。";
+"onboarding.page2.title" = "用列表来整理";
+"onboarding.page3.description" = "观看精彩的电影和电视剧剪辑。加入社区、发表评论、保存到列表并与朋友分享。";
+"onboarding.page3.title" = "通过剪辑来发现";
+"onboarding.page4.createAccount" = "创建账号";
+"onboarding.page4.description" = "创建一个账号，在所有设备间同步你的列表和偏好。";
 "onboarding.page4.skip" = "暂时跳过";
+"onboarding.page4.title" = "准备开始了吗？";
 
 // Discovery
-"discovery.trending" = "热门趋势";
-"discovery.popular" = "受欢迎";
-"discovery.topRated" = "高评分";
-"discovery.basedOnMood" = "专为你挑选";
-"discovery.vibeWatch" = "VibeWatch";
-"discovery.upcoming" = "即将上映";
+"discovery.basedOnMood" = "专为你精选";
 "discovery.forYou" = "为你推荐";
+"discovery.popular" = "热门";
+"discovery.topRated" = "高分";
+"discovery.trending" = "当前热播";
 "discovery.tvShows" = "电视剧";
+"discovery.upcoming" = "即将上线";
+"discovery.vibeWatch" = "VibeWatch";
+
+// Browse
+"browse.emptyMessage" = "点按筛选按钮浏览内容";
+"browse.movies" = "电影";
+"browse.title" = "浏览";
+"browse.tvShows" = "电视剧";
 
 // Lists
-"lists.myLists" = "我的列表";
-"lists.watchlist" = "观看清单";
-"lists.seen" = "已观看";
-"lists.liked" = "喜欢";
-"lists.disliked" = "不喜欢";
-"lists.empty" = "暂无列表";
-"lists.emptyDescription" = "创建你的第一个列表来开始整理喜爱的内容";
-"lists.createList" = "创建列表";
-"lists.listName" = "列表名称";
-"lists.listNamePlaceholder" = "新列表";
-"lists.description" = "描述（可选）";
-"lists.descriptionPlaceholder" = "添加描述…（可选）";
-"lists.listDescriptionPlaceholder" = "添加描述…";
-"lists.noItems" = "暂无项目";
-"lists.error.maxListsReached" = "已达到 {limit} 个自定义列表的最大数量";
-"lists.error.maxItemsReached" = "该列表已达到 {limit} 个项目的最大数量";
-"lists.error.listNotFound" = "未找到列表";
-"lists.error.itemAlreadyInList" = "项目已存在于该列表";
-"lists.error.defaultImmutable" = "该列表无法修改";
-"lists.error.invalidName" = "请输入有效的列表名称";
-"lists.error.authRequired" = "你需要登录才能创建自定义列表。";
-"lists.limitInfo" = "{count}/{limit}";
-"lists.softLimitWarning" = "\"{name}\" 已有 {limit} 个项目。建议创建另一个列表以保持整洁。";
-"lists.searchPlaceholder" = "搜索此列表";
-"lists.editList" = "编辑列表";
 "list.all" = "全部";
 "list.movies" = "电影";
-"list.tvShows" = "电视剧";
-
-// Profile
-"profile.done" = "完成";
-"profile.cancel" = "取消";
-"profile.notifications" = "通知";
-"profile.streamingServices" = "流媒体服务";
-"profile.settings" = "设置";
-"profile.helpSupport" = "帮助与支持";
-"profile.logout" = "退出登录";
-"profile.signIn" = "登录";
-"profile.createAccount" = "创建账户";
-"profile.signInToVibeWatch" = "登录到 VibeWatch";
-"profile.signInDescription" = "创建列表、保存剪辑并个性化你的体验";
-"profile.userNamePlaceholder" = "邮箱或用户名";
-"profile.passwordPlaceholder" = "密码";
-
-// Settings
-"settings.title" = "设置";
-"settings.country" = "国家";
-"settings.language" = "语言";
-"settings.selectCountry" = "选择国家";
-"settings.selectLanguage" = "选择语言";
+"list.tvShows" = "剧集";
+"lists.createList" = "创建列表";
+"lists.deleteConfirmation" = "确定要删除 %@ 吗？这将移除此列表中的所有项目。";
+"lists.deleteList" = "删除列表";
+"lists.description" = "描述（可选）";
+"lists.descriptionPlaceholder" = "添加描述…（可选）";
+"lists.disliked" = "不喜欢";
+"lists.editList" = "编辑列表";
+"lists.empty" = "还没有列表";
+"lists.emptyDescription" = "创建你的第一个列表，开始整理喜爱的内容";
+"lists.error.authRequired" = "你需要登录才能创建自定义列表。";
+"lists.error.defaultImmutable" = "此列表无法修改";
+"lists.error.invalidName" = "请输入有效的列表名称";
+"lists.error.itemAlreadyInList" = "项目已在此列表中";
+"lists.error.listNotFound" = "未找到列表";
+"lists.error.maxItemsReached" = "此列表已达到 {limit} 个项目的上限";
+"lists.error.maxListsReached" = "已达到 {limit} 个自定义列表的上限";
+"lists.liked" = "喜欢";
+"lists.limitInfo" = "{count}/{limit}";
+"lists.listDescriptionPlaceholder" = "添加描述…";
+"lists.listName" = "列表名称";
+"lists.listNamePlaceholder" = "新列表";
+"lists.myLists" = "我的列表";
+"lists.noItems" = "还没有项目";
+"lists.searchPlaceholder" = "搜索此列表";
+"lists.seen" = "看过";
+"lists.softLimitWarning" = "“{name}” 已有 {limit} 个项目。建议新建一个列表来保持条理清晰。";
+"lists.watchlist" = "稍后观看";
+"lists.watchOn" = "观看平台";
 
 // Movie Detail
-"movieDetail.save" = "保存";
-"movieDetail.seen" = "已观看";
-"movieDetail.watchNow" = "立即观看";
-"movieDetail.trailer" = "预告片";
-"movieDetail.information" = "信息";
-"movieDetail.rating" = "评分";
-"movieDetail.ratings" = "评分";
-"movieDetail.genres" = "类型";
-"movieDetail.runtime" = "片长";
+"movieDetail.cast" = "演员";
 "movieDetail.country" = "国家";
 "movieDetail.director" = "导演";
-"movieDetail.cast" = "演员";
-"movieDetail.similar" = "喜欢此内容的人也喜欢";
+"movieDetail.genres" = "类型";
+"movieDetail.information" = "信息";
+"movieDetail.rating" = "评分";
+"movieDetail.ratings" = "条评分";
+"movieDetail.runtime" = "片长";
+"movieDetail.save" = "保存";
+"movieDetail.seen" = "看过";
+"movieDetail.similar" = "喜欢这部的人也喜欢";
+"movieDetail.trailer" = "预告片";
+"movieDetail.watchNow" = "立即观看";
 
 // Filters
 "filter.all" = "全部";
@@ -100,187 +87,209 @@
 
 // Sort
 "sort.dateAdded" = "添加日期";
-"sort.title" = "标题";
-"sort.releaseDate" = "上映日期";
-"sort.rating" = "评分";
-"sort.sortBy" = "排序方式";
-"sort.popularityDesc" = "人气 ↓";
 "sort.popularityAsc" = "人气 ↑";
-"sort.ratingDesc" = "评分 ↓";
+"sort.popularityDesc" = "人气 ↓";
+"sort.rating" = "评分";
 "sort.ratingAsc" = "评分 ↑";
-"sort.releaseDateDesc" = "上映日期 ↓";
+"sort.ratingDesc" = "评分 ↓";
+"sort.releaseDate" = "上映日期";
 "sort.releaseDateAsc" = "上映日期 ↑";
+"sort.releaseDateDesc" = "上映日期 ↓";
+"sort.sortBy" = "排序方式";
+"sort.title" = "标题";
 
 // Advanced Filters
-"filters.title" = "筛选";
-"filters.reset" = "重置";
+"filters.anyCountry" = "任意国家";
 "filters.apply" = "应用";
-"filters.runtime" = "片长";
-"filters.minimumRating" = "最低评分";
 "filters.country" = "国家";
-"filters.sortBy" = "排序方式";
-"filters.anyCountry" = "任何国家";
-"filters.runtimeAny" = "不限";
-"filters.runtimeShort" = "< 90 分钟";
-"filters.runtimeMedium" = "90-120 分钟";
-"filters.runtimeLong" = "> 120 分钟";
-"filters.ratingAny" = "不限";
-"filters.ratingGood" = "7.0+";
+"filters.minimumRating" = "最低评分";
+"filters.ratingAny" = "任意";
 "filters.ratingExcellent" = "8.0+";
+"filters.ratingGood" = "7.0+";
 "filters.ratingMasterpiece" = "9.0+";
-
-// Browse
-"browse.title" = "浏览";
-"browse.movies" = "电影";
-"browse.tvShows" = "电视剧";
-"browse.emptyMessage" = "点击筛选按钮浏览内容";
-
-// Platforms
-"platforms.title" = "平台";
-"platforms.streaming" = "流媒体";
-"platforms.rent" = "租借";
-"platforms.buy" = "购买";
-
-// Common
-"common.done" = "完成";
-"common.cancel" = "取消";
-"common.save" = "保存";
-"common.delete" = "删除";
-"common.edit" = "编辑";
-"common.search" = "搜索";
-"common.year" = "年份";
-"common.loading" = "加载中…";
-"common.items" = "项目";
-"common.item" = "项目";
-"common.or" = "或";
-"common.reply" = "回复";
-"common.uploading" = "上传中…";
-"common.loadMore" = "加载更多";
+"filters.reset" = "重置";
+"filters.runtime" = "片长";
+"filters.runtimeAny" = "任意";
+"filters.runtimeLong" = "> 120 分钟";
+"filters.runtimeMedium" = "90–120 分钟";
+"filters.runtimeShort" = "< 90 分钟";
+"filters.sortBy" = "排序方式";
+"filters.title" = "筛选";
 
 // Clips
-"clips.loadingClips" = "正在加载剪辑…";
-"clips.noClipsAvailable" = "暂无剪辑";
-"clips.noClipsDescription" = "稍后查看你喜欢的电影和节目的精彩场景";
+"clips.addToList" = "添加到列表";
+"clips.beFirstToComment" = "抢先发表评论";
 "clips.comment" = "评论";
 "clips.comments" = "评论";
-"clips.noComments" = "暂无评论";
-"clips.beFirstToComment" = "抢先评论";
-"clips.replyingTo" = "回复给";
-"clips.reply" = "回复";
-"clips.replies" = "回复";
-"clips.viewReplies" = "查看";
-"clips.hideReplies" = "隐藏";
-"clips.addToList" = "添加到列表";
-"clips.noListsYet" = "暂无列表";
-"clips.createFirstList" = "创建你的第一个列表以保存内容";
+"clips.comments.deleteConfirmation" = "确定要删除此评论吗？该操作无法撤销。";
+"clips.comments.loading" = "正在加载评论…";
+"clips.comments.replying" = "正在回复…";
+"clips.createFirstList" = "创建你的第一个列表来保存内容";
 "clips.createNewList" = "创建新列表";
+"clips.feed.craftingSubtitle" = "我们正在为你精挑细选最精彩的剪辑 ✨";
+"clips.feed.craftingTitle" = "为你打造专属推荐流";
+"clips.hideReplies" = "隐藏";
+"clips.loadingClips" = "正在加载剪辑…";
+"clips.noClipsAvailable" = "暂无剪辑";
+"clips.noClipsDescription" = "稍后再来看看你喜爱影视中的精彩片段吧";
+"clips.noComments" = "还没有评论";
+"clips.noListsYet" = "还没有列表";
+"clips.reply" = "回复";
+"clips.replies" = "条回复";
+"clips.replyingTo" = "正在回复";
+"clips.viewReplies" = "查看";
 
 // Search
-"search.trendingSearches" = "热门搜索";
+"search.latestVisited" = "最近访问";
 "search.noResultsFound" = "未找到结果";
-"search.results" = "结果";
 "search.placeholder" = "搜索电视剧或电影…";
+"search.results" = "结果";
+"search.trendingSearches" = "热门搜索";
 
-// Auth
-"auth.welcomeBack" = "欢迎回来";
-"auth.signInContinue" = "登录以继续你的旅程";
-"auth.forgotPassword" = "忘记密码？";
-"auth.signIn" = "登录";
-"auth.dontHaveAccount" = "还没有账户？";
-"auth.signUp" = "注册";
-"auth.createAccount" = "创建账户";
-"auth.joinVibeWatch" = "加入 VibeWatch 开始探索";
-"auth.invalidEmail" = "无效邮箱";
-"auth.invalidPassword" = "无效密码";
-"auth.passwordsDontMatch" = "密码不匹配";
-"auth.alreadyHaveAccount" = "已有账户？";
-"auth.emailPlaceholder" = "邮箱";
-"auth.usernamePlaceholder" = "用户名";
-"auth.passwordPlaceholder" = "密码";
-"auth.confirmPasswordPlaceholder" = "确认密码";
-
-// Notifications
-"notifications.permissionRequired" = "需要通知权限";
-"notifications.openSettings" = "打开设置";
-"notifications.enableInSettings" = "请在设置中启用通知，以接收新内容、价格变动等更新。";
-"notifications.disableConfirmation" = "关闭通知？";
-"notifications.disableMessage" = "你将不会收到新内容、价格变动和个性化推荐的通知。";
-"notifications.disableButton" = "关闭通知";
-
-// Misc
-"misc.language" = "中文";
-"misc.somethingWrong" = "出现问题？";
-"misc.letUsKnow" = "告诉我们";
-"misc.selected" = "已选择";
-"misc.of" = "的";
-
-// Common
-
-"common.dismiss" = "关闭";
-"common.retry" = "重试";
-"common.offline" = "您已离线，正在显示缓存内容。";
-"common.tryAgain" = "再试一次";
-"common.pro" = "专业版";
-"common.terms" = "条款";
-"common.privacy" = "隐私";
-"common.liked" = "已点赞";
-
-// Platforms
-"platform.selectionCount" = "%d / %d 已选择";
-"platform.title" = "流媒体平台";
-
-"clips.comments.loading" = "正在加载评论...";
-"clips.comments.deleteConfirmation" = "确定要删除此评论吗？此操作无法撤销。";
-"clips.comments.replying" = "正在回复…";
-"clips.feed.craftingTitle" = "为你打造完美的内容流";
-"clips.feed.craftingSubtitle" = "我们正在为你精挑细选最佳片段 ✨";
-
-// Auth / Gate
-"auth.gate.description" = "您需要一个账户来创建自定义列表并在设备间同步。";
-"auth.gate.createFree" = "创建免费账户";
-"auth.gate.haveAccount" = "我已有账户";
-"auth.gate.accountRequired" = "需要账户";
-"auth.gate.signupFree" = "注册免费，且不到一分钟即可完成。";
-"auth.gate.createTitle" = "创建你的免费 VibeWatch 账号";
-"auth.gate.limitMessage" = "你已经观看了今日 15 个免费片段。注册即可同步进度并立即解锁明天的内容。";
-
-// AI
-"ai.paywall.unlockAI" = "解锁 AI 聊天";
-"ai.describeVibe" = "描述你的观影氛围";
-"ai.subtitle" = "告诉我你现在的观影心情，我会为你找到最合适的影片。";
-"ai.tryAsking" = "你可以这样问…";
-"ai.thinking" = "思考中…";
-"ai.placeholder" = "例如：“有反转结局的科幻片”";
-"ai.editMessage" = "编辑消息";
-"ai.saveRegenerate" = "保存并重新生成";
-"ai.resultsTitle" = "我为你找到了：";
-
-"ai.paywall.title" = "解锁你的 AI 观影伙伴";
-"ai.paywall.description" = "获取更智能的推荐，找到最适合你的影片！";
-"ai.paywall.goBack" = "返回";
-"ai.paywall.unlockAI" = "解锁 AI 聊天";
-"ai.paywall.benefit.unlimited" = "无限次 AI 推荐";
-"ai.paywall.benefit.smarter" = "更智能的内容发现体验";
-"ai.paywall.benefit.personalized" = "个性化观影清单";
-
+// Profile
+"profile.cancel" = "取消";
+"profile.createAccount" = "创建账号";
+"profile.done" = "完成";
+"profile.helpSupport" = "帮助与支持";
+"profile.logout" = "退出登录";
+"profile.notifications" = "通知";
+"profile.passwordPlaceholder" = "密码";
+"profile.settings" = "设置";
+"profile.signIn" = "登录";
+"profile.signInDescription" = "创建列表、保存剪辑并个性化你的体验";
+"profile.signInToVibeWatch" = "登录 VibeWatch";
+"profile.streamingServices" = "流媒体服务";
+"profile.userNamePlaceholder" = "邮箱或用户名";
 
 // Settings
-"settings.comingSoon" = "更多设置即将推出…";
+"settings.comingSoon" = "更多设置功能即将上线…";
+"settings.country" = "国家";
+"settings.language" = "语言";
+"settings.selectCountry" = "选择国家";
+"settings.selectLanguage" = "选择语言";
+"settings.title" = "设置";
 
-"paywall.daily.title" = "明天再来";
-"paywall.restore" = "恢复购买";
-"paywall.proDescription" = "Pro 版为你提供无限片段、保存偏好设置等更多内容。";
-"paywall.daily.limitReached" = "你已达到今日的观看上限";
-"paywall.daily.limitDescription" = "免费用户每天可观看 15 个片段。升级到 Pro 可解锁无限观看和高级功能。";
+// Platforms
+"platform.selectionCount" = "已选择 %d/%d";
+"platform.title" = "流媒体平台";
+"platforms.buy" = "购买";
+"platforms.rent" = "租借";
+"platforms.streaming" = "流媒体";
+"platforms.title" = "平台";
+
+// Notifications
+"notifications.disableButton" = "关闭通知";
+"notifications.disableConfirmation" = "关闭通知？";
+"notifications.disableMessage" = "你将不再收到新片上线、价格变化和个性化推荐的通知。";
+"notifications.enableInSettings" = "请在“设置”中开启通知，以便接收新片上线、价格变化等更新。";
+"notifications.openSettings" = "打开设置";
+"notifications.permissionRequired" = "需要通知权限";
+
+// Auth
+"auth.alreadyHaveAccount" = "已经有账号？";
+"auth.confirmPasswordPlaceholder" = "确认密码";
+"auth.createAccount" = "创建账号";
+"auth.dontHaveAccount" = "还没有账号？";
+"auth.emailPlaceholder" = "邮箱";
+"auth.forgotPassword" = "忘记密码？";
+"auth.gate.accountRequired" = "需要账号";
+"auth.gate.authRequiredAI" = "你需要账号才能使用 AI 聊天。";
+"auth.gate.createFree" = "创建免费账号";
+"auth.gate.createTitle" = "创建你的免费 VibeWatch 账号";
+"auth.gate.description" = "你需要账号来创建自定义列表并在设备之间同步。";
+"auth.gate.haveAccount" = "我已经有账号";
+"auth.gate.limitMessage" = "你今天已经看完 15 个免费剪辑。注册即可同步进度并立即解锁明日内容。";
+"auth.gate.signupFree" = "注册是免费的，只需不到一分钟。";
+"auth.invalidEmail" = "邮箱无效";
+"auth.invalidPassword" = "密码无效";
+"auth.joinVibeWatch" = "加入 VibeWatch，开始发现新作品";
+"auth.passwordPlaceholder" = "密码";
+"auth.passwordsDontMatch" = "密码不一致";
+"auth.signIn" = "登录";
+"auth.signInContinue" = "登录以继续你的旅程";
+"auth.signUp" = "注册";
+"auth.usernamePlaceholder" = "用户名";
+"auth.welcomeBack" = "欢迎回来";
+
+// AI
+"ai.describeVibe" = "描述你的观影氛围";
+"ai.editMessage" = "编辑消息";
+"ai.hardLimitMessage" = "你已用完今天的 AI 次数，请明天再来。";
+"ai.paywall.benefit.personalized" = "个性化观影清单";
+"ai.paywall.benefit.smarter" = "更智能的内容发现";
+"ai.paywall.benefit.unlimited" = "无限次 AI 推荐";
+"ai.paywall.description" = "获取更智能的推荐，找到最适合你的影片！";
+"ai.paywall.goBack" = "返回";
+"ai.paywall.title" = "解锁你的 AI 观影伙伴";
+"ai.paywall.unlockAI" = "解锁 AI 聊天";
+"ai.placeholder" = "例如：“有反转结局的科幻片”";
+"ai.proRequired" = "AI 聊天仅对 Pro 会员开放。";
+"ai.resultsTitle" = "我为你找到了：";
+"ai.saveRegenerate" = "保存并重新生成";
+"ai.softLimitMessage" = "你即将达到今天的 AI 使用上限，请尽量精简提问。";
+"ai.subtitle" = "告诉我你现在的观影心情，我会为你找到最合适的影片。";
+"ai.suggestion.chips1" = "💖 适合“软软治愈期”的温馨爱情片";
+"ai.suggestion.chips2" = "💥 标志性的 80 年代动作喜剧 ✨";
+"ai.suggestion.chips3" = "🕵️‍♂️ 被低估的反转悬疑片";
+"ai.suggestion.chips4" = "🌀 看完久久无法平复的科幻烧脑片";
+"ai.usage.left" = "剩余";
+
+// Paywall
+"paywall.bestValue" = "最超值";
+"paywall.cta.continue" = "继续";
+"paywall.cta.selectPlan" = "选择方案";
+"paywall.cta.startTrial" = "开始 %@ 免费试用";
+"paywall.daily.limitDescription" = "免费用户每天可观看 15 个剪辑。升级到 Pro 即可享受无限剪辑和高级功能。";
+"paywall.daily.limitReached" = "你已达到今天的观看上限";
 "paywall.daily.nextReset" = "下次重置时间";
-"paywall.daily.resetIn" = "将在…重置";
-"paywall.foundingMember" = "创始会员价格";
+"paywall.daily.resetIn" = "重置倒计时";
+"paywall.daily.title" = "明天再来吧";
+"paywall.discount.annual" = "立减 33%";
+"paywall.ensurePro" = "锁定你的 Pro 方案！";
+"paywall.feature.advancedFilters" = "🔎 高级筛选";
+"paywall.feature.aiAssistant" = "🤖 AI 助手推荐";
+"paywall.feature.lists" = "📋 最多 100 个列表";
+"paywall.feature.noAds" = "❌ 无广告";
+"paywall.feature.offlineMode" = "📵 离线模式";
+"paywall.feature.releaseAlerts" = "🔔 上线提醒";
+"paywall.feature.unlimitedClips" = "▶️ 无限剪辑";
+"paywall.foundingMember" = "创始会员优惠价格";
+"paywall.plan.annual" = "年度方案";
+"paywall.plan.monthly" = "月度方案";
+"paywall.price.perMonth" = "%@/月";
+"paywall.proDescription" = "Pro 为你提供无限剪辑、保存偏好等更多功能。";
+"paywall.restore" = "恢复购买";
+"paywall.trial.badge" = "%@ 免费";
+"paywall.unlockUnlimited" = "解锁无限剪辑";
 "paywall.upgrade" = "升级到 Pro";
-"paywall.unlockUnlimited" = "解锁无限片段";
-"paywall.ensurePro" = "确保你的 Pro 计划！";
-"paywall.bestValue" = "最佳价值";
 
-"lists.watchOn" = "观看途径";
-"lists.deleteList" = "删除列表";
-"lists.deleteConfirmation" = "确定要删除 %@ 吗？这将移除列表中的所有项目。";
+// Common
+"common.cancel" = "取消";
+"common.delete" = "删除";
+"common.dismiss" = "关闭";
+"common.done" = "完成";
+"common.edit" = "编辑";
+"common.items" = "项目";
+"common.item" = "项目";
+"common.loadMore" = "加载更多";
+"common.loading" = "正在加载…";
+"common.liked" = "已点赞";
+"common.offline" = "你已离线。正在显示缓存内容。";
+"common.or" = "或";
+"common.privacy" = "隐私";
+"common.pro" = "PRO";
+"common.reply" = "回复";
+"common.retry" = "重试";
+"common.save" = "保存";
+"common.search" = "搜索";
+"common.terms" = "条款";
+"common.tryAgain" = "重试";
+"common.uploading" = "正在上传…";
+"common.year" = "年份";
 
+// Misc
+"misc.language" = "英文";
+"misc.letUsKnow" = "告诉我们";
+"misc.of" = "共";
+"misc.selected" = "已选";
+"misc.somethingWrong" = "出问题了吗？";

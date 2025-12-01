@@ -37,7 +37,7 @@ class DailyQuotaManager: ObservableObject {
         #if DEBUG
         // Debug-only: force Pro to allow AI feature testing.
         // Toggle off by setting this flag to false if you need to re-enable paywalls in Debug.
-        let forcePro = true
+        let forcePro = AppConstants.Debug.forceProUser
         if forcePro && !isProUser {
             print("🛠️ [DailyQuota] DEBUG MODE: Forcing Pro user for testing")
             isProUser = true

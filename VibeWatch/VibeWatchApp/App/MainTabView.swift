@@ -9,6 +9,7 @@ struct MainTabView: View {
     @State private var isLoading = true
     @State private var showOnboarding = !UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
     @State private var hasClearedAuthOnFreshInstall = false
+    @StateObject private var aiViewModel = AIRecommendationViewModel()
     
     // MARK: - Custom Tab Bar View (iOS 17-25)
     private var customTabBarView: some View {
@@ -27,7 +28,7 @@ struct MainTabView: View {
                     }
                     
                     if selectedTab == 2 {
-                        AIRecommendationsView()
+                        AIRecommendationsView(viewModel: aiViewModel)
                             .transition(.opacity)
                     }
                     
@@ -83,7 +84,7 @@ struct MainTabView: View {
                     .tag(1)
                     .toolbar(selectedTab == 1 ? .hidden : .visible, for: .tabBar)
                 
-                AIRecommendationsView()
+                AIRecommendationsView(viewModel: aiViewModel)
                     .tabItem {
                         Label("AI", systemImage: "sparkles")
                     }

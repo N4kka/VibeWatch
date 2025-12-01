@@ -20,6 +20,16 @@ enum AppConstants {
         static let defaultAnimationDuration: TimeInterval = 0.3
     }
     
+    enum AI {
+        /// Daily token allowance for Pro users
+        static let dailyTokenLimit = 8_000
+    }
+    
+    enum Debug {
+        /// Set to true while developing to force Pro mode (skips entitlement check)
+        static let forceProUser = false
+    }
+    
     /// RevenueCat subscription and entitlement identifiers
     enum RevenueCat {
         /// The entitlement identifier for Pro features

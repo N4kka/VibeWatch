@@ -28,6 +28,16 @@ class DiscoveryCacheService {
         if let lastUpdate = lastCacheUpdate,
            Date().timeIntervalSince(lastUpdate) < 3600, // 1 hour
            !cachedMovies.isEmpty {
+            // Ensure daily randomization still happens even when served from memory
+            if shouldRandomizeToday() {
+                cachedMovies.shuffle()
+                cachedPopularMovies.shuffle()
+                cachedTopRatedMovies.shuffle()
+                cachedTVShows.shuffle()
+                updateLastRandomizationDate()
+                print("🎲 [DiscoveryCache] Randomized in-memory cache for today")
+            }
+            
             print("⚡️ [DiscoveryCache] Using in-memory cache")
             return (cachedMovies, cachedPopularMovies, cachedTopRatedMovies, cachedTVShows)
         }

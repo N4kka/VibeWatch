@@ -102,7 +102,7 @@ class CerebrasService {
         let requestBody = CerebrasChatRequest(
             model: model ?? defaultModel,
             messages: messages,
-            maxTokens: 1024, // Adjust as needed
+            maxTokens: 1024,
             temperature: 0.7,
             stream: false
         )
@@ -110,7 +110,7 @@ class CerebrasService {
         do {
             request.httpBody = try JSONEncoder().encode(requestBody)
         } catch {
-            throw CerebrasError.decodingError // Encoding error actually, but mapping to generic error
+            throw CerebrasError.decodingError
         }
         
         let (data, response) = try await URLSession.shared.data(for: request)
@@ -128,7 +128,7 @@ class CerebrasService {
         
         do {
             let decodedResponse = try JSONDecoder().decode(CerebrasChatResponse.self, from: data)
-            return decodedResponse // Return the full response
+            return decodedResponse
         } catch {
             print("Cerebras Decoding Error: \(error)")
             throw CerebrasError.decodingError

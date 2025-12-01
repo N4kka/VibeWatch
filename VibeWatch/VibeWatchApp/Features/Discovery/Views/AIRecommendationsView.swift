@@ -1,16 +1,32 @@
 import SwiftUI
 
 struct AIRecommendationsView: View {
-    @StateObject private var viewModel = AIRecommendationViewModel()
+    @ObservedObject private var viewModel: AIRecommendationViewModel
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var quotaManager: DailyQuotaManager
     @FocusState private var isInputFocused: Bool
+    @ObservedObject private var localizationManager = LocalizationManager.shared
     
     @State private var showAuthGate = false
     @State private var showPaywall = false
     
     private var canUseAI: Bool {
         appState.isAuthenticated && quotaManager.isProUser
+    }
+    
+    init(viewModel: AIRecommendationViewModel = AIRecommendationViewModel()) {
+        self.viewModel = viewModel
+    }
+    
+    private var suggestionChips: [String] {
+        // Observe locale changes to re-render localized strings
+        _ = localizationManager.localeDidChange
+        return [
+            "ai.suggestion.chips1".localized,
+            "ai.suggestion.chips2".localized,
+            "ai.suggestion.chips3".localized,
+            "ai.suggestion.chips4".localized
+        ]
     }
     
     var body: some View {
@@ -44,7 +60,7 @@ struct AIRecommendationsView: View {
                             .font(.system(size: 60))
                             .foregroundStyle(Color.theme.textSecondary.opacity(0.5))
                         
-                        Text("aititle".localized)
+                        Text("ai.paywall.title".localized)
                             .font(.system(size: 24, weight: .bold))
                             .multilineTextAlignment(.center)
                             .foregroundStyle(Color.theme.textPrimary)
@@ -122,7 +138,9 @@ struct AIRecommendationsView: View {
     // MARK: - Chat Content
     
     private var chatContent: some View {
-        VStack(spacing: 0) {
+        let inputDisabled = viewModel.isLoading || viewModel.hardLimitReached || !canUseAI
+        
+        return VStack(spacing: 0) {
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(spacing: 24) {
@@ -146,16 +164,19 @@ struct AIRecommendationsView: View {
                             .padding(.top, 40)
                             
                             // Suggestion Chips
-                            VStack(alignment: .leading, spacing: 12) {
-                                Text("ai.tryAsking".localized)
-                                    .font(.caption)
-                                    .foregroundStyle(Color.theme.textSecondary)
-                                    .padding(.leading, 4)
+            VStack(alignment: .leading, spacing: 12) {
+                Text("ai.tryAsking".localized)
+                    .font(.caption)
+                    .foregroundStyle(Color.theme.textSecondary)
+                    .padding(.leading, 4)
                                 
                                 FlowLayout(spacing: 10) {
-                                    ForEach(viewModel.suggestionChips, id: \.self) { chip in
+                                    ForEach(suggestionChips, id: \.self) { chip in
                                         Button(action: {
-                                            viewModel.applySuggestion(chip)
+                                            Task {
+                                                await viewModel.sendSuggestion(chip)
+                                                isInputFocused = false
+                                            }
                                         }) {
                                             Text(chip)
                                                 .font(.system(size: 14, weight: .medium))
@@ -255,14 +276,21 @@ struct AIRecommendationsView: View {
                 .background(Color.theme.separator)
             
             // Token Counter
-            HStack {
-                Text("Tokens: \(viewModel.tokensUsedToday)/\(viewModel.aiTokenLimit)")
-                    .font(.caption2)
-                    .foregroundStyle(viewModel.hardLimitReached ? .red : (viewModel.softLimitReached ? .yellow : Color.theme.textSecondary))
-                Spacer()
+            VStack(spacing: 6) {
+                HStack {
+                    Text("Tokens: \(viewModel.tokensUsedToday)/\(viewModel.aiTokenLimit)")
+                        .font(.caption2)
+                        .foregroundStyle(viewModel.hardLimitReached ? .red : (viewModel.softLimitReached ? .yellow : Color.theme.textSecondary))
+                    Spacer()
+                    Text("\(max(0, viewModel.tokensRemaining)) \("ai.usage.left".localized)")
+                        .font(.caption2)
+                        .foregroundStyle(Color.theme.textSecondary)
+                }
+                
+                TokenUsageBar(progress: viewModel.usageProgress, isAtLimit: viewModel.hardLimitReached, isNearLimit: viewModel.softLimitReached)
             }
             .padding(.horizontal)
-            .padding(.vertical, 4)
+            .padding(.vertical, 6)
             
             HStack(spacing: 12) {
                 TextField("ai.placeholder".localized, text: $viewModel.prompt)
@@ -272,6 +300,7 @@ struct AIRecommendationsView: View {
                     .cornerRadius(25)
                     .foregroundStyle(Color.theme.textPrimary)
                     .submitLabel(.send)
+                    .disabled(inputDisabled)
                     .onSubmit {
                         Task {
                             await viewModel.sendMessage()
@@ -290,11 +319,38 @@ struct AIRecommendationsView: View {
                             viewModel.prompt.isEmpty || viewModel.hardLimitReached ? Color.theme.textSecondary : Color.theme.accentOrange
                         )
                 }
-                .disabled(viewModel.prompt.isEmpty || viewModel.isLoading || viewModel.hardLimitReached)
+                .disabled(viewModel.prompt.isEmpty || inputDisabled)
             }
             .padding()
             .background(Color.theme.background.opacity(0.95))
         }
+    }
+}
+
+private struct TokenUsageBar: View {
+    let progress: Double
+    let isAtLimit: Bool
+    let isNearLimit: Bool
+    
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color.theme.cardBackground)
+                
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(
+                        LinearGradient(
+                            colors: isAtLimit ? [.red] : (isNearLimit ? [.yellow, .orange] : [Color.theme.accentOrange, .purple]),
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .frame(width: max(6, geometry.size.width * min(1, progress)))
+            }
+        }
+        .frame(height: 12)
+        .animation(.easeInOut(duration: 0.2), value: progress)
     }
 }
 
@@ -393,7 +449,7 @@ struct RoundedCorner: Shape {
 
 // Helper for suggestion chips layout
 struct FlowLayout: Layout {
-    var spacing: CGFloat = 8
+            var spacing: CGFloat = 8
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let result = flow(proposal: proposal, subviews: subviews, perform: false)
@@ -422,7 +478,7 @@ struct FlowLayout: Layout {
             }
 
             if perform {
-                subview.place(at: CGPoint(x: bounds.minX + currentX, y: bounds.minX + currentY), proposal: .unspecified)
+                subview.place(at: CGPoint(x: bounds.minX + currentX, y: bounds.minY + currentY), proposal: .unspecified)
             }
 
             lineHeight = max(lineHeight, size.height)
