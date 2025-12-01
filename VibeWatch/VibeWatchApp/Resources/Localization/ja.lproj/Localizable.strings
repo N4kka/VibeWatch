@@ -240,14 +240,24 @@
 "auth.gate.createTitle" = "無料の VibeWatch アカウントを作成";
 "auth.gate.limitMessage" = "今日の無料クリップ15件をすべて視聴しました。登録すると進行状況を同期し、明日のクリップをすぐに解放できます。";
 
-"ai.describeVibe" = "気分を教えてください";
-"ai.subtitle" = "今の気分に合う作品をおすすめします。";
-"ai.tryAsking" = "こんな聞き方も…";
+"ai.paywall.unlockAI" = "AI チャットをアンロック";
+"ai.describeVibe" = "今の気分を教えてください";
+"ai.subtitle" = "どんな気分の作品を観たいか教えてくれれば、ぴったりの一本を見つけます。";
+"ai.tryAsking" = "こんな風に聞いてみて…";
 "ai.thinking" = "考え中…";
-"ai.placeholder" = "例：「どんでん返しのあるSF」";
+"ai.placeholder" = "例：「どんでん返しのある SF 映画」";
 "ai.editMessage" = "メッセージを編集";
 "ai.saveRegenerate" = "保存して再生成";
-"ai.resultsTitle" = "見つけた作品はこちら：";
+"ai.resultsTitle" = "こんな作品が見つかりました：";
+
+"ai.paywall.title" = "AI映画バディを解放しよう";
+"ai.paywall.description" = "あなたにぴったりの作品を見つけるための賢いおすすめ！";
+"ai.paywall.goBack" = "戻る";
+"ai.paywall.unlockAI" = "AIチャットをアンロック";
+"ai.paywall.benefit.unlimited" = "AI による無制限おすすめ";
+"ai.paywall.benefit.smarter" = "よりスマートな作品探し";
+"ai.paywall.benefit.personalized" = "パーソナライズされたウォッチリスト";
+
 
 "settings.comingSoon" = "さらに多くの設定が近日追加予定…";
 

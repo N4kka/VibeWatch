@@ -214,6 +214,8 @@
 "misc.selected" = "已选择";
 "misc.of" = "的";
 
+// Common
+
 "common.dismiss" = "关闭";
 "common.retry" = "重试";
 "common.offline" = "您已离线，正在显示缓存内容。";
@@ -223,6 +225,7 @@
 "common.privacy" = "隐私";
 "common.liked" = "已点赞";
 
+// Platforms
 "platform.selectionCount" = "%d / %d 已选择";
 "platform.title" = "流媒体平台";
 
@@ -232,6 +235,7 @@
 "clips.feed.craftingTitle" = "为你打造完美的内容流";
 "clips.feed.craftingSubtitle" = "我们正在为你精挑细选最佳片段 ✨";
 
+// Auth / Gate
 "auth.gate.description" = "您需要一个账户来创建自定义列表并在设备间同步。";
 "auth.gate.createFree" = "创建免费账户";
 "auth.gate.haveAccount" = "我已有账户";
@@ -240,15 +244,27 @@
 "auth.gate.createTitle" = "创建你的免费 VibeWatch 账号";
 "auth.gate.limitMessage" = "你已经观看了今日 15 个免费片段。注册即可同步进度并立即解锁明天的内容。";
 
+// AI
+"ai.paywall.unlockAI" = "解锁 AI 聊天";
 "ai.describeVibe" = "描述你的观影氛围";
-"ai.subtitle" = "告诉我你的心情，我会为你找到完美的影片。";
-"ai.tryAsking" = "试着这样问…";
+"ai.subtitle" = "告诉我你现在的观影心情，我会为你找到最合适的影片。";
+"ai.tryAsking" = "你可以这样问…";
 "ai.thinking" = "思考中…";
-"ai.placeholder" = "例如 “带反转情节的科幻片”";
+"ai.placeholder" = "例如：“有反转结局的科幻片”";
 "ai.editMessage" = "编辑消息";
 "ai.saveRegenerate" = "保存并重新生成";
-"ai.resultsTitle" = "我找到这些：";
+"ai.resultsTitle" = "我为你找到了：";
 
+"ai.paywall.title" = "解锁你的 AI 观影伙伴";
+"ai.paywall.description" = "获取更智能的推荐，找到最适合你的影片！";
+"ai.paywall.goBack" = "返回";
+"ai.paywall.unlockAI" = "解锁 AI 聊天";
+"ai.paywall.benefit.unlimited" = "无限次 AI 推荐";
+"ai.paywall.benefit.smarter" = "更智能的内容发现体验";
+"ai.paywall.benefit.personalized" = "个性化观影清单";
+
+
+// Settings
 "settings.comingSoon" = "更多设置即将推出…";
 
 "paywall.daily.title" = "明天再来";

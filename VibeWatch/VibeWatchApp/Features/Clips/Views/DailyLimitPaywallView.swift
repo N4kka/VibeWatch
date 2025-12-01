@@ -22,14 +22,21 @@ enum PaywallType {
     var upgradeButtonText: String {
         switch self {
         case .clipsQuota: return "paywall.upgrade".localized
-        case .aiQuota: return "ai.paywall.actionButton".localized
+        case .aiQuota: return "paywall.upgrade".localized
         }
     }
     
     var unlockMessage: String {
         switch self {
         case .clipsQuota: return "paywall.unlockUnlimited".localized
-        case .aiQuota: return "ai.paywall.unlockAI".localized // New key needed
+        case .aiQuota: return "ai.paywall.unlockAI".localized
+        }
+    }
+    
+    var goBack: String {
+        switch self {
+            case .clipsQuota: return "paywall.daily.title".localized
+        case .aiQuota: return "ai.paywall.goBack".localized
         }
     }
     
@@ -96,7 +103,7 @@ struct DailyLimitPaywallView: View {
                         dismiss()
                         onComeBack?()
                     } label: {
-                        Text("paywall.daily.title".localized)
+                        Text(paywallType.goBack)
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(.gray)
                             .frame(maxWidth: .infinity)

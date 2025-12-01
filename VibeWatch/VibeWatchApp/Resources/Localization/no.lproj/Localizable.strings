@@ -243,14 +243,24 @@
 "clips.feed.craftingSubtitle" = "Vi håndplukker de beste klippene bare for deg ✨";
 
 // AI
+"ai.paywall.unlockAI" = "Lås opp AI-chat";
 "ai.describeVibe" = "Beskriv stemningen din";
-"ai.subtitle" = "Fortell meg hva du er i humør til, så finner jeg det perfekte å se på.";
+"ai.subtitle" = "Fortell meg hva du er i humør til, så finner jeg noe perfekt å se på.";
 "ai.tryAsking" = "Prøv å spørre etter...";
 "ai.thinking" = "Tenker...";
 "ai.placeholder" = "F.eks. «sci-fi med plottwist»";
 "ai.editMessage" = "Rediger melding";
 "ai.saveRegenerate" = "Lagre og generer på nytt";
 "ai.resultsTitle" = "Her er det jeg fant:";
+
+"ai.paywall.title" = "Lås opp din AI-filmpartner";
+"ai.paywall.description" = "Få smartere anbefalinger for å finne det perfekte valget!";
+"ai.paywall.goBack" = "Gå tilbake";
+"ai.paywall.unlockAI" = "Lås opp AI-chat";
+"ai.paywall.benefit.unlimited" = "Ubegrensede AI-anbefalinger";
+"ai.paywall.benefit.smarter" = "Smartigere innholdsoppdagelse";
+"ai.paywall.benefit.personalized" = "Personlige watchlister";
+
 
 // Settings
 "settings.comingSoon" = "Flere innstillinger kommer snart...";

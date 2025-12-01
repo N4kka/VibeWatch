@@ -255,9 +255,13 @@
 "ai.saveRegenerate" = "Save & Regenerate";
 "ai.resultsTitle" = "Here's what I found:";
 
+"ai.paywall.title" = "Unlock your AI movie buddy";
+"ai.paywall.description" = "Get smarted recommendations to find your perfect fit!";
 "ai.paywall.benefit.unlimited" = "Unlimited AI recommendations";
 "ai.paywall.benefit.smarter" = "Smarter content discovery";
 "ai.paywall.benefit.personalized" = "Personalized watchlists";
+"ai.paywall.goBack" = "Go back";
+"ai.paywall.unlockAI" = "Unlock AI Chat";
 
 // Settings
 "settings.comingSoon" = "More settings coming soon...";

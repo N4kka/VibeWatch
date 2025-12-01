@@ -240,14 +240,24 @@
 "auth.gate.createTitle" = "Maak je gratis VibeWatch-account";
 "auth.gate.limitMessage" = "Je hebt vandaag al 15 gratis clips bekeken. Meld je aan om je voortgang te synchroniseren en de clips van morgen direct te ontgrendelen.";
 
+"ai.paywall.unlockAI" = "AI-chat ontgrendelen";
 "ai.describeVibe" = "Beschrijf je vibe";
-"ai.subtitle" = "Vertel me waar je zin in hebt, dan vind ik de perfecte titel.";
-"ai.tryAsking" = "Probeer te vragen om...";
-"ai.thinking" = "Bezig met nadenken...";
-"ai.placeholder" = "Bijv. 'Sci-fi met een plottwist'";
+"ai.subtitle" = "Vertel me waar je in de stemming voor bent, dan vind ik de perfecte titel.";
+"ai.tryAsking" = "Probeer te vragen naar...";
+"ai.thinking" = "Aan het nadenken...";
+"ai.placeholder" = "Bijv. 'sci-fi met een plottwist'";
 "ai.editMessage" = "Bericht bewerken";
 "ai.saveRegenerate" = "Opslaan & opnieuw genereren";
 "ai.resultsTitle" = "Dit heb ik gevonden:";
+
+"ai.paywall.title" = "Ontgrendel je AI-filmmaatje";
+"ai.paywall.description" = "Krijg slimme aanbevelingen om de perfecte titel te vinden!";
+"ai.paywall.goBack" = "Ga terug";
+"ai.paywall.unlockAI" = "AI-chat ontgrendelen";
+"ai.paywall.benefit.unlimited" = "Onbeperkte AI-aanbevelingen";
+"ai.paywall.benefit.smarter" = "Slimmere contentontdekking";
+"ai.paywall.benefit.personalized" = "Gepersonaliseerde watchlists";
+
 
 "settings.comingSoon" = "Meer instellingen binnenkort beschikbaar...";
 

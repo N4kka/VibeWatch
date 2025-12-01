@@ -240,14 +240,24 @@
 "auth.gate.createTitle" = "Ücretsiz VibeWatch hesabını oluştur";
 "auth.gate.limitMessage" = "Bugünkü 15 ücretsiz klibi izledin. İlerlemeni senkronize etmek ve yarının kliplerini anında açmak için kaydol.";
 
+"ai.paywall.unlockAI" = "AI Sohbeti aç";
 "ai.describeVibe" = "Modunu tarif et";
 "ai.subtitle" = "Nasıl bir şey izlemek istediğini söyle, senin için en uygun seçeneği bulayım.";
-"ai.tryAsking" = "Şöyle sorabilirsin...";
+"ai.tryAsking" = "Şöyle isteyebilirsin...";
 "ai.thinking" = "Düşünüyorum...";
-"ai.placeholder" = "Örn: \"Sürpriz sonlu bilim kurgu\"";
+"ai.placeholder" = "Örn: \"sürpriz sonlu bilim kurgu\"";
 "ai.editMessage" = "Mesajı düzenle";
 "ai.saveRegenerate" = "Kaydet ve yeniden üret";
 "ai.resultsTitle" = "Bunları buldum:";
+
+"ai.paywall.title" = "AI film arkadaşını aç";
+"ai.paywall.description" = "En uygun seçimi bulman için daha akıllı öneriler al!";
+"ai.paywall.goBack" = "Geri dön";
+"ai.paywall.unlockAI" = "AI Sohbeti aç";
+"ai.paywall.benefit.unlimited" = "Sınırsız AI önerisi";
+"ai.paywall.benefit.smarter" = "Daha akıllı içerik keşfi";
+"ai.paywall.benefit.personalized" = "Kişiselleştirilmiş izleme listeleri";
+
 
 "settings.comingSoon" = "Yakında daha fazla ayar geliyor...";
 

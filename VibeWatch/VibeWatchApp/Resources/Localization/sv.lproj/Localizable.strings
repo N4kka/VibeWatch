@@ -240,12 +240,21 @@
 "auth.gate.createTitle" = "Skapa ditt kostnadsfria VibeWatch-konto";
 "auth.gate.limitMessage" = "Du har tittat på dagens 15 gratis klipp. Registrera dig för att synka din historik och låsa upp morgondagens klipp direkt.";
 
+"ai.paywall.unlockAI" = "Lås upp AI-chatt";
 "ai.describeVibe" = "Beskriv din känsla";
-"ai.subtitle" = "Berätta vilket humör du är på så hittar jag något perfekt att se.";
-"ai.tryAsking" = "Prova att fråga efter...";
+"ai.subtitle" = "Berätta vad du är sugen på att se så hittar jag något perfekt.";
+"ai.tryAsking" = "Prova att be om...";
 "ai.thinking" = "Tänker...";
-"ai.placeholder" = "T.ex. \"Sci-fi med plottwist\"";
+"ai.placeholder" = "T.ex. \"sci-fi med plottwist\"";
 "ai.editMessage" = "Redigera meddelande";
 "ai.saveRegenerate" = "Spara & generera igen";
-"a
+"ai.resultsTitle" = "Det här hittade jag:";
+
+"ai.paywall.title" = "Lås upp din AI-filmbuddy";
+"ai.paywall.description" = "Få smartare rekommendationer för att hitta det perfekta valet!";
+"ai.paywall.goBack" = "Gå tillbaka";
+"ai.paywall.unlockAI" = "Lås upp AI-chatt";
+"ai.paywall.benefit.unlimited" = "Obegränsade AI-rekommendationer";
+"ai.paywall.benefit.smarter" = "Smartare innehållsupptäckt";
+"ai.paywall.benefit.personalized" = "Personliga watchlists";
 

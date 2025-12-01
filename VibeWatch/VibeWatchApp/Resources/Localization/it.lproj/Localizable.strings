@@ -241,26 +241,35 @@
 "auth.gate.limitMessage" = "Hai già visto i 15 clip gratuiti di oggi. Registrati per sincronizzare i tuoi progressi e sbloccare subito i contenuti di domani.";
 
 "ai.describeVibe" = "Descrivi la tua vibe";
-"ai.subtitle" = "Dimmi che cosa hai voglia di guardare e troverò il titolo perfetto.";
+"ai.subtitle" = "Dimmi che cosa hai voglia di guardare e troverò il titolo perfetto per te.";
 "ai.tryAsking" = "Prova a chiedere...";
 "ai.thinking" = "Sto pensando...";
-"ai.placeholder" = "Es.: \"Sci-fi con colpo di scena\"";
+"ai.placeholder" = "Es.: \"sci-fi con colpo di scena\"";
 "ai.editMessage" = "Modifica messaggio";
 "ai.saveRegenerate" = "Salva e rigenera";
 "ai.resultsTitle" = "Ecco cosa ho trovato:";
+
+"ai.paywall.title" = "Sblocca il tuo compagno filmico AI";
+"ai.paywall.description" = "Ottieni consigli più intelligenti per trovare il titolo perfetto!";
+"ai.paywall.goBack" = "Torna indietro";
+"ai.paywall.unlockAI" = "Sblocca chat con AI";
+"ai.paywall.benefit.unlimited" = "Consigli illimitati con AI";
+"ai.paywall.benefit.smarter" = "Scoperta di contenuti più intelligente";
+"ai.paywall.benefit.personalized" = "Watchlist personalizzate";
+"ai.paywall.goBack" = "Torna indietro";
 
 "settings.comingSoon" = "Altre impostazioni in arrivo...";
 
 "paywall.daily.title" = "Torna domani";
 "paywall.restore" = "Ripristina acquisti";
-"paywall.proDescription" = "Con Pro hai clip illimitati, preferenze salvate e molto altro.";
+"paywall.proDescription" = "Con Pro hai clip illimitate, preferenze salvate e molto altro.";
 "paywall.daily.limitReached" = "Hai raggiunto il limite di oggi";
-"paywall.daily.limitDescription" = "Gli utenti free possono guardare 15 clip al giorno. Passa a Pro per clip illimitati e funzionalità premium.";
+"paywall.daily.limitDescription" = "Gli utenti free possono guardare 15 clip al giorno. Passa a Pro per clip illimitate e funzionalità premium.";
 "paywall.daily.nextReset" = "Prossimo reset tra";
 "paywall.daily.resetIn" = "Reset tra";
 "paywall.foundingMember" = "Prezzo Founding Member";
 "paywall.upgrade" = "Passa a Pro";
-"paywall.unlockUnlimited" = "Sblocca clip illimitati";
+"paywall.unlockUnlimited" = "Sblocca clip illimitate";
 "paywall.ensurePro" = "Assicurati il tuo piano Pro!";
 "paywall.bestValue" = "MIGLIOR OFFERTA";
 

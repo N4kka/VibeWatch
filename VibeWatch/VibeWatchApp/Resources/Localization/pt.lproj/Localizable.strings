@@ -240,14 +240,24 @@
 "auth.gate.createTitle" = "Crie sua conta gratuita VibeWatch";
 "auth.gate.limitMessage" = "Você já aproveitou os 15 clips gratuitos de hoje. Cadastre-se para sincronizar seu progresso e desbloquear instantaneamente os lançamentos de amanhã.";
 
+"ai.paywall.unlockAI" = "Desbloquear chat com IA";
 "ai.describeVibe" = "Descreva a sua vibe";
-"ai.subtitle" = "Conte-me qual é o seu humor e eu encontro o que assistir.";
+"ai.subtitle" = "Conte qual é o seu clima e eu encontro algo perfeito para você assistir.";
 "ai.tryAsking" = "Tente pedir algo como...";
 "ai.thinking" = "Pensando...";
 "ai.placeholder" = "Ex.: \"sci-fi com reviravolta\"";
 "ai.editMessage" = "Editar mensagem";
 "ai.saveRegenerate" = "Salvar & regenerar";
 "ai.resultsTitle" = "Veja o que eu encontrei:";
+
+"ai.paywall.title" = "Desbloqueie seu parceiro de filmes com IA";
+"ai.paywall.description" = "Receba recomendações mais inteligentes para encontrar a escolha perfeita!";
+"ai.paywall.goBack" = "Voltar";
+"ai.paywall.unlockAI" = "Desbloquear chat com IA";
+"ai.paywall.benefit.unlimited" = "Recomendações ilimitadas com IA";
+"ai.paywall.benefit.smarter" = "Descoberta de conteúdo mais inteligente";
+"ai.paywall.benefit.personalized" = "Watchlists personalizadas";
+
 
 "settings.comingSoon" = "Mais configurações em breve...";
 

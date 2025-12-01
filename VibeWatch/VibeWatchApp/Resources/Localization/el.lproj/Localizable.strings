@@ -240,14 +240,24 @@
 "auth.gate.createTitle" = "Δημιούργησε τον δωρεάν λογαριασμό σου στο VibeWatch";
 "auth.gate.limitMessage" = "Απόλαυσες ήδη τα 15 δωρεάν κλιπ της ημέρας. Κάνε εγγραφή για να συγχρονίζεις την πρόοδό σου και να ξεκλειδώνεις τα αυριανά κλιπ αμέσως.";
 
+"ai.paywall.unlockAI" = "Ξεκλείδωσε το AI Chat";
 "ai.describeVibe" = "Περιέγραψε το mood σου";
-"ai.subtitle" = "Πες μου τι κέφι έχεις να δεις και θα βρω την ιδανική επιλογή.";
+"ai.subtitle" = "Πες μου τι διάθεση έχεις για θέαση κι εγώ θα βρω την ιδανική επιλογή.";
 "ai.tryAsking" = "Δοκίμασε να ζητήσεις...";
 "ai.thinking" = "Σκέφτομαι...";
 "ai.placeholder" = "Π.χ. «sci-fi με ανατροπή»";
 "ai.editMessage" = "Επεξεργασία μηνύματος";
 "ai.saveRegenerate" = "Αποθήκευση & νέα πρόταση";
-"ai.resultsTitle" = "Ιδού τι βρήκα:";
+"ai.resultsTitle" = "Δες τι βρήκα:";
+
+"ai.paywall.title" = "Ξεκλείδωσε τον AI κινηματογραφικό σου φίλο";
+"ai.paywall.description" = "Πάρε πιο έξυπνες προτάσεις για να βρεις την τέλεια επιλογή!";
+"ai.paywall.goBack" = "Πίσω";
+"ai.paywall.unlockAI" = "Ξεκλείδωσε το AI Chat";
+"ai.paywall.benefit.unlimited" = "Απεριόριστες προτάσεις με AI";
+"ai.paywall.benefit.smarter" = "Πιο έξυπνη ανακάλυψη περιεχομένου";
+"ai.paywall.benefit.personalized" = "Εξατομικευμένες watchlists";
+
 
 "settings.comingSoon" = "Περισσότερες ρυθμίσεις σύντομα...";
 

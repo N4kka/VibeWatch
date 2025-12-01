@@ -121,6 +121,7 @@ struct ProPaywallView: View {
 
     private var featuresList: some View {
         VStack(spacing: 14) {
+            FeatureCheckRow(text: "🤖 AI-Assistant recommendations")
             FeatureCheckRow(text: "▶️ Unlimited clips")
             FeatureCheckRow(text: "📵 Offline mode")
             FeatureCheckRow(text: "📋 Up to 100 lists")

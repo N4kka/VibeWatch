@@ -44,7 +44,7 @@ struct AIRecommendationsView: View {
                             .font(.system(size: 60))
                             .foregroundStyle(Color.theme.textSecondary.opacity(0.5))
                         
-                        Text("ai.paywall.title".localized)
+                        Text("aititle".localized)
                             .font(.system(size: 24, weight: .bold))
                             .multilineTextAlignment(.center)
                             .foregroundStyle(Color.theme.textPrimary)
@@ -58,7 +58,7 @@ struct AIRecommendationsView: View {
                         Button {
                             presentAccessGate()
                         } label: {
-                            Text("ai.paywall.actionButton".localized) // "Unlock AI Chat" or "Upgrade to Pro"
+                            Text("paywall.upgrade".localized)
                                 .font(.system(size: 18, weight: .bold))
                                 .foregroundColor(.white)
                                 .frame(maxWidth: .infinity)

@@ -240,14 +240,24 @@
 "auth.gate.createTitle" = "Luo ilmainen VibeWatch-tilisi";
 "auth.gate.limitMessage" = "Olet katsonut tämän päivän 15 ilmaista klippiä. Rekisteröidy synkronoidaksesi edistymisesi ja avataksesi huomisen klipit heti.";
 
+"ai.paywall.unlockAI" = "Avaa AI-keskustelu";
 "ai.describeVibe" = "Kuvaile fiilistäsi";
 "ai.subtitle" = "Kerro, millä tuulella olet, niin etsin sinulle täydellisen katsottavan.";
-"ai.tryAsking" = "Kokeile kysyä esimerkiksi...";
+"ai.tryAsking" = "Kokeile pyytää esimerkiksi...";
 "ai.thinking" = "Ajatellaan...";
 "ai.placeholder" = "Esim. \"scifiä juonenkäänteellä\"";
 "ai.editMessage" = "Muokkaa viestiä";
 "ai.saveRegenerate" = "Tallenna ja luo uudelleen";
 "ai.resultsTitle" = "Tässä, mitä löysin:";
+
+"ai.paywall.title" = "Avaa AI-leffa-apurisi";
+"ai.paywall.description" = "Saat älykkäämpiä suosituksia löytääksesi täydellisen katsottavan!";
+"ai.paywall.goBack" = "Takaisin";
+"ai.paywall.unlockAI" = "Avaa AI-keskustelu";
+"ai.paywall.benefit.unlimited" = "Rajoittamattomat AI-suositukset";
+"ai.paywall.benefit.smarter" = "Älykkäämpi sisällön löytäminen";
+"ai.paywall.benefit.personalized" = "Henkilökohtaiset watchlistit";
+
 
 "settings.comingSoon" = "Lisää asetuksia tulossa pian...";
 

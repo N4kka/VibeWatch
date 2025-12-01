@@ -240,14 +240,24 @@
 "auth.gate.createTitle" = "अपना फ्री VibeWatch अकाउंट बनाएँ";
 "auth.gate.limitMessage" = "आपने आज की 15 मुफ्त क्लिप्स देख ली हैं। प्रगति को सिंक करने और कल की क्लिप्स तुरंत अनलॉक करने के लिए साइनअप करें।";
 
-"ai.describeVibe" = "अपनी वाइब बताएं";
-"ai.subtitle" = "बताएं आपका मूड कैसा है, मैं आपके लिए परफेक्ट शो ढूंढ दूँगा।";
-"ai.tryAsking" = "ऐसे पूछकर देखें...";
+"ai.paywall.unlockAI" = "AI चैट अनलॉक करें";
+"ai.describeVibe" = "अपनी वाइब बताइए";
+"ai.subtitle" = "बताइए आप किस मूड में हैं, मैं आपके लिए देखने के लिए एकदम सही चीज़ ढूँढूँगा।";
+"ai.tryAsking" = "ऐसा पूछकर देखें...";
 "ai.thinking" = "सोच रहा हूँ...";
 "ai.placeholder" = "जैसे: 'ट्विस्ट वाली साइ-फाइ'";
-"ai.editMessage" = "मैसेज संपादित करें";
-"ai.saveRegenerate" = "सहेजें और पुनः जनरेट करें";
-"ai.resultsTitle" = "ये परिणाम मिले:";
+"ai.editMessage" = "संदेश संपादित करें";
+"ai.saveRegenerate" = "सहेजें और दोबारा जनरेट करें";
+"ai.resultsTitle" = "मैंने यह पाया है:";
+
+"ai.paywall.title" = "अपना AI मूवी साथी अनलॉक करें";
+"ai.paywall.description" = "स्मार्ट सुझाव पाएं और अपने लिए परफेक्ट विकल्प खोजें!";
+"ai.paywall.goBack" = "वापस जाएँ";
+"ai.paywall.unlockAI" = "AI चैट अनलॉक करें";
+"ai.paywall.benefit.unlimited" = "अनलिमिटेड AI सुझाव";
+"ai.paywall.benefit.smarter" = "ज़्यादा स्मार्ट कंटेंट डिस्कवरी";
+"ai.paywall.benefit.personalized" = "पर्सनलाइज़्ड वॉचलिस्ट";
+
 
 "settings.comingSoon" = "और सेटिंग्स जल्द ही आ रही हैं…";
 
