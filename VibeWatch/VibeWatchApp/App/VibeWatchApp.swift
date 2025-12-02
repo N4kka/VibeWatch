@@ -49,8 +49,7 @@ struct VibeWatchApp: App {
                     print("📱 Deep link received via URL: \(url.absoluteString)")
                     Task {
                         do {
-                            try await AuthService.shared.client?.auth.session(from: url)
-                            await AuthService.shared.checkAuthState()
+                            try await AuthService.shared.handleAuthCallback(url: url)
                             appState.isAuthenticated = AuthService.shared.isAuthenticated
                             appState.currentUser = AuthService.shared.currentUser
                         } catch {

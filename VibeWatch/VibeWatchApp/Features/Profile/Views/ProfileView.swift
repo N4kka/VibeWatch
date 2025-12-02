@@ -73,8 +73,10 @@ struct ProfileView: View {
     @State private var isUploadingAvatar = false
     @State private var showNotificationAlert = false
     @State private var showDisableConfirmation = false
+    @State private var showLogoutConfirmation = false
     @State private var showPlatformSelector = false
     @State private var showSettings = false
+    @State private var showChangePassword = false
     @State private var pendingNotificationToggle = false
     @AppStorage("selectedPlatforms") private var selectedPlatformsData: Data = Data()
     
@@ -128,11 +130,42 @@ struct ProfileView: View {
                     platformSelectorPanel
                 }
             }
+            .overlay {
+                if showLogoutConfirmation {
+                    popupOverlayBackground(onTap: {
+                        showLogoutConfirmation = false
+                    })
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    
+                    ConfirmationPopup(
+                        title: "profile.logoutConfirmationTitle".localized,
+                        message: nil,
+                        confirmTitle: "common.confirm".localized,
+                        cancelTitle: "common.cancel".localized,
+                        isDestructive: true,
+                        onConfirm: {
+                            showLogoutConfirmation = false
+                            Task {
+                                await handleLogout()
+                            }
+                        },
+                        onCancel: {
+                            showLogoutConfirmation = false
+                        }
+                    )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                }
+            }
         }
         .sheet(isPresented: $showSignUp) {
             SignUpView()
                 .environmentObject(appState)
                 .environmentObject(authService)
+        }
+        .sheet(isPresented: $showChangePassword) {
+            PasswordResetView(mode: .change, isPresented: $showChangePassword)
+                .environmentObject(authService)
+                .environmentObject(appState)
         }
         .sheet(isPresented: $showSignIn) {
             SignInView()
@@ -280,9 +313,7 @@ struct ProfileView: View {
                 settingsSection
                 
                 Button {
-                    Task {
-                        await handleLogout()
-                    }
+                    showLogoutConfirmation = true
                 } label: {
                     Text("profile.logout".localized)
                         .font(.system(size: 16, weight: .semibold))
@@ -296,6 +327,10 @@ struct ProfileView: View {
             }
             .padding(.vertical, 20)
         }
+        .confirmationDialog(
+            "",
+            isPresented: $showLogoutConfirmation
+        ) {}
     }
     
     private var unauthenticatedView: some View {
@@ -455,6 +490,17 @@ struct ProfileView: View {
                     withAnimation {
                         showPlatformSelector = true
                     }
+                }
+            )
+            
+            Divider()
+                .background(Color.white.opacity(0.1))
+            
+            SettingsRow(
+                icon: "key.fill",
+                title: "profile.changePassword".localized,
+                action: {
+                    showChangePassword = true
                 }
             )
             

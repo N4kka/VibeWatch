@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MainTabView: View {
     @EnvironmentObject var appState: AppState // Injected from App
+    @EnvironmentObject var authService: AuthService
     @Environment(\.scenePhase) private var scenePhase // Monitor app lifecycle
     @State private var selectedTab = 0
     @State private var selectedMovie: Movie?
@@ -10,6 +11,13 @@ struct MainTabView: View {
     @State private var showOnboarding = !UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
     @State private var hasClearedAuthOnFreshInstall = false
     @StateObject private var aiViewModel = AIRecommendationViewModel()
+    
+    private var passwordRecoveryBinding: Binding<Bool> {
+        Binding(
+            get: { authService.isPasswordRecoveryFlowPresented },
+            set: { authService.isPasswordRecoveryFlowPresented = $0 }
+        )
+    }
     
     // MARK: - Custom Tab Bar View (iOS 17-25)
     private var customTabBarView: some View {
@@ -224,6 +232,11 @@ struct MainTabView: View {
                 // Ensure app state reflects no auth
                 await appState.checkAuthState()
             }
+        }
+        .sheet(isPresented: passwordRecoveryBinding) {
+            PasswordResetView(mode: .recovery, isPresented: passwordRecoveryBinding)
+                .environmentObject(authService)
+                .environmentObject(appState)
         }
     }
 }

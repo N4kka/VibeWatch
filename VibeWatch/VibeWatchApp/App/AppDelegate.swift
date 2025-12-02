@@ -36,12 +36,8 @@ class AppDelegate: NSObject, UIApplicationDelegate, @MainActor UNUserNotificatio
         if url.scheme == "com.vibewatch.VibeWatchApp" && url.host == "auth" {
             Task {
                 do {
-                    // Let Supabase handle the callback
-                    try await AuthService.shared.client?.auth.session(from: url)
-                    print("✅ OAuth callback handled successfully")
-                    
-                    // Refresh auth state
-                    await AuthService.shared.checkAuthState()
+                    try await AuthService.shared.handleAuthCallback(url: url)
+                    print("✅ Auth callback handled successfully")
                 } catch {
                     print("❌ Error handling OAuth callback: \(error.localizedDescription)")
                 }

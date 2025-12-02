@@ -11,6 +11,8 @@ struct SignInView: View {
     @State private var showSignUp = false
     @State private var emailTouched = false
     @State private var passwordTouched = false
+    @State private var showForgotPasswordSheet = false
+    @State private var resetEmail = ""
     
     var body: some View {
         NavigationView {
@@ -50,6 +52,10 @@ struct SignInView: View {
             .sheet(isPresented: $showSignUp) {
                 SignUpView()
                     .environmentObject(appState)
+                    .environmentObject(authService)
+            }
+            .sheet(isPresented: $showForgotPasswordSheet) {
+                ForgotPasswordSheet(initialEmail: resetEmail)
                     .environmentObject(authService)
             }
         }
@@ -114,7 +120,9 @@ struct SignInView: View {
     
     private var forgotPasswordButton: some View {
         Button {
-            // TODO: Implement forgot password
+            let trimmed = emailOrUsername.trimmingCharacters(in: .whitespacesAndNewlines)
+            resetEmail = trimmed.contains("@") ? trimmed : ""
+            showForgotPasswordSheet = true
         } label: {
             Text("auth.forgotPassword".localized)
                 .font(.system(size: 14, weight: .medium))

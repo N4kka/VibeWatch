@@ -15,6 +15,7 @@ class AuthService: ObservableObject {
     private(set) var client: Supabase.SupabaseClient?
     @Published var currentUser: User?
     @Published var isAuthenticated = false
+    @Published var isPasswordRecoveryFlowPresented = false
     private var lastRevenueCatUserId: String?
     
     private init() {
@@ -40,6 +41,20 @@ class AuthService: ObservableObject {
         Task {
             await checkAuthState()
         }
+    }
+    
+    func handleAuthCallback(url: URL) async throws {
+        guard let client = client else {
+            throw AuthError.notConfigured
+        }
+        
+        try await client.auth.session(from: url)
+        
+        if isPasswordRecoveryURL(url) {
+            isPasswordRecoveryFlowPresented = true
+        }
+        
+        await checkAuthState()
     }
     
     // MARK: - Authentication State
@@ -186,6 +201,23 @@ class AuthService: ObservableObject {
         AnalyticsService.shared.setUserId(nil)
         
         print("✅ User signed out successfully")
+    }
+
+    func sendPasswordReset(email: String) async throws {
+        guard let client = client else {
+            throw AuthError.notConfigured
+        }
+        
+        do {
+            try await client.auth.resetPasswordForEmail(
+                email,
+                redirectTo: URL(string: "com.vibewatch.VibeWatchApp://auth/callback")
+            )
+            print("📧 Password reset email sent to \(email)")
+        } catch {
+            print("❌ Failed to send password reset email: \(error.localizedDescription)")
+            throw AuthError.passwordResetFailed
+        }
     }
     
     // MARK: - Social Authentication
@@ -453,6 +485,20 @@ class AuthService: ObservableObject {
         print("✅ Profile updated successfully in database")
     }
     
+    func updatePassword(to newPassword: String) async throws {
+        guard let client = client else {
+            throw AuthError.notConfigured
+        }
+        
+        do {
+            try await client.auth.update(user: UserAttributes(password: newPassword))
+            print("🔐 Password updated successfully")
+        } catch {
+            print("❌ Failed to update password: \(error.localizedDescription)")
+            throw AuthError.passwordUpdateFailed
+        }
+    }
+    
     func uploadAvatar(imageData: Data) async throws -> String {
         guard let client = client else {
             throw AuthError.notConfigured
@@ -614,6 +660,16 @@ class AuthService: ObservableObject {
             throw AuthError.databaseError
         }
     }
+    
+    private func isPasswordRecoveryURL(_ url: URL) -> Bool {
+        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            return false
+        }
+        
+        return components.queryItems?.contains(where: { item in
+            item.name == "type" && item.value == "recovery"
+        }) == true
+    }
 }
 
 enum AuthError: LocalizedError {
@@ -624,6 +680,8 @@ enum AuthError: LocalizedError {
     case networkError
     case databaseError
     case signUpFailed
+    case passwordResetFailed
+    case passwordUpdateFailed
     
     var errorDescription: String? {
         switch self {
@@ -641,6 +699,10 @@ enum AuthError: LocalizedError {
             return "Database error saving user profile. Please try again."
         case .signUpFailed:
             return "Sign up failed. Please try again."
+        case .passwordResetFailed:
+            return "We couldn't send the reset email. Please try again."
+        case .passwordUpdateFailed:
+            return "Failed to update password. Please try again."
         }
     }
 }

@@ -293,3 +293,21 @@
 "misc.of" = "van";
 "misc.selected" = "geselecteerd";
 "misc.somethingWrong" = "Gaat er iets mis?";
+
+
+// Password Reset
+"auth.resetPassword" = "Reset Password";
+"auth.resetPasswordDescription" = "Enter your email and we'll send you a reset link.";
+"auth.sendResetLink" = "Send Reset Link";
+"auth.resetEmailSent" = "Reset email sent! Check your inbox.";
+"auth.setNewPasswordDescription" = "Create a new password and confirm it to continue.";
+"auth.updatePassword" = "Update Password";
+"auth.passwordResetSuccess" = "Password updated successfully.";
+"profile.changePassword" = "Change Password";
+
+
+// Password Reset Confirmations
+"common.confirm" = "Confirm";
+"profile.logoutConfirmationTitle" = "Are you sure you want to log out?";
+"auth.confirmChangePasswordTitle" = "Change Password";
+"auth.confirmChangePasswordMessage" = "Do you want to update your password now?";
