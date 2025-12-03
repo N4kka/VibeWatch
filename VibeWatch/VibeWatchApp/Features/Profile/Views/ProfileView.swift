@@ -194,7 +194,10 @@ struct ProfileView: View {
             FeedbackSheet(selectedFeedbackType: $selectedFeedbackType)
         }
         .sheet(item: $selectedFeedbackType) { feedback in
-            FeedbackDetailSheet(type: feedback)
+            FeedbackDetailSheet(type: feedback) {
+                selectedFeedbackType = nil
+                showFeedback = true
+            }
         }
     }
     
@@ -761,21 +764,25 @@ struct FeedbackType: Identifiable, Hashable {
     let id: String
     let title: String
     let description: String
+    let iconName: String
     
     static let suggest = FeedbackType(
         id: "suggest",
         title: "profile.feedback.suggestFeature".localized,
-        description: "profile.feedback.suggestFeatureDescription".localized
+        description: "profile.feedback.suggestFeatureDescription".localized,
+        iconName: "iphone"
     )
     static let bug = FeedbackType(
         id: "bug",
         title: "profile.feedback.reportBug".localized,
-        description: "profile.feedback.reportBugDescription".localized
+        description: "profile.feedback.reportBugDescription".localized,
+        iconName: "ant.fill"
     )
     static let other = FeedbackType(
         id: "other",
         title: "profile.feedback.other".localized,
-        description: "profile.feedback.otherDescription".localized
+        description: "profile.feedback.otherDescription".localized,
+        iconName: "gearshape.fill"
     )
     
     static var all: [FeedbackType] { [.suggest, .bug, .other] }
@@ -794,7 +801,12 @@ struct FeedbackSheet: View {
                         dismiss()
                     } label: {
                         HStack {
+                            Image(systemName: type.iconName)
+                                .font(.system(size: 20))
+                                .foregroundColor(.theme.accentOrange)
+                                .frame(width: 24)
                             Text(type.title)
+                                .font(.system(size: 16))
                                 .foregroundColor(.theme.textPrimary)
                             Spacer()
                             Image(systemName: "chevron.right")
@@ -811,12 +823,15 @@ struct FeedbackSheet: View {
             .navigationBarTitleDisplayMode(.inline)
         }
         .preferredColorScheme(.dark)
+        .presentationDetents([.fraction(0.5), .large])
+        .presentationDragIndicator(.visible)
     }
 }
 
 struct FeedbackDetailSheet: View {
     let type: FeedbackType
     @Environment(\.dismiss) private var dismiss
+    var onCancel: (() -> Void)? = nil
     @State private var message = ""
     @State private var keepUpdated = true
     @State private var isSending = false
@@ -836,7 +851,7 @@ struct FeedbackDetailSheet: View {
                 }
                 
                 TextEditor(text: $message)
-                    .frame(minHeight: 160)
+                    .frame(minHeight: 120, maxHeight: 160)
                     .padding(12)
                     .background(Color.white.opacity(0.06))
                     .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -891,12 +906,20 @@ struct FeedbackDetailSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("profile.cancel".localized) { dismiss() }
+                    Button("profile.cancel".localized) {
+                        if let onCancel {
+                            onCancel()
+                        } else {
+                            dismiss()
+                        }
+                    }
                         .foregroundColor(.theme.textPrimary)
                 }
             }
         }
         .preferredColorScheme(.dark)
+        .presentationDetents([.fraction(0.5), .large])
+        .presentationDragIndicator(.visible)
     }
     
     private var canSend: Bool {
