@@ -346,10 +346,6 @@ struct ProfileView: View {
             }
             .padding(.vertical, 20)
         }
-        .confirmationDialog(
-            "",
-            isPresented: $showLogoutConfirmation
-        ) {}
     }
     
     private var unauthenticatedView: some View {
@@ -669,6 +665,8 @@ struct ProfileView: View {
 struct SettingsRow: View {
     let icon: String
     let title: String
+    var iconColor: Color = .theme.accentOrange
+    var textColor: Color = .theme.textPrimary
     let action: () -> Void
     
     var body: some View {
@@ -676,12 +674,12 @@ struct SettingsRow: View {
             HStack(spacing: 16) {
                 Image(systemName: icon)
                     .font(.system(size: 20))
-                    .foregroundColor(.theme.accentOrange)
+                    .foregroundColor(iconColor)
                     .frame(width: 30)
                 
                 Text(title)
                     .font(.system(size: 16))
-                    .foregroundColor(.theme.textPrimary)
+                    .foregroundColor(textColor)
                 
                 Spacer()
                 

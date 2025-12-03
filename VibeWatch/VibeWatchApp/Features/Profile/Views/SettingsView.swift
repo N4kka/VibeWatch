@@ -5,9 +5,9 @@ struct SettingsView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var authService: AuthService
     @StateObject private var localizationManager = LocalizationManager.shared
-    @State private var showDeleteWarning = false
-    @State private var showDeleteConfirmation = false
-    @State private var isDeleting = false
+    @State private var showDeleteAccountPanel = false
+    @State private var showDeleteAccountConfirmation = false
+    @State private var isDeletingAccount = false
     @State private var deletionError: String?
     
     var body: some View {
@@ -51,34 +51,41 @@ struct SettingsView: View {
                             .foregroundColor(.theme.textSecondary)
                             .padding(.top, 12)
                         
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("settings.deleteAccountWarningMessage".localized)
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(.red)
-                            
+                        VStack(spacing: 0) {
                             Button {
-                                showDeleteWarning = true
+                                deletionError = nil
+                                showDeleteAccountPanel = true
                             } label: {
-                                Text("settings.deleteAccount".localized)
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundColor(.white)
-                                    .frame(maxWidth: .infinity)
-                                    .padding()
-                                    .background(Color.red)
-                                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                            }
-                            .disabled(isDeleting)
-                            
-                            if let deletionError {
-                                Text(deletionError)
-                                    .font(.system(size: 13))
-                                    .foregroundColor(.red)
+                                HStack(spacing: 16) {
+                                    Image(systemName: "trash.fill")
+                                        .font(.system(size: 20))
+                                        .foregroundColor(.theme.accentOrange)
+                                        .frame(width: 30)
+                                    
+                                    Text("settings.deleteAccount".localized)
+                                        .font(.system(size: 16))
+                                        .foregroundColor(.theme.textPrimary)
+                                    
+                                    Spacer()
+                                    
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 14))
+                                        .foregroundColor(.theme.textSecondary)
+                                }
+                                .padding()
                             }
                         }
-                        .padding()
-                        .background(Color.white.opacity(0.06))
+                        .background(Color.white.opacity(0.05))
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                         .padding(.top, 8)
+                        
+                        if let deletionError {
+                            Text(deletionError)
+                                .font(.system(size: 13))
+                                .foregroundColor(.red)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 4)
+                        }
                     }
                     .padding(20)
                 }
@@ -86,77 +93,31 @@ struct SettingsView: View {
         }
         .navigationBarHidden(true)
         .overlay {
-            if showDeleteWarning {
-                popupOverlayBackground(onTap: { showDeleteWarning = false })
+            if showDeleteAccountPanel {
+                popupOverlayBackground(onTap: { showDeleteAccountPanel = false })
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 
-                VStack(spacing: 16) {
-                    Text("settings.deleteAccountWarningTitle".localized)
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(.theme.textPrimary)
-                    
-                    Text("settings.deleteAccountWarningMessage".localized)
-                        .font(.system(size: 14))
-                        .foregroundColor(.theme.textSecondary)
-                        .multilineTextAlignment(.center)
-                    
-                    HStack(spacing: 12) {
-                        Button {
-                            showDeleteWarning = false
-                        } label: {
-                            Text("settings.deleteAccountKeep".localized)
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(.theme.textPrimary)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 48)
-                                .background(Color.white.opacity(0.08))
-                                .clipShape(Capsule())
-                        }
-                        
-                        Button {
-                            showDeleteWarning = false
-                            showDeleteConfirmation = true
-                        } label: {
-                            Text("settings.deleteAccountConfirm".localized)
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 48)
-                                .background(Color.red)
-                                .clipShape(Capsule())
-                        }
-                    }
-                }
-                .padding(.vertical, 20)
-                .padding(.horizontal, 18)
-                .background(
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .fill(Color.theme.backgroundDark.opacity(0.9))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                                .stroke(Color.white.opacity(0.08))
-                        )
-                        .shadow(color: Color.black.opacity(0.4), radius: 20, x: 0, y: 10)
-                )
-                .padding(.horizontal, 24)
+                deleteAccountPanel
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                    .padding(.bottom, 24)
             }
         }
         .overlay {
-            if showDeleteConfirmation {
-                popupOverlayBackground(onTap: { showDeleteConfirmation = false })
+            if showDeleteAccountConfirmation {
+                popupOverlayBackground(onTap: { showDeleteAccountConfirmation = false })
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 
                 ConfirmationPopup(
                     title: "settings.deleteAccountFinalTitle".localized,
                     message: "settings.deleteAccountFinalMessage".localized,
-                    confirmTitle: isDeleting ? "settings.deleteAccountDeleting".localized : "settings.deleteAccountConfirm".localized,
+                    confirmTitle: isDeletingAccount ? "settings.deleteAccountDeleting".localized : "settings.deleteAccountConfirm".localized,
                     cancelTitle: "settings.deleteAccountKeep".localized,
                     isDestructive: true,
                     onConfirm: {
                         Task { await performAccountDeletion() }
                     },
                     onCancel: {
-                        if !isDeleting { showDeleteConfirmation = false }
+                        if !isDeletingAccount { showDeleteAccountConfirmation = false }
                     }
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
@@ -176,8 +137,8 @@ struct SettingsView: View {
     }
     
     private func performAccountDeletion() async {
-        guard !isDeleting else { return }
-        isDeleting = true
+        guard !isDeletingAccount else { return }
+        isDeletingAccount = true
         deletionError = nil
         
         do {
@@ -185,18 +146,82 @@ struct SettingsView: View {
             await MainActor.run {
                 appState.isAuthenticated = false
                 appState.currentUser = nil
-                showDeleteConfirmation = false
+                showDeleteAccountConfirmation = false
+                showDeleteAccountPanel = false
                 dismiss()
             }
         } catch {
             await MainActor.run {
                 deletionError = "settings.deleteAccountError".localized
-                showDeleteWarning = false
-                showDeleteConfirmation = false
+                showDeleteAccountPanel = false
+                showDeleteAccountConfirmation = false
             }
         }
         
-        isDeleting = false
+        isDeletingAccount = false
+    }
+    
+    private var deleteAccountPanel: some View {
+        VStack(spacing: 16) {
+            Capsule()
+                .fill(Color.white.opacity(0.2))
+                .frame(width: 44, height: 5)
+                .padding(.top, 8)
+            
+            Text("settings.deleteAccountWarningTitle".localized)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(.theme.textPrimary)
+            
+            Divider()
+                .background(Color.white.opacity(0.12))
+            
+            Text("settings.deleteAccountWarningMessage".localized)
+                .font(.system(size: 14))
+                .foregroundColor(.theme.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 12)
+            
+            VStack(spacing: 12) {
+                Button {
+                    showDeleteAccountPanel = false
+                    showDeleteAccountConfirmation = true
+                } label: {
+                    Text("settings.deleteAccountConfirm".localized)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 48)
+                        .background(Color.red)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                
+                Button {
+                    showDeleteAccountPanel = false
+                } label: {
+                    Text("settings.deleteAccountKeep".localized)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.theme.textPrimary)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 48)
+                        .background(Color.white.opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.bottom, 12)
+        }
+        .padding(.vertical, 10)
+        .padding(.horizontal, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(Color.theme.backgroundDark.opacity(0.98))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .stroke(Color.white.opacity(0.08))
+                )
+                .shadow(color: Color.black.opacity(0.45), radius: 24, x: 0, y: 12)
+        )
+        .padding(.horizontal, 18)
     }
 }
 
