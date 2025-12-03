@@ -57,6 +57,23 @@ enum StreamingPlatform: String, CaseIterable, Identifiable, Codable {
         }
     }
     
+    var logoAssetName: String? {
+        switch self {
+        case .netflix: return "netflix_logo"
+        case .disney: return "disney_plus_logo"
+        case .prime: return "prime_video_logo"
+        case .hbo: return "hbo_logo"
+        case .max: return "hbo_max_logo"
+        case .apple: return "apple_tv_logo"
+        case .paramount: return "paramount_logo"
+        case .hulu: return "hulu_logo"
+        case .peacock: return "peacock_logo"
+        case .youtube: return "yt_logo"
+        case .plex: return "plex_logo"
+        default: return nil
+        }
+    }
+    
     var color: Color {
         switch self {
         case .netflix: return Color(red: 0.9, green: 0.1, blue: 0.15)

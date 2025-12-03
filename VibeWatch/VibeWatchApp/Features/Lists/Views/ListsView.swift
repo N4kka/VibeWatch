@@ -1323,18 +1323,27 @@ struct PlatformChip: View {
         Button(action: action) {
             VStack(spacing: 8) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(platform.color)
-                        .frame(width: 60, height: 60)
+                    if let logoName = platform.logoAssetName {
+                        Image(logoName)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 60, height: 60)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                    } else {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.white.opacity(0.08))
+                            .frame(width: 60, height: 60)
+                            .overlay(
+                                Image(systemName: platform.icon)
+                                    .font(.system(size: 24, weight: .semibold))
+                                    .foregroundColor(.white)
+                            )
+                    }
                     
-                    Image(systemName: platform.icon)
-                        .font(.system(size: 24, weight: .semibold))
-                        .foregroundColor(.white)
-                }
-                .overlay(
                     RoundedRectangle(cornerRadius: 8)
-                        .stroke(isSelected ? Color.theme.accentOrange : Color.clear, lineWidth: 3)
-                )
+                        .stroke(isSelected ? Color.theme.accentOrange : Color.white.opacity(0.12), lineWidth: isSelected ? 3 : 1)
+                        .frame(width: 60, height: 60)
+                }
                 
                 Text(platform.rawValue)
                     .font(.system(size: 10, weight: .medium))
