@@ -311,3 +311,39 @@
 "profile.logoutConfirmationTitle" = "Are you sure you want to log out?";
 "auth.confirmChangePasswordTitle" = "Change Password";
 "auth.confirmChangePasswordMessage" = "Do you want to update your password now?";
+
+
+// Profile - Support & Feedback
+"profile.sendFeedback" = "Send Feedback";
+"profile.aboutUs" = "About us";
+"profile.aboutUsDetail" = "Learn more about the VibeWatch team and our mission to improve your streaming discovery experience.";
+"profile.legalNotes" = "Legal notes";
+"profile.faq" = "FAQ";
+"profile.faqDetail" = "Find quick answers to common questions about accounts, subscriptions, and features.";
+"profile.privacyPolicy" = "Privacy Policy";
+"profile.feedback.suggestFeature" = "Suggest new feature";
+"profile.feedback.suggestFeatureDescription" = "Tell us what would make VibeWatch better for you.";
+"profile.feedback.reportBug" = "Report a bug/problem";
+"profile.feedback.reportBugDescription" = "Describe the issue you're seeing so we can fix it fast.";
+"profile.feedback.other" = "Other";
+"profile.feedback.otherDescription" = "Share any other thoughts or comments.";
+"profile.feedback.keepUpdated" = "Keep me updated";
+"profile.feedback.sendButton" = "Send feedback";
+"profile.feedback.sent" = "Thanks! Your feedback was sent.";
+
+// Settings - Account Deletion
+"settings.deleteAccount" = "Permanently delete my account";
+"settings.deleteAccountWarningTitle" = "Delete account?";
+"settings.deleteAccountWarningMessage" = "This action is permanent and cannot be undone.";
+"settings.deleteAccountKeep" = "No, keep it";
+"settings.deleteAccountConfirm" = "Yes, delete my account";
+"settings.deleteAccountFinalTitle" = "Delete account permanently";
+"settings.deleteAccountFinalMessage" = "Are you absolutely sure? This action cannot be undone.";
+"settings.deleteAccountError" = "Unable to delete account right now.";
+"settings.deleteAccountSuccess" = "Your account was deleted.";
+"settings.deleteAccountDeleting" = "Deleting...";
+
+
+// Profile Upgrade CTA
+"profile.upgradePro.title" = "Upgrade to Pro";
+"profile.upgradePro.subtitle" = "Unlock unlimited clips, AI, and premium lists.";

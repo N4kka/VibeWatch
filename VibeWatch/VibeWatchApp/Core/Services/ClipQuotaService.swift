@@ -73,6 +73,14 @@ final class ClipQuotaService: ObservableObject {
         debugPrintStatus()
     }
     
+    /// Reset all local quota state (used for account deletion)
+    func resetAll() {
+        anonymousClipsWatched = 0
+        defaults.removeObject(forKey: Keys.anonymousClipsWatched)
+        updateProStatus(false)
+        debugPrintStatus()
+    }
+    
     /// Returns the gate type to show for the current anonymous state.
     func gateTypeForAnonymousUser() -> ClipGateType? {
         canWatchClipAnonymous() ? nil : .accountCreation

@@ -31,6 +31,22 @@ class SQLiteService: ObservableObject {
         }
     }
     
+    /// Wipe the local database file and recreate schema
+    func resetDatabase() {
+        closeDatabase()
+        
+        do {
+            try FileManager.default.removeItem(atPath: dbPath)
+            Logger.info("[SQLite] Database file deleted at \(dbPath)")
+        } catch {
+            Logger.error("[SQLite] Failed to delete database: \(error.localizedDescription)")
+        }
+        
+        db = nil
+        openDatabase()
+        createTables()
+    }
+    
     // MARK: - Connection Management
     
     private func openDatabase() {

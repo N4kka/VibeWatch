@@ -121,6 +121,15 @@ class ContentCacheManager: ObservableObject {
         await performSmartPreload()
     }
     
+    func clearAllCaches() {
+        cachedClips = []
+        userDefaults.removeObject(forKey: lastUpdateDateKey)
+        userDefaults.removeObject(forKey: cachedMoviesKey)
+        userDefaults.removeObject(forKey: cachedTVShowsKey)
+        userDefaults.removeObject(forKey: cachedClipsKey)
+        print("🧹 [ContentCache] Cleared cached discovery content and clips")
+    }
+    
     private func loadCachedClips() {
         guard let data = userDefaults.data(forKey: cachedClipsKey),
               let clips = try? JSONDecoder().decode([Clip].self, from: data) else {

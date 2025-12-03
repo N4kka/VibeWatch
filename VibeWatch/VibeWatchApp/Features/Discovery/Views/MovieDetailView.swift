@@ -1,5 +1,5 @@
 import SwiftUI
-import WebKit
+import YouTubeiOSPlayerHelper
 
 struct MovieDetailView: View {
     @Environment(\.dismiss) var dismiss
@@ -638,66 +638,39 @@ struct TrailerSection: View {
 struct YouTubePlayerView: UIViewRepresentable {
     let videoId: String
     
-    func makeUIView(context: Context) -> WKWebView {
-        let configuration = WKWebViewConfiguration()
-        configuration.allowsInlineMediaPlayback = true
-        configuration.mediaTypesRequiringUserActionForPlayback = []
-        
-        let preferences = WKWebpagePreferences()
-        preferences.allowsContentJavaScript = true
-        configuration.defaultWebpagePreferences = preferences
-        
-        let webView = WKWebView(frame: .zero, configuration: configuration)
-        webView.scrollView.isScrollEnabled = false
-        webView.scrollView.bounces = false
-        webView.isOpaque = false
-        webView.backgroundColor = .black
-        webView.navigationDelegate = context.coordinator
-        return webView
-    }
-    
     func makeCoordinator() -> Coordinator {
         Coordinator()
     }
     
-    class Coordinator: NSObject, WKNavigationDelegate {
-        private func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-            if let url = navigationAction.request.url {
-                if url.absoluteString.contains("youtube://") ||
-                   url.absoluteString.contains("itms-apps://") {
-                    decisionHandler(.cancel)
-                    return
-                }
-            }
-            decisionHandler(.allow)
+    func makeUIView(context: Context) -> YTPlayerView {
+        let player = YTPlayerView()
+        player.delegate = context.coordinator
+        player.backgroundColor = .black
+        player.isOpaque = false
+        return player
+    }
+    
+    func updateUIView(_ playerView: YTPlayerView, context: Context) {
+        if context.coordinator.loadedVideoId != videoId {
+            context.coordinator.loadedVideoId = videoId
+            let vars: [String: Any] = [
+                "playsinline": 1,
+                "controls": 1,
+                "modestbranding": 1,
+                "rel": 0,
+                "fs": 1,
+                "origin": "https://www.vibewatch.app"
+            ]
+            playerView.load(withVideoId: videoId, playerVars: vars)
         }
     }
     
-    func updateUIView(_ webView: WKWebView, context: Context) {
-        let embedHTML = """
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-            <style>
-                * { margin: 0; padding: 0; }
-                html, body { width: 100%; height: 100%; background: #000; overflow: hidden; }
-                .video-container { position: relative; width: 100%; padding-bottom: 56.25%; height: 0; overflow: hidden; }
-                .video-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
-            </style>
-        </head>
-        <body>
-            <div class="video-container">
-                <iframe 
-                    src="https://www.youtube-nocookie.com/embed/\(videoId)?playsinline=1&autoplay=0&rel=0&modestbranding=1&controls=1&enablejsapi=1&origin=https://www.vibewatch.app&widget_referrer=https://www.vibewatch.app"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    allowfullscreen frameborder="0" webkitallowfullscreen mozallowfullscreen>
-                </iframe>
-            </div>
-        </body>
-        </html>
-        """
-        webView.loadHTMLString(embedHTML, baseURL: URL(string: "https://www.vibewatch.app"))
+    class Coordinator: NSObject, YTPlayerViewDelegate {
+        var loadedVideoId: String?
+        
+        func playerViewDidBecomeReady(_ playerView: YTPlayerView) {
+            playerView.playVideo()
+        }
     }
 }
 

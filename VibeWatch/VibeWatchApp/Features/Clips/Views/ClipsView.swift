@@ -1,6 +1,6 @@
 import SwiftUI
 import AVKit
-import WebKit
+import YouTubeiOSPlayerHelper
 
 struct ClipsView: View {
     @StateObject private var viewModel = ClipsViewModel()
@@ -10,8 +10,8 @@ struct ClipsView: View {
     @State private var navigateToDiscovery = false
     @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var appState: AppState
-    @State private var hasScrolledToSavedPosition = false // Track if we've restored scroll position
-    @State private var dragOffset: CGFloat = 0 // For manual swipe navigation
+    @State private var hasScrolledToSavedPosition = false
+    @State private var dragOffset: CGFloat = 0
 
     var body: some View {
         // Main content - Clips
@@ -373,7 +373,7 @@ struct ClipPlayerView: View {
             .first?.windows.first?.safeAreaInsets.top ?? 0
                 
         ZStack(alignment: .bottomTrailing) {
-            // Full-screen YouTube player (iframe offset by safe area internally)
+            // Full-screen YouTube player using official YTPlayerView (offset by safe area internally)
             ZStack {
                 VerticalYouTubePlayer(
                     clipId: clip.id,
@@ -562,202 +562,110 @@ struct VerticalYouTubePlayer: UIViewRepresentable {
     let videoId: String // YouTube video ID (can be duplicate across clips)
     let shouldPlay: Bool
     let safeAreaTop: CGFloat // Top safe area inset to offset YouTube controls
-    
-    // CRITICAL: Shared WebView pool to prevent multiple instances
-    private static var webViewPool: [WKWebView] = []
-    private static let maxPoolSize = 3
-    
+
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
     }
-    
-    func makeUIView(context: Context) -> WKWebView {
-        // Reuse existing WebView from pool if available
-        let webView: WKWebView
-        if let pooledView = Self.webViewPool.first {
-            webView = pooledView
-            Self.webViewPool.removeFirst()
-            print("♻️ Reusing WebView from pool (remaining: \(Self.webViewPool.count))")
-        } else {
-            let configuration = WKWebViewConfiguration()
-            configuration.allowsInlineMediaPlayback = true
-            configuration.mediaTypesRequiringUserActionForPlayback = []
-            configuration.allowsPictureInPictureMediaPlayback = false
-            
-            webView = WKWebView(frame: .zero, configuration: configuration)
-            webView.scrollView.isScrollEnabled = false
-            webView.allowsBackForwardNavigationGestures = false // Prevent back/forward swipes
-            webView.isOpaque = false
-            webView.backgroundColor = .black
-            webView.scrollView.backgroundColor = .black
-            webView.scrollView.bounces = false
-            webView.scrollView.alwaysBounceVertical = false
-            webView.scrollView.alwaysBounceHorizontal = false
-            print("🆕 Created new WebView")
-        }
-        
-        webView.navigationDelegate = context.coordinator
-        return webView
+
+    func makeUIView(context: Context) -> PlayerContainerView {
+        let container = PlayerContainerView(topInset: safeAreaTop)
+        container.playerView.delegate = context.coordinator
+        container.playerView.backgroundColor = .black
+        container.playerView.isOpaque = false
+        container.clipsToBounds = true
+        return container
     }
-    
-    static func dismantleUIView(_ webView: WKWebView, coordinator: Coordinator) {
-        // Stop any playing video immediately
-        webView.evaluateJavaScript("if (typeof player !== 'undefined') { player.stopVideo(); player.destroy(); }")
-        
-        // Return to pool if not full
-        if webViewPool.count < maxPoolSize {
-            webViewPool.append(webView)
-            print("🔄 Returned WebView to pool (pool size: \(webViewPool.count))")
-        } else {
-            print("🗑️ Pool full, disposing WebView")
-        }
-    }
-    
-    func updateUIView(_ webView: WKWebView, context: Context) {
-        // CRITICAL: Always stop first to prevent audio bleeding
-        if !shouldPlay {
-            // Not current clip - IMMEDIATELY stop all playback
-            webView.evaluateJavaScript("if (typeof player !== 'undefined') { player.stopVideo(); player.mute(); }")
-            return
-        }
-        
-        // Use clipId (unique) instead of just videoId to prevent audio bugs
+
+    func updateUIView(_ container: PlayerContainerView, context: Context) {
+        context.coordinator.parent = self
+        context.coordinator.shouldPlay = shouldPlay
+        container.topInset = safeAreaTop
+
         if context.coordinator.currentClipId != clipId {
-            print("🎬 Loading new clip: \(clipId)")
-            
-            // IMPORTANT: Stop and destroy any existing player IMMEDIATELY
-            webView.evaluateJavaScript("if (typeof player !== 'undefined') { player.stopVideo(); player.mute(); player.destroy(); }")
-            
             context.coordinator.currentClipId = clipId
-            context.coordinator.currentVideoId = videoId
-            context.coordinator.hasInitiallyPlayed = false
-            
-            // Small delay to ensure cleanup before loading
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                self.loadVideo(in: webView)
-            }
-            return
-        }
-        
-        // This clip should play
-        if !context.coordinator.hasInitiallyPlayed {
-            // Initial play after loading
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
-                webView.evaluateJavaScript("if (typeof player !== 'undefined' && player.unMute && player.playVideo) { player.unMute(); player.playVideo(); }") { _, error in
-                    if error == nil {
-                        context.coordinator.hasInitiallyPlayed = true
-                    }
+            context.coordinator.isReady = false
+            let playerVars: [String: Any] = [
+                "playsinline": 1,
+                "autoplay": shouldPlay ? 1 : 0,
+                "controls": 1,
+                "modestbranding": 1,
+                "fs": 1,
+                "rel": 0,
+                "origin": "https://www.vibewatch.app"
+            ]
+            container.playerView.load(withVideoId: videoId, playerVars: playerVars)
+        } else {
+            if shouldPlay {
+                if context.coordinator.isReady {
+                    container.playerView.playVideo()
                 }
+            } else {
+                container.playerView.pauseVideo()
             }
         }
     }
-    
-    private func loadVideo(in webView: WKWebView) {
-        let embedHTML = """
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-            <style>
-                * { margin: 0; padding: 0; box-sizing: border-box; -webkit-user-select: none; -webkit-touch-callout: none; }
-                html, body { 
-                    width: 100%; 
-                    height: 100%; 
-                    background: #000; 
-                    overflow: hidden;
-                    position: fixed;
-                }
-                #player-container { 
-                    position: fixed; 
-                    top: \(safeAreaTop)px; 
-                    left: 0; 
-                    width: 100%; 
-                    height: calc(100% - \(safeAreaTop)px); 
-                    background: #000;
-                    overflow: hidden;
-                }
-                #player { 
-                    position: absolute; 
-                    top: 0; 
-                    left: 0; 
-                    width: 100%; 
-                    height: 100%; 
-                    border: none;
-                    pointer-events: auto; 
-                }
-                iframe { 
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    border: none;
-                }
-            </style>
-        </head>
-        <body>
-            <div id="player-container"><div id="player"></div></div>
-            <script src="https://www.youtube.com/iframe_api"></script>
-            <script>
-                var player;
-                function onYouTubeIframeAPIReady() {
-                    player = new YT.Player('player', {
-                        height: '100%', 
-                        width: '100%', 
-                        videoId: '\(videoId)',
-                        playerVars: { 
-                            'playsinline': 1, 
-                            'autoplay': 1, 
-                            'mute': 0, 
-                            'loop': 1, 
-                            'playlist': '\(videoId)', 
-                            'controls': 1, 
-                            'showinfo': 1, 
-                            'rel': 0, 
-                            'fs': 1, 
-                            'modestbranding': 1, 
-                            'iv_load_policy': 3, 
-                            'cc_load_policy': 1, 
-                            'enablejsapi': 1, 
-                            'origin': window.location.origin 
-                        },
-                        events: { 
-                            'onReady': function(e) { 
-                                console.log('Player Ready');
-                            }, 
-                            'onStateChange': function(e) { 
-                                if (e.data === YT.PlayerState.ENDED) player.playVideo(); 
-                            } 
-                        }
-                    });
-                }
-                document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
-            </script>
-        </body>
-        </html>
-        """
-        webView.loadHTMLString(embedHTML, baseURL: URL(string: "https://www.vibewatch.app"))
+
+    static func dismantleUIView(_ uiView: PlayerContainerView, coordinator: Coordinator) {
+        uiView.playerView.stopVideo()
     }
-    
-    class Coordinator: NSObject, WKNavigationDelegate {
+
+    class Coordinator: NSObject, YTPlayerViewDelegate {
         var parent: VerticalYouTubePlayer
-        var currentClipId: String?      // Unique clip identifier
-        var currentVideoId: String?     // YouTube video ID
-        var hasInitiallyPlayed = false
-        
+        var currentClipId: String?
+        var isReady = false
+        var shouldPlay = false
+
         init(_ parent: VerticalYouTubePlayer) {
             self.parent = parent
         }
-        
-        private func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-            if let url = navigationAction.request.url {
-                if url.scheme == "youtube" || url.host?.contains("youtube.com") == true && navigationAction.navigationType == .linkActivated {
-                    decisionHandler(.cancel)
-                    return
+
+        func playerViewDidBecomeReady(_ playerView: YTPlayerView) {
+            isReady = true
+            if shouldPlay {
+                playerView.playVideo()
+            }
+        }
+
+        func playerView(_ playerView: YTPlayerView, didChangeTo state: YTPlayerState) {
+            if state == .ended {
+                playerView.seek(toSeconds: 0, allowSeekAhead: true)
+                if shouldPlay {
+                    playerView.playVideo()
                 }
             }
-            decisionHandler(.allow)
         }
+    }
+}
+
+final class PlayerContainerView: UIView {
+    let playerView = YTPlayerView()
+    private var topConstraint: NSLayoutConstraint?
+
+    var topInset: CGFloat {
+        didSet { topConstraint?.constant = topInset }
+    }
+
+    init(topInset: CGFloat) {
+        self.topInset = topInset
+        super.init(frame: .zero)
+        setup()
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    private func setup() {
+        backgroundColor = .black
+        addSubview(playerView)
+        playerView.translatesAutoresizingMaskIntoConstraints = false
+        topConstraint = playerView.topAnchor.constraint(equalTo: topAnchor, constant: topInset)
+        NSLayoutConstraint.activate([
+            topConstraint!,
+            playerView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            playerView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            playerView.bottomAnchor.constraint(equalTo: bottomAnchor)
+        ])
     }
 }
 

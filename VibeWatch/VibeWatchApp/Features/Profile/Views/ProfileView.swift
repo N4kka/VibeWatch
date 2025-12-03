@@ -77,6 +77,10 @@ struct ProfileView: View {
     @State private var showPlatformSelector = false
     @State private var showSettings = false
     @State private var showChangePassword = false
+    @State private var showHelpSupport = false
+    @State private var showFeedback = false
+    @State private var selectedFeedbackType: FeedbackType?
+    @State private var showUpgradePaywall = false
     @State private var pendingNotificationToggle = false
     @AppStorage("selectedPlatforms") private var selectedPlatformsData: Data = Data()
     
@@ -176,6 +180,21 @@ struct ProfileView: View {
             SettingsView()
                 .environmentObject(appState)
                 .environmentObject(authService)
+        }
+        .fullScreenCover(isPresented: $showUpgradePaywall) {
+            ProPaywallView(isPresented: $showUpgradePaywall)
+                .environmentObject(appState)
+                .environmentObject(authService)
+                .environmentObject(DailyQuotaManager.shared)
+        }
+        .sheet(isPresented: $showHelpSupport) {
+            HelpSupportSheet()
+        }
+        .sheet(isPresented: $showFeedback) {
+            FeedbackSheet(selectedFeedbackType: $selectedFeedbackType)
+        }
+        .sheet(item: $selectedFeedbackType) { feedback in
+            FeedbackDetailSheet(type: feedback)
         }
     }
     
@@ -455,6 +474,29 @@ struct ProfileView: View {
     
     private var settingsSection: some View {
         VStack(spacing: 0) {
+            Button {
+                showUpgradePaywall = true
+            } label: {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("profile.upgradePro.title".localized)
+                            .font(.system(size: 16, weight: .bold))
+                        Text("profile.upgradePro.subtitle".localized)
+                            .font(.system(size: 13))
+                            .foregroundColor(.theme.textSecondary)
+                    }
+                    Spacer()
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(.theme.accentOrange)
+                }
+                .padding()
+                .background(Color.theme.accentOrange.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 12)
+            
             HStack {
                 Image(systemName: "bell")
                     .font(.system(size: 20))
@@ -497,6 +539,17 @@ struct ProfileView: View {
                 .background(Color.white.opacity(0.1))
             
             SettingsRow(
+                icon: "envelope",
+                title: "profile.sendFeedback".localized,
+                action: {
+                    showFeedback = true
+                }
+            )
+            
+            Divider()
+                .background(Color.white.opacity(0.1))
+            
+            SettingsRow(
                 icon: "key.fill",
                 title: "profile.changePassword".localized,
                 action: {
@@ -521,7 +574,9 @@ struct ProfileView: View {
             SettingsRow(
                 icon: "questionmark.circle",
                 title: "profile.helpSupport".localized,
-                action: {}
+                action: {
+                    showHelpSupport = true
+                }
             )
         }
         .background(Color.white.opacity(0.05))
@@ -636,5 +691,237 @@ struct SettingsRow: View {
             }
             .padding()
         }
+    }
+}
+
+struct HelpSupportSheet: View {
+    private let privacyURL = URL(string: "https://vibewatchapp.netlify.app/privacy")!
+    private let termsOfUseURL = URL(string: "https://vibewatchapp.netlify.app/terms")!
+
+    var body: some View {
+        NavigationView {
+            List {
+                Section {
+                    Text("profile.aboutUsDetail".localized)
+                        .font(.system(size: 14))
+                        .foregroundColor(.theme.textSecondary)
+                        .listRowBackground(Color.theme.background)
+                } header: {
+                    Text("profile.aboutUs".localized)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.theme.textPrimary)
+                }
+                .listRowBackground(Color.theme.background)
+                
+                Section {
+                    Link(destination: privacyURL) {
+                        HStack {
+                            Text("profile.privacyPolicy".localized)
+                            Spacer()
+                            Image(systemName: "arrow.up.right.square")
+                        }
+                        .foregroundColor(.theme.textPrimary)
+                    }
+                    Link(destination: termsOfUseURL) {
+                        HStack {
+                            Text("profile.termsOfUse".localized)
+                            Spacer()
+                            Image(systemName: "arrow.up.right.square")
+                        }
+                        .foregroundColor(.theme.textPrimary)
+                    }
+                    .listRowBackground(Color.theme.background)
+                } header: {
+                    Text("profile.legalNotes".localized)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.theme.textPrimary)
+                }
+                .listRowBackground(Color.theme.background)
+                
+                Section {
+                    Text("profile.faqDetail".localized)
+                        .font(.system(size: 14))
+                        .foregroundColor(.theme.textSecondary)
+                        .listRowBackground(Color.theme.background)
+                } header: {
+                    Text("profile.faq".localized)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.theme.textPrimary)
+                }
+                .listRowBackground(Color.theme.background)
+            }
+            .scrollContentBackground(.hidden)
+            .background(Color.theme.background)
+            .navigationTitle("profile.helpSupport".localized)
+            .navigationBarTitleDisplayMode(.inline)
+        }
+        .preferredColorScheme(.dark)
+    }
+}
+
+struct FeedbackType: Identifiable, Hashable {
+    let id: String
+    let title: String
+    let description: String
+    
+    static let suggest = FeedbackType(
+        id: "suggest",
+        title: "profile.feedback.suggestFeature".localized,
+        description: "profile.feedback.suggestFeatureDescription".localized
+    )
+    static let bug = FeedbackType(
+        id: "bug",
+        title: "profile.feedback.reportBug".localized,
+        description: "profile.feedback.reportBugDescription".localized
+    )
+    static let other = FeedbackType(
+        id: "other",
+        title: "profile.feedback.other".localized,
+        description: "profile.feedback.otherDescription".localized
+    )
+    
+    static var all: [FeedbackType] { [.suggest, .bug, .other] }
+}
+
+struct FeedbackSheet: View {
+    @Binding var selectedFeedbackType: FeedbackType?
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationView {
+            List {
+                ForEach(FeedbackType.all) { type in
+                    Button {
+                        selectedFeedbackType = type
+                        dismiss()
+                    } label: {
+                        HStack {
+                            Text(type.title)
+                                .foregroundColor(.theme.textPrimary)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .foregroundColor(.theme.textSecondary)
+                        }
+                        .padding(.vertical, 6)
+                    }
+                    .listRowBackground(Color.theme.background)
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(Color.theme.background)
+            .navigationTitle("profile.sendFeedback".localized)
+            .navigationBarTitleDisplayMode(.inline)
+        }
+        .preferredColorScheme(.dark)
+    }
+}
+
+struct FeedbackDetailSheet: View {
+    let type: FeedbackType
+    @Environment(\.dismiss) private var dismiss
+    @State private var message = ""
+    @State private var keepUpdated = true
+    @State private var isSending = false
+    @State private var sendError: String?
+    @State private var sendSuccess = false
+    
+    var body: some View {
+        NavigationView {
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(type.title)
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundColor(.theme.textPrimary)
+                    Text(type.description)
+                        .font(.system(size: 14))
+                        .foregroundColor(.theme.textSecondary)
+                }
+                
+                TextEditor(text: $message)
+                    .frame(minHeight: 160)
+                    .padding(12)
+                    .background(Color.white.opacity(0.06))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.white.opacity(0.08))
+                    )
+                    .foregroundColor(.theme.textPrimary)
+                
+                Toggle(isOn: $keepUpdated) {
+                    Text("profile.feedback.keepUpdated".localized)
+                        .foregroundColor(.theme.textPrimary)
+                }
+                .tint(.theme.accentOrange)
+                
+                if let sendError {
+                    Text(sendError)
+                        .font(.system(size: 13))
+                        .foregroundColor(.red)
+                }
+                
+                if sendSuccess {
+                    Text("profile.feedback.sent".localized)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.green)
+                }
+                
+                Spacer()
+                
+                Button {
+                    Task { await sendFeedback() }
+                } label: {
+                    HStack {
+                        if isSending {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        } else {
+                            Text("profile.feedback.sendButton".localized)
+                                .font(.system(size: 16, weight: .semibold))
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .foregroundColor(.white)
+                    .background(canSend ? Color.theme.accentOrange : Color.theme.accentOrange.opacity(0.5))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .disabled(!canSend || isSending)
+            }
+            .padding(20)
+            .background(Color.theme.background.ignoresSafeArea())
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("profile.cancel".localized) { dismiss() }
+                        .foregroundColor(.theme.textPrimary)
+                }
+            }
+        }
+        .preferredColorScheme(.dark)
+    }
+    
+    private var canSend: Bool {
+        !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+    
+    private func sendFeedback() async {
+        guard canSend else { return }
+        isSending = true
+        sendError = nil
+        sendSuccess = false
+        
+        // Placeholder: simulate sending locally
+        do {
+            try await Task.sleep(nanoseconds: 500_000_000)
+            sendSuccess = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                dismiss()
+            }
+        } catch {
+            sendError = error.localizedDescription
+        }
+        
+        isSending = false
     }
 }

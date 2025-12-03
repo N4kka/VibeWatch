@@ -296,18 +296,54 @@
 
 
 // Password Reset
-"auth.resetPassword" = "Reset Password";
-"auth.resetPasswordDescription" = "Enter your email and we'll send you a reset link.";
-"auth.sendResetLink" = "Send Reset Link";
-"auth.resetEmailSent" = "Reset email sent! Check your inbox.";
-"auth.setNewPasswordDescription" = "Create a new password and confirm it to continue.";
-"auth.updatePassword" = "Update Password";
-"auth.passwordResetSuccess" = "Password updated successfully.";
-"profile.changePassword" = "Change Password";
+"auth.resetPassword" = "Recupera Password";
+"auth.resetPasswordDescription" = "Inserisci la tua email e ti invieremo un link di recupero.";
+"auth.sendResetLink" = "Invia link di recupero";
+"auth.resetEmailSent" = "Email di recupero inviata! Controlla la tua casella postale.";
+"auth.setNewPasswordDescription" = "Crea una nuova password e confermala per continuare.";
+"auth.updatePassword" = "Aggiornare Password";
+"auth.passwordResetSuccess" = "Password aggiornata con successo.";
+"profile.changePassword" = "Cambia Password";
 
 
 // Password Reset Confirmations
-"common.confirm" = "Confirm";
-"profile.logoutConfirmationTitle" = "Are you sure you want to log out?";
-"auth.confirmChangePasswordTitle" = "Change Password";
-"auth.confirmChangePasswordMessage" = "Do you want to update your password now?";
+"common.confirm" = "Conferma";
+"profile.logoutConfirmationTitle" = "Sei sicuro di voler uscire?";
+"auth.confirmChangePasswordTitle" = "Cambia Password";
+"auth.confirmChangePasswordMessage" = "Vuoi aggiornare la tua password ora?";
+
+
+// Profile - Support & Feedback
+"profile.sendFeedback" = "Invia Feedback";
+"profile.aboutUs" = "Chi siamo";
+"profile.aboutUsDetail" = "Learn more about the VibeWatch team and our mission to improve your streaming discovery experience.";
+"profile.legalNotes" = "Note legali";
+"profile.faq" = "FAQ";
+"profile.faqDetail" = "Find quick answers to common questions about accounts, subscriptions, and features.";
+"profile.privacyPolicy" = "Informativa sulla Privacy";
+"profile.termsOfUse" = "Termini e Condizioni";
+"profile.feedback.suggestFeature" = "Consigliaci nuove funzionalità";
+"profile.feedback.suggestFeatureDescription" = "Dicci cosa renderebbe VibeWatch migliore per te.";
+"profile.feedback.reportBug" = "Segnala un bug/problema";
+"profile.feedback.reportBugDescription" = "Descrivici il problema che stai affrontando così possiamo risolverlo al più presto.";
+"profile.feedback.other" = "Altro";
+"profile.feedback.otherDescription" = "Condividi un pensero o un commento.";
+"profile.feedback.keepUpdated" = "Tienimi aggiornato";
+"profile.feedback.sendButton" = "Invia feedback";
+"profile.feedback.sent" = "Grazie! Il tuo feedback è stato inviato.";
+
+// Settings - Account Deletion
+"settings.deleteAccount" = "Cancella definitivamente il mio profilo";
+"settings.deleteAccountWarningTitle" = "Cancella account?";
+"settings.deleteAccountWarningMessage" = "Questa azione è permanente e non può essere annullata..";
+"settings.deleteAccountKeep" = "No, mantieni";
+"settings.deleteAccountConfirm" = "Sì, cancella il mio account";
+"settings.deleteAccountFinalTitle" = "Cancella account definitivamente";
+"settings.deleteAccountFinalMessage" = "Sei assolutamente sicuro? Questa azione non può essere annullata.";
+"settings.deleteAccountError" = "Non è possibile cancellare il tuo account al momento.";
+"settings.deleteAccountSuccess" = "Il tuo account è stato cancellato.";
+"settings.deleteAccountDeleting" = "Cancellando...";
+
+// Profile Upgrade CTA
+"profile.upgradePro.title" = "Iscriviti a Pro";
+"profile.upgradePro.subtitle" = "Sblocca clip illimitate, suggerimenti IA e molte più liste personalizzate.";

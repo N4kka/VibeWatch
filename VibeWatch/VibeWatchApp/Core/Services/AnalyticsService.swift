@@ -9,12 +9,12 @@ import FirebaseAnalytics
 class AnalyticsService {
     static let shared = AnalyticsService()
     
-    private var isEnabled = true
+    private var isEnabled = false
     private var userId: String?
     private var events: [(name: String, parameters: [String: Any]?, timestamp: Date)] = []
     
     private init() {
-        print("📊 [Analytics] Service initialized")
+        print("📊 [Analytics] Service initialized (disabled by default)")
     }
     
     /// Set user ID for analytics

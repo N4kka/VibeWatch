@@ -27,6 +27,9 @@ struct VibeWatchApp: App {
         // Initialize offline-first database
         print("🗄️ [App] Initializing SQLite database...")
         print("✅ [RevenueCat] Configured with API key")
+        
+        // Disable analytics until ATT permission is granted
+        AnalyticsService.shared.setEnabled(false)
     }
     
     var body: some Scene {

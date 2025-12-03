@@ -232,6 +232,9 @@ struct MainTabView: View {
                 // Ensure app state reflects no auth
                 await appState.checkAuthState()
             }
+            
+            // Request tracking permission for analytics (ATT)
+            await TrackingPermissionManager.shared.requestTrackingIfNeeded()
         }
         .sheet(isPresented: passwordRecoveryBinding) {
             PasswordResetView(mode: .recovery, isPresented: passwordRecoveryBinding)

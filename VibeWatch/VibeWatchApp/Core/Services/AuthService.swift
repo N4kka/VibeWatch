@@ -11,6 +11,7 @@ class AuthService: ObservableObject {
     // Real Supabase credentials
     private let supabaseURL = "https://rqhxhkijzhqivljivirq.supabase.co"
     private let supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJxaHhoa2lqemhxaXZsaml2aXJxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwNjc5ODgsImV4cCI6MjA3ODY0Mzk4OH0.D5OV0RX_whGawCu5xPfWX8297XyeXcjBOxsWez-fqVA"
+    private let supabaseFunctionsBaseURL = "https://rqhxhkijzhqivljivirq.functions.supabase.co"
     
     private(set) var client: Supabase.SupabaseClient?
     @Published var currentUser: User?
@@ -499,6 +500,87 @@ class AuthService: ObservableObject {
         }
     }
     
+    func deleteAccountPermanently() async throws {
+        guard let client = client else {
+            throw AuthError.notConfigured
+        }
+        // Require an authenticated, non-anonymous user before attempting deletion
+        guard isAuthenticated, let userId = currentUser?.id else {
+            throw AuthError.userNotFound
+        }
+
+        // Ensure we have a valid session token to call GoTrue
+        let session: Session
+        do {
+            session = try await client.auth.session
+        } catch {
+            print("❌ [Auth] No active session while deleting account: \(error.localizedDescription)")
+            throw AuthError.userNotFound
+        }
+        
+        guard let deleteURL = URL(string: "\(supabaseFunctionsBaseURL)/delete-user") else {
+            throw AuthError.invalidResponse
+        }
+        
+        var request = URLRequest(url: deleteURL)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
+        
+        let (_, response) = try await URLSession.shared.data(for: request)
+        if let httpResponse = response as? HTTPURLResponse {
+            guard 200..<300 ~= httpResponse.statusCode else {
+                print("❌ [Auth] Account deletion failed with status: \(httpResponse.statusCode)")
+                throw AuthError.accountDeletionFailed
+            }
+        } else {
+            throw AuthError.accountDeletionFailed
+        }
+        
+        // Attempt to purge profile data
+        do {
+            try await client
+                .from("profiles")
+                .delete()
+                .eq("id", value: userId)
+                .execute()
+        } catch {
+            print("⚠️ Profile cleanup failed: \(error.localizedDescription)")
+        }
+        
+        // Best-effort: remove other user-scoped data
+        let tables = ["user_daily_quota", "user_ai_token_usage", "user_clip_history", "user_preferences"]
+        for table in tables {
+            do {
+                try await client
+                    .from(table)
+                    .delete()
+                    .eq("user_id", value: userId)
+                    .execute()
+                print("🗑️ Deleted rows from \(table) for user \(userId)")
+            } catch {
+                print("⚠️ Failed to delete from \(table): \(error.localizedDescription)")
+            }
+        }
+        
+        // Clear local state
+        self.currentUser = nil
+        self.isAuthenticated = false
+        await syncRevenueCatUser(with: nil, forceReset: true)
+        await cleanupLocalUserData()
+    }
+
+    private func cleanupLocalUserData() async {
+        ListManager.shared.resetListsForLoggedOutUser()
+        DailyQuotaManager.shared.resetQuota()
+        DailyQuotaManager.shared.downgradeToFree()
+        ClipQuotaService.shared.resetAll()
+        ContentCacheManager.shared.clearAllCaches()
+        SQLiteService.shared.resetDatabase()
+        
+        // Clear any cached auth state
+        await AppState.shared.checkAuthState()
+    }
+    
     func uploadAvatar(imageData: Data) async throws -> String {
         guard let client = client else {
             throw AuthError.notConfigured
@@ -682,6 +764,7 @@ enum AuthError: LocalizedError {
     case signUpFailed
     case passwordResetFailed
     case passwordUpdateFailed
+    case accountDeletionFailed
     
     var errorDescription: String? {
         switch self {
@@ -703,6 +786,8 @@ enum AuthError: LocalizedError {
             return "We couldn't send the reset email. Please try again."
         case .passwordUpdateFailed:
             return "Failed to update password. Please try again."
+        case .accountDeletionFailed:
+            return "We couldn't delete your account. Please try again."
         }
     }
 }
