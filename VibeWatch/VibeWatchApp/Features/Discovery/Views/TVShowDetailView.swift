@@ -12,6 +12,7 @@ struct TVShowDetailView: View {
     @State private var showShareSheet = false
     @State private var shareItems: [Any] = []
     @State private var isPreparingShare = false
+    @State private var showReportBug = false
     
     init(tvShowId: Int) {
         _viewModel = StateObject(wrappedValue: TVShowDetailViewModel(tvShowId: tvShowId))
@@ -116,6 +117,9 @@ struct TVShowDetailView: View {
                 }
             }
         }
+        .sheet(isPresented: $showReportBug) {
+            FeedbackDetailSheet(type: .bug)
+        }
     }
     
     // MARK: - Error View
@@ -177,7 +181,14 @@ struct TVShowDetailView: View {
     @ViewBuilder
     private var providersView: some View {
         if let providers = viewModel.watchProviders, let tvShow = viewModel.tvShow {
-            WatchNowSection(providers: providers, mediaType: .tv, title: tvShow.name, year: tvShow.year, imdbId: viewModel.imdbId)
+            WatchNowSection(
+                providers: providers,
+                mediaType: .tv,
+                title: tvShow.name,
+                year: tvShow.year,
+                imdbId: viewModel.imdbId,
+                onReportIssue: { showReportBug = true }
+            )
         }
     }
     

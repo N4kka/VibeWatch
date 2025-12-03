@@ -12,6 +12,7 @@ struct MovieDetailView: View {
     @State private var showShareSheet = false
     @State private var shareItems: [Any] = []
     @State private var isPreparingShare = false
+    @State private var showReportBug = false
     
     init(movieId: Int) {
         _viewModel = StateObject(wrappedValue: MovieDetailViewModel(movieId: movieId))
@@ -65,7 +66,14 @@ struct MovieDetailView: View {
                         )
                         
                         if let providers = viewModel.watchProviders {
-                            WatchNowSection(providers: providers, mediaType: .movie, title: movie.title, year: movie.year, imdbId: viewModel.imdbId)
+                            WatchNowSection(
+                                providers: providers,
+                                mediaType: .movie,
+                                title: movie.title,
+                                year: movie.year,
+                                imdbId: viewModel.imdbId,
+                                onReportIssue: { showReportBug = true }
+                            )
                         }
                         
                         if let trailer = viewModel.trailer {
@@ -117,6 +125,9 @@ struct MovieDetailView: View {
         .fullScreenCover(isPresented: $showAuthGate) {
             AuthenticationGateView(isPresented: $showAuthGate)
                 .presentationBackground(.clear)
+        }
+        .sheet(isPresented: $showReportBug) {
+            FeedbackDetailSheet(type: .bug)
         }
         .overlay {
             if isPreparingShare {
@@ -497,6 +508,7 @@ struct WatchNowSection: View {
     let title: String
     let year: String?
     let imdbId: String?
+    var onReportIssue: () -> Void = {}
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -517,7 +529,7 @@ struct WatchNowSection: View {
             }
             
             Button {
-                // TODO: Report issue
+                onReportIssue()
             } label: {
                 HStack(spacing: 8) {
                     Text("misc.somethingWrong".localized)
