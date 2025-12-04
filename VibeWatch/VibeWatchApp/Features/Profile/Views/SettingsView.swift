@@ -65,6 +65,7 @@ struct SettingsView: View {
                                     Text("settings.deleteAccount".localized)
                                         .font(.system(size: 16))
                                         .foregroundColor(.theme.textPrimary)
+                                        .multilineTextAlignment(.leading)
                                     
                                     Spacer()
                                     

@@ -329,7 +329,7 @@ struct ProfileView: View {
     
     private var authenticatedView: some View {
         ScrollView {
-            VStack(spacing: 24) {
+            VStack(spacing: 12) {
                 profileHeader
                 
                 settingsSection
@@ -472,115 +472,119 @@ struct ProfileView: View {
     }
     
     private var settingsSection: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: 12) {
             Button {
                 showUpgradePaywall = true
             } label: {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
+                ZStack(alignment: .leading) {
+                    Image("pro_banner")
+                        .resizable()
+                        .scaledToFill()
+                        .frame(maxWidth: .infinity, minHeight: 110, maxHeight: 110)
+                        .clipped()
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    
+                    VStack(alignment: .leading, spacing: 6) {
                         Text("profile.upgradePro.title".localized)
-                            .font(.system(size: 16, weight: .bold))
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundColor(.white)
                         Text("profile.upgradePro.subtitle".localized)
-                            .font(.system(size: 13))
-                            .foregroundColor(.theme.textSecondary)
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.white.opacity(0.85))
                     }
-                    Spacer()
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(.theme.accentOrange)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
                 }
-                .padding()
-                .background(Color.theme.accentOrange.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .padding(.horizontal, 20)
-            .padding(.bottom, 12)
             
-            HStack {
-                Image(systemName: "bell")
-                    .font(.system(size: 20))
-                    .foregroundColor(.theme.accentOrange)
-                    .frame(width: 24)
-                
-                Text("profile.notifications".localized)
-                    .font(.system(size: 16))
-                    .foregroundColor(.theme.textPrimary)
-                
-                Spacer()
-                
-                // Use default iOS toggle (iOS 26+ has new design automatically)
-                Toggle("", isOn: $notificationService.notificationsEnabled)
-                    .labelsHidden()
-                    .tint(.theme.accentOrange)
-            }
-            .onChange(of: notificationService.notificationsEnabled) {_, newValue in
-                if !pendingNotificationToggle {
-                    pendingNotificationToggle = true
-                    handleNotificationToggle()
+            VStack(spacing: 0) {
+                HStack {
+                    Image(systemName: "bell")
+                        .font(.system(size: 20))
+                        .foregroundColor(.theme.accentOrange)
+                        .frame(width: 24)
+                    
+                    Text("profile.notifications".localized)
+                        .font(.system(size: 16))
+                        .foregroundColor(.theme.textPrimary)
+                    
+                    Spacer()
+                    
+                    // Use default iOS toggle (iOS 26+ has new design automatically)
+                    Toggle("", isOn: $notificationService.notificationsEnabled)
+                        .labelsHidden()
+                        .tint(.theme.accentOrange)
                 }
-            }
-            .padding()
-            
-            Divider()
-                .background(Color.white.opacity(0.1))
-            
-            SettingsRow(
-                icon: "play.tv",
-                title: "profile.streamingServices".localized,
-                action: {
-                    withAnimation {
-                        showPlatformSelector = true
+                .onChange(of: notificationService.notificationsEnabled) {_, newValue in
+                    if !pendingNotificationToggle {
+                        pendingNotificationToggle = true
+                        handleNotificationToggle()
                     }
                 }
-            )
-            
-            Divider()
-                .background(Color.white.opacity(0.1))
-            
-            SettingsRow(
-                icon: "envelope",
-                title: "profile.sendFeedback".localized,
-                action: {
-                    showFeedback = true
-                }
-            )
-            
-            Divider()
-                .background(Color.white.opacity(0.1))
-            
-            SettingsRow(
-                icon: "key.fill",
-                title: "profile.changePassword".localized,
-                action: {
-                    showChangePassword = true
-                }
-            )
-            
-            Divider()
-                .background(Color.white.opacity(0.1))
-            
-            SettingsRow(
-                icon: "gear",
-                title: "profile.settings".localized,
-                action: {
-                    showSettings = true
-                }
-            )
-            
-            Divider()
-                .background(Color.white.opacity(0.1))
-            
-            SettingsRow(
-                icon: "questionmark.circle",
-                title: "profile.helpSupport".localized,
-                action: {
-                    showHelpSupport = true
-                }
-            )
+                .padding()
+                
+                Divider()
+                    .background(Color.white.opacity(0.1))
+                
+                SettingsRow(
+                    icon: "play.tv",
+                    title: "profile.streamingServices".localized,
+                    action: {
+                        withAnimation {
+                            showPlatformSelector = true
+                        }
+                    }
+                )
+                
+                Divider()
+                    .background(Color.white.opacity(0.1))
+                
+                SettingsRow(
+                    icon: "envelope",
+                    title: "profile.sendFeedback".localized,
+                    action: {
+                        showFeedback = true
+                    }
+                )
+                
+                Divider()
+                    .background(Color.white.opacity(0.1))
+                
+                SettingsRow(
+                    icon: "key.fill",
+                    title: "profile.changePassword".localized,
+                    action: {
+                        showChangePassword = true
+                    }
+                )
+                
+                Divider()
+                    .background(Color.white.opacity(0.1))
+                
+                SettingsRow(
+                    icon: "gear",
+                    title: "profile.settings".localized,
+                    action: {
+                        showSettings = true
+                    }
+                )
+                
+                Divider()
+                    .background(Color.white.opacity(0.1))
+                
+                SettingsRow(
+                    icon: "questionmark.circle",
+                    title: "profile.helpSupport".localized,
+                    action: {
+                        showHelpSupport = true
+                    }
+                )
+            }
+            .background(Color.white.opacity(0.05))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .padding(.horizontal, 20)
         }
-        .background(Color.white.opacity(0.05))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .padding(.horizontal, 20)
         .alert("notifications.permissionRequired".localized, isPresented: $showNotificationAlert) {
             Button("notifications.openSettings".localized) {
                 notificationService.openSettings()
@@ -698,65 +702,156 @@ struct SettingsRow: View {
 struct HelpSupportSheet: View {
     private let privacyURL = URL(string: "https://vibewatchapp.netlify.app/privacy")!
     private let termsOfUseURL = URL(string: "https://vibewatchapp.netlify.app/terms")!
+    
+    private let faqItems: [FAQItem] = [
+        FAQItem(
+            question: "How does Clips help me discover new titles?",
+            answer: "Clips are short, vertical previews matched to your taste so you can binge-scroll without feeling you’re wasting time."
+        ),
+        FAQItem(
+            question: "Can I track what I watch?",
+            answer: "Yes. Save to lists, mark as seen/liked/disliked, and sync across movie and TV titles."
+        ),
+        FAQItem(
+            question: "Where can I watch it?",
+            answer: "Streaming links are pulled per-country so you can jump straight into the right app."
+        ),
+        FAQItem(
+            question: "What if something looks wrong?",
+            answer: "Use “Let us know” on any title to report bugs or bad links and we’ll fix it fast."
+        ),
+        FAQItem(
+            question: "Does VibeWatch work for casual viewers?",
+            answer: "Totally. We surface easy picks like a Saturday-night movie with friends as well as deep cuts for movie lovers."
+        )
+    ]
+    
+    @State private var expandedFAQ: UUID?
 
     var body: some View {
         NavigationView {
-            List {
-                Section {
-                    Text("profile.aboutUsDetail".localized)
-                        .font(.system(size: 14))
-                        .foregroundColor(.theme.textSecondary)
-                        .listRowBackground(Color.theme.background)
-                } header: {
-                    Text("profile.aboutUs".localized)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.theme.textPrimary)
-                }
-                .listRowBackground(Color.theme.background)
-                
-                Section {
-                    Link(destination: privacyURL) {
-                        HStack {
-                            Text("profile.privacyPolicy".localized)
-                            Spacer()
-                            Image(systemName: "arrow.up.right.square")
-                        }
-                        .foregroundColor(.theme.textPrimary)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("About Us")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundColor(.theme.textPrimary)
+                        Text("We’re two friends building a new kind of movie/TV companion. VibeWatch was born from frustration with clunky trackers: we focus on modern, clip-first discovery, quick streaming links, and tools that help both cinephiles and casual viewers find the perfect pick without endless scrolling.")
+                            .font(.system(size: 14))
+                            .foregroundColor(.theme.textSecondary)
                     }
-                    Link(destination: termsOfUseURL) {
-                        HStack {
-                            Text("profile.termsOfUse".localized)
-                            Spacer()
-                            Image(systemName: "arrow.up.right.square")
+                    .padding()
+                    .background(Color.white.opacity(0.06))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("FAQs")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundColor(.theme.textPrimary)
+                        
+                        LazyVGrid(columns: [GridItem(.flexible())], spacing: 12) {
+                            ForEach(faqItems) { item in
+                                FAQChip(
+                                    item: item,
+                                    isExpanded: expandedFAQ == item.id
+                                ) {
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                        if expandedFAQ == item.id {
+                                            expandedFAQ = nil
+                                        } else {
+                                            expandedFAQ = item.id
+                                        }
+                                    }
+                                }
+                            }
                         }
-                        .foregroundColor(.theme.textPrimary)
                     }
-                    .listRowBackground(Color.theme.background)
-                } header: {
-                    Text("profile.legalNotes".localized)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.theme.textPrimary)
+                    
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Legal")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundColor(.theme.textPrimary)
+                        
+                        VStack(spacing: 10) {
+                            Link(destination: privacyURL) {
+                                HStack {
+                                    Text("Privacy Policy")
+                                    Spacer()
+                                    Image(systemName: "arrow.up.right.square")
+                                }
+                                .font(.system(size: 14))
+                                .foregroundColor(.theme.textPrimary)
+                            }
+                            
+                            Divider()
+                            
+                            Link(destination: termsOfUseURL) {
+                                HStack {
+                                    Text("Terms of Use")
+                                    Spacer()
+                                    Image(systemName: "arrow.up.right.square")
+                                }
+                                .font(.system(size: 14))
+                                .foregroundColor(.theme.textPrimary)
+                            }
+                        }
+                        .padding()
+                        .background(Color.white.opacity(0.06))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
                 }
-                .listRowBackground(Color.theme.background)
-                
-                Section {
-                    Text("profile.faqDetail".localized)
-                        .font(.system(size: 14))
-                        .foregroundColor(.theme.textSecondary)
-                        .listRowBackground(Color.theme.background)
-                } header: {
-                    Text("profile.faq".localized)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.theme.textPrimary)
-                }
-                .listRowBackground(Color.theme.background)
+                .padding(20)
             }
-            .scrollContentBackground(.hidden)
             .background(Color.theme.background)
             .navigationTitle("profile.helpSupport".localized)
             .navigationBarTitleDisplayMode(.inline)
         }
         .preferredColorScheme(.dark)
+    }
+}
+
+private struct FAQItem: Identifiable {
+    let id = UUID()
+    let question: String
+    let answer: String
+}
+
+private struct FAQChip: View {
+    let item: FAQItem
+    let isExpanded: Bool
+    let onToggle: () -> Void
+    
+    var body: some View {
+        Button(action: onToggle) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .center, spacing: 8) {
+                    Text(item.question)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.theme.textPrimary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.theme.textSecondary)
+                }
+                
+                if isExpanded {
+                    Text(item.answer)
+                        .font(.system(size: 12))
+                        .foregroundColor(.theme.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+            }
+            .padding()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.white.opacity(0.06))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isExpanded ? Color.theme.accentOrange : Color.white.opacity(0.08), lineWidth: isExpanded ? 1.5 : 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
     }
 }
 
@@ -831,6 +926,7 @@ struct FeedbackSheet: View {
 struct FeedbackDetailSheet: View {
     let type: FeedbackType
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
     var onCancel: (() -> Void)? = nil
     @State private var message = ""
     @State private var keepUpdated = true
@@ -932,15 +1028,22 @@ struct FeedbackDetailSheet: View {
         sendError = nil
         sendSuccess = false
         
-        // Placeholder: simulate sending locally
-        do {
-            try await Task.sleep(nanoseconds: 500_000_000)
-            sendSuccess = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                dismiss()
-            }
-        } catch {
-            sendError = error.localizedDescription
+        let subject = type.title
+        let body = message
+        let encodedSubject = subject.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? subject
+        let encodedBody = body.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? body
+        let mailtoString = "mailto:startingvibe2025@gmail.com?subject=\(encodedSubject)&body=\(encodedBody)"
+        
+        guard let url = URL(string: mailtoString) else {
+            sendError = "Invalid email content."
+            isSending = false
+            return
+        }
+        
+        openURL(url)
+        sendSuccess = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            dismiss()
         }
         
         isSending = false

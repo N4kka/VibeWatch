@@ -161,7 +161,7 @@ struct ProPaywallView: View {
                 pricePerMonth: annualPerMonthText,
                 discountBadge: annualDiscountBadge,
                 trialBadge: annualTrialBadge,
-                isSelected: selectedPackage?.storeProduct.subscriptionPeriod?.unit == .year,
+                isSelected: selectedPackageID == annualPackage?.identifier || selectedPackage?.storeProduct.subscriptionPeriod?.unit == .year,
                 isPrimary: true
             ) {
                 selectAnnualPackage()
@@ -170,11 +170,11 @@ struct ProPaywallView: View {
             // Monthly plan
             PlanOptionCard(
                 planName: "paywall.plan.monthly".localized,
-                price: nil,
+                price: monthlyPriceText,
                 pricePerMonth: monthlyPerMonthText,
                 discountBadge: nil,
                 trialBadge: monthlyTrialBadge,
-                isSelected: selectedPackage?.storeProduct.subscriptionPeriod?.unit == .month,
+                isSelected: selectedPackageID == monthlyPackage?.identifier || selectedPackage?.storeProduct.subscriptionPeriod?.unit == .month,
                 isPrimary: false
             ) {
                 selectMonthlyPackage()
@@ -199,30 +199,35 @@ struct ProPaywallView: View {
     }
 
     private var annualPriceText: String? {
-        guard let annual = availablePackages.first(where: { $0.storeProduct.subscriptionPeriod?.unit == .year }) else {
+        guard let annual = annualPackage else {
             return "79,99€" // fallback matching mock
         }
         return annual.storeProduct.localizedPriceString
     }
 
     private var annualPerMonthText: String {
-        guard let annual = availablePackages.first(where: { $0.storeProduct.subscriptionPeriod?.unit == .year }) else {
+        guard let annual = annualPackage else {
             return String(format: "paywall.price.perMonth".localized, "9,99€")
         }
         return formattedPerMonthPrice(for: annual.storeProduct, months: 12)
     }
 
     private var monthlyPerMonthText: String {
-        guard let monthly = availablePackages.first(where: { $0.storeProduct.subscriptionPeriod?.unit == .month }) else {
+        guard let monthly = monthlyPackage else {
             return String(format: "paywall.price.perMonth".localized, "9,99€")
         }
         return formattedPerMonthPrice(for: monthly.storeProduct, months: 1)
     }
-    
+
+    private var monthlyPriceText: String? {
+        guard let monthly = monthlyPackage else { return nil }
+        return monthly.storeProduct.localizedPriceString
+    }
+
     // MARK: - Trial badges
     
     private var annualTrialBadge: String? {
-        guard let annual = availablePackages.first(where: { $0.storeProduct.subscriptionPeriod?.unit == .year }),
+        guard let annual = annualPackage,
               let trial = revenueService.getTrialInfo(for: annual) else {
             return nil
         }
@@ -230,7 +235,7 @@ struct ProPaywallView: View {
     }
     
     private var monthlyTrialBadge: String? {
-        guard let monthly = availablePackages.first(where: { $0.storeProduct.subscriptionPeriod?.unit == .month }),
+        guard let monthly = monthlyPackage,
               let trial = revenueService.getTrialInfo(for: monthly) else {
             return nil
         }
@@ -305,26 +310,82 @@ struct ProPaywallView: View {
 
     // MARK: - RevenueCat helpers
 
+    private let monthlyPriorityIds = [
+        // Prefer the correct founding product; include legacy ID fallback for misconfigured offerings
+        "vibewatch_pro_monthly_founding_members",
+        "vibewatch_pro_monthly_founding_member",
+        "vibewatch_pro_monthly_founding",
+        "vibewatch_pro_monthly_standard"
+    ]
+    
+    private let annualPriorityIds = [
+        "vibewatch_pro_yearly_founding",
+        "vibewatch_pro_yearly_standard"
+    ]
+    
     private var availablePackages: [Package] {
         guard let offerings = revenueService.offerings else { return [] }
-        var identifiers: [String] = []
-        identifiers.append(foundingService.getCurrentOffering())
-        if let current = revenueService.currentOfferingID {
-            identifiers.append(current)
-        }
-        identifiers.append(contentsOf: ["founding_member", "default"])
-
-        for identifier in identifiers {
-            if let offering = offerings.offering(identifier: identifier), !offering.availablePackages.isEmpty {
-                return offering.availablePackages
+        
+        // Merge packages from priority offerings, keeping unique identifiers so we don't drop monthly/annual options.
+        var orderedPackages: [Package] = []
+        var seen: Set<String> = []
+        
+        func append(from offering: Offering?) {
+            guard let offering else { return }
+            for package in offering.availablePackages where !seen.contains(package.identifier) {
+                seen.insert(package.identifier)
+                orderedPackages.append(package)
             }
         }
-
-        if let current = offerings.current, !current.availablePackages.isEmpty {
-            return current.availablePackages
+        
+        // Priority order
+        append(from: offerings.offering(identifier: foundingService.getCurrentOffering()))
+        if let currentID = revenueService.currentOfferingID {
+            append(from: offerings.offering(identifier: currentID))
         }
+        append(from: offerings.offering(identifier: "founding_member"))
+        append(from: offerings.offering(identifier: "default"))
+        append(from: offerings.current)
+        
+        // Fallback: any remaining offerings
+        for offering in offerings.all.values {
+            append(from: offering)
+        }
+        
+        return orderedPackages
+    }
 
-        return offerings.all.values.flatMap { $0.availablePackages }
+    private var annualPackage: Package? {
+        prioritizedPackage(
+            priorityIds: annualPriorityIds,
+            period: .year
+        )
+    }
+    
+    private var monthlyPackage: Package? {
+        prioritizedPackage(
+            priorityIds: monthlyPriorityIds,
+            period: .month
+        )
+    }
+    
+    private func prioritizedPackage(priorityIds: [String], period: SubscriptionPeriod.Unit) -> Package? {
+        let periodPackages = availablePackages
+            .filter { $0.storeProduct.subscriptionPeriod?.unit == period }
+            .sorted { lhs, rhs in
+                NSDecimalNumber(decimal: lhs.storeProduct.price).doubleValue <
+                NSDecimalNumber(decimal: rhs.storeProduct.price).doubleValue
+            }
+        
+        // 1) Prefer explicit product IDs in priority order
+        for id in priorityIds {
+            if let match = periodPackages.first(where: { $0.storeProduct.productIdentifier == id }) {
+                return match
+            }
+        }
+        
+        // 2) Fallback to cheapest for the period
+        return periodPackages.first
     }
 
     private var selectedPackage: Package? {
@@ -334,23 +395,21 @@ struct ProPaywallView: View {
            let match = packages.first(where: { $0.identifier == id }) {
             return match
         }
-        return packages.first
+        return annualPackage ?? packages.first
     }
 
     private func selectAnnualPackage() {
-        let packages = availablePackages
-        if let annual = packages.first(where: { $0.storeProduct.subscriptionPeriod?.unit == .year }) {
+        if let annual = annualPackage {
             selectedPackageID = annual.identifier
-        } else if let first = packages.first {
+        } else if let first = availablePackages.first {
             selectedPackageID = first.identifier
         }
     }
 
     private func selectMonthlyPackage() {
-        let packages = availablePackages
-        if let monthly = packages.first(where: { $0.storeProduct.subscriptionPeriod?.unit == .month }) {
+        if let monthly = monthlyPackage {
             selectedPackageID = monthly.identifier
-        } else if let first = packages.first {
+        } else if let first = availablePackages.first {
             selectedPackageID = first.identifier
         }
     }
@@ -405,9 +464,7 @@ struct ProPaywallView: View {
             await RevenueCatService.shared.refreshOfferings(debug: false)
             await MainActor.run {
                 isRefreshing = false
-                if selectedPackageID == nil {
-                    selectedPackageID = availablePackages.first?.identifier
-                }
+                setDefaultPackageIfNeeded()
             }
         }
     }
@@ -416,9 +473,17 @@ struct ProPaywallView: View {
     private func refreshOfferingsIfNeeded() async {
         if revenueService.offerings == nil {
             await RevenueCatService.shared.refreshOfferings(debug: false)
-            if selectedPackageID == nil {
-                selectedPackageID = availablePackages.first?.identifier
-            }
+            setDefaultPackageIfNeeded()
+        }
+    }
+
+    @MainActor
+    private func setDefaultPackageIfNeeded() {
+        guard selectedPackageID == nil else { return }
+        if let annual = annualPackage {
+            selectedPackageID = annual.identifier
+        } else {
+            selectedPackageID = availablePackages.first?.identifier
         }
     }
 
@@ -455,7 +520,7 @@ struct ProPaywallView: View {
                         
                         // Log trial started if this was a trial purchase
                         if let trial = revenueService.getTrialInfo(for: package) {
-                            let price = (package.storeProduct.price as NSDecimalNumber).doubleValue
+                            let price = NSDecimalNumber(decimal: package.storeProduct.price).doubleValue
                             AnalyticsService.shared.logTrialStarted(
                                 productId: package.storeProduct.productIdentifier,
                                 price: price
