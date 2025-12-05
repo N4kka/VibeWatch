@@ -343,6 +343,7 @@ struct ClipPlayerView: View {
     
     @State private var isLiked: Bool
     @State private var likeCount: Int
+    @State private var commentCount: Int
     @State private var showComments = false
     @State private var showAddToList = false
     @State private var hasAppeared = false
@@ -362,6 +363,7 @@ struct ClipPlayerView: View {
         self.onLikeToggle = onLikeToggle
         _isLiked = State(initialValue: clip.isLiked)
         _likeCount = State(initialValue: clip.likes)
+        _commentCount = State(initialValue: clip.comments)
     }
     
     var body: some View {
@@ -441,7 +443,7 @@ struct ClipPlayerView: View {
                 
                 ClipActionButton(
                     icon: "message",
-                    count: clip.comments,
+                    count: commentCount,
                     color: .white
                 ) {
                     showComments = true
@@ -512,7 +514,9 @@ struct ClipPlayerView: View {
             accumulatedWatchTime = 0
         }
         .sheet(isPresented: $showComments) {
-            CommentsView(clipId: clip.id)
+            CommentsView(clipId: clip.id) { newCount in
+                commentCount = newCount
+            }
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.hidden)
         }
@@ -710,6 +714,7 @@ struct ClipActionButton: View {
 
 struct CommentsView: View {
     let clipId: String
+    let onCountsChange: ((Int) -> Void)?
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var appState: AppState
     
@@ -719,7 +724,8 @@ struct CommentsView: View {
                 // Use our new CommentsListView
                 CommentsListView(
                     clipId: clipId,
-                    userId: appState.currentUser?.id ?? "guest"
+                    userId: appState.currentUser?.id ?? "guest",
+                    onCountsChange: onCountsChange
                 )
             }
             .navigationTitle("Comments")

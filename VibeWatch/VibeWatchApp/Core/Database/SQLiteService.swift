@@ -179,62 +179,142 @@ class SQLiteService: ObservableObject {
     
     private func runMigrations() {
         // Check if migrations have already been run using synchronous execute
-        var migrationVersion = "0"
+        var migrationVersionString = "0"
         var statement: OpaquePointer?
         
         if sqlite3_prepare_v2(db, "SELECT value_text FROM app_metadata WHERE key_name = 'migration_version'", -1, &statement, nil) == SQLITE_OK {
             if sqlite3_step(statement) == SQLITE_ROW {
                 if let versionPtr = sqlite3_column_text(statement, 0) {
-                    migrationVersion = String(cString: versionPtr)
+                    migrationVersionString = String(cString: versionPtr)
                 }
             }
             sqlite3_finalize(statement)
         }
         
+        let currentVersion = Int(migrationVersionString) ?? 0
+        let latestVersion = 3
+        
         // Only run migrations if not already at latest version
-        if migrationVersion == "1" {
-            Logger.info("[SQLite] Migrations already applied (version \(migrationVersion))")
+        if currentVersion >= latestVersion {
+            Logger.info("[SQLite] Migrations already applied (version \(migrationVersionString))")
             return
         }
         
-        Logger.info("[SQLite] Running migrations from version \(migrationVersion) to version 1...")
+        Logger.info("[SQLite] Running migrations from version \(currentVersion) to version \(latestVersion)...")
         
         // Temporarily disable foreign keys for migration
         execute("PRAGMA foreign_keys = OFF")
         
-        // Migration 1: Fix clip_comments foreign key constraints
-        Logger.info("[SQLite] Running migration: Recreating clip_comments table...")
+        if currentVersion < 1 {
+            // Migration 1: Fix clip_comments and clip_reactions foreign key constraints
+            Logger.info("[SQLite] Migration 1: recreate clip_comments and clip_reactions tables")
+            
+            execute("DROP TABLE IF EXISTS clip_comments")
+            execute("DROP INDEX IF EXISTS idx_clip_comments_clip")
+            execute("DROP INDEX IF EXISTS idx_clip_comments_parent")
+            execute("DROP INDEX IF EXISTS idx_clip_comments_user")
+            execute(createClipCommentsTable())
+            
+            execute("DROP TABLE IF EXISTS clip_reactions")
+            execute("DROP INDEX IF EXISTS idx_clip_reactions_user")
+            execute("DROP INDEX IF EXISTS idx_clip_reactions_clip")
+            execute(createClipReactionsTable())
+        }
         
-        // Drop the old table (will cascade delete all comments)
-        execute("DROP TABLE IF EXISTS clip_comments")
-        execute("DROP INDEX IF EXISTS idx_clip_comments_clip")
-        execute("DROP INDEX IF EXISTS idx_clip_comments_parent")
-        execute("DROP INDEX IF EXISTS idx_clip_comments_user")
+        if currentVersion < 2 {
+            // Migration 2: add updated_at + user FK to clip_reactions and user FK to clip_comments without dropping data
+            Logger.info("[SQLite] Migration 2: rehydrate clip_reactions with updated_at + user FK")
+            execute("""
+                CREATE TABLE IF NOT EXISTS clip_reactions_new (
+                  id TEXT PRIMARY KEY,
+                  user_id TEXT NOT NULL,
+                  clip_id TEXT NOT NULL,
+                  reaction_type TEXT NOT NULL DEFAULT 'like',
+                  created_at TEXT DEFAULT (datetime('now')),
+                  updated_at TEXT DEFAULT (datetime('now')),
+                  UNIQUE(user_id, clip_id, reaction_type),
+                  FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
+                );
+            """)
+            execute("""
+                INSERT OR IGNORE INTO clip_reactions_new (id, user_id, clip_id, reaction_type, created_at)
+                SELECT id, user_id, clip_id, reaction_type, created_at FROM clip_reactions
+            """)
+            execute("DROP TABLE IF EXISTS clip_reactions")
+            execute("ALTER TABLE clip_reactions_new RENAME TO clip_reactions")
+            execute("CREATE INDEX IF NOT EXISTS idx_clip_reactions_user ON clip_reactions(user_id)")
+            execute("CREATE INDEX IF NOT EXISTS idx_clip_reactions_clip ON clip_reactions(clip_id)")
+            
+            Logger.info("[SQLite] Migration 2: rehydrate clip_comments with user FK")
+            execute("""
+                CREATE TABLE IF NOT EXISTS clip_comments_new (
+                  id TEXT PRIMARY KEY,
+                  clip_id TEXT NOT NULL,
+                  user_id TEXT NOT NULL,
+                  parent_comment_id TEXT,
+                  content TEXT NOT NULL,
+                  like_count INTEGER DEFAULT 0,
+                  reply_count INTEGER DEFAULT 0,
+                  created_at TEXT DEFAULT (datetime('now')),
+                  updated_at TEXT DEFAULT (datetime('now')),
+                  deleted_at TEXT,
+                  FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE,
+                  FOREIGN KEY (parent_comment_id) REFERENCES clip_comments(id) ON DELETE CASCADE
+                );
+            """)
+            execute("""
+                INSERT OR IGNORE INTO clip_comments_new (
+                  id, clip_id, user_id, parent_comment_id, content,
+                  like_count, reply_count, created_at, updated_at, deleted_at
+                )
+                SELECT id, clip_id, user_id, parent_comment_id, content,
+                       like_count, reply_count, created_at, updated_at, deleted_at
+                FROM clip_comments
+            """)
+            execute("DROP TABLE IF EXISTS clip_comments")
+            execute("ALTER TABLE clip_comments_new RENAME TO clip_comments")
+            execute("CREATE INDEX IF NOT EXISTS idx_clip_comments_clip ON clip_comments(clip_id, deleted_at)")
+            execute("CREATE INDEX IF NOT EXISTS idx_clip_comments_parent ON clip_comments(parent_comment_id)")
+            execute("CREATE INDEX IF NOT EXISTS idx_clip_comments_user ON clip_comments(user_id)")
+        }
         
-        // Recreate with new schema
-        execute(createClipCommentsTable())
-        
-        Logger.info("[SQLite] Migration 1 complete: clip_comments table recreated")
-        
-        // Migration 2: Fix clip_reactions foreign key constraints
-        Logger.info("[SQLite] Running migration: Recreating clip_reactions table...")
-        
-        // Drop the old table (will cascade delete all reactions)
-        execute("DROP TABLE IF EXISTS clip_reactions")
-        execute("DROP INDEX IF EXISTS idx_clip_reactions_user")
-        execute("DROP INDEX IF EXISTS idx_clip_reactions_clip")
-        
-        // Recreate with new schema
-        execute(createClipReactionsTable())
-        
-        Logger.info("[SQLite] Migration 2 complete: clip_reactions table recreated")
+        if currentVersion < 3 {
+            Logger.info("[SQLite] Migration 3: add synced_at columns for offline sync tracking")
+            if !columnExists("clip_reactions", column: "synced_at") {
+                execute("ALTER TABLE clip_reactions ADD COLUMN synced_at TEXT")
+            }
+            if !columnExists("clip_comments", column: "synced_at") {
+                execute("ALTER TABLE clip_comments ADD COLUMN synced_at TEXT")
+            }
+            if !columnExists("clip_comment_likes", column: "synced_at") {
+                execute("ALTER TABLE clip_comment_likes ADD COLUMN synced_at TEXT")
+            }
+        }
         
         // Re-enable foreign keys
         execute("PRAGMA foreign_keys = ON")
         
         // Mark migration as complete
-        execute("INSERT OR REPLACE INTO app_metadata (key_name, value_text) VALUES ('migration_version', '1')")
-        Logger.info("[SQLite] Migrations complete - now at version 1")
+        execute("INSERT OR REPLACE INTO app_metadata (key_name, value_text) VALUES ('migration_version', '\(latestVersion)')")
+        Logger.info("[SQLite] Migrations complete - now at version \(latestVersion)")
+    }
+    
+    private func columnExists(_ table: String, column: String) -> Bool {
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+        
+        let pragmaSQL = "PRAGMA table_info(\(table))"
+        if sqlite3_prepare_v2(db, pragmaSQL, -1, &statement, nil) == SQLITE_OK {
+            while sqlite3_step(statement) == SQLITE_ROW {
+                if let namePtr = sqlite3_column_text(statement, 1) {
+                    let name = String(cString: namePtr)
+                    if name == column {
+                        return true
+                    }
+                }
+            }
+        }
+        return false
     }
     
     // MARK: - SQL Execution
@@ -1003,7 +1083,10 @@ extension SQLiteService {
           clip_id TEXT NOT NULL,
           reaction_type TEXT NOT NULL DEFAULT 'like',
           created_at TEXT DEFAULT (datetime('now')),
-          UNIQUE(user_id, clip_id, reaction_type)
+          updated_at TEXT DEFAULT (datetime('now')),
+          synced_at TEXT,
+          UNIQUE(user_id, clip_id, reaction_type),
+          FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
         );
         CREATE INDEX IF NOT EXISTS idx_clip_reactions_user ON clip_reactions(user_id);
         CREATE INDEX IF NOT EXISTS idx_clip_reactions_clip ON clip_reactions(clip_id);
@@ -1023,6 +1106,8 @@ extension SQLiteService {
           created_at TEXT DEFAULT (datetime('now')),
           updated_at TEXT DEFAULT (datetime('now')),
           deleted_at TEXT,
+          synced_at TEXT,
+          FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE,
           FOREIGN KEY (parent_comment_id) REFERENCES clip_comments(id) ON DELETE CASCADE
         );
         CREATE INDEX IF NOT EXISTS idx_clip_comments_clip ON clip_comments(clip_id, deleted_at);
@@ -1038,6 +1123,7 @@ extension SQLiteService {
           comment_id TEXT NOT NULL,
           user_id TEXT NOT NULL,
           created_at TEXT DEFAULT (datetime('now')),
+          synced_at TEXT,
           UNIQUE(user_id, comment_id),
           FOREIGN KEY (comment_id) REFERENCES clip_comments(id) ON DELETE CASCADE,
           FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE

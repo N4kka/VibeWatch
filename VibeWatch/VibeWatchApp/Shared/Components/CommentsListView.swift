@@ -4,6 +4,7 @@ import SwiftUI
 struct CommentsListView: View {
     let clipId: String
     let userId: String
+    var onCountsChange: ((Int) -> Void)? = nil
     
     @State private var comments: [ClipComment] = []
     @State private var isLoading = false
@@ -225,6 +226,8 @@ struct CommentsListView: View {
                 isLoading = false
             }
             
+            notifyCountChange()
+            
             print("✅ [CommentsList] Loaded \(loadedComments.count) comments")
             
         } catch {
@@ -241,6 +244,7 @@ struct CommentsListView: View {
         withAnimation {
             comments.insert(comment, at: 0)
         }
+        notifyCountChange()
     }
     
     private func handleReplyPosted(_ reply: ClipComment, to parent: ClipComment) {
@@ -257,6 +261,7 @@ struct CommentsListView: View {
             updatedComment.replyCount += 1
             comments[index] = updatedComment
         }
+        notifyCountChange()
         
         // Expand replies if not already
         if !expandedComments.contains(parent.id) {
@@ -353,6 +358,7 @@ struct CommentsListView: View {
                     comments.removeAll { $0.id == comment.id }
                 }
             }
+            notifyCountChange()
             
             print("✅ [CommentsList] Deleted comment \(comment.id)")
             
@@ -384,6 +390,7 @@ struct CommentsListView: View {
                     }
                 }
             }
+            notifyCountChange()
             
             print("✅ [CommentsList] Deleted reply \(reply.id)")
             
@@ -394,6 +401,13 @@ struct CommentsListView: View {
                 errorMessage = "Failed to delete reply"
             }
         }
+    }
+    
+    private func notifyCountChange() {
+        let total = comments.reduce(0) { partial, comment in
+            partial + 1 + comment.replyCount
+        }
+        onCountsChange?(total)
     }
 }
 

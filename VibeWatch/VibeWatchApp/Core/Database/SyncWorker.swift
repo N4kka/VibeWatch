@@ -476,6 +476,10 @@ class SyncWorker: ObservableObject {
             try await remoteDB.pullTable(name: "user_daily_quota", userId: userId)
             try await remoteDB.pullTable(name: "user_ai_token_usage", userId: userId)
             try await remoteDB.pullTable(name: "user_clip_history", userId: userId)
+            // Clip engagement
+            try await remoteDB.pullTable(name: "clip_reactions", userId: userId)
+            try await remoteDB.pullTable(name: "clip_comments", userId: userId)
+            try await remoteDB.pullTable(name: "clip_comment_likes", userId: userId)
             // Lists + items
             try await remoteDB.pullTable(name: "lists", userId: userId)
             try await remoteDB.pullTable(name: "list_items", userId: userId)
