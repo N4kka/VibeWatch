@@ -38,6 +38,8 @@ protocol TMDBServiceProtocol {
     func getSimilarTVShows(id: Int, page: Int) async throws -> TMDBResponse<TVShow>
     func getMovieExternalIds(id: Int) async throws -> ExternalIds
     func getTVShowExternalIds(id: Int) async throws -> ExternalIds
+    func getPersonDetails(id: Int) async throws -> PersonDetails
+    func getPersonCombinedCredits(id: Int) async throws -> PersonCombinedCredits
 }
 
 class TMDBService: TMDBServiceProtocol {
@@ -324,6 +326,16 @@ class TMDBService: TMDBServiceProtocol {
     
     func getTVShowExternalIds(id: Int) async throws -> ExternalIds {
         try await request("/tv/\(id)/external_ids")
+    }
+    
+    // MARK: - People
+    
+    func getPersonDetails(id: Int) async throws -> PersonDetails {
+        try await request("/person/\(id)")
+    }
+    
+    func getPersonCombinedCredits(id: Int) async throws -> PersonCombinedCredits {
+        try await request("/person/\(id)/combined_credits")
     }
 }
 

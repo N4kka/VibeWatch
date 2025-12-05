@@ -13,6 +13,8 @@ struct MovieDetailView: View {
     @State private var shareItems: [Any] = []
     @State private var isPreparingShare = false
     @State private var showReportBug = false
+    @State private var selectedActor: Cast?
+    @State private var filmographySelection: FilmographySelection?
     
     init(movieId: Int) {
         _viewModel = StateObject(wrappedValue: MovieDetailViewModel(movieId: movieId))
@@ -84,7 +86,10 @@ struct MovieDetailView: View {
                             MovieCreditsSection(
                                 director: viewModel.director,
                                 cast: viewModel.mainCast,
-                                movie: movie
+                                movie: movie,
+                                onActorTap: { actor in
+                                    selectedActor = actor
+                                }
                             )
                         }
                         
@@ -122,12 +127,32 @@ struct MovieDetailView: View {
                     shareItems = []
                 }
         }
+        .sheet(item: $selectedActor) { actor in
+            ActorDetailView(
+                actorId: actor.id,
+                initialName: actor.name,
+                initialProfileURL: actor.profileURL
+            ) { credit in
+                handleFilmographySelection(credit)
+            }
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+            .presentationBackground(Color.theme.background)
+        }
         .fullScreenCover(isPresented: $showAuthGate) {
             AuthenticationGateView(isPresented: $showAuthGate)
                 .presentationBackground(.clear)
         }
         .sheet(isPresented: $showReportBug) {
             FeedbackDetailSheet(type: .bug)
+        }
+        .fullScreenCover(item: $filmographySelection) { selection in
+            switch selection.mediaType {
+            case .movie:
+                MovieDetailView(movieId: selection.mediaId)
+            case .tv:
+                TVShowDetailView(tvShowId: selection.mediaId)
+            }
         }
         .overlay {
             if isPreparingShare {
@@ -275,6 +300,11 @@ struct MovieDetailView: View {
         if !movie.overview.isEmpty { text += "\n\n\(movie.overview)" }
         items.append(text)
         await MainActor.run { shareItems = items }
+    }
+    
+    private func handleFilmographySelection(_ credit: PersonCredit) {
+        selectedActor = nil
+        filmographySelection = FilmographySelection(mediaType: credit.mediaType, mediaId: credit.id)
     }
 }
 
@@ -690,6 +720,7 @@ struct MovieCreditsSection: View {
     let director: Crew?
     let cast: [Cast]
     let movie: Movie
+    let onActorTap: (Cast) -> Void
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -732,7 +763,9 @@ struct MovieCreditsSection: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 12) {
                             ForEach(cast) { actor in
-                                CastMemberCard(actor: actor)
+                                CastMemberCard(actor: actor) {
+                                    onActorTap(actor)
+                                }
                             }
                         }
                         .padding(.horizontal, 20)
@@ -765,26 +798,31 @@ struct InfoRow: View {
 
 struct CastMemberCard: View {
     let actor: Cast
+    var onTap: (() -> Void)? = nil
     
     var body: some View {
-        VStack(spacing: 8) {
-            CachedAsyncImage(url: actor.profileURL)
-                .aspectRatio(contentMode: .fill)
-                .frame(width: 80, height: 80)
-                .clipShape(Circle())
-            
-            VStack(spacing: 2) {
-                Text(actor.name)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.theme.textPrimary)
-                    .lineLimit(1)
+        Button {
+            onTap?()
+        } label: {
+            VStack(spacing: 8) {
+                CachedAsyncImage(url: actor.profileURL)
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 80, height: 80)
+                    .clipShape(Circle())
                 
-                Text(actor.character)
-                    .font(.system(size: 10))
-                    .foregroundColor(.theme.textSecondary)
-                    .lineLimit(1)
+                VStack(spacing: 2) {
+                    Text(actor.name)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.theme.textPrimary)
+                        .lineLimit(1)
+                    
+                    Text(actor.character)
+                        .font(.system(size: 10))
+                        .foregroundColor(.theme.textSecondary)
+                        .lineLimit(1)
+                }
+                .frame(width: 80)
             }
-            .frame(width: 80)
         }
     }
 }

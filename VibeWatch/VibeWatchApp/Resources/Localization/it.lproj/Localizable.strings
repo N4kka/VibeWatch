@@ -317,6 +317,7 @@
 "profile.sendFeedback" = "Invia Feedback";
 "profile.aboutUs" = "Chi siamo";
 "profile.aboutUsDetail" = "Learn more about the VibeWatch team and our mission to improve your streaming discovery experience.";
+"profile.tmdbAttribution" = "This product uses the TMDb API but is not endorsed or certified by TMDb.";
 "profile.legalNotes" = "Note legali";
 "profile.faq" = "FAQ";
 "profile.faqDetail" = "Find quick answers to common questions about accounts, subscriptions, and features.";
@@ -347,3 +348,13 @@
 // Profile Upgrade CTA
 "profile.upgradePro.title" = "Iscriviti a Pro";
 "profile.upgradePro.subtitle" = "Sblocca clip illimitate, suggerimenti IA e molte più liste personalizzate.";
+
+/// Actor Detail
+"actor.biography.title" = "Biography";
+"actor.biography.loading" = "Loading biography...";
+"actor.biography.unavailable" = "Biography not available.";
+"actor.filmography.movies" = "Movies";
+"actor.filmography.tv" = "TV Shows";
+"actor.retry" = "Try again";
+"actor.biography.showMore" = "Show More";
+"actor.biography.showLess" = "Show Less";

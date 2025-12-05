@@ -13,6 +13,8 @@ struct TVShowDetailView: View {
     @State private var shareItems: [Any] = []
     @State private var isPreparingShare = false
     @State private var showReportBug = false
+    @State private var selectedActor: Cast?
+    @State private var filmographySelection: FilmographySelection?
     
     init(tvShowId: Int) {
         _viewModel = StateObject(wrappedValue: TVShowDetailViewModel(tvShowId: tvShowId))
@@ -101,9 +103,29 @@ struct TVShowDetailView: View {
                     shareItems = []
                 }
         }
+        .sheet(item: $selectedActor) { actor in
+            ActorDetailView(
+                actorId: actor.id,
+                initialName: actor.name,
+                initialProfileURL: actor.profileURL
+            ) { credit in
+                handleFilmographySelection(credit)
+            }
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+                .presentationBackground(Color.theme.background)
+        }
         .fullScreenCover(isPresented: $showAuthGate) {
             AuthenticationGateView(isPresented: $showAuthGate)
                 .presentationBackground(.clear)
+        }
+        .fullScreenCover(item: $filmographySelection) { selection in
+            switch selection.mediaType {
+            case .movie:
+                MovieDetailView(movieId: selection.mediaId)
+            case .tv:
+                TVShowDetailView(tvShowId: selection.mediaId)
+            }
         }
         .overlay {
             if isPreparingShare {
@@ -204,7 +226,10 @@ struct TVShowDetailView: View {
         if !viewModel.mainCast.isEmpty {
             TVShowCreditsSection(
                 cast: viewModel.mainCast,
-                tvShow: tvShow
+                tvShow: tvShow,
+                onActorTap: { actor in
+                    selectedActor = actor
+                }
             )
         }
     }
@@ -353,6 +378,11 @@ struct TVShowDetailView: View {
             shareItems = items
         }
     }
+    
+    private func handleFilmographySelection(_ credit: PersonCredit) {
+        selectedActor = nil
+        filmographySelection = FilmographySelection(mediaType: credit.mediaType, mediaId: credit.id)
+    }
 }
 
 struct TVShowDetailHeaderView: View {
@@ -467,6 +497,7 @@ struct TVShowInfoSection: View {
 struct TVShowCreditsSection: View {
     let cast: [Cast]
     let tvShow: TVShow
+    let onActorTap: (Cast) -> Void
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -499,7 +530,9 @@ struct TVShowCreditsSection: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 12) {
                             ForEach(cast) { actor in
-                                CastMemberCard(actor: actor)
+                                CastMemberCard(actor: actor) {
+                                    onActorTap(actor)
+                                }
                             }
                         }
                         .padding(.horizontal, 20)

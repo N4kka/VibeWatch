@@ -733,12 +733,16 @@ struct HelpSupportSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("About Us")
+                        Text("profile.aboutUs".localized)
                             .font(.system(size: 18, weight: .bold))
                             .foregroundColor(.theme.textPrimary)
                         Text("We’re two friends building a new kind of movie/TV companion. VibeWatch was born from frustration with clunky trackers: we focus on modern, clip-first discovery, quick streaming links, and tools that help both cinephiles and casual viewers find the perfect pick without endless scrolling.")
                             .font(.system(size: 14))
                             .foregroundColor(.theme.textSecondary)
+                        Text("profile.tmdbAttribution".localized)
+                            .font(.system(size: 12))
+                            .foregroundColor(.theme.textSecondary)
+                            .padding(.top, 2)
                     }
                     .padding()
                     .background(Color.white.opacity(0.06))
