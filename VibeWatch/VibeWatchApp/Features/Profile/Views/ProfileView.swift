@@ -697,8 +697,8 @@ struct SettingsRow: View {
 }
 
 struct HelpSupportSheet: View {
-    private let privacyURL = URL(string: "https://vibewatchapp.netlify.app/privacy")!
-    private let termsOfUseURL = URL(string: "https://vibewatchapp.netlify.app/terms")!
+    private let privacyURL = URL(string: "https://vibewatch.vercel.app/privacy")!
+    private let termsOfUseURL = URL(string: "https://vibewatch.vercel.app/terms")!
     
     private let faqItems: [FAQItem] = [
         FAQItem(
