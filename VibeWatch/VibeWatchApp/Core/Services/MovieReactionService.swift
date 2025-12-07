@@ -1,5 +1,4 @@
 import Foundation
-import SwiftUI
 
 @MainActor
 class MovieReactionService: ObservableObject {
@@ -282,25 +281,22 @@ class MovieReactionService: ObservableObject {
     // MARK: - Supabase Helpers
     
     private func fetchCountsFromSupabase(mediaId: Int, mediaType: MediaType) async throws -> MovieReactionCounts {
-        // TODO: Implement Supabase fetch when endpoint is ready
-        // For now, fall back to SQLite
+        // Supabase endpoint pending - fallback to SQLite for now
         return try await fetchCountsFromSQLite(mediaId: mediaId, mediaType: mediaType)
     }
     
     private func syncReactionToSupabase(mediaId: Int, mediaType: MediaType, userId: String, reaction: ReactionType) async throws {
-        // TODO: Implement Supabase sync when endpoint is ready
-        // This would call supabase.from("movie_reactions").upsert(...)
+        // Supabase sync pending - would call supabase.from("movie_reactions").upsert(...)
         print("ℹ️ [MovieReaction] Supabase sync not yet implemented")
     }
     
     private func deleteReactionFromSupabase(mediaId: Int, mediaType: MediaType, userId: String) async throws {
-        // TODO: Implement Supabase delete when endpoint is ready
+        // Supabase deletion pending implementation
         print("ℹ️ [MovieReaction] Supabase delete not yet implemented")
     }
     
     private func syncCountsToSupabase(mediaId: Int, mediaType: MediaType) async throws {
-        // TODO: Implement Supabase counts sync when endpoint is ready
-        // This would upsert the counts to movie_reaction_counts table
+        // Supabase counts sync pending - would upsert to movie_reaction_counts table
         print("ℹ️ [MovieReaction] Supabase counts sync not yet implemented")
     }
     

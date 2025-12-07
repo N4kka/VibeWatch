@@ -3,7 +3,7 @@ import Foundation
 /// Service to migrate data from Supabase to local SQLite
 /// Runs once on first app launch
 @MainActor
-class DatabaseMigrationService {
+final class DatabaseMigrationService {
     static let shared = DatabaseMigrationService()
     
     private let db = SQLiteService.shared
@@ -22,7 +22,7 @@ class DatabaseMigrationService {
         }
         
         do {
-            try await DatabaseUtilities.retryOnFailure(maxAttempts: 3) {
+            try await DatabaseUtilities.retryOnFailure(maxAttempts: 3) { @MainActor in
                 // Migrate clips (this is the most important)
                 await self.migrateClips()
                 
@@ -67,10 +67,12 @@ class DatabaseMigrationService {
             let batchSize = 100
             
             for batch in clips.chunked(into: batchSize) {
-                try await DatabaseUtilities.executeInTransaction {
+                // Compute inserted count for this batch within the transaction,
+                // and return it instead of mutating a captured var.
+                let localBatchInserted: Int = try await DatabaseUtilities.executeInTransaction {
                     try await db.transaction {
                         for clip in batch {
-                            let values: [String: Any] = [
+                            let values: [String: Any] = await [
                                 "id": clip.id,
                                 "clip_id": clip.clipId,
                                 "video_id": clip.videoId,
@@ -96,11 +98,13 @@ class DatabaseMigrationService {
                             ]
                             
                             _ = try await db.insert("clips", values: values)
-                            insertedCount += 1
                         }
                     }
+                    // If we reach here without throwing, the whole batch was inserted.
+                    return batch.count
                 }
                 
+                insertedCount += localBatchInserted
                 print("📦 [Migration] Inserted \(insertedCount)/\(clips.count) clips")
             }
             
@@ -135,7 +139,7 @@ class DatabaseMigrationService {
             // Insert into local SQLite
             try await DatabaseUtilities.executeInTransaction {
                 for item in cacheItems {
-                    let values: [String: Any] = [
+                    let values: [String: Any] = await [
                         "id": item.id,
                         "content_type": item.contentType,
                         "tmdb_id": item.tmdbId,
@@ -163,15 +167,18 @@ class DatabaseMigrationService {
     
     // MARK: - Helper Methods
     
-    private func jsonString(from array: [Any]?) -> String? {
+    // Generic, strongly-typed, and Sendable-safe JSON array serialization
+    private func jsonString<T: Encodable & Sendable>(from array: [T]?) -> String? {
         guard let array = array else { return nil }
-        guard let data = try? JSONSerialization.data(withJSONObject: array),
+        guard let data = try? JSONEncoder().encode(array),
               let string = String(data: data, encoding: .utf8) else {
             return nil
         }
         return string
     }
 }
+
+extension DatabaseMigrationService: @unchecked Sendable {}
 
 // MARK: - Models
 

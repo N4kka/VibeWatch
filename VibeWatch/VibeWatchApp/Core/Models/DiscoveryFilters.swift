@@ -27,10 +27,10 @@ enum RuntimeRange: String, CaseIterable, Identifiable {
     
     var displayName: String {
         switch self {
-        case .any: return "filters.runtimeAny".localized
-        case .short: return "filters.runtimeShort".localized
-        case .medium: return "filters.runtimeMedium".localized
-        case .long: return "filters.runtimeLong".localized
+        case .any: return "filters.runtimeAny".localizedMainSafe()
+        case .short: return "filters.runtimeShort".localizedMainSafe()
+        case .medium: return "filters.runtimeMedium".localizedMainSafe()
+        case .long: return "filters.runtimeLong".localizedMainSafe()
         }
     }
     
@@ -64,10 +64,10 @@ enum RatingRange: String, CaseIterable, Identifiable {
     
     var displayName: String {
         switch self {
-        case .any: return "filters.ratingAny".localized
-        case .good: return "filters.ratingGood".localized
-        case .excellent: return "filters.ratingExcellent".localized
-        case .masterpiece: return "filters.ratingMasterpiece".localized
+        case .any: return "filters.ratingAny".localizedMainSafe()
+        case .good: return "filters.ratingGood".localizedMainSafe()
+        case .excellent: return "filters.ratingExcellent".localizedMainSafe()
+        case .masterpiece: return "filters.ratingMasterpiece".localizedMainSafe()
         }
     }
     

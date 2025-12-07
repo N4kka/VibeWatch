@@ -1,6 +1,6 @@
 import Foundation
 
-protocol TMDBServiceProtocol {
+protocol TMDBServiceProtocol: Sendable {
     func getTrendingMovies(timeWindow: TimeWindow, page: Int) async throws -> TMDBResponse<Movie>
     func getPopularMovies(page: Int) async throws -> TMDBResponse<Movie>
     func getTopRatedMovies(page: Int) async throws -> TMDBResponse<Movie>
@@ -42,8 +42,8 @@ protocol TMDBServiceProtocol {
     func getPersonCombinedCredits(id: Int) async throws -> PersonCombinedCredits
 }
 
-class TMDBService: TMDBServiceProtocol {
-    @MainActor static let shared: TMDBServiceProtocol = TMDBService()
+actor TMDBService: TMDBServiceProtocol {
+    static let shared: TMDBServiceProtocol = TMDBService()
     
     private let baseURL = "https://api.themoviedb.org/3"
     private let apiKey = "e42f888f287ca2fbe26c9a6e70351fb7"
@@ -93,9 +93,9 @@ class TMDBService: TMDBServiceProtocol {
         items.append(URLQueryItem(name: "api_key", value: apiKey))
         
         // Add language and region from LocalizationManager
-        let localizationManager = await LocalizationManager.shared
-        let language = localizationManager.currentLanguage.id // e.g., "it", "en"
-        let region = localizationManager.currentCountry.id // e.g., "IT", "US"
+        let (language, region) = await MainActor.run {
+            LocalizationManager.shared.currentLanguageAndRegion()
+        }
         
         // Combine language and region in TMDb format (e.g., "it-IT", "en-US")
         let languageParam = "\(language)-\(region)"

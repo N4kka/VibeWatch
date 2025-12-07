@@ -707,7 +707,8 @@ struct YouTubePlayerView: UIViewRepresentable {
         }
     }
     
-    class Coordinator: NSObject, YTPlayerViewDelegate {
+    @MainActor
+    class Coordinator: NSObject, @MainActor YTPlayerViewDelegate {
         var loadedVideoId: String?
         
         func playerViewDidBecomeReady(_ playerView: YTPlayerView) {

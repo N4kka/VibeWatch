@@ -457,7 +457,7 @@ struct FlowLayout: Layout {
     }
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        flow(proposal: proposal, subviews: subviews, perform: true, in: bounds)
+        _ = flow(proposal: proposal, subviews: subviews, perform: true, in: bounds)
     }
 
     private func flow(proposal: ProposedViewSize, subviews: Subviews, perform: Bool, in bounds: CGRect = .zero) -> (size: CGSize, maxX: CGFloat) {

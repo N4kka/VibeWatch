@@ -3,8 +3,8 @@ import SQLite3
 
 /// Local SQLite database service for offline-first architecture
 /// All app reads/writes go through this service
-class SQLiteService: ObservableObject {
-    @MainActor static let shared = SQLiteService()
+final class SQLiteService: ObservableObject {
+    static let shared = SQLiteService()
     
     @Published var isConnected = false
     @Published var lastError: String?
@@ -12,6 +12,10 @@ class SQLiteService: ObservableObject {
     private var db: OpaquePointer?
     private let dbPath: String
     private let dbQueue = DispatchQueue(label: "com.vibewatch.sqlite", qos: .userInitiated)
+    
+    // Wrappers to allow capturing dynamic SQLite values in @Sendable contexts.
+    private struct SQLSendableValue: @unchecked Sendable { let raw: Any }
+    private struct SQLSendableRecord: @unchecked Sendable { var raw: [String: Any] }
     
     private init() {
         // Store in app's Documents directory
@@ -362,8 +366,10 @@ class SQLiteService: ObservableObject {
     
     /// Query and return rows as dictionaries
     func queryRaw(_ sql: String, parameters: [Any] = []) async throws -> [[String: Any]] {
+        let safeParameters = parameters.map(SQLSendableValue.init(raw:))
+        
         return try await withCheckedThrowingContinuation { continuation in
-            dbQueue.async { [weak self] in
+            dbQueue.async { [weak self, safeParameters] in
                 guard let self = self else {
                     continuation.resume(throwing: SQLiteError.notConnected)
                     return
@@ -380,11 +386,11 @@ class SQLiteService: ObservableObject {
                 defer { sqlite3_finalize(statement) }
                 
                 // Bind parameters
-                for (index, param) in parameters.enumerated() {
-                    self.bind(param, to: statement, at: Int32(index + 1))
+                for (index, param) in safeParameters.enumerated() {
+                    self.bind(param.raw, to: statement, at: Int32(index + 1))
                 }
                 
-                var results: [[String: Any]] = []
+                var results: [SQLSendableRecord] = []
                 
                 while sqlite3_step(statement) == SQLITE_ROW {
                     var row: [String: Any] = [:]
@@ -396,10 +402,10 @@ class SQLiteService: ObservableObject {
                         row[columnName] = value
                     }
                     
-                    results.append(row)
+                    results.append(SQLSendableRecord(raw: row))
                 }
                 
-                continuation.resume(returning: results)
+                continuation.resume(returning: results.map { $0.raw })
             }
         }
     }
@@ -420,18 +426,20 @@ class SQLiteService: ObservableObject {
 
     /// REPLACE INTO upsert for arbitrary rows. Only columns existing in the table are written.
     /// If the table has a synced_at column and it's missing, it's set to now().
+    @MainActor
     func upsert(table: String, rows: [[String: Any]]) async throws {
         guard !rows.isEmpty else { return }
+        let safeRows = rows.map(SQLSendableRecord.init(raw:))
         let cols = try await columns(for: table)
         guard !cols.isEmpty else { return }
 
         let hasSyncedAt = cols.contains("synced_at")
         let now = ISO8601DateFormatter().string(from: Date())
 
-        for row in rows {
+        for row in safeRows {
             var filtered: [String: Any] = [:]
             for col in cols {
-                if let v = row[col], !(v is NSNull) {
+                if let v = row.raw[col], !(v is NSNull) {
                     filtered[col] = v
                 }
             }
@@ -459,7 +467,7 @@ class SQLiteService: ObservableObject {
     
     // MARK: - Transaction Support
     
-    func transaction(_ operations: () async throws -> Void) async throws {
+    func transaction(_ operations: @Sendable () async throws -> Void) async throws {
         try await DatabaseUtilities.executeInTransaction {
             self.execute("BEGIN TRANSACTION")
             do {
@@ -480,10 +488,10 @@ class SQLiteService: ObservableObject {
         let placeholders = values.keys.map { _ in "?" }.joined(separator: ", ")
         let sql = "INSERT INTO \(table) (\(columns)) VALUES (\(placeholders))"
         
-        let parameters = Array(values.values)
+        let parameters = Array(values.values).map(SQLSendableValue.init(raw:))
         
         return try await withCheckedThrowingContinuation { continuation in
-            dbQueue.async { [weak self] in
+            dbQueue.async { [weak self, parameters] in
                 guard let self = self else {
                     continuation.resume(throwing: SQLiteError.notConnected)
                     return
@@ -501,7 +509,7 @@ class SQLiteService: ObservableObject {
                 
                 // Bind parameters
                 for (index, param) in parameters.enumerated() {
-                    self.bind(param, to: statement, at: Int32(index + 1))
+                    self.bind(param.raw, to: statement, at: Int32(index + 1))
                 }
                 
                 if sqlite3_step(statement) == SQLITE_DONE {
@@ -595,6 +603,7 @@ class SQLiteService: ObservableObject {
     
     // MARK: - Batch Operations
     
+    @MainActor
     func performBatchInsert(table: String, records: [[String: Any]]) async -> Bool {
         guard !records.isEmpty else { return true }
         
@@ -602,8 +611,10 @@ class SQLiteService: ObservableObject {
         let placeholders = "(" + Array(repeating: "?", count: records[0].keys.count).joined(separator: ", ") + ")"
         let query = "INSERT OR REPLACE INTO \(table) (\(columns)) VALUES \(placeholders)"
         
+        let safeRecords = records.map(SQLSendableRecord.init(raw:))
+        
         return await withCheckedContinuation { continuation in
-            dbQueue.async { [weak self] in
+            dbQueue.async { [weak self, safeRecords] in
                 guard let self = self, let db = self.db else {
                     continuation.resume(returning: false)
                     return
@@ -632,9 +643,9 @@ class SQLiteService: ObservableObject {
                     }
                     
                     // Sort keys to ensure order matches columns
-                    let sortedKeys = records[0].keys
+                    let sortedKeys = safeRecords[0].raw.keys
                     
-                    for record in records {
+                    for record in safeRecords {
                         // Reset statement for reuse
                         sqlite3_reset(statement)
                         sqlite3_clear_bindings(statement)
@@ -643,7 +654,7 @@ class SQLiteService: ObservableObject {
                         for (index, key) in sortedKeys.enumerated() {
                             // Use existing helper to bind values
                             // index is 1-based in SQLite
-                            self.bind(record[key] ?? NSNull(), to: statement, at: Int32(index + 1))
+                            self.bind(record.raw[key] ?? NSNull(), to: statement, at: Int32(index + 1))
                         }
                         
                         if sqlite3_step(statement) != SQLITE_DONE {
@@ -720,9 +731,9 @@ class SQLiteService: ObservableObject {
         case SQLITE_TEXT:
             return String(cString: sqlite3_column_text(statement, index))
         case SQLITE_BLOB:
-            let bytes = sqlite3_column_blob(statement, index)
+            guard let bytes = sqlite3_column_blob(statement, index) else { return nil }
             let count = sqlite3_column_bytes(statement, index)
-            return Data(bytes: bytes!, count: Int(count))
+            return Data(bytes: bytes, count: Int(count))
         case SQLITE_NULL:
             return nil
         default:
@@ -1181,3 +1192,6 @@ enum SQLiteError: LocalizedError {
         }
     }
 }
+
+// Serialized through `dbQueue`, so mark as unchecked Sendable for use inside @Sendable closures.
+extension SQLiteService: @unchecked Sendable {}

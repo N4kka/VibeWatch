@@ -7,7 +7,7 @@ enum DatabaseUtilities {
     /// - Returns: The result of the operation.
     /// - Throws: Any error thrown by the operation.
     static func executeInTransaction<T>(
-        _ operation: () async throws -> T
+        _ operation: @Sendable () async throws -> T
     ) async rethrows -> T {
         // Shared transaction logic (conceptual, actual implementation would depend on database library)
         print("BEGIN TRANSACTION (conceptual)")
@@ -28,10 +28,11 @@ enum DatabaseUtilities {
     ///   - operation: The asynchronous operation to perform.
     /// - Returns: The result of the successful operation.
     /// - Throws: The last error encountered if all retries fail.
+    @MainActor
     static func retryOnFailure<T>(
         maxAttempts: Int = 3,
         delay: TimeInterval = 1.0, // Delay between retries
-        _ operation: () async throws -> T
+        _ operation: @MainActor @Sendable () async throws -> T
     ) async throws -> T {
         var lastError: Error?
         for attempt in 1...maxAttempts {

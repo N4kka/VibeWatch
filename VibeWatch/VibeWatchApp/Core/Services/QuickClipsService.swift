@@ -7,7 +7,7 @@ import Foundation
 /// - User taste tracking for personalization
 /// - Instant loading with aggressive caching
 @MainActor
-class QuickClipsService: ObservableObject {
+final class QuickClipsService: ObservableObject {
     static let shared = QuickClipsService()
     
     private let tmdbService = TMDBService.shared
@@ -35,6 +35,7 @@ class QuickClipsService: ObservableObject {
     func preloadClips(from movies: [Movie], count: Int = 5) async -> [Clip] {
         print("⚡ PRELOAD: Starting smart preload from \(movies.count) shared movies...")
         let startTime = Date()
+        let currentLanguage = await MainActor.run { LocalizationManager.shared.currentLanguageCode() }
         
         // Take top 'count' movies + a few extras buffer
         let candidates = Array(movies.prefix(count + 3))
@@ -46,8 +47,7 @@ class QuickClipsService: ObservableObject {
             for movie in candidates {
                 group.addTask {
                     // Use current language for preload (immediate relevance)
-                    let lang = LocalizationManager.shared.currentLanguage.id
-                    if let clips = try? await self.searchYouTubeForMovie(movie, language: lang),
+                    if let clips = try? await self.searchYouTubeForMovie(movie, language: currentLanguage),
                        let firstClip = clips.first {
                         return firstClip
                     }
@@ -124,6 +124,7 @@ class QuickClipsService: ObservableObject {
         
         let (movies1, movies2) = try await (page1, page2)
         let allMovies = movies1.results + movies2.results
+        let localLanguage = await MainActor.run { LocalizationManager.shared.currentLanguageCode() }
         
         // Mix languages: 80% Local, 20% English
         // We'll process in batches to maintain mix
@@ -138,7 +139,7 @@ class QuickClipsService: ObservableObject {
                 
                 // Determine language for this item (Randomized 80/20 split)
                 let useLocal = Double.random(in: 0...1) < 0.8
-                let lang = useLocal ? LocalizationManager.shared.currentLanguage.id : "en"
+                let lang = useLocal ? localLanguage : "en"
                 
                 group.addTask {
                     return (try? await self.searchYouTubeForMovie(movie, language: lang)) ?? []
@@ -156,13 +157,14 @@ class QuickClipsService: ObservableObject {
     private func fetchTVShowClips(limit: Int) async throws -> [Clip] {
         async let page1 = tmdbService.getTrendingTVShows(timeWindow: .week, page: 1)
         let tv1 = try await page1
+        let localLanguage = await MainActor.run { LocalizationManager.shared.currentLanguageCode() }
         
         return await withTaskGroup(of: [Clip].self) { group in
             var clips: [Clip] = []
             
             for tvShow in tv1.results {
                 let useLocal = Double.random(in: 0...1) < 0.8
-                let lang = useLocal ? LocalizationManager.shared.currentLanguage.id : "en"
+                let lang = useLocal ? localLanguage : "en"
                 
                 group.addTask {
                     return (try? await self.searchYouTubeForTVShow(tvShow, language: lang)) ?? []

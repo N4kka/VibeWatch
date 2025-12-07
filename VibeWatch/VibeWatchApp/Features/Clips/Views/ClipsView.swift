@@ -12,6 +12,7 @@ struct ClipsView: View {
     @EnvironmentObject private var appState: AppState
     @State private var hasScrolledToSavedPosition = false
     @State private var dragOffset: CGFloat = 0
+    @State private var showSearch = false
 
     var body: some View {
         // Main content - Clips
@@ -117,6 +118,11 @@ struct ClipsView: View {
             showAccountGate = false
             showDailyPaywall = false
         }
+        
+        .overlay(alignment: .top) {
+            searchBar
+        }
+        .background(searchNavigationLink)
     }
 
     // MARK: - Lifecycle Handlers
@@ -158,6 +164,55 @@ struct ClipsView: View {
                 showAccountGate = true
             }
         }
+    }
+
+    private var searchBar: some View {
+        let safeTop = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .first?.windows.first?.safeAreaInsets.top ?? 0
+        
+        return HStack(spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(.white.opacity(0.7))
+                
+                Text("clips.search.placeholder".localized)
+                    .foregroundColor(.white.opacity(0.7))
+                    .font(.system(size: 16))
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity)
+            .background(Color.white.opacity(0.1))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .contentShape(Rectangle())
+            .onTapGesture {
+                showSearch = true
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, safeTop + 12)
+        .padding(.bottom, 8)
+        .background(
+            LinearGradient(
+                colors: [
+                    Color.black.opacity(0.8),
+                    Color.black.opacity(0.4),
+                    Color.clear
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea(edges: .top)
+        )
+    }
+    
+    private var searchNavigationLink: some View {
+        Color.clear
+            .frame(height: 0)
+            .navigationDestination(isPresented: $showSearch) {
+                ClipsSearchView()
+            }
     }
 
     private var clipsScrollView: some View {
@@ -540,10 +595,12 @@ struct ClipPlayerView: View {
             showControls = true
         }
         
-        // Hide controls after 3 seconds
+        // Hide controls after 3 seconds - struct doesn't need weak self
         controlsTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false) { _ in
-            withAnimation(.easeInOut(duration: 0.2)) {
-                showControls = false
+            Task { @MainActor in
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    showControls = false
+                }
             }
         }
     }
@@ -613,7 +670,8 @@ struct VerticalYouTubePlayer: UIViewRepresentable {
         uiView.playerView.stopVideo()
     }
 
-    class Coordinator: NSObject, YTPlayerViewDelegate {
+    @MainActor
+    class Coordinator: NSObject, @MainActor YTPlayerViewDelegate {
         var parent: VerticalYouTubePlayer
         var currentClipId: String?
         var isReady = false

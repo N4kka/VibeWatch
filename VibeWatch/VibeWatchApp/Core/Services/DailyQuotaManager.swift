@@ -230,11 +230,12 @@ class DailyQuotaManager: ObservableObject {
         let userId = SupabaseService.shared.currentUser?.id
         
         do {
-            let query = userId != nil ?
-                client.from("user_daily_quota").select().eq("user_id", value: userId!) :
-                client.from("user_daily_quota").select().eq("device_id", value: deviceId)
-            
-            let response: [QuotaRow] = try await query.execute().value
+            let response: [QuotaRow]
+            if let userId = userId {
+                response = try await client.from("user_daily_quota").select().eq("user_id", value: userId).execute().value
+            } else {
+                response = try await client.from("user_daily_quota").select().eq("device_id", value: deviceId).execute().value
+            }
             
             if let quota = response.first {
                 clipsWatchedToday = quota.clipsWatchedToday

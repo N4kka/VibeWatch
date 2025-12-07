@@ -65,7 +65,7 @@ class SupabaseService: ObservableObject {
     // MARK: - Generic pull helper (stub for automated sync)
     /// Fetch latest rows for a table, optionally filtered by user_id, and upsert into local DB.
     func pullTable(name: String, userId: String?) async throws {
-        guard let client = client else {
+        guard let client else {
             throw SupabaseError.notConfigured
         }
         
@@ -139,7 +139,7 @@ class SupabaseService: ObservableObject {
     /// Applies a batch of mutations atomically using the `apply_mutations` RPC on Supabase.
     /// Each mutation should include: op ('INSERT'|'UPDATE'|'DELETE'), table, id, record (JSON object).
     func applyMutations(_ batch: [[String: Any]]) async throws {
-        guard let client = client else {
+        guard client != nil else {
             throw SupabaseError.notConfigured
         }
         // Manually call RPC endpoint to avoid Encodable/Any issues

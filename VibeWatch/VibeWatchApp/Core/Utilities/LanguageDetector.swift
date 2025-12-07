@@ -1,7 +1,8 @@
 import Foundation
 import NaturalLanguage
 
-class LanguageDetector {
+@MainActor
+final class LanguageDetector {
     static let shared = LanguageDetector()
     
     private init() {}

@@ -359,3 +359,11 @@
 "actor.retry" = "Try again";
 "actor.biography.showMore" = "Show More";
 "actor.biography.showLess" = "Show Less";
+
+"clips.search.placeholder" = "Search clips, characters, or quotes";
+"clips.search.emptyTitle" = "Find clips you love";
+"clips.search.emptySubtitle" = "Search any movie, show, character, or quote to see matching clips and related picks.";
+"clips.search.showcaseTitle" = "Discover Clips";
+"clips.search.showcaseSubtitle" = "Search above to find clips from your favorite movies and shows";
+"clips.search.matched" = "Matched";
+"clips.search.recommended" = "Recommended";

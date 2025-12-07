@@ -117,7 +117,7 @@ enum SortOption: String, CaseIterable {
     case rating = "sort.rating"
     
     var displayName: String {
-        rawValue.localized
+        rawValue.localizedMainSafe()
     }
 }
 
@@ -127,6 +127,6 @@ enum FilterOption: String, CaseIterable {
     case tvShows = "filter.tvSeries"
     
     var displayName: String {
-        rawValue.localized
+        rawValue.localizedMainSafe()
     }
 }

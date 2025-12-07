@@ -2,12 +2,16 @@ import Foundation
 import Supabase
 
 /// Service for managing clip reactions (likes) and comments
-actor ClipCommentService {
+@MainActor
+final class ClipCommentService: ObservableObject {
     static let shared = ClipCommentService()
     
     private let sqlite = SQLiteService.shared
     private let supabase = SupabaseService.shared
     private let isoFormatter = ISO8601DateFormatter()
+    private struct SendableDictionary: @unchecked Sendable { var raw: [String: Any] }
+    // Added: wrapper to safely send arrays of dictionaries across actors
+    private struct SendableArrayOfDictionaries: @unchecked Sendable { let raw: [[String: Any]] }
     
     // Guard to avoid spamming failing RPCs when backend schema is outdated
     private var commentRPCDisabled = false
@@ -186,16 +190,20 @@ actor ClipCommentService {
         try await ensureUserProfileExists(userId: userId)
         
         let now = isoFormatter.string(from: Date())
-        let parentParameter: Any = parentId ?? NSNull()
+        // Capture only Sendable data outside the transaction
+        let parentIdParam: String? = parentId
         let commentId = UUID().uuidString
         
         try await sqlite.transaction {
+            // Build Any/NSNull inside the @Sendable closure to avoid capturing non-Sendable Any
+            let parentSQLParam: Any = parentIdParam ?? NSNull()
+            
             let success = sqlite.execute("""
                 INSERT OR REPLACE INTO clip_comments (
                     id, clip_id, user_id, parent_comment_id, content,
                     like_count, reply_count, created_at, updated_at, synced_at
                 ) VALUES (?, ?, ?, ?, ?, 0, 0, ?, ?, NULL)
-            """, parameters: [commentId, clipId, userId, parentParameter, content, now, now])
+            """, parameters: [commentId, clipId, userId, parentSQLParam, content, now, now])
             
             if !success {
                 throw NSError(domain: "ClipCommentService", code: 3, userInfo: [
@@ -203,7 +211,7 @@ actor ClipCommentService {
                 ])
             }
             
-            if let parentId = parentId {
+            if let parentId = parentIdParam {
                 let success2 = sqlite.execute("""
                     UPDATE clip_comments
                     SET reply_count = reply_count + 1
@@ -488,7 +496,7 @@ actor ClipCommentService {
     }
     
     private func syncCommentsFromSupabase(clipId: String, userId: String?, limit: Int, includeReplies: Bool) async -> [ClipComment]? {
-        guard let client = await supabase.client, await supabase.isAuthenticated else { return nil }
+        guard let client = supabase.client, supabase.isAuthenticated else { return nil }
         
         do {
             let rows: [SupabaseCommentRow] = try await client
@@ -503,7 +511,7 @@ actor ClipCommentService {
                 .value
             
             // Persist to SQLite
-            let dictionaries: [[String: Any]] = rows.map { row in
+            let dictionariesUnsafe: [[String: Any]] = rows.map { row in
                 var dict: [String: Any] = [
                     "id": row.id,
                     "clip_id": row.clip_id,
@@ -518,7 +526,9 @@ actor ClipCommentService {
                 if let deleted = row.deleted_at { dict["deleted_at"] = deleted }
                 return dict
             }
-            try await sqlite.upsert(table: "clip_comments", rows: dictionaries)
+            // Wrap to avoid sending non-Sendable across actors
+            let safe = SendableArrayOfDictionaries(raw: dictionariesUnsafe)
+            try await sqlite.upsert(table: "clip_comments", rows: safe.raw)
             
             var likedSet = Set<String>()
             if let userId, !rows.isEmpty {
@@ -532,7 +542,7 @@ actor ClipCommentService {
                         .execute()
                         .value
                     
-                    let likeDictionaries: [[String: Any]] = likedRows.map { like in
+                    let likeDictionariesUnsafe: [[String: Any]] = likedRows.map { like in
                         var dict: [String: Any] = [
                             "id": like.id,
                             "comment_id": like.comment_id,
@@ -543,7 +553,8 @@ actor ClipCommentService {
                         }
                         return dict
                     }
-                    try await sqlite.upsert(table: "clip_comment_likes", rows: likeDictionaries)
+                    let likeSafe = SendableArrayOfDictionaries(raw: likeDictionariesUnsafe)
+                    try await sqlite.upsert(table: "clip_comment_likes", rows: likeSafe.raw)
                     likedSet = Set(likedRows.map { $0.comment_id })
                 } catch {
                     print("⚠️ [ClipComment] Failed to sync liked comments from Supabase: \(error)")
@@ -566,7 +577,7 @@ actor ClipCommentService {
     }
     
     private func syncRepliesFromSupabase(parentId: String, userId: String?, limit: Int) async -> [ClipComment]? {
-        guard let client = await supabase.client, await supabase.isAuthenticated else { return nil }
+        guard let client = supabase.client, supabase.isAuthenticated else { return nil }
         
         do {
             let rows: [SupabaseCommentRow] = try await client
@@ -579,7 +590,7 @@ actor ClipCommentService {
                 .execute()
                 .value
             
-            let dictionaries: [[String: Any]] = rows.map { row in
+            let dictionariesUnsafe: [[String: Any]] = rows.map { row in
                 var dict: [String: Any] = [
                     "id": row.id,
                     "clip_id": row.clip_id,
@@ -594,7 +605,8 @@ actor ClipCommentService {
                 if let deleted = row.deleted_at { dict["deleted_at"] = deleted }
                 return dict
             }
-            try await sqlite.upsert(table: "clip_comments", rows: dictionaries)
+            let safe = SendableArrayOfDictionaries(raw: dictionariesUnsafe)
+            try await sqlite.upsert(table: "clip_comments", rows: safe.raw)
             
             var likedSet = Set<String>()
             if let userId, !rows.isEmpty {
@@ -608,7 +620,7 @@ actor ClipCommentService {
                         .execute()
                         .value
                     
-                    let likeDictionaries: [[String: Any]] = likedRows.map { like in
+                    let likeDictionariesUnsafe: [[String: Any]] = likedRows.map { like in
                         var dict: [String: Any] = [
                             "id": like.id,
                             "comment_id": like.comment_id,
@@ -619,7 +631,8 @@ actor ClipCommentService {
                         }
                         return dict
                     }
-                    try await sqlite.upsert(table: "clip_comment_likes", rows: likeDictionaries)
+                    let likeSafe = SendableArrayOfDictionaries(raw: likeDictionariesUnsafe)
+                    try await sqlite.upsert(table: "clip_comment_likes", rows: likeSafe.raw)
                     likedSet = Set(likedRows.map { $0.comment_id })
                 } catch {
                     print("⚠️ [ClipComment] Failed to sync liked replies from Supabase: \(error)")
@@ -658,7 +671,7 @@ actor ClipCommentService {
     }
     
     private func supabaseToggleClipLike(clipId: String, reactionId: String) async -> SupabaseToggleClipLikeResponse? {
-        guard let client = await supabase.client, await supabase.isAuthenticated else {
+        guard let client = supabase.client, supabase.isAuthenticated else {
             return nil
         }
         
@@ -677,7 +690,7 @@ actor ClipCommentService {
     
     private func supabaseAddComment(clipId: String, content: String, parentId: String?, commentId: String) async -> ClipComment? {
         if commentRPCDisabled { return nil }
-        guard let client = await supabase.client, await supabase.isAuthenticated else {
+        guard let client = supabase.client, supabase.isAuthenticated else {
             return nil
         }
         
@@ -706,7 +719,7 @@ actor ClipCommentService {
     }
     
     private func supabaseToggleCommentLike(commentId: String, likeId: String) async -> SupabaseToggleCommentLikeResponse? {
-        guard let client = await supabase.client, await supabase.isAuthenticated else {
+        guard let client = supabase.client, supabase.isAuthenticated else {
             return nil
         }
         
@@ -724,7 +737,7 @@ actor ClipCommentService {
     }
     
     private func supabaseDeleteComment(commentId: String) async -> Bool {
-        guard let client = await supabase.client, await supabase.isAuthenticated else {
+        guard let client = supabase.client, supabase.isAuthenticated else {
             return false
         }
         
@@ -863,15 +876,17 @@ actor ClipCommentService {
             row["deleted_at"] = deletedAt
         }
         
-        try await sqlite.upsert(table: "clip_comments", rows: [row])
+        // Wrap to avoid sending non-Sendable across actors
+        let safe = SendableArrayOfDictionaries(raw: [row])
+        try await sqlite.upsert(table: "clip_comments", rows: safe.raw)
         var comment = mapSupabaseComment(response)
         
         // Backfill denormalized user info if Supabase response didn't include it
         if comment.userDisplayName == nil {
-            comment.userDisplayName = await AuthService.shared.currentUser?.displayName ?? "User"
+            comment.userDisplayName = AuthService.shared.currentUser?.displayName ?? "User"
         }
         if comment.userAvatarURL == nil {
-            comment.userAvatarURL = await AuthService.shared.currentUser?.avatarURL
+            comment.userAvatarURL = AuthService.shared.currentUser?.avatarURL
         }
         
         return comment
@@ -971,20 +986,16 @@ actor ClipCommentService {
     }
     
     private func queueOutbox(userId: String, tableName: String, operation: String, recordId: String, payload: [String: Any]) async {
-        await MainActor.run {
-            Task {
-                do {
-                    try await SyncWorker.shared.queueOperation(
-                        userId: userId,
-                        tableName: tableName,
-                        operationType: operation,
-                        recordId: recordId,
-                        payload: payload
-                    )
-                } catch {
-                    print("⚠️ [ClipComment] Failed to enqueue outbox for \(tableName): \(error)")
-                }
-            }
+        do {
+            try await SyncWorker.shared.queueOperation(
+                userId: userId,
+                tableName: tableName,
+                operationType: operation,
+                recordId: recordId,
+                payload: payload
+            )
+        } catch {
+            print("⚠️ [ClipComment] Failed to enqueue outbox for \(tableName): \(error)")
         }
     }
     
@@ -1136,3 +1147,4 @@ extension ClipComment {
         return comment
     }
 }
+

@@ -720,15 +720,9 @@ struct MediaItemRow: View {
             }
         }
         .frame(height: 204)
-        .background(
-            NavigationLink(
-                destination: destinationView,
-                isActive: $navigateToDetail
-            ) {
-                EmptyView()
-            }
-            .hidden()
-        )
+        .navigationDestination(isPresented: $navigateToDetail) {
+            destinationView
+        }
         .task {
             await loadDetails()
         }

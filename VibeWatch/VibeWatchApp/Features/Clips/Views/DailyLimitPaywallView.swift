@@ -7,36 +7,36 @@ enum PaywallType {
     
     var title: String {
         switch self {
-        case .clipsQuota: return "paywall.daily.limitReached".localized
-        case .aiQuota: return "ai.paywall.title".localized
+        case .clipsQuota: return "paywall.daily.limitReached".localizedMainSafe()
+        case .aiQuota: return "ai.paywall.title".localizedMainSafe()
         }
     }
     
     var description: String {
         switch self {
-        case .clipsQuota: return "paywall.daily.limitDescription".localized
-        case .aiQuota: return "ai.paywall.description".localized
+        case .clipsQuota: return "paywall.daily.limitDescription".localizedMainSafe()
+        case .aiQuota: return "ai.paywall.description".localizedMainSafe()
         }
     }
     
     var upgradeButtonText: String {
         switch self {
-        case .clipsQuota: return "paywall.upgrade".localized
-        case .aiQuota: return "paywall.upgrade".localized
+        case .clipsQuota: return "paywall.upgrade".localizedMainSafe()
+        case .aiQuota: return "paywall.upgrade".localizedMainSafe()
         }
     }
     
     var unlockMessage: String {
         switch self {
-        case .clipsQuota: return "paywall.unlockUnlimited".localized
-        case .aiQuota: return "ai.paywall.unlockAI".localized
+        case .clipsQuota: return "paywall.unlockUnlimited".localizedMainSafe()
+        case .aiQuota: return "ai.paywall.unlockAI".localizedMainSafe()
         }
     }
     
     var goBack: String {
         switch self {
-            case .clipsQuota: return "paywall.daily.title".localized
-        case .aiQuota: return "ai.paywall.goBack".localized
+            case .clipsQuota: return "paywall.daily.title".localizedMainSafe()
+        case .aiQuota: return "ai.paywall.goBack".localizedMainSafe()
         }
     }
     
@@ -351,5 +351,4 @@ struct DailyLimitPaywallView: View {
         }
     }
 }
-
 

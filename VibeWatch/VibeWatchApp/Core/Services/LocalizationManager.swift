@@ -1,7 +1,7 @@
 import Foundation
 import SwiftUI
 
-class LocalizationManager: ObservableObject {
+final class LocalizationManager: ObservableObject {
     @MainActor static let shared = LocalizationManager()
 
     @Published var currentCountry: Country
@@ -75,7 +75,9 @@ class LocalizationManager: ObservableObject {
         print("🌍 Language changed to: \(language.name)")
     }
 
-    func localized(_ key: String) -> String {
+    // Opt out of main-actor isolation for this pure lookup method.
+    // It reads currentLanguage.id and does a bundle lookup; acceptable for our use.
+    nonisolated(unsafe) func localized(_ key: String) -> String {
         // Find the path for the language code
         if let path = Bundle.main.path(forResource: currentLanguage.id, ofType: "lproj"),
            let bundle = Bundle(path: path) {
@@ -86,11 +88,30 @@ class LocalizationManager: ObservableObject {
         // Fallback to the default/base localization (English)
         return NSLocalizedString(key, comment: "")
     }
+    
+    @MainActor
+    func currentLanguageAndRegion() -> (String, String) {
+        (currentLanguage.id, currentCountry.id)
+    }
+    
+    @MainActor
+    func currentLanguageCode() -> String {
+        currentLanguage.id
+    }
 }
 
 // Helper extension for easy access to localized strings
 extension String {
-    var localized: String {
+    // Nonisolated so it can be used from any thread/actor (e.g., enums, models).
+    nonisolated var localized: String {
+        LocalizationManager.shared.localized(self)
+    }
+}
+
+// Since .localized is now nonisolated and safe, this extra helper is no longer needed,
+// but if you want to keep the API, make it nonisolated and just forward.
+extension String {
+    nonisolated func localizedMainSafe() -> String {
         LocalizationManager.shared.localized(self)
     }
 }

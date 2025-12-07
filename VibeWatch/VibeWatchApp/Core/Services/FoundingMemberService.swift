@@ -30,19 +30,27 @@ final class FoundingMemberService: ObservableObject {
         if endMonth < startMonth { endYear += 1 }
         var endComponents = DateComponents(calendar: calendar, year: endYear, month: endMonth, day: endDay)
 
-        var startDate = calendar.date(from: startComponents)!
-        var endDate = calendar.date(from: endComponents)!
+        guard let startDate = calendar.date(from: startComponents),
+              let endDate = calendar.date(from: endComponents) else {
+            fatalError("Failed to create dates from components")
+        }
 
         // If the window already passed for this cycle, shift to the next one
         if now > endDate {
             startComponents.year = (startComponents.year ?? currentYear) + 1
             endComponents.year = (endComponents.year ?? endYear) + 1
-            startDate = calendar.date(from: startComponents)!
-            endDate = calendar.date(from: endComponents)!
+            guard let newStartDate = calendar.date(from: startComponents),
+                  let newEndDate = calendar.date(from: endComponents) else {
+                fatalError("Failed to create updated dates from components")
+            }
+            self.promoStartDate = newStartDate
+            self.promoEndDate = newEndDate
+        } else {
+            self.promoStartDate = startDate
+            self.promoEndDate = endDate
         }
 
-        self.promoStartDate = startDate
-        self.promoEndDate = endDate
+        
         
         self.promoStatus = PromoStatus(isPromoActive: false, timeRemaining: 0)
         refreshPromoStatus()
@@ -93,7 +101,7 @@ final class FoundingMemberService: ObservableObject {
     }
 
     func markAsFoundingMember(productId: String, userId: String?) {
-        // TODO: Persist to Supabase once webhook task (2.4) is implemented.
+        // Note: Supabase persistence to be implemented with webhook system
         print("✨ [FoundingMember] Marked user \(userId ?? "anonymous") via product \(productId)")
     }
 }

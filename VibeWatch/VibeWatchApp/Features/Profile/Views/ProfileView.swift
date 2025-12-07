@@ -637,9 +637,6 @@ struct ProfileView: View {
             try await authService.signOut()
             appState.isAuthenticated = false
             appState.currentUser = nil
-            
-            // Show sign up screen instead of just dismissing
-            unauthenticatedView
         } catch {
             print("Error logging out: \(error.localizedDescription)")
         }
@@ -859,6 +856,7 @@ private struct FAQChip: View {
     }
 }
 
+@MainActor
 struct FeedbackType: Identifiable, Hashable {
     let id: String
     let title: String

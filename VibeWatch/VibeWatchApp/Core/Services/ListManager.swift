@@ -13,19 +13,19 @@ enum ListError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .maxListsReached(let limit):
-            return "lists.error.maxListsReached".localized.replacingOccurrences(of: "{limit}", with: "\(limit)")
+            return "lists.error.maxListsReached".localizedMainSafe().replacingOccurrences(of: "{limit}", with: "\(limit)")
         case .maxItemsReached(let limit):
-            return "lists.error.maxItemsReached".localized.replacingOccurrences(of: "{limit}", with: "\(limit)")
+            return "lists.error.maxItemsReached".localizedMainSafe().replacingOccurrences(of: "{limit}", with: "\(limit)")
         case .listNotFound:
-            return "lists.error.listNotFound".localized
+            return "lists.error.listNotFound".localizedMainSafe()
         case .itemAlreadyInList:
-            return "lists.error.itemAlreadyInList".localized
+            return "lists.error.itemAlreadyInList".localizedMainSafe()
         case .defaultListImmutable:
-            return "lists.error.defaultImmutable".localized
+            return "lists.error.defaultImmutable".localizedMainSafe()
         case .invalidName:
-            return "lists.error.invalidName".localized
+            return "lists.error.invalidName".localizedMainSafe()
         case .authenticationRequired:
-            return "lists.error.authRequired".localized
+            return "lists.error.authRequired".localizedMainSafe()
         }
     }
 }

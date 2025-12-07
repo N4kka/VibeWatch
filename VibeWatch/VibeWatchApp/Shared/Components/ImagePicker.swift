@@ -21,6 +21,7 @@ struct ImagePicker: UIViewControllerRepresentable {
         Coordinator(self)
     }
     
+    @MainActor
     class Coordinator: NSObject, PHPickerViewControllerDelegate {
         let parent: ImagePicker
         

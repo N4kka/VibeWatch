@@ -141,7 +141,8 @@ class PersonalizedClipsService {
         
         let duration = Date().timeIntervalSince(startTime)
         print("✅ Fast feed: Generated \(diverseFeed.count) clips in \(String(format: "%.2f", duration))s")
-        return Array(diverseFeed.prefix(20))
+        let injected = await injectClassics(Array(diverseFeed.prefix(20)), every: 5)
+        return injected
     }
     
     /// Generates an extended feed of ~50 diverse and personalized clips for deeper scrolling.
@@ -198,10 +199,11 @@ class PersonalizedClipsService {
         // Score and diversify
         contentPool = quickScore(contentPool, userProfile: userProfile, themeBoost: todayTheme)
         let diverseFeed = enforceDiversity(contentPool, targetCount: 50)
+        let injected = await injectClassics(diverseFeed, every: 7)
         
         let duration = Date().timeIntervalSince(startTime)
-        print("✅ Extended feed: Generated \(diverseFeed.count) unique clips in \(String(format: "%.2f", duration))s")
-        return Array(diverseFeed.prefix(50))
+        print("✅ Extended feed: Generated \(injected.count) unique clips in \(String(format: "%.2f", duration))s")
+        return Array(injected.prefix(50))
     }
     
     /// Legacy method for compatibility or simpler use.
@@ -610,7 +612,7 @@ class PersonalizedClipsService {
     ///   - clips: The current array of `EnhancedClip` objects in the feed.
     ///   - every: The interval (e.g., every 5 clips) at which to insert a classic clip.
     /// - Returns: A modified array of `EnhancedClip` objects with classic clips injected.
-    private func injectClassics(_ clips: [EnhancedClip], every: Int) -> [EnhancedClip] {
+    private func injectClassics(_ clips: [EnhancedClip], every: Int) async -> [EnhancedClip] {
         var finalFeed = clips
         var insertionIndex = every - 1
         
@@ -621,24 +623,21 @@ class PersonalizedClipsService {
         while insertionIndex < finalFeed.count && classicIndex < shuffledClassics.count {
             let classicId = shuffledClassics[classicIndex]
             
-            // Try to fetch classic clip
-            Task {
-                do {
-                    let movie = try await tmdbService.getMovieDetails(id: classicId)
-                    if let classicClips = try? await fetchBestClipForMovie(movie) {
-                        var classicClip = classicClips.first!
-                        classicClip.isClassic = true
-                        
-                        // Insert at position
-                        if insertionIndex < finalFeed.count {
-                            finalFeed.insert(classicClip, at: insertionIndex)
-                        }
+            do {
+                let movie = try await tmdbService.getMovieDetails(id: classicId)
+                if let classicClips = try? await fetchBestClipForMovie(movie) {
+                    var classicClip = classicClips.first!
+                    classicClip.isClassic = true
+                    
+                    // Insert at position
+                    if insertionIndex < finalFeed.count {
+                        finalFeed.insert(classicClip, at: insertionIndex)
                     }
-                } catch {
-                    print("⚠️ Could not fetch classic movie \(classicId)")
                 }
+            } catch {
+                print("⚠️ Could not fetch classic movie \(classicId)")
             }
-            
+                        
             insertionIndex += every
             classicIndex += 1
         }
@@ -798,4 +797,3 @@ enum DemographicGroup {
     case genX
     case mixed
 }
-

@@ -33,7 +33,9 @@ class NotificationService: ObservableObject { // Conform to ObservableObject
                 return
             }
 
-            self.processNewFCMToken(token)
+            Task { @MainActor in
+                self.processNewFCMToken(token)
+            }
         }
     }
 
@@ -134,3 +136,6 @@ class NotificationService: ObservableObject { // Conform to ObservableObject
         }
     }
 }
+
+// UNNotificationSettings is value-like but not marked Sendable.
+extension UNNotificationSettings: @unchecked @retroactive Sendable {}

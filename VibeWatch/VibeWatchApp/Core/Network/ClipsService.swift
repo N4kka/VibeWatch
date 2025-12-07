@@ -1,6 +1,7 @@
 import Foundation
 
-class ClipsService {
+@MainActor
+final class ClipsService {
     static let shared = ClipsService()
     
     private let tmdbService = TMDBService.shared
@@ -24,7 +25,7 @@ class ClipsService {
     
     func fetchTrendingClips(page: Int = 1, limit: Int = 20) async throws -> [Clip] {
         // Use the smart algorithm engine
-        let algorithmEngine = await PersonalizedClipsService.shared
+        let algorithmEngine = PersonalizedClipsService.shared
         let enhancedClips = try await algorithmEngine.generateSmartFeed(count: limit)
         
         // Convert EnhancedClip back to Clip
@@ -44,6 +45,33 @@ class ClipsService {
         return clips
     }
     
+    /// Search clips by free-text query (YouTube-first). Returns lightweight Clip models so they can be played immediately.
+    func searchClips(query: String, limit: Int = 20) async throws -> [Clip] {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return [] }
+        
+        let maxResults = max(5, min(limit, 30))
+        let searchResults = try await searchYouTubeClips(query: trimmed, maxResults: maxResults)
+        
+        return searchResults.map { item in
+            let videoId = item.id.videoId
+            return Clip(
+                id: "yt-\(videoId)",
+                movieId: nil,
+                tvShowId: nil,
+                title: item.snippet.title,
+                description: item.snippet.title,
+                videoURL: "https://www.youtube.com/watch?v=\(videoId)",
+                videoId: videoId,
+                thumbnailURL: item.snippet.thumbnails.high.url,
+                duration: 0,
+                likes: 0,
+                comments: 0,
+                createdAt: Date()
+            )
+        }
+    }
+    
     // MARK: - TMDb Videos
     
     private func fetchTMDBVideos(for media: MediaItem) async throws -> [Video] {
@@ -61,18 +89,23 @@ class ClipsService {
     
     // MARK: - YouTube API
     
-    private func searchYouTubeClips(query: String) async throws -> [YouTubeSearchItem] {
-        var components = URLComponents(string: "https://www.googleapis.com/youtube/v3/search")!
+    private func searchYouTubeClips(query: String, maxResults: Int = 5) async throws -> [YouTubeSearchItem] {
+        guard var components = URLComponents(string: "https://www.googleapis.com/youtube/v3/search") else {
+            throw URLError(.badURL)
+        }
         components.queryItems = [
             URLQueryItem(name: "part", value: "snippet"),
             URLQueryItem(name: "q", value: "\(query) official"), // Removed exclusions - show ALL content
             URLQueryItem(name: "type", value: "video"),
             URLQueryItem(name: "videoDuration", value: "short"),
-            URLQueryItem(name: "maxResults", value: "5"),
+            URLQueryItem(name: "maxResults", value: "\(max(1, min(maxResults, 50)))"),
             URLQueryItem(name: "key", value: youtubeAPIKey)
         ]
         
-        let (data, _) = try await session.data(from: components.url!)
+        guard let url = components.url else {
+            throw URLError(.badURL)
+        }
+        let (data, _) = try await session.data(from: url)
         let response = try JSONDecoder().decode(YouTubeSearchResponse.self, from: data)
         
         // Return ALL content - no filtering!
@@ -81,12 +114,12 @@ class ClipsService {
     
     // MARK: - Combine Results
     
-    private func fetchClipsForMedia(_ media: MediaItem) async throws -> [Clip] {
+    func clips(for media: MediaItem, maxResults: Int = 5) async throws -> [Clip] {
         var clips: [Clip] = []
         
         // First try TMDb videos
         if let tmdbVideos = try? await fetchTMDBVideos(for: media) {
-            clips.append(contentsOf: tmdbVideos.map { video in
+            clips.append(contentsOf: tmdbVideos.prefix(maxResults).map { video in
                 Clip(
                     id: "\(media.id)-\(video.key)",
                     movieId: media.isMovie ? media.id : nil,
@@ -106,7 +139,7 @@ class ClipsService {
         
         // If no TMDb clips, try YouTube search
         if clips.isEmpty {
-            if let youtubeVideos = try? await searchYouTubeClips(query: media.title) {
+            if let youtubeVideos = try? await searchYouTubeClips(query: media.title, maxResults: maxResults) {
                 clips.append(contentsOf: youtubeVideos.map { video in
                     Clip(
                         id: "\(media.id)-\(video.id.videoId)",
@@ -126,7 +159,7 @@ class ClipsService {
             }
         }
         
-        return clips
+        return Array(clips.prefix(maxResults))
     }
     
     // MARK: - Like Functionality
@@ -197,6 +230,12 @@ struct MediaItem {
         self.id = tvShow.id
         self.title = tvShow.name
         self.isMovie = false
+    }
+    
+    init(id: Int, title: String, isMovie: Bool) {
+        self.id = id
+        self.title = title
+        self.isMovie = isMovie
     }
 }
 

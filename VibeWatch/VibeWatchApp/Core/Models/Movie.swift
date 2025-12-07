@@ -1,6 +1,6 @@
 import Foundation
 
-struct Movie: Codable, Identifiable, Hashable {
+struct Movie: Codable, Identifiable, Hashable, Sendable {
     let id: Int
     let title: String
     let overview: String
@@ -203,6 +203,11 @@ struct TMDBResponse<T: Codable>: Codable {
         case totalResults = "total_results"
     }
 }
+
+// MARK: - Sendable Conformances
+
+extension TMDBResponse: Sendable where T: Sendable {}
+extension ExternalIds: Sendable {}
 
 struct ExternalIds: Codable {
     let imdbId: String?
