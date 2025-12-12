@@ -245,6 +245,7 @@
 "ai.title" = "Vibe AI";
 "ai.tokensUsage" = "토큰: %@/%@";
 "ai.describeVibe" = "지금 기분을 설명해 주세요";
+"ai.thinking" = "생각 중...";
 "ai.editMessage" = "메시지 편집";
 "ai.hardLimitMessage" = "오늘의 AI 사용 한도에 도달했습니다. 내일 다시 이용해 주세요.";
 "ai.paywall.benefit.personalized" = "개인 맞춤형 시청 리스트";

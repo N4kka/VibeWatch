@@ -17,8 +17,9 @@ class ClipsViewModel: ObservableObject {
     private var loadStartTime: Date?
     private var hasLoadedInSession = false // Track if clips loaded in this app session
     
-    init(repository: ClipsRepository = ClipsRepository()) {
-        self.repository = repository
+    init(repository: ClipsRepository? = nil) {
+        // Avoid default-argument evaluation in nonisolated context by constructing here on the main actor
+        self.repository = repository ?? ClipsRepository()
     }
     
     // MARK: - Data Loading
@@ -161,4 +162,3 @@ class ClipsViewModel: ObservableObject {
         Logger.debug("📝 Added to list: \(clip.title)")
     }
 }
-

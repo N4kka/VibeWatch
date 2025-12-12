@@ -245,6 +245,7 @@
 "ai.title" = "Vibe KI";
 "ai.tokensUsage" = "Tokens: %@/%@";
 "ai.describeVibe" = "Beschreibe deine Stimmung";
+"ai.thinking" = "Nachdenken...";
 "ai.editMessage" = "Nachricht bearbeiten";
 "ai.hardLimitMessage" = "Du hast das heutige KI-Limit erreicht. Schau morgen wieder vorbei.";
 "ai.paywall.benefit.personalized" = "Personalisierte Watchlists";

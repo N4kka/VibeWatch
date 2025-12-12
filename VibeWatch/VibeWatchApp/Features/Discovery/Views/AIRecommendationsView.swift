@@ -1,7 +1,8 @@
 import SwiftUI
 
+@MainActor
 struct AIRecommendationsView: View {
-    @ObservedObject private var viewModel: AIRecommendationViewModel
+    @StateObject private var viewModel: AIRecommendationViewModel
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var quotaManager: DailyQuotaManager
     @FocusState private var isInputFocused: Bool
@@ -13,8 +14,14 @@ struct AIRecommendationsView: View {
         appState.isAuthenticated
     }
     
-    init(viewModel: AIRecommendationViewModel = AIRecommendationViewModel()) {
-        self.viewModel = viewModel
+    // Dependency-injected initializer (for previews/tests)
+    init(viewModel: AIRecommendationViewModel) {
+        _viewModel = StateObject(wrappedValue: viewModel)
+    }
+    
+    // Default initializer creates the model on the main actor
+    init() {
+        _viewModel = StateObject(wrappedValue: AIRecommendationViewModel())
     }
     
     private var suggestionChips: [String] {
@@ -472,3 +479,4 @@ struct FlowLayout: Layout {
         return (CGSize(width: maxWidth, height: currentY + lineHeight), maxWidth)
     }
 }
+

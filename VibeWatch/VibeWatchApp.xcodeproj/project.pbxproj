@@ -14,7 +14,7 @@
 		B3DF8FAA2ED5CEC3007FD5D0 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = B3DF8FA92ED5CEC3007FD5D0 /* FirebaseMessaging */; };
 		B3E30E122ECCB7AA008A3B6C /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = B3E30E112ECCB7AA008A3B6C /* PostgREST */; };
 		B3E30E142ECCB7AA008A3B6C /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = B3E30E132ECCB7AA008A3B6C /* Supabase */; };
-		B40000032F3B2A8B00D5B6C5 /* YouTubeiOSPlayerHelper in Frameworks */ = {isa = PBXBuildFile; productRef = B40000022F3B2A8B00D5B6C5 /* YouTubeiOSPlayerHelper */; };
+		B3F2F7E02F14A10000D1A004 /* YouTubeiOSPlayerHelper in Frameworks */ = {isa = PBXBuildFile; productRef = B3F2F7E32F14A10000D1A003 /* YouTubeiOSPlayerHelper */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -54,7 +54,7 @@
 				B32F71162ED399B5001779C5 /* RevenueCatUI in Frameworks */,
 				B3DF8FA82ED5CEC3007FD5D0 /* FirebaseCore in Frameworks */,
 				B3E30E142ECCB7AA008A3B6C /* Supabase in Frameworks */,
-				B40000032F3B2A8B00D5B6C5 /* YouTubeiOSPlayerHelper in Frameworks */,
+				B3F2F7E02F14A10000D1A004 /* YouTubeiOSPlayerHelper in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,7 +112,7 @@
 				B32F71152ED399B5001779C5 /* RevenueCatUI */,
 				B3DF8FA72ED5CEC3007FD5D0 /* FirebaseCore */,
 				B3DF8FA92ED5CEC3007FD5D0 /* FirebaseMessaging */,
-				B40000022F3B2A8B00D5B6C5 /* YouTubeiOSPlayerHelper */,
+				B3F2F7E32F14A10000D1A003 /* YouTubeiOSPlayerHelper */,
 			);
 			productName = VibeWatchApp;
 			productReference = B318DC8A2EC6920500DB1A9A /* VibeWatchApp.app */;
@@ -140,24 +140,24 @@
 				en,
 				Base,
 				it,
-				es,
-				fr,
 				de,
-				pt,
-				zh,
-				ru,
 				ja,
 				hi,
-				ko,
-				nl,
-				pl,
-				fi,
-				da,
-				el,
 				no,
-				tr,
-				nb,
+				el,
 				sv,
+				tr,
+				nl,
+				ru,
+				zh,
+				da,
+				fr,
+				ko,
+				es,
+				pl,
+				pt,
+				fi,
+				nb,
 			);
 			mainGroup = B318DC812EC6920500DB1A9A;
 			minimizedProjectReferenceProxies = 1;
@@ -165,7 +165,7 @@
 				B318DCEC2EC6939A00DB1A9A /* XCRemoteSwiftPackageReference "supabase-swift" */,
 				B32F71122ED399B5001779C5 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
 				B3DC12CA2ED5CB0400B5A429 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
-				B40000012F3B2A8B00D5B6C5 /* XCRemoteSwiftPackageReference "youtube-ios-player-helper" */,
+				B3F2F7E22F14A10000D1A002 /* XCRemoteSwiftPackageReference "youtube-ios-player-helper" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = B318DC8B2EC6920500DB1A9A /* Products */;
@@ -259,7 +259,6 @@
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_STRICT_CONCURRENCY = complete;
 			};
 			name = Debug;
 		};
@@ -316,7 +315,6 @@
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
-				SWIFT_STRICT_CONCURRENCY = complete;
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
@@ -338,9 +336,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = VibeWatchApp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "$(APP_DISPLAY_NAME)";
-				INFOPLIST_KEY_CFBundleURLTypes = "<array><dict><key>CFBundleURLName</key><string>com.vibewatch.auth</string><key>CFBundleURLSchemes</key><array><string>com.vibewatch.VibeWatchApp</string><string>com.vibewatch.VibeWatchApp.beta</string><string>com.vibewatch.vibewatchapp</string><string>com.vibewatch.vibewatchapp.beta</string></array></dict></array>";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.entertainment";
-				INFOPLIST_KEY_NSUserTrackingUsageDescription = "We use permission-based analytics to improve VibeWatch and measure performance. We do not sell your data.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -382,9 +378,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = VibeWatchApp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "$(APP_DISPLAY_NAME)";
-				INFOPLIST_KEY_CFBundleURLTypes = "<array><dict><key>CFBundleURLName</key><string>com.vibewatch.auth</string><key>CFBundleURLSchemes</key><array><string>com.vibewatch.VibeWatchApp</string><string>com.vibewatch.VibeWatchApp.beta</string><string>com.vibewatch.vibewatchapp</string><string>com.vibewatch.vibewatchapp.beta</string></array></dict></array>";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.entertainment";
-				INFOPLIST_KEY_NSUserTrackingUsageDescription = "We use permission-based analytics to improve VibeWatch and measure performance. We do not sell your data.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -457,7 +451,7 @@
 				minimumVersion = 12.6.0;
 			};
 		};
-		B40000012F3B2A8B00D5B6C5 /* XCRemoteSwiftPackageReference "youtube-ios-player-helper" */ = {
+		B3F2F7E22F14A10000D1A002 /* XCRemoteSwiftPackageReference "youtube-ios-player-helper" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/youtube/youtube-ios-player-helper.git";
 			requirement = {
@@ -503,9 +497,9 @@
 			package = B318DCEC2EC6939A00DB1A9A /* XCRemoteSwiftPackageReference "supabase-swift" */;
 			productName = Supabase;
 		};
-		B40000022F3B2A8B00D5B6C5 /* YouTubeiOSPlayerHelper */ = {
+		B3F2F7E32F14A10000D1A003 /* YouTubeiOSPlayerHelper */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = B40000012F3B2A8B00D5B6C5 /* XCRemoteSwiftPackageReference "youtube-ios-player-helper" */;
+			package = B3F2F7E22F14A10000D1A002 /* XCRemoteSwiftPackageReference "youtube-ios-player-helper" */;
 			productName = YouTubeiOSPlayerHelper;
 		};
 /* End XCSwiftPackageProductDependency section */

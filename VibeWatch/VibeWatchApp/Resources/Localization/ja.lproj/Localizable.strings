@@ -245,6 +245,7 @@
 "ai.title" = "Vibe AI";
 "ai.tokensUsage" = "トークン: %@/%@";
 "ai.describeVibe" = "今の気分を教えてください";
+"ai.thinking" = "考え中...";
 "ai.editMessage" = "メッセージ編集";
 "ai.hardLimitMessage" = "今日のAI使用上限に達しました。明日またご利用ください。";
 "ai.paywall.benefit.personalized" = "パーソナライズされたウォッチリスト";

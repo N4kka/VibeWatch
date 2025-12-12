@@ -245,6 +245,7 @@
 "ai.title" = "Vibe AI";
 "ai.tokensUsage" = "Jeton: %@/%@";
 "ai.describeVibe" = "Modunu anlat";
+"ai.thinking" = "Düşünüyor...";
 "ai.editMessage" = "Mesajı düzenle";
 "ai.hardLimitMessage" = "Bugünkü AI limitine ulaştın. Yarın tekrar gel.";
 "ai.paywall.benefit.personalized" = "Kişiselleştirilmiş izleme listeleri";

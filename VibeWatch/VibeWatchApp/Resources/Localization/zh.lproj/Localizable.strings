@@ -244,6 +244,7 @@
 "ai.title" = "Vibe AI";
 "ai.tokensUsage" = "令牌：%@/%@";
 "ai.describeVibe" = "描述你的观影氛围";
+"ai.thinking" = "思考中...";
 "ai.editMessage" = "编辑消息";
 "ai.hardLimitMessage" = "你已用完今天的 AI 次数，请明天再来。";
 "ai.paywall.benefit.personalized" = "个性化观影清单";

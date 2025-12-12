@@ -244,6 +244,7 @@
 "ai.title" = "Vibe AI";
 "ai.tokensUsage" = "Tokens: %@/%@";
 "ai.describeVibe" = "Beskriv vibben din";
+"ai.thinking" = "Tenker...";
 "ai.editMessage" = "Rediger melding";
 "ai.hardLimitMessage" = "Du har nådd dagens AI-grense. Kom tilbake i morgen.";
 "ai.paywall.benefit.personalized" = "Personlige watchlister";

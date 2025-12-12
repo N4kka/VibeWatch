@@ -244,6 +244,7 @@
 "ai.title" = "Vibe AI";
 "ai.tokensUsage" = "Tokenit: %@/%@";
 "ai.describeVibe" = "Kuvaile fiilistäsi";
+"ai.thinking" = "Mietin...";
 "ai.editMessage" = "Muokkaa viestiä";
 "ai.hardLimitMessage" = "Olet saavuttanut tämän päivän AI-rajan. Tule takaisin huomenna.";
 "ai.paywall.benefit.personalized" = "Henkilökohtaiset katselulistat";

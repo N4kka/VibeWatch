@@ -244,6 +244,7 @@
 "ai.title" = "Vibe AI";
 "ai.tokensUsage" = "Διακριτικά: %@/%@";
 "ai.describeVibe" = "Περιέγραψε το vibe σου";
+"ai.thinking" = "Σκέφτομαι...";
 "ai.editMessage" = "Επεξεργασία μηνύματος";
 "ai.hardLimitMessage" = "Έφτασες το σημερινό όριο AI. Έλα ξανά αύριο.";
 "ai.paywall.benefit.personalized" = "Εξατομικευμένες λίστες προβολής";

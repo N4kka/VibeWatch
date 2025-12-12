@@ -245,6 +245,7 @@
 "ai.title" = "Vibe AI";
 "ai.tokensUsage" = "Токены: %@/%@";
 "ai.describeVibe" = "Опишите своё настроение";
+"ai.thinking" = "Думаем...";
 "ai.editMessage" = "Редактировать сообщение";
 "ai.hardLimitMessage" = "Вы достигли дневного лимита AI. Приходите завтра.";
 "ai.paywall.benefit.personalized" = "Персонализированные списки к просмотру";

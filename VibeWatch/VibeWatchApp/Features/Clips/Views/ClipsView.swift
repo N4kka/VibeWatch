@@ -2,6 +2,7 @@ import SwiftUI
 import AVKit
 import YouTubeiOSPlayerHelper
 
+@MainActor
 struct ClipsView: View {
     @StateObject private var viewModel = ClipsViewModel()
     @EnvironmentObject var quotaManager: DailyQuotaManager
