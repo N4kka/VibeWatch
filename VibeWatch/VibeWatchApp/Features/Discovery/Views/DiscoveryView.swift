@@ -49,6 +49,13 @@ struct DiscoveryView: View {
         }
         .toast(isShowing: $appState.showSuccessToast, message: appState.toastMessage, type: .success)
         .toast(isShowing: $appState.showErrorToast, message: appState.toastMessage, type: .error)
+        .onChange(of: appState.shouldShowSignIn) {_, newValue in
+            if newValue {
+                print("🔄 [DiscoveryView] Redirecting to Sign In via Profile")
+                showProfile = true
+                // Note: ProfileView will observe this same flag and open the SignIn sheet
+            }
+        }
     }
     
     private func errorView(_ error: AppError) -> some View {

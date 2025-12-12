@@ -140,9 +140,9 @@ struct AccountCreationGateView: View {
 
     private var benefitsList: some View {
         VStack(alignment: .leading, spacing: 14) {
-            BenefitRow(text: "Save your favorite clips")
-            BenefitRow(text: "Sync across all your devices")
-            BenefitRow(text: "Get personalized recommendations")
+            BenefitRow(text: "auth.gate.benefit.saveClips".localized)
+            BenefitRow(text: "auth.gate.benefit.syncDevices".localized)
+            BenefitRow(text: "auth.gate.benefit.personalizedRecs".localized)
         }
         .padding(.top, 8)
     }

@@ -13,6 +13,14 @@ struct ClipsView: View {
     @State private var hasScrolledToSavedPosition = false
     @State private var dragOffset: CGFloat = 0
     @State private var showSearch = false
+    @State private var isSearchTrayVisible = false
+    @State private var inlineQuery = ""
+    @State private var pendingSearchQuery: String?
+    @FocusState private var isInlineSearchFocused: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isAuroraAnimating = false
+    @State private var isGlyphPulsing = false
+    @State private var isProgressSweeping = false
 
     var body: some View {
         // Main content - Clips
@@ -119,10 +127,26 @@ struct ClipsView: View {
             showDailyPaywall = false
         }
         
+        .safeAreaInset(edge: .top) {
+            searchDock
+        }
+        .overlay {
+            searchDimOverlay
+        }
         .overlay(alignment: .top) {
-            searchBar
+            searchTray
         }
         .background(searchNavigationLink)
+        .onChange(of: isSearchTrayVisible) { _, newValue in
+            if newValue {
+                NotificationCenter.default.post(name: .pauseAllClips, object: nil)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    isInlineSearchFocused = true
+                }
+            } else {
+                isInlineSearchFocused = false
+            }
+        }
     }
 
     // MARK: - Lifecycle Handlers
@@ -166,39 +190,55 @@ struct ClipsView: View {
         }
     }
 
-    private var searchBar: some View {
-        let safeTop = UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .first?.windows.first?.safeAreaInsets.top ?? 0
-        
-        return HStack(spacing: 12) {
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundColor(.white.opacity(0.7))
+    private var searchDock: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("clips.title".localized)
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(.white)
+
+                    Text("clips.search.placeholder".localized)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.white.opacity(0.6))
+                }
                 
-                Text("clips.search.placeholder".localized)
-                    .foregroundColor(.white.opacity(0.7))
-                    .font(.system(size: 16))
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .frame(maxWidth: .infinity)
-            .background(Color.white.opacity(0.1))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            .contentShape(Rectangle())
-            .onTapGesture {
-                showSearch = true
+                Spacer()
+                
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.85)) {
+                        isSearchTrayVisible = true
+                    }
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "magnifyingglass")
+                        Text("clips.search.placeholder".localized)
+                            .lineLimit(1)
+                    }
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(.ultraThinMaterial)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                    )
+                    .clipShape(Capsule())
+                    .shadow(color: .black.opacity(0.3), radius: 12, x: 0, y: 8)
+                }
             }
         }
-        .padding(.horizontal, 20)
-        .padding(.top, safeTop + 12)
-        .padding(.bottom, 8)
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+        .padding(.bottom, 12)
         .background(
             LinearGradient(
                 colors: [
-                    Color.black.opacity(0.8),
-                    Color.black.opacity(0.4),
-                    Color.clear
+                    Color.black.opacity(0.9),
+                    Color.black.opacity(0.7),
+                    Color.black.opacity(0.4)
                 ],
                 startPoint: .top,
                 endPoint: .bottom
@@ -206,12 +246,158 @@ struct ClipsView: View {
             .ignoresSafeArea(edges: .top)
         )
     }
+
+    private var searchTray: some View {
+        Group {
+            if isSearchTrayVisible {
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(.white.opacity(0.85))
+                        
+                        TextField("clips.search.placeholder".localized, text: $inlineQuery)
+                            .foregroundColor(.white)
+                            .autocorrectionDisabled()
+                            .textInputAutocapitalization(.none)
+                            .focused($isInlineSearchFocused)
+                            .onSubmit { launchSearch(with: inlineQuery) }
+                        
+                        if !inlineQuery.isEmpty {
+                            Button {
+                                inlineQuery = ""
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.white.opacity(0.7))
+                            }
+                        }
+                        
+                        Button {
+                            launchSearch(with: inlineQuery)
+                        } label: {
+                            Image(systemName: "arrow.forward.circle.fill")
+                                .foregroundColor(.black)
+                                .frame(width: 32, height: 32)
+                                .background(Color.theme.accentOrange)
+                                .clipShape(Circle())
+                        }
+                        
+                        Button("common.cancel".localized) {
+                            withAnimation(.spring(response: 0.28, dampingFraction: 0.85)) {
+                                isSearchTrayVisible = false
+                            }
+                        }
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.white.opacity(0.8))
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+                    .background(.ultraThinMaterial)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    
+                    chipsRow
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, safeAreaTopInset + 10)
+                .padding(.bottom, 16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    LinearGradient(
+                        colors: [
+                            Color.black.opacity(0.95),
+                            Color.black.opacity(0.82),
+                            Color.black.opacity(0.6)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .ignoresSafeArea(edges: .top)
+                )
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .zIndex(50)
+            }
+        }
+    }
+
+    private var searchDimOverlay: some View {
+        Group {
+            if isSearchTrayVisible {
+                Color.black.opacity(0.25)
+                    .ignoresSafeArea()
+                    .transition(.opacity)
+                    .zIndex(30)
+                    .onTapGesture {
+                        withAnimation(.spring(response: 0.28, dampingFraction: 0.85)) {
+                            isSearchTrayVisible = false
+                        }
+                    }
+            }
+        }
+    }
+
+    private var chipsRow: some View {
+        let chips = [
+            "Quotes",
+            "Characters",
+            "Scenes",
+            "Popular"
+        ]
+        
+        return ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                ForEach(chips, id: \.self) { chip in
+                    Button {
+                        launchSearch(with: chip)
+                    } label: {
+                        Text(chip)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background(Color.white.opacity(0.14))
+                            .overlay(
+                                Capsule()
+                                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                            )
+                            .clipShape(Capsule())
+                    }
+                }
+            }
+            .padding(.leading, 2)
+        }
+    }
+
+    private var safeAreaTopInset: CGFloat {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .first?.windows.first?.safeAreaInsets.top ?? 0
+    }
     
+    private func launchSearch(with query: String) {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            withAnimation(.spring(response: 0.28, dampingFraction: 0.85)) {
+                isSearchTrayVisible = false
+            }
+            return
+        }
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        pendingSearchQuery = trimmed
+        inlineQuery = trimmed
+        showSearch = true
+        withAnimation(.spring(response: 0.28, dampingFraction: 0.85)) {
+            isSearchTrayVisible = false
+        }
+    }
+
     private var searchNavigationLink: some View {
         Color.clear
             .frame(height: 0)
             .navigationDestination(isPresented: $showSearch) {
-                ClipsSearchView()
+                ClipsSearchView(initialQuery: pendingSearchQuery)
             }
     }
 
@@ -273,32 +459,78 @@ struct ClipsView: View {
     private var loadingView: some View {
         GeometryReader { geometry in
             ZStack {
-                // Skeleton clip cards (no background, just transparent skeletons)
-                VStack(spacing: 0) {
+                // Animated aurora backdrop
+                ZStack {
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.97, green: 0.53, blue: 0.28),
+                            Color(red: 0.74, green: 0.27, blue: 0.93),
+                            Color(red: 0.18, green: 0.33, blue: 0.78)
+                        ],
+                        startPoint: isAuroraAnimating ? .topLeading : .bottomTrailing,
+                        endPoint: isAuroraAnimating ? .bottomTrailing : .topLeading
+                    )
+                    .opacity(0.55)
+                    .blur(radius: 50)
+                    
+                    LinearGradient(
+                        colors: [
+                            Color.black.opacity(0.95),
+                            Color.black.opacity(0.75),
+                            Color.black.opacity(0.9)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                }
+                .ignoresSafeArea()
+                .onAppear {
+                    guard !reduceMotion else { return }
+                    withAnimation(.easeInOut(duration: 4.0).repeatForever(autoreverses: true)) {
+                        isAuroraAnimating = true
+                    }
+                }
+
+                // Skeleton clip cards with shimmer
+                VStack(spacing: 12) {
                     ForEach(0..<3, id: \.self) { index in
                         SkeletonClipCard()
-                            .frame(height: geometry.size.height / 3)
+                            .frame(height: geometry.size.height / 3.2)
+                            .padding(.horizontal, 12)
+                            .offset(y: reduceMotion ? 0 : CGFloat(index) * 6)
                     }
                 }
                 .ignoresSafeArea()
                 
                 // Center content overlay
-                VStack(spacing: 24) {
-                    // Animated icon
-                    Image("stars90x90")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 100, height: 100)
-                        .opacity(0.95)
-                        .scaleEffect(viewModel.isLoading ? 1.15 : 1.0)
-                        .rotationEffect(.degrees(viewModel.isLoading ? 360 : 0))
-                        .animation(
-                            .easeInOut(duration: 2.0)
-                            .repeatForever(autoreverses: false),
-                            value: viewModel.isLoading
-                        )
+                VStack(spacing: 18) {
+                    // Animated icon badge
+                    ZStack {
+                        Circle()
+                            .fill(Color.white.opacity(0.06))
+                            .frame(width: 140, height: 140)
+                            .overlay(
+                                Circle()
+                                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                            )
+                            .scaleEffect(isGlyphPulsing ? 1.08 : 0.96)
+                        
+                        Image("stars90x90")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 88, height: 88)
+                            .opacity(0.95)
+                            .scaleEffect(isGlyphPulsing ? 1.12 : 0.98)
+                            .rotationEffect(.degrees(isGlyphPulsing && !reduceMotion ? 360 : 0))
+                    }
+                    .animation(
+                        reduceMotion ?
+                            .none :
+                            .easeInOut(duration: 1.8).repeatForever(autoreverses: true),
+                        value: isGlyphPulsing
+                    )
                     
-                    VStack(spacing: 12) {
+                    VStack(spacing: 10) {
                         // Main message
                         Text("clips.feed.craftingTitle".localized)
                             .font(.system(size: 26, weight: .bold))
@@ -308,30 +540,47 @@ struct ClipsView: View {
                         // Subtext
                         Text("clips.feed.craftingSubtitle".localized)
                             .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.white.opacity(0.8))
+                            .foregroundColor(.white.opacity(0.82))
                             .multilineTextAlignment(.center)
-                            .padding(.horizontal, 32)
+                            .padding(.horizontal, 36)
                         
-                        // Animated dots
-                        HStack(spacing: 8) {
-                            ForEach(0..<3) { dot in
-                                Circle()
-                                    .fill(Color.theme.accentOrange)
-                                    .frame(width: 10, height: 10)
-                                    .scaleEffect(viewModel.isLoading ? 1.2 : 0.6)
-                                    .opacity(viewModel.isLoading ? 1.0 : 0.5)
-                                    .animation(
-                                        .easeInOut(duration: 0.8)
-                                        .repeatForever(autoreverses: true)
-                                        .delay(Double(dot) * 0.25),
-                                        value: viewModel.isLoading
-                                    )
-                            }
-                        }
-                        .padding(.top, 12)
+                        // Breathing progress capsule
+                        Capsule()
+                            .fill(Color.white.opacity(0.14))
+                            .frame(height: 10)
+                            .overlay(
+                                GeometryReader { proxy in
+                                    Capsule()
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [
+                                                    Color.theme.accentOrange.opacity(0.9),
+                                                    Color.purple.opacity(0.85)
+                                                ],
+                                                startPoint: .leading,
+                                                endPoint: .trailing
+                                            )
+                                        )
+                                        .frame(width: proxy.size.width * 0.35)
+                                        .offset(x: isProgressSweeping ? proxy.size.width * 0.65 : 0)
+                                        .animation(
+                                            reduceMotion ?
+                                                .none :
+                                                .easeInOut(duration: 1.6).repeatForever(autoreverses: true),
+                                            value: isProgressSweeping
+                                        )
+                                }
+                            )
+                            .padding(.top, 4)
                     }
                 }
                 .padding(.horizontal, 24)
+                .onAppear {
+                    if !reduceMotion {
+                        isGlyphPulsing = true
+                        isProgressSweeping = true
+                    }
+                }
             }
         }
         .background(Color.black.ignoresSafeArea())
@@ -1287,6 +1536,7 @@ struct ListSelectionRow: View {
 
 // MARK: - Skeleton Loading Card
 struct SkeletonClipCard: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isAnimating = false
     
     var body: some View {
@@ -1381,8 +1631,12 @@ struct SkeletonClipCard: View {
             .padding(.bottom, 120) // Safe area spacing
         }
         .onAppear {
+            guard !reduceMotion else {
+                isAnimating = false
+                return
+            }
             withAnimation(
-                .easeInOut(duration: 1.5)
+                .easeInOut(duration: 1.6)
                 .repeatForever(autoreverses: false)
             ) {
                 isAnimating = true

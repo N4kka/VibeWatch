@@ -131,7 +131,7 @@ struct PasswordResetView: View {
                     }
                 }
             }
-            .presentationDetents([.fraction(0.55), .large])
+            .presentationDetents([.fraction(0.55)])
             .presentationDragIndicator(.visible)
             
             if showConfirmUpdate {
@@ -170,12 +170,20 @@ struct PasswordResetView: View {
         
         do {
             try await authService.updatePassword(to: newPassword)
-            appState.isAuthenticated = authService.isAuthenticated
-            appState.currentUser = authService.currentUser
             successMessage = "auth.passwordResetSuccess".localized
             
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.1) {
-                closeSheet()
+            // Wait briefly then complete recovery
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                Task {
+                    // This unmasks the session and refreshes the profile,
+                    // leaving the user signed in on the Discovery view.
+                    await authService.completeRecovery()
+                    
+                    // Force AppState to refresh from AuthService so the UI updates
+                    await appState.checkAuthState()
+                    
+                    dismiss()
+                }
             }
         } catch {
             errorMessage = error.localizedDescription
@@ -287,7 +295,7 @@ struct ForgotPasswordSheet: View {
                 }
             }
         }
-        .presentationDetents([.fraction(0.5), .large])
+        .presentationDetents([.fraction(0.5)]) // Fixed height to prevent expansion
         .presentationDragIndicator(.visible)
     }
     

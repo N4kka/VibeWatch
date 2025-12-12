@@ -469,6 +469,9 @@ class ListManager: ObservableObject {
             mediaType: mediaType.rawValue
         )
         
+        // Prompt for a review after a successful save action (gated by heuristics)
+        ReviewPromptManager.shared.recordPositiveAction()
+        
         // Prefetch image for offline viewing (watchlist only, WiFi only)
         if lists[index].type == .watchlist, let posterPath = item.posterPath {
             Task.detached(priority: .utility) {

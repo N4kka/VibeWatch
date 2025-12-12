@@ -94,7 +94,7 @@ struct MainTabView: View {
                 
                 AIRecommendationsView(viewModel: aiViewModel)
                     .tabItem {
-                        Label("AI", systemImage: "sparkles")
+                        Label("tab.ai".localized, systemImage: "sparkles")
                     }
                     .tag(2)
                 
@@ -148,7 +148,8 @@ struct MainTabView: View {
     
     var body: some View {
         ZStack {
-            if isLoading {
+            // Force dismiss splash screen if password recovery is presented
+            if isLoading && !authService.isPasswordRecoveryFlowPresented {
                 SplashScreen()
                     .transition(.opacity)
                     .task {
@@ -213,6 +214,8 @@ struct MainTabView: View {
         .background(scenePhaseMonitor) // Monitor app lifecycle for subscription status
         .withErrorHandling()
         .task {
+            ReviewPromptManager.shared.registerAppLaunch()
+            
             // On first launch, clear any persisted auth from keychain
             if !hasClearedAuthOnFreshInstall && !UserDefaults.standard.bool(forKey: "hasLaunchedBefore") {
                 print("🆕 [MainTabView] Fresh install detected - clearing keychain auth")

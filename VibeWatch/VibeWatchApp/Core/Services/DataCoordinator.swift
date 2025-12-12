@@ -43,22 +43,31 @@ class DataCoordinator: ObservableObject {
     func initializeApp() async {
         print("🚀 [DataCoordinator] Starting app initialization...")
         let startTime = Date()
-        
-        // Run discovery + initial clips in parallel (FAST!)
-        async let discoveryTask: () = fetchDiscoveryContent()
-        async let initialTask: () = fetchInitialClips()
-        
-        // Wait for both
-        _ = await (discoveryTask, initialTask)
-        
+
+        // Run discovery + initial clips in parallel with timeout protection
+        await withTaskGroup(of: Void.self) { group in
+            // Discovery task
+            group.addTask {
+                await self.fetchDiscoveryContent()
+            }
+
+            // Initial clips task
+            group.addTask {
+                await self.fetchInitialClips()
+            }
+
+            // Wait for both tasks to complete
+            await group.waitForAll()
+        }
+
         let duration = Date().timeIntervalSince(startTime)
         print("✅ [DataCoordinator] Fast init complete in \(String(format: "%.2f", duration))s")
         print("   📊 Discovery: \(trendingMovies.count) movies, \(trendingTVShows.count) TV")
         print("   🎬 Initial clips: \(initialClips.count) ready")
-        
+
         isInitializing = false
         initialClipsReady = true
-        
+
         // Fetch additional clips in background (don't wait)
         Task.detached(priority: .background) {
             await self.fetchAdditionalClips()
@@ -257,28 +266,28 @@ class DataCoordinator: ObservableObject {
     private func fetchClipForMovie(_ movie: Movie) async -> Clip? {
         // Add small delay to respect rate limits
         try? await Task.sleep(nanoseconds: 100_000_000) // 0.1s
-        
+
         // Try TMDB videos first (clips, trailers, teasers)
         do {
             let videosResponse = try await tmdbService.getMovieVideos(id: movie.id)
-            
+
             // Smart filtering: Prefer official, high-quality videos
             let videos = videosResponse.results.filter { video in
                 guard video.site == "YouTube" else { return false }
-                
+
                 // Prefer official videos (less likely to be removed)
                 let isOfficial = video.official ?? false
-                
+
                 // Filter by type priority: Trailer > Teaser > Clip > Behind the Scenes
                 let acceptedTypes = ["Trailer", "Teaser", "Clip", "Behind the Scenes"]
                 let hasGoodType = acceptedTypes.contains(video.type)
-                
+
                 // Prefer larger videos (higher quality, more likely to be official)
                 let hasGoodSize = (video.size ?? 0) >= 720
-                
+
                 return hasGoodType && (isOfficial || hasGoodSize)
             }
-            
+
             if let video = videos.first {
                 let clip = Clip(
                     id: "\(movie.id)-tmdb-\(video.key)",
@@ -294,30 +303,45 @@ class DataCoordinator: ObservableObject {
                     comments: 0,
                     createdAt: Date()
                 )
-                
+
                 print("   ✅ TMDB clip found: \(movie.title)")
                 return clip
             }
         } catch {
             print("   ⚠️ TMDB videos failed for \(movie.title): \(error.localizedDescription)")
         }
-        
-        // Fallback to YouTube search
+
+        // Fallback to YouTube search with timeout and retry
         do {
             let query = "\(movie.title) official trailer"
             guard let encodedQuery = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
                 return nil
             }
-            
+
             let urlString = "https://www.googleapis.com/youtube/v3/search?part=snippet&q=\(encodedQuery)&type=video&videoDuration=short&maxResults=1&key=AIzaSyCh_tkrvBEGW6ALRvkAN-LYx1B3Cly1160"
-            
+
             guard let url = URL(string: urlString) else { return nil }
-            
-            let (data, _) = try await URLSession.shared.data(from: url)
-            let response = try JSONDecoder().decode(YouTubeSearchResponse.self, from: data)
-            
-            guard let item = response.items.first else { return nil }
-            
+
+            // Create URLSession with timeout
+            let config = URLSessionConfiguration.default
+            config.timeoutIntervalForRequest = 15
+            config.timeoutIntervalForResource = 30
+            config.waitsForConnectivity = true
+            let session = URLSession(configuration: config)
+
+            let (data, response) = try await session.data(from: url)
+
+            // Validate response
+            guard let httpResponse = response as? HTTPURLResponse,
+                  (200...299).contains(httpResponse.statusCode) else {
+                print("   ⚠️ YouTube API returned error for \(movie.title)")
+                return nil
+            }
+
+            let decodedResponse = try JSONDecoder().decode(YouTubeSearchResponse.self, from: data)
+
+            guard let item = decodedResponse.items.first else { return nil }
+
             let clip = Clip(
                 id: "\(movie.id)-yt-\(item.id.videoId)",
                 movieId: movie.id,
@@ -332,10 +356,10 @@ class DataCoordinator: ObservableObject {
                 comments: 0,
                 createdAt: Date()
             )
-            
+
             print("   ✅ YouTube clip found: \(movie.title)")
             return clip
-            
+
         } catch {
             print("   ❌ All sources failed for: \(movie.title) - \(error.localizedDescription)")
             return nil
@@ -345,28 +369,28 @@ class DataCoordinator: ObservableObject {
     /// Fetch a single clip for a TV show (TMDB videos, then YouTube fallback)
     private func fetchClipForTVShow(_ tvShow: TVShow) async -> Clip? {
         try? await Task.sleep(nanoseconds: 100_000_000) // 0.1s
-        
+
         // Try TMDB videos first
         do {
             let videosResponse = try await tmdbService.getTVShowVideos(id: tvShow.id)
-            
+
             // Smart filtering: Prefer official, high-quality videos
             let videos = videosResponse.results.filter { video in
                 guard video.site == "YouTube" else { return false }
-                
+
                 // Prefer official videos (less likely to be removed)
                 let isOfficial = video.official ?? false
-                
+
                 // Filter by type priority
                 let acceptedTypes = ["Trailer", "Teaser", "Clip", "Behind the Scenes"]
                 let hasGoodType = acceptedTypes.contains(video.type)
-                
+
                 // Prefer larger videos (higher quality, more likely to be official)
                 let hasGoodSize = (video.size ?? 0) >= 720
-                
+
                 return hasGoodType && (isOfficial || hasGoodSize)
             }
-            
+
             if let video = videos.first {
                 let clip = Clip(
                     id: "\(tvShow.id)-tmdb-\(video.key)",
@@ -382,30 +406,45 @@ class DataCoordinator: ObservableObject {
                     comments: 0,
                     createdAt: Date()
                 )
-                
+
                 print("   ✅ TMDB clip found: \(tvShow.name)")
                 return clip
             }
         } catch {
             print("   ⚠️ TMDB videos failed for \(tvShow.name): \(error.localizedDescription)")
         }
-        
-        // Fallback to YouTube search
+
+        // Fallback to YouTube search with timeout and retry
         do {
             let query = "\(tvShow.name) official trailer"
             guard let encodedQuery = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
                 return nil
             }
-            
+
             let urlString = "https://www.googleapis.com/youtube/v3/search?part=snippet&q=\(encodedQuery)&type=video&videoDuration=short&maxResults=1&key=AIzaSyCh_tkrvBEGW6ALRvkAN-LYx1B3Cly1160"
-            
+
             guard let url = URL(string: urlString) else { return nil }
-            
-            let (data, _) = try await URLSession.shared.data(from: url)
-            let response = try JSONDecoder().decode(YouTubeSearchResponse.self, from: data)
-            
-            guard let item = response.items.first else { return nil }
-            
+
+            // Create URLSession with timeout
+            let config = URLSessionConfiguration.default
+            config.timeoutIntervalForRequest = 15
+            config.timeoutIntervalForResource = 30
+            config.waitsForConnectivity = true
+            let session = URLSession(configuration: config)
+
+            let (data, response) = try await session.data(from: url)
+
+            // Validate response
+            guard let httpResponse = response as? HTTPURLResponse,
+                  (200...299).contains(httpResponse.statusCode) else {
+                print("   ⚠️ YouTube API returned error for \(tvShow.name)")
+                return nil
+            }
+
+            let decodedResponse = try JSONDecoder().decode(YouTubeSearchResponse.self, from: data)
+
+            guard let item = decodedResponse.items.first else { return nil }
+
             let clip = Clip(
                 id: "\(tvShow.id)-yt-\(item.id.videoId)",
                 movieId: nil,
@@ -420,10 +459,10 @@ class DataCoordinator: ObservableObject {
                 comments: 0,
                 createdAt: Date()
             )
-            
+
             print("   ✅ YouTube clip found: \(tvShow.name)")
             return clip
-            
+
         } catch {
             print("   ❌ All sources failed for: \(tvShow.name) - \(error.localizedDescription)")
             return nil

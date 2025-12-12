@@ -1010,19 +1010,19 @@ struct CustomListDetailView: View {
         .sheet(isPresented: $showEditSheet) {
             EditListView(list: currentList)
         }
-        .alert("Delete List", isPresented: $showDeleteAlert) {
-            Button("Delete", role: .destructive) {
+        .alert("lists.deleteList".localized, isPresented: $showDeleteAlert) {
+            Button("common.delete".localized, role: .destructive) {
                 Task { await deleteList() }
             }
-            Button("Cancel", role: .cancel) { }
+            Button("common.cancel".localized, role: .cancel) { }
         } message: {
-            Text("Are you sure you want to delete \(currentList.name)? This removes all items in this list.")
+            Text("lists.deleteConfirmation".localized.replacingOccurrences(of: "%@", with: currentList.name))
         }
         .alert(item: $error) { appError in
             Alert(
-                title: Text(appError.errorDescription ?? "Error"),
-                message: Text(appError.recoverySuggestion ?? "Please try again."),
-                dismissButton: .default(Text("OK"))
+                title: Text(appError.errorDescription ?? "common.error".localized),
+                message: Text(appError.recoverySuggestion ?? "common.pleaseTryAgain".localized),
+                dismissButton: .default(Text("common.ok".localized))
             )
         }
     }
@@ -1240,9 +1240,9 @@ struct CreateListView: View {
         }
         .alert(item: $error) { appError in
             Alert(
-                title: Text(appError.errorDescription ?? "Error"),
-                message: Text(appError.recoverySuggestion ?? "Please try again."),
-                dismissButton: .default(Text("OK"))
+                title: Text(appError.errorDescription ?? "common.error".localized),
+                message: Text(appError.recoverySuggestion ?? "common.pleaseTryAgain".localized),
+                dismissButton: .default(Text("common.ok".localized))
                         )
                     }
                 }
@@ -1285,8 +1285,8 @@ struct CreateListView: View {
                     .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
-            .alert("Error", isPresented: $showError) {
-                Button("OK", role: .cancel) { }
+            .alert("common.error".localized, isPresented: $showError) {
+                Button("common.ok".localized, role: .cancel) { }
             } message: {
                 Text(errorMessage)
             }

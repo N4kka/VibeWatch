@@ -9,8 +9,29 @@ final class RevenueCatService: ObservableObject {
     @Published private(set) var offerings: Offerings?
     @Published private(set) var currentOfferingID: String?
     @Published private(set) var lastRefreshDate: Date?
+    @Published private(set) var debugLoggingEnabled: Bool
     
-    private init() {}
+    private init() {
+        #if DEBUG
+        self.debugLoggingEnabled = true
+        #else
+        self.debugLoggingEnabled = false
+        #endif
+        
+        setRevenueCatLogLevel(debugLoggingEnabled)
+    }
+    
+    /// Toggle RevenueCat log level at runtime for QA/debug sessions.
+    func setDebugLoggingEnabled(_ enabled: Bool) {
+        guard enabled != debugLoggingEnabled else { return }
+        debugLoggingEnabled = enabled
+        setRevenueCatLogLevel(enabled)
+    }
+    
+    /// Applies the current debug logging preference to RevenueCat.
+    func applyCurrentLogLevel() {
+        setRevenueCatLogLevel(debugLoggingEnabled)
+    }
     
     /// Fetches the latest offerings from RevenueCat and prints useful diagnostics.
     func refreshOfferings(debug: Bool = true) async {
@@ -39,21 +60,22 @@ final class RevenueCatService: ObservableObject {
     
     /// Helper to get trial information from a package
     func getTrialInfo(for package: Package) -> TrialInfo? {
-        guard let discount = package.storeProduct.introductoryDiscount else {
-            return nil
+        if let discount = package.storeProduct.introductoryDiscount,
+           let trial = trialInfo(from: discount) {
+            return trial
         }
-        
-        // Only consider free trials (not intro pricing)
-        guard discount.paymentMode == .freeTrial else {
-            return nil
+
+        // StoreKit 2 products expose subscription options; use reflection so we stay compatible with older SDKs.
+        if let options = subscriptionOptionsViaReflection(from: package.storeProduct) {
+            for option in options {
+                if let intro = introductoryOfferViaReflection(from: option),
+                   let trial = trialInfo(from: intro) {
+                    return trial
+                }
+            }
         }
-        
-        let period = discount.subscriptionPeriod
-        return TrialInfo(
-            duration: period.value,
-            unit: period.unit,
-            localizedDuration: formatTrialDuration(period)
-        )
+
+        return nil
     }
     
     /// Format trial duration for display (e.g., "7 days", "1 month")
@@ -114,6 +136,32 @@ struct TrialInfo {
     let duration: Int
     let unit: SubscriptionPeriod.Unit
     let localizedDuration: String // e.g., "7 days", "1 month"
+}
+
+private extension RevenueCatService {
+    func trialInfo(from discount: StoreProductDiscount) -> TrialInfo? {
+        guard discount.paymentMode == .freeTrial else { return nil }
+        let period = discount.subscriptionPeriod
+        return TrialInfo(
+            duration: period.value,
+            unit: period.unit,
+            localizedDuration: formatTrialDuration(period)
+        )
+    }
+    
+    func setRevenueCatLogLevel(_ debug: Bool) {
+        Purchases.logLevel = debug ? .debug : .info
+        print("📊 [RevenueCat] Log level set to \(debug ? "debug" : "info")")
+    }
+
+    /// Reflection helpers keep compatibility with RevenueCat builds that don't expose StoreKit 2 subscriptionOptions in the public API.
+    func subscriptionOptionsViaReflection(from product: StoreProduct) -> [Any]? {
+        Mirror(reflecting: product).descendant("subscriptionOptions") as? [Any]
+    }
+
+    func introductoryOfferViaReflection(from option: Any) -> StoreProductDiscount? {
+        Mirror(reflecting: option).descendant("introductoryOffer") as? StoreProductDiscount
+    }
 }
 
 

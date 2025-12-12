@@ -1,18 +1,19 @@
-/// Tab Bar
+// Tab Bar
 "tab.clips" = "Klipler";
 "tab.discovery" = "Keşfet";
 "tab.lists" = "Listeler";
 "tab.profile" = "Profil";
+"tab.ai" = "AI";
 
 // Onboarding
-"onboarding.page1.description" = "Sevdiğin film ve dizileri keşfet ve kaydet. Ne izlediğini ve sırada ne olduğunu takip et.";
-"onboarding.page1.title" = "Favorilerini Takip Et & Kaydet";
-"onboarding.page2.description" = "İçeriklerini düzenlemek için özel listeler oluştur. İzleme listelerinden moduna göre koleksiyonlara kadar hepsi senin kontrolünde.";
-"onboarding.page2.title" = "Listelerle Organize Ol";
-"onboarding.page3.description" = "Film ve dizilerden heyecan verici klipler izle. Topluluğa katıl, yorum yap, listelere kaydet ve arkadaşlarınla paylaş.";
-"onboarding.page3.title" = "Kliplerle Keşfet";
+"onboarding.page1.description" = "Moduna uygun AI film ve dizi önerileri, böylece sırada ne izleyeceğini her zaman bilirsin.";
+"onboarding.page1.title" = "AI ile Daha Akıllı Seçimler";
+"onboarding.page2.description" = "Keşfettiğin her film ve diziyi düzenlemek için izleme listeleri ve ruh haline göre koleksiyonlar oluştur.";
+"onboarding.page2.title" = "İzleme Listeni Düzenle";
+"onboarding.page3.description" = "Fragmanları ve klipleri izle, sonra en iyi bulduklarını listelerine kaydet.";
+"onboarding.page3.title" = "Fragmanları ve Klipleri Keşfet";
 "onboarding.page4.createAccount" = "Hesap Oluştur";
-"onboarding.page4.description" = "Listelerini ve tercihlerini tüm cihazlarında senkronize etmek için bir hesap oluştur.";
+"onboarding.page4.description" = "İzleme listelerini ve tercihlerini tüm cihazlarında senkronize etmek için bir hesap oluştur.";
 "onboarding.page4.skip" = "Şimdilik geç";
 "onboarding.page4.title" = "Hazır mısın?";
 
@@ -44,7 +45,7 @@
 "lists.disliked" = "Beğenmedim";
 "lists.editList" = "Listeyi Düzenle";
 "lists.empty" = "Henüz liste yok";
-"lists.emptyDescription" = "Favori içeriklerini düzenlemek için ilk listeni oluştur";
+"lists.emptyDescription" = "Keşfettiğin film ve dizileri düzenlemek için ilk izleme listeni oluştur";
 "lists.error.authRequired" = "Özel listeler oluşturmak için giriş yapmalısın.";
 "lists.error.defaultImmutable" = "Bu listeyi değiştiremezsin";
 "lists.error.invalidName" = "Lütfen geçerli bir liste adı gir";
@@ -74,7 +75,7 @@
 "movieDetail.rating" = "Puan";
 "movieDetail.ratings" = "oy";
 "movieDetail.runtime" = "Süre";
-"movieDetail.save" = "Kaydet";
+"movieDetail.save" = "İzleme listesine kaydet";
 "movieDetail.seen" = "İzlendi";
 "movieDetail.similar" = "Bunu beğenenler şunları da beğendi";
 "movieDetail.trailer" = "Fragman";
@@ -111,12 +112,13 @@
 "filters.runtime" = "Süre";
 "filters.runtimeAny" = "Herhangi bir süre";
 "filters.runtimeLong" = "> 120 dk";
-"filters.runtimeMedium" = "90–120 dk";
+"filters.runtimeMedium" = "90-120 dk";
 "filters.runtimeShort" = "< 90 dk";
 "filters.sortBy" = "Sırala";
 "filters.title" = "Filtreler";
 
 // Clips
+"clips.title" = "Klipler";
 "clips.addToList" = "Listeye ekle";
 "clips.beFirstToComment" = "İlk yorumu sen yap";
 "clips.comment" = "Yorum";
@@ -124,7 +126,7 @@
 "clips.comments.deleteConfirmation" = "Bu yorumu silmek istediğine emin misin? Bu işlem geri alınamaz.";
 "clips.comments.loading" = "Yorumlar yükleniyor...";
 "clips.comments.replying" = "Yanıt veriliyor...";
-"clips.createFirstList" = "İçerik kaydetmek için ilk listeni oluştur";
+"clips.createFirstList" = "Seçimlerini kaydetmek için ilk izleme listeni oluştur";
 "clips.createNewList" = "Yeni Liste Oluştur";
 "clips.feed.craftingSubtitle" = "Senin için en iyi klipleri tek tek seçiyoruz ✨";
 "clips.feed.craftingTitle" = "Mükemmel akışın hazırlanıyor";
@@ -142,7 +144,7 @@
 // Search
 "search.latestVisited" = "Son görüntülenenler";
 "search.noResultsFound" = "Sonuç bulunamadı";
-"search.placeholder" = "Bir dizi veya film ara...";
+"search.placeholder" = "Film veya dizi nerede izlenir bul...";
 "search.results" = "Sonuçlar";
 "search.trendingSearches" = "Trend aramalar";
 
@@ -157,7 +159,7 @@
 "profile.settings" = "Ayarlar";
 "profile.signIn" = "Giriş Yap";
 "profile.signInDescription" = "Listeler oluştur, klipleri kaydet ve deneyimini kişiselleştir";
-"profile.signInToVibeWatch" = "VibeWatch’a giriş yap";
+"profile.signInToVibeWatch" = "VibeWatch'a giriş yap";
 "profile.streamingServices" = "Yayın servisleri";
 "profile.userNamePlaceholder" = "E-posta veya kullanıcı adı";
 
@@ -168,6 +170,21 @@
 "settings.selectCountry" = "Ülke seç";
 "settings.selectLanguage" = "Dil seç";
 "settings.title" = "Ayarlar";
+
+// Cache Management
+"settings.cacheManagement.title" = "Önbellek Yönetimi";
+"settings.cacheManagement.cacheSize" = "Önbellek Boyutu";
+"settings.cacheManagement.cacheSizeTitle" = "Önbellek Boyutunu Seç";
+"settings.cacheManagement.cacheSizeDescription" = "Görsel önbelleği için ne kadar depolama kullanılacağını seç. Daha büyük önbellek daha fazla çevrimdışı içerik sağlar.";
+"settings.cacheManagement.prefetchOption" = "Görsel Ön Yükleme";
+"settings.cacheManagement.prefetchTitle" = "Görsel Ön Yükleme Seçenekleri";
+"settings.cacheManagement.prefetchDescription" = "Görsellerin çevrimdışı görüntüleme için ne zaman indirileceğini kontrol et. Sadece WiFi mobil veri tasarrufu sağlar.";
+"settings.cacheManagement.prefetchNeverWarning" = "Uyarı: Çevrimdışı işlevsellik sınırlı olacak";
+"settings.cacheManagement.clearCache" = "Görsel Önbelleğini Temizle";
+"settings.cacheManagement.clearCacheWarning" = "Tüm önbelleğe alınmış görselleri temizler";
+"settings.cacheManagement.clearCacheConfirmTitle" = "Önbellek Temizlensin mi?";
+"settings.cacheManagement.clearCacheConfirmMessage" = "Bu işlem tüm önbelleğe alınmış görselleri silecek ve depolama alanı açacak. Görselleri tekrar görmek için çevrimiçi olman gerekecek.";
+"settings.cacheManagement.clearCacheConfirm" = "Önbelleği Temizle";
 
 // Platforms
 "platform.selectionCount" = "%d / %d seçili";
@@ -181,7 +198,7 @@
 "notifications.disableButton" = "Bildirimleri kapat";
 "notifications.disableConfirmation" = "Bildirimler kapatılsın mı?";
 "notifications.disableMessage" = "Yeni içerikler, fiyat değişiklikleri ve kişiselleştirilmiş öneriler hakkında bildirim almayacaksın.";
-"notifications.enableInSettings" = "Ayarlar’dan bildirimleri açarak yeni içerikler, fiyat değişiklikleri ve daha fazlası hakkında güncellemeler al.";
+"notifications.enableInSettings" = "Ayarlar'dan bildirimleri açarak yeni içerikler, fiyat değişiklikleri ve daha fazlası hakkında güncellemeler al.";
 "notifications.openSettings" = "Ayarları aç";
 "notifications.permissionRequired" = "Bildirim izni gerekli";
 
@@ -200,9 +217,12 @@
 "auth.gate.haveAccount" = "Zaten bir hesabım var";
 "auth.gate.limitMessage" = "Bugünkü 15 ücretsiz klibini kullandın. İlerlemeni senkronize etmek ve yarının kliplerini anında açmak için kaydol.";
 "auth.gate.signupFree" = "Kayıt ücretsizdir ve bir dakikadan az sürer.";
+"auth.gate.benefit.saveClips" = "Favori kliplerini kaydet";
+"auth.gate.benefit.syncDevices" = "Tüm cihazlarında senkronize et";
+"auth.gate.benefit.personalizedRecs" = "Kişiselleştirilmiş öneriler al";
 "auth.invalidEmail" = "Geçersiz e-posta";
 "auth.invalidPassword" = "Geçersiz şifre";
-"auth.joinVibeWatch" = "VibeWatch’a katıl ve yeni içerikler keşfetmeye başla";
+"auth.joinVibeWatch" = "VibeWatch'a katıl ve yeni içerikler keşfetmeye başla";
 "auth.passwordPlaceholder" = "Şifre";
 "auth.passwordsDontMatch" = "Şifreler eşleşmiyor";
 "auth.signIn" = "Giriş Yap";
@@ -210,28 +230,40 @@
 "auth.signUp" = "Kaydol";
 "auth.usernamePlaceholder" = "Kullanıcı adı";
 "auth.welcomeBack" = "Tekrar hoş geldin";
+"auth.error.notConfigured" = "Kimlik doğrulama servisi yapılandırılmamış. Supabase bilgilerini ekle.";
+"auth.error.invalidResponse" = "Sunucudan geçersiz yanıt.";
+"auth.error.userNotFound" = "Kullanıcı bulunamadı.";
+"auth.error.invalidCredentials" = "Geçersiz e-posta veya şifre.";
+"auth.error.networkError" = "Ağ hatası. Bağlantını kontrol et.";
+"auth.error.databaseError" = "Profil kaydedilirken veritabanı hatası. Tekrar dene.";
+"auth.error.signUpFailed" = "Kayıt başarısız. Tekrar dene.";
+"auth.error.passwordResetFailed" = "Sıfırlama e-postası gönderilemedi. Tekrar dene.";
+"auth.error.passwordUpdateFailed" = "Şifre güncellenemedi. Tekrar dene.";
+"auth.error.accountDeletionFailed" = "Hesap silinemedi. Tekrar dene.";
 
 // AI
+"ai.title" = "Vibe AI";
+"ai.tokensUsage" = "Jeton: %@/%@";
 "ai.describeVibe" = "Modunu anlat";
 "ai.editMessage" = "Mesajı düzenle";
 "ai.hardLimitMessage" = "Bugünkü AI limitine ulaştın. Yarın tekrar gel.";
 "ai.paywall.benefit.personalized" = "Kişiselleştirilmiş izleme listeleri";
 "ai.paywall.benefit.smarter" = "Daha akıllı içerik keşfi";
 "ai.paywall.benefit.unlimited" = "Sınırsız AI önerisi";
-"ai.paywall.description" = "Sana en uygun içeriği bulmak için akıllı öneriler al!";
+"ai.paywall.description" = "Mükemmel izleme deneyimi için daha akıllı AI film ve dizi önerileri al.";
 "ai.paywall.goBack" = "Geri dön";
 "ai.paywall.title" = "AI film arkadaşını aç";
 "ai.paywall.unlockAI" = "AI Sohbeti Aç";
-"ai.placeholder" = "Örn: 'Plot twist’li bilim kurgu'";
+"ai.placeholder" = "Örn: 'Plot twist'li bilim kurgu'";
 "ai.proRequired" = "AI sohbet sadece Pro üyeler için kullanılabilir.";
 "ai.resultsTitle" = "Bunları buldum:";
 "ai.saveRegenerate" = "Kaydet & Yeniden üret";
 "ai.softLimitMessage" = "Bugünkü AI limitine yaklaştın. İsteklerini kısa tut.";
-"ai.subtitle" = "Nasıl bir modda olduğunu söyle, senin için izleyecek en doğru şeyi bulayım.";
-"ai.suggestion.chips1" = "💖 Yumuşak döneme uygun, sıcacık bir romantik film";
-"ai.suggestion.chips2" = "💥 İkonik 80’ler aksiyon-komedisi ✨";
-"ai.suggestion.chips3" = "🕵️‍♂️ Plot twist’li, hak ettiği değeri görmemiş bir gerilim";
-"ai.suggestion.chips4" = "🌀 İzledikten sonra kolay kolay unutamayacağın bir bilim kurgu mindtrip";
+"ai.subtitle" = "Modunu anlat—AI sıradaki filmi veya diziyi bulsun.";
+"ai.suggestion.chips1" = "💖 Rahat bir romantik, AI seçimi";
+"ai.suggestion.chips2" = "💥 80'ler aksiyon-komedi, AI önerir";
+"ai.suggestion.chips3" = "🕵️‍♂️ Sürprizli az bilinen gerilim";
+"ai.suggestion.chips4" = "🤖 AI: Sırada ne izlemeliyim?";
 "ai.usage.left" = "kaldı";
 
 // Paywall
@@ -239,29 +271,29 @@
 "paywall.cta.continue" = "Devam et";
 "paywall.cta.selectPlan" = "Bir plan seç";
 "paywall.cta.startTrial" = "%@ Ücretsiz Denemeyi Başlat";
-"paywall.daily.limitDescription" = "Ücretsiz üyeler günde 15 klip izleyebilir. Sınırsız klip ve premium özellikler için Pro’ya yükselt.";
+"paywall.daily.limitDescription" = "Ücretsiz üyeler günde 15 klip izleyebilir. Sınırsız klip ve premium özellikler için Pro'ya yükselt.";
 "paywall.daily.limitReached" = "Bugünkü limite ulaştın";
 "paywall.daily.nextReset" = "Sonraki sıfırlama";
 "paywall.daily.resetIn" = "Sıfırlanmasına kalan süre";
 "paywall.daily.title" = "Yarın tekrar gel";
 "paywall.discount.annual" = "%33 İNDİRİM";
 "paywall.ensurePro" = "Pro planını garanti altına al!";
-"paywall.feature.advancedFilters" = "🔎 Gelişmiş filtreler";
-"paywall.feature.aiAssistant" = "🤖 AI asistan önerileri";
-"paywall.feature.lists" = "📋 100’e kadar liste";
-"paywall.feature.noAds" = "❌ Reklam yok";
-"paywall.feature.offlineMode" = "📵 Çevrimdışı mod";
-"paywall.feature.releaseAlerts" = "🔔 Yeni çıkış bildirimleri";
-"paywall.feature.unlimitedClips" = "▶️ Sınırsız klip";
+"paywall.feature.advancedFilters" = "🔎 Daha hızlı seçim için gelişmiş filtreler";
+"paywall.feature.aiAssistant" = "🤖 AI film ve dizi önerileri";
+"paywall.feature.lists" = "📋 100'e kadar senkronize izleme listesi";
+"paywall.feature.noAds" = "❌ Klipleri bölen reklam yok";
+"paywall.feature.offlineMode" = "📵 Kaydedilenler için çevrimdışı mod";
+"paywall.feature.releaseAlerts" = "🔔 Favoriler yayınlandığında bildirim";
+"paywall.feature.unlimitedClips" = "▶️ Sınırsız klip ve fragman";
 "paywall.foundingMember" = "Kurucu üye fiyatlandırması";
 "paywall.plan.annual" = "Yıllık";
 "paywall.plan.monthly" = "Aylık";
 "paywall.price.perMonth" = "%@/ay";
-"paywall.proDescription" = "Pro; sınırsız klip, kaydedilmiş tercihler ve daha fazlasını sunar.";
+"paywall.proDescription" = "Pro sınırsız klip, AI film arkadaşı ve senkronize izleme listeleri açar.";
 "paywall.restore" = "Satın alımları geri yükle";
 "paywall.trial.badge" = "%@ ücretsiz";
 "paywall.unlockUnlimited" = "Sınırsız klip aç";
-"paywall.upgrade" = "Pro’ya yükselt";
+"paywall.upgrade" = "Pro'ya yükselt";
 
 // Common
 "common.cancel" = "İptal";
@@ -286,6 +318,9 @@
 "common.tryAgain" = "Tekrar dene";
 "common.uploading" = "Yükleniyor...";
 "common.year" = "Yıl";
+"common.error" = "Hata";
+"common.ok" = "Tamam";
+"common.pleaseTryAgain" = "Lütfen tekrar dene.";
 
 // Misc
 "misc.language" = "Türkçe";
@@ -296,71 +331,97 @@
 
 
 // Password Reset
-"auth.resetPassword" = "Reset Password";
-"auth.resetPasswordDescription" = "Enter your email and we'll send you a reset link.";
-"auth.sendResetLink" = "Send Reset Link";
-"auth.resetEmailSent" = "Reset email sent! Check your inbox.";
-"auth.setNewPasswordDescription" = "Create a new password and confirm it to continue.";
-"auth.updatePassword" = "Update Password";
-"auth.passwordResetSuccess" = "Password updated successfully.";
-"profile.changePassword" = "Change Password";
+"auth.resetPassword" = "Şifreyi Sıfırla";
+"auth.resetPasswordDescription" = "E-postanı gir, sana sıfırlama bağlantısı gönderelim.";
+"auth.sendResetLink" = "Sıfırlama Bağlantısı Gönder";
+"auth.resetEmailSent" = "Sıfırlama e-postası gönderildi! Gelen kutunu kontrol et.";
+"auth.setNewPasswordDescription" = "Yeni bir şifre oluştur ve devam etmek için onayla.";
+"auth.updatePassword" = "Şifreyi Güncelle";
+"auth.passwordResetSuccess" = "Şifre başarıyla güncellendi.";
+"profile.changePassword" = "Şifreyi Değiştir";
 
 
 // Password Reset Confirmations
-"common.confirm" = "Confirm";
-"profile.logoutConfirmationTitle" = "Are you sure you want to log out?";
-"auth.confirmChangePasswordTitle" = "Change Password";
-"auth.confirmChangePasswordMessage" = "Do you want to update your password now?";
+"common.confirm" = "Onayla";
+"profile.logoutConfirmationTitle" = "Çıkış yapmak istediğine emin misin?";
+"auth.confirmChangePasswordTitle" = "Şifreyi Değiştir";
+"auth.confirmChangePasswordMessage" = "Şimdi şifreni güncellemek istiyor musun?";
 
 
 // Profile - Support & Feedback
-"profile.sendFeedback" = "Send Feedback";
-"profile.aboutUs" = "About us";
-"profile.aboutUsDetail" = "Learn more about the VibeWatch team and our mission to improve your streaming discovery experience.";
-"profile.tmdbAttribution" = "This product uses the TMDb API but is not endorsed or certified by TMDb.";
-"profile.legalNotes" = "Legal notes";
-"profile.faq" = "FAQ";
-"profile.faqDetail" = "Find quick answers to common questions about accounts, subscriptions, and features.";
-"profile.privacyPolicy" = "Privacy Policy";
-"profile.feedback.suggestFeature" = "Suggest new feature";
-"profile.feedback.suggestFeatureDescription" = "Tell us what would make VibeWatch better for you.";
-"profile.feedback.reportBug" = "Report a bug/problem";
-"profile.feedback.reportBugDescription" = "Describe the issue you're seeing so we can fix it fast.";
-"profile.feedback.other" = "Other";
-"profile.feedback.otherDescription" = "Share any other thoughts or comments.";
-"profile.feedback.keepUpdated" = "Keep me updated";
-"profile.feedback.sendButton" = "Send feedback";
-"profile.feedback.sent" = "Thanks! Your feedback was sent.";
+"profile.sendFeedback" = "Geri Bildirim Gönder";
+"profile.aboutUs" = "Hakkımızda";
+"profile.aboutUsDetail" = "VibeWatch ekibi ve yayın keşif deneyiminizi iyileştirme misyonumuz hakkında daha fazla bilgi edinin.";
+"profile.tmdbAttribution" = "Bu ürün TMDb API'sini kullanır ancak TMDb tarafından onaylanmamış veya sertifikalandırılmamıştır.";
+"profile.legalNotes" = "Yasal bilgiler";
+"profile.faq" = "SSS";
+"profile.faqDetail" = "Hesaplar, abonelikler ve özellikler hakkında sık sorulan sorulara hızlı cevaplar bul.";
+"profile.privacyPolicy" = "Gizlilik Politikası";
+"profile.termsOfUse" = "Kullanım Şartları";
+"profile.feedback.suggestFeature" = "Yeni özellik öner";
+"profile.feedback.suggestFeatureDescription" = "VibeWatch'u senin için daha iyi yapacak şeyleri anlat.";
+"profile.feedback.reportBug" = "Hata/sorun bildir";
+"profile.feedback.reportBugDescription" = "Gördüğün sorunu anlat, hızlıca düzeltelim.";
+"profile.feedback.other" = "Diğer";
+"profile.feedback.otherDescription" = "Diğer düşüncelerini veya yorumlarını paylaş.";
+"profile.feedback.keepUpdated" = "Beni haberdar et";
+"profile.feedback.sendButton" = "Geri bildirim gönder";
+"profile.feedback.sent" = "Teşekkürler! Geri bildirimin gönderildi.";
+"profile.feedback.invalidEmail" = "Geçersiz e-posta içeriği.";
 
 // Settings - Account Deletion
-"settings.deleteAccount" = "Permanently delete my account";
-"settings.deleteAccountWarningTitle" = "Delete account?";
-"settings.deleteAccountWarningMessage" = "This action is permanent and cannot be undone.";
-"settings.deleteAccountKeep" = "No, keep it";
-"settings.deleteAccountConfirm" = "Yes, delete my account";
-"settings.deleteAccountFinalTitle" = "Delete account permanently";
-"settings.deleteAccountFinalMessage" = "Are you absolutely sure? This action cannot be undone.";
-"settings.deleteAccountError" = "Unable to delete account right now.";
-"settings.deleteAccountSuccess" = "Your account was deleted.";
-"settings.deleteAccountDeleting" = "Deleting...";
+"settings.deleteAccount" = "Hesabımı kalıcı olarak sil";
+"settings.deleteAccountWarningTitle" = "Hesap silinsin mi?";
+"settings.deleteAccountWarningMessage" = "Bu işlem kalıcıdır ve geri alınamaz.";
+"settings.deleteAccountKeep" = "Hayır, kalsın";
+"settings.deleteAccountConfirm" = "Evet, hesabımı sil";
+"settings.deleteAccountFinalTitle" = "Hesabı kalıcı olarak sil";
+"settings.deleteAccountFinalMessage" = "Kesinlikle emin misin? Bu işlem geri alınamaz.";
+"settings.deleteAccountError" = "Hesap şu anda silinemiyor.";
+"settings.deleteAccountSuccess" = "Hesabın silindi.";
+"settings.deleteAccountDeleting" = "Siliniyor...";
 
 
 // Profile Upgrade CTA
-"profile.upgradePro.title" = "Upgrade to Pro";
-"profile.upgradePro.subtitle" = "Unlock unlimited clips, AI, and premium lists.";
+"profile.upgradePro.title" = "Pro'ya Yükselt";
+"profile.upgradePro.subtitle" = "Sınırsız klip, AI ve premium listeleri aç.";
 
 /// Actor Detail
-"actor.biography.title" = "Biography";
-"actor.biography.loading" = "Loading biography...";
-"actor.biography.unavailable" = "Biography not available.";
-"actor.filmography.movies" = "Movies";
-"actor.filmography.tv" = "TV Shows";
-"actor.retry" = "Try again";
-"actor.biography.showMore" = "Show More";
-"actor.biography.showLess" = "Show Less";
+"actor.biography.title" = "Biyografi";
+"actor.biography.loading" = "Biyografi yükleniyor...";
+"actor.biography.unavailable" = "Biyografi mevcut değil.";
+"actor.filmography.movies" = "Filmler";
+"actor.filmography.tv" = "Diziler";
+"actor.retry" = "Tekrar dene";
+"actor.biography.showMore" = "Daha fazla göster";
+"actor.biography.showLess" = "Daha az göster";
 
-"clips.search.placeholder" = "Search clips, characters, or quotes";
-"clips.search.emptyTitle" = "Find clips you love";
-"clips.search.emptySubtitle" = "Search any movie, show, character, or quote to see matching clips and related picks.";
-"clips.search.matched" = "Matched";
-"clips.search.recommended" = "Recommended";
+"clips.search.placeholder" = "Klip, karakter veya replik ara";
+"clips.search.emptyTitle" = "Sevdiğin klipleri bul";
+"clips.search.emptySubtitle" = "Eşleşen klipleri ve önerileri görmek için film, dizi, karakter veya replik ara.";
+"clips.search.showcaseTitle" = "Klipleri Keşfet";
+"clips.search.showcaseSubtitle" = "Favori film ve dizilerinden klip bulmak için yukarıdan ara";
+"clips.search.matched" = "Eşleşen";
+"clips.search.recommended" = "Önerilen";
+
+// Redeem Code
+"settings.redeemCode" = "Kodu Kullan";
+"settings.redeemCode.description" = "Promosyon veya teklif kodu gir";
+"paywall.haveCode" = "Promosyon kodun var mı?";
+
+// Help & Support - About Us
+"profile.aboutUsDescription" = "Yeni bir tür film/dizi arkadaşı oluşturan iki arkadaşız. VibeWatch, hantal takip uygulamalarından duyduğumuz hayal kırıklığından doğdu: modern, klip öncelikli keşif, hızlı yayın bağlantıları ve hem sinema tutkunlarının hem de sıradan izleyicilerin sonsuz kaydırma olmadan mükemmel seçimi bulmasına yardımcı olan araçlara odaklanıyoruz.";
+"profile.faqs" = "SSS";
+"profile.legal" = "Yasal";
+
+// FAQ Items
+"profile.faq.question1" = "Klipler yeni içerik keşfetmeme nasıl yardımcı olur?";
+"profile.faq.answer1" = "Klipler, zevkine uygun kısa, dikey önizlemelerdir, böylece zaman kaybettiğini hissetmeden kaydırabilirsin.";
+"profile.faq.question2" = "İzlediklerimi takip edebilir miyim?";
+"profile.faq.answer2" = "Evet. Listelere kaydet, izlendi/beğendim/beğenmedim olarak işaretle ve film ile dizileri senkronize et.";
+"profile.faq.question3" = "Nerede izleyebilirim?";
+"profile.faq.answer3" = "Yayın bağlantıları ülkeye göre çekilir, böylece doğrudan doğru uygulamaya geçebilirsin.";
+"profile.faq.question4" = "Bir şey yanlış görünürse ne yapmalıyım?";
+"profile.faq.answer4" = "Herhangi bir içerikte \"Bize bildir\" seçeneğini kullanarak hataları veya bozuk bağlantıları bildir, hızlıca düzeltelim.";
+"profile.faq.question5" = "VibeWatch sıradan izleyiciler için de uygun mu?";
+"profile.faq.answer5" = "Kesinlikle. Arkadaşlarla Cumartesi akşamı filmi gibi kolay seçimler ve sinema tutkunları için gizli hazineler sunuyoruz.";

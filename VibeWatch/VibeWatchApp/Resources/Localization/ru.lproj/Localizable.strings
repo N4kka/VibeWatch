@@ -1,18 +1,19 @@
-/// Tab Bar
+// Tab Bar
 "tab.clips" = "Клипы";
 "tab.discovery" = "Обзор";
 "tab.lists" = "Списки";
 "tab.profile" = "Профиль";
+"tab.ai" = "AI";
 
 // Onboarding
-"onboarding.page1.description" = "Открывайте и сохраняйте фильмы и сериалы, которые вам нравятся. Отслеживайте, что вы уже посмотрели и что хотите посмотреть дальше.";
-"onboarding.page1.title" = "Отслеживайте и сохраняйте избранное";
-"onboarding.page2.description" = "Создавайте пользовательские списки, чтобы организовать свой контент. От списков к просмотру до подборок по настроению — всё под вас.";
-"onboarding.page2.title" = "Организуйте с помощью списков";
-"onboarding.page3.description" = "Смотрите захватывающие клипы из фильмов и сериалов. Присоединяйтесь к сообществу, комментируйте, сохраняйте в списки и делитесь с друзьями.";
-"onboarding.page3.title" = "Открывайте через клипы";
+"onboarding.page1.description" = "AI-рекомендации фильмов и сериалов под ваше настроение, чтобы вы всегда знали, что смотреть дальше.";
+"onboarding.page1.title" = "Умный подбор с AI";
+"onboarding.page2.description" = "Создавайте списки к просмотру и коллекции по настроению, чтобы организовать все найденные фильмы и сериалы.";
+"onboarding.page2.title" = "Организуйте свой список";
+"onboarding.page3.description" = "Смотрите трейлеры и клипы, а затем сохраняйте лучшие находки в свои списки.";
+"onboarding.page3.title" = "Откройте трейлеры и клипы";
 "onboarding.page4.createAccount" = "Создать аккаунт";
-"onboarding.page4.description" = "Создайте аккаунт, чтобы синхронизировать списки и настройки на всех ваших устройствах.";
+"onboarding.page4.description" = "Создайте аккаунт, чтобы синхронизировать списки и настройки на всех устройствах.";
 "onboarding.page4.skip" = "Пропустить пока";
 "onboarding.page4.title" = "Готовы начать?";
 
@@ -44,7 +45,7 @@
 "lists.disliked" = "Не понравилось";
 "lists.editList" = "Редактировать список";
 "lists.empty" = "Пока нет списков";
-"lists.emptyDescription" = "Создайте первый список, чтобы начать организовывать любимый контент";
+"lists.emptyDescription" = "Создайте свой первый список, чтобы организовать найденные фильмы и сериалы";
 "lists.error.authRequired" = "Чтобы создавать пользовательские списки, необходимо войти в аккаунт.";
 "lists.error.defaultImmutable" = "Этот список нельзя изменить";
 "lists.error.invalidName" = "Введите корректное название списка";
@@ -74,7 +75,7 @@
 "movieDetail.rating" = "Рейтинг";
 "movieDetail.ratings" = "оценок";
 "movieDetail.runtime" = "Продолжительность";
-"movieDetail.save" = "Сохранить";
+"movieDetail.save" = "Сохранить в список";
 "movieDetail.seen" = "Просмотрено";
 "movieDetail.similar" = "Тем, кому понравилось это, понравилось также";
 "movieDetail.trailer" = "Трейлер";
@@ -111,12 +112,13 @@
 "filters.runtime" = "Продолжительность";
 "filters.runtimeAny" = "Любая";
 "filters.runtimeLong" = "> 120 мин";
-"filters.runtimeMedium" = "90–120 мин";
+"filters.runtimeMedium" = "90-120 мин";
 "filters.runtimeShort" = "< 90 мин";
 "filters.sortBy" = "Сортировать по";
 "filters.title" = "Фильтры";
 
 // Clips
+"clips.title" = "Клипы";
 "clips.addToList" = "Добавить в список";
 "clips.beFirstToComment" = "Станьте первым, кто оставит комментарий";
 "clips.comment" = "Комментарий";
@@ -124,7 +126,7 @@
 "clips.comments.deleteConfirmation" = "Вы уверены, что хотите удалить этот комментарий? Это действие нельзя отменить.";
 "clips.comments.loading" = "Загрузка комментариев...";
 "clips.comments.replying" = "Ответ отправляется...";
-"clips.createFirstList" = "Создайте первый список, чтобы сохранять контент";
+"clips.createFirstList" = "Создайте первый список, чтобы сохранять выбранное";
 "clips.createNewList" = "Создать новый список";
 "clips.feed.craftingSubtitle" = "Мы подбираем для вас лучшие клипы ✨";
 "clips.feed.craftingTitle" = "Создаём вашу идеальную ленту";
@@ -142,7 +144,7 @@
 // Search
 "search.latestVisited" = "Недавно просмотренные";
 "search.noResultsFound" = "Ничего не найдено";
-"search.placeholder" = "Найдите фильм или сериал...";
+"search.placeholder" = "Найдите, где посмотреть фильм или сериал...";
 "search.results" = "Результаты";
 "search.trendingSearches" = "Популярные запросы";
 
@@ -168,6 +170,21 @@
 "settings.selectCountry" = "Выберите страну";
 "settings.selectLanguage" = "Выберите язык";
 "settings.title" = "Настройки";
+
+// Cache Management
+"settings.cacheManagement.title" = "Управление кэшем";
+"settings.cacheManagement.cacheSize" = "Размер кэша";
+"settings.cacheManagement.cacheSizeTitle" = "Выберите размер кэша";
+"settings.cacheManagement.cacheSizeDescription" = "Выберите, сколько места использовать для кэширования изображений. Больший кэш позволяет хранить больше контента офлайн.";
+"settings.cacheManagement.prefetchOption" = "Предзагрузка изображений";
+"settings.cacheManagement.prefetchTitle" = "Параметры предзагрузки";
+"settings.cacheManagement.prefetchDescription" = "Управляйте загрузкой изображений для офлайн-просмотра. Только Wi-Fi экономит мобильный трафик.";
+"settings.cacheManagement.prefetchNeverWarning" = "Предупреждение: офлайн-функции будут ограничены";
+"settings.cacheManagement.clearCache" = "Очистить кэш изображений";
+"settings.cacheManagement.clearCacheWarning" = "Удаляет все кэшированные изображения";
+"settings.cacheManagement.clearCacheConfirmTitle" = "Очистить кэш?";
+"settings.cacheManagement.clearCacheConfirmMessage" = "Это удалит все кэшированные изображения и освободит место. Для просмотра изображений потребуется подключение к интернету.";
+"settings.cacheManagement.clearCacheConfirm" = "Очистить кэш";
 
 // Platforms
 "platform.selectionCount" = "Выбрано %d из %d";
@@ -200,6 +217,9 @@
 "auth.gate.haveAccount" = "У меня уже есть аккаунт";
 "auth.gate.limitMessage" = "Сегодня вы уже посмотрели 15 бесплатных клипов. Зарегистрируйтесь, чтобы синхронизировать прогресс и моментально открыть завтрашние подборки.";
 "auth.gate.signupFree" = "Регистрация бесплатна и занимает меньше минуты.";
+"auth.gate.benefit.saveClips" = "Сохраняйте любимые клипы";
+"auth.gate.benefit.syncDevices" = "Синхронизируйте на всех устройствах";
+"auth.gate.benefit.personalizedRecs" = "Получайте персональные рекомендации";
 "auth.invalidEmail" = "Некорректный email";
 "auth.invalidPassword" = "Некорректный пароль";
 "auth.joinVibeWatch" = "Присоединяйтесь к VibeWatch и начинайте открывать новое";
@@ -210,15 +230,27 @@
 "auth.signUp" = "Зарегистрироваться";
 "auth.usernamePlaceholder" = "Имя пользователя";
 "auth.welcomeBack" = "С возвращением";
+"auth.error.notConfigured" = "Служба аутентификации не настроена. Добавьте учётные данные Supabase.";
+"auth.error.invalidResponse" = "Некорректный ответ от сервера.";
+"auth.error.userNotFound" = "Пользователь не найден.";
+"auth.error.invalidCredentials" = "Неверный email или пароль.";
+"auth.error.networkError" = "Ошибка сети. Проверьте подключение.";
+"auth.error.databaseError" = "Ошибка базы данных при сохранении профиля. Попробуйте снова.";
+"auth.error.signUpFailed" = "Ошибка регистрации. Попробуйте снова.";
+"auth.error.passwordResetFailed" = "Не удалось отправить письмо для сброса. Попробуйте снова.";
+"auth.error.passwordUpdateFailed" = "Не удалось обновить пароль. Попробуйте снова.";
+"auth.error.accountDeletionFailed" = "Не удалось удалить аккаунт. Попробуйте снова.";
 
 // AI
+"ai.title" = "Vibe AI";
+"ai.tokensUsage" = "Токены: %@/%@";
 "ai.describeVibe" = "Опишите своё настроение";
 "ai.editMessage" = "Редактировать сообщение";
 "ai.hardLimitMessage" = "Вы достигли дневного лимита AI. Приходите завтра.";
 "ai.paywall.benefit.personalized" = "Персонализированные списки к просмотру";
 "ai.paywall.benefit.smarter" = "Более умный поиск контента";
 "ai.paywall.benefit.unlimited" = "Неограниченные AI-рекомендации";
-"ai.paywall.description" = "Получайте более умные рекомендации и находите идеальный фильм или сериал!";
+"ai.paywall.description" = "Получайте более умные AI-рекомендации фильмов и сериалов для идеального просмотра.";
 "ai.paywall.goBack" = "Назад";
 "ai.paywall.title" = "Разблокируйте вашего AI-кинонапарника";
 "ai.paywall.unlockAI" = "Разблокировать AI-чат";
@@ -227,11 +259,11 @@
 "ai.resultsTitle" = "Вот что я нашёл:";
 "ai.saveRegenerate" = "Сохранить и сгенерировать заново";
 "ai.softLimitMessage" = "Вы приближаетесь к дневному лимиту AI. Старайтесь формулировать запросы короче.";
-"ai.subtitle" = "Расскажите, на что вы настроены, и я подберу идеальный вариант для просмотра.";
-"ai.suggestion.chips1" = "💖 Тёплая уютная романтика для «soft»-настроения";
-"ai.suggestion.chips2" = "💥 Иконичная экшн-комедия 80-х ✨";
-"ai.suggestion.chips3" = "🕵️‍♂️ Недооценённый триллер с твистом";
-"ai.suggestion.chips4" = "🌀 Научно-фантастический mindtrip, после которого сложно прийти в себя";
+"ai.subtitle" = "Опишите настроение — AI найдёт фильм или сериал для просмотра.";
+"ai.suggestion.chips1" = "💖 Уютная романтика, выбрано AI";
+"ai.suggestion.chips2" = "💥 Боевик-комедия 80-х, AI рекомендует";
+"ai.suggestion.chips3" = "🕵️‍♂️ Недооценённый триллер с поворотом";
+"ai.suggestion.chips4" = "🤖 AI: что мне посмотреть?";
 "ai.usage.left" = "осталось";
 
 // Paywall
@@ -246,18 +278,18 @@
 "paywall.daily.title" = "Возвращайтесь завтра";
 "paywall.discount.annual" = "Скидка 33%";
 "paywall.ensurePro" = "Зафиксируйте свой Pro-тариф!";
-"paywall.feature.advancedFilters" = "🔎 Расширенные фильтры";
-"paywall.feature.aiAssistant" = "🤖 Рекомендации AI-ассистента";
-"paywall.feature.lists" = "📋 До 100 списков";
-"paywall.feature.noAds" = "❌ Без рекламы";
-"paywall.feature.offlineMode" = "📵 Офлайн-режим";
-"paywall.feature.releaseAlerts" = "🔔 Оповещения о релизах";
-"paywall.feature.unlimitedClips" = "▶️ Неограниченные клипы";
+"paywall.feature.advancedFilters" = "🔎 Расширенные фильтры для быстрого выбора";
+"paywall.feature.aiAssistant" = "🤖 AI-рекомендации фильмов и сериалов";
+"paywall.feature.lists" = "📋 До 100 синхронизированных списков";
+"paywall.feature.noAds" = "❌ Без рекламы во время клипов";
+"paywall.feature.offlineMode" = "📵 Офлайн-режим для сохранённого";
+"paywall.feature.releaseAlerts" = "🔔 Уведомления о выходе избранного";
+"paywall.feature.unlimitedClips" = "▶️ Неограниченные клипы и трейлеры";
 "paywall.foundingMember" = "Цена для первых подписчиков";
 "paywall.plan.annual" = "Годовой";
 "paywall.plan.monthly" = "Месячный";
 "paywall.price.perMonth" = "%@/мес";
-"paywall.proDescription" = "Pro даёт вам неограниченные клипы, сохранённые предпочтения и многое другое.";
+"paywall.proDescription" = "Pro открывает неограниченные клипы, AI-помощника и синхронизированные списки.";
 "paywall.restore" = "Восстановить покупки";
 "paywall.trial.badge" = "%@ бесплатно";
 "paywall.unlockUnlimited" = "Разблокировать неограниченные клипы";
@@ -286,6 +318,9 @@
 "common.tryAgain" = "Попробовать снова";
 "common.uploading" = "Загрузка...";
 "common.year" = "Год";
+"common.error" = "Ошибка";
+"common.ok" = "ОК";
+"common.pleaseTryAgain" = "Попробуйте снова.";
 
 // Misc
 "misc.language" = "Русский";
@@ -296,71 +331,97 @@
 
 
 // Password Reset
-"auth.resetPassword" = "Reset Password";
-"auth.resetPasswordDescription" = "Enter your email and we'll send you a reset link.";
-"auth.sendResetLink" = "Send Reset Link";
-"auth.resetEmailSent" = "Reset email sent! Check your inbox.";
-"auth.setNewPasswordDescription" = "Create a new password and confirm it to continue.";
-"auth.updatePassword" = "Update Password";
-"auth.passwordResetSuccess" = "Password updated successfully.";
-"profile.changePassword" = "Change Password";
+"auth.resetPassword" = "Сбросить пароль";
+"auth.resetPasswordDescription" = "Введите email, и мы отправим вам ссылку для сброса.";
+"auth.sendResetLink" = "Отправить ссылку";
+"auth.resetEmailSent" = "Письмо для сброса отправлено! Проверьте почту.";
+"auth.setNewPasswordDescription" = "Создайте новый пароль и подтвердите его.";
+"auth.updatePassword" = "Обновить пароль";
+"auth.passwordResetSuccess" = "Пароль успешно обновлён.";
+"profile.changePassword" = "Изменить пароль";
 
 
 // Password Reset Confirmations
-"common.confirm" = "Confirm";
-"profile.logoutConfirmationTitle" = "Are you sure you want to log out?";
-"auth.confirmChangePasswordTitle" = "Change Password";
-"auth.confirmChangePasswordMessage" = "Do you want to update your password now?";
+"common.confirm" = "Подтвердить";
+"profile.logoutConfirmationTitle" = "Вы уверены, что хотите выйти?";
+"auth.confirmChangePasswordTitle" = "Изменить пароль";
+"auth.confirmChangePasswordMessage" = "Хотите обновить пароль сейчас?";
 
 
 // Profile - Support & Feedback
-"profile.sendFeedback" = "Send Feedback";
-"profile.aboutUs" = "About us";
-"profile.aboutUsDetail" = "Learn more about the VibeWatch team and our mission to improve your streaming discovery experience.";
-"profile.tmdbAttribution" = "This product uses the TMDb API but is not endorsed or certified by TMDb.";
-"profile.legalNotes" = "Legal notes";
+"profile.sendFeedback" = "Отправить отзыв";
+"profile.aboutUs" = "О нас";
+"profile.aboutUsDetail" = "Узнайте больше о команде VibeWatch и нашей миссии улучшить ваш опыт поиска контента.";
+"profile.tmdbAttribution" = "Этот продукт использует API TMDb, но не одобрен и не сертифицирован TMDb.";
+"profile.legalNotes" = "Юридическая информация";
 "profile.faq" = "FAQ";
-"profile.faqDetail" = "Find quick answers to common questions about accounts, subscriptions, and features.";
-"profile.privacyPolicy" = "Privacy Policy";
-"profile.feedback.suggestFeature" = "Suggest new feature";
-"profile.feedback.suggestFeatureDescription" = "Tell us what would make VibeWatch better for you.";
-"profile.feedback.reportBug" = "Report a bug/problem";
-"profile.feedback.reportBugDescription" = "Describe the issue you're seeing so we can fix it fast.";
-"profile.feedback.other" = "Other";
-"profile.feedback.otherDescription" = "Share any other thoughts or comments.";
-"profile.feedback.keepUpdated" = "Keep me updated";
-"profile.feedback.sendButton" = "Send feedback";
-"profile.feedback.sent" = "Thanks! Your feedback was sent.";
+"profile.faqDetail" = "Найдите быстрые ответы на частые вопросы об аккаунтах, подписках и функциях.";
+"profile.privacyPolicy" = "Политика конфиденциальности";
+"profile.termsOfUse" = "Условия использования";
+"profile.feedback.suggestFeature" = "Предложить функцию";
+"profile.feedback.suggestFeatureDescription" = "Расскажите, что сделает VibeWatch лучше для вас.";
+"profile.feedback.reportBug" = "Сообщить об ошибке";
+"profile.feedback.reportBugDescription" = "Опишите проблему, чтобы мы могли быстро её исправить.";
+"profile.feedback.other" = "Другое";
+"profile.feedback.otherDescription" = "Поделитесь любыми мыслями или комментариями.";
+"profile.feedback.keepUpdated" = "Держать меня в курсе";
+"profile.feedback.sendButton" = "Отправить отзыв";
+"profile.feedback.sent" = "Спасибо! Ваш отзыв отправлен.";
+"profile.feedback.invalidEmail" = "Некорректное содержимое email.";
 
 // Settings - Account Deletion
-"settings.deleteAccount" = "Permanently delete my account";
-"settings.deleteAccountWarningTitle" = "Delete account?";
-"settings.deleteAccountWarningMessage" = "This action is permanent and cannot be undone.";
-"settings.deleteAccountKeep" = "No, keep it";
-"settings.deleteAccountConfirm" = "Yes, delete my account";
-"settings.deleteAccountFinalTitle" = "Delete account permanently";
-"settings.deleteAccountFinalMessage" = "Are you absolutely sure? This action cannot be undone.";
-"settings.deleteAccountError" = "Unable to delete account right now.";
-"settings.deleteAccountSuccess" = "Your account was deleted.";
-"settings.deleteAccountDeleting" = "Deleting...";
+"settings.deleteAccount" = "Удалить мой аккаунт навсегда";
+"settings.deleteAccountWarningTitle" = "Удалить аккаунт?";
+"settings.deleteAccountWarningMessage" = "Это действие необратимо.";
+"settings.deleteAccountKeep" = "Нет, оставить";
+"settings.deleteAccountConfirm" = "Да, удалить аккаунт";
+"settings.deleteAccountFinalTitle" = "Удалить аккаунт навсегда";
+"settings.deleteAccountFinalMessage" = "Вы абсолютно уверены? Это действие нельзя отменить.";
+"settings.deleteAccountError" = "Не удалось удалить аккаунт сейчас.";
+"settings.deleteAccountSuccess" = "Ваш аккаунт удалён.";
+"settings.deleteAccountDeleting" = "Удаление...";
 
 
 // Profile Upgrade CTA
-"profile.upgradePro.title" = "Upgrade to Pro";
-"profile.upgradePro.subtitle" = "Unlock unlimited clips, AI, and premium lists.";
+"profile.upgradePro.title" = "Перейти на Pro";
+"profile.upgradePro.subtitle" = "Откройте неограниченные клипы, AI и премиум-списки.";
 
 /// Actor Detail
-"actor.biography.title" = "Biography";
-"actor.biography.loading" = "Loading biography...";
-"actor.biography.unavailable" = "Biography not available.";
-"actor.filmography.movies" = "Movies";
-"actor.filmography.tv" = "TV Shows";
-"actor.retry" = "Try again";
-"actor.biography.showMore" = "Show More";
-"actor.biography.showLess" = "Show Less";
+"actor.biography.title" = "Биография";
+"actor.biography.loading" = "Загрузка биографии...";
+"actor.biography.unavailable" = "Биография недоступна.";
+"actor.filmography.movies" = "Фильмы";
+"actor.filmography.tv" = "Сериалы";
+"actor.retry" = "Попробовать снова";
+"actor.biography.showMore" = "Показать больше";
+"actor.biography.showLess" = "Свернуть";
 
-"clips.search.placeholder" = "Search clips, characters, or quotes";
-"clips.search.emptyTitle" = "Find clips you love";
-"clips.search.emptySubtitle" = "Search any movie, show, character, or quote to see matching clips and related picks.";
-"clips.search.matched" = "Matched";
-"clips.search.recommended" = "Recommended";
+"clips.search.placeholder" = "Поиск клипов, персонажей или цитат";
+"clips.search.emptyTitle" = "Найдите любимые клипы";
+"clips.search.emptySubtitle" = "Ищите фильмы, сериалы, персонажей или цитаты, чтобы найти подходящие клипы и рекомендации.";
+"clips.search.showcaseTitle" = "Откройте клипы";
+"clips.search.showcaseSubtitle" = "Используйте поиск выше, чтобы найти клипы из любимых фильмов и сериалов";
+"clips.search.matched" = "Совпадения";
+"clips.search.recommended" = "Рекомендовано";
+
+// Redeem Code
+"settings.redeemCode" = "Активировать код";
+"settings.redeemCode.description" = "Введите промокод или код предложения";
+"paywall.haveCode" = "Есть промокод?";
+
+// Help & Support - About Us
+"profile.aboutUsDescription" = "Мы — двое друзей, создающих новый вид кино/ТВ-компаньона. VibeWatch родился из-за разочарования в громоздких трекерах: мы делаем упор на современное открытие контента через клипы, быстрые ссылки на стриминг и инструменты, которые помогают и киноманам, и обычным зрителям найти идеальный выбор без бесконечного скроллинга.";
+"profile.faqs" = "FAQ";
+"profile.legal" = "Юридическое";
+
+// FAQ Items
+"profile.faq.question1" = "Как клипы помогают открывать новые тайтлы?";
+"profile.faq.answer1" = "Клипы — это короткие вертикальные превью, подобранные под ваш вкус, чтобы вы могли листать без ощущения потраченного времени.";
+"profile.faq.question2" = "Могу ли я отслеживать просмотренное?";
+"profile.faq.answer2" = "Да. Сохраняйте в списки, отмечайте как просмотрено/понравилось/не понравилось и синхронизируйте фильмы и сериалы.";
+"profile.faq.question3" = "Где это можно посмотреть?";
+"profile.faq.answer3" = "Ссылки на стриминг подбираются по вашей стране, чтобы вы сразу попали в нужное приложение.";
+"profile.faq.question4" = "Что делать, если что-то выглядит неправильно?";
+"profile.faq.answer4" = "Используйте «Сообщите нам» на любом тайтле, чтобы сообщить об ошибках или нерабочих ссылках — мы быстро исправим.";
+"profile.faq.question5" = "Подходит ли VibeWatch для обычных зрителей?";
+"profile.faq.answer5" = "Конечно. Мы показываем простые варианты вроде фильма на вечер с друзьями, а также редкие находки для киноманов.";

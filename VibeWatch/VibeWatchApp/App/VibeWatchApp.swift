@@ -14,11 +14,7 @@ struct VibeWatchApp: App {
     
     init() {
         // Configure RevenueCat with appropriate log level
-        #if DEBUG
-        Purchases.logLevel = .debug
-        #else
-        Purchases.logLevel = .info
-        #endif
+        RevenueCatService.shared.applyCurrentLogLevel()
         Purchases.configure(withAPIKey: Config.revenueCatAPIKey)
         
         // Force load localizations before any views are created
@@ -49,7 +45,7 @@ struct VibeWatchApp: App {
                 }
                 .onOpenURL { url in
                     // Handle deep links from URL schemes (e.g., OAuth)
-                    print("📱 Deep link received via URL: \(url.absoluteString)")
+                    print("📱 Deep link received via URL (SwiftUI): \(url.absoluteString)")
                     Task {
                         do {
                             try await AuthService.shared.handleAuthCallback(url: url)
@@ -87,23 +83,34 @@ class AppState: ObservableObject {
     @Published var showErrorToast = false
     @Published var toastMessage = ""
     @Published var isPreloading = true // Track splash state
+    @Published var shouldShowSignIn = false // Trigger for redirecting to sign in flow
     
     private let authService: AuthService
     private let dataCoordinator = DataCoordinator.shared
     
     init(authService: AuthService = .shared) {
         self.authService = authService
+
+        // Immediately load from cached auth state (synchronous)
+        self.isAuthenticated = authService.isAuthenticated
+        self.currentUser = authService.currentUser
+        print("📱 [AppState] Initialized with auth state: authenticated=\(isAuthenticated), user=\(currentUser?.email ?? "nil")")
+
         Task {
             await checkAuthState()
             await preloadContent()
             await RevenueCatService.shared.refreshOfferings()
+
+            // Check and execute daily prefetch for PRO users
+            await DailyContentPrefetchService.shared.checkAndExecuteDailyPrefetch()
         }
     }
-    
+
     func checkAuthState() async {
         await authService.checkAuthState()
         self.isAuthenticated = authService.isAuthenticated
         self.currentUser = authService.currentUser
+        print("🔄 [AppState] Updated auth state: authenticated=\(isAuthenticated), user=\(currentUser?.email ?? "nil")")
     }
     
     private func preloadContent() async {

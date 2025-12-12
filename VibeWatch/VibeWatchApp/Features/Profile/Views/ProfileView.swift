@@ -66,6 +66,7 @@ struct ProfileView: View {
     @EnvironmentObject var authService: AuthService
     @StateObject private var notificationService = NotificationService.shared
     @StateObject private var localizationManager = LocalizationManager.shared
+    @StateObject private var dailyQuotaManager = DailyQuotaManager.shared
     @State private var showSignUp = false
     @State private var showSignIn = false
     @State private var showImagePicker = false
@@ -91,6 +92,25 @@ struct ProfileView: View {
             }
             return []
         }
+    }
+
+    private var displayNameOrEmail: String {
+        guard let user = appState.currentUser else { return "User" }
+
+        // Show display name if it exists and is not empty
+        if let displayName = user.displayName, !displayName.isEmpty {
+            return displayName
+        }
+
+        // Otherwise show email
+        return user.email
+    }
+
+    private var shouldShowEmailSubtitle: Bool {
+        guard let user = appState.currentUser else { return false }
+
+        // Show email as subtitle only if we're showing displayName as main text
+        return user.displayName != nil && !(user.displayName?.isEmpty ?? true)
     }
     
     private func togglePlatform(_ platform: StreamingPlatform) {
@@ -159,6 +179,14 @@ struct ProfileView: View {
                     )
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                 }
+            }
+        }
+        .onAppear {
+            if appState.shouldShowSignIn {
+                print("🔄 [ProfileView] Auto-opening Sign In sheet")
+                showSignIn = true
+                // Reset flag
+                appState.shouldShowSignIn = false
             }
         }
         .sheet(isPresented: $showSignUp) {
@@ -437,12 +465,12 @@ struct ProfileView: View {
                 .disabled(isUploadingAvatar)
             }
             
-            Text(appState.currentUser?.displayName ?? "User")
+            Text(displayNameOrEmail)
                 .font(.system(size: 24, weight: .bold))
                 .foregroundColor(.theme.textPrimary)
-            
-            if let email = appState.currentUser?.email {
-                Text(email)
+
+            if shouldShowEmailSubtitle {
+                Text(appState.currentUser?.email ?? "")
                     .font(.system(size: 14))
                     .foregroundColor(.theme.textSecondary)
             }
@@ -473,31 +501,34 @@ struct ProfileView: View {
     
     private var settingsSection: some View {
         VStack(spacing: 12) {
-            Button {
-                showUpgradePaywall = true
-            } label: {
-                ZStack(alignment: .leading) {
-                    Image("pro_banner")
-                        .resizable()
-                        .scaledToFill()
-                        .frame(maxWidth: .infinity, minHeight: 110, maxHeight: 110)
-                        .clipped()
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                    
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("profile.upgradePro.title".localized)
-                            .font(.system(size: 18, weight: .bold))
-                            .foregroundColor(.white)
-                        Text("profile.upgradePro.subtitle".localized)
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.white.opacity(0.85))
+            // Only show upgrade banner if user is not Pro
+            if !dailyQuotaManager.isProUser {
+                Button {
+                    showUpgradePaywall = true
+                } label: {
+                    ZStack(alignment: .leading) {
+                        Image("pro_banner")
+                            .resizable()
+                            .scaledToFill()
+                            .frame(maxWidth: .infinity, minHeight: 110, maxHeight: 110)
+                            .clipped()
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("profile.upgradePro.title".localized)
+                                .font(.system(size: 18, weight: .bold))
+                                .foregroundColor(.white)
+                            Text("profile.upgradePro.subtitle".localized)
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.white.opacity(0.85))
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 14)
                 }
+                .padding(.horizontal, 20)
             }
-            .padding(.horizontal, 20)
-            
+
             VStack(spacing: 0) {
                 HStack {
                     Image(systemName: "bell")
@@ -699,30 +730,32 @@ struct SettingsRow: View {
 struct HelpSupportSheet: View {
     private let privacyURL = URL(string: "https://vibewatch.vercel.app/privacy")!
     private let termsOfUseURL = URL(string: "https://vibewatch.vercel.app/terms")!
-    
-    private let faqItems: [FAQItem] = [
-        FAQItem(
-            question: "How does Clips help me discover new titles?",
-            answer: "Clips are short, vertical previews matched to your taste so you can binge-scroll without feeling you’re wasting time."
-        ),
-        FAQItem(
-            question: "Can I track what I watch?",
-            answer: "Yes. Save to lists, mark as seen/liked/disliked, and sync across movie and TV titles."
-        ),
-        FAQItem(
-            question: "Where can I watch it?",
-            answer: "Streaming links are pulled per-country so you can jump straight into the right app."
-        ),
-        FAQItem(
-            question: "What if something looks wrong?",
-            answer: "Use “Let us know” on any title to report bugs or bad links and we’ll fix it fast."
-        ),
-        FAQItem(
-            question: "Does VibeWatch work for casual viewers?",
-            answer: "Totally. We surface easy picks like a Saturday-night movie with friends as well as deep cuts for movie lovers."
-        )
-    ]
-    
+
+    private var faqItems: [FAQItem] {
+        [
+            FAQItem(
+                question: "profile.faq.question1".localized,
+                answer: "profile.faq.answer1".localized
+            ),
+            FAQItem(
+                question: "profile.faq.question2".localized,
+                answer: "profile.faq.answer2".localized
+            ),
+            FAQItem(
+                question: "profile.faq.question3".localized,
+                answer: "profile.faq.answer3".localized
+            ),
+            FAQItem(
+                question: "profile.faq.question4".localized,
+                answer: "profile.faq.answer4".localized
+            ),
+            FAQItem(
+                question: "profile.faq.question5".localized,
+                answer: "profile.faq.answer5".localized
+            )
+        ]
+    }
+
     @State private var expandedFAQ: UUID?
 
     var body: some View {
@@ -733,7 +766,7 @@ struct HelpSupportSheet: View {
                         Text("profile.aboutUs".localized)
                             .font(.system(size: 18, weight: .bold))
                             .foregroundColor(.theme.textPrimary)
-                        Text("We’re two friends building a new kind of movie/TV companion. VibeWatch was born from frustration with clunky trackers: we focus on modern, clip-first discovery, quick streaming links, and tools that help both cinephiles and casual viewers find the perfect pick without endless scrolling.")
+                        Text("profile.aboutUsDescription".localized)
                             .font(.system(size: 14))
                             .foregroundColor(.theme.textSecondary)
                         Text("profile.tmdbAttribution".localized)
@@ -744,12 +777,12 @@ struct HelpSupportSheet: View {
                     .padding()
                     .background(Color.white.opacity(0.06))
                     .clipShape(RoundedRectangle(cornerRadius: 12))
-                    
+
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("FAQs")
+                        Text("profile.faqs".localized)
                             .font(.system(size: 18, weight: .bold))
                             .foregroundColor(.theme.textPrimary)
-                        
+
                         LazyVGrid(columns: [GridItem(.flexible())], spacing: 12) {
                             ForEach(faqItems) { item in
                                 FAQChip(
@@ -767,28 +800,28 @@ struct HelpSupportSheet: View {
                             }
                         }
                     }
-                    
+
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Legal")
+                        Text("profile.legal".localized)
                             .font(.system(size: 18, weight: .bold))
                             .foregroundColor(.theme.textPrimary)
-                        
+
                         VStack(spacing: 10) {
                             Link(destination: privacyURL) {
                                 HStack {
-                                    Text("Privacy Policy")
+                                    Text("profile.privacyPolicy".localized)
                                     Spacer()
                                     Image(systemName: "arrow.up.right.square")
                                 }
                                 .font(.system(size: 14))
                                 .foregroundColor(.theme.textPrimary)
                             }
-                            
+
                             Divider()
-                            
+
                             Link(destination: termsOfUseURL) {
                                 HStack {
-                                    Text("Terms of Use")
+                                    Text("profile.termsOfUse".localized)
                                     Spacer()
                                     Image(systemName: "arrow.up.right.square")
                                 }
@@ -1037,7 +1070,7 @@ struct FeedbackDetailSheet: View {
         let mailtoString = "mailto:startingvibe2025@gmail.com?subject=\(encodedSubject)&body=\(encodedBody)"
         
         guard let url = URL(string: mailtoString) else {
-            sendError = "Invalid email content."
+            sendError = "profile.feedback.invalidEmail".localized
             isSending = false
             return
         }

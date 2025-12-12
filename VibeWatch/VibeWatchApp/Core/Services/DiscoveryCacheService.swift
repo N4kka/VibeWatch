@@ -37,29 +37,43 @@ class DiscoveryCacheService {
                 updateLastRandomizationDate()
                 print("🎲 [DiscoveryCache] Randomized in-memory cache for today")
             }
-            
+
             print("⚡️ [DiscoveryCache] Using in-memory cache")
             return (cachedMovies, cachedPopularMovies, cachedTopRatedMovies, cachedTVShows)
         }
-        
+
         // Step 2: Try local SQLite database cache (offline-capable!)
         if let cached = try? await fetchFromLocalDatabase() {
             print("📊 [DiscoveryCache] Using local SQLite cache")
             cacheInMemory(cached)
             return cached
         }
-        
-        // Step 3: Fallback to TMDB and save to cache
+
+        // Step 3: Fallback to TMDB with error handling
         print("🔄 [DiscoveryCache] Fetching fresh from TMDB and caching...")
-        let fresh = try await fetchFromTMDB()
-        
-        // Save to local database in background
-        Task.detached(priority: .background) {
-            await self.saveToLocalDatabase(fresh)
+        do {
+            let fresh = try await fetchFromTMDB()
+
+            // Save to local database in background
+            Task.detached(priority: .background) {
+                await self.saveToLocalDatabase(fresh)
+            }
+
+            cacheInMemory(fresh)
+            return fresh
+        } catch {
+            print("⚠️ [DiscoveryCache] Failed to fetch from TMDB: \(error.localizedDescription)")
+
+            // If network fails, try to return stale cache (even if expired)
+            if let staleCache = try? await fetchFromLocalDatabase(ignoreExpiration: true) {
+                print("📦 [DiscoveryCache] Using stale cache as fallback")
+                cacheInMemory(staleCache)
+                return staleCache
+            }
+
+            // If all else fails, throw the error
+            throw error
         }
-        
-        cacheInMemory(fresh)
-        return fresh
     }
     
     /// Force refresh from TMDB (call at midnight or on user request)
@@ -100,13 +114,25 @@ class DiscoveryCacheService {
     
     // MARK: - Local SQLite Database Operations
     
-    private func fetchFromLocalDatabase() async throws -> (trending: [Movie], popular: [Movie], topRated: [Movie], tv: [TVShow])? {
-        // Fetch all cached content from local SQLite that's not expired
-        let now = ISO8601DateFormatter().string(from: Date())
-        let response = try await db.queryRaw("""
-            SELECT * FROM discovery_cache
-            WHERE expires_at > ? AND deleted_at IS NULL
-        """, parameters: [now])
+    private func fetchFromLocalDatabase(ignoreExpiration: Bool = false) async throws -> (trending: [Movie], popular: [Movie], topRated: [Movie], tv: [TVShow])? {
+        // Fetch all cached content from local SQLite
+        let response: [[String: Any]]
+
+        if ignoreExpiration {
+            // Fetch even expired cache (for offline fallback)
+            response = try await db.queryRaw("""
+                SELECT * FROM discovery_cache
+                WHERE deleted_at IS NULL
+                ORDER BY cached_at DESC
+            """)
+        } else {
+            // Fetch only non-expired cache
+            let now = ISO8601DateFormatter().string(from: Date())
+            response = try await db.queryRaw("""
+                SELECT * FROM discovery_cache
+                WHERE expires_at > ? AND deleted_at IS NULL
+            """, parameters: [now])
+        }
         
         guard !response.isEmpty else {
             print("📭 [DiscoveryCache] Local cache is empty or expired")
@@ -336,17 +362,38 @@ class DiscoveryCacheService {
     }
     
     private func fetchFromTMDB() async throws -> (trending: [Movie], popular: [Movie], topRated: [Movie], tv: [TVShow]) {
-        // Fetch all in parallel for speed
-        async let trending = tmdbService.getTrendingMovies(timeWindow: .week, page: 1)
-        async let popular = tmdbService.getPopularMovies(page: 1)
-        async let topRated = tmdbService.getTopRatedMovies(page: 1)
-        async let tv = tmdbService.getTrendingTVShows(timeWindow: .week, page: 1)
-        
-        let (trendingRes, popularRes, topRatedRes, tvRes) = try await (trending, popular, topRated, tv)
-        
-        print("✅ [DiscoveryCache] Fetched from TMDB: \(trendingRes.results.count) trending, \(popularRes.results.count) popular, \(topRatedRes.results.count) top rated, \(tvRes.results.count) TV")
-        
-        return (trendingRes.results, popularRes.results, topRatedRes.results, tvRes.results)
+        // Retry with exponential backoff (max 3 attempts)
+        let maxAttempts = 3
+        var lastError: Error?
+
+        for attempt in 1...maxAttempts {
+            do {
+                // Fetch all in parallel for speed
+                async let trending = tmdbService.getTrendingMovies(timeWindow: .week, page: 1)
+                async let popular = tmdbService.getPopularMovies(page: 1)
+                async let topRated = tmdbService.getTopRatedMovies(page: 1)
+                async let tv = tmdbService.getTrendingTVShows(timeWindow: .week, page: 1)
+
+                let (trendingRes, popularRes, topRatedRes, tvRes) = try await (trending, popular, topRated, tv)
+
+                print("✅ [DiscoveryCache] Fetched from TMDB: \(trendingRes.results.count) trending, \(popularRes.results.count) popular, \(topRatedRes.results.count) top rated, \(tvRes.results.count) TV")
+
+                return (trendingRes.results, popularRes.results, topRatedRes.results, tvRes.results)
+            } catch {
+                lastError = error
+                print("⚠️ [DiscoveryCache] Attempt \(attempt)/\(maxAttempts) failed: \(error.localizedDescription)")
+
+                // Don't retry on the last attempt
+                if attempt < maxAttempts {
+                    let delay = pow(2.0, Double(attempt - 1)) // 1s, 2s, 4s
+                    print("🔄 [DiscoveryCache] Retrying in \(delay)s...")
+                    try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                }
+            }
+        }
+
+        // All attempts failed, throw the last error
+        throw lastError ?? NSError(domain: "DiscoveryCacheService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to fetch from TMDB after \(maxAttempts) attempts"])
     }
     
     // MARK: - In-Memory Cache

@@ -20,14 +20,15 @@ final class ClipQuotaService: ObservableObject {
     
     /// Whether user has active Pro subscription (from RevenueCat)
     @Published private(set) var isProUser: Bool = false
-    
+
     // MARK: - Constants
-    
+
     private let anonymousLimit = 15
     private let defaults = UserDefaults.standard
-    
+
     private enum Keys {
         static let anonymousClipsWatched = "clip_quota_anonymous_clips_watched"
+        static let cachedProStatus = "clip_quota_cached_pro_status"
     }
     
     // MARK: - Dependencies
@@ -39,12 +40,22 @@ final class ClipQuotaService: ObservableObject {
     
     private init() {
         self.anonymousClipsWatched = defaults.integer(forKey: Keys.anonymousClipsWatched)
+
+        // Load cached PRO status for offline mode
+        // Only load from cache if the key exists (otherwise wait for RevenueCat)
+        if defaults.object(forKey: Keys.cachedProStatus) != nil {
+            self.isProUser = defaults.bool(forKey: Keys.cachedProStatus)
+            print("📦 [ClipQuota] Loaded cached PRO status: \(isProUser)")
+        } else {
+            print("📭 [ClipQuota] No cached PRO status - will check RevenueCat")
+        }
+
         observeRevenueCatCustomerInfo()
-        
+
         Task { [weak self] in
             _ = await self?.checkIsProUser()
         }
-        
+
         debugPrintStatus()
     }
     
@@ -77,7 +88,8 @@ final class ClipQuotaService: ObservableObject {
     func resetAll() {
         anonymousClipsWatched = 0
         defaults.removeObject(forKey: Keys.anonymousClipsWatched)
-        updateProStatus(false)
+        defaults.removeObject(forKey: Keys.cachedProStatus)
+        isProUser = false
         debugPrintStatus()
     }
     
@@ -94,11 +106,13 @@ final class ClipQuotaService: ObservableObject {
         do {
             let info = try await Purchases.shared.customerInfo()
             let isPro = info.entitlements[AppConstants.RevenueCat.proEntitlementID]?.isActive == true
-            
+
             updateProStatus(isPro)
             return isPro
         } catch {
-            print("❌ [ClipQuota] Failed to fetch RevenueCat customer info: \(error.localizedDescription)")
+            print("⚠️ [ClipQuota] Failed to fetch RevenueCat customer info (possibly offline): \(error.localizedDescription)")
+            print("📱 [ClipQuota] Using cached PRO status: \(isProUser)")
+            // Return cached value - RevenueCat SDK also caches customer info
             return isProUser
         }
     }
@@ -109,10 +123,27 @@ final class ClipQuotaService: ObservableObject {
     private func observeRevenueCatCustomerInfo() {
         customerInfoStreamTask?.cancel()
         customerInfoStreamTask = Task { [weak self] in
+            var isFirstEmission = true
             for await info in Purchases.shared.customerInfoStream {
                 let isPro = info.entitlements[AppConstants.RevenueCat.proEntitlementID]?.isActive == true
                 await MainActor.run {
-                    self?.updateProStatus(isPro)
+                    guard let self = self else { return }
+
+                    // On first emission, only update if we have no cached value
+                    // This prevents RevenueCat's initial cached value from overriding our UserDefaults cache
+                    if isFirstEmission {
+                        isFirstEmission = false
+                        if defaults.object(forKey: Keys.cachedProStatus) == nil {
+                            print("📡 [ClipQuota] First RevenueCat emission, no cache: \(isPro)")
+                            self.updateProStatus(isPro)
+                        } else {
+                            print("📡 [ClipQuota] First RevenueCat emission ignored, using cached: \(self.isProUser)")
+                        }
+                    } else {
+                        // Subsequent emissions are actual updates
+                        print("📡 [ClipQuota] RevenueCat update: \(isPro)")
+                        self.updateProStatus(isPro)
+                    }
                 }
             }
         }
@@ -121,9 +152,13 @@ final class ClipQuotaService: ObservableObject {
     /// Updates Pro status and triggers appropriate actions on status change
     private func updateProStatus(_ newValue: Bool) {
         guard isProUser != newValue else { return }
-        
+
         let wasProBefore = isProUser
         isProUser = newValue
+
+        // Cache PRO status for offline mode
+        defaults.set(newValue, forKey: Keys.cachedProStatus)
+        print("💾 [ClipQuota] Cached PRO status for offline access: \(newValue)")
         
         if !newValue && wasProBefore {
             // Downgraded from Pro to Free

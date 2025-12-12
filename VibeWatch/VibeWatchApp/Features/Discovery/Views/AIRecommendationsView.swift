@@ -8,10 +8,9 @@ struct AIRecommendationsView: View {
     @ObservedObject private var localizationManager = LocalizationManager.shared
     
     @State private var showAuthGate = false
-    @State private var showPaywall = false
     
     private var canUseAI: Bool {
-        appState.isAuthenticated && quotaManager.isProUser
+        appState.isAuthenticated
     }
     
     init(viewModel: AIRecommendationViewModel = AIRecommendationViewModel()) {
@@ -36,7 +35,7 @@ struct AIRecommendationsView: View {
             
             VStack(spacing: 20) {
                 // Header
-                Text("Vibe AI")
+                Text("ai.title".localized)
                     .font(.system(size: 28, weight: .bold))
                     .foregroundStyle(
                         LinearGradient(
@@ -52,86 +51,70 @@ struct AIRecommendationsView: View {
                     // --- AI Chat Content ---
                     chatContent
                 } else {
-                    // --- Gating UI ---
-                    VStack(spacing: 20) {
-                        Spacer()
-                        
-                        Image(systemName: "sparkles.tv")
-                            .font(.system(size: 60))
-                            .foregroundStyle(Color.theme.textSecondary.opacity(0.5))
-                        
-                        Text("ai.paywall.title".localized)
-                            .font(.system(size: 24, weight: .bold))
-                            .multilineTextAlignment(.center)
-                            .foregroundStyle(Color.theme.textPrimary)
-                        
-                        Text("ai.paywall.description".localized)
-                            .font(.system(size: 16))
-                            .multilineTextAlignment(.center)
-                            .foregroundStyle(Color.theme.textSecondary)
-                            .padding(.horizontal)
-                        
-                        Button {
-                            presentAccessGate()
-                        } label: {
-                            Text("paywall.upgrade".localized)
-                                .font(.system(size: 18, weight: .bold))
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 56)
-                                .background(Color.theme.accentOrange)
-                                .cornerRadius(16)
-                        }
-                        .padding(.horizontal, 20)
-                        
-                        Spacer()
-                    }
+                    authGate
                 }
             }
         }
         .onAppear {
+            viewModel.updateTokenLimit(isProUser: quotaManager.isProUser)
             presentAccessGate()
-            if canUseAI {
-                Task { await viewModel.fetchDailyTokenUsage() }
-            }
+            Task { await viewModel.fetchDailyTokenUsage() }
         }
         .onChange(of: appState.isAuthenticated) { _, _ in
             presentAccessGate()
-            if canUseAI {
-                Task { await viewModel.fetchDailyTokenUsage() }
-            }
+            Task { await viewModel.fetchDailyTokenUsage() }
         }
         .onChange(of: quotaManager.isProUser) { _, _ in
-            presentAccessGate()
-            if canUseAI {
-                Task { await viewModel.fetchDailyTokenUsage() }
-            }
+            viewModel.updateTokenLimit(isProUser: quotaManager.isProUser)
+            Task { await viewModel.fetchDailyTokenUsage() }
         }
         .sheet(isPresented: $showAuthGate) {
             AuthenticationGateView(isPresented: $showAuthGate)
                 .presentationBackground(.clear)
-        }
-        .fullScreenCover(isPresented: $showPaywall) {
-            DailyLimitPaywallView(
-                isPresented: $showPaywall,
-                onComeBack: {
-                    NotificationCenter.default.post(name: .navigateToDiscoveryTab, object: nil)
-                },
-                paywallType: .aiQuota
-            )
         }
     }
     
     private func presentAccessGate() {
         if !appState.isAuthenticated {
             showAuthGate = true
-            showPaywall = false
-        } else if !quotaManager.isProUser {
-            showAuthGate = false
-            showPaywall = true
         } else {
             showAuthGate = false
-            showPaywall = false
+        }
+    }
+    
+    private var authGate: some View {
+        VStack(spacing: 20) {
+            Spacer()
+            
+            Image(systemName: "sparkles.tv")
+                .font(.system(size: 60))
+                .foregroundStyle(Color.theme.textSecondary.opacity(0.5))
+            
+            Text("ai.title".localized)
+                .font(.system(size: 24, weight: .bold))
+                .multilineTextAlignment(.center)
+                .foregroundStyle(Color.theme.textPrimary)
+            
+            Text("auth.gate.authRequiredAI".localized)
+                .font(.system(size: 16))
+                .multilineTextAlignment(.center)
+                .foregroundStyle(Color.theme.textSecondary)
+                .padding(.horizontal)
+            
+            Button {
+                presentAccessGate()
+            } label: {
+                Text("auth.signIn".localized)
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 56)
+                    .background(Color.theme.accentOrange)
+                    .cornerRadius(16)
+            }
+            .padding(.horizontal, 20)
+            
+            Spacer()
         }
     }
     
@@ -278,7 +261,7 @@ struct AIRecommendationsView: View {
             // Token Counter
             VStack(spacing: 6) {
                 HStack {
-                    Text("Tokens: \(viewModel.tokensUsedToday)/\(viewModel.aiTokenLimit)")
+                    Text(String(format: "ai.tokensUsage".localized, "\(viewModel.tokensUsedToday)", "\(viewModel.aiTokenLimit)"))
                         .font(.caption2)
                         .foregroundStyle(viewModel.hardLimitReached ? .red : (viewModel.softLimitReached ? .yellow : Color.theme.textSecondary))
                     Spacer()

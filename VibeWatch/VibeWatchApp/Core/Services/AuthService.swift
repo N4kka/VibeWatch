@@ -7,19 +7,32 @@ import RevenueCat
 @MainActor
 class AuthService: ObservableObject {
     static let shared = AuthService()
-    
+
     // Real Supabase credentials
     private let supabaseURL = "https://rqhxhkijzhqivljivirq.supabase.co"
     private let supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJxaHhoa2lqemhxaXZsaml2aXJxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwNjc5ODgsImV4cCI6MjA3ODY0Mzk4OH0.D5OV0RX_whGawCu5xPfWX8297XyeXcjBOxsWez-fqVA"
     private let supabaseFunctionsBaseURL = "https://rqhxhkijzhqivljivirq.functions.supabase.co"
-    
+
     private(set) var client: Supabase.SupabaseClient?
     @Published var currentUser: User?
     @Published var isAuthenticated = false
     @Published var isPasswordRecoveryFlowPresented = false
     private var lastRevenueCatUserId: String?
+    private let baseCallbackScheme = "com.vibewatch.vibewatchapp"
     
+    // Internal flag to track if we are in a temporary recovery session
+    // When true, we hide the authenticated state from the UI (Guest Mode)
+    // even though the SDK has an active session for password update.
+    private var isRecoverySession = false
+
+    // UserDefaults keys for offline persistence
+    private let cachedUserKey = "auth_cached_user"
+    private let cachedAuthStateKey = "auth_cached_is_authenticated"
+    private let expectingPasswordResetKey = "auth_expecting_password_reset"
+    private let userDefaults = UserDefaults.standard
+
     private init() {
+        loadCachedAuthState()
         setupClient()
         print("✅ AuthService initialized with real Supabase")
     }
@@ -30,46 +43,208 @@ class AuthService: ObservableObject {
             print("⚠️ Supabase credentials not configured")
             return
         }
-        
+
         guard let url = URL(string: supabaseURL) else {
             print("❌ Invalid Supabase URL")
             return
         }
-        
+
         client = Supabase.SupabaseClient(supabaseURL: url, supabaseKey: supabaseAnonKey)
         
+        // Listen for auth state changes (Reliable way to detect password recovery)
+        Task {
+            guard let client = client else { return }
+            for await event in client.auth.authStateChanges {
+                print("🔄 [Auth] Auth event received: \(event.event)")
+                
+                // Check if we are in a password recovery flow via SDK event OR local expectation
+                let isExpectingReset = userDefaults.bool(forKey: expectingPasswordResetKey)
+                
+                if event.event == .passwordRecovery {
+                    print("🔐 [Auth] Password recovery event detected from SDK stream")
+                    await MainActor.run {
+                        self.isRecoverySession = true // Mask auth state
+                        self.isPasswordRecoveryFlowPresented = true
+                        // Clear expectation since we handled it
+                        self.userDefaults.set(false, forKey: self.expectingPasswordResetKey)
+                    }
+                } else if event.event == .signedIn && isExpectingReset {
+                    // Fallback: If we just signed in and were expecting a reset (PKCE flow often emits signedIn instead of passwordRecovery)
+                    print("🔐 [Auth] Signed in while expecting password reset - triggering flow")
+                    await MainActor.run {
+                        self.isRecoverySession = true // Mask auth state
+                        self.isPasswordRecoveryFlowPresented = true
+                        // Clear expectation since we handled it
+                        self.userDefaults.set(false, forKey: self.expectingPasswordResetKey)
+                    }
+                }
+                
+                // Refresh auth state on relevant events
+                if [.signedIn, .signedOut, .userUpdated].contains(event.event) {
+                    await checkAuthState()
+                }
+            }
+        }
+
         // Check initial auth state
         Task {
             await checkAuthState()
         }
     }
+
+    // MARK: - Offline Persistence
+
+    /// Load cached authentication state from UserDefaults (for offline support)
+    private func loadCachedAuthState() {
+        isAuthenticated = userDefaults.bool(forKey: cachedAuthStateKey)
+
+        if let userData = userDefaults.data(forKey: cachedUserKey) {
+            do {
+                currentUser = try JSONDecoder().decode(User.self, from: userData)
+                print("📦 [Auth] Loaded cached user: \(currentUser?.email ?? "unknown")")
+                print("   Display name: \(currentUser?.displayName ?? "nil")")
+                print("   Is authenticated: \(isAuthenticated)")
+
+                // Sync with RevenueCat if we have a cached user
+                if let userId = currentUser?.id {
+                    Task {
+                        await syncRevenueCatUser(with: userId)
+                    }
+                }
+            } catch {
+                print("⚠️ [Auth] Failed to decode cached user: \(error.localizedDescription)")
+                currentUser = nil
+                isAuthenticated = false
+            }
+        } else if isAuthenticated {
+            // We think we're authenticated but have no cached user - clear the flag
+            print("⚠️ [Auth] Authenticated flag set but no cached user found - clearing")
+            isAuthenticated = false
+            clearCachedAuthState()
+        }
+    }
+
+    /// Save authentication state to UserDefaults (for offline support)
+    private func saveCachedAuthState() {
+        userDefaults.set(isAuthenticated, forKey: cachedAuthStateKey)
+
+        if let user = currentUser {
+            do {
+                let userData = try JSONEncoder().encode(user)
+                userDefaults.set(userData, forKey: cachedUserKey)
+                print("💾 [Auth] Cached user for offline access: \(user.email)")
+            } catch {
+                print("⚠️ [Auth] Failed to encode user for caching: \(error.localizedDescription)")
+            }
+        } else {
+            userDefaults.removeObject(forKey: cachedUserKey)
+        }
+    }
+
+    /// Clear cached authentication state
+    private func clearCachedAuthState() {
+        userDefaults.removeObject(forKey: cachedUserKey)
+        userDefaults.removeObject(forKey: cachedAuthStateKey)
+        print("🗑️ [Auth] Cleared cached auth state")
+    }
+    
+    /// Return the current authenticated user (cached)
+    func getCurrentUser() async -> User? {
+        currentUser
+    }
     
     func handleAuthCallback(url: URL) async throws {
+        print("🔗 [Auth] Handling callback URL: \(url.absoluteString)")
+        
+        // Check for explicit errors in the URL (Supabase returns error_description in hash or query)
+        if let errorDescription = extractErrorDescription(from: url) {
+            print("❌ [Auth] Error detected in callback URL: \(errorDescription)")
+            await MainActor.run {
+                AppState.shared.showErrorToast = true
+                AppState.shared.toastMessage = errorDescription
+            }
+            return
+        }
+        
         guard let client = client else {
             throw AuthError.notConfigured
         }
-        
-        try await client.auth.session(from: url)
-        
-        if isPasswordRecoveryURL(url) {
-            isPasswordRecoveryFlowPresented = true
+
+        // Supabase may return tokens in the fragment; move them into the query so the SDK can parse them
+        let normalizedURL = moveFragmentToQueryIfNeeded(url)
+        print("🔗 [Auth] Normalized URL: \(normalizedURL.absoluteString)")
+
+        do {
+            try await client.auth.session(from: normalizedURL)
+            print("✅ [Auth] Session successfully established from callback")
+        } catch {
+            print("❌ [Auth] Failed to establish session from callback: \(error)")
+            // If session fails, likely the link is invalid/expired.
+            await MainActor.run {
+                AppState.shared.showErrorToast = true
+                AppState.shared.toastMessage = "auth.error.invalidLink".localized
+            }
+            throw error
         }
-        
+
+        if isPasswordRecoveryURL(url) {
+            print("🔐 [Auth] Detected password recovery URL - triggering flow")
+            await MainActor.run {
+                self.isPasswordRecoveryFlowPresented = true
+            }
+        } else {
+            print("ℹ️ [Auth] Not a password recovery URL")
+        }
+
         await checkAuthState()
     }
     
-    // MARK: - Authentication State
+    private func extractErrorDescription(from url: URL) -> String? {
+        let items = combinedQueryItems(from: url)
+        if let errorDesc = items.first(where: { $0.name == "error_description" })?.value {
+            return errorDesc.replacingOccurrences(of: "+", with: " ")
+        }
+        return nil
+    }
     
+    // MARK: - Authentication State
+
     func checkAuthState() async {
         guard let client = client else { return }
         
+        // If we are in a recovery flow (detected via expectation or event),
+        // effectively "hide" the user from the app UI until the flow completes.
+        if isRecoverySession || userDefaults.bool(forKey: expectingPasswordResetKey) {
+             print("🔒 [Auth] Hiding auth state due to pending recovery flow")
+             self.currentUser = nil
+             self.isAuthenticated = false
+             return
+        }
+
         do {
             let session = try await client.auth.session
             await fetchUserProfile(userId: session.user.id.uuidString)
         } catch {
-            print("No active session: \(error.localizedDescription)")
+            // Network error or session expired
+            print("⚠️ [Auth] Session check failed: \(error.localizedDescription)")
+
+            // Check if we have a cached user (offline mode)
+            if let cachedUser = currentUser, isAuthenticated {
+                print("📱 [Auth] Using cached user for offline access: \(cachedUser.email)")
+                // Keep the user logged in with cached data
+                // Don't change currentUser or isAuthenticated
+                // Sync RevenueCat if we haven't already
+                if lastRevenueCatUserId != cachedUser.id {
+                    await syncRevenueCatUser(with: cachedUser.id)
+                }
+                return
+            }
+
+            // No cached user, truly not authenticated
+            print("❌ [Auth] No active session and no cached user")
             self.currentUser = nil
             self.isAuthenticated = false
+            clearCachedAuthState()
             await syncRevenueCatUser(with: nil)
         }
     }
@@ -80,6 +255,9 @@ class AuthService: ObservableObject {
         guard let client = client else {
             throw AuthError.notConfigured
         }
+        
+        // Clear reset expectation since this is an explicit action
+        userDefaults.set(false, forKey: expectingPasswordResetKey)
         
         do {
             print("📝 Attempting to sign up user: \(email)")
@@ -154,6 +332,9 @@ class AuthService: ObservableObject {
             throw AuthError.notConfigured
         }
         
+        // Clear reset expectation since this is an explicit action
+        userDefaults.set(false, forKey: expectingPasswordResetKey)
+        
         // Check if input is email or username
         let email: String
         if emailOrUsername.contains("@") {
@@ -191,16 +372,20 @@ class AuthService: ObservableObject {
         guard let client = client else {
             throw AuthError.notConfigured
         }
-        
+
         try await client.auth.signOut()
-        
+
         self.currentUser = nil
         self.isAuthenticated = false
+
+        // Clear cached auth state for offline mode
+        clearCachedAuthState()
+
         await syncRevenueCatUser(with: nil, forceReset: force)
-        
+
         // Analytics: Clear user ID
         AnalyticsService.shared.setUserId(nil)
-        
+
         print("✅ User signed out successfully")
     }
 
@@ -208,14 +393,26 @@ class AuthService: ObservableObject {
         guard let client = client else {
             throw AuthError.notConfigured
         }
+
+        guard let redirectURL = authCallbackURL else {
+            print("❌ Invalid auth callback URL")
+            throw AuthError.invalidResponse
+        }
+        
+        print("🔗 Using redirect URL for password reset: \(redirectURL.absoluteString)")
+        
+        // Set expectation flag so we know to trigger the UI when the user comes back via deep link
+        userDefaults.set(true, forKey: expectingPasswordResetKey)
         
         do {
             try await client.auth.resetPasswordForEmail(
                 email,
-                redirectTo: URL(string: "com.vibewatch.VibeWatchApp://auth/callback")
+                redirectTo: redirectURL
             )
             print("📧 Password reset email sent to \(email)")
         } catch {
+            // Clear flag if sending failed
+            userDefaults.set(false, forKey: expectingPasswordResetKey)
             print("❌ Failed to send password reset email: \(error.localizedDescription)")
             throw AuthError.passwordResetFailed
         }
@@ -228,12 +425,15 @@ class AuthService: ObservableObject {
             throw AuthError.notConfigured
         }
         
+        // Clear reset expectation since this is an explicit action
+        userDefaults.set(false, forKey: expectingPasswordResetKey)
+        
         print("🍎 Starting Apple Sign In...")
         
         // Sign in with Apple OAuth
         try await client.auth.signInWithOAuth(
             provider: .apple,
-            redirectTo: URL(string: "com.vibewatch.VibeWatchApp://auth/callback")
+            redirectTo: authCallbackURL
         )
         
         // Wait for auth to complete
@@ -255,12 +455,15 @@ class AuthService: ObservableObject {
             throw AuthError.notConfigured
         }
         
+        // Clear reset expectation since this is an explicit action
+        userDefaults.set(false, forKey: expectingPasswordResetKey)
+        
         print("🔍 Starting Google Sign In...")
         
         // Sign in with Google OAuth
         try await client.auth.signInWithOAuth(
             provider: .google,
-            redirectTo: URL(string: "com.vibewatch.VibeWatchApp://auth/callback")
+            redirectTo: authCallbackURL
         )
         
         // Wait for auth to complete
@@ -328,10 +531,13 @@ class AuthService: ObservableObject {
                 let response = try await performFetch()
                 self.currentUser = response
                 self.isAuthenticated = true
-                
+
+                // Cache for offline access
+                saveCachedAuthState()
+
                 // Register for push notifications now that we have an authenticated user
                 NotificationService.shared.registerDeviceToken()
-                
+
                 print("✅ User profile fetched successfully: \(response.email)")
                 print("   Display name: \(response.displayName ?? "nil")")
                 print("   Avatar URL: \(response.avatarURL ?? "nil")")
@@ -353,10 +559,13 @@ class AuthService: ObservableObject {
                     let retryResponse = try await performFetch()
                     self.currentUser = retryResponse
                     self.isAuthenticated = true
-                    
+
+                    // Cache for offline access
+                    saveCachedAuthState()
+
                     // Register for push notifications now that we have an authenticated user
                     NotificationService.shared.registerDeviceToken()
-                    
+
                     print("✅ User profile fetched after recovery: \(retryResponse.email)")
                     await syncRevenueCatUser(with: userId)
                 } catch let retryError {
@@ -565,6 +774,10 @@ class AuthService: ObservableObject {
         // Clear local state
         self.currentUser = nil
         self.isAuthenticated = false
+
+        // Clear cached auth state for offline mode
+        clearCachedAuthState()
+
         await syncRevenueCatUser(with: nil, forceReset: true)
         await cleanupLocalUserData()
     }
@@ -744,13 +957,131 @@ class AuthService: ObservableObject {
     }
     
     private func isPasswordRecoveryURL(_ url: URL) -> Bool {
-        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
-            return false
+        let queryItems = combinedQueryItems(from: url)
+        
+        // Debug: Print all keys found
+        let keys = queryItems.map { $0.name }
+        print("🔍 [Auth] Callback Params: \(keys)")
+        
+        let isRecovery = queryItems.contains(where: { item in
+            item.name == "type" && item.value == "recovery"
+        })
+        
+        print("🔍 [Auth] Is Recovery: \(isRecovery)")
+        return isRecovery
+    }
+
+    /// Combine query items from both the query string and the fragment portion (#) to support Supabase OAuth/recovery redirects.
+    private func combinedQueryItems(from url: URL) -> [URLQueryItem] {
+        var items: [URLQueryItem] = []
+
+        let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        if let query = components?.queryItems {
+            items.append(contentsOf: query)
+        }
+
+        if let fragment = components?.fragment,
+           let fragComponents = URLComponents(string: "?\(fragment)"),
+           let fragItems = fragComponents.queryItems {
+            items.append(contentsOf: fragItems)
+        }
+
+        return items
+    }
+
+    /// Supabase sometimes returns tokens in the fragment; this helper moves them into the query string for proper parsing.
+    private func moveFragmentToQueryIfNeeded(_ url: URL) -> URL {
+        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              let fragment = components.fragment,
+              !fragment.isEmpty,
+              var merged = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            return url
+        }
+
+        // Merge existing query items with fragment items
+        var queryItems = merged.queryItems ?? []
+        if let fragComponents = URLComponents(string: "?\(fragment)"),
+           let fragItems = fragComponents.queryItems {
+            queryItems.append(contentsOf: fragItems)
+        }
+        merged.fragment = nil
+        merged.queryItems = queryItems
+        return merged.url ?? url
+    }
+
+    /// Show a user-facing message if the recovery link is expired/invalid.
+    private func handleRecoveryErrorIfNeeded(from url: URL) {
+        let items = combinedQueryItems(from: url)
+        let errorCode = items.first(where: { $0.name == "error_code" })?.value
+        let isRecovery = items.contains(where: { $0.name == "type" && $0.value == "recovery" })
+
+        if isRecovery || errorCode == "otp_expired" {
+            let message = "Email link is invalid or has expired. Please request a new password reset link."
+            AppState.shared.toastMessage = message
+            AppState.shared.showErrorToast = true
+        }
+    }
+
+    /// Build the auth callback URL based on current bundle identifier (supports beta/prod)
+    private var authCallbackURL: URL? {
+        let isBeta = (Bundle.main.bundleIdentifier ?? "").contains(".beta")
+        let scheme = isBeta ? "\(baseCallbackScheme).beta" : baseCallbackScheme
+        return URL(string: "\(scheme)://auth/callback")
+    }
+    
+    func completeRecovery() async {
+        print("✅ [Auth] Completing recovery flow")
+        
+        // 1. Turn off the "Guest Mode" mask
+        await MainActor.run {
+            self.isRecoverySession = false
+            self.isPasswordRecoveryFlowPresented = false
         }
         
-        return components.queryItems?.contains(where: { item in
-            item.name == "type" && item.value == "recovery"
-        }) == true
+        // 2. Refresh the actual auth state so the UI updates to "Signed In"
+        // (Supabase session is already valid from the recovery link)
+        await checkAuthState()
+    }
+    
+    /// Update user preferences in database
+    func updateUserPreferences(_ user: User) async throws {
+        guard let client = client else {
+            throw AuthError.notConfigured
+        }
+        
+        struct ProfileUpdatePayload: Encodable {
+            let display_name: String?
+            let avatar_url: String?
+            let cache_size_preference: String?
+            let image_prefetch_option: String?
+        }
+        
+        let payload = ProfileUpdatePayload(
+            display_name: user.displayName,
+            avatar_url: user.avatarURL,
+            cache_size_preference: user.cacheSizePreference.rawValue,
+            image_prefetch_option: user.imagePrefetchOption.rawValue
+        )
+        
+        do {
+            // Perform update
+            try await client
+                .from("profiles")
+                .update(payload)
+                .eq("id", value: user.id)
+                .execute()
+            
+            // Refresh local cache from server to keep consistency
+            await fetchUserProfile(userId: user.id)
+            await MainActor.run {
+                saveCachedAuthState()
+            }
+            
+            print("✅ User preferences updated successfully")
+        } catch {
+            print("❌ Error updating user preferences: \(error)")
+            throw AuthError.databaseError
+        }
     }
 }
 
@@ -765,29 +1096,29 @@ enum AuthError: LocalizedError {
     case passwordResetFailed
     case passwordUpdateFailed
     case accountDeletionFailed
-    
+
     var errorDescription: String? {
         switch self {
         case .notConfigured:
-            return "Authentication service is not configured. Please add your Supabase credentials."
+            return "auth.error.notConfigured".localized
         case .invalidResponse:
-            return "Invalid response from server."
+            return "auth.error.invalidResponse".localized
         case .userNotFound:
-            return "User not found."
+            return "auth.error.userNotFound".localized
         case .invalidCredentials:
-            return "Invalid email or password."
+            return "auth.error.invalidCredentials".localized
         case .networkError:
-            return "Network error. Please check your connection."
+            return "auth.error.networkError".localized
         case .databaseError:
-            return "Database error saving user profile. Please try again."
+            return "auth.error.databaseError".localized
         case .signUpFailed:
-            return "Sign up failed. Please try again."
+            return "auth.error.signUpFailed".localized
         case .passwordResetFailed:
-            return "We couldn't send the reset email. Please try again."
+            return "auth.error.passwordResetFailed".localized
         case .passwordUpdateFailed:
-            return "Failed to update password. Please try again."
+            return "auth.error.passwordUpdateFailed".localized
         case .accountDeletionFailed:
-            return "We couldn't delete your account. Please try again."
+            return "auth.error.accountDeletionFailed".localized
         }
     }
 }

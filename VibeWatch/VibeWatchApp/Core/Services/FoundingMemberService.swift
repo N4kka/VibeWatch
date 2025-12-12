@@ -18,9 +18,9 @@ final class FoundingMemberService: ObservableObject {
     private init() {
         // Configure fixed promo window (e.g., Dec 10 to Jan 10)
         let startMonth = 12
-        let startDay = 1
+        let startDay = 15
         let endMonth = 1
-        let endDay = 1
+        let endDay = 15
 
         let now = Date()
         let currentYear = calendar.component(.year, from: now)

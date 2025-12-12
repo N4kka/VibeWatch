@@ -27,7 +27,20 @@ struct CerebrasChatRequest: Codable {
 
 struct CerebrasMessage: Codable {
     let role: String
-    let content: String
+    let content: String?
+    let reasoning: String?
+
+    /// Initialize for request messages (with content)
+    init(role: String, content: String) {
+        self.role = role
+        self.content = content
+        self.reasoning = nil
+    }
+
+    /// Returns the response text, preferring content over reasoning
+    var responseText: String {
+        return content ?? reasoning ?? ""
+    }
 }
 
 // Response Models
@@ -68,8 +81,8 @@ class CerebrasService {
     @MainActor static let shared = CerebrasService()
     
     private let baseURL = "https://api.cerebras.ai/v1/chat/completions"
-    // Llama 3.1 8B is a good default for speed/efficiency on the free tier
-    private let defaultModel = "llama3.1-8b" 
+    // Zai-glm-4.6 model
+    private let defaultModel = "zai-glm-4.6" 
     
     private init() {}
     
@@ -130,7 +143,11 @@ class CerebrasService {
             let decodedResponse = try JSONDecoder().decode(CerebrasChatResponse.self, from: data)
             return decodedResponse
         } catch {
-            print("Cerebras Decoding Error: \(error)")
+            // Print raw response for debugging
+            if let rawResponse = String(data: data, encoding: .utf8) {
+                print("🔴 [Cerebras] Raw API Response: \(rawResponse)")
+            }
+            print("🔴 [Cerebras] Decoding Error: \(error)")
             throw CerebrasError.decodingError
         }
     }

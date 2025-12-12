@@ -1,18 +1,19 @@
-/// Tab Bar
+// Tab Bar
 "tab.clips" = "Clips";
 "tab.discovery" = "Discovery";
 "tab.lists" = "Lists";
 "tab.profile" = "Profile";
+"tab.ai" = "AI";
 
 // Onboarding
-"onboarding.page1.description" = "Discover and save movies and TV series you love. Keep track of what you've watched and what you want to watch next.";
-"onboarding.page1.title" = "Track & Save Your Favorites";
-"onboarding.page2.description" = "Create custom lists to organize your content. From watchlists to mood-based collections, make it yours.";
-"onboarding.page2.title" = "Organize with Lists";
-"onboarding.page3.description" = "Watch exciting clips from movies and TV shows. Join the community, comment, save to lists, and share with friends.";
-"onboarding.page3.title" = "Discover Through Clips";
+"onboarding.page1.description" = "AI movie and TV recommendations tuned to your vibe, so you always know what to watch next.";
+"onboarding.page1.title" = "Smarter Picks with AI";
+"onboarding.page2.description" = "Build watchlists and mood-based collections to organize every movie and show you discover.";
+"onboarding.page2.title" = "Organize Your Watchlist";
+"onboarding.page3.description" = "Watch trailers and clips, then save the best finds to your lists to stream later.";
+"onboarding.page3.title" = "Discover Trailers & Clips";
 "onboarding.page4.createAccount" = "Create Account";
-"onboarding.page4.description" = "Create an account to sync your lists and preferences across all your devices.";
+"onboarding.page4.description" = "Create an account to sync your watchlists and preferences across all your devices.";
 "onboarding.page4.skip" = "Skip for now";
 "onboarding.page4.title" = "Ready to Start?";
 
@@ -44,7 +45,7 @@
 "lists.disliked" = "Disliked";
 "lists.editList" = "Edit List";
 "lists.empty" = "No Lists Yet";
-"lists.emptyDescription" = "Create your first list to start organizing your favorite content";
+"lists.emptyDescription" = "Create your first watchlist to organize movies and shows you discover";
 "lists.error.authRequired" = "You need to be signed in to create custom lists.";
 "lists.error.defaultImmutable" = "This list can't be modified";
 "lists.error.invalidName" = "Please enter a valid list name";
@@ -74,7 +75,7 @@
 "movieDetail.rating" = "Rating";
 "movieDetail.ratings" = "ratings";
 "movieDetail.runtime" = "Runtime";
-"movieDetail.save" = "Save";
+"movieDetail.save" = "Save to watchlist";
 "movieDetail.seen" = "Seen";
 "movieDetail.similar" = "People who liked this also liked";
 "movieDetail.trailer" = "Trailer";
@@ -117,6 +118,7 @@
 "filters.title" = "Filters";
 
 // Clips
+"clips.title" = "Clips";
 "clips.addToList" = "Add to List";
 "clips.beFirstToComment" = "Be the first to comment";
 "clips.comment" = "Comment";
@@ -124,7 +126,7 @@
 "clips.comments.deleteConfirmation" = "Are you sure you want to delete this comment? This action cannot be undone.";
 "clips.comments.loading" = "Loading comments...";
 "clips.comments.replying" = "Replying...";
-"clips.createFirstList" = "Create your first list to save content";
+"clips.createFirstList" = "Create your first watchlist to save picks";
 "clips.createNewList" = "Create New List";
 "clips.feed.craftingSubtitle" = "We're handpicking the best clips just for you ✨";
 "clips.feed.craftingTitle" = "Crafting Your Perfect Feed";
@@ -142,7 +144,7 @@
 // Search
 "search.latestVisited" = "Latest Visited";
 "search.noResultsFound" = "No results found";
-"search.placeholder" = "Search for a tv show or a movie...";
+"search.placeholder" = "Find where to watch a movie or show...";
 "search.results" = "Results";
 "search.trendingSearches" = "Trending Searches";
 
@@ -168,6 +170,21 @@
 "settings.selectCountry" = "Select Country";
 "settings.selectLanguage" = "Select Language";
 "settings.title" = "Settings";
+
+// Cache Management
+"settings.cacheManagement.title" = "Cache Management";
+"settings.cacheManagement.cacheSize" = "Cache Size";
+"settings.cacheManagement.cacheSizeTitle" = "Choose Cache Size";
+"settings.cacheManagement.cacheSizeDescription" = "Select how much storage to use for caching images. Larger caches allow more offline content.";
+"settings.cacheManagement.prefetchOption" = "Image Prefetching";
+"settings.cacheManagement.prefetchTitle" = "Image Prefetch Options";
+"settings.cacheManagement.prefetchDescription" = "Control when images are downloaded for offline viewing. WiFi-only helps save mobile data.";
+"settings.cacheManagement.prefetchNeverWarning" = "Warning: Offline functionality will be limited";
+"settings.cacheManagement.clearCache" = "Clear Image Cache";
+"settings.cacheManagement.clearCacheWarning" = "Clears all cached images";
+"settings.cacheManagement.clearCacheConfirmTitle" = "Clear Cache?";
+"settings.cacheManagement.clearCacheConfirmMessage" = "This will remove all cached images and free up storage space. You'll need to be online to view images again until they're re-cached.";
+"settings.cacheManagement.clearCacheConfirm" = "Clear Cache";
 
 // Platforms
 "platform.selectionCount" = "%d of %d selected";
@@ -200,6 +217,9 @@
 "auth.gate.haveAccount" = "I already have an account";
 "auth.gate.limitMessage" = "You’ve enjoyed today’s 15 free clips. Sign up to sync your progress and unlock tomorrow’s drops instantly.";
 "auth.gate.signupFree" = "Signing up is free and takes less than a minute.";
+"auth.gate.benefit.saveClips" = "Save your favorite clips";
+"auth.gate.benefit.syncDevices" = "Sync across all your devices";
+"auth.gate.benefit.personalizedRecs" = "Get personalized recommendations";
 "auth.invalidEmail" = "Invalid email";
 "auth.invalidPassword" = "Invalid password";
 "auth.joinVibeWatch" = "Join VibeWatch and start discovering";
@@ -210,15 +230,27 @@
 "auth.signUp" = "Sign Up";
 "auth.usernamePlaceholder" = "Username";
 "auth.welcomeBack" = "Welcome Back";
+"auth.error.notConfigured" = "Authentication service is not configured. Please add your Supabase credentials.";
+"auth.error.invalidResponse" = "Invalid response from server.";
+"auth.error.userNotFound" = "User not found.";
+"auth.error.invalidCredentials" = "Invalid email or password.";
+"auth.error.networkError" = "Network error. Please check your connection.";
+"auth.error.databaseError" = "Database error saving user profile. Please try again.";
+"auth.error.signUpFailed" = "Sign up failed. Please try again.";
+"auth.error.passwordResetFailed" = "We couldn't send the reset email. Please try again.";
+"auth.error.passwordUpdateFailed" = "Failed to update password. Please try again.";
+"auth.error.accountDeletionFailed" = "We couldn't delete your account. Please try again.";
 
 // AI
+"ai.title" = "Vibe AI";
+"ai.tokensUsage" = "Tokens: %@/%@";
 "ai.describeVibe" = "Describe your vibe";
 "ai.editMessage" = "Edit message";
 "ai.hardLimitMessage" = "You've reached today's AI limit. Come back tomorrow.";
 "ai.paywall.benefit.personalized" = "Personalized watchlists";
 "ai.paywall.benefit.smarter" = "Smarter content discovery";
 "ai.paywall.benefit.unlimited" = "Unlimited AI recommendations";
-"ai.paywall.description" = "Get smarted recommendations to find your perfect fit!";
+"ai.paywall.description" = "Get smarter AI movie and TV recommendations to find your perfect watch.";
 "ai.paywall.goBack" = "Go back";
 "ai.paywall.title" = "Unlock your AI movie buddy";
 "ai.paywall.unlockAI" = "Unlock AI Chat";
@@ -227,11 +259,11 @@
 "ai.resultsTitle" = "Here's what I found:";
 "ai.saveRegenerate" = "Save & Regenerate";
 "ai.softLimitMessage" = "You're nearing today's AI limit. Keep prompts concise.";
-"ai.subtitle" = "Tell me what you're in the mood for, and I'll find the perfect watch.";
-"ai.suggestion.chips1" = "💖 Cozy romance for the soft era";
-"ai.suggestion.chips2" = "💥 80s action–comedy but ✨iconic✨";
-"ai.suggestion.chips3" = "🕵️‍♂️ Underrated thriller w/ plot twist";
-"ai.suggestion.chips4" = "🌀 Sci-fi mindtrip you won’t recover from";
+"ai.subtitle" = "Tell me your vibe—AI finds the movie or show to watch next.";
+"ai.suggestion.chips1" = "💖 Cozy romance, AI-picked for me";
+"ai.suggestion.chips2" = "💥 80s action-comedy, AI recommends";
+"ai.suggestion.chips3" = "🕵️‍♂️ Underrated thriller with a twist";
+"ai.suggestion.chips4" = "🤖 AI: what should I watch next?";
 "ai.usage.left" = "left";
 
 // Paywall
@@ -246,18 +278,18 @@
 "paywall.daily.title" = "Come back tomorrow";
 "paywall.discount.annual" = "33% OFF";
 "paywall.ensurePro" = "Ensure your Pro Plan!";
-"paywall.feature.advancedFilters" = "🔎 Advanced filters";
-"paywall.feature.aiAssistant" = "🤖 AI-Assistant recommendations";
-"paywall.feature.lists" = "📋 Up to 100 lists";
-"paywall.feature.noAds" = "❌ No ADs";
-"paywall.feature.offlineMode" = "📵 Offline mode";
-"paywall.feature.releaseAlerts" = "🔔 Release alerts";
-"paywall.feature.unlimitedClips" = "▶️ Unlimited clips";
+"paywall.feature.advancedFilters" = "🔎 Advanced filters for faster picks";
+"paywall.feature.aiAssistant" = "🤖 AI movie & TV recommendations";
+"paywall.feature.lists" = "📋 Up to 100 synced watchlists";
+"paywall.feature.noAds" = "❌ No ads interrupting clips";
+"paywall.feature.offlineMode" = "📵 Offline mode for saved picks";
+"paywall.feature.releaseAlerts" = "🔔 Alerts when favorites stream";
+"paywall.feature.unlimitedClips" = "▶️ Unlimited clips and trailers";
 "paywall.foundingMember" = "Founding Member pricing";
 "paywall.plan.annual" = "Annual";
 "paywall.plan.monthly" = "Monthly";
 "paywall.price.perMonth" = "%@/mo";
-"paywall.proDescription" = "Pro gives you unlimited clips, saved preferences, and more.";
+"paywall.proDescription" = "Pro unlocks unlimited clips, AI movie buddy, and synced watchlists.";
 "paywall.restore" = "Restore purchases";
 "paywall.trial.badge" = "%@ free";
 "paywall.unlockUnlimited" = "Unlock unlimited clips";
@@ -286,6 +318,9 @@
 "common.tryAgain" = "Try Again";
 "common.uploading" = "Uploading...";
 "common.year" = "Year";
+"common.error" = "Error";
+"common.ok" = "OK";
+"common.pleaseTryAgain" = "Please try again.";
 
 // Misc
 "misc.language" = "English";
@@ -332,6 +367,7 @@
 "profile.feedback.keepUpdated" = "Keep me updated";
 "profile.feedback.sendButton" = "Send feedback";
 "profile.feedback.sent" = "Thanks! Your feedback was sent.";
+"profile.feedback.invalidEmail" = "Invalid email content.";
 
 // Settings - Account Deletion
 "settings.deleteAccount" = "Permanently delete my account";
@@ -367,3 +403,25 @@
 "clips.search.showcaseSubtitle" = "Search above to find clips from your favorite movies and shows";
 "clips.search.matched" = "Matched";
 "clips.search.recommended" = "Recommended";
+
+// Redeem Code
+"settings.redeemCode" = "Redeem Code";
+"settings.redeemCode.description" = "Enter a promo or offer code";
+"paywall.haveCode" = "Have a promo code?";
+
+// Help & Support - About Us
+"profile.aboutUsDescription" = "We're two friends building a new kind of movie/TV companion. VibeWatch was born from frustration with clunky trackers: we focus on modern, clip-first discovery, quick streaming links, and tools that help both cinephiles and casual viewers find the perfect pick without endless scrolling.";
+"profile.faqs" = "FAQs";
+"profile.legal" = "Legal";
+
+// FAQ Items
+"profile.faq.question1" = "How does Clips help me discover new titles?";
+"profile.faq.answer1" = "Clips are short, vertical previews matched to your taste so you can binge-scroll without feeling you're wasting time.";
+"profile.faq.question2" = "Can I track what I watch?";
+"profile.faq.answer2" = "Yes. Save to lists, mark as seen/liked/disliked, and sync across movie and TV titles.";
+"profile.faq.question3" = "Where can I watch it?";
+"profile.faq.answer3" = "Streaming links are pulled per-country so you can jump straight into the right app.";
+"profile.faq.question4" = "What if something looks wrong?";
+"profile.faq.answer4" = "Use \"Let us know\" on any title to report bugs or bad links and we'll fix it fast.";
+"profile.faq.question5" = "Does VibeWatch work for casual viewers?";
+"profile.faq.answer5" = "Totally. We surface easy picks like a Saturday-night movie with friends as well as deep cuts for movie lovers.";

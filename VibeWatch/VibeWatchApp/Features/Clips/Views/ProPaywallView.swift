@@ -1,5 +1,6 @@
 import SwiftUI
 import RevenueCat
+import StoreKit
 
 struct ProPaywallView: View {
     @Binding var isPresented: Bool
@@ -17,8 +18,25 @@ struct ProPaywallView: View {
     @State private var showAlert = false
     @State private var dragOffset: CGFloat = 0
 
+    // Transaction listener for code redemption
+    @State private var transactionListenerTask: Task<Void, Never>?
+    
+    private var accentColor: Color {
+        Color(red: 1, green: 0.55, blue: 0.2)
+    }
+
     var body: some View {
         ZStack(alignment: .topTrailing) {
+            LinearGradient(
+                colors: [
+                    Color(red: 30/255, green: 24/255, blue: 24/255),
+                    Color(red: 14/255, green: 14/255, blue: 16/255)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+            
             // Dark background matching new design
             Color(red: 18/255, green: 18/255, blue: 20/255)
                 .ignoresSafeArea()
@@ -37,23 +55,23 @@ struct ProPaywallView: View {
 
                     featuresList
                         .padding(.top, 24)
-                .padding(.bottom, 32)
+                        .padding(.bottom, 32)
 
-            pricingCards
-                .padding(.bottom, 24)
-            
-            if foundingService.promoStatus.isPromoActive {
-                promoCountdown
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, 20)
-            } else if Date() < FoundingMemberService.shared.promoStartDate {
-                promoCountdown
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, 20)
-            }
+                    pricingCards
+                        .padding(.bottom, 24)
+                    
+                    if foundingService.promoStatus.isPromoActive {
+                        promoCountdown
+                            .padding(.horizontal, 24)
+                            .padding(.bottom, 20)
+                    } else if Date() < FoundingMemberService.shared.promoStartDate {
+                        promoCountdown
+                            .padding(.horizontal, 24)
+                            .padding(.bottom, 20)
+                    }
 
-            continueButton
-                .padding(.bottom, 24)
+                    continueButton
+                        .padding(.bottom, 24)
 
                     bottomLinks
                         .padding(.bottom, 40)
@@ -108,12 +126,12 @@ struct ProPaywallView: View {
     // MARK: - Hero
 
     private var hero: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 12) {
             // Orange V logo
             Image("paywall_logo")
                 .foregroundStyle(
                     LinearGradient(
-                        colors: [Color(red: 1, green: 0.6, blue: 0.3), Color.orange],
+                        colors: [accentColor, Color.orange],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
@@ -123,6 +141,12 @@ struct ProPaywallView: View {
             Text("paywall.ensurePro".localized)
                 .font(.system(size: 24, weight: .bold))
                 .foregroundColor(.white)
+
+            Text("paywall.proDescription".localized)
+                .font(.system(size: 15, weight: .regular))
+                .foregroundColor(.white.opacity(0.75))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
         }
         .frame(maxWidth: .infinity)
     }
@@ -142,18 +166,38 @@ struct ProPaywallView: View {
     // MARK: - Features
 
     private var featuresList: some View {
-        VStack(spacing: 14) {
-            ForEach(featureKeys, id: \.self) { key in
-                FeatureCheckRow(text: key.localized)
+        VStack(alignment: .leading, spacing: 16) {
+            Text("paywall.unlockUnlimited".localized)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(.white)
+                .padding(.bottom, 4)
+
+            VStack(spacing: 12) {
+                ForEach(featureKeys, id: \.self) { key in
+                    FeatureCheckRow(text: key.localized)
+                }
             }
         }
-        .padding(.horizontal, 32)
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white.opacity(0.05))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+        )
+        .cornerRadius(22)
+        .padding(.horizontal, 24)
     }
 
     // MARK: - Pricing
 
     private var pricingCards: some View {
-        VStack(spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("paywall.cta.selectPlan".localized)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(.white.opacity(0.9))
+                .padding(.horizontal, 4)
+
             // Annual plan
             PlanOptionCard(
                 planName: "paywall.plan.annual".localized,
@@ -162,7 +206,8 @@ struct ProPaywallView: View {
                 discountBadge: annualDiscountBadge,
                 trialBadge: annualTrialBadge,
                 isSelected: selectedPackageID == annualPackage?.identifier || selectedPackage?.storeProduct.subscriptionPeriod?.unit == .year,
-                isPrimary: true
+                isPrimary: true,
+                accentColor: accentColor
             ) {
                 selectAnnualPackage()
             }
@@ -175,11 +220,20 @@ struct ProPaywallView: View {
                 discountBadge: nil,
                 trialBadge: monthlyTrialBadge,
                 isSelected: selectedPackageID == monthlyPackage?.identifier || selectedPackage?.storeProduct.subscriptionPeriod?.unit == .month,
-                isPrimary: false
+                isPrimary: false,
+                accentColor: accentColor
             ) {
                 selectMonthlyPackage()
             }
         }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white.opacity(0.05))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+        )
+        .cornerRadius(22)
         .padding(.horizontal, 24)
     }
     
@@ -265,11 +319,19 @@ struct ProPaywallView: View {
             }
             .frame(maxWidth: .infinity)
             .frame(height: 60)
-            .background(Color(red: 1, green: 0.55, blue: 0.2))
+            .background(
+                LinearGradient(
+                    colors: [accentColor, Color.orange],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
             .cornerRadius(30)
+            .shadow(color: accentColor.opacity(0.35), radius: 12, x: 0, y: 8)
         }
         .disabled(selectedPackage == nil || isPurchasing)
         .padding(.horizontal, 24)
+        .id(selectedPackageID)
     }
     
     private var continueButtonText: String {
@@ -277,34 +339,110 @@ struct ProPaywallView: View {
         
         // Check if package has a free trial
         if let trial = revenueService.getTrialInfo(for: package) {
-            return String(format: "paywall.cta.startTrial".localized, trial.localizedDuration)
+            return startTrialText(duration: trial.localizedDuration)
         }
         
         return "paywall.cta.continue".localized
+    }
+    
+    private func startTrialText(duration: String) -> String {
+        let template = "paywall.cta.startTrial".localized
+        guard template.contains("%@") else { return template }
+        return String(format: template, duration)
     }
 
     // MARK: - Bottom links
 
     private var bottomLinks: some View {
-        HStack(spacing: 28) {
-            Button(action: restorePurchases) {
-                Text("paywall.restore".localized)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(Color.white.opacity(0.6))
-            }
-            .disabled(isRestoring)
-
-            Button(action: { /* Terms */ }) {
-                Text("common.terms".localized)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(Color.white.opacity(0.6))
+        VStack(spacing: 16) {
+            // Promo code link - prominent placement for creators
+            Button(action: presentOfferCodeRedemption) {
+                HStack(spacing: 6) {
+                    Image(systemName: "ticket.fill")
+                        .font(.system(size: 12))
+                    Text("paywall.haveCode".localized)
+                        .font(.system(size: 14, weight: .semibold))
+                }
+                .foregroundColor(accentColor)
             }
 
-            Button(action: { /* Privacy */ }) {
-                Text("common.privacy".localized)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(Color.white.opacity(0.6))
+            HStack(spacing: 28) {
+                Button(action: restorePurchases) {
+                    Text("paywall.restore".localized)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(Color.white.opacity(0.6))
+                }
+                .disabled(isRestoring)
+
+                Button(action: { /* Terms */ }) {
+                    Text("common.terms".localized)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(Color.white.opacity(0.6))
+                }
+
+                Button(action: { /* Privacy */ }) {
+                    Text("common.privacy".localized)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(Color.white.opacity(0.6))
+                }
             }
+        }
+    }
+
+    /// Present Apple's native offer code redemption sheet
+    private func presentOfferCodeRedemption() {
+        // Start listening for transactions before showing the sheet
+        startTransactionListener()
+
+        SKPaymentQueue.default().presentCodeRedemptionSheet()
+        print("🎟️ [Paywall] Presenting offer code redemption sheet")
+    }
+
+    /// Listen for StoreKit transactions after code redemption
+    private func startTransactionListener() {
+        // Cancel any existing listener
+        transactionListenerTask?.cancel()
+
+        transactionListenerTask = Task {
+            // Listen for new transactions from StoreKit 2
+            for await result in Transaction.updates {
+                switch result {
+                case .verified(let transaction):
+                    print("🎟️ [Paywall] Transaction detected: \(transaction.productID)")
+
+                    // Sync with RevenueCat to update entitlements
+                    await syncPurchasesWithRevenueCat()
+
+                    // Always finish the transaction
+                    await transaction.finish()
+                case .unverified(_, let error):
+                    print("⚠️ [Paywall] Transaction verification failed: \(error)")
+                }
+            }
+        }
+    }
+
+    /// Sync purchases with RevenueCat after code redemption
+    private func syncPurchasesWithRevenueCat() async {
+        do {
+            // Sync purchases forces RevenueCat to check with Apple for new transactions
+            let customerInfo = try await Purchases.shared.syncPurchases()
+            let isPro = customerInfo.entitlements[AppConstants.RevenueCat.proEntitlementID]?.isActive == true
+
+            if isPro {
+                print("✅ [Paywall] Code redeemed successfully! PRO status activated")
+                await MainActor.run {
+                    quotaManager.upgradeToPro()
+                    onPurchased?()
+                    dismiss()
+                }
+                // Also refresh the ClipQuotaService to update its cached status
+                await ClipQuotaService.shared.checkIsProUser()
+            }
+        } catch {
+            print("⚠️ [Paywall] Failed to sync purchases: \(error)")
+            // Still try to check PRO status directly
+            await ClipQuotaService.shared.checkIsProUser()
         }
     }
 
@@ -369,7 +507,7 @@ struct ProPaywallView: View {
         )
     }
     
-    private func prioritizedPackage(priorityIds: [String], period: SubscriptionPeriod.Unit) -> Package? {
+    private func prioritizedPackage(priorityIds: [String], period: RevenueCat.SubscriptionPeriod.Unit) -> Package? {
         let periodPackages = availablePackages
             .filter { $0.storeProduct.subscriptionPeriod?.unit == period }
             .sorted { lhs, rhs in
@@ -461,7 +599,7 @@ struct ProPaywallView: View {
         guard !isRefreshing else { return }
         isRefreshing = true
         Task {
-            await RevenueCatService.shared.refreshOfferings(debug: false)
+            await RevenueCatService.shared.refreshOfferings(debug: true)
             await MainActor.run {
                 isRefreshing = false
                 setDefaultPackageIfNeeded()
@@ -472,7 +610,7 @@ struct ProPaywallView: View {
     @MainActor
     private func refreshOfferingsIfNeeded() async {
         if revenueService.offerings == nil {
-            await RevenueCatService.shared.refreshOfferings(debug: false)
+            await RevenueCatService.shared.refreshOfferings(debug: true)
             setDefaultPackageIfNeeded()
         }
     }
@@ -638,89 +776,108 @@ private struct PlanOptionCard: View {
     let trialBadge: String?
     let isSelected: Bool
     let isPrimary: Bool
+    let accentColor: Color
     let action: () -> Void
+    
+    private var badgeText: String? { trialBadge ?? discountBadge }
+    private var isTrialBadge: Bool { trialBadge != nil }
 
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 0) {
-                // Trial badge at the top (if present)
-                if let trial = trialBadge {
-                    HStack {
-                        Spacer()
-                        Text("🎁 \(trial)")
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 6)
-                            .background(
-                                LinearGradient(
-                                    colors: [Color.green.opacity(0.8), Color.green],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .cornerRadius(12)
-                        Spacer()
-                    }
-                    .padding(.bottom, 8)
-                }
-                
-                ZStack(alignment: .topTrailing) {
-                    HStack(spacing: 14) {
-                        // Radio
-                        PlanRadio(isSelected: isSelected)
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .center, spacing: 12) {
+                    PlanRadio(isSelected: isSelected, accentColor: accentColor)
 
-                        // Inner big label box (left side)
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(planName)
-                                .font(.system(size: 17, weight: .semibold))
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(planName)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.white.opacity(0.9))
+
+                        if let price = price {
+                            Text(price)
+                                .font(.system(size: 18, weight: .bold))
                                 .foregroundColor(.white)
-
-                            if let price = price {
-                                Text(price)
-                                    .font(.system(size: 17, weight: .bold))
-                                    .foregroundColor(.white)
-                            }
                         }
-                        .padding(.vertical, 12)
-                        .padding(.horizontal, 14)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .cornerRadius(25)
-
-                        // Right per-month price
-                        Text(pricePerMonth)
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundColor(.white)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 16)
-                    .background(
-                        Color(red: 36/255, green: 36/255, blue: 38/255)
-                    )
-                    .cornerRadius(26)
 
-                    // Discount badge (only shown if no trial)
-                    if let discount = discountBadge, trialBadge == nil {
-                        Text(discount)
-                            .font(.system(size: 11, weight: .bold))
+                    Spacer()
+
+                    if let badge = badgeText {
+                        badgeView(text: badge, isTrial: isTrialBadge)
+                    }
+                }
+
+                HStack {
+                    if isPrimary {
+                        Text("paywall.bestValue".localized)
+                            .font(.system(size: 12, weight: .bold))
                             .foregroundColor(.black)
+                            .padding(.vertical, 8)
                             .padding(.horizontal, 12)
-                            .padding(.vertical, 4)
-                            .background(Color(red: 1, green: 0.55, blue: 0.2))
-                            .cornerRadius(16)
-                            .padding(.trailing, 18)
-                            .padding(.top, -12)
+                            .background(accentColor)
+                            .cornerRadius(12)
                     }
+                    
+                    Spacer()
+                    
+                    Text(pricePerMonth)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.white.opacity(0.85))
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 12)
+                        .background(Color.white.opacity(0.06))
+                        .cornerRadius(12)
                 }
             }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(cardBackground)
+            .overlay(
+                RoundedRectangle(cornerRadius: 22)
+                    .stroke(borderColor, lineWidth: isSelected ? 2 : 1)
+            )
+            .cornerRadius(22)
+            .shadow(
+                color: isSelected ? accentColor.opacity(0.25) : Color.black.opacity(0.2),
+                radius: isSelected ? 12 : 8,
+                x: 0,
+                y: isSelected ? 10 : 6
+            )
         }
         .buttonStyle(.plain)
         .opacity(isPrimary ? 1.0 : 0.98)
+    }
+
+    private var cardBackground: Color {
+        Color.white.opacity(isSelected ? 0.09 : 0.04)
+    }
+
+    private var borderColor: Color {
+        isSelected ? accentColor : Color.white.opacity(0.12)
+    }
+
+    private func badgeView(text: String, isTrial: Bool) -> some View {
+        Text(isTrial ? "🎁 \(text)" : text)
+            .font(.system(size: 12, weight: .bold))
+            .foregroundColor(isTrial ? .black : .white)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(
+                LinearGradient(
+                    colors: isTrial
+                    ? [Color.green.opacity(0.85), Color.green]
+                    : [accentColor.opacity(0.8), accentColor],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .cornerRadius(12)
     }
 }
 
 private struct PlanRadio: View {
     let isSelected: Bool
+    let accentColor: Color
 
     var body: some View {
         ZStack {
@@ -730,7 +887,7 @@ private struct PlanRadio: View {
 
             if isSelected {
                 Circle()
-                    .fill(Color(red: 1, green: 0.55, blue: 0.2))
+                    .fill(accentColor)
                     .frame(width: 22, height: 22)
 
                 Image(systemName: "checkmark")

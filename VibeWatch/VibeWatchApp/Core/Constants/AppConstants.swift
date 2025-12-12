@@ -21,8 +21,9 @@ enum AppConstants {
     }
     
     enum AI {
-        /// Daily token allowance for Pro users
-        static let dailyTokenLimit = 8_000
+        /// Daily token allowance by tier
+        static let proDailyTokenLimit = 25_000
+        static let freeDailyTokenLimit = 5_000
     }
     
     enum Debug {

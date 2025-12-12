@@ -18,7 +18,7 @@ class AIRecommendationViewModel: ObservableObject {
     
     // Token Quota Management
     @Published var tokensUsedToday: Int = 0
-    let aiTokenLimit = AppConstants.AI.dailyTokenLimit
+    @Published private(set) var aiTokenLimit: Int
     var tokensRemaining: Int { aiTokenLimit - tokensUsedToday }
     var softLimitReached: Bool { tokensUsedToday >= Int(Double(aiTokenLimit) * 0.75) && tokensUsedToday < aiTokenLimit }
     var hardLimitReached: Bool { tokensUsedToday >= aiTokenLimit }
@@ -34,8 +34,13 @@ class AIRecommendationViewModel: ObservableObject {
     private let languageDetector = LanguageDetector.shared
     
     init() {
+        self.aiTokenLimit = quotaManager.isProUser ? AppConstants.AI.proDailyTokenLimit : AppConstants.AI.freeDailyTokenLimit
         // Fetch token usage on init
         Task { await fetchDailyTokenUsage() }
+    }
+    
+    func updateTokenLimit(isProUser: Bool) {
+        aiTokenLimit = isProUser ? AppConstants.AI.proDailyTokenLimit : AppConstants.AI.freeDailyTokenLimit
     }
     
     func fetchDailyTokenUsage() async {
@@ -72,10 +77,6 @@ class AIRecommendationViewModel: ObservableObject {
             self.error = "auth.gate.authRequiredAI".localized
             return
         }
-        guard quotaManager.isProUser else {
-            self.error = "ai.proRequired".localized
-            return
-        }
         guard !hardLimitReached else {
             self.error = "ai.hardLimitMessage".localized
             return
@@ -102,10 +103,6 @@ class AIRecommendationViewModel: ObservableObject {
         // --- PRO Check & Quota Enforcement ---
         guard authService.isAuthenticated else {
             self.error = "auth.gate.authRequiredAI".localized
-            return
-        }
-        guard quotaManager.isProUser else {
-            self.error = "ai.proRequired".localized
             return
         }
         guard !hardLimitReached else {
@@ -148,26 +145,28 @@ class AIRecommendationViewModel: ObservableObject {
             }
             
             let languageInstruction = """
-            Always respond in the same language as the user's request. Detected language: \(detectedLanguageDescription). Do not translate the user's intent into another language.
+            CRITICAL: You MUST respond ONLY in \(detectedLanguageDescription). Do NOT use Chinese or any other language. Match the user's input language exactly.
             """
-            
-            let systemPromptWithLanguage = "You are a helpful assistant for a movie and TV show discovery app called VibeWatch. \(languageInstruction)"
-            
+
+            let systemPromptWithLanguage = "You are a helpful movie recommendation assistant for VibeWatch app. \(languageInstruction)"
+
             let fullPrompt = """
+            IMPORTANT: Respond in \(detectedLanguageDescription) ONLY. Do not use Chinese.
+
             Recommend 3-5 movies or TV shows based on this request: "\(query)".
             For each recommendation, provide:
             1. Title
             2. Year
             3. A brief 1-sentence reason why it fits.
-            
-            Format the output clearly.
+
+            Format the output clearly. Remember: respond in \(detectedLanguageDescription).
             """
             
             let cerebrasResponse = try await CerebrasService.shared.generateResponse(
                 prompt: fullPrompt,
                 systemPrompt: systemPromptWithLanguage // Use dynamic system prompt
             )
-            let aiMessage = AIMessage(content: cerebrasResponse.choices.first?.message.content ?? "No response", isUser: false)
+            let aiMessage = AIMessage(content: cerebrasResponse.choices.first?.message.responseText ?? "No response", isUser: false)
             messages.append(aiMessage)
             
             // Log token usage

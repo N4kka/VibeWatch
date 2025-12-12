@@ -143,6 +143,7 @@ final class SQLiteService: ObservableObject {
             createClipsTable(),
             createDiscoveryCacheTable(),
             createMediaDetailsTable(),
+            createDetailCacheTable(),
             createTrailersTable(),
             createProfilesTable(),
             createListsTable(),
@@ -822,6 +823,36 @@ extension SQLiteService {
           deleted_at TEXT,
           PRIMARY KEY (tmdb_id, media_type)
         );
+        """
+    }
+
+    private func createDetailCacheTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS detail_cache (
+          id TEXT PRIMARY KEY,
+          media_id INTEGER NOT NULL,
+          media_type TEXT NOT NULL,
+          title TEXT NOT NULL,
+          overview TEXT,
+          poster_path TEXT,
+          backdrop_path TEXT,
+          release_date TEXT,
+          vote_average REAL,
+          runtime INTEGER,
+          genres TEXT,
+          credits_json TEXT,
+          videos_json TEXT,
+          providers_json TEXT,
+          similar_json TEXT,
+          imdb_id TEXT,
+          cached_at TEXT DEFAULT (datetime('now')),
+          expires_at TEXT NOT NULL,
+          updated_at TEXT DEFAULT (datetime('now')),
+          deleted_at TEXT,
+          UNIQUE(media_id, media_type)
+        );
+        CREATE INDEX IF NOT EXISTS idx_detail_cache_media ON detail_cache(media_id, media_type);
+        CREATE INDEX IF NOT EXISTS idx_detail_cache_expires ON detail_cache(expires_at);
         """
     }
     

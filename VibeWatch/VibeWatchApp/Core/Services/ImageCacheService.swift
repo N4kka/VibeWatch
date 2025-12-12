@@ -2,7 +2,7 @@ import Foundation
 import UIKit
 
 /// Service for caching images offline
-/// Uses URLCache for automatic caching with size limits
+/// Uses URLCache for automatic caching with size limits and invalidation
 @MainActor
 class ImageCacheService {
     static let shared = ImageCacheService()
@@ -13,12 +13,47 @@ class ImageCacheService {
     // Cache configuration
     private let maxMemorySize = 100 * 1024 * 1024  // 100 MB in memory
     private let maxDiskSize = 500 * 1024 * 1024     // 500 MB on disk
+    private let maxCacheAgeDays = 30                // 30 days before automatic cleanup
+    
+    // Cache size preferences
+    enum CacheSizePreference: String, CaseIterable, Codable {
+        case small = "Small (200MB)"
+        case medium = "Medium (500MB)"
+        case large = "Large (1GB)"
+        
+        var diskSize: Int {
+            switch self {
+            case .small: return 200 * 1024 * 1024
+            case .medium: return 500 * 1024 * 1024
+            case .large: return 1024 * 1024 * 1024
+            }
+        }
+    }
+    
+    // Image prefetch preferences
+    enum ImagePrefetchOption: String, CaseIterable, Codable {
+        case always = "Always"
+        case wifiOnly = "WiFi Only"
+        case never = "Never"
+    }
     
     private init() {
-        // Configure URLCache
+        // Load user's cache size preference from UserDefaults
+        let preferredDiskSize: Int
+        if let preferenceString = UserDefaults.standard.string(forKey: "imageCacheSizePreference"),
+           let preference = CacheSizePreference(rawValue: preferenceString) {
+            preferredDiskSize = preference.diskSize
+            print("📊 [ImageCache] Using user preference: \(preference.rawValue)")
+        } else {
+            // Default to medium size
+            preferredDiskSize = CacheSizePreference.medium.diskSize
+            print("📊 [ImageCache] Using default size: Medium (500MB)")
+        }
+        
+        // Configure URLCache with user's preferred size
         cache = URLCache(
             memoryCapacity: maxMemorySize,
-            diskCapacity: maxDiskSize,
+            diskCapacity: preferredDiskSize,
             directory: FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first?.appendingPathComponent("ImageCache")
         )
         
@@ -29,7 +64,7 @@ class ImageCacheService {
         
         session = URLSession(configuration: config)
         
-        print("🖼️ [ImageCache] Initialized with \(maxMemorySize / 1024 / 1024)MB memory, \(maxDiskSize / 1024 / 1024)MB disk")
+        print("🖼️ [ImageCache] Initialized with \(maxMemorySize / 1024 / 1024)MB memory, \(preferredDiskSize / 1024 / 1024)MB disk")
     }
     
     /// Load image from URL with caching
@@ -106,6 +141,84 @@ class ImageCacheService {
         print("📊 [ImageCache] Disk: \(diskUsage / 1024 / 1024)MB / \(maxDiskSize / 1024 / 1024)MB")
         
         return (memoryUsage, diskUsage)
+    }
+    
+    /// Clean up old cached images (older than maxCacheAgeDays)
+    func cleanupOldCache() {
+        let cacheDirectory = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first?.appendingPathComponent("ImageCache")
+        
+        guard let directory = cacheDirectory, FileManager.default.fileExists(atPath: directory.path) else {
+            print("🧹 [ImageCache] No cache directory found")
+            return
+        }
+        
+        let fileManager = FileManager.default
+        let cutoffDate = Calendar.current.date(byAdding: .day, value: -maxCacheAgeDays, to: Date()) ?? Date()
+        
+        do {
+            let contents = try fileManager.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.contentModificationDateKey], options: [])
+            
+            var deletedCount = 0
+            for fileURL in contents {
+                let resourceValues = try fileURL.resourceValues(forKeys: [.contentModificationDateKey])
+                if let modificationDate = resourceValues.contentModificationDate, 
+                   modificationDate < cutoffDate {
+                    try fileManager.removeItem(at: fileURL)
+                    deletedCount += 1
+                }
+            }
+            
+            print("🧹 [ImageCache] Cleaned up \(deletedCount) old cache files")
+        } catch {
+            print("❌ [ImageCache] Error cleaning cache: \(error)")
+        }
+    }
+    
+    /// Set cache size based on user preference
+    func setCacheSizePreference(_ preference: CacheSizePreference) {
+        // Store the new preference for future cache operations
+        UserDefaults.standard.set(preference.rawValue, forKey: "imageCacheSizePreference")
+        print("🔧 [ImageCache] Cache size preference set to \(preference.rawValue)")
+        print("ℹ️ [ImageCache] New cache size will take effect on next app launch")
+
+        // Note: URLCache doesn't allow changing disk capacity after initialization.
+        // The new size will be applied when the app restarts and ImageCacheService is reinitialized.
+    }
+
+    /// Set image prefetch option
+    func setImagePrefetchOption(_ option: ImagePrefetchOption) {
+        UserDefaults.standard.set(option.rawValue, forKey: "imagePrefetchOption")
+        print("🔧 [ImageCache] Image prefetch option set to \(option.rawValue)")
+    }
+
+    /// Get current image prefetch option from UserDefaults
+    func getCurrentImagePrefetchOption() -> ImagePrefetchOption {
+        if let optionString = UserDefaults.standard.string(forKey: "imagePrefetchOption"),
+           let option = ImagePrefetchOption(rawValue: optionString) {
+            return option
+        }
+        return .wifiOnly // Default
+    }
+    
+    /// Get current cache size preference from UserDefaults
+    func getCurrentCacheSizePreference() -> CacheSizePreference {
+        if let preferenceString = UserDefaults.standard.string(forKey: "imageCacheSizePreference"),
+           let preference = CacheSizePreference(rawValue: preferenceString) {
+            return preference
+        }
+        return .medium // Default
+    }
+    
+    /// Check if image prefetching should proceed based on user preference and network
+    func shouldPrefetchImages(preference: ImagePrefetchOption) async -> Bool {
+        switch preference {
+        case .always:
+            return true
+        case .wifiOnly:
+            return await NetworkMonitor.shared.isOnWiFi()
+        case .never:
+            return false
+        }
     }
 }
 

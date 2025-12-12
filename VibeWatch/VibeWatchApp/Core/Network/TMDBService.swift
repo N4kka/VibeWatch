@@ -75,6 +75,9 @@ actor TMDBService: TMDBServiceProtocol {
         cache = URLCache(memoryCapacity: 50_000_000, diskCapacity: 100_000_000)
         config.urlCache = cache
         config.requestCachePolicy = .useProtocolCachePolicy
+        config.timeoutIntervalForRequest = 20
+        config.timeoutIntervalForResource = 40
+        config.waitsForConnectivity = true
         session = URLSession(configuration: config)
     }
     

@@ -4,6 +4,11 @@ struct ClipsSearchView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = ClipsSearchViewModel()
     @FocusState private var isSearchFocused: Bool
+    private let initialQuery: String?
+    
+    init(initialQuery: String? = nil) {
+        self.initialQuery = initialQuery
+    }
     
     private var safeAreaTop: CGFloat {
         UIApplication.shared.connectedScenes
@@ -25,6 +30,11 @@ struct ClipsSearchView: View {
             dismiss()
         }
         .onAppear {
+            if let initialQuery, !initialQuery.isEmpty {
+                viewModel.query = initialQuery
+                viewModel.updateQuery(initialQuery)
+                Task { await viewModel.performSearch() }
+            }
             isSearchFocused = true
             Task {
                 await viewModel.loadShowcaseClips()

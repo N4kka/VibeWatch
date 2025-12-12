@@ -7,16 +7,19 @@ final class ClipsService {
     private let tmdbService = TMDBService.shared
     private let youtubeAPIKey = "AIzaSyCh_tkrvBEGW6ALRvkAN-LYx1B3Cly1160"
     private let session: URLSession
-    
+
     // In-memory storage for likes (since you don't have a backend)
     private var likedClips: Set<String> = []
     private var clipLikeCounts: [String: Int] = [:]
-    
+
     private init() {
         let config = URLSessionConfiguration.default
         config.requestCachePolicy = .returnCacheDataElseLoad
+        config.timeoutIntervalForRequest = 15
+        config.timeoutIntervalForResource = 30
+        config.waitsForConnectivity = true
         session = URLSession(configuration: config)
-        
+
         // Load saved likes from UserDefaults
         loadLikedClips()
     }

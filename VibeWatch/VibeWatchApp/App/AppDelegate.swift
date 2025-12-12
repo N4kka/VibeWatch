@@ -32,8 +32,15 @@ class AppDelegate: NSObject, UIApplicationDelegate, @MainActor UNUserNotificatio
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
         print("📱 Received URL: \(url.absoluteString)")
         
+        let validSchemes = [
+            "com.vibewatch.VibeWatchApp",
+            "com.vibewatch.VibeWatchApp.beta",
+            "com.vibewatch.vibewatchapp",
+            "com.vibewatch.vibewatchapp.beta"
+        ]
+        
         // Handle Supabase OAuth callback
-        if url.scheme == "com.vibewatch.VibeWatchApp" && url.host == "auth" {
+        if let scheme = url.scheme, validSchemes.contains(scheme) && url.host == "auth" {
             Task {
                 do {
                     try await AuthService.shared.handleAuthCallback(url: url)
