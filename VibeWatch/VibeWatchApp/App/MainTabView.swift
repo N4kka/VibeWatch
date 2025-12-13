@@ -2,41 +2,64 @@ import SwiftUI
 
 struct MainTabView: View {
     @EnvironmentObject var appState: AppState // Injected from App
+    @EnvironmentObject var authService: AuthService
+    @Environment(\.scenePhase) private var scenePhase // Monitor app lifecycle
     @State private var selectedTab = 0
     @State private var selectedMovie: Movie?
     @State private var selectedMediaType: MediaType = .movie
     @State private var isLoading = true
     @State private var showOnboarding = !UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
+    @State private var hasClearedAuthOnFreshInstall = false
+    @StateObject private var aiViewModel = AIRecommendationViewModel()
+    
+    private var passwordRecoveryBinding: Binding<Bool> {
+        Binding(
+            get: { authService.isPasswordRecoveryFlowPresented },
+            set: { authService.isPasswordRecoveryFlowPresented = $0 }
+        )
+    }
     
     // MARK: - Custom Tab Bar View (iOS 17-25)
     private var customTabBarView: some View {
         NavigationStack {
             ZStack(alignment: .bottom) {
-                TabView(selection: $selectedTab) {
-                    DiscoveryView(selectedMovie: $selectedMovie, selectedMediaType: $selectedMediaType)
-                        .tag(0)
+                // Simple tab container - no swipe navigation
+                ZStack {
+                    if selectedTab == 0 {
+                        DiscoveryView(selectedMovie: $selectedMovie, selectedMediaType: $selectedMediaType)
+                            .transition(.opacity)
+                    }
                     
-                    ClipsView()
-                        .tag(1)
+                    if selectedTab == 1 {
+                        ClipsView()
+                            .transition(.opacity)
+                    }
                     
-                    ListsView()
-                        .tag(2)
+                    if selectedTab == 2 {
+                        AIRecommendationsView(viewModel: aiViewModel)
+                            .transition(.opacity)
+                    }
+                    
+                    if selectedTab == 3 {
+                        ListsView()
+                            .transition(.opacity)
+                    }
                 }
-                .tabViewStyle(.page(indexDisplayMode: .never))
+                .animation(.easeInOut(duration: 0.3), value: selectedTab)
                 
                 // Hide bottom bar when on Clips tab
-                if selectedTab != 1 {
-                    VStack(spacing: 0) {
-                        Spacer()
-                        
+                VStack(spacing: 0) {
+                    Spacer()
+                    
+                    if selectedTab != 1 {
                         LiquidGlassBottomBar(selectedTab: $selectedTab)
                             .padding(.horizontal, 16)
                             .padding(.bottom, 20)
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
-                    .ignoresSafeArea(edges: .bottom)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .animation(.spring(response: 0.3, dampingFraction: 0.8), value: selectedTab)
                 }
+                .ignoresSafeArea(edges: .bottom)
+                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: selectedTab)
             }
             .background(Color.theme.background.ignoresSafeArea())
             .navigationBarHidden(true)
@@ -67,12 +90,19 @@ struct MainTabView: View {
                         Label("tab.clips".localized, systemImage: "play.rectangle.fill")
                     }
                     .tag(1)
+                    .toolbar(selectedTab == 1 ? .hidden : .visible, for: .tabBar)
+                
+                AIRecommendationsView(viewModel: aiViewModel)
+                    .tabItem {
+                        Label("tab.ai".localized, systemImage: "sparkles")
+                    }
+                    .tag(2)
                 
                 ListsView()
                     .tabItem {
                         Label("tab.lists".localized, systemImage: "list.bullet")
                     }
-                    .tag(2)
+                    .tag(3)
             }
             .tint(.theme.accentOrange)
             .background(Color.theme.background.ignoresSafeArea())
@@ -118,13 +148,12 @@ struct MainTabView: View {
     
     var body: some View {
         ZStack {
-            if isLoading {
+            // Force dismiss splash screen if password recovery is presented
+            if isLoading && !authService.isPasswordRecoveryFlowPresented {
                 SplashScreen()
                     .transition(.opacity)
                     .task {
                         // REAL WORK: Wait for the AppState to signal ready
-                        // This replaces the fake timer
-                        // We give it a minimum 1.5s just so the logo animation isn't jarring
                         try? await Task.sleep(nanoseconds: 1_500_000_000)
                         
                         // Wait for actual preload if it's still running
@@ -139,7 +168,7 @@ struct MainTabView: View {
             } else if showOnboarding {
                 OnboardingView(showOnboarding: $showOnboarding)
                     .transition(.opacity)
-                    .onChange(of: showOnboarding) { newValue in
+                    .onChange(of: showOnboarding) {_, newValue in
                         print("🔵 [MainTabView] showOnboarding changed to: \(newValue)")
                         if !newValue {
                             print("🔵 [MainTabView] Onboarding completed, showing main app")
@@ -153,6 +182,67 @@ struct MainTabView: View {
                     customTabBarView
                 }
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .navigateToDiscoveryTab)) { _ in
+            // Navigate to Discovery tab
+            withAnimation {
+                selectedTab = 0
+            }
+            print("🏠 [MainTabView] Navigated to Discovery tab")
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .navigateToClipsTab)) { _ in
+            // Navigate to Clips tab
+            withAnimation {
+                selectedTab = 1
+            }
+            print("🎬 [MainTabView] Navigated to Clips tab")
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .navigateToListsTab)) { _ in
+            // Navigate to Lists tab
+            withAnimation {
+                selectedTab = 3
+            }
+            print("📝 [MainTabView] Navigated to Lists tab")
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .navigateToAITab)) { _ in
+            // Navigate to AI tab
+            withAnimation {
+                selectedTab = 2
+            }
+            print("🤖 [MainTabView] Navigated to AI tab")
+        }
+        .background(scenePhaseMonitor) // Monitor app lifecycle for subscription status
+        .withErrorHandling()
+        .task {
+            ReviewPromptManager.shared.registerAppLaunch()
+            
+            // On first launch, clear any persisted auth from keychain
+            if !hasClearedAuthOnFreshInstall && !UserDefaults.standard.bool(forKey: "hasLaunchedBefore") {
+                print("🆕 [MainTabView] Fresh install detected - clearing keychain auth")
+                hasClearedAuthOnFreshInstall = true
+                
+                // Mark as launched so we don't clear again on next launch
+                UserDefaults.standard.set(true, forKey: "hasLaunchedBefore")
+                
+                // Clear any persisted auth session from keychain
+                do {
+                    try await AuthService.shared.signOut(force: true)
+                    print("✅ [MainTabView] Keychain auth cleared for fresh install")
+                } catch {
+                    print("⚠️ [MainTabView] Could not clear auth on fresh install: \(error)")
+                }
+                
+                // Ensure app state reflects no auth
+                await appState.checkAuthState()
+            }
+            
+            // Request tracking permission for analytics (ATT)
+            await TrackingPermissionManager.shared.requestTrackingIfNeeded()
+        }
+        .sheet(isPresented: passwordRecoveryBinding) {
+            PasswordResetView(mode: .recovery, isPresented: passwordRecoveryBinding)
+                .environmentObject(authService)
+                .environmentObject(appState)
         }
     }
 }
@@ -181,11 +271,19 @@ struct LiquidGlassBottomBar: View {
             }
             
             TabBarButton(
-                icon: "list.bullet",
-                title: "tab.lists".localized,
+                icon: "sparkles",
+                title: "AI",
                 isSelected: selectedTab == 2
             ) {
                 selectedTab = 2
+            }
+            
+            TabBarButton(
+                icon: "list.bullet",
+                title: "tab.lists".localized,
+                isSelected: selectedTab == 3
+            ) {
+                selectedTab = 3
             }
         }
         .frame(height: 70)
@@ -239,5 +337,21 @@ struct TabButtonStyle: ButtonStyle {
         configuration.label
             .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
             .animation(.easeInOut(duration: 0.15), value: configuration.isPressed)
+    }
+}
+
+// MARK: - Scene Phase Monitoring Extension
+extension MainTabView {
+    /// Monitor app lifecycle to check subscription status when app becomes active
+    var scenePhaseMonitor: some View {
+        Color.clear
+            .onChange(of: scenePhase) { oldPhase, newPhase in
+                if newPhase == .active && oldPhase != .active {
+                    print("🔍 [App] App became active - checking subscription status")
+                    Task {
+                        await ClipQuotaService.shared.checkIsProUser()
+                    }
+                }
+            }
     }
 }

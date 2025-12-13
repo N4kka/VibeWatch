@@ -26,18 +26,27 @@ struct SearchView: View {
                     ScrollView {
                         VStack(spacing: 24) {
                             if viewModel.searchQuery.isEmpty {
+                                if !viewModel.latestVisitedItems.isEmpty {
+                                    LatestVisitedSection(
+                                        results: viewModel.latestVisitedItems,
+                                        onTap: { result in
+                                            saveAndNavigate(result: result)
+                                        }
+                                    )
+                                }
                                 TrendingSearchesSection(
                                     results: viewModel.trendingSearches,
                                     onTap: { result in
-                                        selectedResult = result
+                                        saveAndNavigate(result: result)
                                     }
                                 )
                             } else {
                                 SearchResultsSection(
                                     results: viewModel.searchResults,
                                     isLoading: viewModel.isLoading,
+                                    error: viewModel.error,
                                     onTap: { result in
-                                        selectedResult = result
+                                        saveAndNavigate(result: result)
                                     }
                                 )
                             }
@@ -56,7 +65,13 @@ struct SearchView: View {
         }
         .onAppear {
             isSearchFocused = true
+            Task { await viewModel.loadLatestVisitedItems() }
         }
+    }
+    
+    private func saveAndNavigate(result: SearchResult) {
+        viewModel.saveVisitedItem(id: result.id, mediaType: result.mediaType)
+        selectedResult = result
     }
 }
 
@@ -99,6 +114,30 @@ struct SearchBarView: View {
     }
 }
 
+struct LatestVisitedSection: View {
+    let results: [SearchResult]
+    let onTap: (SearchResult) -> Void
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("search.latestVisited".localized)
+                .font(.system(size: 20, weight: .bold))
+                .foregroundColor(.theme.textPrimary)
+                .padding(.horizontal, 20)
+            
+            LazyVStack(spacing: 12) {
+                ForEach(results) { result in
+                    SearchResultRow(result: result)
+                        .onTapGesture {
+                            onTap(result)
+                        }
+                }
+            }
+            .padding(.horizontal, 20)
+        }
+    }
+}
+
 struct TrendingSearchesSection: View {
     let results: [SearchResult]
     let onTap: (SearchResult) -> Void
@@ -126,6 +165,7 @@ struct TrendingSearchesSection: View {
 struct SearchResultsSection: View {
     let results: [SearchResult]
     let isLoading: Bool
+    let error: AppError?
     let onTap: (SearchResult) -> Void
     
     var body: some View {
@@ -134,6 +174,11 @@ struct SearchResultsSection: View {
                 ProgressView()
                     .frame(maxWidth: .infinity)
                     .padding(.top, 40)
+            } else if let error = error {
+                Text(error.errorDescription ?? "An error occurred")
+                    .foregroundColor(.theme.textSecondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 60)
             } else if results.isEmpty {
                 VStack(spacing: 12) {
                     Image(systemName: "magnifyingglass")
@@ -170,7 +215,8 @@ struct SearchResultRow: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            AsyncImageView(url: result.posterURL, contentMode: .fill)
+            CachedAsyncImage(url: result.posterURL)
+                .aspectRatio(contentMode: .fill)
                 .frame(width: 80, height: 120)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
             

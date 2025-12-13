@@ -9,7 +9,7 @@ class PlatformDeepLinkHelper {
     ///   - provider: The streaming provider
     ///   - justWatchLink: The JustWatch link from TMDB (shows platform availability)
     ///   - title: The title (for fallback only)
-    static func openPlatform(provider: Provider, justWatchLink: String?, title: String) {
+    @MainActor static func openPlatform(provider: Provider, justWatchLink: String?, title: String) {
         print("🔗 [PlatformDeepLink] Opening platform:")
         print("   Provider: \(provider.providerName) (ID: \(provider.providerId))")
         print("   JustWatch Link: \(justWatchLink ?? "nil")")

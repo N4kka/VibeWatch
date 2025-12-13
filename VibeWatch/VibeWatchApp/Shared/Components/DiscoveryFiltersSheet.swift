@@ -6,6 +6,7 @@ struct AdvancedFiltersPanel: View {
     let showRuntimeFilter: Bool // Only for movies in Discovery
     let onDismiss: () -> Void
     let onApply: (DiscoveryFilters) -> Void
+    @EnvironmentObject var quotaManager: DailyQuotaManager
     
     init(
         filters: Binding<DiscoveryFilters>,
@@ -82,6 +83,20 @@ struct AdvancedFiltersPanel: View {
                     // Content
                     ScrollView {
                         VStack(spacing: 24) {
+                            // Sort By Filter
+                            FilterSection(title: "filters.sortBy".localized) {
+                                VStack(spacing: 8) {
+                                    ForEach(DiscoverySortOption.allCases) { option in
+                                        FilterOptionButton(
+                                            title: option.displayName,
+                                            isSelected: filters.sortBy == option
+                                        ) {
+                                            filters.sortBy = option
+                                        }
+                                    }
+                                }
+                            }
+                            
                             // Runtime Filter (Movies only)
                             if showRuntimeFilter {
                                 FilterSection(title: "filters.runtime".localized) {
@@ -96,6 +111,7 @@ struct AdvancedFiltersPanel: View {
                                         }
                                     }
                                 }
+                                .modifier(ProFeatureLocker(isPro: quotaManager.isProUser))
                             }
                             
                             // Rating Filter
@@ -111,6 +127,7 @@ struct AdvancedFiltersPanel: View {
                                     }
                                 }
                             }
+                            .modifier(ProFeatureLocker(isPro: quotaManager.isProUser))
                             
                             // Country Filter
                             FilterSection(title: "filters.country".localized) {
@@ -134,27 +151,12 @@ struct AdvancedFiltersPanel: View {
                                             }
                                         }
                                     }
-                                    .padding(.horizontal, 20)
-                                }
-                                .padding(.horizontal, -20)
+                                } // Removed padding(.horizontal, 20) and padding(.horizontal, -20)
                             }
-                            
-                            // Sort By Filter
-                            FilterSection(title: "filters.sortBy".localized) {
-                                VStack(spacing: 8) {
-                                    ForEach(DiscoverySortOption.allCases) { option in
-                                        FilterOptionButton(
-                                            title: option.displayName,
-                                            isSelected: filters.sortBy == option
-                                        ) {
-                                            filters.sortBy = option
-                                        }
-                                    }
-                                }
-                            }
+                            .modifier(ProFeatureLocker(isPro: quotaManager.isProUser))
                         }
                         .padding(20)
-                        .padding(.bottom, 20) // Extra padding at bottom
+                        .padding(.bottom, 80) // Extra padding at bottom
                     }
                     .frame(maxHeight: UIScreen.main.bounds.height * 0.6)
                 }
@@ -192,6 +194,7 @@ struct DiscoveryFiltersSheet: View {
     @Binding var filters: DiscoveryFilters
     @State private var localFilters: DiscoveryFilters
     @ObservedObject var localizationManager = LocalizationManager.shared
+    @EnvironmentObject var quotaManager: DailyQuotaManager
     let onApply: (DiscoveryFilters) -> Void
     
     init(filters: Binding<DiscoveryFilters>, onApply: @escaping (DiscoveryFilters) -> Void) {
@@ -204,6 +207,21 @@ struct DiscoveryFiltersSheet: View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 24) {
+                    // Sort By Filter
+                    FilterSection(title: "filters.sortBy".localized) {
+                        VStack(spacing: 12) {
+                            ForEach(DiscoverySortOption.allCases) { option in
+                                FilterOptionButton(
+                                    title: option.displayName,
+                                    isSelected: localFilters.sortBy == option
+                                ) {
+                                    localFilters.sortBy = option
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    
                     // Runtime Filter (Movies only)
                     FilterSection(title: "filters.runtime".localized) {
                         VStack(spacing: 12) {
@@ -217,6 +235,8 @@ struct DiscoveryFiltersSheet: View {
                             }
                         }
                     }
+                    .modifier(ProFeatureLocker(isPro: quotaManager.isProUser))
+                    .padding(.horizontal, 20)
                     
                     // Rating Filter
                     FilterSection(title: "filters.minimumRating".localized) {
@@ -231,6 +251,8 @@ struct DiscoveryFiltersSheet: View {
                             }
                         }
                     }
+                    .modifier(ProFeatureLocker(isPro: quotaManager.isProUser))
+                    .padding(.horizontal, 20)
                     
                     // Country Filter
                     FilterSection(title: "filters.country".localized) {
@@ -252,23 +274,10 @@ struct DiscoveryFiltersSheet: View {
                             }
                         }
                     }
-                    
-                    // Sort By Filter
-                    FilterSection(title: "filters.sortBy".localized) {
-                        VStack(spacing: 12) {
-                            ForEach(DiscoverySortOption.allCases) { option in
-                                FilterOptionButton(
-                                    title: option.displayName,
-                                    isSelected: localFilters.sortBy == option
-                                ) {
-                                    localFilters.sortBy = option
-                                }
-                            }
-                        }
-                    }
-                }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 16)
+                    .modifier(ProFeatureLocker(isPro: quotaManager.isProUser))
+                    .padding(.horizontal, 20)
+            }
+            .padding(.vertical, 40)
             }
             .background(Color.theme.background)
             .navigationTitle("filters.title".localized)
@@ -310,6 +319,31 @@ struct DiscoveryFiltersSheet: View {
             Country(id: "CA", name: "Canada", flag: "🇨🇦", nativeLanguageCode: "en"),
             Country(id: "AU", name: "Australia", flag: "🇦🇺", nativeLanguageCode: "en")
         ]
+    }
+}
+
+struct ProFeatureLocker: ViewModifier {
+    let isPro: Bool
+
+    func body(content: Content) -> some View {
+        ZStack {
+            content
+                .disabled(!isPro)
+                .blur(radius: isPro ? 0 : 3)
+
+            if !isPro {
+                HStack(spacing: 8) {
+                    Image(systemName: "lock.fill")
+                    Text("common.pro".localized)
+                        .font(.system(size: 14, weight: .bold))
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Color.black.opacity(0.7))
+                .cornerRadius(8)
+                .foregroundColor(.yellow)
+            }
+        }
     }
 }
 

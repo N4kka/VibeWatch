@@ -1,14 +1,31 @@
 import SwiftUI
+import RevenueCat
 
 @main
 struct VibeWatchApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var appState = AppState()
     @StateObject private var localizationManager = LocalizationManager.shared
+    @StateObject private var syncWorker = SyncWorker.shared
+    @StateObject private var sqliteDB = SQLiteService.shared
+    @StateObject private var appNavigationManager = AppNavigationManager.shared
+    @StateObject private var authService = AuthService.shared
+    @StateObject private var quotaManager = DailyQuotaManager.shared
     
     init() {
+        // Configure RevenueCat with appropriate log level
+        RevenueCatService.shared.applyCurrentLogLevel()
+        Purchases.configure(withAPIKey: Config.revenueCatAPIKey)
+        
         // Force load localizations before any views are created
         _ = LocalizationManager.shared
+        
+        // Initialize offline-first database
+        print("🗄️ [App] Initializing SQLite database...")
+        print("✅ [RevenueCat] Configured with API key")
+        
+        // Disable analytics until ATT permission is granted
+        AnalyticsService.shared.setEnabled(false)
     }
     
     var body: some Scene {
@@ -16,19 +33,40 @@ struct VibeWatchApp: App {
             MainTabView()
                 .environmentObject(appState)
                 .environmentObject(localizationManager)
+                .environmentObject(syncWorker)
+                .environmentObject(appNavigationManager)
+                .environmentObject(authService)
+                .environmentObject(quotaManager)
                 .preferredColorScheme(.dark)
+                .task {
+                    // Start background sync worker
+                    await syncWorker.startPeriodicSync()
+                    print("🔄 [App] Background sync started")
+                }
                 .onOpenURL { url in
-                    // Handle deep links
-                    print("📱 Deep link received: \(url.absoluteString)")
+                    // Handle deep links from URL schemes (e.g., OAuth)
+                    print("📱 Deep link received via URL (SwiftUI): \(url.absoluteString)")
                     Task {
                         do {
-                            try await AuthService.shared.client?.auth.session(from: url)
-                            await AuthService.shared.checkAuthState()
+                            try await AuthService.shared.handleAuthCallback(url: url)
                             appState.isAuthenticated = AuthService.shared.isAuthenticated
                             appState.currentUser = AuthService.shared.currentUser
                         } catch {
-                            print("❌ Error handling deep link: \(error.localizedDescription)")
+                            print("❌ Error handling deep link from URL: \(error.localizedDescription)")
                         }
+                    }
+                }
+                // Handle deep links from push notifications
+                .sheet(item: $appNavigationManager.deepLinkTarget) { target in
+                    Group {
+                        if target.mediaType == "movie" {
+                            MovieDetailView(movieId: target.mediaId)
+                        } else if target.mediaType == "tv" {
+                            TVShowDetailView(tvShowId: target.mediaId)
+                        }
+                    }
+                    .onDisappear {
+                        appNavigationManager.clearDeepLinkTarget()
                     }
                 }
         }
@@ -45,31 +83,79 @@ class AppState: ObservableObject {
     @Published var showErrorToast = false
     @Published var toastMessage = ""
     @Published var isPreloading = true // Track splash state
+    @Published var shouldShowSignIn = false // Trigger for redirecting to sign in flow
     
-    private let authService = AuthService.shared
+    private let authService: AuthService
     private let dataCoordinator = DataCoordinator.shared
     
-    init() {
+    init(authService: AuthService = .shared) {
+        self.authService = authService
+
+        // Immediately load from cached auth state (synchronous)
+        self.isAuthenticated = authService.isAuthenticated
+        self.currentUser = authService.currentUser
+        print("📱 [AppState] Initialized with auth state: authenticated=\(isAuthenticated), user=\(currentUser?.email ?? "nil")")
+
         Task {
             await checkAuthState()
             await preloadContent()
+            await RevenueCatService.shared.refreshOfferings()
+
+            // Check and execute daily prefetch for PRO users
+            await DailyContentPrefetchService.shared.checkAndExecuteDailyPrefetch()
         }
     }
-    
+
     func checkAuthState() async {
         await authService.checkAuthState()
         self.isAuthenticated = authService.isAuthenticated
         self.currentUser = authService.currentUser
+        print("🔄 [AppState] Updated auth state: authenticated=\(isAuthenticated), user=\(currentUser?.email ?? "nil")")
     }
     
     private func preloadContent() async {
         isPreloading = true
+        
+        // Check if initial data migration is needed
+        if !UserDefaults.standard.bool(forKey: "initialDataPopulated") {
+            print("📥 [App] First launch detected - migrating data from Supabase to SQLite...")
+            await DatabaseMigrationService.shared.migrateInitialData()
+        }
+        
+        // Sync new content from Supabase (incremental sync)
+        print("🔄 [App] Syncing new content from Supabase...")
+        try? await SyncService.shared.syncNewContent()
         
         // Optimized parallel preload: Discovery content + 5 initial clips
         // Then background task for 20 more clips
         print("🚀 Starting optimized preload (parallel tasks)...")
         await dataCoordinator.initializeApp()
         
+        // Ensure discovery content exists (fetch from TMDB if needed)
+        await ensureDiscoveryContentExists()
+        
         isPreloading = false
+    }
+    
+    /// Ensure discovery content exists in local database
+    private func ensureDiscoveryContentExists() async {
+        do {
+            // Try to get discovery content (will use cache if available)
+            let content = try await DiscoveryCacheService.shared.getDiscoveryContent()
+            
+            // Check if we have sufficient content
+            let totalContent = content.trending.count + content.popular.count + content.topRated.count + content.tv.count
+            
+            if totalContent > 0 {
+                print("✅ [App] Discovery content exists: \(totalContent) items")
+            } else {
+                print("⚠️ [App] Discovery cache is empty - fetching fresh from TMDB...")
+                // Cache is empty, force refresh from TMDB
+                try await DiscoveryCacheService.shared.refreshContent()
+                print("✅ [App] Discovery content populated from TMDB")
+            }
+        } catch {
+            print("⚠️ [App] Failed to load discovery content: \(error)")
+        }
     }
 }

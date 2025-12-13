@@ -4,14 +4,20 @@ struct ListsView: View {
     @StateObject private var viewModel = ListsViewModel()
     @StateObject private var listManager = ListManager.shared
     @ObservedObject var localizationManager = LocalizationManager.shared
+    @EnvironmentObject var quotaManager: DailyQuotaManager
+    @EnvironmentObject var appState: AppState
     @State private var selectedFilter: MediaFilter = .all
     @AppStorage("selectedPlatforms") private var selectedPlatformsData: Data = Data()
-    @State private var selectedListType: ListViewType = .watchlist
+    @State private var selectedListType: ListViewType = .myLists
     @State private var showCreateList = false
+    @State private var showAuthGate = false
     @State private var showFilters = false
     @State private var refreshID = UUID()
     @State private var filters = DiscoveryFilters()
+    
     @State private var filterRefreshTrigger = false
+    @State private var showingPaywall = false
+    @State private var itemsLimit = 50 // State for pagination
     
     private var selectedPlatforms: Set<StreamingPlatform> {
         get {
@@ -35,49 +41,51 @@ struct ListsView: View {
     }
     
     var body: some View {
-        NavigationView {
-            ZStack {
-                Color.theme.background.ignoresSafeArea()
+        ZStack {
+            Color.theme.background.ignoresSafeArea()
+            
+            VStack(spacing: 0) {
+                OfflineBanner()
                 
-                VStack(spacing: 0) {
-                    headerView
-                    
-                    ListTypeSwitcher(selectedType: $selectedListType)
-                        .padding(.bottom, 16)
-                    
-                    combinedFiltersRow
-                    
-                    if currentLists.isEmpty {
-                        emptyStateView
-                    } else {
-                        contentView
-                    }
+                headerView
+                
+                ListTypeSwitcher(selectedType: $selectedListType)
+                    .padding(.bottom, 16)
+                
+                combinedFiltersRow
+                
+                if currentLists.isEmpty {
+                    emptyStateView
+                } else {
+                    contentView
                 }
             }
-            .navigationBarHidden(true)
-            .overlay {
-                if showFilters {
-                    AdvancedFiltersPanel(
-                        filters: $filters,
-                        showRuntimeFilter: false, // Lists don't have runtime metadata
-                        onDismiss: {
-                            withAnimation {
-                                showFilters = false
-                            }
-                        },
-                        onApply: { _ in
-                            // Force view refresh when filters are applied
-                            filterRefreshTrigger.toggle()
+        }
+        .navigationBarHidden(true)
+        .overlay {
+            if showFilters {
+                AdvancedFiltersPanel(
+                    filters: $filters,
+                    showRuntimeFilter: false,
+                    onDismiss: {
+                        withAnimation {
+                            showFilters = false
                         }
-                    )
-                }
+                    },
+                    onApply: { _ in
+                        filterRefreshTrigger.toggle()
+                    }
+                )
+                .environmentObject(quotaManager)
             }
         }
         .task {
             await viewModel.loadLists()
+            
+            // Analytics: Track screen view
+            AnalyticsService.shared.logScreenView(screenName: "Lists", screenClass: "ListsView")
         }
-        .onChange(of: localizationManager.localeDidChange) { _ in
-            // Trigger view refresh to update all localized strings
+        .onChange(of: localizationManager.localeDidChange) {_, _ in
             refreshID = UUID()
         }
         .id(refreshID)
@@ -85,10 +93,20 @@ struct ListsView: View {
             CreateListView(viewModel: viewModel)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
-                .presentationBackground(Color.theme.backgroundDark.opacity(0.98))
+                .presentationBackground(Color.theme.background)
+        }
+        .sheet(isPresented: $showAuthGate) {
+            AuthenticationGateView(isPresented: $showAuthGate)
+                .presentationBackground(.clear)
+        }
+        .fullScreenCover(isPresented: $showingPaywall) {
+            DailyLimitPaywallView(isPresented: $showingPaywall)
+        }
+        .onChange(of: selectedListType) {
+            // Reset limit when switching lists
+            itemsLimit = 50
         }
     }
-    
     private var headerView: some View {
         HStack {
             Text("lists.myLists".localized)
@@ -98,7 +116,15 @@ struct ListsView: View {
             Spacer()
             
             Button {
-                showCreateList = true
+                guard appState.isAuthenticated else {
+                    showAuthGate = true
+                    return
+                }
+                if listManager.canCreateList() {
+                    showCreateList = true
+                } else {
+                    showingPaywall = true
+                }
             } label: {
                 Image(systemName: "plus.circle.fill")
                     .font(.system(size: 28))
@@ -122,7 +148,7 @@ struct ListsView: View {
         case .liked:
             lists = [listManager.likedList]
         }
-        
+
         return lists
     }
     
@@ -178,51 +204,63 @@ struct ListsView: View {
     private var itemsGrid: some View {
         ScrollView {
             LazyVStack(spacing: 20) {
-                ForEach(filteredAndSortedItems) { item in
+                ForEach(paginatedItems) { item in
                     MediaItemRow(
                         item: item,
                         isInSeenList: selectedListType == .seen,
                         onMarkAsSeen: {
-                            // Remove from current list
-                            if let currentList = currentLists.first {
-                                listManager.removeFromList(listId: currentList.id, itemId: item.id)
+                            Task {
+                                if let currentList = currentLists.first {
+                                    try? await listManager.removeFromList(listId: currentList.id, itemId: item.id)
+                                }
+                                
+                                let movie = Movie(
+                                    id: item.mediaId,
+                                    title: item.title,
+                                    overview: "",
+                                    posterPath: item.posterPath,
+                                    backdropPath: nil,
+                                    releaseDate: nil,
+                                    voteAverage: 0.0,
+                                    voteCount: 0,
+                                    genreIds: nil,
+                                    genres: nil,
+                                    adult: false,
+                                    originalLanguage: "",
+                                    popularity: 0.0,
+                                    runtime: nil,
+                                    status: nil,
+                                    tagline: nil,
+                                    productionCountries: nil,
+                                    imdbId: nil
+                                )
+                                try await listManager.addToList(listId: listManager.seenList.id, movie: movie, mediaType: item.mediaType)
                             }
-                            
-                            // Add to seen list
-                            let movie = Movie(
-                                id: item.mediaId,
-                                title: item.title,
-                                overview: "",
-                                posterPath: item.posterPath,
-                                backdropPath: nil,
-                                releaseDate: nil,
-                                voteAverage: 0.0,
-                                voteCount: 0,
-                                genreIds: nil,
-                                genres: nil,
-                                adult: false,
-                                originalLanguage: "",
-                                popularity: 0.0,
-                                runtime: nil,
-                                status: nil,
-                                tagline: nil,
-                                productionCountries: nil,
-                                imdbId: nil
-                            )
-                            listManager.addToList(listId: listManager.seenList.id, movie: movie, mediaType: item.mediaType)
                         },
                         onDelete: {
-                            if let currentList = currentLists.first {
-                                listManager.removeFromList(listId: currentList.id, itemId: item.id)
+                            Task {
+                                if let currentList = currentLists.first {
+                                    try? await listManager.removeFromList(listId: currentList.id, itemId: item.id)
+                                }
                             }
                         }
                     )
+                    .onAppear {
+                        // When the last item appears, load more
+                        if item.id == paginatedItems.last?.id {
+                            itemsLimit += 50
+                        }
+                    }
                 }
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 100)
         }
         .id(filterRefreshTrigger) // Force refresh when filters change
+    }
+    
+    private var paginatedItems: [MediaListItem] {
+        Array(filteredAndSortedItems.prefix(itemsLimit))
     }
     
     private var filteredAndSortedItems: [MediaListItem] {
@@ -364,6 +402,10 @@ struct ListsView: View {
                 .padding(.horizontal, 40)
             
             Button {
+                guard appState.isAuthenticated else {
+                    showAuthGate = true
+                    return
+                }
                 showCreateList = true
             } label: {
                 Text("lists.createList".localized)
@@ -398,8 +440,6 @@ struct ListsView: View {
     }
 }
 
-
-
 struct MediaItemRow: View {
     let item: MediaListItem
     let isInSeenList: Bool
@@ -409,6 +449,8 @@ struct MediaItemRow: View {
     @StateObject private var listManager = ListManager.shared
     @State private var movieDetails: Movie?
     @State private var tvShowDetails: TVShow?
+    @State private var topProvider: Provider?
+    @State private var providerLink: String?
     @State private var navigateToDetail = false
     @State private var isLoadingDetails = false
     @State private var offset: CGFloat = 0
@@ -452,7 +494,7 @@ struct MediaItemRow: View {
                 // Poster image - left side
                 if let posterPath = item.posterPath,
                    let url = URL(string: "https://image.tmdb.org/t/p/w342\(posterPath)") {
-                    AsyncImage(url: url) { image in
+                    CachedAsyncImage(url: url) { image in
                         image
                             .resizable()
                             .aspectRatio(contentMode: .fill)
@@ -544,20 +586,48 @@ struct MediaItemRow: View {
                     Spacer()
                     
                     // Watch Now button
-                    Button {
-                        // TODO: Open streaming link
-                    } label: {
-                        HStack {
-                            Image(systemName: "play.tv")
-                                .font(.system(size: 16))
-                            Text("movieDetail.watchNow".localized.uppercased())
-                                .font(.system(size: 14, weight: .semibold))
+                    if let provider = topProvider {
+                        Button {
+                            PlatformDeepLinkHelper.openPlatform(
+                                provider: provider,
+                                justWatchLink: providerLink,
+                                title: item.title
+                            )
+                        } label: {
+                            HStack {
+                                CachedAsyncImage(url: provider.logoURL)
+                                    .frame(width: 20, height: 20)
+                                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                                
+                                Text("WATCH ON \(provider.providerName.uppercased())")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .lineLimit(1)
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 10)
+                            .background(Color.theme.accentOrange)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
-                        .foregroundColor(.theme.textPrimary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(Color.white.opacity(0.2))
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                    } else {
+                        Button {
+                            // No provider found, maybe open search or do nothing
+                        } label: {
+                            HStack {
+                                Image(systemName: "play.tv")
+                                    .font(.system(size: 16))
+                                Text("movieDetail.watchNow".localized.uppercased())
+                                    .font(.system(size: 14, weight: .semibold))
+                            }
+                            .foregroundColor(.theme.textPrimary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(Color.white.opacity(0.2))
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                        }
+                        .disabled(true)
+                        .opacity(0.6)
                     }
                 }
                 
@@ -567,7 +637,9 @@ struct MediaItemRow: View {
                         if isInSeenList {
                             // Remove from seen list
                             if let currentList = listManager.lists.first(where: { $0.type == .seen }) {
-                                listManager.removeFromList(listId: currentList.id, itemId: item.id)
+                                Task {
+                                    try? await listManager.removeFromList(listId: currentList.id, itemId: item.id)
+                                }
                             }
                         } else {
                             onMarkAsSeen()
@@ -597,7 +669,7 @@ struct MediaItemRow: View {
                     navigateToDetail = true
                 }
             }
-            .gesture(
+            .simultaneousGesture(
                 DragGesture(minimumDistance: 20)
                     .onChanged { gesture in
                         // Only activate swipe if horizontal movement is significantly more than vertical
@@ -648,17 +720,20 @@ struct MediaItemRow: View {
             }
         }
         .frame(height: 204)
-        .background(
-            NavigationLink(
-                destination: destinationView,
-                isActive: $navigateToDetail
-            ) {
-                EmptyView()
-            }
-            .hidden()
-        )
+        .navigationDestination(isPresented: $navigateToDetail) {
+            destinationView
+        }
         .task {
             await loadDetails()
+        }
+    }
+    
+    @ViewBuilder
+    private var destinationView: some View {
+        if item.mediaType == .movie {
+            MovieDetailView(movieId: item.mediaId)
+        } else {
+            TVShowDetailView(tvShowId: item.mediaId)
         }
     }
     
@@ -668,23 +743,40 @@ struct MediaItemRow: View {
         
         do {
             if item.mediaType == .movie {
-                movieDetails = try await tmdbService.getMovieDetails(id: item.mediaId)
+                async let details = tmdbService.getMovieDetails(id: item.mediaId)
+                async let providers = tmdbService.getMovieWatchProviders(id: item.mediaId)
+                
+                let (movie, watchProviders) = try await (details, providers)
+                movieDetails = movie
+                processProviders(watchProviders)
             } else {
-                tvShowDetails = try await tmdbService.getTVShowDetails(id: item.mediaId)
+                async let details = tmdbService.getTVShowDetails(id: item.mediaId)
+                async let providers = tmdbService.getTVShowWatchProviders(id: item.mediaId)
+                
+                let (show, watchProviders) = try await (details, providers)
+                tvShowDetails = show
+                processProviders(watchProviders)
             }
         } catch {
-            print("Error loading details: \(error)")
+            print("❌ Error loading details: \(error.localizedDescription)")
         }
         
         isLoadingDetails = false
     }
     
-    @ViewBuilder
-    private var destinationView: some View {
-        if item.mediaType == .movie {
-            MovieDetailView(movieId: item.mediaId)
-        } else {
-            TVShowDetailView(tvShowId: item.mediaId)
+    private func processProviders(_ providers: WatchProvider) {
+        let countryCode = LocalizationManager.shared.currentCountry.id
+        guard let countryProviders = providers.results[countryCode] else { return }
+        
+        providerLink = countryProviders.link
+        
+        // Priority: Flatrate > Rent > Buy
+        if let flatrate = countryProviders.flatrate, !flatrate.isEmpty {
+            topProvider = flatrate.first
+        } else if let rent = countryProviders.rent, !rent.isEmpty {
+            topProvider = rent.first
+        } else if let buy = countryProviders.buy, !buy.isEmpty {
+            topProvider = buy.first
         }
     }
 }
@@ -696,35 +788,24 @@ struct CustomListDetailView: View {
     @State private var filters = DiscoveryFilters()
     @State private var showFilters = false
     @State private var filterRefreshTrigger = false
+    @State private var searchText = ""
+    @State private var itemsLimit = 100
+    @State private var showEditSheet = false
+    @State private var showDeleteAlert = false
+    @State private var error: AppError?
     @Environment(\.dismiss) private var dismiss
 
-    // Sort the single list’s items according to filters.sortBy (used if needed elsewhere)
-    private var filteredAndSortedLists: [MediaList] {
-        var sortedList = list
-        sortedList.items.sort { item1, item2 in
-            switch filters.sortBy {
-            case .popularityDesc:
-                return item1.addedAt > item2.addedAt
-            case .popularityAsc:
-                return item1.addedAt < item2.addedAt
-            case .ratingDesc:
-                return (item1.voteAverage ?? 0) > (item2.voteAverage ?? 0)
-            case .ratingAsc:
-                return (item1.voteAverage ?? 0) < (item2.voteAverage ?? 0)
-            case .releaseDateDesc:
-                return (item1.releaseDate ?? "") > (item2.releaseDate ?? "")
-            case .releaseDateAsc:
-                return (item1.releaseDate ?? "") < (item2.releaseDate ?? "")
-            }
-        }
-        return [sortedList]
+    private var currentList: MediaList {
+        listManager.lists.first(where: { $0.id == list.id }) ?? list
     }
-    
-    // Full filter + sort for the visible items in this list
+
     private var filteredAndSortedItems: [MediaListItem] {
-        var items = list.items
-        
-        // Runtime filter (movies only)
+        var items = currentList.items
+
+        if !searchText.isEmpty {
+            items = items.filter { $0.title.range(of: searchText, options: .caseInsensitive) != nil }
+        }
+
         if filters.runtimeRange != .any {
             items = items.filter { item in
                 guard item.mediaType == .movie, let runtime = item.runtime else { return false }
@@ -733,8 +814,7 @@ struct CustomListDetailView: View {
                 return true
             }
         }
-        
-        // Rating filter
+
         if filters.ratingRange != .any {
             items = items.filter { item in
                 guard let voteAverage = item.voteAverage,
@@ -742,16 +822,14 @@ struct CustomListDetailView: View {
                 return voteAverage >= minRating
             }
         }
-        
-        // Country filter
+
         if let selectedCountry = filters.country {
             items = items.filter { item in
                 guard let originCountry = item.originCountry else { return false }
                 return originCountry.contains(selectedCountry)
             }
         }
-        
-        // Media type filter
+
         switch selectedFilter {
         case .all:
             break
@@ -760,8 +838,7 @@ struct CustomListDetailView: View {
         case .tvSeries:
             items = items.filter { $0.mediaType == .tv }
         }
-        
-        // Sorting
+
         switch filters.sortBy {
         case .popularityDesc, .popularityAsc:
             items.sort { $0.addedAt > $1.addedAt }
@@ -774,8 +851,12 @@ struct CustomListDetailView: View {
         case .releaseDateAsc:
             items.sort { ($0.releaseDate ?? "") < ($1.releaseDate ?? "") }
         }
-        
+
         return items
+    }
+
+    private var paginatedItems: [MediaListItem] {
+        Array(filteredAndSortedItems.prefix(itemsLimit))
     }
 
     var body: some View {
@@ -783,17 +864,15 @@ struct CustomListDetailView: View {
             Color.theme.background.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // Filter bar
+                searchField
+                    .padding(.horizontal, 20)
+                    .padding(.top, 12)
+
                 HStack(spacing: 12) {
                     MediaFilterSwitcher(selectedFilter: $selectedFilter)
-
                     Spacer()
-
-                    // Advanced Filters Button
                     Button {
-                        withAnimation {
-                            showFilters = true
-                        }
+                        withAnimation { showFilters = true }
                     } label: {
                         ZStack(alignment: .topTrailing) {
                             HStack(spacing: 6) {
@@ -807,7 +886,7 @@ struct CustomListDetailView: View {
                             .padding(.vertical, 10)
                             .background(Color.white.opacity(0.1))
                             .clipShape(Capsule())
-                            
+
                             if filters.isActive {
                                 Circle()
                                     .fill(Color.theme.accentOrange)
@@ -820,7 +899,6 @@ struct CustomListDetailView: View {
                 .padding(.horizontal, 20)
                 .padding(.vertical, 12)
 
-                // Items list
                 if filteredAndSortedItems.isEmpty {
                     VStack(spacing: 16) {
                         Image(systemName: "list.bullet")
@@ -835,39 +913,41 @@ struct CustomListDetailView: View {
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 20) {
-                            ForEach(filteredAndSortedItems) { item in
+                            ForEach(paginatedItems) { item in
                                 MediaItemRow(
                                     item: item,
                                     isInSeenList: false,
                                     onMarkAsSeen: {
-                                        // Remove from current list
-                                        listManager.removeFromList(listId: list.id, itemId: item.id)
+                                        Task {
+                                            try? await listManager.removeFromList(listId: list.id, itemId: item.id)
 
-                                        // Add to seen list
-                                        let movie = Movie(
-                                            id: item.mediaId,
-                                            title: item.title,
-                                            overview: "",
-                                            posterPath: item.posterPath,
-                                            backdropPath: nil,
-                                            releaseDate: nil,
-                                            voteAverage: 0.0,
-                                            voteCount: 0,
-                                            genreIds: nil,
-                                            genres: nil,
-                                            adult: false,
-                                            originalLanguage: "",
-                                            popularity: 0.0,
-                                            runtime: nil,
-                                            status: nil,
-                                            tagline: nil,
-                                            productionCountries: nil,
-                                            imdbId: nil
-                                        )
-                                        listManager.addToList(listId: listManager.seenList.id, movie: movie, mediaType: item.mediaType)
+                                            let movie = Movie(
+                                                id: item.mediaId,
+                                                title: item.title,
+                                                overview: "",
+                                                posterPath: item.posterPath,
+                                                backdropPath: nil,
+                                                releaseDate: nil,
+                                                voteAverage: 0.0,
+                                                voteCount: 0,
+                                                genreIds: nil,
+                                                genres: nil,
+                                                adult: false,
+                                                originalLanguage: "",
+                                                popularity: 0.0,
+                                                runtime: nil,
+                                                status: nil,
+                                                tagline: nil,
+                                                productionCountries: nil,
+                                                imdbId: nil
+                                            )
+                                            try await listManager.addToList(listId: listManager.seenList.id, movie: movie, mediaType: item.mediaType)
+                                        }
                                     },
                                     onDelete: {
-                                        listManager.removeFromList(listId: list.id, itemId: item.id)
+                                        Task {
+                                            try? await listManager.removeFromList(listId: list.id, itemId: item.id)
+                                        }
                                     }
                                 )
                             }
@@ -875,11 +955,27 @@ struct CustomListDetailView: View {
                         .padding(.horizontal, 20)
                         .padding(.bottom, 100)
                     }
-                    .id(filterRefreshTrigger) // Force refresh when filters change
+                    .overlay(alignment: .bottom) {
+                        if filteredAndSortedItems.count > paginatedItems.count {
+                            Button {
+                                itemsLimit += 100
+                            } label: {
+                                Text("common.loadMore".localized)
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 32)
+                                    .padding(.vertical, 12)
+                                    .background(Color.theme.accentOrange)
+                                    .clipShape(Capsule())
+                            }
+                            .padding(.bottom, 24)
+                        }
+                    }
+                    .id(filterRefreshTrigger)
                 }
             }
         }
-        .navigationTitle(list.name)
+        .navigationTitle(currentList.name)
         .navigationBarTitleDisplayMode(.large)
         .overlay {
             if showFilters {
@@ -887,15 +983,70 @@ struct CustomListDetailView: View {
                     filters: $filters,
                     showRuntimeFilter: false,
                     onDismiss: {
-                        withAnimation {
-                            showFilters = false
-                        }
+                        withAnimation { showFilters = false }
                     },
                     onApply: { _ in
-                        // Force view refresh when filters are applied
                         filterRefreshTrigger.toggle()
                     }
                 )
+            }
+        }
+        .onChange(of: filters) {_, _ in itemsLimit = 100 }
+        .onChange(of: searchText) {_, _ in itemsLimit = 100 }
+        .toolbar {
+            ToolbarItemGroup(placement: .navigationBarTrailing) {
+                Button {
+                    showEditSheet = true
+                } label: {
+                    Image(systemName: "square.and.pencil")
+                }
+                Button(role: .destructive) {
+                    showDeleteAlert = true
+                } label: {
+                    Image(systemName: "trash")
+                }
+            }
+        }
+        .sheet(isPresented: $showEditSheet) {
+            EditListView(list: currentList)
+        }
+        .alert("lists.deleteList".localized, isPresented: $showDeleteAlert) {
+            Button("common.delete".localized, role: .destructive) {
+                Task { await deleteList() }
+            }
+            Button("common.cancel".localized, role: .cancel) { }
+        } message: {
+            Text("lists.deleteConfirmation".localized.replacingOccurrences(of: "%@", with: currentList.name))
+        }
+        .alert(item: $error) { appError in
+            Alert(
+                title: Text(appError.errorDescription ?? "common.error".localized),
+                message: Text(appError.recoverySuggestion ?? "common.pleaseTryAgain".localized),
+                dismissButton: .default(Text("common.ok".localized))
+            )
+        }
+    }
+
+    private var searchField: some View {
+        HStack {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(.theme.textSecondary)
+            TextField("lists.searchPlaceholder".localized, text: $searchText)
+                .textInputAutocapitalization(.words)
+                .disableAutocorrection(true)
+        }
+        .padding(12)
+        .background(Color.white.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func deleteList() async {
+        do {
+            try await listManager.deleteList(id: currentList.id)
+            await MainActor.run { dismiss() }
+        } catch {
+            await MainActor.run {
+                self.error = .database(error)
             }
         }
     }
@@ -922,7 +1073,7 @@ struct ListCard: View {
                 if let lastItem = list.items.last,
                    let posterPath = lastItem.posterPath,
                    let url = URL(string: "https://image.tmdb.org/t/p/w342\(posterPath)") {
-                    AsyncImage(url: url) { image in
+                    CachedAsyncImage(url: url) { image in
                         image
                             .resizable()
                             .aspectRatio(2/3, contentMode: .fit)
@@ -952,7 +1103,7 @@ struct ListCard: View {
                         ForEach(lastFourItems) { item in
                             if let posterPath = item.posterPath,
                                let url = URL(string: "https://image.tmdb.org/t/p/w342\(posterPath)") {
-                                AsyncImage(url: url) { image in
+                                CachedAsyncImage(url: url) { image in
                                     image
                                         .resizable()
                                         .aspectRatio(2/3, contentMode: .fit)
@@ -992,8 +1143,7 @@ struct CreateListView: View {
     @StateObject private var listManager = ListManager.shared
     @State private var listName = ""
     @State private var listDescription = ""
-    @State private var showError = false
-    @State private var errorMessage = ""
+    @State private var error: AppError?
     
     var body: some View {
         VStack(spacing: 0) {
@@ -1025,7 +1175,7 @@ struct CreateListView: View {
                     HStack {
                         Text("lists.limitInfo".localized
                             .replacingOccurrences(of: "{count}", with: "\(listManager.customListsCount())")
-                            .replacingOccurrences(of: "{limit}", with: "\(ListManager.maxCustomLists)"))
+                            .replacingOccurrences(of: "{limit}", with: "\(listManager.currentCustomListLimit)"))
                             .font(.system(size: 13, weight: .medium))
                             .foregroundColor(listManager.canCreateList() ? .theme.textSecondary : .theme.accentOrange)
                         
@@ -1067,13 +1217,11 @@ struct CreateListView: View {
                 // Create Button
                 Button {
                     Task {
-                        let result = await viewModel.createList(title: listName, description: listDescription.isEmpty ? nil : listDescription)
-                        switch result {
-                        case .success:
+                        do {
+                            try await viewModel.createList(title: listName, description: listDescription.isEmpty ? nil : listDescription)
                             dismiss()
-                        case .failure(let error):
-                            errorMessage = error.localizedDescription
-                            showError = true
+                        } catch {
+                            self.error = .database(error)
                         }
                     }
                 } label: {
@@ -1090,10 +1238,72 @@ struct CreateListView: View {
                 .padding(.bottom, 20)
             }
         }
-        .alert("Error", isPresented: $showError) {
-            Button("OK", role: .cancel) { }
-        } message: {
-            Text(errorMessage)
+        .alert(item: $error) { appError in
+            Alert(
+                title: Text(appError.errorDescription ?? "common.error".localized),
+                message: Text(appError.recoverySuggestion ?? "common.pleaseTryAgain".localized),
+                dismissButton: .default(Text("common.ok".localized))
+                        )
+                    }
+                }
+            }
+            
+            struct EditListView: View {
+    @Environment(\.dismiss) private var dismiss
+    let list: MediaList
+    @StateObject private var listManager = ListManager.shared
+    @State private var name: String
+    @State private var description: String
+    @State private var showError = false
+    @State private var errorMessage = ""
+
+    init(list: MediaList) {
+        self.list = list
+        _name = State(initialValue: list.name)
+        _description = State(initialValue: list.description ?? "")
+    }
+
+    var body: some View {
+        NavigationView {
+            Form {
+                Section(header: Text("lists.listName".localized)) {
+                    TextField("lists.listNamePlaceholder".localized, text: $name)
+                }
+                Section(header: Text("lists.description".localized)) {
+                    TextField("lists.descriptionPlaceholder".localized, text: $description)
+                }
+            }
+            .navigationTitle("lists.editList".localized)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("common.cancel".localized) { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("common.save".localized) {
+                        Task { await saveChanges() }
+                    }
+                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+            .alert("common.error".localized, isPresented: $showError) {
+                Button("common.ok".localized, role: .cancel) { }
+            } message: {
+                Text(errorMessage)
+            }
+        }
+    }
+
+    private func saveChanges() async {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        do {
+            try await listManager.updateList(id: list.id, name: trimmed, description: description.isEmpty ? nil : description)
+            await MainActor.run { dismiss() }
+        } catch {
+            await MainActor.run {
+                errorMessage = error.localizedDescription
+                showError = true
+            }
         }
     }
 }
@@ -1107,18 +1317,27 @@ struct PlatformChip: View {
         Button(action: action) {
             VStack(spacing: 8) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(platform.color)
-                        .frame(width: 60, height: 60)
+                    if let logoName = platform.logoAssetName {
+                        Image(logoName)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 60, height: 60)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                    } else {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.white.opacity(0.08))
+                            .frame(width: 60, height: 60)
+                            .overlay(
+                                Image(systemName: platform.icon)
+                                    .font(.system(size: 24, weight: .semibold))
+                                    .foregroundColor(.white)
+                            )
+                    }
                     
-                    Image(systemName: platform.icon)
-                        .font(.system(size: 24, weight: .semibold))
-                        .foregroundColor(.white)
-                }
-                .overlay(
                     RoundedRectangle(cornerRadius: 8)
-                        .stroke(isSelected ? Color.theme.accentOrange : Color.clear, lineWidth: 3)
-                )
+                        .stroke(isSelected ? Color.theme.accentOrange : Color.white.opacity(0.12), lineWidth: isSelected ? 3 : 1)
+                        .frame(width: 60, height: 60)
+                }
                 
                 Text(platform.rawValue)
                     .font(.system(size: 10, weight: .medium))

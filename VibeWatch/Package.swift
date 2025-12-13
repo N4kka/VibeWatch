@@ -12,15 +12,20 @@ let package = Package(
             targets: ["VibeWatch"])
     ],
     dependencies: [
-        .package(url: "https://github.com/supabase-community/supabase-swift.git", from: "2.0.0")
+        .package(url: "https://github.com/supabase-community/supabase-swift.git", from: "2.0.0"),
+        .package(url: "https://github.com/firebase/firebase-ios-sdk.git", .upToNextMajor(from: "10.0.0")),
+        .package(url: "https://github.com/youtube/youtube-ios-player-helper.git", from: "1.0.0")
     ],
     targets: [
         .target(
             name: "VibeWatch",
             dependencies: [
-                .product(name: "Supabase", package: "supabase-swift")
+                .product(name: "Supabase", package: "supabase-swift"),
+                .product(name: "FirebaseMessaging", package: "firebase-ios-sdk"),
+                .product(name: "FirebaseAnalytics", package: "firebase-ios-sdk"),
+                .product(name: "youtube-ios-player-helper", package: "youtube-ios-player-helper")
             ],
-            path: "VibeWatch"
+            path: "VibeWatchApp"
         )
     ]
 )

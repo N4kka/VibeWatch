@@ -1,0 +1,428 @@
+// Tab Bar
+"tab.clips" = "Klipy";
+"tab.discovery" = "Odkrywaj";
+"tab.lists" = "Listy";
+"tab.profile" = "Profil";
+"tab.ai" = "AI";
+
+// Onboarding
+"onboarding.page1.description" = "Rekomendacje filmów i seriali AI dopasowane do Twojego nastroju, żebyś zawsze wiedział, co obejrzeć następne.";
+"onboarding.page1.title" = "Mądrzejsze wybory z AI";
+"onboarding.page2.description" = "Twórz watchlisty i kolekcje według nastroju, aby uporządkować każdy odkryty film i serial.";
+"onboarding.page2.title" = "Uporządkuj swoją watchlistę";
+"onboarding.page3.description" = "Oglądaj zwiastuny i klipy, a potem zapisuj najlepsze odkrycia na listach do obejrzenia później.";
+"onboarding.page3.title" = "Odkrywaj zwiastuny i klipy";
+"onboarding.page4.createAccount" = "Utwórz konto";
+"onboarding.page4.description" = "Utwórz konto, aby synchronizować watchlisty i preferencje na wszystkich urządzeniach.";
+"onboarding.page4.skip" = "Pomiń na razie";
+"onboarding.page4.title" = "Gotowy, by zacząć?";
+
+// Discovery
+"discovery.basedOnMood" = "Wybrane specjalnie dla Ciebie";
+"discovery.forYou" = "Dla Ciebie";
+"discovery.popular" = "Popularne";
+"discovery.topRated" = "Najwyżej oceniane";
+"discovery.trending" = "Na topie";
+"discovery.tvShows" = "Seriale";
+"discovery.upcoming" = "Wkrótce";
+"discovery.vibeWatch" = "VibeWatch";
+
+// Browse
+"browse.emptyMessage" = "Dotknij przycisku filtra, aby przeglądać treści";
+"browse.movies" = "Filmy";
+"browse.title" = "Przeglądaj";
+"browse.tvShows" = "Seriale";
+
+// Lists
+"list.all" = "Wszystkie";
+"list.movies" = "Filmy";
+"list.tvShows" = "TV";
+"lists.createList" = "Utwórz listę";
+"lists.deleteConfirmation" = "Na pewno chcesz usunąć %@? Wszystkie elementy na tej liście zostaną usunięte.";
+"lists.deleteList" = "Usuń listę";
+"lists.description" = "Opis (opcjonalnie)";
+"lists.descriptionPlaceholder" = "Dodaj opis... (opcjonalnie)";
+"lists.disliked" = "Nie lubię";
+"lists.editList" = "Edytuj listę";
+"lists.empty" = "Brak list";
+"lists.emptyDescription" = "Utwórz pierwszą watchlistę, aby uporządkować odkryte filmy i seriale";
+"lists.error.authRequired" = "Musisz być zalogowany, aby tworzyć własne listy.";
+"lists.error.defaultImmutable" = "Ta lista nie może zostać zmieniona";
+"lists.error.invalidName" = "Wpisz prawidłową nazwę listy";
+"lists.error.itemAlreadyInList" = "Element jest już na tej liście";
+"lists.error.listNotFound" = "Nie znaleziono listy";
+"lists.error.maxItemsReached" = "Osiągnięto limit {limit} elementów dla tej listy";
+"lists.error.maxListsReached" = "Osiągnięto limit {limit} własnych list";
+"lists.liked" = "Lubię";
+"lists.limitInfo" = "{count}/{limit}";
+"lists.listDescriptionPlaceholder" = "Dodaj opis...";
+"lists.listName" = "Nazwa listy";
+"lists.listNamePlaceholder" = "Nowa lista";
+"lists.myLists" = "Moje listy";
+"lists.noItems" = "Brak elementów";
+"lists.searchPlaceholder" = "Szukaj na tej liście";
+"lists.seen" = "Obejrzane";
+"lists.softLimitWarning" = "Lista \"{name}\" ma już {limit} elementów. Rozważ utworzenie nowej listy, aby zachować porządek.";
+"lists.watchlist" = "Do obejrzenia";
+"lists.watchOn" = "OGLĄDAJ NA";
+
+// Movie Detail
+"movieDetail.cast" = "Obsada";
+"movieDetail.country" = "Kraj";
+"movieDetail.director" = "Reżyser";
+"movieDetail.genres" = "Gatunki";
+"movieDetail.information" = "Informacje";
+"movieDetail.rating" = "Ocena";
+"movieDetail.ratings" = "ocen";
+"movieDetail.runtime" = "Czas trwania";
+"movieDetail.save" = "Zapisz na watchliście";
+"movieDetail.seen" = "Obejrzane";
+"movieDetail.similar" = "Osoby, którym podobało się to, lubiły także";
+"movieDetail.trailer" = "Zwiastun";
+"movieDetail.watchNow" = "Oglądaj teraz";
+
+// Filters
+"filter.all" = "Wszystkie";
+"filter.movies" = "Filmy";
+"filter.tvSeries" = "Seriale";
+
+// Sort
+"sort.dateAdded" = "Data dodania";
+"sort.popularityAsc" = "Popularność ↑";
+"sort.popularityDesc" = "Popularność ↓";
+"sort.rating" = "Ocena";
+"sort.ratingAsc" = "Ocena ↑";
+"sort.ratingDesc" = "Ocena ↓";
+"sort.releaseDate" = "Data premiery";
+"sort.releaseDateAsc" = "Data premiery ↑";
+"sort.releaseDateDesc" = "Data premiery ↓";
+"sort.sortBy" = "Sortuj według";
+"sort.title" = "Tytuł";
+
+// Advanced Filters
+"filters.anyCountry" = "Dowolny kraj";
+"filters.apply" = "Zastosuj";
+"filters.country" = "Kraj";
+"filters.minimumRating" = "Minimalna ocena";
+"filters.ratingAny" = "Dowolna";
+"filters.ratingExcellent" = "8.0+";
+"filters.ratingGood" = "7.0+";
+"filters.ratingMasterpiece" = "9.0+";
+"filters.reset" = "Resetuj";
+"filters.runtime" = "Czas trwania";
+"filters.runtimeAny" = "Dowolny";
+"filters.runtimeLong" = "> 120 min";
+"filters.runtimeMedium" = "90-120 min";
+"filters.runtimeShort" = "< 90 min";
+"filters.sortBy" = "Sortuj według";
+"filters.title" = "Filtry";
+
+// Clips
+"clips.title" = "Klipy";
+"clips.addToList" = "Dodaj do listy";
+"clips.beFirstToComment" = "Bądź pierwszym, który skomentuje";
+"clips.comment" = "Komentarz";
+"clips.comments" = "Komentarze";
+"clips.comments.deleteConfirmation" = "Na pewno chcesz usunąć ten komentarz? Tej operacji nie można cofnąć.";
+"clips.comments.loading" = "Ładowanie komentarzy...";
+"clips.comments.replying" = "Odpowiadanie...";
+"clips.createFirstList" = "Utwórz pierwszą watchlistę, aby zapisywać wybory";
+"clips.createNewList" = "Utwórz nową listę";
+"clips.feed.craftingSubtitle" = "Ręcznie wybieramy najlepsze klipy specjalnie dla Ciebie ✨";
+"clips.feed.craftingTitle" = "Tworzymy Twój idealny feed";
+"clips.hideReplies" = "Ukryj";
+"clips.loadingClips" = "Ładowanie klipów...";
+"clips.noClipsAvailable" = "Brak dostępnych klipów";
+"clips.noClipsDescription" = "Wróć później po ekscytujące sceny z ulubionych filmów i seriali";
+"clips.noComments" = "Brak komentarzy";
+"clips.noListsYet" = "Brak list";
+"clips.reply" = "Odpowiedz";
+"clips.replies" = "odpowiedzi";
+"clips.replyingTo" = "Odpowiedź dla";
+"clips.viewReplies" = "Pokaż";
+
+// Search
+"search.latestVisited" = "Ostatnio odwiedzane";
+"search.noResultsFound" = "Nie znaleziono wyników";
+"search.placeholder" = "Znajdź gdzie obejrzeć film lub serial...";
+"search.results" = "Wyniki";
+"search.trendingSearches" = "Popularne wyszukiwania";
+
+// Profile
+"profile.cancel" = "Anuluj";
+"profile.createAccount" = "Utwórz konto";
+"profile.done" = "Gotowe";
+"profile.helpSupport" = "Pomoc i wsparcie";
+"profile.logout" = "Wyloguj się";
+"profile.notifications" = "Powiadomienia";
+"profile.passwordPlaceholder" = "Hasło";
+"profile.settings" = "Ustawienia";
+"profile.signIn" = "Zaloguj się";
+"profile.signInDescription" = "Twórz listy, zapisuj klipy i personalizuj swoje doświadczenie";
+"profile.signInToVibeWatch" = "Zaloguj się do VibeWatch";
+"profile.streamingServices" = "Serwisy streamingowe";
+"profile.userNamePlaceholder" = "E-mail lub nazwa użytkownika";
+
+// Settings
+"settings.comingSoon" = "Wkrótce więcej ustawień...";
+"settings.country" = "Kraj";
+"settings.language" = "Język";
+"settings.selectCountry" = "Wybierz kraj";
+"settings.selectLanguage" = "Wybierz język";
+"settings.title" = "Ustawienia";
+
+// Cache Management
+"settings.cacheManagement.title" = "Zarządzanie pamięcią podręczną";
+"settings.cacheManagement.cacheSize" = "Rozmiar pamięci podręcznej";
+"settings.cacheManagement.cacheSizeTitle" = "Wybierz rozmiar pamięci podręcznej";
+"settings.cacheManagement.cacheSizeDescription" = "Wybierz ile miejsca przeznaczyć na pamięć podręczną obrazów. Większa pamięć pozwala na więcej treści offline.";
+"settings.cacheManagement.prefetchOption" = "Pobieranie obrazów";
+"settings.cacheManagement.prefetchTitle" = "Opcje pobierania obrazów";
+"settings.cacheManagement.prefetchDescription" = "Określ kiedy obrazy są pobierane do przeglądania offline. Tylko WiFi oszczędza dane komórkowe.";
+"settings.cacheManagement.prefetchNeverWarning" = "Ostrzeżenie: Funkcjonalność offline będzie ograniczona";
+"settings.cacheManagement.clearCache" = "Wyczyść pamięć podręczną obrazów";
+"settings.cacheManagement.clearCacheWarning" = "Usuwa wszystkie zapisane obrazy";
+"settings.cacheManagement.clearCacheConfirmTitle" = "Wyczyścić pamięć podręczną?";
+"settings.cacheManagement.clearCacheConfirmMessage" = "To usunie wszystkie zapisane obrazy i zwolni miejsce. Będziesz potrzebować połączenia z internetem, aby ponownie zobaczyć obrazy.";
+"settings.cacheManagement.clearCacheConfirm" = "Wyczyść pamięć podręczną";
+
+// Platforms
+"platform.selectionCount" = "Wybrano %d z %d";
+"platform.title" = "Platformy streamingowe";
+"platforms.buy" = "Kup";
+"platforms.rent" = "Wypożycz";
+"platforms.streaming" = "Streaming";
+"platforms.title" = "Platformy";
+
+// Notifications
+"notifications.disableButton" = "Wyłącz powiadomienia";
+"notifications.disableConfirmation" = "Wyłączyć powiadomienia?";
+"notifications.disableMessage" = "Nie będziesz otrzymywać powiadomień o nowych premierach, zmianach cen i spersonalizowanych rekomendacjach.";
+"notifications.enableInSettings" = "Włącz powiadomienia w Ustawieniach, aby otrzymywać informacje o nowych premierach, zmianach cen i innych aktualizacjach.";
+"notifications.openSettings" = "Otwórz Ustawienia";
+"notifications.permissionRequired" = "Wymagane jest zezwolenie na powiadomienia";
+
+// Auth
+"auth.alreadyHaveAccount" = "Masz już konto?";
+"auth.confirmPasswordPlaceholder" = "Potwierdź hasło";
+"auth.createAccount" = "Utwórz konto";
+"auth.dontHaveAccount" = "Nie masz konta?";
+"auth.emailPlaceholder" = "E-mail";
+"auth.forgotPassword" = "Zapomniałeś hasła?";
+"auth.gate.accountRequired" = "Wymagane jest konto";
+"auth.gate.authRequiredAI" = "Aby korzystać z czatu AI, potrzebujesz konta.";
+"auth.gate.createFree" = "Utwórz darmowe konto";
+"auth.gate.createTitle" = "Utwórz darmowe konto VibeWatch";
+"auth.gate.description" = "Potrzebujesz konta, aby tworzyć własne listy i synchronizować je między urządzeniami.";
+"auth.gate.haveAccount" = "Mam już konto";
+"auth.gate.limitMessage" = "Wykorzystałeś dziś 15 darmowych klipów. Zarejestruj się, aby synchronizować postępy i od razu odblokować jutrzejsze klipy.";
+"auth.gate.signupFree" = "Rejestracja jest darmowa i trwa mniej niż minutę.";
+"auth.gate.benefit.saveClips" = "Zapisuj ulubione klipy";
+"auth.gate.benefit.syncDevices" = "Synchronizuj na wszystkich urządzeniach";
+"auth.gate.benefit.personalizedRecs" = "Otrzymuj spersonalizowane rekomendacje";
+"auth.invalidEmail" = "Nieprawidłowy e-mail";
+"auth.invalidPassword" = "Nieprawidłowe hasło";
+"auth.joinVibeWatch" = "Dołącz do VibeWatch i zacznij odkrywać nowe tytuły";
+"auth.passwordPlaceholder" = "Hasło";
+"auth.passwordsDontMatch" = "Hasła nie są takie same";
+"auth.signIn" = "Zaloguj się";
+"auth.signInContinue" = "Zaloguj się, aby kontynuować";
+"auth.signUp" = "Zarejestruj się";
+"auth.usernamePlaceholder" = "Nazwa użytkownika";
+"auth.welcomeBack" = "Witaj ponownie";
+"auth.error.notConfigured" = "Usługa uwierzytelniania nie jest skonfigurowana. Dodaj swoje dane Supabase.";
+"auth.error.invalidResponse" = "Nieprawidłowa odpowiedź z serwera.";
+"auth.error.userNotFound" = "Użytkownik nie został znaleziony.";
+"auth.error.invalidCredentials" = "Nieprawidłowy e-mail lub hasło.";
+"auth.error.networkError" = "Błąd sieci. Sprawdź połączenie.";
+"auth.error.databaseError" = "Błąd bazy danych przy zapisie profilu. Spróbuj ponownie.";
+"auth.error.signUpFailed" = "Rejestracja nie powiodła się. Spróbuj ponownie.";
+"auth.error.passwordResetFailed" = "Nie udało się wysłać e-maila resetującego. Spróbuj ponownie.";
+"auth.error.passwordUpdateFailed" = "Nie udało się zaktualizować hasła. Spróbuj ponownie.";
+"auth.error.accountDeletionFailed" = "Nie udało się usunąć konta. Spróbuj ponownie.";
+
+// AI
+"ai.title" = "Vibe AI";
+"ai.tokensUsage" = "Tokeny: %@/%@";
+"ai.describeVibe" = "Opisz swój nastrój";
+"ai.thinking" = "Myślę...";
+"ai.editMessage" = "Edytuj wiadomość";
+"ai.hardLimitMessage" = "Osiągnąłeś dzienny limit AI. Wróć jutro.";
+"ai.paywall.benefit.personalized" = "Spersonalizowane listy do obejrzenia";
+"ai.paywall.benefit.smarter" = "Mądrzejsze odkrywanie treści";
+"ai.paywall.benefit.unlimited" = "Nielimitowane rekomendacje AI";
+"ai.paywall.description" = "Zdobądź mądrzejsze rekomendacje AI filmów i seriali, aby znaleźć idealne pozycje.";
+"ai.paywall.goBack" = "Wróć";
+"ai.paywall.title" = "Odblokuj swojego filmowego kumpla AI";
+"ai.paywall.unlockAI" = "Odblokuj czat AI";
+"ai.placeholder" = "Np. \"Sci-fi z niespodziewanym zwrotem akcji\"";
+"ai.proRequired" = "Czat AI jest dostępny tylko dla użytkowników Pro.";
+"ai.resultsTitle" = "Oto, co znalazłem:";
+"ai.saveRegenerate" = "Zapisz i wygeneruj ponownie";
+"ai.softLimitMessage" = "Zbliżasz się do dziennego limitu AI. Zachowaj krótkie, konkretne zapytania.";
+"ai.subtitle" = "Powiedz mi, jaki masz nastrój—AI znajdzie film lub serial do obejrzenia.";
+"ai.suggestion.chips1" = "💖 Przytulny romans, wybrany przez AI";
+"ai.suggestion.chips2" = "💥 Komedii akcji z lat 80., AI poleca";
+"ai.suggestion.chips3" = "🕵️‍♂️ Niedoceniany thriller ze zwrotem akcji";
+"ai.suggestion.chips4" = "🤖 AI: co powinienem obejrzeć?";
+"ai.usage.left" = "pozostało";
+
+// Paywall
+"paywall.bestValue" = "NAJLEPSZA OFERTA";
+"paywall.cta.continue" = "Kontynuuj";
+"paywall.cta.selectPlan" = "Wybierz plan";
+"paywall.cta.startTrial" = "Rozpocznij %@ darmowy okres próbny";
+"paywall.daily.limitDescription" = "Darmowi użytkownicy mogą oglądać 15 klipów dziennie. Przejdź na Pro, aby zyskać nielimitowane klipy i funkcje premium.";
+"paywall.daily.limitReached" = "Osiągnąłeś dzisiejszy limit";
+"paywall.daily.nextReset" = "Następny reset za";
+"paywall.daily.resetIn" = "Reset za";
+"paywall.daily.title" = "Wróć jutro";
+"paywall.discount.annual" = "33% TANIEJ";
+"paywall.ensurePro" = "Zabezpiecz swój plan Pro!";
+"paywall.feature.advancedFilters" = "🔎 Zaawansowane filtry do szybszych wyborów";
+"paywall.feature.aiAssistant" = "🤖 Rekomendacje AI dla filmów i seriali";
+"paywall.feature.lists" = "📋 Do 100 synchronizowanych list";
+"paywall.feature.noAds" = "❌ Bez reklam przerywających klipy";
+"paywall.feature.offlineMode" = "📵 Tryb offline dla zapisanych wyborów";
+"paywall.feature.releaseAlerts" = "🔔 Powiadomienia gdy ulubione są dostępne";
+"paywall.feature.unlimitedClips" = "▶️ Nielimitowane klipy i zwiastuny";
+"paywall.foundingMember" = "Cena dla członków założycieli";
+"paywall.plan.annual" = "Roczny";
+"paywall.plan.monthly" = "Miesięczny";
+"paywall.price.perMonth" = "%@/mies.";
+"paywall.proDescription" = "Pro odblokowuje nielimitowane klipy, filmowego kumpla AI i synchronizowane listy.";
+"paywall.restore" = "Przywróć zakupy";
+"paywall.trial.badge" = "%@ za darmo";
+"paywall.unlockUnlimited" = "Odblokuj nielimitowane klipy";
+"paywall.upgrade" = "Przejdź na Pro";
+
+// Common
+"common.cancel" = "Anuluj";
+"common.delete" = "Usuń";
+"common.dismiss" = "Zamknij";
+"common.done" = "Gotowe";
+"common.edit" = "Edytuj";
+"common.items" = "elementów";
+"common.item" = "element";
+"common.loadMore" = "Wczytaj więcej";
+"common.loading" = "Ładowanie...";
+"common.liked" = "polubił(a)";
+"common.offline" = "Jesteś w trybie offline. Wyświetlamy zapisane treści.";
+"common.or" = "LUB";
+"common.privacy" = "Prywatność";
+"common.pro" = "PRO";
+"common.reply" = "Odpowiedz";
+"common.retry" = "Spróbuj ponownie";
+"common.save" = "Zapisz";
+"common.search" = "Szukaj";
+"common.terms" = "Warunki";
+"common.tryAgain" = "Spróbuj ponownie";
+"common.uploading" = "Przesyłanie...";
+"common.year" = "Rok";
+"common.error" = "Błąd";
+"common.ok" = "OK";
+"common.pleaseTryAgain" = "Spróbuj ponownie.";
+
+// Misc
+"misc.language" = "Polski";
+"misc.letUsKnow" = "Daj nam znać";
+"misc.of" = "z";
+"misc.selected" = "wybrano";
+"misc.somethingWrong" = "Coś jest nie tak?";
+
+
+// Password Reset
+"auth.resetPassword" = "Zresetuj hasło";
+"auth.resetPasswordDescription" = "Wpisz e-mail, a wyślemy Ci link do resetu.";
+"auth.sendResetLink" = "Wyślij link resetujący";
+"auth.resetEmailSent" = "E-mail z resetem wysłany! Sprawdź skrzynkę.";
+"auth.setNewPasswordDescription" = "Utwórz nowe hasło i potwierdź je, aby kontynuować.";
+"auth.updatePassword" = "Zaktualizuj hasło";
+"auth.passwordResetSuccess" = "Hasło zostało zaktualizowane.";
+"profile.changePassword" = "Zmień hasło";
+
+
+// Password Reset Confirmations
+"common.confirm" = "Potwierdź";
+"profile.logoutConfirmationTitle" = "Na pewno chcesz się wylogować?";
+"auth.confirmChangePasswordTitle" = "Zmień hasło";
+"auth.confirmChangePasswordMessage" = "Czy chcesz teraz zaktualizować hasło?";
+
+
+// Profile - Support & Feedback
+"profile.sendFeedback" = "Wyślij opinię";
+"profile.aboutUs" = "O nas";
+"profile.aboutUsDetail" = "Dowiedz się więcej o zespole VibeWatch i naszej misji ulepszania odkrywania streamingu.";
+"profile.tmdbAttribution" = "Ten produkt korzysta z API TMDb, ale nie jest zatwierdzony ani certyfikowany przez TMDb.";
+"profile.legalNotes" = "Informacje prawne";
+"profile.faq" = "FAQ";
+"profile.faqDetail" = "Znajdź szybkie odpowiedzi na częste pytania o konta, subskrypcje i funkcje.";
+"profile.privacyPolicy" = "Polityka prywatności";
+"profile.termsOfUse" = "Warunki użytkowania";
+"profile.feedback.suggestFeature" = "Zaproponuj nową funkcję";
+"profile.feedback.suggestFeatureDescription" = "Powiedz nam, co uczyniłoby VibeWatch lepszym dla Ciebie.";
+"profile.feedback.reportBug" = "Zgłoś błąd/problem";
+"profile.feedback.reportBugDescription" = "Opisz problem, który widzisz, abyśmy mogli go szybko naprawić.";
+"profile.feedback.other" = "Inne";
+"profile.feedback.otherDescription" = "Podziel się innymi przemyśleniami lub komentarzami.";
+"profile.feedback.keepUpdated" = "Informuj mnie o nowościach";
+"profile.feedback.sendButton" = "Wyślij opinię";
+"profile.feedback.sent" = "Dziękujemy! Twoja opinia została wysłana.";
+"profile.feedback.invalidEmail" = "Nieprawidłowa treść e-maila.";
+
+// Settings - Account Deletion
+"settings.deleteAccount" = "Trwale usuń moje konto";
+"settings.deleteAccountWarningTitle" = "Usunąć konto?";
+"settings.deleteAccountWarningMessage" = "Ta czynność jest trwała i nie może być cofnięta.";
+"settings.deleteAccountKeep" = "Nie, zachowaj";
+"settings.deleteAccountConfirm" = "Tak, usuń moje konto";
+"settings.deleteAccountFinalTitle" = "Trwale usuń konto";
+"settings.deleteAccountFinalMessage" = "Czy jesteś absolutnie pewien? Tej czynności nie można cofnąć.";
+"settings.deleteAccountError" = "Nie można teraz usunąć konta.";
+"settings.deleteAccountSuccess" = "Twoje konto zostało usunięte.";
+"settings.deleteAccountDeleting" = "Usuwanie...";
+
+
+// Profile Upgrade CTA
+"profile.upgradePro.title" = "Przejdź na Pro";
+"profile.upgradePro.subtitle" = "Odblokuj nielimitowane klipy, AI i listy premium.";
+
+/// Actor Detail
+"actor.biography.title" = "Biografia";
+"actor.biography.loading" = "Ładowanie biografii...";
+"actor.biography.unavailable" = "Biografia niedostępna.";
+"actor.filmography.movies" = "Filmy";
+"actor.filmography.tv" = "Seriale";
+"actor.retry" = "Spróbuj ponownie";
+"actor.biography.showMore" = "Pokaż więcej";
+"actor.biography.showLess" = "Pokaż mniej";
+
+"clips.search.placeholder" = "Szukaj klipów, postaci lub cytatów";
+"clips.search.emptyTitle" = "Znajdź klipy, które lubisz";
+"clips.search.emptySubtitle" = "Szukaj dowolnego filmu, serialu, postaci lub cytatu, aby zobaczyć pasujące klipy i powiązane propozycje.";
+"clips.search.showcaseTitle" = "Odkryj klipy";
+"clips.search.showcaseSubtitle" = "Szukaj powyżej, aby znaleźć klipy z ulubionych filmów i seriali";
+"clips.search.matched" = "Dopasowane";
+"clips.search.recommended" = "Polecane";
+
+// Redeem Code
+"settings.redeemCode" = "Wykorzystaj kod";
+"settings.redeemCode.description" = "Wpisz kod promocyjny lub ofertowy";
+"paywall.haveCode" = "Masz kod promocyjny?";
+
+// Help & Support - About Us
+"profile.aboutUsDescription" = "Jesteśmy dwójką przyjaciół, którzy tworzą nowy rodzaj towarzysza filmowego/serialowego. VibeWatch narodził się z frustracji niewygodnymi trackerami: skupiamy się na nowoczesnym odkrywaniu opartym na klipach, szybkich linkach do streamingu i narzędziach, które pomagają zarówno kinomaniakom, jak i zwykłym widzom znaleźć idealną pozycję bez niekończącego się scrollowania.";
+"profile.faqs" = "FAQ";
+"profile.legal" = "Prawne";
+
+// FAQ Items
+"profile.faq.question1" = "Jak Klipy pomagają mi odkrywać nowe tytuły?";
+"profile.faq.answer1" = "Klipy to krótkie, pionowe podglądy dopasowane do Twojego gustu, dzięki czemu możesz scrollować bez poczucia marnowania czasu.";
+"profile.faq.question2" = "Czy mogę śledzić co oglądam?";
+"profile.faq.answer2" = "Tak. Zapisuj na listach, oznaczaj jako obejrzane/lubiane/nielubiane i synchronizuj filmy i seriale.";
+"profile.faq.question3" = "Gdzie mogę to obejrzeć?";
+"profile.faq.answer3" = "Linki do streamingu są pobierane dla każdego kraju, więc możesz przejść bezpośrednio do odpowiedniej aplikacji.";
+"profile.faq.question4" = "Co jeśli coś wygląda źle?";
+"profile.faq.answer4" = "Użyj \"Daj nam znać\" przy dowolnym tytule, aby zgłosić błędy lub złe linki, a my szybko to naprawimy.";
+"profile.faq.question5" = "Czy VibeWatch działa dla zwykłych widzów?";
+"profile.faq.answer5" = "Zdecydowanie. Pokazujemy łatwe wybory jak sobotnio-wieczorny film ze znajomymi, ale też perełki dla prawdziwych kinomaniaków.";

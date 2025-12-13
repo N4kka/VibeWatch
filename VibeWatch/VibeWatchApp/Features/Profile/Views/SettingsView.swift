@@ -1,8 +1,35 @@
 import SwiftUI
+import StoreKit
+import RevenueCat
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var appState: AppState
+    @EnvironmentObject var authService: AuthService
     @StateObject private var localizationManager = LocalizationManager.shared
+    @State private var showDeleteAccountPanel = false
+    @State private var showDeleteAccountConfirmation = false
+    @State private var isDeletingAccount = false
+    @State private var deletionError: String?
+
+    // Cache Management
+    @State private var showCacheSizeOptions = false
+    @State private var showPrefetchOptions = false
+    @State private var showClearCacheConfirmation = false
+    @State private var currentUser: User?
+    @State private var selectedCacheSize: ImageCacheService.CacheSizePreference = .medium
+    @State private var selectedPrefetchOption: ImageCacheService.ImagePrefetchOption = .wifiOnly
+
+    // Transaction listener for code redemption
+    @State private var transactionListenerTask: Task<Void, Never>?
+
+    private var cacheSizeDescription: String {
+        selectedCacheSize.rawValue
+    }
+
+    private var prefetchOptionDescription: String {
+        selectedPrefetchOption.rawValue
+    }
     
     var body: some View {
         ZStack {
@@ -40,20 +67,609 @@ struct SettingsView: View {
                 
                 ScrollView {
                     VStack(spacing: 16) {
-                        // Settings content will be added here
-                        // Country and Language are now auto-detected from device
-                        // and can be changed via the language selector in ProfileView toolbar
+                        // Cache Management Section
+                        VStack(spacing: 16) {
+                            Text("settings.cacheManagement.title".localized)
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(.theme.textPrimary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.top, 12)
+                            
+                            // Cache Size Preference
+                            SettingItemView(
+                                icon: "folder.fill",
+                                title: "settings.cacheManagement.cacheSize".localized,
+                                value: cacheSizeDescription,
+                                action: { showCacheSizeOptions = true }
+                            )
+                            
+                            // Image Prefetch Option
+                            SettingItemView(
+                                icon: "arrow.down.circle.fill",
+                                title: "settings.cacheManagement.prefetchOption".localized,
+                                value: prefetchOptionDescription,
+                                action: { showPrefetchOptions = true }
+                            )
+                            
+                            // Clear Cache Button
+                            Button {
+                                showClearCacheConfirmation = true
+                            } label: {
+                                HStack(spacing: 16) {
+                                    ZStack {
+                                        Circle()
+                                            .fill(Color.theme.accentOrange.opacity(0.2))
+                                            .frame(width: 44, height: 44)
+                                        
+                                        Image(systemName: "trash.fill")
+                                            .font(.system(size: 20))
+                                            .foregroundColor(.theme.accentOrange)
+                                    }
+                                    
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("settings.cacheManagement.clearCache".localized)
+                                            .font(.system(size: 16, weight: .semibold))
+                                            .foregroundColor(.theme.textPrimary)
+                                        
+                                        Text("settings.cacheManagement.clearCacheWarning".localized)
+                                            .font(.system(size: 14))
+                                            .foregroundColor(.theme.textSecondary)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 14))
+                                        .foregroundColor(.theme.textSecondary)
+                                }
+                                .padding(16)
+                                .background(Color.white.opacity(0.05))
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                            }
+                        }
+                        .padding(.top, 12)
+
+                        // Redeem Code Section
+                        VStack(spacing: 0) {
+                            Button {
+                                presentOfferCodeRedemption()
+                            } label: {
+                                HStack(spacing: 16) {
+                                    ZStack {
+                                        Circle()
+                                            .fill(Color.theme.accentOrange.opacity(0.2))
+                                            .frame(width: 44, height: 44)
+
+                                        Image(systemName: "ticket.fill")
+                                            .font(.system(size: 20))
+                                            .foregroundColor(.theme.accentOrange)
+                                    }
+
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("settings.redeemCode".localized)
+                                            .font(.system(size: 16, weight: .semibold))
+                                            .foregroundColor(.theme.textPrimary)
+
+                                        Text("settings.redeemCode.description".localized)
+                                            .font(.system(size: 14))
+                                            .foregroundColor(.theme.textSecondary)
+                                    }
+
+                                    Spacer()
+
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 14))
+                                        .foregroundColor(.theme.textSecondary)
+                                }
+                                .padding(16)
+                            }
+                        }
+                        .background(Color.white.opacity(0.05))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .padding(.top, 8)
+
+                        VStack(spacing: 0) {
+                            Button {
+                                deletionError = nil
+                                showDeleteAccountPanel = true
+                            } label: {
+                                HStack(spacing: 16) {
+                                    Image(systemName: "trash.fill")
+                                        .font(.system(size: 20))
+                                        .foregroundColor(.theme.accentOrange)
+                                        .frame(width: 30)
+                                    
+                                    Text("settings.deleteAccount".localized)
+                                        .font(.system(size: 16))
+                                        .foregroundColor(.theme.textPrimary)
+                                        .multilineTextAlignment(.leading)
+                                    
+                                    Spacer()
+                                    
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 14))
+                                        .foregroundColor(.theme.textSecondary)
+                                }
+                                .padding()
+                            }
+                        }
+                        .background(Color.white.opacity(0.05))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .padding(.top, 8)
                         
-                        Text("More settings coming soon...")
-                            .font(.system(size: 14))
-                            .foregroundColor(.theme.textSecondary)
-                            .padding(.top, 40)
+                        if let deletionError {
+                            Text(deletionError)
+                                .font(.system(size: 13))
+                                .foregroundColor(.red)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 4)
+                        }
                     }
                     .padding(20)
                 }
             }
         }
         .navigationBarHidden(true)
+        .onAppear {
+            currentUser = authService.currentUser
+            // Load cache preferences from UserDefaults
+            selectedCacheSize = ImageCacheService.shared.getCurrentCacheSizePreference()
+            selectedPrefetchOption = ImageCacheService.shared.getCurrentImagePrefetchOption()
+            print("ℹ️ [Settings] Loaded cache size preference: \(selectedCacheSize.rawValue)")
+            print("ℹ️ [Settings] Loaded prefetch option: \(selectedPrefetchOption.rawValue)")
+        }
+        .overlay {
+            if showDeleteAccountPanel {
+                popupOverlayBackground(onTap: { showDeleteAccountPanel = false })
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                
+                deleteAccountPanel
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                    .padding(.bottom, 24)
+            }
+        }
+        .overlay {
+            if showCacheSizeOptions {
+                popupOverlayBackground(onTap: { showCacheSizeOptions = false })
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                cacheSizeOptionsPanel
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                    .padding(.bottom, 24)
+            }
+        }
+        .overlay {
+            if showPrefetchOptions {
+                popupOverlayBackground(onTap: { showPrefetchOptions = false })
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                prefetchOptionsPanel
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                    .padding(.bottom, 24)
+            }
+        }
+        .overlay {
+            if showClearCacheConfirmation {
+                clearCacheConfirmation
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+            }
+        }
+        .overlay {
+            if showDeleteAccountConfirmation {
+                popupOverlayBackground(onTap: { showDeleteAccountConfirmation = false })
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                
+                ConfirmationPopup(
+                    title: "settings.deleteAccountFinalTitle".localized,
+                    message: "settings.deleteAccountFinalMessage".localized,
+                    confirmTitle: isDeletingAccount ? "settings.deleteAccountDeleting".localized : "settings.deleteAccountConfirm".localized,
+                    cancelTitle: "settings.deleteAccountKeep".localized,
+                    isDestructive: true,
+                    onConfirm: {
+                        Task { await performAccountDeletion() }
+                    },
+                    onCancel: {
+                        if !isDeletingAccount { showDeleteAccountConfirmation = false }
+                    }
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+            }
+        }
+    }
+    
+    private func updateCacheSizePreference(_ preference: ImageCacheService.CacheSizePreference) {
+        // Update UI state immediately
+        selectedCacheSize = preference
+
+        // Store in UserDefaults (device-specific, no need for cloud sync)
+        ImageCacheService.shared.setCacheSizePreference(preference)
+
+        print("✅ [Settings] Cache size preference updated to \(preference.rawValue)")
+    }
+
+    private func updatePrefetchOption(_ option: ImageCacheService.ImagePrefetchOption) {
+        // Update UI state immediately
+        selectedPrefetchOption = option
+
+        // Store in UserDefaults (device-specific, no need for cloud sync)
+        ImageCacheService.shared.setImagePrefetchOption(option)
+
+        print("✅ [Settings] Prefetch option updated to \(option.rawValue)")
+    }
+    
+    private func clearCache() {
+        ImageCacheService.shared.clearCache()
+
+        // Trigger auto-recaching if prefetch is enabled
+        let prefetchOption = selectedPrefetchOption
+        Task {
+            let shouldRecache = prefetchOption != .never
+
+            if shouldRecache {
+                // Check if we should prefetch based on current network conditions
+                let canPrefetch = await ImageCacheService.shared.shouldPrefetchImages(preference: prefetchOption)
+
+                if canPrefetch {
+                    // Trigger recaching of current content
+                    await triggerRecaching()
+                }
+            }
+        }
+
+        print("✅ Cache cleared successfully")
+    }
+
+    private func triggerRecaching() async {
+        print("🔄 [Cache] Starting auto-recaching after cache clear...")
+
+        // Only recache if user is PRO (since prefetching is a PRO feature)
+        let isProUser = await ClipQuotaService.shared.checkIsProUser()
+
+        if isProUser {
+            // Trigger daily content prefetch with force flag to ignore daily limit
+            await DailyContentPrefetchService.shared.executeDailyPrefetch(force: true)
+            print("🔄 [Cache] Recaching completed")
+        } else {
+            print("📵 [Cache] Skipping recache - User is not PRO")
+        }
+    }
+    
+    private func forceLogout() async {
+        do {
+            try await authService.signOut(force: true)
+            appState.isAuthenticated = false
+            appState.currentUser = nil
+            dismiss()
+        } catch {
+            print("Error forcing logout: \(error.localizedDescription)")
+        }
+    }
+    
+    private func performAccountDeletion() async {
+        guard !isDeletingAccount else { return }
+        isDeletingAccount = true
+        deletionError = nil
+
+        do {
+            try await authService.deleteAccountPermanently()
+            await MainActor.run {
+                appState.isAuthenticated = false
+                appState.currentUser = nil
+                showDeleteAccountConfirmation = false
+                showDeleteAccountPanel = false
+                dismiss()
+            }
+        } catch {
+            await MainActor.run {
+                deletionError = "settings.deleteAccountError".localized
+                showDeleteAccountPanel = false
+                showDeleteAccountConfirmation = false
+            }
+        }
+
+        isDeletingAccount = false
+    }
+
+    /// Present Apple's native offer code redemption sheet
+    private func presentOfferCodeRedemption() {
+        // Start listening for transactions before showing the sheet
+        startTransactionListener()
+
+        // Use StoreKit's native offer code redemption sheet
+        // This opens Apple's system UI for entering promo/offer codes
+        SKPaymentQueue.default().presentCodeRedemptionSheet()
+        print("🎟️ [Settings] Presenting offer code redemption sheet")
+    }
+
+    /// Listen for StoreKit transactions after code redemption
+    private func startTransactionListener() {
+        // Cancel any existing listener
+        transactionListenerTask?.cancel()
+
+        transactionListenerTask = Task {
+            // Listen for new transactions from StoreKit 2
+            for await result in Transaction.updates {
+                switch result {
+                case .verified(let transaction):
+                    print("🎟️ [Settings] Transaction detected: \(transaction.productID)")
+
+                    // Sync with RevenueCat to update entitlements
+                    await syncPurchasesWithRevenueCat()
+
+                    // Always finish the transaction
+                    await transaction.finish()
+                case .unverified(_, let error):
+                    print("⚠️ [Settings] Transaction verification failed: \(error)")
+                }
+            }
+        }
+    }
+
+    /// Sync purchases with RevenueCat after code redemption
+    private func syncPurchasesWithRevenueCat() async {
+        do {
+            // Sync purchases forces RevenueCat to check with Apple for new transactions
+            let customerInfo = try await Purchases.shared.syncPurchases()
+            let isPro = customerInfo.entitlements[AppConstants.RevenueCat.proEntitlementID]?.isActive == true
+
+            if isPro {
+                print("✅ [Settings] Code redeemed successfully! PRO status activated")
+                await MainActor.run {
+                    DailyQuotaManager.shared.upgradeToPro()
+                }
+                // Also refresh the ClipQuotaService to update its cached status
+                await ClipQuotaService.shared.checkIsProUser()
+            }
+        } catch {
+            print("⚠️ [Settings] Failed to sync purchases: \(error)")
+            // Still try to check PRO status directly
+            await ClipQuotaService.shared.checkIsProUser()
+        }
+    }
+    
+    // Cache Size Options Panel
+    private var cacheSizeOptionsPanel: some View {
+        VStack(spacing: 16) {
+            Capsule()
+                .fill(Color.white.opacity(0.2))
+                .frame(width: 44, height: 5)
+                .padding(.top, 8)
+            
+            Text("settings.cacheManagement.cacheSizeTitle".localized)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(.theme.textPrimary)
+            
+            Divider()
+                .background(Color.white.opacity(0.12))
+            
+            Text("settings.cacheManagement.cacheSizeDescription".localized)
+                .font(.system(size: 14))
+                .foregroundColor(.theme.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 12)
+            
+            VStack(spacing: 12) {
+                ForEach(ImageCacheService.CacheSizePreference.allCases, id: \.self) { option in
+                    Button {
+                        updateCacheSizePreference(option)
+                        showCacheSizeOptions = false
+                    } label: {
+                        HStack {
+                            Text(option.rawValue)
+                                .font(.system(size: 16))
+                                .foregroundColor(.theme.textPrimary)
+
+                            Spacer()
+
+                            if selectedCacheSize == option {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(.theme.accentOrange)
+                            }
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 12)
+                        .frame(maxWidth: .infinity)
+                        .background(Color.white.opacity(0.05))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                }
+            }
+            .padding(.horizontal, 12)
+            
+            Button {
+                showCacheSizeOptions = false
+            } label: {
+                Text("common.cancel".localized)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.theme.textPrimary)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 48)
+                    .background(Color.white.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .padding(.horizontal, 12)
+            .padding(.bottom, 12)
+        }
+        .padding(.vertical, 10)
+        .padding(.horizontal, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(Color.theme.backgroundDark.opacity(0.98))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .stroke(Color.white.opacity(0.08))
+                )
+                .shadow(color: Color.black.opacity(0.45), radius: 24, x: 0, y: 12)
+        )
+        .padding(.horizontal, 18)
+    }
+    
+    // Prefetch Options Panel
+    private var prefetchOptionsPanel: some View {
+        VStack(spacing: 16) {
+            Capsule()
+                .fill(Color.white.opacity(0.2))
+                .frame(width: 44, height: 5)
+                .padding(.top, 8)
+            
+            Text("settings.cacheManagement.prefetchTitle".localized)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(.theme.textPrimary)
+            
+            Divider()
+                .background(Color.white.opacity(0.12))
+            
+            Text("settings.cacheManagement.prefetchDescription".localized)
+                .font(.system(size: 14))
+                .foregroundColor(.theme.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 12)
+            
+            VStack(spacing: 12) {
+                ForEach(ImageCacheService.ImagePrefetchOption.allCases, id: \.self) { option in
+                    Button {
+                        updatePrefetchOption(option)
+                        showPrefetchOptions = false
+                    } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(option.rawValue)
+                                    .font(.system(size: 16))
+                                    .foregroundColor(.theme.textPrimary)
+
+                                if option == .never {
+                                    Text("settings.cacheManagement.prefetchNeverWarning".localized)
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.theme.accentOrange)
+                                }
+                            }
+
+                            Spacer()
+
+                            if selectedPrefetchOption == option {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(.theme.accentOrange)
+                            }
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 12)
+                        .frame(maxWidth: .infinity)
+                        .background(Color.white.opacity(0.05))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                }
+            }
+            .padding(.horizontal, 12)
+            
+            Button {
+                showPrefetchOptions = false
+            } label: {
+                Text("common.cancel".localized)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.theme.textPrimary)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 48)
+                    .background(Color.white.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .padding(.horizontal, 12)
+            .padding(.bottom, 12)
+        }
+        .padding(.vertical, 10)
+        .padding(.horizontal, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(Color.theme.backgroundDark.opacity(0.98))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .stroke(Color.white.opacity(0.08))
+                )
+                .shadow(color: Color.black.opacity(0.45), radius: 24, x: 0, y: 12)
+        )
+        .padding(.horizontal, 18)
+    }
+    
+    // Clear Cache Confirmation
+    private var clearCacheConfirmation: some View {
+        ConfirmationPopup(
+            title: "settings.cacheManagement.clearCacheConfirmTitle".localized,
+            message: "settings.cacheManagement.clearCacheConfirmMessage".localized,
+            confirmTitle: "settings.cacheManagement.clearCacheConfirm".localized,
+            cancelTitle: "common.cancel".localized,
+            isDestructive: true,
+            onConfirm: {
+                clearCache()
+                showClearCacheConfirmation = false
+            },
+            onCancel: {
+                showClearCacheConfirmation = false
+            }
+        )
+    }
+    
+    private var deleteAccountPanel: some View {
+        VStack(spacing: 16) {
+            Capsule()
+                .fill(Color.white.opacity(0.2))
+                .frame(width: 44, height: 5)
+                .padding(.top, 8)
+            
+            Text("settings.deleteAccountWarningTitle".localized)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(.theme.textPrimary)
+            
+            Divider()
+                .background(Color.white.opacity(0.12))
+            
+            Text("settings.deleteAccountWarningMessage".localized)
+                .font(.system(size: 14))
+                .foregroundColor(.theme.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 12)
+            
+            VStack(spacing: 12) {
+                Button {
+                    showDeleteAccountPanel = false
+                    showDeleteAccountConfirmation = true
+                } label: {
+                    Text("settings.deleteAccountConfirm".localized)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 48)
+                        .background(Color.red)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                
+                Button {
+                    showDeleteAccountPanel = false
+                } label: {
+                    Text("settings.deleteAccountKeep".localized)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.theme.textPrimary)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 48)
+                        .background(Color.white.opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.bottom, 12)
+        }
+        .padding(.vertical, 10)
+        .padding(.horizontal, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(Color.theme.backgroundDark.opacity(0.98))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .stroke(Color.white.opacity(0.08))
+                )
+                .shadow(color: Color.black.opacity(0.45), radius: 24, x: 0, y: 12)
+        )
+        .padding(.horizontal, 18)
     }
 }
 

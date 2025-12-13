@@ -2,7 +2,19 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>CFBundleDisplayName</key>
-	<string>$(APP_DISPLAY_NAME)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.vibewatch.auth</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.vibewatch.VibeWatchApp</string>
+				<string>com.vibewatch.VibeWatchApp.beta</string>
+				<string>com.vibewatch.vibewatchapp</string>
+				<string>com.vibewatch.vibewatchapp.beta</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

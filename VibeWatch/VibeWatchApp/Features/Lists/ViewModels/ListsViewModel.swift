@@ -6,7 +6,7 @@ import Combine
 class ListsViewModel: ObservableObject {
     @Published var lists: [MediaList] = []
     @Published var isLoading = false
-    @Published var errorMessage: String?
+    @Published var error: AppError?
 
     private let listManager = ListManager.shared
     private var cancellables = Set<AnyCancellable>()
@@ -18,40 +18,21 @@ class ListsViewModel: ObservableObject {
     }
 
     func loadLists() async {
-        isLoading = true
-        errorMessage = nil
-
-        // Load from ListManager (local UserDefaults storage)
-        listManager.loadLists()
-        lists = listManager.lists
-
-        isLoading = false
-    }
-
-    func createList(title: String, description: String?) async -> Result<Void, ListError> {
-        guard !title.isEmpty else {
-            errorMessage = "List title cannot be empty"
-            return .failure(.listNotFound) // Reusing error type
-        }
-
-        // Create list via ListManager (saves to UserDefaults)
-        let result = listManager.createList(name: title, description: description)
+        // No need to reload - ViewModel already observes listManager.$lists
+        // which automatically updates when lists change
         
-        switch result {
-        case .success:
-            errorMessage = nil
-        case .failure(let error):
-            errorMessage = error.localizedDescription
-        }
-
-        // Lists are automatically updated via the publisher binding
-        return result
+        // Just mark as loaded
+        isLoading = false
+        
+        // Lists are already synced via the Combine publisher (line 16-17)
+        // Any changes to listManager.lists automatically update this.lists
     }
 
-    func deleteList(_ list: MediaList) async {
-        // Delete from ListManager
-        listManager.deleteList(list)
+    func createList(title: String, description: String?) async throws {
+        try await listManager.createList(name: title, description: description)
+    }
 
-        // Lists are automatically updated via the publisher binding
+    func deleteList(_ list: MediaList) async throws {
+        try await listManager.deleteList(id: list.id)
     }
 }

@@ -3,11 +3,16 @@ import SwiftUI
 struct SignInView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject var authService: AuthService
     @State private var emailOrUsername = ""
     @State private var password = ""
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var showSignUp = false
+    @State private var emailTouched = false
+    @State private var passwordTouched = false
+    @State private var showForgotPasswordSheet = false
+    @State private var resetEmail = ""
     
     var body: some View {
         NavigationView {
@@ -47,6 +52,11 @@ struct SignInView: View {
             .sheet(isPresented: $showSignUp) {
                 SignUpView()
                     .environmentObject(appState)
+                    .environmentObject(authService)
+            }
+            .sheet(isPresented: $showForgotPasswordSheet) {
+                ForgotPasswordSheet(initialEmail: resetEmail)
+                    .environmentObject(authService)
             }
         }
     }
@@ -70,10 +80,32 @@ struct SignInView: View {
                 .textFieldStyle(CustomTextFieldStyle())
                 .autocapitalization(.none)
                 .textContentType(.username)
+                .onChange(of: emailOrUsername) {_, _ in
+                    emailTouched = true
+                }
             
             SecureField("profile.passwordPlaceholder".localized, text: $password)
                 .textFieldStyle(CustomTextFieldStyle())
                 .textContentType(.password)
+                .onChange(of: password) {_, _ in
+                    passwordTouched = true
+                }
+            
+            if emailTouched && emailOrUsername.contains("@") && !emailOrUsername.isEmpty && !isEmailOrUsernameValid {
+                Text("auth.invalidEmail".localized)
+                    .font(.system(size: 12))
+                    .foregroundColor(.red)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.leading, 16)
+            }
+            
+            if passwordTouched && !password.isEmpty && !isPasswordValid {
+                Text("auth.invalidPassword".localized)
+                    .font(.system(size: 12))
+                    .foregroundColor(.red)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.leading, 16)
+            }
             
             if let errorMessage = errorMessage {
                 Text(errorMessage)
@@ -88,7 +120,9 @@ struct SignInView: View {
     
     private var forgotPasswordButton: some View {
         Button {
-            // TODO: Implement forgot password
+            let trimmed = emailOrUsername.trimmingCharacters(in: .whitespacesAndNewlines)
+            resetEmail = trimmed.contains("@") ? trimmed : ""
+            showForgotPasswordSheet = true
         } label: {
             Text("auth.forgotPassword".localized)
                 .font(.system(size: 14, weight: .medium))
@@ -185,9 +219,20 @@ struct SignInView: View {
     }
     
     private var isFormValid: Bool {
-        !emailOrUsername.isEmpty &&
-        !password.isEmpty &&
-        password.count >= 6
+        isEmailOrUsernameValid && isPasswordValid
+    }
+    
+    private var isEmailOrUsernameValid: Bool {
+        let trimmed = emailOrUsername.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.contains("@") {
+            return ValidationHelper.isValidEmail(trimmed)
+        } else {
+            return !trimmed.isEmpty
+        }
+    }
+    
+    private var isPasswordValid: Bool {
+        ValidationHelper.isValidPassword(password)
     }
     
     private func handleSignIn() async {
@@ -195,8 +240,9 @@ struct SignInView: View {
         isLoading = true
         
         do {
-            let user = try await AuthService.shared.signIn(
-                emailOrUsername: emailOrUsername,
+            let credential = emailOrUsername.trimmingCharacters(in: .whitespacesAndNewlines)
+            let user = try await authService.signIn(
+                emailOrUsername: credential,
                 password: password
             )
             
@@ -216,7 +262,7 @@ struct SignInView: View {
         errorMessage = nil
         
         do {
-            let user = try await AuthService.shared.signInWithApple()
+            let user = try await authService.signInWithApple()
             appState.currentUser = user
             appState.isAuthenticated = true
             dismiss()
@@ -232,7 +278,7 @@ struct SignInView: View {
         errorMessage = nil
         
         do {
-            let user = try await AuthService.shared.signInWithGoogle()
+            let user = try await authService.signInWithGoogle()
             appState.currentUser = user
             appState.isAuthenticated = true
             dismiss()

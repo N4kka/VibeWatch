@@ -6,11 +6,11 @@ enum MediaType: String, Codable {
 }
 
 enum ListType: String, Codable, CaseIterable {
-    case watchlist = "Watchlist"
-    case seen = "Seen"
-    case liked = "Liked"
-    case disliked = "Disliked"
-    case custom = "Custom"
+    case watchlist = "watchlist"
+    case seen = "seen"
+    case liked = "liked"
+    case disliked = "disliked"
+    case custom = "custom"
     
     var icon: String {
         switch self {
@@ -19,6 +19,27 @@ enum ListType: String, Codable, CaseIterable {
         case .liked: return "hand.thumbsup.fill"
         case .disliked: return "hand.thumbsdown.fill"
         case .custom: return "list.bullet"
+        }
+    }
+
+    var displayName: String {
+        switch self {
+        case .watchlist: return "Watchlist"
+        case .seen: return "Seen"
+        case .liked: return "Liked"
+        case .disliked: return "Disliked"
+        case .custom: return "Custom"
+        }
+    }
+
+    init?(databaseValue: String) {
+        switch databaseValue.lowercased() {
+        case "watchlist": self = .watchlist
+        case "seen": self = .seen
+        case "liked": self = .liked
+        case "disliked": self = .disliked
+        case "custom": self = .custom
+        default: return nil
         }
     }
 }
@@ -96,7 +117,7 @@ enum SortOption: String, CaseIterable {
     case rating = "sort.rating"
     
     var displayName: String {
-        rawValue.localized
+        rawValue.localizedMainSafe()
     }
 }
 
@@ -106,6 +127,6 @@ enum FilterOption: String, CaseIterable {
     case tvShows = "filter.tvSeries"
     
     var displayName: String {
-        rawValue.localized
+        rawValue.localizedMainSafe()
     }
 }

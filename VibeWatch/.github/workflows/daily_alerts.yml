@@ -1,0 +1,56 @@
+name: Daily VibeWatch Alerts
+
+on:
+  schedule:
+    # Runs at 21:00 UTC every day
+    - cron: '0 21 * * *'
+  workflow_dispatch: # Allows manual triggering from the Actions tab
+  push:
+    branches:
+      - main
+      - feature/paywall-implementation
+
+jobs:
+  trigger-supabase-functions:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger check-all-availability function
+        id: check_availability
+        run: |
+          echo "Triggering check-all-availability..."
+          response=$(curl -s -w "%{http_code}" -X POST 'https://rqhxhkijzhqivljivirq.supabase.co/functions/v1/check-all-availability' \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Content-Type: application/json")
+          
+          http_code=$(tail -n1 <<< "$response")
+          body=$(head -n-1 <<< "$response")
+          
+          echo "Status code: $http_code"
+          echo "Response body: $body"
+          
+          if [ "$http_code" -ne 200 ]; then
+            echo "::error::Failed to trigger check-all-availability. Status: $http_code"
+            exit 1
+          fi
+
+      - name: Wait for availability checks to process
+        run: sleep 300 # Waits for 5 minutes
+
+      - name: Trigger process-notifications function
+        id: process_notifications
+        run: |
+          echo "Triggering process-notifications..."
+          response=$(curl -s -w "%{http_code}" -X POST 'https://rqhxhkijzhqivljivirq.supabase.co/functions/v1/process-notifications' \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Content-Type: application/json")
+
+          http_code=$(tail -n1 <<< "$response")
+          body=$(head -n-1 <<< "$response")
+
+          echo "Status code: $http_code"
+          echo "Response body: $body"
+
+          if [ "$http_code" -ne 200 ]; then
+            echo "::error::Failed to trigger process-notifications. Status: $http_code"
+            exit 1
+          fi

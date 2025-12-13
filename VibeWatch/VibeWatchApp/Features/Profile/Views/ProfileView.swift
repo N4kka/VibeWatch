@@ -63,8 +63,10 @@ struct LanguageSelector: View {
 struct ProfileView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject var authService: AuthService
     @StateObject private var notificationService = NotificationService.shared
     @StateObject private var localizationManager = LocalizationManager.shared
+    @StateObject private var dailyQuotaManager = DailyQuotaManager.shared
     @State private var showSignUp = false
     @State private var showSignIn = false
     @State private var showImagePicker = false
@@ -72,8 +74,15 @@ struct ProfileView: View {
     @State private var isUploadingAvatar = false
     @State private var showNotificationAlert = false
     @State private var showDisableConfirmation = false
+    @State private var showLogoutConfirmation = false
     @State private var showPlatformSelector = false
     @State private var showSettings = false
+    @State private var showChangePassword = false
+    @State private var showHelpSupport = false
+    @State private var showFeedback = false
+    @State private var selectedFeedbackType: FeedbackType?
+    @State private var showUpgradePaywall = false
+    @State private var pendingNotificationToggle = false
     @AppStorage("selectedPlatforms") private var selectedPlatformsData: Data = Data()
     
     private var selectedPlatforms: Set<StreamingPlatform> {
@@ -83,6 +92,25 @@ struct ProfileView: View {
             }
             return []
         }
+    }
+
+    private var displayNameOrEmail: String {
+        guard let user = appState.currentUser else { return "User" }
+
+        // Show display name if it exists and is not empty
+        if let displayName = user.displayName, !displayName.isEmpty {
+            return displayName
+        }
+
+        // Otherwise show email
+        return user.email
+    }
+
+    private var shouldShowEmailSubtitle: Bool {
+        guard let user = appState.currentUser else { return false }
+
+        // Show email as subtitle only if we're showing displayName as main text
+        return user.displayName != nil && !(user.displayName?.isEmpty ?? true)
     }
     
     private func togglePlatform(_ platform: StreamingPlatform) {
@@ -126,18 +154,78 @@ struct ProfileView: View {
                     platformSelectorPanel
                 }
             }
+            .overlay {
+                if showLogoutConfirmation {
+                    popupOverlayBackground(onTap: {
+                        showLogoutConfirmation = false
+                    })
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    
+                    ConfirmationPopup(
+                        title: "profile.logoutConfirmationTitle".localized,
+                        message: nil,
+                        confirmTitle: "common.confirm".localized,
+                        cancelTitle: "common.cancel".localized,
+                        isDestructive: true,
+                        onConfirm: {
+                            showLogoutConfirmation = false
+                            Task {
+                                await handleLogout()
+                            }
+                        },
+                        onCancel: {
+                            showLogoutConfirmation = false
+                        }
+                    )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                }
+            }
+        }
+        .onAppear {
+            if appState.shouldShowSignIn {
+                print("🔄 [ProfileView] Auto-opening Sign In sheet")
+                showSignIn = true
+                // Reset flag
+                appState.shouldShowSignIn = false
+            }
         }
         .sheet(isPresented: $showSignUp) {
             SignUpView()
+                .environmentObject(appState)
+                .environmentObject(authService)
+        }
+        .sheet(isPresented: $showChangePassword) {
+            PasswordResetView(mode: .change, isPresented: $showChangePassword)
+                .environmentObject(authService)
                 .environmentObject(appState)
         }
         .sheet(isPresented: $showSignIn) {
             SignInView()
                 .environmentObject(appState)
+                .environmentObject(authService)
         }
         .sheet(isPresented: $showSettings) {
             SettingsView()
                 .environmentObject(appState)
+                .environmentObject(authService)
+        }
+        .fullScreenCover(isPresented: $showUpgradePaywall) {
+            ProPaywallView(isPresented: $showUpgradePaywall)
+                .environmentObject(appState)
+                .environmentObject(authService)
+                .environmentObject(DailyQuotaManager.shared)
+        }
+        .sheet(isPresented: $showHelpSupport) {
+            HelpSupportSheet()
+        }
+        .sheet(isPresented: $showFeedback) {
+            FeedbackSheet(selectedFeedbackType: $selectedFeedbackType)
+        }
+        .sheet(item: $selectedFeedbackType) { feedback in
+            FeedbackDetailSheet(type: feedback) {
+                selectedFeedbackType = nil
+                showFeedback = true
+            }
         }
     }
     
@@ -269,15 +357,13 @@ struct ProfileView: View {
     
     private var authenticatedView: some View {
         ScrollView {
-            VStack(spacing: 24) {
+            VStack(spacing: 12) {
                 profileHeader
                 
                 settingsSection
                 
                 Button {
-                    Task {
-                        await handleLogout()
-                    }
+                    showLogoutConfirmation = true
                 } label: {
                     Text("profile.logout".localized)
                         .font(.system(size: 16, weight: .semibold))
@@ -342,7 +428,7 @@ struct ProfileView: View {
             ZStack(alignment: .bottomTrailing) {
                 if let avatarURL = appState.currentUser?.avatarURL,
                    let url = URL(string: avatarURL) {
-                    AsyncImage(url: url) { image in
+                    CachedAsyncImage(url: url) { image in
                         image
                             .resizable()
                             .scaledToFill()
@@ -379,12 +465,12 @@ struct ProfileView: View {
                 .disabled(isUploadingAvatar)
             }
             
-            Text(appState.currentUser?.displayName ?? "User")
+            Text(displayNameOrEmail)
                 .font(.system(size: 24, weight: .bold))
                 .foregroundColor(.theme.textPrimary)
-            
-            if let email = appState.currentUser?.email {
-                Text(email)
+
+            if shouldShowEmailSubtitle {
+                Text(appState.currentUser?.email ?? "")
                     .font(.system(size: 14))
                     .foregroundColor(.theme.textSecondary)
             }
@@ -404,7 +490,7 @@ struct ProfileView: View {
         .sheet(isPresented: $showImagePicker) {
             ImagePicker(selectedImage: $selectedImage)
         }
-        .onChange(of: selectedImage) { newImage in
+        .onChange(of: selectedImage) {_, newImage in
             if let image = newImage {
                 Task {
                     await uploadAvatar(image)
@@ -414,78 +500,122 @@ struct ProfileView: View {
     }
     
     private var settingsSection: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Image(systemName: "bell")
-                    .font(.system(size: 20))
-                    .foregroundColor(.theme.accentOrange)
-                    .frame(width: 24)
+        VStack(spacing: 12) {
+            // Only show upgrade banner if user is not Pro
+            if !dailyQuotaManager.isProUser {
+                Button {
+                    showUpgradePaywall = true
+                } label: {
+                    ZStack(alignment: .leading) {
+                        Image("pro_banner")
+                            .resizable()
+                            .scaledToFill()
+                            .frame(maxWidth: .infinity, minHeight: 110, maxHeight: 110)
+                            .clipped()
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("profile.upgradePro.title".localized)
+                                .font(.system(size: 18, weight: .bold))
+                                .foregroundColor(.white)
+                            Text("profile.upgradePro.subtitle".localized)
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.white.opacity(0.85))
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
+                    }
+                }
+                .padding(.horizontal, 20)
+            }
+
+            VStack(spacing: 0) {
+                HStack {
+                    Image(systemName: "bell")
+                        .font(.system(size: 20))
+                        .foregroundColor(.theme.accentOrange)
+                        .frame(width: 24)
+                    
+                    Text("profile.notifications".localized)
+                        .font(.system(size: 16))
+                        .foregroundColor(.theme.textPrimary)
+                    
+                    Spacer()
+                    
+                    // Use default iOS toggle (iOS 26+ has new design automatically)
+                    Toggle("", isOn: $notificationService.notificationsEnabled)
+                        .labelsHidden()
+                        .tint(.theme.accentOrange)
+                }
+                .onChange(of: notificationService.notificationsEnabled) {_, newValue in
+                    if !pendingNotificationToggle {
+                        pendingNotificationToggle = true
+                        handleNotificationToggle()
+                    }
+                }
+                .padding()
                 
-                Text("profile.notifications".localized)
-                    .font(.system(size: 16))
-                    .foregroundColor(.theme.textPrimary)
+                Divider()
+                    .background(Color.white.opacity(0.1))
                 
-                Spacer()
-                
-                Toggle("", isOn: $notificationService.notificationsEnabled)
-                    .labelsHidden()
-                    .tint(.theme.accentOrange)
-                    .onChange(of: notificationService.notificationsEnabled) { newValue in
-                        Task {
-                            if newValue {
-                                // User wants to enable notifications
-                                let success = await notificationService.enableNotifications()
-                                
-                                if !success {
-                                    // Permission denied - reset toggle and show alert
-                                    notificationService.notificationsEnabled = false
-                                    showNotificationAlert = true
-                                }
-                            } else {
-                                // User wants to disable notifications - show confirmation
-                                showDisableConfirmation = true
-                            }
+                SettingsRow(
+                    icon: "play.tv",
+                    title: "profile.streamingServices".localized,
+                    action: {
+                        withAnimation {
+                            showPlatformSelector = true
                         }
                     }
-            }
-            .padding()
-            
-            Divider()
-                .background(Color.white.opacity(0.1))
-            
-            SettingsRow(
-                icon: "play.tv",
-                title: "profile.streamingServices".localized,
-                action: {
-                    withAnimation {
-                        showPlatformSelector = true
+                )
+                
+                Divider()
+                    .background(Color.white.opacity(0.1))
+                
+                SettingsRow(
+                    icon: "envelope",
+                    title: "profile.sendFeedback".localized,
+                    action: {
+                        showFeedback = true
                     }
-                }
-            )
-            
-            Divider()
-                .background(Color.white.opacity(0.1))
-            
-            SettingsRow(
-                icon: "gear",
-                title: "profile.settings".localized,
-                action: {
-                    showSettings = true
-                }
-            )
-            
-            Divider()
-                .background(Color.white.opacity(0.1))
-            
-            SettingsRow(
-                icon: "questionmark.circle",
-                title: "profile.helpSupport".localized,
-                action: {}
-            )
+                )
+                
+                Divider()
+                    .background(Color.white.opacity(0.1))
+                
+                SettingsRow(
+                    icon: "key.fill",
+                    title: "profile.changePassword".localized,
+                    action: {
+                        showChangePassword = true
+                    }
+                )
+                
+                Divider()
+                    .background(Color.white.opacity(0.1))
+                
+                SettingsRow(
+                    icon: "gear",
+                    title: "profile.settings".localized,
+                    action: {
+                        showSettings = true
+                    }
+                )
+                
+                Divider()
+                    .background(Color.white.opacity(0.1))
+                
+                SettingsRow(
+                    icon: "questionmark.circle",
+                    title: "profile.helpSupport".localized,
+                    action: {
+                        showHelpSupport = true
+                    }
+                )
+            }
+            .background(Color.white.opacity(0.05))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .padding(.horizontal, 20)
         }
-        .background(Color.white.opacity(0.05))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .padding(.horizontal, 20)
         .alert("notifications.permissionRequired".localized, isPresented: $showNotificationAlert) {
             Button("notifications.openSettings".localized) {
                 notificationService.openSettings()
@@ -509,14 +639,35 @@ struct ProfileView: View {
         }
     }
     
+    private func handleNotificationToggle() {
+        Task {
+            defer { pendingNotificationToggle = false }
+            
+            if notificationService.notificationsEnabled {
+                // User wants to enable notifications
+                let success = await notificationService.enableNotifications()
+                
+                if !success {
+                    // Permission denied - reset toggle and show alert
+                    await MainActor.run {
+                        notificationService.notificationsEnabled = false
+                        showNotificationAlert = true
+                    }
+                }
+            } else {
+                // User wants to disable notifications - show confirmation
+                await MainActor.run {
+                    showDisableConfirmation = true
+                }
+            }
+        }
+    }
+    
     private func handleLogout() async {
         do {
-            try await AuthService.shared.signOut()
+            try await authService.signOut()
             appState.isAuthenticated = false
             appState.currentUser = nil
-            
-            // Show sign up screen instead of just dismissing
-            unauthenticatedView
         } catch {
             print("Error logging out: \(error.localizedDescription)")
         }
@@ -534,7 +685,7 @@ struct ProfileView: View {
             }
             
             // Upload to Supabase Storage
-            let avatarURL = try await AuthService.shared.uploadAvatar(imageData: imageData)
+            let avatarURL = try await authService.uploadAvatar(imageData: imageData)
             
             // Update app state
             appState.currentUser?.avatarURL = avatarURL
@@ -549,6 +700,8 @@ struct ProfileView: View {
 struct SettingsRow: View {
     let icon: String
     let title: String
+    var iconColor: Color = .theme.accentOrange
+    var textColor: Color = .theme.textPrimary
     let action: () -> Void
     
     var body: some View {
@@ -556,12 +709,12 @@ struct SettingsRow: View {
             HStack(spacing: 16) {
                 Image(systemName: icon)
                     .font(.system(size: 20))
-                    .foregroundColor(.theme.accentOrange)
+                    .foregroundColor(iconColor)
                     .frame(width: 30)
                 
                 Text(title)
                     .font(.system(size: 16))
-                    .foregroundColor(.theme.textPrimary)
+                    .foregroundColor(textColor)
                 
                 Spacer()
                 
@@ -571,5 +724,363 @@ struct SettingsRow: View {
             }
             .padding()
         }
+    }
+}
+
+struct HelpSupportSheet: View {
+    private let privacyURL = URL(string: "https://vibewatch.vercel.app/privacy")!
+    private let termsOfUseURL = URL(string: "https://vibewatch.vercel.app/terms")!
+
+    private var faqItems: [FAQItem] {
+        [
+            FAQItem(
+                question: "profile.faq.question1".localized,
+                answer: "profile.faq.answer1".localized
+            ),
+            FAQItem(
+                question: "profile.faq.question2".localized,
+                answer: "profile.faq.answer2".localized
+            ),
+            FAQItem(
+                question: "profile.faq.question3".localized,
+                answer: "profile.faq.answer3".localized
+            ),
+            FAQItem(
+                question: "profile.faq.question4".localized,
+                answer: "profile.faq.answer4".localized
+            ),
+            FAQItem(
+                question: "profile.faq.question5".localized,
+                answer: "profile.faq.answer5".localized
+            )
+        ]
+    }
+
+    @State private var expandedFAQ: UUID?
+
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("profile.aboutUs".localized)
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundColor(.theme.textPrimary)
+                        Text("profile.aboutUsDescription".localized)
+                            .font(.system(size: 14))
+                            .foregroundColor(.theme.textSecondary)
+                        Text("profile.tmdbAttribution".localized)
+                            .font(.system(size: 12))
+                            .foregroundColor(.theme.textSecondary)
+                            .padding(.top, 2)
+                    }
+                    .padding()
+                    .background(Color.white.opacity(0.06))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("profile.faqs".localized)
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundColor(.theme.textPrimary)
+
+                        LazyVGrid(columns: [GridItem(.flexible())], spacing: 12) {
+                            ForEach(faqItems) { item in
+                                FAQChip(
+                                    item: item,
+                                    isExpanded: expandedFAQ == item.id
+                                ) {
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                        if expandedFAQ == item.id {
+                                            expandedFAQ = nil
+                                        } else {
+                                            expandedFAQ = item.id
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("profile.legal".localized)
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundColor(.theme.textPrimary)
+
+                        VStack(spacing: 10) {
+                            Link(destination: privacyURL) {
+                                HStack {
+                                    Text("profile.privacyPolicy".localized)
+                                    Spacer()
+                                    Image(systemName: "arrow.up.right.square")
+                                }
+                                .font(.system(size: 14))
+                                .foregroundColor(.theme.textPrimary)
+                            }
+
+                            Divider()
+
+                            Link(destination: termsOfUseURL) {
+                                HStack {
+                                    Text("profile.termsOfUse".localized)
+                                    Spacer()
+                                    Image(systemName: "arrow.up.right.square")
+                                }
+                                .font(.system(size: 14))
+                                .foregroundColor(.theme.textPrimary)
+                            }
+                        }
+                        .padding()
+                        .background(Color.white.opacity(0.06))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                }
+                .padding(20)
+            }
+            .background(Color.theme.background)
+            .navigationTitle("profile.helpSupport".localized)
+            .navigationBarTitleDisplayMode(.inline)
+        }
+        .preferredColorScheme(.dark)
+    }
+}
+
+private struct FAQItem: Identifiable {
+    let id = UUID()
+    let question: String
+    let answer: String
+}
+
+private struct FAQChip: View {
+    let item: FAQItem
+    let isExpanded: Bool
+    let onToggle: () -> Void
+    
+    var body: some View {
+        Button(action: onToggle) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .center, spacing: 8) {
+                    Text(item.question)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.theme.textPrimary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.theme.textSecondary)
+                }
+                
+                if isExpanded {
+                    Text(item.answer)
+                        .font(.system(size: 12))
+                        .foregroundColor(.theme.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+            }
+            .padding()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.white.opacity(0.06))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isExpanded ? Color.theme.accentOrange : Color.white.opacity(0.08), lineWidth: isExpanded ? 1.5 : 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+    }
+}
+
+@MainActor
+struct FeedbackType: Identifiable, Hashable {
+    let id: String
+    let title: String
+    let description: String
+    let iconName: String
+    
+    static let suggest = FeedbackType(
+        id: "suggest",
+        title: "profile.feedback.suggestFeature".localized,
+        description: "profile.feedback.suggestFeatureDescription".localized,
+        iconName: "iphone"
+    )
+    static let bug = FeedbackType(
+        id: "bug",
+        title: "profile.feedback.reportBug".localized,
+        description: "profile.feedback.reportBugDescription".localized,
+        iconName: "ant.fill"
+    )
+    static let other = FeedbackType(
+        id: "other",
+        title: "profile.feedback.other".localized,
+        description: "profile.feedback.otherDescription".localized,
+        iconName: "gearshape.fill"
+    )
+    
+    static var all: [FeedbackType] { [.suggest, .bug, .other] }
+}
+
+struct FeedbackSheet: View {
+    @Binding var selectedFeedbackType: FeedbackType?
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationView {
+            List {
+                ForEach(FeedbackType.all) { type in
+                    Button {
+                        selectedFeedbackType = type
+                        dismiss()
+                    } label: {
+                        HStack {
+                            Image(systemName: type.iconName)
+                                .font(.system(size: 20))
+                                .foregroundColor(.theme.accentOrange)
+                                .frame(width: 24)
+                            Text(type.title)
+                                .font(.system(size: 16))
+                                .foregroundColor(.theme.textPrimary)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .foregroundColor(.theme.textSecondary)
+                        }
+                        .padding(.vertical, 6)
+                    }
+                    .listRowBackground(Color.theme.background)
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(Color.theme.background)
+            .navigationTitle("profile.sendFeedback".localized)
+            .navigationBarTitleDisplayMode(.inline)
+        }
+        .preferredColorScheme(.dark)
+        .presentationDetents([.fraction(0.5), .large])
+        .presentationDragIndicator(.visible)
+    }
+}
+
+struct FeedbackDetailSheet: View {
+    let type: FeedbackType
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
+    var onCancel: (() -> Void)? = nil
+    @State private var message = ""
+    @State private var keepUpdated = true
+    @State private var isSending = false
+    @State private var sendError: String?
+    @State private var sendSuccess = false
+    
+    var body: some View {
+        NavigationView {
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(type.title)
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundColor(.theme.textPrimary)
+                    Text(type.description)
+                        .font(.system(size: 14))
+                        .foregroundColor(.theme.textSecondary)
+                }
+                
+                TextEditor(text: $message)
+                    .frame(minHeight: 120, maxHeight: 160)
+                    .padding(12)
+                    .background(Color.white.opacity(0.06))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.white.opacity(0.08))
+                    )
+                    .foregroundColor(.theme.textPrimary)
+                
+                Toggle(isOn: $keepUpdated) {
+                    Text("profile.feedback.keepUpdated".localized)
+                        .foregroundColor(.theme.textPrimary)
+                }
+                .tint(.theme.accentOrange)
+                
+                if let sendError {
+                    Text(sendError)
+                        .font(.system(size: 13))
+                        .foregroundColor(.red)
+                }
+                
+                if sendSuccess {
+                    Text("profile.feedback.sent".localized)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.green)
+                }
+                
+                Spacer()
+                
+                Button {
+                    Task { await sendFeedback() }
+                } label: {
+                    HStack {
+                        if isSending {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        } else {
+                            Text("profile.feedback.sendButton".localized)
+                                .font(.system(size: 16, weight: .semibold))
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .foregroundColor(.white)
+                    .background(canSend ? Color.theme.accentOrange : Color.theme.accentOrange.opacity(0.5))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .disabled(!canSend || isSending)
+            }
+            .padding(20)
+            .background(Color.theme.background.ignoresSafeArea())
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("profile.cancel".localized) {
+                        if let onCancel {
+                            onCancel()
+                        } else {
+                            dismiss()
+                        }
+                    }
+                        .foregroundColor(.theme.textPrimary)
+                }
+            }
+        }
+        .preferredColorScheme(.dark)
+        .presentationDetents([.fraction(0.5), .large])
+        .presentationDragIndicator(.visible)
+    }
+    
+    private var canSend: Bool {
+        !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+    
+    private func sendFeedback() async {
+        guard canSend else { return }
+        isSending = true
+        sendError = nil
+        sendSuccess = false
+        
+        let subject = type.title
+        let body = message
+        let encodedSubject = subject.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? subject
+        let encodedBody = body.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? body
+        let mailtoString = "mailto:startingvibe2025@gmail.com?subject=\(encodedSubject)&body=\(encodedBody)"
+        
+        guard let url = URL(string: mailtoString) else {
+            sendError = "profile.feedback.invalidEmail".localized
+            isSending = false
+            return
+        }
+        
+        openURL(url)
+        sendSuccess = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            dismiss()
+        }
+        
+        isSending = false
     }
 }

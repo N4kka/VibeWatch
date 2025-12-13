@@ -18,4 +18,8 @@ struct APIConfig {
     // OpenAI API Key (Optional - for AI clip descriptions)
     // Get your key at: https://platform.openai.com/api-keys
     static let openAIAPIKey = "YOUR_OPENAI_API_KEY_HERE"
+    
+    // Cerebras API Key
+    // Get your key at: https://cloud.cerebras.ai/
+    static let cerebrasAPIKey = "YOUR_CEREBRAS_API_KEY_HERE"
 }
