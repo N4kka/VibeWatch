@@ -11,7 +11,7 @@ class DailyQuotaManager: ObservableObject {
     @Published var lastResetDate: Date = Date()
     @Published var hasReachedLimit: Bool = false
     
-    private let freeUserLimit = 15
+    private let freeUserLimit = AppConstants.Clips.freeUserDailyLimit
     private let userDefaults = UserDefaults.standard
     
     // Keys for local storage
@@ -35,9 +35,11 @@ class DailyQuotaManager: ObservableObject {
         checkAndResetIfNeeded()
         
         #if DEBUG
-        // Auto-enable Pro mode in Debug builds
-        if !isProUser {
-            print("🛠️ [DailyQuota] DEBUG MODE: Auto-enabling Pro user (unlimited clips)")
+        // Debug-only: force Pro to allow AI feature testing.
+        // Toggle off by setting this flag to false if you need to re-enable paywalls in Debug.
+        let forcePro = AppConstants.Debug.forceProUser
+        if forcePro && !isProUser {
+            print("🛠️ [DailyQuota] DEBUG MODE: Forcing Pro user for testing")
             isProUser = true
             hasReachedLimit = false
             saveQuotaData()
@@ -113,6 +115,24 @@ class DailyQuotaManager: ObservableObject {
         }
         
         print("✨ [DailyQuota] User upgraded to Pro!")
+    }
+    
+    /// Downgrade to Free (restores limits)
+    func downgradeToFree() {
+        isProUser = false
+        hasReachedLimit = clipsWatchedToday >= freeUserLimit
+        saveQuotaData()
+        
+        Task {
+            await syncToSupabase()
+        }
+        
+        let remaining = remainingClips()
+        print("⬇️ [DailyQuota] Downgraded to Free - \(remaining) clips remaining today")
+        
+        if remaining == 0 {
+            print("🚫 [DailyQuota] Daily limit already reached - user will see paywall")
+        }
     }
     
     /// Reset quota (for testing or manual reset)
@@ -210,11 +230,12 @@ class DailyQuotaManager: ObservableObject {
         let userId = SupabaseService.shared.currentUser?.id
         
         do {
-            let query = userId != nil ?
-                client.from("user_daily_quota").select().eq("user_id", value: userId!) :
-                client.from("user_daily_quota").select().eq("device_id", value: deviceId)
-            
-            let response: [QuotaRow] = try await query.execute().value
+            let response: [QuotaRow]
+            if let userId = userId {
+                response = try await client.from("user_daily_quota").select().eq("user_id", value: userId).execute().value
+            } else {
+                response = try await client.from("user_daily_quota").select().eq("device_id", value: deviceId).execute().value
+            }
             
             if let quota = response.first {
                 clipsWatchedToday = quota.clipsWatchedToday

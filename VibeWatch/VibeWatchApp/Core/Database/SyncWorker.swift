@@ -24,10 +24,16 @@ class SyncWorker: ObservableObject {
     // MARK: - Configuration
     
     private let batchSize = 50
-    private let syncInterval: TimeInterval = 30
+    private let syncInterval: TimeInterval = 60 // run push loop every 60s
     private let maxAttempts = 5
+    private let backoffSchedule: [TimeInterval] = [1, 2, 4, 8, 16] // seconds
+    private let cooldownInterval: TimeInterval = 600 // 10 minutes between cycles after max attempts
+    private let userPullThrottle: TimeInterval = 20 * 60 // 20 minutes between user pulls
+    private let contentPullThrottle: TimeInterval = 24 * 60 * 60 // 24h between content pulls
     
     private var syncTimer: Timer?
+    private var lastUserPull: Date?
+    private var lastContentPull: Date?
     
     // MARK: - Initialization
     
@@ -57,10 +63,11 @@ class SyncWorker: ObservableObject {
             }
         }
         
-        print("🔄 [SyncWorker] Periodic sync started (every \(syncInterval)s)")
+        Logger.info("[SyncWorker] Periodic sync started (every \(syncInterval)s)")
         
         // Initial sync
         await syncIfNeeded()
+        await performPullsIfDue()
     }
     
     /// Stop automatic syncing
@@ -71,8 +78,9 @@ class SyncWorker: ObservableObject {
     
     /// Force sync now (manual trigger)
     func forceSyncNow() async {
-        print("🔄 [SyncWorker] Force sync triggered")
+        Logger.info("[SyncWorker] Force sync triggered")
         await performSync()
+        await performPullsIfDue(forceUserPull: true, forceContentPull: false)
     }
     
     // MARK: - Queue Management
@@ -111,7 +119,7 @@ class SyncWorker: ObservableObject {
         // Update pending count
         await updateCounts()
         
-        print("➕ [SyncWorker] Queued \(operationType) on \(tableName) for \(recordId)")
+        Logger.info("[SyncWorker] Queued \(operationType) on \(tableName) for \(recordId)")
         
         // Trigger sync if batch size reached
         if pendingCount >= batchSize {
@@ -129,7 +137,7 @@ class SyncWorker: ObservableObject {
                 where: "status IN ('pending', 'failed')"
             )
         } catch {
-            print("⚠️ [SyncWorker] Failed to get pending count: \(error)")
+            Logger.warning("[SyncWorker] Failed to get pending count: \(error.localizedDescription)")
             return 0
         }
     }
@@ -142,7 +150,7 @@ class SyncWorker: ObservableObject {
                 where: "status = 'stuck'"
             )
         } catch {
-            print("⚠️ [SyncWorker] Failed to get stuck count: \(error)")
+            Logger.warning("[SyncWorker] Failed to get stuck count: \(error.localizedDescription)")
             return 0
         }
     }
@@ -160,25 +168,26 @@ class SyncWorker: ObservableObject {
             """)
             
             await updateCounts()
-            print("✅ [SyncWorker] Reset all stuck operations")
+            Logger.info("[SyncWorker] Reset all stuck operations")
             
         } catch {
-            print("❌ [SyncWorker] Failed to reset stuck operations: \(error)")
+            Logger.error("[SyncWorker] Failed to reset stuck operations", error: error)
         }
     }
     
     /// View pending operations (for debugging)
     func getPendingOperations() async -> [[String: Any]] {
         do {
-            return try await localDB.queryRaw("""
+            let rows = try await localDB.queryRaw("""
                 SELECT id, table_name, operation_type, record_id, attempts, last_error
                 FROM sync_outbox
                 WHERE status IN ('pending', 'failed', 'stuck')
                 ORDER BY created_at DESC
                 LIMIT 50
             """)
+            return rows
         } catch {
-            print("⚠️ [SyncWorker] Failed to get pending operations: \(error)")
+            Logger.warning("[SyncWorker] Failed to get pending operations: \(error.localizedDescription)")
             return []
         }
     }
@@ -205,6 +214,7 @@ class SyncWorker: ObservableObject {
         
         isOnline = true
         await performSync()
+        await performPullsIfDue()
     }
     
     private func performSync() async {
@@ -219,7 +229,7 @@ class SyncWorker: ObservableObject {
                 return
             }
             
-            print("🔄 [SyncWorker] Syncing \(operations.count) operations...")
+            Logger.info("[SyncWorker] Syncing \(operations.count) operations...")
             
             // Group by user_id for transactional integrity
             let grouped = Dictionary(grouping: operations, by: { $0.userId })
@@ -231,10 +241,10 @@ class SyncWorker: ObservableObject {
                 do {
                     try await syncUserBatch(userId: userId, operations: userOps)
                     successCount += userOps.count
-                    print("✅ [SyncWorker] Synced \(userOps.count) operations for user \(userId)")
+                    Logger.info("[SyncWorker] Synced \(userOps.count) operations for user \(userId)")
                 } catch {
                     failCount += userOps.count
-                    print("❌ [SyncWorker] Failed to sync user \(userId): \(error)")
+                    Logger.error("[SyncWorker] Failed to sync user \(userId)", error: error)
                     await handleBatchFailure(operations: userOps, error: error)
                 }
             }
@@ -242,11 +252,11 @@ class SyncWorker: ObservableObject {
             lastSyncDate = Date()
             await updateCounts()
             
-            print("✅ [SyncWorker] Sync complete: \(successCount) success, \(failCount) failed")
+            Logger.info("[SyncWorker] Sync complete: \(successCount) success, \(failCount) failed")
             
         } catch {
             lastError = error.localizedDescription
-            print("❌ [SyncWorker] Sync failed: \(error)")
+            Logger.error("[SyncWorker] Sync failed", error: error)
         }
     }
     
@@ -290,82 +300,32 @@ class SyncWorker: ObservableObject {
         guard remoteDB.client != nil else {
             throw SyncError.remoteUnavailable
         }
-        
-        // Execute each operation
+
+        // Build batch payload for RPC
+        var batch: [[String: Any]] = []
         for op in operations {
-            do {
-                switch op.operationType {
-                case "INSERT", "UPDATE":
-                    // Convert payload dictionary to JSON string for raw HTTP request
-                    let payloadData = try JSONSerialization.data(withJSONObject: op.payload)
-                    
-                    // Perform HTTP request directly to Supabase REST API
-                    guard let supabaseURL = URL(string: Config.supabaseURL) else {
-                        throw SyncError.invalidPayload
-                    }
-                    
-                    let url = supabaseURL
-                        .appendingPathComponent("rest")
-                        .appendingPathComponent("v1")
-                        .appendingPathComponent(op.tableName)
-                    
-                    var request = URLRequest(url: url)
-                    request.httpMethod = "POST"
-                    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-                    request.setValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
-                    request.setValue("Bearer \(Config.supabaseAnonKey)", forHTTPHeaderField: "Authorization")
-                    request.setValue("return=minimal", forHTTPHeaderField: "Prefer")
-                    request.setValue("resolution=merge-duplicates", forHTTPHeaderField: "Prefer")
-                    request.httpBody = payloadData
-                    
-                    let (_, response) = try await URLSession.shared.data(for: request)
-                    
-                    guard let httpResponse = response as? HTTPURLResponse,
-                          (200...299).contains(httpResponse.statusCode) else {
-                        throw SyncError.remoteUnavailable
-                    }
-                    
-                case "DELETE":
-                    // Soft delete (update deleted_at)
-                    let now = ISO8601DateFormatter().string(from: Date())
-                    let updatePayload: [String: String] = ["deleted_at": now]
-                    let updateData = try JSONSerialization.data(withJSONObject: updatePayload)
-                    
-                    guard let supabaseURL = URL(string: Config.supabaseURL) else {
-                        throw SyncError.invalidPayload
-                    }
-                    
-                    let url = supabaseURL
-                        .appendingPathComponent("rest")
-                        .appendingPathComponent("v1")
-                        .appendingPathComponent(op.tableName)
-                    
-                    var request = URLRequest(url: url)
-                    request.httpMethod = "PATCH"
-                    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-                    request.setValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
-                    request.setValue("Bearer \(Config.supabaseAnonKey)", forHTTPHeaderField: "Authorization")
-                    request.setValue("id=eq.\(op.recordId)", forHTTPHeaderField: "Prefer")
-                    request.httpBody = updateData
-                    
-                    let (_, response) = try await URLSession.shared.data(for: request)
-                    
-                    guard let httpResponse = response as? HTTPURLResponse,
-                          (200...299).contains(httpResponse.statusCode) else {
-                        throw SyncError.remoteUnavailable
-                    }
-                    
-                default:
-                    throw SyncError.unknownOperation(op.operationType)
-                }
-                
-                print("  ✓ Synced \(op.operationType) on \(op.tableName)")
-                
-            } catch {
-                print("  ✗ Failed \(op.operationType) on \(op.tableName): \(error)")
-                throw error
+            var record = op.payload
+            // ensure id present in record
+            if record["id"] == nil {
+                record["id"] = op.recordId
             }
+            // sanitize media_type
+            if op.tableName == "clips" || op.tableName == "list_items" {
+                if let mt = record["media_type"] as? String, !["movie", "tv"].contains(mt) {
+                    record["media_type"] = "movie"
+                }
+            }
+            let entry: [String: Any] = [
+                "op": op.operationType.uppercased(),
+                "table": op.tableName,
+                "id": op.recordId,
+                "record": record
+            ]
+            batch.append(entry)
         }
+
+        // Call server-side RPC to apply atomically
+        try await remoteDB.applyMutations(batch)
     }
     
     // MARK: - Health Checks
@@ -386,7 +346,7 @@ class SyncWorker: ObservableObject {
             return true
             
         } catch {
-            print("⚠️ [SyncWorker] Health check failed: \(error)")
+            Logger.warning("[SyncWorker] Health check failed: \(error.localizedDescription)")
             return false
         }
     }
@@ -399,20 +359,23 @@ class SyncWorker: ObservableObject {
             
             let errorMsg = error.localizedDescription.replacingOccurrences(of: "'", with: "''")
             
+            // If we've hit the max attempts for this cycle, schedule a cooldown and reset attempts.
             if newAttempts >= maxAttempts {
-                // Mark as stuck
+                let nextRetry = Date().addingTimeInterval(cooldownInterval)
+                let formatter = ISO8601DateFormatter()
+                let nextRetryStr = formatter.string(from: nextRetry)
+                
                 _ = try? await localDB.queryRaw("""
                     UPDATE sync_outbox
-                    SET status = 'stuck',
-                        attempts = \(newAttempts),
+                    SET status = 'failed',
+                        attempts = 0,
+                        next_retry_at = '\(nextRetryStr)',
                         last_error = '\(errorMsg)'
                     WHERE id = \(op.id)
                 """)
                 
-                print("⚠️ [SyncWorker] Operation \(op.id) stuck after \(maxAttempts) attempts")
-                
+                Logger.warning("[SyncWorker] Operation \(op.id) reached max attempts. Cooling down until \(nextRetryStr)")
             } else {
-                // Schedule retry
                 let nextRetry = calculateNextRetry(attempts: newAttempts)
                 let formatter = ISO8601DateFormatter()
                 let nextRetryStr = formatter.string(from: nextRetry)
@@ -426,21 +389,15 @@ class SyncWorker: ObservableObject {
                     WHERE id = \(op.id)
                 """)
                 
-                print("🔄 [SyncWorker] Will retry operation \(op.id) at \(nextRetry)")
+                Logger.debug("[SyncWorker] Will retry operation \(op.id) at \(nextRetryStr)")
             }
         }
     }
     
     private func calculateNextRetry(attempts: Int) -> Date {
-        let baseDelay: TimeInterval = 2.0
-        let maxDelay: TimeInterval = 300.0 // 5 minutes
-        let jitter: TimeInterval = 1.0
-        
-        // Exponential backoff: 2^attempts * baseDelay
-        let delay = min(pow(2.0, Double(attempts)) * baseDelay, maxDelay)
-        let jitterAmount = Double.random(in: 0...jitter)
-        
-        return Date().addingTimeInterval(delay + jitterAmount)
+        let index = max(0, min(attempts - 1, backoffSchedule.count - 1))
+        let delay = backoffSchedule[index]
+        return Date().addingTimeInterval(delay)
     }
     
     // MARK: - Data Fetching
@@ -485,12 +442,78 @@ class SyncWorker: ObservableObject {
             _ = try? await localDB.insert("sync_log", values: values)
         }
     }
+
+    // MARK: - Pull Logic (server -> local)
+
+    private func performPullsIfDue(forceUserPull: Bool = false, forceContentPull: Bool = false) async {
+        let now = Date()
+
+        let shouldPullUser = forceUserPull || lastUserPull == nil || now.timeIntervalSince(lastUserPull ?? .distantPast) >= userPullThrottle
+        let shouldPullContent = forceContentPull || lastContentPull == nil || now.timeIntervalSince(lastContentPull ?? .distantPast) >= contentPullThrottle
+
+        if shouldPullUser {
+            await pullUserScopedData()
+            lastUserPull = Date()
+        }
+
+        if shouldPullContent {
+            await pullContentData()
+            lastContentPull = Date()
+        }
+    }
+
+    /// Pull user-scoped tables filtered by current user_id
+    private func pullUserScopedData() async {
+        guard let userId = remoteDB.currentUser?.id else { return }
+        Logger.info("[SyncWorker] Pulling user-scoped data for \(userId)")
+
+        do {
+            // Profiles
+            try await remoteDB.pullTable(name: "profiles", userId: userId)
+            // Preferences
+            try await remoteDB.pullTable(name: "user_preferences", userId: userId)
+            // Quota + AI usage + history
+            try await remoteDB.pullTable(name: "user_daily_quota", userId: userId)
+            try await remoteDB.pullTable(name: "user_ai_token_usage", userId: userId)
+            try await remoteDB.pullTable(name: "user_clip_history", userId: userId)
+            // Clip engagement
+            try await remoteDB.pullTable(name: "clip_reactions", userId: userId)
+            try await remoteDB.pullTable(name: "clip_comments", userId: userId)
+            try await remoteDB.pullTable(name: "clip_comment_likes", userId: userId)
+            // Lists + items
+            try await remoteDB.pullTable(name: "lists", userId: userId)
+            try await remoteDB.pullTable(name: "list_items", userId: userId)
+            // Notifications
+            try await remoteDB.pullTable(name: "notifications", userId: userId)
+            // Devices
+            try await remoteDB.pullTable(name: "user_devices", userId: userId)
+
+            Logger.info("[SyncWorker] User pull complete")
+        } catch {
+            Logger.error("[SyncWorker] User pull failed", error: error)
+        }
+    }
+
+    /// Pull content tables (one-way server -> local)
+    private func pullContentData() async {
+        Logger.info("[SyncWorker] Pulling content data (clips/discovery/trailers/media caches)")
+        do {
+            try await remoteDB.pullTable(name: "clips", userId: nil)
+            try await remoteDB.pullTable(name: "discovery_cache", userId: nil)
+            try await remoteDB.pullTable(name: "trailers_cache", userId: nil)
+            try await remoteDB.pullTable(name: "media_details_cache", userId: nil)
+            try await remoteDB.pullTable(name: "media_availability", userId: nil)
+            Logger.info("[SyncWorker] Content pull complete")
+        } catch {
+            Logger.error("[SyncWorker] Content pull failed", error: error)
+        }
+    }
     
     // MARK: - App Lifecycle
     
     @objc private func appWillBackground() {
         Task {
-            print("📱 [SyncWorker] App backgrounding - forcing sync...")
+            Logger.info("[SyncWorker] App backgrounding - forcing sync...")
             await forceSyncNow()
         }
     }
@@ -498,70 +521,7 @@ class SyncWorker: ObservableObject {
 
 // MARK: - Models
 
-struct SyncOperation {
-    let id: Int
-    let operationId: String
-    let userId: String
-    let tableName: String
-    let operationType: String
-    let recordId: String
-    let payload: [String: Any]
-    let attempts: Int
-    let status: String
-    let nextRetryAt: Date?
-    
-    init?(row: [String: Any]) {
-        guard
-            let id = row["id"] as? Int,
-            let operationId = row["operation_id"] as? String,
-            let userId = row["user_id"] as? String,
-            let tableName = row["table_name"] as? String,
-            let operationType = row["operation_type"] as? String,
-            let recordId = row["record_id"] as? String,
-            let payloadString = row["payload"] as? String,
-            let payloadData = payloadString.data(using: .utf8),
-            let payload = try? JSONSerialization.jsonObject(with: payloadData) as? [String: Any],
-            let status = row["status"] as? String
-        else {
-            print("⚠️ Failed to parse sync operation row")
-            return nil
-        }
-        
-        self.id = id
-        self.operationId = operationId
-        self.userId = userId
-        self.tableName = tableName
-        self.operationType = operationType
-        self.recordId = recordId
-        self.payload = payload
-        self.attempts = row["attempts"] as? Int ?? 0
-        self.status = status
-        
-        // Parse next_retry_at if present
-        if let retryString = row["next_retry_at"] as? String {
-            let formatter = ISO8601DateFormatter()
-            self.nextRetryAt = formatter.date(from: retryString)
-        } else {
-            self.nextRetryAt = nil
-        }
-    }
-}
 
-// MARK: - Error Types
-
-enum SyncError: LocalizedError {
-    case remoteUnavailable
-    case unknownOperation(String)
-    case invalidPayload
-    
-    var errorDescription: String? {
-        switch self {
-        case .remoteUnavailable:
-            return "Remote database is unavailable"
-        case .unknownOperation(let type):
-            return "Unknown operation type: \(type)"
-        case .invalidPayload:
-            return "Invalid operation payload"
-        }
-    }
-}
+// Note: SyncOperation and SyncError are defined in separate files:
+// - Core/Database/SyncOperation.swift
+// - Core/Database/SyncError.swift

@@ -1,6 +1,6 @@
 import Foundation
 
-struct Movie: Codable, Identifiable, Hashable {
+struct Movie: Codable, Identifiable, Hashable, Sendable {
     let id: Int
     let title: String
     let overview: String
@@ -139,98 +139,6 @@ struct Video: Codable, Identifiable, Hashable {
     }
 }
 
-struct WatchProvider: Codable {
-    let results: [String: CountryProviders]?
-}
-
-struct CountryProviders: Codable {
-    let link: String?
-    var flatrate: [Provider]?
-    var rent: [Provider]?
-    var buy: [Provider]?
-}
-
-struct Provider: Codable, Identifiable, Hashable {
-    let providerId: Int
-    let providerName: String
-    let logoPath: String
-    let displayPriority: Int?
-    let price: PriceInfo?
-    let quality: String?
-    let presentationType: String?
-    
-    enum CodingKeys: String, CodingKey {
-        case providerId = "provider_id"
-        case providerName = "provider_name"
-        case logoPath = "logo_path"
-        case displayPriority = "display_priority"
-        case price
-        case quality
-        case presentationType = "presentation_type"
-    }
-    
-    var id: Int { providerId }
-    
-    var logoURL: URL? {
-        URL(string: "https://image.tmdb.org/t/p/w92\(logoPath)")
-    }
-    
-    // Format quality for display (SD, HD, 4K, etc.)
-    var formattedQuality: String? {
-        guard let quality = quality else { return nil }
-        
-        // Handle various quality format possibilities
-        let uppercased = quality.uppercased()
-        if uppercased.contains("4K") || uppercased.contains("UHD") {
-            return "4K"
-        } else if uppercased.contains("HD") || uppercased.contains("1080") {
-            return "HD"
-        } else if uppercased.contains("SD") || uppercased.contains("480") {
-            return "SD"
-        }
-        
-        return quality
-    }
-}
-
-struct PriceInfo: Codable, Hashable {
-    let value: Double?
-    let currency: String?
-    let formatted: String?
-    
-    enum CodingKeys: String, CodingKey {
-        case value
-        case currency
-        case formatted
-    }
-    
-    var displayPrice: String? {
-        if let formatted = formatted {
-            return formatted
-        }
-        
-        if let value = value, let currency = currency {
-            // Format price based on currency
-            return formatPrice(value: value, currency: currency)
-        }
-        
-        return nil
-    }
-    
-    private func formatPrice(value: Double, currency: String) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = currency
-        formatter.maximumFractionDigits = 2
-        
-        if let formatted = formatter.string(from: NSNumber(value: value)) {
-            return formatted
-        }
-        
-        // Fallback
-        return "\(currency) \(String(format: "%.2f", value))"
-    }
-}
 
 struct TVShow: Codable, Identifiable, Hashable {
     let id: Int
@@ -295,6 +203,11 @@ struct TMDBResponse<T: Codable>: Codable {
         case totalResults = "total_results"
     }
 }
+
+// MARK: - Sendable Conformances
+
+extension TMDBResponse: Sendable where T: Sendable {}
+extension ExternalIds: Sendable {}
 
 struct ExternalIds: Codable {
     let imdbId: String?

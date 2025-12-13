@@ -28,21 +28,21 @@ class DatabaseClipsService {
     
     /// Fetch personalized clips (SQLite-first, offline-capable!)
     func fetchPersonalizedClips(count: Int = 20) async throws -> [Clip] {
-        print("📊 [DatabaseClips] Fetching from local SQLite database")
+        Logger.info("[DatabaseClips] Fetching from local SQLite database")
         
         do {
             let clips = try await fetchFromLocalDatabase(count: count)
             
             // If local DB returns clips, use them
             if !clips.isEmpty {
-                print("✅ [DatabaseClips] Successfully fetched \(clips.count) clips from local SQLite")
+                Logger.info("[DatabaseClips] Successfully fetched \(clips.count) clips from local SQLite")
                 return clips
             } else {
-                print("⚠️ [DatabaseClips] Local DB is empty, falling back to YouTube API")
+                Logger.warning("[DatabaseClips] Local DB is empty, falling back to YouTube API")
                 return try await fetchFromYouTubeAPI(count: count)
             }
         } catch {
-            print("❌ [DatabaseClips] Local DB fetch failed: \(error), falling back to YouTube API")
+            Logger.error("[DatabaseClips] Local DB fetch failed: \(error), falling back to YouTube API", error: error)
             return try await fetchFromYouTubeAPI(count: count)
         }
     }
@@ -62,33 +62,10 @@ class DatabaseClipsService {
             ORDER BY RANDOM()
         """)
         
-        print("🎲 [DatabaseClips] Fetched \(response.count) randomized clips from local SQLite")
+        Logger.debug("[DatabaseClips] Fetched \(response.count) randomized clips from local SQLite")
         
         // Parse rows to Clip objects
-        var clips: [Clip] = response.compactMap { row in
-            guard
-                let clipId = row["clip_id"] as? String,
-                let videoId = row["video_id"] as? String,
-                let title = row["title"] as? String,
-                let videoUrl = row["video_url"] as? String
-            else { return nil }
-            
-            return Clip(
-                id: clipId,
-                movieId: row["movie_id"] as? Int,
-                tvShowId: row["tv_show_id"] as? Int,
-                title: title,
-                description: row["description"] as? String ?? "",
-                videoURL: videoUrl,
-                videoId: videoId,
-                thumbnailURL: row["thumbnail_url"] as? String ?? "",
-                duration: 0,
-                likes: row["likes"] as? Int ?? 0,
-                comments: row["comments"] as? Int ?? 0,
-                createdAt: Date(),
-                isLiked: false
-            )
-        }
+        var clips: [Clip] = response.compactMap { mapClip(from: $0) }
         
         // Filter by genres if user has preferences
         if !topGenres.isEmpty {
@@ -113,23 +90,58 @@ class DatabaseClipsService {
         let watchedClips = await getWatchedClipIdsFromLocal(deviceId: deviceId)
         let unwatchedClips = clips.filter { !watchedClips.contains($0.id) }
         
-        // Return limited count
-        let finalClips = Array(unwatchedClips.prefix(count))
+        // Get liked status in one go
+        let likedClipIds = ClipsService.shared.getLikedClipIds()
         
-        print("✅ [DatabaseClips] Returning \(finalClips.count) personalized clips from local SQLite")
+        // Map to final model, setting isLiked status
+        let finalClips = unwatchedClips.prefix(count).map { clip -> Clip in
+            var mutableClip = clip
+            mutableClip.isLiked = likedClipIds.contains(clip.id)
+            return mutableClip
+        }
+        
+        Logger.info("[DatabaseClips] Returning \(finalClips.count) personalized clips from local SQLite")
         return finalClips
     }
     
     // MARK: - YouTube API Fallback
     
     private func fetchFromYouTubeAPI(count: Int) async throws -> [Clip] {
-        print("🎬 [DatabaseClips] Fetching from YouTube API via ClipsService")
+        Logger.info("[DatabaseClips] Fetching from YouTube API via ClipsService")
         
         // Use existing ClipsService for YouTube API fetching
         let clipsService = ClipsService.shared
         let clips = try await clipsService.fetchTrendingClips(page: 1, limit: count)
         
-        print("✅ [DatabaseClips] Fetched \(clips.count) clips from YouTube API")
+        Logger.info("[DatabaseClips] Fetched \(clips.count) clips from YouTube API")
+        return clips
+    }
+    
+    // MARK: - Search
+
+    /// Search locally stored clips by title or description, prioritizing direct matches.
+    func searchClips(query: String, limit: Int = 20) async throws -> [Clip] {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return [] }
+        
+        let likeQuery = "%\(trimmed)%"
+        let rows: [[String: Any]] = try await db.queryRaw("""
+            SELECT * FROM clips
+            WHERE is_active = 1
+              AND deleted_at IS NULL
+              AND (LOWER(title) LIKE LOWER(?) OR LOWER(description) LIKE LOWER(?))
+            ORDER BY CASE WHEN LOWER(title) LIKE LOWER(?) THEN 0 ELSE 1 END, RANDOM()
+            LIMIT ?
+        """, parameters: [likeQuery, likeQuery, likeQuery, limit])
+        
+        let likedClipIds = ClipsService.shared.getLikedClipIds()
+        let clips = rows.compactMap { mapClip(from: $0) }.map { clip -> Clip in
+            var mutable = clip
+            mutable.isLiked = likedClipIds.contains(clip.id)
+            return mutable
+        }
+        
+        Logger.debug("[DatabaseClips] Search for '\(trimmed)' returned \(clips.count) clips")
         return clips
     }
     
@@ -142,7 +154,7 @@ class DatabaseClipsService {
         
         // After day 7 or on day 7, ALWAYS use DB (100%)
         if daysSinceInstall >= 7 {
-            print("📅 [DatabaseClips] Day \(daysSinceInstall), Using DB: 100% (full transition)")
+            Logger.debug("[DatabaseClips] Day \(daysSinceInstall), Using DB: 100% (full transition)")
             return true
         }
         
@@ -153,7 +165,7 @@ class DatabaseClipsService {
         let randomValue = Double.random(in: 0...1)
         let useDB = randomValue < dbPercentage
         
-        print("📅 [DatabaseClips] Day \(daysSinceInstall), DB%: \(Int(dbPercentage * 100))%, Random: \(String(format: "%.2f", randomValue)), Using DB: \(useDB)")
+        Logger.debug("[DatabaseClips] Day \(daysSinceInstall), DB%: \(Int(dbPercentage * 100))%, Random: \(String(format: "%.2f", randomValue)), Using DB: \(useDB)")
         
         return useDB
     }
@@ -169,7 +181,7 @@ class DatabaseClipsService {
             
             return Set(rows.compactMap { $0["clip_id"] as? String })
         } catch {
-            print("⚠️ [DatabaseClips] Error fetching watched clips from local DB: \(error)")
+            Logger.warning("[DatabaseClips] Error fetching watched clips from local DB: \(error.localizedDescription)")
             return []
         }
     }
@@ -193,6 +205,53 @@ class DatabaseClipsService {
         let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
         UserDefaults.standard.set(yesterday, forKey: key)
         return yesterday
+    }
+    
+    private func mapClip(from row: [String: Any]) -> Clip? {
+        guard
+            let clipId = row["clip_id"] as? String,
+            let videoId = row["video_id"] as? String,
+            let title = row["title"] as? String,
+            let videoUrl = row["video_url"] as? String
+        else { return nil }
+        
+        let movieId = (row["movie_id"] as? Int) ?? (row["movie_id"] as? Int64).map(Int.init)
+        let tvShowId = (row["tv_show_id"] as? Int) ?? (row["tv_show_id"] as? Int64).map(Int.init)
+        
+        let createdAt: Date
+        if let timestamp = row["created_at"] as? TimeInterval {
+            createdAt = Date(timeIntervalSince1970: timestamp)
+        } else {
+            createdAt = Date()
+        }
+        
+        let likes = (row["likes"] as? Int) ?? (row["likes"] as? Int64).map(Int.init) ?? 0
+        let comments = (row["comments"] as? Int) ?? (row["comments"] as? Int64).map(Int.init) ?? 0
+        let segmentIndex = (row["segment_index"] as? Int) ?? (row["segment_index"] as? Int64).map(Int.init)
+        let startTime = (row["start_time"] as? Int) ?? (row["start_time"] as? Int64).map(Int.init)
+        let isSegment = (row["is_segment"] as? Bool)
+            ?? (row["is_segment"] as? Int).map { $0 == 1 }
+            ?? false
+        
+        return Clip(
+            id: clipId,
+            movieId: movieId,
+            tvShowId: tvShowId,
+            title: title,
+            description: row["description"] as? String ?? "",
+            videoURL: videoUrl,
+            videoId: videoId,
+            thumbnailURL: row["thumbnail_url"] as? String ?? "",
+            duration: 0,
+            likes: likes,
+            comments: comments,
+            createdAt: createdAt,
+            isLiked: false,
+            isSegment: isSegment,
+            originalClipId: row["original_clip_id"] as? String,
+            segmentIndex: segmentIndex,
+            startTime: startTime
+        )
     }
     
     private func genreIdToName(_ id: Int) -> String? {

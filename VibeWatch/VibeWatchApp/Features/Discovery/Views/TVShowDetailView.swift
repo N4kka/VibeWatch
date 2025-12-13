@@ -3,13 +3,18 @@ import WebKit
 
 struct TVShowDetailView: View {
     @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var appState: AppState
     @StateObject private var viewModel: TVShowDetailViewModel
     @StateObject private var listManager = ListManager.shared
     @State private var showSavePanel = false
+    @State private var showAuthGate = false
     @State private var showSearch = false
     @State private var showShareSheet = false
     @State private var shareItems: [Any] = []
     @State private var isPreparingShare = false
+    @State private var showReportBug = false
+    @State private var selectedActor: Cast?
+    @State private var filmographySelection: FilmographySelection?
     
     init(tvShowId: Int) {
         _viewModel = StateObject(wrappedValue: TVShowDetailViewModel(tvShowId: tvShowId))
@@ -41,13 +46,27 @@ struct TVShowDetailView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
-                if let tvShow = viewModel.tvShow {
+                if viewModel.isLoading {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .padding(.top, 100)
+                } else if let error = viewModel.error {
+                    errorView(error)
+                } else if let tvShow = viewModel.tvShow {
                     let tvShowMovie = tvShowToMovie(tvShow)
                     
-                    headerView(tvShow: tvShow)
+                    TVShowDetailHeaderView(
+                        tvShow: tvShow,
+                        onDismiss: { dismiss() },
+                        onSearch: { showSearch = true },
+                        onShare: {
+                            Task { await handleShare(tvShow: tvShow) }
+                        }
+                    )
                     
                     VStack(spacing: 24) {
                         infoView(tvShow: tvShow)
+                        
                         actionsView(tvShow: tvShow, movie: tvShowMovie)
                         providersView
                         trailerView
@@ -56,10 +75,6 @@ struct TVShowDetailView: View {
                     }
                     .padding(.horizontal, 50)
                     .padding(.bottom, 40)
-                } else if viewModel.isLoading {
-                    ProgressView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .padding(.top, 100)
                 }
             }
         }
@@ -73,6 +88,7 @@ struct TVShowDetailView: View {
                 SaveToListPanel(movie: tvShowToMovie(tvShow), mediaType: .tv)
                     .presentationDetents([.medium])
                     .presentationDragIndicator(.visible)
+                    .presentationBackground(Color.theme.background)
             }
         }
         .task {
@@ -87,6 +103,30 @@ struct TVShowDetailView: View {
                     shareItems = []
                 }
         }
+        .sheet(item: $selectedActor) { actor in
+            ActorDetailView(
+                actorId: actor.id,
+                initialName: actor.name,
+                initialProfileURL: actor.profileURL
+            ) { credit in
+                handleFilmographySelection(credit)
+            }
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+                .presentationBackground(Color.theme.background)
+        }
+        .fullScreenCover(isPresented: $showAuthGate) {
+            AuthenticationGateView(isPresented: $showAuthGate)
+                .presentationBackground(.clear)
+        }
+        .fullScreenCover(item: $filmographySelection) { selection in
+            switch selection.mediaType {
+            case .movie:
+                MovieDetailView(movieId: selection.mediaId)
+            case .tv:
+                TVShowDetailView(tvShowId: selection.mediaId)
+            }
+        }
         .overlay {
             if isPreparingShare {
                 ZStack {
@@ -99,19 +139,45 @@ struct TVShowDetailView: View {
                 }
             }
         }
+        .sheet(isPresented: $showReportBug) {
+            FeedbackDetailSheet(type: .bug)
+        }
     }
     
-    // MARK: - Subviews (computed)
+    // MARK: - Error View
     
-    private func headerView(tvShow: TVShow) -> some View {
-        TVShowDetailHeaderView(
-            tvShow: tvShow,
-            onDismiss: { dismiss() },
-            onSearch: { showSearch = true },
-            onShare: {
-                Task { await handleShare(tvShow: tvShow) }
+    private func errorView(_ error: AppError) -> some View {
+        VStack(spacing: 20) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 60))
+                .foregroundColor(.orange)
+
+            Text(error.errorDescription ?? "Oops!")
+                .font(.system(size: 24, weight: .bold))
+                .foregroundColor(.white)
+
+            if let recoverySuggestion = error.recoverySuggestion {
+                Text(recoverySuggestion)
+                    .font(.system(size: 16))
+                    .foregroundColor(.gray)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
             }
-        )
+
+            Button {
+                Task {
+                    await viewModel.loadTVShowDetails()
+                }
+            } label: {
+                Text("common.tryAgain".localized)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(width: 200, height: 50)
+                    .background(Color.orange)
+                    .cornerRadius(25)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     
     private func infoView(tvShow: TVShow) -> some View {
@@ -122,7 +188,12 @@ struct TVShowDetailView: View {
                         ActionButtonsSection(
                             movie: movie,
                             mediaType: .tv,
-                            onSaveTap: { showSavePanel = true },
+                            onSaveTap: {
+                                // Allow anonymous users to open save panel
+                                // They can save to watchlist without authentication
+                                // Auth gate will show when they try to create custom lists
+                                showSavePanel = true
+                            },
                             onSeenTap: { Task { await handleSeenTap(tvShow: tvShow, movie: movie) } },
                             onLikedTap: { Task { await handleLikedTap(tvShow: tvShow, movie: movie) } },
                             onDislikedTap: { Task { await handleDislikedTap(tvShow: tvShow, movie: movie) } }
@@ -132,7 +203,14 @@ struct TVShowDetailView: View {
     @ViewBuilder
     private var providersView: some View {
         if let providers = viewModel.watchProviders, let tvShow = viewModel.tvShow {
-            WatchNowSection(providers: providers, mediaType: .tv, title: tvShow.name, year: tvShow.year, imdbId: viewModel.imdbId)
+            WatchNowSection(
+                providers: providers,
+                mediaType: .tv,
+                title: tvShow.name,
+                year: tvShow.year,
+                imdbId: viewModel.imdbId,
+                onReportIssue: { showReportBug = true }
+            )
         }
     }
     
@@ -148,7 +226,10 @@ struct TVShowDetailView: View {
         if !viewModel.mainCast.isEmpty {
             TVShowCreditsSection(
                 cast: viewModel.mainCast,
-                tvShow: tvShow
+                tvShow: tvShow,
+                onActorTap: { actor in
+                    selectedActor = actor
+                }
             )
         }
     }
@@ -163,38 +244,90 @@ struct TVShowDetailView: View {
     // MARK: - Actions
     
     private func handleSeenTap(tvShow: TVShow, movie: Movie) async {
-        if listManager.isInList(listId: listManager.seenList.id, mediaId: tvShow.id, mediaType: .tv) {
-            if let item = listManager.seenList.items.first(where: { $0.mediaId == tvShow.id && $0.mediaType == .tv }) {
-                try? await listManager.removeFromList(listId: listManager.seenList.id, itemId: item.id)
+        do {
+            if listManager.isInList(listId: listManager.seenList.id, mediaId: tvShow.id, mediaType: .tv) {
+                if let item = listManager.seenList.items.first(where: { $0.mediaId == tvShow.id && $0.mediaType == .tv }) {
+                    try await listManager.removeFromList(listId: listManager.seenList.id, itemId: item.id)
+                }
+            } else {
+                try await listManager.addToList(listId: listManager.seenList.id, movie: movie, mediaType: .tv)
             }
-        } else {
-            try? await listManager.addToList(listId: listManager.seenList.id, movie: movie, mediaType: .tv)
+        } catch {
+            ErrorHandler.shared.handle(error, context: "Toggle Seen")
         }
     }
     
     private func handleLikedTap(tvShow: TVShow, movie: Movie) async {
-        if listManager.isInList(listId: listManager.likedList.id, mediaId: tvShow.id, mediaType: .tv) {
-            if let item = listManager.likedList.items.first(where: { $0.mediaId == tvShow.id && $0.mediaType == .tv }) {
-                try? await listManager.removeFromList(listId: listManager.likedList.id, itemId: item.id)
+        do {
+            let isCurrentlyLiked = listManager.isInList(listId: listManager.likedList.id, mediaId: tvShow.id, mediaType: .tv)
+            let isCurrentlyDisliked = listManager.isInList(listId: listManager.dislikedList.id, mediaId: tvShow.id, mediaType: .tv)
+            
+            if isCurrentlyLiked {
+                // Remove like
+                if let item = listManager.likedList.items.first(where: { $0.mediaId == tvShow.id && $0.mediaType == .tv }) {
+                    try await listManager.removeFromList(listId: listManager.likedList.id, itemId: item.id)
+                    // Update reaction counts: remove like
+                    try await MovieReactionService.shared.updateReactionCounts(
+                        mediaId: tvShow.id,
+                        mediaType: .tv,
+                        oldReaction: .like,
+                        newReaction: nil
+                    )
+                }
+            } else {
+                // Remove dislike if exists
+                if let dislikedItem = listManager.dislikedList.items.first(where: { $0.mediaId == tvShow.id && $0.mediaType == .tv }) {
+                    try await listManager.removeFromList(listId: listManager.dislikedList.id, itemId: dislikedItem.id)
+                }
+                // Add like
+                try await listManager.addToList(listId: listManager.likedList.id, movie: movie, mediaType: .tv)
+                // Update reaction counts: change from dislike to like (or none to like)
+                try await MovieReactionService.shared.updateReactionCounts(
+                    mediaId: tvShow.id,
+                    mediaType: .tv,
+                    oldReaction: isCurrentlyDisliked ? .dislike : nil,
+                    newReaction: .like
+                )
             }
-        } else {
-            if let dislikedItem = listManager.dislikedList.items.first(where: { $0.mediaId == tvShow.id && $0.mediaType == .tv }) {
-                try? await listManager.removeFromList(listId: listManager.dislikedList.id, itemId: dislikedItem.id)
-            }
-            try? await listManager.addToList(listId: listManager.likedList.id, movie: movie, mediaType: .tv)
+        } catch {
+            ErrorHandler.shared.handle(error, context: "Toggle Liked")
         }
     }
     
     private func handleDislikedTap(tvShow: TVShow, movie: Movie) async {
-        if listManager.isInList(listId: listManager.dislikedList.id, mediaId: tvShow.id, mediaType: .tv) {
-            if let item = listManager.dislikedList.items.first(where: { $0.mediaId == tvShow.id && $0.mediaType == .tv }) {
-                try? await listManager.removeFromList(listId: listManager.dislikedList.id, itemId: item.id)
+        do {
+            let isCurrentlyLiked = listManager.isInList(listId: listManager.likedList.id, mediaId: tvShow.id, mediaType: .tv)
+            let isCurrentlyDisliked = listManager.isInList(listId: listManager.dislikedList.id, mediaId: tvShow.id, mediaType: .tv)
+            
+            if isCurrentlyDisliked {
+                // Remove dislike
+                if let item = listManager.dislikedList.items.first(where: { $0.mediaId == tvShow.id && $0.mediaType == .tv }) {
+                    try await listManager.removeFromList(listId: listManager.dislikedList.id, itemId: item.id)
+                    // Update reaction counts: remove dislike
+                    try await MovieReactionService.shared.updateReactionCounts(
+                        mediaId: tvShow.id,
+                        mediaType: .tv,
+                        oldReaction: .dislike,
+                        newReaction: nil
+                    )
+                }
+            } else {
+                // Remove like if exists
+                if let likedItem = listManager.likedList.items.first(where: { $0.mediaId == tvShow.id && $0.mediaType == .tv }) {
+                    try await listManager.removeFromList(listId: listManager.likedList.id, itemId: likedItem.id)
+                }
+                // Add dislike
+                try await listManager.addToList(listId: listManager.dislikedList.id, movie: movie, mediaType: .tv)
+                // Update reaction counts: change from like to dislike (or none to dislike)
+                try await MovieReactionService.shared.updateReactionCounts(
+                    mediaId: tvShow.id,
+                    mediaType: .tv,
+                    oldReaction: isCurrentlyLiked ? .like : nil,
+                    newReaction: .dislike
+                )
             }
-        } else {
-            if let likedItem = listManager.likedList.items.first(where: { $0.mediaId == tvShow.id && $0.mediaType == .tv }) {
-                try? await listManager.removeFromList(listId: listManager.likedList.id, itemId: likedItem.id)
-            }
-            try? await listManager.addToList(listId: listManager.dislikedList.id, movie: movie, mediaType: .tv)
+        } catch {
+            ErrorHandler.shared.handle(error, context: "Toggle Disliked")
         }
     }
     
@@ -245,6 +378,11 @@ struct TVShowDetailView: View {
             shareItems = items
         }
     }
+    
+    private func handleFilmographySelection(_ credit: PersonCredit) {
+        selectedActor = nil
+        filmographySelection = FilmographySelection(mediaType: credit.mediaType, mediaId: credit.id)
+    }
 }
 
 struct TVShowDetailHeaderView: View {
@@ -255,7 +393,8 @@ struct TVShowDetailHeaderView: View {
     
     var body: some View {
         ZStack(alignment: .top) {
-            AsyncImageView(url: tvShow.backdropURL, contentMode: .fill)
+            CachedAsyncImage(url: tvShow.backdropURL)
+                .aspectRatio(contentMode: .fill)
                 .frame(maxWidth: .infinity, maxHeight: 300)
                 .clipped()
                 .overlay {
@@ -358,6 +497,7 @@ struct TVShowInfoSection: View {
 struct TVShowCreditsSection: View {
     let cast: [Cast]
     let tvShow: TVShow
+    let onActorTap: (Cast) -> Void
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -390,7 +530,9 @@ struct TVShowCreditsSection: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 12) {
                             ForEach(cast) { actor in
-                                CastMemberCard(actor: actor)
+                                CastMemberCard(actor: actor) {
+                                    onActorTap(actor)
+                                }
                             }
                         }
                         .padding(.horizontal, 20)
@@ -428,7 +570,8 @@ struct TVShowCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            AsyncImageView(url: tvShow.posterURL, contentMode: .fill)
+            CachedAsyncImage(url: tvShow.posterURL)
+                .aspectRatio(contentMode: .fill)
                 .frame(width: 140, height: 210)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             

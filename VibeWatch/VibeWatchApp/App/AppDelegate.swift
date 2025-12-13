@@ -1,10 +1,10 @@
 import UIKit
 import Supabase
-import FirebaseCore // Import FirebaseCore
-import FirebaseMessaging // Import FirebaseMessaging
-import UserNotifications // Import UserNotifications
+import FirebaseCore
+import FirebaseMessaging
+import UserNotifications
 
-class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate, MessagingDelegate { // Conform to UNUserNotificationCenterDelegate and MessagingDelegate
+class AppDelegate: NSObject, UIApplicationDelegate, @MainActor UNUserNotificationCenterDelegate, @MainActor MessagingDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
         // Initialize Firebase
         FirebaseApp.configure() // Call FirebaseApp.configure() here
@@ -32,16 +32,19 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
         print("📱 Received URL: \(url.absoluteString)")
         
+        let validSchemes = [
+            "com.vibewatch.VibeWatchApp",
+            "com.vibewatch.VibeWatchApp.beta",
+            "com.vibewatch.vibewatchapp",
+            "com.vibewatch.vibewatchapp.beta"
+        ]
+        
         // Handle Supabase OAuth callback
-        if url.scheme == "com.vibewatch.VibeWatchApp" && url.host == "auth" {
+        if let scheme = url.scheme, validSchemes.contains(scheme) && url.host == "auth" {
             Task {
                 do {
-                    // Let Supabase handle the callback
-                    try await AuthService.shared.client?.auth.session(from: url)
-                    print("✅ OAuth callback handled successfully")
-                    
-                    // Refresh auth state
-                    await AuthService.shared.checkAuthState()
+                    try await AuthService.shared.handleAuthCallback(url: url)
+                    print("✅ Auth callback handled successfully")
                 } catch {
                     print("❌ Error handling OAuth callback: \(error.localizedDescription)")
                 }

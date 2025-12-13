@@ -1,6 +1,7 @@
 import Foundation
+import Combine
 
-enum ListError: Error, Equatable {
+enum ListError: LocalizedError, Equatable {
     case maxListsReached(limit: Int)
     case maxItemsReached(limit: Int)
     case listNotFound
@@ -9,22 +10,22 @@ enum ListError: Error, Equatable {
     case invalidName
     case authenticationRequired
     
-    var localizedDescription: String {
+    var errorDescription: String? {
         switch self {
         case .maxListsReached(let limit):
-            return "lists.error.maxListsReached".localized.replacingOccurrences(of: "{limit}", with: "\(limit)")
+            return "lists.error.maxListsReached".localizedMainSafe().replacingOccurrences(of: "{limit}", with: "\(limit)")
         case .maxItemsReached(let limit):
-            return "lists.error.maxItemsReached".localized.replacingOccurrences(of: "{limit}", with: "\(limit)")
+            return "lists.error.maxItemsReached".localizedMainSafe().replacingOccurrences(of: "{limit}", with: "\(limit)")
         case .listNotFound:
-            return "lists.error.listNotFound".localized
+            return "lists.error.listNotFound".localizedMainSafe()
         case .itemAlreadyInList:
-            return "lists.error.itemAlreadyInList".localized
+            return "lists.error.itemAlreadyInList".localizedMainSafe()
         case .defaultListImmutable:
-            return "lists.error.defaultImmutable".localized
+            return "lists.error.defaultImmutable".localizedMainSafe()
         case .invalidName:
-            return "lists.error.invalidName".localized
+            return "lists.error.invalidName".localizedMainSafe()
         case .authenticationRequired:
-            return "lists.error.authRequired".localized
+            return "lists.error.authRequired".localizedMainSafe()
         }
     }
 }
@@ -49,8 +50,10 @@ class ListManager: ObservableObject {
     private let db = SQLiteService.shared
     private let sync = SyncWorker.shared
     private let supabase = SupabaseService.shared
+    private let authService = AuthService.shared
+    private var cancellables = Set<AnyCancellable>()
     private var userId: String {
-        getDeviceId() // Use device ID as user ID for now
+        authService.currentUser?.id ?? getDeviceId()
     }
 
     var currentCustomListLimit: Int {
@@ -66,6 +69,101 @@ class ListManager: ObservableObject {
         self.softLimitWarningMessage = nil
 
         loadLists()
+        
+        // Observe authentication state changes
+        authService.$isAuthenticated
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] isAuthenticated in
+                guard let self = self else { return }
+                Task {
+                    if isAuthenticated {
+                        await self.syncListsForAuthenticatedUser()
+                    } else {
+                        self.resetListsForLoggedOutUser()
+                    }
+                }
+            }
+            .store(in: &cancellables)
+    }
+    
+    // Call this when user logs in
+    func syncListsForAuthenticatedUser() async {
+        guard let authenticatedUserId = authService.currentUser?.id else {
+            print("⚠️ [ListManager] Not authenticated, cannot sync remote lists.")
+            return
+        }
+
+        print("🔄 [ListManager] Syncing lists for authenticated user: \(authenticatedUserId)")
+        
+        do {
+            // 1. Fetch remote lists for the authenticated user
+            var remoteLists = try await supabase.fetchLists()
+            print("✅ [ListManager] Fetched \(remoteLists.count) remote lists from Supabase.")
+            
+            // 2. Load current local lists (which might still contain anonymous lists)
+            let localListsBeforeSync = lists
+            
+            // 3. Merge/Prioritize: Remote lists become the primary source.
+            //    Ensure core lists are present in remote lists
+            remoteLists = ensureCoreLists(in: remoteLists)
+            
+            // 4. Handle custom local lists that might not be on Supabase yet
+            //    These are lists created by the user when they were anonymous on this device
+            for localList in localListsBeforeSync where localList.type == .custom {
+                if !remoteLists.contains(where: { $0.id == localList.id }) {
+                    // This custom list exists locally but not remotely. Try to upload it.
+                    do {
+                        // Create it on Supabase - using the local list's data
+                        _ = try await supabase.createList(id: localList.id, name: localList.name, description: localList.description, type: .custom)
+                        print("⬆️ [ListManager] Uploaded local custom list '\(localList.name)' to Supabase.")
+                        
+                        // Upload its items too
+                        for item in localList.items {
+                            _ = try await supabase.addItemToList(listId: localList.id, item: item)
+                            print("⬆️ [ListManager] Uploaded item '\(item.title)' to Supabase for list '\(localList.name)'.")
+                        }
+                        remoteLists.append(localList) // Add to our working set of lists
+                    } catch {
+                        print("❌ [ListManager] Failed to upload local custom list '\(localList.name)': \(error)")
+                    }
+                }
+            }
+            
+            // 5. Update local state with the merged lists
+            applyLists(remoteLists)
+            saveLists() // Save to UserDefaults (now containing authenticated lists)
+            
+            print("✅ [ListManager] Lists synced successfully for authenticated user.")
+            
+        } catch {
+            print("❌ [ListManager] Error syncing lists for authenticated user: \(error)")
+            // If fetching remote lists fails, perhaps revert to local only or show error
+            // For now, we'll just log and keep whatever local state was there
+        }
+    }
+    
+    // Call this when user logs out
+    func resetListsForLoggedOutUser() {
+        print("↩️ [ListManager] Resetting lists for logged out user.")
+        
+        // Clear all lists and revert to empty default lists only
+        // This ensures no authenticated user data remains visible
+        let emptyWatchlist = MediaList(name: "lists.watchlist".localized, type: .watchlist)
+        let emptySeenList = MediaList(name: "lists.seen".localized, type: .seen)
+        let emptyLikedList = MediaList(name: "lists.liked".localized, type: .liked)
+        let emptyDislikedList = MediaList(name: "lists.disliked".localized, type: .disliked)
+        
+        // Set lists to only empty default lists
+        self.lists = [emptyWatchlist, emptySeenList, emptyLikedList, emptyDislikedList]
+        self.watchlist = emptyWatchlist
+        self.seenList = emptySeenList
+        self.likedList = emptyLikedList
+        self.dislikedList = emptyDislikedList
+        
+        // Save the empty state
+        saveLists()
+        
+        print("✅ [ListManager] Lists cleared for logged out user - showing empty defaults only.")
     }
     
     func loadLists() {
@@ -74,11 +172,82 @@ class ListManager: ObservableObject {
            let decoded = try? JSONDecoder().decode([MediaList].self, from: data) {
             applyLists(decoded)
             print("📋 [ListManager] Loaded \(decoded.count) lists from UserDefaults")
+            
+            // Ensure all lists exist in database
+            Task {
+                await ensureListsInDatabase()
+            }
         } else {
             // Initialize with default lists
             self.lists = [watchlist, seenList, likedList, dislikedList]
             saveLists()
             print("📋 [ListManager] Initialized default lists")
+            
+            // Create lists in database
+            Task {
+                await ensureListsInDatabase()
+            }
+        }
+    }
+    
+    /// Ensure all in-memory lists exist in both SQLite and Supabase
+    private func ensureListsInDatabase() async {
+        // First, ensure device profile exists in SQLite (for foreign key constraint)
+        await ensureDeviceProfileInSQLite()
+        
+        for list in lists {
+            // Ensure in SQLite
+            await ensureListInSQLite(list)
+            
+            // Ensure in Supabase if authenticated
+            if authService.currentUser != nil {
+                do {
+                    _ = try await supabase.createList(id: list.id, name: list.name, description: list.description, type: list.type)
+                    print("✅ [ListManager] Ensured list '\(list.name)' exists in Supabase")
+                } catch {
+                    // List might already exist, which is fine
+                    print("ℹ️ [ListManager] List '\(list.name)' may already exist in Supabase: \(error)")
+                }
+            }
+        }
+    }
+    
+    /// Ensure device profile exists in SQLite (required for foreign key constraint)
+    private func ensureDeviceProfileInSQLite() async {
+        let success = db.execute("""
+            INSERT OR IGNORE INTO profiles (id, email, display_name, avatar_url, created_at, updated_at)
+            VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))
+        """, parameters: [
+            userId,
+            "device@local",
+            "Local User",
+            nil as String? as Any
+        ])
+        
+        if success {
+            print("✅ [ListManager] Ensured device profile exists in SQLite")
+        } else {
+            print("⚠️ [ListManager] Failed to ensure device profile in SQLite")
+        }
+    }
+    
+    private func ensureListInSQLite(_ list: MediaList) async {
+        let success = db.execute("""
+            INSERT OR IGNORE INTO lists (id, name, description, type, created_at, user_id)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, parameters: [
+            list.id,
+            list.name,
+            list.description ?? "",
+            list.type.rawValue,
+            ISO8601DateFormatter().string(from: list.createdAt),
+            userId
+        ])
+        
+        if success {
+            print("✅ [ListManager] Ensured list '\(list.name)' exists in SQLite")
+        } else {
+            print("⚠️ [ListManager] Failed to ensure list '\(list.name)' in SQLite")
         }
     }
 
@@ -136,7 +305,7 @@ class ListManager: ObservableObject {
 
     @discardableResult
     func fetchLists() async throws -> [MediaList] {
-        guard supabase.currentUser != nil else {
+        guard authService.currentUser != nil else {
             loadLists()
             return lists
         }
@@ -156,14 +325,25 @@ class ListManager: ObservableObject {
             throw ListError.maxListsReached(limit: currentCustomListLimit)
         }
         
-        guard supabase.currentUser != nil else {
+        guard authService.currentUser != nil else {
             throw ListError.authenticationRequired
         }
         
-        let newList = try await supabase.createList(name: trimmedName, description: description, type: .custom)
+        // Generate a local ID first
+        let listId = UUID().uuidString
+        let newList = try await supabase.createList(id: listId, name: trimmedName, description: description, type: .custom)
         
         lists.append(newList)
         saveLists()
+        
+        // Ensure list exists in SQLite too
+        Task {
+            await ensureListInSQLite(newList)
+        }
+        
+        // Analytics: Track list creation
+        AnalyticsService.shared.logListCreated(listType: "custom", listName: trimmedName)
+        
         return newList
     }
     
@@ -201,11 +381,16 @@ class ListManager: ObservableObject {
         guard lists[index].type == .custom else {
             throw ListError.defaultListImmutable
         }
+        let listType = lists[index].type.rawValue
+        
         if supabase.currentUser != nil {
             try await supabase.deleteList(id: id)
         }
         lists.remove(at: index)
         saveLists()
+        
+        // Analytics: Track list deletion
+        AnalyticsService.shared.logListDeleted(listType: listType)
     }
     
     func canCreateList() -> Bool {
@@ -220,6 +405,12 @@ class ListManager: ObservableObject {
     func addToList(listId: String, movie: Movie, mediaType: MediaType) async throws {
         guard let index = lists.firstIndex(where: { $0.id == listId }) else {
             throw ListError.listNotFound
+        }
+        
+        // Check if user is authenticated for custom lists
+        // Anonymous users can only add to watchlist
+        if lists[index].type == .custom && authService.currentUser == nil {
+            throw ListError.authenticationRequired
         }
 
         if lists[index].items.contains(where: { $0.mediaId == movie.id && $0.mediaType == mediaType }) {
@@ -246,21 +437,48 @@ class ListManager: ObservableObject {
             overview: movie.overview
         )
 
+        // Always save locally first
+        objectWillChange.send()
+        lists[index].items.append(item)
+        
+        // Try to sync to Supabase if authenticated (but don't fail if it doesn't work)
         if supabase.currentUser != nil {
-            let savedItem = try await supabase.addItemToList(listId: listId, item: item)
-            objectWillChange.send()
-            lists[index].items.append(savedItem)
-        } else {
-            objectWillChange.send()
-            lists[index].items.append(item)
             Task {
-                await addItemToSQLite(item, listId: listId)
+                do {
+                    _ = try await supabase.addItemToList(listId: listId, item: item)
+                    print("✅ [ListManager] Synced item to Supabase")
+                } catch {
+                    print("⚠️ [ListManager] Failed to sync to Supabase: \(error)")
+                    // Don't throw - local save already succeeded
+                }
             }
+        }
+        
+        // Also save to local SQLite for offline access
+        Task {
+            await addItemToSQLite(item, listId: listId)
         }
 
         updateDefaultReferences(from: lists)
         notifySoftLimitIfNeeded(for: lists[index])
         saveLists()
+        
+        // Analytics: Track item added
+        AnalyticsService.shared.logItemAddedToList(
+            listType: lists[index].type.rawValue,
+            mediaType: mediaType.rawValue
+        )
+        
+        // Prompt for a review after a successful save action (gated by heuristics)
+        ReviewPromptManager.shared.recordPositiveAction()
+        
+        // Prefetch image for offline viewing (watchlist only, WiFi only)
+        if lists[index].type == .watchlist, let posterPath = item.posterPath {
+            Task.detached(priority: .utility) {
+                let imageURL = "https://image.tmdb.org/t/p/w500\(posterPath)"
+                await ImageCacheService.shared.prefetchImages([imageURL], onWiFiOnly: true)
+            }
+        }
     }
     
     func canAddToList(listId: String) -> Bool {
@@ -299,18 +517,27 @@ class ListManager: ObservableObject {
             throw ListError.listNotFound
         }
 
-        if supabase.currentUser != nil {
-            try await supabase.removeItemFromList(itemId: itemId)
-        }
-
+        // Always remove locally first
         objectWillChange.send()
         lists[listIndex].items.removeAll { $0.id == itemId }
         updateDefaultReferences(from: lists)
 
-        if supabase.currentUser == nil {
+        // Try to sync to Supabase if authenticated (but don't fail if it doesn't work)
+        if supabase.currentUser != nil {
             Task {
-                await removeItemFromSQLite(itemId)
+                do {
+                    try await supabase.removeItemFromList(itemId: itemId)
+                    print("✅ [ListManager] Synced removal to Supabase")
+                } catch {
+                    print("⚠️ [ListManager] Failed to sync removal to Supabase: \(error)")
+                    // Don't throw - local removal already succeeded
+                }
             }
+        }
+
+        // Also remove from local SQLite
+        Task {
+            await removeItemFromSQLite(itemId)
         }
         
         saveLists()

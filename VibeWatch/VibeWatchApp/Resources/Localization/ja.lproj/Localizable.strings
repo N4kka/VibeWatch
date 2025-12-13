@@ -1,0 +1,428 @@
+// Tab Bar
+"tab.clips" = "クリップ";
+"tab.discovery" = "発見";
+"tab.lists" = "リスト";
+"tab.profile" = "プロフィール";
+"tab.ai" = "AI";
+
+// Onboarding
+"onboarding.page1.description" = "あなたの気分に合わせたAI映画・ドラマのおすすめで、次に観るべき作品がいつでも分かります。";
+"onboarding.page1.title" = "AIでスマートな選択";
+"onboarding.page2.description" = "ウォッチリストや気分別コレクションを作って、発見した作品を整理しましょう。";
+"onboarding.page2.title" = "ウォッチリストを整理";
+"onboarding.page3.description" = "予告編やクリップを視聴し、お気に入りをリストに保存して後で鑑賞。";
+"onboarding.page3.title" = "予告編 & クリップを探す";
+"onboarding.page4.createAccount" = "アカウント作成";
+"onboarding.page4.description" = "アカウントを作成すると、すべてのデバイスでウォッチリストと設定を同期できます。";
+"onboarding.page4.skip" = "今はスキップ";
+"onboarding.page4.title" = "準備はできましたか？";
+
+// Discovery
+"discovery.basedOnMood" = "あなたのために厳選";
+"discovery.forYou" = "あなた向け";
+"discovery.popular" = "人気";
+"discovery.topRated" = "高評価";
+"discovery.trending" = "トレンド";
+"discovery.tvShows" = "TVシリーズ";
+"discovery.upcoming" = "近日公開";
+"discovery.vibeWatch" = "VibeWatch";
+
+// Browse
+"browse.emptyMessage" = "フィルターボタンをタップしてコンテンツを閲覧";
+"browse.movies" = "映画";
+"browse.title" = "ブラウズ";
+"browse.tvShows" = "TVシリーズ";
+
+// Lists
+"list.all" = "すべて";
+"list.movies" = "映画";
+"list.tvShows" = "TV";
+"lists.createList" = "リスト作成";
+"lists.deleteConfirmation" = "%@ を削除しますか？ このリスト内のすべての項目が削除されます。";
+"lists.deleteList" = "リスト削除";
+"lists.description" = "説明（任意）";
+"lists.descriptionPlaceholder" = "説明を追加…（任意）";
+"lists.disliked" = "低評価";
+"lists.editList" = "リスト編集";
+"lists.empty" = "まだリストがありません";
+"lists.emptyDescription" = "最初のウォッチリストを作成して、発見した映画やドラマを整理しましょう";
+"lists.error.authRequired" = "カスタムリストを作成するにはログインが必要です。";
+"lists.error.defaultImmutable" = "このリストは変更できません";
+"lists.error.invalidName" = "有効なリスト名を入力してください";
+"lists.error.itemAlreadyInList" = "この項目はすでにリストにあります";
+"lists.error.listNotFound" = "リストが見つかりません";
+"lists.error.maxItemsReached" = "このリストは {limit} 件の上限に達しています";
+"lists.error.maxListsReached" = "カスタムリストの上限（{limit} 件）に達しました";
+"lists.liked" = "高評価";
+"lists.limitInfo" = "{count}/{limit}";
+"lists.listDescriptionPlaceholder" = "説明を追加…";
+"lists.listName" = "リスト名";
+"lists.listNamePlaceholder" = "新しいリスト";
+"lists.myLists" = "マイリスト";
+"lists.noItems" = "まだ項目がありません";
+"lists.searchPlaceholder" = "リスト内を検索";
+"lists.seen" = "視聴済み";
+"lists.softLimitWarning" = "「{name}」にはすでに {limit} 件の項目があります。整理のために新しいリストを作成することをおすすめします。";
+"lists.watchlist" = "ウォッチリスト";
+"lists.watchOn" = "視聴先";
+
+// Movie Detail
+"movieDetail.cast" = "キャスト";
+"movieDetail.country" = "国";
+"movieDetail.director" = "監督";
+"movieDetail.genres" = "ジャンル";
+"movieDetail.information" = "情報";
+"movieDetail.rating" = "評価";
+"movieDetail.ratings" = "件の評価";
+"movieDetail.runtime" = "上映時間";
+"movieDetail.save" = "ウォッチリストに保存";
+"movieDetail.seen" = "視聴済み";
+"movieDetail.similar" = "この作品を見た人はこちらも見ています";
+"movieDetail.trailer" = "予告編";
+"movieDetail.watchNow" = "今すぐ見る";
+
+// Filters
+"filter.all" = "すべて";
+"filter.movies" = "映画";
+"filter.tvSeries" = "TVシリーズ";
+
+// Sort
+"sort.dateAdded" = "追加日";
+"sort.popularityAsc" = "人気 ↑";
+"sort.popularityDesc" = "人気 ↓";
+"sort.rating" = "評価";
+"sort.ratingAsc" = "評価 ↑";
+"sort.ratingDesc" = "評価 ↓";
+"sort.releaseDate" = "公開日";
+"sort.releaseDateAsc" = "公開日 ↑";
+"sort.releaseDateDesc" = "公開日 ↓";
+"sort.sortBy" = "並び替え";
+"sort.title" = "タイトル";
+
+// Advanced Filters
+"filters.anyCountry" = "すべての国";
+"filters.apply" = "適用";
+"filters.country" = "国";
+"filters.minimumRating" = "最低評価";
+"filters.ratingAny" = "指定なし";
+"filters.ratingExcellent" = "8.0+";
+"filters.ratingGood" = "7.0+";
+"filters.ratingMasterpiece" = "9.0+";
+"filters.reset" = "リセット";
+"filters.runtime" = "上映時間";
+"filters.runtimeAny" = "指定なし";
+"filters.runtimeLong" = "> 120分";
+"filters.runtimeMedium" = "90-120分";
+"filters.runtimeShort" = "< 90分";
+"filters.sortBy" = "並び替え";
+"filters.title" = "フィルター";
+
+// Clips
+"clips.title" = "クリップ";
+"clips.addToList" = "リストに追加";
+"clips.beFirstToComment" = "最初のコメントを投稿しませんか？";
+"clips.comment" = "コメント";
+"clips.comments" = "コメント";
+"clips.comments.deleteConfirmation" = "このコメントを削除しますか？ この操作は元に戻せません。";
+"clips.comments.loading" = "コメントを読み込み中...";
+"clips.comments.replying" = "返信中...";
+"clips.createFirstList" = "お気に入りを保存するために最初のウォッチリストを作成";
+"clips.createNewList" = "新しいリストを作成";
+"clips.feed.craftingSubtitle" = "あなたのために最高のクリップを厳選しています ✨";
+"clips.feed.craftingTitle" = "あなたの完璧なフィードを作成中";
+"clips.hideReplies" = "非表示";
+"clips.loadingClips" = "クリップを読み込み中...";
+"clips.noClipsAvailable" = "利用可能なクリップがありません";
+"clips.noClipsDescription" = "お気に入り作品の名シーンを後でチェックしてください";
+"clips.noComments" = "まだコメントがありません";
+"clips.noListsYet" = "まだリストがありません";
+"clips.reply" = "返信";
+"clips.replies" = "件の返信";
+"clips.replyingTo" = "返信対象:";
+"clips.viewReplies" = "表示";
+
+// Search
+"search.latestVisited" = "最近見た作品";
+"search.noResultsFound" = "結果が見つかりませんでした";
+"search.placeholder" = "映画やドラマの視聴先を検索...";
+"search.results" = "結果";
+"search.trendingSearches" = "人気の検索";
+
+// Profile
+"profile.cancel" = "キャンセル";
+"profile.createAccount" = "アカウント作成";
+"profile.done" = "完了";
+"profile.helpSupport" = "ヘルプ & サポート";
+"profile.logout" = "ログアウト";
+"profile.notifications" = "通知";
+"profile.passwordPlaceholder" = "パスワード";
+"profile.settings" = "設定";
+"profile.signIn" = "ログイン";
+"profile.signInDescription" = "リストを作成し、クリップを保存し、あなたの体験をカスタマイズできます";
+"profile.signInToVibeWatch" = "VibeWatch にログイン";
+"profile.streamingServices" = "ストリーミングサービス";
+"profile.userNamePlaceholder" = "メールアドレスまたはユーザー名";
+
+// Settings
+"settings.comingSoon" = "さらに多くの設定が近日登場予定…";
+"settings.country" = "国";
+"settings.language" = "言語";
+"settings.selectCountry" = "国を選択";
+"settings.selectLanguage" = "言語を選択";
+"settings.title" = "設定";
+
+// Cache Management
+"settings.cacheManagement.title" = "キャッシュ管理";
+"settings.cacheManagement.cacheSize" = "キャッシュサイズ";
+"settings.cacheManagement.cacheSizeTitle" = "キャッシュサイズを選択";
+"settings.cacheManagement.cacheSizeDescription" = "画像のキャッシュに使用するストレージ量を選択してください。大きいキャッシュはより多くのオフラインコンテンツを可能にします。";
+"settings.cacheManagement.prefetchOption" = "画像のプリフェッチ";
+"settings.cacheManagement.prefetchTitle" = "画像プリフェッチオプション";
+"settings.cacheManagement.prefetchDescription" = "オフライン表示用の画像ダウンロードタイミングを制御します。Wi-Fiのみを選択するとモバイルデータを節約できます。";
+"settings.cacheManagement.prefetchNeverWarning" = "警告：オフライン機能が制限されます";
+"settings.cacheManagement.clearCache" = "画像キャッシュをクリア";
+"settings.cacheManagement.clearCacheWarning" = "すべてのキャッシュ画像を削除します";
+"settings.cacheManagement.clearCacheConfirmTitle" = "キャッシュをクリアしますか？";
+"settings.cacheManagement.clearCacheConfirmMessage" = "すべてのキャッシュ画像が削除され、ストレージが解放されます。再キャッシュされるまで画像を見るにはオンライン接続が必要です。";
+"settings.cacheManagement.clearCacheConfirm" = "キャッシュをクリア";
+
+// Platforms
+"platform.selectionCount" = "%d / %d 選択";
+"platform.title" = "ストリーミングプラットフォーム";
+"platforms.buy" = "購入";
+"platforms.rent" = "レンタル";
+"platforms.streaming" = "ストリーミング";
+"platforms.title" = "プラットフォーム";
+
+// Notifications
+"notifications.disableButton" = "通知をオフ";
+"notifications.disableConfirmation" = "通知をオフにしますか？";
+"notifications.disableMessage" = "新作、価格変更、パーソナライズ推薦などの通知を受け取れなくなります。";
+"notifications.enableInSettings" = "設定で通知を有効にすると、新作や価格変動などの最新情報を受け取れます。";
+"notifications.openSettings" = "設定を開く";
+"notifications.permissionRequired" = "通知許可が必要です";
+
+// Auth
+"auth.alreadyHaveAccount" = "すでにアカウントをお持ちですか？";
+"auth.confirmPasswordPlaceholder" = "パスワード確認";
+"auth.createAccount" = "アカウント作成";
+"auth.dontHaveAccount" = "アカウントをお持ちでないですか？";
+"auth.emailPlaceholder" = "メールアドレス";
+"auth.forgotPassword" = "パスワードをお忘れですか？";
+"auth.gate.accountRequired" = "アカウントが必要です";
+"auth.gate.authRequiredAI" = "AIチャットを利用するにはアカウントが必要です。";
+"auth.gate.createFree" = "無料アカウント作成";
+"auth.gate.createTitle" = "無料の VibeWatch アカウントを作成";
+"auth.gate.description" = "カスタムリストを作成し、デバイス間で同期するにはアカウントが必要です。";
+"auth.gate.haveAccount" = "すでにアカウントがあります";
+"auth.gate.limitMessage" = "今日の15クリップ無料枠を使い切りました。登録すると進捗を同期し、明日のクリップをすぐに解放できます。";
+"auth.gate.signupFree" = "登録は無料で、1分もかかりません。";
+"auth.gate.benefit.saveClips" = "お気に入りのクリップを保存";
+"auth.gate.benefit.syncDevices" = "すべてのデバイスで同期";
+"auth.gate.benefit.personalizedRecs" = "パーソナライズされたおすすめを取得";
+"auth.invalidEmail" = "無効なメールアドレスです";
+"auth.invalidPassword" = "無効なパスワードです";
+"auth.joinVibeWatch" = "VibeWatchに参加して新しい作品を発見しましょう";
+"auth.passwordPlaceholder" = "パスワード";
+"auth.passwordsDontMatch" = "パスワードが一致しません";
+"auth.signIn" = "ログイン";
+"auth.signInContinue" = "続けるにはログインしてください";
+"auth.signUp" = "サインアップ";
+"auth.usernamePlaceholder" = "ユーザー名";
+"auth.welcomeBack" = "おかえりなさい";
+"auth.error.notConfigured" = "認証サービスが設定されていません。Supabaseの認証情報を追加してください。";
+"auth.error.invalidResponse" = "サーバーからの無効な応答です。";
+"auth.error.userNotFound" = "ユーザーが見つかりません。";
+"auth.error.invalidCredentials" = "メールアドレスまたはパスワードが無効です。";
+"auth.error.networkError" = "ネットワークエラーです。接続を確認してください。";
+"auth.error.databaseError" = "プロファイル保存中にデータベースエラーが発生しました。もう一度お試しください。";
+"auth.error.signUpFailed" = "サインアップに失敗しました。もう一度お試しください。";
+"auth.error.passwordResetFailed" = "リセットメールの送信に失敗しました。もう一度お試しください。";
+"auth.error.passwordUpdateFailed" = "パスワードの更新に失敗しました。もう一度お試しください。";
+"auth.error.accountDeletionFailed" = "アカウントの削除に失敗しました。もう一度お試しください。";
+
+// AI
+"ai.title" = "Vibe AI";
+"ai.tokensUsage" = "トークン: %@/%@";
+"ai.describeVibe" = "今の気分を教えてください";
+"ai.thinking" = "考え中...";
+"ai.editMessage" = "メッセージ編集";
+"ai.hardLimitMessage" = "今日のAI使用上限に達しました。明日またご利用ください。";
+"ai.paywall.benefit.personalized" = "パーソナライズされたウォッチリスト";
+"ai.paywall.benefit.smarter" = "よりスマートなコンテンツ発見";
+"ai.paywall.benefit.unlimited" = "無制限のAIおすすめ";
+"ai.paywall.description" = "よりスマートなAI映画・ドラマのおすすめで、完璧な作品を見つけましょう。";
+"ai.paywall.goBack" = "戻る";
+"ai.paywall.title" = "AI映画アシスタントを解放";
+"ai.paywall.unlockAI" = "AIチャットを解放";
+"ai.placeholder" = "例:『どんでん返しのあるSF』";
+"ai.proRequired" = "AIチャットはPro会員専用です。";
+"ai.resultsTitle" = "こちらがおすすめです:";
+"ai.saveRegenerate" = "保存して再生成";
+"ai.softLimitMessage" = "AI使用上限に近づいています。メッセージを短くしてください。";
+"ai.subtitle" = "気分を教えてください—AIが次に観るべき映画やドラマを見つけます。";
+"ai.suggestion.chips1" = "💖 心温まるロマンス、AI厳選";
+"ai.suggestion.chips2" = "💥 80年代アクションコメディ、AIおすすめ";
+"ai.suggestion.chips3" = "🕵️‍♂️ どんでん返しの隠れた名作スリラー";
+"ai.suggestion.chips4" = "🤖 AI: 次は何を観ればいい？";
+"ai.usage.left" = "残り";
+
+// Paywall
+"paywall.bestValue" = "最もおすすめ";
+"paywall.cta.continue" = "続ける";
+"paywall.cta.selectPlan" = "プランを選択";
+"paywall.cta.startTrial" = "%@ 無料トライアル開始";
+"paywall.daily.limitDescription" = "無料会員は1日15クリップまで視聴できます。Proにアップグレードすると無制限で楽しめます。";
+"paywall.daily.limitReached" = "今日の上限に達しました";
+"paywall.daily.nextReset" = "次のリセットまで";
+"paywall.daily.resetIn" = "リセットまで";
+"paywall.daily.title" = "また明日お越しください";
+"paywall.discount.annual" = "33% OFF";
+"paywall.ensurePro" = "Proプランを確保しましょう！";
+"paywall.feature.advancedFilters" = "🔎 高速選択のための詳細フィルター";
+"paywall.feature.aiAssistant" = "🤖 AI映画・ドラマおすすめ";
+"paywall.feature.lists" = "📋 最大100件の同期ウォッチリスト";
+"paywall.feature.noAds" = "❌ クリップ中の広告なし";
+"paywall.feature.offlineMode" = "📵 保存した作品のオフラインモード";
+"paywall.feature.releaseAlerts" = "🔔 お気に入りの配信開始アラート";
+"paywall.feature.unlimitedClips" = "▶️ 無制限のクリップ＆予告編";
+"paywall.foundingMember" = "創設メンバー価格";
+"paywall.plan.annual" = "年間";
+"paywall.plan.monthly" = "月間";
+"paywall.price.perMonth" = "%@/月";
+"paywall.proDescription" = "Proで無制限のクリップ、AI映画バディ、同期ウォッチリストを解放。";
+"paywall.restore" = "購入を復元";
+"paywall.trial.badge" = "%@ 無料";
+"paywall.unlockUnlimited" = "無制限クリップを解放";
+"paywall.upgrade" = "Proにアップグレード";
+
+// Common
+"common.cancel" = "キャンセル";
+"common.delete" = "削除";
+"common.dismiss" = "閉じる";
+"common.done" = "完了";
+"common.edit" = "編集";
+"common.items" = "項目";
+"common.item" = "項目";
+"common.loadMore" = "さらに読み込む";
+"common.loading" = "読み込み中...";
+"common.liked" = "いいね済み";
+"common.offline" = "オフラインです。キャッシュされたコンテンツを表示しています。";
+"common.or" = "または";
+"common.privacy" = "プライバシー";
+"common.pro" = "PRO";
+"common.reply" = "返信";
+"common.retry" = "再試行";
+"common.save" = "保存";
+"common.search" = "検索";
+"common.terms" = "利用規約";
+"common.tryAgain" = "もう一度試す";
+"common.uploading" = "アップロード中...";
+"common.year" = "年";
+"common.error" = "エラー";
+"common.ok" = "OK";
+"common.pleaseTryAgain" = "もう一度お試しください。";
+
+// Misc
+"misc.language" = "日本語";
+"misc.letUsKnow" = "お知らせください";
+"misc.of" = "／";
+"misc.selected" = "選択済み";
+"misc.somethingWrong" = "問題が発生しましたか？";
+
+
+// Password Reset
+"auth.resetPassword" = "パスワードをリセット";
+"auth.resetPasswordDescription" = "メールアドレスを入力すると、リセットリンクをお送りします。";
+"auth.sendResetLink" = "リセットリンクを送信";
+"auth.resetEmailSent" = "リセットメールを送信しました！受信トレイをご確認ください。";
+"auth.setNewPasswordDescription" = "新しいパスワードを作成し、確認して続行してください。";
+"auth.updatePassword" = "パスワードを更新";
+"auth.passwordResetSuccess" = "パスワードが正常に更新されました。";
+"profile.changePassword" = "パスワードを変更";
+
+
+// Password Reset Confirmations
+"common.confirm" = "確認";
+"profile.logoutConfirmationTitle" = "ログアウトしてよろしいですか？";
+"auth.confirmChangePasswordTitle" = "パスワードを変更";
+"auth.confirmChangePasswordMessage" = "今すぐパスワードを更新しますか？";
+
+
+// Profile - Support & Feedback
+"profile.sendFeedback" = "フィードバックを送信";
+"profile.aboutUs" = "私たちについて";
+"profile.aboutUsDetail" = "VibeWatchチームと、ストリーミング体験を向上させるという私たちのミッションについてご紹介します。";
+"profile.tmdbAttribution" = "この製品はTMDb APIを使用していますが、TMDbによって承認または認定されたものではありません。";
+"profile.legalNotes" = "法的事項";
+"profile.faq" = "よくある質問";
+"profile.faqDetail" = "アカウント、サブスクリプション、機能に関するよくある質問への回答を見つけましょう。";
+"profile.privacyPolicy" = "プライバシーポリシー";
+"profile.termsOfUse" = "利用規約";
+"profile.feedback.suggestFeature" = "新機能を提案";
+"profile.feedback.suggestFeatureDescription" = "VibeWatchをより良くするためのアイデアを教えてください。";
+"profile.feedback.reportBug" = "バグ/問題を報告";
+"profile.feedback.reportBugDescription" = "発生している問題を説明してください。迅速に修正いたします。";
+"profile.feedback.other" = "その他";
+"profile.feedback.otherDescription" = "その他のご意見やコメントをお聞かせください。";
+"profile.feedback.keepUpdated" = "最新情報を受け取る";
+"profile.feedback.sendButton" = "フィードバックを送信";
+"profile.feedback.sent" = "ありがとうございます！フィードバックが送信されました。";
+"profile.feedback.invalidEmail" = "無効なメール内容です。";
+
+// Settings - Account Deletion
+"settings.deleteAccount" = "アカウントを完全に削除";
+"settings.deleteAccountWarningTitle" = "アカウントを削除しますか？";
+"settings.deleteAccountWarningMessage" = "この操作は永久的で、元に戻すことはできません。";
+"settings.deleteAccountKeep" = "いいえ、残します";
+"settings.deleteAccountConfirm" = "はい、アカウントを削除します";
+"settings.deleteAccountFinalTitle" = "アカウントを完全に削除";
+"settings.deleteAccountFinalMessage" = "本当によろしいですか？この操作は取り消せません。";
+"settings.deleteAccountError" = "現在アカウントを削除できません。";
+"settings.deleteAccountSuccess" = "アカウントが削除されました。";
+"settings.deleteAccountDeleting" = "削除中...";
+
+
+// Profile Upgrade CTA
+"profile.upgradePro.title" = "Proにアップグレード";
+"profile.upgradePro.subtitle" = "無制限のクリップ、AI、プレミアムリストを解放。";
+
+/// Actor Detail
+"actor.biography.title" = "経歴";
+"actor.biography.loading" = "経歴を読み込み中...";
+"actor.biography.unavailable" = "経歴はありません。";
+"actor.filmography.movies" = "映画";
+"actor.filmography.tv" = "TVシリーズ";
+"actor.retry" = "再試行";
+"actor.biography.showMore" = "もっと見る";
+"actor.biography.showLess" = "表示を減らす";
+
+"clips.search.placeholder" = "クリップ、キャラクター、セリフを検索";
+"clips.search.emptyTitle" = "お気に入りのクリップを見つけよう";
+"clips.search.emptySubtitle" = "映画、ドラマ、キャラクター、セリフを検索して、関連するクリップやおすすめを見つけましょう。";
+"clips.search.showcaseTitle" = "クリップを発見";
+"clips.search.showcaseSubtitle" = "上の検索バーでお気に入り作品のクリップを探す";
+"clips.search.matched" = "一致";
+"clips.search.recommended" = "おすすめ";
+
+// Redeem Code
+"settings.redeemCode" = "コードを引き換え";
+"settings.redeemCode.description" = "プロモコードまたはオファーコードを入力";
+"paywall.haveCode" = "プロモコードをお持ちですか？";
+
+// Help & Support - About Us
+"profile.aboutUsDescription" = "私たちは新しいタイプの映画/ドラマ仲間を作る二人の友人です。VibeWatchは使いにくいトラッカーへの不満から生まれました：モダンでクリップ重視の発見、素早いストリーミングリンク、そして映画ファンもカジュアルな視聴者も延々とスクロールせずに完璧な作品を見つけられるツールに焦点を当てています。";
+"profile.faqs" = "よくある質問";
+"profile.legal" = "法的情報";
+
+// FAQ Items
+"profile.faq.question1" = "クリップはどうやって新しい作品の発見に役立ちますか？";
+"profile.faq.answer1" = "クリップはあなたの好みに合わせた短い縦型プレビューで、時間を無駄にした感覚なしにビンジスクロールできます。";
+"profile.faq.question2" = "観た作品を記録できますか？";
+"profile.faq.answer2" = "はい。リストに保存、視聴済み/好き/嫌いにマーク、映画やドラマを同期できます。";
+"profile.faq.question3" = "どこで見られますか？";
+"profile.faq.answer3" = "ストリーミングリンクは国ごとに取得されるので、適切なアプリに直接飛べます。";
+"profile.faq.question4" = "何かおかしい場合は？";
+"profile.faq.answer4" = "どの作品でも「お知らせください」を使ってバグや壊れたリンクを報告すれば、すぐに修正します。";
+"profile.faq.question5" = "VibeWatchはカジュアルな視聴者にも使えますか？";
+"profile.faq.answer5" = "もちろんです。友達との土曜の夜の映画のような簡単な選択から、映画ファンのための隠れた名作まで幅広く対応しています。";

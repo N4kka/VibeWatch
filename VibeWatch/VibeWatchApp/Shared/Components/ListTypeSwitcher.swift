@@ -7,7 +7,7 @@ enum ListViewType: String, CaseIterable {
     case liked = "lists.liked"
     
     var displayName: String {
-        rawValue.localized
+        rawValue.localizedMainSafe()
     }
 }
 

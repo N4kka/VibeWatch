@@ -4,6 +4,8 @@ struct ListsView: View {
     @StateObject private var viewModel = ListsViewModel()
     @StateObject private var listManager = ListManager.shared
     @ObservedObject var localizationManager = LocalizationManager.shared
+    @EnvironmentObject var quotaManager: DailyQuotaManager
+    @EnvironmentObject var appState: AppState
     @State private var selectedFilter: MediaFilter = .all
     @AppStorage("selectedPlatforms") private var selectedPlatformsData: Data = Data()
     @State private var selectedListType: ListViewType = .myLists
@@ -15,6 +17,7 @@ struct ListsView: View {
     
     @State private var filterRefreshTrigger = false
     @State private var showingPaywall = false
+    @State private var itemsLimit = 50 // State for pagination
     
     private var selectedPlatforms: Set<StreamingPlatform> {
         get {
@@ -38,47 +41,51 @@ struct ListsView: View {
     }
     
     var body: some View {
-        NavigationView {
-            ZStack {
-                Color.theme.background.ignoresSafeArea()
+        ZStack {
+            Color.theme.background.ignoresSafeArea()
+            
+            VStack(spacing: 0) {
+                OfflineBanner()
                 
-                VStack(spacing: 0) {
-                    headerView
-                    
-                    ListTypeSwitcher(selectedType: $selectedListType)
-                        .padding(.bottom, 16)
-                    
-                    combinedFiltersRow
-                    
-                    if currentLists.isEmpty {
-                        emptyStateView
-                    } else {
-                        contentView
-                    }
+                headerView
+                
+                ListTypeSwitcher(selectedType: $selectedListType)
+                    .padding(.bottom, 16)
+                
+                combinedFiltersRow
+                
+                if currentLists.isEmpty {
+                    emptyStateView
+                } else {
+                    contentView
                 }
             }
-            .navigationBarHidden(true)
-            .overlay {
-                if showFilters {
-                    AdvancedFiltersPanel(
-                        filters: $filters,
-                        showRuntimeFilter: false,
-                        onDismiss: {
-                            withAnimation {
-                                showFilters = false
-                            }
-                        },
-                        onApply: { _ in
-                            filterRefreshTrigger.toggle()
+        }
+        .navigationBarHidden(true)
+        .overlay {
+            if showFilters {
+                AdvancedFiltersPanel(
+                    filters: $filters,
+                    showRuntimeFilter: false,
+                    onDismiss: {
+                        withAnimation {
+                            showFilters = false
                         }
-                    )
-                }
+                    },
+                    onApply: { _ in
+                        filterRefreshTrigger.toggle()
+                    }
+                )
+                .environmentObject(quotaManager)
             }
         }
         .task {
             await viewModel.loadLists()
+            
+            // Analytics: Track screen view
+            AnalyticsService.shared.logScreenView(screenName: "Lists", screenClass: "ListsView")
         }
-        .onChange(of: localizationManager.localeDidChange) { _ in
+        .onChange(of: localizationManager.localeDidChange) {_, _ in
             refreshID = UUID()
         }
         .id(refreshID)
@@ -86,16 +93,20 @@ struct ListsView: View {
             CreateListView(viewModel: viewModel)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
-                .presentationBackground(Color.theme.backgroundDark.opacity(0.98))
+                .presentationBackground(Color.theme.background)
         }
         .sheet(isPresented: $showAuthGate) {
             AuthenticationGateView(isPresented: $showAuthGate)
+                .presentationBackground(.clear)
         }
         .fullScreenCover(isPresented: $showingPaywall) {
             DailyLimitPaywallView(isPresented: $showingPaywall)
         }
+        .onChange(of: selectedListType) {
+            // Reset limit when switching lists
+            itemsLimit = 50
+        }
     }
-    
     private var headerView: some View {
         HStack {
             Text("lists.myLists".localized)
@@ -105,7 +116,7 @@ struct ListsView: View {
             Spacer()
             
             Button {
-                guard SupabaseService.shared.isAuthenticated else {
+                guard appState.isAuthenticated else {
                     showAuthGate = true
                     return
                 }
@@ -193,7 +204,7 @@ struct ListsView: View {
     private var itemsGrid: some View {
         ScrollView {
             LazyVStack(spacing: 20) {
-                ForEach(filteredAndSortedItems) { item in
+                ForEach(paginatedItems) { item in
                     MediaItemRow(
                         item: item,
                         isInSeenList: selectedListType == .seen,
@@ -234,12 +245,22 @@ struct ListsView: View {
                             }
                         }
                     )
+                    .onAppear {
+                        // When the last item appears, load more
+                        if item.id == paginatedItems.last?.id {
+                            itemsLimit += 50
+                        }
+                    }
                 }
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 100)
         }
         .id(filterRefreshTrigger) // Force refresh when filters change
+    }
+    
+    private var paginatedItems: [MediaListItem] {
+        Array(filteredAndSortedItems.prefix(itemsLimit))
     }
     
     private var filteredAndSortedItems: [MediaListItem] {
@@ -381,7 +402,7 @@ struct ListsView: View {
                 .padding(.horizontal, 40)
             
             Button {
-                guard SupabaseService.shared.isAuthenticated else {
+                guard appState.isAuthenticated else {
                     showAuthGate = true
                     return
                 }
@@ -428,6 +449,8 @@ struct MediaItemRow: View {
     @StateObject private var listManager = ListManager.shared
     @State private var movieDetails: Movie?
     @State private var tvShowDetails: TVShow?
+    @State private var topProvider: Provider?
+    @State private var providerLink: String?
     @State private var navigateToDetail = false
     @State private var isLoadingDetails = false
     @State private var offset: CGFloat = 0
@@ -471,7 +494,7 @@ struct MediaItemRow: View {
                 // Poster image - left side
                 if let posterPath = item.posterPath,
                    let url = URL(string: "https://image.tmdb.org/t/p/w342\(posterPath)") {
-                    AsyncImage(url: url) { image in
+                    CachedAsyncImage(url: url) { image in
                         image
                             .resizable()
                             .aspectRatio(contentMode: .fill)
@@ -563,20 +586,48 @@ struct MediaItemRow: View {
                     Spacer()
                     
                     // Watch Now button
-                    Button {
-                        // TODO: Open streaming link
-                    } label: {
-                        HStack {
-                            Image(systemName: "play.tv")
-                                .font(.system(size: 16))
-                            Text("movieDetail.watchNow".localized.uppercased())
-                                .font(.system(size: 14, weight: .semibold))
+                    if let provider = topProvider {
+                        Button {
+                            PlatformDeepLinkHelper.openPlatform(
+                                provider: provider,
+                                justWatchLink: providerLink,
+                                title: item.title
+                            )
+                        } label: {
+                            HStack {
+                                CachedAsyncImage(url: provider.logoURL)
+                                    .frame(width: 20, height: 20)
+                                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                                
+                                Text("WATCH ON \(provider.providerName.uppercased())")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .lineLimit(1)
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 10)
+                            .background(Color.theme.accentOrange)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
-                        .foregroundColor(.theme.textPrimary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(Color.white.opacity(0.2))
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                    } else {
+                        Button {
+                            // No provider found, maybe open search or do nothing
+                        } label: {
+                            HStack {
+                                Image(systemName: "play.tv")
+                                    .font(.system(size: 16))
+                                Text("movieDetail.watchNow".localized.uppercased())
+                                    .font(.system(size: 14, weight: .semibold))
+                            }
+                            .foregroundColor(.theme.textPrimary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(Color.white.opacity(0.2))
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                        }
+                        .disabled(true)
+                        .opacity(0.6)
                     }
                 }
                 
@@ -618,7 +669,7 @@ struct MediaItemRow: View {
                     navigateToDetail = true
                 }
             }
-            .gesture(
+            .simultaneousGesture(
                 DragGesture(minimumDistance: 20)
                     .onChanged { gesture in
                         // Only activate swipe if horizontal movement is significantly more than vertical
@@ -669,17 +720,20 @@ struct MediaItemRow: View {
             }
         }
         .frame(height: 204)
-        .background(
-            NavigationLink(
-                destination: destinationView,
-                isActive: $navigateToDetail
-            ) {
-                EmptyView()
-            }
-            .hidden()
-        )
+        .navigationDestination(isPresented: $navigateToDetail) {
+            destinationView
+        }
         .task {
             await loadDetails()
+        }
+    }
+    
+    @ViewBuilder
+    private var destinationView: some View {
+        if item.mediaType == .movie {
+            MovieDetailView(movieId: item.mediaId)
+        } else {
+            TVShowDetailView(tvShowId: item.mediaId)
         }
     }
     
@@ -689,23 +743,40 @@ struct MediaItemRow: View {
         
         do {
             if item.mediaType == .movie {
-                movieDetails = try await tmdbService.getMovieDetails(id: item.mediaId)
+                async let details = tmdbService.getMovieDetails(id: item.mediaId)
+                async let providers = tmdbService.getMovieWatchProviders(id: item.mediaId)
+                
+                let (movie, watchProviders) = try await (details, providers)
+                movieDetails = movie
+                processProviders(watchProviders)
             } else {
-                tvShowDetails = try await tmdbService.getTVShowDetails(id: item.mediaId)
+                async let details = tmdbService.getTVShowDetails(id: item.mediaId)
+                async let providers = tmdbService.getTVShowWatchProviders(id: item.mediaId)
+                
+                let (show, watchProviders) = try await (details, providers)
+                tvShowDetails = show
+                processProviders(watchProviders)
             }
         } catch {
-            print("Error loading details: \(error)")
+            print("❌ Error loading details: \(error.localizedDescription)")
         }
         
         isLoadingDetails = false
     }
     
-    @ViewBuilder
-    private var destinationView: some View {
-        if item.mediaType == .movie {
-            MovieDetailView(movieId: item.mediaId)
-        } else {
-            TVShowDetailView(tvShowId: item.mediaId)
+    private func processProviders(_ providers: WatchProvider) {
+        let countryCode = LocalizationManager.shared.currentCountry.id
+        guard let countryProviders = providers.results[countryCode] else { return }
+        
+        providerLink = countryProviders.link
+        
+        // Priority: Flatrate > Rent > Buy
+        if let flatrate = countryProviders.flatrate, !flatrate.isEmpty {
+            topProvider = flatrate.first
+        } else if let rent = countryProviders.rent, !rent.isEmpty {
+            topProvider = rent.first
+        } else if let buy = countryProviders.buy, !buy.isEmpty {
+            topProvider = buy.first
         }
     }
 }
@@ -721,8 +792,7 @@ struct CustomListDetailView: View {
     @State private var itemsLimit = 100
     @State private var showEditSheet = false
     @State private var showDeleteAlert = false
-    @State private var showActionError = false
-    @State private var actionErrorMessage = ""
+    @State private var error: AppError?
     @Environment(\.dismiss) private var dismiss
 
     private var currentList: MediaList {
@@ -921,8 +991,8 @@ struct CustomListDetailView: View {
                 )
             }
         }
-        .onChange(of: filters) { _ in itemsLimit = 100 }
-        .onChange(of: searchText) { _ in itemsLimit = 100 }
+        .onChange(of: filters) {_, _ in itemsLimit = 100 }
+        .onChange(of: searchText) {_, _ in itemsLimit = 100 }
         .toolbar {
             ToolbarItemGroup(placement: .navigationBarTrailing) {
                 Button {
@@ -940,18 +1010,20 @@ struct CustomListDetailView: View {
         .sheet(isPresented: $showEditSheet) {
             EditListView(list: currentList)
         }
-        .alert("Delete List", isPresented: $showDeleteAlert) {
-            Button("Delete", role: .destructive) {
+        .alert("lists.deleteList".localized, isPresented: $showDeleteAlert) {
+            Button("common.delete".localized, role: .destructive) {
                 Task { await deleteList() }
             }
-            Button("Cancel", role: .cancel) { }
+            Button("common.cancel".localized, role: .cancel) { }
         } message: {
-            Text("Are you sure you want to delete \(currentList.name)? This removes all items in this list.")
+            Text("lists.deleteConfirmation".localized.replacingOccurrences(of: "%@", with: currentList.name))
         }
-        .alert("Error", isPresented: $showActionError) {
-            Button("OK", role: .cancel) { }
-        } message: {
-            Text(actionErrorMessage)
+        .alert(item: $error) { appError in
+            Alert(
+                title: Text(appError.errorDescription ?? "common.error".localized),
+                message: Text(appError.recoverySuggestion ?? "common.pleaseTryAgain".localized),
+                dismissButton: .default(Text("common.ok".localized))
+            )
         }
     }
 
@@ -974,8 +1046,7 @@ struct CustomListDetailView: View {
             await MainActor.run { dismiss() }
         } catch {
             await MainActor.run {
-                actionErrorMessage = error.localizedDescription
-                showActionError = true
+                self.error = .database(error)
             }
         }
     }
@@ -1002,7 +1073,7 @@ struct ListCard: View {
                 if let lastItem = list.items.last,
                    let posterPath = lastItem.posterPath,
                    let url = URL(string: "https://image.tmdb.org/t/p/w342\(posterPath)") {
-                    AsyncImage(url: url) { image in
+                    CachedAsyncImage(url: url) { image in
                         image
                             .resizable()
                             .aspectRatio(2/3, contentMode: .fit)
@@ -1032,7 +1103,7 @@ struct ListCard: View {
                         ForEach(lastFourItems) { item in
                             if let posterPath = item.posterPath,
                                let url = URL(string: "https://image.tmdb.org/t/p/w342\(posterPath)") {
-                                AsyncImage(url: url) { image in
+                                CachedAsyncImage(url: url) { image in
                                     image
                                         .resizable()
                                         .aspectRatio(2/3, contentMode: .fit)
@@ -1072,8 +1143,7 @@ struct CreateListView: View {
     @StateObject private var listManager = ListManager.shared
     @State private var listName = ""
     @State private var listDescription = ""
-    @State private var showError = false
-    @State private var errorMessage = ""
+    @State private var error: AppError?
     
     var body: some View {
         VStack(spacing: 0) {
@@ -1151,8 +1221,7 @@ struct CreateListView: View {
                             try await viewModel.createList(title: listName, description: listDescription.isEmpty ? nil : listDescription)
                             dismiss()
                         } catch {
-                            errorMessage = error.localizedDescription
-                            showError = true
+                            self.error = .database(error)
                         }
                     }
                 } label: {
@@ -1169,117 +1238,17 @@ struct CreateListView: View {
                 .padding(.bottom, 20)
             }
         }
-        .alert("Error", isPresented: $showError) {
-            Button("OK", role: .cancel) { }
-        } message: {
-            Text(errorMessage)
-        }
-    }
-}
-
-struct AuthenticationGateView: View {
-    @Binding var isPresented: Bool
-    @State private var activeAuthSheet: AuthSheet?
-
-    var body: some View {
-        VStack(spacing: 24) {
-            Capsule()
-                .fill(Color.white.opacity(0.2))
-                .frame(width: 46, height: 5)
-                .padding(.top, 14)
-
-            VStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(LinearGradient(
-                            colors: [Color.orange, Color.pink],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ))
-                        .frame(width: 96, height: 96)
-                        .shadow(color: Color.orange.opacity(0.4), radius: 20, x: 0, y: 10)
-
-                    Image(systemName: "person.crop.circle.badge.plus")
-                        .font(.system(size: 40, weight: .bold))
-                        .foregroundColor(.white)
-                }
-
-                Text("Create an Account")
-                    .font(.system(size: 24, weight: .bold))
-                    .multilineTextAlignment(.center)
-
-                Text("You need an account to create custom lists and sync them across your devices.")
-                    .font(.system(size: 15))
-                    .foregroundColor(.gray)
-                    .multilineTextAlignment(.center)
-            }
-
-            VStack(spacing: 12) {
-                Button {
-                    activeAuthSheet = .signUp
-                } label: {
-                    Text("Create free account")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 56)
-                        .background(
-                            LinearGradient(
-                                colors: [Color.orange, Color.orange.opacity(0.85)],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
+        .alert(item: $error) { appError in
+            Alert(
+                title: Text(appError.errorDescription ?? "common.error".localized),
+                message: Text(appError.recoverySuggestion ?? "common.pleaseTryAgain".localized),
+                dismissButton: .default(Text("common.ok".localized))
                         )
-                        .cornerRadius(16)
-                        .shadow(color: Color.orange.opacity(0.3), radius: 10, x: 0, y: 5)
-                }
-
-                Button {
-                    activeAuthSheet = .signIn
-                } label: {
-                    Text("I already have an account")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.orange)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 52)
-                        .background(Color.orange.opacity(0.12))
-                        .cornerRadius(14)
+                    }
                 }
             }
             
-            Button {
-                isPresented = false
-            } label: {
-                Text("Skip for now")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.gray)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 52)
-                    .background(Color.gray.opacity(0.15))
-                    .cornerRadius(14)
-            }
-        }
-        .padding(.horizontal, 24)
-        .padding(.bottom, 20)
-        .sheet(item: $activeAuthSheet) { sheet in
-            switch sheet {
-            case .signUp:
-                SignUpView()
-            case .signIn:
-                SignInView()
-            }
-        }
-    }
-
-    private enum AuthSheet: Identifiable {
-        case signUp
-        case signIn
-        var id: Int { self == .signUp ? 0 : 1 }
-    }
-}
-
-
-struct EditListView: View {
+            struct EditListView: View {
     @Environment(\.dismiss) private var dismiss
     let list: MediaList
     @StateObject private var listManager = ListManager.shared
@@ -1316,8 +1285,8 @@ struct EditListView: View {
                     .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
-            .alert("Error", isPresented: $showError) {
-                Button("OK", role: .cancel) { }
+            .alert("common.error".localized, isPresented: $showError) {
+                Button("common.ok".localized, role: .cancel) { }
             } message: {
                 Text(errorMessage)
             }
@@ -1348,18 +1317,27 @@ struct PlatformChip: View {
         Button(action: action) {
             VStack(spacing: 8) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(platform.color)
-                        .frame(width: 60, height: 60)
+                    if let logoName = platform.logoAssetName {
+                        Image(logoName)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 60, height: 60)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                    } else {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.white.opacity(0.08))
+                            .frame(width: 60, height: 60)
+                            .overlay(
+                                Image(systemName: platform.icon)
+                                    .font(.system(size: 24, weight: .semibold))
+                                    .foregroundColor(.white)
+                            )
+                    }
                     
-                    Image(systemName: platform.icon)
-                        .font(.system(size: 24, weight: .semibold))
-                        .foregroundColor(.white)
-                }
-                .overlay(
                     RoundedRectangle(cornerRadius: 8)
-                        .stroke(isSelected ? Color.theme.accentOrange : Color.clear, lineWidth: 3)
-                )
+                        .stroke(isSelected ? Color.theme.accentOrange : Color.white.opacity(0.12), lineWidth: isSelected ? 3 : 1)
+                        .frame(width: 60, height: 60)
+                }
                 
                 Text(platform.rawValue)
                     .font(.system(size: 10, weight: .medium))

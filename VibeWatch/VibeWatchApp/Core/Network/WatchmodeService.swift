@@ -2,7 +2,7 @@ import Foundation
 
 /// Service for fetching streaming availability, pricing, and quality data from Movie of the Night API (via RapidAPI)
 class WatchmodeService {
-    static let shared = WatchmodeService()
+    @MainActor static let shared = WatchmodeService()
     
     private let baseURL = "https://streaming-availability.p.rapidapi.com"
     private let rapidAPIKey = "4f23d6c502msh1c6ccc90b956bb3p18cabcjsn051c85bd5b33"
@@ -20,12 +20,14 @@ class WatchmodeService {
     }
     
     /// Fetch streaming sources with pricing for a movie/TV show
+    nonisolated(nonsending)
     func getStreamingSources(tmdbId: Int, type: MediaType, region: String) async throws -> [WatchmodeSource] {
         // Movie of the Night API uses TMDb IDs directly - no conversion needed!
         return try await fetchSources(tmdbId: tmdbId, type: type, region: region)
     }
     
     /// Fetch streaming sources with pricing from Movie of the Night API
+    nonisolated(nonsending)
     private func fetchSources(tmdbId: Int, type: MediaType, region: String) async throws -> [WatchmodeSource] {
         // Build endpoint: /shows/{type}/{tmdb_id}
         let typeString = type == .movie ? "movie" : "series"

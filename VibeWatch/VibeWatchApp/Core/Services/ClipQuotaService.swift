@@ -2,51 +2,65 @@ import Foundation
 import Supabase
 import RevenueCat
 
-/// Tracks how many clips a user can watch before showing a gate or paywall.
+/// Tracks quota for ANONYMOUS users and RevenueCat Pro status.
+/// For logged-in user clip counting, use DailyQuotaManager.shared instead.
 ///
-/// Task 1.4 focuses on anonymous users (no account yet). Logged-in logic will be
-/// layered on in later tasks.
+/// Responsibilities:
+/// - Anonymous user clip tracking (15 clips before account creation)
+/// - RevenueCat Pro subscription status
+/// - Automatic Pro/Free downgrade detection
 @MainActor
 final class ClipQuotaService: ObservableObject {
     static let shared = ClipQuotaService()
     
-    // MARK: - Public published properties
-    @Published private(set) var anonymousClipsWatched: Int
-    @Published private(set) var loggedInClipsWatchedToday: Int = 0
-    @Published private(set) var lastLoggedInClipDate: Date?
-    @Published private(set) var isProUser: Bool = false
+    // MARK: - Published Properties
     
+    /// Number of clips watched by anonymous (not logged in) users
+    @Published private(set) var anonymousClipsWatched: Int
+    
+    /// Whether user has active Pro subscription (from RevenueCat)
+    @Published private(set) var isProUser: Bool = false
+
     // MARK: - Constants
+
     private let anonymousLimit = 15
-    private let loggedInDailyLimit = 15
     private let defaults = UserDefaults.standard
-    private let calendar = Calendar.current
-    private let isoFormatter: ISO8601DateFormatter = {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return formatter
-    }()
-    private let nowProvider: () -> Date = { Date() }
+
     private enum Keys {
         static let anonymousClipsWatched = "clip_quota_anonymous_clips_watched"
+        static let cachedProStatus = "clip_quota_cached_pro_status"
     }
-    private var loggedInQuotaLogic: DailyClipQuotaLogic {
-        DailyClipQuotaLogic(limit: loggedInDailyLimit, calendar: calendar, nowProvider: nowProvider)
-    }
+    
+    // MARK: - Dependencies
     
     private let supabase = SupabaseService.shared
     private var customerInfoStreamTask: Task<Void, Never>?
     
+    // MARK: - Initialization
+    
     private init() {
         self.anonymousClipsWatched = defaults.integer(forKey: Keys.anonymousClipsWatched)
+
+        // Load cached PRO status for offline mode
+        // Only load from cache if the key exists (otherwise wait for RevenueCat)
+        if defaults.object(forKey: Keys.cachedProStatus) != nil {
+            self.isProUser = defaults.bool(forKey: Keys.cachedProStatus)
+            print("📦 [ClipQuota] Loaded cached PRO status: \(isProUser)")
+        } else {
+            print("📭 [ClipQuota] No cached PRO status - will check RevenueCat")
+        }
+
         observeRevenueCatCustomerInfo()
+
         Task { [weak self] in
             _ = await self?.checkIsProUser()
         }
+
         debugPrintStatus()
     }
     
-    // MARK: - Anonymous tracking
+    // MARK: - Anonymous User Tracking
+    
     /// Returns true if an anonymous user can watch another clip.
     func canWatchClipAnonymous() -> Bool {
         anonymousClipsWatched < anonymousLimit
@@ -55,8 +69,10 @@ final class ClipQuotaService: ObservableObject {
     /// Records a clip watch for an anonymous user. Call this as soon as a clip starts.
     func recordClipWatchedAnonymous() {
         guard canWatchClipAnonymous() else { return }
+        
         anonymousClipsWatched += 1
         defaults.set(anonymousClipsWatched, forKey: Keys.anonymousClipsWatched)
+        
         debugPrintStatus()
     }
     
@@ -64,225 +80,157 @@ final class ClipQuotaService: ObservableObject {
     func resetAnonymousCounter() {
         anonymousClipsWatched = 0
         defaults.removeObject(forKey: Keys.anonymousClipsWatched)
+        
         debugPrintStatus()
     }
     
-    // MARK: - Gate type helper
+    /// Reset all local quota state (used for account deletion)
+    func resetAll() {
+        anonymousClipsWatched = 0
+        defaults.removeObject(forKey: Keys.anonymousClipsWatched)
+        defaults.removeObject(forKey: Keys.cachedProStatus)
+        isProUser = false
+        debugPrintStatus()
+    }
+    
     /// Returns the gate type to show for the current anonymous state.
     func gateTypeForAnonymousUser() -> ClipGateType? {
         canWatchClipAnonymous() ? nil : .accountCreation
     }
     
-    // MARK: - Logged-in tracking (Task 1.5)
-    /// Refreshes the logged-in clip count from Supabase.
-    func refreshLoggedInCounters() async {
-        guard let userId = supabase.currentUser?.id else { return }
-        do {
-            let status = try await fetchUserClipStatus(userId: userId)
-            await MainActor.run {
-                self.updateLoggedInState(with: status)
-            }
-            debugPrintStatus()
-        } catch {
-            print("❌ [ClipQuota] Failed to refresh logged-in counters: \(error)")
-        }
-    }
+    // MARK: - RevenueCat Pro Status
     
-    /// Returns true if the RevenueCat "pro" entitlement is active.
+    /// Returns true if the RevenueCat Pro entitlement is active.
     @discardableResult
     func checkIsProUser() async -> Bool {
         do {
             let info = try await Purchases.shared.customerInfo()
-            let isPro = info.entitlements["StartingVibe Pro"]?.isActive == true
+            let isPro = info.entitlements[AppConstants.RevenueCat.proEntitlementID]?.isActive == true
+
             updateProStatus(isPro)
             return isPro
         } catch {
-            print("❌ [ClipQuota] Failed to fetch RevenueCat customer info: \(error.localizedDescription)")
+            print("⚠️ [ClipQuota] Failed to fetch RevenueCat customer info (possibly offline): \(error.localizedDescription)")
+            print("📱 [ClipQuota] Using cached PRO status: \(isProUser)")
+            // Return cached value - RevenueCat SDK also caches customer info
             return isProUser
         }
     }
     
-    /// Returns the number of clips a logged-in user has watched today.
-    @discardableResult
-    func getClipsWatchedToday(userId: String) async -> Int {
-        do {
-            let status = try await fetchUserClipStatus(userId: userId)
-            updateLoggedInState(with: status)
-            debugPrintStatus()
-            return status.count
-        } catch {
-            print("❌ [ClipQuota] Failed to fetch logged-in clip count: \(error)")
-            return loggedInClipsWatchedToday
-        }
-    }
+    // MARK: - Private Helpers
     
-    /// Indicates whether a logged-in free user can watch another clip today.
-    func canWatchClipLoggedIn() -> Bool {
-        if isProUser { return true }
-        return loggedInClipsWatchedToday < loggedInDailyLimit
-    }
-    
-    /// Records a clip watch for a logged-in user, incrementing the counter in Supabase.
-    func recordClipWatchedLoggedIn() async {
-        guard let userId = supabase.currentUser?.id else { return }
-        await recordClipWatchedLoggedIn(userId: userId)
-    }
-    
-    /// Records a clip watch for a logged-in user, incrementing the counter in Supabase.
-    func recordClipWatchedLoggedIn(userId: String) async {
-        if isProUser {
-            print("♾️ [ClipQuota] Pro user detected - unlimited clips enabled")
-            return
-        }
-        do {
-            var status = try await fetchUserClipStatus(userId: userId)
-            let incrementResult = loggedInQuotaLogic.incrementedCount(from: status.count)
-            guard incrementResult.didIncrement else {
-                print("🚫 [ClipQuota] Daily limit already reached for user \(userId)")
-                updateLoggedInState(with: status)
-                return
-            }
-            try await persistLoggedInCount(userId: userId, clipsWatched: incrementResult.updatedCount, lastReset: status.lastResetAt)
-            status = LoggedInClipStatus(count: incrementResult.updatedCount, lastResetAt: status.lastResetAt, lastUpdatedAt: nowProvider())
-            updateLoggedInState(with: status)
-            debugPrintStatus()
-        } catch {
-            print("❌ [ClipQuota] Failed to record logged-in clip: \(error)")
-        }
-    }
-    
-    /// Returns the appropriate gate for a logged-in user.
-    func gateTypeForLoggedInUser() -> ClipGateType? {
-        guard !isProUser else { return nil }
-        return canWatchClipLoggedIn() ? nil : .proPaywall
-    }
-    
-    // MARK: - Debug logging
-    private func debugPrintStatus() {
-        print("📊 [ClipQuota] Anonymous clips watched: \(anonymousClipsWatched)/\(anonymousLimit)")
-        if let date = lastLoggedInClipDate {
-            print("📊 [ClipQuota] Logged-in clips: \(loggedInClipsWatchedToday)/\(loggedInDailyLimit) (last date: \(date))")
-        }
-        print("💎 [ClipQuota] Pro status: \(isProUser ? "ACTIVE" : "inactive")")
-    }
-}
-
-// MARK: - Logged-in quota helpers
-
-private extension ClipQuotaService {
-    struct LoggedInClipStatus {
-        let count: Int
-        let lastResetAt: Date
-        let lastUpdatedAt: Date?
-        var lastDate: Date? { lastUpdatedAt ?? lastResetAt }
-    }
-    
-    struct QuotaRow: Decodable {
-        let clipsWatchedToday: Int
-        let lastResetAt: Date?
-        let updatedAt: Date?
-        
-        enum CodingKeys: String, CodingKey {
-            case clipsWatchedToday = "clips_watched_today"
-            case lastResetAt = "last_reset_at"
-            case updatedAt = "updated_at"
-        }
-    }
-    
-    func updateLoggedInState(with status: LoggedInClipStatus) {
-        loggedInClipsWatchedToday = min(status.count, loggedInDailyLimit)
-        lastLoggedInClipDate = status.lastDate
-    }
-    
-    func fetchUserClipStatus(userId: String) async throws -> LoggedInClipStatus {
-        let logic = loggedInQuotaLogic
-        if let existing = try await fetchQuotaRow(userId: userId) {
-            if logic.shouldReset(lastResetAt: existing.lastResetAt) {
-                return try await resetLoggedInCount(userId: userId)
-            }
-            return status(from: existing)
-        } else {
-            return try await createQuotaRow(userId: userId)
-        }
-    }
-    
-    func fetchQuotaRow(userId: String) async throws -> QuotaRow? {
-        guard let client = supabase.client else {
-            throw SupabaseError.notConfigured
-        }
-        let rows: [QuotaRow] = try await client
-            .from("user_daily_quota")
-            .select("clips_watched_today, last_reset_at, updated_at")
-            .eq("user_id", value: userId)
-            .limit(1)
-            .execute()
-            .value
-        return rows.first
-    }
-    
-    func createQuotaRow(userId: String) async throws -> LoggedInClipStatus {
-        let now = nowProvider()
-        try await persistLoggedInCount(userId: userId, clipsWatched: 0, lastReset: now)
-        return LoggedInClipStatus(count: 0, lastResetAt: now, lastUpdatedAt: now)
-    }
-    
-    func resetLoggedInCount(userId: String) async throws -> LoggedInClipStatus {
-        let now = nowProvider()
-        try await persistLoggedInCount(userId: userId, clipsWatched: 0, lastReset: now)
-        return LoggedInClipStatus(count: 0, lastResetAt: now, lastUpdatedAt: now)
-    }
-    
-    func persistLoggedInCount(userId: String, clipsWatched: Int, lastReset: Date) async throws {
-        guard let client = supabase.client else {
-            throw SupabaseError.notConfigured
-        }
-        struct Payload: Encodable {
-            let user_id: String
-            let clips_watched_today: Int
-            let last_reset_at: String
-            let updated_at: String
-        }
-        let payload = Payload(
-            user_id: userId,
-            clips_watched_today: min(clipsWatched, loggedInDailyLimit),
-            last_reset_at: isoFormatter.string(from: lastReset),
-            updated_at: isoFormatter.string(from: nowProvider())
-        )
-        try await client
-            .from("user_daily_quota")
-            .upsert(payload, onConflict: "user_id")
-            .execute()
-    }
-    
-    func status(from row: QuotaRow) -> LoggedInClipStatus {
-        let reset = row.lastResetAt ?? nowProvider()
-        return LoggedInClipStatus(
-            count: min(row.clipsWatchedToday, loggedInDailyLimit),
-            lastResetAt: reset,
-            lastUpdatedAt: row.updatedAt
-        )
-    }
-    
-    func observeRevenueCatCustomerInfo() {
+    /// Observes RevenueCat customer info stream for subscription status changes
+    private func observeRevenueCatCustomerInfo() {
         customerInfoStreamTask?.cancel()
         customerInfoStreamTask = Task { [weak self] in
+            var isFirstEmission = true
             for await info in Purchases.shared.customerInfoStream {
-                let isPro = info.entitlements["StartingVibe Pro"]?.isActive == true
+                let isPro = info.entitlements[AppConstants.RevenueCat.proEntitlementID]?.isActive == true
                 await MainActor.run {
-                    self?.updateProStatus(isPro)
+                    guard let self = self else { return }
+
+                    // On first emission, only update if we have no cached value
+                    // This prevents RevenueCat's initial cached value from overriding our UserDefaults cache
+                    if isFirstEmission {
+                        isFirstEmission = false
+                        if defaults.object(forKey: Keys.cachedProStatus) == nil {
+                            print("📡 [ClipQuota] First RevenueCat emission, no cache: \(isPro)")
+                            self.updateProStatus(isPro)
+                        } else {
+                            print("📡 [ClipQuota] First RevenueCat emission ignored, using cached: \(self.isProUser)")
+                        }
+                    } else {
+                        // Subsequent emissions are actual updates
+                        print("📡 [ClipQuota] RevenueCat update: \(isPro)")
+                        self.updateProStatus(isPro)
+                    }
                 }
             }
         }
     }
     
-    func updateProStatus(_ newValue: Bool) {
+    /// Updates Pro status and triggers appropriate actions on status change
+    private func updateProStatus(_ newValue: Bool) {
         guard isProUser != newValue else { return }
+
+        let wasProBefore = isProUser
         isProUser = newValue
+
+        // Cache PRO status for offline mode
+        defaults.set(newValue, forKey: Keys.cachedProStatus)
+        print("💾 [ClipQuota] Cached PRO status for offline access: \(newValue)")
+        
+        if !newValue && wasProBefore {
+            // Downgraded from Pro to Free
+            print("⬇️ [ClipQuota] Subscription expired - downgrading to Free")
+            DailyQuotaManager.shared.downgradeToFree()
+            
+            // Analytics
+            Task { @MainActor in
+                AnalyticsService.shared.logEvent("subscription_expired", parameters: [:])
+            }
+            
+            // Sync to database
+            Task {
+                await syncStatusToDatabase()
+            }
+        } else if newValue && !wasProBefore {
+            // Upgraded from Free to Pro
+            print("⬆️ [ClipQuota] Subscription activated")
+            DailyQuotaManager.shared.upgradeToPro()
+            
+            // Analytics
+            Task { @MainActor in
+                AnalyticsService.shared.logEvent("subscription_activated", parameters: [:])
+            }
+            
+            // Sync to database
+            Task {
+                await syncStatusToDatabase()
+            }
+        }
+    }
+    
+    /// Sync Pro status to database
+    private func syncStatusToDatabase() async {
+        guard let userId = supabase.currentUser?.id else { return }
+        guard let client = supabase.client else { return }
+        
+        struct StatusUpdate: Encodable {
+            let user_id: String
+            let is_pro: Bool
+            let updated_at: String
+        }
+        
+        let update = StatusUpdate(
+            user_id: userId,
+            is_pro: isProUser,
+            updated_at: ISO8601DateFormatter().string(from: Date())
+        )
+        
+        do {
+            try await client
+                .from("user_daily_quota")
+                .upsert(update, onConflict: "user_id")
+                .execute()
+            
+            print("☁️ [ClipQuota] Pro status synced to database: \(isProUser)")
+        } catch {
+            print("⚠️ [ClipQuota] Failed to sync Pro status: \(error)")
+        }
+    }
+    
+    /// Debug logging of current quota state
+    private func debugPrintStatus() {
+        print("📊 [ClipQuota] Anonymous clips watched: \(anonymousClipsWatched)/\(anonymousLimit)")
+        print("💎 [ClipQuota] Pro status: \(isProUser ? "ACTIVE" : "inactive")")
     }
 }
 
+// MARK: - Gate Types
+
 /// Possible gates to show after exhausting clip limits.
 enum ClipGateType {
-    case accountCreation    // show "create account" gate (anonymous users)
-    case proPaywall         // show Pro paywall (logged-in free users)
+    case accountCreation    // Show "create account" gate (anonymous users)
+    case proPaywall         // Show Pro paywall (logged-in free users)
 }

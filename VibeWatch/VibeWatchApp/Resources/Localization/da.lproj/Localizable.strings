@@ -1,0 +1,427 @@
+// Tab Bar
+"tab.clips" = "Klip";
+"tab.discovery" = "Opdag";
+"tab.lists" = "Lister";
+"tab.profile" = "Profil";
+"tab.ai" = "AI";
+
+// Onboarding
+"onboarding.page1.description" = "AI-anbefalinger til film og tv, tilpasset din vibe, så du altid ved, hvad du skal se næste gang.";
+"onboarding.page1.title" = "Smartere valg med AI";
+"onboarding.page2.description" = "Byg watchlister og stemningsbaserede samlinger for at organisere alle de film og serier, du opdager.";
+"onboarding.page2.title" = "Organisér din watchlist";
+"onboarding.page3.description" = "Se trailere og klip, og gem derefter de bedste fund i dine lister, så du kan streame dem senere.";
+"onboarding.page3.title" = "Opdag trailere og klip";
+"onboarding.page4.description" = "Opret en konto for at synkronisere dine watchlister og præferencer på tværs af alle dine enheder.";
+"onboarding.page4.skip" = "Spring over";
+"onboarding.page4.title" = "Klar til at starte?";
+
+// Discovery
+"discovery.basedOnMood" = "Udvalgt specielt til dig";
+"discovery.forYou" = "Til dig";
+"discovery.popular" = "Populært";
+"discovery.topRated" = "Højest bedømt";
+"discovery.trending" = "Trender lige nu";
+"discovery.tvShows" = "TV-serier";
+"discovery.upcoming" = "Kommende";
+"discovery.vibeWatch" = "VibeWatch";
+
+// Browse
+"browse.emptyMessage" = "Tryk på filterknappen for at gennemse indhold";
+"browse.movies" = "Film";
+"browse.title" = "Gennemse";
+"browse.tvShows" = "TV-serier";
+
+// Lists
+"list.all" = "Alle";
+"list.movies" = "Film";
+"list.tvShows" = "TV";
+"lists.createList" = "Opret liste";
+"lists.deleteConfirmation" = "Er du sikker på, at du vil slette %@? Dette fjerner alle elementer i listen.";
+"lists.deleteList" = "Slet liste";
+"lists.description" = "Beskrivelse (valgfrit)";
+"lists.descriptionPlaceholder" = "Tilføj en beskrivelse... (valgfrit)";
+"lists.disliked" = "Kunne ikke lide";
+"lists.editList" = "Rediger liste";
+"lists.empty" = "Ingen lister endnu";
+"lists.emptyDescription" = "Opret din første watchlist for at organisere film og serier, du opdager";
+"lists.error.authRequired" = "Du skal være logget ind for at oprette brugerdefinerede lister.";
+"lists.error.defaultImmutable" = "Denne liste kan ikke ændres";
+"lists.error.invalidName" = "Indtast et gyldigt listenavn";
+"lists.error.itemAlreadyInList" = "Elementet er allerede i denne liste";
+"lists.error.listNotFound" = "Listen blev ikke fundet";
+"lists.error.maxItemsReached" = "Maksimalt {limit} elementer nået for denne liste";
+"lists.error.maxListsReached" = "Maksimalt {limit} brugerdefinerede lister nået";
+"lists.liked" = "Kunne lide";
+"lists.limitInfo" = "{count}/{limit}";
+"lists.listDescriptionPlaceholder" = "Tilføj en beskrivelse...";
+"lists.listName" = "Listenavn";
+"lists.listNamePlaceholder" = "Ny liste";
+"lists.myLists" = "Mine lister";
+"lists.noItems" = "Ingen elementer endnu";
+"lists.searchPlaceholder" = "Søg i denne liste";
+"lists.seen" = "Set";
+"lists.softLimitWarning" = "\"{name}\" har allerede {limit} elementer. Overvej at oprette en ny liste for bedre struktur.";
+"lists.watchlist" = "Watchlist";
+"lists.watchOn" = "SE PÅ";
+
+// Movie Detail
+"movieDetail.cast" = "Medvirkende";
+"movieDetail.country" = "Land";
+"movieDetail.director" = "Instruktør";
+"movieDetail.genres" = "Genrer";
+"movieDetail.information" = "Information";
+"movieDetail.rating" = "Bedømmelse";
+"movieDetail.ratings" = "bedømmelser";
+"movieDetail.runtime" = "Spilletid";
+"movieDetail.save" = "Gem i watchlist";
+"movieDetail.seen" = "Set";
+"movieDetail.similar" = "Folk, som kunne lide dette, kunne også lide";
+"movieDetail.trailer" = "Trailer";
+"movieDetail.watchNow" = "Se nu";
+
+// Filters
+"filter.all" = "Alle";
+"filter.movies" = "Film";
+"filter.tvSeries" = "TV-serier";
+
+// Sort
+"sort.dateAdded" = "Dato tilføjet";
+"sort.popularityAsc" = "Popularitet ↑";
+"sort.popularityDesc" = "Popularitet ↓";
+"sort.rating" = "Bedømmelse";
+"sort.ratingAsc" = "Bedømmelse ↑";
+"sort.ratingDesc" = "Bedømmelse ↓";
+"sort.releaseDate" = "Udgivelsesdato";
+"sort.releaseDateAsc" = "Udgivelsesdato ↑";
+"sort.releaseDateDesc" = "Udgivelsesdato ↓";
+"sort.sortBy" = "Sorter efter";
+"sort.title" = "Titel";
+
+// Advanced Filters
+"filters.anyCountry" = "Alle lande";
+"filters.apply" = "Anvend";
+"filters.country" = "Land";
+"filters.minimumRating" = "Minimum bedømmelse";
+"filters.ratingAny" = "Hvilket som helst";
+"filters.ratingExcellent" = "8.0+";
+"filters.ratingGood" = "7.0+";
+"filters.ratingMasterpiece" = "9.0+";
+"filters.reset" = "Nulstil";
+"filters.runtime" = "Spilletid";
+"filters.runtimeAny" = "Hvilket som helst";
+"filters.runtimeLong" = "> 120 min";
+"filters.runtimeMedium" = "90–120 min";
+"filters.runtimeShort" = "< 90 min";
+"filters.sortBy" = "Sorter efter";
+"filters.title" = "Filter";
+
+// Clips
+"clips.title" = "Klip";
+"clips.addToList" = "Tilføj til liste";
+"clips.beFirstToComment" = "Vær den første til at kommentere";
+"clips.comment" = "Kommentar";
+"clips.comments" = "Kommentarer";
+"clips.comments.deleteConfirmation" = "Er du sikker på, at du vil slette denne kommentar? Denne handling kan ikke fortrydes.";
+"clips.comments.loading" = "Indlæser kommentarer...";
+"clips.comments.replying" = "Svarer...";
+"clips.createFirstList" = "Opret din første watchlist for at gemme dine valg";
+"clips.createNewList" = "Opret ny liste";
+"clips.feed.craftingSubtitle" = "Vi håndplukker de bedste klip kun til dig ✨";
+"clips.feed.craftingTitle" = "Vi laver din perfekte feed";
+"clips.hideReplies" = "Skjul";
+"clips.loadingClips" = "Indlæser klip...";
+"clips.noClipsAvailable" = "Ingen klip tilgængelige";
+"clips.noClipsDescription" = "Kom tilbage senere for spændende scener fra dine yndlingsfilm og serier";
+"clips.noComments" = "Ingen kommentarer endnu";
+"clips.noListsYet" = "Ingen lister endnu";
+"clips.reply" = "Svar";
+"clips.replies" = "svar";
+"clips.replyingTo" = "Svarer til";
+"clips.viewReplies" = "Vis";
+
+// Search
+"search.latestVisited" = "Senest besøgt";
+"search.noResultsFound" = "Ingen resultater fundet";
+"search.placeholder" = "Find ud af, hvor du kan se en film eller serie...";
+"search.results" = "Resultater";
+"search.trendingSearches" = "Trendende søgninger";
+
+// Profile
+"profile.cancel" = "Annuller";
+"profile.createAccount" = "Opret konto";
+"profile.done" = "Færdig";
+"profile.helpSupport" = "Hjælp & support";
+"profile.logout" = "Log ud";
+"profile.notifications" = "Notifikationer";
+"profile.passwordPlaceholder" = "Adgangskode";
+"profile.settings" = "Indstillinger";
+"profile.signIn" = "Log ind";
+"profile.signInDescription" = "Opret lister, gem klip og personalisér din oplevelse";
+"profile.signInToVibeWatch" = "Log ind på VibeWatch";
+"profile.streamingServices" = "Streaming-tjenester";
+"profile.userNamePlaceholder" = "E-mail eller brugernavn";
+
+// Settings
+"settings.comingSoon" = "Flere indstillinger kommer snart...";
+"settings.country" = "Land";
+"settings.language" = "Sprog";
+"settings.selectCountry" = "Vælg land";
+"settings.selectLanguage" = "Vælg sprog";
+"settings.title" = "Indstillinger";
+
+// Cache Management
+"settings.cacheManagement.title" = "Cachehåndtering";
+"settings.cacheManagement.cacheSize" = "Cache-størrelse";
+"settings.cacheManagement.cacheSizeTitle" = "Vælg cache-størrelse";
+"settings.cacheManagement.cacheSizeDescription" = "Vælg hvor meget lagerplads der skal bruges til at cache billeder. Større cache giver mere offline indhold.";
+"settings.cacheManagement.prefetchOption" = "Forhåndshentning af billeder";
+"settings.cacheManagement.prefetchTitle" = "Indstillinger for forhåndshentning af billeder";
+"settings.cacheManagement.prefetchDescription" = "Styr, hvornår billeder downloades til offline visning. Kun Wi-Fi sparer mobildata.";
+"settings.cacheManagement.prefetchNeverWarning" = "Advarsel: Offline-funktionalitet bliver begrænset";
+"settings.cacheManagement.clearCache" = "Ryd billedcache";
+"settings.cacheManagement.clearCacheWarning" = "Rydder alle cachede billeder";
+"settings.cacheManagement.clearCacheConfirmTitle" = "Ryd cache?";
+"settings.cacheManagement.clearCacheConfirmMessage" = "Dette fjerner alle cachede billeder og frigør lagerplads. Du skal være online for at se billeder igen, indtil de er cachet på ny.";
+"settings.cacheManagement.clearCacheConfirm" = "Ryd cache";
+
+// Platforms
+"platform.selectionCount" = "%d af %d valgt";
+"platform.title" = "Streaming-platforme";
+"platforms.buy" = "Køb";
+"platforms.rent" = "Lej";
+"platforms.streaming" = "Streaming";
+"platforms.title" = "Platforme";
+
+// Notifications
+"notifications.disableButton" = "Deaktiver notifikationer";
+"notifications.disableConfirmation" = "Deaktivér notifikationer?";
+"notifications.disableMessage" = "Du vil ikke længere modtage notifikationer om nye udgivelser, prisændringer eller personlige anbefalinger.";
+"notifications.enableInSettings" = "Aktivér notifikationer i Indstillinger for at modtage opdateringer om nye udgivelser, prisændringer og mere.";
+"notifications.openSettings" = "Åbn indstillinger";
+"notifications.permissionRequired" = "Notifikationstilladelse kræves";
+
+// Auth
+"auth.alreadyHaveAccount" = "Har du allerede en konto?";
+"auth.confirmPasswordPlaceholder" = "Bekræft adgangskode";
+"auth.createAccount" = "Opret konto";
+"auth.dontHaveAccount" = "Har du ikke en konto?";
+"auth.emailPlaceholder" = "E-mail";
+"auth.forgotPassword" = "Glemt adgangskode?";
+"auth.gate.accountRequired" = "Konto kræves";
+"auth.gate.authRequiredAI" = "Du skal bruge en konto for at bruge AI-chat.";
+"auth.gate.createFree" = "Opret gratis konto";
+"auth.gate.createTitle" = "Opret din gratis VibeWatch-konto";
+"auth.gate.description" = "Du har brug for en konto for at oprette tilpassede lister og synkronisere dem på tværs af enheder.";
+"auth.gate.haveAccount" = "Jeg har allerede en konto";
+"auth.gate.limitMessage" = "Du har set dagens 15 gratis klip. Opret en konto for at synkronisere dine fremskridt og låse op for morgendagens klip med det samme.";
+"auth.gate.signupFree" = "Tilmelding er gratis og tager mindre end et minut.";
+"auth.gate.benefit.saveClips" = "Gem dine favoritklip";
+"auth.gate.benefit.syncDevices" = "Synkroniser på alle dine enheder";
+"auth.gate.benefit.personalizedRecs" = "Få personlige anbefalinger";
+"auth.invalidEmail" = "Ugyldig e-mail";
+"auth.invalidPassword" = "Ugyldig adgangskode";
+"auth.joinVibeWatch" = "Bliv medlem af VibeWatch og begynd at opdage";
+"auth.passwordPlaceholder" = "Adgangskode";
+"auth.passwordsDontMatch" = "Adgangskoderne stemmer ikke overens";
+"auth.signIn" = "Log ind";
+"auth.signInContinue" = "Log ind for at fortsætte";
+"auth.signUp" = "Tilmeld";
+"auth.usernamePlaceholder" = "Brugernavn";
+"auth.welcomeBack" = "Velkommen tilbage";
+"auth.error.notConfigured" = "Godkendelsestjenesten er ikke konfigureret. Tilføj venligst dine Supabase-legitimationsoplysninger.";
+"auth.error.invalidResponse" = "Ugyldigt svar fra serveren.";
+"auth.error.userNotFound" = "Bruger ikke fundet.";
+"auth.error.invalidCredentials" = "Ugyldig e-mail eller adgangskode.";
+"auth.error.networkError" = "Netværksfejl. Tjek din forbindelse.";
+"auth.error.databaseError" = "Databasefejl ved lagring af brugerprofil. Prøv igen.";
+"auth.error.signUpFailed" = "Tilmelding mislykkedes. Prøv igen.";
+"auth.error.passwordResetFailed" = "Vi kunne ikke sende nulstillingsmailen. Prøv igen.";
+"auth.error.passwordUpdateFailed" = "Det lykkedes ikke at opdatere adgangskoden. Prøv igen.";
+"auth.error.accountDeletionFailed" = "Vi kunne ikke slette din konto. Prøv igen.";
+
+// AI
+"ai.title" = "Vibe AI";
+"ai.tokensUsage" = "Tokens: %@/%@";
+"ai.describeVibe" = "Beskriv din vibe";
+"ai.thinking" = "Tænker...";
+"ai.editMessage" = "Rediger besked";
+"ai.hardLimitMessage" = "Du har nået dagens AI-grænse. Kom tilbage i morgen.";
+"ai.paywall.benefit.personalized" = "Personlige watchlister";
+"ai.paywall.benefit.smarter" = "Smartere indholdsopdagelse";
+"ai.paywall.benefit.unlimited" = "Ubegrænsede AI-anbefalinger";
+"ai.paywall.goBack" = "Gå tilbage";
+"ai.paywall.title" = "Lås din AI-filmven op";
+"ai.paywall.unlockAI" = "Lås AI-chat op";
+"ai.placeholder" = "Fx: 'Sci-fi med et plot twist'";
+"ai.proRequired" = "AI-chat er kun tilgængelig for Pro-medlemmer.";
+"ai.resultsTitle" = "Her er hvad jeg fandt:";
+"ai.saveRegenerate" = "Gem & regenerér";
+"ai.softLimitMessage" = "Du nærmer dig dagens AI-grænse. Hold dine beskeder korte.";
+"ai.paywall.description" = "Få smartere AI-anbefalinger til film og tv, så du kan finde det perfekte at se.";
+"ai.subtitle" = "Fortæl mig din vibe — AI finder filmen eller serien, du skal se næste gang.";
+"ai.suggestion.chips1" = "💖 Hyggeromance, udvalgt af AI til mig";
+"ai.suggestion.chips2" = "💥 80’er actionkomedie, AI anbefaler";
+"ai.suggestion.chips3" = "🕵️‍♂️ Undervurderet thriller med et twist";
+"ai.suggestion.chips4" = "🤖 AI: hvad skal jeg se næste gang?";
+"ai.usage.left" = "tilbage";
+
+// Paywall
+"paywall.bestValue" = "BEDSTE VÆRDI";
+"paywall.cta.continue" = "Fortsæt";
+"paywall.cta.selectPlan" = "Vælg plan";
+"paywall.cta.startTrial" = "Start %@ gratis prøveperiode";
+"paywall.daily.limitDescription" = "Gratisbrugere kan se 15 klip om dagen. Opgrader til Pro for ubegrænsede klip og premiumfunktioner.";
+"paywall.daily.limitReached" = "Du har nået dagens grænse";
+"paywall.daily.nextReset" = "Næste nulstilling om";
+"paywall.daily.resetIn" = "Nulstilles om";
+"paywall.daily.title" = "Kom tilbage i morgen";
+"paywall.discount.annual" = "33% RABAT";
+"paywall.ensurePro" = "Sikr dig din Pro-plan!";
+"paywall.feature.advancedFilters" = "🔎 Avancerede filtre for hurtigere valg";
+"paywall.feature.aiAssistant" = "🤖 AI-anbefalinger til film og tv";
+"paywall.feature.lists" = "📋 Op til 100 synkroniserede watchlister";
+"paywall.feature.noAds" = "❌ Ingen annoncer, der afbryder klip";
+"paywall.feature.offlineMode" = "📵 Offline-tilstand til gemte valg";
+"paywall.feature.releaseAlerts" = "🔔 Notifikationer når favoritter kan streames";
+"paywall.feature.unlimitedClips" = "▶️ Ubegrænsede klip og trailere";
+"paywall.proDescription" = "Pro låser op for ubegrænsede klip, AI-filmven og synkroniserede watchlister.";
+"paywall.foundingMember" = "Grundlæggerpris";
+"paywall.plan.annual" = "Årlig";
+"paywall.plan.monthly" = "Månedlig";
+"paywall.price.perMonth" = "%@/md";
+"paywall.restore" = "Gendan køb";
+"paywall.trial.badge" = "%@ gratis";
+"paywall.unlockUnlimited" = "Lås op for ubegrænsede klip";
+"paywall.upgrade" = "Opgrader til Pro";
+
+// Common
+"common.cancel" = "Annuller";
+"common.delete" = "Slet";
+"common.dismiss" = "Luk";
+"common.done" = "Færdig";
+"common.edit" = "Rediger";
+"common.items" = "elementer";
+"common.item" = "element";
+"common.loadMore" = "Indlæs mere";
+"common.loading" = "Indlæser...";
+"common.liked" = "kan lide";
+"common.offline" = "Du er offline. Viser cachelagret indhold.";
+"common.or" = "ELLER";
+"common.privacy" = "Privatliv";
+"common.pro" = "PRO";
+"common.reply" = "Svar";
+"common.retry" = "Prøv igen";
+"common.save" = "Gem";
+"common.search" = "Søg";
+"common.terms" = "Vilkår";
+"common.tryAgain" = "Prøv igen";
+"common.uploading" = "Uploader...";
+"common.year" = "År";
+"common.error" = "Fejl";
+"common.ok" = "OK";
+"common.pleaseTryAgain" = "Prøv venligst igen.";
+
+// Misc
+"misc.language" = "Dansk";
+"misc.letUsKnow" = "Lad os vide det";
+"misc.of" = "af";
+"misc.selected" = "valgt";
+"misc.somethingWrong" = "Noget gik galt?";
+
+
+// Password Reset
+"auth.resetPassword" = "Nulstil adgangskode";
+"auth.resetPasswordDescription" = "Indtast din e-mail, så sender vi dig et nulstillingslink.";
+"auth.sendResetLink" = "Send nulstillingslink";
+"auth.resetEmailSent" = "Nulstillingsmail sendt! Tjek din indbakke.";
+"auth.setNewPasswordDescription" = "Opret en ny adgangskode og bekræft den for at fortsætte.";
+"auth.updatePassword" = "Opdatér adgangskode";
+"auth.passwordResetSuccess" = "Adgangskoden blev opdateret.";
+"profile.changePassword" = "Skift adgangskode";
+
+
+// Password Reset Confirmations
+"common.confirm" = "Bekræft";
+"profile.logoutConfirmationTitle" = "Er du sikker på, at du vil logge ud?";
+"auth.confirmChangePasswordTitle" = "Skift adgangskode";
+"auth.confirmChangePasswordMessage" = "Vil du opdatere din adgangskode nu?";
+
+
+// Profile - Support & Feedback
+"profile.sendFeedback" = "Send feedback";
+"profile.aboutUs" = "Om os";
+"profile.aboutUsDetail" = "Lær mere om VibeWatch-teamet og vores mission om at forbedre din streaming-opdagelsesoplevelse.";
+"profile.tmdbAttribution" = "Dette produkt bruger TMDb API, men er ikke godkendt eller certificeret af TMDb.";
+"profile.legalNotes" = "Juridiske bemærkninger";
+"profile.faq" = "FAQ";
+"profile.faqDetail" = "Find hurtige svar på almindelige spørgsmål om konti, abonnementer og funktioner.";
+"profile.privacyPolicy" = "Privatlivspolitik";
+"profile.feedback.suggestFeature" = "Foreslå en ny funktion";
+"profile.feedback.suggestFeatureDescription" = "Fortæl os, hvad der ville gøre VibeWatch bedre for dig.";
+"profile.feedback.reportBug" = "Rapportér en fejl/problem";
+"profile.feedback.reportBugDescription" = "Beskriv problemet, du oplever, så vi kan fixe det hurtigt.";
+"profile.feedback.other" = "Andet";
+"profile.feedback.otherDescription" = "Del andre tanker eller kommentarer.";
+"profile.feedback.keepUpdated" = "Hold mig opdateret";
+"profile.feedback.sendButton" = "Send feedback";
+"profile.feedback.sent" = "Tak! Din feedback blev sendt.";
+"profile.termsOfUse" = "Brugsbetingelser";
+"profile.feedback.invalidEmail" = "Ugyldigt e-mailindhold.";
+
+// Settings - Account Deletion
+"settings.deleteAccount" = "Slet min konto permanent";
+"settings.deleteAccountWarningTitle" = "Slet konto?";
+"settings.deleteAccountWarningMessage" = "Denne handling er permanent og kan ikke fortrydes.";
+"settings.deleteAccountKeep" = "Nej, behold den";
+"settings.deleteAccountConfirm" = "Ja, slet min konto";
+"settings.deleteAccountFinalTitle" = "Slet konto permanent";
+"settings.deleteAccountFinalMessage" = "Er du helt sikker? Denne handling kan ikke fortrydes.";
+"settings.deleteAccountError" = "Kan ikke slette kontoen lige nu.";
+"settings.deleteAccountSuccess" = "Din konto blev slettet.";
+"settings.deleteAccountDeleting" = "Sletter...";
+
+
+// Profile Upgrade CTA
+"profile.upgradePro.title" = "Opgrader til Pro";
+"profile.upgradePro.subtitle" = "Lås op for ubegrænsede klip, AI og premiumlister.";
+
+/// Actor Detail
+"actor.biography.title" = "Biografi";
+"actor.biography.loading" = "Indlæser biografi...";
+"actor.biography.unavailable" = "Biografi er ikke tilgængelig.";
+"actor.filmography.movies" = "Film";
+"actor.filmography.tv" = "TV-serier";
+"actor.retry" = "Prøv igen";
+"actor.biography.showMore" = "Vis mere";
+"actor.biography.showLess" = "Vis mindre";
+
+"clips.search.placeholder" = "Søg klip, karakterer eller citater";
+"clips.search.emptyTitle" = "Find klip, du elsker";
+"clips.search.emptySubtitle" = "Søg efter en film, serie, karakter eller et citat for at se matchende klip og relaterede anbefalinger.";
+"clips.search.matched" = "Matchede";
+"clips.search.recommended" = "Anbefalede";
+"clips.search.showcaseTitle" = "Opdag klip";
+"clips.search.showcaseSubtitle" = "Søg ovenfor for at finde klip fra dine yndlingsfilm og -serier";
+
+// Redeem Code
+"settings.redeemCode" = "Indløs kode";
+"settings.redeemCode.description" = "Indtast en promo- eller tilbudskode";
+"paywall.haveCode" = "Har du en promokode?";
+
+// Help & Support - About Us
+"profile.aboutUsDescription" = "Vi er to venner, der bygger en ny slags film/TV-følgesvend. VibeWatch blev født af frustration over klodsede trackere: vi fokuserer på moderne, klip-først opdagelse, hurtige streaming-links og værktøjer, der hjælper både cinefile og afslappede seere med at finde det perfekte valg uden endeløs scrolling.";
+"profile.faqs" = "Ofte stillede spørgsmål";
+"profile.legal" = "Juridisk";
+
+// FAQ Items
+"profile.faq.question1" = "Hvordan hjælper Clips mig med at finde nye titler?";
+"profile.faq.answer1" = "Klip er korte, vertikale previews der matcher din smag, så du kan scroll-binge uden at føle du spilder tiden.";
+"profile.faq.question2" = "Kan jeg holde styr på, hvad jeg ser?";
+"profile.faq.answer2" = "Ja. Gem på lister, markér som set/kunne lide/kunne ikke lide, og synkroniser på tværs af film og serier.";
+"profile.faq.question3" = "Hvor kan jeg se det?";
+"profile.faq.answer3" = "Streaminglinks hentes per land, så du kan hoppe direkte ind i den rigtige app.";
+"profile.faq.question4" = "Hvad hvis noget ser forkert ud?";
+"profile.faq.answer4" = "Brug \"Giv os besked\" på enhver titel til at rapportere fejl eller dårlige links, så fikser vi det hurtigt.";
+"profile.faq.question5" = "Virker VibeWatch for afslappede seere?";
+"profile.faq.answer5" = "Helt sikkert. Vi viser både lette valg som en lørdagsfilm med venner og dybe nedslag for filmelskere.";

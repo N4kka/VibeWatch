@@ -3,86 +3,215 @@ import SwiftUI
 struct DiscoveryView: View {
     @StateObject private var viewModel = DiscoveryViewModel()
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject var quotaManager: DailyQuotaManager
     @ObservedObject var localizationManager = LocalizationManager.shared
     @State private var showProfile = false
     @State private var showSearch = false
     @State private var showFilters = false
     @Binding var selectedMovie: Movie?
     @Binding var selectedMediaType: MediaType
+    @State private var scrollPosition: String? = nil
+    @State private var moodCarouselIndex = 0
+    @State private var lastTappedMovieId: Int? = nil
+    @State private var hasRestoredScroll = false
     
     var body: some View {
-        discoveryMainView
+        ZStack {
+            if viewModel.isLoading && viewModel.hasNoContent {
+                ProgressView()
+            } else if let error = viewModel.error, viewModel.hasNoContent {
+                errorView(error)
+            } else {
+                discoveryMainView
+            }
+        }
+        .background(Color.theme.background.ignoresSafeArea())
+        .task {
+            await viewModel.loadContent()
+            
+            // Analytics: Track screen view
+            AnalyticsService.shared.logScreenView(screenName: "Discovery", screenClass: "DiscoveryView")
+            
+            // Debug: Print reaction counts
+            await SQLiteService.shared.debugPrintReactionCounts()
+        }
+        .onChange(of: localizationManager.localeDidChange) {_, _ in
+            // Reload content when language/country changes
+            Task {
+                await viewModel.loadContent(forceRefresh: true)
+            }
+        }
+        .sheet(isPresented: $showProfile) {
+            ProfileView()
+        }
+        .fullScreenCover(isPresented: $showSearch) {
+            SearchView()
+        }
+        .toast(isShowing: $appState.showSuccessToast, message: appState.toastMessage, type: .success)
+        .toast(isShowing: $appState.showErrorToast, message: appState.toastMessage, type: .error)
+        .onChange(of: appState.shouldShowSignIn) {_, newValue in
+            if newValue {
+                print("🔄 [DiscoveryView] Redirecting to Sign In via Profile")
+                showProfile = true
+                // Note: ProfileView will observe this same flag and open the SignIn sheet
+            }
+        }
+    }
+    
+    private func errorView(_ error: AppError) -> some View {
+        VStack(spacing: 20) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 60))
+                .foregroundColor(.orange)
+
+            Text(error.errorDescription ?? "Oops!")
+                .font(.system(size: 24, weight: .bold))
+                .foregroundColor(.white)
+
+            if let recoverySuggestion = error.recoverySuggestion {
+                Text(recoverySuggestion)
+                    .font(.system(size: 16))
+                    .foregroundColor(.gray)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
+            }
+
+            Button {
+                Task {
+                    await viewModel.loadDiscoveryContent()
+                }
+            } label: {
+                Text("common.tryAgain".localized)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(width: 200, height: 50)
+                    .background(Color.orange)
+                    .cornerRadius(25)
+            }
+        }
     }
     
     private var discoveryMainView: some View {
-        ScrollView {
-            VStack(spacing: 32) {
-                DiscoveryHeaderView(
-                    onSearchTap: { showSearch = true },
-                    onProfileTap: { showProfile = true },
-                    avatarURL: appState.currentUser?.avatarURL
-                )
-                .padding(.top, 4)
-                
-                if !viewModel.moodMovies.isEmpty {
-                    MoodCarouselSection(movies: viewModel.moodMovies) { movie in
-                        selectedMovie = movie
-                        selectedMediaType = .movie
+        VStack(spacing: 0) {
+            OfflineBanner()
+            
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(spacing: 32) {
+                        DiscoveryHeaderView(
+                        onSearchTap: { showSearch = true },
+                        onProfileTap: { showProfile = true },
+                        avatarURL: appState.currentUser?.avatarURL
+                    )
+                    .padding(.top, 4)
+                    .id("header")
+                    
+                    if !viewModel.moodMovies.isEmpty {
+                        MoodCarouselSection(
+                            movies: viewModel.moodMovies,
+                            currentIndex: $moodCarouselIndex
+                        ) { movie in
+                            scrollPosition = "mood"
+                            selectedMovie = movie
+                            selectedMediaType = .movie
+                        }
+                        .id("mood")
+                    }
+                    
+                    if !viewModel.forYouMovies.isEmpty {
+                        MediaSection(
+                            title: "discovery.forYou".localized,
+                            items: viewModel.forYouMovies,
+                            type: .movie,
+                            scrollToMovieId: scrollPosition == "forYou" ? lastTappedMovieId : nil
+                        ) { movie in
+                            scrollPosition = "forYou"
+                            lastTappedMovieId = movie.id
+                            selectedMovie = movie
+                            selectedMediaType = .movie
+                        }
+                        .id("forYou")
+                    }
+                    
+                    if !viewModel.viralMovies.isEmpty {
+                        MediaSection(
+                            title: "discovery.trending".localized,
+                            items: viewModel.viralMovies,
+                            type: .movie,
+                            scrollToMovieId: scrollPosition == "trending" ? lastTappedMovieId : nil
+                        ) { movie in
+                            scrollPosition = "trending"
+                            lastTappedMovieId = movie.id
+                            selectedMovie = movie
+                            selectedMediaType = .movie
+                        }
+                        .id("trending")
+                    }
+                    
+                    if !viewModel.forYouTVShows.isEmpty {
+                        MediaSection(
+                            title: "discovery.tvShows".localized,
+                            items: viewModel.forYouTVShows,
+                            type: .tv,
+                            scrollToMovieId: scrollPosition == "tvShows" ? lastTappedMovieId : nil
+                        ) { movie in
+                            scrollPosition = "tvShows"
+                            lastTappedMovieId = movie.id
+                            selectedMovie = movie
+                            selectedMediaType = .tv
+                        }
+                        .id("tvShows")
+                    }
+                    
+                    // Browse with Filters Section
+                    BrowseSection(
+                        viewModel: viewModel,
+                        scrollToMovieId: scrollPosition == "browse" ? lastTappedMovieId : nil,
+                        onFilterTap: {
+                            showFilters = true
+                        },
+                        onMovieTap: { movie, type in
+                            scrollPosition = "browse"
+                            lastTappedMovieId = movie.id
+                            selectedMovie = movie
+                            selectedMediaType = type
+                        }
+                    )
+                    .id("browse")
+                    
+                        Color.clear
+                            .frame(height: 80)
                     }
                 }
-                
-                if !viewModel.forYouMovies.isEmpty {
-                    MediaSection(
-                        title: "discovery.forYou".localized,
-                        items: viewModel.forYouMovies,
-                        type: .movie
-                    ) { movie in
-                        selectedMovie = movie
-                        selectedMediaType = .movie
+                .id(viewModel.refreshToken)
+                .refreshable {
+                    // Force refresh from TMDB to get latest content and reload images
+                    print("🔄 [DiscoveryView] Pull-to-refresh triggered")
+                    await viewModel.refreshContent()
+                }
+                .background(Color.theme.background.ignoresSafeArea())
+                .opacity(hasRestoredScroll || scrollPosition == nil ? 1 : 0)
+                .onAppear {
+                    // Scroll to saved position on first appear
+                    if !hasRestoredScroll, let position = scrollPosition {
+                        // Immediate scroll without animation
+                        proxy.scrollTo(position, anchor: .top)
+                        // Short delay to ensure scroll completes before showing
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                            hasRestoredScroll = true
+                        }
+                    } else if scrollPosition == nil {
+                        hasRestoredScroll = true
                     }
                 }
-                
-                if !viewModel.viralMovies.isEmpty {
-                    MediaSection(
-                        title: "discovery.trending".localized,
-                        items: viewModel.viralMovies,
-                        type: .movie
-                    ) { movie in
-                        selectedMovie = movie
-                        selectedMediaType = .movie
+                .onChange(of: selectedMovie) {_, newValue in
+                    // Reset flag when navigating away so we can restore again
+                    if newValue != nil {
+                        hasRestoredScroll = false
                     }
                 }
-                
-                if !viewModel.forYouTVShows.isEmpty {
-                    MediaSection(
-                        title: "discovery.tvShows".localized,
-                        items: viewModel.forYouTVShows,
-                        type: .tv
-                    ) { movie in
-                        selectedMovie = movie
-                        selectedMediaType = .tv
-                    }
-                }
-                
-                // Browse with Filters Section
-                BrowseSection(viewModel: viewModel, onFilterTap: {
-                    showFilters = true
-                }, onMovieTap: { movie, type in
-                    selectedMovie = movie
-                    selectedMediaType = type
-                })
-                
-                Color.clear
-                    .frame(height: 80)
             }
         }
-        .id(viewModel.refreshToken)
-        .refreshable {
-            // Force refresh from TMDB to get latest content and reload images
-            print("🔄 [DiscoveryView] Pull-to-refresh triggered")
-            await viewModel.refreshContent()
-        }
-        .background(Color.theme.background.ignoresSafeArea())
         .overlay {
             if showFilters {
                 AdvancedFiltersPanel(
@@ -99,27 +228,11 @@ struct DiscoveryView: View {
                         }
                     }
                 )
+                .environmentObject(quotaManager)
             }
-        }
-        .task {
-            await viewModel.loadContent()
-        }
-        .onChange(of: localizationManager.localeDidChange) { _ in
-            // Reload content when language/country changes
-            Task {
-                await viewModel.loadContent(forceRefresh: true)
-            }
-        }
-        .sheet(isPresented: $showProfile) {
-            ProfileView()
-        }
-        .fullScreenCover(isPresented: $showSearch) {
-            SearchView()
-        }
-        .toast(isShowing: $appState.showSuccessToast, message: appState.toastMessage, type: .success)
-        .toast(isShowing: $appState.showErrorToast, message: appState.toastMessage, type: .error)
         }
     }
+}
 
 struct DiscoveryHeaderView: View {
     let onSearchTap: () -> Void
@@ -152,7 +265,7 @@ struct DiscoveryHeaderView: View {
                 
                 Button(action: onProfileTap) {
                     if let avatarURL = avatarURL, let url = URL(string: avatarURL) {
-                        AsyncImage(url: url) { image in
+                        CachedAsyncImage(url: url) { image in
                             image
                                 .resizable()
                                 .scaledToFill()
@@ -183,8 +296,8 @@ struct DiscoveryHeaderView: View {
 
 struct MoodCarouselSection: View {
     let movies: [Movie]
+    @Binding var currentIndex: Int
     let onMovieTap: (Movie) -> Void
-    @State private var currentIndex = 0
     @ObservedObject var localizationManager = LocalizationManager.shared
 
     var body: some View {
@@ -227,7 +340,8 @@ struct MoodCarouselCard: View {
         Button(action: onTap) {
             GeometryReader { geometry in
                 ZStack(alignment: .bottom) {
-                    AsyncImageView(url: movie.backdropURL, contentMode: .fill)
+                    CachedAsyncImage(url: movie.backdropURL)
+                        .aspectRatio(contentMode: .fill)
                         .frame(width: geometry.size.width, height: 500)
                         .clipped()
                         .overlay {
@@ -288,6 +402,7 @@ struct MediaSection: View {
     let title: String
     let items: [Movie]
     let type: MediaType
+    let scrollToMovieId: Int?
     let onMovieTap: (Movie) -> Void
     
     var body: some View {
@@ -297,16 +412,28 @@ struct MediaSection: View {
                 .foregroundColor(.theme.textPrimary)
                 .padding(.horizontal, 20)
             
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    ForEach(items) { movie in
-                        MediaCard(movie: movie)
-                            .onTapGesture {
-                                onMovieTap(movie)
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(items) { movie in
+                            MediaCard(movie: movie)
+                                .id(movie.id)
+                                .onTapGesture {
+                                    onMovieTap(movie)
+                                }
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                }
+                .onAppear {
+                    if let movieId = scrollToMovieId {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            withAnimation {
+                                proxy.scrollTo(movieId, anchor: .center)
                             }
+                        }
                     }
                 }
-                .padding(.horizontal, 20)
             }
         }
     }
@@ -317,7 +444,8 @@ struct MediaCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            AsyncImageView(url: movie.posterURL, contentMode: .fill)
+            CachedAsyncImage(url: movie.posterURL)
+                .aspectRatio(contentMode: .fill)
                 .frame(width: 140, height: 210)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             
@@ -341,8 +469,10 @@ struct MediaCard: View {
 
 struct BrowseSection: View {
     @ObservedObject var viewModel: DiscoveryViewModel
+    let scrollToMovieId: Int?
     let onFilterTap: () -> Void
     let onMovieTap: (Movie, MediaType) -> Void
+    @State private var hasLoaded = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -356,12 +486,7 @@ struct BrowseSection: View {
                 HStack(spacing: 12) {
                     ForEach([MediaType.movie, MediaType.tv], id: \.self) { type in
                         Button {
-                            withAnimation {
-                                viewModel.selectedBrowseType = type
-                            }
-                            Task {
-                                await viewModel.browseWithFilters()
-                            }
+                            viewModel.selectedBrowseType = type
                         } label: {
                             Text(type == .movie ? "browse.movies".localized : "browse.tvShows".localized)
                                 .font(.system(size: 13, weight: .medium))
@@ -411,28 +536,52 @@ struct BrowseSection: View {
                 }
                 .frame(height: 210)
             } else if viewModel.selectedBrowseType == .movie && !viewModel.browseMovies.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
-                        ForEach(viewModel.browseMovies) { movie in
-                            MediaCard(movie: movie)
-                                .onTapGesture {
-                                    onMovieTap(movie, .movie)
+                ScrollViewReader { proxy in
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
+                            ForEach(viewModel.browseMovies) { movie in
+                                MediaCard(movie: movie)
+                                    .id(movie.id)
+                                    .onTapGesture {
+                                        onMovieTap(movie, .movie)
+                                    }
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                    }
+                    .onAppear {
+                        if let movieId = scrollToMovieId {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                withAnimation {
+                                    proxy.scrollTo(movieId, anchor: .center)
                                 }
+                            }
                         }
                     }
-                    .padding(.horizontal, 20)
                 }
             } else if viewModel.selectedBrowseType == .tv && !viewModel.browseTVShows.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
-                        ForEach(viewModel.browseTVShows) { tvShow in
-                            MediaCard(movie: tvShow)
-                                .onTapGesture {
-                                    onMovieTap(tvShow, .tv)
+                ScrollViewReader { proxy in
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
+                            ForEach(viewModel.browseTVShows) { tvShow in
+                                MediaCard(movie: tvShow)
+                                    .id(tvShow.id)
+                                    .onTapGesture {
+                                        onMovieTap(tvShow, .tv)
+                                    }
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                    }
+                    .onAppear {
+                        if let movieId = scrollToMovieId {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                withAnimation {
+                                    proxy.scrollTo(movieId, anchor: .center)
                                 }
+                            }
                         }
                     }
-                    .padding(.horizontal, 20)
                 }
             } else {
                 VStack(spacing: 12) {
@@ -449,9 +598,18 @@ struct BrowseSection: View {
             }
         }
         .task {
-            // Load default browse results
-            if viewModel.browseMovies.isEmpty && viewModel.browseTVShows.isEmpty {
+            // Load default browse results only once
+            if !hasLoaded {
                 await viewModel.browseWithFilters()
+                hasLoaded = true
+            }
+        }
+        .onChange(of: viewModel.selectedBrowseType) {_, _ in
+            // Only browse if already loaded (don't trigger on initial load)
+            if hasLoaded {
+                Task {
+                    await viewModel.browseWithFilters()
+                }
             }
         }
     }

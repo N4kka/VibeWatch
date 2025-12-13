@@ -16,7 +16,7 @@ struct DeepLinkTarget: Identifiable {
 /// Manages deep link navigation state across the app.
 /// SwiftUI views can observe this manager to react to deep link requests.
 class AppNavigationManager: ObservableObject {
-    static let shared = AppNavigationManager() // Singleton instance
+    @MainActor static let shared = AppNavigationManager() // Singleton instance
     
     @Published var deepLinkTarget: DeepLinkTarget? = nil {
         didSet {

@@ -4,7 +4,8 @@ import Foundation
 class ContentCacheManager: ObservableObject {
     static let shared = ContentCacheManager()
     
-    @Published var cachedClips: [Clip] = []
+    // Made internal so ClipsRepository can access it
+    var cachedClips: [Clip] = []
     @Published var isPreloadingClips = false
     
     private let userDefaults = UserDefaults.standard
@@ -95,8 +96,7 @@ class ContentCacheManager: ObservableObject {
             
             // Step 3: Preload 5 Clips from these SAME movies (Parallel)
             // This ensures the first 5 clips match the "Trending" vibe and load instantly
-            let preloadedClips = await SimplifiedClipsAlgorithm.shared.preloadClips(from: movies, count: 5)
-            
+                        let preloadedClips = await QuickClipsService.shared.preloadClips(from: movies, count: 5)            
             // Store in memory for immediate access
             self.cachedClips = preloadedClips
             
@@ -119,6 +119,15 @@ class ContentCacheManager: ObservableObject {
     
     func preloadClips() async {
         await performSmartPreload()
+    }
+    
+    func clearAllCaches() {
+        cachedClips = []
+        userDefaults.removeObject(forKey: lastUpdateDateKey)
+        userDefaults.removeObject(forKey: cachedMoviesKey)
+        userDefaults.removeObject(forKey: cachedTVShowsKey)
+        userDefaults.removeObject(forKey: cachedClipsKey)
+        print("🧹 [ContentCache] Cleared cached discovery content and clips")
     }
     
     private func loadCachedClips() {

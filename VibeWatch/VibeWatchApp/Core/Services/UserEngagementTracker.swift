@@ -1,21 +1,20 @@
 import Foundation
 import SwiftUI
 
-@MainActor
 class UserEngagementTracker: ObservableObject {
-    static let shared = UserEngagementTracker()
+    @MainActor static let shared = UserEngagementTracker()
     
     // Watch time tracking
-    @Published var watchHistory: [String: ClipEngagement] = [:] // clipId -> engagement
+    private var watchHistory: [String: ClipEngagement] = [:] // clipId -> engagement
     
     // Preference scores
-    @Published var genreScores: [Int: Double] = [:] // genreId -> score
-    @Published var actorScores: [Int: Double] = [:] // actorId -> score
-    @Published var movieScores: [Int: Double] = [:] // movieId -> score
+    private var genreScores: [Int: Double] = [:] // genreId -> score
+    private var actorScores: [Int: Double] = [:] // actorId -> score
+    private var movieScores: [Int: Double] = [:] // movieId -> score
     
     // Session tracking
-    @Published var currentStreak: Int = 0
-    @Published var isInHotStreak: Bool = false
+    var currentStreak: Int = 0
+    var isInHotStreak: Bool = false
     
     private let userDefaults = UserDefaults.standard
     private let engagementKey = "userEngagementData"

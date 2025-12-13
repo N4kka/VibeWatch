@@ -3,7 +3,7 @@ import SQLite3
 
 /// Local SQLite database service for offline-first architecture
 /// All app reads/writes go through this service
-class SQLiteService: ObservableObject {
+final class SQLiteService: ObservableObject {
     static let shared = SQLiteService()
     
     @Published var isConnected = false
@@ -13,13 +13,17 @@ class SQLiteService: ObservableObject {
     private let dbPath: String
     private let dbQueue = DispatchQueue(label: "com.vibewatch.sqlite", qos: .userInitiated)
     
+    // Wrappers to allow capturing dynamic SQLite values in @Sendable contexts.
+    private struct SQLSendableValue: @unchecked Sendable { let raw: Any }
+    private struct SQLSendableRecord: @unchecked Sendable { var raw: [String: Any] }
+    
     private init() {
         // Store in app's Documents directory
         let fileManager = FileManager.default
         let urls = fileManager.urls(for: .documentDirectory, in: .userDomainMask)
         dbPath = urls[0].appendingPathComponent("vibewatch_local.sqlite").path
         
-        print("📂 [SQLite] Database path: \(dbPath)")
+        Logger.info("[SQLite] Database path: \(dbPath)")
         
         openDatabase()
         createTables()
@@ -29,6 +33,22 @@ class SQLiteService: ObservableObject {
         if let db = db {
             sqlite3_close(db)
         }
+    }
+    
+    /// Wipe the local database file and recreate schema
+    func resetDatabase() {
+        closeDatabase()
+        
+        do {
+            try FileManager.default.removeItem(atPath: dbPath)
+            Logger.info("[SQLite] Database file deleted at \(dbPath)")
+        } catch {
+            Logger.error("[SQLite] Failed to delete database: \(error.localizedDescription)")
+        }
+        
+        db = nil
+        openDatabase()
+        createTables()
     }
     
     // MARK: - Connection Management
@@ -44,17 +64,17 @@ class SQLiteService: ObservableObject {
             // Enable WAL mode for better concurrency
             execute("PRAGMA journal_mode = WAL")
             
-            print("✅ [SQLite] Database opened successfully")
+            Logger.info("[SQLite] Database opened successfully")
         } else {
             isConnected = false
             lastError = String(cString: sqlite3_errmsg(db))
-            print("❌ [SQLite] Failed to open database: \(lastError ?? "unknown")")
+            Logger.error("[SQLite] Failed to open database: \(lastError ?? "unknown")")
         }
     }
     
     private func closeDatabase() {
         if sqlite3_close(db) == SQLITE_OK {
-            print("✅ [SQLite] Database closed")
+            Logger.info("[SQLite] Database closed")
         }
     }
     
@@ -64,8 +84,54 @@ class SQLiteService: ObservableObject {
             let result: [[String: Any]] = try await queryRaw("SELECT 1 as test")
             return result.first?["test"] as? Int == 1
         } catch {
-            print("❌ [SQLite] Connection test failed: \(error)")
+            Logger.error("[SQLite] Connection test failed", error: error)
             return false
+        }
+    }
+    
+    /// Debug: Print all reaction counts
+    func debugPrintReactionCounts() async {
+        do {
+            let counts: [[String: Any]] = try await queryRaw("""
+                SELECT media_id, media_type, like_count, dislike_count, updated_at
+                FROM movie_reaction_counts
+                ORDER BY updated_at DESC
+            """)
+            
+            Logger.debug("📊 [SQLite] Reaction Counts:")
+            Logger.debug("============================================================")
+            for row in counts {
+                let mediaId = row["media_id"] as? Int ?? 0
+                let mediaType = row["media_type"] as? String ?? ""
+                let likes = row["like_count"] as? Int ?? 0
+                let dislikes = row["dislike_count"] as? Int ?? 0
+                let updated = row["updated_at"] as? String ?? ""
+                Logger.debug("  \(mediaType) #\(mediaId): 👍 \(likes) | 👎 \(dislikes) (updated: \(updated))")
+            }
+            Logger.debug("============================================================")
+            Logger.debug("Total: \(counts.count) movies/shows with reactions")
+        } catch {
+            Logger.error("[SQLite] Failed to fetch reaction counts", error: error)
+        }
+    }
+    
+    /// Debug: Print all tables
+    func debugPrintAllTables() async {
+        do {
+            let tables: [[String: Any]] = try await queryRaw("""
+                SELECT name FROM sqlite_master 
+                WHERE type='table' 
+                ORDER BY name
+            """)
+            
+            Logger.debug("📋 [SQLite] All Tables:")
+            for table in tables {
+                if let name = table["name"] as? String {
+                    Logger.debug("  - \(name)")
+                }
+            }
+        } catch {
+            Logger.error("[SQLite] Failed to list tables", error: error)
         }
     }
     
@@ -77,6 +143,7 @@ class SQLiteService: ObservableObject {
             createClipsTable(),
             createDiscoveryCacheTable(),
             createMediaDetailsTable(),
+            createDetailCacheTable(),
             createTrailersTable(),
             createProfilesTable(),
             createListsTable(),
@@ -84,10 +151,17 @@ class SQLiteService: ObservableObject {
             createUserClipHistoryTable(),
             createUserPreferencesTable(),
             createUserDailyQuotaTable(),
+            createUserAITokenUsageTable(),
             createSyncOutboxTable(),
             createSyncLogTable(),
             createDeviceInfoTable(),
-            createAppMetadataTable()
+            createAppMetadataTable(),
+            // Reactions & Comments tables
+            createMovieReactionsTable(),
+            createMovieReactionCountsTable(),
+            createClipReactionsTable(),
+            createClipCommentsTable(),
+            createClipCommentLikesTable()
         ]
         
         for table in tables {
@@ -102,7 +176,150 @@ class SQLiteService: ObservableObject {
             ('last_full_sync', NULL)
         """)
         
-        print("✅ [SQLite] All tables created")
+        Logger.info("[SQLite] All tables created")
+        
+        // Run migrations
+        runMigrations()
+    }
+    
+    private func runMigrations() {
+        // Check if migrations have already been run using synchronous execute
+        var migrationVersionString = "0"
+        var statement: OpaquePointer?
+        
+        if sqlite3_prepare_v2(db, "SELECT value_text FROM app_metadata WHERE key_name = 'migration_version'", -1, &statement, nil) == SQLITE_OK {
+            if sqlite3_step(statement) == SQLITE_ROW {
+                if let versionPtr = sqlite3_column_text(statement, 0) {
+                    migrationVersionString = String(cString: versionPtr)
+                }
+            }
+            sqlite3_finalize(statement)
+        }
+        
+        let currentVersion = Int(migrationVersionString) ?? 0
+        let latestVersion = 3
+        
+        // Only run migrations if not already at latest version
+        if currentVersion >= latestVersion {
+            Logger.info("[SQLite] Migrations already applied (version \(migrationVersionString))")
+            return
+        }
+        
+        Logger.info("[SQLite] Running migrations from version \(currentVersion) to version \(latestVersion)...")
+        
+        // Temporarily disable foreign keys for migration
+        execute("PRAGMA foreign_keys = OFF")
+        
+        if currentVersion < 1 {
+            // Migration 1: Fix clip_comments and clip_reactions foreign key constraints
+            Logger.info("[SQLite] Migration 1: recreate clip_comments and clip_reactions tables")
+            
+            execute("DROP TABLE IF EXISTS clip_comments")
+            execute("DROP INDEX IF EXISTS idx_clip_comments_clip")
+            execute("DROP INDEX IF EXISTS idx_clip_comments_parent")
+            execute("DROP INDEX IF EXISTS idx_clip_comments_user")
+            execute(createClipCommentsTable())
+            
+            execute("DROP TABLE IF EXISTS clip_reactions")
+            execute("DROP INDEX IF EXISTS idx_clip_reactions_user")
+            execute("DROP INDEX IF EXISTS idx_clip_reactions_clip")
+            execute(createClipReactionsTable())
+        }
+        
+        if currentVersion < 2 {
+            // Migration 2: add updated_at + user FK to clip_reactions and user FK to clip_comments without dropping data
+            Logger.info("[SQLite] Migration 2: rehydrate clip_reactions with updated_at + user FK")
+            execute("""
+                CREATE TABLE IF NOT EXISTS clip_reactions_new (
+                  id TEXT PRIMARY KEY,
+                  user_id TEXT NOT NULL,
+                  clip_id TEXT NOT NULL,
+                  reaction_type TEXT NOT NULL DEFAULT 'like',
+                  created_at TEXT DEFAULT (datetime('now')),
+                  updated_at TEXT DEFAULT (datetime('now')),
+                  UNIQUE(user_id, clip_id, reaction_type),
+                  FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
+                );
+            """)
+            execute("""
+                INSERT OR IGNORE INTO clip_reactions_new (id, user_id, clip_id, reaction_type, created_at)
+                SELECT id, user_id, clip_id, reaction_type, created_at FROM clip_reactions
+            """)
+            execute("DROP TABLE IF EXISTS clip_reactions")
+            execute("ALTER TABLE clip_reactions_new RENAME TO clip_reactions")
+            execute("CREATE INDEX IF NOT EXISTS idx_clip_reactions_user ON clip_reactions(user_id)")
+            execute("CREATE INDEX IF NOT EXISTS idx_clip_reactions_clip ON clip_reactions(clip_id)")
+            
+            Logger.info("[SQLite] Migration 2: rehydrate clip_comments with user FK")
+            execute("""
+                CREATE TABLE IF NOT EXISTS clip_comments_new (
+                  id TEXT PRIMARY KEY,
+                  clip_id TEXT NOT NULL,
+                  user_id TEXT NOT NULL,
+                  parent_comment_id TEXT,
+                  content TEXT NOT NULL,
+                  like_count INTEGER DEFAULT 0,
+                  reply_count INTEGER DEFAULT 0,
+                  created_at TEXT DEFAULT (datetime('now')),
+                  updated_at TEXT DEFAULT (datetime('now')),
+                  deleted_at TEXT,
+                  FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE,
+                  FOREIGN KEY (parent_comment_id) REFERENCES clip_comments(id) ON DELETE CASCADE
+                );
+            """)
+            execute("""
+                INSERT OR IGNORE INTO clip_comments_new (
+                  id, clip_id, user_id, parent_comment_id, content,
+                  like_count, reply_count, created_at, updated_at, deleted_at
+                )
+                SELECT id, clip_id, user_id, parent_comment_id, content,
+                       like_count, reply_count, created_at, updated_at, deleted_at
+                FROM clip_comments
+            """)
+            execute("DROP TABLE IF EXISTS clip_comments")
+            execute("ALTER TABLE clip_comments_new RENAME TO clip_comments")
+            execute("CREATE INDEX IF NOT EXISTS idx_clip_comments_clip ON clip_comments(clip_id, deleted_at)")
+            execute("CREATE INDEX IF NOT EXISTS idx_clip_comments_parent ON clip_comments(parent_comment_id)")
+            execute("CREATE INDEX IF NOT EXISTS idx_clip_comments_user ON clip_comments(user_id)")
+        }
+        
+        if currentVersion < 3 {
+            Logger.info("[SQLite] Migration 3: add synced_at columns for offline sync tracking")
+            if !columnExists("clip_reactions", column: "synced_at") {
+                execute("ALTER TABLE clip_reactions ADD COLUMN synced_at TEXT")
+            }
+            if !columnExists("clip_comments", column: "synced_at") {
+                execute("ALTER TABLE clip_comments ADD COLUMN synced_at TEXT")
+            }
+            if !columnExists("clip_comment_likes", column: "synced_at") {
+                execute("ALTER TABLE clip_comment_likes ADD COLUMN synced_at TEXT")
+            }
+        }
+        
+        // Re-enable foreign keys
+        execute("PRAGMA foreign_keys = ON")
+        
+        // Mark migration as complete
+        execute("INSERT OR REPLACE INTO app_metadata (key_name, value_text) VALUES ('migration_version', '\(latestVersion)')")
+        Logger.info("[SQLite] Migrations complete - now at version \(latestVersion)")
+    }
+    
+    private func columnExists(_ table: String, column: String) -> Bool {
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+        
+        let pragmaSQL = "PRAGMA table_info(\(table))"
+        if sqlite3_prepare_v2(db, pragmaSQL, -1, &statement, nil) == SQLITE_OK {
+            while sqlite3_step(statement) == SQLITE_ROW {
+                if let namePtr = sqlite3_column_text(statement, 1) {
+                    let name = String(cString: namePtr)
+                    if name == column {
+                        return true
+                    }
+                }
+            }
+        }
+        return false
     }
     
     // MARK: - SQL Execution
@@ -110,38 +327,50 @@ class SQLiteService: ObservableObject {
     /// Execute a SQL statement without returning results
     @discardableResult
     func execute(_ sql: String, parameters: [Any] = []) -> Bool {
-        var statement: OpaquePointer?
-        
-        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
-            let error = String(cString: sqlite3_errmsg(db))
-            print("❌ [SQLite] Prepare failed: \(error)")
-            print("   SQL: \(sql)")
-            lastError = error
-            return false
+        var success = false
+
+        dbQueue.sync { [weak self] in
+            guard let self = self else { return }
+
+            var statement: OpaquePointer?
+
+            guard sqlite3_prepare_v2(self.db, sql, -1, &statement, nil) == SQLITE_OK else {
+                let error = String(cString: sqlite3_errmsg(self.db))
+                Logger.error("[SQLite] Prepare failed: \(error). SQL: \(sql)")
+                DispatchQueue.main.async { [weak self] in
+                    self?.lastError = error
+                }
+                return
+            }
+
+            defer { sqlite3_finalize(statement) }
+
+            // Bind parameters
+            for (index, param) in parameters.enumerated() {
+                bind(param, to: statement, at: Int32(index + 1))
+            }
+
+            if sqlite3_step(statement) != SQLITE_DONE {
+                let error = String(cString: sqlite3_errmsg(self.db))
+                Logger.error("[SQLite] Execute failed: \(error). SQL: \(sql)")
+                DispatchQueue.main.async { [weak self] in
+                    self?.lastError = error
+                }
+                return
+            }
+
+            success = true
         }
-        
-        defer { sqlite3_finalize(statement) }
-        
-        // Bind parameters
-        for (index, param) in parameters.enumerated() {
-            bind(param, to: statement, at: Int32(index + 1))
-        }
-        
-        if sqlite3_step(statement) != SQLITE_DONE {
-            let error = String(cString: sqlite3_errmsg(db))
-            print("❌ [SQLite] Execute failed: \(error)")
-            print("   SQL: \(sql)")
-            lastError = error
-            return false
-        }
-        
-        return true
+
+        return success
     }
     
     /// Query and return rows as dictionaries
     func queryRaw(_ sql: String, parameters: [Any] = []) async throws -> [[String: Any]] {
+        let safeParameters = parameters.map(SQLSendableValue.init(raw:))
+        
         return try await withCheckedThrowingContinuation { continuation in
-            dbQueue.async { [weak self] in
+            dbQueue.async { [weak self, safeParameters] in
                 guard let self = self else {
                     continuation.resume(throwing: SQLiteError.notConnected)
                     return
@@ -158,11 +387,11 @@ class SQLiteService: ObservableObject {
                 defer { sqlite3_finalize(statement) }
                 
                 // Bind parameters
-                for (index, param) in parameters.enumerated() {
-                    self.bind(param, to: statement, at: Int32(index + 1))
+                for (index, param) in safeParameters.enumerated() {
+                    self.bind(param.raw, to: statement, at: Int32(index + 1))
                 }
                 
-                var results: [[String: Any]] = []
+                var results: [SQLSendableRecord] = []
                 
                 while sqlite3_step(statement) == SQLITE_ROW {
                     var row: [String: Any] = [:]
@@ -174,11 +403,59 @@ class SQLiteService: ObservableObject {
                         row[columnName] = value
                     }
                     
-                    results.append(row)
+                    results.append(SQLSendableRecord(raw: row))
                 }
                 
-                continuation.resume(returning: results)
+                continuation.resume(returning: results.map { $0.raw })
             }
+        }
+    }
+
+    // MARK: - Generic Upsert Helpers
+
+    /// Simple in-memory cache of table columns to avoid repeated PRAGMA calls.
+    private var tableColumnsCache: [String: [String]] = [:]
+
+    /// Fetch column names for a table.
+    private func columns(for table: String) async throws -> [String] {
+        if let cached = tableColumnsCache[table] { return cached }
+        let pragmaRows = try await queryRaw("PRAGMA table_info(\(table))")
+        let names = pragmaRows.compactMap { $0["name"] as? String }
+        tableColumnsCache[table] = names
+        return names
+    }
+
+    /// REPLACE INTO upsert for arbitrary rows. Only columns existing in the table are written.
+    /// If the table has a synced_at column and it's missing, it's set to now().
+    @MainActor
+    func upsert(table: String, rows: [[String: Any]]) async throws {
+        guard !rows.isEmpty else { return }
+        let safeRows = rows.map(SQLSendableRecord.init(raw:))
+        let cols = try await columns(for: table)
+        guard !cols.isEmpty else { return }
+
+        let hasSyncedAt = cols.contains("synced_at")
+        let now = ISO8601DateFormatter().string(from: Date())
+
+        for row in safeRows {
+            var filtered: [String: Any] = [:]
+            for col in cols {
+                if let v = row.raw[col], !(v is NSNull) {
+                    filtered[col] = v
+                }
+            }
+            if hasSyncedAt, filtered["synced_at"] == nil {
+                filtered["synced_at"] = now
+            }
+
+            let keys = Array(filtered.keys)
+            guard !keys.isEmpty else { continue }
+
+            let placeholders = Array(repeating: "?", count: keys.count).joined(separator: ",")
+            let colsJoined = keys.joined(separator: ",")
+            let sql = "REPLACE INTO \(table) (\(colsJoined)) VALUES (\(placeholders))"
+            let params = keys.map { filtered[$0] ?? NSNull() }
+            _ = try await queryRaw(sql, parameters: params)
         }
     }
     
@@ -191,15 +468,16 @@ class SQLiteService: ObservableObject {
     
     // MARK: - Transaction Support
     
-    func transaction(_ operations: () async throws -> Void) async throws {
-        execute("BEGIN TRANSACTION")
-        
-        do {
-            try await operations()
-            execute("COMMIT")
-        } catch {
-            execute("ROLLBACK")
-            throw error
+    func transaction(_ operations: @Sendable () async throws -> Void) async throws {
+        try await DatabaseUtilities.executeInTransaction {
+            self.execute("BEGIN TRANSACTION")
+            do {
+                try await operations()
+                self.execute("COMMIT")
+            } catch {
+                self.execute("ROLLBACK")
+                throw error
+            }
         }
     }
     
@@ -211,10 +489,10 @@ class SQLiteService: ObservableObject {
         let placeholders = values.keys.map { _ in "?" }.joined(separator: ", ")
         let sql = "INSERT INTO \(table) (\(columns)) VALUES (\(placeholders))"
         
-        let parameters = Array(values.values)
+        let parameters = Array(values.values).map(SQLSendableValue.init(raw:))
         
         return try await withCheckedThrowingContinuation { continuation in
-            dbQueue.async { [weak self] in
+            dbQueue.async { [weak self, parameters] in
                 guard let self = self else {
                     continuation.resume(throwing: SQLiteError.notConnected)
                     return
@@ -232,7 +510,7 @@ class SQLiteService: ObservableObject {
                 
                 // Bind parameters
                 for (index, param) in parameters.enumerated() {
-                    self.bind(param, to: statement, at: Int32(index + 1))
+                    self.bind(param.raw, to: statement, at: Int32(index + 1))
                 }
                 
                 if sqlite3_step(statement) == SQLITE_DONE {
@@ -324,6 +602,90 @@ class SQLiteService: ObservableObject {
         return sqlite3_last_insert_rowid(db)
     }
     
+    // MARK: - Batch Operations
+    
+    @MainActor
+    func performBatchInsert(table: String, records: [[String: Any]]) async -> Bool {
+        guard !records.isEmpty else { return true }
+        
+        let columns = records[0].keys.joined(separator: ", ")
+        let placeholders = "(" + Array(repeating: "?", count: records[0].keys.count).joined(separator: ", ") + ")"
+        let query = "INSERT OR REPLACE INTO \(table) (\(columns)) VALUES \(placeholders)"
+        
+        let safeRecords = records.map(SQLSendableRecord.init(raw:))
+        
+        return await withCheckedContinuation { continuation in
+            dbQueue.async { [weak self, safeRecords] in
+                guard let self = self, let db = self.db else {
+                    continuation.resume(returning: false)
+                    return
+                }
+                
+                var success = true
+                var statement: OpaquePointer?
+                
+                // Use C-API directly for transaction
+                let beginResult = sqlite3_exec(db, "BEGIN TRANSACTION", nil, nil, nil)
+                if beginResult != SQLITE_OK {
+                    let error = String(cString: sqlite3_errmsg(db))
+                    print("❌ Batch insert transaction begin failed: \(error)")
+                    continuation.resume(returning: false)
+                    return
+                }
+                
+                do {
+                    // Prepare statement once
+                    if sqlite3_prepare_v2(db, query, -1, &statement, nil) != SQLITE_OK {
+                         let error = String(cString: sqlite3_errmsg(db))
+                         print("❌ Batch insert prepare failed: \(error)")
+                         sqlite3_exec(db, "ROLLBACK", nil, nil, nil)
+                         continuation.resume(returning: false)
+                         return
+                    }
+                    
+                    // Sort keys to ensure order matches columns
+                    let sortedKeys = safeRecords[0].raw.keys
+                    
+                    for record in safeRecords {
+                        // Reset statement for reuse
+                        sqlite3_reset(statement)
+                        sqlite3_clear_bindings(statement)
+                        
+                        // Bind parameters
+                        for (index, key) in sortedKeys.enumerated() {
+                            // Use existing helper to bind values
+                            // index is 1-based in SQLite
+                            self.bind(record.raw[key] ?? NSNull(), to: statement, at: Int32(index + 1))
+                        }
+                        
+                        if sqlite3_step(statement) != SQLITE_DONE {
+                            let error = String(cString: sqlite3_errmsg(db))
+                            print("❌ Batch insert step failed: \(error)")
+                            throw SQLiteError.queryFailed(error)
+                        }
+                    }
+                    
+                    sqlite3_finalize(statement)
+                    
+                    // Commit transaction
+                    if sqlite3_exec(db, "COMMIT", nil, nil, nil) != SQLITE_OK {
+                         let error = String(cString: sqlite3_errmsg(db))
+                         print("❌ Batch insert commit failed: \(error)")
+                         throw SQLiteError.transactionFailed
+                    }
+                    
+                } catch {
+                    print("❌ Batch insert failed: \(error)")
+                    sqlite3_finalize(statement)
+                    sqlite3_exec(db, "ROLLBACK", nil, nil, nil)
+                    success = false
+                }
+                
+                continuation.resume(returning: success)
+            }
+        }
+    }
+
     // MARK: - Helper Methods
     
     private func bind(_ value: Any, to statement: OpaquePointer?, at index: Int32) {
@@ -339,7 +701,7 @@ class SQLiteService: ObservableObject {
         case let val as Bool:
             sqlite3_bind_int(statement, index, val ? 1 : 0)
         case let val as Data:
-            val.withUnsafeBytes {
+            _ = val.withUnsafeBytes {
                 sqlite3_bind_blob(statement, index, $0.baseAddress, Int32(val.count), nil)
             }
         case let val as Date:
@@ -370,9 +732,9 @@ class SQLiteService: ObservableObject {
         case SQLITE_TEXT:
             return String(cString: sqlite3_column_text(statement, index))
         case SQLITE_BLOB:
-            let bytes = sqlite3_column_blob(statement, index)
+            guard let bytes = sqlite3_column_blob(statement, index) else { return nil }
             let count = sqlite3_column_bytes(statement, index)
-            return Data(bytes: bytes!, count: Int(count))
+            return Data(bytes: bytes, count: Int(count))
         case SQLITE_NULL:
             return nil
         default:
@@ -461,6 +823,36 @@ extension SQLiteService {
           deleted_at TEXT,
           PRIMARY KEY (tmdb_id, media_type)
         );
+        """
+    }
+
+    private func createDetailCacheTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS detail_cache (
+          id TEXT PRIMARY KEY,
+          media_id INTEGER NOT NULL,
+          media_type TEXT NOT NULL,
+          title TEXT NOT NULL,
+          overview TEXT,
+          poster_path TEXT,
+          backdrop_path TEXT,
+          release_date TEXT,
+          vote_average REAL,
+          runtime INTEGER,
+          genres TEXT,
+          credits_json TEXT,
+          videos_json TEXT,
+          providers_json TEXT,
+          similar_json TEXT,
+          imdb_id TEXT,
+          cached_at TEXT DEFAULT (datetime('now')),
+          expires_at TEXT NOT NULL,
+          updated_at TEXT DEFAULT (datetime('now')),
+          deleted_at TEXT,
+          UNIQUE(media_id, media_type)
+        );
+        CREATE INDEX IF NOT EXISTS idx_detail_cache_media ON detail_cache(media_id, media_type);
+        CREATE INDEX IF NOT EXISTS idx_detail_cache_expires ON detail_cache(expires_at);
         """
     }
     
@@ -610,6 +1002,17 @@ extension SQLiteService {
         """
     }
     
+    private func createUserAITokenUsageTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS user_ai_token_usage (
+          user_id TEXT PRIMARY KEY,
+          tokens_used_today INTEGER DEFAULT 0,
+          updated_at TEXT DEFAULT (datetime('now')),
+          synced_at TEXT
+        );
+        """
+    }
+    
     private func createSyncOutboxTable() -> String {
         """
         CREATE TABLE IF NOT EXISTS sync_outbox (
@@ -680,6 +1083,97 @@ extension SQLiteService {
         );
         """
     }
+    
+    // MARK: - Reactions & Comments Tables
+    
+    private func createMovieReactionsTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS movie_reactions (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          media_id INTEGER NOT NULL,
+          media_type TEXT NOT NULL,
+          reaction_type TEXT NOT NULL,
+          created_at TEXT DEFAULT (datetime('now')),
+          updated_at TEXT DEFAULT (datetime('now')),
+          UNIQUE(user_id, media_id, media_type),
+          FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_movie_reactions_user ON movie_reactions(user_id);
+        CREATE INDEX IF NOT EXISTS idx_movie_reactions_media ON movie_reactions(media_id, media_type);
+        """
+    }
+    
+    private func createMovieReactionCountsTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS movie_reaction_counts (
+          media_id INTEGER NOT NULL,
+          media_type TEXT NOT NULL,
+          like_count INTEGER DEFAULT 0,
+          dislike_count INTEGER DEFAULT 0,
+          updated_at TEXT DEFAULT (datetime('now')),
+          PRIMARY KEY (media_id, media_type)
+        );
+        """
+    }
+    
+    private func createClipReactionsTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS clip_reactions (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          clip_id TEXT NOT NULL,
+          reaction_type TEXT NOT NULL DEFAULT 'like',
+          created_at TEXT DEFAULT (datetime('now')),
+          updated_at TEXT DEFAULT (datetime('now')),
+          synced_at TEXT,
+          UNIQUE(user_id, clip_id, reaction_type),
+          FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_clip_reactions_user ON clip_reactions(user_id);
+        CREATE INDEX IF NOT EXISTS idx_clip_reactions_clip ON clip_reactions(clip_id);
+        """
+    }
+    
+    private func createClipCommentsTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS clip_comments (
+          id TEXT PRIMARY KEY,
+          clip_id TEXT NOT NULL,
+          user_id TEXT NOT NULL,
+          parent_comment_id TEXT,
+          content TEXT NOT NULL,
+          like_count INTEGER DEFAULT 0,
+          reply_count INTEGER DEFAULT 0,
+          created_at TEXT DEFAULT (datetime('now')),
+          updated_at TEXT DEFAULT (datetime('now')),
+          deleted_at TEXT,
+          synced_at TEXT,
+          FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE,
+          FOREIGN KEY (parent_comment_id) REFERENCES clip_comments(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_clip_comments_clip ON clip_comments(clip_id, deleted_at);
+        CREATE INDEX IF NOT EXISTS idx_clip_comments_parent ON clip_comments(parent_comment_id);
+        CREATE INDEX IF NOT EXISTS idx_clip_comments_user ON clip_comments(user_id);
+        """
+    }
+    
+    private func createClipCommentLikesTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS clip_comment_likes (
+          id TEXT PRIMARY KEY,
+          comment_id TEXT NOT NULL,
+          user_id TEXT NOT NULL,
+          created_at TEXT DEFAULT (datetime('now')),
+          synced_at TEXT,
+          UNIQUE(user_id, comment_id),
+          FOREIGN KEY (comment_id) REFERENCES clip_comments(id) ON DELETE CASCADE,
+          FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_clip_comment_likes_comment ON clip_comment_likes(comment_id);
+        CREATE INDEX IF NOT EXISTS idx_clip_comment_likes_user ON clip_comment_likes(user_id);
+        """
+    }
 }
 
 // MARK: - Helper Structures
@@ -729,3 +1223,6 @@ enum SQLiteError: LocalizedError {
         }
     }
 }
+
+// Serialized through `dbQueue`, so mark as unchecked Sendable for use inside @Sendable closures.
+extension SQLiteService: @unchecked Sendable {}

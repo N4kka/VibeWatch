@@ -8,11 +8,13 @@ struct VibeWatchApp: App {
     @StateObject private var localizationManager = LocalizationManager.shared
     @StateObject private var syncWorker = SyncWorker.shared
     @StateObject private var sqliteDB = SQLiteService.shared
-    @StateObject private var appNavigationManager = AppNavigationManager.shared // Inject AppNavigationManager
+    @StateObject private var appNavigationManager = AppNavigationManager.shared
+    @StateObject private var authService = AuthService.shared
+    @StateObject private var quotaManager = DailyQuotaManager.shared
     
     init() {
-        // Configure RevenueCat
-        Purchases.logLevel = .debug // TODO: Set to .info in production
+        // Configure RevenueCat with appropriate log level
+        RevenueCatService.shared.applyCurrentLogLevel()
         Purchases.configure(withAPIKey: Config.revenueCatAPIKey)
         
         // Force load localizations before any views are created
@@ -21,6 +23,9 @@ struct VibeWatchApp: App {
         // Initialize offline-first database
         print("🗄️ [App] Initializing SQLite database...")
         print("✅ [RevenueCat] Configured with API key")
+        
+        // Disable analytics until ATT permission is granted
+        AnalyticsService.shared.setEnabled(false)
     }
     
     var body: some Scene {
@@ -29,7 +34,9 @@ struct VibeWatchApp: App {
                 .environmentObject(appState)
                 .environmentObject(localizationManager)
                 .environmentObject(syncWorker)
-                .environmentObject(appNavigationManager) // Pass AppNavigationManager to environment
+                .environmentObject(appNavigationManager)
+                .environmentObject(authService)
+                .environmentObject(quotaManager)
                 .preferredColorScheme(.dark)
                 .task {
                     // Start background sync worker
@@ -38,11 +45,10 @@ struct VibeWatchApp: App {
                 }
                 .onOpenURL { url in
                     // Handle deep links from URL schemes (e.g., OAuth)
-                    print("📱 Deep link received via URL: \(url.absoluteString)")
+                    print("📱 Deep link received via URL (SwiftUI): \(url.absoluteString)")
                     Task {
                         do {
-                            try await AuthService.shared.client?.auth.session(from: url)
-                            await AuthService.shared.checkAuthState()
+                            try await AuthService.shared.handleAuthCallback(url: url)
                             appState.isAuthenticated = AuthService.shared.isAuthenticated
                             appState.currentUser = AuthService.shared.currentUser
                         } catch {
@@ -77,22 +83,34 @@ class AppState: ObservableObject {
     @Published var showErrorToast = false
     @Published var toastMessage = ""
     @Published var isPreloading = true // Track splash state
+    @Published var shouldShowSignIn = false // Trigger for redirecting to sign in flow
     
-    private let authService = AuthService.shared
+    private let authService: AuthService
     private let dataCoordinator = DataCoordinator.shared
     
-    init() {
+    init(authService: AuthService = .shared) {
+        self.authService = authService
+
+        // Immediately load from cached auth state (synchronous)
+        self.isAuthenticated = authService.isAuthenticated
+        self.currentUser = authService.currentUser
+        print("📱 [AppState] Initialized with auth state: authenticated=\(isAuthenticated), user=\(currentUser?.email ?? "nil")")
+
         Task {
             await checkAuthState()
             await preloadContent()
             await RevenueCatService.shared.refreshOfferings()
+
+            // Check and execute daily prefetch for PRO users
+            await DailyContentPrefetchService.shared.checkAndExecuteDailyPrefetch()
         }
     }
-    
+
     func checkAuthState() async {
         await authService.checkAuthState()
         self.isAuthenticated = authService.isAuthenticated
         self.currentUser = authService.currentUser
+        print("🔄 [AppState] Updated auth state: authenticated=\(isAuthenticated), user=\(currentUser?.email ?? "nil")")
     }
     
     private func preloadContent() async {
@@ -103,6 +121,10 @@ class AppState: ObservableObject {
             print("📥 [App] First launch detected - migrating data from Supabase to SQLite...")
             await DatabaseMigrationService.shared.migrateInitialData()
         }
+        
+        // Sync new content from Supabase (incremental sync)
+        print("🔄 [App] Syncing new content from Supabase...")
+        try? await SyncService.shared.syncNewContent()
         
         // Optimized parallel preload: Discovery content + 5 initial clips
         // Then background task for 20 more clips
