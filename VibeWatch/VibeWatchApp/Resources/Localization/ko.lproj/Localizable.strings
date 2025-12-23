@@ -103,6 +103,7 @@
 "filters.anyCountry" = "모든 국가";
 "filters.apply" = "적용";
 "filters.country" = "국가";
+"filters.searchCountry" = "국가 검색";
 "filters.minimumRating" = "최소 평점";
 "filters.ratingAny" = "상관없음";
 "filters.ratingExcellent" = "8.0+";
@@ -190,6 +191,8 @@
 "platform.selectionCount" = "%d / %d 선택됨";
 "platform.title" = "스트리밍 플랫폼";
 "platforms.buy" = "구매";
+"platforms.cinema" = "영화관";
+"platforms.justwatch" = "JustWatch";
 "platforms.rent" = "대여";
 "platforms.streaming" = "스트리밍";
 "platforms.title" = "플랫폼";
@@ -215,7 +218,7 @@
 "auth.gate.createTitle" = "무료 VibeWatch 계정을 만드세요";
 "auth.gate.description" = "커스텀 리스트를 만들고 기기 간에 동기화하려면 계정이 필요합니다.";
 "auth.gate.haveAccount" = "이미 계정이 있어요";
-"auth.gate.limitMessage" = "오늘의 15개 무료 클립을 모두 즐기셨네요. 지금 가입하면 진행 상황을 동기화하고 내일의 클립도 바로 잠금 해제됩니다.";
+"auth.gate.limitMessage" = "오늘의 25개 무료 클립을 모두 즐기셨네요. 지금 가입하면 진행 상황을 동기화하고 내일의 클립도 바로 잠금 해제됩니다.";
 "auth.gate.signupFree" = "가입은 무료이며 1분도 걸리지 않습니다.";
 "auth.gate.benefit.saveClips" = "좋아하는 클립 저장";
 "auth.gate.benefit.syncDevices" = "모든 기기에서 동기화";
@@ -243,7 +246,7 @@
 
 // AI
 "ai.title" = "Vibe AI";
-"ai.tokensUsage" = "토큰: %@/%@";
+"ai.requestsUsage" = "일일 요청 %d/%d";
 "ai.describeVibe" = "지금 기분을 설명해 주세요";
 "ai.thinking" = "생각 중...";
 "ai.editMessage" = "메시지 편집";
@@ -265,14 +268,13 @@
 "ai.suggestion.chips2" = "💥 80년대 액션 코미디, AI 추천";
 "ai.suggestion.chips3" = "🕵️‍♂️ 반전이 있는 숨은 스릴러";
 "ai.suggestion.chips4" = "🤖 AI: 다음에 뭘 봐야 할까?";
-"ai.usage.left" = "남음";
 
 // Paywall
 "paywall.bestValue" = "가장 인기 있는 요금제";
 "paywall.cta.continue" = "계속";
 "paywall.cta.selectPlan" = "요금제 선택";
 "paywall.cta.startTrial" = "%@ 무료 체험 시작";
-"paywall.daily.limitDescription" = "무료 회원은 하루에 15개의 클립을 시청할 수 있습니다. Pro로 업그레이드하면 무제한 클립과 프리미엄 기능을 이용할 수 있습니다.";
+"paywall.daily.limitDescription" = "무료 회원은 하루에 25개의 클립을 시청할 수 있습니다. Pro로 업그레이드하면 무제한 클립과 프리미엄 기능을 이용할 수 있습니다.";
 "paywall.daily.limitReached" = "오늘의 한도에 도달했습니다";
 "paywall.daily.nextReset" = "다음 초기화까지";
 "paywall.daily.resetIn" = "초기화까지 남은 시간";
@@ -426,3 +428,89 @@
 "profile.faq.answer4" = "어떤 작품에서든 \"우리에게 알려주세요\"를 사용하여 버그나 잘못된 링크를 신고하면 빠르게 수정하겠습니다.";
 "profile.faq.question5" = "VibeWatch는 일반 시청자에게도 적합한가요?";
 "profile.faq.answer5" = "물론이죠. 친구들과의 토요일 밤 영화 같은 쉬운 선택부터 영화 팬을 위한 숨겨진 보석까지 다양하게 제공합니다.";
+"carousel.hotThisWeek" = "이번 주 인기작";
+"carousel.awardWinners" = "당신이 좋아할 수상작";
+
+// --- Synced from en.lproj ---
+"filters.mediaType" = "미디어 유형";
+"filters.movies" = "영화";
+"filters.tvShows" = "TV 프로그램";
+"filters.both" = "둘 다";
+"filters.rating" = "평가";
+"filters.releasePeriod" = "릴리스 기간";
+"filters.releasePeriodRecent" = "최근(2020+)";
+"filters.releasePeriodModern" = "모던 (2010-2019)";
+"filters.releasePeriodClassic" = "클래식(<2010)";
+"filters.customRange" = "사용자 지정 범위";
+"filters.customYearRange" = "사용자 지정 연도 범위";
+"filters.min" = "Min";
+"filters.max" = "최대";
+"filters.from" = "에서";
+"filters.to" = "To";
+"filters.custom" = "사용자 지정";
+"filters.allCountries" = "모든 국가";
+"filters.sortPopularityDesc" = "가장 인기 있는";
+"filters.sortPopularityAsc" = "가장 인기 없음";
+"filters.sortRatingDesc" = "최고 평점";
+"filters.sortRatingAsc" = "최저 평점";
+"filters.sortReleaseDateDesc" = "최신 먼저";
+"filters.sortReleaseDateAsc" = "최고령자 우선";
+"filters.proFilters" = "프로 필터";
+"filters.hideWatched" = "시청 숨기기";
+"filters.hideDisliked" = "싫어요 숨기기";
+"filters.proTitle" = "고급 필터 잠금 해제";
+"filters.proDescription" = "사용자 지정 범위, 여러 국가 선택 및 고급 필터링 옵션을 사용하려면 Pro로 업그레이드하세요";
+"filters.upgradeToPro" = "프로로 업그레이드";
+"filters.filtersActive" = "d 필터 활성";
+"carousel.dailyMix" = "데일리 믹스";
+"carousel.trendingInGenre" = "%@에서 추세";
+"carousel.becauseYouLiked" = "당신이 %@을 좋아했기 때문에";
+"carousel.hiddenGems" = "%@에 숨겨진 보석";
+"carousel.continueJourney" = "여정 계속하기";
+"carousel.fromSearches" = "검색 결과에서";
+"carousel.topTVPicks" = "당신을 위한 최고의 TV 추천";
+"carousel.staffPicks" = "%@ 팬을 위한 직원 추천";
+"carousel.yearlyRewind" = "연간 되감기";
+"settings.privacy.title" = "개인정보 보호";
+"settings.analytics.share" = "익명 애널리틱스 공유";
+"settings.analytics.share.description" = "사용자가 어떤 기능을 사용하는지 파악하고 앱을 개선하는 데 도움이 됩니다. 광고 추적이 없습니다.";
+"settings.analytics.title" = "분석";
+"settings.analytics.viewStats" = "통계 보기";
+"settings.analytics.description" = "시계 기록 및 인사이트 보기";
+"settings.notifications.title" = "알림";
+"settings.notifications.manage" = "알림 관리";
+"settings.notifications.description" = "새 콘텐츠에 대한 맞춤 알림";
+"onboarding.welcome.title" = "나만의 바이브 발견하기";
+"onboarding.welcome.subtitle" = "나만을 위한 AI 기반 추천을 제공합니다.";
+"onboarding.clips.title" = "읽지 말고 보기";
+"onboarding.clips.subtitle" = "짧고 매력적인 클립을 통해 영화를 경험하세요.";
+"onboarding.lists.title" = "어디서나 내 감시 목록";
+"onboarding.lists.subtitle" = "동영상을 저장하고 모든 기기에서 동기화하세요.";
+"onboarding.account.title" = "프로필 저장";
+"onboarding.account.subtitle" = "계정을 만들어 여러 디바이스에서 관심 목록과 환경설정을 동기화하세요.";
+"onboarding.skip" = "지금은 건너뛰기";
+"paywall.cta.skip" = "지금은 건너뛰기";
+"filters.allPlatforms" = "모든 플랫폼";
+
+// --- Synced from en.lproj ---
+"filters.releasePeriodAny" = "모든";
+"common.next" = "다음";
+"ai.tryAsking" = "물어보세요...";
+
+// --- Synced from en.lproj ---
+"auth.checkEmailTitle" = "이메일 확인";
+"auth.checkEmailMessage" = "확인 링크를 보내드렸습니다. 받은 편지함에서 계정을 확인하시기 바랍니다.";
+
+// --- Synced from en.lproj ---
+"auth.openMailApp" = "메일 앱 열기";
+"auth.iHaveVerified" = "확인 완료";
+"auth.resendEmail" = "이메일 다시 보내기";
+"auth.changeEmail" = "이메일 변경";
+"auth.verificationPending" = "아직 확인을 기다리는 중...";
+
+"movieDetail.whyForMe" = "Why for me?";
+
+"movieDetail.whyForMe.basedOnGenres" = "Based on your 3 favorite genres";
+
+"movieDetail.goodFitTitle" = "Why %@ is a good fit for me?";
+"movieDetail.goodFitSubtitle" = "A quick, personalized take based on your taste.";

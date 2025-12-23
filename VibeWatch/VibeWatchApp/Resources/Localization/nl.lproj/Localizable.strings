@@ -63,11 +63,11 @@
 "lists.searchPlaceholder" = "Zoek in deze lijst";
 "lists.seen" = "Gezien";
 "lists.softLimitWarning" = "\"{name}\" heeft al {limit} items. Maak eventueel een nieuwe lijst om alles overzichtelijk te houden.";
-"lists.watchlist" = "Watchlist";
+"lists.watchlist" = "Controlelijst";
 "lists.watchOn" = "KIJK OP";
 
 // Movie Detail
-"movieDetail.cast" = "Cast";
+"movieDetail.cast" = "Giet";
 "movieDetail.country" = "Land";
 "movieDetail.director" = "Regisseur";
 "movieDetail.genres" = "Genres";
@@ -78,7 +78,7 @@
 "movieDetail.save" = "Opslaan in watchlist";
 "movieDetail.seen" = "Gezien";
 "movieDetail.similar" = "Mensen die dit leuk vonden, vonden dit ook leuk";
-"movieDetail.trailer" = "Trailer";
+"movieDetail.trailer" = "Aanhangwagen";
 "movieDetail.watchNow" = "Nu kijken";
 
 // Filters
@@ -103,6 +103,7 @@
 "filters.anyCountry" = "Elk land";
 "filters.apply" = "Toepassen";
 "filters.country" = "Land";
+"filters.searchCountry" = "Land zoeken";
 "filters.minimumRating" = "Minimale beoordeling";
 "filters.ratingAny" = "Maakt niet uit";
 "filters.ratingExcellent" = "8.0+";
@@ -152,7 +153,7 @@
 "profile.cancel" = "Annuleren";
 "profile.createAccount" = "Account maken";
 "profile.done" = "Klaar";
-"profile.helpSupport" = "Help & Support";
+"profile.helpSupport" = "Hulp en ondersteuning";
 "profile.logout" = "Uitloggen";
 "profile.notifications" = "Meldingen";
 "profile.passwordPlaceholder" = "Wachtwoord";
@@ -190,6 +191,8 @@
 "platform.selectionCount" = "%d van %d geselecteerd";
 "platform.title" = "Streamingplatforms";
 "platforms.buy" = "Kopen";
+"platforms.cinema" = "Bioscoop";
+"platforms.justwatch" = "JustWatch";
 "platforms.rent" = "Huren";
 "platforms.streaming" = "Streaming";
 "platforms.title" = "Platforms";
@@ -215,7 +218,7 @@
 "auth.gate.createTitle" = "Maak je gratis VibeWatch-account";
 "auth.gate.description" = "Je hebt een account nodig om aangepaste lijsten te maken en ze te synchroniseren tussen je apparaten.";
 "auth.gate.haveAccount" = "Ik heb al een account";
-"auth.gate.limitMessage" = "Je hebt vandaag 15 gratis clips bekeken. Meld je aan om je voortgang te synchroniseren en de drops van morgen direct te ontgrendelen.";
+"auth.gate.limitMessage" = "Je hebt vandaag 25 gratis clips bekeken. Meld je aan om je voortgang te synchroniseren en de drops van morgen direct te ontgrendelen.";
 "auth.gate.signupFree" = "Aanmelden is gratis en kost minder dan een minuut.";
 "auth.gate.benefit.saveClips" = "Sla je favoriete clips op";
 "auth.gate.benefit.syncDevices" = "Synchroniseer op al je apparaten";
@@ -243,7 +246,7 @@
 
 // AI
 "ai.title" = "Vibe AI";
-"ai.tokensUsage" = "Tokens: %@/%@";
+"ai.requestsUsage" = "%d/%d dagelijkse verzoeken";
 "ai.describeVibe" = "Beschrijf je vibe";
 "ai.thinking" = "Even nadenken...";
 "ai.editMessage" = "Bericht bewerken";
@@ -265,14 +268,13 @@
 "ai.suggestion.chips2" = "💥 Jaren 80 actiekomedie, AI beveelt aan";
 "ai.suggestion.chips3" = "🕵️‍♂️ Onderschatte thriller met een twist";
 "ai.suggestion.chips4" = "🤖 AI: wat moet ik hierna kijken?";
-"ai.usage.left" = "over";
 
 // Paywall
 "paywall.bestValue" = "BESTE DEAL";
 "paywall.cta.continue" = "Doorgaan";
 "paywall.cta.selectPlan" = "Kies een abonnement";
 "paywall.cta.startTrial" = "Start %@ gratis proefperiode";
-"paywall.daily.limitDescription" = "Gratis leden kunnen 15 clips per dag kijken. Upgrade naar Pro voor onbeperkte clips en premium functies.";
+"paywall.daily.limitDescription" = "Gratis leden kunnen 25 clips per dag kijken. Upgrade naar Pro voor onbeperkte clips en premium functies.";
 "paywall.daily.limitReached" = "Je hebt de limiet van vandaag bereikt";
 "paywall.daily.nextReset" = "Volgende reset over";
 "paywall.daily.resetIn" = "Reset over";
@@ -426,3 +428,89 @@
 "profile.faq.answer4" = "Gebruik \"Laat het ons weten\" bij elke titel om bugs of slechte links te melden en we lossen het snel op.";
 "profile.faq.question5" = "Werkt VibeWatch voor casual kijkers?";
 "profile.faq.answer5" = "Absoluut. We tonen makkelijke keuzes zoals een zaterdagavondfilm met vrienden, maar ook diepgaande tips voor filmliefhebbers.";
+"carousel.hotThisWeek" = "Hot deze week";
+"carousel.awardWinners" = "Prijswinnaars die je geweldig zult vinden";
+
+// --- Synced from en.lproj ---
+"filters.mediaType" = "Type media";
+"filters.movies" = "Films";
+"filters.tvShows" = "TV-programma's";
+"filters.both" = "Beide";
+"filters.rating" = "Beoordeling";
+"filters.releasePeriod" = "Vrijgaveperiode";
+"filters.releasePeriodRecent" = "Recent (2020+)";
+"filters.releasePeriodModern" = "Modern (2010-2019)";
+"filters.releasePeriodClassic" = "Klassiek (<2010)";
+"filters.customRange" = "Aangepast bereik";
+"filters.customYearRange" = "Aangepast jaar Bereik";
+"filters.min" = "Min";
+"filters.max" = "Max";
+"filters.from" = "Van";
+"filters.to" = "Naar";
+"filters.custom" = "Aangepast";
+"filters.allCountries" = "Alle landen";
+"filters.sortPopularityDesc" = "Meest populair";
+"filters.sortPopularityAsc" = "Minst populair";
+"filters.sortRatingDesc" = "Hoogste waardering";
+"filters.sortRatingAsc" = "Laagste waardering";
+"filters.sortReleaseDateDesc" = "Nieuwste eerst";
+"filters.sortReleaseDateAsc" = "Oudste eerst";
+"filters.proFilters" = "Pro filters";
+"filters.hideWatched" = "Verbergen Bekeken";
+"filters.hideDisliked" = "Verbergen Niet leuk";
+"filters.proTitle" = "Geavanceerde filters ontgrendelen";
+"filters.proDescription" = "Upgrade naar Pro voor aangepaste bereiken, selectie uit meerdere landen en geavanceerde filteropties";
+"filters.upgradeToPro" = "Upgrade naar Pro";
+"filters.filtersActive" = "%d filters actief";
+"carousel.dailyMix" = "Je dagelijkse mix";
+"carousel.trendingInGenre" = "Trend in %@";
+"carousel.becauseYouLiked" = "Omdat je %@ leuk vond";
+"carousel.hiddenGems" = "Hidden Gems in %@";
+"carousel.continueJourney" = "Zet je reis voort";
+"carousel.fromSearches" = "Van uw zoekopdrachten";
+"carousel.topTVPicks" = "Top TV-pakketten voor jou";
+"carousel.staffPicks" = "Personeelstips voor %@-fans";
+"carousel.yearlyRewind" = "Je jaarlijkse terugblik";
+"settings.privacy.title" = "Privacy";
+"settings.analytics.share" = "Anonieme analyses delen";
+"settings.analytics.share.description" = "Helpt ons te begrijpen welke functies je gebruikt en de app te verbeteren. Geen advertenties volgen.";
+"settings.analytics.title" = "Analytics";
+"settings.analytics.viewStats" = "Je statistieken bekijken";
+"settings.analytics.description" = "Bekijk je horlogegeschiedenis en inzichten";
+"settings.notifications.title" = "Meldingen";
+"settings.notifications.manage" = "Meldingen beheren";
+"settings.notifications.description" = "Persoonlijke waarschuwingen voor nieuwe inhoud";
+"onboarding.welcome.title" = "Ontdek je vibe";
+"onboarding.welcome.subtitle" = "AI-gestuurde aanbevelingen speciaal voor jou.";
+"onboarding.clips.title" = "Kijken, niet lezen";
+"onboarding.clips.subtitle" = "Ervaar films door middel van korte, boeiende clips.";
+"onboarding.lists.title" = "Jouw controlelijst, overal";
+"onboarding.lists.subtitle" = "Films opslaan en synchroniseren op al je apparaten.";
+"onboarding.account.title" = "Uw profiel opslaan";
+"onboarding.account.subtitle" = "Maak een account aan om je watchlist en voorkeuren te synchroniseren tussen apparaten.";
+"onboarding.skip" = "Voorlopig overslaan";
+"paywall.cta.skip" = "Voorlopig overslaan";
+"filters.allPlatforms" = "Alle platforms";
+
+// --- Synced from en.lproj ---
+"filters.releasePeriodAny" = "Elke";
+"common.next" = "Volgende";
+"ai.tryAsking" = "Probeer het te vragen...";
+
+// --- Synced from en.lproj ---
+"auth.checkEmailTitle" = "Controleer je e-mail";
+"auth.checkEmailMessage" = "We hebben je een bevestigingslink gestuurd. Controleer je inbox om je account te verifiëren.";
+
+// --- Synced from en.lproj ---
+"auth.openMailApp" = "Mail-app openen";
+"auth.iHaveVerified" = "Ik heb geverifieerd";
+"auth.resendEmail" = "E-mail opnieuw verzenden";
+"auth.changeEmail" = "E-mail wijzigen";
+"auth.verificationPending" = "Ik wacht nog steeds op verificatie...";
+
+"movieDetail.whyForMe" = "Why for me?";
+
+"movieDetail.whyForMe.basedOnGenres" = "Based on your 3 favorite genres";
+
+"movieDetail.goodFitTitle" = "Why %@ is a good fit for me?";
+"movieDetail.goodFitSubtitle" = "A quick, personalized take based on your taste.";

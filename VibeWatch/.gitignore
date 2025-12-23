@@ -1,0 +1,28 @@
+# macOS cruft
+.DS_Store
+
+# Xcode build artifacts
+.derivedData/
+
+# Local AI/tooling configs
+.claude/
+
+# Supabase local state/secrets
+supabase/.env
+supabase/.temp/
+supabase/supabase/.temp/
+supabase/.DS_Store
+supabase/supabase/.DS_Store
+
+# Script artifacts
+VibeWatchApp/Scripts/.DS_Store
+
+# Local secrets
+VibeWatchApp/Config/Secrets.xcconfig
+
+# Local-only docs, scripts, and migrations
+docs/
+supabase/
+VibeWatchApp/Scripts/
+VibeWatchApp/Config/
+*.md

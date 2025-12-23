@@ -11,6 +11,9 @@ protocol TMDBServiceProtocol: Sendable {
         minRuntime: Int?,
         maxRuntime: Int?,
         minRating: Double?,
+        maxRating: Double?,
+        releaseDateGte: String?,
+        releaseDateLte: String?,
         country: String?
     ) async throws -> TMDBResponse<Movie>
     func searchMovies(query: String, page: Int) async throws -> TMDBResponse<Movie>
@@ -22,6 +25,9 @@ protocol TMDBServiceProtocol: Sendable {
         sortBy: String,
         page: Int,
         minRating: Double?,
+        maxRating: Double?,
+        firstAirDateGte: String?,
+        firstAirDateLte: String?,
         country: String?
     ) async throws -> TMDBResponse<TVShow>
     func searchTVShows(query: String, page: Int) async throws -> TMDBResponse<TVShow>
@@ -46,7 +52,7 @@ actor TMDBService: TMDBServiceProtocol {
     static let shared: TMDBServiceProtocol = TMDBService()
     
     private let baseURL = "https://api.themoviedb.org/3"
-    private let apiKey = "e42f888f287ca2fbe26c9a6e70351fb7"
+    private let apiKey = Config.tmdbAPIKey
     private let session: URLSession
     private let cache: URLCache
     
@@ -169,6 +175,9 @@ actor TMDBService: TMDBServiceProtocol {
         minRuntime: Int? = nil,
         maxRuntime: Int? = nil,
         minRating: Double? = nil,
+        maxRating: Double? = nil,
+        releaseDateGte: String? = nil,
+        releaseDateLte: String? = nil,
         country: String? = nil
     ) async throws -> TMDBResponse<Movie> {
         var items = [
@@ -192,6 +201,18 @@ actor TMDBService: TMDBServiceProtocol {
             items.append(URLQueryItem(name: "vote_average.gte", value: "\(minRating)"))
             // Only show movies with enough votes to be meaningful
             items.append(URLQueryItem(name: "vote_count.gte", value: "100"))
+        }
+
+        if let maxRating = maxRating {
+            items.append(URLQueryItem(name: "vote_average.lte", value: "\(maxRating)"))
+        }
+
+        if let releaseDateGte = releaseDateGte {
+            items.append(URLQueryItem(name: "primary_release_date.gte", value: releaseDateGte))
+        }
+
+        if let releaseDateLte = releaseDateLte {
+            items.append(URLQueryItem(name: "primary_release_date.lte", value: releaseDateLte))
         }
         
         if let country = country {
@@ -233,6 +254,9 @@ actor TMDBService: TMDBServiceProtocol {
         sortBy: String = "popularity.desc",
         page: Int = 1,
         minRating: Double? = nil,
+        maxRating: Double? = nil,
+        firstAirDateGte: String? = nil,
+        firstAirDateLte: String? = nil,
         country: String? = nil
     ) async throws -> TMDBResponse<TVShow> {
         var items = [
@@ -248,6 +272,18 @@ actor TMDBService: TMDBServiceProtocol {
             items.append(URLQueryItem(name: "vote_average.gte", value: "\(minRating)"))
             // Only show shows with enough votes to be meaningful
             items.append(URLQueryItem(name: "vote_count.gte", value: "100"))
+        }
+
+        if let maxRating = maxRating {
+            items.append(URLQueryItem(name: "vote_average.lte", value: "\(maxRating)"))
+        }
+
+        if let firstAirDateGte = firstAirDateGte {
+            items.append(URLQueryItem(name: "first_air_date.gte", value: firstAirDateGte))
+        }
+
+        if let firstAirDateLte = firstAirDateLte {
+            items.append(URLQueryItem(name: "first_air_date.lte", value: firstAirDateLte))
         }
         
         if let country = country {

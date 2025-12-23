@@ -11,6 +11,8 @@ struct MainTabView: View {
     @State private var showOnboarding = !UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
     @State private var hasClearedAuthOnFreshInstall = false
     @StateObject private var aiViewModel = AIRecommendationViewModel()
+    @State private var showProPaywall = false
+    @State private var proPaywallSource = "unknown"
     
     private var passwordRecoveryBinding: Binding<Bool> {
         Binding(
@@ -47,16 +49,13 @@ struct MainTabView: View {
                 }
                 .animation(.easeInOut(duration: 0.3), value: selectedTab)
                 
-                // Hide bottom bar when on Clips tab
                 VStack(spacing: 0) {
                     Spacer()
                     
-                    if selectedTab != 1 {
-                        LiquidGlassBottomBar(selectedTab: $selectedTab)
-                            .padding(.horizontal, 16)
-                            .padding(.bottom, 20)
-                            .transition(.move(edge: .bottom).combined(with: .opacity))
-                    }
+                    LiquidGlassBottomBar(selectedTab: $selectedTab)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 20)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
                 .ignoresSafeArea(edges: .bottom)
                 .animation(.spring(response: 0.4, dampingFraction: 0.8), value: selectedTab)
@@ -90,7 +89,6 @@ struct MainTabView: View {
                         Label("tab.clips".localized, systemImage: "play.rectangle.fill")
                     }
                     .tag(1)
-                    .toolbar(selectedTab == 1 ? .hidden : .visible, for: .tabBar)
                 
                 AIRecommendationsView(viewModel: aiViewModel)
                     .tabItem {
@@ -166,7 +164,7 @@ struct MainTabView: View {
                         }
                     }
             } else if showOnboarding {
-                OnboardingView(showOnboarding: $showOnboarding)
+                OnboardingContainerView(showOnboarding: $showOnboarding)
                     .transition(.opacity)
                     .onChange(of: showOnboarding) {_, newValue in
                         print("🔵 [MainTabView] showOnboarding changed to: \(newValue)")
@@ -211,6 +209,11 @@ struct MainTabView: View {
             }
             print("🤖 [MainTabView] Navigated to AI tab")
         }
+        .onReceive(NotificationCenter.default.publisher(for: .presentProPaywall)) { notification in
+            let source = (notification.userInfo?["source"] as? String) ?? "unknown"
+            proPaywallSource = source
+            showProPaywall = true
+        }
         .background(scenePhaseMonitor) // Monitor app lifecycle for subscription status
         .withErrorHandling()
         .task {
@@ -236,8 +239,14 @@ struct MainTabView: View {
                 await appState.checkAuthState()
             }
             
-            // Request tracking permission for analytics (ATT)
+            // Request ATT permission (only relevant for ad attribution; not required for product analytics)
             await TrackingPermissionManager.shared.requestTrackingIfNeeded()
+        }
+        .fullScreenCover(isPresented: $showProPaywall) {
+            ProPaywallView(isPresented: $showProPaywall, source: proPaywallSource)
+                .environmentObject(appState)
+                .environmentObject(authService)
+                .environmentObject(DailyQuotaManager.shared)
         }
         .sheet(isPresented: passwordRecoveryBinding) {
             PasswordResetView(mode: .recovery, isPresented: passwordRecoveryBinding)
@@ -349,6 +358,8 @@ extension MainTabView {
                 if newPhase == .active && oldPhase != .active {
                     print("🔍 [App] App became active - checking subscription status")
                     Task {
+                        AnalyticsService.shared.trackAppOpen()
+                        DailyQuotaManager.shared.refreshForNewDayIfNeeded()
                         await ClipQuotaService.shared.checkIsProUser()
                     }
                 }

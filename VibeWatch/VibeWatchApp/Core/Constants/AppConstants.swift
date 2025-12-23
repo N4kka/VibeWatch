@@ -3,7 +3,7 @@ import CoreGraphics
 
 enum AppConstants {
     enum Clips {
-        static let freeUserDailyLimit = 15
+        static let freeUserDailyLimit = 25
         static let maxClipDurationSeconds = 180
         static let paginationThreshold = 5
         static let batchLoadCount = 20
@@ -21,9 +21,9 @@ enum AppConstants {
     }
     
     enum AI {
-        /// Daily token allowance by tier
-        static let proDailyTokenLimit = 25_000
-        static let freeDailyTokenLimit = 5_000
+        /// Daily request allowance by tier
+        static let proDailyRequestLimit = 20
+        static let freeDailyRequestLimit = 5
     }
     
     enum Debug {

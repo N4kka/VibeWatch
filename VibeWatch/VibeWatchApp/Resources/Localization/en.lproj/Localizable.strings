@@ -103,6 +103,7 @@
 "filters.anyCountry" = "Any Country";
 "filters.apply" = "Apply";
 "filters.country" = "Country";
+"filters.searchCountry" = "Search country";
 "filters.minimumRating" = "Minimum Rating";
 "filters.ratingAny" = "Any";
 "filters.ratingExcellent" = "8.0+";
@@ -190,6 +191,8 @@
 "platform.selectionCount" = "%d of %d selected";
 "platform.title" = "Streaming Platforms";
 "platforms.buy" = "Buy";
+"platforms.cinema" = "Cinema";
+"platforms.justwatch" = "JustWatch";
 "platforms.rent" = "Rent";
 "platforms.streaming" = "Streaming";
 "platforms.title" = "Platforms";
@@ -215,7 +218,7 @@
 "auth.gate.createTitle" = "Create your free VibeWatch account";
 "auth.gate.description" = "You need an account to create custom lists and sync them across your devices.";
 "auth.gate.haveAccount" = "I already have an account";
-"auth.gate.limitMessage" = "You’ve enjoyed today’s 15 free clips. Sign up to sync your progress and unlock tomorrow’s drops instantly.";
+"auth.gate.limitMessage" = "You’ve enjoyed today’s 25 free clips. Sign up to sync your progress and unlock tomorrow’s drops instantly.";
 "auth.gate.signupFree" = "Signing up is free and takes less than a minute.";
 "auth.gate.benefit.saveClips" = "Save your favorite clips";
 "auth.gate.benefit.syncDevices" = "Sync across all your devices";
@@ -243,7 +246,7 @@
 
 // AI
 "ai.title" = "Vibe AI";
-"ai.tokensUsage" = "Tokens: %@/%@";
+"ai.requestsUsage" = "%d/%d daily requests";
 "ai.describeVibe" = "Describe your vibe";
 "ai.thinking" = "Thinking...";
 "ai.editMessage" = "Edit message";
@@ -265,14 +268,13 @@
 "ai.suggestion.chips2" = "💥 80s action-comedy, AI recommends";
 "ai.suggestion.chips3" = "🕵️‍♂️ Underrated thriller with a twist";
 "ai.suggestion.chips4" = "🤖 AI: what should I watch next?";
-"ai.usage.left" = "left";
 
 // Paywall
 "paywall.bestValue" = "BEST VALUE";
 "paywall.cta.continue" = "Continue";
 "paywall.cta.selectPlan" = "Select a plan";
 "paywall.cta.startTrial" = "Start %@ Free Trial";
-"paywall.daily.limitDescription" = "Free members can watch 15 clips per day. Upgrade to Pro for unlimited clips and premium features.";
+"paywall.daily.limitDescription" = "Free members can watch 25 clips per day. Upgrade to Pro for unlimited clips and premium features.";
 "paywall.daily.limitReached" = "You've reached today's limit";
 "paywall.daily.nextReset" = "Next reset in";
 "paywall.daily.resetIn" = "Reset in";
@@ -426,3 +428,97 @@
 "profile.faq.answer4" = "Use \"Let us know\" on any title to report bugs or bad links and we'll fix it fast.";
 "profile.faq.question5" = "Does VibeWatch work for casual viewers?";
 "profile.faq.answer5" = "Totally. We surface easy picks like a Saturday-night movie with friends as well as deep cuts for movie lovers.";
+
+// Global Discovery Filters (Phase 3)
+"filters.mediaType" = "Media Type";
+"filters.movies" = "Movies";
+"filters.tvShows" = "TV Shows";
+"filters.both" = "Both";
+"filters.rating" = "Rating";
+"filters.releasePeriod" = "Release Period";
+"filters.releasePeriodRecent" = "Recent (2020+)";
+"filters.releasePeriodModern" = "Modern (2010-2019)";
+"filters.releasePeriodClassic" = "Classic (<2010)";
+"filters.customRange" = "Custom Range";
+"filters.customYearRange" = "Custom Year Range";
+"filters.min" = "Min";
+"filters.max" = "Max";
+"filters.from" = "From";
+"filters.to" = "To";
+"filters.custom" = "Custom";
+"filters.allCountries" = "All Countries";
+"filters.sortPopularityDesc" = "Most Popular";
+"filters.sortPopularityAsc" = "Least Popular";
+"filters.sortRatingDesc" = "Highest Rated";
+"filters.sortRatingAsc" = "Lowest Rated";
+"filters.sortReleaseDateDesc" = "Newest First";
+"filters.sortReleaseDateAsc" = "Oldest First";
+"filters.proFilters" = "Pro Filters";
+"filters.hideWatched" = "Hide Watched";
+"filters.hideDisliked" = "Hide Disliked";
+"filters.proTitle" = "Unlock Advanced Filters";
+"filters.proDescription" = "Upgrade to Pro for custom ranges, multi-country selection, and advanced filtering options";
+"filters.upgradeToPro" = "Upgrade to Pro";
+"filters.filtersActive" = "%d filters active";
+
+// Personalized Carousels
+"carousel.dailyMix" = "Your Daily Mix";
+"carousel.trendingInGenre" = "Trending in %@";
+"carousel.becauseYouLiked" = "Because You Liked %@";
+"carousel.hiddenGems" = "Hidden Gems in %@";
+"carousel.continueJourney" = "Continue Your Journey";
+"carousel.fromSearches" = "From Your Searches";
+"carousel.topTVPicks" = "Top TV Picks for You";
+"carousel.staffPicks" = "Staff Picks for %@ Fans";
+"carousel.yearlyRewind" = "Your Yearly Rewind";
+"carousel.hotThisWeek" = "Hot This Week";
+"carousel.awardWinners" = "Award Winners You'll Love";
+
+// Privacy / Analytics
+"settings.privacy.title" = "Privacy";
+"settings.analytics.share" = "Share anonymous analytics";
+"settings.analytics.share.description" = "Helps us understand what features you use and improve the app. No ads tracking.";
+"settings.analytics.title" = "Analytics";
+"settings.analytics.viewStats" = "View Your Stats";
+"settings.analytics.description" = "See your watch history and insights";
+
+// Notifications
+"settings.notifications.title" = "Notifications";
+"settings.notifications.manage" = "Manage Notifications";
+"settings.notifications.description" = "Personalized alerts for new content";
+
+// Onboarding Revamp
+"onboarding.welcome.title" = "Discover Your Vibe";
+"onboarding.welcome.subtitle" = "AI-powered recommendations tailored just for you.";
+"onboarding.clips.title" = "Watch, Don't Read";
+"onboarding.clips.subtitle" = "Experience movies through short, engaging clips.";
+"onboarding.lists.title" = "Your Watchlist, Everywhere";
+"onboarding.lists.subtitle" = "Save movies and sync across all your devices.";
+"onboarding.account.title" = "Save Your Profile";
+"onboarding.account.subtitle" = "Create an account to sync your watchlist and preferences across devices.";
+"onboarding.skip" = "Skip for now";
+"paywall.cta.skip" = "Skip for now";
+
+// Filters - Streaming Platforms
+"platforms.title" = "Streaming Platforms";
+"filters.allPlatforms" = "All Platforms";
+
+"filters.releasePeriodAny" = "Any";
+"common.next" = "Next";
+"ai.tryAsking" = "Try asking...";
+
+"auth.checkEmailTitle" = "Check your email";
+"auth.checkEmailMessage" = "We've sent you a confirmation link. Please check your inbox to verify your account.";
+
+"auth.openMailApp" = "Open Mail App";
+"auth.iHaveVerified" = "I've Verified";
+"auth.resendEmail" = "Resend Email";
+"auth.changeEmail" = "Change Email";
+"auth.verificationPending" = "Still waiting for verification...";
+
+"movieDetail.whyForMe" = "Why for me?";
+
+"movieDetail.whyForMe.basedOnGenres" = "Based on your 3 favorite genres";
+
+"movieDetail.goodFitTitle" = "Why %@ is a good fit for me?";
+"movieDetail.goodFitSubtitle" = "A quick, personalized take based on your taste.";

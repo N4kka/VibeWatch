@@ -23,9 +23,6 @@ struct VibeWatchApp: App {
         // Initialize offline-first database
         print("🗄️ [App] Initializing SQLite database...")
         print("✅ [RevenueCat] Configured with API key")
-        
-        // Disable analytics until ATT permission is granted
-        AnalyticsService.shared.setEnabled(false)
     }
     
     var body: some Scene {
@@ -69,6 +66,9 @@ struct VibeWatchApp: App {
                         appNavigationManager.clearDeepLinkTarget()
                     }
                 }
+                .fullScreenCover(item: $appState.updateRequirement) { requirement in
+                    UpdateRequiredView(requirement: requirement)
+                }
         }
     }
 }
@@ -84,6 +84,7 @@ class AppState: ObservableObject {
     @Published var toastMessage = ""
     @Published var isPreloading = true // Track splash state
     @Published var shouldShowSignIn = false // Trigger for redirecting to sign in flow
+    @Published var updateRequirement: UpdateRequirement?
     
     private let authService: AuthService
     private let dataCoordinator = DataCoordinator.shared
@@ -97,12 +98,21 @@ class AppState: ObservableObject {
         print("📱 [AppState] Initialized with auth state: authenticated=\(isAuthenticated), user=\(currentUser?.email ?? "nil")")
 
         Task {
+            await checkForRequiredUpdate()
             await checkAuthState()
             await preloadContent()
             await RevenueCatService.shared.refreshOfferings()
 
             // Check and execute daily prefetch for PRO users
             await DailyContentPrefetchService.shared.checkAndExecuteDailyPrefetch()
+        }
+
+        NotificationCenter.default.addObserver(
+            forName: UIApplication.willEnterForegroundNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { await self?.checkForRequiredUpdate() }
         }
     }
 
@@ -111,6 +121,10 @@ class AppState: ObservableObject {
         self.isAuthenticated = authService.isAuthenticated
         self.currentUser = authService.currentUser
         print("🔄 [AppState] Updated auth state: authenticated=\(isAuthenticated), user=\(currentUser?.email ?? "nil")")
+    }
+
+    private func checkForRequiredUpdate() async {
+        updateRequirement = await UpdateCheckService.shared.checkForRequiredUpdate()
     }
     
     private func preloadContent() async {
@@ -133,6 +147,21 @@ class AppState: ObservableObject {
         
         // Ensure discovery content exists (fetch from TMDB if needed)
         await ensureDiscoveryContentExists()
+
+        // Pre-warm the personalized discovery cache so the Discovery tab loads instantly
+        print("📺 [App] Pre-warming Discovery personalization cache...")
+        let profile = await UserPreferenceManager.shared.aggregatePreferences()
+        do {
+            // We call this to trigger the cache-miss logic (API fetch + DB cache) if needed.
+            // When DiscoveryViewModel calls this later, it will hit the DB cache instantly.
+            _ = try await DiscoveryPersonalizationService.shared.generatePersonalizedCarousels(
+                userProfile: profile,
+                forceRefresh: false
+            )
+            print("✅ [App] Discovery personalization pre-warmed successfully")
+        } catch {
+            print("⚠️ [App] Failed to pre-warm Discovery personalization: \(error)")
+        }
         
         isPreloading = false
     }

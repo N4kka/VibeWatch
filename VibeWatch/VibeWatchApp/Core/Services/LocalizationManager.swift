@@ -82,7 +82,13 @@ final class LocalizationManager: ObservableObject {
         if let path = Bundle.main.path(forResource: currentLanguage.id, ofType: "lproj"),
            let bundle = Bundle(path: path) {
             // Return the localized string from the specific bundle
-            return NSLocalizedString(key, tableName: nil, bundle: bundle, comment: "")
+            let localized = NSLocalizedString(key, tableName: nil, bundle: bundle, comment: "")
+            if localized != key {
+                return localized
+            }
+
+            // If the key is missing in the selected localization, fallback to the default (English)
+            return NSLocalizedString(key, comment: "")
         }
 
         // Fallback to the default/base localization (English)

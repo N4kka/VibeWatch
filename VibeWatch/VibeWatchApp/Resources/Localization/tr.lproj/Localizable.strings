@@ -103,6 +103,7 @@
 "filters.anyCountry" = "Herhangi bir ülke";
 "filters.apply" = "Uygula";
 "filters.country" = "Ülke";
+"filters.searchCountry" = "Ülke ara";
 "filters.minimumRating" = "Minimum puan";
 "filters.ratingAny" = "Farketmez";
 "filters.ratingExcellent" = "8.0+";
@@ -190,6 +191,8 @@
 "platform.selectionCount" = "%d / %d seçili";
 "platform.title" = "Yayın platformları";
 "platforms.buy" = "Satın al";
+"platforms.cinema" = "Sinemada";
+"platforms.justwatch" = "JustWatch";
 "platforms.rent" = "Kirala";
 "platforms.streaming" = "Yayın";
 "platforms.title" = "Platformlar";
@@ -215,7 +218,7 @@
 "auth.gate.createTitle" = "Ücretsiz VibeWatch hesabını oluştur";
 "auth.gate.description" = "Özel listeler oluşturmak ve onları cihazların arasında senkronize etmek için bir hesaba ihtiyacın var.";
 "auth.gate.haveAccount" = "Zaten bir hesabım var";
-"auth.gate.limitMessage" = "Bugünkü 15 ücretsiz klibini kullandın. İlerlemeni senkronize etmek ve yarının kliplerini anında açmak için kaydol.";
+"auth.gate.limitMessage" = "Bugünkü 25 ücretsiz klibini kullandın. İlerlemeni senkronize etmek ve yarının kliplerini anında açmak için kaydol.";
 "auth.gate.signupFree" = "Kayıt ücretsizdir ve bir dakikadan az sürer.";
 "auth.gate.benefit.saveClips" = "Favori kliplerini kaydet";
 "auth.gate.benefit.syncDevices" = "Tüm cihazlarında senkronize et";
@@ -243,7 +246,7 @@
 
 // AI
 "ai.title" = "Vibe AI";
-"ai.tokensUsage" = "Jeton: %@/%@";
+"ai.requestsUsage" = "%d/%d günlük istek";
 "ai.describeVibe" = "Modunu anlat";
 "ai.thinking" = "Düşünüyor...";
 "ai.editMessage" = "Mesajı düzenle";
@@ -265,14 +268,13 @@
 "ai.suggestion.chips2" = "💥 80'ler aksiyon-komedi, AI önerir";
 "ai.suggestion.chips3" = "🕵️‍♂️ Sürprizli az bilinen gerilim";
 "ai.suggestion.chips4" = "🤖 AI: Sırada ne izlemeliyim?";
-"ai.usage.left" = "kaldı";
 
 // Paywall
 "paywall.bestValue" = "EN İYİ TEKLİF";
 "paywall.cta.continue" = "Devam et";
 "paywall.cta.selectPlan" = "Bir plan seç";
 "paywall.cta.startTrial" = "%@ Ücretsiz Denemeyi Başlat";
-"paywall.daily.limitDescription" = "Ücretsiz üyeler günde 15 klip izleyebilir. Sınırsız klip ve premium özellikler için Pro'ya yükselt.";
+"paywall.daily.limitDescription" = "Ücretsiz üyeler günde 25 klip izleyebilir. Sınırsız klip ve premium özellikler için Pro'ya yükselt.";
 "paywall.daily.limitReached" = "Bugünkü limite ulaştın";
 "paywall.daily.nextReset" = "Sonraki sıfırlama";
 "paywall.daily.resetIn" = "Sıfırlanmasına kalan süre";
@@ -426,3 +428,89 @@
 "profile.faq.answer4" = "Herhangi bir içerikte \"Bize bildir\" seçeneğini kullanarak hataları veya bozuk bağlantıları bildir, hızlıca düzeltelim.";
 "profile.faq.question5" = "VibeWatch sıradan izleyiciler için de uygun mu?";
 "profile.faq.answer5" = "Kesinlikle. Arkadaşlarla Cumartesi akşamı filmi gibi kolay seçimler ve sinema tutkunları için gizli hazineler sunuyoruz.";
+"carousel.hotThisWeek" = "Bu Haftanın Gözdesi";
+"carousel.awardWinners" = "Seveceğin Ödüllü Yapımlar";
+
+// --- Synced from en.lproj ---
+"filters.mediaType" = "Medya Türü";
+"filters.movies" = "Filmler";
+"filters.tvShows" = "TV Programları";
+"filters.both" = "Her ikisi de";
+"filters.rating" = "Değerlendirme";
+"filters.releasePeriod" = "Serbest Bırakma Dönemi";
+"filters.releasePeriodRecent" = "Yeni (2020+)";
+"filters.releasePeriodModern" = "Modern (2010-2019)";
+"filters.releasePeriodClassic" = "Klasik (<2010)";
+"filters.customRange" = "Özel Aralık";
+"filters.customYearRange" = "Özel Yıl Aralığı";
+"filters.min" = "Min";
+"filters.max" = "Maksimum";
+"filters.from" = "Kimden";
+"filters.to" = "Için";
+"filters.custom" = "Özel";
+"filters.allCountries" = "Tüm Ülkeler";
+"filters.sortPopularityDesc" = "En Popüler";
+"filters.sortPopularityAsc" = "En Az Popüler";
+"filters.sortRatingDesc" = "En Yüksek Puan";
+"filters.sortRatingAsc" = "En Düşük Puan";
+"filters.sortReleaseDateDesc" = "En Yeni İlk";
+"filters.sortReleaseDateAsc" = "En Yaşlı İlk";
+"filters.proFilters" = "Profesyonel Filtreler";
+"filters.hideWatched" = "İzlenenleri Gizle";
+"filters.hideDisliked" = "Hide Disliked";
+"filters.proTitle" = "Gelişmiş Filtrelerin Kilidini Aç";
+"filters.proDescription" = "Özel aralıklar, çoklu ülke seçimi ve gelişmiş filtreleme seçenekleri için Pro'ya yükseltin";
+"filters.upgradeToPro" = "Pro'ya Yükseltme";
+"filters.filtersActive" = "d filtreler etkin";
+"carousel.dailyMix" = "Günlük Karışımınız";
+"carousel.trendingInGenre" = "Trend %@";
+"carousel.becauseYouLiked" = "Çünkü %@'yı Beğendiniz";
+"carousel.hiddenGems" = "Gizli Mücevherler %@ içinde";
+"carousel.continueJourney" = "Yolculuğunuza Devam Edin";
+"carousel.fromSearches" = "Aramalarınızdan";
+"carousel.topTVPicks" = "Sizin İçin En İyi TV Seçimleri";
+"carousel.staffPicks" = "Personel %@ Hayranları için Seçiyor";
+"carousel.yearlyRewind" = "Yıllık Geri Dönüşünüz";
+"settings.privacy.title" = "Gizlilik";
+"settings.analytics.share" = "Anonim analizleri paylaşın";
+"settings.analytics.share.description" = "Hangi özellikleri kullandığınızı anlamamıza ve uygulamayı geliştirmemize yardımcı olur. Reklam takibi yok.";
+"settings.analytics.title" = "Analitik";
+"settings.analytics.viewStats" = "İstatistiklerinizi Görüntüleyin";
+"settings.analytics.description" = "Saat geçmişinizi ve içgörülerinizi görün";
+"settings.notifications.title" = "Bildirimler";
+"settings.notifications.manage" = "Bildirimleri Yönet";
+"settings.notifications.description" = "Yeni içerikler için kişiselleştirilmiş uyarılar";
+"onboarding.welcome.title" = "Vibe'ınızı Keşfedin";
+"onboarding.welcome.subtitle" = "Sadece size özel yapay zeka destekli öneriler.";
+"onboarding.clips.title" = "İzle, Okuma";
+"onboarding.clips.subtitle" = "Filmleri kısa, ilgi çekici kliplerle deneyimleyin.";
+"onboarding.lists.title" = "İzleme Listeniz, Her Yerde";
+"onboarding.lists.subtitle" = "Filmleri kaydedin ve tüm cihazlarınızda senkronize edin.";
+"onboarding.account.title" = "Profilinizi Kaydedin";
+"onboarding.account.subtitle" = "İzleme listenizi ve tercihlerinizi cihazlar arasında senkronize etmek için bir hesap oluşturun.";
+"onboarding.skip" = "Şimdilik atla";
+"paywall.cta.skip" = "Şimdilik atla";
+"filters.allPlatforms" = "Tüm Platformlar";
+
+// --- Synced from en.lproj ---
+"filters.releasePeriodAny" = "Herhangi bir";
+"common.next" = "Sonraki";
+"ai.tryAsking" = "Sormayı dene.";
+
+// --- Synced from en.lproj ---
+"auth.checkEmailTitle" = "E-postanızı kontrol edin";
+"auth.checkEmailMessage" = "Size bir onay bağlantısı gönderdik. Hesabınızı doğrulamak için lütfen gelen kutunuzu kontrol edin.";
+
+// --- Synced from en.lproj ---
+"auth.openMailApp" = "Posta Uygulamasını Aç";
+"auth.iHaveVerified" = "Doğruladım";
+"auth.resendEmail" = "E-postayı Yeniden Gönder";
+"auth.changeEmail" = "E-posta Değiştir";
+"auth.verificationPending" = "Hala doğrulama bekliyorum...";
+
+"movieDetail.whyForMe" = "Why for me?";
+
+"movieDetail.whyForMe.basedOnGenres" = "Based on your 3 favorite genres";
+
+"movieDetail.goodFitTitle" = "Why %@ is a good fit for me?";
+"movieDetail.goodFitSubtitle" = "A quick, personalized take based on your taste.";

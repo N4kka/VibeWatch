@@ -3,41 +3,40 @@ import SwiftUI
 struct ListsView: View {
     @StateObject private var viewModel = ListsViewModel()
     @StateObject private var listManager = ListManager.shared
+    @StateObject private var availabilityService = ListAvailabilityService.shared
     @ObservedObject var localizationManager = LocalizationManager.shared
     @EnvironmentObject var quotaManager: DailyQuotaManager
     @EnvironmentObject var appState: AppState
     @State private var selectedFilter: MediaFilter = .all
-    @AppStorage("selectedPlatforms") private var selectedPlatformsData: Data = Data()
     @State private var selectedListType: ListViewType = .myLists
     @State private var showCreateList = false
     @State private var showAuthGate = false
     @State private var showFilters = false
     @State private var refreshID = UUID()
-    @State private var filters = DiscoveryFilters()
+    @State private var filters = GlobalDiscoveryFilters()
     
     @State private var filterRefreshTrigger = false
     @State private var showingPaywall = false
     @State private var itemsLimit = 50 // State for pagination
+    @State private var searchText = ""
     
-    private var selectedPlatforms: Set<StreamingPlatform> {
-        get {
-            if let decoded = try? JSONDecoder().decode(Set<String>.self, from: selectedPlatformsData) {
-                return Set(decoded.compactMap { StreamingPlatform(rawValue: $0) })
+    private var mediaFilterBinding: Binding<MediaFilter> {
+        Binding(
+            get: {
+                switch filters.mediaType {
+                case .both: return .all
+                case .movies: return .movies
+                case .tvShows: return .tvSeries
+                }
+            },
+            set: { newValue in
+                switch newValue {
+                case .all: filters.mediaType = .both
+                case .movies: filters.mediaType = .movies
+                case .tvSeries: filters.mediaType = .tvShows
+                }
             }
-            return []
-        }
-    }
-    
-    private func togglePlatform(_ platform: StreamingPlatform) {
-        var platforms = selectedPlatforms
-        if platforms.contains(platform) {
-            platforms.remove(platform)
-        } else {
-            platforms.insert(platform)
-        }
-        if let encoded = try? JSONEncoder().encode(platforms.map { $0.rawValue }) {
-            selectedPlatformsData = encoded
-        }
+        )
     }
     
     var body: some View {
@@ -52,6 +51,10 @@ struct ListsView: View {
                 ListTypeSwitcher(selectedType: $selectedListType)
                     .padding(.bottom, 16)
                 
+                searchField
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 16)
+                
                 combinedFiltersRow
                 
                 if currentLists.isEmpty {
@@ -64,14 +67,9 @@ struct ListsView: View {
         .navigationBarHidden(true)
         .overlay {
             if showFilters {
-                AdvancedFiltersPanel(
+                GlobalFilterView(
                     filters: $filters,
-                    showRuntimeFilter: false,
-                    onDismiss: {
-                        withAnimation {
-                            showFilters = false
-                        }
-                    },
+                    isPresented: $showFilters,
                     onApply: { _ in
                         filterRefreshTrigger.toggle()
                     }
@@ -88,6 +86,24 @@ struct ListsView: View {
         .onChange(of: localizationManager.localeDidChange) {_, _ in
             refreshID = UUID()
         }
+        .onChange(of: filters.streamingPlatforms) { _, platforms in
+            if !platforms.isEmpty {
+                 Task {
+                     if let list = currentLists.first {
+                         await availabilityService.checkAvailability(for: list.items, on: platforms)
+                     }
+                 }
+            }
+        }
+        .onChange(of: currentLists.first?.id) { _, _ in
+             if !filters.streamingPlatforms.isEmpty {
+                 Task {
+                     if let list = currentLists.first {
+                         await availabilityService.checkAvailability(for: list.items, on: filters.streamingPlatforms)
+                     }
+                 }
+             }
+        }
         .id(refreshID)
         .sheet(isPresented: $showCreateList) {
             CreateListView(viewModel: viewModel)
@@ -100,7 +116,7 @@ struct ListsView: View {
                 .presentationBackground(.clear)
         }
         .fullScreenCover(isPresented: $showingPaywall) {
-            DailyLimitPaywallView(isPresented: $showingPaywall)
+            DailyLimitPaywallView(isPresented: $showingPaywall, source: "list_limit")
         }
         .onChange(of: selectedListType) {
             // Reset limit when switching lists
@@ -114,6 +130,8 @@ struct ListsView: View {
                 .foregroundColor(.theme.textPrimary)
             
             Spacer()
+
+            ProUpgradeIconButton(isProUser: quotaManager.isProUser, source: "lists_top_right")
             
             Button {
                 guard appState.isAuthenticated else {
@@ -133,6 +151,28 @@ struct ListsView: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 16)
+    }
+    
+    private var searchField: some View {
+        HStack {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(.theme.textSecondary)
+            TextField("lists.searchPlaceholder".localized, text: $searchText)
+                .textInputAutocapitalization(.words)
+                .disableAutocorrection(true)
+            
+            if !searchText.isEmpty {
+                Button {
+                    searchText = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.theme.textSecondary)
+                }
+            }
+        }
+        .padding(12)
+        .background(Color.white.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
     
     private var currentLists: [MediaList] {
@@ -155,7 +195,7 @@ struct ListsView: View {
     private var combinedFiltersRow: some View {
         HStack(spacing: 12) {
             // Media filter switcher
-            MediaFilterSwitcher(selectedFilter: $selectedFilter)
+            MediaFilterSwitcher(selectedFilter: mediaFilterBinding)
             
             Spacer()
             
@@ -267,45 +307,80 @@ struct ListsView: View {
         guard let list = currentLists.first else { return [] }
         var items = list.items
         
+        // Apply search filter
+        if !searchText.isEmpty {
+            items = items.filter { $0.title.range(of: searchText, options: .caseInsensitive) != nil }
+        }
+        
         // Apply runtime filter (movies only)
-        if filters.runtimeRange != .any {
+        if filters.runtimePreset != .any || filters.customRuntimeMin != nil || filters.customRuntimeMax != nil {
+            let (min, max) = filters.getRuntimeRange()
             items = items.filter { item in
                 guard item.mediaType == .movie, let runtime = item.runtime else { return false }
                 
-                if let minRuntime = filters.runtimeRange.minRuntime, runtime < minRuntime {
-                    return false
-                }
-                if let maxRuntime = filters.runtimeRange.maxRuntime, runtime > maxRuntime {
-                    return false
-                }
+                if let minRuntime = min, runtime < minRuntime { return false }
+                if let maxRuntime = max, runtime > maxRuntime { return false }
                 return true
             }
         }
         
         // Apply rating filter
-        if filters.ratingRange != .any {
+        if filters.ratingPreset != .any || filters.customRatingMin != nil || filters.customRatingMax != nil {
+            let (min, max) = filters.getRatingRange()
             items = items.filter { item in
-                guard let voteAverage = item.voteAverage,
-                      let minRating = filters.ratingRange.minRating else { return false }
-                return voteAverage >= minRating
+                guard let voteAverage = item.voteAverage else { return false }
+                if let minRating = min, voteAverage < minRating { return false }
+                if let maxRating = max, voteAverage > maxRating { return false }
+                return true
             }
         }
         
+        // Apply release period filter
+        if filters.releasePeriodPreset != .any || filters.customYearStart != nil || filters.customYearEnd != nil {
+             let (start, end) = filters.getYearRange()
+             items = items.filter { item in
+                 guard let releaseDate = item.releaseDate, let year = Int(releaseDate.prefix(4)) else { return false }
+                 if let startYear = start, year < startYear { return false }
+                 if let endYear = end, year > endYear { return false }
+                 return true
+             }
+        }
+        
         // Apply country filter
-        if let selectedCountry = filters.country {
+        if !filters.countries.isEmpty {
             items = items.filter { item in
                 guard let originCountry = item.originCountry else { return false }
-                return originCountry.contains(selectedCountry)
+                // Check if any of the item's origin countries are in the selected countries
+                return !Set(originCountry).isDisjoint(with: Set(filters.countries))
+            }
+        }
+        
+        // Apply Streaming Platforms filter
+        if !filters.streamingPlatforms.isEmpty {
+            items = items.filter { item in
+                // If availability not loaded yet, include it (optimistic) or exclude? 
+                // Exclude is safer for "Show me only Netflix", but UX is bad if loading.
+                // Let's exclude, but ensure we trigger load.
+                guard let availableOn = availabilityService.availableItems[item.id] else {
+                    return false 
+                }
+                
+                // Map platform Names (from TMDB) to our StreamingPlatform enum rawValues if needed
+                // Our cache stores Provider Names. Filters store StreamingPlatform.rawValue (which are names like "Netflix", "Disney+").
+                // TMDB names usually match well.
+                
+                // Check intersection
+                return !availableOn.isDisjoint(with: filters.streamingPlatforms)
             }
         }
         
         // Apply media type filter
-        switch selectedFilter {
-        case .all:
+        switch filters.mediaType {
+        case .both:
             break
         case .movies:
             items = items.filter { $0.mediaType == .movie }
-        case .tvSeries:
+        case .tvShows:
             items = items.filter { $0.mediaType == .tv }
         }
         
@@ -329,6 +404,15 @@ struct ListsView: View {
     
     private var filteredAndSortedLists: [MediaList] {
         var lists = currentLists
+        
+        // Apply search filter
+        if !searchText.isEmpty {
+            lists = lists.filter { list in
+                let nameMatch = list.name.range(of: searchText, options: .caseInsensitive) != nil
+                let itemMatch = list.items.contains { $0.title.range(of: searchText, options: .caseInsensitive) != nil }
+                return nameMatch || itemMatch
+            }
+        }
         
         // Apply sorting to list items within each list
         switch filters.sortBy {
@@ -422,16 +506,16 @@ struct ListsView: View {
     }
     
     private var filteredLists: [MediaList] {
-        guard selectedFilter != .all else { return viewModel.lists }
+        guard filters.mediaType != .both else { return viewModel.lists }
         
         return viewModel.lists.filter { list in
             let hasType = list.items.contains { item in
-                switch selectedFilter {
+                switch filters.mediaType {
                 case .movies:
                     return item.mediaType == .movie
-                case .tvSeries:
+                case .tvShows:
                     return item.mediaType == .tv
-                case .all:
+                case .both:
                     return true
                 }
             }
@@ -784,8 +868,9 @@ struct MediaItemRow: View {
 struct CustomListDetailView: View {
     let list: MediaList
     @StateObject private var listManager = ListManager.shared
-    @State private var selectedFilter: MediaFilter = .all
-    @State private var filters = DiscoveryFilters()
+    @StateObject private var availabilityService = ListAvailabilityService.shared
+    @EnvironmentObject var quotaManager: DailyQuotaManager
+    @State private var filters = GlobalDiscoveryFilters()
     @State private var showFilters = false
     @State private var filterRefreshTrigger = false
     @State private var searchText = ""
@@ -794,6 +879,25 @@ struct CustomListDetailView: View {
     @State private var showDeleteAlert = false
     @State private var error: AppError?
     @Environment(\.dismiss) private var dismiss
+    
+    private var mediaFilterBinding: Binding<MediaFilter> {
+        Binding(
+            get: {
+                switch filters.mediaType {
+                case .both: return .all
+                case .movies: return .movies
+                case .tvShows: return .tvSeries
+                }
+            },
+            set: { newValue in
+                switch newValue {
+                case .all: filters.mediaType = .both
+                case .movies: filters.mediaType = .movies
+                case .tvSeries: filters.mediaType = .tvShows
+                }
+            }
+        )
+    }
 
     private var currentList: MediaList {
         listManager.lists.first(where: { $0.id == list.id }) ?? list
@@ -806,36 +910,52 @@ struct CustomListDetailView: View {
             items = items.filter { $0.title.range(of: searchText, options: .caseInsensitive) != nil }
         }
 
-        if filters.runtimeRange != .any {
+        // Apply runtime filter
+        if filters.runtimePreset != .any || filters.customRuntimeMin != nil || filters.customRuntimeMax != nil {
+            let (min, max) = filters.getRuntimeRange()
             items = items.filter { item in
                 guard item.mediaType == .movie, let runtime = item.runtime else { return false }
-                if let minRuntime = filters.runtimeRange.minRuntime, runtime < minRuntime { return false }
-                if let maxRuntime = filters.runtimeRange.maxRuntime, runtime > maxRuntime { return false }
+                if let minRuntime = min, runtime < minRuntime { return false }
+                if let maxRuntime = max, runtime > maxRuntime { return false }
                 return true
             }
         }
 
-        if filters.ratingRange != .any {
+        // Apply rating filter
+        if filters.ratingPreset != .any || filters.customRatingMin != nil || filters.customRatingMax != nil {
+            let (min, max) = filters.getRatingRange()
             items = items.filter { item in
-                guard let voteAverage = item.voteAverage,
-                      let minRating = filters.ratingRange.minRating else { return false }
-                return voteAverage >= minRating
+                guard let voteAverage = item.voteAverage else { return false }
+                if let minRating = min, voteAverage < minRating { return false }
+                if let maxRating = max, voteAverage > maxRating { return false }
+                return true
             }
         }
 
-        if let selectedCountry = filters.country {
+        // Apply country filter
+        if !filters.countries.isEmpty {
             items = items.filter { item in
                 guard let originCountry = item.originCountry else { return false }
-                return originCountry.contains(selectedCountry)
+                return !Set(originCountry).isDisjoint(with: Set(filters.countries))
             }
         }
 
-        switch selectedFilter {
-        case .all:
+        // Apply Streaming Platforms filter
+        if !filters.streamingPlatforms.isEmpty {
+            items = items.filter { item in
+                guard let availableOn = availabilityService.availableItems[item.id] else {
+                    return false
+                }
+                return !availableOn.isDisjoint(with: filters.streamingPlatforms)
+            }
+        }
+
+        switch filters.mediaType {
+        case .both:
             break
         case .movies:
             items = items.filter { $0.mediaType == .movie }
-        case .tvSeries:
+        case .tvShows:
             items = items.filter { $0.mediaType == .tv }
         }
 
@@ -869,7 +989,7 @@ struct CustomListDetailView: View {
                     .padding(.top, 12)
 
                 HStack(spacing: 12) {
-                    MediaFilterSwitcher(selectedFilter: $selectedFilter)
+                    MediaFilterSwitcher(selectedFilter: mediaFilterBinding)
                     Spacer()
                     Button {
                         withAnimation { showFilters = true }
@@ -979,17 +1099,29 @@ struct CustomListDetailView: View {
         .navigationBarTitleDisplayMode(.large)
         .overlay {
             if showFilters {
-                AdvancedFiltersPanel(
+                GlobalFilterView(
                     filters: $filters,
-                    showRuntimeFilter: false,
-                    onDismiss: {
-                        withAnimation { showFilters = false }
-                    },
+                    isPresented: $showFilters,
                     onApply: { _ in
                         filterRefreshTrigger.toggle()
                     }
                 )
+                .environmentObject(quotaManager)
             }
+        }
+        .onChange(of: filters.streamingPlatforms) { _, platforms in
+            if !platforms.isEmpty {
+                 Task {
+                     await availabilityService.checkAvailability(for: currentList.items, on: platforms)
+                 }
+            }
+        }
+        .onChange(of: currentList.items.count) { _, _ in
+             if !filters.streamingPlatforms.isEmpty {
+                 Task {
+                     await availabilityService.checkAvailability(for: currentList.items, on: filters.streamingPlatforms)
+                 }
+             }
         }
         .onChange(of: filters) {_, _ in itemsLimit = 100 }
         .onChange(of: searchText) {_, _ in itemsLimit = 100 }

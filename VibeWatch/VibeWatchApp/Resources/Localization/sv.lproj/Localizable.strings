@@ -46,7 +46,7 @@
 "lists.editList" = "Redigera lista";
 "lists.empty" = "Inga listor ännu";
 "lists.emptyDescription" = "Skapa din första watchlist för att organisera filmer och serier du upptäcker";
-"lists.watchlist" = "Watchlist";
+"lists.watchlist" = "Bevakningslista";
 "lists.error.authRequired" = "Du måste vara inloggad för att skapa anpassade listor.";
 "lists.error.defaultImmutable" = "Den här listan kan inte ändras";
 "lists.error.invalidName" = "Ange ett giltigt listnamn";
@@ -71,7 +71,7 @@
 "movieDetail.country" = "Land";
 "movieDetail.director" = "Regissör";
 "movieDetail.genres" = "Genrer";
-"movieDetail.information" = "Information";
+"movieDetail.information" = "Information om";
 "movieDetail.rating" = "Betyg";
 "movieDetail.ratings" = "betyg";
 "movieDetail.runtime" = "Speltid";
@@ -103,6 +103,7 @@
 "filters.anyCountry" = "Vilket land som helst";
 "filters.apply" = "Använd";
 "filters.country" = "Land";
+"filters.searchCountry" = "Sök land";
 "filters.minimumRating" = "Lägsta betyg";
 "filters.ratingAny" = "Vilket som helst";
 "filters.ratingExcellent" = "8.0+";
@@ -111,9 +112,9 @@
 "filters.reset" = "Återställ";
 "filters.runtime" = "Speltid";
 "filters.runtimeAny" = "Vilken som helst";
-"filters.runtimeLong" = "> 120 min";
+"filters.runtimeLong" = "> 120 minuter";
 "filters.runtimeMedium" = "90–120 min";
-"filters.runtimeShort" = "< 90 min";
+"filters.runtimeShort" = "< 90 minuter";
 "filters.sortBy" = "Sortera efter";
 "filters.title" = "Filter";
 
@@ -190,6 +191,8 @@
 "platform.selectionCount" = "%d av %d valda";
 "platform.title" = "Streaming-plattformar";
 "platforms.buy" = "Köp";
+"platforms.cinema" = "Bio";
+"platforms.justwatch" = "JustWatch";
 "platforms.rent" = "Hyra";
 "platforms.streaming" = "Streaming";
 "platforms.title" = "Plattformar";
@@ -215,7 +218,7 @@
 "auth.gate.createTitle" = "Skapa ditt gratis VibeWatch-konto";
 "auth.gate.description" = "Du behöver ett konto för att skapa anpassade listor och synka dem mellan enheter.";
 "auth.gate.haveAccount" = "Jag har redan ett konto";
-"auth.gate.limitMessage" = "Du har sett dagens 15 gratis klipp. Registrera dig för att synka framsteg och låsa upp morgondagens klipp direkt.";
+"auth.gate.limitMessage" = "Du har sett dagens 25 gratis klipp. Registrera dig för att synka framsteg och låsa upp morgondagens klipp direkt.";
 "auth.gate.signupFree" = "Registreringen är gratis och tar mindre än en minut.";
 "auth.gate.benefit.saveClips" = "Spara dina favoritklipp";
 "auth.gate.benefit.syncDevices" = "Synka på alla dina enheter";
@@ -243,7 +246,7 @@
 
 // AI
 "ai.title" = "Vibe AI";
-"ai.tokensUsage" = "Tokens: %@/%@";
+"ai.requestsUsage" = "%d/%d dagliga förfrågningar";
 "ai.describeVibe" = "Beskriv din vibe";
 "ai.thinking" = "Tänker...";
 "ai.editMessage" = "Redigera meddelande";
@@ -261,18 +264,17 @@
 "ai.resultsTitle" = "Det här hittade jag:";
 "ai.saveRegenerate" = "Spara & Generera igen";
 "ai.softLimitMessage" = "Du närmar dig dagens AI-gräns. Håll dina frågor korta.";
-"ai.suggestion.chips1" = "💖 Cozy romance, AI-picked for me";
-"ai.suggestion.chips2" = "💥 80s action-comedy, AI recommends";
-"ai.suggestion.chips3" = "🕵️‍♂️ Underrated thriller with a twist";
-"ai.suggestion.chips4" = "🤖 AI: what should I watch next?";
-"ai.usage.left" = "kvar";
+"ai.suggestion.chips1" = "💖 Mysig romans, AI-plockad för mig";
+"ai.suggestion.chips2" = "💥 80-tals actionkomedi, AI rekommenderar";
+"ai.suggestion.chips3" = "🕵️‍♂️ Underskattad thriller med en twist";
+"ai.suggestion.chips4" = "🤖 AI: vad ska jag titta på härnäst?";
 
 // Paywall
 "paywall.bestValue" = "BÄSTA VAL";
 "paywall.cta.continue" = "Fortsätt";
 "paywall.cta.selectPlan" = "Välj plan";
 "paywall.cta.startTrial" = "Starta %@ gratis provperiod";
-"paywall.daily.limitDescription" = "Gratis medlemmar kan titta på 15 klipp per dag. Uppgradera till Pro för obegränsade klipp och premiumfunktioner.";
+"paywall.daily.limitDescription" = "Gratis medlemmar kan titta på 25 klipp per dag. Uppgradera till Pro för obegränsade klipp och premiumfunktioner.";
 "paywall.daily.limitReached" = "Du har nått dagens gräns";
 "paywall.daily.nextReset" = "Nästa återställning om";
 "paywall.daily.resetIn" = "Återställs om";
@@ -425,3 +427,90 @@
 "profile.faq.answer4" = "Använd \"Hör av dig\" på valfri titel för att rapportera buggar eller dåliga länkar så fixar vi det snabbt.";
 "profile.faq.question5" = "Fungerar VibeWatch för casual-tittare?";
 "profile.faq.answer5" = "Absolut. Vi lyfter fram enkla val som en lördagsfilm med vänner samt djupdykningar för filmälskare.";
+"carousel.hotThisWeek" = "Hett just nu";
+"carousel.awardWinners" = "Prisvinnare du kommer att älska";
+
+// --- Synced from en.lproj ---
+"clips.search.showcaseTitle" = "Upptäck klipp";
+"filters.mediaType" = "Typ av media";
+"filters.movies" = "Filmer";
+"filters.tvShows" = "TV-program";
+"filters.both" = "Båda";
+"filters.rating" = "Betyg";
+"filters.releasePeriod" = "Releaseperiod";
+"filters.releasePeriodRecent" = "Nyligen (2020+)";
+"filters.releasePeriodModern" = "Modern (2010-2019)";
+"filters.releasePeriodClassic" = "Klassisk (<2010)";
+"filters.customRange" = "Anpassat sortiment";
+"filters.customYearRange" = "Anpassat årsintervall";
+"filters.min" = "Min";
+"filters.max" = "Max";
+"filters.from" = "Från";
+"filters.to" = "Till";
+"filters.custom" = "Anpassad";
+"filters.allCountries" = "Alla länder";
+"filters.sortPopularityDesc" = "Mest populära";
+"filters.sortPopularityAsc" = "Minst populära";
+"filters.sortRatingDesc" = "Högsta betyg";
+"filters.sortRatingAsc" = "Lägst rankad";
+"filters.sortReleaseDateDesc" = "Nyaste först";
+"filters.sortReleaseDateAsc" = "Äldst Först";
+"filters.proFilters" = "Proffsfilter";
+"filters.hideWatched" = "Dölj Bevakad";
+"filters.hideDisliked" = "Dölj ogillade";
+"filters.proTitle" = "Lås upp avancerade filter";
+"filters.proDescription" = "Uppgradera till Pro för anpassade intervall, val av flera länder och avancerade filtreringsalternativ";
+"filters.upgradeToPro" = "Uppgradera till Pro";
+"filters.filtersActive" = "%d filter aktiva";
+"carousel.dailyMix" = "Din dagliga mix";
+"carousel.trendingInGenre" = "Trender i %@";
+"carousel.becauseYouLiked" = "För att du gillade %@";
+"carousel.hiddenGems" = "Dolda ädelstenar i %@";
+"carousel.continueJourney" = "Fortsätt din resa";
+"carousel.fromSearches" = "Från dina sökningar";
+"carousel.topTVPicks" = "De bästa TV-valen för dig";
+"carousel.staffPicks" = "Personalens val för %@-fans";
+"carousel.yearlyRewind" = "Din årliga tillbakablick";
+"settings.privacy.title" = "Integritet";
+"settings.analytics.share" = "Dela anonyma analyser";
+"settings.analytics.share.description" = "Hjälper oss att förstå vilka funktioner du använder och förbättra appen. Ingen spårning av annonser.";
+"settings.analytics.title" = "Analys";
+"settings.analytics.viewStats" = "Visa din statistik";
+"settings.analytics.description" = "Se din klockhistorik och dina insikter";
+"settings.notifications.title" = "Meddelanden";
+"settings.notifications.manage" = "Hantera aviseringar";
+"settings.notifications.description" = "Personliga aviseringar om nytt innehåll";
+"onboarding.welcome.title" = "Upptäck din vibe";
+"onboarding.welcome.subtitle" = "AI-drivna rekommendationer som är skräddarsydda för just dig.";
+"onboarding.clips.title" = "Titta, läs inte";
+"onboarding.clips.subtitle" = "Upplev filmer genom korta, engagerande klipp.";
+"onboarding.lists.title" = "Din bevakningslista, överallt";
+"onboarding.lists.subtitle" = "Spara filmer och synkronisera dem mellan alla dina enheter.";
+"onboarding.account.title" = "Spara din profil";
+"onboarding.account.subtitle" = "Skapa ett konto för att synkronisera din bevakningslista och dina preferenser mellan olika enheter.";
+"onboarding.skip" = "Hoppa över för tillfället";
+"paywall.cta.skip" = "Hoppa över för tillfället";
+"filters.allPlatforms" = "Alla plattformar";
+
+// --- Synced from en.lproj ---
+"filters.releasePeriodAny" = "Alla";
+"common.next" = "Nästa";
+"ai.tryAsking" = "Försök att fråga...";
+
+// --- Synced from en.lproj ---
+"auth.checkEmailTitle" = "Kontrollera din e-post";
+"auth.checkEmailMessage" = "Vi har skickat en bekräftelselänk till dig. Vänligen kontrollera din inkorg för att verifiera ditt konto.";
+
+// --- Synced from en.lproj ---
+"auth.openMailApp" = "Öppna Mail-appen";
+"auth.iHaveVerified" = "Jag har verifierat";
+"auth.resendEmail" = "Skicka e-post igen";
+"auth.changeEmail" = "Ändra e-post";
+"auth.verificationPending" = "Väntar fortfarande på bekräftelse...";
+
+"movieDetail.whyForMe" = "Why for me?";
+
+"movieDetail.whyForMe.basedOnGenres" = "Based on your 3 favorite genres";
+
+"movieDetail.goodFitTitle" = "Why %@ is a good fit for me?";
+"movieDetail.goodFitSubtitle" = "A quick, personalized take based on your taste.";

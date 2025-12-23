@@ -1,6 +1,6 @@
 import Foundation
 import SwiftUI
-import NaturalLanguage
+import UIKit
 
 struct AIMessage: Identifiable, Equatable {
     let id = UUID()
@@ -16,60 +16,90 @@ class AIRecommendationViewModel: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var error: String?
     
-    // Token Quota Management
-    @Published var tokensUsedToday: Int = 0
-    @Published private(set) var aiTokenLimit: Int
-    var tokensRemaining: Int { aiTokenLimit - tokensUsedToday }
-    var softLimitReached: Bool { tokensUsedToday >= Int(Double(aiTokenLimit) * 0.75) && tokensUsedToday < aiTokenLimit }
-    var hardLimitReached: Bool { tokensUsedToday >= aiTokenLimit }
-    var usageProgress: Double {
-        guard aiTokenLimit > 0 else { return 0 }
-        return Double(tokensUsedToday) / Double(aiTokenLimit)
-    }
+    // Daily Request Quota Management (service is request-based)
+    @Published var requestsUsedToday: Int = 0
+    @Published private(set) var dailyRequestLimit: Int
+    var hardLimitReached: Bool { requestsUsedToday >= dailyRequestLimit }
     
     // Dependencies
     private let authService = AuthService.shared
-    private let supabaseService = SupabaseService.shared
-    private let quotaManager = DailyQuotaManager.shared
+    private let aiTokenManager = AITokenManager.shared
     private let languageDetector = LanguageDetector.shared
+    private let tmdbService = TMDBService.shared
+    private let cerebrasService = CerebrasService.shared
+    private let preferenceManager = UserPreferenceManager.shared
+    private let queryClassifier = AIQueryClassifier.shared
+    private let contextBuilder = AIContextBuilder.shared
+    private let conversationMemory = ConversationMemoryManager.shared
+    private var timeChangeObserver: NSObjectProtocol?
+    private let userDefaults = UserDefaults.standard
+
+    private static let dayKeyFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = .current
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
     
     init() {
-        self.aiTokenLimit = quotaManager.isProUser ? AppConstants.AI.proDailyTokenLimit : AppConstants.AI.freeDailyTokenLimit
-        // Fetch token usage on init
-        Task { await fetchDailyTokenUsage() }
-    }
-    
-    func updateTokenLimit(isProUser: Bool) {
-        aiTokenLimit = isProUser ? AppConstants.AI.proDailyTokenLimit : AppConstants.AI.freeDailyTokenLimit
-    }
-    
-    func fetchDailyTokenUsage() async {
-        guard let userId = authService.currentUser?.id else {
-            // If not authenticated, keep whatever was there (UI is gated anyway)
-            return
-        }
+        // Limit is now managed by AITokenManager (requests)
+        self.dailyRequestLimit = AITokenManager.shared.dailyLimit
+        self.requestsUsedToday = AITokenManager.shared.tokensUsedToday
         
-        // Show cached local usage immediately (if any)
-        let cached = await supabaseService.getLocalAITokenUsage(userId: userId)
-        if let cached {
-            tokensUsedToday = cached
+        startDayChangeMonitoring()
+        Task {
+            await conversationMemory.loadSessionIfNeeded()
+            hydrateMessagesFromMemory()
+            // Sync with AITokenManager
+            await syncWithTokenManager()
         }
-        
-        do {
-            tokensUsedToday = try await supabaseService.getAITokenUsage(userId: UUID(uuidString: userId)!)
-            if let cached, cached > tokensUsedToday {
-                // Prefer the higher of cached vs remote to avoid regressions if server lags
-                tokensUsedToday = cached
+    }
+
+    deinit {
+        if let timeChangeObserver {
+            NotificationCenter.default.removeObserver(timeChangeObserver)
+        }
+    }
+
+    private func startDayChangeMonitoring() {
+        timeChangeObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.significantTimeChangeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            // AITokenManager handles its own date check, but we can trigger a UI refresh
+            Task { @MainActor in
+                await self?.syncWithTokenManager()
             }
-            await supabaseService.saveLocalAITokenUsage(userId: userId, tokensUsed: tokensUsedToday)
-        } catch {
-            print("❌ Failed to fetch daily AI token usage: \(error)")
-            self.error = "Failed to load token usage."
         }
+    }
+    
+    func updateRequestLimit(isProUser: Bool) {
+        aiTokenManager.updateLimit()
+        Task { await syncWithTokenManager() }
+    }
+    
+    func fetchDailyRequestUsage() async {
+        if let user = authService.currentUser {
+            let userIdString = "\(user.id)"
+            if let userId = UUID(uuidString: userIdString) {
+                if let newTotal = try? await SupabaseService.shared.getAITokenUsage(userId: userId) {
+                    aiTokenManager.syncTokens(newTotal)
+                }
+            }
+        }
+        await syncWithTokenManager()
+    }
+
+    @MainActor
+    private func syncWithTokenManager() async {
+        self.dailyRequestLimit = aiTokenManager.dailyLimit
+        self.requestsUsedToday = aiTokenManager.tokensUsedToday
     }
     
     func sendMessage() async {
-        let trimmedPrompt = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedPrompt = sanitizeUserPrompt(prompt)
         guard !trimmedPrompt.isEmpty else { return }
         
         // --- PRO Check & Quota Enforcement ---
@@ -77,15 +107,9 @@ class AIRecommendationViewModel: ObservableObject {
             self.error = "auth.gate.authRequiredAI".localized
             return
         }
-        guard !hardLimitReached else {
-            self.error = "ai.hardLimitMessage".localized
-            return
-        }
         
-        // Pre-flight token estimation (approximate)
-        let estimatedTokensForTurn = trimmedPrompt.count / 4 + 200 // ~4 chars per token + ~200 for AI response
-        guard tokensRemaining >= estimatedTokensForTurn else {
-            self.error = "ai.hardLimitMessage".localized
+        guard aiTokenManager.canMakeRequest() else {
+            self.error = "Daily AI token limit reached. Upgrade to Pro for more."
             return
         }
         
@@ -93,6 +117,8 @@ class AIRecommendationViewModel: ObservableObject {
         let userMessage = AIMessage(content: trimmedPrompt, isUser: true)
         messages.append(userMessage)
         prompt = "" // Clear input
+
+        await conversationMemory.append(role: .user, content: trimmedPrompt)
         
         await generateResponse(for: trimmedPrompt)
     }
@@ -105,15 +131,8 @@ class AIRecommendationViewModel: ObservableObject {
             self.error = "auth.gate.authRequiredAI".localized
             return
         }
-        guard !hardLimitReached else {
-            self.error = "ai.hardLimitMessage".localized
-            return
-        }
-        
-        // Pre-flight token estimation (approximate)
-        let estimatedTokensForTurn = newContent.count / 4 + 200 // ~4 chars per token + ~200 for AI response
-        guard tokensRemaining >= estimatedTokensForTurn else {
-            self.error = "ai.hardLimitMessage".localized
+        guard aiTokenManager.canMakeRequest() else {
+            self.error = "Daily AI token limit reached. Upgrade to Pro for more."
             return
         }
         
@@ -125,6 +144,8 @@ class AIRecommendationViewModel: ObservableObject {
         if index + 1 < messages.count {
             messages.removeSubrange((index + 1)...)
         }
+
+        await conversationMemory.append(role: .user, content: newContent)
         
         await generateResponse(for: newContent)
     }
@@ -134,75 +155,67 @@ class AIRecommendationViewModel: ObservableObject {
         error = nil
         
         do {
-            // Detect the user's language and instruct the model to mirror it
+            let classification = queryClassifier.classify(query: query)
+            let profile = await preferenceManager.aggregatePreferences()
+
             let detectedLangCode = languageDetector.detectLanguage(for: query)
-            let detectedLanguageDescription: String
-            if let langCode = detectedLangCode,
-               let localizedName = Locale.current.localizedString(forLanguageCode: langCode) {
-                detectedLanguageDescription = "\(localizedName) (\(langCode))"
-            } else {
-                detectedLanguageDescription = "the user's language"
-            }
-            
-            let languageInstruction = """
-            CRITICAL: You MUST respond ONLY in \(detectedLanguageDescription). Do NOT use Chinese or any other language. Match the user's input language exactly.
-            """
+            let languageInstruction = buildLanguageInstruction(detectedLangCode: detectedLangCode)
 
-            let systemPromptWithLanguage = "You are a helpful movie recommendation assistant for VibeWatch app. \(languageInstruction)"
+            let systemPrompt = contextBuilder.buildSystemPrompt(
+                userProfile: profile.userId.isEmpty ? nil : profile,
+                queryType: classification.type
+            ) + "\n\n" + languageInstruction
 
-            let fullPrompt = """
-            IMPORTANT: Respond in \(detectedLanguageDescription) ONLY. Do not use Chinese.
+            let history = conversationHistoryForModel(filteredTo: detectedLangCode)
 
-            Recommend 3-5 movies or TV shows based on this request: "\(query)".
-            For each recommendation, provide:
-            1. Title
-            2. Year
-            3. A brief 1-sentence reason why it fits.
-
-            Format the output clearly. Remember: respond in \(detectedLanguageDescription).
-            """
-            
-            let cerebrasResponse = try await CerebrasService.shared.generateResponse(
-                prompt: fullPrompt,
-                systemPrompt: systemPromptWithLanguage // Use dynamic system prompt
+            let (prompt, metadata) = try await buildPromptAndMetadata(
+                query: query,
+                classification: classification,
+                userProfile: profile,
+                conversationHistory: history
             )
-            let aiMessage = AIMessage(content: cerebrasResponse.choices.first?.message.responseText ?? "No response", isUser: false)
+
+            // Switch to Cerebras
+            let (content, tokens) = try await cerebrasService.chat(
+                history: history,
+                prompt: prompt,
+                systemPrompt: systemPrompt
+            )
+
+            let aiMessage = AIMessage(content: content, isUser: false)
             messages.append(aiMessage)
             
-            // Log token usage
-            if let totalTokens = cerebrasResponse.usage?.totalTokens {
-                if let userId = authService.currentUser?.id {
-                do {
-                    let updatedTotal = try await supabaseService.logAITokenUsage(userId: UUID(uuidString: userId)!, tokensConsumed: totalTokens)
-                    tokensUsedToday = updatedTotal
-                    await supabaseService.saveLocalAITokenUsage(userId: userId, tokensUsed: tokensUsedToday)
-                    print("✅ AI Tokens used today: \(tokensUsedToday)/\(aiTokenLimit)")
-                } catch {
-                    // Still update locally so UI reflects usage even if logging fails
-                    tokensUsedToday = min(aiTokenLimit, tokensUsedToday + totalTokens)
-                    await supabaseService.saveLocalAITokenUsage(userId: userId, tokensUsed: tokensUsedToday)
-                    // Logging failure should not block responses; just report and continue
-                    print("⚠️ Failed to log AI token usage: \(error)")
-                }
-                } else {
-                    tokensUsedToday = min(aiTokenLimit, tokensUsedToday + totalTokens)
-                }
-            }
+            // Record Usage
+            aiTokenManager.recordUsage(tokens)
+            await syncWithTokenManager()
+
+            await conversationMemory.append(
+                role: .assistant,
+                content: content,
+                queryType: metadata.queryTypeKey,
+                mentionedMediaIds: metadata.mentionedMediaIds,
+                mentionedGenres: metadata.mentionedGenres,
+                tokensUsed: tokens
+            )
             
         } catch {
+            Logger.error("[AIRecommendationViewModel] AI Error", error: error)
             self.error = "Failed to get recommendations. Please try again."
-            print("AI Error: \(error)")
         }
         
         isLoading = false
     }
+
+    // Deprecated
+    private func incrementRequestUsage() async { }
+
     
     func applySuggestion(_ suggestion: String) {
         prompt = suggestion
     }
     
     func sendSuggestion(_ suggestion: String) async {
-        prompt = suggestion
+        prompt = sanitizeUserPrompt(suggestion)
         await sendMessage()
     }
     
@@ -210,5 +223,250 @@ class AIRecommendationViewModel: ObservableObject {
         if let index = messages.firstIndex(where: { $0.id == messageId }) {
             messages[index].isEditing.toggle()
         }
+    }
+
+    // MARK: - Helpers
+
+    private func hydrateMessagesFromMemory() {
+        let historical = conversationMemory.recentMessages()
+        messages = historical
+            .filter { $0.role != .system }
+            .map { AIMessage(content: $0.content, isUser: $0.role == .user) }
+    }
+
+    private func conversationHistoryForModel() -> [AIChatMessage] {
+        let historical = conversationMemory.recentMessages()
+
+        // We already pass the current prompt separately to Chutes; avoid duplicating if the last message is a user prompt.
+        if let last = historical.last, last.role == .user {
+            return Array(historical.dropLast())
+        }
+        return historical
+    }
+
+    private func conversationHistoryForModel(filteredTo languageCode: String?) -> [AIChatMessage] {
+        let base = conversationHistoryForModel()
+        guard let languageCode else { return base }
+
+        return base.filter { message in
+            if message.role == .system { return true }
+            guard let detected = languageDetector.detectLanguage(for: message.content) else { return false }
+            return detected == languageCode
+        }
+    }
+
+    private func buildLanguageInstruction(detectedLangCode: String?) -> String {
+        let detectedLanguageDescription: String
+        if let langCode = detectedLangCode,
+           let localizedName = Locale.current.localizedString(forLanguageCode: langCode) {
+            detectedLanguageDescription = "\(localizedName) (\(langCode))"
+        } else {
+            detectedLanguageDescription = "the user's last input language"
+        }
+
+        return """
+        CRITICAL LANGUAGE RULE:
+        - You MUST respond ONLY in \(detectedLanguageDescription).
+        - Match the user's CURRENT input language exactly.
+        - NEVER switch to a different language unless the user does so first in their latest message.
+        - If the user's input is in \(detectedLanguageDescription), your entire response MUST be in \(detectedLanguageDescription).
+        """
+    }
+
+    private func sanitizeUserPrompt(_ text: String) -> String {
+        var cleaned = text.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Handle chip prefixes like "🤖 AI: ..."
+        if let range = cleaned.range(of: "AI:", options: [.caseInsensitive, .anchored]) {
+            cleaned.removeSubrange(range)
+            cleaned = cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        if cleaned.hasPrefix("🤖") {
+            cleaned = cleaned.replacingOccurrences(of: "🤖", with: "")
+            cleaned = cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        if cleaned.lowercased().hasPrefix("ai:") {
+            cleaned = String(cleaned.dropFirst(3)).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        return cleaned
+    }
+
+    private struct PromptMetadata {
+        let queryTypeKey: String?
+        let mentionedMediaIds: [Int]
+        let mentionedGenres: [String]
+    }
+
+    private func buildPromptAndMetadata(
+        query: String,
+        classification: QueryClassification,
+        userProfile: UserProfile,
+        conversationHistory: [AIChatMessage]
+    ) async throws -> (String, PromptMetadata) {
+        switch classification.type {
+        case .specificMedia(let title, let mediaTypeHint):
+            let (details, mediaId) = try await fetchMediaDetailsForTitle(title, mediaTypeHint: mediaTypeHint)
+            let prompt = contextBuilder.buildSpecificMediaPrompt(
+                title: title,
+                movieDetails: details,
+                userProfile: userProfile.userId.isEmpty ? nil : userProfile
+            )
+            return (
+                prompt,
+                PromptMetadata(queryTypeKey: "specific_media", mentionedMediaIds: mediaId.map { [$0] } ?? [], mentionedGenres: [])
+            )
+
+        case .informational(let question):
+            return (
+                """
+                Answer the user's question clearly and directly:
+                \(question)
+                """,
+                PromptMetadata(queryTypeKey: "informational", mentionedMediaIds: [], mentionedGenres: [])
+            )
+
+        case .comparison(let items):
+            let itemsText = items.joined(separator: " vs ")
+            return (
+                """
+                Compare these titles and help the user decide: \(itemsText)
+
+                Provide:
+                - Quick summary of each
+                - Who it's best for
+                - Recommendation for the user based on their preferences
+                """,
+                PromptMetadata(queryTypeKey: "comparison", mentionedMediaIds: [], mentionedGenres: [])
+            )
+
+        case .recommendation(let context):
+            let prompt = contextBuilder.buildRecommendationPrompt(
+                context: context ?? query,
+                userProfile: userProfile.userId.isEmpty ? nil : userProfile,
+                conversationHistory: conversationHistory
+            )
+            return (prompt, PromptMetadata(queryTypeKey: "recommendation", mentionedMediaIds: [], mentionedGenres: []))
+
+        case .moodBased(let mood):
+            let prompt = contextBuilder.buildMoodPrompt(mood: mood, userProfile: userProfile.userId.isEmpty ? nil : userProfile)
+            return (prompt, PromptMetadata(queryTypeKey: "mood_based", mentionedMediaIds: [], mentionedGenres: [mood.rawValue]))
+
+        case .availability(let title, _):
+            let region = await MainActor.run { LocalizationManager.shared.currentLanguageAndRegion().1 }
+            let availability = try? await fetchAvailabilitySummary(title: title, region: region)
+            return (
+                """
+                Help the user find where to watch: "\(title)" (region: \(region))
+
+                Known provider info (may be incomplete): \(availability ?? "N/A")
+
+                Provide a helpful answer and suggest what to check if it's not available.
+                """,
+                PromptMetadata(queryTypeKey: "availability", mentionedMediaIds: [], mentionedGenres: [])
+            )
+        }
+    }
+
+    private func fetchMediaDetailsForTitle(_ title: String, mediaTypeHint: MediaType?) async throws -> (MovieDetails?, Int?) {
+        switch mediaTypeHint {
+        case .tv:
+            if let tv = try? await fetchTVShowDetailsForTitle(title) {
+                return tv
+            }
+            return try await fetchMovieDetailsForTitle(title)
+
+        case .movie:
+            if let movie = try? await fetchMovieDetailsForTitle(title) {
+                return movie
+            }
+            return try await fetchTVShowDetailsForTitle(title)
+
+        case .none:
+            if let movie = try? await fetchMovieDetailsForTitle(title) {
+                return movie
+            }
+            return try await fetchTVShowDetailsForTitle(title)
+        }
+    }
+
+    private func fetchMovieDetailsForTitle(_ title: String) async throws -> (MovieDetails?, Int?) {
+        let results = try await tmdbService.searchMovies(query: title, page: 1)
+        guard let first = results.results.first else {
+            return (nil, nil)
+        }
+
+        let movie = try await tmdbService.getMovieDetails(id: first.id)
+        let credits = try? await tmdbService.getMovieCredits(id: first.id)
+
+        let details = MovieDetails(
+            id: movie.id,
+            title: movie.title,
+            overview: movie.overview,
+            releaseDate: movie.releaseDate,
+            voteAverage: movie.voteAverage,
+            voteCount: movie.voteCount,
+            runtime: movie.runtime,
+            genres: movie.genres?.map { MovieDetails.Genre(id: $0.id, name: $0.name) },
+            credits: credits.map { credits in
+                MovieDetails.Credits(
+                    cast: credits.cast.prefix(10).map { MovieDetails.CastMember(id: $0.id, name: $0.name, character: $0.character) },
+                    crew: credits.crew.prefix(10).map { MovieDetails.CrewMember(id: $0.id, name: $0.name, job: $0.job) }
+                )
+            }
+        )
+
+        return (details, movie.id)
+    }
+
+    private func fetchTVShowDetailsForTitle(_ title: String) async throws -> (MovieDetails?, Int?) {
+        let results = try await tmdbService.searchTVShows(query: title, page: 1)
+        guard let first = results.results.first else {
+            return (nil, nil)
+        }
+
+        let show = try await tmdbService.getTVShowDetails(id: first.id)
+        let credits = try? await tmdbService.getTVShowCredits(id: first.id)
+
+        let details = MovieDetails(
+            id: show.id,
+            title: show.name,
+            overview: show.overview,
+            releaseDate: show.firstAirDate,
+            voteAverage: show.voteAverage,
+            voteCount: show.voteCount,
+            runtime: nil,
+            genres: show.genres?.map { MovieDetails.Genre(id: $0.id, name: $0.name) },
+            credits: credits.map { credits in
+                MovieDetails.Credits(
+                    cast: credits.cast.prefix(10).map { MovieDetails.CastMember(id: $0.id, name: $0.name, character: $0.character) },
+                    crew: credits.crew.prefix(10).map { MovieDetails.CrewMember(id: $0.id, name: $0.name, job: $0.job) }
+                )
+            }
+        )
+
+        return (details, show.id)
+    }
+
+    private func fetchAvailabilitySummary(title: String, region: String) async throws -> String? {
+        let results = try await tmdbService.searchMovies(query: title, page: 1)
+        guard let first = results.results.first else {
+            return nil
+        }
+
+        let providers = try await tmdbService.getMovieWatchProviders(id: first.id)
+        let country = providers.results[region]
+        let streaming = country?.flatrate?.map { $0.providerName }.prefix(5).joined(separator: ", ")
+        let rent = country?.rent?.map { $0.providerName }.prefix(5).joined(separator: ", ")
+        let buy = country?.buy?.map { $0.providerName }.prefix(5).joined(separator: ", ")
+
+        var parts: [String] = []
+        if let streaming, !streaming.isEmpty { parts.append("Stream: \(streaming)") }
+        if let rent, !rent.isEmpty { parts.append("Rent: \(rent)") }
+        if let buy, !buy.isEmpty { parts.append("Buy: \(buy)") }
+        if parts.isEmpty { return nil }
+        return parts.joined(separator: " | ")
     }
 }

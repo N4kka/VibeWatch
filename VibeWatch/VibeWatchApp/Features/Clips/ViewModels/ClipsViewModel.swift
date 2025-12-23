@@ -12,6 +12,10 @@ class ClipsViewModel: ObservableObject {
     private let repository: ClipsRepository
     private let engagementTracker = UserEngagementTracker.shared
     private let prefetchService = ClipsPrefetchService.shared
+    private let preferenceManager = UserPreferenceManager.shared
+    private let tmdbService = TMDBService.shared
+
+    private var watchMetrics: [String: (watched: Double, total: Double)] = [:]
     
     private var isLoadingMore = false
     private var loadStartTime: Date?
@@ -124,6 +128,7 @@ class ClipsViewModel: ObservableObject {
     }
     
     func updateWatchTime(clipId: String, watchedSeconds: Double, totalSeconds: Double) {
+        watchMetrics[clipId] = (watchedSeconds, totalSeconds)
         engagementTracker.updateWatchTime(
             clipId: clipId,
             duration: watchedSeconds,
@@ -132,7 +137,18 @@ class ClipsViewModel: ObservableObject {
     }
     
     func stopWatching(clipId: String) {
-        engagementTracker.endWatchingClip(clipId: clipId)
+        guard let clip = clips.first(where: { $0.id == clipId }) else {
+            engagementTracker.endWatchingClip(clipId: clipId)
+            return
+        }
+
+        Task {
+            let (genreIds, actorIds) = await fetchGenresAndActors(for: clip)
+            engagementTracker.endWatchingClip(clipId: clipId, genres: genreIds, actors: actorIds)
+
+            let score = engagementScore(for: clipId)
+            recordUnifiedPreferences(for: clip, genreIds: genreIds, actorIds: actorIds, engagementScore: score, action: "watch")
+        }
         Logger.debug("👋 Stopped watching clip")
     }
     
@@ -153,6 +169,15 @@ class ClipsViewModel: ObservableObject {
             
             Task {
                 try? await ClipsService.shared.updateLikeStatus(clipId: clipId, isLiked: isLiked)
+
+                let (genreIds, actorIds) = await fetchGenresAndActors(for: updatedClip)
+                recordUnifiedPreferences(
+                    for: updatedClip,
+                    genreIds: genreIds,
+                    actorIds: actorIds,
+                    engagementScore: isLiked ? 5.0 : -1.0,
+                    action: isLiked ? "like" : "unlike"
+                )
             }
         }
     }
@@ -160,5 +185,85 @@ class ClipsViewModel: ObservableObject {
     func trackAddToList(clip: Clip) {
         engagementTracker.trackListAddition(clip: clip, listType: "watchlist")
         Logger.debug("📝 Added to list: \(clip.title)")
+
+        Task {
+            let (genreIds, actorIds) = await fetchGenresAndActors(for: clip)
+            recordUnifiedPreferences(for: clip, genreIds: genreIds, actorIds: actorIds, engagementScore: 8.0, action: "add_to_list")
+        }
+    }
+
+    // MARK: - Unified Preferences Integration
+
+    private func recordUnifiedPreferences(
+        for clip: Clip,
+        genreIds: [Int],
+        actorIds: [Int],
+        engagementScore: Double,
+        action: String
+    ) {
+        let mediaId = clip.movieId ?? clip.tvShowId
+        guard let mediaId else { return }
+
+        preferenceManager.recordInteraction(
+            UserInteraction(
+                source: .clips,
+                mediaId: mediaId,
+                mediaType: clip.inferredMediaType,
+                genreIds: genreIds,
+                actorIds: actorIds,
+                engagementScore: engagementScore,
+                metadata: [
+                    "clip_id": clip.id,
+                    "action": action
+                ]
+            )
+        )
+    }
+
+    private func engagementScore(for clipId: String) -> Double {
+        guard let metrics = watchMetrics[clipId], metrics.total > 0 else {
+            return 0.0
+        }
+
+        let percentage = metrics.watched / metrics.total
+        switch percentage {
+        case 0..<0.1:
+            return -1.0
+        case 0.1..<0.25:
+            return 0.0
+        case 0.25..<0.5:
+            return 1.0
+        case 0.5..<0.8:
+            return 3.0
+        case 0.8...1.0:
+            return 5.0
+        default:
+            return 0.0
+        }
+    }
+
+    private func fetchGenresAndActors(for clip: Clip) async -> ([Int], [Int]) {
+        guard let mediaId = clip.movieId ?? clip.tvShowId else {
+            return ([], [])
+        }
+
+        do {
+            if clip.inferredMediaType == .movie {
+                let movie = try await tmdbService.getMovieDetails(id: mediaId)
+                let credits = try? await tmdbService.getMovieCredits(id: mediaId)
+                let genreIds = movie.genreIds ?? movie.genres?.map { $0.id } ?? []
+                let actorIds = credits?.cast.prefix(5).map { $0.id } ?? []
+                return (genreIds, actorIds)
+            } else {
+                let tv = try await tmdbService.getTVShowDetails(id: mediaId)
+                let credits = try? await tmdbService.getTVShowCredits(id: mediaId)
+                let genreIds = tv.genreIds ?? tv.genres?.map { $0.id } ?? []
+                let actorIds = credits?.cast.prefix(5).map { $0.id } ?? []
+                return (genreIds, actorIds)
+            }
+        } catch {
+            Logger.warning("[ClipsViewModel] Failed to fetch TMDB metadata for clip: \(error.localizedDescription)")
+            return ([], [])
+        }
     }
 }

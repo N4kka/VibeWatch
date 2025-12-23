@@ -6,7 +6,7 @@ import RevenueCat
 /// For logged-in user clip counting, use DailyQuotaManager.shared instead.
 ///
 /// Responsibilities:
-/// - Anonymous user clip tracking (15 clips before account creation)
+/// - Anonymous user clip tracking (25 clips before account creation)
 /// - RevenueCat Pro subscription status
 /// - Automatic Pro/Free downgrade detection
 @MainActor
@@ -23,7 +23,7 @@ final class ClipQuotaService: ObservableObject {
 
     // MARK: - Constants
 
-    private let anonymousLimit = 15
+    private let anonymousLimit = 25
     private let defaults = UserDefaults.standard
 
     private enum Keys {

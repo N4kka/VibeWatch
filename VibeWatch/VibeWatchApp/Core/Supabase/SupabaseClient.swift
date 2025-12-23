@@ -21,6 +21,127 @@ class SupabaseService: ObservableObject {
     private init() {}
 
     private let localDB = SQLiteService.shared
+
+    private static let dayKeyFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = .current
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
+
+    private func localDayKey(for date: Date = Date()) -> String {
+        Self.dayKeyFormatter.string(from: date)
+    }
+
+    private func isDateInTodayLocal(_ date: Date) -> Bool {
+        Calendar.current.isDateInToday(date)
+    }
+
+    private func normalizeUserId(_ userId: String) -> String {
+        userId.lowercased()
+    }
+
+    private struct LocalAITokenUsageState {
+        let tokens: Int
+        let didResetForNewDay: Bool
+    }
+
+    /// Ensures the cached `user_ai_token_usage` row is for the current local day.
+    /// Returns the corrected cached value (0 if it was reset).
+    private func normalizeLocalAITokenUsageForToday(userId: String) async -> LocalAITokenUsageState? {
+        let normalizedUserId = normalizeUserId(userId)
+        let todayKey = localDayKey()
+
+        do {
+            let rows = try await localDB.queryRaw(
+                "SELECT tokens_used_today, usage_day, updated_at FROM user_ai_token_usage WHERE user_id = ? LIMIT 1",
+                parameters: [normalizedUserId]
+            )
+            guard let row = rows.first else { return nil }
+
+            let tokens = row["tokens_used_today"] as? Int ?? 0
+            let usageDay = row["usage_day"] as? String
+            let updatedAt = parseDate(row["updated_at"])
+
+            if let usageDay {
+                if usageDay == todayKey {
+                    return LocalAITokenUsageState(tokens: tokens, didResetForNewDay: false)
+                }
+            } else if let updatedAt, isDateInTodayLocal(updatedAt) {
+                // Backfill day without resetting if the timestamp is still "today".
+                let now = ISO8601DateFormatter().string(from: Date())
+                let update: [String: Any] = [
+                    "user_id": normalizedUserId,
+                    "tokens_used_today": tokens,
+                    "usage_day": todayKey,
+                    "updated_at": now
+                ]
+                try? await localDB.upsert(table: "user_ai_token_usage", rows: [update])
+                return LocalAITokenUsageState(tokens: tokens, didResetForNewDay: false)
+            }
+
+            // New day (or unknown): reset locally.
+            await resetLocalAITokenUsage(userId: normalizedUserId)
+            return LocalAITokenUsageState(tokens: 0, didResetForNewDay: true)
+        } catch {
+            Logger.warning("[SQLite] Failed to read cached AI token usage: \(error.localizedDescription)")
+            return nil
+        }
+    }
+
+    private func resetLocalAITokenUsage(userId: String) async {
+        let normalizedUserId = normalizeUserId(userId)
+        let now = ISO8601DateFormatter().string(from: Date())
+        let todayKey = localDayKey()
+        let row: [String: Any] = [
+            "user_id": normalizedUserId,
+            "tokens_used_today": 0,
+            "usage_day": todayKey,
+            "updated_at": now
+        ]
+        do {
+            try await localDB.upsert(table: "user_ai_token_usage", rows: [row])
+            NotificationCenter.default.post(name: .aiTokenUsageDidReset, object: nil)
+            Logger.debug("[SQLite] Reset cached AI tokens for user \(normalizedUserId) (day=\(todayKey))")
+        } catch {
+            Logger.warning("[SQLite] Failed to reset cached AI token usage locally: \(error.localizedDescription)")
+        }
+    }
+
+    /// Best-effort: reset the remote `user_ai_token_usage` row to 0 (used when local midnight passes).
+    private func resetRemoteAITokenUsageIfPossible(userId: String) async {
+        guard let client else { return }
+
+        struct ResetUpdate: Encodable {
+            let tokens_used_today: Int
+            let updated_at: String
+        }
+
+        let now = ISO8601DateFormatter().string(from: Date())
+        let payload = ResetUpdate(tokens_used_today: 0, updated_at: now)
+
+        do {
+            try await client
+                .from("user_ai_token_usage")
+                .update(payload)
+                .eq("user_id", value: normalizeUserId(userId))
+                .execute()
+        } catch {
+            // Ignore: offline / RLS / schema differences should not break local quota behavior.
+            Logger.warning("[Supabase] Failed to reset remote AI token usage: \(error.localizedDescription)")
+        }
+    }
+
+    /// Called by app-level day-change handlers to enforce local-midnight reset.
+    func handleLocalDayBoundaryForCurrentUser() async {
+        guard let userId = currentUser?.id else { return }
+        let normalized = normalizeUserId(userId)
+        let state = await normalizeLocalAITokenUsageForToday(userId: normalized)
+        if state?.didResetForNewDay == true {
+            await resetRemoteAITokenUsageIfPossible(userId: normalized)
+        }
+    }
     
     private enum PullConflictPolicy {
         case serverWins
@@ -156,14 +277,190 @@ class SupabaseService: ObservableObject {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
-        request.setValue("Bearer \(Config.supabaseAnonKey)", forHTTPHeaderField: "Authorization")
+        if let client,
+           let session = try? await client.auth.session {
+            request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
+        } else {
+            request.setValue("Bearer \(Config.supabaseAnonKey)", forHTTPHeaderField: "Authorization")
+        }
 
         let body = try JSONSerialization.data(withJSONObject: ["batch": batch], options: [])
         request.httpBody = body
 
-        let (_, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
             throw SupabaseError.networkError
+        }
+
+        if (200...299).contains(http.statusCode) {
+            return
+        }
+
+        let bodyString = String(data: data, encoding: .utf8) ?? ""
+
+        // If the RPC isn't deployed yet, fall back to client-side REST operations.
+        if http.statusCode == 404 || bodyString.lowercased().contains("apply_mutations") {
+            try await applyMutationsClientSide(batch)
+            return
+        }
+
+        throw SupabaseError.httpError(statusCode: http.statusCode, body: bodyString)
+    }
+
+    // MARK: - Preferences RPC
+
+    func mergeUserPreferences(userId: UUID, preferences: [[String: Any]]) async throws -> [String: Any] {
+        let payload: [String: Any] = [
+            "p_user_id": userId.uuidString.lowercased(),
+            "p_preferences": preferences
+        ]
+
+        let data = try await callRPC(function: "merge_user_preferences", payload: payload)
+        return (try? JSONSerialization.jsonObject(with: data) as? [String: Any]) ?? [:]
+    }
+
+    private func callRPC(function: String, payload: [String: Any]) async throws -> Data {
+        guard let baseURL = URL(string: Config.supabaseURL) else {
+            throw SupabaseError.notConfigured
+        }
+
+        let url = baseURL
+            .appendingPathComponent("rest")
+            .appendingPathComponent("v1")
+            .appendingPathComponent("rpc")
+            .appendingPathComponent(function)
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
+
+        if let client,
+           let session = try? await client.auth.session {
+            request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
+        } else {
+            request.setValue("Bearer \(Config.supabaseAnonKey)", forHTTPHeaderField: "Authorization")
+        }
+
+        request.httpBody = try JSONSerialization.data(withJSONObject: payload, options: [])
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            throw SupabaseError.networkError
+        }
+
+        guard (200...299).contains(http.statusCode) else {
+            let body = String(data: data, encoding: .utf8) ?? ""
+            throw SupabaseError.httpError(statusCode: http.statusCode, body: body)
+        }
+
+        return data
+    }
+
+    // MARK: - Generic REST Upsert
+
+    func upsertRow(
+        table: String,
+        onConflict: String,
+        record: [String: Any]
+    ) async throws {
+        guard let baseURL = URL(string: Config.supabaseURL) else {
+            throw SupabaseError.notConfigured
+        }
+
+        var components = URLComponents(url: baseURL
+            .appendingPathComponent("rest")
+            .appendingPathComponent("v1")
+            .appendingPathComponent(table), resolvingAgainstBaseURL: false)
+        components?.queryItems = [URLQueryItem(name: "on_conflict", value: onConflict)]
+
+        guard let url = components?.url else {
+            throw SupabaseError.networkError
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
+        request.setValue("resolution=merge-duplicates,return=minimal", forHTTPHeaderField: "Prefer")
+
+        if let client,
+           let session = try? await client.auth.session {
+            request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
+        } else {
+            request.setValue("Bearer \(Config.supabaseAnonKey)", forHTTPHeaderField: "Authorization")
+        }
+
+        request.httpBody = try JSONSerialization.data(withJSONObject: record, options: [])
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            throw SupabaseError.networkError
+        }
+
+        guard (200...299).contains(http.statusCode) else {
+            let body = String(data: data, encoding: .utf8) ?? ""
+            throw SupabaseError.httpError(statusCode: http.statusCode, body: body)
+        }
+    }
+
+    private func deleteRow(table: String, id: String) async throws {
+        guard let baseURL = URL(string: Config.supabaseURL) else {
+            throw SupabaseError.notConfigured
+        }
+
+        var components = URLComponents(url: baseURL
+            .appendingPathComponent("rest")
+            .appendingPathComponent("v1")
+            .appendingPathComponent(table), resolvingAgainstBaseURL: false)
+        components?.queryItems = [URLQueryItem(name: "id", value: "eq.\(id)")]
+
+        guard let url = components?.url else {
+            throw SupabaseError.networkError
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
+        request.setValue("return=minimal", forHTTPHeaderField: "Prefer")
+
+        if let client,
+           let session = try? await client.auth.session {
+            request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
+        } else {
+            request.setValue("Bearer \(Config.supabaseAnonKey)", forHTTPHeaderField: "Authorization")
+        }
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            throw SupabaseError.networkError
+        }
+        guard (200...299).contains(http.statusCode) else {
+            let body = String(data: data, encoding: .utf8) ?? ""
+            throw SupabaseError.httpError(statusCode: http.statusCode, body: body)
+        }
+    }
+
+    private func applyMutationsClientSide(_ batch: [[String: Any]]) async throws {
+        for mutation in batch {
+            let op = (mutation["op"] as? String)?.uppercased() ?? "UPSERT"
+            guard let table = mutation["table"] as? String else { continue }
+            let mutationId = mutation["id"] as? String
+            var record = mutation["record"] as? [String: Any] ?? [:]
+
+            if let mutationId, !mutationId.isEmpty, record["id"] == nil {
+                record["id"] = mutationId
+            }
+
+            switch op {
+            case "DELETE":
+                if let id = (mutationId ?? record["id"] as? String), !id.isEmpty {
+                    try await deleteRow(table: table, id: id)
+                }
+            default:
+                try await upsertRow(table: table, onConflict: "id", record: record)
+            }
         }
     }
     
@@ -465,6 +762,10 @@ class SupabaseService: ObservableObject {
         
         // Try to use remote RPC first; if it fails (e.g., missing function in debug), fall back to local cache.
         let normalizedUserId = userId.uuidString.lowercased()
+        let state = await normalizeLocalAITokenUsageForToday(userId: normalizedUserId)
+        if state?.didResetForNewDay == true {
+            await resetRemoteAITokenUsageIfPossible(userId: normalizedUserId)
+        }
         
         struct LogUsageRequest: Encodable {
             let p_user_id: UUID
@@ -490,6 +791,12 @@ class SupabaseService: ObservableObject {
         guard let client = client else {
             throw SupabaseError.notConfigured
         }
+
+        let normalizedUserId = userId.uuidString.lowercased()
+        let state = await normalizeLocalAITokenUsageForToday(userId: normalizedUserId)
+        if state?.didResetForNewDay == true {
+            await resetRemoteAITokenUsageIfPossible(userId: normalizedUserId)
+        }
         
         struct GetUsageRequest: Encodable {
             let p_user_id: UUID
@@ -497,20 +804,27 @@ class SupabaseService: ObservableObject {
         
         let request = GetUsageRequest(p_user_id: userId)
         
-        let totalTokens: Int = try await client.rpc("get_ai_token_usage", params: request).execute().value
-        
-        // Cache locally for offline state (normalize casing)
-        await saveLocalAITokenUsage(userId: userId.uuidString, tokensUsed: totalTokens)
-        return totalTokens
+        do {
+            let totalTokens: Int = try await client.rpc("get_ai_token_usage", params: request).execute().value
+
+            // Cache locally for offline state (normalize casing)
+            await saveLocalAITokenUsage(userId: normalizedUserId, tokensUsed: totalTokens)
+            return totalTokens
+        } catch {
+            Logger.warning("[Supabase] get_ai_token_usage RPC failed; using local cache. Error: \(error.localizedDescription)")
+            return await getLocalAITokenUsage(userId: normalizedUserId) ?? 0
+        }
     }
     
     /// Cache AI token usage locally so the UI can reflect changes immediately/offline.
     func saveLocalAITokenUsage(userId: String, tokensUsed: Int) async {
-        let normalizedUserId = userId.lowercased()
+        let normalizedUserId = normalizeUserId(userId)
         let now = ISO8601DateFormatter().string(from: Date())
+        let todayKey = localDayKey()
         let row: [String: Any] = [
             "user_id": normalizedUserId,
             "tokens_used_today": tokensUsed,
+            "usage_day": todayKey,
             "updated_at": now
         ]
         do {
@@ -523,17 +837,13 @@ class SupabaseService: ObservableObject {
     
     /// Read cached AI token usage from local SQLite (if available).
     func getLocalAITokenUsage(userId: String) async -> Int? {
-        do {
-            let rows = try await localDB.queryRaw(
-                "SELECT tokens_used_today FROM user_ai_token_usage WHERE user_id = ? LIMIT 1",
-                parameters: [userId.lowercased()]
-            )
-            return rows.first?["tokens_used_today"] as? Int
-        } catch {
-            Logger.warning("[SQLite] Failed to read cached AI token usage: \(error.localizedDescription)")
-            return nil
-        }
+        await normalizeLocalAITokenUsageForToday(userId: userId)?.tokens
     }
+
+}
+
+extension Notification.Name {
+    static let aiTokenUsageDidReset = Notification.Name("aiTokenUsageDidReset")
 }
 
 
@@ -542,6 +852,7 @@ enum SupabaseError: LocalizedError {
     case notAuthenticated
     case authenticationFailed
     case networkError
+    case httpError(statusCode: Int, body: String)
     
     var errorDescription: String? {
         switch self {
@@ -553,6 +864,10 @@ enum SupabaseError: LocalizedError {
             return "Authentication failed. Please check your credentials"
         case .networkError:
             return "Network error. Please check your connection"
+        case .httpError(let statusCode, let body):
+            let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
+            let short = trimmed.count > 300 ? String(trimmed.prefix(300)) + "…" : trimmed
+            return "Supabase HTTP \(statusCode): \(short.isEmpty ? "No response body" : short)"
         }
     }
 }

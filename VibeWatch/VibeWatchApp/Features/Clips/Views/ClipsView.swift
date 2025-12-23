@@ -97,14 +97,13 @@ struct ClipsView: View {
             if showDailyPaywall {
                 DailyLimitPaywallView(isPresented: $showDailyPaywall, onComeBack: {
                     NotificationCenter.default.post(name: .navigateToDiscoveryTab, object: nil)
-                })
+                }, source: "clips_quota")
                 .environmentObject(quotaManager)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .zIndex(100)
             }
         }
         .background(Color.black.ignoresSafeArea())
-        .ignoresSafeArea(.all, edges: .bottom)
         .animation(.easeInOut(duration: 0.3), value: viewModel.isLoading)
         .animation(.easeInOut(duration: 0.3), value: viewModel.clips.isEmpty)
         .task {
@@ -205,6 +204,8 @@ struct ClipsView: View {
                 }
                 
                 Spacer()
+
+                ProUpgradeIconButton(isProUser: quotaManager.isProUser, source: "clips_top_right")
                 
                 Button {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -235,16 +236,8 @@ struct ClipsView: View {
         .padding(.top, 8)
         .padding(.bottom, 12)
         .background(
-            LinearGradient(
-                colors: [
-                    Color.black.opacity(0.9),
-                    Color.black.opacity(0.7),
-                    Color.black.opacity(0.4)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea(edges: .top)
+            Color.black
+                .ignoresSafeArea(edges: .top)
         )
     }
 
@@ -403,25 +396,24 @@ struct ClipsView: View {
     }
 
     private var clipsScrollView: some View {
-        GeometryReader { geometry in
+        GeometryReader { outerGeometry in
             ScrollViewReader { proxy in
-                let screenHeight = UIScreen.main.bounds.height
-                let screenWidth = geometry.size.width
-
                 ScrollView(.vertical, showsIndicators: false) {
                     LazyVStack(spacing: 0) {
                         ForEach(Array(viewModel.clips.enumerated()), id: \.offset) { index, clip in
-                            ClipPlayerView(
-                                clip: clip,
-                                isCurrentClip: viewModel.currentIndex == index,
-                                onBecomeVisible: {
-                                    viewModel.currentIndex = index
-                                },
-                                onLikeToggle: { isLiked in
-                                    viewModel.toggleLike(for: clip.id, isLiked: isLiked)
-                                }
-                            )
-                            .frame(width: screenWidth, height: screenHeight)
+                            GeometryReader { innerGeometry in
+                                ClipPlayerView(
+                                    clip: clip,
+                                    isCurrentClip: viewModel.currentIndex == index,
+                                    onBecomeVisible: {
+                                        viewModel.currentIndex = index
+                                    },
+                                    onLikeToggle: { isLiked in
+                                        viewModel.toggleLike(for: clip.id, isLiked: isLiked)
+                                    }
+                                )
+                            }
+                            .frame(width: outerGeometry.size.width, height: outerGeometry.size.height)
                             .id(index)
                             .onAppear {
                                 // Smart pagination: Load more when 5 clips away from end
@@ -444,7 +436,7 @@ struct ClipsView: View {
                         viewModel.currentIndex = newIndex
                     }
                 }))
-                .ignoresSafeArea(.all) // Ignore all safe areas for proper paging
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .onAppear {
                     // Only scroll to saved position on first appearance
                     if !hasScrolledToSavedPosition {
@@ -454,7 +446,6 @@ struct ClipsView: View {
                 }
             }
         }
-        .ignoresSafeArea(.all) // Full screen scroll view
     }
 
     private var loadingView: some View {
@@ -672,23 +663,15 @@ struct ClipPlayerView: View {
     }
     
     var body: some View {
-        let screenWidth = UIScreen.main.bounds.width
-        let screenHeight = UIScreen.main.bounds.height
-        // Get safe area from window scene (more reliable when ignoring safe areas)
-        let safeAreaTop = UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .first?.windows.first?.safeAreaInsets.top ?? 0
-                
         ZStack(alignment: .bottomTrailing) {
-            // Full-screen YouTube player using official YTPlayerView (offset by safe area internally)
+            // YouTube player contained within bounds
             ZStack {
                 VerticalYouTubePlayer(
                     clipId: clip.id,
                     videoId: clip.videoId,
-                    shouldPlay: isCurrentClip && isFullyVisible,
-                    safeAreaTop: safeAreaTop
+                    shouldPlay: isCurrentClip && isFullyVisible
                 )
-                
+
                 // Edge gesture areas to ensure swipe works even over WebView
                 HStack {
                     Color.clear
@@ -700,10 +683,9 @@ struct ClipPlayerView: View {
                         .contentShape(Rectangle())
                 }
             }
-            .frame(width: screenWidth, height: screenHeight)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color.black)
             .clipped()
-            .edgesIgnoringSafeArea(.all)
             .contentShape(Rectangle())
             .background(
                 GeometryReader { innerGeometry in
@@ -730,10 +712,10 @@ struct ClipPlayerView: View {
                         }
                 )
             
-            // Action buttons on the right
+            // Action buttons on the right (always visible)
             VStack(alignment: .trailing, spacing: 20) {
                 Spacer()
-                
+
                 ClipActionButton(
                     icon: isLiked ? "heart.fill" : "heart",
                     count: likeCount,
@@ -745,7 +727,7 @@ struct ClipPlayerView: View {
                         onLikeToggle(isLiked)
                     }
                 }
-                
+
                 ClipActionButton(
                     icon: "message",
                     count: commentCount,
@@ -753,14 +735,14 @@ struct ClipPlayerView: View {
                 ) {
                     showComments = true
                 }
-                
+
                 ClipActionButton(
                     icon: "plus",
                     color: .white
                 ) {
                     showAddToList = true
                 }
-                
+
                 ClipActionButton(
                     icon: "square.and.arrow.up",
                     color: .white
@@ -771,17 +753,17 @@ struct ClipPlayerView: View {
             .padding(.trailing, 16)
             .padding(.bottom, showControls ? 130 : 100)
             .animation(.easeInOut(duration: 0.2), value: showControls)
-            
-            // Title and description on the left bottom
+
+            // Title and description on the left bottom (always visible)
             VStack(alignment: .leading, spacing: 8) {
                 Spacer()
-                
+
                 VStack(alignment: .leading, spacing: 8) {
                     Text(clip.title)
                         .font(.system(size: 18, weight: .bold))
                         .foregroundColor(.white)
                         .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 1)
-                    
+
                     Text(clip.description)
                         .font(.system(size: 14))
                         .foregroundColor(.white.opacity(0.9))
@@ -791,9 +773,8 @@ struct ClipPlayerView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 16)
-            .padding(.bottom, showControls ? 130 : 100)
+            .padding(.bottom, 100)
             .padding(.trailing, 80)
-            .animation(.bouncy, value: showControls)
         }
         .onAppear {
             hasAppeared = true
@@ -872,14 +853,13 @@ struct VerticalYouTubePlayer: UIViewRepresentable {
     let clipId: String  // UNIQUE identifier for each clip (includes movie ID)
     let videoId: String // YouTube video ID (can be duplicate across clips)
     let shouldPlay: Bool
-    let safeAreaTop: CGFloat // Top safe area inset to offset YouTube controls
 
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
     }
 
     func makeUIView(context: Context) -> PlayerContainerView {
-        let container = PlayerContainerView(topInset: safeAreaTop)
+        let container = PlayerContainerView()
         container.playerView.delegate = context.coordinator
         container.playerView.backgroundColor = .black
         container.playerView.isOpaque = false
@@ -890,7 +870,6 @@ struct VerticalYouTubePlayer: UIViewRepresentable {
     func updateUIView(_ container: PlayerContainerView, context: Context) {
         context.coordinator.parent = self
         context.coordinator.shouldPlay = shouldPlay
-        container.topInset = safeAreaTop
 
         if context.coordinator.currentClipId != clipId {
             context.coordinator.currentClipId = clipId
@@ -951,14 +930,8 @@ struct VerticalYouTubePlayer: UIViewRepresentable {
 
 final class PlayerContainerView: UIView {
     let playerView = YTPlayerView()
-    private var topConstraint: NSLayoutConstraint?
 
-    var topInset: CGFloat {
-        didSet { topConstraint?.constant = topInset }
-    }
-
-    init(topInset: CGFloat) {
-        self.topInset = topInset
+    init() {
         super.init(frame: .zero)
         setup()
     }
@@ -971,9 +944,10 @@ final class PlayerContainerView: UIView {
         backgroundColor = .black
         addSubview(playerView)
         playerView.translatesAutoresizingMaskIntoConstraints = false
-        topConstraint = playerView.topAnchor.constraint(equalTo: topAnchor, constant: topInset)
+
+        // Simple edge-to-edge constraints
         NSLayoutConstraint.activate([
-            topConstraint!,
+            playerView.topAnchor.constraint(equalTo: topAnchor),
             playerView.leadingAnchor.constraint(equalTo: leadingAnchor),
             playerView.trailingAnchor.constraint(equalTo: trailingAnchor),
             playerView.bottomAnchor.constraint(equalTo: bottomAnchor)

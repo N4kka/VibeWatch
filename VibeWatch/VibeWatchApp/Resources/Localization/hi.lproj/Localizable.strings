@@ -102,6 +102,7 @@
 "filters.anyCountry" = "कोई भी देश";
 "filters.apply" = "लागू करें";
 "filters.country" = "देश";
+"filters.searchCountry" = "देश खोजें";
 "filters.minimumRating" = "न्यूनतम रेटिंग";
 "filters.ratingAny" = "कोई भी";
 "filters.ratingExcellent" = "8.0+";
@@ -189,6 +190,8 @@
 "platform.selectionCount" = "%d / %d चुने गए";
 "platform.title" = "स्ट्रीमिंग प्लेटफ़ॉर्म";
 "platforms.buy" = "खरीदें";
+"platforms.cinema" = "सिनेमा";
+"platforms.justwatch" = "JustWatch";
 "platforms.rent" = "किराए पर लें";
 "platforms.streaming" = "स्ट्रीमिंग";
 "platforms.title" = "प्लेटफ़ॉर्म";
@@ -214,7 +217,7 @@
 "auth.gate.createTitle" = "अपना मुफ़्त VibeWatch खाता बनाएँ";
 "auth.gate.description" = "कस्टम सूचियाँ बनाने और उन्हें सिंक करने के लिए आपको खाता चाहिए।";
 "auth.gate.haveAccount" = "मेरे पास पहले से खाता है";
-"auth.gate.limitMessage" = "आपने आज के 15 मुफ़्त क्लिप देख लिए हैं। प्रगति सिंक करने और कल के क्लिप प्राप्त करने के लिए साइन अप करें।";
+"auth.gate.limitMessage" = "आपने आज के 25 मुफ़्त क्लिप देख लिए हैं। प्रगति सिंक करने और कल के क्लिप प्राप्त करने के लिए साइन अप करें।";
 "auth.gate.signupFree" = "साइन अप मुफ़्त है और एक मिनट से भी कम में हो जाता है।";
 "auth.gate.benefit.saveClips" = "अपने पसंदीदा क्लिप्स सहेजें";
 "auth.gate.benefit.syncDevices" = "सभी डिवाइस पर सिंक करें";
@@ -242,7 +245,7 @@
 
 // AI
 "ai.title" = "Vibe AI";
-"ai.tokensUsage" = "टोकन: %@/%@";
+"ai.requestsUsage" = "%d/%d दैनिक अनुरोध";
 "ai.describeVibe" = "अपना मूड बताइए";
 "ai.thinking" = "सोच रहा है...";
 "ai.editMessage" = "संदेश संपादित करें";
@@ -260,36 +263,35 @@
 "ai.softLimitMessage" = "आप आज की AI सीमा के करीब हैं। कृपया संदेश संक्षिप्त रखें।";
 "ai.paywall.description" = "अपनी पसंद के मुताबिक बेहतरीन कंटेंट खोजने के लिए और भी स्मार्ट AI फ़िल्म और टीवी अनुशंसाएँ पाएं।";
 "ai.subtitle" = "अपनी vibe बताइए—AI अगली देखने के लिए फ़िल्म या शो ढूँढता है।";
-"ai.suggestion.chips1" = "💖 Cozy romance, AI-picked for me";
-"ai.suggestion.chips2" = "💥 80s action-comedy, AI recommends";
-"ai.suggestion.chips3" = "🕵️‍♂️ Underrated thriller with a twist";
-"ai.suggestion.chips4" = "🤖 AI: what should I watch next?";
-"ai.usage.left" = "शेष";
+"ai.suggestion.chips1" = "💖 आरामदायक रोमांस, मेरे लिए एआई द्वारा चुना गया";
+"ai.suggestion.chips2" = "💥 80 के दशक की एक्शन-कॉमेडी, एआई अनुशंसा करता है";
+"ai.suggestion.chips3" = "🕵️‍♂️ एक ट्विस्ट के साथ अंडररेटेड थ्रिलर";
+"ai.suggestion.chips4" = "🤖एआई: मुझे आगे क्या देखना चाहिए?";
 
 // Paywall
 "paywall.bestValue" = "सबसे बेहतर मूल्य";
 "paywall.cta.continue" = "जारी रखें";
 "paywall.cta.selectPlan" = "प्लान चुनें";
 "paywall.cta.startTrial" = "%@ मुफ़्त ट्रायल शुरू करें";
-"paywall.daily.limitDescription" = "मुफ़्त सदस्य प्रतिदिन 15 क्लिप देख सकते हैं। Pro में अपग्रेड करें और असीमित क्लिप पाएं।";
+"paywall.daily.limitDescription" = "मुफ़्त सदस्य प्रतिदिन 25 क्लिप देख सकते हैं। Pro में अपग्रेड करें और असीमित क्लिप पाएं।";
 "paywall.daily.limitReached" = "आज की सीमा पूरी हो गई है";
 "paywall.daily.nextReset" = "अगला रीसेट";
 "paywall.daily.resetIn" = "रीसेट में";
 "paywall.daily.title" = "कल वापस आइए";
 "paywall.discount.annual" = "33% छूट";
 "paywall.ensurePro" = "अपनी Pro योजना सुनिश्चित करें!";
-"paywall.feature.advancedFilters" = "🔎 Advanced filters for faster picks";
-"paywall.feature.aiAssistant" = "🤖 AI movie & TV recommendations";
-"paywall.feature.lists" = "📋 Up to 100 synced watchlists";
-"paywall.feature.noAds" = "❌ No ads interrupting clips";
-"paywall.feature.offlineMode" = "📵 Offline mode for saved picks";
-"paywall.feature.releaseAlerts" = "🔔 Alerts when favorites stream";
-"paywall.feature.unlimitedClips" = "▶️ Unlimited clips and trailers";
+"paywall.feature.advancedFilters" = "🔎 तेज़ चयन के लिए उन्नत फ़िल्टर";
+"paywall.feature.aiAssistant" = "🤖 एआई मूवी और टीवी अनुशंसाएँ";
+"paywall.feature.lists" = "📋 अधिकतम 100 समन्वयित वॉचलिस्ट";
+"paywall.feature.noAds" = "❌ क्लिप को बाधित करने वाला कोई विज्ञापन नहीं";
+"paywall.feature.offlineMode" = "📵 सहेजे गए चयन के लिए ऑफ़लाइन मोड";
+"paywall.feature.releaseAlerts" = "🔔 पसंदीदा स्ट्रीम होने पर अलर्ट";
+"paywall.feature.unlimitedClips" = "▶️ असीमित क्लिप और ट्रेलर";
 "paywall.foundingMember" = "संस्थापक सदस्य मूल्य";
 "paywall.plan.annual" = "वार्षिक";
 "paywall.plan.monthly" = "मासिक";
 "paywall.price.perMonth" = "%@/माह";
-"paywall.proDescription" = "Pro unlocks unlimited clips, AI movie buddy, and synced watchlists.";
+"paywall.proDescription" = "प्रो असीमित क्लिप, एआई मूवी बडी और सिंक की गई वॉचलिस्ट को अनलॉक करता है।";
 "paywall.restore" = "खरीदारी पुनर्स्थापित करें";
 "paywall.trial.badge" = "%@ मुफ़्त";
 "paywall.unlockUnlimited" = "असीमित क्लिप्स अनलॉक करें";
@@ -354,7 +356,7 @@
 "profile.aboutUsDetail" = "VibeWatch टीम और स्ट्रीमिंग खोज अनुभव को बेहतर बनाने के हमारे मिशन के बारे में और जानें।";
 "profile.tmdbAttribution" = "यह उत्पाद TMDb API का उपयोग करता है, लेकिन TMDb द्वारा समर्थित या प्रमाणित नहीं है।";
 "profile.legalNotes" = "कानूनी नोट्स";
-"profile.faq" = "FAQ";
+"profile.faq" = "अक्सर पूछे जाने वाले प्रश्न";
 "profile.faqDetail" = "खातों, सब्सक्रिप्शन और फीचर्स से जुड़े आम सवालों के त्वरित जवाब पाएँ।";
 "profile.privacyPolicy" = "गोपनीयता नीति";
 "profile.feedback.suggestFeature" = "नया फीचर सुझाएँ";
@@ -399,8 +401,8 @@
 "clips.search.placeholder" = "क्लिप, किरदार या कोट्स खोजें";
 "clips.search.emptyTitle" = "अपने पसंदीदा क्लिप खोजें";
 "clips.search.emptySubtitle" = "किसी भी फ़िल्म, शो, किरदार या कोट को खोजें ताकि मेल खाने वाले क्लिप और संबंधित सुझाव देख सकें।";
-"clips.search.matched" = "Matched";
-"clips.search.recommended" = "Recommended";
+"clips.search.matched" = "मेल खाने वाले";
+"clips.search.recommended" = "अनुशंसित";
 "clips.search.showcaseTitle" = "क्लिप्स खोजें";
 "clips.search.showcaseSubtitle" = "अपने पसंदीदा फ़िल्मों और शो के क्लिप खोजने के लिए ऊपर खोजें";
 
@@ -425,3 +427,90 @@
 "profile.faq.answer4" = "किसी भी शीर्षक पर \"हमें बताएं\" का उपयोग करें बग या गलत लिंक रिपोर्ट करने के लिए, हम इसे जल्दी ठीक करेंगे.";
 "profile.faq.question5" = "क्या VibeWatch कैज़ुअल दर्शकों के लिए काम करता है?";
 "profile.faq.answer5" = "बिल्कुल। हम आसान विकल्प दिखाते हैं, जैसे दोस्तों के साथ शनिवार रात की फ़िल्म, और साथ ही फ़िल्म प्रेमियों के लिए गहरे चयन.";
+"carousel.hotThisWeek" = "इस हफ्ते लोकप्रिय";
+"carousel.awardWinners" = "पुरस्कार विजेता जो आपको पसंद आएंगे";
+
+// --- Synced from en.lproj ---
+"onboarding.page4.createAccount" = "खाता बनाएं";
+"filters.mediaType" = "मीडिया प्रकार";
+"filters.movies" = "चलचित्र";
+"filters.tvShows" = "टीवी शो";
+"filters.both" = "दोनों";
+"filters.rating" = "रेटिंग";
+"filters.releasePeriod" = "रिलीज़ अवधि";
+"filters.releasePeriodRecent" = "हालिया (2020+)";
+"filters.releasePeriodModern" = "आधुनिक (2010-2019)";
+"filters.releasePeriodClassic" = "क्लासिक (<2010)";
+"filters.customRange" = "कस्टम रेंज";
+"filters.customYearRange" = "कस्टम वर्ष सीमा";
+"filters.min" = "मिन";
+"filters.max" = "अधिकतम";
+"filters.from" = "से";
+"filters.to" = "को";
+"filters.custom" = "रिवाज़";
+"filters.allCountries" = "सभी देश";
+"filters.sortPopularityDesc" = "सबसे लोकप्रिय";
+"filters.sortPopularityAsc" = "कम से कम लोकप्रिय";
+"filters.sortRatingDesc" = "उच्चतम रेटेड";
+"filters.sortRatingAsc" = "सबसे कम रेटिंग";
+"filters.sortReleaseDateDesc" = "नवीनतम प्रथम";
+"filters.sortReleaseDateAsc" = "सबसे पुराना पहले";
+"filters.proFilters" = "प्रो फ़िल्टर";
+"filters.hideWatched" = "छिपा हुआ देखा गया";
+"filters.hideDisliked" = "नापसंद छिपाएँ";
+"filters.proTitle" = "उन्नत फ़िल्टर अनलॉक करें";
+"filters.proDescription" = "कस्टम रेंज, बहु-देशीय चयन और उन्नत फ़िल्टरिंग विकल्पों के लिए प्रो में अपग्रेड करें";
+"filters.upgradeToPro" = "प्रो में अपग्रेड";
+"filters.filtersActive" = "%d फ़िल्टर सक्रिय";
+"carousel.dailyMix" = "आपका दैनिक मिश्रण";
+"carousel.trendingInGenre" = "%@ में ट्रेंडिंग";
+"carousel.becauseYouLiked" = "क्योंकि आपको %@ पसंद आया";
+"carousel.hiddenGems" = "%@ में छुपे रत्न";
+"carousel.continueJourney" = "अपनी यात्रा जारी रखें";
+"carousel.fromSearches" = "आपकी खोजों से";
+"carousel.topTVPicks" = "आपके लिए शीर्ष टीवी चयन";
+"carousel.staffPicks" = "%@ प्रशंसकों के लिए स्टाफ की पसंद";
+"carousel.yearlyRewind" = "आपका वार्षिक रिवाइंड";
+"settings.privacy.title" = "गोपनीयता";
+"settings.analytics.share" = "अनाम विश्लेषण साझा करें";
+"settings.analytics.share.description" = "हमें यह समझने में मदद मिलती है कि आप किन सुविधाओं का उपयोग करते हैं और ऐप को बेहतर बनाते हैं। कोई विज्ञापन ट्रैकिंग नहीं.";
+"settings.analytics.title" = "एनालिटिक्स";
+"settings.analytics.viewStats" = "अपने आँकड़े देखें";
+"settings.analytics.description" = "अपना देखने का इतिहास और जानकारी देखें";
+"settings.notifications.title" = "सूचनाएं";
+"settings.notifications.manage" = "सूचनाएं प्रबंधित करें";
+"settings.notifications.description" = "नई सामग्री के लिए वैयक्तिकृत अलर्ट";
+"onboarding.welcome.title" = "अपना वाइब खोजें";
+"onboarding.welcome.subtitle" = "एआई-संचालित अनुशंसाएं केवल आपके लिए तैयार की गई हैं।";
+"onboarding.clips.title" = "देखो, पढ़ो मत";
+"onboarding.clips.subtitle" = "छोटी, आकर्षक क्लिप के माध्यम से फिल्मों का अनुभव लें।";
+"onboarding.lists.title" = "आपकी निगरानी सूची, हर जगह";
+"onboarding.lists.subtitle" = "फिल्में सहेजें और अपने सभी डिवाइसों में सिंक करें।";
+"onboarding.account.title" = "अपनी प्रोफ़ाइल सहेजें";
+"onboarding.account.subtitle" = "अपनी वॉचलिस्ट और प्राथमिकताओं को सभी डिवाइसों में सिंक करने के लिए एक खाता बनाएं।";
+"onboarding.skip" = "अभी के लिए छोड़ दे";
+"paywall.cta.skip" = "अभी के लिए छोड़ दे";
+"filters.allPlatforms" = "सभी प्लेटफार्म";
+
+// --- Synced from en.lproj ---
+"filters.releasePeriodAny" = "कोई";
+"common.next" = "अगला";
+"ai.tryAsking" = "पूछने का प्रयास करें...";
+
+// --- Synced from en.lproj ---
+"auth.checkEmailTitle" = "अपने ईमेल की जाँच करें";
+"auth.checkEmailMessage" = "हमने आपको एक पुष्टिकरण लिंक भेजा है. कृपया अपना खाता सत्यापित करने के लिए अपना इनबॉक्स जांचें।";
+
+// --- Synced from en.lproj ---
+"auth.openMailApp" = "मेल ऐप खोलें";
+"auth.iHaveVerified" = "मैंने सत्यापित कर लिया है";
+"auth.resendEmail" = "ईमेल दुबारा भेजें";
+"auth.changeEmail" = "बदले ई - मेल";
+"auth.verificationPending" = "अभी भी सत्यापन का इंतजार है...";
+
+"movieDetail.whyForMe" = "Why for me?";
+
+"movieDetail.whyForMe.basedOnGenres" = "Based on your 3 favorite genres";
+
+"movieDetail.goodFitTitle" = "Why %@ is a good fit for me?";
+"movieDetail.goodFitSubtitle" = "A quick, personalized take based on your taste.";

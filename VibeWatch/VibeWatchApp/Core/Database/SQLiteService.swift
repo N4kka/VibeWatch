@@ -9,7 +9,7 @@ final class SQLiteService: ObservableObject {
     @Published var isConnected = false
     @Published var lastError: String?
     
-    private var db: OpaquePointer?
+    var db: OpaquePointer?
     private let dbPath: String
     private let dbQueue = DispatchQueue(label: "com.vibewatch.sqlite", qos: .userInitiated)
     
@@ -177,9 +177,12 @@ final class SQLiteService: ObservableObject {
         """)
         
         Logger.info("[SQLite] All tables created")
-        
+
         // Run migrations
         runMigrations()
+
+        // Run personalization migrations (Phase 1)
+        runPersonalizationMigrations()
     }
     
     private func runMigrations() {
@@ -197,7 +200,7 @@ final class SQLiteService: ObservableObject {
         }
         
         let currentVersion = Int(migrationVersionString) ?? 0
-        let latestVersion = 3
+        let latestVersion = 4
         
         // Only run migrations if not already at latest version
         if currentVersion >= latestVersion {
@@ -295,7 +298,14 @@ final class SQLiteService: ObservableObject {
                 execute("ALTER TABLE clip_comment_likes ADD COLUMN synced_at TEXT")
             }
         }
-        
+
+        if currentVersion < 4 {
+            Logger.info("[SQLite] Migration 4: add usage_day to user_ai_token_usage for daily resets")
+            if !columnExists("user_ai_token_usage", column: "usage_day") {
+                execute("ALTER TABLE user_ai_token_usage ADD COLUMN usage_day TEXT")
+            }
+        }
+
         // Re-enable foreign keys
         execute("PRAGMA foreign_keys = ON")
         
@@ -304,7 +314,7 @@ final class SQLiteService: ObservableObject {
         Logger.info("[SQLite] Migrations complete - now at version \(latestVersion)")
     }
     
-    private func columnExists(_ table: String, column: String) -> Bool {
+    func columnExists(_ table: String, column: String) -> Bool {
         var statement: OpaquePointer?
         defer { sqlite3_finalize(statement) }
         
@@ -1007,11 +1017,13 @@ extension SQLiteService {
         CREATE TABLE IF NOT EXISTS user_ai_token_usage (
           user_id TEXT PRIMARY KEY,
           tokens_used_today INTEGER DEFAULT 0,
+          usage_day TEXT,
           updated_at TEXT DEFAULT (datetime('now')),
           synced_at TEXT
         );
         """
     }
+
     
     private func createSyncOutboxTable() -> String {
         """

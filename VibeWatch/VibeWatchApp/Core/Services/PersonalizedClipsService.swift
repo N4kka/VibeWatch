@@ -325,7 +325,7 @@ class PersonalizedClipsService {
     ///   - userProfile: The user's profile containing preferences.
     ///   - themeBoost: The current thematic day's boost.
     /// - Returns: A new array of `EnhancedClip`s sorted by their calculated `algorithmScore`.
-    private func quickScore(_ clips: [EnhancedClip], userProfile: UserProfile, themeBoost: ThematicDay) -> [EnhancedClip] {
+    private func quickScore(_ clips: [EnhancedClip], userProfile: ClipsUserProfile, themeBoost: ThematicDay) -> [EnhancedClip] {
         return clips.map { enhancedClip in
             var score: Double = 0
             
@@ -500,23 +500,39 @@ class PersonalizedClipsService {
     
     // MARK: - Scoring System
     
-    private func scoreClips(_ clips: [EnhancedClip], userProfile: UserProfile, themeBoost: ThematicDay) -> [EnhancedClip] {
+    private func scoreClips(_ clips: [EnhancedClip], userProfile: ClipsUserProfile, themeBoost: ThematicDay) -> [EnhancedClip] {
+        // Get user's current country and language for localization boosting
+        let userCountry = LocalizationManager.shared.currentCountry.id
+        let userLanguage = LocalizationManager.shared.currentLanguage.id
+
         return clips.map { enhancedClip in
             var score: Double = 0
-            
+
             // Base quality score
             score += enhancedClip.qualityScore * 10
-            
+
             // Trending weight (40% from trending, 30% from popular, 30% from top rated)
             score += enhancedClip.popularity * 0.01
-            
+
+            // Country match boost (+30 points)
+            if let clipCountry = enhancedClip.clip.countryCode,
+               clipCountry.lowercased() == userCountry.lowercased() {
+                score += 30
+            }
+
+            // Language match boost (+20 points)
+            if let clipLanguage = enhancedClip.clip.languageCode,
+               clipLanguage.lowercased() == userLanguage.lowercased() {
+                score += 20
+            }
+
             // User personalization (if they have preferences)
             if engagementTracker.hasAnyPreferences() {
                 for genreId in enhancedClip.genreIds {
                     let genreScore = engagementTracker.getGenreScore(genreId)
                     score += genreScore * 2 // Strong weight on user preferences
                 }
-                
+
                 // Movie-specific preference
                 if let movieId = enhancedClip.clip.movieId {
                     score += engagementTracker.getMovieScore(movieId) * 3
@@ -527,14 +543,14 @@ class PersonalizedClipsService {
                 // Cold start: use industry averages
                 score += userProfile.industryAverageScore(for: enhancedClip.genreIds)
             }
-            
+
             // Thematic day boost
             for genreId in enhancedClip.genreIds {
                 if themeBoost.genreIds.contains(genreId) {
                     score += themeBoost.boostAmount
                 }
             }
-            
+
             // Hot streak boost (high energy content)
             if engagementTracker.isInHotStreak {
                 if enhancedClip.genreIds.contains(28) || // Action
@@ -542,10 +558,10 @@ class PersonalizedClipsService {
                     score += 20 // Boost exciting content during hot streaks
                 }
             }
-            
+
             // Random factor (20% randomness to avoid pure echo chamber)
             score += Double.random(in: 0...15)
-            
+
             var scoredClip = enhancedClip
             scoredClip.algorithmScore = score
             return scoredClip
@@ -674,17 +690,17 @@ class PersonalizedClipsService {
     
     // MARK: - User Profile
     
-    private func getUserProfile() -> UserProfile {
+    private func getUserProfile() -> ClipsUserProfile {
         if engagementTracker.hasAnyPreferences() {
             let topGenres = engagementTracker.getTopGenres(limit: 5)
-            return UserProfile(
+            return ClipsUserProfile(
                 hasPreferences: true,
                 topGenres: topGenres,
                 demographicGroup: .mixed
             )
         } else {
             // Cold start: use industry averages
-            return UserProfile(
+            return ClipsUserProfile(
                 hasPreferences: false,
                 topGenres: [],
                 demographicGroup: .genZ // Default to Gen Z preferences
@@ -753,7 +769,7 @@ struct ThematicDay {
     var isClassicDay: Bool = false
 }
 
-struct UserProfile {
+struct ClipsUserProfile {
     let hasPreferences: Bool
     let topGenres: [Int]
     let demographicGroup: DemographicGroup

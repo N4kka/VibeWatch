@@ -1,5 +1,5 @@
 /// Tab Bar
-"tab.clips" = "Clips";
+"tab.clips" = "Κλιπς";
 "tab.discovery" = "Ανακάλυψη";
 "tab.lists" = "Λίστες";
 "tab.profile" = "Προφίλ";
@@ -62,7 +62,7 @@
 "lists.searchPlaceholder" = "Αναζήτηση σε αυτή τη λίστα";
 "lists.seen" = "Το έχω δει";
 "lists.softLimitWarning" = "Η λίστα \"{name}\" έχει ήδη {limit} στοιχεία. Σκέψου να ξεκινήσεις μια νέα λίστα για να κρατήσεις τα πράγματα οργανωμένα.";
-"lists.watchlist" = "Watchlist";
+"lists.watchlist" = "Λίστα παρακολούθησης";
 "lists.watchOn" = "ΔΕΙΤΕ ΣΤΟ";
 
 // Movie Detail
@@ -102,6 +102,7 @@
 "filters.anyCountry" = "Οποιαδήποτε χώρα";
 "filters.apply" = "Εφαρμογή";
 "filters.country" = "Χώρα";
+"filters.searchCountry" = "Αναζήτηση χώρας";
 "filters.minimumRating" = "Ελάχιστη βαθμολογία";
 "filters.ratingAny" = "Οποιαδήποτε";
 "filters.ratingExcellent" = "8.0+";
@@ -189,6 +190,8 @@
 "platform.selectionCount" = "%d από %d επιλεγμένα";
 "platform.title" = "Πλατφόρμες Streaming";
 "platforms.buy" = "Αγορά";
+"platforms.cinema" = "Κινηματογράφος";
+"platforms.justwatch" = "JustWatch";
 "platforms.rent" = "Ενοικίαση";
 "platforms.streaming" = "Streaming";
 "platforms.title" = "Πλατφόρμες";
@@ -206,7 +209,7 @@
 "auth.confirmPasswordPlaceholder" = "Επιβεβαίωση κωδικού";
 "auth.createAccount" = "Δημιουργία Λογαριασμού";
 "auth.dontHaveAccount" = "Δεν έχεις λογαριασμό;";
-"auth.emailPlaceholder" = "Email";
+"auth.emailPlaceholder" = "Ηλεκτρονικό ταχυδρομείο";
 "auth.forgotPassword" = "Ξέχασες τον κωδικό;";
 "auth.gate.accountRequired" = "Απαιτείται λογαριασμός";
 "auth.gate.authRequiredAI" = "Χρειάζεσαι λογαριασμό για να χρησιμοποιήσεις το AI chat.";
@@ -214,7 +217,7 @@
 "auth.gate.createTitle" = "Δημιούργησε τον δωρεάν λογαριασμό σου στο VibeWatch";
 "auth.gate.description" = "Χρειάζεσαι λογαριασμό για να δημιουργείς προσαρμοσμένες λίστες και να τις συγχρονίζεις σε όλες τις συσκευές σου.";
 "auth.gate.haveAccount" = "Έχω ήδη λογαριασμό";
-"auth.gate.limitMessage" = "Απόλαυσες τα 15 δωρεάν clips για σήμερα. Κάνε εγγραφή για να συγχρονίσεις την πρόοδό σου και να ξεκλειδώσεις άμεσα τα αυριανά drops.";
+"auth.gate.limitMessage" = "Απόλαυσες τα 25 δωρεάν clips για σήμερα. Κάνε εγγραφή για να συγχρονίσεις την πρόοδό σου και να ξεκλειδώσεις άμεσα τα αυριανά drops.";
 "auth.gate.signupFree" = "Η εγγραφή είναι δωρεάν και διαρκεί λιγότερο από ένα λεπτό.";
 "auth.gate.benefit.saveClips" = "Αποθηκεύστε τα αγαπημένα σας κλιπ";
 "auth.gate.benefit.syncDevices" = "Συγχρονίστε σε όλες τις συσκευές σας";
@@ -242,7 +245,7 @@
 
 // AI
 "ai.title" = "Vibe AI";
-"ai.tokensUsage" = "Διακριτικά: %@/%@";
+"ai.requestsUsage" = "%d/%d ημερήσια αιτήματα";
 "ai.describeVibe" = "Περιέγραψε το vibe σου";
 "ai.thinking" = "Σκέφτομαι...";
 "ai.editMessage" = "Επεξεργασία μηνύματος";
@@ -264,14 +267,13 @@
 "ai.suggestion.chips2" = "💥 80s action-comedy, προτείνει το AI";
 "ai.suggestion.chips3" = "🕵️‍♂️ Underrated thriller με ανατροπή";
 "ai.suggestion.chips4" = "🤖 AI: τι να δω στη συνέχεια;";
-"ai.usage.left" = "απομένουν";
 
 // Paywall
 "paywall.bestValue" = "ΚΑΛΥΤΕΡΗ ΠΡΟΣΦΟΡΑ";
 "paywall.cta.continue" = "Συνέχεια";
 "paywall.cta.selectPlan" = "Επίλεξε πλάνο";
 "paywall.cta.startTrial" = "Ξεκίνα %@ Δωρεάν Δοκιμή";
-"paywall.daily.limitDescription" = "Οι δωρεάν χρήστες μπορούν να δουν έως και 15 clips την ημέρα. Κάνε αναβάθμιση σε Pro για απεριόριστα clips και premium λειτουργίες.";
+"paywall.daily.limitDescription" = "Οι δωρεάν χρήστες μπορούν να δουν έως και 25 clips την ημέρα. Κάνε αναβάθμιση σε Pro για απεριόριστα clips και premium λειτουργίες.";
 "paywall.daily.limitReached" = "Έφτασες το σημερινό όριο";
 "paywall.daily.nextReset" = "Επόμενη επαναφορά σε";
 "paywall.daily.resetIn" = "Επαναφορά σε";
@@ -425,3 +427,90 @@
 "profile.faq.answer4" = "Χρησιμοποιήστε το \"Ενημερώστε μας\" σε οποιονδήποτε τίτλο για να αναφέρετε σφάλματα ή κακούς συνδέσμους και θα το διορθώσουμε γρήγορα.";
 "profile.faq.question5" = "Λειτουργεί το VibeWatch για casual θεατές;";
 "profile.faq.answer5" = "Απόλυτα. Προβάλλουμε εύκολες επιλογές όπως μια σαββατόβραδη ταινία με φίλους καθώς και πιο βαθιές επιλογές για τους σινεφίλ.";
+"carousel.hotThisWeek" = "Top αυτή την εβδομάδα";
+"carousel.awardWinners" = "Βραβευμένα που θα λατρέψεις";
+
+// --- Synced from en.lproj ---
+"onboarding.page4.createAccount" = "Δημιουργία λογαριασμού";
+"filters.mediaType" = "Τύπος μέσων ενημέρωσης";
+"filters.movies" = "Ταινίες";
+"filters.tvShows" = "Τηλεοπτικές εκπομπές";
+"filters.both" = "Και οι δύο";
+"filters.rating" = "Αξιολόγηση";
+"filters.releasePeriod" = "Περίοδος απελευθέρωσης";
+"filters.releasePeriodRecent" = "Πρόσφατα (2020+)";
+"filters.releasePeriodModern" = "Σύγχρονη (2010-2019)";
+"filters.releasePeriodClassic" = "Κλασικό (<2010)";
+"filters.customRange" = "Προσαρμοσμένη σειρά";
+"filters.customYearRange" = "Προσαρμοσμένο εύρος έτους";
+"filters.min" = "Min";
+"filters.max" = "Max";
+"filters.from" = "Από το";
+"filters.to" = "Προς";
+"filters.custom" = "Προσαρμοσμένο";
+"filters.allCountries" = "Όλες οι χώρες";
+"filters.sortPopularityDesc" = "Τα πιο δημοφιλή";
+"filters.sortPopularityAsc" = "Λιγότερο δημοφιλές";
+"filters.sortRatingDesc" = "Υψηλότερη βαθμολογία";
+"filters.sortRatingAsc" = "Χαμηλότερη βαθμολογία";
+"filters.sortReleaseDateDesc" = "Το νεότερο Πρώτο";
+"filters.sortReleaseDateAsc" = "Παλαιότερος Πρώτος";
+"filters.proFilters" = "Φίλτρα Pro";
+"filters.hideWatched" = "Απόκρυψη Παρακολουθείται";
+"filters.hideDisliked" = "Απόκρυψη Δεν άρεσε";
+"filters.proTitle" = "Ξεκλειδώστε τα φίλτρα για προχωρημένους";
+"filters.proDescription" = "Αναβάθμιση σε Pro για προσαρμοσμένες σειρές, επιλογή πολλών χωρών και προηγμένες επιλογές φιλτραρίσματος";
+"filters.upgradeToPro" = "Αναβάθμιση σε Pro";
+"filters.filtersActive" = "%d φίλτρα ενεργά";
+"carousel.dailyMix" = "Το καθημερινό σας μείγμα";
+"carousel.trendingInGenre" = "Τάση σε %@";
+"carousel.becauseYouLiked" = "Επειδή σου άρεσε το %@";
+"carousel.hiddenGems" = "Κρυμμένοι πολύτιμοι λίθοι στο %@";
+"carousel.continueJourney" = "Συνεχίστε το ταξίδι σας";
+"carousel.fromSearches" = "Από τις αναζητήσεις σας";
+"carousel.topTVPicks" = "Κορυφαίες τηλεοπτικές επιλογές για εσάς";
+"carousel.staffPicks" = "Επιλογές του προσωπικού για τους οπαδούς του %@";
+"carousel.yearlyRewind" = "Η ετήσια αναστροφή σας";
+"settings.privacy.title" = "Απόρρητο";
+"settings.analytics.share" = "Μοιραστείτε ανώνυμα αναλυτικά στοιχεία";
+"settings.analytics.share.description" = "Μας βοηθά να κατανοήσουμε ποιες λειτουργίες χρησιμοποιείτε και να βελτιώσουμε την εφαρμογή. Δεν παρακολουθεί διαφημίσεις.";
+"settings.analytics.title" = "Analytics";
+"settings.analytics.viewStats" = "Δείτε τα στατιστικά σας";
+"settings.analytics.description" = "Δείτε το ιστορικό και τις πληροφορίες του ρολογιού σας";
+"settings.notifications.title" = "Ειδοποιήσεις";
+"settings.notifications.manage" = "Διαχείριση ειδοποιήσεων";
+"settings.notifications.description" = "Εξατομικευμένες ειδοποιήσεις για νέο περιεχόμενο";
+"onboarding.welcome.title" = "Ανακαλύψτε το Vibe σας";
+"onboarding.welcome.subtitle" = "Συστάσεις με τεχνητή νοημοσύνη προσαρμοσμένες ακριβώς για εσάς.";
+"onboarding.clips.title" = "Παρακολουθήστε, μην διαβάζετε";
+"onboarding.clips.subtitle" = "Ζήστε την εμπειρία των ταινιών μέσα από μικρά, ελκυστικά αποσπάσματα.";
+"onboarding.lists.title" = "Η λίστα παρακολούθησής σας, παντού";
+"onboarding.lists.subtitle" = "Αποθηκεύστε ταινίες και συγχρονίστε τις σε όλες τις συσκευές σας.";
+"onboarding.account.title" = "Αποθηκεύστε το προφίλ σας";
+"onboarding.account.subtitle" = "Δημιουργήστε έναν λογαριασμό για να συγχρονίσετε τη λίστα παρακολούθησης και τις προτιμήσεις σας σε όλες τις συσκευές.";
+"onboarding.skip" = "Παραλείψτε προς το παρόν";
+"paywall.cta.skip" = "Παραλείψτε προς το παρόν";
+"filters.allPlatforms" = "Όλες οι πλατφόρμες";
+
+// --- Synced from en.lproj ---
+"filters.releasePeriodAny" = "Οποιοδήποτε";
+"common.next" = "Επόμενο";
+"ai.tryAsking" = "Προσπαθήστε να ρωτήσετε...";
+
+// --- Synced from en.lproj ---
+"auth.checkEmailTitle" = "Ελέγξτε το email σας";
+"auth.checkEmailMessage" = "Σας στείλαμε έναν σύνδεσμο επιβεβαίωσης. Παρακαλούμε ελέγξτε τα εισερχόμενά σας για να επαληθεύσετε το λογαριασμό σας.";
+
+// --- Synced from en.lproj ---
+"auth.openMailApp" = "Ανοίξτε την εφαρμογή Mail";
+"auth.iHaveVerified" = "Έχω επαληθεύσει";
+"auth.resendEmail" = "Επαναποστολή email";
+"auth.changeEmail" = "Αλλαγή email";
+"auth.verificationPending" = "Ακόμα περιμένουμε την επαλήθευση...";
+
+"movieDetail.whyForMe" = "Why for me?";
+
+"movieDetail.whyForMe.basedOnGenres" = "Based on your 3 favorite genres";
+
+"movieDetail.goodFitTitle" = "Why %@ is a good fit for me?";
+"movieDetail.goodFitSubtitle" = "A quick, personalized take based on your taste.";

@@ -62,7 +62,7 @@
 "lists.searchPlaceholder" = "Søg i denne liste";
 "lists.seen" = "Set";
 "lists.softLimitWarning" = "\"{name}\" har allerede {limit} elementer. Overvej at oprette en ny liste for bedre struktur.";
-"lists.watchlist" = "Watchlist";
+"lists.watchlist" = "Overvågningsliste";
 "lists.watchOn" = "SE PÅ";
 
 // Movie Detail
@@ -102,6 +102,7 @@
 "filters.anyCountry" = "Alle lande";
 "filters.apply" = "Anvend";
 "filters.country" = "Land";
+"filters.searchCountry" = "Søg land";
 "filters.minimumRating" = "Minimum bedømmelse";
 "filters.ratingAny" = "Hvilket som helst";
 "filters.ratingExcellent" = "8.0+";
@@ -110,9 +111,9 @@
 "filters.reset" = "Nulstil";
 "filters.runtime" = "Spilletid";
 "filters.runtimeAny" = "Hvilket som helst";
-"filters.runtimeLong" = "> 120 min";
+"filters.runtimeLong" = "> 120 minutter";
 "filters.runtimeMedium" = "90–120 min";
-"filters.runtimeShort" = "< 90 min";
+"filters.runtimeShort" = "< 90 minutter";
 "filters.sortBy" = "Sorter efter";
 "filters.title" = "Filter";
 
@@ -189,6 +190,8 @@
 "platform.selectionCount" = "%d af %d valgt";
 "platform.title" = "Streaming-platforme";
 "platforms.buy" = "Køb";
+"platforms.cinema" = "Biograf";
+"platforms.justwatch" = "JustWatch";
 "platforms.rent" = "Lej";
 "platforms.streaming" = "Streaming";
 "platforms.title" = "Platforme";
@@ -214,7 +217,7 @@
 "auth.gate.createTitle" = "Opret din gratis VibeWatch-konto";
 "auth.gate.description" = "Du har brug for en konto for at oprette tilpassede lister og synkronisere dem på tværs af enheder.";
 "auth.gate.haveAccount" = "Jeg har allerede en konto";
-"auth.gate.limitMessage" = "Du har set dagens 15 gratis klip. Opret en konto for at synkronisere dine fremskridt og låse op for morgendagens klip med det samme.";
+"auth.gate.limitMessage" = "Du har set dagens 25 gratis klip. Opret en konto for at synkronisere dine fremskridt og låse op for morgendagens klip med det samme.";
 "auth.gate.signupFree" = "Tilmelding er gratis og tager mindre end et minut.";
 "auth.gate.benefit.saveClips" = "Gem dine favoritklip";
 "auth.gate.benefit.syncDevices" = "Synkroniser på alle dine enheder";
@@ -242,7 +245,7 @@
 
 // AI
 "ai.title" = "Vibe AI";
-"ai.tokensUsage" = "Tokens: %@/%@";
+"ai.requestsUsage" = "%d/%d daglige forespørgsler";
 "ai.describeVibe" = "Beskriv din vibe";
 "ai.thinking" = "Tænker...";
 "ai.editMessage" = "Rediger besked";
@@ -264,14 +267,13 @@
 "ai.suggestion.chips2" = "💥 80’er actionkomedie, AI anbefaler";
 "ai.suggestion.chips3" = "🕵️‍♂️ Undervurderet thriller med et twist";
 "ai.suggestion.chips4" = "🤖 AI: hvad skal jeg se næste gang?";
-"ai.usage.left" = "tilbage";
 
 // Paywall
 "paywall.bestValue" = "BEDSTE VÆRDI";
 "paywall.cta.continue" = "Fortsæt";
 "paywall.cta.selectPlan" = "Vælg plan";
 "paywall.cta.startTrial" = "Start %@ gratis prøveperiode";
-"paywall.daily.limitDescription" = "Gratisbrugere kan se 15 klip om dagen. Opgrader til Pro for ubegrænsede klip og premiumfunktioner.";
+"paywall.daily.limitDescription" = "Gratisbrugere kan se 25 klip om dagen. Opgrader til Pro for ubegrænsede klip og premiumfunktioner.";
 "paywall.daily.limitReached" = "Du har nået dagens grænse";
 "paywall.daily.nextReset" = "Næste nulstilling om";
 "paywall.daily.resetIn" = "Nulstilles om";
@@ -354,7 +356,7 @@
 "profile.aboutUsDetail" = "Lær mere om VibeWatch-teamet og vores mission om at forbedre din streaming-opdagelsesoplevelse.";
 "profile.tmdbAttribution" = "Dette produkt bruger TMDb API, men er ikke godkendt eller certificeret af TMDb.";
 "profile.legalNotes" = "Juridiske bemærkninger";
-"profile.faq" = "FAQ";
+"profile.faq" = "OFTE STILLEDE SPØRGSMÅL";
 "profile.faqDetail" = "Find hurtige svar på almindelige spørgsmål om konti, abonnementer og funktioner.";
 "profile.privacyPolicy" = "Privatlivspolitik";
 "profile.feedback.suggestFeature" = "Foreslå en ny funktion";
@@ -425,3 +427,90 @@
 "profile.faq.answer4" = "Brug \"Giv os besked\" på enhver titel til at rapportere fejl eller dårlige links, så fikser vi det hurtigt.";
 "profile.faq.question5" = "Virker VibeWatch for afslappede seere?";
 "profile.faq.answer5" = "Helt sikkert. Vi viser både lette valg som en lørdagsfilm med venner og dybe nedslag for filmelskere.";
+"carousel.hotThisWeek" = "Populært denne uge";
+"carousel.awardWinners" = "Prisvindere du vil elske";
+
+// --- Synced from en.lproj ---
+"onboarding.page4.createAccount" = "Opret konto";
+"filters.mediaType" = "Medietype";
+"filters.movies" = "Film";
+"filters.tvShows" = "Tv-serier";
+"filters.both" = "Begge dele";
+"filters.rating" = "Bedømmelse";
+"filters.releasePeriod" = "Udgivelsesperiode";
+"filters.releasePeriodRecent" = "For nylig (2020+)";
+"filters.releasePeriodModern" = "Moderne (2010-2019)";
+"filters.releasePeriodClassic" = "Klassisk (<2010)";
+"filters.customRange" = "Tilpasset sortiment";
+"filters.customYearRange" = "Brugerdefineret årsinterval";
+"filters.min" = "Min";
+"filters.max" = "Max";
+"filters.from" = "Fra";
+"filters.to" = "Til";
+"filters.custom" = "Brugerdefineret";
+"filters.allCountries" = "Alle lande";
+"filters.sortPopularityDesc" = "Mest populære";
+"filters.sortPopularityAsc" = "Mindst populær";
+"filters.sortRatingDesc" = "Højest vurderet";
+"filters.sortRatingAsc" = "Laveste vurdering";
+"filters.sortReleaseDateDesc" = "Nyeste først";
+"filters.sortReleaseDateAsc" = "Ældste først";
+"filters.proFilters" = "Pro-filtre";
+"filters.hideWatched" = "Skjul overvåget";
+"filters.hideDisliked" = "Skjul ikke ønsket";
+"filters.proTitle" = "Lås op for avancerede filtre";
+"filters.proDescription" = "Opgrader til Pro for brugerdefinerede intervaller, valg af flere lande og avancerede filtreringsmuligheder";
+"filters.upgradeToPro" = "Opgrader til Pro";
+"filters.filtersActive" = "%d filtre aktive";
+"carousel.dailyMix" = "Din daglige blanding";
+"carousel.trendingInGenre" = "Tendenser i %@";
+"carousel.becauseYouLiked" = "Fordi du kunne lide %@";
+"carousel.hiddenGems" = "Skjulte ædelstene i %@";
+"carousel.continueJourney" = "Fortsæt din rejse";
+"carousel.fromSearches" = "Fra dine søgninger";
+"carousel.topTVPicks" = "De bedste tv-valg til dig";
+"carousel.staffPicks" = "Personalets valg for %@-fans";
+"carousel.yearlyRewind" = "Dit årlige tilbageblik";
+"settings.privacy.title" = "Privatlivets fred";
+"settings.analytics.share" = "Del anonyme analyser";
+"settings.analytics.share.description" = "Hjælper os med at forstå, hvilke funktioner du bruger, og med at forbedre appen. Ingen sporing af annoncer.";
+"settings.analytics.title" = "Analyse";
+"settings.analytics.viewStats" = "Se dine statistikker";
+"settings.analytics.description" = "Se din ur-historik og indsigt";
+"settings.notifications.title" = "Meddelelser";
+"settings.notifications.manage" = "Administrer notifikationer";
+"settings.notifications.description" = "Personlige advarsler om nyt indhold";
+"onboarding.welcome.title" = "Opdag din vibe";
+"onboarding.welcome.subtitle" = "AI-drevne anbefalinger, der er skræddersyet til dig.";
+"onboarding.clips.title" = "Se, lad være med at læse";
+"onboarding.clips.subtitle" = "Oplev film gennem korte, engagerende klip.";
+"onboarding.lists.title" = "Din overvågningsliste, overalt";
+"onboarding.lists.subtitle" = "Gem film og synkroniser på tværs af alle dine enheder.";
+"onboarding.account.title" = "Gem din profil";
+"onboarding.account.subtitle" = "Opret en konto for at synkronisere din overvågningsliste og dine præferencer på tværs af enheder.";
+"onboarding.skip" = "Spring over for nu";
+"paywall.cta.skip" = "Spring over for nu";
+"filters.allPlatforms" = "Alle platforme";
+
+// --- Synced from en.lproj ---
+"filters.releasePeriodAny" = "Enhver";
+"common.next" = "Næste";
+"ai.tryAsking" = "Prøv at spørge...";
+
+// --- Synced from en.lproj ---
+"auth.checkEmailTitle" = "Tjek din e-mail";
+"auth.checkEmailMessage" = "Vi har sendt dig et bekræftelseslink. Tjek venligst din indbakke for at bekræfte din konto.";
+
+// --- Synced from en.lproj ---
+"auth.openMailApp" = "Åbn mail-appen";
+"auth.iHaveVerified" = "Jeg har bekræftet";
+"auth.resendEmail" = "Send e-mail igen";
+"auth.changeEmail" = "Skift e-mail";
+"auth.verificationPending" = "Jeg venter stadig på bekræftelse.";
+
+"movieDetail.whyForMe" = "Why for me?";
+
+"movieDetail.whyForMe.basedOnGenres" = "Based on your 3 favorite genres";
+
+"movieDetail.goodFitTitle" = "Why %@ is a good fit for me?";
+"movieDetail.goodFitSubtitle" = "A quick, personalized take based on your taste.";

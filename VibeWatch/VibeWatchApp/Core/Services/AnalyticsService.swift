@@ -9,21 +9,49 @@ import FirebaseAnalytics
 class AnalyticsService {
     static let shared = AnalyticsService()
     
-    private var isEnabled = false
+    private var isEnabled: Bool
     private var userId: String?
     private var events: [(name: String, parameters: [String: Any]?, timestamp: Date)] = []
+    private let installId: String
+
+    private enum DefaultsKeys {
+        static let isEnabled = "analytics.isEnabled"
+        static let firstOpenTracked = "analytics.firstOpenTracked"
+        static let lastIdentifiedUserId = "analytics.lastIdentifiedUserId"
+    }
     
     private init() {
-        print("📊 [Analytics] Service initialized (disabled by default)")
+        self.installId = InstallIDService.getOrCreateInstallId()
+
+        if UserDefaults.standard.object(forKey: DefaultsKeys.isEnabled) == nil {
+            UserDefaults.standard.set(true, forKey: DefaultsKeys.isEnabled)
+        }
+        self.isEnabled = UserDefaults.standard.bool(forKey: DefaultsKeys.isEnabled)
+
+        print("📊 [Analytics] Service initialized (enabled=\(isEnabled))")
     }
     
     /// Set user ID for analytics
     func setUserId(_ userId: String?) {
+        let previousUserId = self.userId
         self.userId = userId
         
         #if canImport(FirebaseAnalytics)
         Analytics.setUserID(userId)
         #endif
+
+        if let userId, userId != previousUserId {
+            let lastIdentified = UserDefaults.standard.string(forKey: DefaultsKeys.lastIdentifiedUserId)
+            if lastIdentified != userId {
+                UserDefaults.standard.set(userId, forKey: DefaultsKeys.lastIdentifiedUserId)
+                Task.detached {
+                    await PostHogClient.shared.identify(
+                        newDistinctId: userId,
+                        anonymousDistinctId: InstallIDService.getOrCreateInstallId()
+                    )
+                }
+            }
+        }
         
         if let userId = userId {
             print("📊 [Analytics] User ID set: \(userId)")
@@ -44,6 +72,7 @@ class AnalyticsService {
     /// Enable/disable analytics
     func setEnabled(_ enabled: Bool) {
         isEnabled = enabled
+        UserDefaults.standard.set(enabled, forKey: DefaultsKeys.isEnabled)
         
         #if canImport(FirebaseAnalytics)
         Analytics.setAnalyticsCollectionEnabled(enabled)
@@ -51,8 +80,27 @@ class AnalyticsService {
         
         print("📊 [Analytics] \(enabled ? "Enabled" : "Disabled")")
     }
-    
+
     // MARK: - Event Tracking
+
+    func trackAppOpen() {
+        guard isEnabled else { return }
+
+        if !UserDefaults.standard.bool(forKey: DefaultsKeys.firstOpenTracked) {
+            UserDefaults.standard.set(true, forKey: DefaultsKeys.firstOpenTracked)
+            logEvent("app_first_open", parameters: [
+                "install_id": installId
+            ])
+        }
+
+        logEvent("app_open", parameters: [
+            "install_id": installId
+        ])
+
+        Task.detached {
+            try? await PostHogClient.shared.flush()
+        }
+    }
     
     /// Track generic event
     func logEvent(_ name: String, parameters: [String: Any]? = nil) {
@@ -67,6 +115,15 @@ class AnalyticsService {
         #if canImport(FirebaseAnalytics)
         Analytics.logEvent(name, parameters: parameters)
         #endif
+
+        Task.detached {
+            let distinctId = await MainActor.run { self.userId ?? self.installId }
+            await PostHogClient.shared.capture(
+                event: name,
+                distinctId: distinctId,
+                properties: parameters
+            )
+        }
         
         print("📊 [Analytics] Event: \(name) \(parameters != nil ? "with params" : "")")
     }

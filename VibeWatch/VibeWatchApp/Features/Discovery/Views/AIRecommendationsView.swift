@@ -9,7 +9,8 @@ struct AIRecommendationsView: View {
     @ObservedObject private var localizationManager = LocalizationManager.shared
     
     @State private var showAuthGate = false
-    
+    @State private var showAIPaywall = false
+
     private var canUseAI: Bool {
         appState.isAuthenticated
     }
@@ -63,21 +64,43 @@ struct AIRecommendationsView: View {
             }
         }
         .onAppear {
-            viewModel.updateTokenLimit(isProUser: quotaManager.isProUser)
+            viewModel.updateRequestLimit(isProUser: quotaManager.isProUser)
             presentAccessGate()
-            Task { await viewModel.fetchDailyTokenUsage() }
+            Task { await viewModel.fetchDailyRequestUsage() }
+            evaluateAIPaywallPresentation()
         }
         .onChange(of: appState.isAuthenticated) { _, _ in
             presentAccessGate()
-            Task { await viewModel.fetchDailyTokenUsage() }
+            Task { await viewModel.fetchDailyRequestUsage() }
+            evaluateAIPaywallPresentation()
         }
         .onChange(of: quotaManager.isProUser) { _, _ in
-            viewModel.updateTokenLimit(isProUser: quotaManager.isProUser)
-            Task { await viewModel.fetchDailyTokenUsage() }
+            viewModel.updateRequestLimit(isProUser: quotaManager.isProUser)
+            Task { await viewModel.fetchDailyRequestUsage() }
+            evaluateAIPaywallPresentation()
+        }
+        .onChange(of: viewModel.requestsUsedToday) { _, _ in
+            evaluateAIPaywallPresentation()
+        }
+        .onChange(of: viewModel.dailyRequestLimit) { _, _ in
+            evaluateAIPaywallPresentation()
         }
         .sheet(isPresented: $showAuthGate) {
             AuthenticationGateView(isPresented: $showAuthGate)
                 .presentationBackground(.clear)
+        }
+        .fullScreenCover(isPresented: $showAIPaywall) {
+            DailyLimitPaywallView(
+                isPresented: $showAIPaywall,
+                paywallType: .aiQuota,
+                source: "ai_quota"
+            )
+        }
+        .overlay(alignment: .topTrailing) {
+            HStack(spacing: 10) {
+                ProUpgradeIconButton(isProUser: quotaManager.isProUser, source: "ai_top_right")
+            }
+            .padding()
         }
     }
     
@@ -86,6 +109,18 @@ struct AIRecommendationsView: View {
             showAuthGate = true
         } else {
             showAuthGate = false
+        }
+    }
+
+    private func evaluateAIPaywallPresentation() {
+        guard appState.isAuthenticated else { return }
+        guard !quotaManager.isProUser else {
+            showAIPaywall = false
+            return
+        }
+
+        if viewModel.hardLimitReached && !showAIPaywall {
+            showAIPaywall = true
         }
     }
     
@@ -220,16 +255,11 @@ struct AIRecommendationsView: View {
                                 .id("loading")
                             }
                             
-                            // Error, Soft/Hard Limit Messages
+                            // Error / Hard Limit Message
                             if let error = viewModel.error {
                                 Text(error)
                                     .foregroundStyle(.red)
                                     .font(.caption)
-                                    .padding(.horizontal)
-                            } else if viewModel.softLimitReached {
-                                Text("ai.softLimitMessage".localized)
-                                    .font(.caption)
-                                    .foregroundStyle(.yellow)
                                     .padding(.horizontal)
                             } else if viewModel.hardLimitReached {
                                 Text("ai.hardLimitMessage".localized)
@@ -265,19 +295,12 @@ struct AIRecommendationsView: View {
             Divider()
                 .background(Color.theme.separator)
             
-            // Token Counter
-            VStack(spacing: 6) {
-                HStack {
-                    Text(String(format: "ai.tokensUsage".localized, "\(viewModel.tokensUsedToday)", "\(viewModel.aiTokenLimit)"))
-                        .font(.caption2)
-                        .foregroundStyle(viewModel.hardLimitReached ? .red : (viewModel.softLimitReached ? .yellow : Color.theme.textSecondary))
-                    Spacer()
-                    Text("\(max(0, viewModel.tokensRemaining)) \("ai.usage.left".localized)")
-                        .font(.caption2)
-                        .foregroundStyle(Color.theme.textSecondary)
-                }
-                
-                TokenUsageBar(progress: viewModel.usageProgress, isAtLimit: viewModel.hardLimitReached, isNearLimit: viewModel.softLimitReached)
+            // Daily Requests Counter
+            HStack {
+                Text(String(format: "ai.requestsUsage".localized, viewModel.requestsUsedToday, viewModel.dailyRequestLimit))
+                    .font(.caption2)
+                    .foregroundStyle(viewModel.hardLimitReached ? .red : Color.theme.textSecondary)
+                Spacer()
             }
             .padding(.horizontal)
             .padding(.vertical, 6)
@@ -314,33 +337,6 @@ struct AIRecommendationsView: View {
             .padding()
             .background(Color.theme.background.opacity(0.95))
         }
-    }
-}
-
-private struct TokenUsageBar: View {
-    let progress: Double
-    let isAtLimit: Bool
-    let isNearLimit: Bool
-    
-    var body: some View {
-        GeometryReader { geometry in
-            ZStack(alignment: .leading) {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(Color.theme.cardBackground)
-                
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(
-                        LinearGradient(
-                            colors: isAtLimit ? [.red] : (isNearLimit ? [.yellow, .orange] : [Color.theme.accentOrange, .purple]),
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .frame(width: max(6, geometry.size.width * min(1, progress)))
-            }
-        }
-        .frame(height: 12)
-        .animation(.easeInOut(duration: 0.2), value: progress)
     }
 }
 
@@ -479,4 +475,3 @@ struct FlowLayout: Layout {
         return (CGSize(width: maxWidth, height: currentY + lineHeight), maxWidth)
     }
 }
-

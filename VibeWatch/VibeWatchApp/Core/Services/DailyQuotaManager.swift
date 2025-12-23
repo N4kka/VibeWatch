@@ -1,7 +1,8 @@
 import Foundation
 import SwiftUI
+import UIKit
 
-/// Manages daily clip quota for free users (15 clips/day)
+/// Manages daily clip quota for free users (25 clips/day)
 @MainActor
 class DailyQuotaManager: ObservableObject {
     static let shared = DailyQuotaManager()
@@ -19,6 +20,8 @@ class DailyQuotaManager: ObservableObject {
     private let lastResetKey = "lastQuotaReset"
     private let isProKey = "isProUser"
     private let deviceIdKey = "deviceIdentifier"
+
+    private var dayChangeObserver: NSObjectProtocol?
     
     // Device identifier for anonymous tracking
     private var deviceId: String {
@@ -33,6 +36,7 @@ class DailyQuotaManager: ObservableObject {
     private init() {
         loadQuotaData()
         checkAndResetIfNeeded()
+        startDayChangeMonitoring()
         
         #if DEBUG
         // Debug-only: force Pro to allow AI feature testing.
@@ -144,6 +148,14 @@ class DailyQuotaManager: ObservableObject {
         
         print("🔄 [DailyQuota] Quota reset")
     }
+
+    /// Call when the app becomes active to enforce local-midnight resets.
+    func refreshForNewDayIfNeeded() {
+        checkAndResetIfNeeded()
+        Task {
+            await SupabaseService.shared.handleLocalDayBoundaryForCurrentUser()
+        }
+    }
     
     // MARK: - Private Methods
     
@@ -154,6 +166,18 @@ class DailyQuotaManager: ObservableObject {
         if !calendar.isDateInToday(lastResetDate) {
             print("🌅 [DailyQuota] New day detected, resetting quota")
             resetQuota()
+        }
+    }
+
+    private func startDayChangeMonitoring() {
+        dayChangeObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.significantTimeChangeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self else { return }
+            print("🕛 [DailyQuota] Significant time change detected - rechecking daily resets")
+            self.refreshForNewDayIfNeeded()
         }
     }
     

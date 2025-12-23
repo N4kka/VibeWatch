@@ -8,10 +8,14 @@ import RevenueCat
 class AuthService: ObservableObject {
     static let shared = AuthService()
 
-    // Real Supabase credentials
-    private let supabaseURL = "https://rqhxhkijzhqivljivirq.supabase.co"
-    private let supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJxaHhoa2lqemhxaXZsaml2aXJxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwNjc5ODgsImV4cCI6MjA3ODY0Mzk4OH0.D5OV0RX_whGawCu5xPfWX8297XyeXcjBOxsWez-fqVA"
-    private let supabaseFunctionsBaseURL = "https://rqhxhkijzhqivljivirq.functions.supabase.co"
+    // Supabase configuration (from Secrets.xcconfig -> Info.plist -> Config)
+    private let supabaseURL = Config.supabaseURL
+    private let supabaseAnonKey = Config.supabaseAnonKey
+    private let supabaseFunctionsBaseURL: String = {
+        let base = Config.supabaseURL
+        guard !base.isEmpty else { return "" }
+        return base.replacingOccurrences(of: ".supabase.co", with: ".functions.supabase.co")
+    }()
 
     private(set) var client: Supabase.SupabaseClient?
     @Published var currentUser: User?
@@ -40,12 +44,19 @@ class AuthService: ObservableObject {
     private func setupClient() {
         guard !supabaseURL.isEmpty && supabaseURL != "YOUR_SUPABASE_URL",
               !supabaseAnonKey.isEmpty && supabaseAnonKey != "YOUR_SUPABASE_ANON_KEY" else {
-            print("⚠️ Supabase credentials not configured")
+            print("⚠️ Supabase credentials not configured (check Secrets.xcconfig)")
             return
         }
 
-        guard let url = URL(string: supabaseURL) else {
-            print("❌ Invalid Supabase URL")
+        if supabaseURL.contains("$(") {
+            print("⚠️ Supabase URL not resolved (check Secrets.xcconfig)")
+            return
+        }
+
+        guard let url = URL(string: supabaseURL),
+              url.scheme?.hasPrefix("http") == true,
+              url.host != nil else {
+            print("❌ Invalid Supabase URL (expected https://<project>.supabase.co)")
             return
         }
 
@@ -167,7 +178,7 @@ class AuthService: ObservableObject {
         }
         
         guard let client = client else {
-            throw AuthError.notConfigured
+            throw AppAuthError.notConfigured
         }
 
         // Supabase may return tokens in the fragment; move them into the query so the SDK can parse them
@@ -253,7 +264,7 @@ class AuthService: ObservableObject {
     
     func signUp(username: String, email: String, password: String) async throws -> User {
         guard let client = client else {
-            throw AuthError.notConfigured
+            throw AppAuthError.notConfigured
         }
         
         // Clear reset expectation since this is an explicit action
@@ -261,16 +272,31 @@ class AuthService: ObservableObject {
         
         do {
             print("📝 Attempting to sign up user: \(email)")
+            print("🔗 Signup Redirect URL: \(authCallbackURL?.absoluteString ?? "nil")")
             
             // FIX: Pass username as metadata so the DB trigger can use it
             let response = try await client.auth.signUp(
                 email: email,
                 password: password,
-                data: ["display_name": .string(username)]
+                data: ["display_name": .string(username)],
+                redirectTo: authCallbackURL
             )
             
             let userId = response.user.id.uuidString
             print("✅ Auth user created with ID: \(userId)")
+            
+            // Check if we have a valid session (email confirmation might be required)
+            if response.session == nil {
+                 print("ℹ️ Sign up successful but no session returned. Email confirmation likely required.")
+                 // Return a temporary user object so the UI can handle the 'success' state,
+                 // but do not attempt to fetch/create profile as it will fail RLS.
+                 return User(
+                    id: userId,
+                    email: email,
+                    displayName: username,
+                    avatarURL: nil
+                 )
+            }
             
             // Wait a moment for the trigger to create the user profile
             try await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
@@ -297,7 +323,7 @@ class AuthService: ObservableObject {
                     self.isAuthenticated = true
                 } catch {
                     print("❌ Error creating profile manually: \(error)")
-                    throw AuthError.databaseError
+                    throw AppAuthError.databaseError
                 }
             } else if let user = currentUser, (user.displayName == nil || user.displayName == "") {
                 // Profile exists but needs username (Trigger might have failed to copy metadata)
@@ -308,7 +334,7 @@ class AuthService: ObservableObject {
             print("✅ User created successfully with Supabase")
             
             guard let user = currentUser else {
-                throw AuthError.userNotFound
+                throw AppAuthError.userNotFound
             }
             
             // Analytics: Track account creation
@@ -316,20 +342,20 @@ class AuthService: ObservableObject {
             AnalyticsService.shared.setUserId(user.id)
             
             return user
-        } catch let error as AuthError {
+        } catch let error as AppAuthError {
             print("❌ AuthError: \(error)")
             ErrorHandler.shared.logOnly(error, context: "Sign up")
             throw error
         } catch {
             print("❌ Unexpected error during signup: \(error)")
             ErrorHandler.shared.logOnly(error, context: "Sign up")
-            throw AuthError.signUpFailed
+            throw AppAuthError.custom(error.localizedDescription)
         }
     }
     
     func signIn(emailOrUsername: String, password: String) async throws -> User {
         guard let client = client else {
-            throw AuthError.notConfigured
+            throw AppAuthError.notConfigured
         }
         
         // Clear reset expectation since this is an explicit action
@@ -356,7 +382,7 @@ class AuthService: ObservableObject {
         await fetchUserProfile(userId: userId)
         
         guard let user = currentUser else {
-            throw AuthError.userNotFound
+            throw AppAuthError.userNotFound
         }
         
         print("✅ User signed in successfully with Supabase")
@@ -370,7 +396,7 @@ class AuthService: ObservableObject {
     
     func signOut(force: Bool = false) async throws {
         guard let client = client else {
-            throw AuthError.notConfigured
+            throw AppAuthError.notConfigured
         }
 
         try await client.auth.signOut()
@@ -386,17 +412,20 @@ class AuthService: ObservableObject {
         // Analytics: Clear user ID
         AnalyticsService.shared.setUserId(nil)
 
+        // Clear Discovery memory cache
+        DiscoveryPersonalizationService.shared.clearMemoryCache()
+
         print("✅ User signed out successfully")
     }
 
     func sendPasswordReset(email: String) async throws {
         guard let client = client else {
-            throw AuthError.notConfigured
+            throw AppAuthError.notConfigured
         }
 
         guard let redirectURL = authCallbackURL else {
             print("❌ Invalid auth callback URL")
-            throw AuthError.invalidResponse
+            throw AppAuthError.invalidResponse
         }
         
         print("🔗 Using redirect URL for password reset: \(redirectURL.absoluteString)")
@@ -414,7 +443,21 @@ class AuthService: ObservableObject {
             // Clear flag if sending failed
             userDefaults.set(false, forKey: expectingPasswordResetKey)
             print("❌ Failed to send password reset email: \(error.localizedDescription)")
-            throw AuthError.passwordResetFailed
+            throw AppAuthError.passwordResetFailed
+        }
+    }
+    
+    func resendConfirmationEmail(email: String) async throws {
+        guard let client = client else {
+            throw AppAuthError.notConfigured
+        }
+        
+        do {
+            try await client.auth.resend(email: email, type: .signup)
+            print("📧 Confirmation email resent to \(email)")
+        } catch {
+            print("❌ Failed to resend confirmation email: \(error)")
+            throw error
         }
     }
     
@@ -422,7 +465,7 @@ class AuthService: ObservableObject {
     
     func signInWithApple() async throws -> User {
         guard let client = client else {
-            throw AuthError.notConfigured
+            throw AppAuthError.notConfigured
         }
         
         // Clear reset expectation since this is an explicit action
@@ -443,7 +486,7 @@ class AuthService: ObservableObject {
         await checkAuthState()
         
         guard let user = currentUser else {
-            throw AuthError.userNotFound
+            throw AppAuthError.userNotFound
         }
         
         print("✅ Apple Sign In successful")
@@ -452,7 +495,7 @@ class AuthService: ObservableObject {
     
     func signInWithGoogle() async throws -> User {
         guard let client = client else {
-            throw AuthError.notConfigured
+            throw AppAuthError.notConfigured
         }
         
         // Clear reset expectation since this is an explicit action
@@ -473,7 +516,7 @@ class AuthService: ObservableObject {
         await checkAuthState()
         
         guard let user = currentUser else {
-            throw AuthError.userNotFound
+            throw AppAuthError.userNotFound
         }
         
         print("✅ Google Sign In successful")
@@ -620,7 +663,7 @@ class AuthService: ObservableObject {
     
     private func getEmailFromUsername(_ username: String) async throws -> String {
         guard let client = client else {
-            throw AuthError.notConfigured
+            throw AppAuthError.notConfigured
         }
         
         struct EmailRow: Decodable { let email: String }
@@ -656,16 +699,16 @@ class AuthService: ObservableObject {
         }
         
         print("❌ Username lookup failed: userNotFound")
-        throw AuthError.userNotFound
+        throw AppAuthError.userNotFound
     }
     
     func updateUserProfile(displayName: String?, avatarURL: String?) async throws {
         guard let client = client else {
-            throw AuthError.notConfigured
+            throw AppAuthError.notConfigured
         }
         
         guard var user = currentUser else {
-            throw AuthError.userNotFound
+            throw AppAuthError.userNotFound
         }
         
         // Prepare update data dictionary
@@ -697,7 +740,7 @@ class AuthService: ObservableObject {
     
     func updatePassword(to newPassword: String) async throws {
         guard let client = client else {
-            throw AuthError.notConfigured
+            throw AppAuthError.notConfigured
         }
         
         do {
@@ -705,17 +748,17 @@ class AuthService: ObservableObject {
             print("🔐 Password updated successfully")
         } catch {
             print("❌ Failed to update password: \(error.localizedDescription)")
-            throw AuthError.passwordUpdateFailed
+            throw AppAuthError.passwordUpdateFailed
         }
     }
     
     func deleteAccountPermanently() async throws {
         guard let client = client else {
-            throw AuthError.notConfigured
+            throw AppAuthError.notConfigured
         }
         // Require an authenticated, non-anonymous user before attempting deletion
         guard isAuthenticated, let userId = currentUser?.id else {
-            throw AuthError.userNotFound
+            throw AppAuthError.userNotFound
         }
 
         // Ensure we have a valid session token to call GoTrue
@@ -724,11 +767,11 @@ class AuthService: ObservableObject {
             session = try await client.auth.session
         } catch {
             print("❌ [Auth] No active session while deleting account: \(error.localizedDescription)")
-            throw AuthError.userNotFound
+            throw AppAuthError.userNotFound
         }
         
         guard let deleteURL = URL(string: "\(supabaseFunctionsBaseURL)/delete-user") else {
-            throw AuthError.invalidResponse
+            throw AppAuthError.invalidResponse
         }
         
         var request = URLRequest(url: deleteURL)
@@ -739,10 +782,10 @@ class AuthService: ObservableObject {
         if let httpResponse = response as? HTTPURLResponse {
             guard 200..<300 ~= httpResponse.statusCode else {
                 print("❌ [Auth] Account deletion failed with status: \(httpResponse.statusCode)")
-                throw AuthError.accountDeletionFailed
+                throw AppAuthError.accountDeletionFailed
             }
         } else {
-            throw AuthError.accountDeletionFailed
+            throw AppAuthError.accountDeletionFailed
         }
         
         // Attempt to purge profile data
@@ -796,11 +839,11 @@ class AuthService: ObservableObject {
     
     func uploadAvatar(imageData: Data) async throws -> String {
         guard let client = client else {
-            throw AuthError.notConfigured
+            throw AppAuthError.notConfigured
         }
         
         guard let userId = currentUser?.id else {
-            throw AuthError.userNotFound
+            throw AppAuthError.userNotFound
         }
         
         // Generate unique file name
@@ -837,7 +880,7 @@ class AuthService: ObservableObject {
     
     private func updateUserProfileDirectly(user: User) async throws {
         guard let client = client else {
-            throw AuthError.notConfigured
+            throw AppAuthError.notConfigured
         }
         
         // Use upsert to create or update the profile
@@ -935,7 +978,7 @@ class AuthService: ObservableObject {
 
     func upsertDeviceToken(_ token: String, platform: String = "ios") async throws {
         guard let client = client else {
-            throw AuthError.notConfigured
+            throw AppAuthError.notConfigured
         }
 
         struct DeviceParams: Encodable {
@@ -952,7 +995,7 @@ class AuthService: ObservableObject {
                 .execute()
         } catch {
             print("❌ Device token RPC failed: \(error)")
-            throw AuthError.databaseError
+            throw AppAuthError.databaseError
         }
     }
     
@@ -1046,7 +1089,7 @@ class AuthService: ObservableObject {
     /// Update user preferences in database
     func updateUserPreferences(_ user: User) async throws {
         guard let client = client else {
-            throw AuthError.notConfigured
+            throw AppAuthError.notConfigured
         }
         
         struct ProfileUpdatePayload: Encodable {
@@ -1080,12 +1123,12 @@ class AuthService: ObservableObject {
             print("✅ User preferences updated successfully")
         } catch {
             print("❌ Error updating user preferences: \(error)")
-            throw AuthError.databaseError
+            throw AppAuthError.databaseError
         }
     }
 }
 
-enum AuthError: LocalizedError {
+enum AppAuthError: LocalizedError {
     case notConfigured
     case invalidResponse
     case userNotFound
@@ -1096,6 +1139,7 @@ enum AuthError: LocalizedError {
     case passwordResetFailed
     case passwordUpdateFailed
     case accountDeletionFailed
+    case custom(String)
 
     var errorDescription: String? {
         switch self {
@@ -1119,6 +1163,8 @@ enum AuthError: LocalizedError {
             return "auth.error.passwordUpdateFailed".localized
         case .accountDeletionFailed:
             return "auth.error.accountDeletionFailed".localized
+        case .custom(let message):
+            return message
         }
     }
 }

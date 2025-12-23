@@ -1,9 +1,11 @@
 import SwiftUI
 import YouTubeiOSPlayerHelper
+import UIKit
 
 struct MovieDetailView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject var quotaManager: DailyQuotaManager
     @StateObject private var viewModel: MovieDetailViewModel
     @StateObject private var listManager = ListManager.shared
     @State private var showSavePanel = false
@@ -15,6 +17,8 @@ struct MovieDetailView: View {
     @State private var showReportBug = false
     @State private var selectedActor: Cast?
     @State private var filmographySelection: FilmographySelection?
+    @State private var showWhyForMeSheet = false
+    @State private var showAIPaywall = false
     
     init(movieId: Int) {
         _viewModel = StateObject(wrappedValue: MovieDetailViewModel(movieId: movieId))
@@ -66,10 +70,16 @@ struct MovieDetailView: View {
                                 }
                             }
                         )
+
+                        GoodFitSection(
+                            title: String(format: "movieDetail.goodFitTitle".localized, movie.title),
+                            subtitle: "movieDetail.goodFitSubtitle".localized,
+                            onWhyTap: { handleWhyForMeTap() }
+                        )
                         
-                        if let providers = viewModel.watchProviders {
+                        if viewModel.watchProviders != nil {
                             WatchNowSection(
-                                providers: providers,
+                                providers: viewModel.watchProviders,
                                 mediaType: .movie,
                                 title: movie.title,
                                 year: movie.year,
@@ -146,6 +156,23 @@ struct MovieDetailView: View {
         .sheet(isPresented: $showReportBug) {
             FeedbackDetailSheet(type: .bug)
         }
+        .sheet(isPresented: $showWhyForMeSheet) {
+            WhyForMeSheetView(
+                title: "movieDetail.whyForMe".localized,
+                message: viewModel.whyForMeMessage,
+                isLoading: viewModel.isWhyForMeLoading,
+                error: viewModel.whyForMeError
+            ) {
+                Task { await viewModel.generateWhyForMe() }
+            }
+        }
+        .fullScreenCover(isPresented: $showAIPaywall) {
+            DailyLimitPaywallView(
+                isPresented: $showAIPaywall,
+                paywallType: .aiQuota,
+                source: "why_for_me_quota"
+            )
+        }
         .fullScreenCover(item: $filmographySelection) { selection in
             switch selection.mediaType {
             case .movie:
@@ -215,6 +242,18 @@ struct MovieDetailView: View {
             }
         } catch {
             ErrorHandler.shared.handle(error, context: "Toggle Seen")
+        }
+    }
+
+    private func handleWhyForMeTap() {
+        guard appState.isAuthenticated else {
+            showAuthGate = true
+            return
+        }
+
+        showWhyForMeSheet = true
+        if viewModel.whyForMeMessage?.isEmpty != false {
+            Task { await viewModel.generateWhyForMe() }
         }
     }
     
@@ -533,29 +572,43 @@ struct ActionButton: View {
 }
 
 struct WatchNowSection: View {
-    let providers: CountryProviders
+    let providers: CountryProviders?
     let mediaType: MediaType
     let title: String
     let year: String?
     let imdbId: String?
     var onReportIssue: () -> Void = {}
-    
+
+    private var justWatchURL: URL? {
+        if let linkString = providers?.link, let url = URL(string: linkString) {
+            return url
+        }
+
+        let country = LocalizationManager.shared.currentCountry.id.lowercased()
+        let encodedQuery = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? title
+        return URL(string: "https://www.justwatch.com/\(country)/search?q=\(encodedQuery)")
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("movieDetail.watchNow".localized)
                 .font(.system(size: 20, weight: .bold))
                 .foregroundColor(.theme.textPrimary)
             
-            if let flatrate = providers.flatrate, !flatrate.isEmpty {
-                ProviderGroup(title: "platforms.streaming".localized, providers: flatrate, justWatchLink: providers.link, mediaTitle: title)
+            if let flatrate = providers?.flatrate, !flatrate.isEmpty {
+                ProviderGroup(title: "platforms.streaming".localized, providers: flatrate, justWatchLink: providers?.link, mediaTitle: title)
             }
             
-            if let rent = providers.rent, !rent.isEmpty {
-                ProviderGroup(title: "platforms.rent".localized, providers: rent, justWatchLink: providers.link, mediaTitle: title)
+            if let rent = providers?.rent, !rent.isEmpty {
+                ProviderGroup(title: "platforms.rent".localized, providers: rent, justWatchLink: providers?.link, mediaTitle: title)
             }
             
-            if let buy = providers.buy, !buy.isEmpty {
-                ProviderGroup(title: "platforms.buy".localized, providers: buy, justWatchLink: providers.link, mediaTitle: title)
+            if let buy = providers?.buy, !buy.isEmpty {
+                ProviderGroup(title: "platforms.buy".localized, providers: buy, justWatchLink: providers?.link, mediaTitle: title)
+            }
+
+            if let url = justWatchURL {
+                CinemaJustWatchGroup(title: "platforms.cinema".localized, url: url)
             }
             
             Button {
@@ -576,61 +629,113 @@ struct WatchNowSection: View {
     }
 }
 
-struct ProviderGroup: View {
+struct CinemaJustWatchGroup: View {
     let title: String
-    let providers: [Provider]
-    let justWatchLink: String?
-    let mediaTitle: String
-    
+    let url: URL
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(title)
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundColor(.theme.textPrimary)
-            
-            LazyVGrid(columns: [
-                GridItem(.adaptive(minimum: 80), spacing: 16)
-            ], spacing: 16) {
-                ForEach(providers) { (provider: Provider) in
-                    Button {
-                        PlatformDeepLinkHelper.openPlatform(provider: provider, justWatchLink: justWatchLink, title: mediaTitle)
-                    } label: {
-                        VStack(spacing: 6) {
-                            CachedAsyncImage(url: provider.logoURL)
-                                .frame(width: 60, height: 60)
-                                .aspectRatio(contentMode: .fit)
-                                .background(Color.white)
-                                .clipShape(RoundedRectangle(cornerRadius: 8))
-                            
-                            VStack(spacing: 2) {
-                                if let price = provider.price?.displayPrice {
-                                    HStack(spacing: 4) {
-                                        Text(price)
-                                            .font(.system(size: 12, weight: .semibold))
-                                            .foregroundColor(.theme.accentOrange)
-                                        
-                                        if let quality = provider.formattedQuality {
-                                            Text("•")
-                                                .font(.system(size: 10))
-                                                .foregroundColor(.theme.textSecondary)
-                                            
+
+            Button {
+                UIApplication.shared.open(url, options: [:])
+            } label: {
+                VStack(spacing: 6) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.white)
+                        Image(systemName: "ticket.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(.black)
+                    }
+                    .frame(width: 60, height: 60)
+
+                    Text("platforms.justwatch".localized)
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(.theme.textSecondary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.center)
+                        .frame(width: 80)
+                }
+                .frame(width: 80)
+            }
+        }
+    }
+}
+
+struct ProviderGroup: View {
+    let title: String
+    let providers: [Provider]
+    let justWatchLink: String?
+    let mediaTitle: String
+
+    private var visibleProviders: [Provider] {
+        providers.filter { provider in
+            guard !provider.logoPath.isEmpty else { return false }
+            let lowerLogo = provider.logoPath.lowercased()
+            if lowerLogo.contains(".svg") { return false }
+            if lowerLogo.contains("logo-white") { return false }
+            let hasLink = provider.externalLink != nil || justWatchLink != nil
+            if hasLink { return true }
+            return PlatformDeepLinkHelper.hasPlatformHomepage(for: provider)
+        }
+    }
+    
+    var body: some View {
+        Group {
+            if !visibleProviders.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(title)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.theme.textPrimary)
+                    
+                    LazyVGrid(columns: [
+                        GridItem(.adaptive(minimum: 80), spacing: 16)
+                    ], spacing: 16) {
+                        ForEach(visibleProviders) { (provider: Provider) in
+                            Button {
+                                PlatformDeepLinkHelper.openPlatform(provider: provider, justWatchLink: justWatchLink, title: mediaTitle)
+                            } label: {
+                                VStack(spacing: 6) {
+                                    CachedAsyncImage(url: provider.logoURL)
+                                        .frame(width: 60, height: 60)
+                                        .aspectRatio(contentMode: .fit)
+                                        .background(Color.white)
+                                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                                    
+                                    VStack(spacing: 2) {
+                                        if let price = provider.price?.displayPrice {
+                                            HStack(spacing: 4) {
+                                                Text(price)
+                                                    .font(.system(size: 12, weight: .semibold))
+                                                    .foregroundColor(.theme.accentOrange)
+                                                
+                                                if let quality = provider.formattedQuality {
+                                                    Text("•")
+                                                        .font(.system(size: 10))
+                                                        .foregroundColor(.theme.textSecondary)
+                                                    
+                                                    Text(quality)
+                                                        .font(.system(size: 12, weight: .medium))
+                                                        .foregroundColor(.theme.textSecondary)
+                                                }
+                                            }
+                                        } else if let quality = provider.formattedQuality {
                                             Text(quality)
-                                                .font(.system(size: 12, weight: .medium))
+                                                .font(.system(size: 10, weight: .medium))
                                                 .foregroundColor(.theme.textSecondary)
+                                        } else {
+                                            Text(" ")
+                                                .font(.system(size: 10))
                                         }
                                     }
-                                } else if let quality = provider.formattedQuality {
-                                    Text(quality)
-                                        .font(.system(size: 10, weight: .medium))
-                                        .foregroundColor(.theme.textSecondary)
-                                } else {
-                                    Text(" ")
-                                        .font(.system(size: 10))
+                                    .frame(height: 16)
                                 }
+                                .frame(width: 80)
                             }
-                            .frame(height: 16)
                         }
-                        .frame(width: 80)
                     }
                 }
             }
@@ -677,6 +782,48 @@ struct TrailerSection: View {
     }
 }
 
+struct GoodFitSection: View {
+    let title: String
+    let subtitle: String
+    let onWhyTap: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(.theme.textPrimary)
+
+            Text(subtitle)
+                .font(.system(size: 13))
+                .foregroundColor(.theme.textSecondary)
+
+            Button(action: onWhyTap) {
+                HStack(spacing: 8) {
+                    Image(systemName: "sparkles")
+                    Text("movieDetail.whyForMe".localized)
+                }
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.theme.textPrimary)
+                .frame(maxWidth: .infinity)
+                .frame(height: 44)
+                .background(Color.white.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.white.opacity(0.05))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+        )
+        .padding(.horizontal, 20)
+    }
+}
+
 struct YouTubePlayerView: UIViewRepresentable {
     let videoId: String
     
@@ -714,6 +861,91 @@ struct YouTubePlayerView: UIViewRepresentable {
         func playerViewDidBecomeReady(_ playerView: YTPlayerView) {
             playerView.playVideo()
         }
+    }
+}
+
+struct WhyForMeSheetView: View {
+    let title: String
+    let message: String?
+    let isLoading: Bool
+    let error: String?
+    let onRetry: () -> Void
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(spacing: 10) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.theme.accentOrange)
+                    Text(title)
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(.theme.textPrimary)
+                }
+                if isLoading {
+                    contentCard {
+                        HStack(spacing: 10) {
+                            ProgressView()
+                            Text("common.loading".localized)
+                                .font(.system(size: 14))
+                                .foregroundColor(.theme.textSecondary)
+                        }
+                    }
+                } else if let error, !error.isEmpty {
+                    contentCard {
+                        Text(error)
+                            .font(.system(size: 14))
+                            .foregroundColor(.theme.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Button(action: onRetry) {
+                        Text("common.tryAgain".localized)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.theme.accentOrange)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background(Color.white.opacity(0.08))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                } else if let message, !message.isEmpty {
+                    contentCard {
+                        Text(message)
+                            .font(.system(size: 15))
+                            .foregroundColor(.theme.textPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                } else {
+                    contentCard {
+                        Text("common.loading".localized)
+                            .font(.system(size: 14))
+                            .foregroundColor(.theme.textSecondary)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(24)
+        }
+        .presentationDetents([.fraction(0.5)])
+        .presentationDragIndicator(.visible)
+        .presentationBackground(Color.theme.background)
+    }
+
+    @ViewBuilder
+    private func contentCard<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            content()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.white.opacity(0.06))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+        )
     }
 }
 
@@ -842,7 +1074,7 @@ struct SimilarMoviesSection: View {
                 HStack(spacing: 12) {
                     ForEach(movies) { movie in
                         NavigationLink(destination: MovieDetailView(movieId: movie.id)) {
-                            MediaCard(movie: movie)
+                            MediaCard(movie: movie, description: nil)
                         }
                     }
                 }

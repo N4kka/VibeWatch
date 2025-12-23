@@ -70,7 +70,7 @@ struct SearchView: View {
     }
     
     private func saveAndNavigate(result: SearchResult) {
-        viewModel.saveVisitedItem(id: result.id, mediaType: result.mediaType)
+        viewModel.handleResultTap(result)
         selectedResult = result
     }
 }

@@ -25,11 +25,8 @@ final class TrackingPermissionManager: ObservableObject {
     }
     
     private func updateAnalyticsState(for status: ATTrackingManager.AuthorizationStatus) async {
-        switch status {
-        case .authorized:
-            AnalyticsService.shared.setEnabled(true)
-        default:
-            AnalyticsService.shared.setEnabled(false)
-        }
+        // ATT is for cross-app tracking/IDFA; product analytics should not depend on it.
+        // Keep this hook for future ad attribution, but do not gate AnalyticsService here.
+        UserDefaults.standard.set(status.rawValue, forKey: "trackingPermission.status")
     }
 }

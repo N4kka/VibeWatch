@@ -468,6 +468,8 @@ class ListManager: ObservableObject {
             listType: lists[index].type.rawValue,
             mediaType: mediaType.rawValue
         )
+
+        PaywallTriggerService.shared.recordSavedToList()
         
         // Prompt for a review after a successful save action (gated by heuristics)
         ReviewPromptManager.shared.recordPositiveAction()

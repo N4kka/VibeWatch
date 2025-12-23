@@ -4,6 +4,7 @@ import WebKit
 struct TVShowDetailView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject var quotaManager: DailyQuotaManager
     @StateObject private var viewModel: TVShowDetailViewModel
     @StateObject private var listManager = ListManager.shared
     @State private var showSavePanel = false
@@ -15,6 +16,8 @@ struct TVShowDetailView: View {
     @State private var showReportBug = false
     @State private var selectedActor: Cast?
     @State private var filmographySelection: FilmographySelection?
+    @State private var showWhyForMeSheet = false
+    @State private var showAIPaywall = false
     
     init(tvShowId: Int) {
         _viewModel = StateObject(wrappedValue: TVShowDetailViewModel(tvShowId: tvShowId))
@@ -119,6 +122,23 @@ struct TVShowDetailView: View {
             AuthenticationGateView(isPresented: $showAuthGate)
                 .presentationBackground(.clear)
         }
+        .sheet(isPresented: $showWhyForMeSheet) {
+            WhyForMeSheetView(
+                title: "movieDetail.whyForMe".localized,
+                message: viewModel.whyForMeMessage,
+                isLoading: viewModel.isWhyForMeLoading,
+                error: viewModel.whyForMeError
+            ) {
+                Task { await viewModel.generateWhyForMe() }
+            }
+        }
+        .fullScreenCover(isPresented: $showAIPaywall) {
+            DailyLimitPaywallView(
+                isPresented: $showAIPaywall,
+                paywallType: .aiQuota,
+                source: "why_for_me_quota"
+            )
+        }
         .fullScreenCover(item: $filmographySelection) { selection in
             switch selection.mediaType {
             case .movie:
@@ -185,6 +205,7 @@ struct TVShowDetailView: View {
     }
     
     private func actionsView(tvShow: TVShow, movie: Movie) -> some View {
+                        VStack(spacing: 20) {
                         ActionButtonsSection(
                             movie: movie,
                             mediaType: .tv,
@@ -198,13 +219,19 @@ struct TVShowDetailView: View {
                             onLikedTap: { Task { await handleLikedTap(tvShow: tvShow, movie: movie) } },
                             onDislikedTap: { Task { await handleDislikedTap(tvShow: tvShow, movie: movie) } }
                         )
+                        GoodFitSection(
+                            title: String(format: "movieDetail.goodFitTitle".localized, tvShow.name),
+                            subtitle: "movieDetail.goodFitSubtitle".localized,
+                            onWhyTap: { handleWhyForMeTap() }
+                        )
+                        }
     }
     
     @ViewBuilder
     private var providersView: some View {
-        if let providers = viewModel.watchProviders, let tvShow = viewModel.tvShow {
+        if viewModel.watchProviders != nil, let tvShow = viewModel.tvShow {
             WatchNowSection(
-                providers: providers,
+                providers: viewModel.watchProviders,
                 mediaType: .tv,
                 title: tvShow.name,
                 year: tvShow.year,
@@ -382,6 +409,25 @@ struct TVShowDetailView: View {
     private func handleFilmographySelection(_ credit: PersonCredit) {
         selectedActor = nil
         filmographySelection = FilmographySelection(mediaType: credit.mediaType, mediaId: credit.id)
+    }
+
+    private func handleWhyForMeTap() {
+        guard appState.isAuthenticated else {
+            showAuthGate = true
+            return
+        }
+
+        if !AITokenManager.shared.canMakeRequest() {
+            if !quotaManager.isProUser {
+                showAIPaywall = true
+            }
+            return
+        }
+
+        showWhyForMeSheet = true
+        if viewModel.whyForMeMessage?.isEmpty != false {
+            Task { await viewModel.generateWhyForMe() }
+        }
     }
 }
 
