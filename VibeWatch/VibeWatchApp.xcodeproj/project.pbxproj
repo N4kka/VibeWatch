@@ -15,11 +15,25 @@
 		B3E30E122ECCB7AA008A3B6C /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = B3E30E112ECCB7AA008A3B6C /* PostgREST */; };
 		B3E30E142ECCB7AA008A3B6C /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = B3E30E132ECCB7AA008A3B6C /* Supabase */; };
 		B3F2F7E02F14A10000D1A004 /* YouTubeiOSPlayerHelper in Frameworks */ = {isa = PBXBuildFile; productRef = B3F2F7E32F14A10000D1A003 /* YouTubeiOSPlayerHelper */; };
+		CF1EE317BD6A461DA9DC12F3 /* PostHogClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7288DBFF0484707BB5CD260 /* PostHogClientTests.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		EE02D6F4DFD24EDF8837B7BE /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B318DC822EC6920500DB1A9A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B318DC892EC6920500DB1A9A;
+			remoteInfo = VibeWatchApp;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
+		017B09F3416F44179444BCC2 /* VibeWatchAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = VibeWatchAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		9FBD15ABB0BF4418879D52D9 /* VibeWatchAppTests/Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = VibeWatchAppTests/Info.plist; sourceTree = "<group>"; };
 		B318DC8A2EC6920500DB1A9A /* VibeWatchApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VibeWatchApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B3F0F1A92F2A1B1C00AA1111 /* VibeWatchApp/Config/Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = VibeWatchApp/Config/Secrets.xcconfig; sourceTree = "<group>"; };
+		E7288DBFF0484707BB5CD260 /* PostHogClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostHogClientTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -60,13 +74,30 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		ED6A2F54E9FE48C9838BCD16 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		1C38A8861B0F4F5D876EE606 /* VibeWatchAppTests */ = {
+			isa = PBXGroup;
+			children = (
+				9FBD15ABB0BF4418879D52D9 /* VibeWatchAppTests/Info.plist */,
+				E7288DBFF0484707BB5CD260 /* PostHogClientTests.swift */,
+			);
+			path = VibeWatchAppTests;
+			sourceTree = "<group>";
+		};
 		B318DC812EC6920500DB1A9A = {
 			isa = PBXGroup;
 			children = (
 				B318DC8C2EC6920500DB1A9A /* VibeWatchApp */,
+				1C38A8861B0F4F5D876EE606 /* VibeWatchAppTests */,
 				B3E30E102ECCB7AA008A3B6C /* Frameworks */,
 				B318DC8B2EC6920500DB1A9A /* Products */,
 				B39A3C0B2EF5898A0087B6B2 /* Recovered References */,
@@ -77,6 +108,7 @@
 			isa = PBXGroup;
 			children = (
 				B318DC8A2EC6920500DB1A9A /* VibeWatchApp.app */,
+				017B09F3416F44179444BCC2 /* VibeWatchAppTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -99,6 +131,24 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		6FD2892C70554E89BC8FEFD1 /* VibeWatchAppTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CDD7E746477247ACA5CB37F4 /* Build configuration list for PBXNativeTarget "VibeWatchAppTests" */;
+			buildPhases = (
+				2BC040EEBFB0469DB94FDF15 /* Sources */,
+				ED6A2F54E9FE48C9838BCD16 /* Frameworks */,
+				6B130BF537D94760834B389F /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D5D51638EDAD4C9A9B52D5EB /* PBXTargetDependency */,
+			);
+			name = VibeWatchAppTests;
+			productName = VibeWatchAppTests;
+			productReference = 017B09F3416F44179444BCC2 /* VibeWatchAppTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		B318DC892EC6920500DB1A9A /* VibeWatchApp */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = B318DC952EC6920800DB1A9A /* Build configuration list for PBXNativeTarget "VibeWatchApp" */;
@@ -139,6 +189,9 @@
 				LastSwiftUpdateCheck = 1640;
 				LastUpgradeCheck = 1640;
 				TargetAttributes = {
+					6FD2892C70554E89BC8FEFD1 = {
+						CreatedOnToolsVersion = 16.4;
+					};
 					B318DC892EC6920500DB1A9A = {
 						CreatedOnToolsVersion = 16.4;
 					};
@@ -184,11 +237,19 @@
 			projectRoot = "";
 			targets = (
 				B318DC892EC6920500DB1A9A /* VibeWatchApp */,
+				6FD2892C70554E89BC8FEFD1 /* VibeWatchAppTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		6B130BF537D94760834B389F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		B318DC882EC6920500DB1A9A /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -199,6 +260,14 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		2BC040EEBFB0469DB94FDF15 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CF1EE317BD6A461DA9DC12F3 /* PostHogClientTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		B318DC862EC6920500DB1A9A /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -207,6 +276,14 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D5D51638EDAD4C9A9B52D5EB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B318DC892EC6920500DB1A9A /* VibeWatchApp */;
+			targetProxy = EE02D6F4DFD24EDF8837B7BE /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		B318DC932EC6920800DB1A9A /* Debug */ = {
@@ -416,6 +493,46 @@
 			};
 			name = Release;
 		};
+		F09297016BFD439BA1DC503C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				INFOPLIST_FILE = VibeWatchAppTests/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.vibewatch.VibeWatchAppTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/VibeWatchApp.app/VibeWatchApp";
+			};
+			name = Release;
+		};
+		F0EC8F9B700740BF9FE5920C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				INFOPLIST_FILE = VibeWatchAppTests/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.vibewatch.VibeWatchAppTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/VibeWatchApp.app/VibeWatchApp";
+			};
+			name = Debug;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -433,6 +550,15 @@
 			buildConfigurations = (
 				B318DC962EC6920800DB1A9A /* Debug */,
 				B318DC972EC6920800DB1A9A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CDD7E746477247ACA5CB37F4 /* Build configuration list for PBXNativeTarget "VibeWatchAppTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F0EC8F9B700740BF9FE5920C /* Debug */,
+				F09297016BFD439BA1DC503C /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -229,13 +229,15 @@ struct TVShowDetailView: View {
     
     @ViewBuilder
     private var providersView: some View {
-        if viewModel.watchProviders != nil, let tvShow = viewModel.tvShow {
+        if let tvShow = viewModel.tvShow {
+            let tvShowMovie = tvShowToMovie(tvShow)
             WatchNowSection(
                 providers: viewModel.watchProviders,
                 mediaType: .tv,
                 title: tvShow.name,
                 year: tvShow.year,
                 imdbId: viewModel.imdbId,
+                movie: tvShowMovie,
                 onReportIssue: { showReportBug = true }
             )
         }

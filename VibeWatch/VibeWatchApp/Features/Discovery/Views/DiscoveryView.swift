@@ -192,7 +192,7 @@ struct DiscoveryView: View {
         let hasTarget = viewModel.personalizedCarousels.contains(where: { $0.type.rawValue == position })
         guard hasTarget else { return }
 
-        proxy.scrollTo(position, anchor: .top)
+        proxy.scrollTo(position, anchor: .center)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
             hasRestoredScroll = true
         }

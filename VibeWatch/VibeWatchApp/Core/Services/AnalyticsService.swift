@@ -8,11 +8,20 @@ import FirebaseAnalytics
 @MainActor
 class AnalyticsService {
     static let shared = AnalyticsService()
+
+    struct EventSnapshot: Identifiable {
+        let id = UUID()
+        let name: String
+        let parameters: [String: Any]?
+        let timestamp: Date
+    }
     
     private var isEnabled: Bool
     private var userId: String?
     private var events: [(name: String, parameters: [String: Any]?, timestamp: Date)] = []
     private let installId: String
+    private var pendingUserProperties: [String: String] = [:]
+    private var pendingUnsetUserProperties: Set<String> = []
 
     private enum DefaultsKeys {
         static let isEnabled = "analytics.isEnabled"
@@ -65,6 +74,14 @@ class AnalyticsService {
         #if canImport(FirebaseAnalytics)
         Analytics.setUserProperty(value, forName: name)
         #endif
+
+        if let value {
+            pendingUserProperties[name] = value
+            pendingUnsetUserProperties.remove(name)
+        } else {
+            pendingUserProperties.removeValue(forKey: name)
+            pendingUnsetUserProperties.insert(name)
+        }
         
         print("📊 [Analytics] User property set: \(name) = \(value ?? "nil")")
     }
@@ -81,23 +98,37 @@ class AnalyticsService {
         print("📊 [Analytics] \(enabled ? "Enabled" : "Disabled")")
     }
 
+    func recentEvents(limit: Int = 50) -> [EventSnapshot] {
+        let slice = events.suffix(limit)
+        return slice.map { EventSnapshot(name: $0.name, parameters: $0.parameters, timestamp: $0.timestamp) }
+    }
+
     // MARK: - Event Tracking
 
     func trackAppOpen() {
         guard isEnabled else { return }
 
+        var eventsToCapture: [(name: String, parameters: [String: Any]?)] = []
+
         if !UserDefaults.standard.bool(forKey: DefaultsKeys.firstOpenTracked) {
             UserDefaults.standard.set(true, forKey: DefaultsKeys.firstOpenTracked)
-            logEvent("app_first_open", parameters: [
+            let params: [String: Any] = [
                 "install_id": installId
-            ])
+            ]
+            logEventLocal("app_first_open", parameters: params)
+            eventsToCapture.append((name: "app_first_open", parameters: params))
         }
 
-        logEvent("app_open", parameters: [
+        let openParams: [String: Any] = [
             "install_id": installId
-        ])
+        ]
+        logEventLocal("app_open", parameters: openParams)
+        eventsToCapture.append((name: "app_open", parameters: openParams))
 
-        Task.detached {
+        Task {
+            for event in eventsToCapture {
+                await captureToPostHog(name: event.name, parameters: event.parameters)
+            }
             try? await PostHogClient.shared.flush()
         }
     }
@@ -105,33 +136,19 @@ class AnalyticsService {
     /// Track generic event
     func logEvent(_ name: String, parameters: [String: Any]? = nil) {
         guard isEnabled else { return }
-        
-        // Store locally for debugging
-        events.append((name, parameters, Date()))
-        if events.count > 100 {
-            events.removeFirst()
-        }
-        
-        #if canImport(FirebaseAnalytics)
-        Analytics.logEvent(name, parameters: parameters)
-        #endif
 
-        Task.detached {
-            let distinctId = await MainActor.run { self.userId ?? self.installId }
-            await PostHogClient.shared.capture(
-                event: name,
-                distinctId: distinctId,
-                properties: parameters
-            )
+        logEventLocal(name, parameters: parameters)
+
+        Task {
+            await captureToPostHog(name: name, parameters: parameters)
         }
-        
-        print("📊 [Analytics] Event: \(name) \(parameters != nil ? "with params" : "")")
     }
     
     // MARK: - Authentication Events
     
     /// User created account
     func logAccountCreated(method: String) {
+        setUserProperty(method, forName: "signup_method")
         #if canImport(FirebaseAnalytics)
         logEvent(AnalyticsEventSignUp, parameters: [
             AnalyticsParameterMethod: method // "email", "apple", "google"
@@ -141,9 +158,6 @@ class AnalyticsService {
             "method": method
         ])
         #endif
-        
-        // Set user property
-        setUserProperty(method, forName: "signup_method")
     }
     
     /// User signed in
@@ -163,13 +177,12 @@ class AnalyticsService {
     
     /// Trial started
     func logTrialStarted(productId: String, price: Double, currency: String = "EUR") {
+        setUserProperty("true", forName: "has_trial")
         logEvent("trial_started", parameters: [
             "product_id": productId,
             "price": price,
             "currency": currency
         ])
-        
-        setUserProperty("true", forName: "has_trial")
     }
     
     /// Subscription purchased
@@ -179,6 +192,11 @@ class AnalyticsService {
         currency: String = "EUR",
         isFoundingMember: Bool
     ) {
+        setUserProperty("pro", forName: "subscription_tier")
+        if isFoundingMember {
+            setUserProperty("true", forName: "is_founding_member")
+        }
+
         #if canImport(FirebaseAnalytics)
         logEvent(AnalyticsEventPurchase, parameters: [
             "product_id": productId,
@@ -194,22 +212,17 @@ class AnalyticsService {
             "is_founding_member": isFoundingMember
         ])
         #endif
-        
-        setUserProperty("pro", forName: "subscription_tier")
-        if isFoundingMember {
-            setUserProperty("true", forName: "is_founding_member")
-        }
     }
     
     /// Subscription canceled
     func logSubscriptionCanceled(productId: String, reason: String? = nil) {
+        setUserProperty("canceled", forName: "subscription_tier")
         var params: [String: Any] = ["product_id": productId]
         if let reason = reason {
             params["reason"] = reason
         }
         
         logEvent("subscription_canceled", parameters: params)
-        setUserProperty("canceled", forName: "subscription_tier")
     }
     
     /// Subscription renewed
@@ -342,12 +355,11 @@ class AnalyticsService {
     
     /// Language changed
     func logLanguageChanged(from: String, to: String) {
+        setUserProperty(to, forName: "preferred_language")
         logEvent("language_changed", parameters: [
             "from": from,
             "to": to
         ])
-        
-        setUserProperty(to, forName: "preferred_language")
     }
     
     // MARK: - Onboarding
@@ -359,8 +371,8 @@ class AnalyticsService {
     
     /// Onboarding completed
     func logOnboardingCompleted() {
-        logEvent("onboarding_completed", parameters: nil)
         setUserProperty("true", forName: "onboarding_completed")
+        logEvent("onboarding_completed", parameters: nil)
     }
     
     /// Onboarding skipped
@@ -389,5 +401,37 @@ class AnalyticsService {
             "screen_name": screenName,
             "screen_class": screenClass ?? screenName
         ])
+    }
+
+    // MARK: - Internal Helpers
+
+    private func logEventLocal(_ name: String, parameters: [String: Any]?) {
+        // Store locally for debugging
+        events.append((name, parameters, Date()))
+        if events.count > 100 {
+            events.removeFirst()
+        }
+
+        #if canImport(FirebaseAnalytics)
+        Analytics.logEvent(name, parameters: parameters)
+        #endif
+
+        print("📊 [Analytics] Event: \(name) \(parameters != nil ? "with params" : "")")
+    }
+
+    private func captureToPostHog(name: String, parameters: [String: Any]?) async {
+        let distinctId = userId ?? installId
+        var eventParameters = parameters ?? [:]
+        if !pendingUnsetUserProperties.isEmpty {
+            eventParameters["$unset"] = Array(pendingUnsetUserProperties)
+        }
+        await PostHogClient.shared.capture(
+            event: name,
+            distinctId: distinctId,
+            userProperties: pendingUserProperties.isEmpty ? nil : pendingUserProperties,
+            properties: eventParameters.isEmpty ? nil : eventParameters
+        )
+        pendingUserProperties.removeAll()
+        pendingUnsetUserProperties.removeAll()
     }
 }

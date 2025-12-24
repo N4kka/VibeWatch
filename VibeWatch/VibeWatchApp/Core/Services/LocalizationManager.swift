@@ -50,6 +50,7 @@ final class LocalizationManager: ObservableObject {
     }
 
     func setCountry(_ country: Country) {
+        let previousLanguageId = currentLanguage.id
         currentCountry = country
         selectedCountryCode = country.id
 
@@ -57,6 +58,11 @@ final class LocalizationManager: ObservableObject {
             currentLanguage = nativeLang
             selectedLanguageCode = nativeLang.id
             print("🌍 Language automatically changed to native: \(nativeLang.name)")
+            if previousLanguageId != nativeLang.id {
+                Task { @MainActor in
+                    AnalyticsService.shared.logLanguageChanged(from: previousLanguageId, to: nativeLang.id)
+                }
+            }
         }
 
         localeDidChange.toggle()
@@ -66,11 +72,18 @@ final class LocalizationManager: ObservableObject {
     }
 
     func setLanguage(_ language: Language) {
+        let previousLanguageId = currentLanguage.id
         currentLanguage = language
         selectedLanguageCode = language.id
 
         localeDidChange.toggle()
         objectWillChange.send()
+
+        if previousLanguageId != language.id {
+            Task { @MainActor in
+                AnalyticsService.shared.logLanguageChanged(from: previousLanguageId, to: language.id)
+            }
+        }
 
         print("🌍 Language changed to: \(language.name)")
     }

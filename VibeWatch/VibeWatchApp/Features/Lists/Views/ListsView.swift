@@ -8,7 +8,7 @@ struct ListsView: View {
     @EnvironmentObject var quotaManager: DailyQuotaManager
     @EnvironmentObject var appState: AppState
     @State private var selectedFilter: MediaFilter = .all
-    @State private var selectedListType: ListViewType = .myLists
+    @State private var selectedListType: ListViewType = .watchlist
     @State private var showCreateList = false
     @State private var showAuthGate = false
     @State private var showFilters = false
@@ -537,6 +537,7 @@ struct MediaItemRow: View {
     @State private var providerLink: String?
     @State private var navigateToDetail = false
     @State private var isLoadingDetails = false
+    @State private var showNotifyMeAlert = false
     @State private var offset: CGFloat = 0
     @State private var isSwiping = false
     @State private var cardWidth: CGFloat = 0
@@ -681,6 +682,7 @@ struct MediaItemRow: View {
                             HStack {
                                 CachedAsyncImage(url: provider.logoURL)
                                     .frame(width: 20, height: 20)
+                                    .background(Color.white)
                                     .clipShape(RoundedRectangle(cornerRadius: 4))
                                 
                                 Text("WATCH ON \(provider.providerName.uppercased())")
@@ -696,22 +698,20 @@ struct MediaItemRow: View {
                         }
                     } else {
                         Button {
-                            // No provider found, maybe open search or do nothing
+                            handleNotifyMe()
                         } label: {
-                            HStack {
-                                Image(systemName: "play.tv")
-                                    .font(.system(size: 16))
-                                Text("movieDetail.watchNow".localized.uppercased())
-                                    .font(.system(size: 14, weight: .semibold))
+                            HStack(spacing: 4) {
+                                Text("NOTIFY ME")
+                                    .font(.system(size: 12, weight: .bold))
+                                Text("🔔")
+                                    .font(.system(size: 12))
                             }
-                            .foregroundColor(.theme.textPrimary)
+                            .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(Color.white.opacity(0.2))
+                            .padding(.vertical, 10)
+                            .background(Color.theme.accentOrange)
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
-                        .disabled(true)
-                        .opacity(0.6)
                     }
                 }
                 
@@ -810,6 +810,42 @@ struct MediaItemRow: View {
         .task {
             await loadDetails()
         }
+        .alert("Notify Me", isPresented: $showNotifyMeAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("We'll send you a notification as soon as '\(item.title)' is available for streaming, rent, or buy.")
+        }
+    }
+    
+    private func handleNotifyMe() {
+        showNotifyMeAlert = true
+        
+        // Ensure it's in watchlist
+        Task {
+            if !listManager.isInList(listId: listManager.watchlist.id, mediaId: item.mediaId, mediaType: item.mediaType) {
+                let movie = Movie(
+                    id: item.mediaId,
+                    title: item.title,
+                    overview: "",
+                    posterPath: item.posterPath,
+                    backdropPath: nil,
+                    releaseDate: nil,
+                    voteAverage: item.voteAverage ?? 0.0,
+                    voteCount: 0,
+                    genreIds: nil,
+                    genres: nil,
+                    adult: false,
+                    originalLanguage: "",
+                    popularity: 0.0,
+                    runtime: item.runtime,
+                    status: nil,
+                    tagline: nil,
+                    productionCountries: nil,
+                    imdbId: nil
+                )
+                try? await listManager.addToList(listId: listManager.watchlist.id, movie: movie, mediaType: item.mediaType)
+            }
+        }
     }
     
     @ViewBuilder
@@ -828,39 +864,143 @@ struct MediaItemRow: View {
         do {
             if item.mediaType == .movie {
                 async let details = tmdbService.getMovieDetails(id: item.mediaId)
-                async let providers = tmdbService.getMovieWatchProviders(id: item.mediaId)
+                let countryCode = LocalizationManager.shared.currentCountry.id
+                async let providers = StreamingAvailabilityService.shared.getProviders(tmdbId: item.mediaId, type: .movie, region: countryCode)
+                async let tmdbProvidersTask = tmdbService.getMovieWatchProviders(id: item.mediaId)
                 
-                let (movie, watchProviders) = try await (details, providers)
+                let (movie, watchProviders, tmdbProvidersData) = try await (details, providers, tmdbProvidersTask)
                 movieDetails = movie
-                processProviders(watchProviders)
+                
+                var finalProviders = watchProviders
+                if let tmdb = tmdbProvidersData.results[countryCode] {
+                    finalProviders = mergeProviders(rich: watchProviders, basic: tmdb)
+                }
+                
+                // Always try to process, even if RapidAPI was empty (merge might have added TMDB ones)
+                processProviders(finalProviders)
+                
             } else {
                 async let details = tmdbService.getTVShowDetails(id: item.mediaId)
-                async let providers = tmdbService.getTVShowWatchProviders(id: item.mediaId)
+                let countryCode = LocalizationManager.shared.currentCountry.id
+                async let providers = StreamingAvailabilityService.shared.getProviders(tmdbId: item.mediaId, type: .tv, region: countryCode)
+                async let tmdbProvidersTask = tmdbService.getTVShowWatchProviders(id: item.mediaId)
                 
-                let (show, watchProviders) = try await (details, providers)
+                let (show, watchProviders, tmdbProvidersData) = try await (details, providers, tmdbProvidersTask)
                 tvShowDetails = show
-                processProviders(watchProviders)
+                
+                var finalProviders = watchProviders
+                if let tmdb = tmdbProvidersData.results[countryCode] {
+                    finalProviders = mergeProviders(rich: watchProviders, basic: tmdb)
+                }
+                
+                processProviders(finalProviders)
             }
         } catch {
             print("❌ Error loading details: \(error.localizedDescription)")
+            await loadTMDBProvidersFallback()
         }
         
         isLoadingDetails = false
     }
     
-    private func processProviders(_ providers: WatchProvider) {
-        let countryCode = LocalizationManager.shared.currentCountry.id
-        guard let countryProviders = providers.results[countryCode] else { return }
+    private func mergeProviders(rich: CountryProviders, basic: CountryProviders) -> CountryProviders {
+        var merged = rich
         
+        func mergeList(_ richList: [Provider]?, _ basicList: [Provider]?) -> [Provider]? {
+            guard let basicList = basicList else { return richList }
+            guard var richList = richList else { return basicList }
+            
+            for provider in basicList {
+                if let index = richList.firstIndex(where: { providerNamesMatch($0.providerName, provider.providerName) }) {
+                    let richLogo = richList[index].logoPath.lowercased()
+                    let shouldPreferTMDBLogo = richLogo.isEmpty || richLogo.contains(".svg")
+                    if shouldPreferTMDBLogo && !provider.logoPath.isEmpty {
+                        let existing = richList[index]
+                        richList[index] = Provider(
+                            providerId: existing.providerId,
+                            providerName: existing.providerName,
+                            logoPath: provider.logoPath,
+                            displayPriority: existing.displayPriority,
+                            price: existing.price,
+                            quality: existing.quality,
+                            presentationType: existing.presentationType,
+                            externalLink: existing.externalLink
+                        )
+                    }
+                } else {
+                    richList.append(provider)
+                }
+            }
+            return richList
+        }
+        
+        merged.flatrate = mergeList(rich.flatrate, basic.flatrate)
+        merged.rent = mergeList(rich.rent, basic.rent)
+        merged.buy = mergeList(rich.buy, basic.buy)
+        merged.link = rich.link ?? basic.link
+        
+        return merged
+    }
+    
+    private func providerNamesMatch(_ name1: String, _ name2: String) -> Bool {
+        let n1 = normalize(name1)
+        let n2 = normalize(name2)
+        return n1 == n2 || n1.contains(n2) || n2.contains(n1)
+    }
+    
+    private func normalize(_ name: String) -> String {
+        return name.lowercased()
+            .replacingOccurrences(of: " ", with: "")
+            .replacingOccurrences(of: "+", with: "plus")
+            .replacingOccurrences(of: "-", with: "")
+            .replacingOccurrences(of: "tv", with: "")
+    }
+
+    private func isValid(_ provider: Provider) -> Bool {
+        guard !provider.logoPath.isEmpty else { return false }
+        let lowerLogo = provider.logoPath.lowercased()
+        if lowerLogo.contains(".svg") { return false }
+        if lowerLogo.contains("logo-white") { return false }
+        return true
+    }
+
+    private func hasValidProviders(_ providers: CountryProviders) -> Bool {
+        let hasFlatrate = providers.flatrate?.contains(where: isValid) == true
+        let hasRent = providers.rent?.contains(where: isValid) == true
+        let hasBuy = providers.buy?.contains(where: isValid) == true
+        return hasFlatrate || hasRent || hasBuy
+    }
+
+    private func loadTMDBProvidersFallback() async {
+        do {
+            if item.mediaType == .movie {
+                let providers = try await tmdbService.getMovieWatchProviders(id: item.mediaId)
+                if let countryProviders = providers.results[LocalizationManager.shared.currentCountry.id] {
+                    // We need to construct a CountryProviders object or just use it directly if types match.
+                    // TMDBService returns WatchProvider.results which is [String: CountryProviders]
+                    processProviders(countryProviders)
+                }
+            } else {
+                let providers = try await tmdbService.getTVShowWatchProviders(id: item.mediaId)
+                if let countryProviders = providers.results[LocalizationManager.shared.currentCountry.id] {
+                    processProviders(countryProviders)
+                }
+            }
+        } catch {
+            print("❌ Error loading TMDB fallback providers: \(error.localizedDescription)")
+        }
+    }
+    
+    private func processProviders(_ countryProviders: CountryProviders) {
         providerLink = countryProviders.link
         
         // Priority: Flatrate > Rent > Buy
-        if let flatrate = countryProviders.flatrate, !flatrate.isEmpty {
-            topProvider = flatrate.first
-        } else if let rent = countryProviders.rent, !rent.isEmpty {
-            topProvider = rent.first
-        } else if let buy = countryProviders.buy, !buy.isEmpty {
-            topProvider = buy.first
+        if let flatrate = countryProviders.flatrate, let valid = flatrate.first(where: isValid) {
+            topProvider = valid
+        } else if let rent = countryProviders.rent, let valid = rent.first(where: isValid) {
+            topProvider = valid
+        } else if let buy = countryProviders.buy, let valid = buy.first(where: isValid) {
+            topProvider = valid
         }
     }
 }

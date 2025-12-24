@@ -363,6 +363,12 @@ extension MainTabView {
                         await ClipQuotaService.shared.checkIsProUser()
                     }
                 }
+
+                if newPhase == .background || newPhase == .inactive {
+                    Task {
+                        try? await PostHogClient.shared.flush()
+                    }
+                }
             }
     }
 }

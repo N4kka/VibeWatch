@@ -77,16 +77,15 @@ struct MovieDetailView: View {
                             onWhyTap: { handleWhyForMeTap() }
                         )
                         
-                        if viewModel.watchProviders != nil {
-                            WatchNowSection(
-                                providers: viewModel.watchProviders,
-                                mediaType: .movie,
-                                title: movie.title,
-                                year: movie.year,
-                                imdbId: viewModel.imdbId,
-                                onReportIssue: { showReportBug = true }
-                            )
-                        }
+                        WatchNowSection(
+                            providers: viewModel.watchProviders,
+                            mediaType: .movie,
+                            title: movie.title,
+                            year: movie.year,
+                            imdbId: viewModel.imdbId,
+                            movie: movie,
+                            onReportIssue: { showReportBug = true }
+                        )
                         
                         if let trailer = viewModel.trailer {
                             TrailerSection(trailer: trailer)
@@ -571,13 +570,61 @@ struct ActionButton: View {
     }
 }
 
+struct TrailerSection: View {
+    let trailer: Video
+    @State private var isPlaying = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("movieDetail.trailer".localized)
+                .font(.system(size: 20, weight: .bold))
+                .foregroundColor(.theme.textPrimary)
+            
+            ZStack {
+                if !isPlaying {
+                    Button {
+                        isPlaying = true
+                    } label: {
+                        CachedAsyncImage(url: trailer.thumbnailURL)
+                            .aspectRatio(contentMode: .fill)
+                            .frame(height: 200)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .overlay {
+                                Image(systemName: "play.circle.fill")
+                                    .font(.system(size: 60))
+                                    .foregroundColor(.white)
+                                    .shadow(radius: 10)
+                            }
+                    }
+                } else {
+                    YouTubePlayerView(videoId: trailer.key)
+                        .frame(height: 200)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+            }
+            .frame(height: 200)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 20)
+    }
+}
+
 struct WatchNowSection: View {
     let providers: CountryProviders?
     let mediaType: MediaType
     let title: String
     let year: String?
     let imdbId: String?
+    let movie: Movie?
     var onReportIssue: () -> Void = {}
+    
+    @StateObject private var listManager = ListManager.shared
+    @State private var showNotifyMeAlert = false
+
+    private var hasAnyProvider: Bool {
+        guard let p = providers else { return false }
+        return (p.flatrate?.isEmpty == false) || (p.rent?.isEmpty == false) || (p.buy?.isEmpty == false)
+    }
 
     private var justWatchURL: URL? {
         if let linkString = providers?.link, let url = URL(string: linkString) {
@@ -595,20 +642,67 @@ struct WatchNowSection: View {
                 .font(.system(size: 20, weight: .bold))
                 .foregroundColor(.theme.textPrimary)
             
-            if let flatrate = providers?.flatrate, !flatrate.isEmpty {
-                ProviderGroup(title: "platforms.streaming".localized, providers: flatrate, justWatchLink: providers?.link, mediaTitle: title)
-            }
-            
-            if let rent = providers?.rent, !rent.isEmpty {
-                ProviderGroup(title: "platforms.rent".localized, providers: rent, justWatchLink: providers?.link, mediaTitle: title)
-            }
-            
-            if let buy = providers?.buy, !buy.isEmpty {
-                ProviderGroup(title: "platforms.buy".localized, providers: buy, justWatchLink: providers?.link, mediaTitle: title)
-            }
+            if hasAnyProvider {
+                if let flatrate = providers?.flatrate, !flatrate.isEmpty {
+                    ProviderGroup(title: "platforms.streaming".localized, providers: flatrate, justWatchLink: providers?.link, mediaTitle: title)
+                }
+                
+                if let rent = providers?.rent, !rent.isEmpty {
+                    ProviderGroup(title: "platforms.rent".localized, providers: rent, justWatchLink: providers?.link, mediaTitle: title)
+                }
+                
+                if let buy = providers?.buy, !buy.isEmpty {
+                    ProviderGroup(title: "platforms.buy".localized, providers: buy, justWatchLink: providers?.link, mediaTitle: title)
+                }
 
-            if let url = justWatchURL {
-                CinemaJustWatchGroup(title: "platforms.cinema".localized, url: url)
+                if let url = justWatchURL {
+                    CinemaJustWatchGroup(title: "platforms.cinema".localized, url: url)
+                }
+            } else {
+                HStack(spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.theme.accentOrange.opacity(0.15))
+                            .frame(width: 40, height: 40)
+                        
+                        Image(systemName: "bell.badge.fill")
+                            .font(.system(size: 18))
+                            .foregroundColor(.theme.accentOrange)
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Unluckily \(title) isn't currently available.")
+                            .font(.system(size: 14))
+                            .foregroundColor(.theme.textSecondary)
+                        
+                        Text("Would you like to be notified?")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(.white)
+                    }
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    Button {
+                        handleNotifyMe()
+                    } label: {
+                        Text("Notify Me")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(Color.theme.accentOrange)
+                            .clipShape(Capsule())
+                    }
+                }
+                .padding(16)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.white.opacity(0.05))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                        )
+                )
             }
             
             Button {
@@ -626,6 +720,22 @@ struct WatchNowSection: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 20)
+        .alert("Notify Me", isPresented: $showNotifyMeAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("We'll send you a notification as soon as '\(title)' is available for streaming, rent, or buy.")
+        }
+    }
+    
+    private func handleNotifyMe() {
+        showNotifyMeAlert = true
+        if let movie = movie {
+            Task {
+                if !listManager.isInList(listId: listManager.watchlist.id, mediaId: movie.id, mediaType: mediaType) {
+                    try? await listManager.addToList(listId: listManager.watchlist.id, movie: movie, mediaType: mediaType)
+                }
+            }
+        }
     }
 }
 
@@ -740,45 +850,6 @@ struct ProviderGroup: View {
                 }
             }
         }
-    }
-}
-
-struct TrailerSection: View {
-    let trailer: Video
-    @State private var isPlaying = false
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("movieDetail.trailer".localized)
-                .font(.system(size: 20, weight: .bold))
-                .foregroundColor(.theme.textPrimary)
-            
-            ZStack {
-                if !isPlaying {
-                    Button {
-                        isPlaying = true
-                    } label: {
-                        CachedAsyncImage(url: trailer.thumbnailURL)
-                            .aspectRatio(contentMode: .fill)
-                            .frame(height: 200)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                            .overlay {
-                                Image(systemName: "play.circle.fill")
-                                    .font(.system(size: 60))
-                                    .foregroundColor(.white)
-                                    .shadow(radius: 10)
-                            }
-                    }
-                } else {
-                    YouTubePlayerView(videoId: trailer.key)
-                        .frame(height: 200)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-            }
-            .frame(height: 200)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 20)
     }
 }
 
