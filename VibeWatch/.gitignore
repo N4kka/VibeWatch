@@ -6,6 +6,7 @@
 
 # Local AI/tooling configs
 .claude/
+.worktrees/
 
 # Supabase local state/secrets
 supabase/.env
