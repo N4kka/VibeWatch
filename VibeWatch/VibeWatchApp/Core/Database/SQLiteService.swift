@@ -149,6 +149,7 @@ final class SQLiteService: ObservableObject {
             createListsTable(),
             createListItemsTable(),
             createUserClipHistoryTable(),
+            createUserClipSignalsTable(),
             createUserPreferencesTable(),
             createUserDailyQuotaTable(),
             createUserAITokenUsageTable(),
@@ -161,7 +162,12 @@ final class SQLiteService: ObservableObject {
             createMovieReactionCountsTable(),
             createClipReactionsTable(),
             createClipCommentsTable(),
-            createClipCommentLikesTable()
+            createClipCommentLikesTable(),
+            // Gamification tables
+            createUserGamificationTable(),
+            createUserBadgesTable(),
+            createUserDailyChallengesTable(),
+            createXPTransactionsTable()
         ]
         
         for table in tables {
@@ -972,6 +978,27 @@ extension SQLiteService {
         CREATE INDEX IF NOT EXISTS idx_clip_history_watched_at ON user_clip_history(watched_at DESC);
         """
     }
+
+    private func createUserClipSignalsTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS user_clip_signals (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          device_id TEXT NOT NULL,
+          clip_id TEXT NOT NULL,
+          signal_type TEXT NOT NULL,
+          signal_value REAL,
+          source TEXT,
+          position INTEGER,
+          session_id TEXT,
+          occurred_at TEXT DEFAULT (datetime('now')),
+          synced_at TEXT,
+          FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_clip_signals_user_id ON user_clip_signals(user_id);
+        CREATE INDEX IF NOT EXISTS idx_clip_signals_clip_id ON user_clip_signals(clip_id);
+        """
+    }
     
     private func createUserPreferencesTable() -> String {
         """
@@ -1184,6 +1211,88 @@ extension SQLiteService {
         );
         CREATE INDEX IF NOT EXISTS idx_clip_comment_likes_comment ON clip_comment_likes(comment_id);
         CREATE INDEX IF NOT EXISTS idx_clip_comment_likes_user ON clip_comment_likes(user_id);
+        """
+    }
+
+    // MARK: - Gamification Tables
+
+    private func createUserGamificationTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS user_gamification (
+          user_id TEXT PRIMARY KEY,
+          total_xp INTEGER DEFAULT 0,
+          current_level INTEGER DEFAULT 1,
+          current_streak INTEGER DEFAULT 0,
+          longest_streak INTEGER DEFAULT 0,
+          last_activity_date TEXT,
+          streak_freezes_remaining INTEGER DEFAULT 0,
+          streak_freezes_used_this_week INTEGER DEFAULT 0,
+          week_start_date TEXT,
+          updated_at TEXT DEFAULT (datetime('now')),
+          synced_at TEXT,
+          FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
+        );
+        """
+    }
+
+    private func createUserBadgesTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS user_badges (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          badge_id TEXT NOT NULL,
+          progress INTEGER DEFAULT 0,
+          target INTEGER NOT NULL,
+          unlocked_at TEXT,
+          updated_at TEXT DEFAULT (datetime('now')),
+          synced_at TEXT,
+          UNIQUE(user_id, badge_id),
+          FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_user_badges_user ON user_badges(user_id);
+        CREATE INDEX IF NOT EXISTS idx_user_badges_unlocked ON user_badges(unlocked_at);
+        """
+    }
+
+    private func createUserDailyChallengesTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS user_daily_challenges (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          challenge_date TEXT NOT NULL,
+          challenge_type TEXT NOT NULL,
+          challenge_description TEXT,
+          target INTEGER NOT NULL,
+          progress INTEGER DEFAULT 0,
+          completed_at TEXT,
+          xp_reward INTEGER DEFAULT 0,
+          updated_at TEXT DEFAULT (datetime('now')),
+          synced_at TEXT,
+          UNIQUE(user_id, challenge_date),
+          FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_daily_challenges_user ON user_daily_challenges(user_id);
+        CREATE INDEX IF NOT EXISTS idx_daily_challenges_date ON user_daily_challenges(challenge_date);
+        """
+    }
+
+    private func createXPTransactionsTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS xp_transactions (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          action_type TEXT NOT NULL,
+          base_xp INTEGER NOT NULL,
+          multiplier REAL DEFAULT 1.0,
+          streak_bonus REAL DEFAULT 0.0,
+          total_xp INTEGER NOT NULL,
+          source TEXT,
+          created_at TEXT DEFAULT (datetime('now')),
+          FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_xp_transactions_user ON xp_transactions(user_id);
+        CREATE INDEX IF NOT EXISTS idx_xp_transactions_created ON xp_transactions(created_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_xp_transactions_action ON xp_transactions(action_type);
         """
     }
 }

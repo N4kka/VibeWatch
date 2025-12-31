@@ -114,7 +114,13 @@ class MovieReactionService: ObservableObject {
     // MARK: - Toggle Reaction
     
     /// Toggle like/dislike for a movie/TV show
-    func toggleReaction(mediaId: Int, mediaType: MediaType, reaction: ReactionType, userId: String) async throws {
+    func toggleReaction(
+        mediaId: Int,
+        mediaType: MediaType,
+        reaction: ReactionType,
+        userId: String,
+        context: AnalyticsContext? = nil
+    ) async throws {
         // Get current reaction
         let currentReaction = try await getUserReaction(mediaId: mediaId, mediaType: mediaType, userId: userId)
         
@@ -131,13 +137,14 @@ class MovieReactionService: ObservableObject {
         countsCache.removeValue(forKey: cacheKey)
         
         // Analytics
-        AnalyticsService.shared.logEvent(
+        AnalyticsService.shared.logEventWithContext(
             currentReaction == reaction ? "reaction_removed" : "reaction_added",
             parameters: [
                 "media_id": mediaId,
                 "media_type": mediaType.rawValue,
                 "reaction_type": reaction.rawValue
-            ]
+            ],
+            context: context
         )
     }
     

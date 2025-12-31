@@ -526,17 +526,24 @@ struct ListsView: View {
 
 struct MediaItemRow: View {
     let item: MediaListItem
-    let isInSeenList: Bool
+    let isInSeenList: Bool // From parent context (which list we're viewing)
     let onMarkAsSeen: () -> Void
     let onDelete: () -> Void
-    
-    @StateObject private var listManager = ListManager.shared
-    @State private var movieDetails: Movie?
-    @State private var tvShowDetails: TVShow?
+
+    @ObservedObject private var listManager = ListManager.shared
+
+    // Computed property to check if item is actually in seen list
+    private var isActuallyInSeenList: Bool {
+        listManager.isInList(
+            listId: listManager.seenList.id,
+            mediaId: item.mediaId,
+            mediaType: item.mediaType
+        )
+    }
     @State private var topProvider: Provider?
     @State private var providerLink: String?
     @State private var navigateToDetail = false
-    @State private var isLoadingDetails = false
+    @State private var isLoadingProviders = false
     @State private var showNotifyMeAlert = false
     @State private var offset: CGFloat = 0
     @State private var isSwiping = false
@@ -609,59 +616,34 @@ struct MediaItemRow: View {
                         .foregroundColor(.theme.textPrimary)
                         .lineLimit(2)
                     
-                    // Metadata
-                    if let movieDetails = movieDetails {
-                        HStack(spacing: 8) {
-                            if let year = movieDetails.year {
-                                Text(year)
-                                    .font(.system(size: 13))
-                                    .foregroundColor(.theme.textSecondary)
-                            }
-                            
-                            if movieDetails.voteAverage > 0 {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "star.fill")
-                                        .font(.system(size: 10))
-                                        .foregroundColor(.yellow)
-                                    Text(String(format: "%.1f", movieDetails.voteAverage))
-                                        .font(.system(size: 13, weight: .medium))
-                                        .foregroundColor(.theme.textPrimary)
-                                }
-                            }
-                            
-                            if let runtime = movieDetails.formattedRuntime {
-                                Text("| \(runtime)")
-                                    .font(.system(size: 13))
-                                    .foregroundColor(.theme.textSecondary)
+                    // Metadata - use cached item data directly for fast display
+                    HStack(spacing: 8) {
+                        if let releaseDate = item.releaseDate, releaseDate.count >= 4 {
+                            Text(String(releaseDate.prefix(4)))
+                                .font(.system(size: 13))
+                                .foregroundColor(.theme.textSecondary)
+                        }
+
+                        if let voteAverage = item.voteAverage, voteAverage > 0 {
+                            HStack(spacing: 4) {
+                                Image(systemName: "star.fill")
+                                    .font(.system(size: 10))
+                                    .foregroundColor(.yellow)
+                                Text(String(format: "%.1f", voteAverage))
+                                    .font(.system(size: 13, weight: .medium))
+                                    .foregroundColor(.theme.textPrimary)
                             }
                         }
-                        
-                        Text(movieDetails.overview)
-                            .font(.system(size: 13))
-                            .foregroundColor(.theme.textSecondary)
-                            .lineLimit(3)
-                            .padding(.top, 4)
-                    } else if let tvShowDetails = tvShowDetails {
-                        HStack(spacing: 8) {
-                            if let year = tvShowDetails.year {
-                                Text(year)
-                                    .font(.system(size: 13))
-                                    .foregroundColor(.theme.textSecondary)
-                            }
-                            
-                            if tvShowDetails.voteAverage > 0 {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "star.fill")
-                                        .font(.system(size: 10))
-                                        .foregroundColor(.yellow)
-                                    Text(String(format: "%.1f", tvShowDetails.voteAverage))
-                                        .font(.system(size: 13, weight: .medium))
-                                        .foregroundColor(.theme.textPrimary)
-                                }
-                            }
+
+                        if item.mediaType == .movie, let runtime = item.runtime, runtime > 0 {
+                            Text("| \(runtime / 60)h \(runtime % 60)m")
+                                .font(.system(size: 13))
+                                .foregroundColor(.theme.textSecondary)
                         }
-                        
-                        Text(tvShowDetails.overview)
+                    }
+
+                    if let overview = item.overview, !overview.isEmpty {
+                        Text(overview)
                             .font(.system(size: 13))
                             .foregroundColor(.theme.textSecondary)
                             .lineLimit(3)
@@ -685,7 +667,7 @@ struct MediaItemRow: View {
                                     .background(Color.white)
                                     .clipShape(RoundedRectangle(cornerRadius: 4))
                                 
-                                Text("WATCH ON \(provider.providerName.uppercased())")
+                                Text(String(format: "lists.watchOn".localized, provider.providerName.uppercased()))
                                     .font(.system(size: 12, weight: .bold))
                                     .lineLimit(1)
                             }
@@ -701,7 +683,7 @@ struct MediaItemRow: View {
                             handleNotifyMe()
                         } label: {
                             HStack(spacing: 4) {
-                                Text("NOTIFY ME")
+                                Text("lists.notifyMe".localized)
                                     .font(.system(size: 12, weight: .bold))
                                 Text("🔔")
                                     .font(.system(size: 12))
@@ -718,11 +700,14 @@ struct MediaItemRow: View {
                 // Checkmark button - top right
                 VStack {
                     Button {
-                        if isInSeenList {
-                            // Remove from seen list
-                            if let currentList = listManager.lists.first(where: { $0.type == .seen }) {
-                                Task {
-                                    try? await listManager.removeFromList(listId: currentList.id, itemId: item.id)
+                        if isActuallyInSeenList {
+                            // Remove from seen list - find the correct item ID in seen list
+                            Task {
+                                if let seenItem = listManager.seenList.items.first(where: { $0.mediaId == item.mediaId && $0.mediaType == item.mediaType }) {
+                                    try? await listManager.removeFromList(
+                                        listId: listManager.seenList.id,
+                                        itemId: seenItem.id
+                                    )
                                 }
                             }
                         } else {
@@ -731,15 +716,15 @@ struct MediaItemRow: View {
                     } label: {
                         ZStack {
                             Circle()
-                                .fill(isInSeenList ? Color.green.opacity(0.2) : Color.white.opacity(0.2))
+                                .fill(isActuallyInSeenList ? Color.green.opacity(0.2) : Color.white.opacity(0.2))
                                 .frame(width: 36, height: 36)
-                            
-                            Image(systemName: isInSeenList ? "checkmark.circle.fill" : "checkmark")
-                                .font(.system(size: isInSeenList ? 20 : 16, weight: .semibold))
-                                .foregroundColor(isInSeenList ? .green : .theme.textSecondary)
+
+                            Image(systemName: isActuallyInSeenList ? "checkmark.circle.fill" : "checkmark")
+                                .font(.system(size: isActuallyInSeenList ? 20 : 16, weight: .semibold))
+                                .foregroundColor(isActuallyInSeenList ? .green : .theme.textSecondary)
                         }
                     }
-                    
+
                     Spacer()
                 }
             }
@@ -808,12 +793,12 @@ struct MediaItemRow: View {
             destinationView
         }
         .task {
-            await loadDetails()
+            await loadProviders()
         }
-        .alert("Notify Me", isPresented: $showNotifyMeAlert) {
-            Button("OK", role: .cancel) { }
+        .alert("lists.notifyMeTitle".localized, isPresented: $showNotifyMeAlert) {
+            Button("common.ok".localized, role: .cancel) { }
         } message: {
-            Text("We'll send you a notification as soon as '\(item.title)' is available for streaming, rent, or buy.")
+            Text(String(format: "lists.notifyMeMessage".localized, item.title))
         }
     }
     
@@ -857,50 +842,38 @@ struct MediaItemRow: View {
         }
     }
     
-    private func loadDetails() async {
-        guard !isLoadingDetails else { return }
-        isLoadingDetails = true
-        
+    /// Load only streaming providers (description/metadata comes from cached item data)
+    private func loadProviders() async {
+        guard !isLoadingProviders else { return }
+        isLoadingProviders = true
+
+        let countryCode = LocalizationManager.shared.currentCountry.id
+
         do {
+            // Fetch providers in parallel
+            async let providersTask = StreamingAvailabilityService.shared.getProviders(tmdbId: item.mediaId, type: item.mediaType, region: countryCode)
+
+            let tmdbProvidersData: WatchProvider
             if item.mediaType == .movie {
-                async let details = tmdbService.getMovieDetails(id: item.mediaId)
-                let countryCode = LocalizationManager.shared.currentCountry.id
-                async let providers = StreamingAvailabilityService.shared.getProviders(tmdbId: item.mediaId, type: .movie, region: countryCode)
-                async let tmdbProvidersTask = tmdbService.getMovieWatchProviders(id: item.mediaId)
-                
-                let (movie, watchProviders, tmdbProvidersData) = try await (details, providers, tmdbProvidersTask)
-                movieDetails = movie
-                
-                var finalProviders = watchProviders
-                if let tmdb = tmdbProvidersData.results[countryCode] {
-                    finalProviders = mergeProviders(rich: watchProviders, basic: tmdb)
-                }
-                
-                // Always try to process, even if RapidAPI was empty (merge might have added TMDB ones)
-                processProviders(finalProviders)
-                
+                tmdbProvidersData = try await tmdbService.getMovieWatchProviders(id: item.mediaId)
             } else {
-                async let details = tmdbService.getTVShowDetails(id: item.mediaId)
-                let countryCode = LocalizationManager.shared.currentCountry.id
-                async let providers = StreamingAvailabilityService.shared.getProviders(tmdbId: item.mediaId, type: .tv, region: countryCode)
-                async let tmdbProvidersTask = tmdbService.getTVShowWatchProviders(id: item.mediaId)
-                
-                let (show, watchProviders, tmdbProvidersData) = try await (details, providers, tmdbProvidersTask)
-                tvShowDetails = show
-                
-                var finalProviders = watchProviders
-                if let tmdb = tmdbProvidersData.results[countryCode] {
-                    finalProviders = mergeProviders(rich: watchProviders, basic: tmdb)
-                }
-                
-                processProviders(finalProviders)
+                tmdbProvidersData = try await tmdbService.getTVShowWatchProviders(id: item.mediaId)
             }
+
+            let watchProviders = try await providersTask
+
+            var finalProviders = watchProviders
+            if let tmdb = tmdbProvidersData.results[countryCode] {
+                finalProviders = mergeProviders(rich: watchProviders, basic: tmdb)
+            }
+
+            processProviders(finalProviders)
         } catch {
-            print("❌ Error loading details: \(error.localizedDescription)")
+            print("❌ Error loading providers: \(error.localizedDescription)")
             await loadTMDBProvidersFallback()
         }
-        
-        isLoadingDetails = false
+
+        isLoadingProviders = false
     }
     
     private func mergeProviders(rich: CountryProviders, basic: CountryProviders) -> CountryProviders {

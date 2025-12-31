@@ -15,13 +15,11 @@ class AnalyticsService {
         let parameters: [String: Any]?
         let timestamp: Date
     }
-    
+
     private var isEnabled: Bool
     private var userId: String?
     private var events: [(name: String, parameters: [String: Any]?, timestamp: Date)] = []
     private let installId: String
-    private var pendingUserProperties: [String: String] = [:]
-    private var pendingUnsetUserProperties: Set<String> = []
 
     private enum DefaultsKeys {
         static let isEnabled = "analytics.isEnabled"
@@ -37,14 +35,17 @@ class AnalyticsService {
         }
         self.isEnabled = UserDefaults.standard.bool(forKey: DefaultsKeys.isEnabled)
 
-        print("📊 [Analytics] Service initialized (enabled=\(isEnabled))")
+        Logger.info("[Analytics] Service initialized (enabled=\(isEnabled))")
+
+        // Log diagnostics on startup to help debug production issues
+        logDiagnostics()
     }
     
     /// Set user ID for analytics
     func setUserId(_ userId: String?) {
         let previousUserId = self.userId
         self.userId = userId
-        
+
         #if canImport(FirebaseAnalytics)
         Analytics.setUserID(userId)
         #endif
@@ -53,19 +54,23 @@ class AnalyticsService {
             let lastIdentified = UserDefaults.standard.string(forKey: DefaultsKeys.lastIdentifiedUserId)
             if lastIdentified != userId {
                 UserDefaults.standard.set(userId, forKey: DefaultsKeys.lastIdentifiedUserId)
+                Logger.info("[Analytics] Identifying user in PostHog: \(userId) (anonymous: \(installId))")
                 Task.detached {
                     await PostHogClient.shared.identify(
                         newDistinctId: userId,
                         anonymousDistinctId: InstallIDService.getOrCreateInstallId()
                     )
+                    Logger.info("[Analytics] User identification event sent to PostHog")
                 }
+            } else {
+                Logger.info("[Analytics] User \(userId) already identified, skipping PostHog identify call")
             }
         }
-        
+
         if let userId = userId {
-            print("📊 [Analytics] User ID set: \(userId)")
+            Logger.info("[Analytics] User ID set: \(userId)")
         } else {
-            print("📊 [Analytics] User ID cleared")
+            Logger.info("[Analytics] User ID cleared (anonymous mode)")
         }
     }
     
@@ -74,14 +79,6 @@ class AnalyticsService {
         #if canImport(FirebaseAnalytics)
         Analytics.setUserProperty(value, forName: name)
         #endif
-
-        if let value {
-            pendingUserProperties[name] = value
-            pendingUnsetUserProperties.remove(name)
-        } else {
-            pendingUserProperties.removeValue(forKey: name)
-            pendingUnsetUserProperties.insert(name)
-        }
         
         print("📊 [Analytics] User property set: \(name) = \(value ?? "nil")")
     }
@@ -96,11 +93,6 @@ class AnalyticsService {
         #endif
         
         print("📊 [Analytics] \(enabled ? "Enabled" : "Disabled")")
-    }
-
-    func recentEvents(limit: Int = 50) -> [EventSnapshot] {
-        let slice = events.suffix(limit)
-        return slice.map { EventSnapshot(name: $0.name, parameters: $0.parameters, timestamp: $0.timestamp) }
     }
 
     // MARK: - Event Tracking
@@ -148,7 +140,6 @@ class AnalyticsService {
     
     /// User created account
     func logAccountCreated(method: String) {
-        setUserProperty(method, forName: "signup_method")
         #if canImport(FirebaseAnalytics)
         logEvent(AnalyticsEventSignUp, parameters: [
             AnalyticsParameterMethod: method // "email", "apple", "google"
@@ -158,6 +149,9 @@ class AnalyticsService {
             "method": method
         ])
         #endif
+        
+        // Set user property
+        setUserProperty(method, forName: "signup_method")
     }
     
     /// User signed in
@@ -177,12 +171,13 @@ class AnalyticsService {
     
     /// Trial started
     func logTrialStarted(productId: String, price: Double, currency: String = "EUR") {
-        setUserProperty("true", forName: "has_trial")
         logEvent("trial_started", parameters: [
             "product_id": productId,
             "price": price,
             "currency": currency
         ])
+        
+        setUserProperty("true", forName: "has_trial")
     }
     
     /// Subscription purchased
@@ -192,11 +187,6 @@ class AnalyticsService {
         currency: String = "EUR",
         isFoundingMember: Bool
     ) {
-        setUserProperty("pro", forName: "subscription_tier")
-        if isFoundingMember {
-            setUserProperty("true", forName: "is_founding_member")
-        }
-
         #if canImport(FirebaseAnalytics)
         logEvent(AnalyticsEventPurchase, parameters: [
             "product_id": productId,
@@ -212,17 +202,22 @@ class AnalyticsService {
             "is_founding_member": isFoundingMember
         ])
         #endif
+        
+        setUserProperty("pro", forName: "subscription_tier")
+        if isFoundingMember {
+            setUserProperty("true", forName: "is_founding_member")
+        }
     }
     
     /// Subscription canceled
     func logSubscriptionCanceled(productId: String, reason: String? = nil) {
-        setUserProperty("canceled", forName: "subscription_tier")
         var params: [String: Any] = ["product_id": productId]
         if let reason = reason {
             params["reason"] = reason
         }
         
         logEvent("subscription_canceled", parameters: params)
+        setUserProperty("canceled", forName: "subscription_tier")
     }
     
     /// Subscription renewed
@@ -258,6 +253,51 @@ class AnalyticsService {
             "media_id": mediaId,
             "watched_duration": watchedDuration
         ])
+    }
+
+    /// Clip impression
+    func logClipImpression(clip: Clip, context: AnalyticsContext? = nil) {
+        var params: [String: Any] = [
+            "clip_id": clip.id,
+            "video_id": clip.videoId,
+            "duration_seconds": clip.duration,
+            "media_type": clip.inferredMediaType.rawValue,
+            "is_segment": clip.isSegment
+        ]
+
+        if let mediaId = clip.movieId ?? clip.tvShowId {
+            params["media_id"] = mediaId
+        }
+
+        if let originalClipId = clip.originalClipId {
+            params["original_clip_id"] = originalClipId
+        }
+
+        if let segmentIndex = clip.segmentIndex {
+            params["segment_index"] = segmentIndex
+        }
+
+        logEventWithContext("clip_impression", parameters: params, context: context)
+    }
+
+    /// Clip completion metrics
+    func logClipCompletion(clip: Clip, watchedSeconds: Double, context: AnalyticsContext? = nil) {
+        let totalSeconds = Double(max(clip.duration, 0))
+        let completionRatio = AnalyticsContext.completionRatio(watched: watchedSeconds, total: totalSeconds)
+        var params: [String: Any] = [
+            "clip_id": clip.id,
+            "video_id": clip.videoId,
+            "media_type": clip.inferredMediaType.rawValue,
+            "watched_seconds": watchedSeconds,
+            "total_seconds": totalSeconds,
+            "completion_ratio": completionRatio
+        ]
+
+        if let mediaId = clip.movieId ?? clip.tvShowId {
+            params["media_id"] = mediaId
+        }
+
+        logEventWithContext("clip_completion", parameters: params, context: context)
     }
     
     /// Movie/show viewed
@@ -295,11 +335,19 @@ class AnalyticsService {
     }
     
     /// Item added to list
-    func logItemAddedToList(listType: String, mediaType: String) {
-        logEvent("add_to_wishlist", parameters: [
-            "list_type": listType,
-            "media_type": mediaType
-        ])
+    func logItemAddedToList(
+        listType: String,
+        mediaType: String,
+        context: AnalyticsContext? = nil
+    ) {
+        logEventWithContext(
+            "add_to_wishlist",
+            parameters: [
+                "list_type": listType,
+                "media_type": mediaType
+            ],
+            context: context
+        )
     }
     
     /// Item removed from list
@@ -339,11 +387,46 @@ class AnalyticsService {
     // MARK: - Feature Usage
     
     /// Filter applied
-    func logFilterApplied(filterType: String, value: String) {
-        logEvent("filter_applied", parameters: [
+    func logFilterApplied(
+        filterType: String,
+        value: String,
+        context: AnalyticsContext? = nil,
+        extra: [String: Any]? = nil
+    ) {
+        var params: [String: Any] = [
             "filter_type": filterType, // "genre", "country", "duration", etc.
             "value": value
-        ])
+        ]
+
+        if let extra {
+            for (key, value) in extra {
+                params[key] = value
+            }
+        }
+
+        logEventWithContext("filter_applied", parameters: params, context: context)
+    }
+
+    func logSearchResultSelected(
+        query: String,
+        mediaId: Int,
+        mediaType: String,
+        position: Int,
+        resultCount: Int?,
+        context: AnalyticsContext? = nil
+    ) {
+        var params: [String: Any] = [
+            "query": query,
+            "media_id": mediaId,
+            "media_type": mediaType,
+            "position": position
+        ]
+
+        if let resultCount {
+            params["result_count"] = resultCount
+        }
+
+        logEventWithContext("search_result_selected", parameters: params, context: context)
     }
     
     /// Platform selected
@@ -355,11 +438,12 @@ class AnalyticsService {
     
     /// Language changed
     func logLanguageChanged(from: String, to: String) {
-        setUserProperty(to, forName: "preferred_language")
         logEvent("language_changed", parameters: [
             "from": from,
             "to": to
         ])
+        
+        setUserProperty(to, forName: "preferred_language")
     }
     
     // MARK: - Onboarding
@@ -371,8 +455,8 @@ class AnalyticsService {
     
     /// Onboarding completed
     func logOnboardingCompleted() {
-        setUserProperty("true", forName: "onboarding_completed")
         logEvent("onboarding_completed", parameters: nil)
+        setUserProperty("true", forName: "onboarding_completed")
     }
     
     /// Onboarding skipped
@@ -394,13 +478,120 @@ class AnalyticsService {
     }
     
     // MARK: - Screen Tracking
-    
+
     /// Track screen view
     func logScreenView(screenName: String, screenClass: String? = nil) {
         logEvent("screen_view", parameters: [
             "screen_name": screenName,
             "screen_class": screenClass ?? screenName
         ])
+    }
+
+    // MARK: - Social & Engagement Events
+
+    /// Content shared
+    func logShareContent(mediaId: Int, mediaType: String, shareDestination: String) {
+        logEvent("share_content", parameters: [
+            "media_id": mediaId,
+            "media_type": mediaType,
+            "share_destination": shareDestination
+        ])
+    }
+
+    /// Comment posted
+    func logCommentPosted(clipId: String, mediaId: Int?, isReply: Bool) {
+        var params: [String: Any] = [
+            "clip_id": clipId,
+            "is_reply": isReply
+        ]
+        if let mediaId = mediaId {
+            params["media_id"] = mediaId
+        }
+        logEvent("comment_posted", parameters: params)
+    }
+
+    /// Clip liked/unliked
+    func logClipReaction(clipId: String, mediaId: Int?, reactionType: String, added: Bool) {
+        var params: [String: Any] = [
+            "clip_id": clipId,
+            "reaction_type": reactionType,
+            "added": added
+        ]
+        if let mediaId = mediaId {
+            params["media_id"] = mediaId
+        }
+        logEvent("clip_reaction", parameters: params)
+    }
+
+    // MARK: - Gamification Events
+
+    /// XP earned event
+    func logXPEarned(actionType: String, baseXP: Int, multiplier: Double, streakBonus: Double, totalXP: Int) {
+        logEvent("xp_earned", parameters: [
+            "action_type": actionType,
+            "base_xp": baseXP,
+            "multiplier": multiplier,
+            "streak_bonus": streakBonus,
+            "total_xp": totalXP
+        ])
+    }
+
+    /// Level up event
+    func logLevelUp(oldLevel: Int, newLevel: Int, rankName: String) {
+        logEvent("level_up", parameters: [
+            "old_level": oldLevel,
+            "new_level": newLevel,
+            "rank_name": rankName
+        ])
+    }
+
+    /// Badge unlocked
+    func logBadgeUnlocked(badgeId: String, badgeName: String, category: String) {
+        logEvent("badge_unlocked", parameters: [
+            "badge_id": badgeId,
+            "badge_name": badgeName,
+            "category": category
+        ])
+    }
+
+    /// Streak milestone
+    func logStreakMilestone(streakDays: Int, bonusPercentage: Int) {
+        logEvent("streak_milestone", parameters: [
+            "streak_days": streakDays,
+            "bonus_percentage": bonusPercentage
+        ])
+    }
+
+    /// Daily challenge completed
+    func logDailyChallengeCompleted(challengeType: String, xpReward: Int) {
+        logEvent("daily_challenge_completed", parameters: [
+            "challenge_type": challengeType,
+            "xp_reward": xpReward
+        ])
+    }
+
+    // MARK: - Diagnostics
+
+    /// Log analytics status for debugging production issues
+    func logDiagnostics() {
+        Logger.info("[Analytics] Status check:")
+        Logger.info("[Analytics]   - Enabled: \(isEnabled)")
+        Logger.info("[Analytics]   - User ID: \(userId ?? "anonymous")")
+        Logger.info("[Analytics]   - Install ID: \(installId)")
+        Logger.info("[Analytics]   - PostHog API Key present: \(!Config.posthogApiKey.isEmpty)")
+        Logger.info("[Analytics]   - PostHog Host: \(Config.posthogHost.isEmpty ? "MISSING" : Config.posthogHost)")
+
+        Task {
+            let diagnostics = await PostHogClient.shared.diagnostics()
+            await MainActor.run {
+                Logger.info("[Analytics]   - PostHog queue count: \(diagnostics.queueCount)")
+                Logger.info("[Analytics]   - PostHog is flushing: \(diagnostics.isFlushing)")
+                Logger.info("[Analytics]   - PostHog flush attempts: \(diagnostics.flushAttemptCount)")
+                if let lastError = diagnostics.lastFlushErrorDescription {
+                    Logger.error("[Analytics]   - PostHog last error: \(lastError)")
+                }
+            }
+        }
     }
 
     // MARK: - Internal Helpers
@@ -419,19 +610,36 @@ class AnalyticsService {
         print("📊 [Analytics] Event: \(name) \(parameters != nil ? "with params" : "")")
     }
 
+    func logEventWithContext(
+        _ name: String,
+        parameters: [String: Any]?,
+        context: AnalyticsContext?
+    ) {
+        logEvent(name, parameters: mergedParameters(parameters, context: context))
+    }
+
+    private func mergedParameters(
+        _ parameters: [String: Any]?,
+        context: AnalyticsContext?
+    ) -> [String: Any]? {
+        guard let context else { return parameters }
+        var merged = parameters ?? [:]
+        for (key, value) in context.properties() {
+            merged[key] = value
+        }
+        return merged.isEmpty ? nil : merged
+    }
+
     private func captureToPostHog(name: String, parameters: [String: Any]?) async {
         let distinctId = userId ?? installId
-        var eventParameters = parameters ?? [:]
-        if !pendingUnsetUserProperties.isEmpty {
-            eventParameters["$unset"] = Array(pendingUnsetUserProperties)
-        }
         await PostHogClient.shared.capture(
             event: name,
             distinctId: distinctId,
-            userProperties: pendingUserProperties.isEmpty ? nil : pendingUserProperties,
-            properties: eventParameters.isEmpty ? nil : eventParameters
+            properties: parameters
         )
-        pendingUserProperties.removeAll()
-        pendingUnsetUserProperties.removeAll()
+    }
+
+    func recentEvents(limit: Int) -> [EventSnapshot] {
+        events.suffix(limit).map { EventSnapshot(name: $0.name, parameters: $0.parameters, timestamp: $0.timestamp) }
     }
 }

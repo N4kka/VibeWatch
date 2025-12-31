@@ -322,9 +322,20 @@ class SyncManager: ObservableObject {
             try await syncClipHistory(payload: payloadDict)
         case "user_discovery_interactions",
              "user_search_history",
+             "user_clip_signals",
              "ai_conversation_history",
              "global_discovery_filters",
-             "device_info":
+             "device_info",
+             "notification_subscriptions":
+            try await syncGenericRecord(tableName: tableName, operationType: operationType, recordId: recordId, payload: payloadDict)
+        // Gamification tables
+        case "user_gamification":
+            try await syncGamificationState(operationType: operationType, recordId: recordId, payload: payloadDict)
+        case "xp_transactions":
+            try await syncGenericRecord(tableName: tableName, operationType: operationType, recordId: recordId, payload: payloadDict)
+        case "user_badges":
+            try await syncGenericRecord(tableName: tableName, operationType: operationType, recordId: recordId, payload: payloadDict)
+        case "user_daily_challenges":
             try await syncGenericRecord(tableName: tableName, operationType: operationType, recordId: recordId, payload: payloadDict)
         default:
             Logger.warning("[SyncManager] Unknown table for sync: \(tableName)")
@@ -414,6 +425,20 @@ class SyncManager: ObservableObject {
         ]
 
         try await supabaseClient.applyMutations([mutation])
+    }
+
+    /// Sync gamification state with user_id as the conflict key
+    private func syncGamificationState(
+        operationType: String,
+        recordId: String,
+        payload: [String: Any]
+    ) async throws {
+        // user_gamification uses user_id as the unique key
+        try await supabaseClient.upsertRow(
+            table: "user_gamification",
+            onConflict: "user_id",
+            record: payload
+        )
     }
 
     private func syncGenericRecord(

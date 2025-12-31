@@ -5,6 +5,8 @@ import YouTubeiOSPlayerHelper
 @MainActor
 struct ClipsView: View {
     @StateObject private var viewModel = ClipsViewModel()
+    @StateObject private var gamificationService = GamificationService.shared
+    @StateObject private var interstitialAdManager = InterstitialAdManager.shared
     @EnvironmentObject var quotaManager: DailyQuotaManager
     @State private var showDailyPaywall = false
     @State private var showAccountGate = false
@@ -22,6 +24,8 @@ struct ClipsView: View {
     @State private var isAuroraAnimating = false
     @State private var isGlyphPulsing = false
     @State private var isProgressSweeping = false
+    @State private var feedSessionId = UUID().uuidString
+    @State private var seenClipIds: Set<String> = []
 
     var body: some View {
         // Main content - Clips
@@ -119,6 +123,11 @@ struct ClipsView: View {
         .onChange(of: viewModel.currentIndex) { oldValue, newValue in
             // Check quota when user scrolls to next clip
             checkQuotaLimit(for: newValue)
+
+            // Track clip for interstitial ads (free users only)
+            if newValue > oldValue {
+                interstitialAdManager.recordClipWatched(isProUser: quotaManager.isProUser)
+            }
         }
         .onChange(of: appState.isAuthenticated) { oldValue, newValue in
             guard newValue, newValue != oldValue else { return }
@@ -137,6 +146,7 @@ struct ClipsView: View {
             searchTray
         }
         .background(searchNavigationLink)
+        .xpToast(gamificationService: gamificationService)
         .onChange(of: isSearchTrayVisible) { _, newValue in
             if newValue {
                 NotificationCenter.default.post(name: .pauseAllClips, object: nil)
@@ -151,6 +161,8 @@ struct ClipsView: View {
 
     // MARK: - Lifecycle Handlers
     private func handleViewAppearance() async {
+        feedSessionId = UUID().uuidString
+        seenClipIds.removeAll()
         await viewModel.loadClips()
         AnalyticsService.shared.logScreenView(screenName: "Clips", screenClass: "ClipsView")
     }
@@ -334,12 +346,12 @@ struct ClipsView: View {
 
     private var chipsRow: some View {
         let chips = [
-            "Quotes",
-            "Characters",
-            "Scenes",
-            "Popular"
+            "clips.search.quotes".localized,
+            "clips.search.characters".localized,
+            "clips.search.scenes".localized,
+            "clips.search.popular".localized
         ]
-        
+
         return ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 10) {
                 ForEach(chips, id: \.self) { chip in
@@ -402,15 +414,28 @@ struct ClipsView: View {
                     LazyVStack(spacing: 0) {
                         ForEach(Array(viewModel.clips.enumerated()), id: \.offset) { index, clip in
                             GeometryReader { innerGeometry in
+                                let context = AnalyticsContext(
+                                    source: "clips_feed",
+                                    position: index,
+                                    sessionId: feedSessionId
+                                )
                                 ClipPlayerView(
                                     clip: clip,
                                     isCurrentClip: viewModel.currentIndex == index,
                                     onBecomeVisible: {
                                         viewModel.currentIndex = index
+                                        if !seenClipIds.contains(clip.id) {
+                                            seenClipIds.insert(clip.id)
+                                            AnalyticsService.shared.logClipImpression(
+                                                clip: clip,
+                                                context: context
+                                            )
+                                        }
                                     },
                                     onLikeToggle: { isLiked in
                                         viewModel.toggleLike(for: clip.id, isLiked: isLiked)
-                                    }
+                                    },
+                                    analyticsContext: context
                                 )
                             }
                             .frame(width: outerGeometry.size.width, height: outerGeometry.size.height)
@@ -602,7 +627,7 @@ struct ClipsView: View {
                 .font(.system(size: 60))
                 .foregroundColor(.orange)
 
-            Text(error.errorDescription ?? "Oops!")
+            Text(error.errorDescription ?? "error.oops".localized)
                 .font(.system(size: 24, weight: .bold))
                 .foregroundColor(.white)
 
@@ -636,6 +661,7 @@ struct ClipPlayerView: View {
     let isCurrentClip: Bool
     let onBecomeVisible: () -> Void
     let onLikeToggle: (Bool) -> Void
+    let analyticsContext: AnalyticsContext?
     
     @State private var isLiked: Bool
     @State private var likeCount: Int
@@ -652,11 +678,18 @@ struct ClipPlayerView: View {
     @State private var watchStartTime: Date?
     @State private var accumulatedWatchTime: TimeInterval = 0
     
-    init(clip: Clip, isCurrentClip: Bool, onBecomeVisible: @escaping () -> Void, onLikeToggle: @escaping (Bool) -> Void) {
+    init(
+        clip: Clip,
+        isCurrentClip: Bool,
+        onBecomeVisible: @escaping () -> Void,
+        onLikeToggle: @escaping (Bool) -> Void,
+        analyticsContext: AnalyticsContext? = nil
+    ) {
         self.clip = clip
         self.isCurrentClip = isCurrentClip
         self.onBecomeVisible = onBecomeVisible
         self.onLikeToggle = onLikeToggle
+        self.analyticsContext = analyticsContext
         _isLiked = State(initialValue: clip.isLiked)
         _likeCount = State(initialValue: clip.likes)
         _commentCount = State(initialValue: clip.comments)
@@ -751,7 +784,7 @@ struct ClipPlayerView: View {
                 }
             }
             .padding(.trailing, 16)
-            .padding(.bottom, showControls ? 130 : 100)
+            .padding(.bottom, showControls ? 140 : 60)
             .animation(.easeInOut(duration: 0.2), value: showControls)
 
             // Title and description on the left bottom (always visible)
@@ -773,8 +806,9 @@ struct ClipPlayerView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 16)
-            .padding(.bottom, 100)
+            .padding(.bottom, showControls ? 140 : 60)
             .padding(.trailing, 80)
+            .animation(.easeInOut(duration: 0.2), value: showControls)
         }
         .onAppear {
             hasAppeared = true
@@ -791,16 +825,48 @@ struct ClipPlayerView: View {
             // End tracking and save engagement data
             if let startTime = watchStartTime {
                 let watchDuration = Date().timeIntervalSince(startTime) + accumulatedWatchTime
-                // Assuming average clip is 60 seconds (we don't have actual duration yet)
-                engagementTracker.updateWatchTime(clipId: clip.id, duration: watchDuration, totalDuration: 60)
+                let totalDuration = clip.duration > 0 ? TimeInterval(clip.duration) : 60
+                engagementTracker.updateWatchTime(
+                    clipId: clip.id,
+                    duration: watchDuration,
+                    totalDuration: totalDuration
+                )
                 engagementTracker.endWatchingClip(clipId: clip.id, genres: [], actors: [])
+                AnalyticsService.shared.logClipCompletion(
+                    clip: clip,
+                    watchedSeconds: watchDuration,
+                    context: analyticsContext
+                )
+                let completionRatio = AnalyticsContext.completionRatio(
+                    watched: watchDuration,
+                    total: totalDuration
+                )
+                Task {
+                    await SupabaseService.shared.logClipSignal(
+                        clipId: clip.id,
+                        signalType: "completion",
+                        signalValue: completionRatio,
+                        context: analyticsContext
+                    )
+
+                    // Award gamification XP for clip completion
+                    if let userId = await AuthService.shared.currentUser?.id {
+                        let isPro = await ClipQuotaService.shared.checkIsProUser()
+                        await GamificationService.shared.recordClipWatch(
+                            userId: userId,
+                            clipId: clip.id,
+                            completionRate: completionRatio,
+                            isPro: isPro
+                        )
+                    }
+                }
             }
             
             watchStartTime = nil
             accumulatedWatchTime = 0
         }
         .sheet(isPresented: $showComments) {
-            CommentsView(clipId: clip.id) { newCount in
+            CommentsView(clipId: clip.id, analyticsContext: analyticsContext) { newCount in
                 commentCount = newCount
             }
                 .presentationDetents([.medium, .large])
@@ -808,9 +874,11 @@ struct ClipPlayerView: View {
         }
         .sheet(isPresented: $showAddToList) {
             AddToListView(
+                clipId: clip.id,
                 movieId: clip.movieId,
                 tvShowId: clip.tvShowId, 
-                mediaType: clip.movieId != nil ? .movie : .tv
+                mediaType: clip.movieId != nil ? .movie : .tv,
+                analyticsContext: analyticsContext
             )
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.hidden)
@@ -996,6 +1064,7 @@ struct ClipActionButton: View {
 
 struct CommentsView: View {
     let clipId: String
+    let analyticsContext: AnalyticsContext?
     let onCountsChange: ((Int) -> Void)?
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var appState: AppState
@@ -1007,6 +1076,7 @@ struct CommentsView: View {
                 CommentsListView(
                     clipId: clipId,
                     userId: appState.currentUser?.id ?? "guest",
+                    analyticsContext: analyticsContext,
                     onCountsChange: onCountsChange
                 )
             }
@@ -1280,14 +1350,24 @@ struct AddToListView: View {
     @StateObject private var listManager = ListManager.shared
     @StateObject private var listsViewModel = ListsViewModel()
     @State private var showCreateList = false
+    let clipId: String?
     let movieId: Int?
     let tvShowId: Int?
     let mediaType: MediaType
+    let analyticsContext: AnalyticsContext?
     
-    init(movieId: Int? = nil, tvShowId: Int? = nil, mediaType: MediaType = .movie) {
+    init(
+        clipId: String? = nil,
+        movieId: Int? = nil,
+        tvShowId: Int? = nil,
+        mediaType: MediaType = .movie,
+        analyticsContext: AnalyticsContext? = nil
+    ) {
+        self.clipId = clipId
         self.movieId = movieId
         self.tvShowId = tvShowId
         self.mediaType = mediaType
+        self.analyticsContext = analyticsContext
     }
     
     private var availableLists: [MediaList] {
@@ -1416,7 +1496,12 @@ struct AddToListView: View {
                 do {
                     if mediaType == .movie, let movieId = movieId {
                         let movieDetails = try await TMDBService.shared.getMovieDetails(id: movieId)
-                        try? await listManager.addToList(listId: list.id, movie: movieDetails, mediaType: .movie)
+                        try? await listManager.addToList(
+                            listId: list.id,
+                            movie: movieDetails,
+                            mediaType: .movie,
+                            analyticsContext: analyticsContext
+                        )
                     } else if mediaType == .tv, let tvShowId = tvShowId {
                         let tvDetails = try await TMDBService.shared.getTVShowDetails(id: tvShowId)
                         let movie = Movie(
@@ -1439,7 +1524,21 @@ struct AddToListView: View {
                             productionCountries: nil,
                             imdbId: nil
                         )
-                        try? await listManager.addToList(listId: list.id, movie: movie, mediaType: .tv)
+                        try? await listManager.addToList(
+                            listId: list.id,
+                            movie: movie,
+                            mediaType: .tv,
+                            analyticsContext: analyticsContext
+                        )
+                    }
+
+                    if let clipId {
+                        await SupabaseService.shared.logClipSignal(
+                            clipId: clipId,
+                            signalType: "add_to_list",
+                            signalValue: 1,
+                            context: analyticsContext
+                        )
                     }
                     
                     dismiss()

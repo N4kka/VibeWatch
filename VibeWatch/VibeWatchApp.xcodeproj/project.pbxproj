@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		B318DCEE2EC6939A00DB1A9A /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = B318DCED2EC6939A00DB1A9A /* Auth */; };
+		B31D2C442EFFA4020091F030 /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = B31D2C432EFFA4020091F030 /* GoogleMobileAds */; };
 		B32F71142ED399B5001779C5 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = B32F71132ED399B5001779C5 /* RevenueCat */; };
 		B32F71162ED399B5001779C5 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = B32F71152ED399B5001779C5 /* RevenueCatUI */; };
 		B3DF8FA82ED5CEC3007FD5D0 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = B3DF8FA72ED5CEC3007FD5D0 /* FirebaseCore */; };
@@ -66,6 +67,7 @@
 				B32F71142ED399B5001779C5 /* RevenueCat in Frameworks */,
 				B3E30E122ECCB7AA008A3B6C /* PostgREST in Frameworks */,
 				B3DF8FAA2ED5CEC3007FD5D0 /* FirebaseMessaging in Frameworks */,
+				B31D2C442EFFA4020091F030 /* GoogleMobileAds in Frameworks */,
 				B318DCEE2EC6939A00DB1A9A /* Auth in Frameworks */,
 				B32F71162ED399B5001779C5 /* RevenueCatUI in Frameworks */,
 				B3DF8FA82ED5CEC3007FD5D0 /* FirebaseCore in Frameworks */,
@@ -174,6 +176,7 @@
 				B3DF8FA72ED5CEC3007FD5D0 /* FirebaseCore */,
 				B3DF8FA92ED5CEC3007FD5D0 /* FirebaseMessaging */,
 				B3F2F7E32F14A10000D1A003 /* YouTubeiOSPlayerHelper */,
+				B31D2C432EFFA4020091F030 /* GoogleMobileAds */,
 			);
 			productName = VibeWatchApp;
 			productReference = B318DC8A2EC6920500DB1A9A /* VibeWatchApp.app */;
@@ -230,6 +233,7 @@
 				B32F71122ED399B5001779C5 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
 				B3DC12CA2ED5CB0400B5A429 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 				B3F2F7E22F14A10000D1A002 /* XCRemoteSwiftPackageReference "youtube-ios-player-helper" */,
+				B31D2C422EFFA4020091F030 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = B318DC8B2EC6920500DB1A9A /* Products */;
@@ -574,6 +578,14 @@
 				minimumVersion = 2.5.1;
 			};
 		};
+		B31D2C422EFFA4020091F030 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/googleads/swift-package-manager-google-mobile-ads";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.14.0;
+			};
+		};
 		B32F71122ED399B5001779C5 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm.git";
@@ -605,6 +617,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = B318DCEC2EC6939A00DB1A9A /* XCRemoteSwiftPackageReference "supabase-swift" */;
 			productName = Auth;
+		};
+		B31D2C432EFFA4020091F030 /* GoogleMobileAds */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B31D2C422EFFA4020091F030 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */;
+			productName = GoogleMobileAds;
 		};
 		B32F71132ED399B5001779C5 /* RevenueCat */ = {
 			isa = XCSwiftPackageProductDependency;

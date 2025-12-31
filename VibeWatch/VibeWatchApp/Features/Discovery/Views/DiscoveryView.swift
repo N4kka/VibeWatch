@@ -2,6 +2,7 @@ import SwiftUI
 
 struct DiscoveryView: View {
     @StateObject private var viewModel = DiscoveryViewModel()
+    @StateObject private var gamificationService = GamificationService.shared
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var quotaManager: DailyQuotaManager
     @ObservedObject var localizationManager = LocalizationManager.shared
@@ -14,7 +15,8 @@ struct DiscoveryView: View {
     @State private var moodCarouselIndex = 0
     @State private var lastTappedMovieId: Int? = nil
     @State private var hasRestoredScroll = false
-    
+    @State private var filterSessionId = UUID().uuidString
+
     var body: some View {
         ZStack {
             if viewModel.isLoading && viewModel.hasNoContent {
@@ -24,14 +26,37 @@ struct DiscoveryView: View {
             } else {
                 discoveryMainView
             }
+
+            // Floating XP Badge (gamification)
+            if gamificationService.isLoaded {
+                FloatingXPBadgeView(gamificationService: gamificationService)
+            }
         }
         .background(Color.theme.background.ignoresSafeArea())
         .task {
             await viewModel.loadContentIfNeeded()
-            
+
+            // Load gamification state
+            if let userId = appState.currentUser?.id {
+                await gamificationService.loadUserState(userId: userId)
+
+                // Only award and show XP if this is first launch of day
+                let isPro = quotaManager.isProUser
+                let today = Calendar.current.startOfDay(for: Date())
+                let lastActivity = gamificationService.userState.lastActivityDate
+
+                let isFirstLaunchOfDay = lastActivity == nil ||
+                    Calendar.current.startOfDay(for: lastActivity!) < today
+
+                if isFirstLaunchOfDay {
+                    _ = await gamificationService.awardXP(userId: userId, action: .dailyOpen, isPro: isPro)
+                }
+                // If not first launch, don't call awardXP at all - no toast will show
+            }
+
             // Analytics: Track screen view
             AnalyticsService.shared.logScreenView(screenName: "Discovery", screenClass: "DiscoveryView")
-            
+
             // Debug: Print reaction counts
             await SQLiteService.shared.debugPrintReactionCounts()
         }
@@ -54,12 +79,25 @@ struct DiscoveryView: View {
                     isPresented: $showFilters
                 ) { filters in
                     viewModel.applyFilters(filters)
+                    AnalyticsService.shared.logFilterApplied(
+                        filterType: "global",
+                        value: filters.isActive ? "active" : "cleared",
+                        context: AnalyticsContext(
+                            source: "discovery_filters",
+                            sessionId: filterSessionId
+                        ),
+                        extra: [
+                            "filter_active": filters.isActive,
+                            "active_filter_count": filters.activeFilterCount
+                        ]
+                    )
                 }
                 .transition(.opacity)
             }
         }
         .toast(isShowing: $appState.showSuccessToast, message: appState.toastMessage, type: .success)
         .toast(isShowing: $appState.showErrorToast, message: appState.toastMessage, type: .error)
+        .xpToast(gamificationService: gamificationService)
         .onChange(of: appState.shouldShowSignIn) {_, newValue in
             if newValue {
                 print("🔄 [DiscoveryView] Redirecting to Sign In via Profile")
@@ -75,7 +113,7 @@ struct DiscoveryView: View {
                 .font(.system(size: 60))
                 .foregroundColor(.orange)
 
-            Text(error.errorDescription ?? "Oops!")
+            Text(error.errorDescription ?? "error.oops".localized)
                 .font(.system(size: 24, weight: .bold))
                 .foregroundColor(.white)
 
@@ -111,7 +149,10 @@ struct DiscoveryView: View {
                     VStack(spacing: 32) {
                         DiscoveryHeaderView(
                         onSearchTap: { showSearch = true },
-                        onFilterTap: { showFilters = true },
+                        onFilterTap: {
+                            filterSessionId = UUID().uuidString
+                            showFilters = true
+                        },
                         onProfileTap: { showProfile = true },
                         avatarURL: appState.currentUser?.avatarURL,
                         isProUser: quotaManager.isProUser,
@@ -192,7 +233,7 @@ struct DiscoveryView: View {
         let hasTarget = viewModel.personalizedCarousels.contains(where: { $0.type.rawValue == position })
         guard hasTarget else { return }
 
-        proxy.scrollTo(position, anchor: .center)
+        proxy.scrollTo(position, anchor: .top)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
             hasRestoredScroll = true
         }

@@ -3,12 +3,12 @@ import Foundation
 actor PostHogClient {
     static let shared = PostHogClient()
 
-    struct Diagnostics: Sendable {
+    struct Diagnostics {
         let queueCount: Int
         let isFlushing: Bool
+        let flushAttemptCount: Int
         let lastFlushErrorDescription: String?
         let lastFlushErrorAt: Date?
-        let flushAttemptCount: Int
     }
 
     private struct Envelope: Codable {
@@ -37,6 +37,27 @@ actor PostHogClient {
 
     private init() {
         queue = loadQueue()
+        logInitializationStatus()
+    }
+
+    /// Log PostHog configuration status on startup for production debugging
+    private func logInitializationStatus() {
+        let apiKey = Config.posthogApiKey
+        let host = Config.posthogHost
+
+        Logger.info("[PostHogClient] Initialized - API Key present: \(!apiKey.isEmpty), Host: \(host.isEmpty ? "MISSING" : host)")
+
+        if apiKey.isEmpty {
+            Logger.error("[PostHogClient] POSTHOG_API_KEY is missing! Analytics will not be sent.")
+        }
+
+        if host.isEmpty {
+            Logger.error("[PostHogClient] POSTHOG_HOST is missing! Analytics will not be sent.")
+        }
+
+        if !apiKey.isEmpty && !host.isEmpty {
+            Logger.info("[PostHogClient] Configuration valid - ready to capture events")
+        }
     }
 
     func capture(
@@ -80,6 +101,27 @@ actor PostHogClient {
             properties: [
                 "$anon_distinct_id": anonymousDistinctId
             ]
+        )
+    }
+
+    func diagnostics() -> Diagnostics {
+        var errorDescription: String?
+        if let error = lastFlushError {
+            switch error {
+            case .notConfigured:
+                errorDescription = "Not configured"
+            case .invalidHost:
+                errorDescription = "Invalid host"
+            case .http(let statusCode, let body):
+                errorDescription = "HTTP \(statusCode): \(body)"
+            }
+        }
+        return Diagnostics(
+            queueCount: queue.count,
+            isFlushing: isFlushing,
+            flushAttemptCount: flushAttemptCount,
+            lastFlushErrorDescription: errorDescription,
+            lastFlushErrorAt: lastFlushErrorAt
         )
     }
 
@@ -132,16 +174,6 @@ actor PostHogClient {
 
         lastFlushError = nil
         lastFlushErrorAt = nil
-    }
-
-    func diagnostics() -> Diagnostics {
-        Diagnostics(
-            queueCount: queue.count,
-            isFlushing: isFlushing,
-            lastFlushErrorDescription: lastFlushError.map { String(describing: $0) },
-            lastFlushErrorAt: lastFlushErrorAt,
-            flushAttemptCount: flushAttemptCount
-        )
     }
 
     // MARK: - Private
@@ -233,130 +265,5 @@ enum PostHogValue: Codable {
             return
         }
         self = .string(String(describing: any))
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case string
-        case number
-        case bool
-        case object
-        case array
-        case null
-    }
-
-    private enum LegacyValueKey: String, CodingKey {
-        case _0
-    }
-
-    init(from decoder: Decoder) throws {
-        let singleValue = try? decoder.singleValueContainer()
-
-        if let container = singleValue {
-            if container.decodeNil() {
-                self = .null
-                return
-            }
-            if let value = try? container.decode(Bool.self) {
-                self = .bool(value)
-                return
-            }
-            if let value = try? container.decode(Double.self) {
-                self = .number(value)
-                return
-            }
-            if let value = try? container.decode(String.self) {
-                self = .string(value)
-                return
-            }
-            if let value = try? container.decode([String: PostHogValue].self) {
-                self = .object(value)
-                return
-            }
-            if let value = try? container.decode([PostHogValue].self) {
-                self = .array(value)
-                return
-            }
-        }
-
-        let keyed = try? decoder.container(keyedBy: CodingKeys.self)
-        if let keyed, keyed.contains(.string) {
-            if let value = try? keyed.decode(String.self, forKey: .string) {
-                self = .string(value)
-                return
-            }
-            if let legacy = try? keyed.nestedContainer(keyedBy: LegacyValueKey.self, forKey: .string),
-               let value = try? legacy.decode(String.self, forKey: ._0) {
-                self = .string(value)
-                return
-            }
-        }
-        if let keyed, keyed.contains(.number) {
-            if let value = try? keyed.decode(Double.self, forKey: .number) {
-                self = .number(value)
-                return
-            }
-            if let legacy = try? keyed.nestedContainer(keyedBy: LegacyValueKey.self, forKey: .number),
-               let value = try? legacy.decode(Double.self, forKey: ._0) {
-                self = .number(value)
-                return
-            }
-        }
-        if let keyed, keyed.contains(.bool) {
-            if let value = try? keyed.decode(Bool.self, forKey: .bool) {
-                self = .bool(value)
-                return
-            }
-            if let legacy = try? keyed.nestedContainer(keyedBy: LegacyValueKey.self, forKey: .bool),
-               let value = try? legacy.decode(Bool.self, forKey: ._0) {
-                self = .bool(value)
-                return
-            }
-        }
-        if let keyed, keyed.contains(.object) {
-            if let value = try? keyed.decode([String: PostHogValue].self, forKey: .object) {
-                self = .object(value)
-                return
-            }
-            if let legacy = try? keyed.nestedContainer(keyedBy: LegacyValueKey.self, forKey: .object),
-               let value = try? legacy.decode([String: PostHogValue].self, forKey: ._0) {
-                self = .object(value)
-                return
-            }
-        }
-        if let keyed, keyed.contains(.array) {
-            if let value = try? keyed.decode([PostHogValue].self, forKey: .array) {
-                self = .array(value)
-                return
-            }
-            if let legacy = try? keyed.nestedContainer(keyedBy: LegacyValueKey.self, forKey: .array),
-               let value = try? legacy.decode([PostHogValue].self, forKey: ._0) {
-                self = .array(value)
-                return
-            }
-        }
-        if let keyed, keyed.contains(.null) {
-            self = .null
-            return
-        }
-
-        self = .null
-    }
-
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.singleValueContainer()
-        switch self {
-        case .string(let value):
-            try container.encode(value)
-        case .number(let value):
-            try container.encode(value)
-        case .bool(let value):
-            try container.encode(value)
-        case .object(let value):
-            try container.encode(value)
-        case .array(let value):
-            try container.encode(value)
-        case .null:
-            try container.encodeNil()
-        }
     }
 }

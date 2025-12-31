@@ -4,6 +4,7 @@ import FirebaseCore
 import FirebaseMessaging
 import UserNotifications
 import BackgroundTasks
+import GoogleMobileAds
 
 class AppDelegate: NSObject, UIApplicationDelegate, @MainActor UNUserNotificationCenterDelegate, @MainActor MessagingDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
@@ -17,6 +18,9 @@ class AppDelegate: NSObject, UIApplicationDelegate, @MainActor UNUserNotificatio
 
         // Initialize Firebase
         FirebaseApp.configure() // Call FirebaseApp.configure() here
+
+        // Initialize Google Mobile Ads SDK
+        MobileAds.shared.start(completionHandler: nil)
         
         // Initialize LocalizationManager early to ensure translations are loaded before UI
         _ = LocalizationManager.shared

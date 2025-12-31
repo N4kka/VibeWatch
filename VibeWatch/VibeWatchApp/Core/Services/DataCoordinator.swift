@@ -27,7 +27,16 @@ class DataCoordinator: ObservableObject {
     
     // Services
     private let tmdbService = TMDBService.shared
-    
+
+    // Shared URLSession for YouTube API calls (connection pooling, reduced overhead)
+    private lazy var youtubeSession: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 5   // Fast timeout for responsive UI
+        config.timeoutIntervalForResource = 10
+        config.waitsForConnectivity = false    // Fail fast instead of waiting
+        return URLSession(configuration: config)
+    }()
+
     // Track what's been fetched
     private var discoveryFetched = false
     private var usedMovieIds = Set<Int>()
@@ -38,25 +47,28 @@ class DataCoordinator: ObservableObject {
     private init() {}
     
     // MARK: - App Launch (Parallel Tasks)
-    
+
     /// Called on splash screen - runs discovery + initial clips in parallel, additional in background
     func initializeApp() async {
         print("🚀 [DataCoordinator] Starting app initialization...")
         let startTime = Date()
 
-        // Run discovery + initial clips in parallel with timeout protection
+        // Add 5-second timeout for critical path
         await withTaskGroup(of: Void.self) { group in
-            // Discovery task
             group.addTask {
-                await self.fetchDiscoveryContent()
+                // Discovery with timeout
+                await self.withTimeout(seconds: 5) {
+                    await self.fetchDiscoveryContent()
+                }
             }
 
-            // Initial clips task
             group.addTask {
-                await self.fetchInitialClips()
+                // Initial clips with timeout
+                await self.withTimeout(seconds: 5) {
+                    await self.fetchInitialClips()
+                }
             }
 
-            // Wait for both tasks to complete
             await group.waitForAll()
         }
 
@@ -69,42 +81,228 @@ class DataCoordinator: ObservableObject {
         initialClipsReady = true
 
         // Fetch additional clips in background (don't wait)
-        Task.detached(priority: .background) {
+        // Use Task instead of Task.detached to inherit @MainActor context
+        Task(priority: .background) {
             await self.fetchAdditionalClips()
+        }
+    }
+
+    // MARK: - Timeout Helper
+
+    // DESIGN NOTE: When timeout expires, we call group.cancelAll() but the operation
+    // continues running in background. This is intentional - we want the cache to
+    // populate even if the UI moves on. The timeout only unblocks the UI thread,
+    // it doesn't abort the underlying network/database work.
+
+    /// Execute an operation with a timeout - returns nil if timeout expires
+    private func withTimeout<T>(seconds: Double, operation: @escaping () async -> T?) async -> T? {
+        await withTaskGroup(of: T?.self) { group in
+            group.addTask {
+                await operation()
+            }
+            group.addTask {
+                try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+                return nil
+            }
+
+            if let result = await group.next() {
+                group.cancelAll()
+                return result
+            }
+            return nil
+        }
+    }
+
+    /// Execute a void operation with a timeout
+    private func withTimeout(seconds: Double, operation: @escaping () async -> Void) async {
+        await withTaskGroup(of: Bool.self) { group in
+            group.addTask {
+                await operation()
+                return true
+            }
+            group.addTask {
+                try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+                return false
+            }
+
+            // Wait for first to complete
+            if let completed = await group.next() {
+                group.cancelAll()
+                if !completed {
+                    print("⚠️ [DataCoordinator] Operation timed out after \(seconds)s")
+                }
+            }
         }
     }
     
     // MARK: - Discovery Content (Database Cache)
-    
-    /// Fetch all discovery content - uses database cache, refreshes if needed
+
+    /// Fetch all discovery content - prioritizes cache for INSTANT loading
+    /// Strategy: Display cached content IMMEDIATELY, refresh in background only
     private func fetchDiscoveryContent() async {
-        print("📺 [DataCoordinator] Checking discovery cache...")
-        
+        print("[DataCoordinator] Starting discovery content fetch")
+
         let discoveryCache = DiscoveryCacheService.shared
-        
+
+        // STEP 1: Load cached content IMMEDIATELY (no network wait)
         do {
-            // Check if cache needs refresh
-            if await discoveryCache.needsRefresh() {
-                print("🔄 [DataCoordinator] Cache expired, refreshing from TMDB...")
-                try await discoveryCache.refreshContent()
+            let cachedContent = try await discoveryCache.getDiscoveryContent()
+
+            // Validate cache has actual content
+            let hasContent = !cachedContent.trending.isEmpty ||
+                             !cachedContent.popular.isEmpty ||
+                             !cachedContent.topRated.isEmpty ||
+                             !cachedContent.tv.isEmpty
+
+            if hasContent {
+                // Set content immediately - user sees data NOW
+                self.trendingMovies = cachedContent.trending
+                self.popularMovies = cachedContent.popular
+                self.topRatedMovies = cachedContent.topRated
+                self.trendingTVShows = cachedContent.tv
+                discoveryFetched = true
+                print("[DataCoordinator] Loaded \(cachedContent.trending.count) trending movies from cache INSTANTLY")
+
+                // Prefetch images for cached content in background (don't block UI)
+                Task(priority: .background) {
+                    await self.prefetchDiscoveryImages(
+                        trendingMovies: cachedContent.trending,
+                        topRatedMovies: cachedContent.topRated,
+                        popularMovies: cachedContent.popular,
+                        trendingTVShows: cachedContent.tv
+                    )
+                }
+
+                // Check if cache needs refresh (in background, don't block UI)
+                if await discoveryCache.needsRefresh() {
+                    Task(priority: .background) {
+                        await self.refreshDiscoveryContentInBackground()
+                    }
+                }
+                return
             }
-            
-            // Get from cache (either DB or fresh)
+        } catch {
+            print("[DataCoordinator] Cache retrieval failed: \(error.localizedDescription)")
+        }
+
+        // STEP 2: No valid cache - fetch from network (first launch scenario)
+        print("[DataCoordinator] No cache available, fetching from network")
+        await fetchDiscoveryFromNetwork()
+    }
+
+    // MARK: - Background Discovery Refresh
+
+    /// Refreshes discovery content in background without blocking UI
+    private func refreshDiscoveryContentInBackground() async {
+        print("[DataCoordinator] Background refresh started")
+
+        let discoveryCache = DiscoveryCacheService.shared
+
+        do {
+            // Refresh content from TMDB
+            try await discoveryCache.refreshContent()
+            let newContent = try await discoveryCache.getDiscoveryContent()
+
+            // Update UI on main actor
+            await MainActor.run {
+                self.trendingMovies = newContent.trending
+                self.popularMovies = newContent.popular
+                self.topRatedMovies = newContent.topRated
+                self.trendingTVShows = newContent.tv
+            }
+
+            // Prefetch new images
+            await prefetchDiscoveryImages(
+                trendingMovies: newContent.trending,
+                topRatedMovies: newContent.topRated,
+                popularMovies: newContent.popular,
+                trendingTVShows: newContent.tv
+            )
+
+            print("[DataCoordinator] Background refresh completed")
+        } catch {
+            print("[DataCoordinator] Background refresh failed: \(error.localizedDescription)")
+        }
+    }
+
+    // MARK: - Network Fetch (First Launch)
+
+    /// Fetches discovery content from network when no cache exists
+    private func fetchDiscoveryFromNetwork() async {
+        let discoveryCache = DiscoveryCacheService.shared
+
+        do {
+            try await discoveryCache.refreshContent()
             let content = try await discoveryCache.getDiscoveryContent()
-            
-            // Store for DataCoordinator's internal use (legacy support)
+
             self.trendingMovies = content.trending
             self.popularMovies = content.popular
             self.topRatedMovies = content.topRated
             self.trendingTVShows = content.tv
-            
+
             discoveryFetched = true
-            
-            print("✅ [DataCoordinator] Discovery content ready from cache")
-            
+            print("[DataCoordinator] Network fetch completed - \(content.trending.count) trending movies")
+
+            // Prefetch images in background
+            Task(priority: .background) {
+                await self.prefetchDiscoveryImages(
+                    trendingMovies: content.trending,
+                    topRatedMovies: content.topRated,
+                    popularMovies: content.popular,
+                    trendingTVShows: content.tv
+                )
+            }
+
         } catch {
-            print("❌ [DataCoordinator] Failed to fetch discovery: \(error)")
+            print("[DataCoordinator] Network fetch failed: \(error.localizedDescription)")
         }
+    }
+
+    // MARK: - Image Prefetching
+
+    /// Prefetches discovery images for offline viewing
+    private func prefetchDiscoveryImages(
+        trendingMovies: [Movie],
+        topRatedMovies: [Movie],
+        popularMovies: [Movie],
+        trendingTVShows: [TVShow]
+    ) async {
+        var urls: [String] = []
+
+        // Collect poster URLs from trending movies (first 20)
+        for movie in trendingMovies.prefix(20) {
+            if let path = movie.posterPath, !path.isEmpty {
+                urls.append("https://image.tmdb.org/t/p/w342\(path)")
+            }
+        }
+
+        // Collect poster URLs from top rated movies (first 20)
+        for movie in topRatedMovies.prefix(20) {
+            if let path = movie.posterPath, !path.isEmpty {
+                urls.append("https://image.tmdb.org/t/p/w342\(path)")
+            }
+        }
+
+        // Collect poster URLs from popular movies (first 20)
+        for movie in popularMovies.prefix(20) {
+            if let path = movie.posterPath, !path.isEmpty {
+                urls.append("https://image.tmdb.org/t/p/w342\(path)")
+            }
+        }
+
+        // Collect poster URLs from trending TV shows (first 20)
+        for show in trendingTVShows.prefix(20) {
+            if let path = show.posterPath, !path.isEmpty {
+                urls.append("https://image.tmdb.org/t/p/w342\(path)")
+            }
+        }
+
+        // Remove duplicates
+        let uniqueUrls = Array(Set(urls))
+
+        // Prefetch all images using ImageCacheService (respects user's WiFi preference)
+        await ImageCacheService.shared.prefetchImages(uniqueUrls, onWiFiOnly: true)
+        print("[DataCoordinator] Prefetched \(uniqueUrls.count) discovery images")
     }
     
     /// Refresh discovery content (e.g., when language changes)
@@ -318,18 +516,11 @@ class DataCoordinator: ObservableObject {
                 return nil
             }
 
-            let urlString = "https://www.googleapis.com/youtube/v3/search?part=snippet&q=\(encodedQuery)&type=video&videoDuration=short&maxResults=1&key=AIzaSyCh_tkrvBEGW6ALRvkAN-LYx1B3Cly1160"
+            let urlString = "https://www.googleapis.com/youtube/v3/search?part=snippet&q=\(encodedQuery)&type=video&videoDuration=short&maxResults=1&key=\(Config.youtubeApiKey)"
 
             guard let url = URL(string: urlString) else { return nil }
 
-            // Create URLSession with timeout
-            let config = URLSessionConfiguration.default
-            config.timeoutIntervalForRequest = 15
-            config.timeoutIntervalForResource = 30
-            config.waitsForConnectivity = true
-            let session = URLSession(configuration: config)
-
-            let (data, response) = try await session.data(from: url)
+            let (data, response) = try await youtubeSession.data(from: url)
 
             // Validate response
             guard let httpResponse = response as? HTTPURLResponse,
@@ -421,18 +612,11 @@ class DataCoordinator: ObservableObject {
                 return nil
             }
 
-            let urlString = "https://www.googleapis.com/youtube/v3/search?part=snippet&q=\(encodedQuery)&type=video&videoDuration=short&maxResults=1&key=AIzaSyCh_tkrvBEGW6ALRvkAN-LYx1B3Cly1160"
+            let urlString = "https://www.googleapis.com/youtube/v3/search?part=snippet&q=\(encodedQuery)&type=video&videoDuration=short&maxResults=1&key=\(Config.youtubeApiKey)"
 
             guard let url = URL(string: urlString) else { return nil }
 
-            // Create URLSession with timeout
-            let config = URLSessionConfiguration.default
-            config.timeoutIntervalForRequest = 15
-            config.timeoutIntervalForResource = 30
-            config.waitsForConnectivity = true
-            let session = URLSession(configuration: config)
-
-            let (data, response) = try await session.data(from: url)
+            let (data, response) = try await youtubeSession.data(from: url)
 
             // Validate response
             guard let httpResponse = response as? HTTPURLResponse,

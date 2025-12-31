@@ -30,6 +30,24 @@ enum AppConstants {
         /// Set to true while developing to force Pro mode (skips entitlement check)
         static let forceProUser = false
     }
+
+    /// Google AdMob configuration
+    enum AdMob {
+        #if DEBUG
+        /// Google's test banner ad unit ID for development
+        static let bannerAdUnitID = "ca-app-pub-3940256099942544/2435281174"
+        /// Google's test interstitial ad unit ID for development
+        static let interstitialAdUnitID = "ca-app-pub-3940256099942544/4411468910"
+        #else
+        /// Production banner ad unit ID
+        static let bannerAdUnitID = "ca-app-pub-7584278391945422/4228606699"
+        /// Production interstitial ad unit ID
+        static let interstitialAdUnitID = "ca-app-pub-7584278391945422/4313201322"
+        #endif
+
+        /// Show interstitial ad every N clips for free users
+        static let clipsPerInterstitial = 5
+    }
     
     /// RevenueCat subscription and entitlement identifiers
     enum RevenueCat {

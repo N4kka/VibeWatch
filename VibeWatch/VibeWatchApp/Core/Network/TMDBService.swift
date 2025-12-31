@@ -46,6 +46,7 @@ protocol TMDBServiceProtocol: Sendable {
     func getTVShowExternalIds(id: Int) async throws -> ExternalIds
     func getPersonDetails(id: Int) async throws -> PersonDetails
     func getPersonCombinedCredits(id: Int) async throws -> PersonCombinedCredits
+    func searchPerson(query: String) async throws -> [PersonSearchResult]
 }
 
 actor TMDBService: TMDBServiceProtocol {
@@ -81,9 +82,9 @@ actor TMDBService: TMDBServiceProtocol {
         cache = URLCache(memoryCapacity: 50_000_000, diskCapacity: 100_000_000)
         config.urlCache = cache
         config.requestCachePolicy = .useProtocolCachePolicy
-        config.timeoutIntervalForRequest = 20
-        config.timeoutIntervalForResource = 40
-        config.waitsForConnectivity = true
+        config.timeoutIntervalForRequest = 5   // Reduced from 20s for faster failure
+        config.timeoutIntervalForResource = 10 // Reduced from 40s for faster failure
+        config.waitsForConnectivity = false    // Don't wait - fail fast, use cache
         session = URLSession(configuration: config)
     }
     
@@ -368,13 +369,61 @@ actor TMDBService: TMDBServiceProtocol {
     }
     
     // MARK: - People
-    
+
     func getPersonDetails(id: Int) async throws -> PersonDetails {
         try await request("/person/\(id)")
     }
-    
+
     func getPersonCombinedCredits(id: Int) async throws -> PersonCombinedCredits {
         try await request("/person/\(id)/combined_credits")
+    }
+
+    // MARK: - Person Search
+
+    func searchPerson(query: String) async throws -> [PersonSearchResult] {
+        guard !query.isEmpty else { return [] }
+
+        let response: PersonSearchResponse = try await request("/search/person", queryItems: [
+            URLQueryItem(name: "query", value: query),
+            URLQueryItem(name: "include_adult", value: "false")
+        ])
+
+        // Filter to actors only (known_for_department = "Acting")
+        return response.results.filter { $0.knownForDepartment == "Acting" }
+    }
+}
+
+// MARK: - Person Search Models
+
+struct PersonSearchResult: Codable, Identifiable {
+    let id: Int
+    let name: String
+    let profilePath: String?
+    let knownForDepartment: String?
+    let popularity: Double
+
+    var profileURL: URL? {
+        guard let path = profilePath else { return nil }
+        return URL(string: "https://image.tmdb.org/t/p/w185\(path)")
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, popularity
+        case profilePath = "profile_path"
+        case knownForDepartment = "known_for_department"
+    }
+}
+
+struct PersonSearchResponse: Codable {
+    let results: [PersonSearchResult]
+    let page: Int
+    let totalPages: Int
+    let totalResults: Int
+
+    enum CodingKeys: String, CodingKey {
+        case results, page
+        case totalPages = "total_pages"
+        case totalResults = "total_results"
     }
 }
 

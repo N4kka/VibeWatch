@@ -18,9 +18,18 @@ class SupabaseService: ObservableObject {
         return AuthService.shared.isAuthenticated
     }
     
-    private init() {}
+    private init() {
+        if let savedDeviceId = UserDefaults.standard.string(forKey: "deviceIdentifier") {
+            self.deviceId = savedDeviceId
+        } else {
+            let newDeviceId = UUID().uuidString
+            UserDefaults.standard.set(newDeviceId, forKey: "deviceIdentifier")
+            self.deviceId = newDeviceId
+        }
+    }
 
     private let localDB = SQLiteService.shared
+    private let deviceId: String
 
     private static let dayKeyFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -166,6 +175,47 @@ class SupabaseService: ObservableObject {
         df.timeZone = TimeZone(secondsFromGMT: 0)
         df.dateFormat = "yyyy-MM-dd HH:mm:ss"
         return df.date(from: string)
+    }
+
+    // MARK: - Clip Signals
+
+    func logClipSignal(
+        clipId: String,
+        signalType: String,
+        signalValue: Double,
+        context: AnalyticsContext? = nil
+    ) async {
+        guard let userId = currentUser?.id else { return }
+
+        let recordId = UUID().uuidString.lowercased()
+        let now = ISO8601DateFormatter().string(from: Date())
+
+        let values: [String: Any] = [
+            "id": recordId,
+            "user_id": userId,
+            "device_id": deviceId,
+            "clip_id": clipId,
+            "signal_type": signalType,
+            "signal_value": signalValue,
+            "source": context?.source ?? NSNull(),
+            "position": context?.position ?? NSNull(),
+            "session_id": context?.sessionId ?? NSNull(),
+            "occurred_at": now,
+            "synced_at": NSNull()
+        ]
+
+        do {
+            _ = try await localDB.insert("user_clip_signals", values: values)
+            await SyncManager.shared.queueSync(
+                operation: .insertRecord(
+                    table: "user_clip_signals",
+                    recordId: recordId,
+                    record: values
+                )
+            )
+        } catch {
+            Logger.error("[Supabase] Failed to log clip signal", error: error)
+        }
     }
 
     /// Check if the remote row is newer than local (by updated_at). If no local row, treat as newer.

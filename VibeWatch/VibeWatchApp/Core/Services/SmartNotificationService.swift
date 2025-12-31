@@ -826,16 +826,23 @@ class SmartNotificationService: NSObject, ObservableObject {
     // MARK: - Helper Methods
 
     private func canSendNow() async -> Bool {
-        guard let prefs = preferences else { return false }
+        guard let prefs = preferences else {
+            Logger.warning("[SmartNotificationService] No preferences loaded, cannot determine quiet hours")
+            return false
+        }
 
         let hour = Calendar.current.component(.hour, from: Date())
 
         // Check quiet hours
+        // quietHoursStart = when quiet hours BEGIN (e.g., 22 = 10 PM)
+        // quietHoursEnd = when quiet hours END (e.g., 8 = 8 AM)
         if prefs.quietHoursStart < prefs.quietHoursEnd {
-            // Normal case: 22:00 - 08:00
-            return hour < prefs.quietHoursStart && hour >= prefs.quietHoursEnd
+            // Daytime quiet hours (e.g., start=10, end=22 means quiet from 10am-10pm)
+            // Can send when hour < start OR hour >= end
+            return hour < prefs.quietHoursStart || hour >= prefs.quietHoursEnd
         } else {
-            // Crossing midnight: 22:00 - 08:00
+            // Overnight quiet hours (e.g., start=22, end=8 means quiet from 10pm-8am)
+            // Can send when hour >= end AND hour < start (i.e., 8am-10pm)
             return hour >= prefs.quietHoursEnd && hour < prefs.quietHoursStart
         }
     }
@@ -960,6 +967,156 @@ class SmartNotificationService: NSObject, ObservableObject {
             return []
         }
         return array
+    }
+
+    // MARK: - Pro Feature: Custom Alert Registration
+
+    /// Register custom actor alerts for Pro users
+    /// Saves actor subscriptions to local database and queues sync to Supabase
+    func registerActorAlerts(userId: String, actorIds: [Int]) async {
+        Logger.info("[SmartNotificationService] Registering \(actorIds.count) actor alerts for user: \(userId)")
+
+        // First, delete existing actor subscriptions for this user
+        let deleteSql = """
+            DELETE FROM notification_subscriptions
+            WHERE user_id = ? AND type = 'actor_alert'
+        """
+        _ = sqliteService.execute(deleteSql, parameters: [userId])
+
+        // Insert new actor subscriptions
+        let now = ISO8601DateFormatter().string(from: Date())
+
+        for actorId in actorIds {
+            let subscriptionId = UUID().uuidString.lowercased()
+
+            let insertSql = """
+                INSERT INTO notification_subscriptions (
+                    id, user_id, actor_id, genre_id, type, created_at, synced_at
+                ) VALUES (?, ?, ?, NULL, 'actor_alert', ?, NULL)
+            """
+
+            let success = sqliteService.execute(insertSql, parameters: [
+                subscriptionId,
+                userId,
+                actorId,
+                now
+            ])
+
+            if success {
+                // Queue sync to Supabase
+                let record: [String: Any] = [
+                    "id": subscriptionId,
+                    "user_id": userId,
+                    "actor_id": actorId,
+                    "genre_id": NSNull(),
+                    "type": "actor_alert",
+                    "created_at": now
+                ]
+
+                await SyncManager.shared.queueSync(
+                    operation: .upsertRecord(
+                        table: "notification_subscriptions",
+                        recordId: subscriptionId,
+                        record: record
+                    )
+                )
+
+                Logger.debug("[SmartNotificationService] Registered actor alert for actor ID: \(actorId)")
+            } else {
+                Logger.error("[SmartNotificationService] Failed to insert actor alert for actor ID: \(actorId)")
+            }
+        }
+
+        Logger.info("[SmartNotificationService] Completed registering actor alerts")
+    }
+
+    /// Register custom genre alerts for Pro users
+    /// Saves genre subscriptions to local database and queues sync to Supabase
+    func registerGenreAlerts(userId: String, genreIds: [Int]) async {
+        Logger.info("[SmartNotificationService] Registering \(genreIds.count) genre alerts for user: \(userId)")
+
+        // First, delete existing genre subscriptions for this user
+        let deleteSql = """
+            DELETE FROM notification_subscriptions
+            WHERE user_id = ? AND type = 'genre_alert'
+        """
+        _ = sqliteService.execute(deleteSql, parameters: [userId])
+
+        // Insert new genre subscriptions
+        let now = ISO8601DateFormatter().string(from: Date())
+
+        for genreId in genreIds {
+            let subscriptionId = UUID().uuidString.lowercased()
+
+            let insertSql = """
+                INSERT INTO notification_subscriptions (
+                    id, user_id, actor_id, genre_id, type, created_at, synced_at
+                ) VALUES (?, ?, NULL, ?, 'genre_alert', ?, NULL)
+            """
+
+            let success = sqliteService.execute(insertSql, parameters: [
+                subscriptionId,
+                userId,
+                genreId,
+                now
+            ])
+
+            if success {
+                // Queue sync to Supabase
+                let record: [String: Any] = [
+                    "id": subscriptionId,
+                    "user_id": userId,
+                    "actor_id": NSNull(),
+                    "genre_id": genreId,
+                    "type": "genre_alert",
+                    "created_at": now
+                ]
+
+                await SyncManager.shared.queueSync(
+                    operation: .upsertRecord(
+                        table: "notification_subscriptions",
+                        recordId: subscriptionId,
+                        record: record
+                    )
+                )
+
+                Logger.debug("[SmartNotificationService] Registered genre alert for genre ID: \(genreId)")
+            } else {
+                Logger.error("[SmartNotificationService] Failed to insert genre alert for genre ID: \(genreId)")
+            }
+        }
+
+        Logger.info("[SmartNotificationService] Completed registering genre alerts")
+    }
+
+    /// Load custom alert subscriptions from database
+    /// Used to populate preferences when loading
+    func loadCustomAlertSubscriptions(userId: String) async -> (actorIds: [Int], genreIds: [Int]) {
+        var actorIds: [Int] = []
+        var genreIds: [Int] = []
+
+        // Load actor alerts
+        let actorSql = """
+            SELECT actor_id FROM notification_subscriptions
+            WHERE user_id = ? AND type = 'actor_alert' AND actor_id IS NOT NULL
+        """
+
+        if let actorRows = try? await sqliteService.queryRaw(actorSql, parameters: [userId]) {
+            actorIds = actorRows.compactMap { $0["actor_id"] as? Int }
+        }
+
+        // Load genre alerts
+        let genreSql = """
+            SELECT genre_id FROM notification_subscriptions
+            WHERE user_id = ? AND type = 'genre_alert' AND genre_id IS NOT NULL
+        """
+
+        if let genreRows = try? await sqliteService.queryRaw(genreSql, parameters: [userId]) {
+            genreIds = genreRows.compactMap { $0["genre_id"] as? Int }
+        }
+
+        Logger.debug("[SmartNotificationService] Loaded custom alerts: \(actorIds.count) actors, \(genreIds.count) genres")
+        return (actorIds, genreIds)
     }
 }
 

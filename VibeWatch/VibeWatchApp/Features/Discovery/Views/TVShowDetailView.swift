@@ -45,40 +45,51 @@ struct TVShowDetailView: View {
             imdbId: tvShow.imdbId
         )
     }
-    
+
+    private var shouldShowAd: Bool {
+        !quotaManager.isProUser
+    }
+
     var body: some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                if viewModel.isLoading {
-                    ProgressView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .padding(.top, 100)
-                } else if let error = viewModel.error {
-                    errorView(error)
-                } else if let tvShow = viewModel.tvShow {
-                    let tvShowMovie = tvShowToMovie(tvShow)
-                    
-                    TVShowDetailHeaderView(
-                        tvShow: tvShow,
-                        onDismiss: { dismiss() },
-                        onSearch: { showSearch = true },
-                        onShare: {
-                            Task { await handleShare(tvShow: tvShow) }
+        ZStack(alignment: .bottom) {
+            ScrollView {
+                VStack(spacing: 0) {
+                    if viewModel.isLoading {
+                        ProgressView()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .padding(.top, 100)
+                    } else if let error = viewModel.error {
+                        errorView(error)
+                    } else if let tvShow = viewModel.tvShow {
+                        let tvShowMovie = tvShowToMovie(tvShow)
+
+                        TVShowDetailHeaderView(
+                            tvShow: tvShow,
+                            onDismiss: { dismiss() },
+                            onSearch: { showSearch = true },
+                            onShare: {
+                                Task { await handleShare(tvShow: tvShow) }
+                            }
+                        )
+
+                        VStack(spacing: 24) {
+                            infoView(tvShow: tvShow)
+
+                            actionsView(tvShow: tvShow, movie: tvShowMovie)
+                            providersView
+                            trailerView
+                            creditsView(tvShow: tvShow)
+                            similarView
                         }
-                    )
-                    
-                    VStack(spacing: 24) {
-                        infoView(tvShow: tvShow)
-                        
-                        actionsView(tvShow: tvShow, movie: tvShowMovie)
-                        providersView
-                        trailerView
-                        creditsView(tvShow: tvShow)
-                        similarView
+                        .padding(.horizontal, 50)
+                        .padding(.bottom, shouldShowAd ? 90 : 40)
                     }
-                    .padding(.horizontal, 50)
-                    .padding(.bottom, 40)
                 }
+            }
+
+            if shouldShowAd {
+                BannerAdView(adUnitID: AppConstants.AdMob.bannerAdUnitID)
+                    .frame(height: 50)
             }
         }
         .background(Color.theme.background.ignoresSafeArea())

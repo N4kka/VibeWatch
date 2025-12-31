@@ -1,128 +1,430 @@
 import SwiftUI
 import Charts
 
-/// Main analytics dashboard showing user statistics and insights
+/// Main analytics dashboard showing user statistics and gamification insights
 struct AnalyticsDashboardView: View {
     @StateObject private var analyticsService = AnalyticsInsightsService.shared
+    @StateObject private var gamificationService = GamificationService.shared
     @StateObject private var authService = AuthService.shared
     @State private var selectedTimeframe: Timeframe = .allTime
     @State private var isRefreshing = false
+    @State private var isPro = false
+    @State private var showLevelProgress = false
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 24) {
-                // Timeframe Picker
-                timeframePicker
+            VStack(spacing: 16) {
+                // MARK: - Gamification Section
 
-                if analyticsService.isLoading {
-                    loadingView
-                } else if let stats = analyticsService.userStats {
-                    // Watch Stats Card
-                    WatchStatsCard(stats: stats.watchStats)
-
-                    // Genre Distribution
-                    GenreDistributionCard(distribution: stats.genreDistribution)
-
-                    // Watch Streak
-                    WatchStreakCard(
-                        currentStreak: stats.viewingPatterns.currentStreak,
-                        longestStreak: stats.viewingPatterns.longestStreak
-                    )
-
-                    // Viewing Heatmap
-                    ViewingHeatmapCard(patterns: stats.viewingPatterns)
-
-                    // Top Content
-                    TopContentCard(performance: stats.contentPerformance)
-
-                    // Discovery Insights
-                    DiscoveryInsightsCard(insights: stats.discoveryInsights)
-
-                    // Milestones
-                    if !stats.milestones.isEmpty {
-                        MilestonesCard(milestones: stats.milestones)
+                // Level Hero Card (Tappable)
+                levelHeroCard
+                    .onTapGesture {
+                        showLevelProgress = true
                     }
-                } else if let error = analyticsService.error {
-                    errorView(error)
-                } else {
-                    emptyStateView
-                }
+
+                // Combined Streak & Daily Challenge Card
+                streakAndChallengeCard
+
+                // Badges Preview (Horizontal Scroll)
+                badgesPreviewSection
+
+                // MARK: - Watch Statistics Section
+
+                statsSection
             }
-            .padding()
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
         }
+        .background(Color.theme.background.ignoresSafeArea())
         .navigationTitle("Your Stats")
         .navigationBarTitleDisplayMode(.large)
+        .sheet(isPresented: $showLevelProgress) {
+            LevelProgressView(gamificationService: gamificationService)
+        }
+        .levelUpBanner(gamificationService: gamificationService)
         .task {
-            await loadStats()
+            await loadData()
         }
         .refreshable {
-            await loadStats()
+            await loadData()
         }
     }
 
-    // MARK: - Subviews
+    // MARK: - Level Hero Card (Simplified & Tappable)
 
-    private var timeframePicker: some View {
-        Picker("Timeframe", selection: $selectedTimeframe) {
-            Text("All Time").tag(Timeframe.allTime)
-            Text("This Year").tag(Timeframe.thisYear)
-            Text("This Month").tag(Timeframe.thisMonth)
-            Text("Last Month").tag(Timeframe.lastMonth)
-            Text("Last Week").tag(Timeframe.lastWeek)
+    private var levelHeroCard: some View {
+        HStack(spacing: 16) {
+            // Rank Icon
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [gamificationService.userState.rank.color, gamificationService.userState.rank.color.opacity(0.5)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 48, height: 48)
+
+                Text("\(gamificationService.userState.currentLevel)")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(.white)
+            }
+
+            // Level Info
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 8) {
+                    Text("Level \(gamificationService.userState.currentLevel)")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(.white)
+
+                    Text(gamificationService.userState.rank.name)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(gamificationService.userState.rank.color)
+                }
+
+                // XP Progress (compact)
+                HStack(spacing: 8) {
+                    GeometryReader { geometry in
+                        ZStack(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(Color.white.opacity(0.1))
+                                .frame(height: 8)
+
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [.theme.accentOrange, .orange],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .frame(width: geometry.size.width * gamificationService.userState.levelProgress, height: 8)
+                        }
+                    }
+                    .frame(height: 8)
+
+                    Text("\(gamificationService.userState.xpProgressInLevel)/\(gamificationService.userState.xpNeededForNextLevel)")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.white.opacity(0.5))
+                        .frame(width: 70, alignment: .trailing)
+                }
+            }
+
+            Spacer()
+
+            // Pro Badge & Chevron
+            HStack(spacing: 8) {
+                if isPro {
+                    HStack(spacing: 4) {
+                        Image(systemName: "bolt.fill")
+                            .font(.system(size: 10))
+                        Text("x2")
+                            .font(.system(size: 12, weight: .bold))
+                    }
+                    .foregroundColor(.theme.accentOrange)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Capsule().fill(Color.theme.accentOrange.opacity(0.2)))
+                }
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.4))
+            }
         }
-        .pickerStyle(.segmented)
-        .onChange(of: selectedTimeframe) { _ in
-            Task {
-                await loadStats()
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.white.opacity(0.05))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(gamificationService.userState.rank.color.opacity(0.3), lineWidth: 1)
+                )
+        )
+    }
+
+    // MARK: - Combined Streak & Challenge Card
+
+    private var streakAndChallengeCard: some View {
+        HStack(spacing: 0) {
+            // Streak Section
+            HStack(spacing: 12) {
+                Image(systemName: "flame.fill")
+                    .font(.system(size: 24))
+                    .foregroundColor(.orange)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(gamificationService.userState.currentStreak)")
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(.white)
+
+                    Text("Day Streak")
+                        .font(.system(size: 11))
+                        .foregroundColor(.white.opacity(0.5))
+                }
+
+                if gamificationService.userState.streakBonusPercentage > 0 {
+                    Text("+\(gamificationService.userState.streakBonusPercentage)%")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(.orange)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(Capsule().fill(Color.orange.opacity(0.2)))
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 16)
+            .padding(.horizontal, 16)
+
+            // Divider
+            Rectangle()
+                .fill(Color.white.opacity(0.1))
+                .frame(width: 1)
+                .padding(.vertical, 12)
+
+            // Daily Challenge Section
+            if let challenge = gamificationService.currentChallenge {
+                HStack(spacing: 12) {
+                    Image(systemName: challenge.type.icon)
+                        .font(.system(size: 24))
+                        .foregroundColor(challenge.completed ? .green : .theme.accentOrange)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 4) {
+                            Text(challenge.completed ? "Done!" : "\(challenge.progress)/\(challenge.type.target)")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(challenge.completed ? .green : .white)
+
+                            Text("+\(challenge.type.xpReward)")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(.theme.accentOrange)
+                        }
+
+                        // Mini progress bar
+                        GeometryReader { geometry in
+                            ZStack(alignment: .leading) {
+                                RoundedRectangle(cornerRadius: 2)
+                                    .fill(Color.white.opacity(0.1))
+                                    .frame(height: 4)
+
+                                RoundedRectangle(cornerRadius: 2)
+                                    .fill(challenge.completed ? Color.green : Color.theme.accentOrange)
+                                    .frame(width: geometry.size.width * min(1.0, Double(challenge.progress) / Double(challenge.type.target)), height: 4)
+                            }
+                        }
+                        .frame(height: 4)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 16)
+                .padding(.horizontal, 16)
+            } else {
+                VStack {
+                    Text("No Challenge")
+                        .font(.system(size: 12))
+                        .foregroundColor(.white.opacity(0.4))
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+            }
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.white.opacity(0.05))
+        )
+    }
+
+    // MARK: - Badges Preview Section
+
+    private var badgesPreviewSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Badges")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.white.opacity(0.6))
+                    .textCase(.uppercase)
+                    .tracking(0.5)
+
+                Spacer()
+
+                NavigationLink(destination: BadgeGalleryView(gamificationService: gamificationService)) {
+                    HStack(spacing: 4) {
+                        Text("See all")
+                            .font(.system(size: 13, weight: .medium))
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 11))
+                    }
+                    .foregroundColor(.theme.accentOrange)
+                }
+            }
+
+            // Horizontal scroll of badges
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 16) {
+                    let badges = gamificationService.getAllBadgesWithProgress()
+                    let sortedBadges = badges.sorted { $0.isUnlocked && !$1.isUnlocked }
+
+                    ForEach(sortedBadges.prefix(10), id: \.definition.id) { item in
+                        badgeIcon(item)
+                    }
+                }
+            }
+        }
+        .padding(.vertical, 8)
+    }
+
+    private func badgeIcon(_ item: (definition: BadgeDefinition, progress: Int, isUnlocked: Bool)) -> some View {
+        ZStack {
+            Circle()
+                .fill(item.isUnlocked ? item.definition.color.opacity(0.2) : Color.white.opacity(0.05))
+                .frame(width: 48, height: 48)
+
+            Image(systemName: item.definition.icon)
+                .font(.system(size: 20))
+                .foregroundColor(item.isUnlocked ? item.definition.color : .white.opacity(0.2))
+
+            if !item.isUnlocked {
+                Circle()
+                    .fill(Color.black.opacity(0.3))
+                    .frame(width: 48, height: 48)
+
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 12))
+                    .foregroundColor(.white.opacity(0.5))
             }
         }
     }
 
+    // MARK: - Stats Section
+
+    private var statsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Header with timeframe picker
+            HStack {
+                Text("Your Activity")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.white.opacity(0.6))
+                    .textCase(.uppercase)
+                    .tracking(0.5)
+
+                Spacer()
+
+                Menu {
+                    ForEach([Timeframe.allTime, .thisYear, .thisMonth, .lastWeek], id: \.self) { timeframe in
+                        Button {
+                            selectedTimeframe = timeframe
+                            Task { await loadStats() }
+                        } label: {
+                            HStack {
+                                Text(timeframe.displayName)
+                                if selectedTimeframe == timeframe {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Text(selectedTimeframe.displayName)
+                            .font(.system(size: 13, weight: .medium))
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 10))
+                    }
+                    .foregroundColor(.theme.accentOrange)
+                }
+            }
+
+            // Stats Content
+            if analyticsService.isLoading {
+                loadingView
+            } else if let stats = analyticsService.userStats {
+                statsGrid(stats: stats.watchStats)
+
+                GenreDistributionCard(distribution: stats.genreDistribution)
+
+                ViewingHeatmapCard(patterns: stats.viewingPatterns)
+
+                TopContentCard(performance: stats.contentPerformance)
+
+                DiscoveryInsightsCard(insights: stats.discoveryInsights)
+            } else if let error = analyticsService.error {
+                errorView(error)
+            } else {
+                emptyStateView
+            }
+        }
+    }
+
+    private func statsGrid(stats: WatchStats) -> some View {
+        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+            StatItem(title: "Movies", value: "\(stats.totalMovies)", icon: "film", color: .blue)
+            StatItem(title: "Episodes", value: "\(stats.totalEpisodes)", icon: "tv", color: .purple)
+            StatItem(title: "Watch Time", value: "\(stats.totalWatchTimeHours)h", icon: "clock.fill", color: .orange)
+            StatItem(title: "Completion", value: "\(Int(stats.completionRate * 100))%", icon: "checkmark.circle.fill", color: .green)
+        }
+    }
+
+    // MARK: - Loading/Error/Empty Views
+
     private var loadingView: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 12) {
             ProgressView()
-                .scaleEffect(1.5)
-            Text("Analyzing your watch history...")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
+                .scaleEffect(1.2)
+                .tint(.theme.accentOrange)
+            Text("Loading stats...")
+                .font(.system(size: 13))
+                .foregroundColor(.white.opacity(0.5))
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 300)
+        .frame(height: 150)
     }
 
     private func errorView(_ error: String) -> some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 12) {
             Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 48))
+                .font(.system(size: 32))
                 .foregroundColor(.orange)
             Text("Error Loading Stats")
-                .font(.headline)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.white)
             Text(error)
-                .font(.subheadline)
-                .foregroundColor(.secondary)
+                .font(.system(size: 12))
+                .foregroundColor(.white.opacity(0.5))
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 300)
+        .frame(height: 150)
     }
 
     private var emptyStateView: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 12) {
             Image(systemName: "chart.bar.xaxis")
-                .font(.system(size: 48))
-                .foregroundColor(.secondary)
+                .font(.system(size: 32))
+                .foregroundColor(.white.opacity(0.3))
             Text("No Stats Yet")
-                .font(.headline)
-            Text("Start watching content to see your analytics!")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.white)
+            Text("Start watching to see your analytics!")
+                .font(.system(size: 12))
+                .foregroundColor(.white.opacity(0.5))
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 300)
+        .frame(height: 150)
     }
 
-    // MARK: - Methods
+    // MARK: - Data Loading
+
+    private func loadData() async {
+        guard let userId = await authService.currentUser?.id else { return }
+
+        isPro = await ClipQuotaService.shared.checkIsProUser()
+
+        async let gamificationLoad: () = gamificationService.loadUserState(userId: userId)
+        async let statsLoad: () = loadStats()
+
+        _ = await (gamificationLoad, statsLoad)
+    }
 
     private func loadStats() async {
         guard let userId = await authService.currentUser?.id else { return }
@@ -130,72 +432,21 @@ struct AnalyticsDashboardView: View {
     }
 }
 
-// MARK: - Watch Stats Card
+// MARK: - Timeframe Extension
 
-struct WatchStatsCard: View {
-    let stats: WatchStats
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Image(systemName: "film.fill")
-                    .foregroundColor(.accentColor)
-                Text("Watch Statistics")
-                    .font(.headline)
-                Spacer()
-            }
-
-            // Grid of stats
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                StatItem(
-                    title: "Movies",
-                    value: "\(stats.totalMovies)",
-                    icon: "film",
-                    color: .blue
-                )
-
-                StatItem(
-                    title: "Episodes",
-                    value: "\(stats.totalEpisodes)",
-                    icon: "tv",
-                    color: .purple
-                )
-
-                StatItem(
-                    title: "Watch Time",
-                    value: "\(stats.totalWatchTimeHours)h",
-                    icon: "clock.fill",
-                    color: .orange
-                )
-
-                StatItem(
-                    title: "Completion",
-                    value: "\(Int(stats.completionRate * 100))%",
-                    icon: "checkmark.circle.fill",
-                    color: .green
-                )
-
-                StatItem(
-                    title: "Avg Session",
-                    value: "\(stats.averageSessionMinutes)m",
-                    icon: "calendar",
-                    color: .indigo
-                )
-
-                StatItem(
-                    title: "Longest Session",
-                    value: "\(stats.longestSessionMinutes)m",
-                    icon: "star.fill",
-                    color: .yellow
-                )
-            }
+extension Timeframe {
+    var displayName: String {
+        switch self {
+        case .allTime: return "All Time"
+        case .thisYear: return "This Year"
+        case .thisMonth: return "This Month"
+        case .lastMonth: return "Last Month"
+        case .lastWeek: return "This Week"
         }
-        .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
     }
 }
+
+// MARK: - Stat Item
 
 struct StatItem: View {
     let title: String
@@ -206,21 +457,23 @@ struct StatItem: View {
     var body: some View {
         VStack(spacing: 8) {
             Image(systemName: icon)
-                .font(.title2)
+                .font(.system(size: 20))
                 .foregroundColor(color)
 
             Text(value)
-                .font(.title2)
-                .fontWeight(.bold)
+                .font(.system(size: 22, weight: .bold))
+                .foregroundColor(.white)
 
             Text(title)
-                .font(.caption)
-                .foregroundColor(.secondary)
+                .font(.system(size: 11))
+                .foregroundColor(.white.opacity(0.5))
         }
         .frame(maxWidth: .infinity)
-        .padding()
-        .background(Color(.secondarySystemBackground))
-        .cornerRadius(8)
+        .padding(.vertical, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.white.opacity(0.03))
+        )
     }
 }
 
@@ -230,17 +483,17 @@ struct GenreDistributionCard: View {
     let distribution: GenreStats
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: "theatermasks.fill")
-                    .foregroundColor(.accentColor)
+                    .foregroundColor(.purple)
                 Text("Genre Distribution")
-                    .font(.headline)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.white)
                 Spacer()
             }
 
             if !distribution.distribution.isEmpty {
-                // Pie Chart
                 Chart(distribution.distribution.prefix(5)) { genre in
                     SectorMark(
                         angle: .value("Count", genre.count),
@@ -250,113 +503,18 @@ struct GenreDistributionCard: View {
                     .foregroundStyle(by: .value("Genre", genre.genreName))
                     .cornerRadius(4)
                 }
-                .frame(height: 250)
+                .frame(height: 180)
                 .chartLegend(position: .bottom, spacing: 8)
-
-                // Top Genre Highlight
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Top Genre")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Text(distribution.topGenre.genreName)
-                            .font(.title3)
-                            .fontWeight(.semibold)
-                        Text("\(distribution.topGenre.count) items (\(Int(distribution.topGenre.percentage * 100))%)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-
-                    Spacer()
-
-                    if let emerging = distribution.emergingGenre {
-                        VStack(alignment: .trailing, spacing: 4) {
-                            Text("Emerging Genre")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            HStack(spacing: 4) {
-                                Image(systemName: "arrow.up.right")
-                                    .font(.caption)
-                                    .foregroundColor(.green)
-                                Text(emerging.genreName)
-                                    .font(.subheadline)
-                                    .fontWeight(.semibold)
-                            }
-                        }
-                    }
-                }
-                .padding(.top, 8)
             } else {
                 Text("No genre data available")
-                    .foregroundColor(.secondary)
+                    .font(.system(size: 13))
+                    .foregroundColor(.white.opacity(0.4))
                     .frame(maxWidth: .infinity, alignment: .center)
-                    .padding()
+                    .padding(.vertical, 24)
             }
         }
-        .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
-    }
-}
-
-// MARK: - Watch Streak Card
-
-struct WatchStreakCard: View {
-    let currentStreak: Int
-    let longestStreak: Int
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Image(systemName: "flame.fill")
-                    .foregroundColor(.orange)
-                Text("Watch Streak")
-                    .font(.headline)
-                Spacer()
-            }
-
-            HStack(spacing: 24) {
-                VStack(spacing: 8) {
-                    Text("\(currentStreak)")
-                        .font(.system(size: 48, weight: .bold))
-                        .foregroundColor(.orange)
-                    Text("Current Streak")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                .frame(maxWidth: .infinity)
-
-                Divider()
-                    .frame(height: 60)
-
-                VStack(spacing: 8) {
-                    Text("\(longestStreak)")
-                        .font(.system(size: 48, weight: .bold))
-                        .foregroundColor(.yellow)
-                    Text("Longest Streak")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                .frame(maxWidth: .infinity)
-            }
-
-            if currentStreak > 0 {
-                Text("🔥 Keep watching to maintain your streak!")
-                    .font(.caption)
-                    .foregroundColor(.orange)
-                    .frame(maxWidth: .infinity, alignment: .center)
-            } else {
-                Text("Start watching today to begin a new streak!")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-            }
-        }
-        .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+        .padding(16)
+        .background(RoundedRectangle(cornerRadius: 16).fill(Color.white.opacity(0.05)))
     }
 }
 
@@ -364,72 +522,55 @@ struct WatchStreakCard: View {
 
 struct ViewingHeatmapCard: View {
     let patterns: ViewingPatterns
-
-    private let dayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    private let dayLabels = ["S", "M", "T", "W", "T", "F", "S"]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: "calendar")
-                    .foregroundColor(.accentColor)
+                    .foregroundColor(.blue)
                 Text("Viewing Patterns")
-                    .font(.headline)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.white)
                 Spacer()
+
+                Text(patterns.preferredTimeOfDay.rawValue)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(.theme.accentOrange)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Capsule().fill(Color.theme.accentOrange.opacity(0.2)))
             }
 
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Preferred Time: \(patterns.preferredTimeOfDay.rawValue)")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-
-                // Simplified heatmap (showing intensity by day)
+            VStack(spacing: 3) {
                 ForEach(0..<7, id: \.self) { day in
-                    HStack(spacing: 4) {
+                    HStack(spacing: 2) {
                         Text(dayLabels[day])
-                            .font(.caption2)
-                            .frame(width: 30, alignment: .leading)
-                            .foregroundColor(.secondary)
+                            .font(.system(size: 9))
+                            .frame(width: 14, alignment: .leading)
+                            .foregroundColor(.white.opacity(0.4))
 
                         ForEach(0..<24, id: \.self) { hour in
                             Rectangle()
                                 .fill(colorForIntensity(patterns.heatmap[day][hour]))
-                                .frame(width: 10, height: 20)
+                                .frame(height: 12)
                                 .cornerRadius(2)
                         }
                     }
                 }
-
-                // Hour labels
-                HStack(spacing: 4) {
-                    Text("")
-                        .frame(width: 30)
-                    ForEach([0, 6, 12, 18], id: \.self) { hour in
-                        Text("\(hour)")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                }
             }
         }
-        .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+        .padding(16)
+        .background(RoundedRectangle(cornerRadius: 16).fill(Color.white.opacity(0.05)))
     }
 
     func colorForIntensity(_ minutes: Int) -> Color {
         switch minutes {
-        case 0:
-            return Color(.systemGray5)
-        case 1...30:
-            return .blue.opacity(0.3)
-        case 31...60:
-            return .blue.opacity(0.6)
-        case 61...120:
-            return .blue.opacity(0.8)
-        default:
-            return .blue
+        case 0: return Color.white.opacity(0.05)
+        case 1...30: return Color.blue.opacity(0.3)
+        case 31...60: return Color.blue.opacity(0.5)
+        case 61...120: return Color.blue.opacity(0.7)
+        default: return Color.blue
         }
     }
 }
@@ -440,60 +581,39 @@ struct TopContentCard: View {
     let performance: ContentPerformance
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: "star.fill")
                     .foregroundColor(.yellow)
                 Text("Top Content")
-                    .font(.headline)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.white)
                 Spacer()
             }
 
-            if !performance.highestRated.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Highest Rated")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                    ForEach(performance.highestRated.prefix(3)) { media in
-                        HStack {
-                            Image(systemName: media.mediaType == .movie ? "film" : "tv")
-                                .foregroundColor(.accentColor)
-                            Text(media.title.isEmpty ? "Media #\(media.id)" : media.title)
-                                .font(.subheadline)
-                            Spacer()
-                        }
-                    }
-                }
-            }
-
             if !performance.mostRewatched.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Most Rewatched")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                    ForEach(performance.mostRewatched.prefix(3)) { media in
-                        HStack {
-                            Image(systemName: "arrow.clockwise")
-                                .foregroundColor(.orange)
-                            Text(media.title.isEmpty ? "Media #\(media.id)" : media.title)
-                                .font(.subheadline)
-                            Spacer()
-                        }
+                ForEach(performance.mostRewatched.prefix(3)) { media in
+                    HStack(spacing: 8) {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 12))
+                            .foregroundColor(.orange)
+                        Text(media.title.isEmpty ? "Media #\(media.id)" : media.title)
+                            .font(.system(size: 13))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                        Spacer()
                     }
                 }
-            }
-
-            if performance.highestRated.isEmpty && performance.mostRewatched.isEmpty {
+            } else {
                 Text("No content data available")
-                    .foregroundColor(.secondary)
+                    .font(.system(size: 13))
+                    .foregroundColor(.white.opacity(0.4))
                     .frame(maxWidth: .infinity, alignment: .center)
-                    .padding()
+                    .padding(.vertical, 12)
             }
         }
-        .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+        .padding(16)
+        .background(RoundedRectangle(cornerRadius: 16).fill(Color.white.opacity(0.05)))
     }
 }
 
@@ -503,116 +623,57 @@ struct DiscoveryInsightsCard: View {
     let insights: DiscoveryInsights
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: "sparkles")
-                    .foregroundColor(.accentColor)
+                    .foregroundColor(.cyan)
                 Text("Discovery Channels")
-                    .font(.headline)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.white)
                 Spacer()
             }
 
             if !insights.sourceBreakdown.isEmpty {
-                VStack(spacing: 12) {
+                VStack(spacing: 10) {
                     ForEach(Array(insights.sourceBreakdown.sorted(by: { $0.value > $1.value })), id: \.key) { source, count in
                         HStack {
                             Text(source.capitalized)
-                                .font(.subheadline)
-                            Spacer()
-                            Text("\(count)")
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.accentColor)
-                        }
+                                .font(.system(size: 13))
+                                .foregroundColor(.white)
 
-                        // Progress bar
-                        GeometryReader { geometry in
-                            let total = insights.sourceBreakdown.values.reduce(0, +)
-                            let percentage = Double(count) / Double(total)
+                            GeometryReader { geometry in
+                                let total = insights.sourceBreakdown.values.reduce(0, +)
+                                let percentage = Double(count) / Double(max(total, 1))
 
-                            ZStack(alignment: .leading) {
-                                Rectangle()
-                                    .fill(Color(.systemGray5))
-                                    .frame(height: 6)
-                                    .cornerRadius(3)
+                                ZStack(alignment: .leading) {
+                                    RoundedRectangle(cornerRadius: 2)
+                                        .fill(Color.white.opacity(0.1))
+                                        .frame(height: 4)
 
-                                Rectangle()
-                                    .fill(Color.accentColor)
-                                    .frame(width: geometry.size.width * percentage, height: 6)
-                                    .cornerRadius(3)
+                                    RoundedRectangle(cornerRadius: 2)
+                                        .fill(Color.theme.accentOrange)
+                                        .frame(width: geometry.size.width * percentage, height: 4)
+                                }
                             }
+                            .frame(height: 4)
+
+                            Text("\(count)")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(.theme.accentOrange)
+                                .frame(width: 30, alignment: .trailing)
                         }
-                        .frame(height: 6)
                     }
                 }
-
-                Text("Most successful: \(insights.mostSuccessfulChannel.capitalized)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.top, 8)
             } else {
                 Text("No discovery data available")
-                    .foregroundColor(.secondary)
+                    .font(.system(size: 13))
+                    .foregroundColor(.white.opacity(0.4))
                     .frame(maxWidth: .infinity, alignment: .center)
-                    .padding()
+                    .padding(.vertical, 12)
             }
         }
-        .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
-    }
-}
-
-// MARK: - Milestones Card
-
-struct MilestonesCard: View {
-    let milestones: [Milestone]
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Image(systemName: "trophy.fill")
-                    .foregroundColor(.yellow)
-                Text("Achievements")
-                    .font(.headline)
-                Spacer()
-            }
-
-            ForEach(milestones) { milestone in
-                HStack(spacing: 12) {
-                    Image(systemName: milestone.icon)
-                        .font(.title2)
-                        .foregroundColor(.yellow)
-                        .frame(width: 40)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(milestone.title)
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                        Text(milestone.description)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-
-                    Spacer()
-                }
-                .padding()
-                .background(
-                    LinearGradient(
-                        colors: [Color.yellow.opacity(0.1), Color.orange.opacity(0.1)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .cornerRadius(8)
-            }
-        }
-        .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+        .padding(16)
+        .background(RoundedRectangle(cornerRadius: 16).fill(Color.white.opacity(0.05)))
     }
 }
 

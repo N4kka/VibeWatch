@@ -56,7 +56,11 @@ final class ClipCommentService: ObservableObject {
     }
     
     /// Toggle like on a clip
-    func toggleClipLike(clipId: String, userId: String) async throws {
+    func toggleClipLike(
+        clipId: String,
+        userId: String,
+        context: AnalyticsContext? = nil
+    ) async throws {
         try await ensureUserProfileExists(userId: userId)
         
         let wasLiked = try await hasUserLikedClip(clipId: clipId, userId: userId)
@@ -111,9 +115,16 @@ final class ClipCommentService: ObservableObject {
         
         // Analytics
         Task { @MainActor in
-            AnalyticsService.shared.logEvent(
+            AnalyticsService.shared.logEventWithContext(
                 nowLiked ? "clip_liked" : "clip_like_removed",
-                parameters: ["clip_id": clipId]
+                parameters: ["clip_id": clipId],
+                context: context
+            )
+            await SupabaseService.shared.logClipSignal(
+                clipId: clipId,
+                signalType: "like",
+                signalValue: nowLiked ? 1 : -1,
+                context: context
             )
         }
     }
@@ -185,7 +196,13 @@ final class ClipCommentService: ObservableObject {
     }
     
     /// Post a new comment
-    func postComment(clipId: String, userId: String, content: String, parentId: String? = nil) async throws -> ClipComment {
+    func postComment(
+        clipId: String,
+        userId: String,
+        content: String,
+        parentId: String? = nil,
+        context: AnalyticsContext? = nil
+    ) async throws -> ClipComment {
         // Ensure user profile exists in SQLite first (and update avatar if needed)
         try await ensureUserProfileExists(userId: userId)
         
@@ -266,23 +283,38 @@ final class ClipCommentService: ObservableObject {
             print("📦 [ClipComment] Posted comment locally and queued sync for clip \(clipId)")
         }
         
-        // Analytics
+        // Analytics & Gamification
         Task { @MainActor in
-            AnalyticsService.shared.logEvent(
+            AnalyticsService.shared.logEventWithContext(
                 parentId != nil ? "comment_reply_posted" : "comment_posted",
                 parameters: [
                     "clip_id": clipId,
                     "comment_id": commentId,
                     "is_reply": parentId != nil
-                ]
+                ],
+                context: context
             )
+            await SupabaseService.shared.logClipSignal(
+                clipId: clipId,
+                signalType: parentId != nil ? "comment_reply" : "comment",
+                signalValue: 1,
+                context: context
+            )
+
+            // Award gamification XP for posting comment
+            let isPro = await ClipQuotaService.shared.checkIsProUser()
+            _ = await GamificationService.shared.awardXP(userId: userId, action: .commentPosted, isPro: isPro)
         }
-        
+
         return clipComment
     }
     
     /// Delete a comment
-    func deleteComment(commentId: String, userId: String) async throws {
+    func deleteComment(
+        commentId: String,
+        userId: String,
+        context: AnalyticsContext? = nil
+    ) async throws {
         // Verify ownership
         let rows: [[String: Any]] = try await sqlite.queryRaw("""
             SELECT user_id, parent_comment_id, clip_id FROM clip_comments WHERE id = ?
@@ -343,9 +375,10 @@ final class ClipCommentService: ObservableObject {
         
         // Analytics
         Task { @MainActor in
-            AnalyticsService.shared.logEvent(
+            AnalyticsService.shared.logEventWithContext(
                 "comment_deleted",
-                parameters: ["comment_id": commentId]
+                parameters: ["comment_id": commentId, "clip_id": clipId],
+                context: context
             )
         }
     }
@@ -353,7 +386,11 @@ final class ClipCommentService: ObservableObject {
     // MARK: - Comment Likes
     
     /// Toggle like on a comment
-    func toggleCommentLike(commentId: String, userId: String) async throws -> Bool {
+    func toggleCommentLike(
+        commentId: String,
+        userId: String,
+        context: AnalyticsContext? = nil
+    ) async throws -> Bool {
         // Ensure user profile exists first
         try await ensureUserProfileExists(userId: userId)
         
@@ -402,9 +439,10 @@ final class ClipCommentService: ObservableObject {
         
         // Analytics
         Task { @MainActor in
-            AnalyticsService.shared.logEvent(
+            AnalyticsService.shared.logEventWithContext(
                 nowLiked ? "comment_liked" : "comment_like_removed",
-                parameters: ["comment_id": commentId]
+                parameters: ["comment_id": commentId],
+                context: context
             )
         }
         
@@ -1147,4 +1185,3 @@ extension ClipComment {
         return comment
     }
 }
-

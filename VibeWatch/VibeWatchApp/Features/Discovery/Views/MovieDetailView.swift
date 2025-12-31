@@ -24,91 +24,102 @@ struct MovieDetailView: View {
         _viewModel = StateObject(wrappedValue: MovieDetailViewModel(movieId: movieId))
     }
     
+    private var shouldShowAd: Bool {
+        !quotaManager.isProUser
+    }
+
     var body: some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                if viewModel.isLoading {
-                    ProgressView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .padding(.top, 100)
-                } else if let error = viewModel.error {
-                    errorView(error)
-                } else if let movie = viewModel.movie {
-                    MovieDetailHeaderView(
-                        movie: movie,
-                        onDismiss: { dismiss() },
-                        onSearch: { showSearch = true },
-                        onShare: {
-                            Task {
-                                await handleShare(movie: movie)
-                            }
-                        }
-                    )
-
-                    VStack(spacing: 24) {
-                        MovieInfoSection(movie: movie)
-                        
-                        ActionButtonsSection(
+        ZStack(alignment: .bottom) {
+            ScrollView {
+                VStack(spacing: 0) {
+                    if viewModel.isLoading {
+                        ProgressView()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .padding(.top, 100)
+                    } else if let error = viewModel.error {
+                        errorView(error)
+                    } else if let movie = viewModel.movie {
+                        MovieDetailHeaderView(
                             movie: movie,
-                            mediaType: .movie,
-                            onSaveTap: {
-                                showSavePanel = true
-                            },
-                            onSeenTap: {
+                            onDismiss: { dismiss() },
+                            onSearch: { showSearch = true },
+                            onShare: {
                                 Task {
-                                    await handleSeenTap(movie: movie)
-                                }
-                            },
-                            onLikedTap: {
-                                Task {
-                                    await handleLikedTap(movie: movie)
-                                }
-                            },
-                            onDislikedTap: {
-                                Task {
-                                    await handleDislikedTap(movie: movie)
+                                    await handleShare(movie: movie)
                                 }
                             }
                         )
 
-                        GoodFitSection(
-                            title: String(format: "movieDetail.goodFitTitle".localized, movie.title),
-                            subtitle: "movieDetail.goodFitSubtitle".localized,
-                            onWhyTap: { handleWhyForMeTap() }
-                        )
-                        
-                        WatchNowSection(
-                            providers: viewModel.watchProviders,
-                            mediaType: .movie,
-                            title: movie.title,
-                            year: movie.year,
-                            imdbId: viewModel.imdbId,
-                            movie: movie,
-                            onReportIssue: { showReportBug = true }
-                        )
-                        
-                        if let trailer = viewModel.trailer {
-                            TrailerSection(trailer: trailer)
-                        }
-                        
-                        if !viewModel.mainCast.isEmpty || viewModel.director != nil {
-                            MovieCreditsSection(
-                                director: viewModel.director,
-                                cast: viewModel.mainCast,
+                        VStack(spacing: 24) {
+                            MovieInfoSection(movie: movie)
+
+                            ActionButtonsSection(
                                 movie: movie,
-                                onActorTap: { actor in
-                                    selectedActor = actor
+                                mediaType: .movie,
+                                onSaveTap: {
+                                    showSavePanel = true
+                                },
+                                onSeenTap: {
+                                    Task {
+                                        await handleSeenTap(movie: movie)
+                                    }
+                                },
+                                onLikedTap: {
+                                    Task {
+                                        await handleLikedTap(movie: movie)
+                                    }
+                                },
+                                onDislikedTap: {
+                                    Task {
+                                        await handleDislikedTap(movie: movie)
+                                    }
                                 }
                             )
+
+                            GoodFitSection(
+                                title: String(format: "movieDetail.goodFitTitle".localized, movie.title),
+                                subtitle: "movieDetail.goodFitSubtitle".localized,
+                                onWhyTap: { handleWhyForMeTap() }
+                            )
+
+                            WatchNowSection(
+                                providers: viewModel.watchProviders,
+                                mediaType: .movie,
+                                title: movie.title,
+                                year: movie.year,
+                                imdbId: viewModel.imdbId,
+                                movie: movie,
+                                onReportIssue: { showReportBug = true }
+                            )
+
+                            if let trailer = viewModel.trailer {
+                                TrailerSection(trailer: trailer)
+                            }
+
+                            if !viewModel.mainCast.isEmpty || viewModel.director != nil {
+                                MovieCreditsSection(
+                                    director: viewModel.director,
+                                    cast: viewModel.mainCast,
+                                    movie: movie,
+                                    onActorTap: { actor in
+                                        selectedActor = actor
+                                    }
+                                )
+                            }
+
+                            if !viewModel.similarMovies.isEmpty {
+                                SimilarMoviesSection(movies: viewModel.similarMovies)
+                            }
                         }
-                        
-                        if !viewModel.similarMovies.isEmpty {
-                            SimilarMoviesSection(movies: viewModel.similarMovies)
-                        }
+                        .padding(.horizontal, 50)
+                        .padding(.bottom, shouldShowAd ? 90 : 40)
                     }
-                    .padding(.horizontal, 50)
-                    .padding(.bottom, 40)
                 }
+            }
+
+            if shouldShowAd {
+                BannerAdView(adUnitID: AppConstants.AdMob.bannerAdUnitID)
+                    .frame(height: 50)
             }
         }
         .background(Color.theme.background.ignoresSafeArea())

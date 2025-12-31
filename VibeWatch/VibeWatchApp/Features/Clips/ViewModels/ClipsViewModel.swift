@@ -178,10 +178,16 @@ class ClipsViewModel: ObservableObject {
                     engagementScore: isLiked ? 5.0 : -1.0,
                     action: isLiked ? "like" : "unlike"
                 )
+
+                // Award gamification XP for liking a clip
+                if isLiked, let userId = await AuthService.shared.currentUser?.id {
+                    let isPro = await ClipQuotaService.shared.checkIsProUser()
+                    _ = await GamificationService.shared.awardXP(userId: userId, action: .clipLiked, isPro: isPro)
+                }
             }
         }
     }
-    
+
     func trackAddToList(clip: Clip) {
         engagementTracker.trackListAddition(clip: clip, listType: "watchlist")
         Logger.debug("📝 Added to list: \(clip.title)")
@@ -189,6 +195,12 @@ class ClipsViewModel: ObservableObject {
         Task {
             let (genreIds, actorIds) = await fetchGenresAndActors(for: clip)
             recordUnifiedPreferences(for: clip, genreIds: genreIds, actorIds: actorIds, engagementScore: 8.0, action: "add_to_list")
+
+            // Award gamification XP for adding to list
+            if let userId = await AuthService.shared.currentUser?.id {
+                let isPro = await ClipQuotaService.shared.checkIsProUser()
+                _ = await GamificationService.shared.awardXP(userId: userId, action: .addedToList, isPro: isPro)
+            }
         }
     }
 

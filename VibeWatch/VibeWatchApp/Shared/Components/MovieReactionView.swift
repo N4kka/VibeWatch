@@ -3,6 +3,7 @@ import SwiftUI
 struct MovieReactionView: View {
     let mediaId: Int
     let mediaType: MediaType
+    let analyticsContext: AnalyticsContext? = nil
     
     @StateObject private var reactionService = MovieReactionService.shared
     @EnvironmentObject var authService: AuthService
@@ -106,7 +107,8 @@ struct MovieReactionView: View {
                     mediaId: mediaId,
                     mediaType: mediaType,
                     reaction: reaction,
-                    userId: userId
+                    userId: userId,
+                    context: analyticsContext
                 )
                 
                 // Reload to get updated counts

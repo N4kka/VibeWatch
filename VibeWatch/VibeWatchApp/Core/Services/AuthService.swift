@@ -800,7 +800,7 @@ class AuthService: ObservableObject {
         }
         
         // Best-effort: remove other user-scoped data
-        let tables = ["user_daily_quota", "user_ai_token_usage", "user_clip_history", "user_preferences"]
+        let tables = ["user_daily_quota", "user_ai_token_usage", "user_clip_history", "user_clip_signals", "user_preferences"]
         for table in tables {
             do {
                 try await client

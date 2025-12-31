@@ -402,7 +402,12 @@ class ListManager: ObservableObject {
         lists.filter { $0.type == .custom }.count
     }
     
-    func addToList(listId: String, movie: Movie, mediaType: MediaType) async throws {
+    func addToList(
+        listId: String,
+        movie: Movie,
+        mediaType: MediaType,
+        analyticsContext: AnalyticsContext? = nil
+    ) async throws {
         guard let index = lists.firstIndex(where: { $0.id == listId }) else {
             throw ListError.listNotFound
         }
@@ -466,7 +471,8 @@ class ListManager: ObservableObject {
         // Analytics: Track item added
         AnalyticsService.shared.logItemAddedToList(
             listType: lists[index].type.rawValue,
-            mediaType: mediaType.rawValue
+            mediaType: mediaType.rawValue,
+            context: analyticsContext
         )
 
         PaywallTriggerService.shared.recordSavedToList()

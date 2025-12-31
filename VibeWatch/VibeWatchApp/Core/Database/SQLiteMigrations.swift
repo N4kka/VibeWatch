@@ -8,7 +8,7 @@ extension SQLiteService {
     /// Run personalization migrations (Phase 1)
     func runPersonalizationMigrations() {
         let currentVersion = getPersonalizationMigrationVersion()
-        let latestVersion = 5
+        let latestVersion = 6
 
         guard currentVersion < latestVersion else {
             Logger.info("[SQLite] Personalization migrations already applied (version \(currentVersion))")
@@ -38,6 +38,9 @@ extension SQLiteService {
             }
             if currentVersion < 5 {
                 migration5_AddSmartNotifications()
+            }
+            if currentVersion < 6 {
+                migration6_AddNotificationSubscriptions()
             }
 
             // Update migration version
@@ -150,6 +153,16 @@ extension SQLiteService {
         execute(createUserNotificationPreferencesTable())
 
         Logger.info("[SQLite] Migration 5 complete - Smart notifications enabled")
+    }
+
+    // MARK: - Migration 6: Notification Subscriptions (Pro Feature)
+
+    private func migration6_AddNotificationSubscriptions() {
+        Logger.info("[SQLite] Migration 6: Creating notification subscriptions table for Pro features")
+
+        execute(createNotificationSubscriptionsTable())
+
+        Logger.info("[SQLite] Migration 6 complete - Pro notification subscriptions enabled")
     }
 
     // MARK: - Table Creation Methods
@@ -270,6 +283,26 @@ extension SQLiteService {
             custom_genre_alerts TEXT,
             updated_at TEXT NOT NULL
         );
+        """
+    }
+
+    private func createNotificationSubscriptionsTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS notification_subscriptions (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            actor_id INTEGER,
+            genre_id INTEGER,
+            type TEXT NOT NULL CHECK (type IN ('actor_alert', 'genre_alert')),
+            created_at TEXT NOT NULL,
+            synced_at TEXT,
+            FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_notification_subscriptions_user ON notification_subscriptions(user_id, type);
+        CREATE INDEX IF NOT EXISTS idx_notification_subscriptions_actor ON notification_subscriptions(actor_id) WHERE actor_id IS NOT NULL;
+        CREATE INDEX IF NOT EXISTS idx_notification_subscriptions_genre ON notification_subscriptions(genre_id) WHERE genre_id IS NOT NULL;
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_notification_subscriptions_user_actor ON notification_subscriptions(user_id, actor_id, type) WHERE actor_id IS NOT NULL;
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_notification_subscriptions_user_genre ON notification_subscriptions(user_id, genre_id, type) WHERE genre_id IS NOT NULL;
         """
     }
 
