@@ -121,10 +121,18 @@ class AppState: ObservableObject {
         ) { [weak self] _ in
             Task {
                 await self?.checkForRequiredUpdate()
+
+                // CRITICAL: Sync user data when returning to foreground
+                await self?.performSyncOnForegroundResume()
+
                 // Also check for notifications when returning to foreground
                 await self?.scheduleSmartNotificationsIfNeeded()
             }
         }
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
 
     func checkAuthState() async {
@@ -154,6 +162,37 @@ class AppState: ObservableObject {
         await SyncWorker.shared.forceSyncNow()
 
         print("✅ [AppState] Full sync completed on app launch")
+    }
+
+    /// Sync user data when app returns to foreground
+    /// Throttled to avoid excessive syncs
+    private func performSyncOnForegroundResume() async {
+        guard isAuthenticated, let userId = currentUser?.id else { return }
+
+        // Throttle: Only sync if last sync was > 2 minutes ago
+        let lastSyncKey = "lastForegroundSyncTime"
+        let lastSync = UserDefaults.standard.double(forKey: lastSyncKey)
+        let now = Date().timeIntervalSince1970
+        let twoMinutes: TimeInterval = 2 * 60
+
+        guard now - lastSync > twoMinutes else {
+            print("📱 [AppState] Skipping foreground sync - synced recently")
+            return
+        }
+
+        UserDefaults.standard.set(now, forKey: lastSyncKey)
+        print("🔄 [AppState] Performing sync on foreground resume...")
+
+        // Sync gamification state (may have changed on another device)
+        await GamificationService.shared.loadUserState(userId: userId)
+
+        // Sync lists
+        await ListManager.shared.syncListsForAuthenticatedUser()
+
+        // Process pending outbox
+        await SyncWorker.shared.forceSyncNow()
+
+        print("✅ [AppState] Foreground sync completed")
     }
 
     /// Schedule smart notifications when user is authenticated
