@@ -100,6 +100,10 @@ class AppState: ObservableObject {
         Task {
             await checkForRequiredUpdate()
             await checkAuthState()
+
+            // CRITICAL: Sync user data from Supabase on every app launch
+            await performFullSyncOnLaunch()
+
             await preloadContent()
             await RevenueCatService.shared.refreshOfferings()
 
@@ -128,6 +132,28 @@ class AppState: ObservableObject {
         self.isAuthenticated = authService.isAuthenticated
         self.currentUser = authService.currentUser
         print("🔄 [AppState] Updated auth state: authenticated=\(isAuthenticated), user=\(currentUser?.email ?? "nil")")
+    }
+
+    /// Perform full sync from Supabase on app launch
+    /// This ensures data persists across days and devices
+    private func performFullSyncOnLaunch() async {
+        guard isAuthenticated, let userId = currentUser?.id else {
+            print("📱 [AppState] Skipping sync - not authenticated")
+            return
+        }
+
+        print("🔄 [AppState] Performing full sync on app launch...")
+
+        // Sync gamification state first (XP, level, streak, badges)
+        await GamificationService.shared.loadUserState(userId: userId)
+
+        // Sync lists from Supabase
+        await ListManager.shared.syncListsForAuthenticatedUser()
+
+        // Process any pending outbox operations
+        await SyncWorker.shared.forceSyncNow()
+
+        print("✅ [AppState] Full sync completed on app launch")
     }
 
     /// Schedule smart notifications when user is authenticated
