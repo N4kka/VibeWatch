@@ -412,6 +412,58 @@ class GamificationService: ObservableObject {
         Logger.info("[GamificationService] State loaded - Level: \(userState.currentLevel), XP: \(userState.totalXP), Streak: \(userState.currentStreak)")
     }
 
+    /// Explicitly sync gamification state from Supabase
+    /// Call this on app launch and foreground resume to ensure cross-device sync
+    func syncFromSupabase(userId: String) async {
+        Logger.info("[GamificationService] Syncing from Supabase for user: \(userId)")
+
+        // Fetch remote state
+        guard let remoteState = await fetchRemoteState(userId: userId) else {
+            Logger.warning("[GamificationService] No remote state found - using local")
+            return
+        }
+
+        // Store local values for comparison
+        let localXP = userState.totalXP
+        let localLevel = userState.currentLevel
+        let localStreak = userState.currentStreak
+        let localLongestStreak = userState.longestStreak
+
+        // Merge with local state (take max values)
+        userState.totalXP = max(localXP, remoteState.totalXP)
+        userState.currentLevel = max(localLevel, remoteState.currentLevel)
+        userState.longestStreak = max(localLongestStreak, remoteState.longestStreak)
+
+        // For streak, use the one from the most recent activity
+        if let remoteDate = remoteState.lastActivityDate,
+           let localDate = userState.lastActivityDate {
+            if remoteDate > localDate {
+                userState.currentStreak = remoteState.currentStreak
+                userState.lastActivityDate = remoteDate
+            }
+        } else if let remoteDate = remoteState.lastActivityDate {
+            userState.currentStreak = remoteState.currentStreak
+            userState.lastActivityDate = remoteDate
+        }
+
+        // Recalculate level based on merged XP
+        userState.calculateLevel()
+
+        // If local had higher values, push to Supabase
+        if localXP > remoteState.totalXP || localLevel > remoteState.currentLevel {
+            await saveUserState(userId: userId)
+            Logger.info("[GamificationService] Pushed higher local state to Supabase")
+        }
+
+        // Merge badges from remote
+        await mergeBadgesFromRemote(userId: userId)
+
+        Logger.info("[GamificationService] Synced - XP: \(userState.totalXP), Level: \(userState.currentLevel), Streak: \(userState.currentStreak)")
+
+        // Notify UI to refresh
+        objectWillChange.send()
+    }
+
     /// Load state from local SQLite only
     private func loadLocalState(userId: String) async -> UserGamificationState? {
         let stateQuery = """
