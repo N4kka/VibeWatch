@@ -152,6 +152,9 @@ class AppState: ObservableObject {
 
         print("🔄 [AppState] Performing full sync on app launch...")
 
+        // Check onboarding state from profile first
+        await checkOnboardingFromProfile()
+
         // Sync gamification state first (XP, level, streak, badges)
         await GamificationService.shared.loadUserState(userId: userId)
 
@@ -193,6 +196,39 @@ class AppState: ObservableObject {
         await SyncWorker.shared.forceSyncNow()
 
         print("✅ [AppState] Foreground sync completed")
+    }
+
+    /// Check if user completed onboarding on another device
+    private func checkOnboardingFromProfile() async {
+        guard isAuthenticated else { return }
+
+        // If already completed locally, sync to profile if needed
+        if UserDefaults.standard.bool(forKey: "hasCompletedOnboarding") {
+            // Ensure it's synced to profile
+            Task {
+                do {
+                    try await SupabaseService.shared.updateUserProfile([
+                        "onboarding_completed": true,
+                        "onboarding_completed_at": ISO8601DateFormatter().string(from: Date())
+                    ])
+                } catch {
+                    print("⚠️ [AppState] Failed to sync onboarding state: \(error)")
+                }
+            }
+            return
+        }
+
+        // Check if completed on another device
+        do {
+            if let profile = try await SupabaseService.shared.fetchUserProfile(),
+               let completed = profile["onboarding_completed"] as? Bool,
+               completed {
+                UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+                print("✅ [AppState] Onboarding already completed on another device")
+            }
+        } catch {
+            print("⚠️ [AppState] Failed to check onboarding from profile: \(error)")
+        }
     }
 
     /// Schedule smart notifications when user is authenticated
