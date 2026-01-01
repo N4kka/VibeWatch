@@ -167,27 +167,110 @@ class ListManager: ObservableObject {
     }
     
     func loadLists() {
-        // Load from UserDefaults synchronously first (backward compatibility)
+        // Load from SQLite first (source of truth), fallback to UserDefaults
+        Task {
+            await loadListsFromSQLite()
+            await ensureListsInDatabase()
+        }
+    }
+
+    /// Load lists from SQLite (source of truth)
+    /// Falls back to UserDefaults for backward compatibility with existing users
+    private func loadListsFromSQLite() async {
+        guard let userId = AuthService.shared.currentUser?.id else {
+            loadListsFromUserDefaults()
+            return
+        }
+
+        do {
+            // Query 1: Load all lists for user
+            let listsQuery = """
+                SELECT l.id, l.name, l.description, l.type, l.created_at
+                FROM lists l
+                WHERE l.user_id = ?
+                ORDER BY l.created_at DESC
+            """
+            let listRows = try await db.queryRaw(listsQuery, parameters: [userId])
+
+            guard !listRows.isEmpty else {
+                loadListsFromUserDefaults()
+                return
+            }
+
+            // Query 2: Load ALL items for ALL lists in one query
+            let listIds = listRows.compactMap { $0["id"] as? String }
+            let placeholders = listIds.map { _ in "?" }.joined(separator: ", ")
+            let itemsQuery = """
+                SELECT * FROM list_items
+                WHERE list_id IN (\(placeholders)) AND deleted_at IS NULL
+                ORDER BY added_at DESC
+            """
+            let itemRows = try await db.queryRaw(itemsQuery, parameters: listIds)
+
+            // Group items by list_id
+            var itemsByListId: [String: [MediaListItem]] = [:]
+            for row in itemRows {
+                guard let listId = row["list_id"] as? String,
+                      let item = MediaListItem.from(dictionary: row) else { continue }
+                itemsByListId[listId, default: []].append(item)
+            }
+
+            // Build lists with pre-fetched items
+            var loadedLists: [MediaList] = []
+            for row in listRows {
+                guard let id = row["id"] as? String,
+                      let name = row["name"] as? String,
+                      let typeRaw = row["type"] as? String,
+                      let type = ListType(rawValue: typeRaw) else { continue }
+
+                let items = itemsByListId[id] ?? []
+                let list = MediaList(
+                    id: id,
+                    name: name,
+                    description: row["description"] as? String,
+                    type: type,
+                    createdAt: ISO8601DateFormatter().date(from: row["created_at"] as? String ?? "") ?? Date(),
+                    items: items
+                )
+                loadedLists.append(list)
+            }
+
+            applyLists(loadedLists)
+            print("📋 [ListManager] Loaded \(loadedLists.count) lists with \(itemRows.count) items from SQLite (2 queries)")
+        } catch {
+            print("❌ [ListManager] Failed to load from SQLite: \(error)")
+            loadListsFromUserDefaults()
+        }
+    }
+
+    /// Legacy loader for backward compatibility
+    private func loadListsFromUserDefaults() {
         if let data = UserDefaults.standard.data(forKey: "media_lists"),
            let decoded = try? JSONDecoder().decode([MediaList].self, from: data) {
             applyLists(decoded)
-            print("📋 [ListManager] Loaded \(decoded.count) lists from UserDefaults")
-            
-            // Ensure all lists exist in database
+            print("[ListManager] Loaded \(decoded.count) lists from UserDefaults (legacy)")
+
+            // Migrate to SQLite in background
             Task {
-                await ensureListsInDatabase()
+                await migrateListsToSQLite(decoded)
             }
         } else {
             // Initialize with default lists
             self.lists = [watchlist, seenList, likedList, dislikedList]
             saveLists()
-            print("📋 [ListManager] Initialized default lists")
-            
-            // Create lists in database
-            Task {
-                await ensureListsInDatabase()
+            print("[ListManager] Initialized default lists")
+        }
+    }
+
+    /// Migrate lists from UserDefaults to SQLite
+    private func migrateListsToSQLite(_ lists: [MediaList]) async {
+        for list in lists {
+            await ensureListInSQLite(list)
+            for item in list.items {
+                await addItemToSQLite(item, listId: list.id)
             }
         }
+        print("[ListManager] Migrated \(lists.count) lists to SQLite")
     }
     
     /// Ensure all in-memory lists exist in both SQLite and Supabase
