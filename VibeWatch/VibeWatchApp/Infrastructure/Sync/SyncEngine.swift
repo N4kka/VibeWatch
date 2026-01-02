@@ -66,11 +66,21 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
 
     // MARK: - Published State
 
+    /// The sync state machine managing sync lifecycle
+    public let stateMachine: SyncStateMachine
+
+    /// Whether a sync operation is currently in progress (derived from state machine)
     @Published public private(set) var isSyncing = false
+
     @Published public private(set) var lastSyncAt: Date?
     @Published public private(set) var pendingOperationsCount: Int = 0
     @Published public private(set) var lastError: String?
     @Published public private(set) var isOnline: Bool = true
+
+    /// The current sync state (forwarded from state machine)
+    public var syncState: SyncState {
+        stateMachine.currentState
+    }
 
     // MARK: - Dependencies
 
@@ -104,6 +114,9 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
     private var lastBackgroundTime: Date?
     private var cancellables = Set<AnyCancellable>()
 
+    /// Tracks the state before suspension for proper resume
+    private var stateBeforeSuspension: SyncState?
+
     // MARK: - Notification Names
 
     public static let syncStartedNotification = Notification.Name("SyncEngine.syncStarted")
@@ -115,11 +128,13 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
     private init(
         sqliteService: SQLiteService = .shared,
         networkMonitor: NetworkMonitor = .shared,
-        conflictResolver: ConflictResolverProtocol = ConflictResolver.shared
+        conflictResolver: ConflictResolverProtocol = ConflictResolver.shared,
+        stateMachine: SyncStateMachine? = nil
     ) {
         self.sqliteService = sqliteService
         self.networkMonitor = networkMonitor
         self.conflictResolver = conflictResolver
+        self.stateMachine = stateMachine ?? SyncStateMachine()
 
         // Load or create device ID
         if let savedDeviceId = UserDefaults.standard.string(forKey: "deviceIdentifier") {
@@ -138,6 +153,7 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
         Logger.info("[SyncEngine] Initialized with device ID: \(deviceId)")
 
         setupNetworkObserver()
+        setupStateMachineObserver()
     }
 
     // MARK: - Setup
@@ -147,14 +163,39 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
         networkMonitor.$isConnected
             .removeDuplicates()
             .sink { [weak self] isConnected in
-                self?.isOnline = isConnected
+                guard let self = self else { return }
+                self.isOnline = isConnected
                 if isConnected {
                     Task { @MainActor [weak self] in
                         await self?.handleNetworkRestored()
                     }
+                } else {
+                    // Network lost - transition to offline if not already
+                    self.handleNetworkLost()
                 }
             }
             .store(in: &cancellables)
+    }
+
+    private func setupStateMachineObserver() {
+        // Keep isSyncing in sync with state machine
+        stateMachine.$currentState
+            .map { $0.isSyncing }
+            .removeDuplicates()
+            .assign(to: &$isSyncing)
+    }
+
+    private func handleNetworkLost() {
+        // Only transition to offline if we're in a state that should go offline
+        switch stateMachine.currentState {
+        case .idle:
+            stateMachine.goOffline(reason: "Network connectivity lost")
+        case .syncing:
+            // Will be handled by the sync operation failure
+            break
+        default:
+            break
+        }
     }
 
     // MARK: - Lifecycle Management
@@ -186,11 +227,17 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
     /// Record when app goes to background for foreground resume logic.
     public func recordBackgroundEntry() {
         lastBackgroundTime = Date()
-        Logger.debug("[SyncEngine] Recorded background entry")
+        stateBeforeSuspension = stateMachine.currentState
+        stateMachine.suspend(reason: "App entering background")
+        Logger.debug("[SyncEngine] Recorded background entry, state was: \(stateBeforeSuspension?.logDescription ?? "unknown")")
     }
 
     /// Handle app returning to foreground.
     public func handleForegroundResume() async {
+        // Resume from suspended state
+        let previousState = stateBeforeSuspension
+        stateBeforeSuspension = nil
+
         let shouldFullSync: Bool
         if let backgroundTime = lastBackgroundTime {
             let elapsed = Date().timeIntervalSince(backgroundTime)
@@ -200,15 +247,36 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             shouldFullSync = true
         }
 
-        if shouldFullSync {
-            await performFullSync(trigger: .foregroundResume)
+        // Determine the resume state based on network and previous state
+        let resumeState: SyncState
+        if !networkMonitor.isConnected {
+            resumeState = .offline
+        } else if case .error(let err, let retryable) = previousState {
+            // Preserve error state if not retryable
+            resumeState = retryable ? .idle : .error(err, retryable: false)
         } else {
-            await pushPendingChanges()
+            resumeState = .idle
+        }
+
+        stateMachine.resume(to: resumeState, reason: "App returned to foreground")
+
+        if resumeState == .idle {
+            if shouldFullSync {
+                await performFullSync(trigger: .foregroundResume)
+            } else {
+                await pushPendingChanges()
+            }
         }
     }
 
     private func handleNetworkRestored() async {
         Logger.info("[SyncEngine] Network restored - syncing pending changes")
+
+        // Transition from offline to idle (or stay in current state if not offline)
+        if case .offline = stateMachine.currentState {
+            stateMachine.goOnline(reason: "Network connectivity restored")
+        }
+
         await performFullSync(trigger: .networkRestored)
     }
 
@@ -272,24 +340,34 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
     // MARK: - Full Sync
 
     public func performFullSync(trigger: SyncTrigger) async {
-        guard !isSyncing else {
-            Logger.debug("[SyncEngine] Sync already in progress, skipping (\(trigger.logDescription))")
+        // Check if we can start a sync using state machine
+        guard stateMachine.canTransition(to: .syncing(.fullSync)) else {
+            Logger.debug("[SyncEngine] Cannot start sync in current state: \(stateMachine.currentState.logDescription) (\(trigger.logDescription))")
             return
         }
 
         guard networkMonitor.isConnected else {
             Logger.debug("[SyncEngine] Offline, skipping sync (\(trigger.logDescription))")
+            if stateMachine.currentState != .offline {
+                stateMachine.goOffline(reason: "Network unavailable for sync")
+            }
             return
         }
 
-        Logger.info("[SyncEngine] Starting \(trigger.shouldPerformFullSync ? "full" : "partial") sync (\(trigger.logDescription))")
+        // Determine the operation type based on trigger
+        let operation: SyncOperationType = trigger.shouldPerformFullSync ? .fullSync :
+            (trigger.shouldPushChanges && trigger.shouldPullChanges ? .fullSync :
+             trigger.shouldPushChanges ? .push : .pull)
 
-        isSyncing = true
-        postNotification(SyncEngine.syncStartedNotification, trigger: trigger)
+        Logger.info("[SyncEngine] Starting \(operation.logDescription) (\(trigger.logDescription))")
 
-        defer {
-            isSyncing = false
+        // Transition to syncing state
+        guard stateMachine.startSync(operation, reason: trigger.logDescription) else {
+            Logger.warning("[SyncEngine] Failed to transition to syncing state")
+            return
         }
+
+        postNotification(SyncEngine.syncStartedNotification, trigger: trigger)
 
         do {
             // Push pending changes first
@@ -308,11 +386,23 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             UserDefaults.standard.set(now, forKey: "SyncEngine.lastSyncTimestamp")
             lastError = nil
 
+            // Transition to idle state
+            stateMachine.completeSync(reason: "Sync completed for \(trigger.logDescription)")
+
             postNotification(SyncEngine.syncCompletedNotification, trigger: trigger)
             Logger.info("[SyncEngine] Sync completed successfully (\(trigger.logDescription))")
 
         } catch {
             lastError = error.localizedDescription
+
+            // Determine if error is network-related
+            let stateError = SyncStateError.from(error)
+            if case .networkFailure = stateError {
+                stateMachine.goOffline(reason: "Network lost during sync")
+            } else {
+                stateMachine.failSync(with: stateError, reason: "Sync failed: \(error.localizedDescription)")
+            }
+
             postNotification(SyncEngine.syncFailedNotification, trigger: trigger, error: error)
             Logger.error("[SyncEngine] Sync failed (\(trigger.logDescription))", error: error)
         }
@@ -321,8 +411,8 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
     // MARK: - Push Changes
 
     public func pushPendingChanges() async {
-        guard !isSyncing else {
-            Logger.debug("[SyncEngine] Push skipped - sync in progress")
+        guard stateMachine.canTransition(to: .syncing(.push)) else {
+            Logger.debug("[SyncEngine] Push skipped - cannot transition from \(stateMachine.currentState.logDescription)")
             return
         }
 
@@ -331,10 +421,17 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             return
         }
 
-        isSyncing = true
-        defer { isSyncing = false }
+        guard stateMachine.startSync(.push, reason: "Pushing pending changes") else {
+            Logger.debug("[SyncEngine] Push skipped - failed to start sync")
+            return
+        }
 
         await pushPendingChangesInternal()
+
+        // Complete the sync if we're still in syncing state
+        if stateMachine.currentState.isSyncing {
+            stateMachine.completeSync(reason: "Push completed")
+        }
     }
 
     private func pushPendingChangesInternal() async {
@@ -387,8 +484,8 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
     // MARK: - Pull Changes
 
     public func pullFromRemote() async {
-        guard !isSyncing else {
-            Logger.debug("[SyncEngine] Pull skipped - sync in progress")
+        guard stateMachine.canTransition(to: .syncing(.pull)) else {
+            Logger.debug("[SyncEngine] Pull skipped - cannot transition from \(stateMachine.currentState.logDescription)")
             return
         }
 
@@ -397,10 +494,17 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             return
         }
 
-        isSyncing = true
-        defer { isSyncing = false }
+        guard stateMachine.startSync(.pull, reason: "Pulling remote changes") else {
+            Logger.debug("[SyncEngine] Pull skipped - failed to start sync")
+            return
+        }
 
         await pullFromRemoteInternal()
+
+        // Complete the sync if we're still in syncing state
+        if stateMachine.currentState.isSyncing {
+            stateMachine.completeSync(reason: "Pull completed")
+        }
     }
 
     private func pullFromRemoteInternal() async {
@@ -758,6 +862,40 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
         """
         _ = sqliteService.execute(sql)
         Logger.info("[SyncEngine] Cleared completed operations older than \(olderThanDays) days")
+    }
+
+    /// Get the state machine's history for debugging
+    public func getStateHistory() -> [SyncStateHistoryEntry] {
+        return stateMachine.getHistory()
+    }
+
+    /// Get a debug description of the current sync state
+    public func getStateDebugInfo() -> String {
+        var info: [String] = []
+        info.append("Current State: \(stateMachine.currentState)")
+        info.append("Is Syncing: \(isSyncing)")
+        info.append("Is Online: \(isOnline)")
+        info.append("Pending Operations: \(pendingOperationsCount)")
+        if let lastSync = lastSyncAt {
+            let formatter = DateFormatter()
+            formatter.dateStyle = .short
+            formatter.timeStyle = .medium
+            info.append("Last Sync: \(formatter.string(from: lastSync))")
+        }
+        if let error = lastError {
+            info.append("Last Error: \(error)")
+        }
+        info.append("")
+        info.append("State History:")
+        info.append(stateMachine.historyDescription())
+        return info.joined(separator: "\n")
+    }
+
+    /// Force transition to a specific state (for testing/debugging only)
+    @discardableResult
+    public func forceState(_ state: SyncState, reason: String? = nil) -> Bool {
+        Logger.warning("[SyncEngine] Forcing state transition to \(state.logDescription)")
+        return stateMachine.transition(to: state, reason: reason ?? "Forced state change")
     }
 }
 
