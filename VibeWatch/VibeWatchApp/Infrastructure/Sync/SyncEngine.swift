@@ -80,6 +80,9 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
 
     // MARK: - Configuration
 
+    /// Conflict resolver for handling local/remote conflicts during pull
+    private let conflictResolver: ConflictResolverProtocol
+
     /// Maximum number of retry attempts before marking an operation as stuck
     private let maxRetries = 5
 
@@ -111,10 +114,12 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
 
     private init(
         sqliteService: SQLiteService = .shared,
-        networkMonitor: NetworkMonitor = .shared
+        networkMonitor: NetworkMonitor = .shared,
+        conflictResolver: ConflictResolverProtocol = ConflictResolver.shared
     ) {
         self.sqliteService = sqliteService
         self.networkMonitor = networkMonitor
+        self.conflictResolver = conflictResolver
 
         // Load or create device ID
         if let savedDeviceId = UserDefaults.standard.string(forKey: "deviceIdentifier") {
@@ -426,7 +431,7 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
 
         for table in userTables {
             do {
-                try await SupabaseService.shared.pullTable(name: table, userId: userId)
+                try await pullTableWithConflictResolution(name: table, userId: userId)
                 Logger.debug("[SyncEngine] Pulled \(table)")
             } catch {
                 Logger.warning("[SyncEngine] Failed to pull \(table): \(error.localizedDescription)")
@@ -434,6 +439,134 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
         }
 
         Logger.info("[SyncEngine] Pull complete")
+    }
+
+    /// Pulls a table from remote with conflict resolution applied.
+    ///
+    /// For each remote record, checks if a local record exists and uses
+    /// the appropriate conflict resolution strategy to merge them.
+    private func pullTableWithConflictResolution(name: String, userId: String) async throws {
+        guard let client = SupabaseService.shared.client else {
+            throw SyncEngineError.notAuthenticated
+        }
+
+        // Fetch remote records
+        var query = client.from(name).select("*")
+        if name == "profiles" {
+            query = query.eq("id", value: userId)
+        } else {
+            query = query.eq("user_id", value: userId)
+        }
+
+        let data = try await query.execute().data
+        guard let remoteRows = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
+            return
+        }
+
+        let strategy = TableConflictMapping.strategy(for: name)
+        var resolvedRows: [[String: Any]] = []
+        var conflictsResolved = 0
+
+        for remoteRow in remoteRows {
+            // Normalize remote row
+            let normalizedRemote = normalizeRow(remoteRow, for: name)
+
+            // Get the record ID
+            guard let recordId = getRecordId(from: normalizedRemote, table: name) else {
+                resolvedRows.append(normalizedRemote)
+                continue
+            }
+
+            // Check for local record
+            if let localRow = await fetchLocalRecord(table: name, id: recordId) {
+                // Conflict exists - resolve it
+                let resolved = conflictResolver.resolve(
+                    table: name,
+                    local: localRow,
+                    remote: normalizedRemote
+                )
+
+                resolvedRows.append(resolved.record)
+
+                if resolved.wasModified {
+                    conflictsResolved += 1
+                    Logger.debug("[SyncEngine] Resolved conflict in \(name) using \(resolved.strategyUsed.rawValue): \(resolved.source.rawValue)")
+                }
+            } else {
+                // No local record - just use remote
+                resolvedRows.append(normalizedRemote)
+            }
+        }
+
+        // Upsert resolved records to local database
+        if !resolvedRows.isEmpty {
+            try await sqliteService.upsert(table: name, rows: resolvedRows)
+        }
+
+        if conflictsResolved > 0 {
+            Logger.info("[SyncEngine] Resolved \(conflictsResolved) conflicts in \(name) using \(strategy.rawValue) strategy")
+        }
+    }
+
+    /// Fetches a local record by ID for conflict resolution.
+    private func fetchLocalRecord(table: String, id: String) async -> [String: Any]? {
+        let idColumn = getPrimaryKeyColumn(for: table)
+        let sql = "SELECT * FROM \(table) WHERE \(idColumn) = ? LIMIT 1"
+
+        do {
+            let rows = try await sqliteService.queryRaw(sql, parameters: [id])
+            return rows.first
+        } catch {
+            return nil
+        }
+    }
+
+    /// Gets the primary key column name for a table.
+    private func getPrimaryKeyColumn(for table: String) -> String {
+        switch table {
+        case "user_gamification":
+            return "user_id"
+        case "device_info":
+            return "device_id"
+        case "global_discovery_filters":
+            return "user_id"
+        default:
+            return "id"
+        }
+    }
+
+    /// Gets the record ID from a row based on table type.
+    private func getRecordId(from row: [String: Any], table: String) -> String? {
+        let keyColumn = getPrimaryKeyColumn(for: table)
+        if let id = row[keyColumn] {
+            return String(describing: id)
+        }
+        return nil
+    }
+
+    /// Normalizes a row for storage (handles media_type, JSON arrays, etc.).
+    private func normalizeRow(_ row: [String: Any], for table: String) -> [String: Any] {
+        var normalized = row
+
+        // Ensure media_type is valid
+        if table == "clips" || table == "list_items" {
+            if let mt = normalized["media_type"] as? String, !["movie", "tv"].contains(mt) {
+                normalized["media_type"] = "movie"
+            }
+        }
+
+        // Convert Postgres arrays to JSON strings
+        let arrayFields = ["genres", "actors", "keywords", "origin_country"]
+        for field in arrayFields {
+            if let arr = normalized[field] as? [Any] {
+                if let data = try? JSONSerialization.data(withJSONObject: arr),
+                   let str = String(data: data, encoding: .utf8) {
+                    normalized[field] = str
+                }
+            }
+        }
+
+        return normalized
     }
 
     // MARK: - Operation Execution
