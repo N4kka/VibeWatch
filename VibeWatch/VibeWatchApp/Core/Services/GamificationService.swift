@@ -574,27 +574,34 @@ class GamificationService: ObservableObject {
             await onLevelUp(userId: userId, oldLevel: oldLevel, newLevel: userState.currentLevel)
         }
 
-        // Save to database
-        await saveXPTransaction(
-            userId: userId,
-            action: action,
-            baseXP: baseXP,
-            multiplier: proMultiplier,
-            streakBonus: streakMultiplier - 1.0,
-            totalXP: totalXP,
-            source: source
-        )
+        // Save to database - wrap in transaction for atomicity
+        do {
+            try await sqliteService.transaction {
+                await self.saveXPTransaction(
+                    userId: userId,
+                    action: action,
+                    baseXP: baseXP,
+                    multiplier: proMultiplier,
+                    streakBonus: streakMultiplier - 1.0,
+                    totalXP: totalXP,
+                    source: source
+                )
 
-        await saveUserState(userId: userId)
+                await self.saveUserState(userId: userId)
 
-        // Update daily count
+                // Update badge progress
+                await self.updateBadgeProgress(userId: userId, action: action)
+
+                // Update daily challenge progress
+                await self.updateChallengeProgress(userId: userId, action: action)
+            }
+        } catch {
+            Logger.error("[GamificationService] Failed to save XP transaction: \(error.localizedDescription)")
+            return nil
+        }
+
+        // Update daily count (in-memory only)
         dailyActionCounts[action.rawValue] = (dailyActionCounts[action.rawValue] ?? 0) + 1
-
-        // Update badge progress
-        await updateBadgeProgress(userId: userId, action: action)
-
-        // Update daily challenge progress
-        await updateChallengeProgress(userId: userId, action: action)
 
         // Get challenge progress info for toast (if applicable)
         var challengeProgressInfo: ChallengeProgressInfo?
