@@ -404,7 +404,11 @@ extension MainTabView {
 
                 if newPhase == .background || newPhase == .inactive {
                     Task {
-                        try? await PostHogClient.shared.flush()
+                        do {
+                            try await PostHogClient.shared.flush()
+                        } catch {
+                            Logger.error("[MainTabView] Failed to flush PostHog events: \(error.localizedDescription)")
+                        }
                     }
                 }
             }

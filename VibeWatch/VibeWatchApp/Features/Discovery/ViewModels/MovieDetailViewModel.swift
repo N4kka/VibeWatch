@@ -70,14 +70,18 @@ class MovieDetailViewModel: ObservableObject {
 
                 // Step 3: Cache the successfully fetched data (PRO users only)
                 if isProUser, let movie = self.movie {
-                    try? await detailCache.cacheMovieDetails(
-                        movie: movie,
-                        credits: self.credits,
-                        videos: self.videos,
-                        watchProviders: self.watchProviders,
-                        similarMovies: self.similarMovies,
-                        imdbId: self.imdbId
-                    )
+                    do {
+                        try await detailCache.cacheMovieDetails(
+                            movie: movie,
+                            credits: self.credits,
+                            videos: self.videos,
+                            watchProviders: self.watchProviders,
+                            similarMovies: self.similarMovies,
+                            imdbId: self.imdbId
+                        )
+                    } catch {
+                        Logger.warning("[MovieDetail] Failed to cache movie details: \(error.localizedDescription)")
+                    }
                 }
 
                 // Success - clear any error and return
@@ -359,14 +363,18 @@ class TVShowDetailViewModel: ObservableObject {
 
                 // Step 3: Cache the successfully fetched data (PRO users only)
                 if isProUser, let tvShow = self.tvShow {
-                    try? await detailCache.cacheTVShowDetails(
-                        tvShow: tvShow,
-                        credits: self.credits,
-                        videos: self.videos,
-                        watchProviders: self.watchProviders,
-                        similarShows: self.similarShows,
-                        imdbId: self.imdbId
-                    )
+                    do {
+                        try await detailCache.cacheTVShowDetails(
+                            tvShow: tvShow,
+                            credits: self.credits,
+                            videos: self.videos,
+                            watchProviders: self.watchProviders,
+                            similarShows: self.similarShows,
+                            imdbId: self.imdbId
+                        )
+                    } catch {
+                        Logger.warning("[MovieDetail] Failed to cache TV show details: \(error.localizedDescription)")
+                    }
                 }
 
                 // Success - clear any error and return

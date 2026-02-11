@@ -108,7 +108,11 @@ final class ClipsSearchViewModel: ObservableObject {
         updateLike(in: &related, clipId: clipId, isLiked: isLiked)
         
         Task {
-            try? await ClipsService.shared.updateLikeStatus(clipId: clipId, isLiked: isLiked)
+            do {
+                try await ClipsService.shared.updateLikeStatus(clipId: clipId, isLiked: isLiked)
+            } catch {
+                Logger.error("[ClipsSearchViewModel] Failed to update like status: \(error.localizedDescription)")
+            }
         }
     }
     

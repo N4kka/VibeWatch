@@ -311,7 +311,11 @@ class AppState: ObservableObject {
         // Refresh discovery content if stale (background)
         if ContentCacheManager.shared.shouldUpdateDiscoveryContent() {
             print("🔄 [AppState] Refreshing stale discovery content in background...")
-            try? await DiscoveryCacheService.shared.refreshContent()
+            do {
+                try await DiscoveryCacheService.shared.refreshContent()
+            } catch {
+                Logger.error("[AppState] Failed to refresh discovery content: \(error.localizedDescription)")
+            }
         }
 
         // Phase 4: Preload images for instant display
@@ -320,10 +324,14 @@ class AppState: ObservableObject {
         // Pre-warm personalization cache (background, low priority)
         Task(priority: .utility) {
             let profile = await UserPreferenceManager.shared.aggregatePreferences()
-            _ = try? await DiscoveryPersonalizationService.shared.generatePersonalizedCarousels(
-                userProfile: profile,
-                forceRefresh: false
-            )
+            do {
+                _ = try await DiscoveryPersonalizationService.shared.generatePersonalizedCarousels(
+                    userProfile: profile,
+                    forceRefresh: false
+                )
+            } catch {
+                Logger.error("[AppState] Failed to generate personalized carousels: \(error.localizedDescription)")
+            }
         }
     }
 

@@ -463,10 +463,18 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
 
                     // Check for schema missing error (PGRST205)
                     if isSchemaError(errorMessage) {
-                        try? await markOperationBlocked(operationId: operation.operationId, error: errorMessage)
+                        do {
+                            try await markOperationBlocked(operationId: operation.operationId, error: errorMessage)
+                        } catch {
+                            Logger.error("[SyncEngine] Failed to mark operation as blocked: \(error.localizedDescription)")
+                        }
                         Logger.warning("[SyncEngine] Blocked operation (schema missing): \(operation.tableName)")
                     } else {
-                        try? await incrementRetryCount(operationId: operation.operationId, error: errorMessage)
+                        do {
+                            try await incrementRetryCount(operationId: operation.operationId, error: errorMessage)
+                        } catch {
+                            Logger.error("[SyncEngine] Failed to increment retry count: \(error.localizedDescription)")
+                        }
                         Logger.warning("[SyncEngine] Operation failed: \(operation.tableName) - \(errorMessage)")
                     }
                     failCount += 1
