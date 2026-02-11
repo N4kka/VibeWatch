@@ -62,7 +62,11 @@ class DiscoveryViewModel: ObservableObject {
             }
             .store(in: &cancellables)
     }
-    
+
+    deinit {
+        loadTask?.cancel()
+    }
+
     // Alias for loadContent to fix call site compatibility
     func loadDiscoveryContent() async {
         await loadContent()

@@ -23,7 +23,12 @@ final class ClipsSearchViewModel: ObservableObject {
         self.searchService = searchService
         self.clipsService = clipsService
     }
-    
+
+    deinit {
+        searchTask?.cancel()
+        debounceTask?.cancel()
+    }
+
     func updateQuery(_ text: String) {
         query = text
         debounceTask?.cancel()

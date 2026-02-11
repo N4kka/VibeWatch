@@ -27,7 +27,12 @@ class SearchViewModel: ObservableObject {
         Logger.debug("[SearchViewModel] init() called")
         self.loadTrendingSearches()
         Task { await self.loadLatestVisitedItems() }
-    }    
+    }
+
+    deinit {
+        searchTask?.cancel()
+    }
+
     func search() {
         searchTask?.cancel()
         
