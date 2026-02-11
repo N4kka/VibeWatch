@@ -4,7 +4,7 @@ import UIKit
 /// Service for caching images offline
 /// Uses URLCache for automatic caching with size limits and invalidation
 @MainActor
-class ImageCacheService {
+class ImageCacheService: ImageCacheServiceProtocol {
     static let shared = ImageCacheService()
     
     private let cache: URLCache

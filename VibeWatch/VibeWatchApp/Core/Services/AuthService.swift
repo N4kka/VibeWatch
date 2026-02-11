@@ -5,7 +5,7 @@ import AuthenticationServices
 import RevenueCat
 
 @MainActor
-class AuthService: ObservableObject {
+class AuthService: AuthServiceProtocol {
     static let shared = AuthService()
 
     // Supabase configuration (from Secrets.xcconfig -> Info.plist -> Config)

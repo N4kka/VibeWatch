@@ -31,7 +31,7 @@ enum ListError: LocalizedError, Equatable {
 }
 
 @MainActor
-class ListManager: ObservableObject {
+class ListManager: ListManagerProtocol {
     static let shared = ListManager()
     
     // Limits
