@@ -149,17 +149,22 @@ final class ClipCommentService: ObservableObject {
         """, parameters: [clipId, limit])
         
         var comments = rows.compactMap { ClipComment.from(dictionary: $0) }
-        
-        // Check if current user has liked each comment
-        if let userId = userId {
+
+        // Fetch all liked comment IDs in a single query (fix N+1)
+        if let userId = userId, !comments.isEmpty {
+            let commentIds = comments.map { $0.id }
+            let placeholders = commentIds.map { _ in "?" }.joined(separator: ", ")
+            let likeRows: [[String: Any]] = try await sqlite.queryRaw("""
+                SELECT comment_id FROM clip_comment_likes
+                WHERE user_id = ? AND comment_id IN (\(placeholders))
+            """, parameters: [userId] + commentIds)
+
+            let likedSet = Set(likeRows.compactMap { $0["comment_id"] as? String })
             for i in 0..<comments.count {
-                comments[i].isLiked = try await hasUserLikedComment(
-                    commentId: comments[i].id,
-                    userId: userId
-                )
+                comments[i].isLiked = likedSet.contains(comments[i].id)
             }
         }
-        
+
         return comments
     }
     
@@ -181,17 +186,22 @@ final class ClipCommentService: ObservableObject {
         """, parameters: [parentId, limit])
         
         var replies = rows.compactMap { ClipComment.from(dictionary: $0) }
-        
-        // Check if current user has liked each reply
-        if let userId = userId {
+
+        // Fetch all liked reply IDs in a single query (fix N+1)
+        if let userId = userId, !replies.isEmpty {
+            let replyIds = replies.map { $0.id }
+            let placeholders = replyIds.map { _ in "?" }.joined(separator: ", ")
+            let likeRows: [[String: Any]] = try await sqlite.queryRaw("""
+                SELECT comment_id FROM clip_comment_likes
+                WHERE user_id = ? AND comment_id IN (\(placeholders))
+            """, parameters: [userId] + replyIds)
+
+            let likedSet = Set(likeRows.compactMap { $0["comment_id"] as? String })
             for i in 0..<replies.count {
-                replies[i].isLiked = try await hasUserLikedComment(
-                    commentId: replies[i].id,
-                    userId: userId
-                )
+                replies[i].isLiked = likedSet.contains(replies[i].id)
             }
         }
-        
+
         return replies
     }
     
