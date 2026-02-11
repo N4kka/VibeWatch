@@ -80,7 +80,7 @@ class AnalyticsService {
         Analytics.setUserProperty(value, forName: name)
         #endif
         
-        print("📊 [Analytics] User property set: \(name) = \(value ?? "nil")")
+        Logger.debug("[Analytics] User property set: \(name) = \(value ?? "nil")")
     }
     
     /// Enable/disable analytics
@@ -92,7 +92,7 @@ class AnalyticsService {
         Analytics.setAnalyticsCollectionEnabled(enabled)
         #endif
         
-        print("📊 [Analytics] \(enabled ? "Enabled" : "Disabled")")
+        Logger.debug("[Analytics] \(enabled ? "Enabled" : "Disabled")")
     }
 
     // MARK: - Event Tracking
@@ -607,7 +607,7 @@ class AnalyticsService {
         Analytics.logEvent(name, parameters: parameters)
         #endif
 
-        print("📊 [Analytics] Event: \(name) \(parameters != nil ? "with params" : "")")
+        Logger.debug("[Analytics] Event: \(name) \(parameters != nil ? "with params" : "")")
     }
 
     func logEventWithContext(

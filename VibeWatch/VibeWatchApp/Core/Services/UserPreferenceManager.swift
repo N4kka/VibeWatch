@@ -17,7 +17,7 @@ class UserPreferenceManager: ObservableObject {
 
     private let sqliteService: SQLiteService
     private let supabaseClient: SupabaseService
-    private var syncManager: SyncManager?
+    private var syncEngine: SyncEngineProtocol?
 
     // MARK: - Constants
 
@@ -50,9 +50,9 @@ class UserPreferenceManager: ObservableObject {
         Logger.info("[UserPreferenceManager] Initialized with device ID: \(deviceId)")
     }
 
-    /// Set SyncManager after initialization to avoid circular dependency
-    func setSyncManager(_ manager: SyncManager) {
-        self.syncManager = manager
+    /// Set SyncEngine after initialization to avoid circular dependency
+    func setSyncEngine(_ engine: SyncEngineProtocol) {
+        self.syncEngine = engine
     }
 
     // MARK: - Public Methods
@@ -135,9 +135,28 @@ class UserPreferenceManager: ObservableObject {
 
                 Logger.debug("[UserPreferenceManager] Recorded \(signals.count) signals from \(interaction.source)")
 
-                // Queue for cloud sync if manager is available
-                if let syncManager = syncManager {
-                    await syncManager.queueSync(operation: .updatePreferences(signals))
+                // Queue for cloud sync if engine is available
+                if let syncEngine = syncEngine {
+                    for signal in signals {
+                        let payload: [String: Any] = [
+                            "category": signal.category,
+                            "id": signal.id,
+                            "name": signal.name,
+                            "weight": signal.weight,
+                            "source": signal.source.rawValue
+                        ]
+                        do {
+                            try await syncEngine.queueOperation(
+                                table: "unified_user_preferences",
+                                operationType: "UPSERT",
+                                recordId: "\(signal.category)_\(signal.id)",
+                                payload: payload,
+                                dependsOn: nil
+                            )
+                        } catch {
+                            Logger.error("[UserPreferenceManager] Failed to queue preference sync: \(error)")
+                        }
+                    }
                 }
             } catch {
                 Logger.error("[UserPreferenceManager] Failed to record interaction", error: error)
@@ -174,7 +193,15 @@ class UserPreferenceManager: ObservableObject {
 
         do {
             _ = try await sqliteService.insert("user_search_history", values: values)
-            await syncManager?.queueSync(operation: .insertRecord(table: "user_search_history", recordId: recordId, record: values))
+            if let syncEngine = syncEngine {
+                try await syncEngine.queueOperation(
+                    table: "user_search_history",
+                    operationType: "INSERT",
+                    recordId: recordId,
+                    payload: values,
+                    dependsOn: nil
+                )
+            }
         } catch {
             Logger.error("[UserPreferenceManager] Failed to record search query", error: error)
         }
@@ -211,7 +238,15 @@ class UserPreferenceManager: ObservableObject {
 
         do {
             _ = try await sqliteService.insert("user_search_history", values: values)
-            await syncManager?.queueSync(operation: .insertRecord(table: "user_search_history", recordId: recordId, record: values))
+            if let syncEngine = syncEngine {
+                try await syncEngine.queueOperation(
+                    table: "user_search_history",
+                    operationType: "INSERT",
+                    recordId: recordId,
+                    payload: values,
+                    dependsOn: nil
+                )
+            }
         } catch {
             Logger.error("[UserPreferenceManager] Failed to record search click", error: error)
         }

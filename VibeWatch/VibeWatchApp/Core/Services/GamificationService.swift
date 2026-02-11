@@ -725,13 +725,17 @@ class GamificationService: ObservableObject {
             "updated_at": ISO8601DateFormatter().string(from: Date())
         ]
 
-        await SyncManager.shared.queueSync(
-            operation: .upsertRecord(
+        do {
+            try await SyncEngine.shared.queueOperation(
                 table: "user_gamification",
+                operationType: "UPSERT",
                 recordId: userId,
-                record: syncData
+                payload: syncData,
+                dependsOn: nil
             )
-        )
+        } catch {
+            Logger.error("[Gamification] Failed to queue gamification sync: \(error)")
+        }
     }
 
     private func saveXPTransaction(
@@ -775,13 +779,17 @@ class GamificationService: ObservableObject {
             "created_at": now
         ]
 
-        await SyncManager.shared.queueSync(
-            operation: .insertRecord(
+        do {
+            try await SyncEngine.shared.queueOperation(
                 table: "xp_transactions",
+                operationType: "INSERT",
                 recordId: transactionId,
-                record: syncData
+                payload: syncData,
+                dependsOn: nil
             )
-        )
+        } catch {
+            Logger.error("[Gamification] Failed to queue XP transaction sync: \(error)")
+        }
     }
 
     private func loadBadges(userId: String) async {
@@ -936,13 +944,17 @@ class GamificationService: ObservableObject {
             "updated_at": now
         ]
 
-        await SyncManager.shared.queueSync(
-            operation: .upsertRecord(
+        do {
+            try await SyncEngine.shared.queueOperation(
                 table: "user_badges",
+                operationType: "UPSERT",
                 recordId: recordId,
-                record: syncData
+                payload: syncData,
+                dependsOn: nil
             )
-        )
+        } catch {
+            Logger.error("[Gamification] Failed to queue badge sync: \(error)")
+        }
     }
 
     private func onBadgeUnlocked(userId: String, badge: BadgeDefinition) async {
@@ -1027,13 +1039,17 @@ class GamificationService: ObservableObject {
                 "created_at": now
             ]
 
-            await SyncManager.shared.queueSync(
-                operation: .insertRecord(
+            do {
+                try await SyncEngine.shared.queueOperation(
                     table: "user_daily_challenges",
+                    operationType: "INSERT",
                     recordId: challengeId,
-                    record: syncData
+                    payload: syncData,
+                    dependsOn: nil
                 )
-            )
+            } catch {
+                Logger.error("[Gamification] Failed to queue challenge sync: \(error)")
+            }
         }
     }
 
@@ -1118,13 +1134,17 @@ class GamificationService: ObservableObject {
             syncData["completed_at"] = completedAt
         }
 
-        await SyncManager.shared.queueSync(
-            operation: .upsertRecord(
+        do {
+            try await SyncEngine.shared.queueOperation(
                 table: "user_daily_challenges",
+                operationType: "UPSERT",
                 recordId: challengeId,
-                record: syncData
+                payload: syncData,
+                dependsOn: nil
             )
-        )
+        } catch {
+            Logger.error("[Gamification] Failed to queue challenge update sync: \(error)")
+        }
     }
 
     private func loadDailyActionCounts(userId: String) async {

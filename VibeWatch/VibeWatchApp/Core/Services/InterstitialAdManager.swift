@@ -21,7 +21,7 @@ class InterstitialAdManager: NSObject, ObservableObject {
         guard !isProUser else { return }
 
         clipsSinceLastAd += 1
-        print("Clips since last ad: \(clipsSinceLastAd)")
+        Logger.debug("[InterstitialAd] Clips since last ad: \(clipsSinceLastAd)")
 
         if clipsSinceLastAd >= AppConstants.AdMob.clipsPerInterstitial {
             showAdIfReady()
@@ -31,18 +31,18 @@ class InterstitialAdManager: NSObject, ObservableObject {
     /// Show the interstitial ad if one is loaded
     func showAdIfReady() {
         guard let ad = interstitialAd else {
-            print("Interstitial ad not ready, loading...")
+            Logger.debug("[InterstitialAd] Ad not ready, loading...")
             Task { await loadAd() }
             return
         }
 
         guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
               let rootViewController = windowScene.windows.first?.rootViewController else {
-            print("No root view controller found")
+            Logger.warning("[InterstitialAd] No root view controller found")
             return
         }
 
-        print("Presenting interstitial ad...")
+        Logger.debug("[InterstitialAd] Presenting ad...")
         ad.present(from: rootViewController)
     }
 
@@ -55,9 +55,9 @@ class InterstitialAdManager: NSObject, ObservableObject {
             )
             interstitialAd?.fullScreenContentDelegate = self
             isAdReady = true
-            print("Interstitial ad loaded successfully")
+            Logger.debug("[InterstitialAd] Ad loaded successfully")
         } catch {
-            print("Interstitial ad failed to load: \(error.localizedDescription)")
+            Logger.error("[InterstitialAd] Ad failed to load: \(error.localizedDescription)")
             isAdReady = false
         }
     }
@@ -71,7 +71,7 @@ class InterstitialAdManager: NSObject, ObservableObject {
 extension InterstitialAdManager: FullScreenContentDelegate {
     nonisolated func adDidDismissFullScreenContent(_ ad: FullScreenPresentingAd) {
         Task { @MainActor in
-            print("Interstitial ad dismissed")
+            Logger.debug("[InterstitialAd] Ad dismissed")
             interstitialAd = nil
             clipsSinceLastAd = 0
             isAdReady = false
@@ -81,7 +81,7 @@ extension InterstitialAdManager: FullScreenContentDelegate {
 
     nonisolated func ad(_ ad: FullScreenPresentingAd, didFailToPresentFullScreenContentWithError error: Error) {
         Task { @MainActor in
-            print("Interstitial ad failed to present: \(error.localizedDescription)")
+            Logger.error("[InterstitialAd] Ad failed to present: \(error.localizedDescription)")
             interstitialAd = nil
             isAdReady = false
             await loadAd()
@@ -89,15 +89,15 @@ extension InterstitialAdManager: FullScreenContentDelegate {
     }
 
     nonisolated func adWillPresentFullScreenContent(_ ad: FullScreenPresentingAd) {
-        print("Interstitial ad will present")
+        Logger.debug("[InterstitialAd] Ad will present")
         NotificationCenter.default.post(name: .pauseAllClips, object: nil)
     }
 
     nonisolated func adDidRecordImpression(_ ad: FullScreenPresentingAd) {
-        print("Interstitial ad recorded impression")
+        Logger.debug("[InterstitialAd] Ad recorded impression")
     }
 
     nonisolated func adDidRecordClick(_ ad: FullScreenPresentingAd) {
-        print("Interstitial ad recorded click")
+        Logger.debug("[InterstitialAd] Ad recorded click")
     }
 }

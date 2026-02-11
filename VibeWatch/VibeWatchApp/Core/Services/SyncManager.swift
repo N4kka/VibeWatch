@@ -539,7 +539,8 @@ class SyncManager: ObservableObject {
     private func calculateNextRetryTime(attempts: Int) -> Date {
         // Exponential backoff: 1min, 5min, 15min, 1hr, 4hr
         let delays: [TimeInterval] = [60, 300, 900, 3600, 14400]
-        let delay = attempts < delays.count ? delays[attempts] : delays.last!
+        let maxDelay: TimeInterval = 14400 // 4 hours
+        let delay = attempts < delays.count ? delays[attempts] : maxDelay
         return Date().addingTimeInterval(delay)
     }
 
@@ -579,18 +580,21 @@ class SyncManager: ObservableObject {
     func resolveConflict<T: Syncable>(local: T, remote: T) -> T {
         // Use type-specific resolution strategies based on data type
         if let localPref = local as? UnifiedPreferenceRecord,
-           let remotePref = remote as? UnifiedPreferenceRecord {
-            return mergePreferences(local: localPref, remote: remotePref) as! T
+           let remotePref = remote as? UnifiedPreferenceRecord,
+           let result = mergePreferences(local: localPref, remote: remotePref) as? T {
+            return result
         }
 
         if let localList = local as? WatchlistItemRecord,
-           let remoteList = remote as? WatchlistItemRecord {
-            return unionMergeWatchlist(local: localList, remote: remoteList) as! T
+           let remoteList = remote as? WatchlistItemRecord,
+           let result = unionMergeWatchlist(local: localList, remote: remoteList) as? T {
+            return result
         }
 
         if let localReaction = local as? ReactionRecord,
-           let remoteReaction = remote as? ReactionRecord {
-            return lastWriteWins(local: localReaction, remote: remoteReaction) as! T
+           let remoteReaction = remote as? ReactionRecord,
+           let result = lastWriteWins(local: localReaction, remote: remoteReaction) as? T {
+            return result
         }
 
         // Default strategy: last-write-wins

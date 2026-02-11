@@ -14,7 +14,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, @MainActor UNUserNotificatio
         CerebrasBackendBackgroundScheduler.shared.scheduleNextRun()
         NotificationBackgroundTask.shared.register()
         NotificationBackgroundTask.shared.scheduleNextRun()
-        UserPreferenceManager.shared.setSyncManager(SyncManager.shared)
+        UserPreferenceManager.shared.setSyncEngine(SyncEngine.shared)
 
         // Initialize Firebase
         FirebaseApp.configure() // Call FirebaseApp.configure() here

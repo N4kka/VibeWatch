@@ -1013,13 +1013,17 @@ class SmartNotificationService: NSObject, ObservableObject {
                     "created_at": now
                 ]
 
-                await SyncManager.shared.queueSync(
-                    operation: .upsertRecord(
+                do {
+                    try await SyncEngine.shared.queueOperation(
                         table: "notification_subscriptions",
+                        operationType: "UPSERT",
                         recordId: subscriptionId,
-                        record: record
+                        payload: record,
+                        dependsOn: nil
                     )
-                )
+                } catch {
+                    Logger.error("[SmartNotificationService] Failed to queue actor alert sync: \(error)")
+                }
 
                 Logger.debug("[SmartNotificationService] Registered actor alert for actor ID: \(actorId)")
             } else {
@@ -1072,13 +1076,17 @@ class SmartNotificationService: NSObject, ObservableObject {
                     "created_at": now
                 ]
 
-                await SyncManager.shared.queueSync(
-                    operation: .upsertRecord(
+                do {
+                    try await SyncEngine.shared.queueOperation(
                         table: "notification_subscriptions",
+                        operationType: "UPSERT",
                         recordId: subscriptionId,
-                        record: record
+                        payload: record,
+                        dependsOn: nil
                     )
-                )
+                } catch {
+                    Logger.error("[SmartNotificationService] Failed to queue genre alert sync: \(error)")
+                }
 
                 Logger.debug("[SmartNotificationService] Registered genre alert for genre ID: \(genreId)")
             } else {

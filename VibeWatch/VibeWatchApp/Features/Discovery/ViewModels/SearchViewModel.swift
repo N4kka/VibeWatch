@@ -24,7 +24,7 @@ class SearchViewModel: ObservableObject {
     private var lastLoggedAt: Date?
     
     init() {
-        print("SearchViewModel: init() called")
+        Logger.debug("[SearchViewModel] init() called")
         self.loadTrendingSearches()
         Task { await self.loadLatestVisitedItems() }
     }    
@@ -172,7 +172,7 @@ class SearchViewModel: ObservableObject {
                             )
                         }
                     } catch {
-                        print("Error loading visited item \(item.id) (\(item.mediaType)): \(error)")
+                        Logger.warning("[SearchViewModel] Error loading visited item \(item.id) (\(item.mediaType)): \(error)")
                     }
                     return nil
                 }

@@ -1,21 +1,103 @@
 import Foundation
 import SQLite3
 
+// MARK: - Phase 5: SQL Injection Prevention
+
+/// Whitelist of valid table names to prevent SQL injection
+/// Only tables in this enum can be used in dynamic SQL queries
+enum SQLiteTable: String, CaseIterable {
+    // Core content tables
+    case clips
+    case discoveryCache = "discovery_cache"
+    case mediaDetailsCache = "media_details_cache"
+    case detailCache = "detail_cache"
+    case trailersCache = "trailers_cache"
+
+    // User tables
+    case profiles
+    case lists
+    case listItems = "list_items"
+
+    // User activity tables
+    case userClipHistory = "user_clip_history"
+    case userClipSignals = "user_clip_signals"
+    case userPreferences = "user_preferences"
+    case userDailyQuota = "user_daily_quota"
+    case userAiTokenUsage = "user_ai_token_usage"
+
+    // Sync tables
+    case syncOutbox = "sync_outbox"
+    case syncLog = "sync_log"
+
+    // Device/App tables
+    case deviceInfo = "device_info"
+    case appMetadata = "app_metadata"
+
+    // Reactions & Comments
+    case movieReactions = "movie_reactions"
+    case movieReactionCounts = "movie_reaction_counts"
+    case clipReactions = "clip_reactions"
+    case clipComments = "clip_comments"
+    case clipCommentLikes = "clip_comment_likes"
+
+    // Gamification
+    case userGamification = "user_gamification"
+    case userBadges = "user_badges"
+    case userDailyChallenges = "user_daily_challenges"
+    case xpTransactions = "xp_transactions"
+
+    // Personalization (SQLiteMigrations)
+    case userSearchHistory = "user_search_history"
+    case userDiscoveryInteractions = "user_discovery_interactions"
+    case unifiedUserPreferences = "unified_user_preferences"
+    case personalizedDiscovery = "personalized_discovery"
+    case aiConversationHistory = "ai_conversation_history"
+    case globalDiscoveryFilters = "global_discovery_filters"
+
+    // Cerebras/AI tables
+    case cerebrasJobQueue = "cerebras_job_queue"
+    case mediaEmbeddings = "media_embeddings"
+    case userBehaviorInsights = "user_behavior_insights"
+    case cerebrasJobMetrics = "cerebras_job_metrics"
+    case userTimePatterns = "user_time_patterns"
+
+    // Notifications
+    case notificationHistory = "notification_history"
+    case userNotificationPreferences = "user_notification_preferences"
+    case notificationSubscriptions = "notification_subscriptions"
+
+    /// All valid table names as a Set for O(1) lookup
+    static let validTableNames: Set<String> = Set(SQLiteTable.allCases.map(\.rawValue))
+
+    /// Check if a table name is valid (safe to use in SQL)
+    static func isValid(_ tableName: String) -> Bool {
+        validTableNames.contains(tableName)
+    }
+}
+
 /// Local SQLite database service for offline-first architecture
 /// All app reads/writes go through this service
 final class SQLiteService: ObservableObject {
     static let shared = SQLiteService()
-    
+
     @Published var isConnected = false
     @Published var lastError: String?
-    
+
     var db: OpaquePointer?
     private let dbPath: String
     private let dbQueue = DispatchQueue(label: "com.vibewatch.sqlite", qos: .userInitiated)
-    
+
     // Wrappers to allow capturing dynamic SQLite values in @Sendable contexts.
     private struct SQLSendableValue: @unchecked Sendable { let raw: Any }
     private struct SQLSendableRecord: @unchecked Sendable { var raw: [String: Any] }
+
+    /// Validate table name to prevent SQL injection (Phase 5 Security)
+    private func validateTableName(_ table: String) throws {
+        guard SQLiteTable.isValid(table) else {
+            Logger.error("[SQLite] SQL injection attempt blocked: invalid table '\(table)'")
+            throw SQLiteError.invalidTableName(table)
+        }
+    }
     
     private init() {
         // Store in app's Documents directory
@@ -434,6 +516,7 @@ final class SQLiteService: ObservableObject {
 
     /// Fetch column names for a table.
     private func columns(for table: String) async throws -> [String] {
+        try validateTableName(table)  // Phase 5: SQL injection prevention
         if let cached = tableColumnsCache[table] { return cached }
         let pragmaRows = try await queryRaw("PRAGMA table_info(\(table))")
         let names = pragmaRows.compactMap { $0["name"] as? String }
@@ -445,6 +528,7 @@ final class SQLiteService: ObservableObject {
     /// If the table has a synced_at column and it's missing, it's set to now().
     @MainActor
     func upsert(table: String, rows: [[String: Any]]) async throws {
+        try validateTableName(table)  // Phase 5: SQL injection prevention
         guard !rows.isEmpty else { return }
         let safeRows = rows.map(SQLSendableRecord.init(raw:))
         let cols = try await columns(for: table)
@@ -501,6 +585,7 @@ final class SQLiteService: ObservableObject {
     
     /// Insert a record and return the rowid
     func insert(_ table: String, values: [String: Any]) async throws -> Int64 {
+        try validateTableName(table)  // Phase 5: SQL injection prevention
         let columns = values.keys.joined(separator: ", ")
         let placeholders = values.keys.map { _ in "?" }.joined(separator: ", ")
         let sql = "INSERT INTO \(table) (\(columns)) VALUES (\(placeholders))"
@@ -542,6 +627,7 @@ final class SQLiteService: ObservableObject {
     
     /// Update records
     func update(_ table: String, values: [String: Any], where condition: String, parameters: [Any] = []) async throws {
+        try validateTableName(table)  // Phase 5: SQL injection prevention
         let setClause = values.keys.map { "\($0) = ?" }.joined(separator: ", ")
         let sql = "UPDATE \(table) SET \(setClause) WHERE \(condition)"
         
@@ -553,6 +639,7 @@ final class SQLiteService: ObservableObject {
     
     /// Delete records (soft delete by default)
     func delete(_ table: String, where condition: String, parameters: [Any] = [], hard: Bool = false) async throws {
+        try validateTableName(table)  // Phase 5: SQL injection prevention
         if hard {
             let sql = "DELETE FROM \(table) WHERE \(condition)"
             _ = try await queryRaw(sql, parameters: parameters)
@@ -562,7 +649,7 @@ final class SQLiteService: ObservableObject {
             _ = try await queryRaw(sql, parameters: parameters)
         }
     }
-    
+
     /// Select records
     func select<T: Decodable>(
         _ table: String,
@@ -571,6 +658,7 @@ final class SQLiteService: ObservableObject {
         orderBy: String? = nil,
         limit: Int? = nil
     ) async throws -> [T] {
+        try validateTableName(table)  // Phase 5: SQL injection prevention
         var sql = "SELECT * FROM \(table)"
         
         if let condition = condition {
@@ -1330,7 +1418,8 @@ enum SQLiteError: LocalizedError {
     case queryFailed(String)
     case invalidData
     case transactionFailed
-    
+    case invalidTableName(String)  // Phase 5: SQL injection prevention
+
     var errorDescription: String? {
         switch self {
         case .notConnected:
@@ -1341,6 +1430,8 @@ enum SQLiteError: LocalizedError {
             return "Invalid data format"
         case .transactionFailed:
             return "Transaction failed"
+        case .invalidTableName(let table):
+            return "Invalid table name: \(table)"
         }
     }
 }

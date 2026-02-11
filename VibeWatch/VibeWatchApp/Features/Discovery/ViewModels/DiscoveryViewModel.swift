@@ -78,7 +78,7 @@ class DiscoveryViewModel: ObservableObject {
 
     /// Load content - uses database cache for instant loading!
     func loadContent(forceRefresh: Bool = false) async {
-        print("📺 [DiscoveryViewModel] Loading personalized Discovery... forceRefresh: \(forceRefresh)")
+        Logger.debug("[DiscoveryViewModel] Loading personalized Discovery... forceRefresh: \(forceRefresh)")
 
         // Avoid reloading (and resetting scroll) when coming back from a detail screen.
         if !forceRefresh, hasLoadedOnce, !hasNoContent, !shouldReloadForNewDay() {
@@ -118,12 +118,12 @@ class DiscoveryViewModel: ObservableObject {
             generatedCarousels = carousels
             self.personalizedCarousels = applyGlobalFilters(to: generatedCarousels)
 
-            print("✅ [DiscoveryViewModel] Loaded \(personalizedCarousels.count) personalized carousels")
+            Logger.debug("[DiscoveryViewModel] Loaded \(personalizedCarousels.count) personalized carousels")
             hasLoadedOnce = true
             markReloadedForToday()
             
         } catch {
-            print("❌ [DiscoveryViewModel] Failed to load personalized content: \(error)")
+            Logger.error("[DiscoveryViewModel] Failed to load personalized content: \(error)")
             self.error = AppError.network(error)
         }
         
@@ -363,13 +363,17 @@ class DiscoveryViewModel: ObservableObject {
                 values: record
             )
 
-            await SyncManager.shared.queueSync(
-                operation: .insertRecord(
+            do {
+                try await SyncEngine.shared.queueOperation(
                     table: "user_discovery_interactions",
+                    operationType: "INSERT",
                     recordId: recordId,
-                    record: record.merging(["filter_config": filterConfigJSON]) { _, new in new }
+                    payload: record.merging(["filter_config": filterConfigJSON]) { _, new in new },
+                    dependsOn: nil
                 )
-            )
+            } catch {
+                Logger.error("[DiscoveryViewModel] Failed to queue interaction sync: \(error)")
+            }
         } catch {
             Logger.error("[DiscoveryViewModel] Failed to insert discovery interaction", error: error)
         }
@@ -521,13 +525,17 @@ class DiscoveryViewModel: ObservableObject {
                 "countries": globalFilters.countries.isEmpty ? NSNull() : globalFilters.countries
             ]) { _, new in new }
 
-            await SyncManager.shared.queueSync(
-                operation: .upsertRecord(
+            do {
+                try await SyncEngine.shared.queueOperation(
                     table: "global_discovery_filters",
+                    operationType: "UPSERT",
                     recordId: userId,
-                    record: supabaseRow
+                    payload: supabaseRow,
+                    dependsOn: nil
                 )
-            )
+            } catch {
+                Logger.error("[DiscoveryViewModel] Failed to queue filter sync: \(error)")
+            }
         } catch {
             Logger.warning("[DiscoveryViewModel] Failed to persist global filters: \(error.localizedDescription)")
         }

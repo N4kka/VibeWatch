@@ -35,22 +35,22 @@ class DiscoveryCacheService {
                 cachedTopRatedMovies.shuffle()
                 cachedTVShows.shuffle()
                 updateLastRandomizationDate()
-                print("🎲 [DiscoveryCache] Randomized in-memory cache for today")
+                Logger.debug("[DiscoveryCache] Randomized in-memory cache for today")
             }
 
-            print("⚡️ [DiscoveryCache] Using in-memory cache")
+            Logger.debug("[DiscoveryCache] Using in-memory cache")
             return (cachedMovies, cachedPopularMovies, cachedTopRatedMovies, cachedTVShows)
         }
 
         // Step 2: Try local SQLite database cache (offline-capable!)
         if let cached = try? await fetchFromLocalDatabase() {
-            print("📊 [DiscoveryCache] Using local SQLite cache")
+            Logger.debug("[DiscoveryCache] Using local SQLite cache")
             cacheInMemory(cached)
             return cached
         }
 
         // Step 3: Fallback to TMDB with error handling
-        print("🔄 [DiscoveryCache] Fetching fresh from TMDB and caching...")
+        Logger.debug("[DiscoveryCache] Fetching fresh from TMDB and caching...")
         do {
             let fresh = try await fetchFromTMDB()
 
@@ -62,11 +62,11 @@ class DiscoveryCacheService {
             cacheInMemory(fresh)
             return fresh
         } catch {
-            print("⚠️ [DiscoveryCache] Failed to fetch from TMDB: \(error.localizedDescription)")
+            Logger.warning("[DiscoveryCache] Failed to fetch from TMDB: \(error.localizedDescription)")
 
             // If network fails, try to return stale cache (even if expired)
             if let staleCache = try? await fetchFromLocalDatabase(ignoreExpiration: true) {
-                print("📦 [DiscoveryCache] Using stale cache as fallback")
+                Logger.debug("[DiscoveryCache] Using stale cache as fallback")
                 cacheInMemory(staleCache)
                 return staleCache
             }
@@ -78,7 +78,7 @@ class DiscoveryCacheService {
     
     /// Force refresh from TMDB (call at midnight or on user request)
     func refreshContent() async throws {
-        print("🔄 [DiscoveryCache] Force refreshing from TMDB...")
+        Logger.debug("[DiscoveryCache] Force refreshing from TMDB...")
         let fresh = try await fetchFromTMDB()
         await saveToLocalDatabase(fresh)
         cacheInMemory(fresh)
@@ -107,7 +107,7 @@ class DiscoveryCacheService {
             let age = Date().timeIntervalSince(cachedAt)
             return age > 86400 // 24 hours
         } catch {
-            print("⚠️ [DiscoveryCache] Failed to check cache age: \(error)")
+            Logger.warning("[DiscoveryCache] Failed to check cache age: \(error)")
             return true
         }
     }
@@ -135,7 +135,7 @@ class DiscoveryCacheService {
         }
         
         guard !response.isEmpty else {
-            print("📭 [DiscoveryCache] Local cache is empty or expired")
+            Logger.debug("[DiscoveryCache] Local cache is empty or expired")
             return nil
         }
         
@@ -176,10 +176,10 @@ class DiscoveryCacheService {
             topRatedMovies.shuffle()
             trendingTV.shuffle()
             updateLastRandomizationDate()
-            print("🎲 [DiscoveryCache] Randomized all content for today")
+            Logger.debug("[DiscoveryCache] Randomized all content for today")
         }
         
-        print("✅ [DiscoveryCache] Retrieved from local SQLite: \(trendingMovies.count) trending, \(popularMovies.count) popular, \(topRatedMovies.count) top rated, \(trendingTV.count) TV")
+        Logger.debug("[DiscoveryCache] Retrieved from local SQLite: \(trendingMovies.count) trending, \(popularMovies.count) popular, \(topRatedMovies.count) top rated, \(trendingTV.count) TV")
         
         return (trendingMovies, popularMovies, topRatedMovies, trendingTV)
     }
@@ -256,12 +256,12 @@ class DiscoveryCacheService {
     }
     
     private func saveToLocalDatabase(_ content: (trending: [Movie], popular: [Movie], topRated: [Movie], tv: [TVShow])) async {
-        print("💾 [DiscoveryCache] Saving to local SQLite...")
+        Logger.debug("[DiscoveryCache] Saving to local SQLite...")
         
         do {
             // Clear old cache first
             _ = try await db.queryRaw("DELETE FROM discovery_cache")
-            print("🗑️ [DiscoveryCache] Cleared old local cache")
+            Logger.debug("[DiscoveryCache] Cleared old local cache")
             
             // Helper to convert genre IDs array to JSON string
             let genresToJSON = { (genres: [Int]?) -> String in
@@ -354,10 +354,10 @@ class DiscoveryCacheService {
             }
             
             let totalItems = content.trending.count + content.popular.count + content.topRated.count + content.tv.count
-            print("✅ [DiscoveryCache] Saved \(totalItems) items to local SQLite")
+            Logger.debug("[DiscoveryCache] Saved \(totalItems) items to local SQLite")
             
         } catch {
-            print("❌ [DiscoveryCache] Failed to save to local database: \(error)")
+            Logger.error("[DiscoveryCache] Failed to save to local database: \(error)")
         }
     }
     
@@ -376,17 +376,17 @@ class DiscoveryCacheService {
 
                 let (trendingRes, popularRes, topRatedRes, tvRes) = try await (trending, popular, topRated, tv)
 
-                print("✅ [DiscoveryCache] Fetched from TMDB: \(trendingRes.results.count) trending, \(popularRes.results.count) popular, \(topRatedRes.results.count) top rated, \(tvRes.results.count) TV")
+                Logger.debug("[DiscoveryCache] Fetched from TMDB: \(trendingRes.results.count) trending, \(popularRes.results.count) popular, \(topRatedRes.results.count) top rated, \(tvRes.results.count) TV")
 
                 return (trendingRes.results, popularRes.results, topRatedRes.results, tvRes.results)
             } catch {
                 lastError = error
-                print("⚠️ [DiscoveryCache] Attempt \(attempt)/\(maxAttempts) failed: \(error.localizedDescription)")
+                Logger.warning("[DiscoveryCache] Attempt \(attempt)/\(maxAttempts) failed: \(error.localizedDescription)")
 
                 // Don't retry on the last attempt
                 if attempt < maxAttempts {
                     let delay = pow(2.0, Double(attempt - 1)) // 1s, 2s, 4s
-                    print("🔄 [DiscoveryCache] Retrying in \(delay)s...")
+                    Logger.debug("[DiscoveryCache] Retrying in \(delay)s...")
                     try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
                 }
             }

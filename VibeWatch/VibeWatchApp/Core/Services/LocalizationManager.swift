@@ -46,7 +46,7 @@ final class LocalizationManager: ObservableObject {
         self.currentCountry = Country.findByCode(deviceCountryCode) ?? Country.all[0]
         self.currentLanguage = Language.findByCode(deviceLanguageCode) ?? Language.all[0]
 
-        print("🌍 Localization initialized: Country=\(currentCountry.name), Language=\(currentLanguage.name)")
+        Logger.debug("[Localization] Localization initialized: Country=\(currentCountry.name), Language=\(currentLanguage.name)")
     }
 
     func setCountry(_ country: Country) {
@@ -57,7 +57,7 @@ final class LocalizationManager: ObservableObject {
         if let nativeLang = Language.findByCode(country.nativeLanguageCode) {
             currentLanguage = nativeLang
             selectedLanguageCode = nativeLang.id
-            print("🌍 Language automatically changed to native: \(nativeLang.name)")
+            Logger.debug("[Localization] Language automatically changed to native: \(nativeLang.name)")
             if previousLanguageId != nativeLang.id {
                 Task { @MainActor in
                     AnalyticsService.shared.logLanguageChanged(from: previousLanguageId, to: nativeLang.id)
@@ -68,7 +68,7 @@ final class LocalizationManager: ObservableObject {
         localeDidChange.toggle()
         objectWillChange.send()
 
-        print("🌍 Country changed to: \(country.name)")
+        Logger.debug("[Localization] Country changed to: \(country.name)")
     }
 
     func setLanguage(_ language: Language) {
@@ -85,7 +85,7 @@ final class LocalizationManager: ObservableObject {
             }
         }
 
-        print("🌍 Language changed to: \(language.name)")
+        Logger.debug("[Localization] Language changed to: \(language.name)")
     }
 
     // Opt out of main-actor isolation for this pure lookup method.

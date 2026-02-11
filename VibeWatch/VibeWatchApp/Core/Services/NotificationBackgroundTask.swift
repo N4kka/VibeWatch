@@ -32,7 +32,12 @@ class NotificationBackgroundTask {
             using: nil
         ) { task in
             Logger.info("[NotificationBackgroundTask] Background task started")
-            self.handleBackgroundTask(task: task as! BGAppRefreshTask)
+            guard let refreshTask = task as? BGAppRefreshTask else {
+                Logger.error("[NotificationBackgroundTask] ❌ Unexpected task type: \(type(of: task))")
+                task.setTaskCompleted(success: false)
+                return
+            }
+            self.handleBackgroundTask(task: refreshTask)
         }
 
         Logger.info("[NotificationBackgroundTask] Registered with identifier: \(Self.identifier)")

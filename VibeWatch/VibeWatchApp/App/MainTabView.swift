@@ -153,12 +153,15 @@ struct MainTabView: View {
                     .task {
                         // REAL WORK: Wait for the AppState to signal ready
                         try? await Task.sleep(nanoseconds: 1_500_000_000)
-                        
+
                         // Wait for actual preload if it's still running
                         while appState.isPreloading {
                             try? await Task.sleep(nanoseconds: 100_000_000) // Check every 0.1s
                         }
-                        
+
+                        // Additionally wait for Discovery content to be ready to avoid showing empty loader
+                        await waitForDiscoveryContentReady()
+
                         withAnimation(.easeOut(duration: 0.5)) {
                             isLoading = false
                         }
@@ -253,6 +256,41 @@ struct MainTabView: View {
                 .environmentObject(authService)
                 .environmentObject(appState)
         }
+    }
+
+    /// Wait for Discovery content to be ready before dismissing splash screen
+    /// This prevents showing an empty DiscoveryPage with a loader
+    private func waitForDiscoveryContentReady() async {
+        // Check if we have cached discovery content
+        let hasCachedMovies = ContentCacheManager.shared.getCachedDiscoveryMovies() != nil
+        let hasCachedTVShows = ContentCacheManager.shared.getCachedDiscoveryTVShows() != nil
+
+        if hasCachedMovies || hasCachedTVShows {
+            // We have cached content, no need to wait
+            return
+        }
+
+        // No cached content, wait for Discovery content to be fetched
+        // Maximum wait time: 3 seconds to avoid infinite splash
+        let maxWaitTime: TimeInterval = 3.0
+        let startTime = Date()
+
+        while Date().timeIntervalSince(startTime) < maxWaitTime {
+            // Check if Discovery content is now available
+            let hasMovies = ContentCacheManager.shared.getCachedDiscoveryMovies() != nil
+            let hasTVShows = ContentCacheManager.shared.getCachedDiscoveryTVShows() != nil
+
+            if hasMovies || hasTVShows {
+                // Content is ready, exit
+                return
+            }
+
+            // Wait 100ms before checking again
+            try? await Task.sleep(nanoseconds: 100_000_000)
+        }
+
+        // Timeout reached, proceed anyway to avoid infinite splash
+        print("⚠️ [MainTabView] Discovery content not ready after timeout, showing UI anyway")
     }
 }
 

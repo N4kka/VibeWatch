@@ -206,12 +206,12 @@ class SupabaseService: ObservableObject {
 
         do {
             _ = try await localDB.insert("user_clip_signals", values: values)
-            await SyncManager.shared.queueSync(
-                operation: .insertRecord(
-                    table: "user_clip_signals",
-                    recordId: recordId,
-                    record: values
-                )
+            try await SyncEngine.shared.queueOperation(
+                table: "user_clip_signals",
+                operationType: "INSERT",
+                recordId: recordId,
+                payload: values,
+                dependsOn: nil
             )
         } catch {
             Logger.error("[Supabase] Failed to log clip signal", error: error)

@@ -102,6 +102,6 @@ final class FoundingMemberService: ObservableObject {
 
     func markAsFoundingMember(productId: String, userId: String?) {
         // Note: Supabase persistence to be implemented with webhook system
-        print("✨ [FoundingMember] Marked user \(userId ?? "anonymous") via product \(productId)")
+        Logger.debug("[FoundingMember] Marked user as founding member via product \(productId)")
     }
 }

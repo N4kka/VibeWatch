@@ -33,13 +33,13 @@ class MovieDetailViewModel: ObservableObject {
 
         // Step 1: Check if user is PRO (offline mode only for PRO users)
         let isProUser = await quotaService.checkIsProUser()
-        print("🔍 [MovieDetail] PRO user status: \(isProUser)")
+        Logger.debug("[MovieDetail] PRO user status: \(isProUser)")
 
         // Step 2: Try to load from cache first (PRO users only)
         if isProUser {
             do {
                 if let cached = try await detailCache.getCachedMovieDetails(movieId: movieId) {
-                    print("📦 [MovieDetail] Loaded from cache (PRO user): \(cached.movie.title)")
+                    Logger.debug("[MovieDetail] Loaded from cache (PRO user): \(cached.movie.title)")
                     self.movie = cached.movie
                     self.credits = cached.credits
                     self.videos = cached.videos
@@ -50,13 +50,13 @@ class MovieDetailViewModel: ObservableObject {
                     // Note: We still have cached data, so no error state
                     return
                 } else {
-                    print("⚠️ [MovieDetail] No cached data found for movie ID \(movieId)")
+                    Logger.warning("[MovieDetail] No cached data found for movie ID \(movieId)")
                 }
             } catch {
-                print("⚠️ [MovieDetail] Cache retrieval failed: \(error.localizedDescription)")
+                Logger.warning("[MovieDetail] Cache retrieval failed: \(error.localizedDescription)")
             }
         } else {
-            print("📵 [MovieDetail] Non-PRO user - skipping cache")
+            Logger.debug("[MovieDetail] Non-PRO user - skipping cache")
         }
 
         // Step 2: Cache miss or expired - fetch from network with retry logic
@@ -86,12 +86,12 @@ class MovieDetailViewModel: ObservableObject {
                 return
             } catch {
                 lastError = error
-                print("⚠️ [MovieDetail] Attempt \(attempt)/\(maxAttempts) failed: \(error.localizedDescription)")
+                Logger.warning("[MovieDetail] Attempt \(attempt)/\(maxAttempts) failed: \(error.localizedDescription)")
 
                 // Don't retry on the last attempt
                 if attempt < maxAttempts {
                     let delay = pow(2.0, Double(attempt - 1)) // 1s, 2s
-                    print("🔄 [MovieDetail] Retrying in \(delay)s...")
+                    Logger.debug("[MovieDetail] Retrying in \(delay)s...")
                     try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
                 }
             }
@@ -121,7 +121,7 @@ class MovieDetailViewModel: ObservableObject {
         imdbId = externalIdsData.imdbId
         similarMovies = Array(similarData.results.prefix(10))
 
-        print("🎬 [MovieDetail] IMDB ID: \(imdbId ?? "nil")")
+        Logger.debug("[MovieDetail] IMDB ID: \(imdbId ?? "nil")")
 
         // Streaming Availability Logic
         let country = LocalizationManager.shared.currentCountry.id
@@ -134,7 +134,7 @@ class MovieDetailViewModel: ObservableObject {
                 type: .movie,
                 region: country
             )
-            print("✅ [StreamingAvailability] Loaded comprehensive providers")
+            Logger.debug("[StreamingAvailability] Loaded comprehensive providers")
             
             // 2. Merge with TMDB data (to fill gaps like Rakuten, Google Play if missing)
             if let tmdb = tmdbProviders {
@@ -143,7 +143,7 @@ class MovieDetailViewModel: ObservableObject {
             
             self.watchProviders = richProviders
         } catch {
-            print("⚠️ [StreamingAvailability] API failed: \(error.localizedDescription). Falling back to TMDB.")
+            Logger.warning("[StreamingAvailability] API failed: \(error.localizedDescription). Falling back to TMDB.")
             self.watchProviders = tmdbProviders
         }
     }
@@ -166,7 +166,7 @@ class MovieDetailViewModel: ObservableObject {
                     let richLogo = richList[index].logoPath.lowercased()
                     let shouldPreferTMDBLogo = richLogo.isEmpty || richLogo.contains(".svg")
                     if shouldPreferTMDBLogo && !provider.logoPath.isEmpty {
-                        print("   ♻️ Using TMDB logo for \(richList[index].providerName)")
+                        Logger.debug("[MovieDetail] Using TMDB logo for \(richList[index].providerName)")
                         // We need to create a new provider because it's a struct (value type)
                         let existing = richList[index]
                         richList[index] = Provider(
@@ -182,7 +182,7 @@ class MovieDetailViewModel: ObservableObject {
                     }
                 } else {
                     // If provider is NOT in rich list, add it
-                    print("   ➕ Merging missing provider from TMDB: \(provider.providerName)")
+                    Logger.debug("[MovieDetail] Merging missing provider from TMDB: \(provider.providerName)")
                     richList.append(provider)
                 }
             }
@@ -336,7 +336,7 @@ class TVShowDetailViewModel: ObservableObject {
 
         // Step 2: Try to load from cache first (PRO users only)
         if isProUser, let cached = try? await detailCache.getCachedTVShowDetails(tvShowId: tvShowId) {
-            print("📦 [TVShowDetail] Loaded from cache (PRO user): \(cached.tvShow.name)")
+            Logger.debug("[TVShowDetail] Loaded from cache (PRO user): \(cached.tvShow.name)")
             self.tvShow = cached.tvShow
             self.credits = cached.credits
             self.videos = cached.videos
@@ -375,12 +375,12 @@ class TVShowDetailViewModel: ObservableObject {
                 return
             } catch {
                 lastError = error
-                print("⚠️ [TVShowDetail] Attempt \(attempt)/\(maxAttempts) failed: \(error.localizedDescription)")
+                Logger.warning("[TVShowDetail] Attempt \(attempt)/\(maxAttempts) failed: \(error.localizedDescription)")
 
                 // Don't retry on the last attempt
                 if attempt < maxAttempts {
                     let delay = pow(2.0, Double(attempt - 1)) // 1s, 2s
-                    print("🔄 [TVShowDetail] Retrying in \(delay)s...")
+                    Logger.debug("[TVShowDetail] Retrying in \(delay)s...")
                     try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
                 }
             }
@@ -409,7 +409,7 @@ class TVShowDetailViewModel: ObservableObject {
         imdbId = externalIdsData.imdbId
         similarShows = Array(similarData.results.prefix(10))
 
-        print("📺 [TVShowDetail] IMDB ID: \(imdbId ?? "nil")")
+        Logger.debug("[TVShowDetail] IMDB ID: \(imdbId ?? "nil")")
 
         // Streaming Availability Logic
         let country = LocalizationManager.shared.currentCountry.id
@@ -422,7 +422,7 @@ class TVShowDetailViewModel: ObservableObject {
                 type: .tv,
                 region: country
             )
-            print("✅ [StreamingAvailability] Loaded comprehensive providers for TV Show")
+            Logger.debug("[StreamingAvailability] Loaded comprehensive providers for TV Show")
             
             // 2. Merge with TMDB data
             if let tmdb = tmdbProviders {
@@ -431,7 +431,7 @@ class TVShowDetailViewModel: ObservableObject {
             
             self.watchProviders = richProviders
         } catch {
-            print("⚠️ [StreamingAvailability] API failed: \(error.localizedDescription). Falling back to TMDB.")
+            Logger.warning("[StreamingAvailability] API failed: \(error.localizedDescription). Falling back to TMDB.")
             self.watchProviders = tmdbProviders
         }
     }
@@ -450,7 +450,7 @@ class TVShowDetailViewModel: ObservableObject {
                     let richLogo = richList[index].logoPath.lowercased()
                     let shouldPreferTMDBLogo = richLogo.isEmpty || richLogo.contains(".svg")
                     if shouldPreferTMDBLogo && !provider.logoPath.isEmpty {
-                        print("   ♻️ Using TMDB logo for \(richList[index].providerName)")
+                        Logger.debug("[MovieDetail] Using TMDB logo for \(richList[index].providerName)")
                         let existing = richList[index]
                         richList[index] = Provider(
                             providerId: existing.providerId,
@@ -465,7 +465,7 @@ class TVShowDetailViewModel: ObservableObject {
                     }
                 } else {
                     // If provider is NOT in rich list, add it
-                    print("   ➕ Merging missing provider from TMDB: \(provider.providerName)")
+                    Logger.debug("[MovieDetail] Merging missing provider from TMDB: \(provider.providerName)")
                     richList.append(provider)
                 }
             }

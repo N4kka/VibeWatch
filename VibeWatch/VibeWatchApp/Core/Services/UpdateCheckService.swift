@@ -48,7 +48,7 @@ final class UpdateCheckService {
                 appStoreURL: appStoreURL
             )
         } catch {
-            print("⚠️ [UpdateCheckService] Failed to fetch update config: \(error)")
+            Logger.warning("[UpdateCheckService] Failed to fetch update config: \(error)")
             return nil
         }
     }

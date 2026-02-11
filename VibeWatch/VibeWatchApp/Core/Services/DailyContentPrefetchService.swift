@@ -48,7 +48,7 @@ class DailyContentPrefetchService: ObservableObject {
     func executeDailyPrefetch(force: Bool = false) async {
         // Only for PRO users
         guard await quotaService.checkIsProUser() else {
-            print("📵 [DailyPrefetch] Skipping - Non-PRO user")
+            Logger.debug("[DailyPrefetch] Skipping - Non-PRO user")
             return
         }
 
@@ -57,27 +57,27 @@ class DailyContentPrefetchService: ObservableObject {
         let shouldPrefetch = await imageCache.shouldPrefetchImages(preference: prefetchOption)
 
         guard shouldPrefetch else {
-            print("📵 [DailyPrefetch] Skipping - User disabled image prefetching")
+            Logger.debug("[DailyPrefetch] Skipping - User disabled image prefetching")
             return
         }
 
         // Check if prefetch is needed (once per day) - unless forced
         guard force || shouldPrefetchToday() else {
             if force {
-                print("🔄 [DailyPrefetch] Forced prefetch - ignoring daily limit")
+                Logger.debug("[DailyPrefetch] Forced prefetch - ignoring daily limit")
             }
-            print("✅ [DailyPrefetch] Already prefetched today")
+            Logger.debug("[DailyPrefetch] Already prefetched today")
             return
         }
 
-        print("🚀 [DailyPrefetch] Starting daily content prefetch...")
+        Logger.info("[DailyPrefetch] Starting daily content prefetch...")
         await executeDailyPrefetchInternal()
     }
     
     /// Manually trigger prefetch (for testing or user request)
     func manualPrefetch() async {
         guard await quotaService.checkIsProUser() else {
-            print("❌ [DailyPrefetch] Manual prefetch failed - Non-PRO user")
+            Logger.error("[DailyPrefetch] Manual prefetch failed - Non-PRO user")
             return
         }
 
@@ -87,7 +87,7 @@ class DailyContentPrefetchService: ObservableObject {
     /// Enable/disable daily prefetch
     func setEnabled(_ enabled: Bool) {
         userDefaults.set(enabled, forKey: prefetchEnabledKey)
-        print("⚙️ [DailyPrefetch] Daily prefetch \(enabled ? "enabled" : "disabled")")
+        Logger.debug("[DailyPrefetch] Daily prefetch \(enabled ? "enabled" : "disabled")")
     }
 
     func isEnabled() -> Bool {
@@ -115,13 +115,13 @@ class DailyContentPrefetchService: ObservableObject {
 
         do {
             // Step 1: Clear yesterday's cache (5%)
-            print("🗑️ [DailyPrefetch] Clearing yesterday's cache...")
+            Logger.debug("[DailyPrefetch] Clearing yesterday's cache...")
             try await detailCache.clearAllCache()
             prefetchProgress = 0.05
-            print("✅ [DailyPrefetch] Old cache cleared")
+            Logger.debug("[DailyPrefetch] Old cache cleared")
 
             // Step 2: Get ALL discovery content from DiscoveryCacheService (10%)
-            print("📥 [DailyPrefetch] Fetching ALL discovery content...")
+            Logger.debug("[DailyPrefetch] Fetching ALL discovery content...")
             let discoveryCache = DiscoveryCacheService.shared
             let (trending, popular, topRated, tvShows) = try await discoveryCache.getDiscoveryContent()
 
@@ -133,19 +133,19 @@ class DailyContentPrefetchService: ObservableObject {
             let uniqueMovies = Array(allMovies)
 
             prefetchProgress = 0.1
-            print("✅ [DailyPrefetch] Fetched \(uniqueMovies.count) movies, \(tvShows.count) TV shows")
+            Logger.debug("[DailyPrefetch] Fetched \(uniqueMovies.count) movies, \(tvShows.count) TV shows")
 
             // Step 3: Cache all movie details (50%)
-            print("💾 [DailyPrefetch] Caching movie details...")
+            Logger.debug("[DailyPrefetch] Caching movie details...")
             await cacheMovieDetails(uniqueMovies, progressStart: 0.1, progressEnd: 0.5)
             prefetchProgress = 0.5
-            print("✅ [DailyPrefetch] Cached \(uniqueMovies.count) movie details")
+            Logger.debug("[DailyPrefetch] Cached \(uniqueMovies.count) movie details")
 
             // Step 4: Cache all TV show details (100%)
-            print("💾 [DailyPrefetch] Caching TV show details...")
+            Logger.debug("[DailyPrefetch] Caching TV show details...")
             await cacheTVShowDetails(tvShows, progressStart: 0.5, progressEnd: 1.0)
             prefetchProgress = 1.0
-            print("✅ [DailyPrefetch] Cached \(tvShows.count) TV show details")
+            Logger.debug("[DailyPrefetch] Cached \(tvShows.count) TV show details")
 
             // Mark as complete
             let duration = Date().timeIntervalSince(startTime)
@@ -153,11 +153,11 @@ class DailyContentPrefetchService: ObservableObject {
             userDefaults.set(Date(), forKey: lastPrefetchKey)
             isPrefetching = false
 
-            print("🎉 [DailyPrefetch] Complete in \(String(format: "%.2f", duration))s")
-            print("   Total cached: \(uniqueMovies.count) movies + \(tvShows.count) TV shows")
+            Logger.info("[DailyPrefetch] Complete in \(String(format: "%.2f", duration))s")
+            Logger.debug("[DailyPrefetch] Total cached: \(uniqueMovies.count) movies + \(tvShows.count) TV shows")
 
         } catch {
-            print("❌ [DailyPrefetch] Failed: \(error.localizedDescription)")
+            Logger.error("[DailyPrefetch] Failed: \(error.localizedDescription)")
             isPrefetching = false
             prefetchProgress = 0
         }
@@ -249,13 +249,13 @@ class DailyContentPrefetchService: ObservableObject {
                 let progress = progressStart + (Double(index + 1) / Double(totalMovies)) * (progressEnd - progressStart)
                 prefetchProgress = progress
 
-                print("   💾 Cached movie \(cached)/\(totalMovies): \(movie.title) + \(imageURLs.count) images")
+                Logger.debug("[DailyPrefetch] Cached movie \(cached)/\(totalMovies): \(movie.title) + \(imageURLs.count) images")
 
                 // Small delay to respect rate limits
                 try? await Task.sleep(nanoseconds: 250_000_000) // 0.25s
 
             } catch {
-                print("   ⚠️ Failed to cache movie \(movie.title): \(error.localizedDescription)")
+                Logger.warning("[DailyPrefetch] Failed to cache movie \(movie.title): \(error.localizedDescription)")
             }
         }
     }
@@ -346,13 +346,13 @@ class DailyContentPrefetchService: ObservableObject {
                 let progress = progressStart + (Double(index + 1) / Double(totalShows)) * (progressEnd - progressStart)
                 prefetchProgress = progress
 
-                print("   💾 Cached TV show \(cached)/\(totalShows): \(tvShow.name) + \(imageURLs.count) images")
+                Logger.debug("[DailyPrefetch] Cached TV show \(cached)/\(totalShows): \(tvShow.name) + \(imageURLs.count) images")
 
                 // Small delay to respect rate limits
                 try? await Task.sleep(nanoseconds: 250_000_000) // 0.25s
 
             } catch {
-                print("   ⚠️ Failed to cache TV show \(tvShow.name): \(error.localizedDescription)")
+                Logger.warning("[DailyPrefetch] Failed to cache TV show \(tvShow.name): \(error.localizedDescription)")
             }
         }
     }
@@ -365,9 +365,9 @@ class DailyContentPrefetchService: ObservableObject {
             try await detailCache.clearAllCache()
             lastPrefetchDate = nil
             userDefaults.removeObject(forKey: lastPrefetchKey)
-            print("🗑️ [DailyPrefetch] All prefetched content cleared")
+            Logger.debug("[DailyPrefetch] All prefetched content cleared")
         } catch {
-            print("❌ [DailyPrefetch] Failed to clear content: \(error.localizedDescription)")
+            Logger.error("[DailyPrefetch] Failed to clear content: \(error.localizedDescription)")
         }
     }
 }

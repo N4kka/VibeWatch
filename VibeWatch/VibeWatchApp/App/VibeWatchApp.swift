@@ -6,7 +6,7 @@ struct VibeWatchApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var appState = AppState()
     @StateObject private var localizationManager = LocalizationManager.shared
-    @StateObject private var syncWorker = SyncWorker.shared
+    @StateObject private var syncEngine = SyncEngine.shared
     @StateObject private var sqliteDB = SQLiteService.shared
     @StateObject private var appNavigationManager = AppNavigationManager.shared
     @StateObject private var authService = AuthService.shared
@@ -30,15 +30,14 @@ struct VibeWatchApp: App {
             MainTabView()
                 .environmentObject(appState)
                 .environmentObject(localizationManager)
-                .environmentObject(syncWorker)
+                .environmentObject(syncEngine)
                 .environmentObject(appNavigationManager)
                 .environmentObject(authService)
                 .environmentObject(quotaManager)
                 .preferredColorScheme(.dark)
                 .task {
-                    // Start background sync worker
-                    await syncWorker.startPeriodicSync()
-                    print("🔄 [App] Background sync started")
+                    // SyncEngine automatically handles periodic syncs via state machine
+                    print("🔄 [App] SyncEngine initialized")
                 }
                 .onOpenURL { url in
                     // Handle deep links from URL schemes (e.g., OAuth)
@@ -92,19 +91,36 @@ class AppState: ObservableObject {
     init(authService: AuthService = .shared) {
         self.authService = authService
 
-        // Immediately load from cached auth state (synchronous)
+        // INSTANT LAUNCH (Phase 4): Load cached state synchronously
         self.isAuthenticated = authService.isAuthenticated
         self.currentUser = authService.currentUser
+
+        // Check if we have cached content for instant display
+        let hasCachedContent = loadCachedContentSync()
+        if hasCachedContent {
+            // Show UI immediately with cached content
+            self.isPreloading = false
+            print("⚡️ [AppState] Instant launch - showing cached content")
+        }
+
         print("📱 [AppState] Initialized with auth state: authenticated=\(isAuthenticated), user=\(currentUser?.email ?? "nil")")
 
-        Task {
+        // Background initialization (non-blocking)
+        Task(priority: .userInitiated) {
             await checkForRequiredUpdate()
             await checkAuthState()
 
             // CRITICAL: Sync user data from Supabase on every app launch
             await performFullSyncOnLaunch()
 
-            await preloadContent()
+            // Only run full preload if we didn't have cached content
+            if !hasCachedContent {
+                await preloadContent()
+            } else {
+                // Still run background refresh, but don't block UI
+                await refreshContentInBackground()
+            }
+
             await RevenueCatService.shared.refreshOfferings()
 
             // Check and execute daily prefetch for PRO users
@@ -162,7 +178,7 @@ class AppState: ObservableObject {
         await ListManager.shared.syncListsForAuthenticatedUser()
 
         // Process any pending outbox operations
-        await SyncWorker.shared.forceSyncNow()
+        await SyncEngine.shared.pushPendingChanges()
 
         print("✅ [AppState] Full sync completed on app launch")
     }
@@ -193,7 +209,7 @@ class AppState: ObservableObject {
         await ListManager.shared.syncListsForAuthenticatedUser()
 
         // Process pending outbox
-        await SyncWorker.shared.forceSyncNow()
+        await SyncEngine.shared.pushPendingChanges()
 
         print("✅ [AppState] Foreground sync completed")
     }
@@ -259,11 +275,117 @@ class AppState: ObservableObject {
     private func checkForRequiredUpdate() async {
         updateRequirement = await UpdateCheckService.shared.checkForRequiredUpdate()
     }
+
+    // MARK: - Instant Launch (Phase 4)
+
+    /// Synchronously check if we have valid cached content for instant display
+    /// This runs on init() before any async work
+    private func loadCachedContentSync() -> Bool {
+        // Check ContentCacheManager for cached clips (loaded sync in its init)
+        let hasClips = !ContentCacheManager.shared.cachedClips.isEmpty
+
+        // Check for cached discovery content
+        let hasMovies = ContentCacheManager.shared.getCachedDiscoveryMovies() != nil
+
+        // Check if initial data has been populated
+        let hasInitialData = UserDefaults.standard.bool(forKey: "initialDataPopulated")
+
+        let hasCachedContent = hasClips || hasMovies || hasInitialData
+
+        if hasCachedContent {
+            print("⚡️ [AppState] Found cached content: clips=\(hasClips), movies=\(hasMovies), initialData=\(hasInitialData)")
+        }
+
+        return hasCachedContent
+    }
+
+    /// Background refresh that doesn't block UI
+    /// Called when we already have cached content
+    private func refreshContentInBackground() async {
+        // Run database migrations if needed
+        await DatabaseMigrationManager.shared.runMigrations()
+
+        // Initialize app coordinator (background)
+        await dataCoordinator.initializeApp()
+
+        // Refresh discovery content if stale (background)
+        if ContentCacheManager.shared.shouldUpdateDiscoveryContent() {
+            print("🔄 [AppState] Refreshing stale discovery content in background...")
+            try? await DiscoveryCacheService.shared.refreshContent()
+        }
+
+        // Phase 4: Preload images for instant display
+        await preloadDiscoveryImages()
+
+        // Pre-warm personalization cache (background, low priority)
+        Task(priority: .utility) {
+            let profile = await UserPreferenceManager.shared.aggregatePreferences()
+            _ = try? await DiscoveryPersonalizationService.shared.generatePersonalizedCarousels(
+                userProfile: profile,
+                forceRefresh: false
+            )
+        }
+    }
+
+    // MARK: - Image Preloading (Phase 4)
+
+    /// Preload poster images for discovery content
+    /// This ensures images are cached for instant display when user scrolls
+    private func preloadDiscoveryImages() async {
+        // Check user's prefetch preference
+        let prefetchOption = ImageCacheService.shared.getCurrentImagePrefetchOption()
+        guard await ImageCacheService.shared.shouldPrefetchImages(preference: prefetchOption) else {
+            print("🖼️ [AppState] Skipping image preload - user preference or network")
+            return
+        }
+
+        print("🖼️ [AppState] Preloading discovery images...")
+
+        // Collect poster URLs from cached content
+        var posterURLs: [String] = []
+
+        // From cached movies
+        if let movies = ContentCacheManager.shared.getCachedDiscoveryMovies() {
+            let moviePosters = movies.prefix(20).compactMap { movie -> String? in
+                guard let posterPath = movie.posterPath else { return nil }
+                return "https://image.tmdb.org/t/p/w342\(posterPath)"
+            }
+            posterURLs.append(contentsOf: moviePosters)
+        }
+
+        // From cached TV shows
+        if let tvShows = ContentCacheManager.shared.getCachedDiscoveryTVShows() {
+            let tvPosters = tvShows.prefix(10).compactMap { show -> String? in
+                guard let posterPath = show.posterPath else { return nil }
+                return "https://image.tmdb.org/t/p/w342\(posterPath)"
+            }
+            posterURLs.append(contentsOf: tvPosters)
+        }
+
+        // From cached clips (thumbnails)
+        let clipThumbnails = ContentCacheManager.shared.cachedClips.prefix(10).compactMap { clip -> String? in
+            guard let thumbnail = clip.thumbnailURL, !thumbnail.isEmpty else { return nil }
+            return thumbnail
+        }
+        posterURLs.append(contentsOf: clipThumbnails)
+
+        guard !posterURLs.isEmpty else {
+            print("🖼️ [AppState] No images to preload")
+            return
+        }
+
+        print("🖼️ [AppState] Preloading \(posterURLs.count) images...")
+        await ImageCacheService.shared.prefetchImages(posterURLs, onWiFiOnly: prefetchOption == .wifiOnly)
+        print("✅ [AppState] Image preload complete")
+    }
     
     private func preloadContent() async {
         isPreloading = true
-        
-        // Check if initial data migration is needed
+
+        // Run unified database migrations (Phase 4: performance indexes, etc.)
+        await DatabaseMigrationManager.shared.runMigrations()
+
+        // Check if initial data migration is needed (legacy one-time migration)
         if !UserDefaults.standard.bool(forKey: "initialDataPopulated") {
             print("📥 [App] First launch detected - migrating data from Supabase to SQLite...")
             await DatabaseMigrationService.shared.migrateInitialData()
@@ -271,7 +393,7 @@ class AppState: ObservableObject {
         
         // Sync new content from Supabase (incremental sync)
         print("🔄 [App] Syncing new content from Supabase...")
-        try? await SyncService.shared.syncNewContent()
+        await SyncEngine.shared.pullFromRemote()
         
         // Optimized parallel preload: Discovery content + 5 initial clips
         // Then background task for 20 more clips

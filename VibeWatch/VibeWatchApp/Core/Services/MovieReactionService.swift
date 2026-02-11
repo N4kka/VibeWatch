@@ -30,7 +30,7 @@ class MovieReactionService: ObservableObject {
                 countsCache[cacheKey] = counts
                 return counts
             } catch {
-                print("⚠️ [MovieReaction] Failed to fetch from Supabase: \(error)")
+                Logger.warning("[MovieReaction] Failed to fetch from Supabase: \(error)")
                 // Fall through to SQLite
             }
         }
@@ -80,9 +80,9 @@ class MovieReactionService: ObservableObject {
             Task {
                 do {
                     try await syncCountsToSupabase(mediaId: mediaId, mediaType: mediaType)
-                    print("✅ [MovieReaction] Synced counts to Supabase")
+                    Logger.debug("[MovieReaction] Synced counts to Supabase")
                 } catch {
-                    print("⚠️ [MovieReaction] Failed to sync counts to Supabase: \(error)")
+                    Logger.warning("[MovieReaction] Failed to sync counts to Supabase: \(error)")
                 }
             }
         }
@@ -108,7 +108,7 @@ class MovieReactionService: ObservableObject {
             )
         }
         
-        print("✅ [MovieReaction] Updated counts: \(oldReaction?.rawValue ?? "none") → \(newReaction?.rawValue ?? "none") for \(mediaType.rawValue) \(mediaId)")
+        Logger.debug("[MovieReaction] Updated counts: \(oldReaction?.rawValue ?? "none") → \(newReaction?.rawValue ?? "none") for \(mediaType.rawValue) \(mediaId)")
     }
     
     // MARK: - Toggle Reaction
@@ -175,15 +175,15 @@ class MovieReactionService: ObservableObject {
             Task {
                 do {
                     try await syncReactionToSupabase(mediaId: mediaId, mediaType: mediaType, userId: userId, reaction: reaction)
-                    print("✅ [MovieReaction] Synced reaction to Supabase")
+                    Logger.debug("[MovieReaction] Synced reaction to Supabase")
                 } catch {
-                    print("⚠️ [MovieReaction] Failed to sync to Supabase: \(error)")
+                    Logger.warning("[MovieReaction] Failed to sync to Supabase: \(error)")
                     // Don't throw - local save succeeded
                 }
             }
         }
         
-        print("✅ [MovieReaction] Set \(reaction.rawValue) for \(mediaType.rawValue) \(mediaId)")
+        Logger.debug("[MovieReaction] Set \(reaction.rawValue) for \(mediaType.rawValue) \(mediaId)")
     }
     
     private func removeReaction(mediaId: Int, mediaType: MediaType, userId: String, reaction: ReactionType) async throws {
@@ -203,14 +203,14 @@ class MovieReactionService: ObservableObject {
             Task {
                 do {
                     try await deleteReactionFromSupabase(mediaId: mediaId, mediaType: mediaType, userId: userId)
-                    print("✅ [MovieReaction] Deleted reaction from Supabase")
+                    Logger.debug("[MovieReaction] Deleted reaction from Supabase")
                 } catch {
-                    print("⚠️ [MovieReaction] Failed to delete from Supabase: \(error)")
+                    Logger.warning("[MovieReaction] Failed to delete from Supabase: \(error)")
                 }
             }
         }
         
-        print("✅ [MovieReaction] Removed \(reaction.rawValue) for \(mediaType.rawValue) \(mediaId)")
+        Logger.debug("[MovieReaction] Removed \(reaction.rawValue) for \(mediaType.rawValue) \(mediaId)")
     }
     
     // MARK: - SQLite Helpers
@@ -294,7 +294,7 @@ class MovieReactionService: ObservableObject {
     
     private func syncReactionToSupabase(mediaId: Int, mediaType: MediaType, userId: String, reaction: ReactionType) async throws {
         guard let client = supabase.client else {
-            print("⚠️ [MovieReaction] No Supabase client - queueing for later sync")
+            Logger.warning("[MovieReaction] No Supabase client - queueing for later sync")
             await queueReactionForSync(mediaId: mediaId, mediaType: mediaType, userId: userId, reaction: reaction)
             return
         }
@@ -327,9 +327,9 @@ class MovieReactionService: ObservableObject {
                 .upsert(record)
                 .execute()
 
-            print("✅ [MovieReaction] Synced reaction to Supabase")
+            Logger.debug("[MovieReaction] Synced reaction to Supabase")
         } catch {
-            print("⚠️ [MovieReaction] Failed to sync reaction: \(error)")
+            Logger.warning("[MovieReaction] Failed to sync reaction: \(error)")
             await queueReactionForSync(mediaId: mediaId, mediaType: mediaType, userId: userId, reaction: reaction)
             throw error
         }
@@ -337,7 +337,7 @@ class MovieReactionService: ObservableObject {
     
     private func deleteReactionFromSupabase(mediaId: Int, mediaType: MediaType, userId: String) async throws {
         guard let client = supabase.client else {
-            print("⚠️ [MovieReaction] No Supabase client for deletion")
+            Logger.warning("[MovieReaction] No Supabase client for deletion")
             return
         }
 
@@ -349,9 +349,9 @@ class MovieReactionService: ObservableObject {
                 .eq("media_type", value: mediaType.rawValue)
                 .execute()
 
-            print("✅ [MovieReaction] Deleted reaction from Supabase")
+            Logger.debug("[MovieReaction] Deleted reaction from Supabase")
         } catch {
-            print("⚠️ [MovieReaction] Failed to delete from Supabase: \(error)")
+            Logger.warning("[MovieReaction] Failed to delete from Supabase: \(error)")
             throw error
         }
     }
@@ -384,9 +384,9 @@ class MovieReactionService: ObservableObject {
                 .upsert(record)
                 .execute()
 
-            print("✅ [MovieReaction] Synced counts to Supabase: \(counts.likeCount) likes, \(counts.dislikeCount) dislikes")
+            Logger.debug("[MovieReaction] Synced counts to Supabase: \(counts.likeCount) likes, \(counts.dislikeCount) dislikes")
         } catch {
-            print("⚠️ [MovieReaction] Failed to sync counts: \(error)")
+            Logger.warning("[MovieReaction] Failed to sync counts: \(error)")
         }
     }
     
@@ -405,16 +405,16 @@ class MovieReactionService: ObservableObject {
         ]
 
         do {
-            try await SyncWorker.shared.queueOperation(
-                userId: userId,
-                tableName: "movie_reactions",
+            try await SyncEngine.shared.queueOperation(
+                table: "movie_reactions",
                 operationType: "UPSERT",
                 recordId: reactionId,
-                payload: payload
+                payload: payload,
+                dependsOn: nil
             )
-            print("📦 [MovieReaction] Queued reaction for sync")
+            Logger.debug("[MovieReaction] Queued reaction for sync")
         } catch {
-            print("❌ [MovieReaction] Failed to queue reaction: \(error)")
+            Logger.error("[MovieReaction] Failed to queue reaction: \(error)")
         }
     }
 

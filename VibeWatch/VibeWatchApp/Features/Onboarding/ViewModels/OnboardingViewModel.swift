@@ -39,7 +39,7 @@ class OnboardingViewModel: ObservableObject {
     }
     
     func completeOnboarding() {
-        print("🟢 [Onboarding] Completing onboarding flow...")
+        Logger.info("[Onboarding] Completing onboarding flow...")
         UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
         
         // Slight delay to allow animation to complete if needed

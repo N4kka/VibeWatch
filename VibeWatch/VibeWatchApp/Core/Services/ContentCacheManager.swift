@@ -3,115 +3,110 @@ import Foundation
 @MainActor
 class ContentCacheManager: ObservableObject {
     static let shared = ContentCacheManager()
-    
+
     // Made internal so ClipsRepository can access it
     var cachedClips: [Clip] = []
     @Published var isPreloadingClips = false
-    
-    private let userDefaults = UserDefaults.standard
+
+    private let db = SQLiteService.shared
     private let clipsService = ClipsService.shared
-    
-    // Keys for UserDefaults
-    private let lastUpdateDateKey = "lastDiscoveryUpdateDate"
-    private let cachedMoviesKey = "cachedDiscoveryMovies"
-    private let cachedTVShowsKey = "cachedDiscoveryTVShows"
-    private let cachedClipsKey = "cachedClips"
-    
+
+    // SQLite app_metadata keys
+    private let lastUpdateDateKey = "last_discovery_update"
+    private let cachedMoviesKey = "cached_discovery_movies"
+    private let cachedTVShowsKey = "cached_discovery_tvshows"
+    private let cachedClipsKey = "cached_clips"
+
+    // Legacy UserDefaults keys (for migration only)
+    private let legacyLastUpdateKey = "lastDiscoveryUpdateDate"
+    private let legacyCachedMoviesKey = "cachedDiscoveryMovies"
+    private let legacyCachedTVShowsKey = "cachedDiscoveryTVShows"
+    private let legacyCachedClipsKey = "cachedClips"
+
     private init() {
-        loadCachedClips()
+        Task {
+            await migrateFromUserDefaultsIfNeeded()
+            await loadCachedClips()
+        }
     }
     
     // MARK: - Daily Discovery Content
-    
+
     func shouldUpdateDiscoveryContent() -> Bool {
-        guard let lastUpdate = userDefaults.object(forKey: lastUpdateDateKey) as? Date else {
-            return true // First time
-        }
-        
+        // Check in-memory first (sync for callers that need immediate answer)
+        guard let lastUpdate = lastUpdateDate else { return true }
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         let lastUpdateDay = calendar.startOfDay(for: lastUpdate)
-        
         return today > lastUpdateDay
     }
-    
+
+    /// In-memory cached last update date (loaded from SQLite at init)
+    private var lastUpdateDate: Date?
+    private var inMemoryMovies: [Movie]?
+    private var inMemoryTVShows: [Movie]?
+
     func getCachedDiscoveryMovies() -> [Movie]? {
-        guard !shouldUpdateDiscoveryContent(),
-              let data = userDefaults.data(forKey: cachedMoviesKey),
-              let movies = try? JSONDecoder().decode([Movie].self, from: data) else {
-            return nil
-        }
-        return movies
+        guard !shouldUpdateDiscoveryContent() else { return nil }
+        return inMemoryMovies
     }
-    
+
     func getCachedDiscoveryTVShows() -> [Movie]? {
-        guard !shouldUpdateDiscoveryContent(),
-              let data = userDefaults.data(forKey: cachedTVShowsKey),
-              let tvShows = try? JSONDecoder().decode([Movie].self, from: data) else {
-            return nil
-        }
-        return tvShows
+        guard !shouldUpdateDiscoveryContent() else { return nil }
+        return inMemoryTVShows
     }
-    
+
     func cacheDiscoveryContent(movies: [Movie], tvShows: [Movie]) {
-        // Shuffle for randomness
         let shuffledMovies = movies.shuffled()
         let shuffledTVShows = tvShows.shuffled()
-        
-        // Save to UserDefaults
-        if let moviesData = try? JSONEncoder().encode(shuffledMovies) {
-            userDefaults.set(moviesData, forKey: cachedMoviesKey)
+
+        inMemoryMovies = shuffledMovies
+        inMemoryTVShows = shuffledTVShows
+        lastUpdateDate = Date()
+
+        Task {
+            await saveMetadata(key: cachedMoviesKey, json: shuffledMovies)
+            await saveMetadata(key: cachedTVShowsKey, json: shuffledTVShows)
+            await saveMetadataText(key: lastUpdateDateKey, value: ISO8601DateFormatter().string(from: Date()))
         }
-        
-        if let tvShowsData = try? JSONEncoder().encode(shuffledTVShows) {
-            userDefaults.set(tvShowsData, forKey: cachedTVShowsKey)
-        }
-        
-        // Update last update date
-        userDefaults.set(Date(), forKey: lastUpdateDateKey)
     }
     
     // MARK: - Shared Preload Logic (The "One Source of Truth")
-    
+
     /// Orchestrates the main app launch preload:
     /// 1. Fetches Trending Movies (used by BOTH Discovery & Clips)
     /// 2. Picks top 5 movies and preloads clips in parallel
     /// 3. Caches everything
     func performSmartPreload() async {
-        print("🚀 START: Unified Smart Preload")
+        Logger.info("[ContentCache] Starting unified smart preload")
         let startTime = Date()
-        
+
         do {
             // Step 1: Fetch Trending Movies (Source of Truth)
             let moviesResponse = try await TMDBService.shared.getTrendingMovies(timeWindow: .week, page: 1)
             let movies = moviesResponse.results
-            
-            // Step 2: Cache for Discovery View (so it doesn't re-fetch)
-            // We store this in memory/disk so DiscoveryViewModel can pick it up instantly
-            if let moviesData = try? JSONEncoder().encode(movies) {
-                userDefaults.set(moviesData, forKey: cachedMoviesKey)
-                userDefaults.set(Date(), forKey: lastUpdateDateKey) // Mark as fresh
-            }
-            print("✅ Step 1: Cached \(movies.count) trending movies for Discovery")
-            
+
+            // Step 2: Cache for Discovery View in SQLite
+            inMemoryMovies = movies
+            lastUpdateDate = Date()
+            await saveMetadata(key: cachedMoviesKey, json: movies)
+            await saveMetadataText(key: lastUpdateDateKey, value: ISO8601DateFormatter().string(from: Date()))
+            Logger.debug("[ContentCache] Cached \(movies.count) trending movies for Discovery")
+
             // Step 3: Preload 5 Clips from these SAME movies (Parallel)
-            // This ensures the first 5 clips match the "Trending" vibe and load instantly
-                        let preloadedClips = await QuickClipsService.shared.preloadClips(from: movies, count: 5)            
-            // Store in memory for immediate access
+            let preloadedClips = await QuickClipsService.shared.preloadClips(from: movies, count: 5)
             self.cachedClips = preloadedClips
-            
-            // Persist backup
-            if let clipsData = try? JSONEncoder().encode(preloadedClips) {
-                userDefaults.set(clipsData, forKey: cachedClipsKey)
-            }
-            
+
+            // Persist clips backup to SQLite
+            await saveMetadata(key: cachedClipsKey, json: preloadedClips)
+
             let duration = Date().timeIntervalSince(startTime)
-            print("✅ PRELOAD COMPLETE in \(String(format: "%.3f", duration))s")
-            
+            Logger.info("[ContentCache] Preload complete in \(String(format: "%.3f", duration))s")
+
         } catch {
-            print("❌ Preload failed: \(error.localizedDescription)")
+            Logger.error("[ContentCache] Preload failed: \(error.localizedDescription)")
         }
-        
+
         isPreloadingClips = false
     }
 
@@ -123,24 +118,154 @@ class ContentCacheManager: ObservableObject {
     
     func clearAllCaches() {
         cachedClips = []
-        userDefaults.removeObject(forKey: lastUpdateDateKey)
-        userDefaults.removeObject(forKey: cachedMoviesKey)
-        userDefaults.removeObject(forKey: cachedTVShowsKey)
-        userDefaults.removeObject(forKey: cachedClipsKey)
-        print("🧹 [ContentCache] Cleared cached discovery content and clips")
-    }
-    
-    private func loadCachedClips() {
-        guard let data = userDefaults.data(forKey: cachedClipsKey),
-              let clips = try? JSONDecoder().decode([Clip].self, from: data) else {
-            return
+        inMemoryMovies = nil
+        inMemoryTVShows = nil
+        lastUpdateDate = nil
+
+        Task {
+            await deleteMetadata(key: lastUpdateDateKey)
+            await deleteMetadata(key: cachedMoviesKey)
+            await deleteMetadata(key: cachedTVShowsKey)
+            await deleteMetadata(key: cachedClipsKey)
         }
-        cachedClips = clips
-        print("✅ Loaded \(clips.count) cached clips from storage")
+        Logger.debug("[ContentCache] Cleared all caches")
     }
-    
+
+    private func loadCachedClips() async {
+        // Load clips from SQLite
+        if let clips: [Clip] = await loadMetadata(key: cachedClipsKey) {
+            cachedClips = clips
+            Logger.debug("[ContentCache] Loaded \(clips.count) cached clips from SQLite")
+        }
+
+        // Load discovery content for sync access
+        if let movies: [Movie] = await loadMetadata(key: cachedMoviesKey) {
+            inMemoryMovies = movies
+        }
+        if let tvShows: [Movie] = await loadMetadata(key: cachedTVShowsKey) {
+            inMemoryTVShows = tvShows
+        }
+        if let dateStr = await loadMetadataText(key: lastUpdateDateKey) {
+            lastUpdateDate = ISO8601DateFormatter().date(from: dateStr)
+        }
+    }
+
     func clearClipsCache() {
         cachedClips = []
-        userDefaults.removeObject(forKey: cachedClipsKey)
+        Task { await deleteMetadata(key: cachedClipsKey) }
+    }
+
+    // MARK: - SQLite Helpers (app_metadata table)
+
+    private func saveMetadata<T: Encodable>(key: String, json value: T) async {
+        do {
+            guard let data = try? JSONEncoder().encode(value),
+                  let jsonStr = String(data: data, encoding: .utf8) else { return }
+            _ = try await db.queryRaw(
+                "REPLACE INTO app_metadata (key_name, value_json, updated_at) VALUES (?, ?, datetime('now'))",
+                parameters: [key, jsonStr]
+            )
+        } catch {
+            Logger.error("[ContentCache] Failed to save metadata '\(key)': \(error)")
+        }
+    }
+
+    private func saveMetadataText(key: String, value: String) async {
+        do {
+            _ = try await db.queryRaw(
+                "REPLACE INTO app_metadata (key_name, value_text, updated_at) VALUES (?, ?, datetime('now'))",
+                parameters: [key, value]
+            )
+        } catch {
+            Logger.error("[ContentCache] Failed to save metadata '\(key)': \(error)")
+        }
+    }
+
+    private func loadMetadata<T: Decodable>(key: String) async -> T? {
+        do {
+            let rows = try await db.queryRaw(
+                "SELECT value_json FROM app_metadata WHERE key_name = ?",
+                parameters: [key]
+            )
+            guard let row = rows.first,
+                  let jsonStr = row["value_json"] as? String,
+                  let data = jsonStr.data(using: .utf8) else { return nil }
+            return try JSONDecoder().decode(T.self, from: data)
+        } catch {
+            Logger.error("[ContentCache] Failed to load metadata '\(key)': \(error)")
+            return nil
+        }
+    }
+
+    private func loadMetadataText(key: String) async -> String? {
+        do {
+            let rows = try await db.queryRaw(
+                "SELECT value_text FROM app_metadata WHERE key_name = ?",
+                parameters: [key]
+            )
+            return rows.first?["value_text"] as? String
+        } catch {
+            Logger.error("[ContentCache] Failed to load metadata '\(key)': \(error)")
+            return nil
+        }
+    }
+
+    private func deleteMetadata(key: String) async {
+        do {
+            _ = try await db.queryRaw(
+                "DELETE FROM app_metadata WHERE key_name = ?",
+                parameters: [key]
+            )
+        } catch {
+            Logger.error("[ContentCache] Failed to delete metadata '\(key)': \(error)")
+        }
+    }
+
+    /// One-time migration from UserDefaults to SQLite
+    private func migrateFromUserDefaultsIfNeeded() async {
+        let ud = UserDefaults.standard
+        guard ud.object(forKey: legacyLastUpdateKey) != nil ||
+              ud.data(forKey: legacyCachedMoviesKey) != nil else { return }
+
+        // Migrate movies
+        if let data = ud.data(forKey: legacyCachedMoviesKey),
+           let jsonStr = String(data: data, encoding: .utf8) {
+            await saveMetadataRaw(key: cachedMoviesKey, json: jsonStr)
+        }
+
+        // Migrate TV shows
+        if let data = ud.data(forKey: legacyCachedTVShowsKey),
+           let jsonStr = String(data: data, encoding: .utf8) {
+            await saveMetadataRaw(key: cachedTVShowsKey, json: jsonStr)
+        }
+
+        // Migrate clips
+        if let data = ud.data(forKey: legacyCachedClipsKey),
+           let jsonStr = String(data: data, encoding: .utf8) {
+            await saveMetadataRaw(key: cachedClipsKey, json: jsonStr)
+        }
+
+        // Migrate last update date
+        if let date = ud.object(forKey: legacyLastUpdateKey) as? Date {
+            await saveMetadataText(key: lastUpdateDateKey, value: ISO8601DateFormatter().string(from: date))
+        }
+
+        // Remove legacy keys
+        ud.removeObject(forKey: legacyLastUpdateKey)
+        ud.removeObject(forKey: legacyCachedMoviesKey)
+        ud.removeObject(forKey: legacyCachedTVShowsKey)
+        ud.removeObject(forKey: legacyCachedClipsKey)
+        Logger.info("[ContentCache] Migrated cache data from UserDefaults to SQLite")
+    }
+
+    private func saveMetadataRaw(key: String, json: String) async {
+        do {
+            _ = try await db.queryRaw(
+                "REPLACE INTO app_metadata (key_name, value_json, updated_at) VALUES (?, ?, datetime('now'))",
+                parameters: [key, json]
+            )
+        } catch {
+            Logger.error("[ContentCache] Failed to save raw metadata '\(key)': \(error)")
+        }
     }
 }

@@ -14,10 +14,9 @@ class DailyQuotaManager: ObservableObject {
     
     private let freeUserLimit = AppConstants.Clips.freeUserDailyLimit
     private let userDefaults = UserDefaults.standard
-    
-    // Keys for local storage
-    private let clipsCountKey = "dailyClipsCount"
-    private let lastResetKey = "lastQuotaReset"
+    private let db = SQLiteService.shared
+
+    // App settings keys (kept in UserDefaults per architecture principles)
     private let isProKey = "isProUser"
     private let deviceIdKey = "deviceIdentifier"
 
@@ -34,8 +33,14 @@ class DailyQuotaManager: ObservableObject {
     }
     
     private init() {
-        loadQuotaData()
-        checkAndResetIfNeeded()
+        // Load pro status from UserDefaults (app setting)
+        isProUser = userDefaults.bool(forKey: isProKey)
+        // Load quota from SQLite, with one-time migration
+        Task {
+            await migrateFromUserDefaultsIfNeeded()
+            await loadQuotaFromSQLite()
+            checkAndResetIfNeeded()
+        }
         startDayChangeMonitoring()
         
         #if DEBUG
@@ -43,7 +48,7 @@ class DailyQuotaManager: ObservableObject {
         // Toggle off by setting this flag to false if you need to re-enable paywalls in Debug.
         let forcePro = AppConstants.Debug.forceProUser
         if forcePro && !isProUser {
-            print("🛠️ [DailyQuota] DEBUG MODE: Forcing Pro user for testing")
+            Logger.debug("[DailyQuota] DEBUG MODE: Forcing Pro user for testing")
             isProUser = true
             hasReachedLimit = false
             saveQuotaData()
@@ -82,7 +87,7 @@ class DailyQuotaManager: ObservableObject {
             await syncToSupabase()
         }
         
-        print("📊 [DailyQuota] Clips watched: \(clipsWatchedToday)/\(freeUserLimit)")
+        Logger.debug("[DailyQuota] Clips watched: \(clipsWatchedToday)/\(freeUserLimit)")
     }
     
     /// Time until quota resets (for countdown timer)
@@ -118,7 +123,7 @@ class DailyQuotaManager: ObservableObject {
             await syncToSupabase()
         }
         
-        print("✨ [DailyQuota] User upgraded to Pro!")
+        Logger.info("[DailyQuota] User upgraded to Pro")
     }
     
     /// Downgrade to Free (restores limits)
@@ -132,10 +137,10 @@ class DailyQuotaManager: ObservableObject {
         }
         
         let remaining = remainingClips()
-        print("⬇️ [DailyQuota] Downgraded to Free - \(remaining) clips remaining today")
-        
+        Logger.info("[DailyQuota] Downgraded to Free - \(remaining) clips remaining today")
+
         if remaining == 0 {
-            print("🚫 [DailyQuota] Daily limit already reached - user will see paywall")
+            Logger.info("[DailyQuota] Daily limit already reached - user will see paywall")
         }
     }
     
@@ -146,7 +151,7 @@ class DailyQuotaManager: ObservableObject {
         hasReachedLimit = false
         saveQuotaData()
         
-        print("🔄 [DailyQuota] Quota reset")
+        Logger.debug("[DailyQuota] Quota reset")
     }
 
     /// Call when the app becomes active to enforce local-midnight resets.
@@ -164,7 +169,7 @@ class DailyQuotaManager: ObservableObject {
         let calendar = Calendar.current
         
         if !calendar.isDateInToday(lastResetDate) {
-            print("🌅 [DailyQuota] New day detected, resetting quota")
+            Logger.info("[DailyQuota] New day detected, resetting quota")
             resetQuota()
         }
     }
@@ -176,30 +181,85 @@ class DailyQuotaManager: ObservableObject {
             queue: .main
         ) { [weak self] _ in
             guard let self else { return }
-            print("🕛 [DailyQuota] Significant time change detected - rechecking daily resets")
+            Logger.debug("[DailyQuota] Significant time change detected - rechecking daily resets")
             self.refreshForNewDayIfNeeded()
         }
     }
     
-    /// Load quota data from UserDefaults
-    private func loadQuotaData() {
-        clipsWatchedToday = userDefaults.integer(forKey: clipsCountKey)
-        isProUser = userDefaults.bool(forKey: isProKey)
-        
-        if let savedDate = userDefaults.object(forKey: lastResetKey) as? Date {
-            lastResetDate = savedDate
+    /// One-time migration from UserDefaults to SQLite
+    private func migrateFromUserDefaultsIfNeeded() async {
+        let legacyClipsKey = "dailyClipsCount"
+        let legacyResetKey = "lastQuotaReset"
+        guard userDefaults.object(forKey: legacyClipsKey) != nil else { return }
+
+        let oldCount = userDefaults.integer(forKey: legacyClipsKey)
+        let oldReset = userDefaults.object(forKey: legacyResetKey) as? Date ?? Date()
+        let userId = SupabaseService.shared.currentUser?.id ?? "anonymous"
+        let quotaId = "\(userId)_\(deviceId)"
+
+        do {
+            let sql = """
+                REPLACE INTO user_daily_quota (id, user_id, device_id, clips_watched_today, last_reset_at, is_pro, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+            """
+            _ = try await db.queryRaw(sql, parameters: [
+                quotaId, userId, deviceId, oldCount,
+                ISO8601DateFormatter().string(from: oldReset),
+                isProUser ? 1 : 0
+            ])
+            userDefaults.removeObject(forKey: legacyClipsKey)
+            userDefaults.removeObject(forKey: legacyResetKey)
+            Logger.info("[DailyQuota] Migrated quota data from UserDefaults to SQLite")
+        } catch {
+            Logger.error("[DailyQuota] Migration failed: \(error)")
         }
-        
-        hasReachedLimit = clipsWatchedToday >= freeUserLimit && !isProUser
-        
-        print("📱 [DailyQuota] Loaded: \(clipsWatchedToday) clips watched today")
     }
-    
-    /// Save quota data to UserDefaults
+
+    /// Load quota data from SQLite
+    private func loadQuotaFromSQLite() async {
+        do {
+            let userId = SupabaseService.shared.currentUser?.id ?? "anonymous"
+            let result = try await db.queryRaw(
+                "SELECT clips_watched_today, last_reset_at FROM user_daily_quota WHERE user_id = ? AND device_id = ? LIMIT 1",
+                parameters: [userId, deviceId]
+            )
+            if let row = result.first {
+                clipsWatchedToday = row["clips_watched_today"] as? Int ?? 0
+                if let str = row["last_reset_at"] as? String,
+                   let date = ISO8601DateFormatter().date(from: str) {
+                    lastResetDate = date
+                }
+                hasReachedLimit = clipsWatchedToday >= freeUserLimit && !isProUser
+                Logger.debug("[DailyQuota] Loaded from SQLite: \(clipsWatchedToday) clips watched today")
+            }
+        } catch {
+            Logger.error("[DailyQuota] Failed to load from SQLite: \(error)")
+        }
+    }
+
+    /// Save quota data - pro status to UserDefaults (app setting), quota to SQLite (user data)
     private func saveQuotaData() {
-        userDefaults.set(clipsWatchedToday, forKey: clipsCountKey)
         userDefaults.set(isProUser, forKey: isProKey)
-        userDefaults.set(lastResetDate, forKey: lastResetKey)
+        Task { await saveQuotaToSQLite() }
+    }
+
+    /// Save quota data to SQLite
+    private func saveQuotaToSQLite() async {
+        do {
+            let userId = SupabaseService.shared.currentUser?.id ?? "anonymous"
+            let quotaId = "\(userId)_\(deviceId)"
+            let sql = """
+                REPLACE INTO user_daily_quota (id, user_id, device_id, clips_watched_today, last_reset_at, is_pro, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+            """
+            _ = try await db.queryRaw(sql, parameters: [
+                quotaId, userId, deviceId, clipsWatchedToday,
+                ISO8601DateFormatter().string(from: lastResetDate),
+                isProUser ? 1 : 0
+            ])
+        } catch {
+            Logger.error("[DailyQuota] Failed to save to SQLite: \(error)")
+        }
     }
     
     /// Sync quota to Supabase (for server-side tracking)
@@ -239,9 +299,9 @@ class DailyQuotaManager: ObservableObject {
                 .upsert(quotaUpdate, onConflict: conflictColumn)
                 .execute()
             
-            print("☁️ [DailyQuota] Synced to Supabase")
+            Logger.debug("[DailyQuota] Synced to Supabase")
         } catch {
-            print("⚠️ [DailyQuota] Sync error: \(error)")
+            Logger.warning("[DailyQuota] Sync error: \(error)")
         }
     }
     
@@ -267,10 +327,10 @@ class DailyQuotaManager: ObservableObject {
                 hasReachedLimit = clipsWatchedToday >= freeUserLimit && !isProUser
                 saveQuotaData()
                 
-                print("☁️ [DailyQuota] Fetched from Supabase: \(clipsWatchedToday) clips")
+                Logger.debug("[DailyQuota] Fetched from Supabase: \(clipsWatchedToday) clips")
             }
         } catch {
-            print("⚠️ [DailyQuota] Fetch error: \(error)")
+            Logger.warning("[DailyQuota] Fetch error: \(error)")
         }
     }
 }
