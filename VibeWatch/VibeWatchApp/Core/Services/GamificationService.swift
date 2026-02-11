@@ -315,7 +315,7 @@ struct UserGamificationState {
 // MARK: - Gamification Service
 
 @MainActor
-class GamificationService: GamificationServiceProtocol {
+class GamificationService: ObservableObject {
     static let shared = GamificationService()
 
     // MARK: - Published State
