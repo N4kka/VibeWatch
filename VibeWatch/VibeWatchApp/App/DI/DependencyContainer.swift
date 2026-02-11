@@ -34,6 +34,18 @@ final class DependencyContainer: ObservableObject {
     lazy var clipsService = ClipsService.shared
     lazy var detailCache = DetailCacheService.shared
     lazy var prefetchService = ClipsPrefetchService.shared
+    lazy var userPreferenceManager = UserPreferenceManager.shared
+    lazy var personalizationService = DiscoveryPersonalizationService.shared
+    lazy var sqliteService = SQLiteService.shared
+    lazy var dailyQuotaManager = DailyQuotaManager.shared
+    lazy var streamingService = StreamingAvailabilityService.shared
+    lazy var clipQuotaService = ClipQuotaService.shared
+    lazy var cerebrasService = CerebrasService.shared
+    lazy var aiTokenManager = AITokenManager.shared
+    lazy var languageDetector = LanguageDetector.shared
+    lazy var queryClassifier = AIQueryClassifier.shared
+    lazy var contextBuilder = AIContextBuilder.shared
+    lazy var conversationMemory = ConversationMemoryManager.shared
 
     // MARK: - Initialization
 
@@ -50,17 +62,48 @@ final class DependencyContainer: ObservableObject {
 
     /// Creates a ClipsSearchViewModel with injected dependencies
     func makeClipsSearchViewModel() -> ClipsSearchViewModel {
-        ClipsSearchViewModel()
+        ClipsSearchViewModel(
+            searchService: ClipsSearchService.shared,
+            clipsService: clipsService
+        )
     }
 
     /// Creates a DiscoveryViewModel with injected dependencies
     func makeDiscoveryViewModel() -> DiscoveryViewModel {
-        DiscoveryViewModel()
+        DiscoveryViewModel(
+            quotaManager: dailyQuotaManager,
+            preferenceManager: userPreferenceManager,
+            personalizationService: personalizationService,
+            sqliteService: sqliteService
+        )
     }
 
     /// Creates a MovieDetailViewModel with injected dependencies
     func makeMovieDetailViewModel(movieId: Int) -> MovieDetailViewModel {
-        MovieDetailViewModel(movieId: movieId)
+        MovieDetailViewModel(
+            movieId: movieId,
+            tmdbService: tmdbService,
+            streamingService: streamingService,
+            detailCache: detailCache,
+            quotaService: clipQuotaService,
+            cerebrasService: cerebrasService,
+            preferenceManager: userPreferenceManager,
+            aiTokenManager: aiTokenManager
+        )
+    }
+
+    /// Creates a TVShowDetailViewModel with injected dependencies
+    func makeTVShowDetailViewModel(tvShowId: Int) -> TVShowDetailViewModel {
+        TVShowDetailViewModel(
+            tvShowId: tvShowId,
+            tmdbService: tmdbService,
+            streamingService: streamingService,
+            detailCache: detailCache,
+            quotaService: clipQuotaService,
+            cerebrasService: cerebrasService,
+            preferenceManager: userPreferenceManager,
+            aiTokenManager: aiTokenManager
+        )
     }
 
     // Note: TV show detail view uses the same ViewModel - add factory when needed
@@ -70,22 +113,35 @@ final class DependencyContainer: ObservableObject {
 
     /// Creates a SearchViewModel with injected dependencies
     func makeSearchViewModel() -> SearchViewModel {
-        SearchViewModel()
+        SearchViewModel(
+            tmdbService: tmdbService,
+            preferenceManager: userPreferenceManager
+        )
     }
 
     /// Creates an ActorDetailViewModel with injected dependencies
     func makeActorDetailViewModel(personId: Int) -> ActorDetailViewModel {
-        ActorDetailViewModel(personId: personId)
+        ActorDetailViewModel(personId: personId, tmdbService: tmdbService)
     }
 
     /// Creates an AIRecommendationViewModel with injected dependencies
     func makeAIRecommendationViewModel() -> AIRecommendationViewModel {
-        AIRecommendationViewModel()
+        AIRecommendationViewModel(
+            authService: authService,
+            aiTokenManager: aiTokenManager,
+            languageDetector: languageDetector,
+            tmdbService: tmdbService,
+            cerebrasService: cerebrasService,
+            preferenceManager: userPreferenceManager,
+            queryClassifier: queryClassifier,
+            contextBuilder: contextBuilder,
+            conversationMemory: conversationMemory
+        )
     }
 
     /// Creates a ListsViewModel with injected dependencies
     func makeListsViewModel() -> ListsViewModel {
-        ListsViewModel()
+        ListsViewModel(listManager: listManager)
     }
 
     /// Creates an OnboardingViewModel with injected dependencies

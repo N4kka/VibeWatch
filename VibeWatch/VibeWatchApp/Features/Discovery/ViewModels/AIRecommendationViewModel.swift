@@ -22,15 +22,15 @@ class AIRecommendationViewModel: ObservableObject {
     var hardLimitReached: Bool { requestsUsedToday >= dailyRequestLimit }
     
     // Dependencies
-    private let authService = AuthService.shared
-    private let aiTokenManager = AITokenManager.shared
-    private let languageDetector = LanguageDetector.shared
-    private let tmdbService = TMDBService.shared
-    private let cerebrasService = CerebrasService.shared
-    private let preferenceManager = UserPreferenceManager.shared
-    private let queryClassifier = AIQueryClassifier.shared
-    private let contextBuilder = AIContextBuilder.shared
-    private let conversationMemory = ConversationMemoryManager.shared
+    private let authService: AuthService
+    private let aiTokenManager: AITokenManager
+    private let languageDetector: LanguageDetector
+    private let tmdbService: any TMDBServiceProtocol
+    private let cerebrasService: CerebrasService
+    private let preferenceManager: UserPreferenceManager
+    private let queryClassifier: AIQueryClassifier
+    private let contextBuilder: AIContextBuilder
+    private let conversationMemory: ConversationMemoryManager
     private var timeChangeObserver: NSObjectProtocol?
     private let userDefaults = UserDefaults.standard
 
@@ -41,12 +41,32 @@ class AIRecommendationViewModel: ObservableObject {
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter
     }()
-    
-    init() {
+
+    init(
+        authService: AuthService = .shared,
+        aiTokenManager: AITokenManager = .shared,
+        languageDetector: LanguageDetector = .shared,
+        tmdbService: any TMDBServiceProtocol = TMDBService.shared,
+        cerebrasService: CerebrasService = .shared,
+        preferenceManager: UserPreferenceManager = .shared,
+        queryClassifier: AIQueryClassifier = .shared,
+        contextBuilder: AIContextBuilder = .shared,
+        conversationMemory: ConversationMemoryManager = .shared
+    ) {
+        self.authService = authService
+        self.aiTokenManager = aiTokenManager
+        self.languageDetector = languageDetector
+        self.tmdbService = tmdbService
+        self.cerebrasService = cerebrasService
+        self.preferenceManager = preferenceManager
+        self.queryClassifier = queryClassifier
+        self.contextBuilder = contextBuilder
+        self.conversationMemory = conversationMemory
+
         // Limit is now managed by AITokenManager (requests)
-        self.dailyRequestLimit = AITokenManager.shared.dailyLimit
-        self.requestsUsedToday = AITokenManager.shared.tokensUsedToday
-        
+        self.dailyRequestLimit = aiTokenManager.dailyLimit
+        self.requestsUsedToday = aiTokenManager.tokensUsedToday
+
         startDayChangeMonitoring()
         Task {
             await conversationMemory.loadSessionIfNeeded()

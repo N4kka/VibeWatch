@@ -14,17 +14,33 @@ class MovieDetailViewModel: ObservableObject {
     @Published var isWhyForMeLoading = false
     @Published var whyForMeError: String?
     
-    private let tmdbService = TMDBService.shared
-    private let streamingService = StreamingAvailabilityService.shared
-    private let detailCache = DetailCacheService.shared
-    private let quotaService = ClipQuotaService.shared
-    private let cerebrasService = CerebrasService.shared
-    private let preferenceManager = UserPreferenceManager.shared
-    private let aiTokenManager = AITokenManager.shared
+    private let tmdbService: any TMDBServiceProtocol
+    private let streamingService: StreamingAvailabilityService
+    private let detailCache: DetailCacheService
+    private let quotaService: ClipQuotaService
+    private let cerebrasService: CerebrasService
+    private let preferenceManager: UserPreferenceManager
+    private let aiTokenManager: AITokenManager
     private let movieId: Int
 
-    init(movieId: Int) {
+    init(
+        movieId: Int,
+        tmdbService: any TMDBServiceProtocol = TMDBService.shared,
+        streamingService: StreamingAvailabilityService = .shared,
+        detailCache: DetailCacheService = .shared,
+        quotaService: ClipQuotaService = .shared,
+        cerebrasService: CerebrasService = .shared,
+        preferenceManager: UserPreferenceManager = .shared,
+        aiTokenManager: AITokenManager = .shared
+    ) {
         self.movieId = movieId
+        self.tmdbService = tmdbService
+        self.streamingService = streamingService
+        self.detailCache = detailCache
+        self.quotaService = quotaService
+        self.cerebrasService = cerebrasService
+        self.preferenceManager = preferenceManager
+        self.aiTokenManager = aiTokenManager
     }
 
     func loadMovieDetails() async {
@@ -318,17 +334,33 @@ class TVShowDetailViewModel: ObservableObject {
     @Published var isWhyForMeLoading = false
     @Published var whyForMeError: String?
     
-    private let tmdbService = TMDBService.shared
-    private let streamingService = StreamingAvailabilityService.shared
-    private let detailCache = DetailCacheService.shared
-    private let quotaService = ClipQuotaService.shared
-    private let cerebrasService = CerebrasService.shared
-    private let preferenceManager = UserPreferenceManager.shared
-    private let aiTokenManager = AITokenManager.shared
+    private let tmdbService: any TMDBServiceProtocol
+    private let streamingService: StreamingAvailabilityService
+    private let detailCache: DetailCacheService
+    private let quotaService: ClipQuotaService
+    private let cerebrasService: CerebrasService
+    private let preferenceManager: UserPreferenceManager
+    private let aiTokenManager: AITokenManager
     private let tvShowId: Int
 
-    init(tvShowId: Int) {
+    init(
+        tvShowId: Int,
+        tmdbService: any TMDBServiceProtocol = TMDBService.shared,
+        streamingService: StreamingAvailabilityService = .shared,
+        detailCache: DetailCacheService = .shared,
+        quotaService: ClipQuotaService = .shared,
+        cerebrasService: CerebrasService = .shared,
+        preferenceManager: UserPreferenceManager = .shared,
+        aiTokenManager: AITokenManager = .shared
+    ) {
         self.tvShowId = tvShowId
+        self.tmdbService = tmdbService
+        self.streamingService = streamingService
+        self.detailCache = detailCache
+        self.quotaService = quotaService
+        self.cerebrasService = cerebrasService
+        self.preferenceManager = preferenceManager
+        self.aiTokenManager = aiTokenManager
     }
 
     func loadTVShowDetails() async {
