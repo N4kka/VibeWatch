@@ -56,7 +56,6 @@ struct DailyLimitPaywallView: View {
     let source: String
     
     @StateObject private var quotaManager = DailyQuotaManager.shared
-    @ObservedObject private var foundingService = FoundingMemberService.shared
     @State private var countdownText = DailyQuotaManager.shared.timeUntilResetFormatted()
     @State private var showProPaywall = false
     @State private var showAlert = false
@@ -95,10 +94,6 @@ struct DailyLimitPaywallView: View {
                     heroSection
 
                     BenefitList(paywallType: paywallType) // Pass paywallType
-
-                    if foundingService.promoStatus.isPromoActive {
-                        promoCountdownBanner
-                    }
 
                     if paywallType == .clipsQuota { // Only show countdown for clips quota
                         countdownBanner
@@ -235,29 +230,6 @@ struct DailyLimitPaywallView: View {
         .cornerRadius(16)
     }
 
-    private var promoCountdownBanner: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "sparkles")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(.orange)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text("paywall.foundingMember".localized)
-                    .font(.system(size: 12))
-                    .foregroundColor(.gray)
-
-                Text(foundingService.getCountdownText())
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.white)
-            }
-
-            Spacer()
-        }
-        .padding(14)
-        .background(Color.orange.opacity(0.12))
-        .cornerRadius(16)
-    }
-
     private var upgradeButton: some View {
         Button {
             AnalyticsService.shared.logPaywallCTAClicked(source: source, cta: "upgrade")
@@ -308,12 +280,6 @@ struct DailyLimitPaywallView: View {
                 if info.entitlements["StartingVibe Pro"]?.isActive == true {
                     quotaManager.upgradeToPro()
                     Task { await ClipQuotaService.shared.checkIsProUser() }
-                    if let productId = info.entitlements["StartingVibe Pro"]?.productIdentifier {
-                        FoundingMemberService.shared.markAsFoundingMember(
-                            productId: productId,
-                            userId: SupabaseService.shared.currentUser?.id
-                        )
-                    }
                     AnalyticsService.shared.logEvent("restore_succeeded", parameters: [:])
                     dismiss(action: "restore_success", logDismiss: false)
                 } else {
