@@ -40,8 +40,7 @@ final class RevenueCatService: ObservableObject {
             self.offerings = offerings
             self.lastRefreshDate = Date()
             self.currentOfferingID = offerings.current?.identifier
-            FoundingMemberService.shared.refreshPromoStatus()
-            
+
             if debug {
                 debugPrintOfferings(offerings)
             }
