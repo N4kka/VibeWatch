@@ -97,7 +97,7 @@ final class CerebrasBackendJobManager {
     private let cerebrasService: CerebrasService
     private let tmdbService: TMDBServiceProtocol
 
-    private let embeddingModel = "zai-glm-4.6"
+    private let embeddingModel = "zai-glm-4.7"
     private let embeddingDimensions = 64
 
     private init(

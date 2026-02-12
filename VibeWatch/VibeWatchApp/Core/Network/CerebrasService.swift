@@ -83,8 +83,8 @@ class CerebrasService {
     @MainActor static let shared = CerebrasService()
 
     private let baseURL = "https://api.cerebras.ai/v1/chat/completions"
-    // Zai-glm-4.6 model for backend processing
-    private let defaultModel = "zai-glm-4.6"
+    // Zai-glm-4.7 model for backend processing
+    private let defaultModel = "zai-glm-4.7"
 
     private init() {
         Logger.info("[CerebrasService] Initialized with model: \(defaultModel)")
@@ -283,7 +283,7 @@ class CerebrasService {
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
 
         let requestBody = CerebrasChatRequest(
-            model: defaultModel, // zai-glm-4.6
+            model: defaultModel, // zai-glm-4.7
             messages: messages,
             maxTokens: 1024,
             temperature: 0.7,
@@ -479,7 +479,7 @@ class CerebrasService {
     /// - Parameters:
     ///   - prompt: The user's input string
     ///   - systemPrompt: Optional system instruction to guide the AI's behavior
-    ///   - model: The model to use (defaults to zai-glm-4.6)
+    ///   - model: The model to use (defaults to zai-glm-4.7)
     /// - Returns: The AI's string response
     func generateResponse(
         prompt: String,
