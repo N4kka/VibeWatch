@@ -9,7 +9,6 @@ struct ProPaywallView: View {
     var onPurchased: (() -> Void)?
 
     @ObservedObject private var revenueService = RevenueCatService.shared
-    @ObservedObject private var foundingService = FoundingMemberService.shared
     @EnvironmentObject var quotaManager: DailyQuotaManager
     @State private var selectedPackageID: String?
     @State private var isRefreshing = false
@@ -67,16 +66,6 @@ struct ProPaywallView: View {
 
                     pricingCards
                         .padding(.bottom, 24)
-                    
-                    if foundingService.promoStatus.isPromoActive {
-                        promoCountdown
-                            .padding(.horizontal, 24)
-                            .padding(.bottom, 20)
-                    } else if Date() < FoundingMemberService.shared.promoStartDate {
-                        promoCountdown
-                            .padding(.horizontal, 24)
-                            .padding(.bottom, 20)
-                    }
 
                     continueButton
                         .padding(.bottom, 24)
@@ -260,39 +249,24 @@ struct ProPaywallView: View {
         .cornerRadius(22)
         .padding(.horizontal, 24)
     }
-    
-    private var promoCountdown: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("paywall.foundingMember".localized)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(.white.opacity(0.75))
-            Text(foundingService.getCountdownText())
-                .font(.system(size: 16, weight: .bold))
-                .foregroundColor(.white)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
-        .background(Color.orange.opacity(0.12))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-    }
 
     private var annualPriceText: String? {
         guard let annual = annualPackage else {
-            return "79,99€" // fallback matching mock
+            return nil
         }
         return annual.storeProduct.localizedPriceString
     }
 
     private var annualPerMonthText: String {
         guard let annual = annualPackage else {
-            return String(format: "paywall.price.perMonth".localized, "9,99€")
+            return String(format: "paywall.price.perMonth".localized, "—")
         }
         return formattedPerMonthPrice(for: annual.storeProduct, months: 12)
     }
 
     private var monthlyPerMonthText: String {
         guard let monthly = monthlyPackage else {
-            return String(format: "paywall.price.perMonth".localized, "9,99€")
+            return String(format: "paywall.price.perMonth".localized, "—")
         }
         return formattedPerMonthPrice(for: monthly.storeProduct, months: 1)
     }
@@ -474,15 +448,10 @@ struct ProPaywallView: View {
     // MARK: - RevenueCat helpers
 
     private let monthlyPriorityIds = [
-        // Prefer the correct founding product; include legacy ID fallback for misconfigured offerings
-        "vibewatch_pro_monthly_founding_members",
-        "vibewatch_pro_monthly_founding_member",
-        "vibewatch_pro_monthly_founding",
         "vibewatch_pro_monthly_standard"
     ]
     
     private let annualPriorityIds = [
-        "vibewatch_pro_yearly_founding",
         "vibewatch_pro_yearly_standard"
     ]
     
@@ -500,13 +469,11 @@ struct ProPaywallView: View {
                 orderedPackages.append(package)
             }
         }
-        
+
         // Priority order
-        append(from: offerings.offering(identifier: foundingService.getCurrentOffering()))
         if let currentID = revenueService.currentOfferingID {
             append(from: offerings.offering(identifier: currentID))
         }
-        append(from: offerings.offering(identifier: "founding_member"))
         append(from: offerings.offering(identifier: "default"))
         append(from: offerings.current)
         
@@ -681,16 +648,11 @@ struct ProPaywallView: View {
                     if !userCancelled && (hasActiveEntitlement || hasRecentTransaction) {
                         didCompletePurchaseOrRestore = true
                         quotaManager.upgradeToPro()
-                        FoundingMemberService.shared.markAsFoundingMember(
-                            productId: package.storeProduct.productIdentifier,
-                            userId: SupabaseService.shared.currentUser?.id
-                        )
 
                         let price = NSDecimalNumber(decimal: package.storeProduct.price).doubleValue
                         AnalyticsService.shared.logSubscriptionPurchased(
                             productId: package.storeProduct.productIdentifier,
-                            price: price,
-                            isFoundingMember: package.storeProduct.productIdentifier.contains("founding")
+                            price: price
                         )
                         
                         // Log trial started if this was a trial purchase
@@ -736,12 +698,6 @@ struct ProPaywallView: View {
                     if info.entitlements[AppConstants.RevenueCat.proEntitlementID]?.isActive == true {
                         didCompletePurchaseOrRestore = true
                         quotaManager.upgradeToPro()
-                        if let productId = info.entitlements[AppConstants.RevenueCat.proEntitlementID]?.productIdentifier {
-                            FoundingMemberService.shared.markAsFoundingMember(
-                                productId: productId,
-                                userId: SupabaseService.shared.currentUser?.id
-                            )
-                        }
                         onPurchased?()
                         AnalyticsService.shared.logEvent("restore_succeeded", parameters: [:])
                         dismiss(logDismiss: false)
