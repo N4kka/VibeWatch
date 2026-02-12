@@ -46,7 +46,7 @@ class ErrorHandler: ObservableObject {
         }
         
         // Check for specific technical error types
-        if let authError = error as? AuthError {
+        if let authError = error as? AppAuthError {
             return handleAuthError(authError)
         }
         
@@ -74,10 +74,20 @@ class ErrorHandler: ObservableObject {
     
     // MARK: - Specific Error Handlers
     
-    private func handleAuthError(_ error: AuthError) -> AppError {
+    private func handleAuthError(_ error: AppAuthError) -> AppError {
         switch error {
         case .networkError:
             return .network(error)
+        case .custom(_):
+            // Map custom auth errors to unknown with message, or a specific type if available
+            // For now, let's treat it as a database or unknown error but preserve description
+            // Actually, ErrorHandler converts TO AppError. 
+            // AppError probably has .unknown(Error) or similar.
+            // Let's check AppError definition. Assuming .unknown takes Error.
+            // If message is string, we might need a custom error type.
+            // Let's just return .unknown with a custom NSError?
+            // Or better, let's map .custom to .unknown for now as AppError might not have .custom
+            return .unknown(error)
         default:
             return .unauthorized
         }
@@ -117,7 +127,7 @@ class ErrorHandler: ObservableObject {
     private func logError(_ appError: AppError, originalError: Error, context: String) {
         let contextStr = context.isEmpty ? "" : " [\(context)]"
         // Use the localized description from the AppError itself.
-        print("❌ [ErrorHandler]\(contextStr) \(appError.localizedDescription)")
+        Logger.error("[ErrorHandler]\(contextStr) \(appError.localizedDescription)")
         
         // Log to analytics
         AnalyticsService.shared.logEvent("error_handled", parameters: [

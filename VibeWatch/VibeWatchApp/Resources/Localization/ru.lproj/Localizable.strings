@@ -103,6 +103,7 @@
 "filters.anyCountry" = "Любая страна";
 "filters.apply" = "Применить";
 "filters.country" = "Страна";
+"filters.searchCountry" = "Поиск страны";
 "filters.minimumRating" = "Минимальный рейтинг";
 "filters.ratingAny" = "Любой";
 "filters.ratingExcellent" = "8.0+";
@@ -190,6 +191,8 @@
 "platform.selectionCount" = "Выбрано %d из %d";
 "platform.title" = "Стриминговые платформы";
 "platforms.buy" = "Купить";
+"platforms.cinema" = "Кинотеатр";
+"platforms.justwatch" = "JustWatch";
 "platforms.rent" = "Арендовать";
 "platforms.streaming" = "Стриминг";
 "platforms.title" = "Платформы";
@@ -207,7 +210,7 @@
 "auth.confirmPasswordPlaceholder" = "Подтвердите пароль";
 "auth.createAccount" = "Создать аккаунт";
 "auth.dontHaveAccount" = "Нет аккаунта?";
-"auth.emailPlaceholder" = "Email";
+"auth.emailPlaceholder" = "Электронная почта";
 "auth.forgotPassword" = "Забыли пароль?";
 "auth.gate.accountRequired" = "Требуется аккаунт";
 "auth.gate.authRequiredAI" = "Для использования AI-чата нужен аккаунт.";
@@ -215,7 +218,7 @@
 "auth.gate.createTitle" = "Создайте бесплатный аккаунт VibeWatch";
 "auth.gate.description" = "Для создания пользовательских списков и их синхронизации между устройствами нужен аккаунт.";
 "auth.gate.haveAccount" = "У меня уже есть аккаунт";
-"auth.gate.limitMessage" = "Сегодня вы уже посмотрели 15 бесплатных клипов. Зарегистрируйтесь, чтобы синхронизировать прогресс и моментально открыть завтрашние подборки.";
+"auth.gate.limitMessage" = "Сегодня вы уже посмотрели 25 бесплатных клипов. Зарегистрируйтесь, чтобы синхронизировать прогресс и моментально открыть завтрашние подборки.";
 "auth.gate.signupFree" = "Регистрация бесплатна и занимает меньше минуты.";
 "auth.gate.benefit.saveClips" = "Сохраняйте любимые клипы";
 "auth.gate.benefit.syncDevices" = "Синхронизируйте на всех устройствах";
@@ -243,7 +246,7 @@
 
 // AI
 "ai.title" = "Vibe AI";
-"ai.tokensUsage" = "Токены: %@/%@";
+"ai.requestsUsage" = "%d/%d запросов в день";
 "ai.describeVibe" = "Опишите своё настроение";
 "ai.thinking" = "Думаем...";
 "ai.editMessage" = "Редактировать сообщение";
@@ -265,14 +268,13 @@
 "ai.suggestion.chips2" = "💥 Боевик-комедия 80-х, AI рекомендует";
 "ai.suggestion.chips3" = "🕵️‍♂️ Недооценённый триллер с поворотом";
 "ai.suggestion.chips4" = "🤖 AI: что мне посмотреть?";
-"ai.usage.left" = "осталось";
 
 // Paywall
 "paywall.bestValue" = "ЛУЧШЕЕ ПРЕДЛОЖЕНИЕ";
 "paywall.cta.continue" = "Продолжить";
 "paywall.cta.selectPlan" = "Выбрать план";
 "paywall.cta.startTrial" = "Начать бесплатный пробный период %@";
-"paywall.daily.limitDescription" = "Бесплатные пользователи могут смотреть до 15 клипов в день. Обновитесь до Pro, чтобы получить неограниченный доступ и премиум-функции.";
+"paywall.daily.limitDescription" = "Бесплатные пользователи могут смотреть до 25 клипов в день. Обновитесь до Pro, чтобы получить неограниченный доступ и премиум-функции.";
 "paywall.daily.limitReached" = "Вы достигли дневного лимита";
 "paywall.daily.nextReset" = "Следующий сброс через";
 "paywall.daily.resetIn" = "Сброс через";
@@ -286,7 +288,6 @@
 "paywall.feature.offlineMode" = "📵 Офлайн-режим для сохранённого";
 "paywall.feature.releaseAlerts" = "🔔 Уведомления о выходе избранного";
 "paywall.feature.unlimitedClips" = "▶️ Неограниченные клипы и трейлеры";
-"paywall.foundingMember" = "Цена для первых подписчиков";
 "paywall.plan.annual" = "Годовой";
 "paywall.plan.monthly" = "Месячный";
 "paywall.price.perMonth" = "%@/мес";
@@ -355,7 +356,7 @@
 "profile.aboutUsDetail" = "Узнайте больше о команде VibeWatch и нашей миссии улучшить ваш опыт поиска контента.";
 "profile.tmdbAttribution" = "Этот продукт использует API TMDb, но не одобрен и не сертифицирован TMDb.";
 "profile.legalNotes" = "Юридическая информация";
-"profile.faq" = "FAQ";
+"profile.faq" = "ЧАСТО ЗАДАВАЕМЫЕ ВОПРОСЫ";
 "profile.faqDetail" = "Найдите быстрые ответы на частые вопросы об аккаунтах, подписках и функциях.";
 "profile.privacyPolicy" = "Политика конфиденциальности";
 "profile.termsOfUse" = "Условия использования";
@@ -426,3 +427,89 @@
 "profile.faq.answer4" = "Используйте «Сообщите нам» на любом тайтле, чтобы сообщить об ошибках или нерабочих ссылках — мы быстро исправим.";
 "profile.faq.question5" = "Подходит ли VibeWatch для обычных зрителей?";
 "profile.faq.answer5" = "Конечно. Мы показываем простые варианты вроде фильма на вечер с друзьями, а также редкие находки для киноманов.";
+"carousel.hotThisWeek" = "Хиты недели";
+"carousel.awardWinners" = "Лауреаты премий, которые вам понравятся";
+
+// --- Synced from en.lproj ---
+"filters.mediaType" = "Тип носителя";
+"filters.movies" = "Фильмы";
+"filters.tvShows" = "Телешоу";
+"filters.both" = "Оба";
+"filters.rating" = "Рейтинг";
+"filters.releasePeriod" = "Период выпуска";
+"filters.releasePeriodRecent" = "Последние годы (2020+)";
+"filters.releasePeriodModern" = "Современность (2010-2019)";
+"filters.releasePeriodClassic" = "Классика (<2010)";
+"filters.customRange" = "Пользовательский диапазон";
+"filters.customYearRange" = "Пользовательский диапазон лет";
+"filters.min" = "Мин";
+"filters.max" = "Макс";
+"filters.from" = "С сайта";
+"filters.to" = "На";
+"filters.custom" = "Пользовательское";
+"filters.allCountries" = "Все страны";
+"filters.sortPopularityDesc" = "Самые популярные";
+"filters.sortPopularityAsc" = "Наименее популярный";
+"filters.sortRatingDesc" = "Самый высокий рейтинг";
+"filters.sortRatingAsc" = "Самая низкая оценка";
+"filters.sortReleaseDateDesc" = "Самый новый первый";
+"filters.sortReleaseDateAsc" = "Самый старый первый";
+"filters.proFilters" = "Профессиональные фильтры";
+"filters.hideWatched" = "Спрятаться под наблюдением";
+"filters.hideDisliked" = "Скрыть Не понравилось";
+"filters.proTitle" = "Разблокируйте расширенные фильтры";
+"filters.proDescription" = "Перейдите на версию Pro, чтобы получить пользовательские диапазоны, выбор нескольких стран и расширенные возможности фильтрации";
+"filters.upgradeToPro" = "Обновление до Pro";
+"filters.filtersActive" = "%d фильтров активны";
+"carousel.dailyMix" = "Ваш ежедневный микс";
+"carousel.trendingInGenre" = "Тенденция в %@";
+"carousel.becauseYouLiked" = "Потому что тебе нравилось %@";
+"carousel.hiddenGems" = "Скрытые драгоценные камни в %@";
+"carousel.continueJourney" = "Продолжайте свое путешествие";
+"carousel.fromSearches" = "Из ваших поисков";
+"carousel.topTVPicks" = "Лучшие телевизионные подборки для вас";
+"carousel.staffPicks" = "Выбор сотрудников для фанатов %@";
+"carousel.yearlyRewind" = "Ваша годовая перемотка";
+"settings.privacy.title" = "Конфиденциальность";
+"settings.analytics.share" = "Обменивайтесь анонимной аналитикой";
+"settings.analytics.share.description" = "Помогает нам понять, какими функциями вы пользуетесь, и улучшить приложение. Никакого отслеживания рекламы.";
+"settings.analytics.title" = "Аналитика";
+"settings.analytics.viewStats" = "Просмотр статистики";
+"settings.analytics.description" = "Просматривайте историю своих часов и информацию о них";
+"settings.notifications.title" = "Уведомления";
+"settings.notifications.manage" = "Управление уведомлениями";
+"settings.notifications.description" = "Персональные оповещения о новых материалах";
+"onboarding.welcome.title" = "Откройте для себя свои вибрации";
+"onboarding.welcome.subtitle" = "Рекомендации на основе искусственного интеллекта, созданные специально для вас.";
+"onboarding.clips.title" = "Смотреть, не читать";
+"onboarding.clips.subtitle" = "Познакомьтесь с фильмами через короткие, увлекательные ролики.";
+"onboarding.lists.title" = "Ваш список наблюдения, везде";
+"onboarding.lists.subtitle" = "Сохраняйте фильмы и синхронизируйте их на всех устройствах.";
+"onboarding.account.title" = "Сохранить профиль";
+"onboarding.account.subtitle" = "Создайте учетную запись, чтобы синхронизировать список просмотра и предпочтения на разных устройствах.";
+"onboarding.skip" = "Пока пропустите";
+"paywall.cta.skip" = "Пока пропустите";
+"filters.allPlatforms" = "Все платформы";
+
+// --- Synced from en.lproj ---
+"filters.releasePeriodAny" = "Любой";
+"common.next" = "Следующий";
+"ai.tryAsking" = "Попробуйте спросить...";
+
+// --- Synced from en.lproj ---
+"auth.checkEmailTitle" = "Проверьте свою электронную почту";
+"auth.checkEmailMessage" = "Мы отправили вам ссылку для подтверждения. Пожалуйста, проверьте свой почтовый ящик, чтобы подтвердить учетную запись.";
+
+// --- Synced from en.lproj ---
+"auth.openMailApp" = "Откройте приложение \"Почта";
+"auth.iHaveVerified" = "Я проверил";
+"auth.resendEmail" = "Повторная отправка электронной почты";
+"auth.changeEmail" = "Изменить электронную почту";
+"auth.verificationPending" = "Все еще жду проверки...";
+
+"movieDetail.whyForMe" = "Why for me?";
+
+"movieDetail.whyForMe.basedOnGenres" = "Based on your 3 favorite genres";
+
+"movieDetail.goodFitTitle" = "Why %@ is a good fit for me?";
+"movieDetail.goodFitSubtitle" = "A quick, personalized take based on your taste.";

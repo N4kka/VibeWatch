@@ -1,25 +1,7 @@
 import Foundation
 
 // INSTRUCTIONS:
-// 1. Copy this file to Config.swift (remove .template)
-// 2. Add your API keys below
-// 3. Never commit Config.swift to version control
-
-struct APIConfig {
-    // TMDB API Key
-    // Get your key at: https://www.themoviedb.org/settings/api
-    static let tmdbAPIKey = "YOUR_TMDB_API_KEY_HERE"
-    
-    // Supabase Configuration
-    // Get your credentials at: https://app.supabase.com/project/_/settings/api
-    static let supabaseURL = "YOUR_SUPABASE_URL_HERE"
-    static let supabaseAnonKey = "YOUR_SUPABASE_ANON_KEY_HERE"
-    
-    // OpenAI API Key (Optional - for AI clip descriptions)
-    // Get your key at: https://platform.openai.com/api-keys
-    static let openAIAPIKey = "YOUR_OPENAI_API_KEY_HERE"
-    
-    // Cerebras API Key
-    // Get your key at: https://cloud.cerebras.ai/
-    static let cerebrasAPIKey = "YOUR_CEREBRAS_API_KEY_HERE"
-}
+// Secrets are now provided via an untracked xcconfig file:
+// 1. Copy `VibeWatchApp/Config/Secrets.xcconfig.template` to `Secrets.xcconfig`
+// 2. Fill in your keys
+// 3. The app reads them from Info.plist at runtime

@@ -33,9 +33,9 @@ class NetworkMonitor: ObservableObject {
                 self?.isInitialized = true
 
                 if self?.isConnected == true {
-                    print("🌐 [NetworkMonitor] Connected (\(self?.connectionType.description ?? "unknown"))")
+                    Logger.debug("[NetworkMonitor] Connected (\(self?.connectionType.description ?? "unknown"))")
                 } else {
-                    print("📵 [NetworkMonitor] Disconnected")
+                    Logger.debug("[NetworkMonitor] Disconnected")
                 }
             }
         }
@@ -63,7 +63,7 @@ class NetworkMonitor: ObservableObject {
                 try? await Task.sleep(nanoseconds: 100_000_000) // 0.1s
             }
             if !isInitialized {
-                print("⚠️ [NetworkMonitor] Timeout waiting for network status, assuming WiFi")
+                Logger.warning("[NetworkMonitor] Timeout waiting for network status, assuming WiFi")
                 return true // Assume WiFi if we can't determine (better to prefetch than not)
             }
         }

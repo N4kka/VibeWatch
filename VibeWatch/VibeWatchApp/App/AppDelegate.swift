@@ -3,11 +3,24 @@ import Supabase
 import FirebaseCore
 import FirebaseMessaging
 import UserNotifications
+import BackgroundTasks
+import GoogleMobileAds
 
 class AppDelegate: NSObject, UIApplicationDelegate, @MainActor UNUserNotificationCenterDelegate, @MainActor MessagingDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
+        DiscoveryCarouselBackgroundRefresher.shared.register()
+        DiscoveryCarouselBackgroundRefresher.shared.scheduleNextRefresh()
+        CerebrasBackendBackgroundScheduler.shared.register()
+        CerebrasBackendBackgroundScheduler.shared.scheduleNextRun()
+        NotificationBackgroundTask.shared.register()
+        NotificationBackgroundTask.shared.scheduleNextRun()
+        UserPreferenceManager.shared.setSyncEngine(SyncEngine.shared)
+
         // Initialize Firebase
         FirebaseApp.configure() // Call FirebaseApp.configure() here
+
+        // Initialize Google Mobile Ads SDK
+        MobileAds.shared.start(completionHandler: nil)
         
         // Initialize LocalizationManager early to ensure translations are loaded before UI
         _ = LocalizationManager.shared
@@ -26,6 +39,12 @@ class AppDelegate: NSObject, UIApplicationDelegate, @MainActor UNUserNotificatio
         application.registerForRemoteNotifications()
         
         return true
+    }
+
+    func applicationDidEnterBackground(_ application: UIApplication) {
+        DiscoveryCarouselBackgroundRefresher.shared.scheduleNextRefresh()
+        CerebrasBackendBackgroundScheduler.shared.scheduleNextRun()
+        NotificationBackgroundTask.shared.scheduleNextRun()
     }
     
     // Handle URL schemes (for OAuth callbacks)

@@ -10,6 +10,7 @@ class DatabaseClipsService {
     private let supabase = SupabaseService.shared
     private let engagementTracker = UserEngagementTracker.shared
     private let quotaManager = DailyQuotaManager.shared
+    private let preferenceManager = UserPreferenceManager.shared
     
     // Gradual rollout percentages (Day 1-7, then 100% DB)
     private let rolloutSchedule: [Int: Double] = [
@@ -51,57 +52,139 @@ class DatabaseClipsService {
     
     private func fetchFromLocalDatabase(count: Int) async throws -> [Clip] {
         // Get user preferences for personalization
-        let topGenres = engagementTracker.getTopGenres(limit: 5)
+        let engagementTopGenres = engagementTracker.getTopGenres(limit: 5)
+        let userProfile = await preferenceManager.aggregatePreferences()
+        let unifiedTopGenres = userProfile.topGenres.prefix(5).map { $0.genreId }
+
+        let topGenres = Array(Set(engagementTopGenres + unifiedTopGenres))
         let deviceId = getDeviceId()
-        
-        // Fetch ALL active clips from local SQLite, randomized
-        // RANDOMIZE clips on every fetch (app launch) - using SQLite's RANDOM()
-        let response: [[String: Any]] = try await db.queryRaw("""
-            SELECT * FROM clips
-            WHERE is_active = 1 AND deleted_at IS NULL
-            ORDER BY RANDOM()
-        """)
-        
-        Logger.debug("[DatabaseClips] Fetched \(response.count) randomized clips from local SQLite")
-        
+
+        // Fetch active clips from local SQLite using bucket-based randomization (Phase 4 optimization)
+        // Pick a random bucket range instead of ORDER BY RANDOM() for better performance
+        let bucketStart = Int.random(in: 0..<100)
+        let bucketEnd = (bucketStart + 30) % 100  // 30% of clips per fetch
+
+        let response: [[String: Any]]
+        if bucketStart < bucketEnd {
+            response = try await db.queryRaw("""
+                SELECT * FROM clips
+                WHERE is_active = 1 AND deleted_at IS NULL
+                  AND random_bucket >= ? AND random_bucket < ?
+                ORDER BY random_bucket
+            """, parameters: [bucketStart, bucketEnd])
+        } else {
+            // Wrap around case (e.g., 90-20)
+            response = try await db.queryRaw("""
+                SELECT * FROM clips
+                WHERE is_active = 1 AND deleted_at IS NULL
+                  AND (random_bucket >= ? OR random_bucket < ?)
+                ORDER BY random_bucket
+            """, parameters: [bucketStart, bucketEnd])
+        }
+
+        Logger.debug("[DatabaseClips] Fetched \(response.count) clips from bucket range \(bucketStart)-\(bucketEnd)")
+
+        // Phase 4 Fix: Build genre lookup dictionary O(N) instead of O(N²) linear search
+        var genresByClipId: [String: [String]] = [:]
+        for row in response {
+            guard let clipId = row["clip_id"] as? String else { continue }
+            if let genresString = row["genres"] as? String,
+               let genresData = genresString.data(using: .utf8),
+               let genres = try? JSONDecoder().decode([String].self, from: genresData) {
+                genresByClipId[clipId] = genres
+            } else {
+                genresByClipId[clipId] = []
+            }
+        }
+
         // Parse rows to Clip objects
         var clips: [Clip] = response.compactMap { mapClip(from: $0) }
-        
-        // Filter by genres if user has preferences
+
+        // Filter by genres if user has preferences (now O(1) lookup per clip)
         if !topGenres.isEmpty {
-            let genreNames = Set(topGenres.compactMap { genreIdToName($0) })
+            let preferredGenreNames = Set(topGenres.compactMap { genreIdToName($0) })
             let genreFiltered = clips.filter { clip in
-                // Parse genres JSON string
-                guard let genresString = response.first(where: { ($0["clip_id"] as? String) == clip.id })?["genres"] as? String,
-                      let genresData = genresString.data(using: .utf8),
-                      let genres = try? JSONDecoder().decode([String].self, from: genresData) else {
-                    return false
-                }
-                return !Set(genres).isDisjoint(with: genreNames)
+                let genres = genresByClipId[clip.id] ?? []
+                return !Set(genres).isDisjoint(with: preferredGenreNames)
             }
-            
+
             // Use filtered clips if we have enough
             if genreFiltered.count >= count {
                 clips = genreFiltered
             }
         }
-        
+
         // Filter out already-watched clips
         let watchedClips = await getWatchedClipIdsFromLocal(deviceId: deviceId)
         let unwatchedClips = clips.filter { !watchedClips.contains($0.id) }
-        
+
         // Get liked status in one go
         let likedClipIds = ClipsService.shared.getLikedClipIds()
-        
+
         // Map to final model, setting isLiked status
-        let finalClips = unwatchedClips.prefix(count).map { clip -> Clip in
+        let scored = scoreClips(
+            clips: unwatchedClips,
+            genresByClipId: genresByClipId,
+            userProfile: userProfile,
+            preferredGenreIds: topGenres
+        )
+
+        let finalClips = scored.prefix(count).map { clip -> Clip in
             var mutableClip = clip
             mutableClip.isLiked = likedClipIds.contains(clip.id)
             return mutableClip
         }
-        
+
         Logger.info("[DatabaseClips] Returning \(finalClips.count) personalized clips from local SQLite")
         return finalClips
+    }
+
+    /// Score clips for personalization ranking
+    /// Phase 4 Fix: Uses genresByClipId dictionary for O(1) lookups instead of O(N) linear search
+    private func scoreClips(
+        clips: [Clip],
+        genresByClipId: [String: [String]],
+        userProfile: UserProfile,
+        preferredGenreIds: [Int]
+    ) -> [Clip] {
+        let preferredGenreNames = Set(preferredGenreIds.compactMap { genreIdToName($0)?.lowercased() })
+        let lastSearch = userProfile.recentActivity.lastSearchQuery?.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        let likedTitles = userProfile.recentActivity.likedMedia.prefix(5).map { $0.title.lowercased() }
+
+        func score(for clip: Clip) -> Double {
+            var score: Double = 0
+
+            // Cross-feature boosts from unified profile (O(1) dictionary lookup)
+            let clipGenreNames = Set((genresByClipId[clip.id] ?? []).map { $0.lowercased() })
+            if !preferredGenreNames.isEmpty, !clipGenreNames.isDisjoint(with: preferredGenreNames) {
+                score += 30
+            }
+
+            // Search relevance boost
+            if let lastSearch, !lastSearch.isEmpty {
+                let haystack = "\(clip.title) \(clip.description)".lowercased()
+                if haystack.contains(lastSearch) {
+                    score += 25
+                }
+            }
+
+            // AI/likes context boost (proxy: user's liked titles)
+            if !likedTitles.isEmpty {
+                let haystack = clip.title.lowercased()
+                if likedTitles.contains(where: { !($0.isEmpty) && haystack.contains($0) }) {
+                    score += 20
+                }
+            }
+
+            // Small freshness/randomness to prevent repetition
+            score += Double.random(in: 0...5)
+            return score
+        }
+
+        return clips
+            .map { (clip: $0, score: score(for: $0)) }
+            .sorted { $0.score > $1.score }
+            .map(\.clip)
     }
     
     // MARK: - YouTube API Fallback

@@ -12,6 +12,10 @@ class ClipsViewModel: ObservableObject {
     private let repository: ClipsRepository
     private let engagementTracker = UserEngagementTracker.shared
     private let prefetchService = ClipsPrefetchService.shared
+    private let preferenceManager = UserPreferenceManager.shared
+    private let tmdbService = TMDBService.shared
+
+    private var watchMetrics: [String: (watched: Double, total: Double)] = [:]
     
     private var isLoadingMore = false
     private var loadStartTime: Date?
@@ -42,7 +46,11 @@ class ClipsViewModel: ObservableObject {
             if prefetchService.shouldFetchToday() {
                 Logger.info("📅 [ClipsViewModel] Triggering daily clips pre-fetch...")
                 Task {
-                    try? await prefetchService.prefetchClips(targetCount: 800)
+                    do {
+                        try await prefetchService.prefetchClips(targetCount: 800)
+                    } catch {
+                        Logger.error("[ClipsViewModel] Failed to prefetch clips: \(error.localizedDescription)")
+                    }
                 }
             }
             
@@ -124,6 +132,7 @@ class ClipsViewModel: ObservableObject {
     }
     
     func updateWatchTime(clipId: String, watchedSeconds: Double, totalSeconds: Double) {
+        watchMetrics[clipId] = (watchedSeconds, totalSeconds)
         engagementTracker.updateWatchTime(
             clipId: clipId,
             duration: watchedSeconds,
@@ -132,7 +141,18 @@ class ClipsViewModel: ObservableObject {
     }
     
     func stopWatching(clipId: String) {
-        engagementTracker.endWatchingClip(clipId: clipId)
+        guard let clip = clips.first(where: { $0.id == clipId }) else {
+            engagementTracker.endWatchingClip(clipId: clipId)
+            return
+        }
+
+        Task {
+            let (genreIds, actorIds) = await fetchGenresAndActors(for: clip)
+            engagementTracker.endWatchingClip(clipId: clipId, genres: genreIds, actors: actorIds)
+
+            let score = engagementScore(for: clipId)
+            recordUnifiedPreferences(for: clip, genreIds: genreIds, actorIds: actorIds, engagementScore: score, action: "watch")
+        }
         Logger.debug("👋 Stopped watching clip")
     }
     
@@ -152,13 +172,130 @@ class ClipsViewModel: ObservableObject {
             }
             
             Task {
-                try? await ClipsService.shared.updateLikeStatus(clipId: clipId, isLiked: isLiked)
+                do {
+                    try await ClipsService.shared.updateLikeStatus(clipId: clipId, isLiked: isLiked)
+                } catch {
+                    Logger.error("[ClipsViewModel] Failed to update like status: \(error.localizedDescription)")
+                }
+
+                let (genreIds, actorIds) = await fetchGenresAndActors(for: updatedClip)
+                recordUnifiedPreferences(
+                    for: updatedClip,
+                    genreIds: genreIds,
+                    actorIds: actorIds,
+                    engagementScore: isLiked ? 5.0 : -1.0,
+                    action: isLiked ? "like" : "unlike"
+                )
+
+                // Award gamification XP for liking a clip
+                if isLiked, let userId = await AuthService.shared.currentUser?.id {
+                    let isPro = await ClipQuotaService.shared.checkIsProUser()
+                    _ = await GamificationService.shared.awardXP(userId: userId, action: .clipLiked, isPro: isPro)
+                }
             }
         }
     }
-    
+
     func trackAddToList(clip: Clip) {
         engagementTracker.trackListAddition(clip: clip, listType: "watchlist")
         Logger.debug("📝 Added to list: \(clip.title)")
+
+        Task {
+            let (genreIds, actorIds) = await fetchGenresAndActors(for: clip)
+            recordUnifiedPreferences(for: clip, genreIds: genreIds, actorIds: actorIds, engagementScore: 8.0, action: "add_to_list")
+
+            // Award gamification XP for adding to list
+            if let userId = await AuthService.shared.currentUser?.id {
+                let isPro = await ClipQuotaService.shared.checkIsProUser()
+                _ = await GamificationService.shared.awardXP(userId: userId, action: .addedToList, isPro: isPro)
+            }
+        }
+    }
+
+    // MARK: - Unified Preferences Integration
+
+    private func recordUnifiedPreferences(
+        for clip: Clip,
+        genreIds: [Int],
+        actorIds: [Int],
+        engagementScore: Double,
+        action: String
+    ) {
+        let mediaId = clip.movieId ?? clip.tvShowId
+        guard let mediaId else { return }
+
+        preferenceManager.recordInteraction(
+            UserInteraction(
+                source: .clips,
+                mediaId: mediaId,
+                mediaType: clip.inferredMediaType,
+                genreIds: genreIds,
+                actorIds: actorIds,
+                engagementScore: engagementScore,
+                metadata: [
+                    "clip_id": clip.id,
+                    "action": action
+                ]
+            )
+        )
+    }
+
+    private func engagementScore(for clipId: String) -> Double {
+        guard let metrics = watchMetrics[clipId], metrics.total > 0 else {
+            return 0.0
+        }
+
+        let percentage = metrics.watched / metrics.total
+        switch percentage {
+        case 0..<0.1:
+            return -1.0
+        case 0.1..<0.25:
+            return 0.0
+        case 0.25..<0.5:
+            return 1.0
+        case 0.5..<0.8:
+            return 3.0
+        case 0.8...1.0:
+            return 5.0
+        default:
+            return 0.0
+        }
+    }
+
+    private func fetchGenresAndActors(for clip: Clip) async -> ([Int], [Int]) {
+        guard let mediaId = clip.movieId ?? clip.tvShowId else {
+            return ([], [])
+        }
+
+        do {
+            if clip.inferredMediaType == .movie {
+                let movie = try await tmdbService.getMovieDetails(id: mediaId)
+                let credits: Credits?
+                do {
+                    credits = try await tmdbService.getMovieCredits(id: mediaId)
+                } catch {
+                    Logger.debug("[ClipsViewModel] Credits unavailable for movie \(mediaId): \(error.localizedDescription)")
+                    credits = nil
+                }
+                let genreIds = movie.genreIds ?? movie.genres?.map { $0.id } ?? []
+                let actorIds = credits?.cast.prefix(5).map { $0.id } ?? []
+                return (genreIds, actorIds)
+            } else {
+                let tv = try await tmdbService.getTVShowDetails(id: mediaId)
+                let credits: Credits?
+                do {
+                    credits = try await tmdbService.getTVShowCredits(id: mediaId)
+                } catch {
+                    Logger.debug("[ClipsViewModel] Credits unavailable for TV show \(mediaId): \(error.localizedDescription)")
+                    credits = nil
+                }
+                let genreIds = tv.genreIds ?? tv.genres?.map { $0.id } ?? []
+                let actorIds = credits?.cast.prefix(5).map { $0.id } ?? []
+                return (genreIds, actorIds)
+            }
+        } catch {
+            Logger.warning("[ClipsViewModel] Failed to fetch TMDB metadata for clip: \(error.localizedDescription)")
+            return ([], [])
+        }
     }
 }

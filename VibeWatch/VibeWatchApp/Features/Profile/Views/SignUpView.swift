@@ -11,6 +11,7 @@ struct SignUpView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var showSignIn = false
+    @State private var showCheckEmail = false
     @State private var emailTouched = false
     @State private var passwordTouched = false
     @State private var confirmPasswordTouched = false
@@ -52,6 +53,23 @@ struct SignUpView: View {
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
+            .fullScreenCover(isPresented: $showCheckEmail) {
+                CheckEmailView(
+                    email: email,
+                    onVerified: {
+                        showCheckEmail = false
+                        dismiss()
+                    },
+                    onResend: {
+                        Task {
+                            try? await authService.resendConfirmationEmail(email: email)
+                        }
+                    },
+                    onChangeEmail: {
+                        showCheckEmail = false
+                    }
+                )
+            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("profile.cancel".localized) {
@@ -120,10 +138,22 @@ struct SignUpView: View {
                     }
                 
                 if passwordTouched && !password.isEmpty && !isPasswordValid {
-                    Text("auth.invalidPassword".localized)
-                        .font(.system(size: 12))
-                        .foregroundColor(.red)
-                        .padding(.leading, 16)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("auth.invalidPassword".localized)
+                            .font(.system(size: 12))
+                            .foregroundColor(.red)
+                        
+                        Text("• At least 8 characters")
+                            .font(.system(size: 11))
+                            .foregroundColor(.red.opacity(0.8))
+                        Text("• Uppercase & lowercase letter")
+                            .font(.system(size: 11))
+                            .foregroundColor(.red.opacity(0.8))
+                        Text("• At least one number")
+                            .font(.system(size: 11))
+                            .foregroundColor(.red.opacity(0.8))
+                    }
+                    .padding(.leading, 16)
                 }
             }
             
@@ -260,12 +290,16 @@ struct SignUpView: View {
                 password: password
             )
             
-            appState.currentUser = user
-            appState.isAuthenticated = true
-            appState.showSuccessToast = true
-            appState.toastMessage = "Account created successfully!"
-            
-            dismiss()
+            if authService.isAuthenticated {
+                appState.currentUser = user
+                appState.isAuthenticated = true
+                appState.showSuccessToast = true
+                appState.toastMessage = "Account created successfully!"
+                dismiss()
+            } else {
+                // Session is nil, email confirmation is required
+                showCheckEmail = true
+            }
         } catch {
             errorMessage = error.localizedDescription
             appState.showErrorToast = true

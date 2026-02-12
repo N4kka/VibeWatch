@@ -3,26 +3,29 @@ import SwiftUI
 
 class UserEngagementTracker: ObservableObject {
     @MainActor static let shared = UserEngagementTracker()
-    
+
     // Watch time tracking
     private var watchHistory: [String: ClipEngagement] = [:] // clipId -> engagement
-    
+
     // Preference scores
     private var genreScores: [Int: Double] = [:] // genreId -> score
     private var actorScores: [Int: Double] = [:] // actorId -> score
     private var movieScores: [Int: Double] = [:] // movieId -> score
-    
+
     // Session tracking
     var currentStreak: Int = 0
     var isInHotStreak: Bool = false
-    
-    private let userDefaults = UserDefaults.standard
-    private let engagementKey = "userEngagementData"
-    private let genreScoresKey = "genreScores"
-    private let movieScoresKey = "movieScores"
-    
+
+    private let db = SQLiteService.shared
+    private let legacyGenreScoresKey = "genreScores"
+    private let legacyMovieScoresKey = "movieScores"
+    private let legacyEngagementKey = "userEngagementData"
+
     private init() {
-        loadEngagementData()
+        Task {
+            await migrateFromUserDefaultsIfNeeded()
+            await loadFromSQLite()
+        }
     }
     
     // MARK: - Watch Time Tracking
@@ -118,7 +121,7 @@ class UserEngagementTracker: ObservableObject {
             currentStreak += 1
             if currentStreak >= 3 {
                 isInHotStreak = true
-                print("🔥 User in HOT STREAK! Boosting engagement content...")
+                Logger.debug("[Engagement] User in hot streak, boosting engagement content")
             }
         } else if score <= 0 {
             currentStreak = 0
@@ -149,7 +152,7 @@ class UserEngagementTracker: ObservableObject {
             movieScores[tvShowId] = currentScore + 15.0
         }
         
-        print("✅ List addition tracked: +10 genre points, +15 movie points")
+        Logger.debug("[Engagement] List addition tracked: +10 genre points, +15 movie points")
         saveEngagementData()
     }
     
@@ -172,36 +175,102 @@ class UserEngagementTracker: ObservableObject {
         return !genreScores.isEmpty || !movieScores.isEmpty
     }
     
-    // MARK: - Persistence
-    
+    // MARK: - Persistence (SQLite)
+
     private func saveEngagementData() {
-        // Save genre scores
-        if let genreData = try? JSONEncoder().encode(genreScores) {
-            userDefaults.set(genreData, forKey: genreScoresKey)
-        }
-        
-        // Save movie scores
-        if let movieData = try? JSONEncoder().encode(movieScores) {
-            userDefaults.set(movieData, forKey: movieScoresKey)
+        Task { await saveToSQLite() }
+    }
+
+    private func saveToSQLite() async {
+        let userId = await SupabaseService.shared.currentUser?.id ?? "anonymous"
+        let deviceId = UserDefaults.standard.string(forKey: "deviceIdentifier") ?? "unknown"
+
+        do {
+            // Save genre scores
+            for (genreId, score) in genreScores {
+                let prefId = "\(userId)_genre_\(genreId)"
+                let sql = """
+                    REPLACE INTO user_preferences (id, user_id, device_id, preference_type, preference_id, score, updated_at)
+                    VALUES (?, ?, ?, 'genre', ?, ?, datetime('now'))
+                """
+                _ = try await db.queryRaw(sql, parameters: [prefId, userId, deviceId, String(genreId), score])
+            }
+
+            // Save movie scores
+            for (movieId, score) in movieScores {
+                let prefId = "\(userId)_movie_\(movieId)"
+                let sql = """
+                    REPLACE INTO user_preferences (id, user_id, device_id, preference_type, preference_id, score, updated_at)
+                    VALUES (?, ?, ?, 'movie', ?, ?, datetime('now'))
+                """
+                _ = try await db.queryRaw(sql, parameters: [prefId, userId, deviceId, String(movieId), score])
+            }
+
+            // Save actor scores
+            for (actorId, score) in actorScores {
+                let prefId = "\(userId)_actor_\(actorId)"
+                let sql = """
+                    REPLACE INTO user_preferences (id, user_id, device_id, preference_type, preference_id, score, updated_at)
+                    VALUES (?, ?, ?, 'actor', ?, ?, datetime('now'))
+                """
+                _ = try await db.queryRaw(sql, parameters: [prefId, userId, deviceId, String(actorId), score])
+            }
+        } catch {
+            Logger.error("[Engagement] Failed to save to SQLite: \(error)")
         }
     }
-    
-    private func loadEngagementData() {
-        // Load genre scores
-        if let genreData = userDefaults.data(forKey: genreScoresKey),
+
+    private func loadFromSQLite() async {
+        let userId = await SupabaseService.shared.currentUser?.id ?? "anonymous"
+
+        do {
+            let rows = try await db.queryRaw(
+                "SELECT preference_type, preference_id, score FROM user_preferences WHERE user_id = ? AND deleted_at IS NULL",
+                parameters: [userId]
+            )
+
+            for row in rows {
+                guard let type = row["preference_type"] as? String,
+                      let idStr = row["preference_id"] as? String,
+                      let id = Int(idStr),
+                      let score = row["score"] as? Double else { continue }
+
+                switch type {
+                case "genre": genreScores[id] = score
+                case "movie": movieScores[id] = score
+                case "actor": actorScores[id] = score
+                default: break
+                }
+            }
+
+            Logger.debug("[Engagement] Loaded preferences: \(genreScores.count) genres, \(movieScores.count) movies")
+        } catch {
+            Logger.error("[Engagement] Failed to load from SQLite: \(error)")
+        }
+    }
+
+    /// One-time migration from UserDefaults to SQLite
+    private func migrateFromUserDefaultsIfNeeded() async {
+        let ud = UserDefaults.standard
+        guard ud.data(forKey: legacyGenreScoresKey) != nil || ud.data(forKey: legacyMovieScoresKey) != nil else { return }
+
+        if let genreData = ud.data(forKey: legacyGenreScoresKey),
            let scores = try? JSONDecoder().decode([Int: Double].self, from: genreData) {
             genreScores = scores
         }
-        
-        // Load movie scores
-        if let movieData = userDefaults.data(forKey: movieScoresKey),
+        if let movieData = ud.data(forKey: legacyMovieScoresKey),
            let scores = try? JSONDecoder().decode([Int: Double].self, from: movieData) {
             movieScores = scores
         }
-        
-        print("✅ Loaded user preferences: \(genreScores.count) genres, \(movieScores.count) movies")
+
+        await saveToSQLite()
+
+        ud.removeObject(forKey: legacyGenreScoresKey)
+        ud.removeObject(forKey: legacyMovieScoresKey)
+        ud.removeObject(forKey: legacyEngagementKey)
+        Logger.info("[Engagement] Migrated engagement data from UserDefaults to SQLite")
     }
-    
+
     func clearAllData() {
         watchHistory.removeAll()
         genreScores.removeAll()
@@ -209,10 +278,18 @@ class UserEngagementTracker: ObservableObject {
         movieScores.removeAll()
         currentStreak = 0
         isInHotStreak = false
-        
-        userDefaults.removeObject(forKey: genreScoresKey)
-        userDefaults.removeObject(forKey: movieScoresKey)
-        userDefaults.removeObject(forKey: engagementKey)
+
+        Task {
+            let userId = await SupabaseService.shared.currentUser?.id ?? "anonymous"
+            do {
+                _ = try await db.queryRaw(
+                    "DELETE FROM user_preferences WHERE user_id = ?",
+                    parameters: [userId]
+                )
+            } catch {
+                Logger.error("[Engagement] Failed to clear SQLite data: \(error)")
+            }
+        }
     }
 }
 

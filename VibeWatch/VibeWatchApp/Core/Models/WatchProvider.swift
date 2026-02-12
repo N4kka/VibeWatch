@@ -21,6 +21,7 @@ struct Provider: Codable, Identifiable, Hashable {
     var price: PriceInfo?
     var quality: String?
     var presentationType: String?
+    var externalLink: URL?
     
     enum CodingKeys: String, CodingKey {
         case providerId = "provider_id"
@@ -30,12 +31,16 @@ struct Provider: Codable, Identifiable, Hashable {
         case price
         case quality
         case presentationType = "presentation_type"
+        case externalLink
     }
     
     var id: Int { providerId }
     
     var logoURL: URL {
-        URL(string: "https://image.tmdb.org/t/p/original\(logoPath)")!
+        if logoPath.hasPrefix("http") {
+            return URL(string: logoPath) ?? URL(string: "https://image.tmdb.org/t/p/original\(logoPath)")!
+        }
+        return URL(string: "https://image.tmdb.org/t/p/original\(logoPath)")!
     }
     
     var formattedQuality: String? {

@@ -11,6 +11,7 @@ struct SettingsView: View {
     @State private var showDeleteAccountConfirmation = false
     @State private var isDeletingAccount = false
     @State private var deletionError: String?
+    @AppStorage("analytics.isEnabled") private var analyticsEnabled: Bool = true
 
     // Cache Management
     @State private var showCacheSizeOptions = false
@@ -30,21 +31,22 @@ struct SettingsView: View {
     private var prefetchOptionDescription: String {
         selectedPrefetchOption.rawValue
     }
-    
+
     var body: some View {
-        ZStack {
-            Color.theme.background.ignoresSafeArea()
-            
-            VStack(spacing: 0) {
-                // Header
-                HStack {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(.theme.textPrimary)
-                    }
+        NavigationView {
+            ZStack {
+                Color.theme.background.ignoresSafeArea()
+
+                VStack(spacing: 0) {
+                    // Header
+                    HStack {
+                        Button {
+                            dismiss()
+                        } label: {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(.theme.textPrimary)
+                        }
                     
                     Spacer()
                     
@@ -67,6 +69,188 @@ struct SettingsView: View {
                 
                 ScrollView {
                     VStack(spacing: 16) {
+                        // Privacy / Analytics Section
+                        VStack(spacing: 16) {
+                            Text("settings.privacy.title".localized)
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(.theme.textPrimary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.top, 12)
+
+                            HStack(spacing: 16) {
+                                ZStack {
+                                    Circle()
+                                        .fill(Color.theme.accentOrange.opacity(0.2))
+                                        .frame(width: 44, height: 44)
+
+                                    Image(systemName: "chart.bar.fill")
+                                        .font(.system(size: 20))
+                                        .foregroundColor(.theme.accentOrange)
+                                }
+
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("settings.analytics.share".localized)
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundColor(.theme.textPrimary)
+
+                                    Text("settings.analytics.share.description".localized)
+                                        .font(.system(size: 14))
+                                        .foregroundColor(.theme.textSecondary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+
+                                Spacer()
+
+                                Toggle("", isOn: $analyticsEnabled)
+                                    .labelsHidden()
+                                    .tint(.theme.accentOrange)
+                            }
+                            .padding(16)
+                            .background(Color.white.opacity(0.05))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        .onChange(of: analyticsEnabled) { _, newValue in
+                            AnalyticsService.shared.setEnabled(newValue)
+                        }
+
+                        // Notifications Section
+                        if let userId = authService.currentUser?.id {
+                            VStack(spacing: 16) {
+                                Text("settings.notifications.title".localized)
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(.theme.textPrimary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.top, 12)
+
+                                NavigationLink {
+                                    NotificationPreferencesView(userId: userId)
+                                } label: {
+                                    HStack(spacing: 16) {
+                                        ZStack {
+                                            Circle()
+                                                .fill(Color.theme.accentOrange.opacity(0.2))
+                                                .frame(width: 44, height: 44)
+
+                                            Image(systemName: "bell.fill")
+                                                .font(.system(size: 20))
+                                                .foregroundColor(.theme.accentOrange)
+                                        }
+
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text("settings.notifications.manage".localized)
+                                                .font(.system(size: 16, weight: .semibold))
+                                                .foregroundColor(.theme.textPrimary)
+
+                                            Text("settings.notifications.description".localized)
+                                                .font(.system(size: 14))
+                                                .foregroundColor(.theme.textSecondary)
+                                        }
+
+                                        Spacer()
+
+                                        Image(systemName: "chevron.right")
+                                            .font(.system(size: 14))
+                                            .foregroundColor(.theme.textSecondary)
+                                    }
+                                    .padding(16)
+                                    .background(Color.white.opacity(0.05))
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                                }
+                            }
+                        }
+
+                        // Analytics Dashboard Section
+                        if (authService.currentUser?.id) != nil {
+                            VStack(spacing: 16) {
+                                Text("settings.analytics.title".localized)
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(.theme.textPrimary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.top, 12)
+
+                                NavigationLink {
+                                    AnalyticsDashboardView()
+                                } label: {
+                                    HStack(spacing: 16) {
+                                        ZStack {
+                                            Circle()
+                                                .fill(Color.theme.accentOrange.opacity(0.2))
+                                                .frame(width: 44, height: 44)
+
+                                            Image(systemName: "chart.bar.fill")
+                                                .font(.system(size: 20))
+                                                .foregroundColor(.theme.accentOrange)
+                                        }
+
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text("settings.analytics.viewStats".localized)
+                                                .font(.system(size: 16, weight: .semibold))
+                                                .foregroundColor(.theme.textPrimary)
+
+                                            Text("settings.analytics.description".localized)
+                                                .font(.system(size: 14))
+                                                .foregroundColor(.theme.textSecondary)
+                                        }
+
+                                        Spacer()
+
+                                        Image(systemName: "chevron.right")
+                                            .font(.system(size: 14))
+                                            .foregroundColor(.theme.textSecondary)
+                                    }
+                                    .padding(16)
+                                    .background(Color.white.opacity(0.05))
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                                }
+                            }
+                        }
+
+#if DEBUG
+                        // Analytics Debug Section
+                        VStack(spacing: 16) {
+                            Text("Debug")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(.theme.textPrimary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.top, 12)
+
+                            NavigationLink {
+                                AnalyticsHealthDebugView()
+                            } label: {
+                                HStack(spacing: 16) {
+                                    ZStack {
+                                        Circle()
+                                            .fill(Color.theme.accentOrange.opacity(0.2))
+                                            .frame(width: 44, height: 44)
+
+                                        Image(systemName: "waveform.path.ecg")
+                                            .font(.system(size: 20))
+                                            .foregroundColor(.theme.accentOrange)
+                                    }
+
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("Analytics Health")
+                                            .font(.system(size: 16, weight: .semibold))
+                                            .foregroundColor(.theme.textPrimary)
+
+                                        Text("Inspect recent events and PostHog queue.")
+                                            .font(.system(size: 14))
+                                            .foregroundColor(.theme.textSecondary)
+                                    }
+
+                                    Spacer()
+
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 14))
+                                        .foregroundColor(.theme.textSecondary)
+                                }
+                                .padding(16)
+                                .background(Color.white.opacity(0.05))
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                            }
+                        }
+#endif
+
                         // Cache Management Section
                         VStack(spacing: 16) {
                             Text("settings.cacheManagement.title".localized)
@@ -275,8 +459,10 @@ struct SettingsView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             }
         }
+        }
+        .navigationViewStyle(.stack)
     }
-    
+
     private func updateCacheSizePreference(_ preference: ImageCacheService.CacheSizePreference) {
         // Update UI state immediately
         selectedCacheSize = preference

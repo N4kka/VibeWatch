@@ -1,21 +1,103 @@
 import Foundation
 import SQLite3
 
+// MARK: - Phase 5: SQL Injection Prevention
+
+/// Whitelist of valid table names to prevent SQL injection
+/// Only tables in this enum can be used in dynamic SQL queries
+enum SQLiteTable: String, CaseIterable {
+    // Core content tables
+    case clips
+    case discoveryCache = "discovery_cache"
+    case mediaDetailsCache = "media_details_cache"
+    case detailCache = "detail_cache"
+    case trailersCache = "trailers_cache"
+
+    // User tables
+    case profiles
+    case lists
+    case listItems = "list_items"
+
+    // User activity tables
+    case userClipHistory = "user_clip_history"
+    case userClipSignals = "user_clip_signals"
+    case userPreferences = "user_preferences"
+    case userDailyQuota = "user_daily_quota"
+    case userAiTokenUsage = "user_ai_token_usage"
+
+    // Sync tables
+    case syncOutbox = "sync_outbox"
+    case syncLog = "sync_log"
+
+    // Device/App tables
+    case deviceInfo = "device_info"
+    case appMetadata = "app_metadata"
+
+    // Reactions & Comments
+    case movieReactions = "movie_reactions"
+    case movieReactionCounts = "movie_reaction_counts"
+    case clipReactions = "clip_reactions"
+    case clipComments = "clip_comments"
+    case clipCommentLikes = "clip_comment_likes"
+
+    // Gamification
+    case userGamification = "user_gamification"
+    case userBadges = "user_badges"
+    case userDailyChallenges = "user_daily_challenges"
+    case xpTransactions = "xp_transactions"
+
+    // Personalization (SQLiteMigrations)
+    case userSearchHistory = "user_search_history"
+    case userDiscoveryInteractions = "user_discovery_interactions"
+    case unifiedUserPreferences = "unified_user_preferences"
+    case personalizedDiscovery = "personalized_discovery"
+    case aiConversationHistory = "ai_conversation_history"
+    case globalDiscoveryFilters = "global_discovery_filters"
+
+    // Cerebras/AI tables
+    case cerebrasJobQueue = "cerebras_job_queue"
+    case mediaEmbeddings = "media_embeddings"
+    case userBehaviorInsights = "user_behavior_insights"
+    case cerebrasJobMetrics = "cerebras_job_metrics"
+    case userTimePatterns = "user_time_patterns"
+
+    // Notifications
+    case notificationHistory = "notification_history"
+    case userNotificationPreferences = "user_notification_preferences"
+    case notificationSubscriptions = "notification_subscriptions"
+
+    /// All valid table names as a Set for O(1) lookup
+    static let validTableNames: Set<String> = Set(SQLiteTable.allCases.map(\.rawValue))
+
+    /// Check if a table name is valid (safe to use in SQL)
+    static func isValid(_ tableName: String) -> Bool {
+        validTableNames.contains(tableName)
+    }
+}
+
 /// Local SQLite database service for offline-first architecture
 /// All app reads/writes go through this service
 final class SQLiteService: ObservableObject {
     static let shared = SQLiteService()
-    
+
     @Published var isConnected = false
     @Published var lastError: String?
-    
-    private var db: OpaquePointer?
+
+    var db: OpaquePointer?
     private let dbPath: String
     private let dbQueue = DispatchQueue(label: "com.vibewatch.sqlite", qos: .userInitiated)
-    
+
     // Wrappers to allow capturing dynamic SQLite values in @Sendable contexts.
     private struct SQLSendableValue: @unchecked Sendable { let raw: Any }
     private struct SQLSendableRecord: @unchecked Sendable { var raw: [String: Any] }
+
+    /// Validate table name to prevent SQL injection (Phase 5 Security)
+    private func validateTableName(_ table: String) throws {
+        guard SQLiteTable.isValid(table) else {
+            Logger.error("[SQLite] SQL injection attempt blocked: invalid table '\(table)'")
+            throw SQLiteError.invalidTableName(table)
+        }
+    }
     
     private init() {
         // Store in app's Documents directory
@@ -149,6 +231,7 @@ final class SQLiteService: ObservableObject {
             createListsTable(),
             createListItemsTable(),
             createUserClipHistoryTable(),
+            createUserClipSignalsTable(),
             createUserPreferencesTable(),
             createUserDailyQuotaTable(),
             createUserAITokenUsageTable(),
@@ -161,7 +244,12 @@ final class SQLiteService: ObservableObject {
             createMovieReactionCountsTable(),
             createClipReactionsTable(),
             createClipCommentsTable(),
-            createClipCommentLikesTable()
+            createClipCommentLikesTable(),
+            // Gamification tables
+            createUserGamificationTable(),
+            createUserBadgesTable(),
+            createUserDailyChallengesTable(),
+            createXPTransactionsTable()
         ]
         
         for table in tables {
@@ -177,9 +265,12 @@ final class SQLiteService: ObservableObject {
         """)
         
         Logger.info("[SQLite] All tables created")
-        
+
         // Run migrations
         runMigrations()
+
+        // Run personalization migrations (Phase 1)
+        runPersonalizationMigrations()
     }
     
     private func runMigrations() {
@@ -197,7 +288,7 @@ final class SQLiteService: ObservableObject {
         }
         
         let currentVersion = Int(migrationVersionString) ?? 0
-        let latestVersion = 3
+        let latestVersion = 4
         
         // Only run migrations if not already at latest version
         if currentVersion >= latestVersion {
@@ -295,7 +386,14 @@ final class SQLiteService: ObservableObject {
                 execute("ALTER TABLE clip_comment_likes ADD COLUMN synced_at TEXT")
             }
         }
-        
+
+        if currentVersion < 4 {
+            Logger.info("[SQLite] Migration 4: add usage_day to user_ai_token_usage for daily resets")
+            if !columnExists("user_ai_token_usage", column: "usage_day") {
+                execute("ALTER TABLE user_ai_token_usage ADD COLUMN usage_day TEXT")
+            }
+        }
+
         // Re-enable foreign keys
         execute("PRAGMA foreign_keys = ON")
         
@@ -304,7 +402,7 @@ final class SQLiteService: ObservableObject {
         Logger.info("[SQLite] Migrations complete - now at version \(latestVersion)")
     }
     
-    private func columnExists(_ table: String, column: String) -> Bool {
+    func columnExists(_ table: String, column: String) -> Bool {
         var statement: OpaquePointer?
         defer { sqlite3_finalize(statement) }
         
@@ -418,6 +516,7 @@ final class SQLiteService: ObservableObject {
 
     /// Fetch column names for a table.
     private func columns(for table: String) async throws -> [String] {
+        try validateTableName(table)  // Phase 5: SQL injection prevention
         if let cached = tableColumnsCache[table] { return cached }
         let pragmaRows = try await queryRaw("PRAGMA table_info(\(table))")
         let names = pragmaRows.compactMap { $0["name"] as? String }
@@ -429,6 +528,7 @@ final class SQLiteService: ObservableObject {
     /// If the table has a synced_at column and it's missing, it's set to now().
     @MainActor
     func upsert(table: String, rows: [[String: Any]]) async throws {
+        try validateTableName(table)  // Phase 5: SQL injection prevention
         guard !rows.isEmpty else { return }
         let safeRows = rows.map(SQLSendableRecord.init(raw:))
         let cols = try await columns(for: table)
@@ -485,6 +585,7 @@ final class SQLiteService: ObservableObject {
     
     /// Insert a record and return the rowid
     func insert(_ table: String, values: [String: Any]) async throws -> Int64 {
+        try validateTableName(table)  // Phase 5: SQL injection prevention
         let columns = values.keys.joined(separator: ", ")
         let placeholders = values.keys.map { _ in "?" }.joined(separator: ", ")
         let sql = "INSERT INTO \(table) (\(columns)) VALUES (\(placeholders))"
@@ -526,6 +627,7 @@ final class SQLiteService: ObservableObject {
     
     /// Update records
     func update(_ table: String, values: [String: Any], where condition: String, parameters: [Any] = []) async throws {
+        try validateTableName(table)  // Phase 5: SQL injection prevention
         let setClause = values.keys.map { "\($0) = ?" }.joined(separator: ", ")
         let sql = "UPDATE \(table) SET \(setClause) WHERE \(condition)"
         
@@ -537,6 +639,7 @@ final class SQLiteService: ObservableObject {
     
     /// Delete records (soft delete by default)
     func delete(_ table: String, where condition: String, parameters: [Any] = [], hard: Bool = false) async throws {
+        try validateTableName(table)  // Phase 5: SQL injection prevention
         if hard {
             let sql = "DELETE FROM \(table) WHERE \(condition)"
             _ = try await queryRaw(sql, parameters: parameters)
@@ -546,7 +649,7 @@ final class SQLiteService: ObservableObject {
             _ = try await queryRaw(sql, parameters: parameters)
         }
     }
-    
+
     /// Select records
     func select<T: Decodable>(
         _ table: String,
@@ -555,6 +658,7 @@ final class SQLiteService: ObservableObject {
         orderBy: String? = nil,
         limit: Int? = nil
     ) async throws -> [T] {
+        try validateTableName(table)  // Phase 5: SQL injection prevention
         var sql = "SELECT * FROM \(table)"
         
         if let condition = condition {
@@ -962,6 +1066,27 @@ extension SQLiteService {
         CREATE INDEX IF NOT EXISTS idx_clip_history_watched_at ON user_clip_history(watched_at DESC);
         """
     }
+
+    private func createUserClipSignalsTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS user_clip_signals (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          device_id TEXT NOT NULL,
+          clip_id TEXT NOT NULL,
+          signal_type TEXT NOT NULL,
+          signal_value REAL,
+          source TEXT,
+          position INTEGER,
+          session_id TEXT,
+          occurred_at TEXT DEFAULT (datetime('now')),
+          synced_at TEXT,
+          FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_clip_signals_user_id ON user_clip_signals(user_id);
+        CREATE INDEX IF NOT EXISTS idx_clip_signals_clip_id ON user_clip_signals(clip_id);
+        """
+    }
     
     private func createUserPreferencesTable() -> String {
         """
@@ -1007,11 +1132,13 @@ extension SQLiteService {
         CREATE TABLE IF NOT EXISTS user_ai_token_usage (
           user_id TEXT PRIMARY KEY,
           tokens_used_today INTEGER DEFAULT 0,
+          usage_day TEXT,
           updated_at TEXT DEFAULT (datetime('now')),
           synced_at TEXT
         );
         """
     }
+
     
     private func createSyncOutboxTable() -> String {
         """
@@ -1172,6 +1299,89 @@ extension SQLiteService {
         );
         CREATE INDEX IF NOT EXISTS idx_clip_comment_likes_comment ON clip_comment_likes(comment_id);
         CREATE INDEX IF NOT EXISTS idx_clip_comment_likes_user ON clip_comment_likes(user_id);
+        CREATE INDEX IF NOT EXISTS idx_clip_comment_likes_user_comment ON clip_comment_likes(user_id, comment_id);
+        """
+    }
+
+    // MARK: - Gamification Tables
+
+    private func createUserGamificationTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS user_gamification (
+          user_id TEXT PRIMARY KEY,
+          total_xp INTEGER DEFAULT 0,
+          current_level INTEGER DEFAULT 1,
+          current_streak INTEGER DEFAULT 0,
+          longest_streak INTEGER DEFAULT 0,
+          last_activity_date TEXT,
+          streak_freezes_remaining INTEGER DEFAULT 0,
+          streak_freezes_used_this_week INTEGER DEFAULT 0,
+          week_start_date TEXT,
+          updated_at TEXT DEFAULT (datetime('now')),
+          synced_at TEXT,
+          FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
+        );
+        """
+    }
+
+    private func createUserBadgesTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS user_badges (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          badge_id TEXT NOT NULL,
+          progress INTEGER DEFAULT 0,
+          target INTEGER NOT NULL,
+          unlocked_at TEXT,
+          updated_at TEXT DEFAULT (datetime('now')),
+          synced_at TEXT,
+          UNIQUE(user_id, badge_id),
+          FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_user_badges_user ON user_badges(user_id);
+        CREATE INDEX IF NOT EXISTS idx_user_badges_unlocked ON user_badges(unlocked_at);
+        """
+    }
+
+    private func createUserDailyChallengesTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS user_daily_challenges (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          challenge_date TEXT NOT NULL,
+          challenge_type TEXT NOT NULL,
+          challenge_description TEXT,
+          target INTEGER NOT NULL,
+          progress INTEGER DEFAULT 0,
+          completed_at TEXT,
+          xp_reward INTEGER DEFAULT 0,
+          updated_at TEXT DEFAULT (datetime('now')),
+          synced_at TEXT,
+          UNIQUE(user_id, challenge_date),
+          FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_daily_challenges_user ON user_daily_challenges(user_id);
+        CREATE INDEX IF NOT EXISTS idx_daily_challenges_date ON user_daily_challenges(challenge_date);
+        """
+    }
+
+    private func createXPTransactionsTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS xp_transactions (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          action_type TEXT NOT NULL,
+          base_xp INTEGER NOT NULL,
+          multiplier REAL DEFAULT 1.0,
+          streak_bonus REAL DEFAULT 0.0,
+          total_xp INTEGER NOT NULL,
+          source TEXT,
+          created_at TEXT DEFAULT (datetime('now')),
+          FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_xp_transactions_user ON xp_transactions(user_id);
+        CREATE INDEX IF NOT EXISTS idx_xp_transactions_created ON xp_transactions(created_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_xp_transactions_action ON xp_transactions(action_type);
         """
     }
 }
@@ -1209,7 +1419,8 @@ enum SQLiteError: LocalizedError {
     case queryFailed(String)
     case invalidData
     case transactionFailed
-    
+    case invalidTableName(String)  // Phase 5: SQL injection prevention
+
     var errorDescription: String? {
         switch self {
         case .notConnected:
@@ -1220,6 +1431,8 @@ enum SQLiteError: LocalizedError {
             return "Invalid data format"
         case .transactionFailed:
             return "Transaction failed"
+        case .invalidTableName(let table):
+            return "Invalid table name: \(table)"
         }
     }
 }

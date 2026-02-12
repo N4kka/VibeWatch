@@ -20,7 +20,12 @@ struct Clip: Codable, Identifiable {
     let originalClipId: String?
     let segmentIndex: Int?
     let startTime: Int? // Start time in seconds for this segment
-    
+
+    // Country/Language metadata for personalization
+    let countryCode: String?
+    let languageCode: String?
+    let sourceRegion: String?
+
     enum CodingKeys: String, CodingKey {
         case id, title, description, duration, likes, comments, isLiked
         case movieId = "movie_id"
@@ -33,13 +38,17 @@ struct Clip: Codable, Identifiable {
         case originalClipId = "original_clip_id"
         case segmentIndex = "segment_index"
         case startTime = "start_time"
+        case countryCode = "country_code"
+        case languageCode = "language_code"
+        case sourceRegion = "source_region"
     }
     
     init(id: String, movieId: Int?, tvShowId: Int?, title: String, description: String,
          videoURL: String, videoId: String, thumbnailURL: String?, duration: Int,
          likes: Int, comments: Int, createdAt: Date, isLiked: Bool = false,
          isSegment: Bool = false, originalClipId: String? = nil,
-         segmentIndex: Int? = nil, startTime: Int? = nil) {
+         segmentIndex: Int? = nil, startTime: Int? = nil,
+         countryCode: String? = nil, languageCode: String? = nil, sourceRegion: String? = nil) {
         self.id = id
         self.movieId = movieId
         self.tvShowId = tvShowId
@@ -57,6 +66,9 @@ struct Clip: Codable, Identifiable {
         self.originalClipId = originalClipId
         self.segmentIndex = segmentIndex
         self.startTime = startTime
+        self.countryCode = countryCode
+        self.languageCode = languageCode
+        self.sourceRegion = sourceRegion
     }
     
     init(from decoder: Decoder) throws {
@@ -78,6 +90,10 @@ struct Clip: Codable, Identifiable {
         originalClipId = try container.decodeIfPresent(String.self, forKey: .originalClipId)
         segmentIndex = try container.decodeIfPresent(Int.self, forKey: .segmentIndex)
         startTime = try container.decodeIfPresent(Int.self, forKey: .startTime)
+        // Backward compatible: decode new metadata fields if present
+        countryCode = try container.decodeIfPresent(String.self, forKey: .countryCode)
+        languageCode = try container.decodeIfPresent(String.self, forKey: .languageCode)
+        sourceRegion = try container.decodeIfPresent(String.self, forKey: .sourceRegion)
     }
 }
 

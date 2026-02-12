@@ -11,6 +11,9 @@ protocol TMDBServiceProtocol: Sendable {
         minRuntime: Int?,
         maxRuntime: Int?,
         minRating: Double?,
+        maxRating: Double?,
+        releaseDateGte: String?,
+        releaseDateLte: String?,
         country: String?
     ) async throws -> TMDBResponse<Movie>
     func searchMovies(query: String, page: Int) async throws -> TMDBResponse<Movie>
@@ -22,6 +25,9 @@ protocol TMDBServiceProtocol: Sendable {
         sortBy: String,
         page: Int,
         minRating: Double?,
+        maxRating: Double?,
+        firstAirDateGte: String?,
+        firstAirDateLte: String?,
         country: String?
     ) async throws -> TMDBResponse<TVShow>
     func searchTVShows(query: String, page: Int) async throws -> TMDBResponse<TVShow>
@@ -40,13 +46,14 @@ protocol TMDBServiceProtocol: Sendable {
     func getTVShowExternalIds(id: Int) async throws -> ExternalIds
     func getPersonDetails(id: Int) async throws -> PersonDetails
     func getPersonCombinedCredits(id: Int) async throws -> PersonCombinedCredits
+    func searchPerson(query: String) async throws -> [PersonSearchResult]
 }
 
 actor TMDBService: TMDBServiceProtocol {
     static let shared: TMDBServiceProtocol = TMDBService()
     
     private let baseURL = "https://api.themoviedb.org/3"
-    private let apiKey = "e42f888f287ca2fbe26c9a6e70351fb7"
+    private let apiKey = Config.tmdbAPIKey
     private let session: URLSession
     private let cache: URLCache
     
@@ -75,9 +82,9 @@ actor TMDBService: TMDBServiceProtocol {
         cache = URLCache(memoryCapacity: 50_000_000, diskCapacity: 100_000_000)
         config.urlCache = cache
         config.requestCachePolicy = .useProtocolCachePolicy
-        config.timeoutIntervalForRequest = 20
-        config.timeoutIntervalForResource = 40
-        config.waitsForConnectivity = true
+        config.timeoutIntervalForRequest = 5   // Reduced from 20s for faster failure
+        config.timeoutIntervalForResource = 10 // Reduced from 40s for faster failure
+        config.waitsForConnectivity = false    // Don't wait - fail fast, use cache
         session = URLSession(configuration: config)
     }
     
@@ -169,6 +176,9 @@ actor TMDBService: TMDBServiceProtocol {
         minRuntime: Int? = nil,
         maxRuntime: Int? = nil,
         minRating: Double? = nil,
+        maxRating: Double? = nil,
+        releaseDateGte: String? = nil,
+        releaseDateLte: String? = nil,
         country: String? = nil
     ) async throws -> TMDBResponse<Movie> {
         var items = [
@@ -192,6 +202,18 @@ actor TMDBService: TMDBServiceProtocol {
             items.append(URLQueryItem(name: "vote_average.gte", value: "\(minRating)"))
             // Only show movies with enough votes to be meaningful
             items.append(URLQueryItem(name: "vote_count.gte", value: "100"))
+        }
+
+        if let maxRating = maxRating {
+            items.append(URLQueryItem(name: "vote_average.lte", value: "\(maxRating)"))
+        }
+
+        if let releaseDateGte = releaseDateGte {
+            items.append(URLQueryItem(name: "primary_release_date.gte", value: releaseDateGte))
+        }
+
+        if let releaseDateLte = releaseDateLte {
+            items.append(URLQueryItem(name: "primary_release_date.lte", value: releaseDateLte))
         }
         
         if let country = country {
@@ -233,6 +255,9 @@ actor TMDBService: TMDBServiceProtocol {
         sortBy: String = "popularity.desc",
         page: Int = 1,
         minRating: Double? = nil,
+        maxRating: Double? = nil,
+        firstAirDateGte: String? = nil,
+        firstAirDateLte: String? = nil,
         country: String? = nil
     ) async throws -> TMDBResponse<TVShow> {
         var items = [
@@ -248,6 +273,18 @@ actor TMDBService: TMDBServiceProtocol {
             items.append(URLQueryItem(name: "vote_average.gte", value: "\(minRating)"))
             // Only show shows with enough votes to be meaningful
             items.append(URLQueryItem(name: "vote_count.gte", value: "100"))
+        }
+
+        if let maxRating = maxRating {
+            items.append(URLQueryItem(name: "vote_average.lte", value: "\(maxRating)"))
+        }
+
+        if let firstAirDateGte = firstAirDateGte {
+            items.append(URLQueryItem(name: "first_air_date.gte", value: firstAirDateGte))
+        }
+
+        if let firstAirDateLte = firstAirDateLte {
+            items.append(URLQueryItem(name: "first_air_date.lte", value: firstAirDateLte))
         }
         
         if let country = country {
@@ -332,13 +369,61 @@ actor TMDBService: TMDBServiceProtocol {
     }
     
     // MARK: - People
-    
+
     func getPersonDetails(id: Int) async throws -> PersonDetails {
         try await request("/person/\(id)")
     }
-    
+
     func getPersonCombinedCredits(id: Int) async throws -> PersonCombinedCredits {
         try await request("/person/\(id)/combined_credits")
+    }
+
+    // MARK: - Person Search
+
+    func searchPerson(query: String) async throws -> [PersonSearchResult] {
+        guard !query.isEmpty else { return [] }
+
+        let response: PersonSearchResponse = try await request("/search/person", queryItems: [
+            URLQueryItem(name: "query", value: query),
+            URLQueryItem(name: "include_adult", value: "false")
+        ])
+
+        // Filter to actors only (known_for_department = "Acting")
+        return response.results.filter { $0.knownForDepartment == "Acting" }
+    }
+}
+
+// MARK: - Person Search Models
+
+struct PersonSearchResult: Codable, Identifiable {
+    let id: Int
+    let name: String
+    let profilePath: String?
+    let knownForDepartment: String?
+    let popularity: Double
+
+    var profileURL: URL? {
+        guard let path = profilePath else { return nil }
+        return URL(string: "https://image.tmdb.org/t/p/w185\(path)")
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, popularity
+        case profilePath = "profile_path"
+        case knownForDepartment = "known_for_department"
+    }
+}
+
+struct PersonSearchResponse: Codable {
+    let results: [PersonSearchResult]
+    let page: Int
+    let totalPages: Int
+    let totalResults: Int
+
+    enum CodingKeys: String, CodingKey {
+        case results, page
+        case totalPages = "total_pages"
+        case totalResults = "total_results"
     }
 }
 

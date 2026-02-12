@@ -3,7 +3,7 @@ import CoreGraphics
 
 enum AppConstants {
     enum Clips {
-        static let freeUserDailyLimit = 15
+        static let freeUserDailyLimit = 25
         static let maxClipDurationSeconds = 180
         static let paginationThreshold = 5
         static let batchLoadCount = 20
@@ -21,14 +21,32 @@ enum AppConstants {
     }
     
     enum AI {
-        /// Daily token allowance by tier
-        static let proDailyTokenLimit = 25_000
-        static let freeDailyTokenLimit = 5_000
+        /// Daily request allowance by tier
+        static let proDailyRequestLimit = 20
+        static let freeDailyRequestLimit = 5
     }
     
     enum Debug {
         /// Set to true while developing to force Pro mode (skips entitlement check)
         static let forceProUser = false
+    }
+
+    /// Google AdMob configuration
+    enum AdMob {
+        #if DEBUG
+        /// Google's test banner ad unit ID for development
+        static let bannerAdUnitID = "ca-app-pub-3940256099942544/2435281174"
+        /// Google's test interstitial ad unit ID for development
+        static let interstitialAdUnitID = "ca-app-pub-3940256099942544/4411468910"
+        #else
+        /// Production banner ad unit ID
+        static let bannerAdUnitID = "ca-app-pub-7584278391945422/4228606699"
+        /// Production interstitial ad unit ID
+        static let interstitialAdUnitID = "ca-app-pub-7584278391945422/4313201322"
+        #endif
+
+        /// Show interstitial ad every N clips for free users
+        static let clipsPerInterstitial = 5
     }
     
     /// RevenueCat subscription and entitlement identifiers
@@ -39,7 +57,6 @@ enum AppConstants {
         
         /// Offering identifiers
         enum Offerings {
-            static let foundingMember = "founding_member"
             static let standard = "default"
         }
         

@@ -82,7 +82,7 @@ enum RatingRange: String, CaseIterable, Identifiable {
 }
 
 /// Sort options for discovery
-enum DiscoverySortOption: String, CaseIterable, Identifiable {
+enum DiscoverySortOption: String, CaseIterable, Identifiable, Codable {
     case popularityDesc
     case popularityAsc
     case ratingDesc
@@ -94,23 +94,34 @@ enum DiscoverySortOption: String, CaseIterable, Identifiable {
     
     var displayName: String {
         switch self {
-        case .popularityDesc: return "sort.popularityDesc".localized
-        case .popularityAsc: return "sort.popularityAsc".localized
-        case .ratingDesc: return "sort.ratingDesc".localized
-        case .ratingAsc: return "sort.ratingAsc".localized
-        case .releaseDateDesc: return "sort.releaseDateDesc".localized
-        case .releaseDateAsc: return "sort.releaseDateAsc".localized
+        case .popularityDesc: return "filters.sortPopularityDesc".localized
+        case .popularityAsc: return "filters.sortPopularityAsc".localized
+        case .ratingDesc: return "filters.sortRatingDesc".localized
+        case .ratingAsc: return "filters.sortRatingAsc".localized
+        case .releaseDateDesc: return "filters.sortReleaseDateDesc".localized
+        case .releaseDateAsc: return "filters.sortReleaseDateAsc".localized
         }
     }
     
     var tmdbValue: String {
+        tmdbValue(for: .movie)
+    }
+
+    func tmdbValue(for mediaType: MediaType) -> String {
         switch self {
         case .popularityDesc: return "popularity.desc"
         case .popularityAsc: return "popularity.asc"
         case .ratingDesc: return "vote_average.desc"
         case .ratingAsc: return "vote_average.asc"
-        case .releaseDateDesc: return "release_date.desc"
-        case .releaseDateAsc: return "release_date.asc"
+        case .releaseDateDesc:
+            return mediaType == .tv ? "first_air_date.desc" : "release_date.desc"
+        case .releaseDateAsc:
+            return mediaType == .tv ? "first_air_date.asc" : "release_date.asc"
         }
+    }
+
+    /// Free users get basic sorting options
+    static var freeCases: [DiscoverySortOption] {
+        [.popularityDesc, .ratingDesc]
     }
 }

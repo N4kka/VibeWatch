@@ -1,4 +1,4 @@
-/// Tab Bar
+// Tab Bar
 "tab.clips" = "Klipit";
 "tab.discovery" = "Löydä";
 "tab.lists" = "Listat";
@@ -6,79 +6,83 @@
 "tab.ai" = "AI";
 
 // Onboarding
-"onboarding.page1.description" = "AI-elokuva- ja TV-suositukset viritettynä fiilikseesi, jotta tiedät aina mitä katsoa seuraavaksi.";
 "onboarding.page1.title" = "Fiksummat valinnat AI:n avulla";
-"onboarding.page2.description" = "Luo katselulistoja ja tunnelmapohjaisia kokoelmia, jotta voit järjestää jokaisen löytämäsi elokuvan ja sarjan.";
+"onboarding.page1.description" = "AI-elokuva- ja TV-suositukset viritettynä fiilikseesi, jotta tiedät aina mitä katsoa seuraavaksi.";
 "onboarding.page2.title" = "Järjestä katselulistasi";
-"onboarding.page3.description" = "Katso trailereita ja klippejä ja tallenna sitten parhaat löydöt listoillesi katsottavaksi myöhemmin.";
+"onboarding.page2.description" = "Luo katselulistoja ja tunnelmapohjaisia kokoelmia, jotta voit järjestää jokaisen löytämäsi elokuvan ja sarjan.";
 "onboarding.page3.title" = "Löydä trailerit ja klipit";
-"onboarding.page4.description" = "Luo tili synkronoidaksesi katselulistasi ja asetuksesi kaikilla laitteillasi.";
-"onboarding.page4.skip" = "Ohita toistaiseksi";
+"onboarding.page3.description" = "Katso trailereita ja klippejä ja tallenna sitten parhaat löydöt listoillesi katsottavaksi myöhemmin.";
 "onboarding.page4.title" = "Valmis aloittamaan?";
+"onboarding.page4.description" = "Luo tili synkronoidaksesi katselulistasi ja asetuksesi kaikilla laitteillasi.";
+"onboarding.page4.createAccount" = "Luo tili";
+"onboarding.page4.skip" = "Ohita toistaiseksi";
 
 // Discovery
-"discovery.basedOnMood" = "Valittu juuri sinulle";
+"discovery.vibeWatch" = "VibeWatch";
 "discovery.forYou" = "Sinulle";
+"discovery.basedOnMood" = "Valittu juuri sinulle";
+"discovery.trending" = "Nyt pinnalla";
 "discovery.popular" = "Suosittua";
 "discovery.topRated" = "Parhaiten arvioidut";
-"discovery.trending" = "Nyt pinnalla";
-"discovery.tvShows" = "TV-sarjat";
 "discovery.upcoming" = "Tulossa pian";
-"discovery.vibeWatch" = "VibeWatch";
+"discovery.tvShows" = "TV-sarjat";
 
 // Browse
-"browse.emptyMessage" = "Selaa sisältöä napauttamalla suodatinpainiketta";
-"browse.movies" = "Elokuvat";
 "browse.title" = "Selaa";
+"browse.movies" = "Elokuvat";
 "browse.tvShows" = "TV-sarjat";
+"browse.emptyMessage" = "Selaa sisältöä napauttamalla suodatinpainiketta";
 
 // Lists
 "list.all" = "Kaikki";
 "list.movies" = "Elokuvat";
 "list.tvShows" = "TV";
-"lists.createList" = "Luo lista";
-"lists.deleteConfirmation" = "Haluatko varmasti poistaa kohteen %@? Tämä poistaa kaikki tämän listan kohteet.";
-"lists.deleteList" = "Poista lista";
-"lists.description" = "Kuvaus (valinnainen)";
-"lists.descriptionPlaceholder" = "Lisää kuvaus... (valinnainen)";
-"lists.disliked" = "Ei tykätty";
-"lists.editList" = "Muokkaa listaa";
+"lists.myLists" = "Omat listani";
 "lists.empty" = "Ei listoja vielä";
 "lists.emptyDescription" = "Luo ensimmäinen katselulistasi järjestääksesi löytämäsi elokuvat ja sarjat";
-"lists.error.authRequired" = "Sinun täytyy olla kirjautuneena luodaksesi mukautettuja listoja.";
-"lists.error.defaultImmutable" = "Tätä listaa ei voi muokata";
-"lists.error.invalidName" = "Anna kelvollinen listan nimi";
-"lists.error.itemAlreadyInList" = "Kohde on jo tällä listalla";
-"lists.error.listNotFound" = "Listaa ei löytynyt";
-"lists.error.maxItemsReached" = "Tämän listan enimmäismäärä {limit} kohdetta saavutettu";
-"lists.error.maxListsReached" = "Mukautettujen listojen enimmäismäärä {limit} saavutettu";
-"lists.liked" = "Tykkätyt";
-"lists.limitInfo" = "{count}/{limit}";
-"lists.listDescriptionPlaceholder" = "Lisää kuvaus...";
+"lists.noItems" = "Ei kohteita vielä";
+"lists.createList" = "Luo lista";
+"lists.editList" = "Muokkaa listaa";
+"lists.deleteList" = "Poista lista";
+"lists.deleteConfirmation" = "Haluatko varmasti poistaa kohteen %@? Tämä poistaa kaikki tämän listan kohteet.";
 "lists.listName" = "Listan nimi";
 "lists.listNamePlaceholder" = "Uusi lista";
-"lists.myLists" = "Omat listat";
-"lists.noItems" = "Ei kohteita vielä";
+"lists.description" = "Kuvaus (valinnainen)";
+"lists.descriptionPlaceholder" = "Lisää kuvaus... (valinnainen)";
+"lists.listDescriptionPlaceholder" = "Lisää kuvaus...";
 "lists.searchPlaceholder" = "Hae tästä listasta";
-"lists.seen" = "Katsottu";
-"lists.softLimitWarning" = "Listalla \"{name}\" on jo {limit} kohdetta. Luo uusi lista pitääksesi kaiken järjestyksessä.";
 "lists.watchlist" = "Katselulista";
-"lists.watchOn" = "KATSO PALVELUSSA";
+"lists.seen" = "Katsottu";
+"lists.liked" = "Tykätty";
+"lists.disliked" = "Ei tykätty";
+"lists.limitInfo" = "{count}/{limit}";
+"lists.softLimitWarning" = "\"{name}\" sisältää jo {limit} kohdetta. Harkitse uuden listan luomista, jotta asiat pysyvät järjestyksessä.";
+"lists.error.authRequired" = "Sinun täytyy olla kirjautuneena luodaksesi mukautettuja listoja.";
+"lists.error.defaultImmutable" = "Tätä listaa ei voi muokata";
+"lists.error.invalidName" = "Syötä kelvollinen listan nimi";
+"lists.error.itemAlreadyInList" = "Kohde on jo tässä listassa";
+"lists.error.listNotFound" = "Listaa ei löytynyt";
+"lists.error.maxItemsReached" = "Tälle listalle on saavutettu enimmäismäärä: {limit} kohdetta";
+"lists.error.maxListsReached" = "Mukautettujen listojen enimmäismäärä on saavutettu: {limit}";
 
 // Movie Detail
-"movieDetail.cast" = "Näyttelijät";
-"movieDetail.country" = "Maa";
-"movieDetail.director" = "Ohjaaja";
-"movieDetail.genres" = "Genret";
 "movieDetail.information" = "Tiedot";
-"movieDetail.rating" = "Arvosana";
-"movieDetail.ratings" = "arvostelua";
+"movieDetail.cast" = "Näyttelijät";
+"movieDetail.director" = "Ohjaaja";
+"movieDetail.country" = "Maa";
+"movieDetail.genres" = "Genret";
 "movieDetail.runtime" = "Kesto";
-"movieDetail.save" = "Tallenna katselulistalle";
-"movieDetail.seen" = "Katsottu";
-"movieDetail.similar" = "Katsojat, jotka pitivät tästä, pitivät myös näistä";
+"movieDetail.rating" = "Arvio";
+"movieDetail.ratings" = "arvioita";
 "movieDetail.trailer" = "Traileri";
 "movieDetail.watchNow" = "Katso nyt";
+"movieDetail.save" = "Tallenna katselulistalle";
+"movieDetail.seen" = "Katsottu";
+"movieDetail.similar" = "Tämän tykkääjät tykkäsivät myös";
+"movieDetail.whyForMe" = "Miksi minulle?";
+"movieDetail.whyForMe.basedOnGenres" = "Perustuu kolmeen suosikkigenreesi";
+"movieDetail.goodFitTitle" = "Miksi %@ sopii minulle?";
+"movieDetail.goodFitSubtitle" = "Nopea, henkilökohtainen arvio makusi perusteella.";
 
 // Filters
 "filter.all" = "Kaikki";
@@ -86,89 +90,103 @@
 "filter.tvSeries" = "TV-sarjat";
 
 // Sort
+"sort.sortBy" = "Järjestä";
+"sort.title" = "Nimi";
 "sort.dateAdded" = "Lisäyspäivä";
 "sort.popularityAsc" = "Suosio ↑";
 "sort.popularityDesc" = "Suosio ↓";
-"sort.rating" = "Arvosana";
-"sort.ratingAsc" = "Arvosana ↑";
-"sort.ratingDesc" = "Arvosana ↓";
+"sort.rating" = "Arvio";
+"sort.ratingAsc" = "Arvio ↑";
+"sort.ratingDesc" = "Arvio ↓";
 "sort.releaseDate" = "Julkaisupäivä";
 "sort.releaseDateAsc" = "Julkaisupäivä ↑";
 "sort.releaseDateDesc" = "Julkaisupäivä ↓";
-"sort.sortBy" = "Järjestä";
-"sort.title" = "Nimi";
 
 // Advanced Filters
-"filters.anyCountry" = "Mikä tahansa maa";
+"filters.title" = "Suodattimet";
 "filters.apply" = "Käytä";
-"filters.country" = "Maa";
-"filters.minimumRating" = "Vähimmäisarvosana";
-"filters.ratingAny" = "Mikä tahansa";
-"filters.ratingExcellent" = "8.0+";
-"filters.ratingGood" = "7.0+";
-"filters.ratingMasterpiece" = "9.0+";
 "filters.reset" = "Nollaa";
+"filters.sortBy" = "Järjestä";
+"filters.anyCountry" = "Mikä tahansa maa";
+"filters.country" = "Maa";
+"filters.searchCountry" = "Hae maata";
+"filters.minimumRating" = "Vähimmäisarvio";
+"filters.ratingAny" = "Mikä tahansa";
+"filters.ratingGood" = "7.0+";
+"filters.ratingExcellent" = "8.0+";
+"filters.ratingMasterpiece" = "9.0+";
 "filters.runtime" = "Kesto";
 "filters.runtimeAny" = "Mikä tahansa";
-"filters.runtimeLong" = "> 120 min";
-"filters.runtimeMedium" = "90–120 min";
 "filters.runtimeShort" = "< 90 min";
-"filters.sortBy" = "Järjestä";
-"filters.title" = "Suodattimet";
+"filters.runtimeMedium" = "90-120 min";
+"filters.runtimeLong" = "> 120 min";
 
 // Clips
 "clips.title" = "Klipit";
+"clips.loadingClips" = "Ladataan klippejä...";
+"clips.noClipsAvailable" = "Klippejä ei saatavilla";
+"clips.noClipsDescription" = "Palaa myöhemmin nähdäksesi kohtauksia suosikkielokuvistasi ja -sarjoistasi";
 "clips.addToList" = "Lisää listaan";
-"clips.beFirstToComment" = "Ole ensimmäinen kommentoija";
+"clips.createFirstList" = "Luo ensimmäinen katselulistasi tallentaaksesi valintoja";
+"clips.createNewList" = "Luo uusi lista";
+"clips.feed.craftingTitle" = "Rakennamme sinulle täydellisen feedeen";
+"clips.feed.craftingSubtitle" = "Poimimme parhaat klipit juuri sinulle ✨";
 "clips.comment" = "Kommentti";
 "clips.comments" = "Kommentit";
-"clips.comments.deleteConfirmation" = "Haluatko varmasti poistaa tämän kommentin? Toimintoa ei voi perua.";
+"clips.noComments" = "Ei kommentteja vielä";
+"clips.beFirstToComment" = "Kirjoita ensimmäinen kommentti";
+"clips.reply" = "Vastaa";
+"clips.replies" = "vastauksia";
+"clips.replyingTo" = "Vastataan käyttäjälle";
 "clips.comments.loading" = "Ladataan kommentteja...";
 "clips.comments.replying" = "Vastataan...";
-"clips.createFirstList" = "Luo ensimmäinen katselulistasi tallentaaksesi valinnat";
-"clips.createNewList" = "Luo uusi lista";
-"clips.feed.craftingSubtitle" = "Poimimme parhaat klipit juuri sinulle ✨";
-"clips.feed.craftingTitle" = "Rakennetaan täydellistä syötettäsi";
+"clips.comments.deleteConfirmation" = "Haluatko varmasti poistaa tämän kommentin? Tätä toimintoa ei voi perua.";
 "clips.hideReplies" = "Piilota";
-"clips.loadingClips" = "Ladataan klippejä...";
-"clips.noClipsAvailable" = "Ei klippejä saatavilla";
-"clips.noClipsDescription" = "Tule myöhemmin takaisin nähdäksesi uudet kohtaukset suosikkielokuvistasi ja -sarjoistasi";
-"clips.noComments" = "Ei kommentteja vielä";
-"clips.noListsYet" = "Ei listoja vielä";
-"clips.reply" = "Vastaa";
-"clips.replies" = "vastausta";
-"clips.replyingTo" = "Vastataan käyttäjälle";
 "clips.viewReplies" = "Näytä";
 
+// Clips Search
+"clips.search.placeholder" = "Hae klippejä, hahmoja tai lainauksia";
+"clips.search.emptyTitle" = "Löydä klippejä, joista pidät";
+"clips.search.emptySubtitle" = "Hae elokuvaa, sarjaa, hahmoa tai lainausta nähdäksesi osuvat klipit ja siihen liittyvät suositukset.";
+"clips.search.showcaseTitle" = "Löydä klippejä";
+"clips.search.showcaseSubtitle" = "Hae yltä löytääksesi klippejä suosikkielokuvistasi ja -sarjoistasi";
+"clips.search.matched" = "Osumat";
+"clips.search.recommended" = "Suositellut";
+"clips.search.quotes" = "Lainaukset";
+"clips.search.characters" = "Hahmot";
+"clips.search.scenes" = "Kohtaukset";
+"clips.search.popular" = "Suosittua";
+
 // Search
-"search.latestVisited" = "Viimeksi katsottu";
-"search.noResultsFound" = "Tuloksia ei löytynyt";
-"search.placeholder" = "Etsi, missä elokuvan tai sarjan voi katsoa...";
+"search.latestVisited" = "Viimeksi katsotut";
+"search.trendingSearches" = "Suositut haut";
+"search.placeholder" = "Etsi, mistä voit katsoa elokuvan tai sarjan...";
 "search.results" = "Tulokset";
-"search.trendingSearches" = "Trendaavat haut";
+"search.noResultsFound" = "Tuloksia ei löytynyt";
 
 // Profile
-"profile.cancel" = "Peruuta";
-"profile.createAccount" = "Luo tili";
-"profile.done" = "Valmis";
-"profile.helpSupport" = "Ohje & tuki";
-"profile.logout" = "Kirjaudu ulos";
-"profile.notifications" = "Ilmoitukset";
-"profile.passwordPlaceholder" = "Salasana";
-"profile.settings" = "Asetukset";
+"profile.signInToVibeWatch" = "Kirjaudu VibeWatchiin";
 "profile.signIn" = "Kirjaudu sisään";
 "profile.signInDescription" = "Luo listoja, tallenna klippejä ja personoi kokemuksesi";
-"profile.signInToVibeWatch" = "Kirjaudu VibeWatchiin";
-"profile.streamingServices" = "Suoratoistopalvelut";
+"profile.createAccount" = "Luo tili";
 "profile.userNamePlaceholder" = "Sähköposti tai käyttäjänimi";
+"profile.passwordPlaceholder" = "Salasana";
+"profile.done" = "Valmis";
+"profile.cancel" = "Peruuta";
+"profile.settings" = "Asetukset";
+"profile.streamingServices" = "Suoratoistopalvelut";
+"profile.notifications" = "Ilmoitukset";
+"profile.helpSupport" = "Ohje & tuki";
+"profile.logout" = "Kirjaudu ulos";
+"profile.changePassword" = "Vaihda salasana";
 
 // Settings
-"settings.comingSoon" = "Lisää asetuksia tulossa pian...";
-"settings.country" = "Maa";
-"settings.language" = "Kieli";
-"settings.selectCountry" = "Valitse maa";
-"settings.selectLanguage" = "Valitse kieli";
 "settings.title" = "Asetukset";
+"settings.comingSoon" = "Lisää asetuksia tulossa pian...";
+"settings.language" = "Kieli";
+"settings.country" = "Maa";
+"settings.selectLanguage" = "Valitse kieli";
+"settings.selectCountry" = "Valitse maa";
 
 // Cache Management
 "settings.cacheManagement.title" = "Välimuistin hallinta";
@@ -186,149 +204,63 @@
 "settings.cacheManagement.clearCacheConfirm" = "Tyhjennä välimuisti";
 
 // Platforms
-"platform.selectionCount" = "%d / %d valittuna";
 "platform.title" = "Suoratoistoalustat";
-"platforms.buy" = "Osta";
-"platforms.rent" = "Vuokraa";
-"platforms.streaming" = "Suoratoisto";
+"platform.selectionCount" = "%d of %d selected";
 "platforms.title" = "Alustat";
+"platforms.streaming" = "Suoratoisto";
+"platforms.rent" = "Vuokraa";
+"platforms.buy" = "Osta";
+"platforms.cinema" = "Elokuvateatteri";
+"platforms.justwatch" = "JustWatch";
 
-// Notifications
+// Notifications (System Permission Prompt)
 "notifications.disableButton" = "Poista ilmoitukset käytöstä";
 "notifications.disableConfirmation" = "Poistetaanko ilmoitukset käytöstä?";
-"notifications.disableMessage" = "Et enää saa ilmoituksia uusista julkaisuista, hinnanmuutoksista tai personoiduista suosituksista.";
-"notifications.enableInSettings" = "Ota ilmoitukset käyttöön asetuksista saadaksesi päivityksiä uusista julkaisuista, hinnanmuutoksista ja muusta.";
+"notifications.disableMessage" = "Et saa ilmoituksia uusista julkaisuista, hintamuutoksista tai personoiduista suosituksista.";
+"notifications.enableInSettings" = "Ota ilmoitukset käyttöön Asetuksista saadaksesi päivityksiä uusista julkaisuista, hintamuutoksista ja muusta.";
 "notifications.openSettings" = "Avaa asetukset";
-"notifications.permissionRequired" = "Ilmoitusoikeus vaaditaan";
+"notifications.permissionRequired" = "Ilmoituslupa vaaditaan";
 
 // Auth
+"auth.welcomeBack" = "Tervetuloa takaisin";
+"auth.joinVibeWatch" = "Liity VibeWatchiin ja aloita löytäminen";
+"auth.signIn" = "Kirjaudu sisään";
+"auth.signUp" = "Rekisteröidy";
+"auth.signInContinue" = "Kirjaudu sisään jatkaaksesi";
 "auth.alreadyHaveAccount" = "Onko sinulla jo tili?";
-"auth.confirmPasswordPlaceholder" = "Vahvista salasana";
-"auth.createAccount" = "Luo tili";
 "auth.dontHaveAccount" = "Eikö sinulla ole tiliä?";
 "auth.emailPlaceholder" = "Sähköposti";
+"auth.usernamePlaceholder" = "Käyttäjänimi";
+"auth.passwordPlaceholder" = "Salasana";
+"auth.confirmPasswordPlaceholder" = "Vahvista salasana";
+"auth.createAccount" = "Luo tili";
 "auth.forgotPassword" = "Unohditko salasanan?";
-"auth.gate.accountRequired" = "Tili vaaditaan";
-"auth.gate.authRequiredAI" = "Tarvitset tilin käyttääksesi AI-chattia.";
-"auth.gate.createFree" = "Luo ilmainen tili";
-"auth.gate.createTitle" = "Luo ilmainen VibeWatch-tilisi";
-"auth.gate.description" = "Tarvitset tilin luodaksesi mukautettuja listoja ja synkronoidaksesi ne laitteidesi välillä.";
-"auth.gate.haveAccount" = "Minulla on jo tili";
-"auth.gate.limitMessage" = "Olet katsonut tämän päivän 15 ilmaista klippiä. Rekisteröidy synkronoidaksesi edistymisesi ja avataksesi huomisen klipit heti.";
-"auth.gate.signupFree" = "Rekisteröityminen on ilmaista ja vie alle minuutin.";
-"auth.gate.benefit.saveClips" = "Tallenna suosikkiklipit";
-"auth.gate.benefit.syncDevices" = "Synkronoi kaikilla laitteillasi";
-"auth.gate.benefit.personalizedRecs" = "Saa henkilökohtaiset suositukset";
 "auth.invalidEmail" = "Virheellinen sähköposti";
 "auth.invalidPassword" = "Virheellinen salasana";
-"auth.joinVibeWatch" = "Liity VibeWatchiin ja ala löytää uutta katsottavaa";
-"auth.passwordPlaceholder" = "Salasana";
 "auth.passwordsDontMatch" = "Salasanat eivät täsmää";
-"auth.signIn" = "Kirjaudu sisään";
-"auth.signInContinue" = "Kirjaudu sisään jatkaaksesi";
-"auth.signUp" = "Rekisteröidy";
-"auth.usernamePlaceholder" = "Käyttäjänimi";
-"auth.welcomeBack" = "Tervetuloa takaisin";
-"auth.error.notConfigured" = "Tunnistautumispalvelua ei ole määritetty. Lisää Supabase-tunnuksesi.";
+"auth.error.notConfigured" = "Todennuspalvelua ei ole määritetty. Lisää Supabase-tunnukset.";
 "auth.error.invalidResponse" = "Virheellinen vastaus palvelimelta.";
-"auth.error.userNotFound" = "Käyttäjää ei löydy.";
+"auth.error.userNotFound" = "Käyttäjää ei löytynyt.";
 "auth.error.invalidCredentials" = "Virheellinen sähköposti tai salasana.";
 "auth.error.networkError" = "Verkkovirhe. Tarkista yhteytesi.";
-"auth.error.databaseError" = "Tietokantavirhe käyttäjäprofiilia tallennettaessa. Yritä uudelleen.";
+"auth.error.databaseError" = "Tietokantavirhe käyttäjäprofiilin tallennuksessa. Yritä uudelleen.";
 "auth.error.signUpFailed" = "Rekisteröityminen epäonnistui. Yritä uudelleen.";
-"auth.error.passwordResetFailed" = "Emme voineet lähettää palautusviestiä. Yritä uudelleen.";
-"auth.error.passwordUpdateFailed" = "Salasanan päivittäminen epäonnistui. Yritä uudelleen.";
-"auth.error.accountDeletionFailed" = "Emme voineet poistaa tiliäsi. Yritä uudelleen.";
+"auth.error.passwordResetFailed" = "Palautusviestiä ei voitu lähettää. Yritä uudelleen.";
+"auth.error.passwordUpdateFailed" = "Salasanan päivitys epäonnistui. Yritä uudelleen.";
+"auth.error.accountDeletionFailed" = "Tilin poistaminen epäonnistui. Yritä uudelleen.";
 
-// AI
-"ai.title" = "Vibe AI";
-"ai.tokensUsage" = "Tokenit: %@/%@";
-"ai.describeVibe" = "Kuvaile fiilistäsi";
-"ai.thinking" = "Mietin...";
-"ai.editMessage" = "Muokkaa viestiä";
-"ai.hardLimitMessage" = "Olet saavuttanut tämän päivän AI-rajan. Tule takaisin huomenna.";
-"ai.paywall.benefit.personalized" = "Henkilökohtaiset katselulistat";
-"ai.paywall.benefit.smarter" = "Älykkäämpi sisällön löytäminen";
-"ai.paywall.benefit.unlimited" = "Rajoittamattomat AI-suositukset";
-"ai.paywall.goBack" = "Palaa takaisin";
-"ai.paywall.title" = "Avaa AI-elokuvakaverisi";
-"ai.paywall.unlockAI" = "Avaa AI-chat";
-"ai.placeholder" = "Esim. \"Sci-fi, jossa on juonenkäänne\"";
-"ai.proRequired" = "AI-chat on käytettävissä vain Pro-jäsenille.";
-"ai.resultsTitle" = "Tässä, mitä löysin:";
-"ai.saveRegenerate" = "Tallenna & luo uudelleen";
-"ai.softLimitMessage" = "Lähestyt tämän päivän AI-rajaa. Pidä viestit ytimekkäinä.";
-"ai.paywall.description" = "Saat fiksummat AI-elokuva- ja TV-suositukset ja löydät täydellisen katsottavan.";
-"ai.subtitle" = "Kerro fiiliksesi — AI löytää seuraavan katsottavan elokuvan tai sarjan.";
-"ai.suggestion.chips1" = "💖 Tunnelmallinen romanssi, AI valitsi minulle";
-"ai.suggestion.chips2" = "💥 80-luvun toimintakoomedia, AI suosittelee";
-"ai.suggestion.chips3" = "🕵️‍♂️ Aliarvostettu trilleri, jossa on käänne";
-"ai.suggestion.chips4" = "🤖 AI: mitä minun pitäisi katsoa seuraavaksi?";
-"ai.usage.left" = "jäljellä";
-
-// Paywall
-"paywall.bestValue" = "PARAS DIILI";
-"paywall.cta.continue" = "Jatka";
-"paywall.cta.selectPlan" = "Valitse tilaus";
-"paywall.cta.startTrial" = "Aloita %@ ilmainen kokeilu";
-"paywall.daily.limitDescription" = "Ilmaisjäsenet voivat katsoa 15 klippiä päivässä. Päivitä Pro-versioon saadaksesi rajattomat klipit ja premium-ominaisuudet.";
-"paywall.daily.limitReached" = "Olet saavuttanut tämän päivän rajan";
-"paywall.daily.nextReset" = "Seuraava nollaus";
-"paywall.daily.resetIn" = "Nollaus ajassa";
-"paywall.daily.title" = "Tule takaisin huomenna";
-"paywall.discount.annual" = "33% ALENNUS";
-"paywall.ensurePro" = "Varmista Pro-tilauksesi!";
-"paywall.feature.advancedFilters" = "🔎 Edistyneet suodattimet nopeampiin valintoihin";
-"paywall.feature.aiAssistant" = "🤖 AI-elokuva- ja TV-suositukset";
-"paywall.feature.lists" = "📋 Jopa 100 synkronoitua katselulistaa";
-"paywall.feature.noAds" = "❌ Ei mainoksia keskeyttämässä klippejä";
-"paywall.feature.offlineMode" = "📵 Offline-tila tallennetuille valinnoille";
-"paywall.feature.releaseAlerts" = "🔔 Hälytykset, kun suosikit ovat katsottavissa";
-"paywall.feature.unlimitedClips" = "▶️ Rajattomat klipit ja trailerit";
-"paywall.foundingMember" = "Perustajajäsenten hinnoittelu";
-"paywall.plan.annual" = "Vuosittainen";
-"paywall.plan.monthly" = "Kuukausittainen";
-"paywall.price.perMonth" = "%@/kk";
-"paywall.proDescription" = "Pro avaa rajattomat klipit, AI-elokuvakaverin ja synkronoidut katselulistat.";
-"paywall.restore" = "Palauta ostot";
-"paywall.trial.badge" = "%@ ilmainen";
-"paywall.unlockUnlimited" = "Avaa rajattomat klipit";
-"paywall.upgrade" = "Päivitä Pro-versioon";
-
-// Common
-"common.cancel" = "Peruuta";
-"common.delete" = "Poista";
-"common.dismiss" = "Sulje";
-"common.done" = "Valmis";
-"common.edit" = "Muokkaa";
-"common.items" = "kohdetta";
-"common.item" = "kohde";
-"common.loadMore" = "Lataa lisää";
-"common.loading" = "Ladataan...";
-"common.liked" = "tykätty";
-"common.offline" = "Olet offline-tilassa. Näytetään välimuistissa oleva sisältö.";
-"common.or" = "TAI";
-"common.privacy" = "Tietosuoja";
-"common.pro" = "PRO";
-"common.reply" = "Vastaa";
-"common.retry" = "Yritä uudelleen";
-"common.save" = "Tallenna";
-"common.search" = "Haku";
-"common.terms" = "Ehdot";
-"common.tryAgain" = "Yritä uudelleen";
-"common.uploading" = "Lähetetään...";
-"common.year" = "Vuosi";
-"common.error" = "Virhe";
-"common.ok" = "OK";
-"common.pleaseTryAgain" = "Yritä uudelleen.";
-
-// Misc
-"misc.language" = "Suomi";
-"misc.letUsKnow" = "Kerro meille";
-"misc.of" = "/";
-"misc.selected" = "valittu";
-"misc.somethingWrong" = "Jokin meni pieleen?";
-
+// Auth Gate
+"auth.gate.accountRequired" = "Tili vaaditaan";
+"auth.gate.authRequiredAI" = "Tarvitset tilin käyttääksesi AI-chatia.";
+"auth.gate.createTitle" = "Luo ilmainen VibeWatch-tili";
+"auth.gate.description" = "Tarvitset tilin luodaksesi mukautettuja listoja ja synkronoidaksesi ne laitteillesi.";
+"auth.gate.createFree" = "Luo ilmainen tili";
+"auth.gate.haveAccount" = "Minulla on jo tili";
+"auth.gate.signupFree" = "Rekisteröityminen on ilmaista ja vie alle minuutin.";
+"auth.gate.limitMessage" = "Olet katsonut päivän 25 ilmaista klippiä. Rekisteröidy synkronoidaksesi edistymisesi ja avataksesi huomisen klipit heti.";
+"auth.gate.benefit.saveClips" = "Tallenna suosikkiklipit";
+"auth.gate.benefit.syncDevices" = "Synkronoi kaikille laitteillesi";
+"auth.gate.benefit.personalizedRecs" = "Saat personoituja suosituksia";
 
 // Password Reset
 "auth.resetPassword" = "Vaihda salasana";
@@ -338,25 +270,126 @@
 "auth.setNewPasswordDescription" = "Luo uusi salasana ja vahvista se jatkaaksesi.";
 "auth.updatePassword" = "Päivitä salasana";
 "auth.passwordResetSuccess" = "Salasana päivitettiin onnistuneesti.";
-"profile.changePassword" = "Vaihda salasana";
 
-
-// Password Reset Confirmations
+// Password Change Confirmations
 "common.confirm" = "Vahvista";
 "profile.logoutConfirmationTitle" = "Haluatko varmasti kirjautua ulos?";
 "auth.confirmChangePasswordTitle" = "Vaihda salasana";
 "auth.confirmChangePasswordMessage" = "Haluatko päivittää salasanasi nyt?";
 
+// AI
+"ai.title" = "Vibe AI";
+"ai.subtitle" = "Kerro fiiliksesi — AI löytää seuraavan katsottavan elokuvan tai sarjan.";
+"ai.describeVibe" = "Kuvaile fiilistäsi";
+"ai.placeholder" = "Esim. \"Sci-fi juonenkäänteellä\"";
+"ai.editMessage" = "Muokkaa viestiä";
+"ai.thinking" = "Ajatellaan...";
+"ai.resultsTitle" = "Tässä mitä löysin:";
+"ai.saveRegenerate" = "Tallenna ja luo uudelleen";
+"ai.requestsUsage" = "%d/%d päivittäistä pyyntöä";
+"ai.softLimitMessage" = "Lähestyt päivän AI-rajaa. Pidä pyynnöt ytimekkäinä.";
+"ai.hardLimitMessage" = "Olet saavuttanut päivän AI-rajan. Tule huomenna uudelleen.";
+"ai.proRequired" = "AI-chat on saatavilla vain Pro-jäsenille.";
+"ai.suggestion.chips1" = "💖 Cozy romance, AI:n valitsema";
+"ai.suggestion.chips2" = "💥 80-luvun toiminta-komedia, AI suosittelee";
+"ai.suggestion.chips3" = "🕵️‍♂️ Aliarvostettu trilleri juonenkäänteellä";
+"ai.suggestion.chips4" = "🤖 AI: mitä katsoisin seuraavaksi?";
+"ai.tryAsking" = "Kokeile kysyä...";
 
-// Profile - Support & Feedback
-"profile.sendFeedback" = "Lähetä palautetta";
+// AI Paywall
+"ai.paywall.title" = "Avaa AI-elokuvakaverisi";
+"ai.paywall.description" = "Saat fiksummat AI-suositukset elokuville ja sarjoille, jotta löydät täydellisen katsottavan.";
+"ai.paywall.benefit.unlimited" = "Rajattomat AI-suositukset";
+"ai.paywall.benefit.smarter" = "Fiksumpi sisällön löytäminen";
+"ai.paywall.benefit.personalized" = "Personoidut katselulistat";
+"ai.paywall.unlockAI" = "Avaa AI-chat";
+"ai.paywall.goBack" = "Takaisin";
+
+// Paywall
+"paywall.bestValue" = "PARAS ARVO";
+"paywall.ensurePro" = "Varmista Pro-tilauksesi!";
+"paywall.proDescription" = "Pro avaa rajattomat klipit, AI-elokuvakaverin ja synkronoidut katselulistat.";
+"paywall.cta.selectPlan" = "Valitse tilaus";
+"paywall.cta.continue" = "Jatka";
+"paywall.cta.startTrial" = "Aloita %@ ilmainen kokeilu";
+"paywall.cta.skip" = "Ohita toistaiseksi";
+"paywall.plan.monthly" = "Kuukausittainen";
+"paywall.plan.annual" = "Vuosittainen";
+"paywall.discount.annual" = "33% ALENNUS";
+"paywall.price.perMonth" = "%@/kk";
+"paywall.trial.badge" = "%@ ilmainen";
+"paywall.restore" = "Palauta ostot";
+"paywall.upgrade" = "Päivitä Pro-versioon";
+"paywall.unlockUnlimited" = "Avaa rajattomat klipit";
+"paywall.daily.title" = "Tule huomenna uudelleen";
+"paywall.daily.limitReached" = "Olet saavuttanut päivän rajan";
+"paywall.daily.limitDescription" = "Ilmaisjäsenet voivat katsoa 25 klippiä päivässä. Päivitä Prohon saadaksesi rajattomat klipit ja premium-ominaisuudet.";
+"paywall.daily.resetIn" = "Nollautuu";
+"paywall.daily.nextReset" = "Seuraava nollaus";
+"paywall.feature.unlimitedClips" = "▶️ Rajattomat klipit ja trailerit";
+"paywall.feature.noAds" = "❌ Ei mainoksia keskeyttämässä klippejä";
+"paywall.feature.aiAssistant" = "🤖 AI-elokuva- ja TV-suositukset";
+"paywall.feature.advancedFilters" = "🔎 Edistyneet suodattimet nopeampiin valintoihin";
+"paywall.feature.lists" = "📋 Jopa 100 synkronoitua katselulistaa";
+"paywall.feature.offlineMode" = "📵 Offline-tila tallennetuille valinnoille";
+"paywall.feature.releaseAlerts" = "🔔 Hälytykset, kun suosikit ovat katsottavissa";
+
+// Common
+"common.ok" = "OK";
+"common.cancel" = "Peruuta";
+"common.done" = "Valmis";
+"common.dismiss" = "Sulje";
+"common.edit" = "Muokkaa";
+"common.save" = "Tallenna";
+"common.delete" = "Poista";
+"common.search" = "Haku";
+"common.retry" = "Yritä uudelleen";
+"common.tryAgain" = "Yritä uudelleen";
+"common.loading" = "Ladataan...";
+"common.uploading" = "Lähetetään...";
+"common.loadMore" = "Lataa lisää";
+"common.next" = "Seuraava";
+"common.item" = "kohde";
+"common.items" = "kohdetta";
+"common.year" = "Vuosi";
+"common.or" = "TAI";
+"common.reply" = "Vastaa";
+"common.liked" = "tykätty";
+"common.offline" = "Olet offline-tilassa. Näytetään välimuistissa oleva sisältö.";
+"common.pro" = "PRO";
+"common.privacy" = "Tietosuoja";
+"common.terms" = "Ehdot";
+"common.error" = "Virhe";
+"common.pleaseTryAgain" = "Yritä uudelleen.";
+
+// Misc
+"misc.language" = "Suomi";
+"misc.of" = "/";
+"misc.selected" = "valittu";
+"misc.somethingWrong" = "Jokin meni pieleen?";
+"misc.letUsKnow" = "Kerro meille";
+
+// Redeem Code
+"settings.redeemCode" = "Lunasta koodi";
+"settings.redeemCode.description" = "Syötä promo- tai tarjoustunnus";
+"paywall.haveCode" = "Onko sinulla promokoodi?";
+
+// Help & Support - About Us
 "profile.aboutUs" = "Tietoa meistä";
 "profile.aboutUsDetail" = "Lue lisää VibeWatch-tiimistä ja missiostamme parantaa suoratoistosisällön löytämistä.";
-"profile.tmdbAttribution" = "Tämä tuote käyttää TMDb API:a, mutta TMDb ei tue tai sertifioi sitä.";
-"profile.legalNotes" = "Oikeudelliset huomautukset";
+"profile.aboutUsDescription" = "Olemme kaksi ystävää rakentamassa uudentyyppistä elokuva-/sarjakaveria. VibeWatch syntyi turhautumisesta kömpelöihin trackereihin: keskitymme moderniin, klipit-ensin-löytämiseen, nopeisiin suoratoistolinkkeihin ja työkaluihin, jotka auttavat sekä elokuvafaneja että satunnaisia katsojia löytämään täydellisen valinnan ilman loputonta selaamista.";
+"profile.faqs" = "UKK";
 "profile.faq" = "UKK";
 "profile.faqDetail" = "Löydä nopeat vastaukset yleisiin kysymyksiin tileistä, tilauksista ja ominaisuuksista.";
+"profile.legal" = "Oikeudellinen";
+"profile.legalNotes" = "Oikeudelliset huomautukset";
+"profile.tmdbAttribution" = "Tämä tuote käyttää TMDb API:a, mutta TMDb ei tue tai sertifioi sitä.";
 "profile.privacyPolicy" = "Tietosuojakäytäntö";
+"profile.termsOfUse" = "Käyttöehdot";
+"profile.terms" = "Ehdot";
+"profile.sendFeedback" = "Lähetä palautetta";
+
+// Profile - Support & Feedback
 "profile.feedback.suggestFeature" = "Ehdota uutta ominaisuutta";
 "profile.feedback.suggestFeatureDescription" = "Kerro, mikä tekisi VibeWatchista paremman sinulle.";
 "profile.feedback.reportBug" = "Ilmoita bugista/ongelmasta";
@@ -366,14 +399,25 @@
 "profile.feedback.keepUpdated" = "Pidä minut ajan tasalla";
 "profile.feedback.sendButton" = "Lähetä palaute";
 "profile.feedback.sent" = "Kiitos! Palautteesi lähetettiin.";
-"profile.termsOfUse" = "Käyttöehdot";
 "profile.feedback.invalidEmail" = "Virheellinen sähköpostisisältö.";
+
+// FAQ Items
+"profile.faq.question1" = "Miten Clips auttaa minua löytämään uusia nimikkeitä?";
+"profile.faq.answer1" = "Klipit ovat lyhyitä, pystysuuntaisia esikatseluja, jotka on sovitettu makuusi, jotta voit selata ilman tunnetta ajanhukasta.";
+"profile.faq.question2" = "Voinko seurata, mitä katson?";
+"profile.faq.answer2" = "Kyllä. Tallenna listoille, merkitse katsotuksi/tykätyksi/ei tykätyksi ja synkronoi elokuva- ja TV-nimikkeiden välillä.";
+"profile.faq.question3" = "Mistä voin katsoa sen?";
+"profile.faq.answer3" = "Suoratoistolinkit haetaan maakohtaisesti, joten voit siirtyä suoraan oikeaan sovellukseen.";
+"profile.faq.question4" = "Entä jos jokin näyttää väärältä?";
+"profile.faq.answer4" = "Käytä \"Kerro meille\" minkä tahansa nimikkeen kohdalla ilmoittaaksesi bugeista tai huonoista linkeistä, ja korjaamme sen nopeasti.";
+"profile.faq.question5" = "Toimiiko VibeWatch satunnaisille katsojille?";
+"profile.faq.answer5" = "Ehdottomasti. Nostamme esiin helppoja valintoja, kuten lauantai-illan elokuvan ystävien kanssa, sekä syvempiä löytöjä elokuvien ystäville.";
 
 // Settings - Account Deletion
 "settings.deleteAccount" = "Poista tilini pysyvästi";
 "settings.deleteAccountWarningTitle" = "Poistetaanko tili?";
 "settings.deleteAccountWarningMessage" = "Tämä toiminto on pysyvä eikä sitä voi perua.";
-"settings.deleteAccountKeep" = "Ei, pidä tili";
+"settings.deleteAccountKeep" = "Ei, pidä se";
 "settings.deleteAccountConfirm" = "Kyllä, poista tilini";
 "settings.deleteAccountFinalTitle" = "Poista tili pysyvästi";
 "settings.deleteAccountFinalMessage" = "Oletko aivan varma? Tätä toimintoa ei voi perua.";
@@ -381,47 +425,161 @@
 "settings.deleteAccountSuccess" = "Tilisi poistettiin.";
 "settings.deleteAccountDeleting" = "Poistetaan...";
 
-
 // Profile Upgrade CTA
 "profile.upgradePro.title" = "Päivitä Pro-versioon";
 "profile.upgradePro.subtitle" = "Avaa rajattomat klipit, AI ja premium-listat.";
 
-/// Actor Detail
+// Actor Detail
 "actor.biography.title" = "Elämäkerta";
 "actor.biography.loading" = "Ladataan elämäkertaa...";
-"actor.biography.unavailable" = "Elämäkertaa ei ole saatavilla.";
+"actor.biography.unavailable" = "Elämäkertaa ei saatavilla.";
 "actor.filmography.movies" = "Elokuvat";
 "actor.filmography.tv" = "TV-sarjat";
 "actor.retry" = "Yritä uudelleen";
 "actor.biography.showMore" = "Näytä lisää";
 "actor.biography.showLess" = "Näytä vähemmän";
 
-"clips.search.placeholder" = "Hae klippejä, hahmoja tai sitaatteja";
-"clips.search.emptyTitle" = "Löydä klippejä, joista pidät";
-"clips.search.emptySubtitle" = "Hae mitä tahansa elokuvaa, sarjaa, hahmoa tai sitaattia nähdäksesi osuvat klipit ja siihen liittyvät suositukset.";
-"clips.search.matched" = "Osumat";
-"clips.search.recommended" = "Suositellut";
-"clips.search.showcaseTitle" = "Löydä klippejä";
-"clips.search.showcaseSubtitle" = "Etsi yllä löytääksesi klippejä suosikkielokuvistasi ja -sarjoistasi";
+// Global Discovery Filters
+"filters.mediaType" = "Mediatyyppi";
+"filters.movies" = "Elokuvat";
+"filters.tvShows" = "TV-sarjat";
+"filters.both" = "Molemmat";
+"filters.rating" = "Arvio";
+"filters.releasePeriod" = "Julkaisujakso";
+"filters.releasePeriodAny" = "Mikä tahansa";
+"filters.releasePeriodRecent" = "Viimeaikaiset (2020+)";
+"filters.releasePeriodModern" = "Modernit (2010-2019)";
+"filters.releasePeriodClassic" = "Klassikot (<2010)";
+"filters.customRange" = "Mukautettu alue";
+"filters.customYearRange" = "Mukautettu vuosialue";
+"filters.min" = "Min";
+"filters.max" = "Max";
+"filters.from" = "Alkaen";
+"filters.to" = "Asti";
+"filters.custom" = "Mukautettu";
+"filters.allCountries" = "Kaikki maat";
+"filters.sortPopularityDesc" = "Suosituimmat";
+"filters.sortPopularityAsc" = "Vähiten suosittu";
+"filters.sortRatingDesc" = "Parhaiten arvioidut";
+"filters.sortRatingAsc" = "Heikoiten arvioidut";
+"filters.sortReleaseDateDesc" = "Uusimmat ensin";
+"filters.sortReleaseDateAsc" = "Vanhimmat ensin";
+"filters.proFilters" = "Pro-suodattimet";
+"filters.hideWatched" = "Piilota katsotut";
+"filters.hideDisliked" = "Piilota ei tykätyt";
+"filters.proTitle" = "Avaa edistyneet suodattimet";
+"filters.proDescription" = "Päivitä Prohon saadaksesi mukautetut alueet, usean maan valinnan ja edistyneet suodatusvaihtoehdot";
+"filters.upgradeToPro" = "Päivitä Prohon";
+"filters.filtersActive" = "%d suodatinta aktiivisena";
 
-// Redeem Code
-"settings.redeemCode" = "Lunasta koodi";
-"settings.redeemCode.description" = "Syötä kampanja- tai tarjouskoodi";
-"paywall.haveCode" = "Onko sinulla kampanjakoodi?";
+// Filters - Streaming Platforms
+"filters.allPlatforms" = "Kaikki alustat";
+"platforms.title" = "Suoratoistoalustat";
 
-// Help & Support - About Us
-"profile.aboutUsDescription" = "Olemme kaksi ystävää rakentamassa uudenlaista elokuva-/tv-kumppania. VibeWatch syntyi turhautumisesta kömpelöihin trackereihin: keskitymme moderniin, klippipainotteiseen löytämiseen, nopeisiin suoratoistolinkkeihin ja työkaluihin, jotka auttavat sekä cinefiilejä että satunnaiskatsojia löytämään täydellisen valinnan ilman loputonta selausta.";
-"profile.faqs" = "UKK";
-"profile.legal" = "Oikeudelliset";
+// Personalized Carousels
+"carousel.dailyMix" = "Päivittäinen mixisi";
+"carousel.trendingInGenre" = "Trendaa genressä %@";
+"carousel.becauseYouLiked" = "Koska pidit: %@";
+"carousel.hiddenGems" = "Piilotetut helmet genressä %@";
+"carousel.continueJourney" = "Jatka matkaasi";
+"carousel.fromSearches" = "Hauistasi";
+"carousel.topTVPicks" = "Parhaat TV-valinnat sinulle";
+"carousel.staffPicks" = "Tiimin valinnat %@-faneille";
+"carousel.yearlyRewind" = "Vuotuinen rewindisi";
+"carousel.hotThisWeek" = "Kuuminta tällä viikolla";
+"carousel.awardWinners" = "Palkitut, joista pidät";
 
-// FAQ Items
-"profile.faq.question1" = "Miten Clips auttaa löytämään uusia nimikkeitä?";
-"profile.faq.answer1" = "Klipit ovat lyhyitä pystysuoria esikatseluja, jotka sopivat makuusi, joten voit selailla tuntematta tuhlaavasi aikaa.";
-"profile.faq.question2" = "Voinko seurata mitä katson?";
-"profile.faq.answer2" = "Kyllä. Tallenna listoihin, merkitse nähdyksi/tykätyksi/ei-tykätyksi ja synkronoi elokuvien ja sarjojen välillä.";
-"profile.faq.question3" = "Missä voin katsoa sen?";
-"profile.faq.answer3" = "Suoratoistolinkit haetaan maakohtaisesti, jotta pääset suoraan oikeaan sovellukseen.";
-"profile.faq.question4" = "Entä jos jokin näyttää väärältä?";
-"profile.faq.answer4" = "Käytä \"Kerro meille\" missä tahansa nimikkeessä ilmoittaaksesi bugeista tai huonoista linkeistä, niin korjaamme ne nopeasti.";
-"profile.faq.question5" = "Toimiiko VibeWatch satunnaiskatsojille?";
-"profile.faq.answer5" = "Ehdottomasti. Nostamme esiin helpot valinnat, kuten lauantai-illan elokuvan ystävien kanssa, sekä syvemmät helmet elokuvaharrastajille.";
+// Privacy / Analytics
+"settings.privacy.title" = "Tietosuoja";
+"settings.analytics.title" = "Analytiikka";
+"settings.analytics.share" = "Jaa anonyymi analytiikka";
+"settings.analytics.share.description" = "Auttaa meitä ymmärtämään, mitä ominaisuuksia käytät, ja parantamaan sovellusta. Ei mainosseurantaa.";
+"settings.analytics.viewStats" = "Näytä tilastosi";
+"settings.analytics.description" = "Katso katseluhistoria ja oivallukset";
+
+// Settings - Notifications (Settings Screen)
+"settings.notifications.title" = "Ilmoitukset";
+"settings.notifications.manage" = "Hallitse ilmoituksia";
+"settings.notifications.description" = "Personoidut ilmoitukset uudesta sisällöstä";
+
+// Onboarding Revamp
+"onboarding.welcome.title" = "Löydä fiiliksesi";
+"onboarding.welcome.subtitle" = "AI-suositukset, räätälöity juuri sinulle.";
+"onboarding.clips.title" = "Katso, älä lue";
+"onboarding.clips.subtitle" = "Koe elokuvat lyhyiden, mukaansatempaavien klippien kautta.";
+"onboarding.lists.title" = "Katselulistasi, kaikkialla";
+"onboarding.lists.subtitle" = "Tallenna elokuvia ja synkronoi kaikille laitteillesi.";
+"onboarding.account.title" = "Tallenna profiilisi";
+"onboarding.account.subtitle" = "Luo tili synkronoidaksesi katselulistan ja mieltymykset laitteiden välillä.";
+"onboarding.skip" = "Ohita toistaiseksi";
+
+// Email Verification
+"auth.checkEmailTitle" = "Tarkista sähköpostisi";
+"auth.checkEmailMessage" = "Lähetimme sinulle vahvistuslinkin. Tarkista postilaatikkosi vahvistaaksesi tilisi.";
+"auth.openMailApp" = "Avaa Mail-sovellus";
+"auth.iHaveVerified" = "Olen vahvistanut";
+"auth.resendEmail" = "Lähetä uudelleen";
+"auth.changeEmail" = "Vaihda sähköposti";
+"auth.verificationPending" = "Odotetaan vahvistusta...";
+
+// Gamification
+"gamification.levelUp" = "LEVEL UP!";
+"gamification.level" = "Taso";
+"gamification.rankAchieved" = "\"%@\" -taso saavutettu";
+"gamification.xp.base" = "perus";
+"gamification.xp.proBoost" = "Pro-boost";
+"gamification.xp.streakBonus" = "Streak-bonus";
+"gamification.xp.total" = "XP yhteensä";
+"gamification.challengeComplete" = "Haaste suoritettu!";
+
+// Notification Preferences
+"notifications.title" = "Ilmoitukset";
+"notifications.status" = "Tila";
+"notifications.enabled" = "Ilmoitukset käytössä";
+"notifications.disabled" = "Ilmoitukset pois käytöstä";
+"notifications.enableDescription" = "Ota ilmoitukset käyttöön saadaksesi personoituja hälytyksiä uusista jaksoista, julkaisuista ja sisällöstä, josta pidät.";
+"notifications.enableButton" = "Ota ilmoitukset käyttöön";
+"notifications.types" = "Ilmoitustyypit";
+"notifications.newEpisodes" = "Uudet jaksot";
+"notifications.newEpisodesDesc" = "Saat ilmoituksen, kun seuraamiesi sarjojen uudet jaksot ovat saatavilla";
+"notifications.personalizedReleases" = "Personoidut julkaisut";
+"notifications.personalizedReleasesDesc" = "Uudet elokuvat ja sarjat, jotka sopivat makuusi";
+"notifications.favoriteActors" = "Suosikkinäyttelijät & ohjaajat";
+"notifications.favoriteActorsDesc" = "Uutta sisältöä ihmisiltä, joista pidät";
+"notifications.similarContent" = "Samankaltainen sisältö";
+"notifications.similarContentDesc" = "Suosituksia sen perusteella, mistä pidit";
+"notifications.watchlistAlerts" = "Katselulista-hälytykset";
+"notifications.watchlistAlertsDesc" = "Kun katselulistasi nimikkeet tulevat saataville";
+"notifications.milestones" = "Virstanpylväät & saavutukset";
+"notifications.milestonesDesc" = "Juhlista katselustreakejäsi ja saavutuksiasi";
+"notifications.frequency" = "Tiheys";
+"notifications.dailyLimit" = "Päivittäinen raja";
+"notifications.perDay" = "päivässä";
+"notifications.unlimited" = "Rajaton";
+"notifications.quietHours" = "Hiljaiset tunnit";
+"notifications.startTime" = "Aloitusaika";
+"notifications.endTime" = "Lopetusaika";
+"notifications.quietHoursDesc" = "Näinä aikoina ei lähetetä ilmoituksia";
+"notifications.proFeatures" = "Pro-ominaisuudet";
+"notifications.customActorAlerts" = "Mukautetut näyttelijähälytykset";
+"notifications.customGenreAlerts" = "Mukautetut genre-hälytykset";
+"notifications.proFeaturesDesc" = "Saat hälytyksiä valitsemistasi näyttelijöistä ja genreistä";
+"notifications.save" = "Tallenna";
+"notifications.settingsSaved" = "Asetukset tallennettu";
+"notifications.preferencesUpdated" = "Ilmoitusasetuksesi on päivitetty.";
+"notifications.typesFooter" = "Valitse, mistä ilmoituksia haluat";
+"notifications.frequencyFooter" = "Ilmoitusten enimmäismäärä päivässä";
+"notifications.favoriteActorsTitle" = "Suosikkinäyttelijäsi";
+"notifications.favoriteActorsFooter" = "Saat ilmoituksen, kun näillä näyttelijöillä on uutta sisältöä";
+"notifications.favoriteGenresTitle" = "Suosikkigenresi";
+"notifications.favoriteGenresFooter" = "Saat ilmoituksia uusista julkaisuista näissä genreissä";
+"notifications.fromPreferences" = "Mieltymyksistäsi";
+
+// Media Item Row (Lists)
+"lists.notifyMe" = "ILMOITA MINULLE";
+"lists.watchOn" = "KATSO PALVELUSSA %@";
+"lists.notifyMeTitle" = "Ilmoita minulle";
+"lists.notifyMeMessage" = "Lähetämme sinulle ilmoituksen heti, kun '%@' on saatavilla suoratoistoon, vuokrattavaksi tai ostettavaksi.";
+
+// Error Views
+"error.oops" = "Hups!";

@@ -4,7 +4,7 @@ import UIKit
 /// Service for caching images offline
 /// Uses URLCache for automatic caching with size limits and invalidation
 @MainActor
-class ImageCacheService {
+class ImageCacheService: ImageCacheServiceProtocol {
     static let shared = ImageCacheService()
     
     private let cache: URLCache
@@ -43,11 +43,11 @@ class ImageCacheService {
         if let preferenceString = UserDefaults.standard.string(forKey: "imageCacheSizePreference"),
            let preference = CacheSizePreference(rawValue: preferenceString) {
             preferredDiskSize = preference.diskSize
-            print("📊 [ImageCache] Using user preference: \(preference.rawValue)")
+            Logger.debug("[ImageCache] Using user preference: \(preference.rawValue)")
         } else {
             // Default to medium size
             preferredDiskSize = CacheSizePreference.medium.diskSize
-            print("📊 [ImageCache] Using default size: Medium (500MB)")
+            Logger.debug("[ImageCache] Using default size: Medium (500MB)")
         }
         
         // Configure URLCache with user's preferred size
@@ -64,7 +64,7 @@ class ImageCacheService {
         
         session = URLSession(configuration: config)
         
-        print("🖼️ [ImageCache] Initialized with \(maxMemorySize / 1024 / 1024)MB memory, \(preferredDiskSize / 1024 / 1024)MB disk")
+        Logger.debug("[ImageCache] Initialized with \(maxMemorySize / 1024 / 1024)MB memory, \(preferredDiskSize / 1024 / 1024)MB disk")
     }
     
     /// Load image from URL with caching
@@ -77,12 +77,12 @@ class ImageCacheService {
         let request = URLRequest(url: url)
         if let cachedResponse = cache.cachedResponse(for: request),
            let image = UIImage(data: cachedResponse.data) {
-            print("✅ [ImageCache] Loaded from cache: \(url.lastPathComponent)")
+            Logger.debug("[ImageCache] Loaded from cache: \(url.lastPathComponent)")
             return image
         }
         
         // Download image
-        print("⬇️ [ImageCache] Downloading: \(url.lastPathComponent)")
+        Logger.debug("[ImageCache] Downloading: \(url.lastPathComponent)")
         let (data, response) = try await session.data(from: url)
         
         guard let image = UIImage(data: data) else {
@@ -104,12 +104,12 @@ class ImageCacheService {
         if onWiFiOnly {
             let isOnWiFi = await NetworkMonitor.shared.isOnWiFi()
             guard isOnWiFi else {
-                print("⚠️ [ImageCache] Skipping prefetch - not on WiFi")
+                Logger.warning("[ImageCache] Skipping prefetch - not on WiFi")
                 return
             }
         }
         
-        print("📥 [ImageCache] Prefetching \(urls.count) images...")
+        Logger.debug("[ImageCache] Prefetching \(urls.count) images...")
         
         await withTaskGroup(of: Void.self) { group in
             for urlString in urls {
@@ -117,19 +117,19 @@ class ImageCacheService {
                     do {
                         _ = try await self.loadImage(from: urlString)
                     } catch {
-                        print("❌ [ImageCache] Failed to prefetch \(urlString): \(error)")
+                        Logger.error("[ImageCache] Failed to prefetch \(urlString): \(error)")
                     }
                 }
             }
         }
         
-        print("✅ [ImageCache] Prefetch complete")
+        Logger.debug("[ImageCache] Prefetch complete")
     }
     
     /// Clear all cached images
     func clearCache() {
         cache.removeAllCachedResponses()
-        print("🗑️ [ImageCache] Cache cleared")
+        Logger.debug("[ImageCache] Cache cleared")
     }
     
     /// Get cache statistics
@@ -137,8 +137,8 @@ class ImageCacheService {
         let memoryUsage = cache.currentMemoryUsage
         let diskUsage = cache.currentDiskUsage
         
-        print("📊 [ImageCache] Memory: \(memoryUsage / 1024 / 1024)MB / \(maxMemorySize / 1024 / 1024)MB")
-        print("📊 [ImageCache] Disk: \(diskUsage / 1024 / 1024)MB / \(maxDiskSize / 1024 / 1024)MB")
+        Logger.debug("[ImageCache] Memory: \(memoryUsage / 1024 / 1024)MB / \(maxMemorySize / 1024 / 1024)MB")
+        Logger.debug("[ImageCache] Disk: \(diskUsage / 1024 / 1024)MB / \(maxDiskSize / 1024 / 1024)MB")
         
         return (memoryUsage, diskUsage)
     }
@@ -148,7 +148,7 @@ class ImageCacheService {
         let cacheDirectory = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first?.appendingPathComponent("ImageCache")
         
         guard let directory = cacheDirectory, FileManager.default.fileExists(atPath: directory.path) else {
-            print("🧹 [ImageCache] No cache directory found")
+            Logger.debug("[ImageCache] No cache directory found")
             return
         }
         
@@ -168,9 +168,9 @@ class ImageCacheService {
                 }
             }
             
-            print("🧹 [ImageCache] Cleaned up \(deletedCount) old cache files")
+            Logger.debug("[ImageCache] Cleaned up \(deletedCount) old cache files")
         } catch {
-            print("❌ [ImageCache] Error cleaning cache: \(error)")
+            Logger.error("[ImageCache] Error cleaning cache: \(error)")
         }
     }
     
@@ -178,8 +178,8 @@ class ImageCacheService {
     func setCacheSizePreference(_ preference: CacheSizePreference) {
         // Store the new preference for future cache operations
         UserDefaults.standard.set(preference.rawValue, forKey: "imageCacheSizePreference")
-        print("🔧 [ImageCache] Cache size preference set to \(preference.rawValue)")
-        print("ℹ️ [ImageCache] New cache size will take effect on next app launch")
+        Logger.debug("[ImageCache] Cache size preference set to \(preference.rawValue)")
+        Logger.debug("[ImageCache] New cache size will take effect on next app launch")
 
         // Note: URLCache doesn't allow changing disk capacity after initialization.
         // The new size will be applied when the app restarts and ImageCacheService is reinitialized.
@@ -188,7 +188,7 @@ class ImageCacheService {
     /// Set image prefetch option
     func setImagePrefetchOption(_ option: ImagePrefetchOption) {
         UserDefaults.standard.set(option.rawValue, forKey: "imagePrefetchOption")
-        print("🔧 [ImageCache] Image prefetch option set to \(option.rawValue)")
+        Logger.debug("[ImageCache] Image prefetch option set to \(option.rawValue)")
     }
 
     /// Get current image prefetch option from UserDefaults

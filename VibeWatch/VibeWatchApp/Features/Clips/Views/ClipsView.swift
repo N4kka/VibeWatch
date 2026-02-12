@@ -5,6 +5,8 @@ import YouTubeiOSPlayerHelper
 @MainActor
 struct ClipsView: View {
     @StateObject private var viewModel = ClipsViewModel()
+    @StateObject private var gamificationService = GamificationService.shared
+    @StateObject private var interstitialAdManager = InterstitialAdManager.shared
     @EnvironmentObject var quotaManager: DailyQuotaManager
     @State private var showDailyPaywall = false
     @State private var showAccountGate = false
@@ -22,6 +24,8 @@ struct ClipsView: View {
     @State private var isAuroraAnimating = false
     @State private var isGlyphPulsing = false
     @State private var isProgressSweeping = false
+    @State private var feedSessionId = UUID().uuidString
+    @State private var seenClipIds: Set<String> = []
 
     var body: some View {
         // Main content - Clips
@@ -97,14 +101,13 @@ struct ClipsView: View {
             if showDailyPaywall {
                 DailyLimitPaywallView(isPresented: $showDailyPaywall, onComeBack: {
                     NotificationCenter.default.post(name: .navigateToDiscoveryTab, object: nil)
-                })
+                }, source: "clips_quota")
                 .environmentObject(quotaManager)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .zIndex(100)
             }
         }
         .background(Color.black.ignoresSafeArea())
-        .ignoresSafeArea(.all, edges: .bottom)
         .animation(.easeInOut(duration: 0.3), value: viewModel.isLoading)
         .animation(.easeInOut(duration: 0.3), value: viewModel.clips.isEmpty)
         .task {
@@ -120,6 +123,11 @@ struct ClipsView: View {
         .onChange(of: viewModel.currentIndex) { oldValue, newValue in
             // Check quota when user scrolls to next clip
             checkQuotaLimit(for: newValue)
+
+            // Track clip for interstitial ads (free users only)
+            if newValue > oldValue {
+                interstitialAdManager.recordClipWatched(isProUser: quotaManager.isProUser)
+            }
         }
         .onChange(of: appState.isAuthenticated) { oldValue, newValue in
             guard newValue, newValue != oldValue else { return }
@@ -138,6 +146,7 @@ struct ClipsView: View {
             searchTray
         }
         .background(searchNavigationLink)
+        .xpToast(gamificationService: gamificationService)
         .onChange(of: isSearchTrayVisible) { _, newValue in
             if newValue {
                 NotificationCenter.default.post(name: .pauseAllClips, object: nil)
@@ -152,6 +161,8 @@ struct ClipsView: View {
 
     // MARK: - Lifecycle Handlers
     private func handleViewAppearance() async {
+        feedSessionId = UUID().uuidString
+        seenClipIds.removeAll()
         await viewModel.loadClips()
         AnalyticsService.shared.logScreenView(screenName: "Clips", screenClass: "ClipsView")
     }
@@ -205,6 +216,8 @@ struct ClipsView: View {
                 }
                 
                 Spacer()
+
+                ProUpgradeIconButton(isProUser: quotaManager.isProUser, source: "clips_top_right")
                 
                 Button {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -235,16 +248,8 @@ struct ClipsView: View {
         .padding(.top, 8)
         .padding(.bottom, 12)
         .background(
-            LinearGradient(
-                colors: [
-                    Color.black.opacity(0.9),
-                    Color.black.opacity(0.7),
-                    Color.black.opacity(0.4)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea(edges: .top)
+            Color.black
+                .ignoresSafeArea(edges: .top)
         )
     }
 
@@ -341,12 +346,12 @@ struct ClipsView: View {
 
     private var chipsRow: some View {
         let chips = [
-            "Quotes",
-            "Characters",
-            "Scenes",
-            "Popular"
+            "clips.search.quotes".localized,
+            "clips.search.characters".localized,
+            "clips.search.scenes".localized,
+            "clips.search.popular".localized
         ]
-        
+
         return ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 10) {
                 ForEach(chips, id: \.self) { chip in
@@ -403,25 +408,37 @@ struct ClipsView: View {
     }
 
     private var clipsScrollView: some View {
-        GeometryReader { geometry in
+        GeometryReader { outerGeometry in
             ScrollViewReader { proxy in
-                let screenHeight = UIScreen.main.bounds.height
-                let screenWidth = geometry.size.width
-
                 ScrollView(.vertical, showsIndicators: false) {
                     LazyVStack(spacing: 0) {
                         ForEach(Array(viewModel.clips.enumerated()), id: \.offset) { index, clip in
-                            ClipPlayerView(
-                                clip: clip,
-                                isCurrentClip: viewModel.currentIndex == index,
-                                onBecomeVisible: {
-                                    viewModel.currentIndex = index
-                                },
-                                onLikeToggle: { isLiked in
-                                    viewModel.toggleLike(for: clip.id, isLiked: isLiked)
-                                }
-                            )
-                            .frame(width: screenWidth, height: screenHeight)
+                            GeometryReader { innerGeometry in
+                                let context = AnalyticsContext(
+                                    source: "clips_feed",
+                                    position: index,
+                                    sessionId: feedSessionId
+                                )
+                                ClipPlayerView(
+                                    clip: clip,
+                                    isCurrentClip: viewModel.currentIndex == index,
+                                    onBecomeVisible: {
+                                        viewModel.currentIndex = index
+                                        if !seenClipIds.contains(clip.id) {
+                                            seenClipIds.insert(clip.id)
+                                            AnalyticsService.shared.logClipImpression(
+                                                clip: clip,
+                                                context: context
+                                            )
+                                        }
+                                    },
+                                    onLikeToggle: { isLiked in
+                                        viewModel.toggleLike(for: clip.id, isLiked: isLiked)
+                                    },
+                                    analyticsContext: context
+                                )
+                            }
+                            .frame(width: outerGeometry.size.width, height: outerGeometry.size.height)
                             .id(index)
                             .onAppear {
                                 // Smart pagination: Load more when 5 clips away from end
@@ -444,7 +461,7 @@ struct ClipsView: View {
                         viewModel.currentIndex = newIndex
                     }
                 }))
-                .ignoresSafeArea(.all) // Ignore all safe areas for proper paging
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .onAppear {
                     // Only scroll to saved position on first appearance
                     if !hasScrolledToSavedPosition {
@@ -454,7 +471,6 @@ struct ClipsView: View {
                 }
             }
         }
-        .ignoresSafeArea(.all) // Full screen scroll view
     }
 
     private var loadingView: some View {
@@ -611,7 +627,7 @@ struct ClipsView: View {
                 .font(.system(size: 60))
                 .foregroundColor(.orange)
 
-            Text(error.errorDescription ?? "Oops!")
+            Text(error.errorDescription ?? "error.oops".localized)
                 .font(.system(size: 24, weight: .bold))
                 .foregroundColor(.white)
 
@@ -645,6 +661,7 @@ struct ClipPlayerView: View {
     let isCurrentClip: Bool
     let onBecomeVisible: () -> Void
     let onLikeToggle: (Bool) -> Void
+    let analyticsContext: AnalyticsContext?
     
     @State private var isLiked: Bool
     @State private var likeCount: Int
@@ -661,34 +678,33 @@ struct ClipPlayerView: View {
     @State private var watchStartTime: Date?
     @State private var accumulatedWatchTime: TimeInterval = 0
     
-    init(clip: Clip, isCurrentClip: Bool, onBecomeVisible: @escaping () -> Void, onLikeToggle: @escaping (Bool) -> Void) {
+    init(
+        clip: Clip,
+        isCurrentClip: Bool,
+        onBecomeVisible: @escaping () -> Void,
+        onLikeToggle: @escaping (Bool) -> Void,
+        analyticsContext: AnalyticsContext? = nil
+    ) {
         self.clip = clip
         self.isCurrentClip = isCurrentClip
         self.onBecomeVisible = onBecomeVisible
         self.onLikeToggle = onLikeToggle
+        self.analyticsContext = analyticsContext
         _isLiked = State(initialValue: clip.isLiked)
         _likeCount = State(initialValue: clip.likes)
         _commentCount = State(initialValue: clip.comments)
     }
     
     var body: some View {
-        let screenWidth = UIScreen.main.bounds.width
-        let screenHeight = UIScreen.main.bounds.height
-        // Get safe area from window scene (more reliable when ignoring safe areas)
-        let safeAreaTop = UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .first?.windows.first?.safeAreaInsets.top ?? 0
-                
         ZStack(alignment: .bottomTrailing) {
-            // Full-screen YouTube player using official YTPlayerView (offset by safe area internally)
+            // YouTube player contained within bounds
             ZStack {
                 VerticalYouTubePlayer(
                     clipId: clip.id,
                     videoId: clip.videoId,
-                    shouldPlay: isCurrentClip && isFullyVisible,
-                    safeAreaTop: safeAreaTop
+                    shouldPlay: isCurrentClip && isFullyVisible
                 )
-                
+
                 // Edge gesture areas to ensure swipe works even over WebView
                 HStack {
                     Color.clear
@@ -700,10 +716,9 @@ struct ClipPlayerView: View {
                         .contentShape(Rectangle())
                 }
             }
-            .frame(width: screenWidth, height: screenHeight)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color.black)
             .clipped()
-            .edgesIgnoringSafeArea(.all)
             .contentShape(Rectangle())
             .background(
                 GeometryReader { innerGeometry in
@@ -730,10 +745,10 @@ struct ClipPlayerView: View {
                         }
                 )
             
-            // Action buttons on the right
+            // Action buttons on the right (always visible)
             VStack(alignment: .trailing, spacing: 20) {
                 Spacer()
-                
+
                 ClipActionButton(
                     icon: isLiked ? "heart.fill" : "heart",
                     count: likeCount,
@@ -745,7 +760,7 @@ struct ClipPlayerView: View {
                         onLikeToggle(isLiked)
                     }
                 }
-                
+
                 ClipActionButton(
                     icon: "message",
                     count: commentCount,
@@ -753,14 +768,14 @@ struct ClipPlayerView: View {
                 ) {
                     showComments = true
                 }
-                
+
                 ClipActionButton(
                     icon: "plus",
                     color: .white
                 ) {
                     showAddToList = true
                 }
-                
+
                 ClipActionButton(
                     icon: "square.and.arrow.up",
                     color: .white
@@ -769,19 +784,19 @@ struct ClipPlayerView: View {
                 }
             }
             .padding(.trailing, 16)
-            .padding(.bottom, showControls ? 130 : 100)
+            .padding(.bottom, showControls ? 140 : 60)
             .animation(.easeInOut(duration: 0.2), value: showControls)
-            
-            // Title and description on the left bottom
+
+            // Title and description on the left bottom (always visible)
             VStack(alignment: .leading, spacing: 8) {
                 Spacer()
-                
+
                 VStack(alignment: .leading, spacing: 8) {
                     Text(clip.title)
                         .font(.system(size: 18, weight: .bold))
                         .foregroundColor(.white)
                         .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 1)
-                    
+
                     Text(clip.description)
                         .font(.system(size: 14))
                         .foregroundColor(.white.opacity(0.9))
@@ -791,9 +806,9 @@ struct ClipPlayerView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 16)
-            .padding(.bottom, showControls ? 130 : 100)
+            .padding(.bottom, showControls ? 140 : 60)
             .padding(.trailing, 80)
-            .animation(.bouncy, value: showControls)
+            .animation(.easeInOut(duration: 0.2), value: showControls)
         }
         .onAppear {
             hasAppeared = true
@@ -810,16 +825,48 @@ struct ClipPlayerView: View {
             // End tracking and save engagement data
             if let startTime = watchStartTime {
                 let watchDuration = Date().timeIntervalSince(startTime) + accumulatedWatchTime
-                // Assuming average clip is 60 seconds (we don't have actual duration yet)
-                engagementTracker.updateWatchTime(clipId: clip.id, duration: watchDuration, totalDuration: 60)
+                let totalDuration = clip.duration > 0 ? TimeInterval(clip.duration) : 60
+                engagementTracker.updateWatchTime(
+                    clipId: clip.id,
+                    duration: watchDuration,
+                    totalDuration: totalDuration
+                )
                 engagementTracker.endWatchingClip(clipId: clip.id, genres: [], actors: [])
+                AnalyticsService.shared.logClipCompletion(
+                    clip: clip,
+                    watchedSeconds: watchDuration,
+                    context: analyticsContext
+                )
+                let completionRatio = AnalyticsContext.completionRatio(
+                    watched: watchDuration,
+                    total: totalDuration
+                )
+                Task {
+                    await SupabaseService.shared.logClipSignal(
+                        clipId: clip.id,
+                        signalType: "completion",
+                        signalValue: completionRatio,
+                        context: analyticsContext
+                    )
+
+                    // Award gamification XP for clip completion
+                    if let userId = await AuthService.shared.currentUser?.id {
+                        let isPro = await ClipQuotaService.shared.checkIsProUser()
+                        await GamificationService.shared.recordClipWatch(
+                            userId: userId,
+                            clipId: clip.id,
+                            completionRate: completionRatio,
+                            isPro: isPro
+                        )
+                    }
+                }
             }
             
             watchStartTime = nil
             accumulatedWatchTime = 0
         }
         .sheet(isPresented: $showComments) {
-            CommentsView(clipId: clip.id) { newCount in
+            CommentsView(clipId: clip.id, analyticsContext: analyticsContext) { newCount in
                 commentCount = newCount
             }
                 .presentationDetents([.medium, .large])
@@ -827,9 +874,11 @@ struct ClipPlayerView: View {
         }
         .sheet(isPresented: $showAddToList) {
             AddToListView(
+                clipId: clip.id,
                 movieId: clip.movieId,
                 tvShowId: clip.tvShowId, 
-                mediaType: clip.movieId != nil ? .movie : .tv
+                mediaType: clip.movieId != nil ? .movie : .tv,
+                analyticsContext: analyticsContext
             )
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.hidden)
@@ -872,14 +921,13 @@ struct VerticalYouTubePlayer: UIViewRepresentable {
     let clipId: String  // UNIQUE identifier for each clip (includes movie ID)
     let videoId: String // YouTube video ID (can be duplicate across clips)
     let shouldPlay: Bool
-    let safeAreaTop: CGFloat // Top safe area inset to offset YouTube controls
 
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
     }
 
     func makeUIView(context: Context) -> PlayerContainerView {
-        let container = PlayerContainerView(topInset: safeAreaTop)
+        let container = PlayerContainerView()
         container.playerView.delegate = context.coordinator
         container.playerView.backgroundColor = .black
         container.playerView.isOpaque = false
@@ -890,7 +938,6 @@ struct VerticalYouTubePlayer: UIViewRepresentable {
     func updateUIView(_ container: PlayerContainerView, context: Context) {
         context.coordinator.parent = self
         context.coordinator.shouldPlay = shouldPlay
-        container.topInset = safeAreaTop
 
         if context.coordinator.currentClipId != clipId {
             context.coordinator.currentClipId = clipId
@@ -951,14 +998,8 @@ struct VerticalYouTubePlayer: UIViewRepresentable {
 
 final class PlayerContainerView: UIView {
     let playerView = YTPlayerView()
-    private var topConstraint: NSLayoutConstraint?
 
-    var topInset: CGFloat {
-        didSet { topConstraint?.constant = topInset }
-    }
-
-    init(topInset: CGFloat) {
-        self.topInset = topInset
+    init() {
         super.init(frame: .zero)
         setup()
     }
@@ -971,9 +1012,10 @@ final class PlayerContainerView: UIView {
         backgroundColor = .black
         addSubview(playerView)
         playerView.translatesAutoresizingMaskIntoConstraints = false
-        topConstraint = playerView.topAnchor.constraint(equalTo: topAnchor, constant: topInset)
+
+        // Simple edge-to-edge constraints
         NSLayoutConstraint.activate([
-            topConstraint!,
+            playerView.topAnchor.constraint(equalTo: topAnchor),
             playerView.leadingAnchor.constraint(equalTo: leadingAnchor),
             playerView.trailingAnchor.constraint(equalTo: trailingAnchor),
             playerView.bottomAnchor.constraint(equalTo: bottomAnchor)
@@ -1022,6 +1064,7 @@ struct ClipActionButton: View {
 
 struct CommentsView: View {
     let clipId: String
+    let analyticsContext: AnalyticsContext?
     let onCountsChange: ((Int) -> Void)?
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var appState: AppState
@@ -1033,6 +1076,7 @@ struct CommentsView: View {
                 CommentsListView(
                     clipId: clipId,
                     userId: appState.currentUser?.id ?? "guest",
+                    analyticsContext: analyticsContext,
                     onCountsChange: onCountsChange
                 )
             }
@@ -1306,14 +1350,24 @@ struct AddToListView: View {
     @StateObject private var listManager = ListManager.shared
     @StateObject private var listsViewModel = ListsViewModel()
     @State private var showCreateList = false
+    let clipId: String?
     let movieId: Int?
     let tvShowId: Int?
     let mediaType: MediaType
+    let analyticsContext: AnalyticsContext?
     
-    init(movieId: Int? = nil, tvShowId: Int? = nil, mediaType: MediaType = .movie) {
+    init(
+        clipId: String? = nil,
+        movieId: Int? = nil,
+        tvShowId: Int? = nil,
+        mediaType: MediaType = .movie,
+        analyticsContext: AnalyticsContext? = nil
+    ) {
+        self.clipId = clipId
         self.movieId = movieId
         self.tvShowId = tvShowId
         self.mediaType = mediaType
+        self.analyticsContext = analyticsContext
     }
     
     private var availableLists: [MediaList] {
@@ -1442,7 +1496,12 @@ struct AddToListView: View {
                 do {
                     if mediaType == .movie, let movieId = movieId {
                         let movieDetails = try await TMDBService.shared.getMovieDetails(id: movieId)
-                        try? await listManager.addToList(listId: list.id, movie: movieDetails, mediaType: .movie)
+                        try? await listManager.addToList(
+                            listId: list.id,
+                            movie: movieDetails,
+                            mediaType: .movie,
+                            analyticsContext: analyticsContext
+                        )
                     } else if mediaType == .tv, let tvShowId = tvShowId {
                         let tvDetails = try await TMDBService.shared.getTVShowDetails(id: tvShowId)
                         let movie = Movie(
@@ -1465,7 +1524,21 @@ struct AddToListView: View {
                             productionCountries: nil,
                             imdbId: nil
                         )
-                        try? await listManager.addToList(listId: list.id, movie: movie, mediaType: .tv)
+                        try? await listManager.addToList(
+                            listId: list.id,
+                            movie: movie,
+                            mediaType: .tv,
+                            analyticsContext: analyticsContext
+                        )
+                    }
+
+                    if let clipId {
+                        await SupabaseService.shared.logClipSignal(
+                            clipId: clipId,
+                            signalType: "add_to_list",
+                            signalValue: 1,
+                            context: analyticsContext
+                        )
                     }
                     
                     dismiss()

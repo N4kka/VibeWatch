@@ -210,7 +210,7 @@ struct ProfileView: View {
                 .environmentObject(authService)
         }
         .fullScreenCover(isPresented: $showUpgradePaywall) {
-            ProPaywallView(isPresented: $showUpgradePaywall)
+            ProPaywallView(isPresented: $showUpgradePaywall, source: "profile_banner")
                 .environmentObject(appState)
                 .environmentObject(authService)
                 .environmentObject(DailyQuotaManager.shared)

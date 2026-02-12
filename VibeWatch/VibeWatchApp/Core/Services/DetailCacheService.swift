@@ -69,11 +69,11 @@ class DetailCacheService {
             var updateValues = values
             updateValues["deleted_at"] = NSNull()  // Clear deleted_at
             try await db.update("detail_cache", values: updateValues, where: "id = ?", parameters: [existingId])
-            print("✅ [DetailCache] Updated cached movie: \(movie.title)")
+            Logger.debug("[DetailCache] Updated cached movie: \(movie.title)")
         } else {
             // Insert new
             _ = try await db.insert("detail_cache", values: values)
-            print("✅ [DetailCache] Cached new movie: \(movie.title)")
+            Logger.debug("[DetailCache] Cached new movie: \(movie.title)")
         }
     }
 
@@ -87,13 +87,12 @@ class DetailCacheService {
             WHERE media_id = ? AND media_type = 'movie'
         """, parameters: [movieId])
 
-        if allRows.isEmpty {
-            print("📭 [DetailCache] No cache entry exists for movie ID \(movieId)")
-        } else {
-            let row = allRows.first!
+        if let row = allRows.first {
             let expiresAt = row["expires_at"] as? String ?? "nil"
             let deletedAt = row["deleted_at"] as? String ?? "nil"
-            print("🔍 [DetailCache] Found cache entry for movie ID \(movieId): expires_at=\(expiresAt), deleted_at=\(deletedAt), now=\(now)")
+            Logger.debug("[DetailCache] Found cache entry for movie ID \(movieId): expires_at=\(expiresAt), deleted_at=\(deletedAt), now=\(now)")
+        } else {
+            Logger.debug("[DetailCache] No cache entry exists for movie ID \(movieId)")
         }
 
         let rows = try await db.queryRaw("""
@@ -103,7 +102,7 @@ class DetailCacheService {
         """, parameters: [movieId, now])
 
         guard let row = rows.first else {
-            print("📭 [DetailCache] No valid cached movie found for ID \(movieId) (expired or deleted)")
+            Logger.debug("[DetailCache] No valid cached movie found for ID \(movieId) (expired or deleted)")
             return nil
         }
 
@@ -163,11 +162,11 @@ class DetailCacheService {
             var updateValues = values
             updateValues["deleted_at"] = NSNull()  // Clear deleted_at
             try await db.update("detail_cache", values: updateValues, where: "id = ?", parameters: [existingId])
-            print("✅ [DetailCache] Updated cached TV show: \(tvShow.name)")
+            Logger.debug("[DetailCache] Updated cached TV show: \(tvShow.name)")
         } else {
             // Insert new
             _ = try await db.insert("detail_cache", values: values)
-            print("✅ [DetailCache] Cached new TV show: \(tvShow.name)")
+            Logger.debug("[DetailCache] Cached new TV show: \(tvShow.name)")
         }
     }
 
@@ -181,13 +180,12 @@ class DetailCacheService {
             WHERE media_id = ? AND media_type = 'tv'
         """, parameters: [tvShowId])
 
-        if allRows.isEmpty {
-            print("📭 [DetailCache] No cache entry exists for TV show ID \(tvShowId)")
-        } else {
-            let row = allRows.first!
+        if let row = allRows.first {
             let expiresAt = row["expires_at"] as? String ?? "nil"
             let deletedAt = row["deleted_at"] as? String ?? "nil"
-            print("🔍 [DetailCache] Found cache entry for TV show ID \(tvShowId): expires_at=\(expiresAt), deleted_at=\(deletedAt), now=\(now)")
+            Logger.debug("[DetailCache] Found cache entry for TV show ID \(tvShowId): expires_at=\(expiresAt), deleted_at=\(deletedAt), now=\(now)")
+        } else {
+            Logger.debug("[DetailCache] No cache entry exists for TV show ID \(tvShowId)")
         }
 
         let rows = try await db.queryRaw("""
@@ -197,7 +195,7 @@ class DetailCacheService {
         """, parameters: [tvShowId, now])
 
         guard let row = rows.first else {
-            print("📭 [DetailCache] No valid cached TV show found for ID \(tvShowId) (expired or deleted)")
+            Logger.debug("[DetailCache] No valid cached TV show found for ID \(tvShowId) (expired or deleted)")
             return nil
         }
 
@@ -237,7 +235,7 @@ class DetailCacheService {
         let providers = decodeFromBase64(row["providers_json"] as? String, as: CountryProviders.self)
         let similar = decodeFromBase64(row["similar_json"] as? String, as: [Movie].self) ?? []
 
-        print("✅ [DetailCache] Retrieved cached movie: \(movie.title)")
+        Logger.debug("[DetailCache] Retrieved cached movie: \(movie.title)")
 
         return CachedMovieDetail(
             movie: movie,
@@ -277,7 +275,7 @@ class DetailCacheService {
         let providers = decodeFromBase64(row["providers_json"] as? String, as: CountryProviders.self)
         let similar = decodeFromBase64(row["similar_json"] as? String, as: [TVShow].self) ?? []
 
-        print("✅ [DetailCache] Retrieved cached TV show: \(tvShow.name)")
+        Logger.debug("[DetailCache] Retrieved cached TV show: \(tvShow.name)")
 
         return CachedTVShowDetail(
             tvShow: tvShow,
@@ -308,7 +306,7 @@ class DetailCacheService {
             WHERE expires_at <= ? AND deleted_at IS NULL
         """, parameters: [now, now])
 
-        print("🗑️ [DetailCache] Cleared expired cache entries")
+        Logger.debug("[DetailCache] Cleared expired cache entries")
     }
 
     /// Clear all cached details
@@ -320,7 +318,7 @@ class DetailCacheService {
             WHERE deleted_at IS NULL
         """, parameters: [now])
 
-        print("🗑️ [DetailCache] Cleared all cached details")
+        Logger.debug("[DetailCache] Cleared all cached details")
     }
 }
 

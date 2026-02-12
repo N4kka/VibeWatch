@@ -2,10 +2,12 @@ import Foundation
 
 /// Data layer responsible for fetching clips from various sources.
 @MainActor
-class ClipsRepository {
+class ClipsRepository: ClipsRepositoryProtocol {
+    static let shared = ClipsRepository()
+
     private let database: DatabaseClipsService
     private let cache: ContentCacheManager
-    
+
     init(database: DatabaseClipsService = .shared, cache: ContentCacheManager = .shared) {
         self.database = database
         self.cache = cache

@@ -4,6 +4,7 @@ import WebKit
 struct TVShowDetailView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject var quotaManager: DailyQuotaManager
     @StateObject private var viewModel: TVShowDetailViewModel
     @StateObject private var listManager = ListManager.shared
     @State private var showSavePanel = false
@@ -15,6 +16,8 @@ struct TVShowDetailView: View {
     @State private var showReportBug = false
     @State private var selectedActor: Cast?
     @State private var filmographySelection: FilmographySelection?
+    @State private var showWhyForMeSheet = false
+    @State private var showAIPaywall = false
     
     init(tvShowId: Int) {
         _viewModel = StateObject(wrappedValue: TVShowDetailViewModel(tvShowId: tvShowId))
@@ -42,40 +45,51 @@ struct TVShowDetailView: View {
             imdbId: tvShow.imdbId
         )
     }
-    
+
+    private var shouldShowAd: Bool {
+        !quotaManager.isProUser
+    }
+
     var body: some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                if viewModel.isLoading {
-                    ProgressView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .padding(.top, 100)
-                } else if let error = viewModel.error {
-                    errorView(error)
-                } else if let tvShow = viewModel.tvShow {
-                    let tvShowMovie = tvShowToMovie(tvShow)
-                    
-                    TVShowDetailHeaderView(
-                        tvShow: tvShow,
-                        onDismiss: { dismiss() },
-                        onSearch: { showSearch = true },
-                        onShare: {
-                            Task { await handleShare(tvShow: tvShow) }
+        ZStack(alignment: .bottom) {
+            ScrollView {
+                VStack(spacing: 0) {
+                    if viewModel.isLoading {
+                        ProgressView()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .padding(.top, 100)
+                    } else if let error = viewModel.error {
+                        errorView(error)
+                    } else if let tvShow = viewModel.tvShow {
+                        let tvShowMovie = tvShowToMovie(tvShow)
+
+                        TVShowDetailHeaderView(
+                            tvShow: tvShow,
+                            onDismiss: { dismiss() },
+                            onSearch: { showSearch = true },
+                            onShare: {
+                                Task { await handleShare(tvShow: tvShow) }
+                            }
+                        )
+
+                        VStack(spacing: 24) {
+                            infoView(tvShow: tvShow)
+
+                            actionsView(tvShow: tvShow, movie: tvShowMovie)
+                            providersView
+                            trailerView
+                            creditsView(tvShow: tvShow)
+                            similarView
                         }
-                    )
-                    
-                    VStack(spacing: 24) {
-                        infoView(tvShow: tvShow)
-                        
-                        actionsView(tvShow: tvShow, movie: tvShowMovie)
-                        providersView
-                        trailerView
-                        creditsView(tvShow: tvShow)
-                        similarView
+                        .padding(.horizontal, 50)
+                        .padding(.bottom, shouldShowAd ? 90 : 40)
                     }
-                    .padding(.horizontal, 50)
-                    .padding(.bottom, 40)
                 }
+            }
+
+            if shouldShowAd {
+                BannerAdView(adUnitID: AppConstants.AdMob.bannerAdUnitID)
+                    .frame(height: 50)
             }
         }
         .background(Color.theme.background.ignoresSafeArea())
@@ -118,6 +132,23 @@ struct TVShowDetailView: View {
         .fullScreenCover(isPresented: $showAuthGate) {
             AuthenticationGateView(isPresented: $showAuthGate)
                 .presentationBackground(.clear)
+        }
+        .sheet(isPresented: $showWhyForMeSheet) {
+            WhyForMeSheetView(
+                title: "movieDetail.whyForMe".localized,
+                message: viewModel.whyForMeMessage,
+                isLoading: viewModel.isWhyForMeLoading,
+                error: viewModel.whyForMeError
+            ) {
+                Task { await viewModel.generateWhyForMe() }
+            }
+        }
+        .fullScreenCover(isPresented: $showAIPaywall) {
+            DailyLimitPaywallView(
+                isPresented: $showAIPaywall,
+                paywallType: .aiQuota,
+                source: "why_for_me_quota"
+            )
         }
         .fullScreenCover(item: $filmographySelection) { selection in
             switch selection.mediaType {
@@ -185,6 +216,7 @@ struct TVShowDetailView: View {
     }
     
     private func actionsView(tvShow: TVShow, movie: Movie) -> some View {
+                        VStack(spacing: 20) {
                         ActionButtonsSection(
                             movie: movie,
                             mediaType: .tv,
@@ -198,17 +230,25 @@ struct TVShowDetailView: View {
                             onLikedTap: { Task { await handleLikedTap(tvShow: tvShow, movie: movie) } },
                             onDislikedTap: { Task { await handleDislikedTap(tvShow: tvShow, movie: movie) } }
                         )
+                        GoodFitSection(
+                            title: String(format: "movieDetail.goodFitTitle".localized, tvShow.name),
+                            subtitle: "movieDetail.goodFitSubtitle".localized,
+                            onWhyTap: { handleWhyForMeTap() }
+                        )
+                        }
     }
     
     @ViewBuilder
     private var providersView: some View {
-        if let providers = viewModel.watchProviders, let tvShow = viewModel.tvShow {
+        if let tvShow = viewModel.tvShow {
+            let tvShowMovie = tvShowToMovie(tvShow)
             WatchNowSection(
-                providers: providers,
+                providers: viewModel.watchProviders,
                 mediaType: .tv,
                 title: tvShow.name,
                 year: tvShow.year,
                 imdbId: viewModel.imdbId,
+                movie: tvShowMovie,
                 onReportIssue: { showReportBug = true }
             )
         }
@@ -382,6 +422,25 @@ struct TVShowDetailView: View {
     private func handleFilmographySelection(_ credit: PersonCredit) {
         selectedActor = nil
         filmographySelection = FilmographySelection(mediaType: credit.mediaType, mediaId: credit.id)
+    }
+
+    private func handleWhyForMeTap() {
+        guard appState.isAuthenticated else {
+            showAuthGate = true
+            return
+        }
+
+        if !AITokenManager.shared.canMakeRequest() {
+            if !quotaManager.isProUser {
+                showAIPaywall = true
+            }
+            return
+        }
+
+        showWhyForMeSheet = true
+        if viewModel.whyForMeMessage?.isEmpty != false {
+            Task { await viewModel.generateWhyForMe() }
+        }
     }
 }
 
