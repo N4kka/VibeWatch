@@ -218,7 +218,7 @@ struct ProPaywallView: View {
                 pricePerMonth: annualPerMonthText,
                 discountBadge: annualDiscountBadge,
                 trialBadge: annualTrialBadge,
-                isSelected: selectedPackageID == annualPackage?.identifier || selectedPackage?.storeProduct.subscriptionPeriod?.unit == .year,
+                isSelected: selectedPackageID != nil && selectedPackageID == annualPackage?.identifier,
                 isPrimary: true,
                 accentColor: accentColor
             ) {
@@ -232,7 +232,7 @@ struct ProPaywallView: View {
                 pricePerMonth: monthlyPerMonthText,
                 discountBadge: nil,
                 trialBadge: monthlyTrialBadge,
-                isSelected: selectedPackageID == monthlyPackage?.identifier || selectedPackage?.storeProduct.subscriptionPeriod?.unit == .month,
+                isSelected: selectedPackageID != nil && selectedPackageID == monthlyPackage?.identifier,
                 isPrimary: false,
                 accentColor: accentColor
             ) {
