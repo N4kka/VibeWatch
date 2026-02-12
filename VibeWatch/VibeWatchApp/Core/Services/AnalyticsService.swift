@@ -184,29 +184,23 @@ class AnalyticsService {
     func logSubscriptionPurchased(
         productId: String,
         price: Double,
-        currency: String = "EUR",
-        isFoundingMember: Bool
+        currency: String = "EUR"
     ) {
         #if canImport(FirebaseAnalytics)
         logEvent(AnalyticsEventPurchase, parameters: [
             "product_id": productId,
             AnalyticsParameterPrice: price,
-            AnalyticsParameterCurrency: currency,
-            "is_founding_member": isFoundingMember
+            AnalyticsParameterCurrency: currency
         ])
         #else
         logEvent("purchase", parameters: [
             "product_id": productId,
             "price": price,
-            "currency": currency,
-            "is_founding_member": isFoundingMember
+            "currency": currency
         ])
         #endif
-        
+
         setUserProperty("pro", forName: "subscription_tier")
-        if isFoundingMember {
-            setUserProperty("true", forName: "is_founding_member")
-        }
     }
     
     /// Subscription canceled
