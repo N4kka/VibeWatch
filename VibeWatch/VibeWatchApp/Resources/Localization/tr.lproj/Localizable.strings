@@ -288,7 +288,6 @@
 "paywall.feature.offlineMode" = "📵 Kaydedilenler için çevrimdışı mod";
 "paywall.feature.releaseAlerts" = "🔔 Favoriler yayınlandığında bildirim";
 "paywall.feature.unlimitedClips" = "▶️ Sınırsız klip ve fragman";
-"paywall.foundingMember" = "Kurucu üye fiyatlandırması";
 "paywall.plan.annual" = "Yıllık";
 "paywall.plan.monthly" = "Aylık";
 "paywall.price.perMonth" = "%@/ay";

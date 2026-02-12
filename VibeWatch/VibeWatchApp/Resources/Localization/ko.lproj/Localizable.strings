@@ -316,7 +316,6 @@
 "paywall.plan.monthly" = "월간";
 "paywall.plan.annual" = "연간";
 "paywall.discount.annual" = "33% 할인";
-"paywall.foundingMember" = "초기 멤버 전용 가격";
 "paywall.price.perMonth" = "%@/월";
 "paywall.trial.badge" = "%@ 무료";
 "paywall.restore" = "구매 내역 복원";

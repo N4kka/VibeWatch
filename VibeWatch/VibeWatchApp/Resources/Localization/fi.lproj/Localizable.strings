@@ -316,7 +316,6 @@
 "paywall.plan.monthly" = "Kuukausittainen";
 "paywall.plan.annual" = "Vuosittainen";
 "paywall.discount.annual" = "33% ALENNUS";
-"paywall.foundingMember" = "Perustajajäsenten hinnoittelu";
 "paywall.price.perMonth" = "%@/kk";
 "paywall.trial.badge" = "%@ ilmainen";
 "paywall.restore" = "Palauta ostot";

@@ -288,7 +288,6 @@
 "paywall.feature.offlineMode" = "📵 Modo offline para favoritos salvos";
 "paywall.feature.releaseAlerts" = "🔔 Alertas quando favoritos estiverem em streaming";
 "paywall.feature.unlimitedClips" = "▶️ Clips e trailers ilimitados";
-"paywall.foundingMember" = "Preço de membro fundador";
 "paywall.plan.annual" = "Anual";
 "paywall.plan.monthly" = "Mensal";
 "paywall.price.perMonth" = "%@/mês";

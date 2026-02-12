@@ -288,7 +288,6 @@
 "paywall.feature.offlineMode" = "📵 Офлайн-режим для сохранённого";
 "paywall.feature.releaseAlerts" = "🔔 Уведомления о выходе избранного";
 "paywall.feature.unlimitedClips" = "▶️ Неограниченные клипы и трейлеры";
-"paywall.foundingMember" = "Цена для первых подписчиков";
 "paywall.plan.annual" = "Годовой";
 "paywall.plan.monthly" = "Месячный";
 "paywall.price.perMonth" = "%@/мес";

@@ -256,7 +256,6 @@
 "paywall.feature.offlineMode" = "📵 Frakoblet modus for lagrede valg";
 "paywall.feature.releaseAlerts" = "🔔 Varsler når favoritter strømmes";
 "paywall.feature.unlimitedClips" = "▶️ Unlimited klipp og trailere";
-"paywall.foundingMember" = "Priser for grunnleggermedlem";
 "paywall.plan.annual" = "Årlig";
 "paywall.plan.monthly" = "Månedlig";
 "paywall.price.perMonth" = "%@/mo";
