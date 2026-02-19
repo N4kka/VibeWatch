@@ -54,3 +54,7 @@ BUILD_FIX.md
 TestApp.swift
 generate_project.sh
 open_xcode.sh
+
+# Local tooling/projects
+.claude/
+ElevateYourMood/

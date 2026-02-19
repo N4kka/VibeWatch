@@ -8,10 +8,11 @@ class ListsViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var error: AppError?
 
-    private let listManager = ListManager.shared
+    private let listManager: ListManager
     private var cancellables = Set<AnyCancellable>()
 
-    init() {
+    init(listManager: ListManager = .shared) {
+        self.listManager = listManager
         // Observe ListManager changes to keep lists in sync
         listManager.$lists
             .assign(to: &$lists)

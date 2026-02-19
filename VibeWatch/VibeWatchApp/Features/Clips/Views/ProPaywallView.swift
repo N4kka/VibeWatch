@@ -4,10 +4,11 @@ import StoreKit
 
 struct ProPaywallView: View {
     @Binding var isPresented: Bool
+    let source: String
+    var isOnboarding: Bool = false
     var onPurchased: (() -> Void)?
 
     @ObservedObject private var revenueService = RevenueCatService.shared
-    @ObservedObject private var foundingService = FoundingMemberService.shared
     @EnvironmentObject var quotaManager: DailyQuotaManager
     @State private var selectedPackageID: String?
     @State private var isRefreshing = false
@@ -17,6 +18,7 @@ struct ProPaywallView: View {
     @State private var alertMessage = ""
     @State private var showAlert = false
     @State private var dragOffset: CGFloat = 0
+    @State private var didCompletePurchaseOrRestore = false
 
     // Transaction listener for code redemption
     @State private var transactionListenerTask: Task<Void, Never>?
@@ -44,12 +46,17 @@ struct ProPaywallView: View {
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
-                    // Drag indicator
-                    Capsule()
-                        .fill(Color.white.opacity(0.2))
-                        .frame(width: 46, height: 5)
-                        .padding(.top, 14)
-                        .padding(.bottom, 20)
+                    if !isOnboarding {
+                        // Drag indicator
+                        Capsule()
+                            .fill(Color.white.opacity(0.2))
+                            .frame(width: 46, height: 5)
+                            .padding(.top, 14)
+                            .padding(.bottom, 20)
+                    } else {
+                        // Spacer for onboarding to push content down slightly
+                        Color.clear.frame(height: 60)
+                    }
                     
                     hero
 
@@ -59,16 +66,6 @@ struct ProPaywallView: View {
 
                     pricingCards
                         .padding(.bottom, 24)
-                    
-                    if foundingService.promoStatus.isPromoActive {
-                        promoCountdown
-                            .padding(.horizontal, 24)
-                            .padding(.bottom, 20)
-                    } else if Date() < FoundingMemberService.shared.promoStartDate {
-                        promoCountdown
-                            .padding(.horizontal, 24)
-                            .padding(.bottom, 20)
-                    }
 
                     continueButton
                         .padding(.bottom, 24)
@@ -90,7 +87,7 @@ struct ProPaywallView: View {
                     .onEnded { value in
                         if value.translation.height > 150 {
                             withAnimation(.easeOut(duration: 0.25)) {
-                                dismiss()
+                                dismiss(action: "swipe_down", logDismiss: true)
                             }
                         } else {
                             withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
@@ -101,20 +98,36 @@ struct ProPaywallView: View {
             )
 
             // Close button
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(.white)
-                    .frame(width: 32, height: 32)
-                    .background(Color.white.opacity(0.15))
-                    .clipShape(Circle())
-                    .padding()
+            if isOnboarding {
+                Button {
+                    dismiss(action: "skip", logDismiss: true)
+                } label: {
+                    Text("paywall.cta.skip".localized)
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.white.opacity(0.7))
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 10)
+                        .background(Color.black.opacity(0.3))
+                        .clipShape(Capsule())
+                        .padding()
+                }
+            } else {
+                Button {
+                    dismiss(action: "close", logDismiss: true)
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(width: 32, height: 32)
+                        .background(Color.white.opacity(0.15))
+                        .clipShape(Circle())
+                        .padding()
+                }
             }
         }
         .task {
             await refreshOfferingsIfNeeded()
+            AnalyticsService.shared.logPaywallViewed(source: source, type: "pro")
         }
         .alert(alertTitle, isPresented: $showAlert) {
             Button("OK", role: .cancel) { alertMessage = "" }
@@ -205,7 +218,7 @@ struct ProPaywallView: View {
                 pricePerMonth: annualPerMonthText,
                 discountBadge: annualDiscountBadge,
                 trialBadge: annualTrialBadge,
-                isSelected: selectedPackageID == annualPackage?.identifier || selectedPackage?.storeProduct.subscriptionPeriod?.unit == .year,
+                isSelected: selectedPackageID != nil && selectedPackageID == annualPackage?.identifier,
                 isPrimary: true,
                 accentColor: accentColor
             ) {
@@ -219,7 +232,7 @@ struct ProPaywallView: View {
                 pricePerMonth: monthlyPerMonthText,
                 discountBadge: nil,
                 trialBadge: monthlyTrialBadge,
-                isSelected: selectedPackageID == monthlyPackage?.identifier || selectedPackage?.storeProduct.subscriptionPeriod?.unit == .month,
+                isSelected: selectedPackageID != nil && selectedPackageID == monthlyPackage?.identifier,
                 isPrimary: false,
                 accentColor: accentColor
             ) {
@@ -236,39 +249,24 @@ struct ProPaywallView: View {
         .cornerRadius(22)
         .padding(.horizontal, 24)
     }
-    
-    private var promoCountdown: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("paywall.foundingMember".localized)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(.white.opacity(0.75))
-            Text(foundingService.getCountdownText())
-                .font(.system(size: 16, weight: .bold))
-                .foregroundColor(.white)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
-        .background(Color.orange.opacity(0.12))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-    }
 
     private var annualPriceText: String? {
         guard let annual = annualPackage else {
-            return "79,99€" // fallback matching mock
+            return nil
         }
         return annual.storeProduct.localizedPriceString
     }
 
     private var annualPerMonthText: String {
         guard let annual = annualPackage else {
-            return String(format: "paywall.price.perMonth".localized, "9,99€")
+            return String(format: "paywall.price.perMonth".localized, "—")
         }
         return formattedPerMonthPrice(for: annual.storeProduct, months: 12)
     }
 
     private var monthlyPerMonthText: String {
         guard let monthly = monthlyPackage else {
-            return String(format: "paywall.price.perMonth".localized, "9,99€")
+            return String(format: "paywall.price.perMonth".localized, "—")
         }
         return formattedPerMonthPrice(for: monthly.storeProduct, months: 1)
     }
@@ -434,7 +432,8 @@ struct ProPaywallView: View {
                 await MainActor.run {
                     quotaManager.upgradeToPro()
                     onPurchased?()
-                    dismiss()
+                    didCompletePurchaseOrRestore = true
+                    dismiss(logDismiss: false)
                 }
                 // Also refresh the ClipQuotaService to update its cached status
                 await ClipQuotaService.shared.checkIsProUser()
@@ -449,15 +448,10 @@ struct ProPaywallView: View {
     // MARK: - RevenueCat helpers
 
     private let monthlyPriorityIds = [
-        // Prefer the correct founding product; include legacy ID fallback for misconfigured offerings
-        "vibewatch_pro_monthly_founding_members",
-        "vibewatch_pro_monthly_founding_member",
-        "vibewatch_pro_monthly_founding",
         "vibewatch_pro_monthly_standard"
     ]
     
     private let annualPriorityIds = [
-        "vibewatch_pro_yearly_founding",
         "vibewatch_pro_yearly_standard"
     ]
     
@@ -475,13 +469,11 @@ struct ProPaywallView: View {
                 orderedPackages.append(package)
             }
         }
-        
+
         // Priority order
-        append(from: offerings.offering(identifier: foundingService.getCurrentOffering()))
         if let currentID = revenueService.currentOfferingID {
             append(from: offerings.offering(identifier: currentID))
         }
-        append(from: offerings.offering(identifier: "founding_member"))
         append(from: offerings.offering(identifier: "default"))
         append(from: offerings.current)
         
@@ -628,6 +620,10 @@ struct ProPaywallView: View {
     private func handlePurchase() {
         guard let package = selectedPackage, !isPurchasing else { return }
         isPurchasing = true
+        AnalyticsService.shared.logPaywallCTAClicked(source: source, cta: "continue")
+        AnalyticsService.shared.logEvent("purchase_started", parameters: [
+            "product_id": package.storeProduct.productIdentifier
+        ])
         Task {
             do {
                 let result = try await Purchases.shared.purchase(package: package)
@@ -650,15 +646,17 @@ struct ProPaywallView: View {
 
                     // If purchase wasn't cancelled and we have transaction evidence, consider it successful
                     if !userCancelled && (hasActiveEntitlement || hasRecentTransaction) {
+                        didCompletePurchaseOrRestore = true
                         quotaManager.upgradeToPro()
-                        FoundingMemberService.shared.markAsFoundingMember(
+
+                        let price = NSDecimalNumber(decimal: package.storeProduct.price).doubleValue
+                        AnalyticsService.shared.logSubscriptionPurchased(
                             productId: package.storeProduct.productIdentifier,
-                            userId: SupabaseService.shared.currentUser?.id
+                            price: price
                         )
                         
                         // Log trial started if this was a trial purchase
                         if let trial = revenueService.getTrialInfo(for: package) {
-                            let price = NSDecimalNumber(decimal: package.storeProduct.price).doubleValue
                             AnalyticsService.shared.logTrialStarted(
                                 productId: package.storeProduct.productIdentifier,
                                 price: price
@@ -667,7 +665,7 @@ struct ProPaywallView: View {
                         }
                         
                         onPurchased?()
-                        dismiss()
+                        dismiss(logDismiss: false)
                     } else if !userCancelled {
                         // Purchase completed but entitlement not yet active - likely sandbox delay
                         presentAlert(
@@ -679,6 +677,9 @@ struct ProPaywallView: View {
             } catch {
                 await MainActor.run {
                     isPurchasing = false
+                    AnalyticsService.shared.logEvent("purchase_failed", parameters: [
+                        "error": (error as NSError).localizedDescription
+                    ])
                     handlePurchaseError(error)
                 }
             }
@@ -688,22 +689,20 @@ struct ProPaywallView: View {
     private func restorePurchases() {
         guard !isRestoring else { return }
         isRestoring = true
+        AnalyticsService.shared.logEvent("restore_started", parameters: [:])
         Task {
             do {
                 let info = try await Purchases.shared.restorePurchases()
                 await MainActor.run {
                     isRestoring = false
                     if info.entitlements[AppConstants.RevenueCat.proEntitlementID]?.isActive == true {
+                        didCompletePurchaseOrRestore = true
                         quotaManager.upgradeToPro()
-                        if let productId = info.entitlements[AppConstants.RevenueCat.proEntitlementID]?.productIdentifier {
-                            FoundingMemberService.shared.markAsFoundingMember(
-                                productId: productId,
-                                userId: SupabaseService.shared.currentUser?.id
-                            )
-                        }
                         onPurchased?()
-                        dismiss()
+                        AnalyticsService.shared.logEvent("restore_succeeded", parameters: [:])
+                        dismiss(logDismiss: false)
                     } else {
+                        AnalyticsService.shared.logEvent("restore_no_active_subscription", parameters: [:])
                         presentAlert(
                             title: "No Subscription Found",
                             message: "We couldn't find an active subscription for this Apple ID."
@@ -713,6 +712,9 @@ struct ProPaywallView: View {
             } catch {
                 await MainActor.run {
                     isRestoring = false
+                    AnalyticsService.shared.logEvent("restore_failed", parameters: [
+                        "error": (error as NSError).localizedDescription
+                    ])
                     presentAlert(title: "Restore Failed", message: error.localizedDescription)
                 }
             }
@@ -734,7 +736,10 @@ struct ProPaywallView: View {
         showAlert = true
     }
 
-    private func dismiss() {
+    private func dismiss(action: String = "close", logDismiss: Bool = true) {
+        if logDismiss, !didCompletePurchaseOrRestore {
+            AnalyticsService.shared.logPaywallDismissed(source: source, action: action)
+        }
         withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
             isPresented = false
         }

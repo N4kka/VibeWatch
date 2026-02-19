@@ -4,6 +4,7 @@ import SwiftUI
 struct CommentsListView: View {
     let clipId: String
     let userId: String
+    let analyticsContext: AnalyticsContext?
     var onCountsChange: ((Int) -> Void)? = nil
     
     @State private var comments: [ClipComment] = []
@@ -12,6 +13,18 @@ struct CommentsListView: View {
     @State private var replyingTo: ClipComment?
     @State private var expandedComments: Set<String> = []
     @State private var commentReplies: [String: [ClipComment]] = [:]
+
+    init(
+        clipId: String,
+        userId: String,
+        analyticsContext: AnalyticsContext? = nil,
+        onCountsChange: ((Int) -> Void)? = nil
+    ) {
+        self.clipId = clipId
+        self.userId = userId
+        self.analyticsContext = analyticsContext
+        self.onCountsChange = onCountsChange
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -53,6 +66,7 @@ struct CommentsListView: View {
                     clipId: clipId,
                     userId: userId,
                     parentCommentId: replyComment.id,
+                    analyticsContext: analyticsContext,
                     onCommentPosted: { newReply in
                         handleReplyPosted(newReply, to: replyComment)
                     },
@@ -65,6 +79,7 @@ struct CommentsListView: View {
                     clipId: clipId,
                     userId: userId,
                     parentCommentId: nil,
+                    analyticsContext: analyticsContext,
                     onCommentPosted: { newComment in
                         handleCommentPosted(newComment)
                     }
@@ -309,7 +324,8 @@ struct CommentsListView: View {
         do {
             let isNowLiked = try await ClipCommentService.shared.toggleCommentLike(
                 commentId: comment.id,
-                userId: userId
+                userId: userId,
+                context: analyticsContext
             )
             
             // Update the comment in the list on main thread with animation
@@ -350,7 +366,8 @@ struct CommentsListView: View {
         do {
             try await ClipCommentService.shared.deleteComment(
                 commentId: comment.id,
-                userId: userId
+                userId: userId,
+                context: analyticsContext
             )
             
             await MainActor.run {
@@ -375,7 +392,8 @@ struct CommentsListView: View {
         do {
             try await ClipCommentService.shared.deleteComment(
                 commentId: reply.id,
-                userId: userId
+                userId: userId,
+                context: analyticsContext
             )
             
             await MainActor.run {

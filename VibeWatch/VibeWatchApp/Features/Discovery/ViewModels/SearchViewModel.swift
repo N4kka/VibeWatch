@@ -16,33 +16,52 @@ class SearchViewModel: ObservableObject {
     @Published var error: AppError?
     
     private var searchTask: Task<Void, Never>?
-    private let tmdbService = TMDBService.shared
+    private let tmdbService: any TMDBServiceProtocol
+    private let preferenceManager: UserPreferenceManager
     private let visitedItemsKey = "latestVisitedItems" // UserDefaults key
     private let maxVisitedItems = 2 // Max items to store
-    
-    init() {
-        print("SearchViewModel: init() called")
+    private var lastLoggedQuery: String?
+    private var lastLoggedAt: Date?
+
+    init(
+        tmdbService: any TMDBServiceProtocol = TMDBService.shared,
+        preferenceManager: UserPreferenceManager = .shared
+    ) {
+        self.tmdbService = tmdbService
+        self.preferenceManager = preferenceManager
+        Logger.debug("[SearchViewModel] init() called")
         self.loadTrendingSearches()
         Task { await self.loadLatestVisitedItems() }
-    }    
+    }
+
+    deinit {
+        searchTask?.cancel()
+    }
+
     func search() {
         searchTask?.cancel()
         
-        guard !searchQuery.trimmingCharacters(in: .whitespaces).isEmpty else {
+        let currentQuery = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !currentQuery.isEmpty else {
             searchResults = []
             return
         }
         
         searchTask = Task {
+            // Debounce input so we don't spam both TMDB and search-history logging.
+            try? await Task.sleep(nanoseconds: 350_000_000)
+            guard !Task.isCancelled else { return }
+
             isLoading = true
             error = nil
             
             do {
-                let response = try await tmdbService.searchMulti(query: searchQuery, page: 1)
+                let response = try await tmdbService.searchMulti(query: currentQuery, page: 1)
                 if !Task.isCancelled {
                     searchResults = response.results.filter { result in
                         result.mediaType == "movie" || result.mediaType == "tv"
                     }
+                    await logSearchIfNeeded(query: currentQuery, resultCount: searchResults.count)
                 }
             } catch {
                 if !Task.isCancelled {
@@ -52,6 +71,43 @@ class SearchViewModel: ObservableObject {
             
             isLoading = false
         }
+    }
+
+    func handleResultTap(_ result: SearchResult) {
+        saveVisitedItem(id: result.id, mediaType: result.mediaType)
+
+        let query = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return }
+
+        Task {
+            await preferenceManager.recordSearchClick(
+                query: query,
+                clickedMediaId: result.id,
+                clickedMediaTitle: result.displayTitle,
+                clickedMediaType: result.mediaType,
+                resultCount: searchResults.count
+            )
+        }
+    }
+
+    private func logSearchIfNeeded(query: String, resultCount: Int) async {
+        let normalized = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard normalized.count >= 3 else { return }
+
+        if let last = lastLoggedQuery, last == normalized,
+           let lastAt = lastLoggedAt,
+           Date().timeIntervalSince(lastAt) < 10 {
+            return
+        }
+
+        lastLoggedQuery = normalized
+        lastLoggedAt = Date()
+
+        await preferenceManager.recordSearchQuery(
+            query: normalized,
+            mediaType: nil,
+            resultCount: resultCount
+        )
     }
     
     func saveVisitedItem(id: Int, mediaType: String) {
@@ -126,7 +182,7 @@ class SearchViewModel: ObservableObject {
                             )
                         }
                     } catch {
-                        print("Error loading visited item \(item.id) (\(item.mediaType)): \(error)")
+                        Logger.warning("[SearchViewModel] Error loading visited item \(item.id) (\(item.mediaType)): \(error)")
                     }
                     return nil
                 }

@@ -5,6 +5,7 @@ struct CommentInputView: View {
     let clipId: String
     let userId: String
     let parentCommentId: String?
+    let analyticsContext: AnalyticsContext?
     let onCommentPosted: (ClipComment) -> Void
     let onCancel: (() -> Void)?
     
@@ -19,12 +20,14 @@ struct CommentInputView: View {
         clipId: String,
         userId: String,
         parentCommentId: String? = nil,
+        analyticsContext: AnalyticsContext? = nil,
         onCommentPosted: @escaping (ClipComment) -> Void,
         onCancel: (() -> Void)? = nil
     ) {
         self.clipId = clipId
         self.userId = userId
         self.parentCommentId = parentCommentId
+        self.analyticsContext = analyticsContext
         self.onCommentPosted = onCommentPosted
         self.onCancel = onCancel
     }
@@ -126,7 +129,8 @@ struct CommentInputView: View {
                     clipId: clipId,
                     userId: userId,
                     content: trimmedText,
-                    parentId: parentCommentId
+                    parentId: parentCommentId,
+                    context: analyticsContext
                 )
                 
                 await MainActor.run {

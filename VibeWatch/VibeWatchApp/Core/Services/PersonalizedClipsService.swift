@@ -65,7 +65,7 @@ class PersonalizedClipsService {
         
         // Fetch just trending movies and keep trying until we get 2 clips
         let moviesResponse = try await tmdbService.getTrendingMovies(timeWindow: .week, page: 1)
-        print("📊 Got \(moviesResponse.results.count) trending movies to try")
+        Logger.debug("[PersonalizedClips] Got \(moviesResponse.results.count) trending movies to try")
         
         var clips: [EnhancedClip] = []
         var triedCount = 0
@@ -76,23 +76,23 @@ class PersonalizedClipsService {
             
             if let movieClips = try? await fetchBestClipForMovie(movie), let clip = movieClips.first {
                 clips.append(clip)
-                print("✅ Got clip \(clips.count) from movie: \(movie.title)")
-                
+                Logger.debug("[PersonalizedClips] Got clip \(clips.count) from movie: \(movie.title)")
+
                 if clips.count >= 2 {
-                    print("🎯 Target reached: 2 clips secured!")
+                    Logger.debug("[PersonalizedClips] Target reached: 2 clips secured")
                     break // Stop as soon as we have 2
                 }
             } else {
-                print("⏭️ Movie '\(movie.title)' has no clips, trying next...")
+                Logger.debug("[PersonalizedClips] Movie '\(movie.title)' has no clips, trying next")
             }
         }
         
         let duration = Date().timeIntervalSince(startTime)
-        print("✅ Quick start ready: \(clips.count)/2 clips in \(String(format: "%.2f", duration))s (tried \(triedCount) movies)")
-        
+        Logger.info("[PersonalizedClips] Quick start ready: \(clips.count)/2 clips in \(String(format: "%.2f", duration))s (tried \(triedCount) movies)")
+
         // If we still don't have 2, log a warning
         if clips.count < 2 {
-            print("⚠️ WARNING: Only got \(clips.count) clip(s) after trying \(triedCount) movies!")
+            Logger.warning("[PersonalizedClips] Only got \(clips.count) clip(s) after trying \(triedCount) movies")
         }
         
         return clips
@@ -120,27 +120,24 @@ class PersonalizedClipsService {
         let results = try await (moviesPage1, moviesPage2, tvPage1, tvPage2)
         var contentPool = results.0 + results.1 + results.2 + results.3
         
-        print("📦 Fast feed: Fetched \(contentPool.count) clips in \(String(format: "%.2f", Date().timeIntervalSince(startTime)))s")
-        print("📊 Source variety: ~\(contentPool.count) clips from multiple sources for final 20")
+        Logger.debug("[PersonalizedClips] Fast feed: Fetched \(contentPool.count) clips in \(String(format: "%.2f", Date().timeIntervalSince(startTime)))s")
         
         // Quick scoring
         contentPool = quickScore(contentPool, userProfile: userProfile, themeBoost: todayTheme)
         
         // Log source IDs BEFORE diversity
         let beforeSourceIds = Set(contentPool.map { $0.clip.movieId ?? $0.clip.tvShowId ?? 0 })
-        print("📊 Before diversity: \(contentPool.count) clips from \(beforeSourceIds.count) unique sources")
-        print("📝 Source IDs: \(Array(beforeSourceIds).sorted())")
+        Logger.debug("[PersonalizedClips] Before diversity: \(contentPool.count) clips from \(beforeSourceIds.count) unique sources")
         
         // Diversity
         let diverseFeed = enforceDiversity(contentPool, targetCount: 20)
         
         // Log source IDs AFTER diversity
         let afterSourceIds = Set(diverseFeed.map { $0.clip.movieId ?? $0.clip.tvShowId ?? 0 })
-        print("📊 After diversity: \(diverseFeed.count) clips from \(afterSourceIds.count) unique sources")
-        print("📝 Final source IDs: \(Array(afterSourceIds).sorted())")
+        Logger.debug("[PersonalizedClips] After diversity: \(diverseFeed.count) clips from \(afterSourceIds.count) unique sources")
         
         let duration = Date().timeIntervalSince(startTime)
-        print("✅ Fast feed: Generated \(diverseFeed.count) clips in \(String(format: "%.2f", duration))s")
+        Logger.info("[PersonalizedClips] Fast feed: Generated \(diverseFeed.count) clips in \(String(format: "%.2f", duration))s")
         let injected = await injectClassics(Array(diverseFeed.prefix(20)), every: 5)
         return injected
     }
@@ -191,8 +188,7 @@ class PersonalizedClipsService {
         nextMoviePage += 3
         nextTVPage += 3
         
-        print("📦 Extended feed: Fetched \(contentPool.count) clips in \(String(format: "%.2f", Date().timeIntervalSince(startTime)))s")
-        print("📄 Pages fetched so far: Movies \(moviePagesFetched.count), TV \(tvPagesFetched.count)")
+        Logger.debug("[PersonalizedClips] Extended feed: Fetched \(contentPool.count) clips, pages: Movies \(moviePagesFetched.count), TV \(tvPagesFetched.count)")
         
         // Note: Deduplication removed - segmenter will handle all clips
         
@@ -202,7 +198,7 @@ class PersonalizedClipsService {
         let injected = await injectClassics(diverseFeed, every: 7)
         
         let duration = Date().timeIntervalSince(startTime)
-        print("✅ Extended feed: Generated \(injected.count) unique clips in \(String(format: "%.2f", duration))s")
+        Logger.info("[PersonalizedClips] Extended feed: Generated \(injected.count) unique clips in \(String(format: "%.2f", duration))s")
         return Array(injected.prefix(50))
     }
     
@@ -250,10 +246,10 @@ class PersonalizedClipsService {
             for movie in moviesToFetch {
                 group.addTask {
                     if let movieClips = try? await self._fetchBestClipForMovie(movie), !movieClips.isEmpty {
-                        print("   ✅ Movie: \"\(movie.title)\" (ID: \(movie.id)) → Found clip")
+                        Logger.debug("[PersonalizedClips] Movie: \"\(movie.title)\" (ID: \(movie.id)) - Found clip")
                         return (movieClips[0], movie.id)
                     } else {
-                        print("   ⏭️ Movie: \"\(movie.title)\" (ID: \(movie.id)) → No clips available")
+                        Logger.debug("[PersonalizedClips] Movie: \"\(movie.title)\" (ID: \(movie.id)) - No clips available")
                         return nil
                     }
                 }
@@ -267,7 +263,7 @@ class PersonalizedClipsService {
                     movieIds.insert(result.movieId)
                 }
             }
-            print("🎯 [Page \(page)] Got \(clips.count) clips from \(movieIds.count) unique movies: \(Array(movieIds).sorted())")
+            Logger.debug("[PersonalizedClips] [Page \(page)] Got \(clips.count) clips from \(movieIds.count) unique movies")
             return clips
         }
     }
@@ -291,10 +287,10 @@ class PersonalizedClipsService {
             for tvShow in tvShowsToFetch {
                 group.addTask {
                     if let tvClips = try? await self.fetchBestClipForTVShow(tvShow), !tvClips.isEmpty {
-                        print("   ✅ TV Show: \"\(tvShow.name)\" (ID: \(tvShow.id)) → Found clip")
+                        Logger.debug("[PersonalizedClips] TV Show: \"\(tvShow.name)\" (ID: \(tvShow.id)) - Found clip")
                         return (tvClips[0], tvShow.id)
                     } else {
-                        print("   ⏭️ TV Show: \"\(tvShow.name)\" (ID: \(tvShow.id)) → No clips available")
+                        Logger.debug("[PersonalizedClips] TV Show: \"\(tvShow.name)\" (ID: \(tvShow.id)) - No clips available")
                         return nil
                     }
                 }
@@ -308,7 +304,7 @@ class PersonalizedClipsService {
                     tvIds.insert(result.tvId)
                 }
             }
-            print("🎯 [Page \(page)] Got \(clips.count) clips from \(tvIds.count) unique TV shows: \(Array(tvIds).sorted())")
+            Logger.debug("[PersonalizedClips] [Page \(page)] Got \(clips.count) clips from \(tvIds.count) unique TV shows")
             return clips
         }
     }
@@ -325,7 +321,7 @@ class PersonalizedClipsService {
     ///   - userProfile: The user's profile containing preferences.
     ///   - themeBoost: The current thematic day's boost.
     /// - Returns: A new array of `EnhancedClip`s sorted by their calculated `algorithmScore`.
-    private func quickScore(_ clips: [EnhancedClip], userProfile: UserProfile, themeBoost: ThematicDay) -> [EnhancedClip] {
+    private func quickScore(_ clips: [EnhancedClip], userProfile: ClipsUserProfile, themeBoost: ThematicDay) -> [EnhancedClip] {
         return clips.map { enhancedClip in
             var score: Double = 0
             
@@ -500,23 +496,39 @@ class PersonalizedClipsService {
     
     // MARK: - Scoring System
     
-    private func scoreClips(_ clips: [EnhancedClip], userProfile: UserProfile, themeBoost: ThematicDay) -> [EnhancedClip] {
+    private func scoreClips(_ clips: [EnhancedClip], userProfile: ClipsUserProfile, themeBoost: ThematicDay) -> [EnhancedClip] {
+        // Get user's current country and language for localization boosting
+        let userCountry = LocalizationManager.shared.currentCountry.id
+        let userLanguage = LocalizationManager.shared.currentLanguage.id
+
         return clips.map { enhancedClip in
             var score: Double = 0
-            
+
             // Base quality score
             score += enhancedClip.qualityScore * 10
-            
+
             // Trending weight (40% from trending, 30% from popular, 30% from top rated)
             score += enhancedClip.popularity * 0.01
-            
+
+            // Country match boost (+30 points)
+            if let clipCountry = enhancedClip.clip.countryCode,
+               clipCountry.lowercased() == userCountry.lowercased() {
+                score += 30
+            }
+
+            // Language match boost (+20 points)
+            if let clipLanguage = enhancedClip.clip.languageCode,
+               clipLanguage.lowercased() == userLanguage.lowercased() {
+                score += 20
+            }
+
             // User personalization (if they have preferences)
             if engagementTracker.hasAnyPreferences() {
                 for genreId in enhancedClip.genreIds {
                     let genreScore = engagementTracker.getGenreScore(genreId)
                     score += genreScore * 2 // Strong weight on user preferences
                 }
-                
+
                 // Movie-specific preference
                 if let movieId = enhancedClip.clip.movieId {
                     score += engagementTracker.getMovieScore(movieId) * 3
@@ -527,14 +539,14 @@ class PersonalizedClipsService {
                 // Cold start: use industry averages
                 score += userProfile.industryAverageScore(for: enhancedClip.genreIds)
             }
-            
+
             // Thematic day boost
             for genreId in enhancedClip.genreIds {
                 if themeBoost.genreIds.contains(genreId) {
                     score += themeBoost.boostAmount
                 }
             }
-            
+
             // Hot streak boost (high energy content)
             if engagementTracker.isInHotStreak {
                 if enhancedClip.genreIds.contains(28) || // Action
@@ -542,10 +554,10 @@ class PersonalizedClipsService {
                     score += 20 // Boost exciting content during hot streaks
                 }
             }
-            
+
             // Random factor (20% randomness to avoid pure echo chamber)
             score += Double.random(in: 0...15)
-            
+
             var scoredClip = enhancedClip
             scoredClip.algorithmScore = score
             return scoredClip
@@ -625,17 +637,18 @@ class PersonalizedClipsService {
             
             do {
                 let movie = try await tmdbService.getMovieDetails(id: classicId)
-                if let classicClips = try? await fetchBestClipForMovie(movie) {
-                    var classicClip = classicClips.first!
+                if let classicClips = try? await fetchBestClipForMovie(movie),
+                   let firstClip = classicClips.first {
+                    var classicClip = firstClip
                     classicClip.isClassic = true
-                    
+
                     // Insert at position
                     if insertionIndex < finalFeed.count {
                         finalFeed.insert(classicClip, at: insertionIndex)
                     }
                 }
             } catch {
-                print("⚠️ Could not fetch classic movie \(classicId)")
+                Logger.warning("[PersonalizedClips] Could not fetch classic movie \(classicId)")
             }
                         
             insertionIndex += every
@@ -674,17 +687,17 @@ class PersonalizedClipsService {
     
     // MARK: - User Profile
     
-    private func getUserProfile() -> UserProfile {
+    private func getUserProfile() -> ClipsUserProfile {
         if engagementTracker.hasAnyPreferences() {
             let topGenres = engagementTracker.getTopGenres(limit: 5)
-            return UserProfile(
+            return ClipsUserProfile(
                 hasPreferences: true,
                 topGenres: topGenres,
                 demographicGroup: .mixed
             )
         } else {
             // Cold start: use industry averages
-            return UserProfile(
+            return ClipsUserProfile(
                 hasPreferences: false,
                 topGenres: [],
                 demographicGroup: .genZ // Default to Gen Z preferences
@@ -753,7 +766,7 @@ struct ThematicDay {
     var isClassicDay: Bool = false
 }
 
-struct UserProfile {
+struct ClipsUserProfile {
     let hasPreferences: Bool
     let topGenres: [Int]
     let demographicGroup: DemographicGroup

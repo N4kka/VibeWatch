@@ -102,6 +102,7 @@
 "filters.anyCountry" = "任意国家";
 "filters.apply" = "应用";
 "filters.country" = "国家";
+"filters.searchCountry" = "搜索国家";
 "filters.minimumRating" = "最低评分";
 "filters.ratingAny" = "任意";
 "filters.ratingExcellent" = "8.0+";
@@ -189,6 +190,8 @@
 "platform.selectionCount" = "已选择 %d/%d";
 "platform.title" = "流媒体平台";
 "platforms.buy" = "购买";
+"platforms.cinema" = "影院";
+"platforms.justwatch" = "JustWatch";
 "platforms.rent" = "租借";
 "platforms.streaming" = "流媒体";
 "platforms.title" = "平台";
@@ -214,7 +217,7 @@
 "auth.gate.createTitle" = "创建你的免费 VibeWatch 账号";
 "auth.gate.description" = "你需要账号来创建自定义列表并在设备之间同步。";
 "auth.gate.haveAccount" = "我已经有账号";
-"auth.gate.limitMessage" = "你今天已经看完 15 个免费剪辑。注册即可同步进度并立即解锁明日内容。";
+"auth.gate.limitMessage" = "你今天已经看完 25 个免费剪辑。注册即可同步进度并立即解锁明日内容。";
 "auth.gate.signupFree" = "注册是免费的，只需不到一分钟。";
 "auth.gate.benefit.saveClips" = "保存你喜欢的剪辑";
 "auth.gate.benefit.syncDevices" = "在所有设备间同步";
@@ -242,7 +245,7 @@
 
 // AI
 "ai.title" = "Vibe AI";
-"ai.tokensUsage" = "令牌：%@/%@";
+"ai.requestsUsage" = "每日请求 %d/%d";
 "ai.describeVibe" = "描述你的观影氛围";
 "ai.thinking" = "思考中...";
 "ai.editMessage" = "编辑消息";
@@ -264,14 +267,13 @@
 "ai.suggestion.chips2" = "💥 AI 推荐 80 年代动作喜剧";
 "ai.suggestion.chips3" = "🕵️‍♂️ AI 推荐的冷门反转惊悚片";
 "ai.suggestion.chips4" = "🤖 AI：我接下来该看什么？";
-"ai.usage.left" = "剩余";
 
 // Paywall
 "paywall.bestValue" = "最超值";
 "paywall.cta.continue" = "继续";
 "paywall.cta.selectPlan" = "选择方案";
 "paywall.cta.startTrial" = "开始 %@ 免费试用";
-"paywall.daily.limitDescription" = "免费用户每天可观看 15 个剪辑。升级到 Pro 即可享受无限剪辑和高级功能。";
+"paywall.daily.limitDescription" = "免费用户每天可观看 25 个剪辑。升级到 Pro 即可享受无限剪辑和高级功能。";
 "paywall.daily.limitReached" = "你已达到今天的观看上限";
 "paywall.daily.nextReset" = "下次重置时间";
 "paywall.daily.resetIn" = "重置倒计时";
@@ -286,7 +288,6 @@
 "paywall.feature.releaseAlerts" = "🔔 收藏内容上线时提醒";
 "paywall.feature.unlimitedClips" = "▶️ 无限剪辑与预告片";
 "paywall.proDescription" = "Pro 解锁无限剪辑、AI 观影助手和同步观影列表。";
-"paywall.foundingMember" = "创始会员优惠价格";
 "paywall.plan.annual" = "年度方案";
 "paywall.plan.monthly" = "月度方案";
 "paywall.price.perMonth" = "%@/月";
@@ -422,3 +423,90 @@
 "profile.faq.answer4" = "在任何标题上使用 \"告诉我们\" 来报告错误或坏链接，我们会尽快修复。";
 "profile.faq.question5" = "VibeWatch 适合普通观众吗？";
 "profile.faq.answer5" = "完全适合。我们会呈现简单的选择，比如和朋友的周六电影之夜，也有为影迷准备的深入佳作.";
+"carousel.hotThisWeek" = "本周热门";
+"carousel.awardWinners" = "你会喜欢的获奖作品";
+
+// --- Synced from en.lproj ---
+"onboarding.page4.createAccount" = "创建账户";
+"filters.mediaType" = "媒体类型";
+"filters.movies" = "电影";
+"filters.tvShows" = "电视节目";
+"filters.both" = "两者";
+"filters.rating" = "评级";
+"filters.releasePeriod" = "释放期";
+"filters.releasePeriodRecent" = "近期（2020 年以上）";
+"filters.releasePeriodModern" = "现代（2010-2019）";
+"filters.releasePeriodClassic" = "经典 (<2010)";
+"filters.customRange" = "自定义范围";
+"filters.customYearRange" = "自定义年份范围";
+"filters.min" = "最小";
+"filters.max" = "最大";
+"filters.from" = "来自";
+"filters.to" = "至";
+"filters.custom" = "定制";
+"filters.allCountries" = "所有国家";
+"filters.sortPopularityDesc" = "最受欢迎";
+"filters.sortPopularityAsc" = "最不受欢迎";
+"filters.sortRatingDesc" = "评级最高";
+"filters.sortRatingAsc" = "评级最低";
+"filters.sortReleaseDateDesc" = "最新最先";
+"filters.sortReleaseDateAsc" = "年龄最大者优先";
+"filters.proFilters" = "专业过滤器";
+"filters.hideWatched" = "隐藏监视";
+"filters.hideDisliked" = "隐藏 不喜欢";
+"filters.proTitle" = "解锁高级过滤器";
+"filters.proDescription" = "升级至专业版，可获得自定义范围、多国选择和高级筛选选项";
+"filters.upgradeToPro" = "升级至专业版";
+"filters.filtersActive" = "%d 过滤器处于活动状态";
+"carousel.dailyMix" = "您的每日搭配";
+"carousel.trendingInGenre" = "趋势 %@";
+"carousel.becauseYouLiked" = "因为你喜欢 %@";
+"carousel.hiddenGems" = "%@ 隐藏的宝石";
+"carousel.continueJourney" = "继续您的旅程";
+"carousel.fromSearches" = "来自您的搜索";
+"carousel.topTVPicks" = "为您推荐的热门电视";
+"carousel.staffPicks" = "员工为 %@ 粉丝精选";
+"carousel.yearlyRewind" = "您的年度回顾";
+"settings.privacy.title" = "隐私权";
+"settings.analytics.share" = "共享匿名分析结果";
+"settings.analytics.share.description" = "帮助我们了解您使用的功能并改进应用程序。无广告跟踪。";
+"settings.analytics.title" = "分析";
+"settings.analytics.viewStats" = "查看统计数据";
+"settings.analytics.description" = "查看您的手表历史和洞察力";
+"settings.notifications.title" = "通知";
+"settings.notifications.manage" = "管理通知";
+"settings.notifications.description" = "新内容的个性化提醒";
+"onboarding.welcome.title" = "发现你的气质";
+"onboarding.welcome.subtitle" = "专为您量身定制的人工智能推荐。";
+"onboarding.clips.title" = "观看，不要阅读";
+"onboarding.clips.subtitle" = "通过引人入胜的短片体验电影。";
+"onboarding.lists.title" = "您的观察清单，无处不在";
+"onboarding.lists.subtitle" = "保存影片并在所有设备上同步。";
+"onboarding.account.title" = "保存个人资料";
+"onboarding.account.subtitle" = "创建一个账户，在不同设备间同步你的观察列表和偏好。";
+"onboarding.skip" = "暂时跳过";
+"paywall.cta.skip" = "暂时跳过";
+"filters.allPlatforms" = "所有平台";
+
+// --- Synced from en.lproj ---
+"filters.releasePeriodAny" = "任何";
+"common.next" = "下一页";
+"ai.tryAsking" = "试着问...";
+
+// --- Synced from en.lproj ---
+"auth.checkEmailTitle" = "查看电子邮件";
+"auth.checkEmailMessage" = "我们已经向您发送了确认链接。请检查您的收件箱以验证您的账户。";
+
+// --- Synced from en.lproj ---
+"auth.openMailApp" = "打开邮件应用程序";
+"auth.iHaveVerified" = "我已验证";
+"auth.resendEmail" = "重新发送电子邮件";
+"auth.changeEmail" = "更改电子邮件";
+"auth.verificationPending" = "仍在等待验证...";
+
+"movieDetail.whyForMe" = "Why for me?";
+
+"movieDetail.whyForMe.basedOnGenres" = "Based on your 3 favorite genres";
+
+"movieDetail.goodFitTitle" = "Why %@ is a good fit for me?";
+"movieDetail.goodFitSubtitle" = "A quick, personalized take based on your taste.";

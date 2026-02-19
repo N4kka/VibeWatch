@@ -9,10 +9,11 @@ final class ActorDetailViewModel: ObservableObject {
     @Published var error: AppError?
     
     private let personId: Int
-    private let tmdbService = TMDBService.shared
-    
-    init(personId: Int) {
+    private let tmdbService: any TMDBServiceProtocol
+
+    init(personId: Int, tmdbService: any TMDBServiceProtocol = TMDBService.shared) {
         self.personId = personId
+        self.tmdbService = tmdbService
     }
     
     func loadDetails() async {

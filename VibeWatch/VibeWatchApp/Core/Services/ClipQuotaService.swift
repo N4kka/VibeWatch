@@ -6,7 +6,7 @@ import RevenueCat
 /// For logged-in user clip counting, use DailyQuotaManager.shared instead.
 ///
 /// Responsibilities:
-/// - Anonymous user clip tracking (15 clips before account creation)
+/// - Anonymous user clip tracking (25 clips before account creation)
 /// - RevenueCat Pro subscription status
 /// - Automatic Pro/Free downgrade detection
 @MainActor
@@ -23,7 +23,7 @@ final class ClipQuotaService: ObservableObject {
 
     // MARK: - Constants
 
-    private let anonymousLimit = 15
+    private let anonymousLimit = 25
     private let defaults = UserDefaults.standard
 
     private enum Keys {
@@ -45,9 +45,9 @@ final class ClipQuotaService: ObservableObject {
         // Only load from cache if the key exists (otherwise wait for RevenueCat)
         if defaults.object(forKey: Keys.cachedProStatus) != nil {
             self.isProUser = defaults.bool(forKey: Keys.cachedProStatus)
-            print("📦 [ClipQuota] Loaded cached PRO status: \(isProUser)")
+            Logger.debug("[ClipQuota] Loaded cached PRO status: \(isProUser)")
         } else {
-            print("📭 [ClipQuota] No cached PRO status - will check RevenueCat")
+            Logger.debug("[ClipQuota] No cached PRO status - will check RevenueCat")
         }
 
         observeRevenueCatCustomerInfo()
@@ -110,8 +110,8 @@ final class ClipQuotaService: ObservableObject {
             updateProStatus(isPro)
             return isPro
         } catch {
-            print("⚠️ [ClipQuota] Failed to fetch RevenueCat customer info (possibly offline): \(error.localizedDescription)")
-            print("📱 [ClipQuota] Using cached PRO status: \(isProUser)")
+            Logger.warning("[ClipQuota] Failed to fetch RevenueCat customer info (possibly offline): \(error.localizedDescription)")
+            Logger.debug("[ClipQuota] Using cached PRO status: \(isProUser)")
             // Return cached value - RevenueCat SDK also caches customer info
             return isProUser
         }
@@ -134,14 +134,14 @@ final class ClipQuotaService: ObservableObject {
                     if isFirstEmission {
                         isFirstEmission = false
                         if defaults.object(forKey: Keys.cachedProStatus) == nil {
-                            print("📡 [ClipQuota] First RevenueCat emission, no cache: \(isPro)")
+                            Logger.debug("[ClipQuota] First RevenueCat emission, no cache: \(isPro)")
                             self.updateProStatus(isPro)
                         } else {
-                            print("📡 [ClipQuota] First RevenueCat emission ignored, using cached: \(self.isProUser)")
+                            Logger.debug("[ClipQuota] First RevenueCat emission ignored, using cached: \(self.isProUser)")
                         }
                     } else {
                         // Subsequent emissions are actual updates
-                        print("📡 [ClipQuota] RevenueCat update: \(isPro)")
+                        Logger.debug("[ClipQuota] RevenueCat update: \(isPro)")
                         self.updateProStatus(isPro)
                     }
                 }
@@ -158,11 +158,11 @@ final class ClipQuotaService: ObservableObject {
 
         // Cache PRO status for offline mode
         defaults.set(newValue, forKey: Keys.cachedProStatus)
-        print("💾 [ClipQuota] Cached PRO status for offline access: \(newValue)")
+        Logger.debug("[ClipQuota] Cached PRO status for offline access: \(newValue)")
         
         if !newValue && wasProBefore {
             // Downgraded from Pro to Free
-            print("⬇️ [ClipQuota] Subscription expired - downgrading to Free")
+            Logger.debug("[ClipQuota] Subscription expired - downgrading to Free")
             DailyQuotaManager.shared.downgradeToFree()
             
             // Analytics
@@ -176,7 +176,7 @@ final class ClipQuotaService: ObservableObject {
             }
         } else if newValue && !wasProBefore {
             // Upgraded from Free to Pro
-            print("⬆️ [ClipQuota] Subscription activated")
+            Logger.info("[ClipQuota] Subscription activated")
             DailyQuotaManager.shared.upgradeToPro()
             
             // Analytics
@@ -214,16 +214,16 @@ final class ClipQuotaService: ObservableObject {
                 .upsert(update, onConflict: "user_id")
                 .execute()
             
-            print("☁️ [ClipQuota] Pro status synced to database: \(isProUser)")
+            Logger.debug("[ClipQuota] Pro status synced to database: \(isProUser)")
         } catch {
-            print("⚠️ [ClipQuota] Failed to sync Pro status: \(error)")
+            Logger.warning("[ClipQuota] Failed to sync Pro status: \(error)")
         }
     }
     
     /// Debug logging of current quota state
     private func debugPrintStatus() {
-        print("📊 [ClipQuota] Anonymous clips watched: \(anonymousClipsWatched)/\(anonymousLimit)")
-        print("💎 [ClipQuota] Pro status: \(isProUser ? "ACTIVE" : "inactive")")
+        Logger.debug("[ClipQuota] Anonymous clips watched: \(anonymousClipsWatched)/\(anonymousLimit)")
+        Logger.debug("[ClipQuota] Pro status: \(isProUser ? "ACTIVE" : "inactive")")
     }
 }
 

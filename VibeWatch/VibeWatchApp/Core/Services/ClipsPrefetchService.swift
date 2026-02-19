@@ -13,7 +13,7 @@ class ClipsPrefetchService: ObservableObject {
     
     private let supabase = SupabaseService.shared
     private let tmdbService = TMDBService.shared
-    private let youtubeAPIKey = "AIzaSyCh_tkrvBEGW6ALRvkAN-LYx1B3Cly1160"
+    private let youtubeAPIKey = Config.youtubeApiKey  // Phase 5: Use Config instead of hardcoded key
     
     private let userDefaults = UserDefaults.standard
     private let lastFetchKey = "lastClipsPrefetchDate"
@@ -38,39 +38,39 @@ class ClipsPrefetchService: ObservableObject {
             let response = try JSONDecoder().decode(YouTubeVideoResponse.self, from: data)
             
             guard let video = response.items.first else {
-                print("⚠️ [Validation] Video \(videoId): Not found")
+                Logger.warning("[Validation] Video \(videoId): Not found")
                 return false
             }
             
             // Check if video is embeddable
             guard video.status.embeddable else {
-                print("⚠️ [Validation] Video \(videoId): Not embeddable")
+                Logger.warning("[Validation] Video \(videoId): Not embeddable")
                 return false
             }
             
             // Check if video has age restrictions that block embedding
             if let ageGated = video.contentDetails.contentRating.ytRating, ageGated == "ytAgeRestricted" {
-                print("⚠️ [Validation] Video \(videoId): Age restricted")
+                Logger.warning("[Validation] Video \(videoId): Age restricted")
                 return false
             }
             
             // Check upload status
             guard video.status.uploadStatus == "processed" else {
-                print("⚠️ [Validation] Video \(videoId): Not processed (status: \(video.status.uploadStatus))")
+                Logger.warning("[Validation] Video \(videoId): Not processed (status: \(video.status.uploadStatus))")
                 return false
             }
             
             // Check privacy status
             guard video.status.privacyStatus == "public" else {
-                print("⚠️ [Validation] Video \(videoId): Not public (status: \(video.status.privacyStatus))")
+                Logger.warning("[Validation] Video \(videoId): Not public (status: \(video.status.privacyStatus))")
                 return false
             }
             
-            print("✅ [Validation] Video \(videoId): Valid")
+            Logger.debug("[Validation] Video \(videoId): Valid")
             return true
             
         } catch {
-            print("❌ [Validation] Video \(videoId): Validation failed - \(error)")
+            Logger.error("[Validation] Video \(videoId): Validation failed - \(error)")
             return false
         }
     }
@@ -83,28 +83,28 @@ class ClipsPrefetchService: ObservableObject {
     @discardableResult
     func prefetchClips(targetCount: Int = 800) async throws -> Int {
         guard !isFetching else {
-            print("⚠️ [ClipsPrefetch] Already fetching, skipping...")
+            Logger.warning("[ClipsPrefetch] Already fetching, skipping...")
             return 0
         }
         
-        print("🚀 [ClipsPrefetch] Starting pre-fetch - Target: \(targetCount) VALID clips in DB...")
+        Logger.info("[ClipsPrefetch] Starting pre-fetch - Target: \(targetCount) VALID clips in DB...")
         isFetching = true
         fetchProgress = 0.0
         
         do {
             // 1. Check current DB count
             let currentDBCount = try await getValidClipsCountInDB()
-            print("📊 [ClipsPrefetch] Current DB count: \(currentDBCount) / \(targetCount)")
+            Logger.debug("[ClipsPrefetch] Current DB count: \(currentDBCount) / \(targetCount)")
             
             if currentDBCount >= targetCount {
-                print("✅ [ClipsPrefetch] Target already met! (\(currentDBCount) clips)")
+                Logger.info("[ClipsPrefetch] Target already met! (\(currentDBCount) clips)")
                 isFetching = false
                 cachedClipsCount = currentDBCount
                 return currentDBCount
             }
             
             let needed = targetCount - currentDBCount
-            print("🎯 [ClipsPrefetch] Need \(needed) more valid clips")
+            Logger.debug("[ClipsPrefetch] Need \(needed) more valid clips")
             
             // 2. Fetch and validate clips until we reach target
             var validClipsStored = currentDBCount
@@ -115,7 +115,7 @@ class ClipsPrefetchService: ObservableObject {
             let movies = try await fetchPopularMovies(count: needed)
             let tvShows = try await fetchPopularTVShows(count: needed)
             
-            print("📺 [ClipsPrefetch] Fetched \(movies.count) movies, \(tvShows.count) TV shows")
+            Logger.debug("[ClipsPrefetch] Fetched \(movies.count) movies, \(tvShows.count) TV shows")
             
             // Process movies
             for movie in movies {
@@ -129,7 +129,7 @@ class ClipsPrefetchService: ObservableObject {
                     validClipsStored += stored
                     
                     fetchProgress = Double(validClipsStored) / Double(targetCount)
-                    print("📊 Progress: \(validClipsStored)/\(targetCount) (\(Int(fetchProgress * 100))%)")
+                    Logger.debug("[ClipsPrefetch] Progress: \(validClipsStored)/\(targetCount) (\(Int(fetchProgress * 100))%)")
                 }
                 
                 attemptedClips += 1
@@ -150,7 +150,7 @@ class ClipsPrefetchService: ObservableObject {
                     validClipsStored += stored
                     
                     fetchProgress = Double(validClipsStored) / Double(targetCount)
-                    print("📊 Progress: \(validClipsStored)/\(targetCount) (\(Int(fetchProgress * 100))%)")
+                    Logger.debug("[ClipsPrefetch] Progress: \(validClipsStored)/\(targetCount) (\(Int(fetchProgress * 100))%)")
                 }
                 
                 attemptedClips += 1
@@ -170,15 +170,15 @@ class ClipsPrefetchService: ObservableObject {
             isFetching = false
             fetchProgress = 1.0
             
-            print("✅ [ClipsPrefetch] Completed! DB now has \(finalCount) valid clips")
-            print("   Target: \(targetCount), Achieved: \(finalCount), Success: \(finalCount >= targetCount ? "YES" : "NO")")
+            Logger.info("[ClipsPrefetch] Completed! DB now has \(finalCount) valid clips")
+            Logger.debug("[ClipsPrefetch] Target: \(targetCount), Achieved: \(finalCount), Success: \(finalCount >= targetCount ? "YES" : "NO")")
             
             return finalCount
             
         } catch {
             isFetching = false
             fetchProgress = 0.0
-            print("❌ [ClipsPrefetch] Error: \(error)")
+            Logger.error("[ClipsPrefetch] Error: \(error)")
             throw error
         }
     }
@@ -253,11 +253,11 @@ class ClipsPrefetchService: ObservableObject {
     @discardableResult
     func performWeeklyRefresh(additionalClips: Int = 200) async throws -> Int {
         guard !isFetching else {
-            print("⚠️ [ClipsPrefetch] Already fetching, skipping weekly refresh...")
+            Logger.warning("[ClipsPrefetch] Already fetching, skipping weekly refresh...")
             return 0
         }
         
-        print("🔄 [ClipsPrefetch] Starting weekly refresh - adding \(additionalClips) new clips...")
+        Logger.debug("[ClipsPrefetch] Starting weekly refresh - adding \(additionalClips) new clips...")
         isFetching = true
         fetchProgress = 0.0
         
@@ -270,7 +270,7 @@ class ClipsPrefetchService: ObservableObject {
             let movies = try await fetchTrendingMovies(count: additionalClips / 2)
             let tvShows = try await fetchTrendingTVShows(count: additionalClips / 2)
             
-            print("📺 [WeeklyRefresh] Fetched \(movies.count) trending movies, \(tvShows.count) TV shows")
+            Logger.debug("[WeeklyRefresh] Fetched \(movies.count) trending movies, \(tvShows.count) TV shows")
             
             // Process movies
             for movie in movies {
@@ -284,7 +284,7 @@ class ClipsPrefetchService: ObservableObject {
                     validClipsStored += stored
                     
                     fetchProgress = Double(validClipsStored) / Double(additionalClips)
-                    print("📊 Refresh Progress: \(validClipsStored)/\(additionalClips) (\(Int(fetchProgress * 100))%)")
+                    Logger.debug("[ClipsPrefetch] Refresh Progress: \(validClipsStored)/\(additionalClips) (\(Int(fetchProgress * 100))%)")
                 }
                 
                 attemptedClips += 1
@@ -305,7 +305,7 @@ class ClipsPrefetchService: ObservableObject {
                     validClipsStored += stored
                     
                     fetchProgress = Double(validClipsStored) / Double(additionalClips)
-                    print("📊 Refresh Progress: \(validClipsStored)/\(additionalClips) (\(Int(fetchProgress * 100))%)")
+                    Logger.debug("[ClipsPrefetch] Refresh Progress: \(validClipsStored)/\(additionalClips) (\(Int(fetchProgress * 100))%)")
                 }
                 
                 attemptedClips += 1
@@ -323,14 +323,14 @@ class ClipsPrefetchService: ObservableObject {
             isFetching = false
             fetchProgress = 1.0
             
-            print("✅ [WeeklyRefresh] Completed! Added \(validClipsStored) new clips. Total in DB: \(finalCount)")
+            Logger.info("[WeeklyRefresh] Completed! Added \(validClipsStored) new clips. Total in DB: \(finalCount)")
             
             return validClipsStored
             
         } catch {
             isFetching = false
             fetchProgress = 0.0
-            print("❌ [WeeklyRefresh] Error: \(error)")
+            Logger.error("[WeeklyRefresh] Error: \(error)")
             throw error
         }
     }
@@ -412,7 +412,7 @@ class ClipsPrefetchService: ObservableObject {
             let isValid = await isVideoValid(videoId: video.key)
             
             if !isValid {
-                print("⏭️ [ClipsPrefetch] Skipping invalid video: \(video.key) for movie: \(movie.title)")
+                Logger.debug("[ClipsPrefetch] Skipping invalid video: \(video.key) for movie: \(movie.title)")
                 continue
             }
             
@@ -458,7 +458,7 @@ class ClipsPrefetchService: ObservableObject {
             let isValid = await isVideoValid(videoId: video.key)
             
             if !isValid {
-                print("⏭️ [ClipsPrefetch] Skipping invalid video: \(video.key) for TV: \(tvShow.name)")
+                Logger.debug("[ClipsPrefetch] Skipping invalid video: \(video.key) for TV: \(tvShow.name)")
                 continue
             }
             
@@ -516,11 +516,11 @@ class ClipsPrefetchService: ObservableObject {
                     .value
                 
                 storedCount += batch.count
-                print("💾 [ClipsPrefetch] Stored batch: \(storedCount)/\(clips.count)")
+                Logger.debug("[ClipsPrefetch] Stored batch: \(storedCount)/\(clips.count)")
                 
             } catch {
                 // If upsert fails due to RLS, try insert without conflict check
-                print("⚠️ [ClipsPrefetch] Upsert failed, trying insert: \(error)")
+                Logger.warning("[ClipsPrefetch] Upsert failed, trying insert: \(error)")
                 
                 do {
                     let _: [CachedClip] = try await client
@@ -530,9 +530,9 @@ class ClipsPrefetchService: ObservableObject {
                         .value
                     
                     storedCount += batch.count
-                    print("💾 [ClipsPrefetch] Inserted batch: \(storedCount)/\(clips.count)")
+                    Logger.debug("[ClipsPrefetch] Inserted batch: \(storedCount)/\(clips.count)")
                 } catch {
-                    print("❌ [ClipsPrefetch] Batch insert also failed: \(error)")
+                    Logger.error("[ClipsPrefetch] Batch insert also failed: \(error)")
                     // Continue with next batch
                 }
             }

@@ -11,6 +11,8 @@ struct MainTabView: View {
     @State private var showOnboarding = !UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
     @State private var hasClearedAuthOnFreshInstall = false
     @StateObject private var aiViewModel = AIRecommendationViewModel()
+    @State private var showProPaywall = false
+    @State private var proPaywallSource = "unknown"
     
     private var passwordRecoveryBinding: Binding<Bool> {
         Binding(
@@ -47,16 +49,13 @@ struct MainTabView: View {
                 }
                 .animation(.easeInOut(duration: 0.3), value: selectedTab)
                 
-                // Hide bottom bar when on Clips tab
                 VStack(spacing: 0) {
                     Spacer()
                     
-                    if selectedTab != 1 {
-                        LiquidGlassBottomBar(selectedTab: $selectedTab)
-                            .padding(.horizontal, 16)
-                            .padding(.bottom, 20)
-                            .transition(.move(edge: .bottom).combined(with: .opacity))
-                    }
+                    LiquidGlassBottomBar(selectedTab: $selectedTab)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 20)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
                 .ignoresSafeArea(edges: .bottom)
                 .animation(.spring(response: 0.4, dampingFraction: 0.8), value: selectedTab)
@@ -90,7 +89,6 @@ struct MainTabView: View {
                         Label("tab.clips".localized, systemImage: "play.rectangle.fill")
                     }
                     .tag(1)
-                    .toolbar(selectedTab == 1 ? .hidden : .visible, for: .tabBar)
                 
                 AIRecommendationsView(viewModel: aiViewModel)
                     .tabItem {
@@ -153,20 +151,20 @@ struct MainTabView: View {
                 SplashScreen()
                     .transition(.opacity)
                     .task {
-                        // REAL WORK: Wait for the AppState to signal ready
-                        try? await Task.sleep(nanoseconds: 1_500_000_000)
-                        
-                        // Wait for actual preload if it's still running
+                        // If still preloading, poll until done (no-op when cache was instant)
                         while appState.isPreloading {
-                            try? await Task.sleep(nanoseconds: 100_000_000) // Check every 0.1s
+                            try? await Task.sleep(nanoseconds: 100_000_000) // Poll every 0.1s
                         }
-                        
+
+                        // Wait for Discovery content only if we don't have cache yet
+                        await waitForDiscoveryContentReady()
+
                         withAnimation(.easeOut(duration: 0.5)) {
                             isLoading = false
                         }
                     }
             } else if showOnboarding {
-                OnboardingView(showOnboarding: $showOnboarding)
+                OnboardingContainerView(showOnboarding: $showOnboarding)
                     .transition(.opacity)
                     .onChange(of: showOnboarding) {_, newValue in
                         print("🔵 [MainTabView] showOnboarding changed to: \(newValue)")
@@ -211,6 +209,11 @@ struct MainTabView: View {
             }
             print("🤖 [MainTabView] Navigated to AI tab")
         }
+        .onReceive(NotificationCenter.default.publisher(for: .presentProPaywall)) { notification in
+            let source = (notification.userInfo?["source"] as? String) ?? "unknown"
+            proPaywallSource = source
+            showProPaywall = true
+        }
         .background(scenePhaseMonitor) // Monitor app lifecycle for subscription status
         .withErrorHandling()
         .task {
@@ -236,14 +239,55 @@ struct MainTabView: View {
                 await appState.checkAuthState()
             }
             
-            // Request tracking permission for analytics (ATT)
+            // Request ATT permission (only relevant for ad attribution; not required for product analytics)
             await TrackingPermissionManager.shared.requestTrackingIfNeeded()
+        }
+        .fullScreenCover(isPresented: $showProPaywall) {
+            ProPaywallView(isPresented: $showProPaywall, source: proPaywallSource)
+                .environmentObject(appState)
+                .environmentObject(authService)
+                .environmentObject(DailyQuotaManager.shared)
         }
         .sheet(isPresented: passwordRecoveryBinding) {
             PasswordResetView(mode: .recovery, isPresented: passwordRecoveryBinding)
                 .environmentObject(authService)
                 .environmentObject(appState)
         }
+    }
+
+    /// Wait for Discovery content to be ready before dismissing splash screen
+    /// This prevents showing an empty DiscoveryPage with a loader
+    private func waitForDiscoveryContentReady() async {
+        // Check if we have cached discovery content
+        let hasCachedMovies = ContentCacheManager.shared.getCachedDiscoveryMovies() != nil
+        let hasCachedTVShows = ContentCacheManager.shared.getCachedDiscoveryTVShows() != nil
+
+        if hasCachedMovies || hasCachedTVShows {
+            // We have cached content, no need to wait
+            return
+        }
+
+        // No cached content, wait for Discovery content to be fetched
+        // Maximum wait time: 3 seconds to avoid infinite splash
+        let maxWaitTime: TimeInterval = 3.0
+        let startTime = Date()
+
+        while Date().timeIntervalSince(startTime) < maxWaitTime {
+            // Check if Discovery content is now available
+            let hasMovies = ContentCacheManager.shared.getCachedDiscoveryMovies() != nil
+            let hasTVShows = ContentCacheManager.shared.getCachedDiscoveryTVShows() != nil
+
+            if hasMovies || hasTVShows {
+                // Content is ready, exit
+                return
+            }
+
+            // Wait 100ms before checking again
+            try? await Task.sleep(nanoseconds: 100_000_000)
+        }
+
+        // Timeout reached, proceed anyway to avoid infinite splash
+        print("⚠️ [MainTabView] Discovery content not ready after timeout, showing UI anyway")
     }
 }
 
@@ -349,7 +393,19 @@ extension MainTabView {
                 if newPhase == .active && oldPhase != .active {
                     print("🔍 [App] App became active - checking subscription status")
                     Task {
+                        AnalyticsService.shared.trackAppOpen()
+                        DailyQuotaManager.shared.refreshForNewDayIfNeeded()
                         await ClipQuotaService.shared.checkIsProUser()
+                    }
+                }
+
+                if newPhase == .background || newPhase == .inactive {
+                    Task {
+                        do {
+                            try await PostHogClient.shared.flush()
+                        } catch {
+                            Logger.error("[MainTabView] Failed to flush PostHog events: \(error.localizedDescription)")
+                        }
                     }
                 }
             }

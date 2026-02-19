@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		B318DCEE2EC6939A00DB1A9A /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = B318DCED2EC6939A00DB1A9A /* Auth */; };
+		B31D2C442EFFA4020091F030 /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = B31D2C432EFFA4020091F030 /* GoogleMobileAds */; };
 		B32F71142ED399B5001779C5 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = B32F71132ED399B5001779C5 /* RevenueCat */; };
 		B32F71162ED399B5001779C5 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = B32F71152ED399B5001779C5 /* RevenueCatUI */; };
 		B3DF8FA82ED5CEC3007FD5D0 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = B3DF8FA72ED5CEC3007FD5D0 /* FirebaseCore */; };
@@ -15,10 +16,25 @@
 		B3E30E122ECCB7AA008A3B6C /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = B3E30E112ECCB7AA008A3B6C /* PostgREST */; };
 		B3E30E142ECCB7AA008A3B6C /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = B3E30E132ECCB7AA008A3B6C /* Supabase */; };
 		B3F2F7E02F14A10000D1A004 /* YouTubeiOSPlayerHelper in Frameworks */ = {isa = PBXBuildFile; productRef = B3F2F7E32F14A10000D1A003 /* YouTubeiOSPlayerHelper */; };
+		CF1EE317BD6A461DA9DC12F3 /* PostHogClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7288DBFF0484707BB5CD260 /* PostHogClientTests.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		EE02D6F4DFD24EDF8837B7BE /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B318DC822EC6920500DB1A9A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B318DC892EC6920500DB1A9A;
+			remoteInfo = VibeWatchApp;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
+		017B09F3416F44179444BCC2 /* VibeWatchAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = VibeWatchAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		9FBD15ABB0BF4418879D52D9 /* VibeWatchAppTests/Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = VibeWatchAppTests/Info.plist; sourceTree = "<group>"; };
 		B318DC8A2EC6920500DB1A9A /* VibeWatchApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VibeWatchApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B3F0F1A92F2A1B1C00AA1111 /* VibeWatchApp/Config/Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = VibeWatchApp/Config/Secrets.xcconfig; sourceTree = "<group>"; };
+		E7288DBFF0484707BB5CD260 /* PostHogClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostHogClientTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -26,6 +42,7 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
+				Tests/MultiDeviceSyncTests.swift,
 			);
 			target = B318DC892EC6920500DB1A9A /* VibeWatchApp */;
 		};
@@ -50,6 +67,7 @@
 				B32F71142ED399B5001779C5 /* RevenueCat in Frameworks */,
 				B3E30E122ECCB7AA008A3B6C /* PostgREST in Frameworks */,
 				B3DF8FAA2ED5CEC3007FD5D0 /* FirebaseMessaging in Frameworks */,
+				B31D2C442EFFA4020091F030 /* GoogleMobileAds in Frameworks */,
 				B318DCEE2EC6939A00DB1A9A /* Auth in Frameworks */,
 				B32F71162ED399B5001779C5 /* RevenueCatUI in Frameworks */,
 				B3DF8FA82ED5CEC3007FD5D0 /* FirebaseCore in Frameworks */,
@@ -58,15 +76,33 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		ED6A2F54E9FE48C9838BCD16 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		1C38A8861B0F4F5D876EE606 /* VibeWatchAppTests */ = {
+			isa = PBXGroup;
+			children = (
+				9FBD15ABB0BF4418879D52D9 /* VibeWatchAppTests/Info.plist */,
+				E7288DBFF0484707BB5CD260 /* PostHogClientTests.swift */,
+			);
+			path = VibeWatchAppTests;
+			sourceTree = "<group>";
+		};
 		B318DC812EC6920500DB1A9A = {
 			isa = PBXGroup;
 			children = (
 				B318DC8C2EC6920500DB1A9A /* VibeWatchApp */,
+				1C38A8861B0F4F5D876EE606 /* VibeWatchAppTests */,
 				B3E30E102ECCB7AA008A3B6C /* Frameworks */,
 				B318DC8B2EC6920500DB1A9A /* Products */,
+				B39A3C0B2EF5898A0087B6B2 /* Recovered References */,
 			);
 			sourceTree = "<group>";
 		};
@@ -74,8 +110,17 @@
 			isa = PBXGroup;
 			children = (
 				B318DC8A2EC6920500DB1A9A /* VibeWatchApp.app */,
+				017B09F3416F44179444BCC2 /* VibeWatchAppTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		B39A3C0B2EF5898A0087B6B2 /* Recovered References */ = {
+			isa = PBXGroup;
+			children = (
+				B3F0F1A92F2A1B1C00AA1111 /* VibeWatchApp/Config/Secrets.xcconfig */,
+			);
+			name = "Recovered References";
 			sourceTree = "<group>";
 		};
 		B3E30E102ECCB7AA008A3B6C /* Frameworks */ = {
@@ -88,6 +133,24 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		6FD2892C70554E89BC8FEFD1 /* VibeWatchAppTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CDD7E746477247ACA5CB37F4 /* Build configuration list for PBXNativeTarget "VibeWatchAppTests" */;
+			buildPhases = (
+				2BC040EEBFB0469DB94FDF15 /* Sources */,
+				ED6A2F54E9FE48C9838BCD16 /* Frameworks */,
+				6B130BF537D94760834B389F /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D5D51638EDAD4C9A9B52D5EB /* PBXTargetDependency */,
+			);
+			name = VibeWatchAppTests;
+			productName = VibeWatchAppTests;
+			productReference = 017B09F3416F44179444BCC2 /* VibeWatchAppTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		B318DC892EC6920500DB1A9A /* VibeWatchApp */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = B318DC952EC6920800DB1A9A /* Build configuration list for PBXNativeTarget "VibeWatchApp" */;
@@ -113,6 +176,7 @@
 				B3DF8FA72ED5CEC3007FD5D0 /* FirebaseCore */,
 				B3DF8FA92ED5CEC3007FD5D0 /* FirebaseMessaging */,
 				B3F2F7E32F14A10000D1A003 /* YouTubeiOSPlayerHelper */,
+				B31D2C432EFFA4020091F030 /* GoogleMobileAds */,
 			);
 			productName = VibeWatchApp;
 			productReference = B318DC8A2EC6920500DB1A9A /* VibeWatchApp.app */;
@@ -128,6 +192,9 @@
 				LastSwiftUpdateCheck = 1640;
 				LastUpgradeCheck = 1640;
 				TargetAttributes = {
+					6FD2892C70554E89BC8FEFD1 = {
+						CreatedOnToolsVersion = 16.4;
+					};
 					B318DC892EC6920500DB1A9A = {
 						CreatedOnToolsVersion = 16.4;
 					};
@@ -166,6 +233,7 @@
 				B32F71122ED399B5001779C5 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
 				B3DC12CA2ED5CB0400B5A429 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 				B3F2F7E22F14A10000D1A002 /* XCRemoteSwiftPackageReference "youtube-ios-player-helper" */,
+				B31D2C422EFFA4020091F030 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = B318DC8B2EC6920500DB1A9A /* Products */;
@@ -173,11 +241,19 @@
 			projectRoot = "";
 			targets = (
 				B318DC892EC6920500DB1A9A /* VibeWatchApp */,
+				6FD2892C70554E89BC8FEFD1 /* VibeWatchAppTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		6B130BF537D94760834B389F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		B318DC882EC6920500DB1A9A /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -188,6 +264,14 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		2BC040EEBFB0469DB94FDF15 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CF1EE317BD6A461DA9DC12F3 /* PostHogClientTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		B318DC862EC6920500DB1A9A /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -196,6 +280,14 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D5D51638EDAD4C9A9B52D5EB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B318DC892EC6920500DB1A9A /* VibeWatchApp */;
+			targetProxy = EE02D6F4DFD24EDF8837B7BE /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		B318DC932EC6920800DB1A9A /* Debug */ = {
@@ -321,6 +413,7 @@
 		};
 		B318DC962EC6920800DB1A9A /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = B3F0F1A92F2A1B1C00AA1111 /* VibeWatchApp/Config/Secrets.xcconfig */;
 			buildSettings = {
 				APP_DISPLAY_NAME = "";
 				"APP_DISPLAY_NAME[arch=*]" = "VibeWatch Beta";
@@ -329,7 +422,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = 3V97GU3CCY;
 				ENABLE_PREVIEWS = YES;
@@ -347,7 +440,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.03;
+				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.vibewatch.VibeWatchApp.beta;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -364,6 +457,7 @@
 		};
 		B318DC972EC6920800DB1A9A /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = B3F0F1A92F2A1B1C00AA1111 /* VibeWatchApp/Config/Secrets.xcconfig */;
 			buildSettings = {
 				APP_DISPLAY_NAME = "";
 				"APP_DISPLAY_NAME[arch=*]" = VibeWatch;
@@ -372,7 +466,7 @@
 				CODE_SIGN_ENTITLEMENTS = VibeWatchApp/VibeWatchAppRelease.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 3V97GU3CCY;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -389,7 +483,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.03;
+				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.vibewatch.VibeWatchApp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -402,6 +496,46 @@
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
+		};
+		F09297016BFD439BA1DC503C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				INFOPLIST_FILE = VibeWatchAppTests/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.vibewatch.VibeWatchAppTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/VibeWatchApp.app/VibeWatchApp";
+			};
+			name = Release;
+		};
+		F0EC8F9B700740BF9FE5920C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				INFOPLIST_FILE = VibeWatchAppTests/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.vibewatch.VibeWatchAppTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/VibeWatchApp.app/VibeWatchApp";
+			};
+			name = Debug;
 		};
 /* End XCBuildConfiguration section */
 
@@ -424,6 +558,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		CDD7E746477247ACA5CB37F4 /* Build configuration list for PBXNativeTarget "VibeWatchAppTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F0EC8F9B700740BF9FE5920C /* Debug */,
+				F09297016BFD439BA1DC503C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
@@ -433,6 +576,14 @@
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 2.5.1;
+			};
+		};
+		B31D2C422EFFA4020091F030 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/googleads/swift-package-manager-google-mobile-ads";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.14.0;
 			};
 		};
 		B32F71122ED399B5001779C5 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
@@ -466,6 +617,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = B318DCEC2EC6939A00DB1A9A /* XCRemoteSwiftPackageReference "supabase-swift" */;
 			productName = Auth;
+		};
+		B31D2C432EFFA4020091F030 /* GoogleMobileAds */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B31D2C422EFFA4020091F030 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */;
+			productName = GoogleMobileAds;
 		};
 		B32F71132ED399B5001779C5 /* RevenueCat */ = {
 			isa = XCSwiftPackageProductDependency;

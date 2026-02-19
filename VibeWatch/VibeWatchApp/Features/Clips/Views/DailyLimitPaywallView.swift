@@ -48,14 +48,14 @@ enum PaywallType {
     }
 }
 
-/// Paywall presented when logged-in free users watch 15 clips in a day.
+/// Paywall presented when logged-in free users watch 25 clips in a day.
 struct DailyLimitPaywallView: View {
     @Binding var isPresented: Bool
     var onComeBack: (() -> Void)?
     let paywallType: PaywallType // New property
+    let source: String
     
     @StateObject private var quotaManager = DailyQuotaManager.shared
-    @ObservedObject private var foundingService = FoundingMemberService.shared
     @State private var countdownText = DailyQuotaManager.shared.timeUntilResetFormatted()
     @State private var showProPaywall = false
     @State private var showAlert = false
@@ -64,10 +64,16 @@ struct DailyLimitPaywallView: View {
     @State private var dragOffset: CGFloat = 0
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
-    init(isPresented: Binding<Bool>, onComeBack: (() -> Void)? = nil, paywallType: PaywallType = .clipsQuota) {
+    init(
+        isPresented: Binding<Bool>,
+        onComeBack: (() -> Void)? = nil,
+        paywallType: PaywallType = .clipsQuota,
+        source: String = "unknown"
+    ) {
         self._isPresented = isPresented
         self.onComeBack = onComeBack
         self.paywallType = paywallType
+        self.source = source
     }
 
     var body: some View {
@@ -89,10 +95,6 @@ struct DailyLimitPaywallView: View {
 
                     BenefitList(paywallType: paywallType) // Pass paywallType
 
-                    if foundingService.promoStatus.isPromoActive {
-                        promoCountdownBanner
-                    }
-
                     if paywallType == .clipsQuota { // Only show countdown for clips quota
                         countdownBanner
                     }
@@ -100,7 +102,7 @@ struct DailyLimitPaywallView: View {
                     upgradeButton
 
                     Button {
-                        dismiss()
+                        dismiss(action: "come_back", logDismiss: true)
                         onComeBack?()
                     } label: {
                         Text(paywallType.goBack)
@@ -142,7 +144,7 @@ struct DailyLimitPaywallView: View {
                         .onEnded { value in
                             if value.translation.height > 150 {
                                 withAnimation(.easeOut(duration: 0.25)) {
-                                    dismiss()
+                                    dismiss(action: "swipe_down", logDismiss: true)
                                 }
                             } else {
                                 withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
@@ -165,9 +167,15 @@ struct DailyLimitPaywallView: View {
             Text(alertMessage)
         }
         .fullScreenCover(isPresented: $showProPaywall) {
-            ProPaywallView(isPresented: $showProPaywall) {
-                dismiss()
+            ProPaywallView(isPresented: $showProPaywall, source: "\(source)_upgrade") {
+                dismiss(action: "purchase_success", logDismiss: false)
             }
+        }
+        .task {
+            AnalyticsService.shared.logPaywallViewed(
+                source: source,
+                type: paywallType == .clipsQuota ? "daily_limit" : "ai_limit"
+            )
         }
     }
 
@@ -222,31 +230,9 @@ struct DailyLimitPaywallView: View {
         .cornerRadius(16)
     }
 
-    private var promoCountdownBanner: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "sparkles")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(.orange)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text("paywall.foundingMember".localized)
-                    .font(.system(size: 12))
-                    .foregroundColor(.gray)
-
-                Text(foundingService.getCountdownText())
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.white)
-            }
-
-            Spacer()
-        }
-        .padding(14)
-        .background(Color.orange.opacity(0.12))
-        .cornerRadius(16)
-    }
-
     private var upgradeButton: some View {
         Button {
+            AnalyticsService.shared.logPaywallCTAClicked(source: source, cta: "upgrade")
             showProPaywall = true
         } label: {
             VStack(spacing: 6) {
@@ -271,7 +257,10 @@ struct DailyLimitPaywallView: View {
         }
     }
 
-    private func dismiss() {
+    private func dismiss(action: String = "close", logDismiss: Bool = true) {
+        if logDismiss {
+            AnalyticsService.shared.logPaywallDismissed(source: source, action: action)
+        }
         withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
             isPresented = false
         }
@@ -285,24 +274,24 @@ struct DailyLimitPaywallView: View {
 
     private func restorePurchases() async {
         do {
+            AnalyticsService.shared.logEvent("restore_started", parameters: [:])
             let info = try await Purchases.shared.restorePurchases()
             await MainActor.run {
                 if info.entitlements["StartingVibe Pro"]?.isActive == true {
                     quotaManager.upgradeToPro()
                     Task { await ClipQuotaService.shared.checkIsProUser() }
-                    if let productId = info.entitlements["StartingVibe Pro"]?.productIdentifier {
-                        FoundingMemberService.shared.markAsFoundingMember(
-                            productId: productId,
-                            userId: SupabaseService.shared.currentUser?.id
-                        )
-                    }
-                    dismiss()
+                    AnalyticsService.shared.logEvent("restore_succeeded", parameters: [:])
+                    dismiss(action: "restore_success", logDismiss: false)
                 } else {
+                    AnalyticsService.shared.logEvent("restore_no_active_subscription", parameters: [:])
                     presentAlert(title: "No Subscription Found", message: "We couldn’t find an active subscription for this Apple ID.")
                 }
             }
         } catch {
             await MainActor.run {
+                AnalyticsService.shared.logEvent("restore_failed", parameters: [
+                    "error": (error as NSError).localizedDescription
+                ])
                 presentAlert(title: "Restore Failed", message: error.localizedDescription)
             }
         }
@@ -351,4 +340,3 @@ struct DailyLimitPaywallView: View {
         }
     }
 }
-

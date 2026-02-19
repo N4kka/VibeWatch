@@ -23,7 +23,12 @@ final class ClipsSearchViewModel: ObservableObject {
         self.searchService = searchService
         self.clipsService = clipsService
     }
-    
+
+    deinit {
+        searchTask?.cancel()
+        debounceTask?.cancel()
+    }
+
     func updateQuery(_ text: String) {
         query = text
         debounceTask?.cancel()
@@ -108,7 +113,11 @@ final class ClipsSearchViewModel: ObservableObject {
         updateLike(in: &related, clipId: clipId, isLiked: isLiked)
         
         Task {
-            try? await ClipsService.shared.updateLikeStatus(clipId: clipId, isLiked: isLiked)
+            do {
+                try await ClipsService.shared.updateLikeStatus(clipId: clipId, isLiked: isLiked)
+            } catch {
+                Logger.error("[ClipsSearchViewModel] Failed to update like status: \(error.localizedDescription)")
+            }
         }
     }
     

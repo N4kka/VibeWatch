@@ -33,7 +33,7 @@ final class QuickClipsService: ObservableObject {
     ///   - count: Number of clips to preload (default 5)
     /// - Returns: List of ready-to-play clips
     func preloadClips(from movies: [Movie], count: Int = 5) async -> [Clip] {
-        print("⚡ PRELOAD: Starting smart preload from \(movies.count) shared movies...")
+        Logger.debug("[QuickClips] PRELOAD: Starting smart preload from \(movies.count) shared movies...")
         let startTime = Date()
         let currentLanguage = await MainActor.run { LocalizationManager.shared.currentLanguageCode() }
         
@@ -73,7 +73,7 @@ final class QuickClipsService: ObservableObject {
         cachedClips = preloaded
         preloaded.forEach { shownClipIds.insert($0.id) }
         
-        print("✅ PRELOAD: Ready in \(String(format: "%.3f", Date().timeIntervalSince(startTime)))s - \(preloaded.count) clips")
+        Logger.debug("[QuickClips] PRELOAD: Ready in \(String(format: "%.3f", Date().timeIntervalSince(startTime)))s - \(preloaded.count) clips")
         return preloaded
     }
 
@@ -81,7 +81,7 @@ final class QuickClipsService: ObservableObject {
     
     /// Generate feed with language mixing (80% localized, 20% English)
     func generateFeed(count: Int = 30) async throws -> [Clip] {
-        print("⚡ Generating mixed feed (80% Local / 20% Global)...")
+        Logger.debug("[QuickClips] Generating mixed feed (80% Local / 20% Global)...")
         
         // 1. Fetch Source Data (Movies & TV)
         async let moviesTask = fetchMovieClips(limit: 20) // Fetch more to filter
@@ -190,13 +190,13 @@ final class QuickClipsService: ObservableObject {
         // Rejection words (to avoid bad content)
         // ... logic remains similar ...
         
-        let urlString = "https://www.googleapis.com/youtube/v3/search?part=snippet&q=\(encodedQuery)&type=video&videoDuration=short&maxResults=1&key=AIzaSyCh_tkrvBEGW6ALRvkAN-LYx1B3Cly1160&relevanceLanguage=\(language)"
-        
+        let urlString = "https://www.googleapis.com/youtube/v3/search?part=snippet&q=\(encodedQuery)&type=video&videoDuration=short&maxResults=1&key=\(Config.youtubeApiKey)&relevanceLanguage=\(language)"
+
         guard let url = URL(string: urlString) else { return [] }
-        
+
         let (data, _) = try await URLSession.shared.data(from: url)
         let searchResponse = try JSONDecoder().decode(YouTubeSearchResponse.self, from: data)
-        
+
         return searchResponse.items.map { item in
             Clip(
                 id: "\(movie.id)-yt-\(item.id.videoId)",
@@ -221,13 +221,13 @@ final class QuickClipsService: ObservableObject {
         
         guard let encodedQuery = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else { return [] }
         
-        let urlString = "https://www.googleapis.com/youtube/v3/search?part=snippet&q=\(encodedQuery)&type=video&videoDuration=short&maxResults=1&key=AIzaSyCh_tkrvBEGW6ALRvkAN-LYx1B3Cly1160&relevanceLanguage=\(language)"
-        
+        let urlString = "https://www.googleapis.com/youtube/v3/search?part=snippet&q=\(encodedQuery)&type=video&videoDuration=short&maxResults=1&key=\(Config.youtubeApiKey)&relevanceLanguage=\(language)"
+
         guard let url = URL(string: urlString) else { return [] }
-        
+
         let (data, _) = try await URLSession.shared.data(from: url)
         let searchResponse = try JSONDecoder().decode(YouTubeSearchResponse.self, from: data)
-        
+
         return searchResponse.items.map { item in
             Clip(
                 id: "\(tvShow.id)-yt-\(item.id.videoId)",
@@ -268,7 +268,7 @@ final class QuickClipsService: ObservableObject {
     /// Reset deduplication for fresh feed
     func resetDeduplication() {
         shownClipIds.removeAll()
-        print("🔄 Deduplication reset")
+        Logger.debug("[QuickClips] Deduplication reset")
     }
     
     // MARK: - Personalization (User Taste Tracking)
