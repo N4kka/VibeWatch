@@ -46,6 +46,7 @@ class ListManager: ObservableObject {
     @Published var likedList: MediaList
     @Published var dislikedList: MediaList
     @Published var softLimitWarningMessage: String?
+    @Published var isLoadingInitial = true
     
     private let db = SQLiteService.shared
     private let sync = SyncEngine.shared
@@ -172,6 +173,7 @@ class ListManager: ObservableObject {
             await migrateFromUserDefaultsIfNeeded()
             await loadListsFromSQLite()
             await ensureListsInDatabase()
+            isLoadingInitial = false
         }
     }
 

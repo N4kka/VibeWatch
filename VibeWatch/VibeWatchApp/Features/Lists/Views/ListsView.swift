@@ -57,7 +57,10 @@ struct ListsView: View {
                 
                 combinedFiltersRow
                 
-                if currentLists.isEmpty {
+                if listManager.isLoadingInitial {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if currentLists.isEmpty {
                     emptyStateView
                 } else {
                     contentView
