@@ -16,7 +16,7 @@ final class DatabaseMigrationManager {
     private let versionKey = "unified_migration_version"
 
     /// Current latest migration version
-    private let latestVersion = 1
+    private let latestVersion = 2
 
     private init() {}
 
@@ -60,6 +60,13 @@ final class DatabaseMigrationManager {
                 description: "Add missing indexes for Phase 4 performance improvements",
                 type: .schema,
                 execute: migration1_AddPerformanceIndexes
+            ),
+            Migration(
+                version: 2,
+                name: "missing_columns",
+                description: "Add columns present in code but missing from initial schema DDL",
+                type: .schema,
+                execute: migration2_AddMissingColumns
             )
         ]
     }
@@ -122,6 +129,50 @@ final class DatabaseMigrationManager {
         """)
 
         Logger.info("[Migration 1] Performance indexes added successfully")
+    }
+
+    /// Migration 2: Add columns that exist in INSERT statements but were missing from CREATE TABLE DDL
+    private func migration2_AddMissingColumns() async throws {
+        Logger.info("[Migration 2] Adding missing columns to fix silent INSERT failures...")
+
+        // 1. personalized_discovery.media_data (CRITICAL: every carousel INSERT fails without this)
+        if !db.columnExists("personalized_discovery", column: "media_data") {
+            db.execute("ALTER TABLE personalized_discovery ADD COLUMN media_data TEXT")
+            Logger.info("[Migration 2] Added media_data to personalized_discovery")
+        }
+
+        // 2. user_ai_token_usage.id + last_reset_at
+        // The table uses user_id as PRIMARY KEY; id is used in REPLACE INTO statements as a regular column.
+        if !db.columnExists("user_ai_token_usage", column: "id") {
+            db.execute("ALTER TABLE user_ai_token_usage ADD COLUMN id TEXT")
+            Logger.info("[Migration 2] Added id column to user_ai_token_usage")
+        }
+        if !db.columnExists("user_ai_token_usage", column: "last_reset_at") {
+            db.execute("ALTER TABLE user_ai_token_usage ADD COLUMN last_reset_at TEXT")
+            Logger.info("[Migration 2] Added last_reset_at to user_ai_token_usage")
+        }
+
+        // 3. user_daily_challenges.created_at
+        if !db.columnExists("user_daily_challenges", column: "created_at") {
+            db.execute("ALTER TABLE user_daily_challenges ADD COLUMN created_at TEXT DEFAULT (datetime('now'))")
+            Logger.info("[Migration 2] Added created_at to user_daily_challenges")
+        }
+
+        // 4. user_clip_history: media_id, season_number, episode_number (queried by SmartNotificationService)
+        if !db.columnExists("user_clip_history", column: "media_id") {
+            db.execute("ALTER TABLE user_clip_history ADD COLUMN media_id INTEGER")
+            Logger.info("[Migration 2] Added media_id to user_clip_history")
+        }
+        if !db.columnExists("user_clip_history", column: "season_number") {
+            db.execute("ALTER TABLE user_clip_history ADD COLUMN season_number INTEGER")
+            Logger.info("[Migration 2] Added season_number to user_clip_history")
+        }
+        if !db.columnExists("user_clip_history", column: "episode_number") {
+            db.execute("ALTER TABLE user_clip_history ADD COLUMN episode_number INTEGER")
+            Logger.info("[Migration 2] Added episode_number to user_clip_history")
+        }
+
+        Logger.info("[Migration 2] All missing columns added successfully")
     }
 
     // MARK: - Version Management

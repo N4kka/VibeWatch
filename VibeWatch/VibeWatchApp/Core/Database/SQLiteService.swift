@@ -1130,8 +1130,10 @@ extension SQLiteService {
     private func createUserAITokenUsageTable() -> String {
         """
         CREATE TABLE IF NOT EXISTS user_ai_token_usage (
+          id TEXT,
           user_id TEXT PRIMARY KEY,
           tokens_used_today INTEGER DEFAULT 0,
+          last_reset_at TEXT,
           usage_day TEXT,
           updated_at TEXT DEFAULT (datetime('now')),
           synced_at TEXT
@@ -1355,6 +1357,7 @@ extension SQLiteService {
           progress INTEGER DEFAULT 0,
           completed_at TEXT,
           xp_reward INTEGER DEFAULT 0,
+          created_at TEXT DEFAULT (datetime('now')),
           updated_at TEXT DEFAULT (datetime('now')),
           synced_at TEXT,
           UNIQUE(user_id, challenge_date),
