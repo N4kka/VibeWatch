@@ -2,6 +2,7 @@ import SwiftUI
 
 struct DiscoveryView: View {
     @StateObject private var viewModel = DiscoveryViewModel()
+    @StateObject private var searchViewModel = SearchViewModel()
     @StateObject private var gamificationService = GamificationService.shared
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var quotaManager: DailyQuotaManager
@@ -70,7 +71,7 @@ struct DiscoveryView: View {
             ProfileView()
         }
         .fullScreenCover(isPresented: $showSearch) {
-            SearchView()
+            SearchView(viewModel: searchViewModel)
         }
         .overlay {
             if showFilters {

@@ -2,7 +2,7 @@ import SwiftUI
 
 struct SearchView: View {
     @Environment(\.dismiss) var dismiss
-    @StateObject private var viewModel = SearchViewModel()
+    @ObservedObject var viewModel: SearchViewModel
     @FocusState private var isSearchFocused: Bool
     @State private var selectedResult: SearchResult?
     
