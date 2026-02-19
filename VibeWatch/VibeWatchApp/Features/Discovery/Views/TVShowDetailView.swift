@@ -7,6 +7,7 @@ struct TVShowDetailView: View {
     @EnvironmentObject var quotaManager: DailyQuotaManager
     @StateObject private var viewModel: TVShowDetailViewModel
     @StateObject private var listManager = ListManager.shared
+    @StateObject private var searchViewModel = SearchViewModel()
     @State private var showSavePanel = false
     @State private var showAuthGate = false
     @State private var showSearch = false
@@ -109,7 +110,7 @@ struct TVShowDetailView: View {
             await viewModel.loadTVShowDetails()
         }
         .sheet(isPresented: $showSearch) {
-            SearchView()
+            SearchView(viewModel: searchViewModel)
         }
         .sheet(isPresented: $showShareSheet) {
             ShareSheet(items: shareItems)
