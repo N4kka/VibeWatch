@@ -151,15 +151,12 @@ struct MainTabView: View {
                 SplashScreen()
                     .transition(.opacity)
                     .task {
-                        // REAL WORK: Wait for the AppState to signal ready
-                        try? await Task.sleep(nanoseconds: 1_500_000_000)
-
-                        // Wait for actual preload if it's still running
+                        // If still preloading, poll until done (no-op when cache was instant)
                         while appState.isPreloading {
-                            try? await Task.sleep(nanoseconds: 100_000_000) // Check every 0.1s
+                            try? await Task.sleep(nanoseconds: 100_000_000) // Poll every 0.1s
                         }
 
-                        // Additionally wait for Discovery content to be ready to avoid showing empty loader
+                        // Wait for Discovery content only if we don't have cache yet
                         await waitForDiscoveryContentReady()
 
                         withAnimation(.easeOut(duration: 0.5)) {
