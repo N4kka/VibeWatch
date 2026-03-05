@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Completed 01-critical-bug-fixes/01-01-PLAN.md
-last_updated: "2026-03-05T16:31:07.423Z"
-last_activity: 2026-03-05 — Roadmap created for v1.0 Production milestone
+stopped_at: Completed 01-critical-bug-fixes/01-02-PLAN.md
+last_updated: "2026-03-05T17:49:29Z"
+last_activity: 2026-03-05 — BUG-01 fixed: clip_comments updated_at schema migration + commentRPCDisabled removed
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 5
-  completed_plans: 1
-  percent: 0
+  completed_plans: 2
+  percent: 20
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-05)
 ## Current Position
 
 Phase: 1 of 4 (Critical Bug Fixes)
-Plan: 0 of 4 in current phase
-Status: Ready to plan
-Last activity: 2026-03-05 — Roadmap created for v1.0 Production milestone
+Plan: 2 of 4 in current phase
+Status: In progress
+Last activity: 2026-03-05 — BUG-01 fixed (clip_comments updated_at schema + commentRPCDisabled removed)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██░░░░░░░░] 20%
 
 ## Performance Metrics
 
@@ -51,6 +51,7 @@ Progress: [░░░░░░░░░░] 0%
 
 *Updated after each plan completion*
 | Phase 01-critical-bug-fixes P01 | 21 | 3 tasks | 7 files |
+| Phase 01-critical-bug-fixes P02 | 36 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -66,6 +67,9 @@ Recent decisions affecting current work:
 - [Phase 01-critical-bug-fixes]: Used resetBlockedOperations() for testUnblockSchemaErrorOperations — unblockAndRetryBlockedOperations() added in GREEN phase
 - [Phase 01-critical-bug-fixes]: XCTSkip guard for genre distribution tests — genre_ids column added in BUG-04 GREEN phase
 - [Phase 01-critical-bug-fixes]: Registered all orphaned test files in pbxproj and fixed scheme TestAction — CLI test execution was broken
+- [Phase 01-critical-bug-fixes]: Supabase migration uses DO/EXCEPTION block — Postgres has no IF NOT EXISTS for ALTER COLUMN SET DEFAULT
+- [Phase 01-critical-bug-fixes]: commentRPCDisabled removed by pure deletion — schema fix makes client-side disable unnecessary
+- [Phase 01-critical-bug-fixes]: Supabase migration committed with git add -f — supabase/ is gitignored but plan artifact required it tracked
 
 ### Pending Todos
 
@@ -73,11 +77,11 @@ None yet.
 
 ### Blockers/Concerns
 
-- BUG-01 (Supabase schema missing updated_at) is a prerequisite for BUG-02 (SyncEngine recovery) — fix schema first
+- BUG-01 RESOLVED — Supabase migration + local SQLite migration + commentRPCDisabled removed
 - QUAL-02 (MultiDeviceSyncTests) depends on SyncEngine APIs being stable — execute after bug fixes
 
 ## Session Continuity
 
-Last session: 2026-03-05T16:31:07.421Z
-Stopped at: Completed 01-critical-bug-fixes/01-01-PLAN.md
+Last session: 2026-03-05T17:49:29Z
+Stopped at: Completed 01-critical-bug-fixes/01-02-PLAN.md
 Resume file: None
