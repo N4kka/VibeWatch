@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-stopped_at: Completed 01-critical-bug-fixes/01-02-PLAN.md
-last_updated: "2026-03-05T17:49:29Z"
-last_activity: 2026-03-05 — BUG-01 fixed: clip_comments updated_at schema migration + commentRPCDisabled removed
+status: executing
+stopped_at: Completed 01-critical-bug-fixes/01-05-PLAN.md
+last_updated: "2026-03-05T17:13:40.450Z"
+last_activity: 2026-03-05 — BUG-01 fixed (clip_comments updated_at schema + commentRPCDisabled removed)
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 5
-  completed_plans: 2
+  completed_plans: 4
   percent: 20
 ---
 
@@ -52,6 +52,8 @@ Progress: [██░░░░░░░░] 20%
 *Updated after each plan completion*
 | Phase 01-critical-bug-fixes P01 | 21 | 3 tasks | 7 files |
 | Phase 01-critical-bug-fixes P02 | 36 | 2 tasks | 3 files |
+| Phase 01-critical-bug-fixes P04 | 40min | 2 tasks | 3 files |
+| Phase 01-critical-bug-fixes P05 | 40min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -70,6 +72,11 @@ Recent decisions affecting current work:
 - [Phase 01-critical-bug-fixes]: Supabase migration uses DO/EXCEPTION block — Postgres has no IF NOT EXISTS for ALTER COLUMN SET DEFAULT
 - [Phase 01-critical-bug-fixes]: commentRPCDisabled removed by pure deletion — schema fix makes client-side disable unnecessary
 - [Phase 01-critical-bug-fixes]: Supabase migration committed with git add -f — supabase/ is gitignored but plan artifact required it tracked
+- [Phase 01-critical-bug-fixes]: Added Equatable to DeepLinkTarget comparing by mediaId+mediaType so .onChange(of:) compiles
+- [Phase 01-critical-bug-fixes]: Movie placeholder pattern: construct minimal Movie(id:) to trigger existing navigationDestination without introducing second navigation mechanism
+- [Phase 01-critical-bug-fixes]: clearDeepLinkTarget() called in MainTabView handleDeepLinkTarget after navigation state set — view owns lifecycle of deepLinkTarget consumption
+- [Phase 01-critical-bug-fixes]: genre_ids column on user_clip_history already added by migration 4 committed in plan 01-02 — no new migration needed for BUG-04
+- [Phase 01-critical-bug-fixes]: Non-nil empty-struct pattern: empty moodDistribution distinguishes below-threshold state from nil/not-implemented
 
 ### Pending Todos
 
@@ -82,6 +89,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-05T17:49:29Z
-Stopped at: Completed 01-critical-bug-fixes/01-02-PLAN.md
+Last session: 2026-03-05T17:13:40.449Z
+Stopped at: Completed 01-critical-bug-fixes/01-05-PLAN.md
 Resume file: None

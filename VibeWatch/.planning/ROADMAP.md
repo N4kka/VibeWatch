@@ -81,7 +81,7 @@ Phases execute in order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Critical Bug Fixes | 2/5 | In Progress|  |
+| 1. Critical Bug Fixes | 4/5 | In Progress|  |
 | 2. Security Hardening | 0/2 | Not started | - |
 | 3. Performance | 0/3 | Not started | - |
 | 4. Code Quality | 0/2 | Not started | - |
