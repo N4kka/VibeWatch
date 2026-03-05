@@ -22,13 +22,14 @@ This milestone stabilizes VibeWatch for production release. No new features — 
   2. If a SyncEngine operation was blocked by a PGRST205 error and the backend schema is later corrected, the operation retries and succeeds without clearing app data
   3. Tapping a push notification opens the app and navigates directly to the relevant movie or TV show
   4. The Analytics Dashboard mood analysis section displays data instead of an empty/nil state
-**Plans**: TBD
+**Plans**: 5 plans
 
 Plans:
-- [ ] 01-01: Fix Supabase comments schema (add updated_at migration) and clear commentRPCDisabled flag
-- [ ] 01-02: Add SyncEngine PGRST205 recovery path (unblock and retry when schema is corrected)
-- [ ] 01-03: Implement SmartNotificationService.handleNotificationTap routing via AppNavigationManager
-- [ ] 01-04: Implement or remove moodAnalysis in AnalyticsInsightsService.generateUserStatistics
+- [ ] 01-01-PLAN.md — Wave 0 test stubs for all four bugs (RED baseline for TDD)
+- [ ] 01-02-PLAN.md — BUG-01: Supabase migration + SQLite migration 3 + remove commentRPCDisabled flag
+- [ ] 01-03-PLAN.md — BUG-02: Expose SyncEngine.unblockAndRetryBlockedOperations() and wire into performFullSyncOnLaunch
+- [ ] 01-04-PLAN.md — BUG-03: Implement handleNotificationTap and add deepLinkTarget observer to MainTabView
+- [ ] 01-05-PLAN.md — BUG-04: Implement calculateMoodAnalysis() in AnalyticsInsightsService and add dashboard placeholder
 
 ### Phase 2: Security Hardening
 **Goal**: The Cerebras API key is never bundled in the app binary, and auth session tokens are encrypted at rest on device
@@ -80,7 +81,7 @@ Phases execute in order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Critical Bug Fixes | 0/4 | Not started | - |
+| 1. Critical Bug Fixes | 0/5 | Not started | - |
 | 2. Security Hardening | 0/2 | Not started | - |
 | 3. Performance | 0/3 | Not started | - |
 | 4. Code Quality | 0/2 | Not started | - |
