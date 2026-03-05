@@ -179,6 +179,9 @@ class AppState: ObservableObject {
         // Sync lists from Supabase
         await ListManager.shared.syncListsForAuthenticatedUser()
 
+        // Unblock any PGRST205-stuck operations from previous sessions before pushing
+        SyncEngine.shared.unblockAndRetryBlockedOperations()
+
         // Process any pending outbox operations
         await SyncEngine.shared.pushPendingChanges()
 
