@@ -4,6 +4,7 @@ struct MainTabView: View {
     @EnvironmentObject var appState: AppState // Injected from App
     @EnvironmentObject var authService: AuthService
     @Environment(\.scenePhase) private var scenePhase // Monitor app lifecycle
+    @ObservedObject private var navigationManager = AppNavigationManager.shared
     @State private var selectedTab = 0
     @State private var selectedMovie: Movie?
     @State private var selectedMediaType: MediaType = .movie
@@ -13,14 +14,14 @@ struct MainTabView: View {
     @StateObject private var aiViewModel = AIRecommendationViewModel()
     @State private var showProPaywall = false
     @State private var proPaywallSource = "unknown"
-    
+
     private var passwordRecoveryBinding: Binding<Bool> {
         Binding(
             get: { authService.isPasswordRecoveryFlowPresented },
             set: { authService.isPasswordRecoveryFlowPresented = $0 }
         )
     }
-    
+
     // MARK: - Custom Tab Bar View (iOS 17-25)
     private var customTabBarView: some View {
         NavigationStack {
@@ -31,27 +32,27 @@ struct MainTabView: View {
                         DiscoveryView(selectedMovie: $selectedMovie, selectedMediaType: $selectedMediaType)
                             .transition(.opacity)
                     }
-                    
+
                     if selectedTab == 1 {
                         ClipsView()
                             .transition(.opacity)
                     }
-                    
+
                     if selectedTab == 2 {
                         AIRecommendationsView(viewModel: aiViewModel)
                             .transition(.opacity)
                     }
-                    
+
                     if selectedTab == 3 {
                         ListsView()
                             .transition(.opacity)
                     }
                 }
                 .animation(.easeInOut(duration: 0.3), value: selectedTab)
-                
+
                 VStack(spacing: 0) {
                     Spacer()
-                    
+
                     LiquidGlassBottomBar(selectedTab: $selectedTab)
                         .padding(.horizontal, 16)
                         .padding(.bottom, 20)
@@ -72,7 +73,7 @@ struct MainTabView: View {
         }
         .transition(.opacity)
     }
-    
+
     // MARK: - Native Tab Bar View (iOS 26+)
     @available(iOS 26.0, *)
     private var nativeTabBarView: some View {
@@ -83,19 +84,19 @@ struct MainTabView: View {
                         Label("tab.discovery".localized, systemImage: "house.fill")
                     }
                     .tag(0)
-                
+
                 ClipsView()
                     .tabItem {
                         Label("tab.clips".localized, systemImage: "play.rectangle.fill")
                     }
                     .tag(1)
-                
+
                 AIRecommendationsView(viewModel: aiViewModel)
                     .tabItem {
                         Label("tab.ai".localized, systemImage: "sparkles")
                     }
                     .tag(2)
-                
+
                 ListsView()
                     .tabItem {
                         Label("tab.lists".localized, systemImage: "list.bullet")
@@ -118,32 +119,32 @@ struct MainTabView: View {
         }
         .transition(.opacity)
     }
-    
+
     // Configure native iOS tab bar appearance (iOS 26+)
     private func configureNativeTabBar() {
         let appearance = UITabBarAppearance()
         appearance.configureWithDefaultBackground()
-        
+
         // Use system blur material for native glass effect
         appearance.backgroundEffect = UIBlurEffect(style: .systemUltraThinMaterialDark)
         appearance.backgroundColor = UIColor(Color.theme.background.opacity(0.8))
-        
+
         // Selected item color (orange accent)
         appearance.stackedLayoutAppearance.selected.iconColor = UIColor(Color.theme.accentOrange)
         appearance.stackedLayoutAppearance.selected.titleTextAttributes = [
             .foregroundColor: UIColor(Color.theme.accentOrange)
         ]
-        
+
         // Unselected item color (gray)
         appearance.stackedLayoutAppearance.normal.iconColor = UIColor(Color.theme.textSecondary)
         appearance.stackedLayoutAppearance.normal.titleTextAttributes = [
             .foregroundColor: UIColor(Color.theme.textSecondary)
         ]
-        
+
         UITabBar.appearance().standardAppearance = appearance
         UITabBar.appearance().scrollEdgeAppearance = appearance
     }
-    
+
     var body: some View {
         ZStack {
             // Force dismiss splash screen if password recovery is presented
@@ -214,19 +215,29 @@ struct MainTabView: View {
             proPaywallSource = source
             showProPaywall = true
         }
+        .onChange(of: navigationManager.deepLinkTarget) { _, target in
+            guard let target = target else { return }
+            handleDeepLinkTarget(target)
+        }
+        .onAppear {
+            // Handle cold-launch case: deepLinkTarget may be set before view appears
+            if let target = navigationManager.deepLinkTarget {
+                handleDeepLinkTarget(target)
+            }
+        }
         .background(scenePhaseMonitor) // Monitor app lifecycle for subscription status
         .withErrorHandling()
         .task {
             ReviewPromptManager.shared.registerAppLaunch()
-            
+
             // On first launch, clear any persisted auth from keychain
             if !hasClearedAuthOnFreshInstall && !UserDefaults.standard.bool(forKey: "hasLaunchedBefore") {
                 print("🆕 [MainTabView] Fresh install detected - clearing keychain auth")
                 hasClearedAuthOnFreshInstall = true
-                
+
                 // Mark as launched so we don't clear again on next launch
                 UserDefaults.standard.set(true, forKey: "hasLaunchedBefore")
-                
+
                 // Clear any persisted auth session from keychain
                 do {
                     try await AuthService.shared.signOut(force: true)
@@ -234,11 +245,11 @@ struct MainTabView: View {
                 } catch {
                     print("⚠️ [MainTabView] Could not clear auth on fresh install: \(error)")
                 }
-                
+
                 // Ensure app state reflects no auth
                 await appState.checkAuthState()
             }
-            
+
             // Request ATT permission (only relevant for ad attribution; not required for product analytics)
             await TrackingPermissionManager.shared.requestTrackingIfNeeded()
         }
@@ -253,6 +264,42 @@ struct MainTabView: View {
                 .environmentObject(authService)
                 .environmentObject(appState)
         }
+    }
+
+    /// Navigate to the correct tab and detail view for a deep link target.
+    /// Called from both .onChange(of: deepLinkTarget) and .onAppear for cold-launch support.
+    private func handleDeepLinkTarget(_ target: DeepLinkTarget) {
+        // Navigate to Discovery tab (tab 0) which hosts both MovieDetailView and TVShowDetailView
+        withAnimation {
+            selectedTab = 0
+        }
+
+        // Build a minimal Movie placeholder — navigationDestination(item: $selectedMovie) only
+        // uses movie.id to route to MovieDetailView(movieId:) or TVShowDetailView(tvShowId:)
+        let placeholder = Movie(
+            id: target.mediaId,
+            title: "",
+            overview: "",
+            posterPath: nil,
+            backdropPath: nil,
+            releaseDate: nil,
+            voteAverage: 0,
+            voteCount: 0,
+            genreIds: nil,
+            genres: nil,
+            adult: false,
+            originalLanguage: "",
+            popularity: 0,
+            runtime: nil,
+            status: nil,
+            tagline: nil,
+            productionCountries: nil,
+            imdbId: nil
+        )
+
+        selectedMediaType = target.mediaType == "tv" ? .tv : .movie
+        selectedMovie = placeholder
+        navigationManager.clearDeepLinkTarget()
     }
 
     /// Wait for Discovery content to be ready before dismissing splash screen
@@ -295,7 +342,7 @@ struct MainTabView: View {
 
 struct LiquidGlassBottomBar: View {
     @Binding var selectedTab: Int
-    
+
     var body: some View {
         HStack(spacing: 0) {
             TabBarButton(
@@ -305,7 +352,7 @@ struct LiquidGlassBottomBar: View {
             ) {
                 selectedTab = 0
             }
-            
+
             TabBarButton(
                 icon: "play.rectangle.fill",
                 title: "tab.clips".localized,
@@ -313,7 +360,7 @@ struct LiquidGlassBottomBar: View {
             ) {
                 selectedTab = 1
             }
-            
+
             TabBarButton(
                 icon: "sparkles",
                 title: "AI",
@@ -321,7 +368,7 @@ struct LiquidGlassBottomBar: View {
             ) {
                 selectedTab = 2
             }
-            
+
             TabBarButton(
                 icon: "list.bullet",
                 title: "tab.lists".localized,
@@ -343,14 +390,14 @@ struct TabBarButton: View {
     let title: String
     let isSelected: Bool
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
             VStack(spacing: 6) {
                 Image(systemName: icon)
                     .font(.system(size: 22, weight: isSelected ? .semibold : .regular))
                     .symbolEffect(.bounce, value: isSelected)
-                
+
                 Text(title)
                     .font(.system(size: 11, weight: isSelected ? .semibold : .medium))
                     .lineLimit(1)

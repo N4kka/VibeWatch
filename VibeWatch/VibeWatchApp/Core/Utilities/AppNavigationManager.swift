@@ -5,10 +5,14 @@ import SwiftUI
 // MARK: - DeepLinkTarget
 
 /// Represents a specific destination within the app that can be triggered by a deep link.
-struct DeepLinkTarget: Identifiable {
+struct DeepLinkTarget: Identifiable, Equatable {
     let id = UUID() // For Identifiable conformance, useful for some SwiftUI modifiers
     let mediaId: Int
     let mediaType: String // "movie" or "tv"
+
+    static func == (lhs: DeepLinkTarget, rhs: DeepLinkTarget) -> Bool {
+        lhs.mediaId == rhs.mediaId && lhs.mediaType == rhs.mediaType
+    }
 }
 
 // MARK: - AppNavigationManager
