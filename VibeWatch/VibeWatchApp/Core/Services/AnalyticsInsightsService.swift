@@ -37,6 +37,7 @@ class AnalyticsInsightsService: ObservableObject {
             async let genreStats = calculateGenreDistribution(userId: userId, timeframe: timeframe)
             async let viewingPatterns = calculateViewingPatterns(userId: userId)
             async let contentPerformance = calculateContentPerformance(userId: userId, timeframe: timeframe)
+            async let moodStats = calculateMoodAnalysis(userId: userId, timeframe: timeframe)
             async let discoveryInsights = calculateDiscoveryInsights(userId: userId, timeframe: timeframe)
             async let milestones = detectMilestones(userId: userId)
 
@@ -45,7 +46,7 @@ class AnalyticsInsightsService: ObservableObject {
                 genreDistribution: await genreStats,
                 viewingPatterns: await viewingPatterns,
                 contentPerformance: await contentPerformance,
-                moodAnalysis: nil, // Optional: will implement later
+                moodAnalysis: await moodStats,
                 discoveryInsights: await discoveryInsights,
                 milestones: await milestones,
                 generatedAt: Date()
@@ -472,6 +473,49 @@ class AnalyticsInsightsService: ObservableObject {
             fastestBinged: fastestBinged,
             abandoned: abandoned
         )
+    }
+
+    // MARK: - Mood Analysis
+
+    /// Compute mood distribution from user's genre viewing history.
+    /// Returns a non-nil MoodAnalysis with an empty moodDistribution when the user
+    /// has fewer than 5 history items with genre data (placeholder state).
+    private func calculateMoodAnalysis(userId: String, timeframe: Timeframe) async -> MoodAnalysis {
+        // Deterministic genre → mood mapping (TMDB genre IDs)
+        let genreToMood: [Int: String] = [
+            35: "Light", 16: "Light", 10751: "Light", 10402: "Light",
+            12: "Adventurous", 14: "Adventurous", 878: "Adventurous", 10752: "Adventurous", 37: "Adventurous",
+            28: "Intense", 53: "Intense", 27: "Intense", 80: "Intense",
+            18: "Thoughtful", 99: "Thoughtful", 36: "Thoughtful", 9648: "Thoughtful",
+            10749: "Romantic", 10770: "Romantic"
+        ]
+
+        let since = timeframe.startDate
+        let sql = """
+            SELECT genre_ids FROM user_clip_history
+            WHERE user_id = ? AND watched_at >= ?
+              AND genre_ids IS NOT NULL AND genre_ids != ''
+        """
+        let rows = (try? await sqliteService.queryRaw(sql, parameters: [userId, since.ISO8601Format()])) ?? []
+
+        guard rows.count >= 5 else {
+            return MoodAnalysis(moodDistribution: [:], preferredMoodByTime: [:], emotionalJourney: [])
+        }
+
+        var moodCounts: [String: Int] = [:]
+        for row in rows {
+            guard let genreString = row["genre_ids"] as? String else { continue }
+            let genreIds = genreString
+                .split(separator: ",")
+                .compactMap { Int($0.trimmingCharacters(in: .whitespaces)) }
+            for genreId in genreIds {
+                if let mood = genreToMood[genreId] {
+                    moodCounts[mood, default: 0] += 1
+                }
+            }
+        }
+
+        return MoodAnalysis(moodDistribution: moodCounts, preferredMoodByTime: [:], emotionalJourney: [])
     }
 
     // MARK: - Discovery Insights

@@ -17,16 +17,27 @@ final class AnalyticsInsightsTests: XCTestCase {
 
     override func setUp() async throws {
         try await super.setUp()
+        let db = SQLiteService.shared
+        // Insert a profile row so FK constraint on user_clip_history is satisfied
+        _ = db.execute(
+            "INSERT OR IGNORE INTO profiles (id, display_name) VALUES (?, 'Test User')",
+            parameters: [userId]
+        )
         // Ensure any prior test data for this userId is removed
-        _ = SQLiteService.shared.execute(
+        _ = db.execute(
             "DELETE FROM user_clip_history WHERE user_id = ?",
             parameters: [userId]
         )
     }
 
     override func tearDown() async throws {
-        _ = SQLiteService.shared.execute(
+        let db = SQLiteService.shared
+        _ = db.execute(
             "DELETE FROM user_clip_history WHERE user_id = ?",
+            parameters: [userId]
+        )
+        _ = db.execute(
+            "DELETE FROM profiles WHERE id = ?",
             parameters: [userId]
         )
         try await super.tearDown()
