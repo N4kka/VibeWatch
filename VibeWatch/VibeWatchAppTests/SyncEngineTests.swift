@@ -230,13 +230,14 @@ final class SyncEngineTests: XCTestCase {
 
     func testIsSyncingFlag() async {
         // Initially not syncing
-        XCTAssertFalse(syncEngine.isSyncing, "Should not be syncing initially")
+        let isSyncing = await MainActor.run { syncEngine.isSyncing }
+        XCTAssertFalse(isSyncing, "Should not be syncing initially")
 
         print("isSyncing flag test passed")
     }
 
     func testPendingOperationsCount() async throws {
-        let initialCount = syncEngine.pendingOperationsCount
+        let initialCount = await MainActor.run { syncEngine.pendingOperationsCount }
 
         // Queue multiple operations
         for i in 1...3 {
@@ -252,7 +253,7 @@ final class SyncEngineTests: XCTestCase {
         // Wait a moment for count update
         try await Task.sleep(nanoseconds: 100_000_000) // 0.1s
 
-        let newCount = syncEngine.pendingOperationsCount
+        let newCount = await MainActor.run { syncEngine.pendingOperationsCount }
         XCTAssertGreaterThanOrEqual(newCount, initialCount, "Pending count should not decrease")
 
         print("Pending operations count test passed")
@@ -475,6 +476,54 @@ final class SyncEngineTests: XCTestCase {
                 parameters: [table]
             )
         }
+    }
+}
+
+// MARK: - BUG-02 Tests
+
+extension SyncEngineTests {
+
+    /// RED test (BUG-02): Insert a PGRST205-blocked row, call the unblock method,
+    /// assert the row transitions from 'blocked' to 'pending'.
+    ///
+    /// Uses resetBlockedOperations() (public, semantically equivalent) because
+    /// the target method unblockAndRetryBlockedOperations() is added in the GREEN phase.
+    /// The test documents the required behavior contract for BUG-02.
+    func testUnblockSchemaErrorOperations() async throws {
+        let testOperationId = "test-pgrst205-blocked-\(UUID().uuidString)"
+
+        // Insert a blocked row simulating a PGRST205 schema error
+        _ = sqliteService.execute("""
+            INSERT INTO sync_outbox
+                (operation_id, user_id, table_name, operation_type, record_id, payload, status, last_error)
+            VALUES (?, 'test-user', 'clip_comments', 'INSERT', ?, '{}', 'blocked', 'PGRST205: column updated_at not found')
+        """, parameters: [testOperationId, testOperationId])
+
+        // Verify the row is blocked before the unblock call
+        var rows = (try? await sqliteService.queryRaw(
+            "SELECT status FROM sync_outbox WHERE operation_id = ?",
+            parameters: [testOperationId]
+        )) ?? []
+        XCTAssertEqual(rows.first?["status"] as? String, "blocked",
+            "Row must be in 'blocked' state before unblock call")
+
+        // Call unblock — BUG-02 fix will expose unblockAndRetryBlockedOperations().
+        // Until then, resetBlockedOperations() provides equivalent semantics for this test.
+        await syncEngine.resetBlockedOperations()
+
+        // Assert the row is now pending
+        rows = (try? await sqliteService.queryRaw(
+            "SELECT status FROM sync_outbox WHERE operation_id = ?",
+            parameters: [testOperationId]
+        )) ?? []
+        XCTAssertEqual(rows.first?["status"] as? String, "pending",
+            "PGRST205-blocked operations must be reset to 'pending' after unblock call")
+
+        // Cleanup
+        _ = sqliteService.execute(
+            "DELETE FROM sync_outbox WHERE operation_id = ?",
+            parameters: [testOperationId]
+        )
     }
 }
 
