@@ -7,10 +7,10 @@
 
 ### Critical Bugs
 
-- [ ] **BUG-01**: Comments sync to Supabase — fix missing `updated_at` column in backend schema so `clip_add_comment` RPC succeeds and `commentRPCDisabled` flag is never set
-- [ ] **BUG-02**: SyncEngine recovers from PGRST205-blocked operations — add a recovery path so permanently stuck operations can be unblocked when backend schema is later corrected
-- [ ] **BUG-03**: Push notification taps navigate to relevant content — implement `SmartNotificationService.handleNotificationTap` to route to movie/show via `AppNavigationManager`
-- [ ] **BUG-04**: Analytics Dashboard shows mood analysis — implement or remove `moodAnalysis` field in `AnalyticsInsightsService.generateUserStatistics`
+- [x] **BUG-01**: Comments sync to Supabase — fix missing `updated_at` column in backend schema so `clip_add_comment` RPC succeeds and `commentRPCDisabled` flag is never set
+- [x] **BUG-02**: SyncEngine recovers from PGRST205-blocked operations — add a recovery path so permanently stuck operations can be unblocked when backend schema is later corrected
+- [x] **BUG-03**: Push notification taps navigate to relevant content — implement `SmartNotificationService.handleNotificationTap` to route to movie/show via `AppNavigationManager`
+- [x] **BUG-04**: Analytics Dashboard shows mood analysis — implement or remove `moodAnalysis` field in `AnalyticsInsightsService.generateUserStatistics`
 
 ### Security
 
@@ -62,10 +62,10 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BUG-01 | Phase 1 | Pending |
-| BUG-02 | Phase 1 | Pending |
-| BUG-03 | Phase 1 | Pending |
-| BUG-04 | Phase 1 | Pending |
+| BUG-01 | Phase 1 | Complete |
+| BUG-02 | Phase 1 | Complete |
+| BUG-03 | Phase 1 | Complete |
+| BUG-04 | Phase 1 | Complete |
 | SEC-01 | Phase 2 | Pending |
 | SEC-02 | Phase 2 | Pending |
 | PERF-01 | Phase 3 | Pending |
