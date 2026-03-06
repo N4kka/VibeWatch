@@ -35,10 +35,72 @@ class AuthService: AuthServiceProtocol {
     private let expectingPasswordResetKey = "auth_expecting_password_reset"
     private let userDefaults = UserDefaults.standard
 
+    // Keychain storage for encrypted auth token persistence
+    private let keychainStorage = KeychainStorage()
+
     private init() {
+        AuthService._migrateUserDefaultsToKeychain(from: UserDefaults.standard, to: KeychainStorage())
         loadCachedAuthState()
         setupClient()
         Logger.info("[Auth] AuthService initialized with real Supabase")
+    }
+
+    // MARK: - UserDefaults to Keychain Migration
+
+    /// Migrates cached auth state from UserDefaults to Keychain.
+    /// This static overload accepts injected stores to allow unit testing without
+    /// triggering the @MainActor singleton (which is not constructible in tests).
+    ///
+    /// - Parameters:
+    ///   - defaults: The UserDefaults instance to read from and clear.
+    ///   - keychain: The AuthLocalStorage (Keychain) to write to.
+    @discardableResult
+    nonisolated static func _migrateUserDefaultsToKeychain(
+        from defaults: UserDefaults,
+        to keychain: any AuthLocalStorage
+    ) -> Bool {
+        // Idempotency check: if the trigger key is absent, migration already ran
+        guard defaults.object(forKey: "auth_cached_user") != nil else {
+            return true
+        }
+
+        var migrationFailed = false
+
+        // Migrate auth_cached_user (Data)
+        if let userData = defaults.data(forKey: "auth_cached_user") {
+            do {
+                try keychain.store(key: "auth_cached_user", value: userData)
+                defaults.removeObject(forKey: "auth_cached_user")
+            } catch {
+                Logger.error("[Auth] Keychain migration failed for auth_cached_user: \(error)")
+                migrationFailed = true
+            }
+        }
+
+        // Migrate auth_cached_is_authenticated (Bool as 1-byte Data)
+        if !migrationFailed {
+            let isAuth = defaults.bool(forKey: "auth_cached_is_authenticated")
+            let isAuthData = Data([isAuth ? 1 : 0])
+            do {
+                try keychain.store(key: "auth_cached_is_authenticated", value: isAuthData)
+                defaults.removeObject(forKey: "auth_cached_is_authenticated")
+            } catch {
+                Logger.error("[Auth] Keychain migration failed for auth_cached_is_authenticated: \(error)")
+                migrationFailed = true
+            }
+        }
+
+        if migrationFailed {
+            Logger.warning("[Auth] Keychain migration failed — user will need to re-login")
+            // Clear both stores to avoid stale plaintext tokens
+            defaults.removeObject(forKey: "auth_cached_user")
+            defaults.removeObject(forKey: "auth_cached_is_authenticated")
+            try? keychain.remove(key: "auth_cached_user")
+            try? keychain.remove(key: "auth_cached_is_authenticated")
+            return false
+        }
+
+        return true
     }
 
     private func setupClient() {
@@ -60,7 +122,10 @@ class AuthService: AuthServiceProtocol {
             return
         }
 
-        client = Supabase.SupabaseClient(supabaseURL: url, supabaseKey: supabaseAnonKey)
+        let options = SupabaseClientOptions(
+            auth: SupabaseClientOptions.AuthOptions(storage: keychainStorage)
+        )
+        client = Supabase.SupabaseClient(supabaseURL: url, supabaseKey: supabaseAnonKey, options: options)
 
         // Listen for auth state changes (Reliable way to detect password recovery)
         Task {
@@ -105,11 +170,17 @@ class AuthService: AuthServiceProtocol {
 
     // MARK: - Offline Persistence
 
-    /// Load cached authentication state from UserDefaults (for offline support)
+    /// Load cached authentication state from Keychain (for offline support)
     private func loadCachedAuthState() {
-        isAuthenticated = userDefaults.bool(forKey: cachedAuthStateKey)
+        // Read isAuthenticated from Keychain (1-byte Bool encoding)
+        if let isAuthData = try? keychainStorage.retrieve(key: cachedAuthStateKey),
+           let byte = isAuthData.first {
+            isAuthenticated = byte != 0
+        } else {
+            isAuthenticated = false
+        }
 
-        if let userData = userDefaults.data(forKey: cachedUserKey) {
+        if let userData = try? keychainStorage.retrieve(key: cachedUserKey) {
             do {
                 currentUser = try JSONDecoder().decode(User.self, from: userData)
                 // Phase 5: Use Logger for sensitive data (email sanitization)
@@ -136,28 +207,30 @@ class AuthService: AuthServiceProtocol {
         }
     }
 
-    /// Save authentication state to UserDefaults (for offline support)
+    /// Save authentication state to Keychain (for offline support)
     private func saveCachedAuthState() {
-        userDefaults.set(isAuthenticated, forKey: cachedAuthStateKey)
+        // Store isAuthenticated as 1-byte Data in Keychain
+        let isAuthData = Data([isAuthenticated ? 1 : 0])
+        try? keychainStorage.store(key: cachedAuthStateKey, value: isAuthData)
 
         if let user = currentUser {
             do {
                 let userData = try JSONEncoder().encode(user)
-                userDefaults.set(userData, forKey: cachedUserKey)
+                try? keychainStorage.store(key: cachedUserKey, value: userData)
                 // Phase 5: Use Logger for sensitive data (email sanitization)
                 Logger.info("[Auth] Cached user for offline access: \(user.id.prefix(8))...")
             } catch {
                 Logger.warning("[Auth] Failed to encode user for caching: \(error.localizedDescription)")
             }
         } else {
-            userDefaults.removeObject(forKey: cachedUserKey)
+            try? keychainStorage.remove(key: cachedUserKey)
         }
     }
 
     /// Clear cached authentication state
     private func clearCachedAuthState() {
-        userDefaults.removeObject(forKey: cachedUserKey)
-        userDefaults.removeObject(forKey: cachedAuthStateKey)
+        try? keychainStorage.remove(key: cachedUserKey)
+        try? keychainStorage.remove(key: cachedAuthStateKey)
         Logger.debug("[Auth] Cleared cached auth state")
     }
 
