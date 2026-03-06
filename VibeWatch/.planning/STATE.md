@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-security-hardening/02-01-PLAN.md
-last_updated: "2026-03-06T09:43:30.007Z"
+stopped_at: Completed 02-security-hardening/02-02-PLAN.md
+last_updated: "2026-03-06T10:02:45.283Z"
 last_activity: 2026-03-05 — BUG-01 fixed (clip_comments updated_at schema + commentRPCDisabled removed)
 progress:
   total_phases: 4
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 8
-  completed_plans: 7
+  completed_plans: 8
   percent: 20
 ---
 
@@ -57,6 +57,7 @@ Progress: [██░░░░░░░░] 20%
 | Phase 01-critical-bug-fixes P03 | 7 | 2 tasks | 2 files |
 | Phase 02-security-hardening P00 | 5 | 2 tasks | 3 files |
 | Phase 02-security-hardening P01 | 9 | 2 tasks | 5 files |
+| Phase 02-security-hardening P02 | 25 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -87,6 +88,9 @@ Recent decisions affecting current work:
 - [Phase 02-security-hardening]: AuthMigrationTests uses AuthLocalStorage protocol and AuthService._migrateUserDefaultsToKeychain(from:to:) testable static overload as TDD seam for plan 02-02
 - [Phase 02-security-hardening]: cerebras-proxy deployed with --no-verify-jwt to enable per-request JWT verification; two-client pattern (anon + service-role) for RPC logging
 - [Phase 02-security-hardening]: Config.cerebrasAPIKey removed with no empty-string fallback — compile error enforces complete cleanup; CEREBRAS_API_KEY now server-side secret only
+- [Phase 02-security-hardening]: SupabaseClientOptions.AuthOptions(storage:) constructor required in supabase-swift 2.38.1 — storage is a let constant, not mutable after init
+- [Phase 02-security-hardening]: _migrateUserDefaultsToKeychain declared nonisolated static — required for synchronous XCTest call without MainActor isolation
+- [Phase 02-security-hardening]: Bool cached as 1-byte Data([byte]) in Keychain — avoids encoder dependency for single boolean value
 
 ### Pending Todos
 
@@ -99,6 +103,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-06T09:43:30.005Z
-Stopped at: Completed 02-security-hardening/02-01-PLAN.md
+Last session: 2026-03-06T10:02:45.281Z
+Stopped at: Completed 02-security-hardening/02-02-PLAN.md
 Resume file: None
