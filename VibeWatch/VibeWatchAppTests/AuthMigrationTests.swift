@@ -1,4 +1,5 @@
 import XCTest
+import Auth
 @testable import VibeWatchApp
 
 /// Unit tests for the UserDefaults-to-Keychain migration in AuthService.
