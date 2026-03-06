@@ -15,7 +15,7 @@
 ### Security
 
 - [ ] **SEC-01**: Cerebras API key never leaves the server — proxy all `CerebrasService` calls through a Supabase Edge Function; remove key from app bundle
-- [ ] **SEC-02**: Auth session tokens stored in Keychain — migrate `AuthService` token persistence from `UserDefaults` to iOS Keychain
+- [x] **SEC-02**: Auth session tokens stored in Keychain — migrate `AuthService` token persistence from `UserDefaults` to iOS Keychain
 
 ### Performance
 
@@ -67,7 +67,7 @@
 | BUG-03 | Phase 1 | Complete |
 | BUG-04 | Phase 1 | Complete |
 | SEC-01 | Phase 2 | Pending |
-| SEC-02 | Phase 2 | Pending |
+| SEC-02 | Phase 2 | Complete |
 | PERF-01 | Phase 3 | Pending |
 | PERF-02 | Phase 3 | Pending |
 | PERF-03 | Phase 3 | Pending |
