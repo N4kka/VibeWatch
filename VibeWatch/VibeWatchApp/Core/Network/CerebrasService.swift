@@ -82,7 +82,12 @@ struct CerebrasUsage: Codable {
 class CerebrasService {
     @MainActor static let shared = CerebrasService()
 
-    private let baseURL = "https://api.cerebras.ai/v1/chat/completions"
+    private let baseURL: String = {
+        let base = Config.supabaseURL
+        guard !base.isEmpty else { return "" }
+        let host = base.replacingOccurrences(of: ".supabase.co", with: ".functions.supabase.co")
+        return "\(host)/cerebras-proxy"
+    }()
     // Zai-glm-4.7 model for backend processing
     private let defaultModel = "zai-glm-4.7"
 
@@ -279,7 +284,11 @@ class CerebrasService {
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.addValue("Bearer \(Config.cerebrasAPIKey)", forHTTPHeaderField: "Authorization")
+        let session = try await AuthService.shared.client?.auth.session
+        guard let accessToken = session?.accessToken, !accessToken.isEmpty else {
+            throw CerebrasError.unknown
+        }
+        request.addValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
 
         let requestBody = CerebrasChatRequest(
@@ -493,7 +502,11 @@ class CerebrasService {
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.addValue("Bearer \(Config.cerebrasAPIKey)", forHTTPHeaderField: "Authorization")
+        let session = try await AuthService.shared.client?.auth.session
+        guard let accessToken = session?.accessToken, !accessToken.isEmpty else {
+            throw CerebrasError.unknown
+        }
+        request.addValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
 
         let messages = [
