@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-critical-bug-fixes/01-05-PLAN.md
-last_updated: "2026-03-05T17:13:40.450Z"
+stopped_at: Completed 01-critical-bug-fixes/01-03-PLAN.md
+last_updated: "2026-03-06T08:20:01.996Z"
 last_activity: 2026-03-05 — BUG-01 fixed (clip_comments updated_at schema + commentRPCDisabled removed)
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 5
-  completed_plans: 4
+  completed_plans: 5
   percent: 20
 ---
 
@@ -54,6 +54,7 @@ Progress: [██░░░░░░░░] 20%
 | Phase 01-critical-bug-fixes P02 | 36 | 2 tasks | 3 files |
 | Phase 01-critical-bug-fixes P04 | 40min | 2 tasks | 3 files |
 | Phase 01-critical-bug-fixes P05 | 40min | 2 tasks | 3 files |
+| Phase 01-critical-bug-fixes P03 | 7 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -77,6 +78,9 @@ Recent decisions affecting current work:
 - [Phase 01-critical-bug-fixes]: clearDeepLinkTarget() called in MainTabView handleDeepLinkTarget after navigation state set — view owns lifecycle of deepLinkTarget consumption
 - [Phase 01-critical-bug-fixes]: genre_ids column on user_clip_history already added by migration 4 committed in plan 01-02 — no new migration needed for BUG-04
 - [Phase 01-critical-bug-fixes]: Non-nil empty-struct pattern: empty moodDistribution distinguishes below-threshold state from nil/not-implemented
+- [Phase 01-critical-bug-fixes]: unblockAndRetryBlockedOperations() is synchronous — underlying SQL UPDATE is synchronous, no async wrapper needed
+- [Phase 01-critical-bug-fixes]: Method added directly on SyncEngine class (not SyncEngineProtocol) — AppState calls SyncEngine.shared directly
+- [Phase 01-critical-bug-fixes]: Launch-time unblock called before pushPendingChanges() in performFullSyncOnLaunch — formerly-blocked ops included in same launch push
 
 ### Pending Todos
 
@@ -89,6 +93,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-05T17:13:40.449Z
-Stopped at: Completed 01-critical-bug-fixes/01-05-PLAN.md
+Last session: 2026-03-06T08:20:01.992Z
+Stopped at: Completed 01-critical-bug-fixes/01-03-PLAN.md
 Resume file: None

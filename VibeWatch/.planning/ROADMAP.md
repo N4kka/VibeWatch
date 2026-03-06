@@ -6,7 +6,7 @@ This milestone stabilizes VibeWatch for production release. No new features — 
 
 ## Phases
 
-- [ ] **Phase 1: Critical Bug Fixes** - Restore comments sync, unblock stuck SyncEngine operations, wire notification deep-linking, and remove the hardcoded nil from Analytics Dashboard
+- [x] **Phase 1: Critical Bug Fixes** - Restore comments sync, unblock stuck SyncEngine operations, wire notification deep-linking, and remove the hardcoded nil from Analytics Dashboard (completed 2026-03-06)
 - [ ] **Phase 2: Security Hardening** - Proxy Cerebras through a server-side Edge Function and migrate auth token storage to iOS Keychain
 - [ ] **Phase 3: Performance** - Enforce sub-500ms cold start, eliminate duplicate carousel work, add concurrent SQLite reads, and audit cache-first screen loads
 - [ ] **Phase 4: Code Quality** - Replace all 212 raw print() calls with Logger and fix the broken MultiDeviceSyncTests
@@ -81,7 +81,7 @@ Phases execute in order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Critical Bug Fixes | 4/5 | In Progress|  |
+| 1. Critical Bug Fixes | 5/5 | Complete   | 2026-03-06 |
 | 2. Security Hardening | 0/2 | Not started | - |
 | 3. Performance | 0/3 | Not started | - |
 | 4. Code Quality | 0/2 | Not started | - |
