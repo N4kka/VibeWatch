@@ -24,6 +24,8 @@
 		26BD1630A9514E7B9D559ED5 /* DatabaseMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F849736129F54FA8BD1D3247 /* DatabaseMigrationTests.swift */; };
 		13392337BF1F4B568E9A4B9C /* AppNavigationManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06ECE77A8DA440E92022CE7 /* AppNavigationManagerTests.swift */; };
 		C6877C53B7A3455F88CAEEA9 /* AnalyticsInsightsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C9EEC77D8F045818BF4B264 /* AnalyticsInsightsTests.swift */; };
+		A1B2C3D4E5F6A1B2 /* KeychainStorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A1B3 /* KeychainStorageTests.swift */; };
+		A1B2C3D4E5F6A1B4 /* AuthMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A1B5 /* AuthMigrationTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -49,6 +51,8 @@
 		F849736129F54FA8BD1D3247 /* DatabaseMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseMigrationTests.swift; sourceTree = "<group>"; };
 		D06ECE77A8DA440E92022CE7 /* AppNavigationManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppNavigationManagerTests.swift; sourceTree = "<group>"; };
 		4C9EEC77D8F045818BF4B264 /* AnalyticsInsightsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsInsightsTests.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F6A1B3 /* KeychainStorageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStorageTests.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F6A1B5 /* AuthMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthMigrationTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -112,6 +116,8 @@
 				F849736129F54FA8BD1D3247 /* DatabaseMigrationTests.swift */,
 				D06ECE77A8DA440E92022CE7 /* AppNavigationManagerTests.swift */,
 				4C9EEC77D8F045818BF4B264 /* AnalyticsInsightsTests.swift */,
+				A1B2C3D4E5F6A1B3 /* KeychainStorageTests.swift */,
+				A1B2C3D4E5F6A1B5 /* AuthMigrationTests.swift */,
 			);
 			path = VibeWatchAppTests;
 			sourceTree = "<group>";
@@ -297,6 +303,8 @@
 				26BD1630A9514E7B9D559ED5 /* DatabaseMigrationTests.swift in Sources */,
 				13392337BF1F4B568E9A4B9C /* AppNavigationManagerTests.swift in Sources */,
 				C6877C53B7A3455F88CAEEA9 /* AnalyticsInsightsTests.swift in Sources */,
+				A1B2C3D4E5F6A1B2 /* KeychainStorageTests.swift in Sources */,
+				A1B2C3D4E5F6A1B4 /* AuthMigrationTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
