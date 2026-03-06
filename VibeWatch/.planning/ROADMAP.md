@@ -39,11 +39,12 @@ Plans:
   1. The Cerebras API key does not appear in the compiled .ipa or in the app bundle's Info.plist/xcconfig; all AI requests route through a Supabase Edge Function
   2. Auth session tokens survive an app restart and are stored in iOS Keychain, not in a plain UserDefaults .plist file
   3. Existing logged-in users are silently migrated to Keychain storage on first launch after the update (no forced re-login)
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 02-01: Create Supabase Edge Function Cerebras proxy; update CerebrasService to call it; remove key from Config/xcconfig
-- [ ] 02-02: Migrate AuthService token persistence from UserDefaults to iOS Keychain with in-place migration
+- [ ] 02-00-PLAN.md — Wave 0 RED test stubs for KeychainStorage and AuthService migration (TDD baseline for SEC-02)
+- [ ] 02-01-PLAN.md — SEC-01: Create cerebras-proxy Edge Function; update CerebrasService to call it; remove key from Config/xcconfig
+- [ ] 02-02-PLAN.md — SEC-02: Implement KeychainStorage adapter and update AuthService with Keychain wiring and migration
 
 ### Phase 3: Performance
 **Goal**: The app reaches a usable Discovery screen in under 500ms from cache on every cold start, with no duplicate work and no UI-blocking SQLite reads
@@ -82,6 +83,6 @@ Phases execute in order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Critical Bug Fixes | 5/5 | Complete   | 2026-03-06 |
-| 2. Security Hardening | 0/2 | Not started | - |
+| 2. Security Hardening | 0/3 | Not started | - |
 | 3. Performance | 0/3 | Not started | - |
 | 4. Code Quality | 0/2 | Not started | - |
