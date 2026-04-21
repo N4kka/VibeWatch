@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-security-hardening/02-02-PLAN.md
-last_updated: "2026-03-06T14:45:10.853Z"
+stopped_at: Completed 03-performance/03-00-PLAN.md
+last_updated: "2026-04-21T13:39:46.254Z"
 last_activity: 2026-03-05 — BUG-01 fixed (clip_comments updated_at schema + commentRPCDisabled removed)
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 8
-  completed_plans: 8
+  total_plans: 12
+  completed_plans: 9
   percent: 20
 ---
 
@@ -58,6 +58,7 @@ Progress: [██░░░░░░░░] 20%
 | Phase 02-security-hardening P00 | 5 | 2 tasks | 3 files |
 | Phase 02-security-hardening P01 | 9 | 2 tasks | 5 files |
 | Phase 02-security-hardening P02 | 25 | 2 tasks | 3 files |
+| Phase 03-performance P00 | 8 | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -91,6 +92,8 @@ Recent decisions affecting current work:
 - [Phase 02-security-hardening]: SupabaseClientOptions.AuthOptions(storage:) constructor required in supabase-swift 2.38.1 — storage is a let constant, not mutable after init
 - [Phase 02-security-hardening]: _migrateUserDefaultsToKeychain declared nonisolated static — required for synchronous XCTest call without MainActor isolation
 - [Phase 02-security-hardening]: Bool cached as 1-byte Data([byte]) in Keychain — avoids encoder dependency for single boolean value
+- [Phase 03-performance]: AppState.init(authService:) requires a parameter — GREEN tests for PERF-02 will need @MainActor context or mock auth service injection
+- [Phase 03-performance]: PERF-04 RED stubs use XCTFail() sentinel since memoryCache is private and ClipsRepository mock seam does not exist yet
 
 ### Pending Todos
 
@@ -103,6 +106,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-06T10:02:45.281Z
-Stopped at: Completed 02-security-hardening/02-02-PLAN.md
+Last session: 2026-04-21T13:39:46.252Z
+Stopped at: Completed 03-performance/03-00-PLAN.md
 Resume file: None

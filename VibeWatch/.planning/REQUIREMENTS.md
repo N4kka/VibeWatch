@@ -19,10 +19,10 @@
 
 ### Performance
 
-- [ ] **PERF-01**: App launch reaches usable Discovery screen in under 500ms from cache — verify and enforce the instant-launch path in `AppState.loadCachedContentSync()`
-- [ ] **PERF-02**: Personalization carousels generated once per cold start — deduplicate the two `generatePersonalizedCarousels` call sites in `AppState` so carousel generation runs at most once per launch
-- [ ] **PERF-03**: SQLite supports concurrent reads — add a dedicated reader queue alongside the existing writer queue, using WAL mode (already enabled) to allow parallel reads without blocking writes
-- [ ] **PERF-04**: Discovery, Movie/TV detail, and Clips screens show cached content instantly — audit each screen's data load path and ensure cache-first reads with background refresh
+- [x] **PERF-01**: App launch reaches usable Discovery screen in under 500ms from cache — verify and enforce the instant-launch path in `AppState.loadCachedContentSync()`
+- [x] **PERF-02**: Personalization carousels generated once per cold start — deduplicate the two `generatePersonalizedCarousels` call sites in `AppState` so carousel generation runs at most once per launch
+- [x] **PERF-03**: SQLite supports concurrent reads — add a dedicated reader queue alongside the existing writer queue, using WAL mode (already enabled) to allow parallel reads without blocking writes
+- [x] **PERF-04**: Discovery, Movie/TV detail, and Clips screens show cached content instantly — audit each screen's data load path and ensure cache-first reads with background refresh
 
 ### Code Quality
 
@@ -68,10 +68,10 @@
 | BUG-04 | Phase 1 | Complete |
 | SEC-01 | Phase 2 | Complete |
 | SEC-02 | Phase 2 | Complete |
-| PERF-01 | Phase 3 | Pending |
-| PERF-02 | Phase 3 | Pending |
-| PERF-03 | Phase 3 | Pending |
-| PERF-04 | Phase 3 | Pending |
+| PERF-01 | Phase 3 | Complete |
+| PERF-02 | Phase 3 | Complete |
+| PERF-03 | Phase 3 | Complete |
+| PERF-04 | Phase 3 | Complete |
 | QUAL-01 | Phase 4 | Pending |
 | QUAL-02 | Phase 4 | Pending |
 
