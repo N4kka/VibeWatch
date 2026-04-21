@@ -55,12 +55,13 @@ Plans:
   2. Personalization carousels are generated exactly once per cold start (single call site, no duplicate computation)
   3. SQLite read operations for Discovery, Movie/TV detail, and Clips screens do not block on concurrent writes — cached content appears instantly
   4. Discovery, Movie/TV detail, and Clips screens each load cached content before initiating any network refresh
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 03-01: Audit and enforce AppState.loadCachedContentSync() instant-launch path; deduplicate generatePersonalizedCarousels call sites
-- [ ] 03-02: Add concurrent reader queue to SQLiteService alongside existing writer queue (WAL mode already enabled)
-- [ ] 03-03: Audit Discovery, MovieDetail, TVDetail, and ClipsView data load paths for cache-first reads with background refresh
+- [ ] 03-00-PLAN.md — Wave 0 RED test stubs for all four performance requirements (TDD baseline)
+- [ ] 03-01-PLAN.md — PERF-01 + PERF-02: Fix loadCachedContentSync() via hasPersonalizedDiscoveryCache; guard generatePersonalizedCarousels with carouselsGeneratedThisLaunch Bool
+- [ ] 03-02-PLAN.md — PERF-03: Split SQLiteService into writer + concurrent reader queue; open read-only SQLite connection for WAL concurrent reads
+- [ ] 03-03-PLAN.md — PERF-04: Remove PRO gate from Movie/TV detail cache reads; verify Discovery and Clips cache-first paths
 
 ### Phase 4: Code Quality
 **Goal**: No raw print() statements exist in production code paths, and the only non-trivial test in the project compiles and passes
@@ -84,5 +85,5 @@ Phases execute in order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. Critical Bug Fixes | 5/5 | Complete   | 2026-03-06 |
 | 2. Security Hardening | 3/3 | Complete   | 2026-03-06 |
-| 3. Performance | 0/3 | Not started | - |
+| 3. Performance | 0/4 | Not started | - |
 | 4. Code Quality | 0/2 | Not started | - |
