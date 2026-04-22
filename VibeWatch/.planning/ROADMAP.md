@@ -70,11 +70,11 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. A release build produces zero print() output — all 212 raw print() calls are replaced with Logger.info/debug/warning/error equivalents
   2. MultiDeviceSyncTests.swift compiles without errors and all test cases pass, covering SyncEngine and ConflictResolver conflict resolution paths
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 04-01: Replace all 212 print() calls with Logger across 30 files
-- [ ] 04-02: Update MultiDeviceSyncTests to use SyncEngine and ConflictResolver APIs
+- [ ] 04-01-PLAN.md — QUAL-01: Replace all 186 raw print() calls with Logger across 28 production files
+- [ ] 04-02-PLAN.md — QUAL-02: Rewrite MultiDeviceSyncTests.swift using ConflictResolver and SyncEngine APIs
 
 ## Progress
 
