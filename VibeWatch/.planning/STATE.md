@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03-performance/03-00-PLAN.md
-last_updated: "2026-04-21T13:39:46.254Z"
+stopped_at: Completed 03-performance/03-01-PLAN.md
+last_updated: "2026-04-22T06:23:04.135Z"
 last_activity: 2026-03-05 — BUG-01 fixed (clip_comments updated_at schema + commentRPCDisabled removed)
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 12
-  completed_plans: 9
+  completed_plans: 10
   percent: 20
 ---
 
@@ -59,6 +59,7 @@ Progress: [██░░░░░░░░] 20%
 | Phase 02-security-hardening P01 | 9 | 2 tasks | 5 files |
 | Phase 02-security-hardening P02 | 25 | 2 tasks | 3 files |
 | Phase 03-performance P00 | 8 | 1 tasks | 2 files |
+| Phase 03-performance P01 | 16 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -94,6 +95,9 @@ Recent decisions affecting current work:
 - [Phase 02-security-hardening]: Bool cached as 1-byte Data([byte]) in Keychain — avoids encoder dependency for single boolean value
 - [Phase 03-performance]: AppState.init(authService:) requires a parameter — GREEN tests for PERF-02 will need @MainActor context or mock auth service injection
 - [Phase 03-performance]: PERF-04 RED stubs use XCTFail() sentinel since memoryCache is private and ClipsRepository mock seam does not exist yet
+- [Phase 03-performance]: refreshCacheState() added to SQLiteService — tests need re-check after insert/delete since shared singleton persists between test runs
+- [Phase 03-performance]: carouselsGeneratedThisLaunch on AppState (not DiscoveryPersonalizationService) — resets on AppState re-creation in tests
+- [Phase 03-performance]: loadCachedContentSync() stripped of ContentCacheManager paths — replaced with SQLiteService.hasCachedPersonalizedContent()
 
 ### Pending Todos
 
@@ -106,6 +110,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-21T13:39:46.252Z
-Stopped at: Completed 03-performance/03-00-PLAN.md
+Last session: 2026-04-22T06:23:04.133Z
+Stopped at: Completed 03-performance/03-01-PLAN.md
 Resume file: None
