@@ -87,6 +87,10 @@ final class SQLiteService: ObservableObject {
     private let dbPath: String
     private let dbQueue = DispatchQueue(label: "com.vibewatch.sqlite", qos: .userInitiated)
 
+    /// True when personalized_discovery table has at least one row.
+    /// Set synchronously at init() before any concurrent access begins.
+    private(set) var hasPersonalizedDiscoveryCache: Bool = false
+
     // Wrappers to allow capturing dynamic SQLite values in @Sendable contexts.
     private struct SQLSendableValue: @unchecked Sendable { let raw: Any }
     private struct SQLSendableRecord: @unchecked Sendable { var raw: [String: Any] }
@@ -109,8 +113,9 @@ final class SQLiteService: ObservableObject {
         
         openDatabase()
         createTables()
+        checkInitialCacheState()
     }
-    
+
     deinit {
         if let db = db {
             sqlite3_close(db)
@@ -131,8 +136,9 @@ final class SQLiteService: ObservableObject {
         db = nil
         openDatabase()
         createTables()
+        checkInitialCacheState()
     }
-    
+
     // MARK: - Connection Management
     
     private func openDatabase() {
@@ -159,7 +165,32 @@ final class SQLiteService: ObservableObject {
             Logger.info("[SQLite] Database closed")
         }
     }
-    
+
+    /// Check whether personalized_discovery has any rows.
+    /// Uses raw sqlite3_* calls directly on db — NOT execute() — to avoid
+    /// dbQueue re-entrancy. Safe to call from init() after createTables().
+    private func checkInitialCacheState() {
+        var stmt: OpaquePointer?
+        let sql = "SELECT COUNT(*) FROM personalized_discovery LIMIT 1"
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return }
+        defer { sqlite3_finalize(stmt) }
+        if sqlite3_step(stmt) == SQLITE_ROW {
+            hasPersonalizedDiscoveryCache = sqlite3_column_int(stmt, 0) > 0
+        }
+    }
+
+    /// Returns true when personalized_discovery table has at least one row.
+    /// Reflects the value set synchronously at init().
+    func hasCachedPersonalizedContent() -> Bool {
+        hasPersonalizedDiscoveryCache
+    }
+
+    /// Re-runs the cache state check and updates hasPersonalizedDiscoveryCache.
+    /// Call this after modifying personalized_discovery to keep the property current.
+    func refreshCacheState() {
+        checkInitialCacheState()
+    }
+
     /// Test database connection
     func testConnection() async -> Bool {
         do {
