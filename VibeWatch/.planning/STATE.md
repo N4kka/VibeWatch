@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03-performance/03-02-PLAN.md
-last_updated: "2026-04-22T06:35:58.059Z"
+stopped_at: Completed 03-performance/03-03-PLAN.md
+last_updated: "2026-04-22T06:54:55.716Z"
 last_activity: 2026-03-05 — BUG-01 fixed (clip_comments updated_at schema + commentRPCDisabled removed)
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 12
-  completed_plans: 11
+  completed_plans: 12
   percent: 20
 ---
 
@@ -61,6 +61,7 @@ Progress: [██░░░░░░░░] 20%
 | Phase 03-performance P00 | 8 | 1 tasks | 2 files |
 | Phase 03-performance P01 | 16 | 2 tasks | 3 files |
 | Phase 03-performance P02 | 10 | 1 tasks | 2 files |
+| Phase 03-performance P03 | 14 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -101,6 +102,9 @@ Recent decisions affecting current work:
 - [Phase 03-performance]: loadCachedContentSync() stripped of ContentCacheManager paths — replaced with SQLiteService.hasCachedPersonalizedContent()
 - [Phase 03-performance]: SQLITE_OPEN_FULLMUTEX (not NOMUTEX) required for shared readerDb on concurrent queue — NOMUTEX caused illegal multi-threaded access crash
 - [Phase 03-performance]: readerQueue declared as let (not private let) so @testable import can access readerQueue.label in tests
+- [Phase 03-performance]: Cache READ extended to all users in detail VMs (not PRO-only) — reads are free; PRO gate remains on WRITES only
+- [Phase 03-performance]: Background refresh after cache hit uses Task(priority: .utility) to avoid competing with UI thread
+- [Phase 03-performance]: PERF-04 tests use XCTSkip — memoryCache is private; DatabaseClipsService requires full app bootstrap; manual path in 03-VALIDATION.md
 
 ### Pending Todos
 
@@ -113,6 +117,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-22T06:35:58.058Z
-Stopped at: Completed 03-performance/03-02-PLAN.md
+Last session: 2026-04-22T06:54:55.714Z
+Stopped at: Completed 03-performance/03-03-PLAN.md
 Resume file: None
