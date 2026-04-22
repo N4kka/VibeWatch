@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03-performance/03-01-PLAN.md
-last_updated: "2026-04-22T06:23:04.135Z"
+stopped_at: Completed 03-performance/03-02-PLAN.md
+last_updated: "2026-04-22T06:35:58.059Z"
 last_activity: 2026-03-05 — BUG-01 fixed (clip_comments updated_at schema + commentRPCDisabled removed)
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 12
-  completed_plans: 10
+  completed_plans: 11
   percent: 20
 ---
 
@@ -60,6 +60,7 @@ Progress: [██░░░░░░░░] 20%
 | Phase 02-security-hardening P02 | 25 | 2 tasks | 3 files |
 | Phase 03-performance P00 | 8 | 1 tasks | 2 files |
 | Phase 03-performance P01 | 16 | 2 tasks | 3 files |
+| Phase 03-performance P02 | 10 | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -98,6 +99,8 @@ Recent decisions affecting current work:
 - [Phase 03-performance]: refreshCacheState() added to SQLiteService — tests need re-check after insert/delete since shared singleton persists between test runs
 - [Phase 03-performance]: carouselsGeneratedThisLaunch on AppState (not DiscoveryPersonalizationService) — resets on AppState re-creation in tests
 - [Phase 03-performance]: loadCachedContentSync() stripped of ContentCacheManager paths — replaced with SQLiteService.hasCachedPersonalizedContent()
+- [Phase 03-performance]: SQLITE_OPEN_FULLMUTEX (not NOMUTEX) required for shared readerDb on concurrent queue — NOMUTEX caused illegal multi-threaded access crash
+- [Phase 03-performance]: readerQueue declared as let (not private let) so @testable import can access readerQueue.label in tests
 
 ### Pending Todos
 
@@ -110,6 +113,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-22T06:23:04.133Z
-Stopped at: Completed 03-performance/03-01-PLAN.md
+Last session: 2026-04-22T06:35:58.058Z
+Stopped at: Completed 03-performance/03-02-PLAN.md
 Resume file: None
