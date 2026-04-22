@@ -47,35 +47,53 @@ class MovieDetailViewModel: ObservableObject {
         isLoading = true
         error = nil
 
-        // Step 1: Check if user is PRO (offline mode only for PRO users)
+        // Step 1: Check if user is PRO (needed for cache WRITE decision only)
         let isProUser = await quotaService.checkIsProUser()
         Logger.debug("[MovieDetail] PRO user status: \(isProUser)")
 
-        // Step 2: Try to load from cache first (PRO users only)
-        if isProUser {
-            do {
-                if let cached = try await detailCache.getCachedMovieDetails(movieId: movieId) {
-                    Logger.debug("[MovieDetail] Loaded from cache (PRO user): \(cached.movie.title)")
-                    self.movie = cached.movie
-                    self.credits = cached.credits
-                    self.videos = cached.videos
-                    self.watchProviders = cached.watchProviders
-                    self.similarMovies = cached.similarMovies
-                    self.imdbId = cached.movie.imdbId
-                    isLoading = false
-                    // Note: We still have cached data, so no error state
-                    return
-                } else {
-                    Logger.warning("[MovieDetail] No cached data found for movie ID \(movieId)")
+        // Step 2: Try to load from cache first (ALL users — cache reads are free)
+        do {
+            if let cached = try await detailCache.getCachedMovieDetails(movieId: movieId) {
+                Logger.debug("[MovieDetail] Loaded from cache: \(cached.movie.title)")
+                self.movie = cached.movie
+                self.credits = cached.credits
+                self.videos = cached.videos
+                self.watchProviders = cached.watchProviders
+                self.similarMovies = cached.similarMovies
+                self.imdbId = cached.movie.imdbId
+                isLoading = false
+                // Background network refresh — does not block the cached display
+                Task(priority: .utility) {
+                    do {
+                        try await self.attemptLoadMovieDetails()
+                        // Cache write remains PRO-only
+                        if isProUser, let movie = self.movie {
+                            do {
+                                try await self.detailCache.cacheMovieDetails(
+                                    movie: movie,
+                                    credits: self.credits,
+                                    videos: self.videos,
+                                    watchProviders: self.watchProviders,
+                                    similarMovies: self.similarMovies,
+                                    imdbId: self.imdbId
+                                )
+                            } catch {
+                                Logger.warning("[MovieDetail] Failed to cache movie details: \(error.localizedDescription)")
+                            }
+                        }
+                    } catch {
+                        Logger.warning("[MovieDetail] Background refresh failed: \(error.localizedDescription)")
+                    }
                 }
-            } catch {
-                Logger.warning("[MovieDetail] Cache retrieval failed: \(error.localizedDescription)")
+                return
+            } else {
+                Logger.warning("[MovieDetail] No cached data found for movie ID \(movieId)")
             }
-        } else {
-            Logger.debug("[MovieDetail] Non-PRO user - skipping cache")
+        } catch {
+            Logger.warning("[MovieDetail] Cache retrieval failed: \(error.localizedDescription)")
         }
 
-        // Step 2: Cache miss or expired - fetch from network with retry logic
+        // Step 3: Cache miss — fetch from network with retry logic
         let maxAttempts = 3
         var lastError: Error?
 
@@ -367,24 +385,52 @@ class TVShowDetailViewModel: ObservableObject {
         isLoading = true
         error = nil
 
-        // Step 1: Check if user is PRO (offline mode only for PRO users)
+        // Step 1: Check if user is PRO (needed for cache WRITE decision only)
         let isProUser = await quotaService.checkIsProUser()
 
-        // Step 2: Try to load from cache first (PRO users only)
-        if isProUser, let cached = try? await detailCache.getCachedTVShowDetails(tvShowId: tvShowId) {
-            Logger.debug("[TVShowDetail] Loaded from cache (PRO user): \(cached.tvShow.name)")
-            self.tvShow = cached.tvShow
-            self.credits = cached.credits
-            self.videos = cached.videos
-            self.watchProviders = cached.watchProviders
-            self.similarShows = cached.similarShows
-            self.imdbId = cached.tvShow.imdbId
-            isLoading = false
-            // Note: We still have cached data, so no error state
-            return
+        // Step 2: Try to load from cache first (ALL users — cache reads are free)
+        do {
+            if let cached = try await detailCache.getCachedTVShowDetails(tvShowId: tvShowId) {
+                Logger.debug("[TVShowDetail] Loaded from cache: \(cached.tvShow.name)")
+                self.tvShow = cached.tvShow
+                self.credits = cached.credits
+                self.videos = cached.videos
+                self.watchProviders = cached.watchProviders
+                self.similarShows = cached.similarShows
+                self.imdbId = cached.tvShow.imdbId
+                isLoading = false
+                // Background network refresh — does not block the cached display
+                Task(priority: .utility) {
+                    do {
+                        try await self.attemptLoadTVShowDetails()
+                        // Cache write remains PRO-only
+                        if isProUser, let tvShow = self.tvShow {
+                            do {
+                                try await self.detailCache.cacheTVShowDetails(
+                                    tvShow: tvShow,
+                                    credits: self.credits,
+                                    videos: self.videos,
+                                    watchProviders: self.watchProviders,
+                                    similarShows: self.similarShows,
+                                    imdbId: self.imdbId
+                                )
+                            } catch {
+                                Logger.warning("[TVShowDetail] Failed to cache TV show details: \(error.localizedDescription)")
+                            }
+                        }
+                    } catch {
+                        Logger.warning("[TVShowDetail] Background refresh failed: \(error.localizedDescription)")
+                    }
+                }
+                return
+            } else {
+                Logger.warning("[TVShowDetail] No cached data found for TV show ID \(tvShowId)")
+            }
+        } catch {
+            Logger.warning("[TVShowDetail] Cache retrieval failed: \(error.localizedDescription)")
         }
 
-        // Step 2: Cache miss or expired - fetch from network with retry logic
+        // Step 3: Cache miss — fetch from network with retry logic
         let maxAttempts = 3
         var lastError: Error?
 
