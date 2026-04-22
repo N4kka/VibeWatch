@@ -89,7 +89,11 @@ class AppState: ObservableObject {
     
     private let authService: AuthService
     private let dataCoordinator = DataCoordinator.shared
-    
+
+    /// Prevents generatePersonalizedCarousels from firing more than once per AppState lifetime.
+    /// Starts false; set to true after the first carousel generation completes.
+    private(set) var carouselsGeneratedThisLaunch = false
+
     init(authService: AuthService = .shared) {
         self.authService = authService
 
@@ -286,22 +290,9 @@ class AppState: ObservableObject {
     /// Synchronously check if we have valid cached content for instant display
     /// This runs on init() before any async work
     private func loadCachedContentSync() -> Bool {
-        // Check ContentCacheManager for cached clips (loaded sync in its init)
-        let hasClips = !ContentCacheManager.shared.cachedClips.isEmpty
-
-        // Check for cached discovery content
-        let hasMovies = ContentCacheManager.shared.getCachedDiscoveryMovies() != nil
-
-        // Check if initial data has been populated
+        let hasCache = SQLiteService.shared.hasCachedPersonalizedContent()
         let hasInitialData = UserDefaults.standard.bool(forKey: "initialDataPopulated")
-
-        let hasCachedContent = hasClips || hasMovies || hasInitialData
-
-        if hasCachedContent {
-            print("⚡️ [AppState] Found cached content: clips=\(hasClips), movies=\(hasMovies), initialData=\(hasInitialData)")
-        }
-
-        return hasCachedContent
+        return hasCache || hasInitialData
     }
 
     /// Background refresh that doesn't block UI
@@ -327,7 +318,9 @@ class AppState: ObservableObject {
         await preloadDiscoveryImages()
 
         // Pre-warm personalization cache (background, low priority)
-        Task(priority: .utility) {
+        Task(priority: .utility) { [self] in
+            guard !self.carouselsGeneratedThisLaunch else { return }
+            self.carouselsGeneratedThisLaunch = true
             let profile = await UserPreferenceManager.shared.aggregatePreferences()
             do {
                 _ = try await DiscoveryPersonalizationService.shared.generatePersonalizedCarousels(
@@ -417,6 +410,8 @@ class AppState: ObservableObject {
         await ensureDiscoveryContentExists()
 
         // Pre-warm the personalized discovery cache so the Discovery tab loads instantly
+        guard !carouselsGeneratedThisLaunch else { return }
+        carouselsGeneratedThisLaunch = true
         print("📺 [App] Pre-warming Discovery personalization cache...")
         let profile = await UserPreferenceManager.shared.aggregatePreferences()
         do {
