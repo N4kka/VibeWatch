@@ -19,7 +19,7 @@ final class AITokenManager: ObservableObject {
     @Published private(set) var dailyLimit: Int = 5
     
     private var lastResetDate: Date = Date()
-    private var dayChangeObserver: NSObjectProtocol?
+    nonisolated(unsafe) private var dayChangeObserver: NSObjectProtocol?
     
     private init() {
         updateLimit()

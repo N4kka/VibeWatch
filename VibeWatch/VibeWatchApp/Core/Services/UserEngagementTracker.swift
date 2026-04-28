@@ -1,8 +1,9 @@
 import Foundation
 import SwiftUI
 
-class UserEngagementTracker: ObservableObject {
-    @MainActor static let shared = UserEngagementTracker()
+@MainActor
+final class UserEngagementTracker: ObservableObject {
+    static let shared = UserEngagementTracker()
 
     // Watch time tracking
     private var watchHistory: [String: ClipEngagement] = [:] // clipId -> engagement
@@ -22,9 +23,10 @@ class UserEngagementTracker: ObservableObject {
     private let legacyEngagementKey = "userEngagementData"
 
     private init() {
-        Task {
-            await migrateFromUserDefaultsIfNeeded()
-            await loadFromSQLite()
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            await self.migrateFromUserDefaultsIfNeeded()
+            await self.loadFromSQLite()
         }
     }
     
@@ -178,7 +180,9 @@ class UserEngagementTracker: ObservableObject {
     // MARK: - Persistence (SQLite)
 
     private func saveEngagementData() {
-        Task { await saveToSQLite() }
+        Task { @MainActor [weak self] in
+            await self?.saveToSQLite()
+        }
     }
 
     private func saveToSQLite() async {
@@ -279,10 +283,11 @@ class UserEngagementTracker: ObservableObject {
         currentStreak = 0
         isInHotStreak = false
 
-        Task {
+        Task { @MainActor [weak self] in
+            guard let self else { return }
             let userId = await SupabaseService.shared.currentUser?.id ?? "anonymous"
             do {
-                _ = try await db.queryRaw(
+                _ = try await self.db.queryRaw(
                     "DELETE FROM user_preferences WHERE user_id = ?",
                     parameters: [userId]
                 )

@@ -153,7 +153,9 @@ final class DependencyContainer: ObservableObject {
 // MARK: - Environment Key
 
 private struct DependencyContainerKey: EnvironmentKey {
-    static let defaultValue: DependencyContainer = .shared
+    nonisolated(unsafe) static var defaultValue: DependencyContainer {
+        MainActor.assumeIsolated { DependencyContainer.shared }
+    }
 }
 
 extension EnvironmentValues {

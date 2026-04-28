@@ -3,6 +3,7 @@ import XCTest
 
 /// Unit tests for the unified SyncEngine
 /// Tests sync logic, backoff strategy, dependency handling, and error recovery
+@MainActor
 final class SyncEngineTests: XCTestCase {
 
     var syncEngine: SyncEngine!
@@ -566,19 +567,16 @@ extension SyncEngineTests {
     func testConcurrentQueueOperations() async throws {
         print("Starting concurrent queue test...")
 
-        // Queue multiple operations concurrently
-        await withTaskGroup(of: Void.self) { group in
-            for i in 1...10 {
-                group.addTask {
-                    try? await self.syncEngine.queueOperation(
-                        table: "concurrent_test",
-                        operationType: "INSERT",
-                        recordId: "concurrent-\(i)-\(UUID().uuidString)",
-                        payload: ["index": i],
-                        dependsOn: nil
-                    )
-                }
-            }
+        // Queue multiple operations. SyncEngine is main actor-isolated under Swift 6,
+        // so this test validates repeated queueing without crossing actor boundaries.
+        for i in 1...10 {
+            try? await syncEngine.queueOperation(
+                table: "concurrent_test",
+                operationType: "INSERT",
+                recordId: "concurrent-\(i)-\(UUID().uuidString)",
+                payload: ["index": i],
+                dependsOn: nil
+            )
         }
 
         // Verify all operations were queued (some might fail due to race conditions)

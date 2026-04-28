@@ -3,6 +3,8 @@ import Foundation
 actor PostHogClient {
     static let shared = PostHogClient()
 
+    private static let queueKey = "posthog.queue.v1"
+
     struct Diagnostics {
         let queueCount: Int
         let isFlushing: Bool
@@ -28,7 +30,7 @@ actor PostHogClient {
         case http(statusCode: Int, body: String)
     }
 
-    private let queueKey = "posthog.queue.v1"
+    private let queueKey = PostHogClient.queueKey
     private var queue: [EventPayload] = []
     private var isFlushing = false
     private var lastFlushError: PostHogError?
@@ -36,12 +38,12 @@ actor PostHogClient {
     private var flushAttemptCount = 0
 
     private init() {
-        queue = loadQueue()
-        logInitializationStatus()
+        queue = Self.loadQueue()
+        Self.logInitializationStatus()
     }
 
     /// Log PostHog configuration status on startup for production debugging
-    private func logInitializationStatus() {
+    private static func logInitializationStatus() {
         let apiKey = Config.posthogApiKey
         let host = Config.posthogHost
 
@@ -63,8 +65,8 @@ actor PostHogClient {
     func capture(
         event: String,
         distinctId: String,
-        userProperties: [String: Any]? = nil,
-        properties: [String: Any]? = nil,
+        userProperties: [String: PostHogValue]? = nil,
+        properties: [String: PostHogValue]? = nil,
         timestamp: Date = Date()
     ) {
         guard !Config.posthogApiKey.isEmpty, !Config.posthogHost.isEmpty else { return }
@@ -80,12 +82,12 @@ actor PostHogClient {
 
         if let properties {
             for (key, value) in properties {
-                merged[key] = PostHogValue(any: value)
+                merged[key] = value
             }
         }
 
         if let userProperties {
-            merged["$set"] = .object(userProperties.mapValues { PostHogValue(any: $0) })
+            merged["$set"] = .object(userProperties)
         }
 
         let isoTimestamp = ISO8601DateFormatter().string(from: timestamp)
@@ -99,7 +101,7 @@ actor PostHogClient {
             event: "$identify",
             distinctId: newDistinctId,
             properties: [
-                "$anon_distinct_id": anonymousDistinctId
+                "$anon_distinct_id": .string(anonymousDistinctId)
             ]
         )
     }
@@ -213,13 +215,13 @@ actor PostHogClient {
         }
     }
 
-    private func loadQueue() -> [EventPayload] {
+    private static func loadQueue() -> [EventPayload] {
         guard let data = UserDefaults.standard.data(forKey: queueKey) else { return [] }
         return (try? JSONDecoder().decode([EventPayload].self, from: data)) ?? []
     }
 }
 
-enum PostHogValue: Codable {
+enum PostHogValue: Codable, Sendable {
     case string(String)
     case number(Double)
     case bool(Bool)

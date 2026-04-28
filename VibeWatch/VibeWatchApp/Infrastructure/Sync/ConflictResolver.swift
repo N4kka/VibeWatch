@@ -4,7 +4,7 @@ import Foundation
 
 /// Protocol defining the conflict resolution interface for testability.
 /// Enables dependency injection and mocking in tests.
-public protocol ConflictResolverProtocol: AnyObject {
+public protocol ConflictResolverProtocol: AnyObject, Sendable {
     /// Resolves a conflict between local and remote records.
     ///
     /// - Parameters:
@@ -64,7 +64,7 @@ public struct ResolvedRecord {
 /// - `.lastWriteWins`: Most recent timestamp wins (reactions)
 /// - `.serverWins`: Always take server value (clips)
 /// - `.weightedMerge`: Combine device signals (preferences)
-public final class ConflictResolver: ConflictResolverProtocol {
+public final class ConflictResolver: ConflictResolverProtocol, @unchecked Sendable {
 
     // MARK: - Singleton
 

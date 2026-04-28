@@ -24,6 +24,7 @@ struct SVGImageView: UIViewRepresentable {
         context.coordinator.loadSVG(from: url, into: uiView)
     }
 
+    @MainActor
     final class Coordinator {
         private var currentURL: URL?
         private var task: Task<Void, Never>?
@@ -33,7 +34,7 @@ struct SVGImageView: UIViewRepresentable {
             currentURL = url
             task?.cancel()
 
-            task = Task {
+            task = Task { [weak webView] in
                 let html: String
                 do {
                     let (data, _) = try await URLSession.shared.data(from: url)
@@ -59,9 +60,7 @@ struct SVGImageView: UIViewRepresentable {
                     html = Self.imgHTML(for: url)
                 }
 
-                await MainActor.run {
-                    webView.loadHTMLString(html, baseURL: nil)
-                }
+                webView?.loadHTMLString(html, baseURL: nil)
             }
         }
 

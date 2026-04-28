@@ -5,6 +5,7 @@ import Combine
 
 /// Protocol defining the unified sync engine interface.
 /// Enables testability through dependency injection and mocking.
+@MainActor
 public protocol SyncEngineProtocol: AnyObject {
     /// Whether a sync operation is currently in progress
     var isSyncing: Bool { get }
@@ -119,21 +120,21 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
 
     // MARK: - Notification Names
 
-    public static let syncStartedNotification = Notification.Name("SyncEngine.syncStarted")
-    public static let syncCompletedNotification = Notification.Name("SyncEngine.syncCompleted")
-    public static let syncFailedNotification = Notification.Name("SyncEngine.syncFailed")
+    nonisolated public static let syncStartedNotification = Notification.Name("SyncEngine.syncStarted")
+    nonisolated public static let syncCompletedNotification = Notification.Name("SyncEngine.syncCompleted")
+    nonisolated public static let syncFailedNotification = Notification.Name("SyncEngine.syncFailed")
 
     // MARK: - Initialization
 
     private init(
-        sqliteService: SQLiteService = .shared,
-        networkMonitor: NetworkMonitor = .shared,
-        conflictResolver: ConflictResolverProtocol = ConflictResolver.shared,
+        sqliteService: SQLiteService? = nil,
+        networkMonitor: NetworkMonitor? = nil,
+        conflictResolver: ConflictResolverProtocol? = nil,
         stateMachine: SyncStateMachine? = nil
     ) {
-        self.sqliteService = sqliteService
-        self.networkMonitor = networkMonitor
-        self.conflictResolver = conflictResolver
+        self.sqliteService = sqliteService ?? .shared
+        self.networkMonitor = networkMonitor ?? .shared
+        self.conflictResolver = conflictResolver ?? ConflictResolver.shared
         self.stateMachine = stateMachine ?? SyncStateMachine()
 
         // Load or create device ID

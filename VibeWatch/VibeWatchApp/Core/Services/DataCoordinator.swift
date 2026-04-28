@@ -93,7 +93,7 @@ class DataCoordinator: ObservableObject {
     // it doesn't abort the underlying network/database work.
 
     /// Execute an operation with a timeout - returns nil if timeout expires
-    private func withTimeout<T>(seconds: Double, operation: @escaping () async -> T?) async -> T? {
+    private func withTimeout<T: Sendable>(seconds: Double, operation: @escaping @Sendable () async -> T?) async -> T? {
         await withTaskGroup(of: T?.self) { group in
             group.addTask {
                 await operation()
@@ -112,7 +112,7 @@ class DataCoordinator: ObservableObject {
     }
 
     /// Execute a void operation with a timeout
-    private func withTimeout(seconds: Double, operation: @escaping () async -> Void) async {
+    private func withTimeout(seconds: Double, operation: @escaping @Sendable () async -> Void) async {
         await withTaskGroup(of: Bool.self) { group in
             group.addTask {
                 await operation()

@@ -3,8 +3,8 @@ import Foundation
 /// Service for fetching comprehensive streaming availability, pricing, and quality data
 /// Uses the "Movie of the Night" API (via RapidAPI)
 /// Limits: 1,000 requests/month (Free Tier)
-class StreamingAvailabilityService {
-    @MainActor static let shared = StreamingAvailabilityService()
+final class StreamingAvailabilityService: @unchecked Sendable {
+    static let shared = StreamingAvailabilityService()
     
     private let baseURL = "https://streaming-availability.p.rapidapi.com"
     private let rapidAPIKey = "4f23d6c502msh1c6ccc90b956bb3p18cabcjsn051c85bd5b33"

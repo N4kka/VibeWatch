@@ -520,6 +520,7 @@ final class SQLiteService: ObservableObject {
     }
     
     /// Query and return rows as dictionaries
+    nonisolated(nonsending)
     func queryRaw(_ sql: String, parameters: [Any] = []) async throws -> [[String: Any]] {
         let safeParameters = parameters.map(SQLSendableValue.init(raw:))
         
@@ -582,7 +583,7 @@ final class SQLiteService: ObservableObject {
 
     /// REPLACE INTO upsert for arbitrary rows. Only columns existing in the table are written.
     /// If the table has a synced_at column and it's missing, it's set to now().
-    @MainActor
+    nonisolated(nonsending)
     func upsert(table: String, rows: [[String: Any]]) async throws {
         try validateTableName(table)  // Phase 5: SQL injection prevention
         guard !rows.isEmpty else { return }
@@ -616,6 +617,7 @@ final class SQLiteService: ObservableObject {
     }
     
     /// Query and decode to Codable type
+    nonisolated(nonsending)
     func query<T: Decodable>(_ sql: String, parameters: [Any] = []) async throws -> [T] {
         let rows = try await queryRaw(sql, parameters: parameters)
         let data = try JSONSerialization.data(withJSONObject: rows)
@@ -640,6 +642,7 @@ final class SQLiteService: ObservableObject {
     // MARK: - CRUD Helpers
     
     /// Insert a record and return the rowid
+    nonisolated(nonsending)
     func insert(_ table: String, values: [String: Any]) async throws -> Int64 {
         try validateTableName(table)  // Phase 5: SQL injection prevention
         let columns = values.keys.joined(separator: ", ")
@@ -682,6 +685,7 @@ final class SQLiteService: ObservableObject {
     }
     
     /// Update records
+    nonisolated(nonsending)
     func update(_ table: String, values: [String: Any], where condition: String, parameters: [Any] = []) async throws {
         try validateTableName(table)  // Phase 5: SQL injection prevention
         let setClause = values.keys.map { "\($0) = ?" }.joined(separator: ", ")
@@ -694,6 +698,7 @@ final class SQLiteService: ObservableObject {
     }
     
     /// Delete records (soft delete by default)
+    nonisolated(nonsending)
     func delete(_ table: String, where condition: String, parameters: [Any] = [], hard: Bool = false) async throws {
         try validateTableName(table)  // Phase 5: SQL injection prevention
         if hard {

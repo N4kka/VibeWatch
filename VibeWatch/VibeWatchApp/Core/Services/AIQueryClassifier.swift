@@ -3,7 +3,7 @@ import NaturalLanguage
 
 /// Service for classifying AI chatbot queries and extracting entities
 /// Uses NaturalLanguage framework for intent detection and entity recognition
-class AIQueryClassifier {
+final class AIQueryClassifier: @unchecked Sendable {
     static let shared = AIQueryClassifier()
 
     // MARK: - Properties

@@ -133,7 +133,7 @@ final class ClipQuotaService: ObservableObject {
                     // This prevents RevenueCat's initial cached value from overriding our UserDefaults cache
                     if isFirstEmission {
                         isFirstEmission = false
-                        if defaults.object(forKey: Keys.cachedProStatus) == nil {
+                        if self.defaults.object(forKey: Keys.cachedProStatus) == nil {
                             Logger.debug("[ClipQuota] First RevenueCat emission, no cache: \(isPro)")
                             self.updateProStatus(isPro)
                         } else {

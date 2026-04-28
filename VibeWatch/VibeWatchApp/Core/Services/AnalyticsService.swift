@@ -626,10 +626,11 @@ class AnalyticsService {
 
     private func captureToPostHog(name: String, parameters: [String: Any]?) async {
         let distinctId = userId ?? installId
+        let postHogProperties = parameters?.mapValues { PostHogValue(any: $0) }
         await PostHogClient.shared.capture(
             event: name,
             distinctId: distinctId,
-            properties: parameters
+            properties: postHogProperties
         )
     }
 

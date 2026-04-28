@@ -31,7 +31,7 @@ class AIRecommendationViewModel: ObservableObject {
     private let queryClassifier: AIQueryClassifier
     private let contextBuilder: AIContextBuilder
     private let conversationMemory: ConversationMemoryManager
-    private var timeChangeObserver: NSObjectProtocol?
+    nonisolated(unsafe) private var timeChangeObserver: NSObjectProtocol?
     private let userDefaults = UserDefaults.standard
 
     private static let dayKeyFormatter: DateFormatter = {

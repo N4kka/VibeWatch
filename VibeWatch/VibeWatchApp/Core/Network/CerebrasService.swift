@@ -79,8 +79,8 @@ struct CerebrasUsage: Codable {
 
 /// Service for backend AI processing with Cerebras AI (24M tokens/day)
 /// Used for batch operations, content enhancement, and heavy lifting
-class CerebrasService {
-    @MainActor static let shared = CerebrasService()
+final class CerebrasService: @unchecked Sendable {
+    static let shared = CerebrasService()
 
     private let baseURL: String = {
         let base = Config.supabaseURL

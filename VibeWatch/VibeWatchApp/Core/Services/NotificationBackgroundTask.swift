@@ -4,7 +4,8 @@ import UIKit
 
 /// Manages background task scheduling for smart notifications
 /// Runs every 6 hours to check for new content and schedule notifications
-class NotificationBackgroundTask {
+@MainActor
+final class NotificationBackgroundTask {
     static let shared = NotificationBackgroundTask()
 
     // MARK: - Constants

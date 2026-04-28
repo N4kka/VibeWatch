@@ -37,8 +37,9 @@ struct ImagePicker: UIViewControllerRepresentable {
             
             if provider.canLoadObject(ofClass: UIImage.self) {
                 provider.loadObject(ofClass: UIImage.self) { image, error in
+                    let imageData = (image as? UIImage)?.pngData()
                     DispatchQueue.main.async {
-                        self.parent.selectedImage = image as? UIImage
+                        self.parent.selectedImage = imageData.flatMap(UIImage.init(data:))
                         self.parent.dismiss()
                     }
                 }

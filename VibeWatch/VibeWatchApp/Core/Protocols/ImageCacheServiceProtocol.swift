@@ -3,6 +3,7 @@ import UIKit
 
 /// Protocol defining the image cache service interface.
 /// Enables testability through dependency injection and mocking.
+@MainActor
 protocol ImageCacheServiceProtocol: AnyObject {
     // MARK: - Image Loading
 

@@ -210,13 +210,31 @@ Verification:
 
 ## Status
 
-Pending approval before implementation.
+In progress.
 
-Implementation has not started. The first approval decision is how to handle the dirty working tree before creating the `pre-refactor` tag:
-- Option A: commit the existing local edits as a preservation commit.
-- Option B: stash the existing local edits.
+Pre-implementation decisions:
+- Existing local edits were preserved with commit `ebf4bbd` (`chore: preserve pre-refactor workspace state`).
+- Tag `pre-refactor` was created on that preserved HEAD.
+- Refactor implementation is happening in worktree `.worktrees/data-layer-notifications-refactor` on branch `refactor/data-layer-notifications`.
 
-I will not run destructive git operations. Any existing user changes will be preserved.
+Completed:
+- Phase 0 build settings updated to Swift 6.0 with `SWIFT_STRICT_CONCURRENCY = complete` for app and test targets.
+- Release APNs entitlement changed from `development` to `production`.
+- Ignored local `Secrets.xcconfig` and `Config.swift` were copied into the worktree for build verification only; they are not tracked.
+- Swift 6 concurrency build blockers discovered by Fase 0 were fixed with minimal compatibility changes.
+- Verification: `xcodebuild -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' build` succeeded.
+
+Verification notes:
+- Build succeeded with `xcodebuild -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' build`.
+- Test target now compiles under Swift 6, but runtime assertions fail in existing sync/conflict tests:
+  - `ConflictResolverTests.testLevelCalculation`
+  - `ConflictResolverTests.testFullConflictResolutionFlow`
+  - `SyncEngineTests.testQueueOperation`
+  - `SyncEngineTests.testFullSyncFlow`
+  - `SyncEngineTests.testConcurrentQueueOperations`
+  - `SyncEngineTests.testQueueOperationPerformance`
+  - `SyncStateMachineTests.testIdleToIdle`
+- I stopped after Phase 0 rather than starting Phase 1 with a red test suite.
 
 ## Pros & Cons
 

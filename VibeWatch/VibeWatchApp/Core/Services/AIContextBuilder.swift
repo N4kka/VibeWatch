@@ -2,7 +2,7 @@ import Foundation
 
 /// Service for building AI context and system prompts
 /// Generates personalized prompts based on user profile and query type
-class AIContextBuilder {
+final class AIContextBuilder: @unchecked Sendable {
     static let shared = AIContextBuilder()
 
     // MARK: - Initialization
