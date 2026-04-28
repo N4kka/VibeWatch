@@ -548,23 +548,29 @@ class SupabaseService: ObservableObject {
             .execute()
             .value
         
-        // Convert to MediaList and fetch items for each
-        var mediaLists: [MediaList] = []
-        for listData in listsData {
-            let items = try await fetchListItems(listId: listData.id)
-            let listType = ListType(databaseValue: listData.type) ?? ListType(rawValue: listData.type) ?? .custom
-            
-            let mediaList = MediaList(
-                id: listData.id,
-                name: listData.name,
-                description: listData.description,
-                type: listType,
-                createdAt: listData.createdAt,
-                items: items
-            )
-            mediaLists.append(mediaList)
+        // Fetch all lists' items in parallel
+        let mediaLists: [MediaList] = try await withThrowingTaskGroup(of: MediaList.self) { group in
+            for listData in listsData {
+                group.addTask {
+                    let items = try await self.fetchListItems(listId: listData.id)
+                    let listType = ListType(databaseValue: listData.type) ?? ListType(rawValue: listData.type) ?? .custom
+                    return MediaList(
+                        id: listData.id,
+                        name: listData.name,
+                        description: listData.description,
+                        type: listType,
+                        createdAt: listData.createdAt,
+                        items: items
+                    )
+                }
+            }
+            var results: [MediaList] = []
+            for try await list in group {
+                results.append(list)
+            }
+            return results
         }
-        
+
         return mediaLists
     }
     

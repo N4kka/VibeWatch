@@ -172,8 +172,8 @@ class ListManager: ObservableObject {
         Task {
             await migrateFromUserDefaultsIfNeeded()
             await loadListsFromSQLite()
-            await ensureListsInDatabase()
             isLoadingInitial = false
+            await ensureListsInDatabase()
         }
     }
 
@@ -368,11 +368,36 @@ class ListManager: ObservableObject {
         }
     }
     
-    /// Save all current lists to SQLite
+    /// Save all current lists (metadata + items) to SQLite
     private func saveListsToSQLite() async {
         for list in lists {
             await ensureListInSQLite(list)
+            if !list.items.isEmpty {
+                await saveItemsToSQLite(list.items, listId: list.id)
+            }
         }
+    }
+
+    /// Batch-upsert items using INSERT OR IGNORE so synced items survive the next cold launch
+    private func saveItemsToSQLite(_ items: [MediaListItem], listId: String) async {
+        let records: [[String: Any]] = items.map { item in [
+            "id": item.id,
+            "list_id": listId,
+            "user_id": userId,
+            "media_id": item.mediaId,
+            "media_type": item.mediaType.rawValue,
+            "title": item.title,
+            "poster_path": item.posterPath ?? "",
+            "runtime": item.runtime as Any,
+            "vote_average": item.voteAverage as Any,
+            "vote_count": item.voteCount as Any,
+            "origin_country": stringArray(item.originCountry),
+            "release_date": item.releaseDate ?? "",
+            "genres": intArray(item.genres),
+            "overview": item.overview ?? "",
+            "added_at": ISO8601DateFormatter().string(from: item.addedAt)
+        ]}
+        await db.performBatchInsert(table: "list_items", records: records)
     }
 
     @discardableResult
