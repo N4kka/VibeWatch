@@ -109,16 +109,16 @@ public final class SyncStateMachine: ObservableObject, SyncStateMachineProtocol 
     public func transition(to newState: SyncState, reason: String? = nil) -> Bool {
         let oldState = currentState
 
-        // Check if transition is valid
-        guard canTransition(to: newState) else {
-            Logger.warning("[SyncStateMachine] Invalid transition: \(oldState.logDescription) -> \(newState.logDescription)")
-            return false
-        }
-
         // Skip if transitioning to same state (except for error which may have different details)
         if oldState == newState {
             Logger.debug("[SyncStateMachine] Skipping transition to same state: \(newState.logDescription)")
             return true
+        }
+
+        // Check if transition is valid
+        guard canTransition(to: newState) else {
+            Logger.warning("[SyncStateMachine] Invalid transition: \(oldState.logDescription) -> \(newState.logDescription)")
+            return false
         }
 
         // Apply transition

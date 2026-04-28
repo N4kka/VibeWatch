@@ -174,8 +174,14 @@ public final class ConflictResolver: ConflictResolverProtocol, @unchecked Sendab
             )
         }
 
-        // Both deleted or both not deleted - use last write wins
-        return resolveWithLastWriteWins(local: local, remote: remote)
+        // Both deleted or both not deleted - use last write wins within union semantics.
+        let resolved = resolveWithLastWriteWins(local: local, remote: remote)
+        return ResolvedRecord(
+            record: resolved.record,
+            strategyUsed: .union,
+            wasModified: resolved.wasModified,
+            source: resolved.source
+        )
     }
 
     /// Max wins strategy: Take maximum values for numeric fields.
@@ -293,13 +299,13 @@ public final class ConflictResolver: ConflictResolverProtocol, @unchecked Sendab
     /// Level thresholds:
     /// - Level 1: 0 XP
     /// - Level 2-5: (level - 1) * 100
-    /// - Level 6-10: 500 + (level - 5) * 300
-    /// - Level 11-15: 2000 + (level - 10) * 600
-    /// - Level 16-20: 5000 + (level - 15) * 1000
-    /// - Level 21-25: 10000 + (level - 20) * 2000
-    /// - Level 26-30: 20000 + (level - 25) * 4000
-    /// - Level 31-40: 40000 + (level - 30) * 4000
-    /// - Level 41+: 80000 + (level - 40) * 5000
+    /// - Level 6-10: 500 + (level - 6) * 300
+    /// - Level 11-15: 2000 + (level - 11) * 600
+    /// - Level 16-20: 5000 + (level - 16) * 1000
+    /// - Level 21-25: 10000 + (level - 21) * 2000
+    /// - Level 26-30: 20000 + (level - 26) * 4000
+    /// - Level 31-40: 40000 + (level - 31) * 4000
+    /// - Level 41+: 80000 + (level - 41) * 5000
     public func calculateLevel(from xp: Int) -> Int {
         var level = 1
         while levelThreshold(for: level + 1) <= xp && level < 50 {
@@ -312,13 +318,13 @@ public final class ConflictResolver: ConflictResolverProtocol, @unchecked Sendab
         switch level {
         case 1: return 0
         case 2...5: return (level - 1) * 100
-        case 6...10: return 500 + (level - 5) * 300
-        case 11...15: return 2000 + (level - 10) * 600
-        case 16...20: return 5000 + (level - 15) * 1000
-        case 21...25: return 10000 + (level - 20) * 2000
-        case 26...30: return 20000 + (level - 25) * 4000
-        case 31...40: return 40000 + (level - 30) * 4000
-        default: return 80000 + (level - 40) * 5000
+        case 6...10: return 500 + (level - 6) * 300
+        case 11...15: return 2000 + (level - 11) * 600
+        case 16...20: return 5000 + (level - 16) * 1000
+        case 21...25: return 10000 + (level - 21) * 2000
+        case 26...30: return 20000 + (level - 26) * 4000
+        case 31...40: return 40000 + (level - 31) * 4000
+        default: return 80000 + (level - 41) * 5000
         }
     }
 

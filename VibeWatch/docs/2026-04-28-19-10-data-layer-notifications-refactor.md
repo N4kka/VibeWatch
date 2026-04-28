@@ -223,18 +223,21 @@ Completed:
 - Ignored local `Secrets.xcconfig` and `Config.swift` were copied into the worktree for build verification only; they are not tracked.
 - Swift 6 concurrency build blockers discovered by Fase 0 were fixed with minimal compatibility changes.
 - Verification: `xcodebuild -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' build` succeeded.
+- Sync/conflict test regressions exposed by the Swift 6 baseline were fixed before starting Phase 1:
+  - `ConflictResolver` now preserves `.union` strategy metadata when union resolution falls back to last-write-wins.
+  - XP level thresholds now match the documented level starts.
+  - `SyncStateMachine` treats same-state transitions as no-op successes before validity checks.
+  - `SyncEngineTests` can disable immediate outbox pushes to keep queue-count assertions deterministic.
 
 Verification notes:
 - Build succeeded with `xcodebuild -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' build`.
-- Test target now compiles under Swift 6, but runtime assertions fail in existing sync/conflict tests:
-  - `ConflictResolverTests.testLevelCalculation`
-  - `ConflictResolverTests.testFullConflictResolutionFlow`
-  - `SyncEngineTests.testQueueOperation`
-  - `SyncEngineTests.testFullSyncFlow`
-  - `SyncEngineTests.testConcurrentQueueOperations`
-  - `SyncEngineTests.testQueueOperationPerformance`
-  - `SyncStateMachineTests.testIdleToIdle`
-- I stopped after Phase 0 rather than starting Phase 1 with a red test suite.
+- Targeted sync/conflict suite succeeded with:
+  `xcodebuild test -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' -only-testing:VibeWatchAppTests/ConflictResolverTests -only-testing:VibeWatchAppTests/SyncStateMachineTests -only-testing:VibeWatchAppTests/SyncEngineTests`.
+- Full test suite succeeded with:
+  `xcodebuild test -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5'`.
+- Fresh app build succeeded with:
+  `xcodebuild -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' build`.
+- Build still emits existing warnings unrelated to the current checkpoint; they are intentionally left for later cleanup.
 
 ## Pros & Cons
 

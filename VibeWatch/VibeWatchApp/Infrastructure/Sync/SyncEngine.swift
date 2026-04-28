@@ -118,6 +118,9 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
     /// Tracks the state before suspension for proper resume
     private var stateBeforeSuspension: SyncState?
 
+    /// Allows queue-focused tests to avoid consuming outbox entries immediately.
+    var isImmediatePushEnabled = true
+
     // MARK: - Notification Names
 
     nonisolated public static let syncStartedNotification = Notification.Name("SyncEngine.syncStarted")
@@ -329,7 +332,7 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             Logger.debug("[SyncEngine] Queued \(operationType) on \(table) for record \(recordId)")
 
             // Attempt immediate sync if online
-            if networkMonitor.isConnected {
+            if isImmediatePushEnabled && networkMonitor.isConnected {
                 await pushPendingChanges()
             }
         } else {

@@ -17,6 +17,8 @@ final class SyncEngineTests: XCTestCase {
 
         // Get shared instances
         syncEngine = SyncEngine.shared
+        syncEngine.isImmediatePushEnabled = false
+        syncEngine.forceState(.idle, reason: "Reset before SyncEngineTests")
         sqliteService = SQLiteService.shared
         testUserId = "test-user-\(UUID().uuidString)"
 
@@ -26,6 +28,8 @@ final class SyncEngineTests: XCTestCase {
 
     override func tearDown() async throws {
         await cleanTestData()
+        syncEngine.forceState(.idle, reason: "Reset after SyncEngineTests")
+        syncEngine.isImmediatePushEnabled = true
         try await super.tearDown()
     }
 
