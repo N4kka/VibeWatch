@@ -228,11 +228,19 @@ Completed:
   - XP level thresholds now match the documented level starts.
   - `SyncStateMachine` treats same-state transitions as no-op successes before validity checks.
   - `SyncEngineTests` can disable immediate outbox pushes to keep queue-count assertions deterministic.
+- Phase 1 repository-layer schema and protocols were added:
+  - Migration 7 creates `media_availability`, `discovery_carousels`, `discovery_carousel_items`, and `notification_events`.
+  - Migration 7 adds idempotent `metadata_expires_at` and `availability_expires_at` TTL columns to `media_details_cache`.
+  - New repository protocols define AsyncStream read surfaces and async throwing write/refresh methods for Lists, Media, Discovery, and Notifications.
+  - SQLite table whitelist now includes the new repository cache tables.
+  - `DatabaseMigrationTests.testPersonalizationMigration7AddsRepositoryLayerCacheSchema` covers schema creation and migration idempotency.
 
 Verification notes:
 - Build succeeded with `xcodebuild -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' build`.
 - Targeted sync/conflict suite succeeded with:
   `xcodebuild test -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' -only-testing:VibeWatchAppTests/ConflictResolverTests -only-testing:VibeWatchAppTests/SyncStateMachineTests -only-testing:VibeWatchAppTests/SyncEngineTests`.
+- Phase 1 migration test succeeded with:
+  `xcodebuild test -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' -only-testing:VibeWatchAppTests/DatabaseMigrationTests/testPersonalizationMigration7AddsRepositoryLayerCacheSchema`.
 - Full test suite succeeded with:
   `xcodebuild test -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5'`.
 - Fresh app build succeeded with:

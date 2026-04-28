@@ -49,4 +49,44 @@ final class DatabaseMigrationTests: XCTestCase {
         XCTAssertFalse(rows.isEmpty,
             "clip_comments must have an updated_at column (expected from DatabaseMigrationManager version 3)")
     }
+
+    func testPersonalizationMigration7AddsRepositoryLayerCacheSchema() async throws {
+        let db = SQLiteService.shared
+
+        db.runPersonalizationMigrations()
+        db.runPersonalizationMigrations()
+
+        let versionRows = try await db.queryRaw("""
+            SELECT value_text FROM app_metadata
+            WHERE key_name = 'personalization_migration_version'
+        """)
+        XCTAssertEqual(versionRows.first?["value_text"] as? String, "7")
+
+        let tableRows = try await db.queryRaw("""
+            SELECT name FROM sqlite_master
+            WHERE type = 'table'
+              AND name IN (
+                'media_availability',
+                'discovery_carousels',
+                'discovery_carousel_items',
+                'notification_events'
+              )
+        """)
+        let tableNames = Set(tableRows.compactMap { $0["name"] as? String })
+        XCTAssertEqual(tableNames, [
+            "media_availability",
+            "discovery_carousels",
+            "discovery_carousel_items",
+            "notification_events"
+        ])
+
+        let mediaDetailsColumns = try await db.queryRaw("""
+            SELECT name FROM pragma_table_info('media_details_cache')
+            WHERE name IN ('metadata_expires_at', 'availability_expires_at')
+        """)
+        XCTAssertEqual(Set(mediaDetailsColumns.compactMap { $0["name"] as? String }), [
+            "metadata_expires_at",
+            "availability_expires_at"
+        ])
+    }
 }

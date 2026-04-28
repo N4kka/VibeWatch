@@ -12,6 +12,9 @@ enum SQLiteTable: String, CaseIterable {
     case mediaDetailsCache = "media_details_cache"
     case detailCache = "detail_cache"
     case trailersCache = "trailers_cache"
+    case mediaAvailability = "media_availability"
+    case discoveryCarousels = "discovery_carousels"
+    case discoveryCarouselItems = "discovery_carousel_items"
 
     // User tables
     case profiles
@@ -65,6 +68,7 @@ enum SQLiteTable: String, CaseIterable {
     case notificationHistory = "notification_history"
     case userNotificationPreferences = "user_notification_preferences"
     case notificationSubscriptions = "notification_subscriptions"
+    case notificationEvents = "notification_events"
 
     /// All valid table names as a Set for O(1) lookup
     static let validTableNames: Set<String> = Set(SQLiteTable.allCases.map(\.rawValue))
