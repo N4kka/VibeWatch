@@ -234,6 +234,15 @@ Completed:
   - New repository protocols define AsyncStream read surfaces and async throwing write/refresh methods for Lists, Media, Discovery, and Notifications.
   - SQLite table whitelist now includes the new repository cache tables.
   - `DatabaseMigrationTests.testPersonalizationMigration7AddsRepositoryLayerCacheSchema` covers schema creation and migration idempotency.
+- Phase 2 live/mock repository implementations were added:
+  - `LiveMediaRepository` yields SQLite snapshots first, refreshes stale metadata/availability via injected remote loaders, and stores availability with a 12-hour TTL.
+  - `LiveDiscoveryRepository` persists carousels/items to SQLite, refreshes via an injected carousel provider, records interactions, and normalizes `choose_for_you` to position 0.
+  - `LiveListRepository` performs optimistic SQLite list/list-item writes and queues sync operations.
+  - `LiveNotificationRepository` records local notification events and deduplicates sent events.
+  - Mock repositories were added for Lists, Media, Discovery, and Notifications.
+  - Supabase `apply_mutations` and `merge_user_preferences` now use SDK RPC calls with Encodable payloads instead of manual RPC URLSession requests.
+  - `SQLiteService.upsert`, `update`, and `delete` now write through the writer connection instead of routing write SQL through the read-only query path.
+  - Repository tests cover SWR details, availability TTL, and Discovery ordering.
 
 Verification notes:
 - Build succeeded with `xcodebuild -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' build`.
@@ -241,6 +250,8 @@ Verification notes:
   `xcodebuild test -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' -only-testing:VibeWatchAppTests/ConflictResolverTests -only-testing:VibeWatchAppTests/SyncStateMachineTests -only-testing:VibeWatchAppTests/SyncEngineTests`.
 - Phase 1 migration test succeeded with:
   `xcodebuild test -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' -only-testing:VibeWatchAppTests/DatabaseMigrationTests/testPersonalizationMigration7AddsRepositoryLayerCacheSchema`.
+- Phase 2 repository tests succeeded with:
+  `xcodebuild test -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' -only-testing:VibeWatchAppTests/LiveMediaRepositoryTests -only-testing:VibeWatchAppTests/LiveDiscoveryRepositoryTests`.
 - Full test suite succeeded with:
   `xcodebuild test -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5'`.
 - Fresh app build succeeded with:

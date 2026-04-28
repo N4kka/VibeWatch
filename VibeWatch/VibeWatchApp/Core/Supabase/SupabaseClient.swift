@@ -310,101 +310,37 @@ class SupabaseService: ObservableObject {
     /// Applies a batch of mutations atomically using the `apply_mutations` RPC on Supabase.
     /// Each mutation should include: op ('INSERT'|'UPDATE'|'DELETE'), table, id, record (JSON object).
     func applyMutations(_ batch: [[String: Any]]) async throws {
-        guard client != nil else {
+        guard let client else {
             throw SupabaseError.notConfigured
         }
-        // Manually call RPC endpoint to avoid Encodable/Any issues
-        guard let baseURL = URL(string: Config.supabaseURL) else {
-            throw SupabaseError.notConfigured
-        }
-        let url = baseURL
-            .appendingPathComponent("rest")
-            .appendingPathComponent("v1")
-            .appendingPathComponent("rpc")
-            .appendingPathComponent("apply_mutations")
 
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
-        if let client,
-           let session = try? await client.auth.session {
-            request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
-        } else {
-            request.setValue("Bearer \(Config.supabaseAnonKey)", forHTTPHeaderField: "Authorization")
-        }
+        let request = ApplyMutationsRequest(batch: batch.map { SupabaseJSONValue(any: $0) })
 
-        let body = try JSONSerialization.data(withJSONObject: ["batch": batch], options: [])
-        request.httpBody = body
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse else {
-            throw SupabaseError.networkError
-        }
-
-        if (200...299).contains(http.statusCode) {
-            return
-        }
-
-        let bodyString = String(data: data, encoding: .utf8) ?? ""
-
-        // If the RPC isn't deployed yet, fall back to client-side REST operations.
-        if http.statusCode == 404 || bodyString.lowercased().contains("apply_mutations") {
+        do {
+            _ = try await client.rpc("apply_mutations", params: request).execute()
+        } catch {
+            // If the RPC isn't deployed yet, fall back to client-side REST operations.
+            let message = String(describing: error).lowercased()
+            guard message.contains("apply_mutations") || message.contains("404") else {
+                throw error
+            }
             try await applyMutationsClientSide(batch)
-            return
         }
-
-        throw SupabaseError.httpError(statusCode: http.statusCode, body: bodyString)
     }
 
     // MARK: - Preferences RPC
 
     func mergeUserPreferences(userId: UUID, preferences: [[String: Any]]) async throws -> [String: Any] {
-        let payload: [String: Any] = [
-            "p_user_id": userId.uuidString.lowercased(),
-            "p_preferences": preferences
-        ]
-
-        let data = try await callRPC(function: "merge_user_preferences", payload: payload)
-        return (try? JSONSerialization.jsonObject(with: data) as? [String: Any]) ?? [:]
-    }
-
-    private func callRPC(function: String, payload: [String: Any]) async throws -> Data {
-        guard let baseURL = URL(string: Config.supabaseURL) else {
+        guard let client else {
             throw SupabaseError.notConfigured
         }
 
-        let url = baseURL
-            .appendingPathComponent("rest")
-            .appendingPathComponent("v1")
-            .appendingPathComponent("rpc")
-            .appendingPathComponent(function)
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
-
-        if let client,
-           let session = try? await client.auth.session {
-            request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
-        } else {
-            request.setValue("Bearer \(Config.supabaseAnonKey)", forHTTPHeaderField: "Authorization")
-        }
-
-        request.httpBody = try JSONSerialization.data(withJSONObject: payload, options: [])
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse else {
-            throw SupabaseError.networkError
-        }
-
-        guard (200...299).contains(http.statusCode) else {
-            let body = String(data: data, encoding: .utf8) ?? ""
-            throw SupabaseError.httpError(statusCode: http.statusCode, body: body)
-        }
-
-        return data
+        let request = MergeUserPreferencesRequest(
+            p_user_id: userId.uuidString.lowercased(),
+            p_preferences: preferences.map { SupabaseJSONValue(any: $0) }
+        )
+        let response = try await client.rpc("merge_user_preferences", params: request).execute()
+        return (try? JSONSerialization.jsonObject(with: response.data) as? [String: Any]) ?? [:]
     }
 
     // MARK: - Generic REST Upsert
@@ -956,6 +892,95 @@ extension Notification.Name {
     static let aiTokenUsageDidReset = Notification.Name("aiTokenUsageDidReset")
 }
 
+private struct ApplyMutationsRequest: Encodable {
+    let batch: [SupabaseJSONValue]
+}
+
+private struct MergeUserPreferencesRequest: Encodable {
+    let p_user_id: String
+    let p_preferences: [SupabaseJSONValue]
+}
+
+private enum SupabaseJSONValue: Encodable, Sendable {
+    case string(String)
+    case number(Double)
+    case bool(Bool)
+    case object([String: SupabaseJSONValue])
+    case array([SupabaseJSONValue])
+    case null
+
+    init(any: Any) {
+        if let value = any as? SupabaseJSONValue {
+            self = value
+        } else if let value = any as? String {
+            self = .string(value)
+        } else if let value = any as? Bool {
+            self = .bool(value)
+        } else if let value = any as? Int {
+            self = .number(Double(value))
+        } else if let value = any as? Int64 {
+            self = .number(Double(value))
+        } else if let value = any as? Double {
+            self = .number(value)
+        } else if let value = any as? Float {
+            self = .number(Double(value))
+        } else if let value = any as? NSNumber {
+            self = .number(value.doubleValue)
+        } else if let value = any as? UUID {
+            self = .string(value.uuidString.lowercased())
+        } else if let value = any as? Date {
+            self = .string(ISO8601DateFormatter().string(from: value))
+        } else if let value = any as? [String: Any] {
+            self = .object(value.mapValues { SupabaseJSONValue(any: $0) })
+        } else if let value = any as? [Any] {
+            self = .array(value.map { SupabaseJSONValue(any: $0) })
+        } else if any is NSNull {
+            self = .null
+        } else {
+            self = .null
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        switch self {
+        case .string(let value):
+            var container = encoder.singleValueContainer()
+            try container.encode(value)
+        case .number(let value):
+            var container = encoder.singleValueContainer()
+            try container.encode(value)
+        case .bool(let value):
+            var container = encoder.singleValueContainer()
+            try container.encode(value)
+        case .object(let value):
+            var container = encoder.container(keyedBy: DynamicCodingKey.self)
+            for (key, element) in value {
+                try container.encode(element, forKey: DynamicCodingKey(stringValue: key))
+            }
+        case .array(let value):
+            var container = encoder.unkeyedContainer()
+            for element in value {
+                try container.encode(element)
+            }
+        case .null:
+            var container = encoder.singleValueContainer()
+            try container.encodeNil()
+        }
+    }
+}
+
+private struct DynamicCodingKey: CodingKey {
+    let stringValue: String
+    let intValue: Int? = nil
+
+    init(stringValue: String) {
+        self.stringValue = stringValue
+    }
+
+    init?(intValue: Int) {
+        nil
+    }
+}
 
 enum SupabaseError: LocalizedError {
     case notConfigured

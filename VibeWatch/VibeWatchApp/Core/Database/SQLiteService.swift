@@ -616,7 +616,9 @@ final class SQLiteService: ObservableObject {
             let colsJoined = keys.joined(separator: ",")
             let sql = "REPLACE INTO \(table) (\(colsJoined)) VALUES (\(placeholders))"
             let params = keys.map { filtered[$0] ?? NSNull() }
-            _ = try await queryRaw(sql, parameters: params)
+            guard execute(sql, parameters: params) else {
+                throw SQLiteError.queryFailed(lastError ?? "Failed to upsert row into \(table)")
+            }
         }
     }
     
@@ -697,8 +699,10 @@ final class SQLiteService: ObservableObject {
         
         let valueParams = Array(values.values)
         let allParams = valueParams + parameters
-        
-        _ = try await queryRaw(sql, parameters: allParams)
+
+        guard execute(sql, parameters: allParams) else {
+            throw SQLiteError.queryFailed(lastError ?? "Failed to update \(table)")
+        }
     }
     
     /// Delete records (soft delete by default)
@@ -707,11 +711,15 @@ final class SQLiteService: ObservableObject {
         try validateTableName(table)  // Phase 5: SQL injection prevention
         if hard {
             let sql = "DELETE FROM \(table) WHERE \(condition)"
-            _ = try await queryRaw(sql, parameters: parameters)
+            guard execute(sql, parameters: parameters) else {
+                throw SQLiteError.queryFailed(lastError ?? "Failed to delete from \(table)")
+            }
         } else {
             // Soft delete
             let sql = "UPDATE \(table) SET deleted_at = datetime('now') WHERE \(condition)"
-            _ = try await queryRaw(sql, parameters: parameters)
+            guard execute(sql, parameters: parameters) else {
+                throw SQLiteError.queryFailed(lastError ?? "Failed to soft-delete from \(table)")
+            }
         }
     }
 
