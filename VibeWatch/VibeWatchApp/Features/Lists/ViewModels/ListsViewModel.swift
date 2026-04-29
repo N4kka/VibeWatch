@@ -104,7 +104,7 @@ final class ListsViewModel {
     }
 
     func currentCustomListLimit(isProUser: Bool) -> Int {
-        isProUser ? ListManager.proMaxCustomLists : ListManager.freeMaxCustomLists
+        isProUser ? 100 : 2
     }
 
     func canCreateList(isProUser: Bool) -> Bool {

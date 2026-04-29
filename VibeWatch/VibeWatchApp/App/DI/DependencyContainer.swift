@@ -76,6 +76,7 @@ final class DependencyContainer: ObservableObject {
     func makeDiscoveryViewModel() -> DiscoveryViewModel {
         DiscoveryViewModel(
             repository: discoveryRepository,
+            listRepository: listRepository,
             quotaManager: dailyQuotaManager,
             preferenceManager: userPreferenceManager,
             sqliteService: sqliteService

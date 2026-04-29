@@ -2,28 +2,34 @@ import SwiftUI
 
 struct SaveToListPanel: View {
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var listManager = ListManager.shared
+    @Environment(\.listRepository) private var listRepository
     @EnvironmentObject var appState: AppState
+    @State private var lists: [MediaList] = []
     @State private var showCreateList = false
     @State private var showAuthGate = false
     @State private var newListName = ""
     @State private var showAlert = false
     @State private var alertTitle = ""
     @State private var alertMessage = ""
-    
+
     let movie: Movie
     let mediaType: MediaType
-    
+
+    private var userId: String { appState.currentUser?.id ?? "anonymous" }
+
+    private func isInList(_ list: MediaList) -> Bool {
+        list.items.contains { $0.mediaId == movie.id && $0.mediaType == mediaType }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
-            // Header
             HStack {
                 Text("movieDetail.save".localized)
                     .font(.system(size: 20, weight: .bold))
                     .foregroundColor(.theme.textPrimary)
-                
+
                 Spacer()
-                
+
                 Button {
                     dismiss()
                 } label: {
@@ -35,47 +41,48 @@ struct SaveToListPanel: View {
             .padding(.horizontal, 20)
             .padding(.top, 20)
             .padding(.bottom, 16)
-            
-            // Lists
+
             ScrollView {
                 VStack(spacing: 12) {
-                    ForEach(listManager.lists.filter { $0.type != .seen && $0.type != .liked && $0.type != .disliked }) { list in
+                    ForEach(lists.filter { $0.type != .seen && $0.type != .liked && $0.type != .disliked }) { list in
                         ListRow(
                             list: list,
-                            isInList: listManager.isInList(listId: list.id, mediaId: movie.id, mediaType: mediaType),
+                            isInList: isInList(list),
                             isLocked: list.type == .custom && !appState.isAuthenticated
                         ) {
                             Task {
                                 do {
-                                    if listManager.isInList(listId: list.id, mediaId: movie.id, mediaType: mediaType) {
-                                        if let existing = list.items.first(where: { $0.mediaId == movie.id }) {
-                                            try await listManager.removeFromList(listId: list.id, itemId: existing.id)
-                                        }
+                                    let identifier = MediaIdentifier(id: movie.id, mediaType: mediaType)
+                                    if isInList(list) {
+                                        try await listRepository.removeItem(identifier, from: list.id, userId: userId)
                                     } else {
-                                        try await listManager.addToList(listId: list.id, movie: movie, mediaType: mediaType)
+                                        let item = MediaListItem(
+                                            mediaId: movie.id,
+                                            mediaType: mediaType,
+                                            title: movie.title,
+                                            posterPath: movie.posterPath,
+                                            runtime: movie.runtime,
+                                            voteAverage: movie.voteAverage,
+                                            voteCount: movie.voteCount,
+                                            releaseDate: movie.releaseDate,
+                                            overview: movie.overview
+                                        )
+                                        try await listRepository.addItem(ListItemMutation(userId: userId, listId: list.id, item: item))
                                     }
                                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                                         dismiss()
                                     }
                                 } catch {
-                                    // Check if it's an authentication error
-                                    if let listError = error as? ListError, listError == .authenticationRequired {
-                                        showAuthGate = true
-                                    } else {
-                                        ErrorHandler.shared.handle(error, context: "Save to list")
-                                    }
+                                    ErrorHandler.shared.handle(error, context: "Save to list")
                                 }
                             }
                         }
                     }
-                    
-                    // Create New List Button
+
                     Button {
-                        // Check if user is authenticated
                         if appState.isAuthenticated {
                             showCreateList = true
                         } else {
-                            // Show authentication gate for anonymous users
                             showAuthGate = true
                         }
                     } label: {
@@ -83,21 +90,21 @@ struct SaveToListPanel: View {
                             Image(systemName: "plus.circle.fill")
                                 .font(.system(size: 24))
                                 .foregroundColor(.theme.accentOrange)
-                            
+
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("clips.createNewList".localized)
                                     .font(.system(size: 16, weight: .semibold))
                                     .foregroundColor(.theme.textPrimary)
-                                
+
                                 if !appState.isAuthenticated {
                                     Text("auth.gate.accountRequired".localized)
                                         .font(.system(size: 12))
                                         .foregroundColor(.theme.textSecondary)
                                 }
                             }
-                            
+
                             Spacer()
-                            
+
                             if !appState.isAuthenticated {
                                 Image(systemName: "lock.fill")
                                     .font(.system(size: 14))
@@ -114,6 +121,11 @@ struct SaveToListPanel: View {
                 .padding(.vertical, 12)
             }
         }
+        .task {
+            for await snapshot in listRepository.lists(for: userId) {
+                lists = snapshot
+            }
+        }
         .alert("lists.createList".localized, isPresented: $showCreateList) {
             TextField("lists.listNamePlaceholder".localized, text: $newListName)
             Button("common.cancel".localized, role: .cancel) {
@@ -123,10 +135,11 @@ struct SaveToListPanel: View {
                 if !newListName.isEmpty {
                     Task {
                         do {
-                            try await listManager.createList(name: newListName)
+                            let list = MediaList(name: newListName, type: .custom)
+                            try await listRepository.createList(list, userId: userId)
                             newListName = ""
                         } catch {
-                            print("⚠️ Failed to create list: \(error)")
+                            Logger.warning("Failed to create list: \(error)")
                         }
                     }
                 }
@@ -140,13 +153,6 @@ struct SaveToListPanel: View {
         .fullScreenCover(isPresented: $showAuthGate) {
             AuthenticationGateView(isPresented: $showAuthGate)
                 .presentationBackground(.clear)
-        }
-        .onChange(of: listManager.softLimitWarningMessage) {_, newValue in
-            guard let message = newValue else { return }
-            alertTitle = "Heads Up"
-            alertMessage = message
-            showAlert = true
-            listManager.softLimitWarningMessage = nil
         }
     }
 }

@@ -17,10 +17,11 @@ struct MovieDetailView: View {
 
 private struct MovieDetailContentView: View {
     @Environment(\.dismiss) var dismiss
+    @Environment(\.listRepository) private var listRepository
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var quotaManager: DailyQuotaManager
     @State private var viewModel: MovieDetailViewModel
-    @StateObject private var listManager = ListManager.shared
+    @State private var lists: [MediaList] = []
     @StateObject private var searchViewModel = SearchViewModel()
     @State private var showSavePanel = false
     @State private var showAuthGate = false
@@ -68,8 +69,10 @@ private struct MovieDetailContentView: View {
                             MovieInfoSection(movie: movie)
 
                             ActionButtonsSection(
-                                movie: movie,
-                                mediaType: .movie,
+                                isInAnyList: isInAnyList(mediaId: movie.id, mediaType: .movie),
+                                isInSeen: isInDefaultList(.seen, mediaId: movie.id, mediaType: .movie),
+                                isInLiked: isInDefaultList(.liked, mediaId: movie.id, mediaType: .movie),
+                                isInDisliked: isInDefaultList(.disliked, mediaId: movie.id, mediaType: .movie),
                                 onSaveTap: {
                                     showSavePanel = true
                                 },
@@ -103,7 +106,10 @@ private struct MovieDetailContentView: View {
                                 year: movie.year,
                                 imdbId: viewModel.imdbId,
                                 movie: movie,
-                                onReportIssue: { showReportBug = true }
+                                onReportIssue: { showReportBug = true },
+                                onNotifyMe: {
+                                    Task { await handleAddToWatchlist(movie: movie, mediaType: .movie) }
+                                }
                             )
 
                             if let trailer = viewModel.trailer {
@@ -150,7 +156,9 @@ private struct MovieDetailContentView: View {
             }
         }
         .task {
-            await viewModel.loadMovieDetails()
+            async let details: () = viewModel.loadMovieDetails()
+            async let listLoad: () = loadLists()
+            _ = await (details, listLoad)
         }
         .sheet(isPresented: $showSearch) {
             SearchView(viewModel: searchViewModel)
@@ -253,16 +261,77 @@ private struct MovieDetailContentView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     
-    // Action Handlers
-    
+    // MARK: - List Helpers
+
+    private var userId: String { appState.currentUser?.id ?? "anonymous" }
+
+    private func defaultList(_ type: ListType) -> MediaList {
+        lists.first { $0.type == type } ?? MediaList(name: type.displayName, type: type)
+    }
+
+    private func isInDefaultList(_ type: ListType, mediaId: Int, mediaType: MediaType) -> Bool {
+        defaultList(type).items.contains { $0.mediaId == mediaId && $0.mediaType == mediaType }
+    }
+
+    private func isInAnyList(mediaId: Int, mediaType: MediaType) -> Bool {
+        lists.contains { $0.items.contains { $0.mediaId == mediaId && $0.mediaType == mediaType } }
+    }
+
+    private func loadLists() async {
+        for await snapshot in listRepository.lists(for: userId) {
+            lists = snapshot
+        }
+    }
+
+    private func mediaListItem(from movie: Movie, mediaType: MediaType) -> MediaListItem {
+        MediaListItem(
+            mediaId: movie.id,
+            mediaType: mediaType,
+            title: movie.title,
+            posterPath: movie.posterPath,
+            runtime: movie.runtime,
+            voteAverage: movie.voteAverage,
+            voteCount: movie.voteCount,
+            releaseDate: movie.releaseDate,
+            overview: movie.overview
+        )
+    }
+
+    private func optimisticAdd(_ item: MediaListItem, to type: ListType) {
+        let list = defaultList(type)
+        guard !list.items.contains(where: { $0.mediaId == item.mediaId && $0.mediaType == item.mediaType }) else { return }
+        var items = list.items
+        items.append(item)
+        replaceList(MediaList(id: list.id, name: list.name, description: list.description, type: list.type, createdAt: list.createdAt, items: items))
+    }
+
+    private func optimisticRemove(_ identifier: MediaIdentifier, from type: ListType) {
+        let list = defaultList(type)
+        var items = list.items
+        items.removeAll { $0.mediaId == identifier.id && $0.mediaType == identifier.mediaType }
+        replaceList(MediaList(id: list.id, name: list.name, description: list.description, type: list.type, createdAt: list.createdAt, items: items))
+    }
+
+    private func replaceList(_ list: MediaList) {
+        if let index = lists.firstIndex(where: { $0.type == list.type }) {
+            lists[index] = list
+        } else {
+            lists.append(list)
+        }
+    }
+
+    // MARK: - Action Handlers
+
     private func handleSeenTap(movie: Movie) async {
+        let identifier = MediaIdentifier(id: movie.id, mediaType: .movie)
         do {
-            if listManager.isInList(listId: listManager.seenList.id, mediaId: movie.id, mediaType: .movie) {
-                if let item = listManager.seenList.items.first(where: { $0.mediaId == movie.id && $0.mediaType == .movie }) {
-                    try await listManager.removeFromList(listId: listManager.seenList.id, itemId: item.id)
-                }
+            if isInDefaultList(.seen, mediaId: movie.id, mediaType: .movie) {
+                optimisticRemove(identifier, from: .seen)
+                try await listRepository.removeFromDefaultList(type: .seen, identifier: identifier, userId: userId)
             } else {
-                try await listManager.addToList(listId: listManager.seenList.id, movie: movie, mediaType: .movie)
+                let item = mediaListItem(from: movie, mediaType: .movie)
+                optimisticAdd(item, to: .seen)
+                try await listRepository.addToDefaultList(type: .seen, item: item, userId: userId)
             }
         } catch {
             ErrorHandler.shared.handle(error, context: "Toggle Seen")
@@ -280,59 +349,70 @@ private struct MovieDetailContentView: View {
             Task { await viewModel.generateWhyForMe() }
         }
     }
-    
+
     private func handleLikedTap(movie: Movie) async {
+        let identifier = MediaIdentifier(id: movie.id, mediaType: .movie)
+        let wasLiked = isInDefaultList(.liked, mediaId: movie.id, mediaType: .movie)
+        let wasDisliked = isInDefaultList(.disliked, mediaId: movie.id, mediaType: .movie)
         do {
-            let isCurrentlyLiked = listManager.isInList(listId: listManager.likedList.id, mediaId: movie.id, mediaType: .movie)
-            let isCurrentlyDisliked = listManager.isInList(listId: listManager.dislikedList.id, mediaId: movie.id, mediaType: .movie)
-            
-            if isCurrentlyLiked {
-                if let item = listManager.likedList.items.first(where: { $0.mediaId == movie.id && $0.mediaType == .movie }) {
-                    try await listManager.removeFromList(listId: listManager.likedList.id, itemId: item.id)
-                    try await MovieReactionService.shared.updateReactionCounts(
-                        mediaId: movie.id, mediaType: .movie, oldReaction: .like, newReaction: nil
-                    )
-                }
+            if wasLiked {
+                optimisticRemove(identifier, from: .liked)
+                try await listRepository.removeFromDefaultList(type: .liked, identifier: identifier, userId: userId)
+                try await MovieReactionService.shared.updateReactionCounts(
+                    mediaId: movie.id, mediaType: .movie, oldReaction: .like, newReaction: nil
+                )
             } else {
-                if let dislikedItem = listManager.dislikedList.items.first(where: { $0.mediaId == movie.id && $0.mediaType == .movie }) {
-                    try await listManager.removeFromList(listId: listManager.dislikedList.id, itemId: dislikedItem.id)
+                if wasDisliked {
+                    optimisticRemove(identifier, from: .disliked)
+                    try await listRepository.removeFromDefaultList(type: .disliked, identifier: identifier, userId: userId)
                 }
-                try await listManager.addToList(listId: listManager.likedList.id, movie: movie, mediaType: .movie)
+                let item = mediaListItem(from: movie, mediaType: .movie)
+                optimisticAdd(item, to: .liked)
+                try await listRepository.addToDefaultList(type: .liked, item: item, userId: userId)
                 try await MovieReactionService.shared.updateReactionCounts(
                     mediaId: movie.id, mediaType: .movie,
-                    oldReaction: isCurrentlyDisliked ? .dislike : nil, newReaction: .like
+                    oldReaction: wasDisliked ? .dislike : nil, newReaction: .like
                 )
             }
         } catch {
             ErrorHandler.shared.handle(error, context: "Toggle Liked")
         }
     }
-    
+
     private func handleDislikedTap(movie: Movie) async {
+        let identifier = MediaIdentifier(id: movie.id, mediaType: .movie)
+        let wasLiked = isInDefaultList(.liked, mediaId: movie.id, mediaType: .movie)
+        let wasDisliked = isInDefaultList(.disliked, mediaId: movie.id, mediaType: .movie)
         do {
-            let isCurrentlyLiked = listManager.isInList(listId: listManager.likedList.id, mediaId: movie.id, mediaType: .movie)
-            let isCurrentlyDisliked = listManager.isInList(listId: listManager.dislikedList.id, mediaId: movie.id, mediaType: .movie)
-            
-            if isCurrentlyDisliked {
-                if let item = listManager.dislikedList.items.first(where: { $0.mediaId == movie.id && $0.mediaType == .movie }) {
-                    try await listManager.removeFromList(listId: listManager.dislikedList.id, itemId: item.id)
-                    try await MovieReactionService.shared.updateReactionCounts(
-                        mediaId: movie.id, mediaType: .movie, oldReaction: .dislike, newReaction: nil
-                    )
-                }
+            if wasDisliked {
+                optimisticRemove(identifier, from: .disliked)
+                try await listRepository.removeFromDefaultList(type: .disliked, identifier: identifier, userId: userId)
+                try await MovieReactionService.shared.updateReactionCounts(
+                    mediaId: movie.id, mediaType: .movie, oldReaction: .dislike, newReaction: nil
+                )
             } else {
-                if let likedItem = listManager.likedList.items.first(where: { $0.mediaId == movie.id && $0.mediaType == .movie }) {
-                    try await listManager.removeFromList(listId: listManager.likedList.id, itemId: likedItem.id)
+                if wasLiked {
+                    optimisticRemove(identifier, from: .liked)
+                    try await listRepository.removeFromDefaultList(type: .liked, identifier: identifier, userId: userId)
                 }
-                try await listManager.addToList(listId: listManager.dislikedList.id, movie: movie, mediaType: .movie)
+                let item = mediaListItem(from: movie, mediaType: .movie)
+                optimisticAdd(item, to: .disliked)
+                try await listRepository.addToDefaultList(type: .disliked, item: item, userId: userId)
                 try await MovieReactionService.shared.updateReactionCounts(
                     mediaId: movie.id, mediaType: .movie,
-                    oldReaction: isCurrentlyLiked ? .like : nil, newReaction: .dislike
+                    oldReaction: wasLiked ? .like : nil, newReaction: .dislike
                 )
             }
         } catch {
             ErrorHandler.shared.handle(error, context: "Toggle Disliked")
         }
+    }
+
+    private func handleAddToWatchlist(movie: Movie, mediaType: MediaType) async {
+        guard !isInDefaultList(.watchlist, mediaId: movie.id, mediaType: mediaType) else { return }
+        let item = mediaListItem(from: movie, mediaType: mediaType)
+        optimisticAdd(item, to: .watchlist)
+        try? await listRepository.addToDefaultList(type: .watchlist, item: item, userId: userId)
     }
     
     private func handleShare(movie: Movie) async {
@@ -483,41 +563,17 @@ struct MovieInfoSection: View {
 }
 
 struct ActionButtonsSection: View {
-    @StateObject private var listManager = ListManager.shared
-    
-    let movie: Movie
-    let mediaType: MediaType
+    let isInAnyList: Bool
+    let isInSeen: Bool
+    let isInLiked: Bool
+    let isInDisliked: Bool
+    var likesCount: Int = 0
+    var dislikesCount: Int = 0
     let onSaveTap: () -> Void
     let onSeenTap: () -> Void
     let onLikedTap: () -> Void
     let onDislikedTap: () -> Void
-    
-    private var isInAnyList: Bool {
-        listManager.lists.contains { list in
-            list.items.contains { $0.mediaId == movie.id && $0.mediaType == mediaType }
-        }
-    }
-    
-    private var isInSeen: Bool {
-        listManager.isInList(listId: listManager.seenList.id, mediaId: movie.id, mediaType: mediaType)
-    }
-    
-    private var isInLiked: Bool {
-        listManager.isInList(listId: listManager.likedList.id, mediaId: movie.id, mediaType: mediaType)
-    }
-    
-    private var isInDisliked: Bool {
-        listManager.isInList(listId: listManager.dislikedList.id, mediaId: movie.id, mediaType: mediaType)
-    }
-    
-    private var likesCount: Int {
-        listManager.likedList.items.filter { $0.mediaId == movie.id && $0.mediaType == mediaType }.count
-    }
-    
-    private var dislikesCount: Int {
-        listManager.dislikedList.items.filter { $0.mediaId == movie.id && $0.mediaType == mediaType }.count
-    }
-    
+
     var body: some View {
         HStack(spacing: 12) {
             ActionButton(
@@ -527,7 +583,7 @@ struct ActionButtonsSection: View {
             ) {
                 onSaveTap()
             }
-            
+
             ActionButton(
                 icon: "eye.fill",
                 title: "movieDetail.seen".localized,
@@ -537,7 +593,7 @@ struct ActionButtonsSection: View {
                     onSeenTap()
                 }
             }
-            
+
             ActionButton(
                 icon: "hand.thumbsup.fill",
                 title: "",
@@ -548,7 +604,7 @@ struct ActionButtonsSection: View {
                     onLikedTap()
                 }
             }
-            
+
             ActionButton(
                 icon: "hand.thumbsdown.fill",
                 title: "",
@@ -642,8 +698,8 @@ struct WatchNowSection: View {
     let imdbId: String?
     let movie: Movie?
     var onReportIssue: () -> Void = {}
-    
-    @StateObject private var listManager = ListManager.shared
+    var onNotifyMe: () -> Void = {}
+
     @State private var showNotifyMeAlert = false
 
     private var hasAnyProvider: Bool {
@@ -754,13 +810,7 @@ struct WatchNowSection: View {
     
     private func handleNotifyMe() {
         showNotifyMeAlert = true
-        if let movie = movie {
-            Task {
-                if !listManager.isInList(listId: listManager.watchlist.id, mediaId: movie.id, mediaType: mediaType) {
-                    try? await listManager.addToList(listId: listManager.watchlist.id, movie: movie, mediaType: mediaType)
-                }
-            }
-        }
+        onNotifyMe()
     }
 }
 

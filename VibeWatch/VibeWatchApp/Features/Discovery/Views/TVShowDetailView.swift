@@ -16,10 +16,11 @@ struct TVShowDetailView: View {
 
 private struct TVShowDetailContentView: View {
     @Environment(\.dismiss) var dismiss
+    @Environment(\.listRepository) private var listRepository
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var quotaManager: DailyQuotaManager
     @State private var viewModel: TVShowDetailViewModel
-    @StateObject private var listManager = ListManager.shared
+    @State private var lists: [MediaList] = []
     @StateObject private var searchViewModel = SearchViewModel()
     @State private var showSavePanel = false
     @State private var showAuthGate = false
@@ -120,7 +121,9 @@ private struct TVShowDetailContentView: View {
             }
         }
         .task {
-            await viewModel.loadTVShowDetails()
+            async let details: () = viewModel.loadTVShowDetails()
+            async let listLoad: () = loadLists()
+            _ = await (details, listLoad)
         }
         .sheet(isPresented: $showSearch) {
             SearchView(viewModel: searchViewModel)
@@ -230,26 +233,23 @@ private struct TVShowDetailContentView: View {
     }
     
     private func actionsView(tvShow: TVShow, movie: Movie) -> some View {
-                        VStack(spacing: 20) {
-                        ActionButtonsSection(
-                            movie: movie,
-                            mediaType: .tv,
-                            onSaveTap: {
-                                // Allow anonymous users to open save panel
-                                // They can save to watchlist without authentication
-                                // Auth gate will show when they try to create custom lists
-                                showSavePanel = true
-                            },
-                            onSeenTap: { Task { await handleSeenTap(tvShow: tvShow, movie: movie) } },
-                            onLikedTap: { Task { await handleLikedTap(tvShow: tvShow, movie: movie) } },
-                            onDislikedTap: { Task { await handleDislikedTap(tvShow: tvShow, movie: movie) } }
-                        )
-                        GoodFitSection(
-                            title: String(format: "movieDetail.goodFitTitle".localized, tvShow.name),
-                            subtitle: "movieDetail.goodFitSubtitle".localized,
-                            onWhyTap: { handleWhyForMeTap() }
-                        )
-                        }
+        VStack(spacing: 20) {
+            ActionButtonsSection(
+                isInAnyList: isInAnyList(mediaId: tvShow.id, mediaType: .tv),
+                isInSeen: isInDefaultList(.seen, mediaId: tvShow.id, mediaType: .tv),
+                isInLiked: isInDefaultList(.liked, mediaId: tvShow.id, mediaType: .tv),
+                isInDisliked: isInDefaultList(.disliked, mediaId: tvShow.id, mediaType: .tv),
+                onSaveTap: { showSavePanel = true },
+                onSeenTap: { Task { await handleSeenTap(tvShow: tvShow, movie: movie) } },
+                onLikedTap: { Task { await handleLikedTap(tvShow: tvShow, movie: movie) } },
+                onDislikedTap: { Task { await handleDislikedTap(tvShow: tvShow, movie: movie) } }
+            )
+            GoodFitSection(
+                title: String(format: "movieDetail.goodFitTitle".localized, tvShow.name),
+                subtitle: "movieDetail.goodFitSubtitle".localized,
+                onWhyTap: { handleWhyForMeTap() }
+            )
+        }
     }
     
     @ViewBuilder
@@ -263,7 +263,10 @@ private struct TVShowDetailContentView: View {
                 year: tvShow.year,
                 imdbId: viewModel.imdbId,
                 movie: tvShowMovie,
-                onReportIssue: { showReportBug = true }
+                onReportIssue: { showReportBug = true },
+                onNotifyMe: {
+                    Task { await handleAddToWatchlist(movie: tvShowToMovie(tvShow), mediaType: .tv) }
+                }
             )
         }
     }
@@ -295,96 +298,148 @@ private struct TVShowDetailContentView: View {
         }
     }
     
+    // MARK: - List Helpers
+
+    private var userId: String { appState.currentUser?.id ?? "anonymous" }
+
+    private func defaultList(_ type: ListType) -> MediaList {
+        lists.first { $0.type == type } ?? MediaList(name: type.displayName, type: type)
+    }
+
+    private func isInDefaultList(_ type: ListType, mediaId: Int, mediaType: MediaType) -> Bool {
+        defaultList(type).items.contains { $0.mediaId == mediaId && $0.mediaType == mediaType }
+    }
+
+    private func isInAnyList(mediaId: Int, mediaType: MediaType) -> Bool {
+        lists.contains { $0.items.contains { $0.mediaId == mediaId && $0.mediaType == mediaType } }
+    }
+
+    private func loadLists() async {
+        for await snapshot in listRepository.lists(for: userId) {
+            lists = snapshot
+        }
+    }
+
+    private func mediaListItem(from movie: Movie, mediaType: MediaType) -> MediaListItem {
+        MediaListItem(
+            mediaId: movie.id,
+            mediaType: mediaType,
+            title: movie.title,
+            posterPath: movie.posterPath,
+            runtime: movie.runtime,
+            voteAverage: movie.voteAverage,
+            voteCount: movie.voteCount,
+            releaseDate: movie.releaseDate,
+            overview: movie.overview
+        )
+    }
+
+    private func optimisticAdd(_ item: MediaListItem, to type: ListType) {
+        let list = defaultList(type)
+        guard !list.items.contains(where: { $0.mediaId == item.mediaId && $0.mediaType == item.mediaType }) else { return }
+        var items = list.items
+        items.append(item)
+        replaceList(MediaList(id: list.id, name: list.name, description: list.description, type: list.type, createdAt: list.createdAt, items: items))
+    }
+
+    private func optimisticRemove(_ identifier: MediaIdentifier, from type: ListType) {
+        let list = defaultList(type)
+        var items = list.items
+        items.removeAll { $0.mediaId == identifier.id && $0.mediaType == identifier.mediaType }
+        replaceList(MediaList(id: list.id, name: list.name, description: list.description, type: list.type, createdAt: list.createdAt, items: items))
+    }
+
+    private func replaceList(_ list: MediaList) {
+        if let index = lists.firstIndex(where: { $0.type == list.type }) {
+            lists[index] = list
+        } else {
+            lists.append(list)
+        }
+    }
+
     // MARK: - Actions
-    
+
     private func handleSeenTap(tvShow: TVShow, movie: Movie) async {
+        let identifier = MediaIdentifier(id: tvShow.id, mediaType: .tv)
         do {
-            if listManager.isInList(listId: listManager.seenList.id, mediaId: tvShow.id, mediaType: .tv) {
-                if let item = listManager.seenList.items.first(where: { $0.mediaId == tvShow.id && $0.mediaType == .tv }) {
-                    try await listManager.removeFromList(listId: listManager.seenList.id, itemId: item.id)
-                }
+            if isInDefaultList(.seen, mediaId: tvShow.id, mediaType: .tv) {
+                optimisticRemove(identifier, from: .seen)
+                try await listRepository.removeFromDefaultList(type: .seen, identifier: identifier, userId: userId)
             } else {
-                try await listManager.addToList(listId: listManager.seenList.id, movie: movie, mediaType: .tv)
+                let item = mediaListItem(from: movie, mediaType: .tv)
+                optimisticAdd(item, to: .seen)
+                try await listRepository.addToDefaultList(type: .seen, item: item, userId: userId)
             }
         } catch {
             ErrorHandler.shared.handle(error, context: "Toggle Seen")
         }
     }
-    
+
     private func handleLikedTap(tvShow: TVShow, movie: Movie) async {
+        let identifier = MediaIdentifier(id: tvShow.id, mediaType: .tv)
+        let wasLiked = isInDefaultList(.liked, mediaId: tvShow.id, mediaType: .tv)
+        let wasDisliked = isInDefaultList(.disliked, mediaId: tvShow.id, mediaType: .tv)
         do {
-            let isCurrentlyLiked = listManager.isInList(listId: listManager.likedList.id, mediaId: tvShow.id, mediaType: .tv)
-            let isCurrentlyDisliked = listManager.isInList(listId: listManager.dislikedList.id, mediaId: tvShow.id, mediaType: .tv)
-            
-            if isCurrentlyLiked {
-                // Remove like
-                if let item = listManager.likedList.items.first(where: { $0.mediaId == tvShow.id && $0.mediaType == .tv }) {
-                    try await listManager.removeFromList(listId: listManager.likedList.id, itemId: item.id)
-                    // Update reaction counts: remove like
-                    try await MovieReactionService.shared.updateReactionCounts(
-                        mediaId: tvShow.id,
-                        mediaType: .tv,
-                        oldReaction: .like,
-                        newReaction: nil
-                    )
-                }
-            } else {
-                // Remove dislike if exists
-                if let dislikedItem = listManager.dislikedList.items.first(where: { $0.mediaId == tvShow.id && $0.mediaType == .tv }) {
-                    try await listManager.removeFromList(listId: listManager.dislikedList.id, itemId: dislikedItem.id)
-                }
-                // Add like
-                try await listManager.addToList(listId: listManager.likedList.id, movie: movie, mediaType: .tv)
-                // Update reaction counts: change from dislike to like (or none to like)
+            if wasLiked {
+                optimisticRemove(identifier, from: .liked)
+                try await listRepository.removeFromDefaultList(type: .liked, identifier: identifier, userId: userId)
                 try await MovieReactionService.shared.updateReactionCounts(
-                    mediaId: tvShow.id,
-                    mediaType: .tv,
-                    oldReaction: isCurrentlyDisliked ? .dislike : nil,
-                    newReaction: .like
+                    mediaId: tvShow.id, mediaType: .tv, oldReaction: .like, newReaction: nil
+                )
+            } else {
+                if wasDisliked {
+                    optimisticRemove(identifier, from: .disliked)
+                    try await listRepository.removeFromDefaultList(type: .disliked, identifier: identifier, userId: userId)
+                }
+                let item = mediaListItem(from: movie, mediaType: .tv)
+                optimisticAdd(item, to: .liked)
+                try await listRepository.addToDefaultList(type: .liked, item: item, userId: userId)
+                try await MovieReactionService.shared.updateReactionCounts(
+                    mediaId: tvShow.id, mediaType: .tv,
+                    oldReaction: wasDisliked ? .dislike : nil, newReaction: .like
                 )
             }
         } catch {
             ErrorHandler.shared.handle(error, context: "Toggle Liked")
         }
     }
-    
+
     private func handleDislikedTap(tvShow: TVShow, movie: Movie) async {
+        let identifier = MediaIdentifier(id: tvShow.id, mediaType: .tv)
+        let wasLiked = isInDefaultList(.liked, mediaId: tvShow.id, mediaType: .tv)
+        let wasDisliked = isInDefaultList(.disliked, mediaId: tvShow.id, mediaType: .tv)
         do {
-            let isCurrentlyLiked = listManager.isInList(listId: listManager.likedList.id, mediaId: tvShow.id, mediaType: .tv)
-            let isCurrentlyDisliked = listManager.isInList(listId: listManager.dislikedList.id, mediaId: tvShow.id, mediaType: .tv)
-            
-            if isCurrentlyDisliked {
-                // Remove dislike
-                if let item = listManager.dislikedList.items.first(where: { $0.mediaId == tvShow.id && $0.mediaType == .tv }) {
-                    try await listManager.removeFromList(listId: listManager.dislikedList.id, itemId: item.id)
-                    // Update reaction counts: remove dislike
-                    try await MovieReactionService.shared.updateReactionCounts(
-                        mediaId: tvShow.id,
-                        mediaType: .tv,
-                        oldReaction: .dislike,
-                        newReaction: nil
-                    )
-                }
-            } else {
-                // Remove like if exists
-                if let likedItem = listManager.likedList.items.first(where: { $0.mediaId == tvShow.id && $0.mediaType == .tv }) {
-                    try await listManager.removeFromList(listId: listManager.likedList.id, itemId: likedItem.id)
-                }
-                // Add dislike
-                try await listManager.addToList(listId: listManager.dislikedList.id, movie: movie, mediaType: .tv)
-                // Update reaction counts: change from like to dislike (or none to dislike)
+            if wasDisliked {
+                optimisticRemove(identifier, from: .disliked)
+                try await listRepository.removeFromDefaultList(type: .disliked, identifier: identifier, userId: userId)
                 try await MovieReactionService.shared.updateReactionCounts(
-                    mediaId: tvShow.id,
-                    mediaType: .tv,
-                    oldReaction: isCurrentlyLiked ? .like : nil,
-                    newReaction: .dislike
+                    mediaId: tvShow.id, mediaType: .tv, oldReaction: .dislike, newReaction: nil
+                )
+            } else {
+                if wasLiked {
+                    optimisticRemove(identifier, from: .liked)
+                    try await listRepository.removeFromDefaultList(type: .liked, identifier: identifier, userId: userId)
+                }
+                let item = mediaListItem(from: movie, mediaType: .tv)
+                optimisticAdd(item, to: .disliked)
+                try await listRepository.addToDefaultList(type: .disliked, item: item, userId: userId)
+                try await MovieReactionService.shared.updateReactionCounts(
+                    mediaId: tvShow.id, mediaType: .tv,
+                    oldReaction: wasLiked ? .like : nil, newReaction: .dislike
                 )
             }
         } catch {
             ErrorHandler.shared.handle(error, context: "Toggle Disliked")
         }
     }
-    
+
+    private func handleAddToWatchlist(movie: Movie, mediaType: MediaType) async {
+        guard !isInDefaultList(.watchlist, mediaId: movie.id, mediaType: mediaType) else { return }
+        let item = mediaListItem(from: movie, mediaType: mediaType)
+        optimisticAdd(item, to: .watchlist)
+        try? await listRepository.addToDefaultList(type: .watchlist, item: item, userId: userId)
+    }
+
     // MARK: - Sharing
     
     private func handleShare(tvShow: TVShow) async {

@@ -945,9 +945,11 @@ struct MediaItemRow: View {
 
 struct CustomListDetailView: View {
     let list: MediaList
-    @StateObject private var listManager = ListManager.shared
+    @Environment(\.listRepository) private var listRepository
+    @EnvironmentObject var appState: AppState
     @StateObject private var availabilityService = ListAvailabilityService.shared
     @EnvironmentObject var quotaManager: DailyQuotaManager
+    @State private var lists: [MediaList] = []
     @State private var filters = GlobalDiscoveryFilters()
     @State private var showFilters = false
     @State private var filterRefreshTrigger = false
@@ -977,8 +979,10 @@ struct CustomListDetailView: View {
         )
     }
 
+    private var userId: String { appState.currentUser?.id ?? "anonymous" }
+
     private var currentList: MediaList {
-        listManager.lists.first(where: { $0.id == list.id }) ?? list
+        lists.first(where: { $0.id == list.id }) ?? list
     }
 
     private var filteredAndSortedItems: [MediaListItem] {
@@ -1112,69 +1116,7 @@ struct CustomListDetailView: View {
                     ScrollView {
                         LazyVStack(spacing: 20) {
                             ForEach(paginatedItems) { item in
-                                MediaItemRow(
-                                    item: item,
-                                    isInSeenList: false,
-                                    onMarkAsSeen: {
-                                        Task {
-                                            try? await listManager.removeFromList(listId: list.id, itemId: item.id)
-
-                                            let movie = Movie(
-                                                id: item.mediaId,
-                                                title: item.title,
-                                                overview: "",
-                                                posterPath: item.posterPath,
-                                                backdropPath: nil,
-                                                releaseDate: nil,
-                                                voteAverage: 0.0,
-                                                voteCount: 0,
-                                                genreIds: nil,
-                                                genres: nil,
-                                                adult: false,
-                                                originalLanguage: "",
-                                                popularity: 0.0,
-                                                runtime: nil,
-                                                status: nil,
-                                                tagline: nil,
-                                                productionCountries: nil,
-                                                imdbId: nil
-                                            )
-                                            try await listManager.addToList(listId: listManager.seenList.id, movie: movie, mediaType: item.mediaType)
-                                        }
-                                    },
-                                    onDelete: {
-                                        Task {
-                                            try? await listManager.removeFromList(listId: list.id, itemId: item.id)
-                                        }
-                                    },
-                                    onNotifyMe: {
-                                        Task {
-                                            if !listManager.isInList(listId: listManager.watchlist.id, mediaId: item.mediaId, mediaType: item.mediaType) {
-                                                let movie = Movie(
-                                                    id: item.mediaId,
-                                                    title: item.title,
-                                                    overview: item.overview ?? "",
-                                                    posterPath: item.posterPath,
-                                                    backdropPath: nil,
-                                                    releaseDate: item.releaseDate,
-                                                    voteAverage: item.voteAverage ?? 0.0,
-                                                    voteCount: item.voteCount ?? 0,
-                                                    genreIds: nil,
-                                                    genres: nil,
-                                                    adult: false,
-                                                    originalLanguage: "",
-                                                    popularity: 0.0,
-                                                    runtime: item.runtime,
-                                                    status: nil,
-                                                    tagline: nil,
-                                                    productionCountries: nil,
-                                                    imdbId: nil
-                                                )
-                                                try? await listManager.addToList(listId: listManager.watchlist.id, movie: movie, mediaType: item.mediaType)
-                                            }
-                                        }
-                                    }
-                                )
+                                itemRow(item)
                             }
                         }
                         .padding(.horizontal, 20)
@@ -1202,6 +1144,7 @@ struct CustomListDetailView: View {
         }
         .navigationTitle(currentList.name)
         .navigationBarTitleDisplayMode(.large)
+        .task { await loadLists() }
         .overlay {
             if showFilters {
                 GlobalFilterView(
@@ -1277,9 +1220,49 @@ struct CustomListDetailView: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
+    private func itemRow(_ item: MediaListItem) -> some View {
+        MediaItemRow(
+            item: item,
+            isInSeenList: false,
+            onMarkAsSeen: { Task { await handleMarkAsSeen(item) } },
+            onDelete: { Task { await handleDeleteItem(item) } },
+            onNotifyMe: { Task { await handleNotifyMe(item) } }
+        )
+    }
+
+    private func handleMarkAsSeen(_ item: MediaListItem) async {
+        let identifier = MediaIdentifier(id: item.mediaId, mediaType: item.mediaType)
+        try? await listRepository.removeItem(identifier, from: list.id, userId: userId)
+        let seenItem = MediaListItem(mediaId: item.mediaId, mediaType: item.mediaType, title: item.title, posterPath: item.posterPath)
+        try? await listRepository.addToDefaultList(type: .seen, item: seenItem, userId: userId)
+    }
+
+    private func handleDeleteItem(_ item: MediaListItem) async {
+        let identifier = MediaIdentifier(id: item.mediaId, mediaType: item.mediaType)
+        try? await listRepository.removeItem(identifier, from: list.id, userId: userId)
+    }
+
+    private func handleNotifyMe(_ item: MediaListItem) async {
+        let watchlist = lists.first(where: { $0.type == .watchlist })
+        let alreadyInWatchlist = watchlist?.items.contains { $0.mediaId == item.mediaId && $0.mediaType == item.mediaType } ?? false
+        guard !alreadyInWatchlist else { return }
+        let watchlistItem = MediaListItem(
+            mediaId: item.mediaId, mediaType: item.mediaType, title: item.title, posterPath: item.posterPath,
+            runtime: item.runtime, voteAverage: item.voteAverage, voteCount: item.voteCount,
+            releaseDate: item.releaseDate, overview: item.overview
+        )
+        try? await listRepository.addToDefaultList(type: .watchlist, item: watchlistItem, userId: userId)
+    }
+
+    private func loadLists() async {
+        for await snapshot in listRepository.lists(for: userId) {
+            lists = snapshot
+        }
+    }
+
     private func deleteList() async {
         do {
-            try await listManager.deleteList(id: currentList.id)
+            try await listRepository.deleteList(id: currentList.id, userId: userId)
             await MainActor.run { dismiss() }
         } catch {
             await MainActor.run {
@@ -1485,10 +1468,11 @@ struct CreateListView: View {
                 }
             }
             
-            struct EditListView: View {
+struct EditListView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.listRepository) private var listRepository
+    @EnvironmentObject var appState: AppState
     let list: MediaList
-    @StateObject private var listManager = ListManager.shared
     @State private var name: String
     @State private var description: String
     @State private var showError = false
@@ -1533,8 +1517,17 @@ struct CreateListView: View {
     private func saveChanges() async {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
+        let userId = appState.currentUser?.id ?? "anonymous"
         do {
-            try await listManager.updateList(id: list.id, name: trimmed, description: description.isEmpty ? nil : description)
+            let updated = MediaList(
+                id: list.id,
+                name: trimmed,
+                description: description.isEmpty ? nil : description,
+                type: list.type,
+                createdAt: list.createdAt,
+                items: list.items
+            )
+            try await listRepository.updateList(updated, userId: userId)
             await MainActor.run { dismiss() }
         } catch {
             await MainActor.run {

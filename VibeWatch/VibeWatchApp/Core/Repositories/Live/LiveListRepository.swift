@@ -135,6 +135,21 @@ final class LiveListRepository: ListRepository {
         try await addItem(ListItemMutation(userId: userId, listId: seenList.id, item: item))
     }
 
+    func addToDefaultList(type: ListType, item: MediaListItem, userId: String) async throws {
+        let list = try await ensureDefaultList(type: type, userId: userId)
+        try await addItem(ListItemMutation(userId: userId, listId: list.id, item: item))
+    }
+
+    func removeFromDefaultList(type: ListType, identifier: MediaIdentifier, userId: String) async throws {
+        guard let list = try await loadLists(for: userId).first(where: { $0.type == type }) else { return }
+        try await removeItem(identifier, from: list.id, userId: userId)
+    }
+
+    func defaultListItems(type: ListType, userId: String) async throws -> [MediaListItem] {
+        let lists = try await loadLists(for: userId)
+        return lists.first(where: { $0.type == type })?.items ?? []
+    }
+
     private func loadLists(for userId: String) async throws -> [MediaList] {
         let listRows = try await db.queryRaw("""
             SELECT * FROM lists

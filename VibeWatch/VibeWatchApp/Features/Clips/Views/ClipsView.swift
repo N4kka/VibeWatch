@@ -1349,14 +1349,14 @@ struct AddToListView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.listRepository) private var listRepository
     @EnvironmentObject private var appState: AppState
-    @StateObject private var listManager = ListManager.shared
+    @State private var lists: [MediaList] = []
     @State private var showCreateList = false
     let clipId: String?
     let movieId: Int?
     let tvShowId: Int?
     let mediaType: MediaType
     let analyticsContext: AnalyticsContext?
-    
+
     init(
         clipId: String? = nil,
         movieId: Int? = nil,
@@ -1370,9 +1370,11 @@ struct AddToListView: View {
         self.mediaType = mediaType
         self.analyticsContext = analyticsContext
     }
-    
+
+    private var userId: String { appState.currentUser?.id ?? "anonymous" }
+
     private var availableLists: [MediaList] {
-        listManager.lists.filter { list in
+        lists.filter { list in
             list.type == .watchlist || list.type == .custom
         }
     }
@@ -1472,10 +1474,11 @@ struct AddToListView: View {
                 }
             }
         }
+        .task { await loadLists() }
         .sheet(isPresented: $showCreateList) {
             CreateListView(viewModel: ListsViewModel(
                 repository: listRepository,
-                userId: appState.currentUser?.id ?? "anonymous"
+                userId: userId
             ), isProUser: false)
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
@@ -1487,53 +1490,49 @@ struct AddToListView: View {
         return list.items.contains { $0.mediaId == itemId }
     }
     
+    private func loadLists() async {
+        for await snapshot in listRepository.lists(for: userId) {
+            lists = snapshot
+        }
+    }
+
     private func toggleListSelection(_ list: MediaList) {
         let itemId = movieId ?? tvShowId ?? 0
-        
+
         Task {
             if isItemInList(list) {
-                if let item = list.items.first(where: { $0.mediaId == itemId }) {
-                    try? await listManager.removeFromList(listId: list.id, itemId: item.id)
-                    dismiss()
-                }
+                let identifier = MediaIdentifier(id: itemId, mediaType: mediaType)
+                try? await listRepository.removeItem(identifier, from: list.id, userId: userId)
+                dismiss()
             } else {
                 do {
                     if mediaType == .movie, let movieId = movieId {
                         let movieDetails = try await TMDBService.shared.getMovieDetails(id: movieId)
-                        try? await listManager.addToList(
-                            listId: list.id,
-                            movie: movieDetails,
+                        let item = MediaListItem(
+                            mediaId: movieDetails.id,
                             mediaType: .movie,
-                            analyticsContext: analyticsContext
+                            title: movieDetails.title,
+                            posterPath: movieDetails.posterPath,
+                            runtime: movieDetails.runtime,
+                            voteAverage: movieDetails.voteAverage,
+                            voteCount: movieDetails.voteCount,
+                            releaseDate: movieDetails.releaseDate,
+                            overview: movieDetails.overview
                         )
+                        try await listRepository.addItem(ListItemMutation(userId: userId, listId: list.id, item: item))
                     } else if mediaType == .tv, let tvShowId = tvShowId {
                         let tvDetails = try await TMDBService.shared.getTVShowDetails(id: tvShowId)
-                        let movie = Movie(
-                            id: tvDetails.id,
+                        let item = MediaListItem(
+                            mediaId: tvDetails.id,
+                            mediaType: .tv,
                             title: tvDetails.name,
-                            overview: tvDetails.overview,
                             posterPath: tvDetails.posterPath,
-                            backdropPath: tvDetails.backdropPath,
-                            releaseDate: tvDetails.firstAirDate,
                             voteAverage: tvDetails.voteAverage,
                             voteCount: tvDetails.voteCount,
-                            genreIds: nil,
-                            genres: nil,
-                            adult: false,
-                            originalLanguage: tvDetails.originalLanguage,
-                            popularity: tvDetails.popularity,
-                            runtime: nil,
-                            status: nil,
-                            tagline: nil,
-                            productionCountries: nil,
-                            imdbId: nil
+                            releaseDate: tvDetails.firstAirDate,
+                            overview: tvDetails.overview
                         )
-                        try? await listManager.addToList(
-                            listId: list.id,
-                            movie: movie,
-                            mediaType: .tv,
-                            analyticsContext: analyticsContext
-                        )
+                        try await listRepository.addItem(ListItemMutation(userId: userId, listId: list.id, item: item))
                     }
 
                     if let clipId {
@@ -1544,7 +1543,7 @@ struct AddToListView: View {
                             context: analyticsContext
                         )
                     }
-                    
+
                     dismiss()
                 } catch {
                     print("Error adding to list: \(error)")

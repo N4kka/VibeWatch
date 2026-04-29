@@ -278,4 +278,7 @@ private final class SnapshotListRepository: ListRepository {
     func addItem(_ mutation: ListItemMutation) async throws {}
     func removeItem(_ identifier: MediaIdentifier, from listId: String, userId: String) async throws {}
     func markAsSeen(_ identifier: MediaIdentifier, userId: String) async throws {}
+    func addToDefaultList(type: ListType, item: MediaListItem, userId: String) async throws {}
+    func removeFromDefaultList(type: ListType, identifier: MediaIdentifier, userId: String) async throws {}
+    func defaultListItems(type: ListType, userId: String) async throws -> [MediaListItem] { [] }
 }

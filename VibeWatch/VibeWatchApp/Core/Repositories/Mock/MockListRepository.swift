@@ -85,4 +85,21 @@ final class MockListRepository: ListRepository {
             item: MediaListItem(mediaId: identifier.id, mediaType: identifier.mediaType, title: "Seen #\(identifier.id)", posterPath: nil)
         ))
     }
+
+    func addToDefaultList(type: ListType, item: MediaListItem, userId: String) async throws {
+        let list = listsByUser[userId]?.first(where: { $0.type == type }) ?? MediaList(name: type.displayName, type: type)
+        if listsByUser[userId]?.contains(where: { $0.id == list.id }) != true {
+            listsByUser[userId, default: []].append(list)
+        }
+        try await addItem(ListItemMutation(userId: userId, listId: list.id, item: item))
+    }
+
+    func removeFromDefaultList(type: ListType, identifier: MediaIdentifier, userId: String) async throws {
+        guard let list = listsByUser[userId]?.first(where: { $0.type == type }) else { return }
+        try await removeItem(identifier, from: list.id, userId: userId)
+    }
+
+    func defaultListItems(type: ListType, userId: String) async throws -> [MediaListItem] {
+        listsByUser[userId]?.first(where: { $0.type == type })?.items ?? []
+    }
 }

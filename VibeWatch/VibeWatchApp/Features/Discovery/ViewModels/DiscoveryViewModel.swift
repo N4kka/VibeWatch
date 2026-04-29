@@ -19,6 +19,7 @@ final class DiscoveryViewModel {
     }
     
     private let repository: any DiscoveryRepository
+    private let listRepository: any ListRepository
     private let userId: String
     private let preferenceManager: UserPreferenceManager
     private let sqliteService: SQLiteService
@@ -41,12 +42,14 @@ final class DiscoveryViewModel {
 
     init(
         repository: any DiscoveryRepository = LiveDiscoveryRepository(),
+        listRepository: any ListRepository = DependencyContainer.shared.listRepository,
         userId: String = AuthService.shared.currentUser?.id ?? "anonymous",
         quotaManager: DailyQuotaManager = .shared,
         preferenceManager: UserPreferenceManager = .shared,
         sqliteService: SQLiteService = .shared
     ) {
         self.repository = repository
+        self.listRepository = listRepository
         self.userId = userId
         self.quotaManager = quotaManager
         self.preferenceManager = preferenceManager
@@ -117,7 +120,7 @@ final class DiscoveryViewModel {
                 let carousels = snapshots.map(personalizedCarousel)
                 guard !carousels.isEmpty else { continue }
                 generatedCarousels = carousels
-                personalizedCarousels = applyGlobalFilters(to: carousels)
+                personalizedCarousels = await applyGlobalFilters(to: carousels)
                 loadedSnapshots = true
                 isLoading = false
             }
@@ -152,10 +155,9 @@ final class DiscoveryViewModel {
         globalFilters = sanitized
         globalFilters.save()
 
-        personalizedCarousels = applyGlobalFilters(to: generatedCarousels)
-        refreshToken = UUID()
-
         Task {
+            personalizedCarousels = await applyGlobalFilters(to: generatedCarousels)
+            refreshToken = UUID()
             await persistGlobalFilters()
         }
     }
@@ -215,7 +217,18 @@ final class DiscoveryViewModel {
     
     // MARK: - Filtering
 
-    private func applyGlobalFilters(to carousels: [PersonalizedCarousel]) -> [PersonalizedCarousel] {
+    private func applyGlobalFilters(to carousels: [PersonalizedCarousel]) async -> [PersonalizedCarousel] {
+        var seenIds = Set<Int>()
+        var dislikedIds = Set<Int>()
+        if quotaManager.isProUser, globalFilters.hideWatched || globalFilters.hideDisliked {
+            if globalFilters.hideWatched {
+                seenIds = Set((try? await listRepository.defaultListItems(type: .seen, userId: userId))?.map(\.mediaId) ?? [])
+            }
+            if globalFilters.hideDisliked {
+                dislikedIds = Set((try? await listRepository.defaultListItems(type: .disliked, userId: userId))?.map(\.mediaId) ?? [])
+            }
+        }
+
         var filteredCarousels: [PersonalizedCarousel] = []
 
         for carousel in carousels {
@@ -232,10 +245,10 @@ final class DiscoveryViewModel {
 
             if quotaManager.isProUser {
                 if globalFilters.hideWatched {
-                    items = filterWatched(movies: items)
+                    items = filterWatched(movies: items, seenIds: seenIds)
                 }
                 if globalFilters.hideDisliked {
-                    items = filterDisliked(movies: items)
+                    items = filterDisliked(movies: items, dislikedIds: dislikedIds)
                 }
             }
 
@@ -323,16 +336,12 @@ final class DiscoveryViewModel {
         return formatter.date(from: dateString) ?? .distantPast
     }
 
-    private func filterWatched(movies: [Movie]) -> [Movie] {
-        let listManager = ListManager.shared
-        let seenItems = Set(listManager.seenList.items.map { $0.mediaId })
-        return movies.filter { !seenItems.contains($0.id) }
+    private func filterWatched(movies: [Movie], seenIds: Set<Int>) -> [Movie] {
+        movies.filter { !seenIds.contains($0.id) }
     }
 
-    private func filterDisliked(movies: [Movie]) -> [Movie] {
-        let listManager = ListManager.shared
-        let dislikedItems = Set(listManager.dislikedList.items.map { $0.mediaId })
-        return movies.filter { !dislikedItems.contains($0.id) }
+    private func filterDisliked(movies: [Movie], dislikedIds: Set<Int>) -> [Movie] {
+        movies.filter { !dislikedIds.contains($0.id) }
     }
 
     // MARK: - Interaction Logging
@@ -472,7 +481,7 @@ final class DiscoveryViewModel {
 
             globalFilters = loaded
             globalFilters.save()
-            personalizedCarousels = applyGlobalFilters(to: generatedCarousels)
+            personalizedCarousels = await applyGlobalFilters(to: generatedCarousels)
             refreshToken = UUID()
         } catch {
             Logger.warning("[DiscoveryViewModel] Failed to load global filters from database: \(error.localizedDescription)")
