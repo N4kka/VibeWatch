@@ -40,9 +40,10 @@ final class LiveListRepository: ListRepository {
 
                 do {
                     let remoteLists = try await remoteListsLoader(userId)
-                    if !remoteLists.isEmpty {
-                        try await persistRemoteLists(remoteLists, userId: userId)
-                        continuation.yield((try? await loadLists(for: userId)) ?? remoteLists)
+                    let normalizedRemoteLists = normalizeDefaultListDuplicates(remoteLists)
+                    if !normalizedRemoteLists.isEmpty {
+                        try await persistRemoteLists(normalizedRemoteLists, userId: userId)
+                        continuation.yield((try? await loadLists(for: userId)) ?? normalizedRemoteLists)
                     }
                 } catch {
                     Logger.warning("[LiveListRepository] Failed to hydrate remote lists: \(error.localizedDescription)")
@@ -157,7 +158,7 @@ final class LiveListRepository: ListRepository {
             itemsByList[listId, default: []].append(item)
         }
 
-        return listRows.compactMap { row in
+        let lists: [MediaList] = listRows.compactMap { row in
             guard let id = row["id"] as? String,
                   let name = row["name"] as? String,
                   let typeRaw = row["type"] as? String,
@@ -173,10 +174,56 @@ final class LiveListRepository: ListRepository {
                 items: itemsByList[id] ?? []
             )
         }
+
+        return normalizeDefaultListDuplicates(lists)
     }
 
     private func loadList(id: String, userId: String) async throws -> MediaList? {
         try await loadLists(for: userId).first { $0.id == id }
+    }
+
+    private func normalizeDefaultListDuplicates(_ lists: [MediaList]) -> [MediaList] {
+        let defaultTypes: Set<ListType> = [.watchlist, .seen, .liked, .disliked]
+        let groupedDefaults = Dictionary(grouping: lists.filter { defaultTypes.contains($0.type) }, by: \.type)
+        let mergedDefaults = groupedDefaults.mapValues(mergeDefaultLists)
+        var emittedTypes = Set<ListType>()
+
+        return lists.compactMap { list in
+            guard defaultTypes.contains(list.type) else { return list }
+            guard !emittedTypes.contains(list.type) else { return nil }
+            emittedTypes.insert(list.type)
+            return mergedDefaults[list.type] ?? list
+        }
+    }
+
+    private func mergeDefaultLists(_ lists: [MediaList]) -> MediaList {
+        guard let canonical = lists.max(by: { lhs, rhs in
+            if lhs.items.count != rhs.items.count {
+                return lhs.items.count < rhs.items.count
+            }
+            return lhs.createdAt < rhs.createdAt
+        }) else {
+            return MediaList(name: ListType.watchlist.displayName, type: .watchlist)
+        }
+
+        var itemsByIdentity: [String: MediaListItem] = [:]
+        for item in lists.flatMap(\.items) {
+            let key = "\(item.mediaType.rawValue):\(item.mediaId)"
+            if let existing = itemsByIdentity[key], existing.addedAt >= item.addedAt {
+                continue
+            }
+            itemsByIdentity[key] = item
+        }
+
+        let items = itemsByIdentity.values.sorted { $0.addedAt > $1.addedAt }
+        return MediaList(
+            id: canonical.id,
+            name: canonical.name,
+            description: canonical.description,
+            type: canonical.type,
+            createdAt: canonical.createdAt,
+            items: items
+        )
     }
 
     private func persistRemoteLists(_ lists: [MediaList], userId: String) async throws {
@@ -190,22 +237,8 @@ final class LiveListRepository: ListRepository {
     }
 
     private func ensureDefaultList(type: ListType, userId: String) async throws -> MediaList {
-        let rows = try await db.queryRaw("""
-            SELECT * FROM lists
-            WHERE user_id = ? AND type = ? AND deleted_at IS NULL
-            LIMIT 1
-        """, parameters: [userId, type.rawValue])
-
-        if let row = rows.first,
-           let id = row["id"] as? String,
-           let name = row["name"] as? String {
-            return MediaList(
-                id: id,
-                name: name,
-                description: row["description"] as? String,
-                type: type,
-                createdAt: RepositoryCoding.date(from: row["created_at"]) ?? Date()
-            )
+        if let existingList = try await loadLists(for: userId).first(where: { $0.type == type }) {
+            return existingList
         }
 
         let list = MediaList(name: type.displayName, type: type)

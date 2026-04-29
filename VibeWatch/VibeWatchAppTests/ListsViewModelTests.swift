@@ -127,6 +127,118 @@ final class LiveListRepositoryTests: XCTestCase {
         XCTAssertEqual(persistedItems.first?["media_id"] as? Int, 27205)
         XCTAssertEqual(persistedItems.first?["title"] as? String, "Inception")
     }
+
+    func testListsMergesDuplicateRemoteDefaultListsUsingLargestList() async throws {
+        let userId = "live-list-repo-test-\(UUID().uuidString)"
+        let fullListId = "remote-full-watchlist-\(UUID().uuidString)"
+        let emptyListId = "remote-empty-watchlist-\(UUID().uuidString)"
+        let remoteItem = MediaListItem(
+            id: "remote-item-\(UUID().uuidString)",
+            mediaId: 550,
+            mediaType: .movie,
+            title: "Fight Club",
+            posterPath: nil,
+            addedAt: Date(timeIntervalSince1970: 1_700_000_000)
+        )
+        let fullWatchlist = MediaList(
+            id: fullListId,
+            name: "Watchlist",
+            type: .watchlist,
+            createdAt: Date(timeIntervalSince1970: 1_600_000_000),
+            items: [remoteItem]
+        )
+        let newerEmptyWatchlist = MediaList(
+            id: emptyListId,
+            name: "Watchlist",
+            type: .watchlist,
+            createdAt: Date(timeIntervalSince1970: 1_800_000_000),
+            items: []
+        )
+        let repository = LiveListRepository(
+            db: db,
+            remoteListsLoader: { _ in [newerEmptyWatchlist, fullWatchlist] },
+            syncQueue: { _, _, _, _ in
+                XCTFail("Hydrating remote lists should not enqueue outbound sync")
+            }
+        )
+
+        var snapshots: [[MediaList]] = []
+        for await lists in repository.lists(for: userId) {
+            snapshots.append(lists)
+        }
+
+        let watchlists = snapshots.last?.filter { $0.type == .watchlist } ?? []
+        XCTAssertEqual(watchlists.count, 1)
+        XCTAssertEqual(watchlists.first?.id, fullListId)
+        XCTAssertEqual(watchlists.first?.items.map(\.mediaId), [550])
+    }
+
+    func testMarkAsSeenUsesMergedDefaultSeenList() async throws {
+        let userId = "live-list-repo-test-\(UUID().uuidString)"
+        let fullSeenListId = "local-full-seen-\(UUID().uuidString)"
+        let emptySeenListId = "local-empty-seen-\(UUID().uuidString)"
+        let olderDate = RepositoryCoding.string(from: Date(timeIntervalSince1970: 1_600_000_000))
+        let newerDate = RepositoryCoding.string(from: Date(timeIntervalSince1970: 1_800_000_000))
+
+        try await db.upsert(table: "profiles", rows: [[
+            "id": userId,
+            "email": "test@example.com",
+            "display_name": "Test User",
+            "created_at": olderDate,
+            "updated_at": olderDate
+        ]])
+        try await db.upsert(table: "lists", rows: [
+            [
+                "id": emptySeenListId,
+                "user_id": userId,
+                "name": "Seen",
+                "type": "seen",
+                "created_at": newerDate,
+                "updated_at": newerDate
+            ],
+            [
+                "id": fullSeenListId,
+                "user_id": userId,
+                "name": "Seen",
+                "type": "seen",
+                "created_at": olderDate,
+                "updated_at": olderDate
+            ]
+        ])
+        try await db.upsert(table: "list_items", rows: [[
+            "id": "existing-seen-item-\(UUID().uuidString)",
+            "list_id": fullSeenListId,
+            "user_id": userId,
+            "media_id": 550,
+            "media_type": "movie",
+            "title": "Fight Club",
+            "added_at": olderDate,
+            "updated_at": olderDate
+        ]])
+
+        let repository = LiveListRepository(
+            db: db,
+            remoteListsLoader: { _ in [] },
+            syncQueue: { table, operationType, _, payload in
+                XCTAssertEqual(table, "list_items")
+                XCTAssertEqual(operationType, "UPSERT")
+                XCTAssertEqual(payload["list_id"] as? String, fullSeenListId)
+            }
+        )
+
+        try await repository.markAsSeen(MediaIdentifier(id: 551, mediaType: .movie), userId: userId)
+
+        let fullListRows = try await db.queryRaw(
+            "SELECT id FROM list_items WHERE user_id = ? AND list_id = ? AND media_id = ? AND deleted_at IS NULL",
+            parameters: [userId, fullSeenListId, 551]
+        )
+        let emptyListRows = try await db.queryRaw(
+            "SELECT id FROM list_items WHERE user_id = ? AND list_id = ? AND media_id = ? AND deleted_at IS NULL",
+            parameters: [userId, emptySeenListId, 551]
+        )
+        XCTAssertEqual(fullListRows.count, 1)
+        XCTAssertTrue(emptyListRows.isEmpty)
+    }
 }
 
 @MainActor
