@@ -38,7 +38,6 @@ final class ListsViewModel {
 
         for await snapshot in repository.lists(for: userId) {
             lists = snapshot
-            break
         }
 
         isLoading = false

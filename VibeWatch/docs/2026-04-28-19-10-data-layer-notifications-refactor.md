@@ -255,6 +255,7 @@ Completed:
   - List creation, deletion, item removal, watchlist add, and mark-as-seen operations in the primary Lists screen route through `ListRepository`.
   - `CreateListView` now receives a repository-backed model and an explicit Pro-state value instead of requiring a new runtime environment object.
   - `ListsViewModelTests` covers loading repository snapshots and creating custom lists through the injected repository.
+  - Post-test bugfix: `LiveListRepository` now hydrates authenticated lists from Supabase into SQLite after the initial local snapshot, and `ListsViewModel` consumes the final repository snapshot instead of stopping at the first empty local snapshot. This fixes fresh-device authenticated list views showing empty while new local writes appeared immediately.
   - Remaining Phase 4 work: migrate Detail view models, `DiscoveryViewModel`, and secondary list surfaces such as custom list detail/edit paths away from direct `ListManager` usage.
 
 Verification notes:
@@ -267,9 +268,15 @@ Verification notes:
   `xcodebuild test -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' -only-testing:VibeWatchAppTests/LiveMediaRepositoryTests -only-testing:VibeWatchAppTests/LiveDiscoveryRepositoryTests`.
 - Phase 4a Lists targeted tests succeeded with:
   `xcodebuild test -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' -only-testing:VibeWatchAppTests/AppNavigationManagerTests -only-testing:VibeWatchAppTests/ListsViewModelTests`.
+- Phase 4a list hydration regression tests first failed as expected on the missing repository remote loader, then succeeded with:
+  `xcodebuild test -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' -only-testing:VibeWatchAppTests/LiveListRepositoryTests -only-testing:VibeWatchAppTests/ListsViewModelTests`
+  Result: 4 tests, 0 failures.
 - Full test suite succeeded after Phase 4a with:
   `xcodebuild test -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5'`
   Result: 119 tests, 0 failures.
+- Full test suite succeeded after the list hydration regression fix with:
+  `xcodebuild test -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5'`
+  Result: 121 tests, 0 failures.
 - Standalone build succeeded after Phase 4a with:
   `xcodebuild -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' build`.
 - Phase 3 repository environment test succeeded with:

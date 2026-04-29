@@ -3,12 +3,20 @@ import Foundation
 @MainActor
 final class LiveListRepository: ListRepository {
     typealias SyncQueue = @MainActor (String, String, String, [String: Any]) async throws -> Void
+    typealias RemoteListsLoader = @MainActor (String) async throws -> [MediaList]
 
     private let db: SQLiteService
     private let syncQueue: SyncQueue
+    private let remoteListsLoader: RemoteListsLoader
 
     init(
         db: SQLiteService = .shared,
+        remoteListsLoader: @escaping RemoteListsLoader = { userId in
+            guard SupabaseService.shared.currentUser?.id == userId else {
+                return []
+            }
+            return try await SupabaseService.shared.fetchLists()
+        },
         syncQueue: @escaping SyncQueue = { table, operationType, recordId, payload in
             try await SyncEngine.shared.queueOperation(
                 table: table,
@@ -20,13 +28,26 @@ final class LiveListRepository: ListRepository {
         }
     ) {
         self.db = db
+        self.remoteListsLoader = remoteListsLoader
         self.syncQueue = syncQueue
     }
 
     func lists(for userId: String) -> AsyncStream<[MediaList]> {
         AsyncStream { continuation in
             Task { @MainActor in
-                continuation.yield((try? await loadLists(for: userId)) ?? [])
+                let localLists = (try? await loadLists(for: userId)) ?? []
+                continuation.yield(localLists)
+
+                do {
+                    let remoteLists = try await remoteListsLoader(userId)
+                    if !remoteLists.isEmpty {
+                        try await persistRemoteLists(remoteLists, userId: userId)
+                        continuation.yield((try? await loadLists(for: userId)) ?? remoteLists)
+                    }
+                } catch {
+                    Logger.warning("[LiveListRepository] Failed to hydrate remote lists: \(error.localizedDescription)")
+                }
+
                 continuation.finish()
             }
         }
@@ -156,6 +177,16 @@ final class LiveListRepository: ListRepository {
 
     private func loadList(id: String, userId: String) async throws -> MediaList? {
         try await loadLists(for: userId).first { $0.id == id }
+    }
+
+    private func persistRemoteLists(_ lists: [MediaList], userId: String) async throws {
+        try await ensureProfile(userId: userId)
+        try await db.upsert(table: "lists", rows: lists.map { listRow($0, userId: userId) })
+
+        let itemRows = lists.flatMap { list in
+            list.items.map { itemRow($0, listId: list.id, userId: userId) }
+        }
+        try await db.upsert(table: "list_items", rows: itemRows)
     }
 
     private func ensureDefaultList(type: ListType, userId: String) async throws -> MediaList {
