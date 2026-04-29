@@ -180,7 +180,6 @@ SELECT
         ORDER BY
             CASE WHEN li.list_id = m.canonical_list_id THEN 0 ELSE 1 END,
             li.added_at DESC NULLS LAST,
-            li.updated_at DESC NULLS LAST,
             li.id
     ) AS item_rank
 FROM list_items li
@@ -196,8 +195,7 @@ WHERE li.deleted_at IS NULL;
 
 -- Soft-delete duplicate media rows before moving rows into the canonical list.
 UPDATE list_items li
-SET deleted_at = NOW(),
-    updated_at = NOW()
+SET deleted_at = NOW()
 FROM default_list_item_rank r
 WHERE li.id = r.item_id
   AND r.item_rank > 1
@@ -205,8 +203,7 @@ WHERE li.id = r.item_id
 
 -- Move the remaining unique rows from duplicate lists into the canonical list.
 UPDATE list_items li
-SET list_id = r.canonical_list_id,
-    updated_at = NOW()
+SET list_id = r.canonical_list_id
 FROM default_list_item_rank r
 WHERE li.id = r.item_id
   AND r.item_rank = 1
