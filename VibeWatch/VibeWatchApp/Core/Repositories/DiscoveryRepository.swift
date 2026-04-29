@@ -19,7 +19,7 @@ struct DiscoveryInteraction {
 }
 
 @MainActor
-protocol DiscoveryRepository: AnyObject {
+protocol DiscoveryRepository: AnyObject, Sendable {
     func carousels(for userId: String, filters: GlobalDiscoveryFilters) -> AsyncStream<[DiscoveryCarouselSnapshot]>
 
     func refreshCarousels(for userId: String, filters: GlobalDiscoveryFilters) async throws

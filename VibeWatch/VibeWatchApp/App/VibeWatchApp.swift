@@ -36,6 +36,10 @@ struct VibeWatchApp: App {
                 .environmentObject(authService)
                 .environmentObject(quotaManager)
                 .environmentObject(dependencies)
+                .environment(\.listRepository, dependencies.listRepository)
+                .environment(\.mediaRepository, dependencies.mediaRepository)
+                .environment(\.discoveryRepository, dependencies.discoveryRepository)
+                .environment(\.notificationRepository, dependencies.notificationRepository)
                 .preferredColorScheme(.dark)
                 .task {
                     // SyncEngine automatically handles periodic syncs via state machine

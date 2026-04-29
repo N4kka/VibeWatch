@@ -11,6 +11,7 @@
 		13392337BF1F4B568E9A4B9C /* AppNavigationManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06ECE77A8DA440E92022CE7 /* AppNavigationManagerTests.swift */; };
 		26BD1630A9514E7B9D559ED5 /* DatabaseMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F849736129F54FA8BD1D3247 /* DatabaseMigrationTests.swift */; };
 		2F2A7B8519954E77A42B6C21 /* LiveDiscoveryRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7531370A04684C10B714F834 /* LiveDiscoveryRepositoryTests.swift */; };
+		32F14B4D80C94B4188E28BAE /* RepositoryEnvironmentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2E1424DCE674E17A76DA121 /* RepositoryEnvironmentTests.swift */; };
 		3A7518E7EFF7451DA829EBCA /* ClipCommentServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B64FF4907D54457B73097CA /* ClipCommentServiceTests.swift */; };
 		6041113C7B15457BB8A1B4EB /* ConflictResolverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75B51919D2BF4686B686EDCA /* ConflictResolverTests.swift */; };
 		6E9D5B3A4D8C45B886473578 /* RepositoryTestFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6BC5B56C7C34CDEB68BCED1 /* RepositoryTestFixtures.swift */; };
@@ -54,6 +55,7 @@
 		A1B2C3D4E5F6A1B5 /* AuthMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthMigrationTests.swift; sourceTree = "<group>"; };
 		A6BC5B56C7C34CDEB68BCED1 /* RepositoryTestFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Repositories/RepositoryTestFixtures.swift; sourceTree = "<group>"; };
 		C3D4E5F6A1B2C3D5 /* PerformanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceTests.swift; sourceTree = "<group>"; };
+		C2E1424DCE674E17A76DA121 /* RepositoryEnvironmentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Repositories/RepositoryEnvironmentTests.swift; sourceTree = "<group>"; };
 		B318DC8A2EC6920500DB1A9A /* VibeWatchApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VibeWatchApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B3F0F1A92F2A1B1C00AA1111 /* VibeWatchApp/Config/Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = VibeWatchApp/Config/Secrets.xcconfig; sourceTree = "<group>"; };
 		D06ECE77A8DA440E92022CE7 /* AppNavigationManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppNavigationManagerTests.swift; sourceTree = "<group>"; };
@@ -129,6 +131,7 @@
 				C3D4E5F6A1B2C3D5 /* PerformanceTests.swift */,
 				ECD0767719AC47A49153BCA0 /* LiveMediaRepositoryTests.swift */,
 				7531370A04684C10B714F834 /* LiveDiscoveryRepositoryTests.swift */,
+				C2E1424DCE674E17A76DA121 /* RepositoryEnvironmentTests.swift */,
 				A6BC5B56C7C34CDEB68BCED1 /* RepositoryTestFixtures.swift */,
 			);
 			path = VibeWatchAppTests;
@@ -320,6 +323,7 @@
 				C3D4E5F6A1B2C3D4 /* PerformanceTests.swift in Sources */,
 				B6BCE94E561A46C29F713899 /* LiveMediaRepositoryTests.swift in Sources */,
 				2F2A7B8519954E77A42B6C21 /* LiveDiscoveryRepositoryTests.swift in Sources */,
+				32F14B4D80C94B4188E28BAE /* RepositoryEnvironmentTests.swift in Sources */,
 				6E9D5B3A4D8C45B886473578 /* RepositoryTestFixtures.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

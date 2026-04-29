@@ -21,6 +21,10 @@ final class DependencyContainer: ObservableObject {
     // MARK: - Repository & Data Services
 
     lazy var clipsRepository = ClipsRepository.shared
+    lazy var listRepository: any ListRepository = LiveListRepository()
+    lazy var mediaRepository: any MediaRepository = LiveMediaRepository()
+    lazy var discoveryRepository: any DiscoveryRepository = LiveDiscoveryRepository()
+    lazy var notificationRepository: any NotificationRepository = LiveNotificationRepository()
     lazy var imageCache = ImageCacheService.shared
 
     // MARK: - Feature Services

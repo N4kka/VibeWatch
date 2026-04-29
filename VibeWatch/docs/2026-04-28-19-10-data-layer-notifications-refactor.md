@@ -243,6 +243,12 @@ Completed:
   - Supabase `apply_mutations` and `merge_user_preferences` now use SDK RPC calls with Encodable payloads instead of manual RPC URLSession requests.
   - `SQLiteService.upsert`, `update`, and `delete` now write through the writer connection instead of routing write SQL through the read-only query path.
   - Repository tests cover SWR details, availability TTL, and Discovery ordering.
+- Phase 3 dependency injection wiring was added:
+  - `DependencyContainer` now owns lazy live repository factories for Lists, Media, Discovery, and Notifications.
+  - `RepositoryEnvironment` adds SwiftUI environment values for the four repository protocols.
+  - The app root injects the live repositories alongside the existing `DependencyContainer`.
+  - Repository protocols now conform to `Sendable` so they can be stored safely in SwiftUI environment values under Swift 6.
+  - `RepositoryEnvironmentTests` covers container factories and environment override behavior with mocks.
 
 Verification notes:
 - Build succeeded with `xcodebuild -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' build`.
@@ -252,6 +258,8 @@ Verification notes:
   `xcodebuild test -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' -only-testing:VibeWatchAppTests/DatabaseMigrationTests/testPersonalizationMigration7AddsRepositoryLayerCacheSchema`.
 - Phase 2 repository tests succeeded with:
   `xcodebuild test -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' -only-testing:VibeWatchAppTests/LiveMediaRepositoryTests -only-testing:VibeWatchAppTests/LiveDiscoveryRepositoryTests`.
+- Phase 3 repository environment test succeeded with:
+  `xcodebuild test -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' -only-testing:VibeWatchAppTests/RepositoryEnvironmentTests`.
 - Full test suite succeeded with:
   `xcodebuild test -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5'`.
 - Fresh app build succeeded with:

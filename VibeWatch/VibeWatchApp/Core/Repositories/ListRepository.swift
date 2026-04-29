@@ -7,7 +7,7 @@ struct ListItemMutation {
 }
 
 @MainActor
-protocol ListRepository: AnyObject {
+protocol ListRepository: AnyObject, Sendable {
     func lists(for userId: String) -> AsyncStream<[MediaList]>
     func list(id: String, userId: String) -> AsyncStream<MediaList?>
     func contains(_ identifier: MediaIdentifier, in listType: ListType, userId: String) -> AsyncStream<Bool>

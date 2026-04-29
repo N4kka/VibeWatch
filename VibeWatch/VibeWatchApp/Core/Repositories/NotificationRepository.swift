@@ -26,7 +26,7 @@ struct NotificationEvent: Identifiable, Codable {
 }
 
 @MainActor
-protocol NotificationRepository: AnyObject {
+protocol NotificationRepository: AnyObject, Sendable {
     func events(for userId: String) -> AsyncStream<[NotificationEvent]>
     func wasAlreadySent(eventKey: String, channel: NotificationChannel, userId: String) async throws -> Bool
 

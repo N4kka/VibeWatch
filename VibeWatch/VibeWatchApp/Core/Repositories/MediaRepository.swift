@@ -19,7 +19,7 @@ struct MediaAvailabilitySnapshot {
 }
 
 @MainActor
-protocol MediaRepository: AnyObject {
+protocol MediaRepository: AnyObject, Sendable {
     func details(for identifier: MediaIdentifier) -> AsyncStream<MediaDetailsSnapshot?>
     func availability(for identifier: MediaIdentifier, region: String) -> AsyncStream<MediaAvailabilitySnapshot?>
 
