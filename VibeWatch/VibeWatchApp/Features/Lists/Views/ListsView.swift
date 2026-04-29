@@ -1,8 +1,21 @@
 import SwiftUI
 
 struct ListsView: View {
-    @StateObject private var viewModel = ListsViewModel()
-    @StateObject private var listManager = ListManager.shared
+    @Environment(\.listRepository) private var listRepository
+    @EnvironmentObject private var appState: AppState
+
+    private var userId: String {
+        appState.currentUser?.id ?? "anonymous"
+    }
+
+    var body: some View {
+        ListsContentView(repository: listRepository, userId: userId)
+            .id(userId)
+    }
+}
+
+private struct ListsContentView: View {
+    @State private var viewModel: ListsViewModel
     @StateObject private var availabilityService = ListAvailabilityService.shared
     @ObservedObject var localizationManager = LocalizationManager.shared
     @EnvironmentObject var quotaManager: DailyQuotaManager
@@ -19,6 +32,10 @@ struct ListsView: View {
     @State private var showingPaywall = false
     @State private var itemsLimit = 50 // State for pagination
     @State private var searchText = ""
+
+    init(repository: any ListRepository, userId: String) {
+        _viewModel = State(initialValue: ListsViewModel(repository: repository, userId: userId))
+    }
     
     private var mediaFilterBinding: Binding<MediaFilter> {
         Binding(
@@ -57,7 +74,7 @@ struct ListsView: View {
                 
                 combinedFiltersRow
                 
-                if listManager.isLoadingInitial {
+                if viewModel.isLoading && viewModel.lists.isEmpty {
                     ProgressView()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if currentLists.isEmpty {
@@ -109,7 +126,7 @@ struct ListsView: View {
         }
         .id(refreshID)
         .sheet(isPresented: $showCreateList) {
-            CreateListView(viewModel: viewModel)
+            CreateListView(viewModel: viewModel, isProUser: quotaManager.isProUser)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
                 .presentationBackground(Color.theme.background)
@@ -141,7 +158,7 @@ struct ListsView: View {
                     showAuthGate = true
                     return
                 }
-                if listManager.canCreateList() {
+                if viewModel.canCreateList(isProUser: quotaManager.isProUser) {
                     showCreateList = true
                 } else {
                     showingPaywall = true
@@ -183,13 +200,13 @@ struct ListsView: View {
         
         switch selectedListType {
         case .myLists:
-            lists = listManager.lists.filter { $0.type == .custom }
+            lists = viewModel.customLists
         case .watchlist:
-            lists = [listManager.watchlist]
+            lists = [viewModel.watchlist]
         case .seen:
-            lists = [listManager.seenList]
+            lists = [viewModel.seenList]
         case .liked:
-            lists = [listManager.likedList]
+            lists = [viewModel.likedList]
         }
 
         return lists
@@ -250,41 +267,25 @@ struct ListsView: View {
                 ForEach(paginatedItems) { item in
                     MediaItemRow(
                         item: item,
-                        isInSeenList: selectedListType == .seen,
+                        isInSeenList: selectedListType == .seen || viewModel.containsSeen(item),
                         onMarkAsSeen: {
                             Task {
                                 if let currentList = currentLists.first {
-                                    try? await listManager.removeFromList(listId: currentList.id, itemId: item.id)
+                                    try? await viewModel.removeItem(item, from: currentList)
                                 }
-                                
-                                let movie = Movie(
-                                    id: item.mediaId,
-                                    title: item.title,
-                                    overview: "",
-                                    posterPath: item.posterPath,
-                                    backdropPath: nil,
-                                    releaseDate: nil,
-                                    voteAverage: 0.0,
-                                    voteCount: 0,
-                                    genreIds: nil,
-                                    genres: nil,
-                                    adult: false,
-                                    originalLanguage: "",
-                                    popularity: 0.0,
-                                    runtime: nil,
-                                    status: nil,
-                                    tagline: nil,
-                                    productionCountries: nil,
-                                    imdbId: nil
-                                )
-                                try await listManager.addToList(listId: listManager.seenList.id, movie: movie, mediaType: item.mediaType)
+                                try? await viewModel.markAsSeen(item)
                             }
                         },
                         onDelete: {
                             Task {
                                 if let currentList = currentLists.first {
-                                    try? await listManager.removeFromList(listId: currentList.id, itemId: item.id)
+                                    try? await viewModel.removeItem(item, from: currentList)
                                 }
+                            }
+                        },
+                        onNotifyMe: {
+                            Task {
+                                try? await viewModel.addToWatchlist(item)
                             }
                         }
                     )
@@ -532,16 +533,11 @@ struct MediaItemRow: View {
     let isInSeenList: Bool // From parent context (which list we're viewing)
     let onMarkAsSeen: () -> Void
     let onDelete: () -> Void
-
-    @ObservedObject private var listManager = ListManager.shared
+    let onNotifyMe: () -> Void
 
     // Computed property to check if item is actually in seen list
     private var isActuallyInSeenList: Bool {
-        listManager.isInList(
-            listId: listManager.seenList.id,
-            mediaId: item.mediaId,
-            mediaType: item.mediaType
-        )
+        isInSeenList
     }
     @State private var topProvider: Provider?
     @State private var providerLink: String?
@@ -704,15 +700,7 @@ struct MediaItemRow: View {
                 VStack {
                     Button {
                         if isActuallyInSeenList {
-                            // Remove from seen list - find the correct item ID in seen list
-                            Task {
-                                if let seenItem = listManager.seenList.items.first(where: { $0.mediaId == item.mediaId && $0.mediaType == item.mediaType }) {
-                                    try? await listManager.removeFromList(
-                                        listId: listManager.seenList.id,
-                                        itemId: seenItem.id
-                                    )
-                                }
-                            }
+                            onDelete()
                         } else {
                             onMarkAsSeen()
                         }
@@ -807,33 +795,7 @@ struct MediaItemRow: View {
     
     private func handleNotifyMe() {
         showNotifyMeAlert = true
-        
-        // Ensure it's in watchlist
-        Task {
-            if !listManager.isInList(listId: listManager.watchlist.id, mediaId: item.mediaId, mediaType: item.mediaType) {
-                let movie = Movie(
-                    id: item.mediaId,
-                    title: item.title,
-                    overview: "",
-                    posterPath: item.posterPath,
-                    backdropPath: nil,
-                    releaseDate: nil,
-                    voteAverage: item.voteAverage ?? 0.0,
-                    voteCount: 0,
-                    genreIds: nil,
-                    genres: nil,
-                    adult: false,
-                    originalLanguage: "",
-                    popularity: 0.0,
-                    runtime: item.runtime,
-                    status: nil,
-                    tagline: nil,
-                    productionCountries: nil,
-                    imdbId: nil
-                )
-                try? await listManager.addToList(listId: listManager.watchlist.id, movie: movie, mediaType: item.mediaType)
-            }
-        }
+        onNotifyMe()
     }
     
     @ViewBuilder
@@ -1184,6 +1146,33 @@ struct CustomListDetailView: View {
                                         Task {
                                             try? await listManager.removeFromList(listId: list.id, itemId: item.id)
                                         }
+                                    },
+                                    onNotifyMe: {
+                                        Task {
+                                            if !listManager.isInList(listId: listManager.watchlist.id, mediaId: item.mediaId, mediaType: item.mediaType) {
+                                                let movie = Movie(
+                                                    id: item.mediaId,
+                                                    title: item.title,
+                                                    overview: item.overview ?? "",
+                                                    posterPath: item.posterPath,
+                                                    backdropPath: nil,
+                                                    releaseDate: item.releaseDate,
+                                                    voteAverage: item.voteAverage ?? 0.0,
+                                                    voteCount: item.voteCount ?? 0,
+                                                    genreIds: nil,
+                                                    genres: nil,
+                                                    adult: false,
+                                                    originalLanguage: "",
+                                                    popularity: 0.0,
+                                                    runtime: item.runtime,
+                                                    status: nil,
+                                                    tagline: nil,
+                                                    productionCountries: nil,
+                                                    imdbId: nil
+                                                )
+                                                try? await listManager.addToList(listId: listManager.watchlist.id, movie: movie, mediaType: item.mediaType)
+                                            }
+                                        }
                                     }
                                 )
                             }
@@ -1387,8 +1376,8 @@ struct ListCard: View {
 
 struct CreateListView: View {
     @Environment(\.dismiss) private var dismiss
-    @ObservedObject var viewModel: ListsViewModel
-    @StateObject private var listManager = ListManager.shared
+    let viewModel: ListsViewModel
+    let isProUser: Bool
     @State private var listName = ""
     @State private var listDescription = ""
     @State private var error: AppError?
@@ -1422,10 +1411,10 @@ struct CreateListView: View {
                     // Limit Info
                     HStack {
                         Text("lists.limitInfo".localized
-                            .replacingOccurrences(of: "{count}", with: "\(listManager.customListsCount())")
-                            .replacingOccurrences(of: "{limit}", with: "\(listManager.currentCustomListLimit)"))
+                            .replacingOccurrences(of: "{count}", with: "\(viewModel.customListsCount())")
+                            .replacingOccurrences(of: "{limit}", with: "\(viewModel.currentCustomListLimit(isProUser: isProUser))"))
                             .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(listManager.canCreateList() ? .theme.textSecondary : .theme.accentOrange)
+                            .foregroundColor(viewModel.canCreateList(isProUser: isProUser) ? .theme.textSecondary : .theme.accentOrange)
                         
                         Spacer()
                     }
@@ -1478,10 +1467,10 @@ struct CreateListView: View {
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
-                        .background(listName.isEmpty || !listManager.canCreateList() ? Color.gray.opacity(0.3) : Color.theme.accentOrange)
+                        .background(listName.isEmpty || !viewModel.canCreateList(isProUser: isProUser) ? Color.gray.opacity(0.3) : Color.theme.accentOrange)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
-                .disabled(listName.isEmpty || !listManager.canCreateList())
+                .disabled(listName.isEmpty || !viewModel.canCreateList(isProUser: isProUser))
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)
             }

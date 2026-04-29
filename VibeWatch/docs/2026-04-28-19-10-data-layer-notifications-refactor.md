@@ -249,6 +249,13 @@ Completed:
   - The app root injects the live repositories alongside the existing `DependencyContainer`.
   - Repository protocols now conform to `Sendable` so they can be stored safely in SwiftUI environment values under Swift 6.
   - `RepositoryEnvironmentTests` covers container factories and environment override behavior with mocks.
+- Phase 4a Lists migration was added:
+  - `ListsViewModel` is now an `@Observable` model driven by injected `ListRepository` and `userId`.
+  - The primary `ListsView` reads `ListRepository` from SwiftUI environment and stores the model with `@State`.
+  - List creation, deletion, item removal, watchlist add, and mark-as-seen operations in the primary Lists screen route through `ListRepository`.
+  - `CreateListView` now receives a repository-backed model and an explicit Pro-state value instead of requiring a new runtime environment object.
+  - `ListsViewModelTests` covers loading repository snapshots and creating custom lists through the injected repository.
+  - Remaining Phase 4 work: migrate Detail view models, `DiscoveryViewModel`, and secondary list surfaces such as custom list detail/edit paths away from direct `ListManager` usage.
 
 Verification notes:
 - Build succeeded with `xcodebuild -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' build`.
@@ -258,6 +265,13 @@ Verification notes:
   `xcodebuild test -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' -only-testing:VibeWatchAppTests/DatabaseMigrationTests/testPersonalizationMigration7AddsRepositoryLayerCacheSchema`.
 - Phase 2 repository tests succeeded with:
   `xcodebuild test -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' -only-testing:VibeWatchAppTests/LiveMediaRepositoryTests -only-testing:VibeWatchAppTests/LiveDiscoveryRepositoryTests`.
+- Phase 4a Lists targeted tests succeeded with:
+  `xcodebuild test -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' -only-testing:VibeWatchAppTests/AppNavigationManagerTests -only-testing:VibeWatchAppTests/ListsViewModelTests`.
+- Full test suite succeeded after Phase 4a with:
+  `xcodebuild test -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5'`
+  Result: 119 tests, 0 failures.
+- Standalone build succeeded after Phase 4a with:
+  `xcodebuild -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' build`.
 - Phase 3 repository environment test succeeded with:
   `xcodebuild test -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' -only-testing:VibeWatchAppTests/RepositoryEnvironmentTests`.
 - Full test suite succeeded with:

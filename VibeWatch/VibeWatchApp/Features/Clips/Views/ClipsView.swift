@@ -1347,8 +1347,9 @@ struct ReplyRow: View {
 
 struct AddToListView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.listRepository) private var listRepository
+    @EnvironmentObject private var appState: AppState
     @StateObject private var listManager = ListManager.shared
-    @StateObject private var listsViewModel = ListsViewModel()
     @State private var showCreateList = false
     let clipId: String?
     let movieId: Int?
@@ -1472,7 +1473,10 @@ struct AddToListView: View {
             }
         }
         .sheet(isPresented: $showCreateList) {
-            CreateListView(viewModel: listsViewModel)
+            CreateListView(viewModel: ListsViewModel(
+                repository: listRepository,
+                userId: appState.currentUser?.id ?? "anonymous"
+            ), isProUser: false)
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
         }

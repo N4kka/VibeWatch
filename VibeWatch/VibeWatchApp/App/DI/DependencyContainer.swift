@@ -145,7 +145,10 @@ final class DependencyContainer: ObservableObject {
 
     /// Creates a ListsViewModel with injected dependencies
     func makeListsViewModel() -> ListsViewModel {
-        ListsViewModel(listManager: listManager)
+        ListsViewModel(
+            repository: listRepository,
+            userId: authService.currentUser?.id ?? "anonymous"
+        )
     }
 
     /// Creates an OnboardingViewModel with injected dependencies
