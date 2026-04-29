@@ -86,6 +86,7 @@ final class DependencyContainer: ObservableObject {
     func makeMovieDetailViewModel(movieId: Int) -> MovieDetailViewModel {
         MovieDetailViewModel(
             movieId: movieId,
+            mediaRepository: mediaRepository,
             tmdbService: tmdbService,
             streamingService: streamingService,
             detailCache: detailCache,
@@ -100,6 +101,7 @@ final class DependencyContainer: ObservableObject {
     func makeTVShowDetailViewModel(tvShowId: Int) -> TVShowDetailViewModel {
         TVShowDetailViewModel(
             tvShowId: tvShowId,
+            mediaRepository: mediaRepository,
             tmdbService: tmdbService,
             streamingService: streamingService,
             detailCache: detailCache,

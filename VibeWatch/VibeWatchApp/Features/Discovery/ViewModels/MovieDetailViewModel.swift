@@ -1,19 +1,21 @@
 import Foundation
 
 @MainActor
-class MovieDetailViewModel: ObservableObject {
-    @Published var movie: Movie?
-    @Published var credits: Credits?
-    @Published var videos: [Video] = []
-    @Published var watchProviders: CountryProviders?
-    @Published var similarMovies: [Movie] = []
-    @Published var imdbId: String?
-    @Published var isLoading = false
-    @Published var error: AppError?
-    @Published var whyForMeMessage: String?
-    @Published var isWhyForMeLoading = false
-    @Published var whyForMeError: String?
+@Observable
+final class MovieDetailViewModel {
+    var movie: Movie?
+    var credits: Credits?
+    var videos: [Video] = []
+    var watchProviders: CountryProviders?
+    var similarMovies: [Movie] = []
+    var imdbId: String?
+    var isLoading = false
+    var error: AppError?
+    var whyForMeMessage: String?
+    var isWhyForMeLoading = false
+    var whyForMeError: String?
     
+    private let mediaRepository: any MediaRepository
     private let tmdbService: any TMDBServiceProtocol
     private let streamingService: StreamingAvailabilityService
     private let detailCache: DetailCacheService
@@ -22,18 +24,22 @@ class MovieDetailViewModel: ObservableObject {
     private let preferenceManager: UserPreferenceManager
     private let aiTokenManager: AITokenManager
     private let movieId: Int
+    private let loadSupplementalInBackground: Bool
 
     init(
         movieId: Int,
+        mediaRepository: any MediaRepository = LiveMediaRepository(),
         tmdbService: any TMDBServiceProtocol = TMDBService.shared,
         streamingService: StreamingAvailabilityService = .shared,
         detailCache: DetailCacheService = .shared,
         quotaService: ClipQuotaService = .shared,
         cerebrasService: CerebrasService = .shared,
         preferenceManager: UserPreferenceManager = .shared,
-        aiTokenManager: AITokenManager = .shared
+        aiTokenManager: AITokenManager = .shared,
+        loadSupplementalInBackground: Bool = true
     ) {
         self.movieId = movieId
+        self.mediaRepository = mediaRepository
         self.tmdbService = tmdbService
         self.streamingService = streamingService
         self.detailCache = detailCache
@@ -41,6 +47,7 @@ class MovieDetailViewModel: ObservableObject {
         self.cerebrasService = cerebrasService
         self.preferenceManager = preferenceManager
         self.aiTokenManager = aiTokenManager
+        self.loadSupplementalInBackground = loadSupplementalInBackground
     }
 
     func loadMovieDetails() async {
@@ -50,6 +57,16 @@ class MovieDetailViewModel: ObservableObject {
         // Step 1: Check if user is PRO (needed for cache WRITE decision only)
         let isProUser = await quotaService.checkIsProUser()
         Logger.debug("[MovieDetail] PRO user status: \(isProUser)")
+
+        if await loadMovieRepositorySnapshot() {
+            isLoading = false
+            if loadSupplementalInBackground {
+                Task(priority: .utility) {
+                    await self.refreshMovieSupplementalData(isProUser: isProUser)
+                }
+            }
+            return
+        }
 
         // Step 2: Try to load from cache first (ALL users — cache reads are free)
         do {
@@ -138,6 +155,60 @@ class MovieDetailViewModel: ObservableObject {
         // All attempts failed - show error
         self.error = AppError.network(lastError ?? NSError(domain: "MovieDetailViewModel", code: -1))
         isLoading = false
+    }
+
+    private func loadMovieRepositorySnapshot() async -> Bool {
+        let identifier = MediaIdentifier(id: movieId, mediaType: .movie)
+        var didLoad = false
+
+        for await snapshot in mediaRepository.details(for: identifier) {
+            guard case let .movie(movieData) = snapshot else { continue }
+            movie = movieData
+            imdbId = movieData.imdbId ?? imdbId
+            didLoad = true
+            isLoading = false
+        }
+
+        return didLoad
+    }
+
+    private func refreshMovieSupplementalData(isProUser: Bool) async {
+        async let detailsRefresh: Void = {
+            do {
+                try await self.attemptLoadMovieDetails()
+            } catch {
+                Logger.warning("[MovieDetail] Background detail refresh failed: \(error.localizedDescription)")
+            }
+        }()
+        async let repositoryAvailability: Void = loadMovieAvailabilityFromRepository()
+
+        _ = await (detailsRefresh, repositoryAvailability)
+
+        if isProUser, let movie = self.movie {
+            do {
+                try await detailCache.cacheMovieDetails(
+                    movie: movie,
+                    credits: credits,
+                    videos: videos,
+                    watchProviders: watchProviders,
+                    similarMovies: similarMovies,
+                    imdbId: imdbId
+                )
+            } catch {
+                Logger.warning("[MovieDetail] Failed to cache movie details: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func loadMovieAvailabilityFromRepository() async {
+        let country = LocalizationManager.shared.currentCountry.id
+        let identifier = MediaIdentifier(id: movieId, mediaType: .movie)
+
+        for await snapshot in mediaRepository.availability(for: identifier, region: country) {
+            if let providers = snapshot?.providers.results[country] {
+                watchProviders = providers
+            }
+        }
     }
 
     private func attemptLoadMovieDetails() async throws {
@@ -339,19 +410,21 @@ class MovieDetailViewModel: ObservableObject {
 }
 
 @MainActor
-class TVShowDetailViewModel: ObservableObject {
-    @Published var tvShow: TVShow?
-    @Published var credits: Credits?
-    @Published var videos: [Video] = []
-    @Published var watchProviders: CountryProviders?
-    @Published var similarShows: [TVShow] = []
-    @Published var imdbId: String?
-    @Published var isLoading = false
-    @Published var error: AppError?
-    @Published var whyForMeMessage: String?
-    @Published var isWhyForMeLoading = false
-    @Published var whyForMeError: String?
+@Observable
+final class TVShowDetailViewModel {
+    var tvShow: TVShow?
+    var credits: Credits?
+    var videos: [Video] = []
+    var watchProviders: CountryProviders?
+    var similarShows: [TVShow] = []
+    var imdbId: String?
+    var isLoading = false
+    var error: AppError?
+    var whyForMeMessage: String?
+    var isWhyForMeLoading = false
+    var whyForMeError: String?
     
+    private let mediaRepository: any MediaRepository
     private let tmdbService: any TMDBServiceProtocol
     private let streamingService: StreamingAvailabilityService
     private let detailCache: DetailCacheService
@@ -360,18 +433,22 @@ class TVShowDetailViewModel: ObservableObject {
     private let preferenceManager: UserPreferenceManager
     private let aiTokenManager: AITokenManager
     private let tvShowId: Int
+    private let loadSupplementalInBackground: Bool
 
     init(
         tvShowId: Int,
+        mediaRepository: any MediaRepository = LiveMediaRepository(),
         tmdbService: any TMDBServiceProtocol = TMDBService.shared,
         streamingService: StreamingAvailabilityService = .shared,
         detailCache: DetailCacheService = .shared,
         quotaService: ClipQuotaService = .shared,
         cerebrasService: CerebrasService = .shared,
         preferenceManager: UserPreferenceManager = .shared,
-        aiTokenManager: AITokenManager = .shared
+        aiTokenManager: AITokenManager = .shared,
+        loadSupplementalInBackground: Bool = true
     ) {
         self.tvShowId = tvShowId
+        self.mediaRepository = mediaRepository
         self.tmdbService = tmdbService
         self.streamingService = streamingService
         self.detailCache = detailCache
@@ -379,6 +456,7 @@ class TVShowDetailViewModel: ObservableObject {
         self.cerebrasService = cerebrasService
         self.preferenceManager = preferenceManager
         self.aiTokenManager = aiTokenManager
+        self.loadSupplementalInBackground = loadSupplementalInBackground
     }
 
     func loadTVShowDetails() async {
@@ -387,6 +465,16 @@ class TVShowDetailViewModel: ObservableObject {
 
         // Step 1: Check if user is PRO (needed for cache WRITE decision only)
         let isProUser = await quotaService.checkIsProUser()
+
+        if await loadTVShowRepositorySnapshot() {
+            isLoading = false
+            if loadSupplementalInBackground {
+                Task(priority: .utility) {
+                    await self.refreshTVShowSupplementalData(isProUser: isProUser)
+                }
+            }
+            return
+        }
 
         // Step 2: Try to load from cache first (ALL users — cache reads are free)
         do {
@@ -475,6 +563,60 @@ class TVShowDetailViewModel: ObservableObject {
         // All attempts failed - show error
         self.error = AppError.network(lastError ?? NSError(domain: "TVShowDetailViewModel", code: -1))
         isLoading = false
+    }
+
+    private func loadTVShowRepositorySnapshot() async -> Bool {
+        let identifier = MediaIdentifier(id: tvShowId, mediaType: .tv)
+        var didLoad = false
+
+        for await snapshot in mediaRepository.details(for: identifier) {
+            guard case let .tvShow(tvShowData) = snapshot else { continue }
+            tvShow = tvShowData
+            imdbId = tvShowData.imdbId ?? imdbId
+            didLoad = true
+            isLoading = false
+        }
+
+        return didLoad
+    }
+
+    private func refreshTVShowSupplementalData(isProUser: Bool) async {
+        async let detailsRefresh: Void = {
+            do {
+                try await self.attemptLoadTVShowDetails()
+            } catch {
+                Logger.warning("[TVShowDetail] Background detail refresh failed: \(error.localizedDescription)")
+            }
+        }()
+        async let repositoryAvailability: Void = loadTVShowAvailabilityFromRepository()
+
+        _ = await (detailsRefresh, repositoryAvailability)
+
+        if isProUser, let tvShow = self.tvShow {
+            do {
+                try await detailCache.cacheTVShowDetails(
+                    tvShow: tvShow,
+                    credits: credits,
+                    videos: videos,
+                    watchProviders: watchProviders,
+                    similarShows: similarShows,
+                    imdbId: imdbId
+                )
+            } catch {
+                Logger.warning("[TVShowDetail] Failed to cache TV show details: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func loadTVShowAvailabilityFromRepository() async {
+        let country = LocalizationManager.shared.currentCountry.id
+        let identifier = MediaIdentifier(id: tvShowId, mediaType: .tv)
+
+        for await snapshot in mediaRepository.availability(for: identifier, region: country) {
+            if let providers = snapshot?.providers.results[country] {
+                watchProviders = providers
+            }
+        }
     }
 
     private func attemptLoadTVShowDetails() async throws {

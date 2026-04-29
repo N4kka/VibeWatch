@@ -3,10 +3,23 @@ import YouTubeiOSPlayerHelper
 import UIKit
 
 struct MovieDetailView: View {
+    @Environment(\.mediaRepository) private var mediaRepository
+    private let movieId: Int
+
+    init(movieId: Int) {
+        self.movieId = movieId
+    }
+
+    var body: some View {
+        MovieDetailContentView(movieId: movieId, mediaRepository: mediaRepository)
+    }
+}
+
+private struct MovieDetailContentView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var quotaManager: DailyQuotaManager
-    @StateObject private var viewModel: MovieDetailViewModel
+    @State private var viewModel: MovieDetailViewModel
     @StateObject private var listManager = ListManager.shared
     @StateObject private var searchViewModel = SearchViewModel()
     @State private var showSavePanel = false
@@ -21,8 +34,8 @@ struct MovieDetailView: View {
     @State private var showWhyForMeSheet = false
     @State private var showAIPaywall = false
     
-    init(movieId: Int) {
-        _viewModel = StateObject(wrappedValue: MovieDetailViewModel(movieId: movieId))
+    init(movieId: Int, mediaRepository: any MediaRepository) {
+        _viewModel = State(initialValue: MovieDetailViewModel(movieId: movieId, mediaRepository: mediaRepository))
     }
     
     private var shouldShowAd: Bool {

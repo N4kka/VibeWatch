@@ -256,7 +256,15 @@ Completed:
   - `CreateListView` now receives a repository-backed model and an explicit Pro-state value instead of requiring a new runtime environment object.
   - `ListsViewModelTests` covers loading repository snapshots and creating custom lists through the injected repository.
   - Post-test bugfix: `LiveListRepository` now hydrates authenticated lists from Supabase into SQLite after the initial local snapshot, and `ListsViewModel` consumes the final repository snapshot instead of stopping at the first empty local snapshot. This fixes fresh-device authenticated list views showing empty while new local writes appeared immediately.
-  - Remaining Phase 4 work: migrate Detail view models, `DiscoveryViewModel`, and secondary list surfaces such as custom list detail/edit paths away from direct `ListManager` usage.
+  - Post-production-data cleanup: duplicate default lists are normalized app-side and a Supabase SQL runbook was added to merge existing duplicate `watchlist`, `seen`, `liked`, and `disliked` rows into the list with the most items.
+- Phase 4b Detail view model migration was added:
+  - `MovieDetailViewModel` and `TVShowDetailViewModel` are now `@Observable` models.
+  - Both detail view models load their first detail snapshot from injected `MediaRepository`, allowing cached repository data to render before supplemental refresh work completes.
+  - `MovieDetailView` and `TVShowDetailView` read `mediaRepository` from SwiftUI environment and store repository-backed view models with `@State`.
+  - `DependencyContainer` detail factories now pass the live `mediaRepository`.
+  - `DetailViewModelRepositoryTests` covers movie and TV detail snapshots with `MockMediaRepository`.
+  - Verification: full `xcodebuild test -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5'` passed with 125 tests.
+  - Remaining Phase 4 work: migrate `DiscoveryViewModel` and secondary list surfaces such as custom list detail/edit paths away from direct `ListManager` usage.
 
 Verification notes:
 - Build succeeded with `xcodebuild -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' build`.

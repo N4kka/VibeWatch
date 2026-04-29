@@ -2,10 +2,23 @@ import SwiftUI
 import WebKit
 
 struct TVShowDetailView: View {
+    @Environment(\.mediaRepository) private var mediaRepository
+    private let tvShowId: Int
+
+    init(tvShowId: Int) {
+        self.tvShowId = tvShowId
+    }
+
+    var body: some View {
+        TVShowDetailContentView(tvShowId: tvShowId, mediaRepository: mediaRepository)
+    }
+}
+
+private struct TVShowDetailContentView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var quotaManager: DailyQuotaManager
-    @StateObject private var viewModel: TVShowDetailViewModel
+    @State private var viewModel: TVShowDetailViewModel
     @StateObject private var listManager = ListManager.shared
     @StateObject private var searchViewModel = SearchViewModel()
     @State private var showSavePanel = false
@@ -20,8 +33,8 @@ struct TVShowDetailView: View {
     @State private var showWhyForMeSheet = false
     @State private var showAIPaywall = false
     
-    init(tvShowId: Int) {
-        _viewModel = StateObject(wrappedValue: TVShowDetailViewModel(tvShowId: tvShowId))
+    init(tvShowId: Int, mediaRepository: any MediaRepository) {
+        _viewModel = State(initialValue: TVShowDetailViewModel(tvShowId: tvShowId, mediaRepository: mediaRepository))
     }
     
     private func tvShowToMovie(_ tvShow: TVShow) -> Movie {
