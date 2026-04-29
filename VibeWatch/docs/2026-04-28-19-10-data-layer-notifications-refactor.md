@@ -265,6 +265,15 @@ Completed:
   - `DetailViewModelRepositoryTests` covers movie and TV detail snapshots with `MockMediaRepository`.
   - Verification: full `xcodebuild test -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5'` passed with 125 tests.
   - Remaining Phase 4 work: migrate `DiscoveryViewModel` and secondary list surfaces such as custom list detail/edit paths away from direct `ListManager` usage.
+- Phase 4c Discovery view model migration was added:
+  - `DiscoveryViewModel` is now an `@Observable` model driven by injected `DiscoveryRepository` and explicit `userId`.
+  - The primary Discovery read path consumes `DiscoveryCarouselSnapshot` streams and maps them into the existing `PersonalizedCarousel` UI model.
+  - `DiscoveryView` reads `discoveryRepository` from SwiftUI environment and recreates its content view when the authenticated user changes.
+  - `DependencyContainer.makeDiscoveryViewModel()` now injects the live `DiscoveryRepository`.
+  - Existing global filters, local filter persistence, pro-only hide watched/disliked behavior, analytics, gamification, and interaction logging remain scoped as-is for this batch.
+  - `DiscoveryViewModelRepositoryTests` covers repository snapshot loading with `MockDiscoveryRepository`.
+  - Verification: full `xcodebuild test -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5'` passed with 126 tests.
+  - Remaining Phase 4 work: migrate secondary list surfaces such as custom list detail/edit paths away from direct `ListManager` usage.
 
 Verification notes:
 - Build succeeded with `xcodebuild -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' build`.
@@ -279,6 +288,12 @@ Verification notes:
 - Phase 4a list hydration regression tests first failed as expected on the missing repository remote loader, then succeeded with:
   `xcodebuild test -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' -only-testing:VibeWatchAppTests/LiveListRepositoryTests -only-testing:VibeWatchAppTests/ListsViewModelTests`
   Result: 4 tests, 0 failures.
+- Phase 4c Discovery view model targeted test succeeded with:
+  `xcodebuild test -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' -only-testing:VibeWatchAppTests/DiscoveryViewModelRepositoryTests`
+  Result: 1 test, 0 failures.
+- Full test suite succeeded after Phase 4c with:
+  `xcodebuild test -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5'`
+  Result: 126 tests, 0 failures.
 - Full test suite succeeded after Phase 4a with:
   `xcodebuild test -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5'`
   Result: 119 tests, 0 failures.

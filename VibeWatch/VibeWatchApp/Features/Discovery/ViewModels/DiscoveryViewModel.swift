@@ -2,28 +2,33 @@ import Foundation
 import SwiftUI
 import Combine
 import UIKit
+import Observation
 
 @MainActor
-class DiscoveryViewModel: ObservableObject {
-    @Published var personalizedCarousels: [PersonalizedCarousel] = []
-    @Published var globalFilters: GlobalDiscoveryFilters
-    @Published var isLoading = false
-    @Published var isRefreshing = false
-    @Published var error: AppError?
-    @Published var refreshToken = UUID()
+@Observable
+final class DiscoveryViewModel {
+    var personalizedCarousels: [PersonalizedCarousel] = []
+    var globalFilters: GlobalDiscoveryFilters
+    var isLoading = false
+    var isRefreshing = false
+    var error: AppError?
+    var refreshToken = UUID()
     
     var hasNoContent: Bool {
         personalizedCarousels.isEmpty
     }
     
+    private let repository: any DiscoveryRepository
+    private let userId: String
     private let preferenceManager: UserPreferenceManager
-    private let personalizationService: DiscoveryPersonalizationService
     private let sqliteService: SQLiteService
     private let quotaManager: DailyQuotaManager
+    @ObservationIgnored
     private var cancellables = Set<AnyCancellable>()
     private var generatedCarousels: [PersonalizedCarousel] = []
     private let userDefaults = UserDefaults.standard
     private var hasLoadedOnce = false
+    @ObservationIgnored
     private var loadTask: Task<Void, Never>?
 
     private static let dayKeyFormatter: DateFormatter = {
@@ -35,14 +40,16 @@ class DiscoveryViewModel: ObservableObject {
     }()
 
     init(
+        repository: any DiscoveryRepository = LiveDiscoveryRepository(),
+        userId: String = AuthService.shared.currentUser?.id ?? "anonymous",
         quotaManager: DailyQuotaManager = .shared,
         preferenceManager: UserPreferenceManager = .shared,
-        personalizationService: DiscoveryPersonalizationService = .shared,
         sqliteService: SQLiteService = .shared
     ) {
+        self.repository = repository
+        self.userId = userId
         self.quotaManager = quotaManager
         self.preferenceManager = preferenceManager
-        self.personalizationService = personalizationService
         self.sqliteService = sqliteService
         self.globalFilters = GlobalDiscoveryFilters.load()
 
@@ -89,42 +96,39 @@ class DiscoveryViewModel: ObservableObject {
             return
         }
 
-        if !forceRefresh, !personalizationService.hasCachedData {
-            let userId = AuthService.shared.currentUser?.id
-            if let cached = await personalizationService.loadCachedCarouselsIfAvailable(userId: userId) {
-                generatedCarousels = cached
-                personalizedCarousels = applyGlobalFilters(to: cached)
-                hasLoadedOnce = true
-            }
-        }
-
-        if !forceRefresh, hasLoadedOnce, !hasNoContent, !shouldReloadForNewDay() {
-            return
-        }
-
         if forceRefresh {
             isRefreshing = true
         } else {
             // Only show loader if we don't have cached data ready to go
-            if !personalizationService.hasCachedData {
+            if hasNoContent {
                 isLoading = true
             }
         }
         error = nil
         
         do {
-            let profile = await preferenceManager.aggregatePreferences()
-            let carousels = try await personalizationService.generatePersonalizedCarousels(
-                userProfile: profile,
-                filters: globalFilters,
-                forceRefresh: forceRefresh
-            )
-            generatedCarousels = carousels
-            self.personalizedCarousels = applyGlobalFilters(to: generatedCarousels)
+            if forceRefresh {
+                try await repository.invalidateCarousels(for: userId)
+                try await repository.refreshCarousels(for: userId, filters: globalFilters)
+            }
 
-            Logger.debug("[DiscoveryViewModel] Loaded \(personalizedCarousels.count) personalized carousels")
+            var loadedSnapshots = false
+            for await snapshots in repository.carousels(for: userId, filters: globalFilters) {
+                let carousels = snapshots.map(personalizedCarousel)
+                guard !carousels.isEmpty else { continue }
+                generatedCarousels = carousels
+                personalizedCarousels = applyGlobalFilters(to: carousels)
+                loadedSnapshots = true
+                isLoading = false
+            }
+
+            Logger.debug("[DiscoveryViewModel] Loaded \(personalizedCarousels.count) repository carousels")
             hasLoadedOnce = true
             markReloadedForToday()
+
+            if !loadedSnapshots {
+                personalizedCarousels = []
+            }
             
         } catch {
             Logger.error("[DiscoveryViewModel] Failed to load personalized content: \(error)")
@@ -187,18 +191,26 @@ class DiscoveryViewModel: ObservableObject {
     }
 
     private func shouldReloadForNewDay() -> Bool {
-        let userId = AuthService.shared.currentUser?.id.lowercased() ?? "anon"
-        let key = "discovery_last_loaded_day_\(userId)"
+        let key = "discovery_last_loaded_day_\(userId.lowercased())"
         let todayKey = Self.dayKeyFormatter.string(from: Date())
         let stored = userDefaults.string(forKey: key)
         return stored != todayKey
     }
 
     private func markReloadedForToday() {
-        let userId = AuthService.shared.currentUser?.id.lowercased() ?? "anon"
-        let key = "discovery_last_loaded_day_\(userId)"
+        let key = "discovery_last_loaded_day_\(userId.lowercased())"
         let todayKey = Self.dayKeyFormatter.string(from: Date())
         userDefaults.set(todayKey, forKey: key)
+    }
+
+    private func personalizedCarousel(from snapshot: DiscoveryCarouselSnapshot) -> PersonalizedCarousel {
+        PersonalizedCarousel(
+            type: CarouselType(rawValue: snapshot.type) ?? .dailyMix,
+            title: snapshot.title,
+            items: snapshot.items,
+            descriptions: [:],
+            reason: ""
+        )
     }
     
     // MARK: - Filtering
@@ -331,7 +343,7 @@ class DiscoveryViewModel: ObservableObject {
         mediaType: MediaType,
         interactionType: String
     ) async {
-        guard let userId = AuthService.shared.currentUser?.id else {
+        guard userId != "anonymous" else {
             return
         }
 
@@ -386,7 +398,7 @@ class DiscoveryViewModel: ObservableObject {
     // MARK: - Filter Persistence (SQLite + Sync)
 
     private func loadGlobalFiltersFromDatabaseIfAvailable() async {
-        guard let userId = AuthService.shared.currentUser?.id else {
+        guard userId != "anonymous" else {
             return
         }
 
@@ -468,7 +480,7 @@ class DiscoveryViewModel: ObservableObject {
     }
 
     private func persistGlobalFilters() async {
-        guard let userId = AuthService.shared.currentUser?.id else {
+        guard userId != "anonymous" else {
             return
         }
 

@@ -1,7 +1,29 @@
 import SwiftUI
 
 struct DiscoveryView: View {
-    @StateObject private var viewModel = DiscoveryViewModel()
+    @Environment(\.discoveryRepository) private var discoveryRepository
+    @EnvironmentObject private var appState: AppState
+    @Binding private var selectedMovie: Movie?
+    @Binding private var selectedMediaType: MediaType
+
+    init(selectedMovie: Binding<Movie?>, selectedMediaType: Binding<MediaType>) {
+        _selectedMovie = selectedMovie
+        _selectedMediaType = selectedMediaType
+    }
+
+    var body: some View {
+        DiscoveryContentView(
+            repository: discoveryRepository,
+            userId: appState.currentUser?.id ?? "anonymous",
+            selectedMovie: $selectedMovie,
+            selectedMediaType: $selectedMediaType
+        )
+        .id(appState.currentUser?.id ?? "anonymous")
+    }
+}
+
+private struct DiscoveryContentView: View {
+    @State private var viewModel: DiscoveryViewModel
     @StateObject private var searchViewModel = SearchViewModel()
     @StateObject private var gamificationService = GamificationService.shared
     @EnvironmentObject var appState: AppState
@@ -17,6 +39,17 @@ struct DiscoveryView: View {
     @State private var lastTappedMovieId: Int? = nil
     @State private var hasRestoredScroll = false
     @State private var filterSessionId = UUID().uuidString
+
+    init(
+        repository: any DiscoveryRepository,
+        userId: String,
+        selectedMovie: Binding<Movie?>,
+        selectedMediaType: Binding<MediaType>
+    ) {
+        _viewModel = State(initialValue: DiscoveryViewModel(repository: repository, userId: userId))
+        _selectedMovie = selectedMovie
+        _selectedMediaType = selectedMediaType
+    }
 
     var body: some View {
         ZStack {
