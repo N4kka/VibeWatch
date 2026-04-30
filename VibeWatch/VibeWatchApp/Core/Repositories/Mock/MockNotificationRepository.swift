@@ -47,6 +47,14 @@ final class MockNotificationRepository: NotificationRepository {
     func recordOpened(eventId: String, openedAt: Date) async throws {}
     func recordDismissed(eventId: String, dismissedAt: Date) async throws {}
 
+    // MARK: - APNs Device Token (Phase 8)
+
+    var registeredDeviceTokens: [(token: String, userId: String)] = []
+
+    func registerAPNsDeviceToken(_ tokenHex: String, userId: String) async throws {
+        registeredDeviceTokens.append((token: tokenHex, userId: userId))
+    }
+
     private func update(eventId: String, transform: (NotificationEvent) -> NotificationEvent) {
         for userId in eventsByUser.keys {
             guard let index = eventsByUser[userId]?.firstIndex(where: { $0.id == eventId }),

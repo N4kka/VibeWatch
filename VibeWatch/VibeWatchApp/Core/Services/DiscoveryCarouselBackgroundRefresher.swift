@@ -12,7 +12,7 @@ final class DiscoveryCarouselBackgroundRefresher {
     func register() {
         BGTaskScheduler.shared.register(
             forTaskWithIdentifier: Self.taskIdentifier,
-            using: nil
+            using: DispatchQueue.main
         ) { task in
             guard let refreshTask = task as? BGAppRefreshTask else {
                 task.setTaskCompleted(success: false)
@@ -47,28 +47,31 @@ final class DiscoveryCarouselBackgroundRefresher {
         let operationTask = Task { @MainActor in
             defer { task.setTaskCompleted(success: true) }
 
-            guard AuthService.shared.currentUser?.id != nil else {
-                return
-            }
-
-            Logger.info("[DiscoveryCarouselBackgroundRefresher] 🌙 Background refresh started")
-
-            let profile = await UserPreferenceManager.shared.aggregatePreferences()
-            let filters = GlobalDiscoveryFilters.load()
-
-            // Force refresh to update cache
-            _ = try? await DiscoveryPersonalizationService.shared.generatePersonalizedCarousels(
-                userProfile: profile,
-                filters: filters,
-                forceRefresh: true  // Always refresh in background to update cache
-            )
-
-            Logger.info("[DiscoveryCarouselBackgroundRefresher] ✅ Background refresh completed")
+            await refreshNow()
         }
 
         task.expirationHandler = {
             Logger.warning("[DiscoveryCarouselBackgroundRefresher] Background task expired")
             operationTask.cancel()
         }
+    }
+
+    func refreshNow() async {
+        guard AuthService.shared.currentUser?.id != nil else {
+            return
+        }
+
+        Logger.info("[DiscoveryCarouselBackgroundRefresher] 🌙 Background refresh started")
+
+        let profile = await UserPreferenceManager.shared.aggregatePreferences()
+        let filters = GlobalDiscoveryFilters.load()
+
+        _ = try? await DiscoveryPersonalizationService.shared.generatePersonalizedCarousels(
+            userProfile: profile,
+            filters: filters,
+            forceRefresh: true
+        )
+
+        Logger.info("[DiscoveryCarouselBackgroundRefresher] ✅ Background refresh completed")
     }
 }

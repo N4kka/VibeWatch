@@ -19,6 +19,7 @@ class SmartNotificationService: NSObject, ObservableObject {
     private let tmdbService: TMDBServiceProtocol
     private let preferenceManager: UserPreferenceManager
     private let cerebrasService: CerebrasService
+    private let notificationRepository: any NotificationRepository
     private let notificationCenter = UNUserNotificationCenter.current()
 
     // MARK: - Constants
@@ -40,6 +41,7 @@ class SmartNotificationService: NSObject, ObservableObject {
         self.tmdbService = TMDBService.shared
         self.preferenceManager = UserPreferenceManager.shared
         self.cerebrasService = CerebrasService.shared
+        self.notificationRepository = LiveNotificationRepository()
 
         // Get device ID
         if let savedDeviceId = UserDefaults.standard.string(forKey: "deviceIdentifier") {
@@ -173,86 +175,72 @@ class SmartNotificationService: NSObject, ObservableObject {
 
     /// Schedule all pending smart notifications
     func schedulePersonalizedNotifications(userId: String) async {
-        guard notificationPermissionGranted else {
-            Logger.warning("[SmartNotificationService] Cannot schedule - permissions not granted")
-            return
+        Logger.info("[SmartNotificationService] Implicit personalized local scheduling is disabled for user: \(userId)")
+    }
+
+    @discardableResult
+    func scheduleAvailabilityReminder(
+        userId: String,
+        mediaId: Int,
+        mediaType: MediaType,
+        title: String,
+        scheduledFor requestedDate: Date? = nil
+    ) async -> Bool {
+        if !notificationPermissionGranted {
+            let granted = await requestPermissions()
+            guard granted else { return false }
         }
 
-        let resolvedPreferences: NotificationPreferences?
-        if let existing = preferences {
-            resolvedPreferences = existing
-        } else {
-            resolvedPreferences = await loadAndReturnPreferences(userId: userId)
+        let scheduledFor = requestedDate ?? nextReminderDate()
+        let eventKey = "availability_reminder:\(mediaType.rawValue):\(mediaId)"
+        let body = "We'll remind you to check availability for \(title)."
+
+        let content = UNMutableNotificationContent()
+        content.title = "Availability Reminder"
+        content.body = body
+        content.sound = .default
+        content.userInfo = [
+            "type": NotificationType.availabilityReminder.rawValue,
+            "media_id": mediaId,
+            "media_type": mediaType.rawValue
+        ]
+
+        let components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: scheduledFor)
+        let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+        let request = UNNotificationRequest(identifier: eventKey, content: content, trigger: trigger)
+
+        do {
+            try await notificationCenter.add(request)
+            let now = Date()
+            let event = NotificationEvent(
+                id: eventKey,
+                userId: userId,
+                eventKey: eventKey,
+                channel: .localReminder,
+                notificationType: .availabilityReminder,
+                mediaId: mediaId,
+                mediaType: mediaType,
+                title: content.title,
+                body: body,
+                scheduledFor: scheduledFor,
+                sentAt: nil,
+                openedAt: nil,
+                dismissedAt: nil,
+                payload: [
+                    "media_id": String(mediaId),
+                    "media_type": mediaType.rawValue,
+                    "title": title
+                ],
+                createdAt: now,
+                updatedAt: now
+            )
+            try await notificationRepository.recordScheduled(event)
+            Logger.info("[SmartNotificationService] Scheduled availability reminder for \(title)")
+            return true
+        } catch {
+            Logger.error("[SmartNotificationService] Failed to schedule availability reminder", error: error)
+            return false
         }
-        guard let preferences = resolvedPreferences else { return }
-
-        // Check daily limit
-        let todayCount = await getTodayNotificationCount(userId: userId)
-        guard todayCount < preferences.maxDailyNotifications else {
-            Logger.info("[SmartNotificationService] Daily notification limit reached (\(todayCount)/\(preferences.maxDailyNotifications))")
-            return
-        }
-
-        Logger.info("[SmartNotificationService] Scheduling notifications for user: \(userId)")
-
-        var scheduledCount = 0
-        let remainingSlots = preferences.maxDailyNotifications - todayCount
-
-        // 1. Check for new episodes (highest priority)
-        if preferences.enableNewEpisodes && scheduledCount < remainingSlots {
-            let newEpisodes = await detectNewEpisodes(userId: userId)
-            for episode in newEpisodes.prefix(remainingSlots - scheduledCount) {
-                await scheduleNewEpisodeNotification(userId: userId, notification: episode)
-                scheduledCount += 1
-            }
-        }
-
-        // 2. Check for personalized release alerts
-        if preferences.enableReleaseAlerts && scheduledCount < remainingSlots {
-            let releases = await detectPersonalizedReleases(userId: userId)
-            if let release = releases.first {
-                await scheduleReleaseNotification(userId: userId, notification: release)
-                scheduledCount += 1
-            }
-        }
-
-        // 3. Check for favorite actor/director content
-        if preferences.enableActorAlerts && scheduledCount < remainingSlots {
-            let actorAlerts = await detectFavoriteActorContent(userId: userId)
-            if let actorAlert = actorAlerts.first {
-                await scheduleActorNotification(userId: userId, notification: actorAlert)
-                scheduledCount += 1
-            }
-        }
-
-        // 4. Similar content recommendations
-        if preferences.enableSimilarContent && scheduledCount < remainingSlots {
-            let similarContent = await detectSimilarContent(userId: userId)
-            if let similar = similarContent.first {
-                await scheduleSimilarContentNotification(userId: userId, notification: similar)
-                scheduledCount += 1
-            }
-        }
-
-        // 5. Watchlist availability alerts
-        if preferences.enableWatchlistAlerts && scheduledCount < remainingSlots {
-            let watchlistAlerts = await detectWatchlistAvailability(userId: userId)
-            if let alert = watchlistAlerts.first {
-                await scheduleWatchlistNotification(userId: userId, notification: alert)
-                scheduledCount += 1
-            }
-        }
-
-        // 6. Milestone achievements
-        if preferences.enableMilestones && scheduledCount < remainingSlots {
-            let milestones = await detectMilestones(userId: userId)
-            if let milestone = milestones.first {
-                await scheduleMilestoneNotification(userId: userId, notification: milestone)
-                scheduledCount += 1
-            }
-        }
-
-        Logger.info("[SmartNotificationService] Scheduled \(scheduledCount) notifications")
     }
 
     // MARK: - Detection Methods
@@ -626,204 +614,13 @@ class SmartNotificationService: NSObject, ObservableObject {
         )
     }
 
-    // MARK: - Notification Builders
-
-    private func scheduleNewEpisodeNotification(userId: String, notification: NewEpisodeNotification) async {
-        let content = UNMutableNotificationContent()
-        content.title = "New Episode Available!"
-        content.body = "\(notification.show.title) - S\(notification.episode.seasonNumber)E\(notification.episode.episodeNumber): \(notification.episode.name)"
-        content.sound = .default
-        content.badge = 1
-        content.userInfo = [
-            "type": "new_episode",
-            "show_id": notification.show.id,
-            "season": notification.episode.seasonNumber,
-            "episode": notification.episode.episodeNumber
-        ]
-
-        // Schedule immediately (unless in quiet hours)
-        if await canSendNow() {
-            let request = UNNotificationRequest(
-                identifier: UUID().uuidString,
-                content: content,
-                trigger: UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
-            )
-
-            try? await notificationCenter.add(request)
-
-            // Record in database
-            await recordNotificationSent(
-                userId: userId,
-                type: .newEpisode,
-                contentId: "\(notification.show.id)_S\(notification.episode.seasonNumber)E\(notification.episode.episodeNumber)"
-            )
-
-            Logger.info("[SmartNotificationService] Scheduled new episode notification: \(notification.show.title)")
-        }
-    }
-
-    private func scheduleReleaseNotification(userId: String, notification: ReleaseNotification) async {
-        let content = UNMutableNotificationContent()
-        content.title = "New Release You'll Love"
-        content.body = "\(notification.movie.title) - \(notification.matchReason)"
-        content.sound = .default
-        content.badge = 1
-        content.userInfo = [
-            "type": "release_alert",
-            "movie_id": notification.movie.id
-        ]
-
-        if await canSendNow() {
-            let request = UNNotificationRequest(
-                identifier: UUID().uuidString,
-                content: content,
-                trigger: UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
-            )
-
-            try? await notificationCenter.add(request)
-
-            await recordNotificationSent(
-                userId: userId,
-                type: .releaseAlert,
-                contentId: String(notification.movie.id)
-            )
-
-            Logger.info("[SmartNotificationService] Scheduled release notification: \(notification.movie.title)")
-        }
-    }
-
-    private func scheduleActorNotification(userId: String, notification: ActorNotification) async {
-        let content = UNMutableNotificationContent()
-        content.title = "\(notification.actor.name) Has New Content!"
-        content.body = "\(notification.movie.title) is now available"
-        content.sound = .default
-        content.badge = 1
-        content.userInfo = [
-            "type": "actor_alert",
-            "actor_id": notification.actor.actorId,
-            "movie_id": notification.movie.id
-        ]
-
-        if await canSendNow() {
-            let request = UNNotificationRequest(
-                identifier: UUID().uuidString,
-                content: content,
-                trigger: UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
-            )
-
-            try? await notificationCenter.add(request)
-
-            await recordNotificationSent(
-                userId: userId,
-                type: .actorAlert,
-                contentId: "\(notification.actor.actorId)_\(notification.movie.id)"
-            )
-
-            Logger.info("[SmartNotificationService] Scheduled actor notification: \(notification.actor.name)")
-        }
-    }
-
-    private func scheduleSimilarContentNotification(userId: String, notification: SimilarContentNotification) async {
-        let content = UNMutableNotificationContent()
-        content.title = "You Might Love This"
-        content.body = "Loved \(notification.originalMovie.title)? Try \(notification.similarMovie.title)"
-        content.sound = .default
-        content.badge = 1
-        content.userInfo = [
-            "type": "similar_content",
-            "original_id": notification.originalMovie.id,
-            "similar_id": notification.similarMovie.id
-        ]
-
-        if await canSendNow() {
-            let request = UNNotificationRequest(
-                identifier: UUID().uuidString,
-                content: content,
-                trigger: UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
-            )
-
-            try? await notificationCenter.add(request)
-
-            await recordNotificationSent(
-                userId: userId,
-                type: .similarContent,
-                contentId: "\(notification.originalMovie.id)_\(notification.similarMovie.id)"
-            )
-
-            Logger.info("[SmartNotificationService] Scheduled similar content notification")
-        }
-    }
-
-    private func scheduleWatchlistNotification(userId: String, notification: WatchlistNotification) async {
-        let content = UNMutableNotificationContent()
-        content.title = notification.title
-        content.body = notification.message
-        content.sound = .default
-        content.badge = 1
-        content.userInfo = [
-            "type": "watchlist_alert",
-            "media_id": notification.mediaId
-        ]
-
-        if await canSendNow() {
-            let request = UNNotificationRequest(
-                identifier: UUID().uuidString,
-                content: content,
-                trigger: UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
-            )
-
-            try? await notificationCenter.add(request)
-
-            await recordNotificationSent(
-                userId: userId,
-                type: .watchlistAlert,
-                contentId: String(notification.mediaId)
-            )
-
-            Logger.info("[SmartNotificationService] Scheduled watchlist notification: \(notification.title)")
-        }
-    }
-
-    private func scheduleMilestoneNotification(userId: String, notification: MilestoneNotification) async {
-        let content = UNMutableNotificationContent()
-        content.title = notification.title
-        content.body = notification.message
-        content.sound = .default
-        content.badge = 1
-
-        let contentId: String
-        switch notification.type {
-        case .watchCount(let count):
-            contentId = "watch_count_\(count)"
-        case .watchStreak(let days):
-            contentId = "watch_streak_\(days)"
-        }
-
-        content.userInfo = [
-            "type": "milestone",
-            "milestone_id": contentId
-        ]
-
-        if await canSendNow() {
-            let request = UNNotificationRequest(
-                identifier: UUID().uuidString,
-                content: content,
-                trigger: UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
-            )
-
-            try? await notificationCenter.add(request)
-
-            await recordNotificationSent(
-                userId: userId,
-                type: .milestone,
-                contentId: contentId
-            )
-
-            Logger.info("[SmartNotificationService] Scheduled milestone notification: \(notification.title)")
-        }
-    }
-
     // MARK: - Helper Methods
+
+    private func nextReminderDate(from date: Date = Date()) -> Date {
+        let calendar = Calendar.current
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: date) ?? date.addingTimeInterval(24 * 60 * 60)
+        return calendar.date(bySettingHour: 9, minute: 0, second: 0, of: tomorrow) ?? tomorrow
+    }
 
     private func canSendNow() async -> Bool {
         guard let prefs = preferences else {
@@ -1193,6 +990,7 @@ struct NotificationPreferences: Codable {
 }
 
 enum NotificationType: String, Codable {
+    case availabilityReminder = "availability_reminder"
     case newEpisode = "new_episode"
     case releaseAlert = "release_alert"
     case actorAlert = "actor_alert"

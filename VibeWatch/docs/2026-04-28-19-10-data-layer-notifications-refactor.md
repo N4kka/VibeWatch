@@ -210,7 +210,7 @@ Verification:
 
 ## Status
 
-In progress.
+In progress. Phase 7 is complete, moving to Phase 8.
 
 Pre-implementation decisions:
 - Existing local edits were preserved with commit `ebf4bbd` (`chore: preserve pre-refactor workspace state`).
@@ -273,9 +273,75 @@ Completed:
   - Existing global filters, local filter persistence, pro-only hide watched/disliked behavior, analytics, gamification, and interaction logging remain scoped as-is for this batch.
   - `DiscoveryViewModelRepositoryTests` covers repository snapshot loading with `MockDiscoveryRepository`.
   - Verification: full `xcodebuild test -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5'` passed with 126 tests.
-  - Remaining Phase 4 work: migrate secondary list surfaces such as custom list detail/edit paths away from direct `ListManager` usage.
+- Phase 5 Discovery Cache Cleanup was completed:
+  - `DiscoveryPersonalizationService` memory cache removed; it now functions strictly as a data fetcher.
+  - `LiveDiscoveryRepository` took full ownership of the caching layer and TTL via `SQLiteService`.
+  - Enforced `daily_mix` (Choose for You equivalent) to be sorted to the top for every user in `LiveDiscoveryRepository.normalizePositions()`.
+  - Updated stale performance-test comments so they no longer describe the removed memory cache path.
+  - Verification: targeted Discovery repository/view-model/performance tests passed, and no `memoryCache`/`hasCachedData`/legacy Discovery cache helpers remain in app or test code.
+
+- Phase 4d secondary list surfaces migration was added:
+  - `ListRepository` protocol gained `addToDefaultList`, `removeFromDefaultList`, and `defaultListItems` convenience methods with live and mock implementations.
+  - `ActionButtonsSection` and `WatchNowSection` are now pure views receiving state via parameters instead of owning `ListManager`.
+  - `MovieDetailContentView` and `TVShowDetailContentView` load lists from `ListRepository` via environment, perform optimistic local updates, and pass state to child views.
+  - `CustomListDetailView`, `EditListView`, `SaveToListPanel`, and `AddToListView` (Clips) all migrated from `ListManager.shared` to `ListRepository` from environment.
+  - `DiscoveryViewModel` now receives `ListRepository` via injection for hide-watched/hide-disliked filtering instead of accessing `ListManager.shared`.
+  - `ListsViewModel.currentCustomListLimit` uses inline constants instead of `ListManager` statics.
+  - Zero `ListManager` references remain in `Features/` or `Shared/`.
+  - Verification: full `xcodebuild test` passed with 126 tests, 0 failures.
+
+- Phase 6 Local User-Initiated Notifications was completed:
+  - Removed implicit smart-notification scheduling from app launch and foreground resume paths.
+  - Disabled `SmartNotificationService.schedulePersonalizedNotifications` as an implicit local scheduling path; Phase 7 will reintroduce local digest scheduling through the background task flow.
+  - Removed all production `UNTimeIntervalNotificationTrigger` usage.
+  - Added explicit availability reminders through `SmartNotificationService.scheduleAvailabilityReminder`, using `UNCalendarNotificationTrigger` and recording scheduled local reminder events through `NotificationRepository`.
+  - Wired existing user-initiated "Notify Me" actions in detail and list surfaces to schedule the explicit availability reminder.
+  - Added `NotificationSchedulingPolicyTests` to lock the Phase 6 invariants.
+  - Verification: targeted policy tests passed and `rg "UNTimeIntervalNotificationTrigger" VibeWatchApp` returns no production usages.
+
+- Phase 7 Local Background Digest Notifications was completed:
+  - Kept the existing `com.vibewatch.smart-notifications` BGTask identifier and six-hour `BGAppRefreshTaskRequest` cadence.
+  - Added the required `UIBackgroundModes` `fetch` entry so iOS accepts `BGAppRefreshTaskRequest` scheduling on device.
+  - Added SwiftUI `scenePhase` background scheduling because device testing showed `UIApplicationDelegate.applicationDidEnterBackground` was not hit on the tested path.
+  - Registered `@MainActor` BGTask handlers on `DispatchQueue.main` after device simulation exposed a Swift executor assertion crash from BGTaskScheduler's private queue.
+  - Replaced the old background call to `schedulePersonalizedNotifications` with local digest scheduling inside `NotificationBackgroundTask`.
+  - The digest queries SQLite watchlist items joined to local `media_availability` rows, so it never depends on network fetches during the background task.
+  - Watchlist provider loading now routes through `LiveMediaRepository.availability(...)`, ensuring the list UI's provider load also populates `media_availability` for the local digest query.
+  - Each digest candidate deduplicates through `NotificationRepository.wasAlreadySent(eventKey:channel:userId:)` using `.localDigest`.
+  - Scheduled digest notifications use `UNCalendarNotificationTrigger` and record scheduled `NotificationEvent` rows through `LiveNotificationRepository`.
+  - Added Console.app-visible unified logging for `NotificationBackgroundTask` device diagnostics.
+  - Added policy coverage for the background digest invariants and the device-discovered scheduling/cache regressions.
+  - Verification: targeted notification policy tests passed, scans still show no production `UNTimeIntervalNotificationTrigger` usage, and physical-device BGTask simulation scheduled 3 local digest notifications before completing successfully.
+
+- BUG: During manual testing of Phase 4 in airplane mode, the app correctly renders Discovery and Detail pages from cache. However, the user profile does not correctly display the logged-in user details (shows generic "user"), causing lists to be empty. A partial fix was attempted in AuthService.checkAuthState(), but the issue persists. This must be resolved.
 
 Verification notes:
+- Phase 7 policy test first failed as expected because `NotificationBackgroundTask` still used the old implicit scheduler and lacked local query/dedup/calendar scheduling; after implementation the full notification policy suite succeeded with:
+  `xcodebuild test -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' -only-testing:VibeWatchAppTests/NotificationSchedulingPolicyTests -quiet`
+  Result: command exited 0.
+- Device smoke-test diagnosis on April 29, 2026 found `dasd` rejecting `bgRefresh-com.vibewatch.smart-notifications` with `No relevant background execution modes found`; fixed by adding `UIBackgroundModes` `fetch` and locking it with `NotificationSchedulingPolicyTests.testBackgroundDigestHasRequiredBackgroundFetchMode`.
+- Follow-up device smoke-test diagnosis found the AppDelegate launch path scheduling correctly, while backgrounding did not hit `applicationDidEnterBackground`; fixed by scheduling from SwiftUI `scenePhase == .background` and locking it with `NotificationSchedulingPolicyTests.testSwiftUILifecycleSchedulesBackgroundDigestWhenSceneMovesToBackground`.
+- Follow-up device simulation found `EXC_BREAKPOINT` in `_dispatch_assert_queue_fail` because BGTaskScheduler invoked the `@MainActor` registration closure on its private queue; fixed by registering BGTask handlers with `using: DispatchQueue.main` and locking it with `NotificationSchedulingPolicyTests.testMainActorBackgroundTaskHandlersRegisterOnMainQueue`.
+- Follow-up device simulation initially completed with `No local digest candidates`; root cause was watchlist provider loading bypassing `LiveMediaRepository`, so the UI could show provider data without populating `media_availability`. Fixed by loading watchlist provider availability through `mediaRepository.availability(for:region:)` and locking it with `NotificationSchedulingPolicyTests.testWatchlistProviderLoadingPopulatesRepositoryAvailabilityForBackgroundDigest`.
+- Physical-device smoke test on April 30, 2026 succeeded after a fresh install: pending `com.vibewatch.smart-notifications` request was present, LLDB simulation logged `Background task started`, `Processing notifications`, `Scheduled 3 local digest notifications`, and `Background task completed successfully`.
+- Full test suite after Phase 7 succeeded with:
+  `xcodebuild test -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' -quiet`
+  Result: command exited 0.
+- Phase 5 re-verification succeeded with:
+  `xcodebuild test -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' -only-testing:VibeWatchAppTests/LiveDiscoveryRepositoryTests -only-testing:VibeWatchAppTests/DiscoveryViewModelRepositoryTests -only-testing:VibeWatchAppTests/PerformanceTests/testDiscoveryLoadsFromCacheBeforeNetwork -quiet`
+  Result: command exited 0.
+- Phase 5 legacy cache scan succeeded with:
+  `rg -n "hasCachedData|memoryCache|loadCachedCarouselsIfAvailable|cachePersonalizedContent|loadFromCache\\(" VibeWatchApp VibeWatchAppTests`
+  Result: no matches.
+- Phase 6 policy tests first failed as expected on app lifecycle scheduling, missing explicit calendar reminders, and `UNTimeIntervalNotificationTrigger`; after implementation they succeeded with:
+  `xcodebuild test -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' -only-testing:VibeWatchAppTests/NotificationSchedulingPolicyTests`
+  Result: 3 tests, 0 failures.
+- Phase 6 trigger scan succeeded with:
+  `rg "UNTimeIntervalNotificationTrigger" VibeWatchApp`
+  Result: no matches.
+- Phase 6 app lifecycle scan succeeded with:
+  `rg -n "scheduleSmartNotificationsIfNeeded|NotificationBackgroundTask\\.shared\\.triggerImmediately\\(\\)" VibeWatchApp/App VibeWatchApp/Features`
+  Result: no matches.
 - Build succeeded with `xcodebuild -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' build`.
 - Targeted sync/conflict suite succeeded with:
   `xcodebuild test -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' -only-testing:VibeWatchAppTests/ConflictResolverTests -only-testing:VibeWatchAppTests/SyncStateMachineTests -only-testing:VibeWatchAppTests/SyncEngineTests`.

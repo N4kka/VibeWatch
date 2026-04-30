@@ -24,8 +24,8 @@ final class LiveDiscoveryRepositoryTests: XCTestCase {
                         expiresAt: Date().addingTimeInterval(3600)
                     ),
                     DiscoveryCarouselSnapshot(
-                        type: "choose_for_you",
-                        title: "Choose for You",
+                        type: "daily_mix",
+                        title: "Your Daily Mix",
                         mediaType: .movie,
                         position: 1,
                         items: [Movie.repositoryTestFixture(id: 8_910_002, title: "Chosen Movie")],
@@ -44,7 +44,7 @@ final class LiveDiscoveryRepositoryTests: XCTestCase {
             break
         }
 
-        XCTAssertEqual(emitted.first?.type, "choose_for_you")
+        XCTAssertEqual(emitted.first?.type, "daily_mix")
         XCTAssertEqual(emitted.map(\.position), [0, 1])
     }
 }

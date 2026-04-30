@@ -487,9 +487,6 @@ class AuthService: AuthServiceProtocol {
         // Analytics: Clear user ID
         AnalyticsService.shared.setUserId(nil)
 
-        // Clear Discovery memory cache
-        DiscoveryPersonalizationService.shared.clearMemoryCache()
-
         Logger.info("[Auth] User signed out successfully")
     }
 
@@ -656,6 +653,15 @@ class AuthService: AuthServiceProtocol {
                 // Register for push notifications now that we have an authenticated user
                 NotificationService.shared.registerDeviceToken()
 
+                // Phase 8: Register pending APNs token if one was stashed before authentication
+                if let pendingToken = UserDefaults.standard.string(forKey: "pendingAPNsTokenHex") {
+                    Task {
+                        try? await DependencyContainer.shared.notificationRepository.registerAPNsDeviceToken(pendingToken, userId: response.id)
+                        UserDefaults.standard.removeObject(forKey: "pendingAPNsTokenHex")
+                        Logger.info("[Auth] Registered pending APNs token after authentication")
+                    }
+                }
+
                 Logger.info("[Auth] User profile fetched successfully for user: \(response.id.prefix(8))...")
                 Logger.debug("[Auth] Display name: \(response.displayName ?? "nil")")
                 Logger.debug("[Auth] Avatar URL: \(response.avatarURL ?? "nil")")
@@ -684,14 +690,30 @@ class AuthService: AuthServiceProtocol {
                     // Register for push notifications now that we have an authenticated user
                     NotificationService.shared.registerDeviceToken()
 
+                    // Phase 8: Register pending APNs token if one was stashed before authentication
+                    if let pendingToken = UserDefaults.standard.string(forKey: "pendingAPNsTokenHex") {
+                        Task {
+                            try? await DependencyContainer.shared.notificationRepository.registerAPNsDeviceToken(pendingToken, userId: retryResponse.id)
+                            UserDefaults.standard.removeObject(forKey: "pendingAPNsTokenHex")
+                            Logger.info("[Auth] Registered pending APNs token after authentication (retry)")
+                        }
+                    }
+
                     Logger.info("[Auth] User profile fetched after recovery: \(retryResponse.id.prefix(8))...")
                     await syncRevenueCatUser(with: userId)
                 } catch let retryError {
                     Logger.error("[Auth] Final fetch failed: \(retryError)")
-                    Logger.error("[Auth] This will cause 'User not found' error in sign in")
-                    // Ensure currentUser is nil so signUp knows to try manual creation
-                    self.currentUser = nil
-                    await syncRevenueCatUser(with: nil)
+                    if let cachedUser = self.currentUser, cachedUser.id.lowercased() == userId.lowercased() {
+                        Logger.warning("[Auth] Keeping cached user for offline access instead of clearing")
+                        // Don't clear currentUser, maintain offline authentication
+                    } else {
+                        Logger.error("[Auth] This will cause 'User not found' error in sign in")
+                        // Ensure currentUser is nil so signUp knows to try manual creation
+                        self.currentUser = nil
+                        self.isAuthenticated = false
+                        clearCachedAuthState()
+                        await syncRevenueCatUser(with: nil)
+                    }
                 }
             }
         }

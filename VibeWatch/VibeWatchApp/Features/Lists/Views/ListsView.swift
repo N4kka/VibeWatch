@@ -15,6 +15,7 @@ struct ListsView: View {
 }
 
 private struct ListsContentView: View {
+    private let userId: String
     @State private var viewModel: ListsViewModel
     @StateObject private var availabilityService = ListAvailabilityService.shared
     @ObservedObject var localizationManager = LocalizationManager.shared
@@ -34,6 +35,7 @@ private struct ListsContentView: View {
     @State private var searchText = ""
 
     init(repository: any ListRepository, userId: String) {
+        self.userId = userId
         _viewModel = State(initialValue: ListsViewModel(repository: repository, userId: userId))
     }
     
@@ -286,6 +288,12 @@ private struct ListsContentView: View {
                         onNotifyMe: {
                             Task {
                                 try? await viewModel.addToWatchlist(item)
+                                await SmartNotificationService.shared.scheduleAvailabilityReminder(
+                                    userId: userId,
+                                    mediaId: item.mediaId,
+                                    mediaType: item.mediaType,
+                                    title: item.title
+                                )
                             }
                         }
                     )
@@ -549,6 +557,7 @@ struct MediaItemRow: View {
     @State private var cardWidth: CGFloat = 0
     
     private let tmdbService = TMDBService.shared
+    private let mediaRepository: any MediaRepository = LiveMediaRepository()
     
     private var deleteThreshold: CGFloat {
         // Delete when swiped 75% of the card width
@@ -817,18 +826,13 @@ struct MediaItemRow: View {
         do {
             // Fetch providers in parallel
             async let providersTask = StreamingAvailabilityService.shared.getProviders(tmdbId: item.mediaId, type: item.mediaType, region: countryCode)
-
-            let tmdbProvidersData: WatchProvider
-            if item.mediaType == .movie {
-                tmdbProvidersData = try await tmdbService.getMovieWatchProviders(id: item.mediaId)
-            } else {
-                tmdbProvidersData = try await tmdbService.getTVShowWatchProviders(id: item.mediaId)
-            }
+            async let repositoryProvidersTask = loadRepositoryAvailability(countryCode: countryCode)
 
             let watchProviders = try await providersTask
+            let repositoryProvidersData = await repositoryProvidersTask
 
             var finalProviders = watchProviders
-            if let tmdb = tmdbProvidersData.results[countryCode] {
+            if let tmdb = repositoryProvidersData?.results[countryCode] {
                 finalProviders = mergeProviders(rich: watchProviders, basic: tmdb)
             }
 
@@ -839,6 +843,19 @@ struct MediaItemRow: View {
         }
 
         isLoadingProviders = false
+    }
+
+    private func loadRepositoryAvailability(countryCode: String) async -> WatchProvider? {
+        let identifier = MediaIdentifier(id: item.mediaId, mediaType: item.mediaType)
+        var providers: WatchProvider?
+
+        for await snapshot in mediaRepository.availability(for: identifier, region: countryCode) {
+            if let snapshot {
+                providers = snapshot.providers
+            }
+        }
+
+        return providers
     }
     
     private func mergeProviders(rich: CountryProviders, basic: CountryProviders) -> CountryProviders {
@@ -910,23 +927,13 @@ struct MediaItemRow: View {
     }
 
     private func loadTMDBProvidersFallback() async {
-        do {
-            if item.mediaType == .movie {
-                let providers = try await tmdbService.getMovieWatchProviders(id: item.mediaId)
-                if let countryProviders = providers.results[LocalizationManager.shared.currentCountry.id] {
-                    // We need to construct a CountryProviders object or just use it directly if types match.
-                    // TMDBService returns WatchProvider.results which is [String: CountryProviders]
-                    processProviders(countryProviders)
-                }
-            } else {
-                let providers = try await tmdbService.getTVShowWatchProviders(id: item.mediaId)
-                if let countryProviders = providers.results[LocalizationManager.shared.currentCountry.id] {
-                    processProviders(countryProviders)
-                }
-            }
-        } catch {
-            print("❌ Error loading TMDB fallback providers: \(error.localizedDescription)")
+        let countryCode = LocalizationManager.shared.currentCountry.id
+        guard let providers = await loadRepositoryAvailability(countryCode: countryCode),
+              let countryProviders = providers.results[countryCode] else {
+            return
         }
+
+        processProviders(countryProviders)
     }
     
     private func processProviders(_ countryProviders: CountryProviders) {
@@ -1245,13 +1252,21 @@ struct CustomListDetailView: View {
     private func handleNotifyMe(_ item: MediaListItem) async {
         let watchlist = lists.first(where: { $0.type == .watchlist })
         let alreadyInWatchlist = watchlist?.items.contains { $0.mediaId == item.mediaId && $0.mediaType == item.mediaType } ?? false
-        guard !alreadyInWatchlist else { return }
-        let watchlistItem = MediaListItem(
-            mediaId: item.mediaId, mediaType: item.mediaType, title: item.title, posterPath: item.posterPath,
-            runtime: item.runtime, voteAverage: item.voteAverage, voteCount: item.voteCount,
-            releaseDate: item.releaseDate, overview: item.overview
+        if !alreadyInWatchlist {
+            let watchlistItem = MediaListItem(
+                mediaId: item.mediaId, mediaType: item.mediaType, title: item.title, posterPath: item.posterPath,
+                runtime: item.runtime, voteAverage: item.voteAverage, voteCount: item.voteCount,
+                releaseDate: item.releaseDate, overview: item.overview
+            )
+            try? await listRepository.addToDefaultList(type: .watchlist, item: watchlistItem, userId: userId)
+        }
+
+        await SmartNotificationService.shared.scheduleAvailabilityReminder(
+            userId: userId,
+            mediaId: item.mediaId,
+            mediaType: item.mediaType,
+            title: item.title
         )
-        try? await listRepository.addToDefaultList(type: .watchlist, item: watchlistItem, userId: userId)
     }
 
     private func loadLists() async {

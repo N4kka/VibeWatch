@@ -119,6 +119,117 @@ async function sendPushNotification(
   }
 }
 
+// --- APNs Direct Push (Phase 8) ---
+
+async function getAPNsJWT(keyBase64: string, keyId: string, teamId: string): Promise<string> {
+  const keyPem = atob(keyBase64);
+  const privateKey = await importPKCS8(keyPem, 'ES256');
+
+  const jwt = await new SignJWT({})
+    .setProtectedHeader({ alg: 'ES256', kid: keyId })
+    .setIssuer(teamId)
+    .setIssuedAt()
+    .sign(privateKey);
+
+  return jwt;
+}
+
+async function sendAPNsPush(
+  supabaseClient: SupabaseClient,
+  notification: any,
+  apnsJWT: string,
+  bundleId: string
+) {
+  console.log(`[APNs] Preparing to send APNs push for user ${notification.user_id}`);
+
+  // 1. Get user's APNs device tokens from device_tokens table
+  const { data: tokens, error: tokenError } = await supabaseClient
+    .from('device_tokens')
+    .select('token')
+    .eq('user_id', notification.user_id)
+    .eq('platform', 'ios');
+
+  if (tokenError) {
+    console.error(`[APNs] Error fetching device tokens for user ${notification.user_id}:`, tokenError);
+    return;
+  }
+
+  if (!tokens || tokens.length === 0) {
+    console.log(`[APNs] No APNs device tokens found for user ${notification.user_id}. Skipping.`);
+    return;
+  }
+
+  const notificationId = crypto.randomUUID();
+  const payload = {
+    aps: {
+      alert: {
+        title: notification.title,
+        body: notification.body,
+      },
+      sound: 'default',
+      badge: 1,
+    },
+    // Custom data for deep linking
+    media_id: String(notification.media_id ?? ''),
+    media_type: notification.media_type ?? '',
+    notification_id: notificationId,
+  };
+
+  // 2. Send to each device token
+  for (const row of tokens) {
+    const deviceToken = row.token;
+    const apnsUrl = `https://api.push.apple.com/3/device/${deviceToken}`;
+
+    console.log(`[APNs] Sending push to token: ...${deviceToken.slice(-10)}`);
+
+    try {
+      const response = await fetch(apnsUrl, {
+        method: 'POST',
+        headers: {
+          'authorization': `bearer ${apnsJWT}`,
+          'apns-topic': bundleId,
+          'apns-push-type': 'alert',
+          'apns-priority': '10',
+          'apns-expiration': '0',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        console.error(`[APNs] Push failed for token ...${deviceToken.slice(-10)}: ${response.status} ${errorBody}`);
+      } else {
+        console.log(`[APNs] ✅ Push sent successfully to token: ...${deviceToken.slice(-10)}`);
+      }
+    } catch (err) {
+      console.error(`[APNs] Network error sending to token ...${deviceToken.slice(-10)}:`, err);
+    }
+  }
+
+  // 3. Record remote notification event for dedup
+  const { error: insertError } = await supabaseClient
+    .from('notification_events_remote')
+    .insert({
+      notification_id: notificationId,
+      user_id: notification.user_id,
+      content_type: notification.media_type ?? 'unknown',
+      content_id: String(notification.media_id ?? ''),
+      channel: 'remote_push',
+      title: notification.title,
+      body: notification.body,
+      payload: {
+        media_id: notification.media_id,
+        media_type: notification.media_type,
+      },
+      sent_at: new Date().toISOString(),
+    });
+
+  if (insertError) {
+    console.error(`[APNs] Failed to record remote notification event:`, insertError);
+  }
+}
+
 // --- Resend Email Logic ---
 
 async function sendEmail(
@@ -197,11 +308,18 @@ serve(async (_req) => {
     const resendApiKey = Deno.env.get('RESEND_API_KEY')
     const fromEmail = Deno.env.get('FROM_EMAIL')
 
+    // Phase 8: APNs secrets (optional — when set, APNs direct push is enabled)
+    const apnsKeyBase64 = Deno.env.get('APNS_KEY_BASE64')
+    const apnsKeyId = Deno.env.get('APNS_KEY_ID')
+    const apnsTeamId = Deno.env.get('APNS_TEAM_ID')
+    const apnsBundleId = Deno.env.get('APNS_BUNDLE_ID') ?? 'com.vibewatch.VibeWatchApp'
+    const apnsEnabled = !!(apnsKeyBase64 && apnsKeyId && apnsTeamId)
+
     if (!firebaseServiceAccountJson || !resendApiKey || !fromEmail) {
         throw new Error("Missing required environment variables/secrets.")
     }
     const firebaseServiceAccount = JSON.parse(firebaseServiceAccountJson)
-    console.log('✅ Secrets and clients configured.')
+    console.log(`✅ Secrets and clients configured. APNs direct push: ${apnsEnabled ? 'ENABLED' : 'disabled (secrets missing)'}`)
 
     // --- 2. FETCH PENDING NOTIFICATIONS ---
     const { data: notifications, error: fetchError } = await supabaseClient
@@ -226,13 +344,41 @@ serve(async (_req) => {
 
     // --- 3. PROCESS NOTIFICATIONS ---
     const firebaseAccessToken = await getFirebaseAccessToken(firebaseServiceAccount)
+    let apnsJWT: string | null = null
+    if (apnsEnabled) {
+      apnsJWT = await getAPNsJWT(apnsKeyBase64!, apnsKeyId!, apnsTeamId!)
+      console.log('✅ APNs JWT generated for direct push.')
+    }
+
     const processedNotificationIds = []
 
     for (const notification of notifications) {
         console.log(`Processing notification ID: ${notification.id} for user: ${notification.user_id}`)
-        
-        // Send Push Notification
+
+        // Check dedup: skip if already sent for this content
+        if (notification.media_id) {
+          const { data: existing } = await supabaseClient
+            .from('notification_events_remote')
+            .select('notification_id')
+            .eq('user_id', notification.user_id)
+            .eq('content_type', notification.media_type ?? 'unknown')
+            .eq('content_id', String(notification.media_id))
+            .limit(1)
+
+          if (existing && existing.length > 0) {
+            console.log(`⏭️ Skipping notification ${notification.id} — already sent for ${notification.media_type}:${notification.media_id}`)
+            processedNotificationIds.push(notification.id)
+            continue
+          }
+        }
+
+        // Send via FCM (Firebase)
         await sendPushNotification(supabaseClient, notification, firebaseAccessToken, firebaseServiceAccount.project_id)
+
+        // Send via APNs direct push (Phase 8) if configured
+        if (apnsJWT) {
+          await sendAPNsPush(supabaseClient, notification, apnsJWT, apnsBundleId)
+        }
         
         // Send Email
         await sendEmail(supabaseClient, notification, resendApiKey, fromEmail)

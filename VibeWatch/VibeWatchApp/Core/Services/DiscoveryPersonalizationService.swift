@@ -13,14 +13,6 @@ class DiscoveryPersonalizationService: ObservableObject {
     private let sqliteService: SQLiteService
     private let cerebrasService: CerebrasService
     
-    // In-memory cache for instant access (avoids DB reads on view reloads)
-    private var memoryCache: [PersonalizedCarousel]?
-    
-    /// Returns true if valid data is available in the memory cache
-    var hasCachedData: Bool {
-        return memoryCache != nil
-    }
-
     // MARK: - Constants
 
     private let maxItemsPerCarousel = 20
@@ -53,24 +45,6 @@ class DiscoveryPersonalizationService: ObservableObject {
         filters: GlobalDiscoveryFilters? = nil,
         forceRefresh: Bool = false
     ) async throws -> [PersonalizedCarousel] {
-
-        // LEVEL 1: MEMORY CACHE (Instant)
-        if !forceRefresh, let cached = memoryCache {
-            Logger.info("[DiscoveryPersonalizationService] ✅ Loaded from memory cache (instant)")
-            return cached
-        }
-
-        // LEVEL 2: DATABASE CACHE (Fast)
-        if !forceRefresh {
-            if let cached = try await loadFromCache(userId: userProfile.userId) {
-                Logger.info("[DiscoveryPersonalizationService] ✅ Loaded \(cached.count) carousels from DB cache")
-                self.memoryCache = cached
-                return cached
-            }
-            Logger.info("[DiscoveryPersonalizationService] ⚠️ Cache miss or expired - fetching from API")
-        } else {
-            Logger.info("[DiscoveryPersonalizationService] 🔄 Force refresh requested - fetching from API")
-        }
 
         // LEVEL 3: API GENERATION (Slow)
         var carousels: [PersonalizedCarousel] = []
@@ -161,41 +135,9 @@ class DiscoveryPersonalizationService: ObservableObject {
 
         carousels = await applyDynamicLoglines(to: carousels, userProfile: userProfile)
 
-        // Cache to database for offline access
-        await cachePersonalizedContent(carousels: carousels, userId: userProfile.userId)
-        
-        // Update memory cache
-        self.memoryCache = carousels
-
         Logger.info("[DiscoveryPersonalizationService] Generated \(carousels.count) carousels")
 
         return carousels
-    }
-    
-    /// Clear in-memory cache (call on sign out)
-    func clearMemoryCache() {
-        memoryCache = nil
-        Logger.info("[DiscoveryPersonalizationService] Memory cache cleared")
-    }
-
-    /// Warm the in-memory cache from the DB cache when available.
-    func loadCachedCarouselsIfAvailable(userId: String?) async -> [PersonalizedCarousel]? {
-        do {
-            if let userId, !userId.isEmpty,
-               let cached = try await loadFromCache(userId: userId) {
-                memoryCache = cached
-                return cached
-            }
-
-            let deviceId = await sqliteService.getOrCreateDeviceId()
-            if let cached = try await loadFromCache(deviceId: deviceId) {
-                memoryCache = cached
-                return cached
-            }
-        } catch {
-            Logger.warning("[DiscoveryPersonalizationService] Failed to load cache: \(error.localizedDescription)")
-        }
-        return nil
     }
 
     /// Calculate personalization score for a movie/show
@@ -1015,255 +957,6 @@ class DiscoveryPersonalizationService: ObservableObject {
         return dot / denom
     }
 
-    // MARK: - Private Methods - Caching
-
-    /// Load personalized carousels from database cache
-    /// Returns nil if cache is expired or doesn't exist
-    private func loadFromCache(userId: String) async throws -> [PersonalizedCarousel]? {
-        let now = Date()
-        let isoFormatter = ISO8601DateFormatter()
-        let nowString = isoFormatter.string(from: now)
-
-        // Query cached carousel data that hasn't expired
-        let rows = try await sqliteService.queryRaw("""
-            SELECT * FROM personalized_discovery
-            WHERE user_id = ? AND expires_at > ?
-            ORDER BY carousel_type, position ASC
-        """, parameters: [userId, nowString])
-
-        guard !rows.isEmpty else {
-            Logger.debug("[DiscoveryPersonalizationService] No cache found or cache expired")
-            return nil
-        }
-
-        Logger.debug("[DiscoveryPersonalizationService] Found \(rows.count) cached items, loading movie data...")
-
-        // Group rows by carousel_type and extract movie data
-        var carouselMovies: [String: [(movie: Movie, position: Int)]] = [:]
-        var carouselMetadata: [String: (title: String, reason: String)] = [:]
-        var descriptions: [String: [String: String]] = [:] // carousel type -> media id -> description
-
-        for row in rows {
-            guard let typeString = row["carousel_type"] as? String,
-                  let title = row["carousel_title"] as? String,
-                  let position = row["position"] as? Int else {
-                continue
-            }
-
-            let reason = row["reason"] as? String ?? ""
-            let description = row["description"] as? String
-
-            // Try to decode movie from cached JSON data
-            var movie: Movie?
-            if let movieDataString = row["media_data"] as? String,
-               !movieDataString.isEmpty,
-               let movieData = movieDataString.data(using: .utf8),
-               let decodedMovie = try? JSONDecoder().decode(Movie.self, from: movieData) {
-                movie = decodedMovie
-            } else {
-                // Cache is in old format without full movie data - invalidate it
-                Logger.warning("[DiscoveryPersonalizationService] Cache missing movie data - will regenerate")
-                return nil
-            }
-
-            guard let validMovie = movie else { continue }
-
-            if carouselMovies[typeString] == nil {
-                carouselMovies[typeString] = []
-                carouselMetadata[typeString] = (title: title, reason: reason)
-                descriptions[typeString] = [:]
-            }
-
-            carouselMovies[typeString]?.append((movie: validMovie, position: position))
-
-            if let desc = description {
-                descriptions[typeString]?[String(validMovie.id)] = desc
-            }
-        }
-
-        Logger.debug("[DiscoveryPersonalizationService] Loaded movie data for \(carouselMovies.values.flatMap { $0 }.count) items")
-
-        // Convert to PersonalizedCarousel objects with full movie data
-        var carousels: [PersonalizedCarousel] = []
-        for (typeString, movieItems) in carouselMovies {
-            guard let type = CarouselType(rawValue: typeString),
-                  let metadata = carouselMetadata[typeString] else {
-                continue
-            }
-
-            // Sort by position and get full movie objects
-            let sortedMovies = deduplicateMoviesById(movieItems
-                .sorted { $0.position < $1.position }
-                .map { $0.movie })
-
-            guard !sortedMovies.isEmpty else { continue }
-
-            let carousel = PersonalizedCarousel(
-                type: type,
-                title: metadata.title,
-                items: sortedMovies,
-                descriptions: descriptions[typeString] ?? [:],
-                reason: metadata.reason
-            )
-
-            carousels.append(carousel)
-        }
-
-        Logger.info("[DiscoveryPersonalizationService] ✅ Loaded \(carousels.count) carousels from cache with full movie details")
-
-        return carousels.isEmpty ? nil : carousels
-    }
-
-    /// Load personalized carousels from database cache using device id.
-    private func loadFromCache(deviceId: String) async throws -> [PersonalizedCarousel]? {
-        let now = Date()
-        let isoFormatter = ISO8601DateFormatter()
-        let nowString = isoFormatter.string(from: now)
-
-        let rows = try await sqliteService.queryRaw("""
-            SELECT * FROM personalized_discovery
-            WHERE device_id = ? AND expires_at > ?
-            ORDER BY carousel_type, position ASC
-        """, parameters: [deviceId, nowString])
-
-        guard !rows.isEmpty else {
-            Logger.debug("[DiscoveryPersonalizationService] No device cache found or cache expired")
-            return nil
-        }
-
-        Logger.debug("[DiscoveryPersonalizationService] Found \(rows.count) cached items (device), loading movie data...")
-
-        var carouselMovies: [String: [(movie: Movie, position: Int)]] = [:]
-        var carouselMetadata: [String: (title: String, reason: String)] = [:]
-        var descriptions: [String: [String: String]] = [:]
-
-        for row in rows {
-            guard let typeString = row["carousel_type"] as? String,
-                  let title = row["carousel_title"] as? String,
-                  let position = row["position"] as? Int else {
-                continue
-            }
-
-            let reason = row["reason"] as? String ?? ""
-            let description = row["description"] as? String
-
-            var movie: Movie?
-            if let movieDataString = row["media_data"] as? String,
-               !movieDataString.isEmpty,
-               let movieData = movieDataString.data(using: .utf8),
-               let decodedMovie = try? JSONDecoder().decode(Movie.self, from: movieData) {
-                movie = decodedMovie
-            } else {
-                Logger.warning("[DiscoveryPersonalizationService] Device cache missing movie data - will regenerate")
-                return nil
-            }
-
-            guard let validMovie = movie else { continue }
-
-            if carouselMovies[typeString] == nil {
-                carouselMovies[typeString] = []
-                carouselMetadata[typeString] = (title: title, reason: reason)
-                descriptions[typeString] = [:]
-            }
-
-            carouselMovies[typeString]?.append((movie: validMovie, position: position))
-
-            if let desc = description {
-                descriptions[typeString]?[String(validMovie.id)] = desc
-            }
-        }
-
-        Logger.debug("[DiscoveryPersonalizationService] Loaded movie data for \(carouselMovies.values.flatMap { $0 }.count) items (device)")
-
-        var carousels: [PersonalizedCarousel] = []
-        for (typeString, movieItems) in carouselMovies {
-            guard let type = CarouselType(rawValue: typeString),
-                  let metadata = carouselMetadata[typeString] else {
-                continue
-            }
-
-            let sortedMovies = deduplicateMoviesById(movieItems
-                .sorted { $0.position < $1.position }
-                .map { $0.movie })
-
-            guard !sortedMovies.isEmpty else { continue }
-
-            let carousel = PersonalizedCarousel(
-                type: type,
-                title: metadata.title,
-                items: sortedMovies,
-                descriptions: descriptions[typeString] ?? [:],
-                reason: metadata.reason
-            )
-
-            carousels.append(carousel)
-        }
-
-        Logger.info("[DiscoveryPersonalizationService] ✅ Loaded \(carousels.count) carousels from device cache with full movie details")
-
-        return carousels.isEmpty ? nil : carousels
-    }
-
-    private func cachePersonalizedContent(carousels: [PersonalizedCarousel], userId: String) async {
-        let deviceId = await sqliteService.getOrCreateDeviceId()
-        let now = ISO8601DateFormatter().string(from: Date())
-        // Expire at next local midnight so Discovery refreshes once per day.
-        let nextMidnight: Date = {
-            let calendar = Calendar.current
-            let startOfToday = calendar.startOfDay(for: Date())
-            return calendar.date(byAdding: .day, value: 1, to: startOfToday) ?? Date().addingTimeInterval(86400)
-        }()
-        let expiresAt = ISO8601DateFormatter().string(from: nextMidnight)
-
-        // First, delete old cache for this user
-        do {
-            _ = try await sqliteService.delete("personalized_discovery", where: "user_id = ?", parameters: [userId], hard: true)
-        } catch {
-            Logger.warning("[DiscoveryPersonalizationService] Failed to clear old cache: \(error.localizedDescription)")
-        }
-
-        for carousel in carousels {
-            for (index, movie) in carousel.items.enumerated() {
-                let id = UUID().uuidString.lowercased()
-                let description = carousel.descriptions[String(movie.id)] ?? ""
-
-                // Encode full movie object to JSON for caching
-                let movieData: String? = {
-                    if let encoded = try? JSONEncoder().encode(movie),
-                       let jsonString = String(data: encoded, encoding: .utf8) {
-                        return jsonString
-                    }
-                    return nil
-                }()
-
-                let values: [String: Any] = [
-                    "id": id,
-                    "user_id": userId,
-                    "device_id": deviceId,
-                    "carousel_type": carousel.type.rawValue,
-                    "carousel_title": carousel.title,
-                    "media_id": movie.id,
-                    "media_type": "movie",
-                    "media_data": movieData ?? NSNull(),  // Store full movie JSON
-                    "position": index,
-                    "score": carousel.items.count - index,
-                    "reason": carousel.reason,
-                    "description": description,
-                    "generated_at": now,
-                    "expires_at": expiresAt
-                ]
-
-                do {
-                    _ = try await sqliteService.insert("personalized_discovery", values: values)
-                } catch {
-                    Logger.error("[DiscoveryPersonalizationService] Failed to cache carousel item", error: error)
-                }
-            }
-        }
-
-        Logger.debug("[DiscoveryPersonalizationService] Cached \(carousels.count) carousels to database")
-    }
-
     private func deduplicateMoviesById(_ movies: [Movie]) -> [Movie] {
         var seen: Set<Int> = []
         var result: [Movie] = []
@@ -1377,7 +1070,6 @@ extension TVShow: MovieProtocol {}
 enum PersonalizationError: LocalizedError {
     case insufficientData
     case noResults
-    case cachingFailed
 
     var errorDescription: String? {
         switch self {
@@ -1385,8 +1077,6 @@ enum PersonalizationError: LocalizedError {
             return "Insufficient user data for personalization"
         case .noResults:
             return "No results found for personalization"
-        case .cachingFailed:
-            return "Failed to cache personalized content"
         }
     }
 }

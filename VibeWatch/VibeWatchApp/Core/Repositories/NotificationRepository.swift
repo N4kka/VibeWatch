@@ -34,4 +34,10 @@ protocol NotificationRepository: AnyObject, Sendable {
     func recordSent(eventId: String, sentAt: Date) async throws
     func recordOpened(eventId: String, openedAt: Date) async throws
     func recordDismissed(eventId: String, dismissedAt: Date) async throws
+
+    // MARK: - APNs Device Token (Phase 8)
+
+    /// Registers or updates the raw APNs device token (hex-encoded) for the current user on Supabase.
+    /// Also stores the token locally in `device_tokens` for offline reference.
+    func registerAPNsDeviceToken(_ tokenHex: String, userId: String) async throws
 }

@@ -87,6 +87,60 @@ final class LiveNotificationRepository: NotificationRepository {
         ]
     }
 
+    // MARK: - APNs Device Token (Phase 8)
+
+    func registerAPNsDeviceToken(_ tokenHex: String, userId: String) async throws {
+        let now = RepositoryCoding.string(from: Date())
+        let locale = Locale.current.identifier
+        let timezone = TimeZone.current.identifier
+
+        // 1. Store locally in SQLite for offline reference
+        try await db.upsert(table: "device_tokens", rows: [[
+            "user_id": userId,
+            "token": tokenHex,
+            "platform": "ios",
+            "locale": locale,
+            "timezone": timezone,
+            "created_at": now,
+            "last_seen_at": now
+        ]])
+
+        // 2. Upsert to Supabase using the SDK
+        guard let client = AuthService.shared.client else {
+            Logger.warning("[LiveNotificationRepository] Supabase client unavailable, token stored locally only")
+            return
+        }
+
+        struct DeviceTokenUpsert: Encodable {
+            let user_id: String
+            let token: String
+            let platform: String
+            let locale: String
+            let timezone: String
+            let last_seen_at: String
+        }
+
+        let payload = DeviceTokenUpsert(
+            user_id: userId,
+            token: tokenHex,
+            platform: "ios",
+            locale: locale,
+            timezone: timezone,
+            last_seen_at: ISO8601DateFormatter().string(from: Date())
+        )
+
+        do {
+            try await client
+                .from("device_tokens")
+                .upsert(payload)
+                .execute()
+            Logger.info("[LiveNotificationRepository] APNs token upserted to Supabase for user \(userId.prefix(8))...")
+        } catch {
+            Logger.warning("[LiveNotificationRepository] Failed to upsert APNs token remotely: \(error.localizedDescription)")
+            // Not thrown — the local store succeeded, so the token will sync on next opportunity
+        }
+    }
+
     private func event(from row: [String: Any]) -> NotificationEvent? {
         guard let id = row["id"] as? String,
               let userId = row["user_id"] as? String,

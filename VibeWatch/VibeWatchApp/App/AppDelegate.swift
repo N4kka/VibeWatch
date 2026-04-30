@@ -9,7 +9,6 @@ import GoogleMobileAds
 class AppDelegate: NSObject, UIApplicationDelegate, @MainActor UNUserNotificationCenterDelegate, @MainActor MessagingDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
         DiscoveryCarouselBackgroundRefresher.shared.register()
-        DiscoveryCarouselBackgroundRefresher.shared.scheduleNextRefresh()
         CerebrasBackendBackgroundScheduler.shared.register()
         CerebrasBackendBackgroundScheduler.shared.scheduleNextRun()
         NotificationBackgroundTask.shared.register()
@@ -42,7 +41,6 @@ class AppDelegate: NSObject, UIApplicationDelegate, @MainActor UNUserNotificatio
     }
 
     func applicationDidEnterBackground(_ application: UIApplication) {
-        DiscoveryCarouselBackgroundRefresher.shared.scheduleNextRefresh()
         CerebrasBackendBackgroundScheduler.shared.scheduleNextRun()
         NotificationBackgroundTask.shared.scheduleNextRun()
     }
@@ -111,6 +109,16 @@ class AppDelegate: NSObject, UIApplicationDelegate, @MainActor UNUserNotificatio
         
         // Handle deep link if present
         AppNavigationManager.shared.handle(userInfo: userInfo)
+
+        // Record the opened event for remote push notifications through the repository
+        if let notificationId = userInfo["notification_id"] as? String {
+            Task {
+                try? await DependencyContainer.shared.notificationRepository.recordOpened(
+                    eventId: notificationId,
+                    openedAt: Date()
+                )
+            }
+        }
         
         completionHandler()
     }
@@ -126,8 +134,26 @@ class AppDelegate: NSObject, UIApplicationDelegate, @MainActor UNUserNotificatio
     // MARK: - APNs Delegate
     
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-        print("APNs token received: \(deviceToken.description)")
+        let tokenHex = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
+        print("APNs token received: \(tokenHex)")
         Messaging.messaging().apnsToken = deviceToken
+
+        // Phase 8: Register the raw APNs token with Supabase via NotificationRepository
+        Task {
+            guard let userId = AuthService.shared.currentUser?.id else {
+                print("⚠️ APNs token received but no authenticated user — will register on next login")
+                // Stash for later registration when the user authenticates
+                UserDefaults.standard.set(tokenHex, forKey: "pendingAPNsTokenHex")
+                return
+            }
+            do {
+                try await DependencyContainer.shared.notificationRepository.registerAPNsDeviceToken(tokenHex, userId: userId)
+                UserDefaults.standard.removeObject(forKey: "pendingAPNsTokenHex")
+                print("✅ APNs token registered with NotificationRepository for user \(userId.prefix(8))...")
+            } catch {
+                print("❌ Failed to register APNs token via repository: \(error.localizedDescription)")
+            }
+        }
     }
     
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {

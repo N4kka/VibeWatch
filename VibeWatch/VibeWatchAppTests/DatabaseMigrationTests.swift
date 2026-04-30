@@ -60,7 +60,7 @@ final class DatabaseMigrationTests: XCTestCase {
             SELECT value_text FROM app_metadata
             WHERE key_name = 'personalization_migration_version'
         """)
-        XCTAssertEqual(versionRows.first?["value_text"] as? String, "7")
+        XCTAssertEqual(versionRows.first?["value_text"] as? String, "8")
 
         let tableRows = try await db.queryRaw("""
             SELECT name FROM sqlite_master
@@ -69,7 +69,8 @@ final class DatabaseMigrationTests: XCTestCase {
                 'media_availability',
                 'discovery_carousels',
                 'discovery_carousel_items',
-                'notification_events'
+                'notification_events',
+                'device_tokens'
               )
         """)
         let tableNames = Set(tableRows.compactMap { $0["name"] as? String })
@@ -77,7 +78,8 @@ final class DatabaseMigrationTests: XCTestCase {
             "media_availability",
             "discovery_carousels",
             "discovery_carousel_items",
-            "notification_events"
+            "notification_events",
+            "device_tokens"
         ])
 
         let mediaDetailsColumns = try await db.queryRaw("""

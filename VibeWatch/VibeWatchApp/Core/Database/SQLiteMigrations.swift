@@ -8,7 +8,7 @@ extension SQLiteService {
     /// Run personalization migrations (Phase 1)
     func runPersonalizationMigrations() {
         let currentVersion = getPersonalizationMigrationVersion()
-        let latestVersion = 7
+        let latestVersion = 8
 
         guard currentVersion < latestVersion else {
             Logger.info("[SQLite] Personalization migrations already applied (version \(currentVersion))")
@@ -44,6 +44,9 @@ extension SQLiteService {
             }
             if currentVersion < 7 {
                 migration7_AddRepositoryLayerCache()
+            }
+            if currentVersion < 8 {
+                migration8_AddDeviceTokensTable()
             }
 
             // Update migration version

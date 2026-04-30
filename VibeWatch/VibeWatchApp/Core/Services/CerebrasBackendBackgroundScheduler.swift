@@ -12,7 +12,7 @@ final class CerebrasBackendBackgroundScheduler {
     func register() {
         BGTaskScheduler.shared.register(
             forTaskWithIdentifier: Self.taskIdentifier,
-            using: nil
+            using: DispatchQueue.main
         ) { task in
             guard let processingTask = task as? BGProcessingTask else {
                 task.setTaskCompleted(success: false)

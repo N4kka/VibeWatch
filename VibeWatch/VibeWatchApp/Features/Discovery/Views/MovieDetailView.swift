@@ -409,10 +409,18 @@ private struct MovieDetailContentView: View {
     }
 
     private func handleAddToWatchlist(movie: Movie, mediaType: MediaType) async {
-        guard !isInDefaultList(.watchlist, mediaId: movie.id, mediaType: mediaType) else { return }
-        let item = mediaListItem(from: movie, mediaType: mediaType)
-        optimisticAdd(item, to: .watchlist)
-        try? await listRepository.addToDefaultList(type: .watchlist, item: item, userId: userId)
+        if !isInDefaultList(.watchlist, mediaId: movie.id, mediaType: mediaType) {
+            let item = mediaListItem(from: movie, mediaType: mediaType)
+            optimisticAdd(item, to: .watchlist)
+            try? await listRepository.addToDefaultList(type: .watchlist, item: item, userId: userId)
+        }
+
+        await SmartNotificationService.shared.scheduleAvailabilityReminder(
+            userId: userId,
+            mediaId: movie.id,
+            mediaType: mediaType,
+            title: movie.title
+        )
     }
     
     private func handleShare(movie: Movie) async {

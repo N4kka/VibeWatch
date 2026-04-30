@@ -161,8 +161,8 @@ final class LiveDiscoveryRepository: DiscoveryRepository {
 
     private func normalizePositions(_ carousels: [DiscoveryCarouselSnapshot], cachedAt: Date) -> [DiscoveryCarouselSnapshot] {
         let sorted = carousels.sorted { lhs, rhs in
-            if lhs.type == "choose_for_you" { return true }
-            if rhs.type == "choose_for_you" { return false }
+            if lhs.type == "daily_mix" { return true }
+            if rhs.type == "daily_mix" { return false }
             return lhs.position < rhs.position
         }
 

@@ -4,6 +4,7 @@ import RevenueCat
 @main
 struct VibeWatchApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var appState = AppState()
     @StateObject private var localizationManager = LocalizationManager.shared
     @StateObject private var syncEngine = SyncEngine.shared
@@ -74,6 +75,11 @@ struct VibeWatchApp: App {
                 .fullScreenCover(item: $appState.updateRequirement) { requirement in
                     UpdateRequiredView(requirement: requirement)
                 }
+                .onChange(of: scenePhase) { _, newPhase in
+                    if scenePhase == .background || newPhase == .background {
+                        NotificationBackgroundTask.shared.scheduleNextRun()
+                    }
+                }
         }
     }
 }
@@ -135,9 +141,6 @@ class AppState: ObservableObject {
 
             // Check and execute daily prefetch for PRO users
             await DailyContentPrefetchService.shared.checkAndExecuteDailyPrefetch()
-
-            // Schedule smart notifications on app launch (background tasks are unreliable)
-            await scheduleSmartNotificationsIfNeeded()
         }
 
         NotificationCenter.default.addObserver(
@@ -151,8 +154,6 @@ class AppState: ObservableObject {
                 // CRITICAL: Sync user data when returning to foreground
                 await self?.performSyncOnForegroundResume()
 
-                // Also check for notifications when returning to foreground
-                await self?.scheduleSmartNotificationsIfNeeded()
             }
         }
     }
@@ -258,31 +259,6 @@ class AppState: ObservableObject {
         } catch {
             print("⚠️ [AppState] Failed to check onboarding from profile: \(error)")
         }
-    }
-
-    /// Schedule smart notifications when user is authenticated
-    /// Called on app launch and when returning to foreground
-    private func scheduleSmartNotificationsIfNeeded() async {
-        guard let userId = currentUser?.id else {
-            print("📳 [AppState] Skipping notification check - no authenticated user")
-            return
-        }
-
-        // Throttle: Only run once per 30 minutes
-        let lastRunKey = "lastSmartNotificationCheck"
-        let lastRun = UserDefaults.standard.double(forKey: lastRunKey)
-        let now = Date().timeIntervalSince1970
-        let thirtyMinutes: TimeInterval = 30 * 60
-
-        if now - lastRun < thirtyMinutes {
-            print("📳 [AppState] Skipping notification check - ran recently")
-            return
-        }
-
-        UserDefaults.standard.set(now, forKey: lastRunKey)
-        print("📳 [AppState] Triggering smart notification check for user: \(userId)")
-
-        await NotificationBackgroundTask.shared.triggerImmediately()
     }
 
     private func checkForRequiredUpdate() async {

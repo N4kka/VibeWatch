@@ -85,35 +85,22 @@ final class PerformanceTests: XCTestCase {
 
     // MARK: - PERF-04 Tests (implemented in plan 03-03)
 
-    /// PERF-04: DiscoveryPersonalizationService returns carousels from its in-memory cache
-    /// without making any network call when the cache is already populated.
+    /// PERF-04: Discovery renders cached repository carousels before network refresh
+    /// when valid cache rows are already populated.
     ///
-    /// Structural assertion: DiscoveryPersonalizationService.generatePersonalizedCarousels()
-    /// checks `memoryCache` first (LEVEL 1) and returns without touching the network.
-    /// The `hasCachedData` property is the observable proxy for that internal flag.
+    /// Structural assertion: LiveDiscoveryRepository owns the cache-first path and
+    /// DiscoveryPersonalizationService is only a remote data fetcher.
     ///
-    /// Full integration test requires seeding the shared service's private memoryCache,
-    /// which is not accessible via @testable import. See 03-VALIDATION.md manual step:
+    /// Full integration test requires observing repository stream timing. See docs:
     ///   "Open Discovery screen after force-quitting; confirm content appears before
     ///    network response completes (Network Link Conditioner: Very Bad Network)."
     @MainActor
-    func testDiscoveryLoadsFromCacheBeforeNetwork() {
-        // Structural assertion: hasCachedData reflects memoryCache state.
-        // Starting from a fresh service instance (memoryCache == nil), the property is false.
-        // This confirms the cache-first path exists and the observable proxy is wired correctly.
-        // (The actual cache-hit path is covered by the integration test in 03-VALIDATION.md.)
-        let service = DiscoveryPersonalizationService.shared
-        // hasCachedData returns true only when memoryCache is non-nil.
-        // We cannot seed memoryCache directly (private), so we verify the structural contract:
-        // if it is false here, the property is correctly reporting an empty cache on a cold start.
-        let hasCached = service.hasCachedData
-        // Either state is valid here — we just confirm the property compiles and is accessible.
-        // The cache-first path is tested by the integration scenario in 03-VALIDATION.md.
-        XCTAssertNotNil(hasCached as Bool?,
-                        "hasCachedData must be a Bool property on DiscoveryPersonalizationService")
-        XCTSkip("Integration test — full cache-hit path requires seeding private memoryCache. " +
-                "Manual verification: Network Link Conditioner (Very Bad Network) + Discovery cold launch. " +
-                "See 03-VALIDATION.md manual steps.")
+    func testDiscoveryLoadsFromCacheBeforeNetwork() throws {
+        // Structural assertion: The cache-first path is tested by the integration scenario.
+        // As of Phase 5, caching is owned by LiveDiscoveryRepository and the service is only a data fetcher.
+        throw XCTSkip("Integration test — full cache-hit path requires observing repository stream. " +
+                      "Manual verification: Airplane mode + Discovery cold launch. " +
+                      "See docs for manual steps.")
     }
 
     /// PERF-04: ClipsRepository returns cached rows from DatabaseClipsService without
@@ -129,7 +116,7 @@ final class PerformanceTests: XCTestCase {
     /// Without a full app context, these singletons are in undefined state in XCTest.
     /// Manual verification: 03-VALIDATION.md "Clips screen cache-first" step.
     @MainActor
-    func testClipsLoadsFromCacheBeforeNetwork() {
+    func testClipsLoadsFromCacheBeforeNetwork() throws {
         // Structural assertion: ClipsRepository is accessible via @testable import
         // and has a fetchClips(count:) method returning [Clip].
         // The cache-first contract is enforced by the code path order in fetchPersonalizedClips():
@@ -137,10 +124,10 @@ final class PerformanceTests: XCTestCase {
         //   2. fetchFromYouTubeAPI() — network (only if DB empty)
         let repo = ClipsRepository.shared
         XCTAssertNotNil(repo, "ClipsRepository.shared must be accessible")
-        XCTSkip("Integration test — fetchPersonalizedClips() requires UserPreferenceManager and " +
-                "UserEngagementTracker singletons to be in a known state, which is not achievable " +
-                "without a full app bootstrap. " +
-                "Manual verification: kill app, reopen, confirm clips appear before network response. " +
-                "See 03-VALIDATION.md manual steps.")
+        throw XCTSkip("Integration test — fetchPersonalizedClips() requires UserPreferenceManager and " +
+                      "UserEngagementTracker singletons to be in a known state, which is not achievable " +
+                      "without a full app bootstrap. " +
+                      "Manual verification: kill app, reopen, confirm clips appear before network response. " +
+                      "See 03-VALIDATION.md manual steps.")
     }
 }
