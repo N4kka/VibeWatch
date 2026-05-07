@@ -54,19 +54,6 @@ struct VibeWatchApp: App {
                         }
                     }
                 }
-                // Handle deep links from push notifications
-                .sheet(item: $appNavigationManager.deepLinkTarget) { target in
-                    Group {
-                        if target.mediaType == "movie" {
-                            MovieDetailView(movieId: target.mediaId)
-                        } else if target.mediaType == "tv" {
-                            TVShowDetailView(tvShowId: target.mediaId)
-                        }
-                    }
-                    .onDisappear {
-                        appNavigationManager.clearDeepLinkTarget()
-                    }
-                }
                 .fullScreenCover(item: $appState.updateRequirement) { requirement in
                     UpdateRequiredView(requirement: requirement)
                 }
