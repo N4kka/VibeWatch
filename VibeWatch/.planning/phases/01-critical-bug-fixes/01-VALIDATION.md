@@ -42,9 +42,9 @@ audited: 2026-05-07
 | 1-01-01 | 01 | 0 | BUG-01 | unit | `xcodebuild test -scheme VibeWatchApp -only-testing:VibeWatchAppTests/ClipCommentServiceTests` | ✅ | ✅ green |
 | 1-01-02 | 01 | 0 | BUG-01 | unit | `xcodebuild test -scheme VibeWatchApp -only-testing:VibeWatchAppTests/DatabaseMigrationTests` | ✅ | ✅ green |
 | 1-02-01 | 02 | 0 | BUG-02 | integration | `xcodebuild test -scheme VibeWatchApp -only-testing:VibeWatchAppTests/SyncEngineTests/testUnblockSchemaErrorOperations` | ✅ | ✅ green |
-| 1-02-02 | 02 | manual | BUG-02 | manual | Simulator + Supabase: add blocked row, call unblock method, verify status → completed | N/A | ⬜ manual |
+| 1-02-02 | 02 | manual | BUG-02 | manual | Simulator + Supabase: add blocked row, call unblock method, verify status → completed | N/A | ✅ verified |
 | 1-03-01 | 03 | 0 | BUG-03 | unit | `xcodebuild test -scheme VibeWatchApp -only-testing:VibeWatchAppTests/AppNavigationManagerTests` | ✅ | ✅ green |
-| 1-03-02 | 03 | manual | BUG-03 | manual | Kill app, tap notification in Notification Center, verify MovieDetailView opens | N/A | ⬜ manual |
+| 1-03-02 | 03 | manual | BUG-03 | manual | Kill app, tap notification in Notification Center, verify MovieDetailView opens | N/A | ✅ verified |
 | 1-04-01 | 04 | 0 | BUG-04 | unit | `xcodebuild test -scheme VibeWatchApp -only-testing:VibeWatchAppTests/AnalyticsInsightsTests` | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
