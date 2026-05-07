@@ -244,7 +244,7 @@ struct TVShowDetailView: View {
         if let tvShow = viewModel.tvShow {
             let tvShowMovie = tvShowToMovie(tvShow)
             WatchNowSection(
-                providers: viewModel.watchProviders,
+                providerState: viewModel.watchProviderState,
                 mediaType: .tv,
                 title: tvShow.name,
                 year: tvShow.year,

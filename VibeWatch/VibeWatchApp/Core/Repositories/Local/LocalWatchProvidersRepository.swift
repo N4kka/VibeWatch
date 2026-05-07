@@ -3,7 +3,7 @@ import Foundation
 /// Reads and writes watch providers from the local `watch_providers` SQLite table.
 /// Only returns cached data if within the TTL window; never touches the network.
 @MainActor
-final class LocalWatchProvidersRepository {
+final class LocalWatchProvidersRepository: WatchProvidersCache {
     static let shared = LocalWatchProvidersRepository()
     private let db = SQLiteService.shared
     private let ttl: TimeInterval = 24 * 60 * 60

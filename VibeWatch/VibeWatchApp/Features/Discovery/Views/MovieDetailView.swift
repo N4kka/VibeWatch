@@ -84,7 +84,7 @@ struct MovieDetailView: View {
                             )
 
                             WatchNowSection(
-                                providers: viewModel.watchProviders,
+                                providerState: viewModel.watchProviderState,
                                 mediaType: .movie,
                                 title: movie.title,
                                 year: movie.year,
@@ -622,7 +622,7 @@ struct TrailerSection: View {
 }
 
 struct WatchNowSection: View {
-    let providers: CountryProviders?
+    let providerState: WatchProviderLoadState
     let mediaType: MediaType
     let title: String
     let year: String?
@@ -633,9 +633,24 @@ struct WatchNowSection: View {
     @StateObject private var listManager = ListManager.shared
     @State private var showNotifyMeAlert = false
 
+    private var providers: CountryProviders? {
+        providerState.providers
+    }
+
+    private func visibleProviders(_ providers: [Provider]?, justWatchLink: String?) -> [Provider] {
+        (providers ?? []).filter { provider in
+            guard provider.hasUsableLogo else { return false }
+            let hasLink = provider.externalLink != nil || justWatchLink != nil
+            if hasLink { return true }
+            return PlatformDeepLinkHelper.hasPlatformHomepage(for: provider)
+        }
+    }
+
     private var hasAnyProvider: Bool {
-        guard let p = providers else { return false }
-        return (p.flatrate?.isEmpty == false) || (p.rent?.isEmpty == false) || (p.buy?.isEmpty == false)
+        guard let providers else { return false }
+        return !visibleProviders(providers.flatrate, justWatchLink: providers.link).isEmpty ||
+        !visibleProviders(providers.rent, justWatchLink: providers.link).isEmpty ||
+        !visibleProviders(providers.buy, justWatchLink: providers.link).isEmpty
     }
 
     private var justWatchURL: URL? {
@@ -654,17 +669,33 @@ struct WatchNowSection: View {
                 .font(.system(size: 20, weight: .bold))
                 .foregroundColor(.theme.textPrimary)
             
-            if hasAnyProvider {
-                if let flatrate = providers?.flatrate, !flatrate.isEmpty {
-                    ProviderGroup(title: "platforms.streaming".localized, providers: flatrate, justWatchLink: providers?.link, mediaTitle: title)
+            if providerState.isLoading {
+                HStack {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .theme.accentOrange))
+                        .frame(maxWidth: .infinity)
                 }
-                
-                if let rent = providers?.rent, !rent.isEmpty {
-                    ProviderGroup(title: "platforms.rent".localized, providers: rent, justWatchLink: providers?.link, mediaTitle: title)
-                }
-                
-                if let buy = providers?.buy, !buy.isEmpty {
-                    ProviderGroup(title: "platforms.buy".localized, providers: buy, justWatchLink: providers?.link, mediaTitle: title)
+                .frame(height: 72)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.white.opacity(0.05))
+                )
+            } else if hasAnyProvider {
+                if let providers {
+                    let flatrate = visibleProviders(providers.flatrate, justWatchLink: providers.link)
+                    if !flatrate.isEmpty {
+                        ProviderGroup(title: "platforms.streaming".localized, providers: flatrate, justWatchLink: providers.link, mediaTitle: title)
+                    }
+
+                    let rent = visibleProviders(providers.rent, justWatchLink: providers.link)
+                    if !rent.isEmpty {
+                        ProviderGroup(title: "platforms.rent".localized, providers: rent, justWatchLink: providers.link, mediaTitle: title)
+                    }
+
+                    let buy = visibleProviders(providers.buy, justWatchLink: providers.link)
+                    if !buy.isEmpty {
+                        ProviderGroup(title: "platforms.buy".localized, providers: buy, justWatchLink: providers.link, mediaTitle: title)
+                    }
                 }
 
                 if let url = justWatchURL {

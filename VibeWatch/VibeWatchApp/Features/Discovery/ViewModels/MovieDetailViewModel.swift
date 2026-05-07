@@ -1,11 +1,33 @@
 import Foundation
 
+enum WatchProviderLoadState {
+    case loading
+    case available(CountryProviders)
+    case unavailable
+
+    var providers: CountryProviders? {
+        if case .available(let providers) = self { return providers }
+        return nil
+    }
+
+    var isLoading: Bool {
+        if case .loading = self { return true }
+        return false
+    }
+
+    var isUnavailable: Bool {
+        if case .unavailable = self { return true }
+        return false
+    }
+}
+
 @MainActor
 class MovieDetailViewModel: ObservableObject {
     @Published var movie: Movie?
     @Published var credits: Credits?
     @Published var videos: [Video] = []
     @Published var watchProviders: CountryProviders?
+    @Published var watchProviderState: WatchProviderLoadState = .loading
     @Published var similarMovies: [Movie] = []
     @Published var imdbId: String?
     @Published var isLoading = false
@@ -40,6 +62,8 @@ class MovieDetailViewModel: ObservableObject {
     func loadMovieDetails() async {
         isLoading = true
         error = nil
+        watchProviders = nil
+        watchProviderState = .loading
         let region = LocalizationManager.shared.currentCountry.id
 
         // Stream 1: cache-first detail (instant on cache hit, background refresh after)
@@ -48,7 +72,13 @@ class MovieDetailViewModel: ObservableObject {
             for await providers in self.providersRepository.observeProviders(
                 mediaId: self.movieId, mediaType: .movie, region: region
             ) {
-                if let providers { self.watchProviders = providers }
+                if let providers, providers.hasUsableProviders {
+                    self.watchProviders = providers
+                    self.watchProviderState = .available(providers)
+                } else {
+                    self.watchProviders = nil
+                    self.watchProviderState = .unavailable
+                }
             }
         }
 
@@ -58,8 +88,6 @@ class MovieDetailViewModel: ObservableObject {
             self.videos = snapshot.videos
             self.similarMovies = snapshot.similarMovies
             self.imdbId = snapshot.movie.imdbId
-            // Seed providers from detail_cache legacy field only if not yet set by providersRepository
-            if self.watchProviders == nil, let p = snapshot.watchProviders { self.watchProviders = p }
             self.isLoading = false
             self.error = nil
         }
@@ -160,6 +188,7 @@ class TVShowDetailViewModel: ObservableObject {
     @Published var credits: Credits?
     @Published var videos: [Video] = []
     @Published var watchProviders: CountryProviders?
+    @Published var watchProviderState: WatchProviderLoadState = .loading
     @Published var similarShows: [TVShow] = []
     @Published var imdbId: String?
     @Published var isLoading = false
@@ -194,13 +223,21 @@ class TVShowDetailViewModel: ObservableObject {
     func loadTVShowDetails() async {
         isLoading = true
         error = nil
+        watchProviders = nil
+        watchProviderState = .loading
         let region = LocalizationManager.shared.currentCountry.id
 
         Task(priority: .utility) {
             for await providers in self.providersRepository.observeProviders(
                 mediaId: self.tvShowId, mediaType: .tv, region: region
             ) {
-                if let providers { self.watchProviders = providers }
+                if let providers, providers.hasUsableProviders {
+                    self.watchProviders = providers
+                    self.watchProviderState = .available(providers)
+                } else {
+                    self.watchProviders = nil
+                    self.watchProviderState = .unavailable
+                }
             }
         }
 
@@ -210,7 +247,6 @@ class TVShowDetailViewModel: ObservableObject {
             self.videos = snapshot.videos
             self.similarShows = snapshot.similarShows
             self.imdbId = snapshot.tvShow.imdbId
-            if self.watchProviders == nil, let p = snapshot.watchProviders { self.watchProviders = p }
             self.isLoading = false
             self.error = nil
         }
