@@ -305,12 +305,17 @@ struct MainTabView: View {
     /// Wait for Discovery content to be ready before dismissing splash screen
     /// This prevents showing an empty DiscoveryPage with a loader
     private func waitForDiscoveryContentReady() async {
-        // Check if we have cached discovery content
+        // SQLite personalized cache → AppState already set isPreloading=false and
+        // will hydrate ContentCacheManager in background. Skip the 3s wait entirely.
+        if SQLiteService.shared.hasCachedPersonalizedContent() {
+            return
+        }
+
+        // Check in-memory cache as fallback
         let hasCachedMovies = ContentCacheManager.shared.getCachedDiscoveryMovies() != nil
         let hasCachedTVShows = ContentCacheManager.shared.getCachedDiscoveryTVShows() != nil
 
         if hasCachedMovies || hasCachedTVShows {
-            // We have cached content, no need to wait
             return
         }
 
