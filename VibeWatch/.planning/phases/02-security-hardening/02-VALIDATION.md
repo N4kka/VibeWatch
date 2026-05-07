@@ -66,7 +66,7 @@ audited: 2026-05-07
 | Edge Function rejects unauthenticated requests | SEC-01 | Requires deployed Supabase Edge Function | `curl -X POST https://<supabase-url>/functions/v1/cerebras-proxy -H "Content-Type: application/json" -d '{}'` → expect 401 response | ✅ verified 2026-05-07 — returned `{"error":"Missing Authorization header"}` |
 | CEREBRAS_API_KEY absent from .ipa bundle | SEC-01 | Requires archive build + binary inspection | Build archive → `strings VibeWatchApp.app/VibeWatchApp \| grep -i cerebras` → expect no match | ✅ verified 2026-05-07 — zero matches for `csk-` in archive binary |
 | Keychain token survives app restart | SEC-02 | Requires device/Simulator restart | Sign in → force-quit app → relaunch → verify still logged in | ✅ verified 2026-05-07 |
-| Existing user silently migrated on first update launch | SEC-02 | Requires pre-migration state setup on device | Install pre-migration build (UserDefaults populated) → install post-migration build → verify user still logged in + UserDefaults keys absent |
+| Existing user silently migrated on first update launch | SEC-02 | Requires pre-migration state setup on device | Install pre-migration build (UserDefaults populated) → install post-migration build → verify user still logged in + UserDefaults keys absent | ✅ verified 2026-05-07 — Dec 2025 build → latest: user stayed logged in, `auth_cached_user` absent from UserDefaults plist |
 
 ---
 
