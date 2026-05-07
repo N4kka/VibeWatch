@@ -50,7 +50,7 @@ class DataCoordinator: ObservableObject {
 
     /// Called on splash screen - runs discovery + initial clips in parallel, additional in background
     func initializeApp() async {
-        print("🚀 [DataCoordinator] Starting app initialization...")
+        Logger.info("[DataCoordinator] Starting app initialization")
         let startTime = Date()
 
         // Add 5-second timeout for critical path
@@ -73,9 +73,7 @@ class DataCoordinator: ObservableObject {
         }
 
         let duration = Date().timeIntervalSince(startTime)
-        print("✅ [DataCoordinator] Fast init complete in \(String(format: "%.2f", duration))s")
-        print("   📊 Discovery: \(trendingMovies.count) movies, \(trendingTVShows.count) TV")
-        print("   🎬 Initial clips: \(initialClips.count) ready")
+        Logger.info("[DataCoordinator] Fast init complete in \(String(format: "%.2f", duration))s - Discovery: \(trendingMovies.count) movies, \(trendingTVShows.count) TV, Initial clips: \(initialClips.count)")
 
         isInitializing = false
         initialClipsReady = true
@@ -129,7 +127,7 @@ class DataCoordinator: ObservableObject {
             if let completed = await group.next() {
                 group.cancelAll()
                 if !completed {
-                    print("⚠️ [DataCoordinator] Operation timed out after \(seconds)s")
+                    Logger.warning("[DataCoordinator] Operation timed out after \(seconds)s")
                 }
             }
         }
@@ -140,7 +138,7 @@ class DataCoordinator: ObservableObject {
     /// Fetch all discovery content - prioritizes cache for INSTANT loading
     /// Strategy: Display cached content IMMEDIATELY, refresh in background only
     private func fetchDiscoveryContent() async {
-        print("[DataCoordinator] Starting discovery content fetch")
+        Logger.debug("[DataCoordinator] Starting discovery content fetch")
 
         let discoveryCache = DiscoveryCacheService.shared
 
@@ -161,7 +159,7 @@ class DataCoordinator: ObservableObject {
                 self.topRatedMovies = cachedContent.topRated
                 self.trendingTVShows = cachedContent.tv
                 discoveryFetched = true
-                print("[DataCoordinator] Loaded \(cachedContent.trending.count) trending movies from cache INSTANTLY")
+                Logger.debug("[DataCoordinator] Loaded \(cachedContent.trending.count) trending movies from cache")
 
                 // Prefetch images for cached content in background (don't block UI)
                 Task(priority: .background) {
@@ -182,11 +180,11 @@ class DataCoordinator: ObservableObject {
                 return
             }
         } catch {
-            print("[DataCoordinator] Cache retrieval failed: \(error.localizedDescription)")
+            Logger.warning("[DataCoordinator] Cache retrieval failed: \(error.localizedDescription)")
         }
 
         // STEP 2: No valid cache - fetch from network (first launch scenario)
-        print("[DataCoordinator] No cache available, fetching from network")
+        Logger.debug("[DataCoordinator] No cache available, fetching from network")
         await fetchDiscoveryFromNetwork()
     }
 
@@ -194,7 +192,7 @@ class DataCoordinator: ObservableObject {
 
     /// Refreshes discovery content in background without blocking UI
     private func refreshDiscoveryContentInBackground() async {
-        print("[DataCoordinator] Background refresh started")
+        Logger.debug("[DataCoordinator] Background refresh started")
 
         let discoveryCache = DiscoveryCacheService.shared
 
@@ -219,9 +217,9 @@ class DataCoordinator: ObservableObject {
                 trendingTVShows: newContent.tv
             )
 
-            print("[DataCoordinator] Background refresh completed")
+            Logger.debug("[DataCoordinator] Background refresh completed")
         } catch {
-            print("[DataCoordinator] Background refresh failed: \(error.localizedDescription)")
+            Logger.error("[DataCoordinator] Background refresh failed: \(error.localizedDescription)")
         }
     }
 
@@ -241,7 +239,7 @@ class DataCoordinator: ObservableObject {
             self.trendingTVShows = content.tv
 
             discoveryFetched = true
-            print("[DataCoordinator] Network fetch completed - \(content.trending.count) trending movies")
+            Logger.debug("[DataCoordinator] Network fetch completed - \(content.trending.count) trending movies")
 
             // Prefetch images in background
             Task(priority: .background) {
@@ -254,7 +252,7 @@ class DataCoordinator: ObservableObject {
             }
 
         } catch {
-            print("[DataCoordinator] Network fetch failed: \(error.localizedDescription)")
+            Logger.error("[DataCoordinator] Network fetch failed: \(error.localizedDescription)")
         }
     }
 
@@ -302,12 +300,12 @@ class DataCoordinator: ObservableObject {
 
         // Prefetch all images using ImageCacheService (respects user's WiFi preference)
         await ImageCacheService.shared.prefetchImages(uniqueUrls, onWiFiOnly: true)
-        print("[DataCoordinator] Prefetched \(uniqueUrls.count) discovery images")
+        Logger.debug("[DataCoordinator] Prefetched \(uniqueUrls.count) discovery images")
     }
     
     /// Refresh discovery content (e.g., when language changes)
     func refreshDiscoveryContent() async {
-        print("🔄 [DataCoordinator] Refreshing discovery content...")
+        Logger.debug("[DataCoordinator] Refreshing discovery content")
         discoveryFetched = false
         await fetchDiscoveryContent()
     }
@@ -328,7 +326,7 @@ class DataCoordinator: ObservableObject {
     
     /// Fetch 5 clips from DATABASE for INSTANT playback (super fast!)
     private func fetchInitialClips() async {
-        print("🎬 [DataCoordinator] Fetching initial clips from DATABASE...")
+        Logger.debug("[DataCoordinator] Fetching initial clips from database")
         
         do {
             // Fetch directly from database (should be instant!)
@@ -338,12 +336,12 @@ class DataCoordinator: ObservableObject {
             initialClips = clips
             
             if !clips.isEmpty {
-                print("✅ [DataCoordinator] Initial clips ready from DB: \(clips.count)")
+                Logger.debug("[DataCoordinator] Initial clips ready from DB: \(clips.count)")
             } else {
-                print("⚠️ [DataCoordinator] No clips in database yet")
+                Logger.warning("[DataCoordinator] No clips in database yet")
             }
         } catch {
-            print("❌ [DataCoordinator] Failed to fetch initial clips from DB: \(error)")
+            Logger.error("[DataCoordinator] Failed to fetch initial clips from DB: \(error)")
             initialClips = []
         }
     }
@@ -352,7 +350,7 @@ class DataCoordinator: ObservableObject {
     
     /// Fetch more clips from DATABASE in background while user explores Discovery
     private func fetchAdditionalClips() async {
-        print("🎬 [DataCoordinator] Fetching additional clips from DATABASE (background)...")
+        Logger.debug("[DataCoordinator] Fetching additional clips from database (background)")
         
         do {
             // Fetch from database (fast!)
@@ -361,10 +359,10 @@ class DataCoordinator: ObservableObject {
             
             await MainActor.run {
                 self.additionalClips = clips
-                print("✅ [DataCoordinator] Additional clips ready from DB: \(clips.count) (total: \(self.initialClips.count + clips.count))")
+                Logger.debug("[DataCoordinator] Additional clips ready from DB: \(clips.count) (total: \(self.initialClips.count + clips.count))")
             }
         } catch {
-            print("❌ [DataCoordinator] Failed to fetch additional clips from DB: \(error)")
+            Logger.error("[DataCoordinator] Failed to fetch additional clips from DB: \(error)")
             await MainActor.run {
                 self.additionalClips = []
             }
@@ -375,7 +373,7 @@ class DataCoordinator: ObservableObject {
     
     /// Fetch more clips for infinite scroll
     func fetchMoreClips(count: Int = 20) async -> [Clip] {
-        print("🎬 [DataCoordinator] Fetching \(count) more clips (page \(nextMoviePage))...")
+        Logger.debug("[DataCoordinator] Fetching \(count) more clips (page \(nextMoviePage))")
         
         do {
             // Fetch next pages of content
@@ -389,11 +387,11 @@ class DataCoordinator: ObservableObject {
             
             let clips = await fetchClipsBatch(count: count, fromMovies: moviesRes.results, fromTV: tvRes.results)
             
-            print("✅ [DataCoordinator] Pagination: fetched \(clips.count) clips")
+            Logger.debug("[DataCoordinator] Pagination: fetched \(clips.count) clips")
             return clips
             
         } catch {
-            print("❌ [DataCoordinator] Pagination failed: \(error)")
+            Logger.error("[DataCoordinator] Pagination failed: \(error)")
             return []
         }
     }
@@ -502,11 +500,11 @@ class DataCoordinator: ObservableObject {
                     createdAt: Date()
                 )
 
-                print("   ✅ TMDB clip found: \(movie.title)")
+                Logger.debug("[DataCoordinator] TMDB clip found: \(movie.title)")
                 return clip
             }
         } catch {
-            print("   ⚠️ TMDB videos failed for \(movie.title): \(error.localizedDescription)")
+            Logger.warning("[DataCoordinator] TMDB videos failed for \(movie.title): \(error.localizedDescription)")
         }
 
         // Fallback to YouTube search with timeout and retry
@@ -525,7 +523,7 @@ class DataCoordinator: ObservableObject {
             // Validate response
             guard let httpResponse = response as? HTTPURLResponse,
                   (200...299).contains(httpResponse.statusCode) else {
-                print("   ⚠️ YouTube API returned error for \(movie.title)")
+                Logger.warning("[DataCoordinator] YouTube API returned error for \(movie.title)")
                 return nil
             }
 
@@ -548,11 +546,11 @@ class DataCoordinator: ObservableObject {
                 createdAt: Date()
             )
 
-            print("   ✅ YouTube clip found: \(movie.title)")
+            Logger.debug("[DataCoordinator] YouTube clip found: \(movie.title)")
             return clip
 
         } catch {
-            print("   ❌ All sources failed for: \(movie.title) - \(error.localizedDescription)")
+            Logger.error("[DataCoordinator] All sources failed for: \(movie.title) - \(error.localizedDescription)")
             return nil
         }
     }
@@ -598,11 +596,11 @@ class DataCoordinator: ObservableObject {
                     createdAt: Date()
                 )
 
-                print("   ✅ TMDB clip found: \(tvShow.name)")
+                Logger.debug("[DataCoordinator] TMDB clip found: \(tvShow.name)")
                 return clip
             }
         } catch {
-            print("   ⚠️ TMDB videos failed for \(tvShow.name): \(error.localizedDescription)")
+            Logger.warning("[DataCoordinator] TMDB videos failed for \(tvShow.name): \(error.localizedDescription)")
         }
 
         // Fallback to YouTube search with timeout and retry
@@ -621,7 +619,7 @@ class DataCoordinator: ObservableObject {
             // Validate response
             guard let httpResponse = response as? HTTPURLResponse,
                   (200...299).contains(httpResponse.statusCode) else {
-                print("   ⚠️ YouTube API returned error for \(tvShow.name)")
+                Logger.warning("[DataCoordinator] YouTube API returned error for \(tvShow.name)")
                 return nil
             }
 
@@ -644,11 +642,11 @@ class DataCoordinator: ObservableObject {
                 createdAt: Date()
             )
 
-            print("   ✅ YouTube clip found: \(tvShow.name)")
+            Logger.debug("[DataCoordinator] YouTube clip found: \(tvShow.name)")
             return clip
 
         } catch {
-            print("   ❌ All sources failed for: \(tvShow.name) - \(error.localizedDescription)")
+            Logger.error("[DataCoordinator] All sources failed for: \(tvShow.name) - \(error.localizedDescription)")
             return nil
         }
     }

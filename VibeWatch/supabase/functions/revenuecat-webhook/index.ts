@@ -56,25 +56,6 @@ function verifySignature(body: string, signature: string): boolean {
 // Function to handle the INITIAL_PURCHASE event
 async function handleInitialPurchase(userId: string, productId: string, purchasedAt: string) {
   console.log(`Handling initial purchase for user: ${userId}`)
-  
-  if (productId.includes('founding')) {
-    await markAsFoundingMember(userId)
-  }
-}
-
-// Function to mark a user as a founding member
-async function markAsFoundingMember(userId: string) {
-  console.log(`Marking user as founding member: ${userId}`)
-  const { data, error } = await supabase
-    .from('profiles')
-    .update({ is_founding_member: true })
-    .eq('id', userId)
-
-  if (error) {
-    console.error('Error marking user as founding member:', error)
-  } else {
-    console.log('Successfully marked user as founding member:', userId)
-  }
 }
 
 // Function to handle the CANCELLATION event

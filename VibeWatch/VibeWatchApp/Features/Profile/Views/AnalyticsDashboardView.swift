@@ -343,6 +343,10 @@ struct AnalyticsDashboardView: View {
 
                 GenreDistributionCard(distribution: stats.genreDistribution)
 
+                if let mood = stats.moodAnalysis {
+                    MoodAnalysisCard(moodAnalysis: mood)
+                }
+
                 ViewingHeatmapCard(patterns: stats.viewingPatterns)
 
                 TopContentCard(performance: stats.contentPerformance)
@@ -670,6 +674,70 @@ struct DiscoveryInsightsCard: View {
                     .foregroundColor(.white.opacity(0.4))
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 12)
+            }
+        }
+        .padding(16)
+        .background(RoundedRectangle(cornerRadius: 16).fill(Color.white.opacity(0.05)))
+    }
+}
+
+// MARK: - Mood Analysis Card
+
+struct MoodAnalysisCard: View {
+    let moodAnalysis: MoodAnalysis
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "theatermasks")
+                    .foregroundColor(.pink)
+                Text("Mood Profile")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.white)
+                Spacer()
+            }
+
+            if moodAnalysis.moodDistribution.isEmpty {
+                Text("Not enough data yet — keep watching to see your mood profile.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding()
+                    .frame(maxWidth: .infinity)
+            } else {
+                VStack(spacing: 10) {
+                    ForEach(
+                        Array(moodAnalysis.moodDistribution.sorted(by: { $0.value > $1.value })),
+                        id: \.key
+                    ) { mood, count in
+                        HStack {
+                            Text(mood)
+                                .font(.system(size: 13))
+                                .foregroundColor(.white)
+
+                            GeometryReader { geometry in
+                                let total = moodAnalysis.moodDistribution.values.reduce(0, +)
+                                let percentage = Double(count) / Double(max(total, 1))
+
+                                ZStack(alignment: .leading) {
+                                    RoundedRectangle(cornerRadius: 2)
+                                        .fill(Color.white.opacity(0.1))
+                                        .frame(height: 4)
+
+                                    RoundedRectangle(cornerRadius: 2)
+                                        .fill(Color.pink)
+                                        .frame(width: geometry.size.width * percentage, height: 4)
+                                }
+                            }
+                            .frame(height: 4)
+
+                            Text("\(count)")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(.pink)
+                                .frame(width: 30, alignment: .trailing)
+                        }
+                    }
+                }
             }
         }
         .padding(16)

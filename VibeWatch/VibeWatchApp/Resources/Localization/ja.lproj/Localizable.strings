@@ -316,7 +316,6 @@
 "paywall.plan.monthly" = "月額";
 "paywall.plan.annual" = "年額";
 "paywall.discount.annual" = "33% OFF";
-"paywall.foundingMember" = "創業メンバー価格";
 "paywall.price.perMonth" = "%@/月";
 "paywall.trial.badge" = "%@ 無料";
 "paywall.restore" = "購入を復元";

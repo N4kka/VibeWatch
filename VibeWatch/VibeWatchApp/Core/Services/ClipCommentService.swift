@@ -13,9 +13,6 @@ final class ClipCommentService: ObservableObject {
     // Added: wrapper to safely send arrays of dictionaries across actors
     private struct SendableArrayOfDictionaries: @unchecked Sendable { let raw: [[String: Any]] }
     
-    // Guard to avoid spamming failing RPCs when backend schema is outdated
-    private var commentRPCDisabled = false
-    
     // Cache for clip like counts
     private var likeCountsCache: [String: Int] = [:]
     
@@ -93,7 +90,7 @@ final class ClipCommentService: ObservableObject {
             await setLocalClipLikeCount(clipId: clipId, count: remoteResult.like_count)
             likeCountsCache[clipId] = remoteResult.like_count
             markSynced(table: "clip_reactions", recordId: reactionId)
-            print("☁️ [ClipComment] Synced clip like to Supabase (liked: \(remoteResult.liked))")
+            Logger.debug("[ClipComment] Synced clip like to Supabase (liked: \(remoteResult.liked))")
         } else {
             let payload: [String: Any] = [
                 "id": reactionId,
@@ -110,7 +107,7 @@ final class ClipCommentService: ObservableObject {
                 recordId: reactionId,
                 payload: payload
             )
-            print("📦 [ClipComment] Applied clip like locally and queued sync")
+            Logger.debug("[ClipComment] Applied clip like locally and queued sync")
         }
         
         // Analytics
@@ -149,17 +146,22 @@ final class ClipCommentService: ObservableObject {
         """, parameters: [clipId, limit])
         
         var comments = rows.compactMap { ClipComment.from(dictionary: $0) }
-        
-        // Check if current user has liked each comment
-        if let userId = userId {
+
+        // Fetch all liked comment IDs in a single query (fix N+1)
+        if let userId = userId, !comments.isEmpty {
+            let commentIds = comments.map { $0.id }
+            let placeholders = commentIds.map { _ in "?" }.joined(separator: ", ")
+            let likeRows: [[String: Any]] = try await sqlite.queryRaw("""
+                SELECT comment_id FROM clip_comment_likes
+                WHERE user_id = ? AND comment_id IN (\(placeholders))
+            """, parameters: [userId] + commentIds)
+
+            let likedSet = Set(likeRows.compactMap { $0["comment_id"] as? String })
             for i in 0..<comments.count {
-                comments[i].isLiked = try await hasUserLikedComment(
-                    commentId: comments[i].id,
-                    userId: userId
-                )
+                comments[i].isLiked = likedSet.contains(comments[i].id)
             }
         }
-        
+
         return comments
     }
     
@@ -181,17 +183,22 @@ final class ClipCommentService: ObservableObject {
         """, parameters: [parentId, limit])
         
         var replies = rows.compactMap { ClipComment.from(dictionary: $0) }
-        
-        // Check if current user has liked each reply
-        if let userId = userId {
+
+        // Fetch all liked reply IDs in a single query (fix N+1)
+        if let userId = userId, !replies.isEmpty {
+            let replyIds = replies.map { $0.id }
+            let placeholders = replyIds.map { _ in "?" }.joined(separator: ", ")
+            let likeRows: [[String: Any]] = try await sqlite.queryRaw("""
+                SELECT comment_id FROM clip_comment_likes
+                WHERE user_id = ? AND comment_id IN (\(placeholders))
+            """, parameters: [userId] + replyIds)
+
+            let likedSet = Set(likeRows.compactMap { $0["comment_id"] as? String })
             for i in 0..<replies.count {
-                replies[i].isLiked = try await hasUserLikedComment(
-                    commentId: replies[i].id,
-                    userId: userId
-                )
+                replies[i].isLiked = likedSet.contains(replies[i].id)
             }
         }
-        
+
         return replies
     }
     
@@ -236,7 +243,7 @@ final class ClipCommentService: ObservableObject {
                 """, parameters: [parentId])
                 
                 if !success2 {
-                    print("⚠️ [ClipComment] Failed to increment reply count for parent \(parentId)")
+                    Logger.warning("[ClipComment] Failed to increment reply count for parent \(parentId)")
                 }
             }
         }
@@ -258,7 +265,7 @@ final class ClipCommentService: ObservableObject {
             commentId: commentId
         ) {
             markSynced(table: "clip_comments", recordId: remoteComment.id)
-            print("☁️ [ClipComment] Posted comment to Supabase for clip \(clipId)")
+            Logger.debug("[ClipComment] Posted comment to Supabase for clip \(clipId)")
             clipComment = remoteComment
         } else {
             let payload: [String: Any] = [
@@ -280,7 +287,7 @@ final class ClipCommentService: ObservableObject {
                 recordId: commentId,
                 payload: payload
             )
-            print("📦 [ClipComment] Posted comment locally and queued sync for clip \(clipId)")
+            Logger.debug("[ClipComment] Posted comment locally and queued sync for clip \(clipId)")
         }
         
         // Analytics & Gamification
@@ -351,7 +358,7 @@ final class ClipCommentService: ObservableObject {
                 """, parameters: [parentId])
                 
                 if !success {
-                    print("⚠️ [ClipComment] Failed to decrement reply count for parent \(parentId)")
+                    Logger.warning("[ClipComment] Failed to decrement reply count for parent \(parentId)")
                 }
             }
         }
@@ -361,7 +368,7 @@ final class ClipCommentService: ObservableObject {
         // Try remote; queue if it fails
         if await supabaseDeleteComment(commentId: commentId) {
             markSynced(table: "clip_comments", recordId: commentId)
-            print("☁️ [ClipComment] Deleted comment \(commentId) remotely")
+            Logger.debug("[ClipComment] Deleted comment \(commentId) remotely")
         } else {
             await queueOutbox(
                 userId: userId,
@@ -370,7 +377,7 @@ final class ClipCommentService: ObservableObject {
                 recordId: commentId,
                 payload: ["id": commentId, "clip_id": clipId, "deleted_at": now]
             )
-            print("📦 [ClipComment] Soft-deleted comment locally and queued remote delete")
+            Logger.debug("[ClipComment] Soft-deleted comment locally and queued remote delete")
         }
         
         // Analytics
@@ -419,7 +426,7 @@ final class ClipCommentService: ObservableObject {
             )
             markSynced(table: "clip_comment_likes", recordId: likeId)
             markSynced(table: "clip_comments", recordId: commentId)
-            print("☁️ [ClipComment] Synced comment like to Supabase (liked: \(remoteResult.liked))")
+            Logger.debug("[ClipComment] Synced comment like to Supabase (liked: \(remoteResult.liked))")
         } else {
             let payload: [String: Any] = [
                 "id": likeId,
@@ -434,7 +441,7 @@ final class ClipCommentService: ObservableObject {
                 recordId: likeId,
                 payload: payload
             )
-            print("📦 [ClipComment] Toggled comment like locally and queued sync")
+            Logger.debug("[ClipComment] Toggled comment like locally and queued sync")
         }
         
         // Analytics
@@ -595,7 +602,7 @@ final class ClipCommentService: ObservableObject {
                     try await sqlite.upsert(table: "clip_comment_likes", rows: likeSafe.raw)
                     likedSet = Set(likedRows.map { $0.comment_id })
                 } catch {
-                    print("⚠️ [ClipComment] Failed to sync liked comments from Supabase: \(error)")
+                    Logger.warning("[ClipComment] Failed to sync liked comments from Supabase: \(error)")
                 }
             }
             
@@ -609,7 +616,7 @@ final class ClipCommentService: ObservableObject {
             }
             return comments
         } catch {
-            print("⚠️ [ClipComment] Failed to sync comments from Supabase: \(error)")
+            Logger.warning("[ClipComment] Failed to sync comments from Supabase: \(error)")
             return nil
         }
     }
@@ -673,7 +680,7 @@ final class ClipCommentService: ObservableObject {
                     try await sqlite.upsert(table: "clip_comment_likes", rows: likeSafe.raw)
                     likedSet = Set(likedRows.map { $0.comment_id })
                 } catch {
-                    print("⚠️ [ClipComment] Failed to sync liked replies from Supabase: \(error)")
+                    Logger.warning("[ClipComment] Failed to sync liked replies from Supabase: \(error)")
                 }
             }
             
@@ -684,7 +691,7 @@ final class ClipCommentService: ObservableObject {
             }
             return replies
         } catch {
-            print("⚠️ [ClipComment] Failed to sync replies from Supabase: \(error)")
+            Logger.warning("[ClipComment] Failed to sync replies from Supabase: \(error)")
             return nil
         }
     }
@@ -721,13 +728,12 @@ final class ClipCommentService: ObservableObject {
                 .value
             return response
         } catch {
-            print("⚠️ [ClipComment] Supabase clip like toggle failed: \(error)")
+            Logger.warning("[ClipComment] Supabase clip like toggle failed: \(error)")
             return nil
         }
     }
     
     private func supabaseAddComment(clipId: String, content: String, parentId: String?, commentId: String) async -> ClipComment? {
-        if commentRPCDisabled { return nil }
         guard let client = supabase.client, supabase.isAuthenticated else {
             return nil
         }
@@ -747,15 +753,12 @@ final class ClipCommentService: ObservableObject {
             let comment = try await persistSupabaseComment(response)
             return comment
         } catch {
-            if let pgError = error as? PostgrestError, pgError.code == "42703" || pgError.message.contains("updated_at") {
-                commentRPCDisabled = true
-                print("⚠️ [ClipComment] Disabling comment RPC (server schema missing column): \(pgError.message)")
-            }
-            print("⚠️ [ClipComment] Supabase comment create failed: \(error)")
+            // schema errors are now handled by backend migration
+            Logger.warning("[ClipComment] Supabase comment create failed: \(error)")
             return nil
         }
     }
-    
+
     private func supabaseToggleCommentLike(commentId: String, likeId: String) async -> SupabaseToggleCommentLikeResponse? {
         guard let client = supabase.client, supabase.isAuthenticated else {
             return nil
@@ -769,7 +772,7 @@ final class ClipCommentService: ObservableObject {
                 .value
             return response
         } catch {
-            print("⚠️ [ClipComment] Supabase comment like toggle failed: \(error)")
+            Logger.warning("[ClipComment] Supabase comment like toggle failed: \(error)")
             return nil
         }
     }
@@ -786,7 +789,7 @@ final class ClipCommentService: ObservableObject {
                 .execute()
             return true
         } catch {
-            print("⚠️ [ClipComment] Supabase comment delete failed: \(error)")
+            Logger.warning("[ClipComment] Supabase comment delete failed: \(error)")
             return false
         }
     }
@@ -871,7 +874,7 @@ final class ClipCommentService: ObservableObject {
             """, parameters: [remoteLikeCount, markSynced ? isoFormatter.string(from: Date()) : NSNull(), commentId])
             
             if !success {
-                print("⚠️ [ClipComment] Failed to sync like_count for comment \(commentId)")
+                Logger.warning("[ClipComment] Failed to sync like_count for comment \(commentId)")
             }
         } else if liked && !wasLiked {
             let success = sqlite.execute("""
@@ -880,7 +883,7 @@ final class ClipCommentService: ObservableObject {
                 WHERE id = ?
             """, parameters: [commentId])
             if !success {
-                print("⚠️ [ClipComment] Failed to increment like count for comment \(commentId)")
+                Logger.warning("[ClipComment] Failed to increment like count for comment \(commentId)")
             }
         } else if !liked && wasLiked {
             let success = sqlite.execute("""
@@ -889,7 +892,7 @@ final class ClipCommentService: ObservableObject {
                 WHERE id = ?
             """, parameters: [commentId])
             if !success {
-                print("⚠️ [ClipComment] Failed to decrement like count for comment \(commentId)")
+                Logger.warning("[ClipComment] Failed to decrement like count for comment \(commentId)")
             }
         }
         
@@ -1025,15 +1028,15 @@ final class ClipCommentService: ObservableObject {
     
     private func queueOutbox(userId: String, tableName: String, operation: String, recordId: String, payload: [String: Any]) async {
         do {
-            try await SyncWorker.shared.queueOperation(
-                userId: userId,
-                tableName: tableName,
+            try await SyncEngine.shared.queueOperation(
+                table: tableName,
                 operationType: operation,
                 recordId: recordId,
-                payload: payload
+                payload: payload,
+                dependsOn: nil
             )
         } catch {
-            print("⚠️ [ClipComment] Failed to enqueue outbox for \(tableName): \(error)")
+            Logger.warning("[ClipComment] Failed to enqueue outbox for \(tableName): \(error)")
         }
     }
     
@@ -1052,11 +1055,11 @@ final class ClipCommentService: ObservableObject {
                 let email = currentUser.email
                 let avatar = currentUser.avatarURL
                 
-                print("ℹ️ [ClipComment] Fetched from AuthService - name: \(name), email: \(email), avatar: \(avatar ?? "nil")")
+                Logger.debug("[ClipComment] Fetched from AuthService - name: \(name), email: \(email), avatar: \(avatar ?? "nil")")
                 
                 return (name, email, avatar)
             } else {
-                print("⚠️ [ClipComment] No matching user in AuthService for userId: \(userId)")
+                Logger.warning("[ClipComment] No matching user in AuthService for userId: \(userId)")
                 return ("User", "user@local", nil)
             }
         }
@@ -1075,7 +1078,7 @@ final class ClipCommentService: ObservableObject {
             let existingName = existingRows.first?["display_name"] as? String
             let existingAvatar = existingRows.first?["avatar_url"] as? String
             
-            print("ℹ️ [ClipComment] Profile exists - name: \(existingName ?? "nil"), avatar: \(existingAvatar ?? "nil")")
+            Logger.debug("[ClipComment] Profile exists - name: \(existingName ?? "nil"), avatar: \(existingAvatar ?? "nil")")
             
             // Update profile if avatar is missing/changed or display name changed
             let needsAvatarUpdate = existingAvatar != avatarURL && avatarURL != nil
@@ -1092,9 +1095,9 @@ final class ClipCommentService: ObservableObject {
                 """, parameters: [displayName, avatarParam, now, userId])
                 
                 if success {
-                    print("✅ [ClipComment] Updated profile - name: \(displayName), avatar: \(avatarURL ?? "nil")")
+                    Logger.debug("[ClipComment] Updated profile - name: \(displayName), avatar: \(avatarURL ?? "nil")")
                 } else {
-                    print("⚠️ [ClipComment] Failed to update profile for user \(userId)")
+                    Logger.warning("[ClipComment] Failed to update profile for user \(userId)")
                 }
             }
             
@@ -1113,7 +1116,7 @@ final class ClipCommentService: ObservableObject {
         """, parameters: [userId, email, displayName, avatarParam, now, now])
         
         if success {
-            print("✅ [ClipComment] Created profile entry for user \(userId) with name: \(displayName), avatar: \(avatarURL ?? "nil")")
+            Logger.debug("[ClipComment] Created profile entry for user \(userId) with name: \(displayName), avatar: \(avatarURL ?? "nil")")
         } else {
             // Profile might have been created in another thread/operation
             // Verify it exists now
@@ -1123,12 +1126,12 @@ final class ClipCommentService: ObservableObject {
             
             if verifyRows.isEmpty {
                 // Still doesn't exist, this is a real error
-                print("❌ [ClipComment] Failed to create profile for user \(userId)")
+                Logger.error("[ClipComment] Failed to create profile for user \(userId)")
                 throw NSError(domain: "ClipCommentService", code: 10, userInfo: [
                     NSLocalizedDescriptionKey: "Failed to create user profile"
                 ])
             } else {
-                print("ℹ️ [ClipComment] Profile already exists for user \(userId) (race condition)")
+                Logger.debug("[ClipComment] Profile already exists for user \(userId) (race condition)")
             }
         }
     }
@@ -1175,11 +1178,11 @@ extension ClipComment {
         
         // Debug logging
         if let displayName = comment.userDisplayName, let avatarURL = comment.userAvatarURL {
-            print("📝 [ClipComment] Loaded comment with user: \(displayName), avatar: \(avatarURL)")
+            Logger.debug("[ClipComment] Loaded comment with user: \(displayName), avatar: \(avatarURL)")
         } else if let displayName = comment.userDisplayName {
-            print("📝 [ClipComment] Loaded comment with user: \(displayName), avatar: nil")
+            Logger.debug("[ClipComment] Loaded comment with user: \(displayName), avatar: nil")
         } else {
-            print("⚠️ [ClipComment] Loaded comment with no user info")
+            Logger.warning("[ClipComment] Loaded comment with no user info")
         }
         
         return comment

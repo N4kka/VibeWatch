@@ -199,7 +199,7 @@ actor PostHogClient {
         do {
             try await flush()
         } catch {
-            print("📊 [PostHog] Flush failed: \(error)")
+            Logger.warning("[PostHog] Flush failed: \(error)")
             // Keep queue and retry on next flush opportunity.
         }
     }

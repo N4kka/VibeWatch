@@ -127,7 +127,7 @@ class ErrorHandler: ObservableObject {
     private func logError(_ appError: AppError, originalError: Error, context: String) {
         let contextStr = context.isEmpty ? "" : " [\(context)]"
         // Use the localized description from the AppError itself.
-        print("❌ [ErrorHandler]\(contextStr) \(appError.localizedDescription)")
+        Logger.error("[ErrorHandler]\(contextStr) \(appError.localizedDescription)")
         
         // Log to analytics
         AnalyticsService.shared.logEvent("error_handled", parameters: [

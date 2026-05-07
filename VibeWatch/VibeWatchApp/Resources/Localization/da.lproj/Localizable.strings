@@ -316,7 +316,6 @@
 "paywall.plan.monthly" = "Månedlig";
 "paywall.plan.annual" = "Årlig";
 "paywall.discount.annual" = "33% RABAT";
-"paywall.foundingMember" = "Grundlæggerpris";
 "paywall.price.perMonth" = "%@/md";
 "paywall.trial.badge" = "%@ gratis";
 "paywall.restore" = "Gendan køb";

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct DiscoveryView: View {
     @StateObject private var viewModel = DiscoveryViewModel()
+    @StateObject private var searchViewModel = SearchViewModel()
     @StateObject private var gamificationService = GamificationService.shared
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var quotaManager: DailyQuotaManager
@@ -70,7 +71,7 @@ struct DiscoveryView: View {
             ProfileView()
         }
         .fullScreenCover(isPresented: $showSearch) {
-            SearchView()
+            SearchView(viewModel: searchViewModel)
         }
         .overlay {
             if showFilters {
@@ -100,7 +101,7 @@ struct DiscoveryView: View {
         .xpToast(gamificationService: gamificationService)
         .onChange(of: appState.shouldShowSignIn) {_, newValue in
             if newValue {
-                print("🔄 [DiscoveryView] Redirecting to Sign In via Profile")
+                Logger.info("[DiscoveryView] Redirecting to Sign In via Profile")
                 showProfile = true
                 // Note: ProfileView will observe this same flag and open the SignIn sheet
             }
@@ -200,7 +201,7 @@ struct DiscoveryView: View {
                 .id(viewModel.refreshToken)
                 .refreshable {
                     // Force refresh from TMDB to get latest content and reload images
-                    print("🔄 [DiscoveryView] Pull-to-refresh triggered")
+                    Logger.debug("[DiscoveryView] Pull-to-refresh triggered")
                     await viewModel.refreshContent()
                 }
                 .background(Color.theme.background.ignoresSafeArea())

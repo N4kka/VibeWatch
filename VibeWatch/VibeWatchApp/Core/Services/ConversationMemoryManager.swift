@@ -115,13 +115,17 @@ final class ConversationMemoryManager: ObservableObject {
             )
 
             let recordId = record["id"] as? String ?? UUID().uuidString
-            await SyncManager.shared.queueSync(
-                operation: .insertRecord(
+            do {
+                try await SyncEngine.shared.queueOperation(
                     table: "ai_conversation_history",
+                    operationType: "INSERT",
                     recordId: recordId,
-                    record: record
+                    payload: record,
+                    dependsOn: nil
                 )
-            )
+            } catch {
+                Logger.error("[ConversationMemoryManager] Failed to queue sync: \(error)")
+            }
         } catch {
             Logger.error("[ConversationMemoryManager] Failed to persist conversation message", error: error)
         }

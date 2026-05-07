@@ -46,9 +46,10 @@ class ListManager: ObservableObject {
     @Published var likedList: MediaList
     @Published var dislikedList: MediaList
     @Published var softLimitWarningMessage: String?
+    @Published var isLoadingInitial = true
     
     private let db = SQLiteService.shared
-    private let sync = SyncWorker.shared
+    private let sync = SyncEngine.shared
     private let supabase = SupabaseService.shared
     private let authService = AuthService.shared
     private var cancellables = Set<AnyCancellable>()
@@ -89,16 +90,16 @@ class ListManager: ObservableObject {
     // Call this when user logs in
     func syncListsForAuthenticatedUser() async {
         guard let authenticatedUserId = authService.currentUser?.id else {
-            print("⚠️ [ListManager] Not authenticated, cannot sync remote lists.")
+            Logger.warning("[ListManager] Not authenticated, cannot sync remote lists.")
             return
         }
 
-        print("🔄 [ListManager] Syncing lists for authenticated user: \(authenticatedUserId)")
+        Logger.info("[ListManager] Syncing lists for authenticated user: \(authenticatedUserId.prefix(8))...")
         
         do {
             // 1. Fetch remote lists for the authenticated user
             var remoteLists = try await supabase.fetchLists()
-            print("✅ [ListManager] Fetched \(remoteLists.count) remote lists from Supabase.")
+            Logger.info("[ListManager] Fetched \(remoteLists.count) remote lists from Supabase.")
             
             // 2. Load current local lists (which might still contain anonymous lists)
             let localListsBeforeSync = lists
@@ -115,28 +116,28 @@ class ListManager: ObservableObject {
                     do {
                         // Create it on Supabase - using the local list's data
                         _ = try await supabase.createList(id: localList.id, name: localList.name, description: localList.description, type: .custom)
-                        print("⬆️ [ListManager] Uploaded local custom list '\(localList.name)' to Supabase.")
+                        Logger.info("[ListManager] Uploaded local custom list '\(localList.name)' to Supabase.")
                         
                         // Upload its items too
                         for item in localList.items {
                             _ = try await supabase.addItemToList(listId: localList.id, item: item)
-                            print("⬆️ [ListManager] Uploaded item '\(item.title)' to Supabase for list '\(localList.name)'.")
+                            Logger.debug("[ListManager] Uploaded item '\(item.title)' to Supabase for list '\(localList.name)'.")
                         }
                         remoteLists.append(localList) // Add to our working set of lists
                     } catch {
-                        print("❌ [ListManager] Failed to upload local custom list '\(localList.name)': \(error)")
+                        Logger.error("[ListManager] Failed to upload local custom list '\(localList.name)': \(error)")
                     }
                 }
             }
             
             // 5. Update local state with the merged lists
             applyLists(remoteLists)
-            saveLists() // Save to UserDefaults (now containing authenticated lists)
-            
-            print("✅ [ListManager] Lists synced successfully for authenticated user.")
+            await saveListsToSQLite()
+
+            Logger.info("[ListManager] Lists synced successfully for authenticated user.")
             
         } catch {
-            print("❌ [ListManager] Error syncing lists for authenticated user: \(error)")
+            Logger.error("[ListManager] Error syncing lists for authenticated user: \(error)")
             // If fetching remote lists fails, perhaps revert to local only or show error
             // For now, we'll just log and keep whatever local state was there
         }
@@ -144,7 +145,7 @@ class ListManager: ObservableObject {
     
     // Call this when user logs out
     func resetListsForLoggedOutUser() {
-        print("↩️ [ListManager] Resetting lists for logged out user.")
+        Logger.info("[ListManager] Resetting lists for logged out user.")
         
         // Clear all lists and revert to empty default lists only
         // This ensures no authenticated user data remains visible
@@ -160,33 +161,103 @@ class ListManager: ObservableObject {
         self.likedList = emptyLikedList
         self.dislikedList = emptyDislikedList
         
-        // Save the empty state
-        saveLists()
-        
-        print("✅ [ListManager] Lists cleared for logged out user - showing empty defaults only.")
+        // Save the empty state to SQLite
+        Task { await saveListsToSQLite() }
+
+        Logger.info("[ListManager] Lists cleared for logged out user - showing empty defaults only.")
     }
     
     func loadLists() {
-        // Load from UserDefaults synchronously first (backward compatibility)
-        if let data = UserDefaults.standard.data(forKey: "media_lists"),
-           let decoded = try? JSONDecoder().decode([MediaList].self, from: data) {
-            applyLists(decoded)
-            print("📋 [ListManager] Loaded \(decoded.count) lists from UserDefaults")
-            
-            // Ensure all lists exist in database
-            Task {
-                await ensureListsInDatabase()
+        // Load from SQLite ONLY (single source of truth)
+        Task {
+            await migrateFromUserDefaultsIfNeeded()
+            await loadListsFromSQLite()
+            isLoadingInitial = false
+            await ensureListsInDatabase()
+        }
+    }
+
+    /// One-time migration: import lists from UserDefaults to SQLite, then delete the key
+    private func migrateFromUserDefaultsIfNeeded() async {
+        let userDefaultsKey = "media_lists"
+        guard let data = UserDefaults.standard.data(forKey: userDefaultsKey),
+              let decoded = try? JSONDecoder().decode([MediaList].self, from: data) else {
+            return
+        }
+
+        Logger.info("[ListManager] Migrating \(decoded.count) lists from UserDefaults to SQLite...")
+        for list in decoded {
+            await ensureListInSQLite(list)
+            for item in list.items {
+                await addItemToSQLite(item, listId: list.id)
             }
-        } else {
-            // Initialize with default lists
+        }
+
+        UserDefaults.standard.removeObject(forKey: userDefaultsKey)
+        Logger.info("[ListManager] Migration complete. Removed UserDefaults key '\(userDefaultsKey)'")
+    }
+
+    /// Load lists from SQLite (single source of truth)
+    private func loadListsFromSQLite() async {
+        let currentUserId = AuthService.shared.currentUser?.id ?? getDeviceId()
+
+        do {
+            let listsQuery = """
+                SELECT l.id, l.name, l.description, l.type, l.created_at
+                FROM lists l
+                WHERE l.user_id = ?
+                ORDER BY l.created_at DESC
+            """
+            let listRows = try await db.queryRaw(listsQuery, parameters: [currentUserId])
+
+            guard !listRows.isEmpty else {
+                // No lists in SQLite - initialize with defaults
+                self.lists = [watchlist, seenList, likedList, dislikedList]
+                Logger.info("[ListManager] No lists in SQLite. Initialized defaults.")
+                return
+            }
+
+            let listIds = listRows.compactMap { $0["id"] as? String }
+            let placeholders = listIds.map { _ in "?" }.joined(separator: ", ")
+            let itemsQuery = """
+                SELECT * FROM list_items
+                WHERE list_id IN (\(placeholders)) AND deleted_at IS NULL
+                ORDER BY added_at DESC
+            """
+            let itemRows = try await db.queryRaw(itemsQuery, parameters: listIds)
+
+            var itemsByListId: [String: [MediaListItem]] = [:]
+            for row in itemRows {
+                guard let listId = row["list_id"] as? String,
+                      let item = MediaListItem.from(dictionary: row) else { continue }
+                itemsByListId[listId, default: []].append(item)
+            }
+
+            var loadedLists: [MediaList] = []
+            for row in listRows {
+                guard let id = row["id"] as? String,
+                      let name = row["name"] as? String,
+                      let typeRaw = row["type"] as? String,
+                      let type = ListType(rawValue: typeRaw) else { continue }
+
+                let items = itemsByListId[id] ?? []
+                let list = MediaList(
+                    id: id,
+                    name: name,
+                    description: row["description"] as? String,
+                    type: type,
+                    createdAt: ISO8601DateFormatter().date(from: row["created_at"] as? String ?? "") ?? Date(),
+                    items: items
+                )
+                loadedLists.append(list)
+            }
+
+            applyLists(loadedLists)
+            Logger.info("[ListManager] Loaded \(loadedLists.count) lists with \(itemRows.count) items from SQLite")
+        } catch {
+            Logger.error("[ListManager] Failed to load from SQLite: \(error)")
+            // Initialize with defaults rather than failing silently
             self.lists = [watchlist, seenList, likedList, dislikedList]
-            saveLists()
-            print("📋 [ListManager] Initialized default lists")
-            
-            // Create lists in database
-            Task {
-                await ensureListsInDatabase()
-            }
         }
     }
     
@@ -203,10 +274,10 @@ class ListManager: ObservableObject {
             if authService.currentUser != nil {
                 do {
                     _ = try await supabase.createList(id: list.id, name: list.name, description: list.description, type: list.type)
-                    print("✅ [ListManager] Ensured list '\(list.name)' exists in Supabase")
+                    Logger.debug("[ListManager] Ensured list '\(list.name)' exists in Supabase")
                 } catch {
                     // List might already exist, which is fine
-                    print("ℹ️ [ListManager] List '\(list.name)' may already exist in Supabase: \(error)")
+                    Logger.debug("[ListManager] List '\(list.name)' may already exist in Supabase: \(error)")
                 }
             }
         }
@@ -225,9 +296,9 @@ class ListManager: ObservableObject {
         ])
         
         if success {
-            print("✅ [ListManager] Ensured device profile exists in SQLite")
+            Logger.debug("[ListManager] Ensured device profile exists in SQLite")
         } else {
-            print("⚠️ [ListManager] Failed to ensure device profile in SQLite")
+            Logger.warning("[ListManager] Failed to ensure device profile in SQLite")
         }
     }
     
@@ -245,9 +316,9 @@ class ListManager: ObservableObject {
         ])
         
         if success {
-            print("✅ [ListManager] Ensured list '\(list.name)' exists in SQLite")
+            Logger.debug("[ListManager] Ensured list '\(list.name)' exists in SQLite")
         } else {
-            print("⚠️ [ListManager] Failed to ensure list '\(list.name)' in SQLite")
+            Logger.warning("[ListManager] Failed to ensure list '\(list.name)' in SQLite")
         }
     }
 
@@ -297,10 +368,36 @@ class ListManager: ObservableObject {
         }
     }
     
-    func saveLists() {
-        if let encoded = try? JSONEncoder().encode(lists) {
-            UserDefaults.standard.set(encoded, forKey: "media_lists")
+    /// Save all current lists (metadata + items) to SQLite
+    private func saveListsToSQLite() async {
+        for list in lists {
+            await ensureListInSQLite(list)
+            if !list.items.isEmpty {
+                await saveItemsToSQLite(list.items, listId: list.id)
+            }
         }
+    }
+
+    /// Batch-upsert items using INSERT OR IGNORE so synced items survive the next cold launch
+    private func saveItemsToSQLite(_ items: [MediaListItem], listId: String) async {
+        let records: [[String: Any]] = items.map { item in [
+            "id": item.id,
+            "list_id": listId,
+            "user_id": userId,
+            "media_id": item.mediaId,
+            "media_type": item.mediaType.rawValue,
+            "title": item.title,
+            "poster_path": item.posterPath ?? "",
+            "runtime": item.runtime as Any,
+            "vote_average": item.voteAverage as Any,
+            "vote_count": item.voteCount as Any,
+            "origin_country": stringArray(item.originCountry),
+            "release_date": item.releaseDate ?? "",
+            "genres": intArray(item.genres),
+            "overview": item.overview ?? "",
+            "added_at": ISO8601DateFormatter().string(from: item.addedAt)
+        ]}
+        await db.performBatchInsert(table: "list_items", records: records)
     }
 
     @discardableResult
@@ -311,7 +408,7 @@ class ListManager: ObservableObject {
         }
         let remoteLists = try await supabase.fetchLists()
         applyLists(remoteLists)
-        saveLists()
+        await saveListsToSQLite()
         return remoteLists
     }
     
@@ -334,12 +431,7 @@ class ListManager: ObservableObject {
         let newList = try await supabase.createList(id: listId, name: trimmedName, description: description, type: .custom)
         
         lists.append(newList)
-        saveLists()
-        
-        // Ensure list exists in SQLite too
-        Task {
-            await ensureListInSQLite(newList)
-        }
+        await ensureListInSQLite(newList)
         
         // Analytics: Track list creation
         AnalyticsService.shared.logListCreated(listType: "custom", listName: trimmedName)
@@ -371,7 +463,7 @@ class ListManager: ObservableObject {
         lists[index] = updated
         updateDefaultReferences(from: lists)
         notifySoftLimitIfNeeded(for: lists[index])
-        saveLists()
+        Task { await ensureListInSQLite(updated) }
     }
     
     func deleteList(id: String) async throws {
@@ -387,7 +479,16 @@ class ListManager: ObservableObject {
             try await supabase.deleteList(id: id)
         }
         lists.remove(at: index)
-        saveLists()
+        // Soft delete from SQLite
+        Task {
+            let success = db.execute(
+                "UPDATE lists SET deleted_at = datetime('now') WHERE id = ?",
+                parameters: [id]
+            )
+            if !success {
+                Logger.error("[ListManager] Failed to soft-delete list \(id) from SQLite")
+            }
+        }
         
         // Analytics: Track list deletion
         AnalyticsService.shared.logListDeleted(listType: listType)
@@ -451,9 +552,9 @@ class ListManager: ObservableObject {
             Task {
                 do {
                     _ = try await supabase.addItemToList(listId: listId, item: item)
-                    print("✅ [ListManager] Synced item to Supabase")
+                    Logger.debug("[ListManager] Synced item to Supabase")
                 } catch {
-                    print("⚠️ [ListManager] Failed to sync to Supabase: \(error)")
+                    Logger.warning("[ListManager] Failed to sync to Supabase: \(error)")
                     // Don't throw - local save already succeeded
                 }
             }
@@ -466,8 +567,8 @@ class ListManager: ObservableObject {
 
         updateDefaultReferences(from: lists)
         notifySoftLimitIfNeeded(for: lists[index])
-        saveLists()
-        
+        // Item already saved to SQLite via addItemToSQLite above
+
         // Analytics: Track item added
         AnalyticsService.shared.logItemAddedToList(
             listType: lists[index].type.rawValue,
@@ -503,7 +604,6 @@ class ListManager: ObservableObject {
             if let index = lists.firstIndex(where: { $0.id == listId }) {
                 lists[index].items = items
                 updateDefaultReferences(from: lists)
-                saveLists()
             }
             return items
         }
@@ -535,9 +635,9 @@ class ListManager: ObservableObject {
             Task {
                 do {
                     try await supabase.removeItemFromList(itemId: itemId)
-                    print("✅ [ListManager] Synced removal to Supabase")
+                    Logger.debug("[ListManager] Synced removal to Supabase")
                 } catch {
-                    print("⚠️ [ListManager] Failed to sync removal to Supabase: \(error)")
+                    Logger.warning("[ListManager] Failed to sync removal to Supabase: \(error)")
                     // Don't throw - local removal already succeeded
                 }
             }
@@ -547,8 +647,6 @@ class ListManager: ObservableObject {
         Task {
             await removeItemFromSQLite(itemId)
         }
-        
-        saveLists()
     }
     
     private func removeItemFromSQLite(_ itemId: String) async {
@@ -562,17 +660,17 @@ class ListManager: ObservableObject {
             
             // Queue for sync
             try await sync.queueOperation(
-                userId: userId,
-                tableName: "list_items",
+                table: "list_items",
                 operationType: "DELETE",
                 recordId: itemId,
-                payload: ["id": itemId]
+                payload: ["id": itemId],
+                dependsOn: nil
             )
             
-            print("✅ [ListManager] Removed item \(itemId) from SQLite and queued for sync")
-            
+            Logger.debug("[ListManager] Removed item \(itemId) from SQLite and queued for sync")
+
         } catch {
-            print("❌ [ListManager] Failed to remove item from SQLite: \(error)")
+            Logger.error("[ListManager] Failed to remove item from SQLite: \(error)")
         }
     }
     
@@ -606,17 +704,17 @@ class ListManager: ObservableObject {
             
             // Queue for sync
             try await sync.queueOperation(
-                userId: userId,
-                tableName: "list_items",
+                table: "list_items",
                 operationType: "INSERT",
                 recordId: item.id,
-                payload: values
+                payload: values,
+                dependsOn: nil
             )
             
-            print("✅ [ListManager] Added item '\(item.title)' to SQLite and queued for sync")
-            
+            Logger.debug("[ListManager] Added item '\(item.title)' to SQLite and queued for sync")
+
         } catch {
-            print("❌ [ListManager] Failed to add item to SQLite: \(error)")
+            Logger.error("[ListManager] Failed to add item to SQLite: \(error)")
         }
     }
     

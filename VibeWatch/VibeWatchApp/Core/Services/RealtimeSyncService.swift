@@ -15,7 +15,7 @@ class RealtimeSyncService: ObservableObject {
     // MARK: - Dependencies
 
     private let supabaseClient: SupabaseService
-    private let sqliteService: SQLiteService
+    private let syncEngine: SyncEngineProtocol
     private var subscriptions: Set<AnyCancellable> = []
 
     // MARK: - Constants
@@ -27,10 +27,10 @@ class RealtimeSyncService: ObservableObject {
 
     private init(
         supabaseClient: SupabaseService = .shared,
-        sqliteService: SQLiteService = .shared
+        syncEngine: SyncEngineProtocol = SyncEngine.shared
     ) {
         self.supabaseClient = supabaseClient
-        self.sqliteService = sqliteService
+        self.syncEngine = syncEngine
 
         // Get device ID
         if let savedDeviceId = UserDefaults.standard.string(forKey: "deviceIdentifier") {
@@ -140,21 +140,17 @@ class RealtimeSyncService: ObservableObject {
 
         Logger.info("[RealtimeSyncService] 📥 Received preference update from device: \(recordDeviceId)")
 
-        do {
-            // Update local database with new data
-            try await updateLocalPreference(record)
+        // Trigger SyncEngine to pull from remote instead of writing directly
+        await syncEngine.pullFromRemote()
 
-            lastRealtimeUpdate = Date()
+        lastRealtimeUpdate = Date()
 
-            // Notify UI to refresh
-            NotificationCenter.default.post(
-                name: .realtimePreferenceUpdated,
-                object: nil,
-                userInfo: ["record": record]
-            )
-        } catch {
-            Logger.error("[RealtimeSyncService] Failed to handle preference update", error: error)
-        }
+        // Notify UI to refresh
+        NotificationCenter.default.post(
+            name: .realtimePreferenceUpdated,
+            object: nil,
+            userInfo: ["record": record]
+        )
     }
 
     private func handleReactionUpdate(_ payload: RealtimePayload) async {
@@ -167,19 +163,16 @@ class RealtimeSyncService: ObservableObject {
 
         Logger.info("[RealtimeSyncService] 📥 Received reaction update from device: \(recordDeviceId)")
 
-        do {
-            try await updateLocalReaction(record)
+        // Trigger SyncEngine to pull from remote instead of writing directly
+        await syncEngine.pullFromRemote()
 
-            lastRealtimeUpdate = Date()
+        lastRealtimeUpdate = Date()
 
-            NotificationCenter.default.post(
-                name: .realtimeReactionUpdated,
-                object: nil,
-                userInfo: ["record": record]
-            )
-        } catch {
-            Logger.error("[RealtimeSyncService] Failed to handle reaction update", error: error)
-        }
+        NotificationCenter.default.post(
+            name: .realtimeReactionUpdated,
+            object: nil,
+            userInfo: ["record": record]
+        )
     }
 
     private func handleListUpdate(_ payload: RealtimePayload) async {
@@ -192,78 +185,18 @@ class RealtimeSyncService: ObservableObject {
 
         Logger.info("[RealtimeSyncService] 📥 Received list update from device: \(recordDeviceId)")
 
-        do {
-            try await updateLocalList(record)
+        // Trigger SyncEngine to pull from remote instead of writing directly
+        await syncEngine.pullFromRemote()
 
-            lastRealtimeUpdate = Date()
+        lastRealtimeUpdate = Date()
 
-            NotificationCenter.default.post(
-                name: .realtimeListUpdated,
-                object: nil,
-                userInfo: ["record": record]
-            )
-        } catch {
-            Logger.error("[RealtimeSyncService] Failed to handle list update", error: error)
-        }
+        NotificationCenter.default.post(
+            name: .realtimeListUpdated,
+            object: nil,
+            userInfo: ["record": record]
+        )
     }
 
-    // MARK: - Private Methods - Database Updates
-
-    private func updateLocalPreference(_ record: [String: Any]) async throws {
-        guard let preferenceId = record["preference_id"] as? String,
-              let userId = record["user_id"] as? String,
-              let category = record["preference_category"] as? String else {
-            throw RealtimeSyncError.invalidRecord
-        }
-
-        let sql = """
-            INSERT OR REPLACE INTO unified_user_preferences (
-                id, user_id, device_id, preference_category, preference_id,
-                preference_name, score, score_from_clips, score_from_discovery,
-                score_from_search, score_from_ai, score_from_lists,
-                interaction_count, last_interaction_at, updated_at, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """
-
-        let values: [Any] = [
-            record["id"] ?? UUID().uuidString,
-            userId,
-            record["device_id"] ?? deviceId,
-            category,
-            preferenceId,
-            record["preference_name"] ?? NSNull(),
-            record["score"] ?? 0.0,
-            record["score_from_clips"] ?? 0.0,
-            record["score_from_discovery"] ?? 0.0,
-            record["score_from_search"] ?? 0.0,
-            record["score_from_ai"] ?? 0.0,
-            record["score_from_lists"] ?? 0.0,
-            record["interaction_count"] ?? 0,
-            record["last_interaction_at"] ?? NSNull(),
-            record["updated_at"] ?? ISO8601DateFormatter().string(from: Date()),
-            record["created_at"] ?? ISO8601DateFormatter().string(from: Date())
-        ]
-
-        let success = sqliteService.execute(sql, parameters: values)
-
-        if !success {
-            throw RealtimeSyncError.databaseUpdateFailed
-        }
-
-        Logger.debug("[RealtimeSyncService] Updated local preference: \(category)/\(preferenceId)")
-    }
-
-    private func updateLocalReaction(_ record: [String: Any]) async throws {
-        // Implementation similar to updateLocalPreference
-        // Update movie_reactions table with new data
-        Logger.debug("[RealtimeSyncService] Updating local reaction")
-    }
-
-    private func updateLocalList(_ record: [String: Any]) async throws {
-        // Implementation similar to updateLocalPreference
-        // Update list_items table with new data
-        Logger.debug("[RealtimeSyncService] Updating local list item")
-    }
 }
 
 // MARK: - Realtime Payload

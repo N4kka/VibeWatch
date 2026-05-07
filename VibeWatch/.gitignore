@@ -27,3 +27,5 @@ supabase/
 VibeWatchApp/Scripts/
 VibeWatchApp/Config/
 *.md
+!.planning/**
+.mcp.json

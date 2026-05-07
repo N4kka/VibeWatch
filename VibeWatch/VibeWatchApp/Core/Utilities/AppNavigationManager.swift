@@ -5,10 +5,14 @@ import SwiftUI
 // MARK: - DeepLinkTarget
 
 /// Represents a specific destination within the app that can be triggered by a deep link.
-struct DeepLinkTarget: Identifiable {
+struct DeepLinkTarget: Identifiable, Equatable {
     let id = UUID() // For Identifiable conformance, useful for some SwiftUI modifiers
     let mediaId: Int
     let mediaType: String // "movie" or "tv"
+
+    static func == (lhs: DeepLinkTarget, rhs: DeepLinkTarget) -> Bool {
+        lhs.mediaId == rhs.mediaId && lhs.mediaType == rhs.mediaType
+    }
 }
 
 // MARK: - AppNavigationManager
@@ -21,9 +25,9 @@ class AppNavigationManager: ObservableObject {
     @Published var deepLinkTarget: DeepLinkTarget? = nil {
         didSet {
             if deepLinkTarget != nil {
-                print("🔗 AppNavigationManager: Deep link target set: \(deepLinkTarget?.mediaType ?? "") \(deepLinkTarget?.mediaId ?? 0)")
+                Logger.debug("[AppNavigationManager] Deep link target set: \(deepLinkTarget?.mediaType ?? "") \(deepLinkTarget?.mediaId ?? 0)")
             } else {
-                print("🔗 AppNavigationManager: Deep link target cleared.")
+                Logger.debug("[AppNavigationManager] Deep link target cleared.")
             }
         }
     }
@@ -34,7 +38,7 @@ class AppNavigationManager: ObservableObject {
     /// and attempts to set a deep link target.
     /// - Parameter userInfo: The dictionary containing deep link information.
     func handle(userInfo: [AnyHashable: Any]) {
-        print("🔗 AppNavigationManager: Handling userInfo for deep link: \(userInfo)")
+        Logger.debug("[AppNavigationManager] Handling userInfo for deep link: \(userInfo)")
         
         // --- More robust parsing to handle different possible keys ---
         let mediaIdKey = userInfo["media_id"] != nil ? "media_id" : "movie_id"
@@ -51,22 +55,22 @@ class AppNavigationManager: ObservableObject {
         
         // Ensure mediaType is a string
         guard let mediaType = userInfo[mediaTypeKey] as? String else {
-            print("❌ AppNavigationManager: Deep link userInfo is missing or has invalid media type key.")
+            Logger.error("[AppNavigationManager] Deep link userInfo is missing or has invalid media type key.")
             return
         }
         
         // Ensure we have a valid mediaId
         guard let mediaId = parsedMediaId else {
-            print("❌ AppNavigationManager: Deep link userInfo is missing or has invalid media id key.")
+            Logger.error("[AppNavigationManager] Deep link userInfo is missing or has invalid media id key.")
             return
         }
 
         // Ensure mediaType is valid (even if the key was movie_type, the value should be 'movie' or 'tv')
         if mediaType == "movie" || mediaType == "tv" {
             self.deepLinkTarget = DeepLinkTarget(mediaId: mediaId, mediaType: mediaType)
-            print("🔗 AppNavigationManager: Parsed deep link to \(mediaType) ID \(mediaId)")
+            Logger.debug("[AppNavigationManager] Parsed deep link to \(mediaType) ID \(mediaId)")
         } else {
-            print("❌ AppNavigationManager: Invalid media_type value in deep link: \(mediaType)")
+            Logger.error("[AppNavigationManager] Invalid media_type value in deep link: \(mediaType)")
         }
     }
     

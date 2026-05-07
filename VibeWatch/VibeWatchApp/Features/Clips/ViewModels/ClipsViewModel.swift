@@ -46,7 +46,11 @@ class ClipsViewModel: ObservableObject {
             if prefetchService.shouldFetchToday() {
                 Logger.info("📅 [ClipsViewModel] Triggering daily clips pre-fetch...")
                 Task {
-                    try? await prefetchService.prefetchClips(targetCount: 800)
+                    do {
+                        try await prefetchService.prefetchClips(targetCount: 800)
+                    } catch {
+                        Logger.error("[ClipsViewModel] Failed to prefetch clips: \(error.localizedDescription)")
+                    }
                 }
             }
             
@@ -168,7 +172,11 @@ class ClipsViewModel: ObservableObject {
             }
             
             Task {
-                try? await ClipsService.shared.updateLikeStatus(clipId: clipId, isLiked: isLiked)
+                do {
+                    try await ClipsService.shared.updateLikeStatus(clipId: clipId, isLiked: isLiked)
+                } catch {
+                    Logger.error("[ClipsViewModel] Failed to update like status: \(error.localizedDescription)")
+                }
 
                 let (genreIds, actorIds) = await fetchGenresAndActors(for: updatedClip)
                 recordUnifiedPreferences(
@@ -262,13 +270,25 @@ class ClipsViewModel: ObservableObject {
         do {
             if clip.inferredMediaType == .movie {
                 let movie = try await tmdbService.getMovieDetails(id: mediaId)
-                let credits = try? await tmdbService.getMovieCredits(id: mediaId)
+                let credits: Credits?
+                do {
+                    credits = try await tmdbService.getMovieCredits(id: mediaId)
+                } catch {
+                    Logger.debug("[ClipsViewModel] Credits unavailable for movie \(mediaId): \(error.localizedDescription)")
+                    credits = nil
+                }
                 let genreIds = movie.genreIds ?? movie.genres?.map { $0.id } ?? []
                 let actorIds = credits?.cast.prefix(5).map { $0.id } ?? []
                 return (genreIds, actorIds)
             } else {
                 let tv = try await tmdbService.getTVShowDetails(id: mediaId)
-                let credits = try? await tmdbService.getTVShowCredits(id: mediaId)
+                let credits: Credits?
+                do {
+                    credits = try await tmdbService.getTVShowCredits(id: mediaId)
+                } catch {
+                    Logger.debug("[ClipsViewModel] Credits unavailable for TV show \(mediaId): \(error.localizedDescription)")
+                    credits = nil
+                }
                 let genreIds = tv.genreIds ?? tv.genres?.map { $0.id } ?? []
                 let actorIds = credits?.cast.prefix(5).map { $0.id } ?? []
                 return (genreIds, actorIds)

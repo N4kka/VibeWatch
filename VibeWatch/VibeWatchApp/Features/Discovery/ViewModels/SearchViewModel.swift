@@ -16,18 +16,28 @@ class SearchViewModel: ObservableObject {
     @Published var error: AppError?
     
     private var searchTask: Task<Void, Never>?
-    private let tmdbService = TMDBService.shared
-    private let preferenceManager = UserPreferenceManager.shared
+    private let tmdbService: any TMDBServiceProtocol
+    private let preferenceManager: UserPreferenceManager
     private let visitedItemsKey = "latestVisitedItems" // UserDefaults key
     private let maxVisitedItems = 2 // Max items to store
     private var lastLoggedQuery: String?
     private var lastLoggedAt: Date?
-    
-    init() {
-        print("SearchViewModel: init() called")
+
+    init(
+        tmdbService: any TMDBServiceProtocol = TMDBService.shared,
+        preferenceManager: UserPreferenceManager = .shared
+    ) {
+        self.tmdbService = tmdbService
+        self.preferenceManager = preferenceManager
+        Logger.debug("[SearchViewModel] init() called")
         self.loadTrendingSearches()
         Task { await self.loadLatestVisitedItems() }
-    }    
+    }
+
+    deinit {
+        searchTask?.cancel()
+    }
+
     func search() {
         searchTask?.cancel()
         
@@ -172,7 +182,7 @@ class SearchViewModel: ObservableObject {
                             )
                         }
                     } catch {
-                        print("Error loading visited item \(item.id) (\(item.mediaType)): \(error)")
+                        Logger.warning("[SearchViewModel] Error loading visited item \(item.id) (\(item.mediaType)): \(error)")
                     }
                     return nil
                 }

@@ -512,7 +512,7 @@ struct CustomActorAlertsView: View {
                 prefs.customActorAlerts = selectedActorIds
                 await notificationService.savePreferences(userId: userId, preferences: prefs)
                 await notificationService.registerActorAlerts(userId: userId, actorIds: selectedActorIds)
-                print("✅ [CustomActorAlerts] Saved \(selectedActorIds.count) actor alerts")
+                Logger.info("[CustomActorAlerts] Saved \(selectedActorIds.count) actor alerts")
             }
         }
     }
@@ -701,7 +701,7 @@ struct CustomGenreAlertsView: View {
                 prefs.customGenreAlerts = selectedGenreIds
                 await notificationService.savePreferences(userId: userId, preferences: prefs)
                 await notificationService.registerGenreAlerts(userId: userId, genreIds: selectedGenreIds)
-                print("✅ [CustomGenreAlerts] Saved \(selectedGenreIds.count) genre alerts")
+                Logger.info("[CustomGenreAlerts] Saved \(selectedGenreIds.count) genre alerts")
             }
         }
     }

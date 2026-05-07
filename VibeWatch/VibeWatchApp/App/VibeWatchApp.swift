@@ -6,11 +6,12 @@ struct VibeWatchApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var appState = AppState()
     @StateObject private var localizationManager = LocalizationManager.shared
-    @StateObject private var syncWorker = SyncWorker.shared
+    @StateObject private var syncEngine = SyncEngine.shared
     @StateObject private var sqliteDB = SQLiteService.shared
     @StateObject private var appNavigationManager = AppNavigationManager.shared
     @StateObject private var authService = AuthService.shared
     @StateObject private var quotaManager = DailyQuotaManager.shared
+    @StateObject private var dependencies = DependencyContainer.shared
     
     init() {
         // Configure RevenueCat with appropriate log level
@@ -21,8 +22,8 @@ struct VibeWatchApp: App {
         _ = LocalizationManager.shared
         
         // Initialize offline-first database
-        print("🗄️ [App] Initializing SQLite database...")
-        print("✅ [RevenueCat] Configured with API key")
+        Logger.info("[App] Initializing SQLite database...")
+        Logger.info("[App] RevenueCat configured with API key")
     }
     
     var body: some Scene {
@@ -30,40 +31,27 @@ struct VibeWatchApp: App {
             MainTabView()
                 .environmentObject(appState)
                 .environmentObject(localizationManager)
-                .environmentObject(syncWorker)
+                .environmentObject(syncEngine)
                 .environmentObject(appNavigationManager)
                 .environmentObject(authService)
                 .environmentObject(quotaManager)
+                .environmentObject(dependencies)
                 .preferredColorScheme(.dark)
                 .task {
-                    // Start background sync worker
-                    await syncWorker.startPeriodicSync()
-                    print("🔄 [App] Background sync started")
+                    // SyncEngine automatically handles periodic syncs via state machine
+                    Logger.info("[App] SyncEngine initialized")
                 }
                 .onOpenURL { url in
                     // Handle deep links from URL schemes (e.g., OAuth)
-                    print("📱 Deep link received via URL (SwiftUI): \(url.absoluteString)")
+                    Logger.info("[App] Deep link received via URL (SwiftUI): \(url.absoluteString)")
                     Task {
                         do {
                             try await AuthService.shared.handleAuthCallback(url: url)
                             appState.isAuthenticated = AuthService.shared.isAuthenticated
                             appState.currentUser = AuthService.shared.currentUser
                         } catch {
-                            print("❌ Error handling deep link from URL: \(error.localizedDescription)")
+                            Logger.error("[App] Error handling deep link from URL: \(error.localizedDescription)")
                         }
-                    }
-                }
-                // Handle deep links from push notifications
-                .sheet(item: $appNavigationManager.deepLinkTarget) { target in
-                    Group {
-                        if target.mediaType == "movie" {
-                            MovieDetailView(movieId: target.mediaId)
-                        } else if target.mediaType == "tv" {
-                            TVShowDetailView(tvShowId: target.mediaId)
-                        }
-                    }
-                    .onDisappear {
-                        appNavigationManager.clearDeepLinkTarget()
                     }
                 }
                 .fullScreenCover(item: $appState.updateRequirement) { requirement in
@@ -88,19 +76,44 @@ class AppState: ObservableObject {
     
     private let authService: AuthService
     private let dataCoordinator = DataCoordinator.shared
-    
+
+    /// Prevents generatePersonalizedCarousels from firing more than once per AppState lifetime.
+    /// Starts false; set to true after the first carousel generation completes.
+    private(set) var carouselsGeneratedThisLaunch = false
+
     init(authService: AuthService = .shared) {
         self.authService = authService
 
-        // Immediately load from cached auth state (synchronous)
+        // INSTANT LAUNCH (Phase 4): Load cached state synchronously
         self.isAuthenticated = authService.isAuthenticated
         self.currentUser = authService.currentUser
-        print("📱 [AppState] Initialized with auth state: authenticated=\(isAuthenticated), user=\(currentUser?.email ?? "nil")")
 
-        Task {
+        // Check if we have cached content for instant display
+        let hasCachedContent = loadCachedContentSync()
+        if hasCachedContent {
+            // Show UI immediately with cached content
+            self.isPreloading = false
+            Logger.info("[AppState] Instant launch - showing cached content")
+        }
+
+        Logger.info("[AppState] Initialized with auth state: authenticated=\(isAuthenticated), user=\(currentUser?.email ?? "nil")")
+
+        // Background initialization (non-blocking)
+        Task(priority: .userInitiated) {
             await checkForRequiredUpdate()
             await checkAuthState()
-            await preloadContent()
+
+            // CRITICAL: Sync user data from Supabase on every app launch
+            await performFullSyncOnLaunch()
+
+            // Only run full preload if we didn't have cached content
+            if !hasCachedContent {
+                await preloadContent()
+            } else {
+                // Still run background refresh, but don't block UI
+                await refreshContentInBackground()
+            }
+
             await RevenueCatService.shared.refreshOfferings()
 
             // Check and execute daily prefetch for PRO users
@@ -117,24 +130,124 @@ class AppState: ObservableObject {
         ) { [weak self] _ in
             Task {
                 await self?.checkForRequiredUpdate()
+
+                // CRITICAL: Sync user data when returning to foreground
+                await self?.performSyncOnForegroundResume()
+
                 // Also check for notifications when returning to foreground
                 await self?.scheduleSmartNotificationsIfNeeded()
             }
         }
     }
 
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
     func checkAuthState() async {
         await authService.checkAuthState()
         self.isAuthenticated = authService.isAuthenticated
         self.currentUser = authService.currentUser
-        print("🔄 [AppState] Updated auth state: authenticated=\(isAuthenticated), user=\(currentUser?.email ?? "nil")")
+        Logger.info("[AppState] Updated auth state: authenticated=\(isAuthenticated), user=\(currentUser?.email ?? "nil")")
+    }
+
+    /// Perform full sync from Supabase on app launch
+    /// This ensures data persists across days and devices
+    private func performFullSyncOnLaunch() async {
+        guard isAuthenticated, let userId = currentUser?.id else {
+            Logger.info("[AppState] Skipping sync - not authenticated")
+            return
+        }
+
+        Logger.info("[AppState] Performing full sync on app launch...")
+
+        // Check onboarding state from profile first
+        await checkOnboardingFromProfile()
+
+        // Sync gamification state first (XP, level, streak, badges)
+        await GamificationService.shared.loadUserState(userId: userId)
+
+        // Sync lists from Supabase
+        await ListManager.shared.syncListsForAuthenticatedUser()
+
+        // Unblock any PGRST205-stuck operations from previous sessions before pushing
+        SyncEngine.shared.unblockAndRetryBlockedOperations()
+
+        // Process any pending outbox operations
+        await SyncEngine.shared.pushPendingChanges()
+
+        Logger.info("[AppState] Full sync completed on app launch")
+    }
+
+    /// Sync user data when app returns to foreground
+    /// Throttled to avoid excessive syncs
+    private func performSyncOnForegroundResume() async {
+        guard isAuthenticated, let userId = currentUser?.id else { return }
+
+        // Throttle: Only sync if last sync was > 2 minutes ago
+        let lastSyncKey = "lastForegroundSyncTime"
+        let lastSync = UserDefaults.standard.double(forKey: lastSyncKey)
+        let now = Date().timeIntervalSince1970
+        let twoMinutes: TimeInterval = 2 * 60
+
+        guard now - lastSync > twoMinutes else {
+            Logger.info("[AppState] Skipping foreground sync - synced recently")
+            return
+        }
+
+        UserDefaults.standard.set(now, forKey: lastSyncKey)
+        Logger.info("[AppState] Performing sync on foreground resume...")
+
+        // Sync gamification state (may have changed on another device)
+        await GamificationService.shared.loadUserState(userId: userId)
+
+        // Sync lists
+        await ListManager.shared.syncListsForAuthenticatedUser()
+
+        // Process pending outbox
+        await SyncEngine.shared.pushPendingChanges()
+
+        Logger.info("[AppState] Foreground sync completed")
+    }
+
+    /// Check if user completed onboarding on another device
+    private func checkOnboardingFromProfile() async {
+        guard isAuthenticated else { return }
+
+        // If already completed locally, sync to profile if needed
+        if UserDefaults.standard.bool(forKey: "hasCompletedOnboarding") {
+            // Ensure it's synced to profile
+            Task {
+                do {
+                    try await SupabaseService.shared.updateUserProfile([
+                        "onboarding_completed": true,
+                        "onboarding_completed_at": ISO8601DateFormatter().string(from: Date())
+                    ])
+                } catch {
+                    Logger.warning("[AppState] Failed to sync onboarding state: \(error)")
+                }
+            }
+            return
+        }
+
+        // Check if completed on another device
+        do {
+            if let profile = try await SupabaseService.shared.fetchUserProfile(),
+               let completed = profile["onboarding_completed"] as? Bool,
+               completed {
+                UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+                Logger.info("[AppState] Onboarding already completed on another device")
+            }
+        } catch {
+            Logger.warning("[AppState] Failed to check onboarding from profile: \(error)")
+        }
     }
 
     /// Schedule smart notifications when user is authenticated
     /// Called on app launch and when returning to foreground
     private func scheduleSmartNotificationsIfNeeded() async {
         guard let userId = currentUser?.id else {
-            print("📳 [AppState] Skipping notification check - no authenticated user")
+            Logger.debug("[AppState] Skipping notification check - no authenticated user")
             return
         }
 
@@ -145,12 +258,12 @@ class AppState: ObservableObject {
         let thirtyMinutes: TimeInterval = 30 * 60
 
         if now - lastRun < thirtyMinutes {
-            print("📳 [AppState] Skipping notification check - ran recently")
+            Logger.debug("[AppState] Skipping notification check - ran recently")
             return
         }
 
         UserDefaults.standard.set(now, forKey: lastRunKey)
-        print("📳 [AppState] Triggering smart notification check for user: \(userId)")
+        Logger.info("[AppState] Triggering smart notification check for user: \(userId)")
 
         await NotificationBackgroundTask.shared.triggerImmediately()
     }
@@ -158,30 +271,135 @@ class AppState: ObservableObject {
     private func checkForRequiredUpdate() async {
         updateRequirement = await UpdateCheckService.shared.checkForRequiredUpdate()
     }
+
+    // MARK: - Instant Launch (Phase 4)
+
+    /// Synchronously check if we have valid cached content for instant display
+    /// This runs on init() before any async work
+    private func loadCachedContentSync() -> Bool {
+        let hasCache = SQLiteService.shared.hasCachedPersonalizedContent()
+        let hasInitialData = UserDefaults.standard.bool(forKey: "initialDataPopulated")
+        return hasCache || hasInitialData
+    }
+
+    /// Background refresh that doesn't block UI
+    /// Called when we already have cached content
+    private func refreshContentInBackground() async {
+        // Run database migrations if needed
+        await DatabaseMigrationManager.shared.runMigrations()
+
+        // Initialize app coordinator (background)
+        await dataCoordinator.initializeApp()
+
+        // Refresh discovery content if stale (background)
+        if ContentCacheManager.shared.shouldUpdateDiscoveryContent() {
+            Logger.info("[AppState] Refreshing stale discovery content in background...")
+            do {
+                try await DiscoveryCacheService.shared.refreshContent()
+            } catch {
+                Logger.error("[AppState] Failed to refresh discovery content: \(error.localizedDescription)")
+            }
+        }
+
+        // Phase 4: Preload images for instant display
+        await preloadDiscoveryImages()
+
+        // Pre-warm personalization cache (background, low priority)
+        Task(priority: .utility) { [self] in
+            guard !self.carouselsGeneratedThisLaunch else { return }
+            self.carouselsGeneratedThisLaunch = true
+            let profile = await UserPreferenceManager.shared.aggregatePreferences()
+            do {
+                _ = try await DiscoveryPersonalizationService.shared.generatePersonalizedCarousels(
+                    userProfile: profile,
+                    forceRefresh: false
+                )
+            } catch {
+                Logger.error("[AppState] Failed to generate personalized carousels: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    // MARK: - Image Preloading (Phase 4)
+
+    /// Preload poster images for discovery content
+    /// This ensures images are cached for instant display when user scrolls
+    private func preloadDiscoveryImages() async {
+        // Check user's prefetch preference
+        let prefetchOption = ImageCacheService.shared.getCurrentImagePrefetchOption()
+        guard await ImageCacheService.shared.shouldPrefetchImages(preference: prefetchOption) else {
+            Logger.info("[AppState] Skipping image preload - user preference or network")
+            return
+        }
+
+        Logger.info("[AppState] Preloading discovery images...")
+
+        // Collect poster URLs from cached content
+        var posterURLs: [String] = []
+
+        // From cached movies
+        if let movies = ContentCacheManager.shared.getCachedDiscoveryMovies() {
+            let moviePosters = movies.prefix(20).compactMap { movie -> String? in
+                guard let posterPath = movie.posterPath else { return nil }
+                return "https://image.tmdb.org/t/p/w342\(posterPath)"
+            }
+            posterURLs.append(contentsOf: moviePosters)
+        }
+
+        // From cached TV shows
+        if let tvShows = ContentCacheManager.shared.getCachedDiscoveryTVShows() {
+            let tvPosters = tvShows.prefix(10).compactMap { show -> String? in
+                guard let posterPath = show.posterPath else { return nil }
+                return "https://image.tmdb.org/t/p/w342\(posterPath)"
+            }
+            posterURLs.append(contentsOf: tvPosters)
+        }
+
+        // From cached clips (thumbnails)
+        let clipThumbnails = ContentCacheManager.shared.cachedClips.prefix(10).compactMap { clip -> String? in
+            guard let thumbnail = clip.thumbnailURL, !thumbnail.isEmpty else { return nil }
+            return thumbnail
+        }
+        posterURLs.append(contentsOf: clipThumbnails)
+
+        guard !posterURLs.isEmpty else {
+            Logger.info("[AppState] No images to preload")
+            return
+        }
+
+        Logger.info("[AppState] Preloading \(posterURLs.count) images...")
+        await ImageCacheService.shared.prefetchImages(posterURLs, onWiFiOnly: prefetchOption == .wifiOnly)
+        Logger.info("[AppState] Image preload complete")
+    }
     
     private func preloadContent() async {
         isPreloading = true
-        
-        // Check if initial data migration is needed
+
+        // Run unified database migrations (Phase 4: performance indexes, etc.)
+        await DatabaseMigrationManager.shared.runMigrations()
+
+        // Check if initial data migration is needed (legacy one-time migration)
         if !UserDefaults.standard.bool(forKey: "initialDataPopulated") {
-            print("📥 [App] First launch detected - migrating data from Supabase to SQLite...")
+            Logger.info("[App] First launch detected - migrating data from Supabase to SQLite...")
             await DatabaseMigrationService.shared.migrateInitialData()
         }
         
         // Sync new content from Supabase (incremental sync)
-        print("🔄 [App] Syncing new content from Supabase...")
-        try? await SyncService.shared.syncNewContent()
+        Logger.info("[App] Syncing new content from Supabase...")
+        await SyncEngine.shared.pullFromRemote()
         
         // Optimized parallel preload: Discovery content + 5 initial clips
         // Then background task for 20 more clips
-        print("🚀 Starting optimized preload (parallel tasks)...")
+        Logger.info("[App] Starting optimized preload (parallel tasks)...")
         await dataCoordinator.initializeApp()
         
         // Ensure discovery content exists (fetch from TMDB if needed)
         await ensureDiscoveryContentExists()
 
         // Pre-warm the personalized discovery cache so the Discovery tab loads instantly
-        print("📺 [App] Pre-warming Discovery personalization cache...")
+        guard !carouselsGeneratedThisLaunch else { return }
+        carouselsGeneratedThisLaunch = true
+        Logger.info("[App] Pre-warming Discovery personalization cache...")
         let profile = await UserPreferenceManager.shared.aggregatePreferences()
         do {
             // We call this to trigger the cache-miss logic (API fetch + DB cache) if needed.
@@ -190,9 +408,9 @@ class AppState: ObservableObject {
                 userProfile: profile,
                 forceRefresh: false
             )
-            print("✅ [App] Discovery personalization pre-warmed successfully")
+            Logger.info("[App] Discovery personalization pre-warmed successfully")
         } catch {
-            print("⚠️ [App] Failed to pre-warm Discovery personalization: \(error)")
+            Logger.warning("[App] Failed to pre-warm Discovery personalization: \(error)")
         }
         
         isPreloading = false
@@ -208,15 +426,15 @@ class AppState: ObservableObject {
             let totalContent = content.trending.count + content.popular.count + content.topRated.count + content.tv.count
             
             if totalContent > 0 {
-                print("✅ [App] Discovery content exists: \(totalContent) items")
+                Logger.info("[App] Discovery content exists: \(totalContent) items")
             } else {
-                print("⚠️ [App] Discovery cache is empty - fetching fresh from TMDB...")
+                Logger.warning("[App] Discovery cache is empty - fetching fresh from TMDB...")
                 // Cache is empty, force refresh from TMDB
                 try await DiscoveryCacheService.shared.refreshContent()
-                print("✅ [App] Discovery content populated from TMDB")
+                Logger.info("[App] Discovery content populated from TMDB")
             }
         } catch {
-            print("⚠️ [App] Failed to load discovery content: \(error)")
+            Logger.warning("[App] Failed to load discovery content: \(error)")
         }
     }
 }

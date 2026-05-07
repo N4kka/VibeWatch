@@ -66,7 +66,7 @@ class ListAvailabilityService: ObservableObject {
             
             return available
         } catch {
-            print("❌ Failed to fetch providers for \(item.title): \(error)")
+            Logger.error("[ListAvailability] Failed to fetch providers for \(item.title): \(error)")
             return []
         }
     }

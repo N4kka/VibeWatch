@@ -57,7 +57,6 @@ enum AppConstants {
         
         /// Offering identifiers
         enum Offerings {
-            static let foundingMember = "founding_member"
             static let standard = "default"
         }
         

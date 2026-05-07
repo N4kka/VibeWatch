@@ -412,6 +412,58 @@ class GamificationService: ObservableObject {
         Logger.info("[GamificationService] State loaded - Level: \(userState.currentLevel), XP: \(userState.totalXP), Streak: \(userState.currentStreak)")
     }
 
+    /// Explicitly sync gamification state from Supabase
+    /// Call this on app launch and foreground resume to ensure cross-device sync
+    func syncFromSupabase(userId: String) async {
+        Logger.info("[GamificationService] Syncing from Supabase for user: \(userId)")
+
+        // Fetch remote state
+        guard let remoteState = await fetchRemoteState(userId: userId) else {
+            Logger.warning("[GamificationService] No remote state found - using local")
+            return
+        }
+
+        // Store local values for comparison
+        let localXP = userState.totalXP
+        let localLevel = userState.currentLevel
+        let localStreak = userState.currentStreak
+        let localLongestStreak = userState.longestStreak
+
+        // Merge with local state (take max values)
+        userState.totalXP = max(localXP, remoteState.totalXP)
+        userState.currentLevel = max(localLevel, remoteState.currentLevel)
+        userState.longestStreak = max(localLongestStreak, remoteState.longestStreak)
+
+        // For streak, use the one from the most recent activity
+        if let remoteDate = remoteState.lastActivityDate,
+           let localDate = userState.lastActivityDate {
+            if remoteDate > localDate {
+                userState.currentStreak = remoteState.currentStreak
+                userState.lastActivityDate = remoteDate
+            }
+        } else if let remoteDate = remoteState.lastActivityDate {
+            userState.currentStreak = remoteState.currentStreak
+            userState.lastActivityDate = remoteDate
+        }
+
+        // Recalculate level based on merged XP
+        userState.calculateLevel()
+
+        // If local had higher values, push to Supabase
+        if localXP > remoteState.totalXP || localLevel > remoteState.currentLevel {
+            await saveUserState(userId: userId)
+            Logger.info("[GamificationService] Pushed higher local state to Supabase")
+        }
+
+        // Merge badges from remote
+        await mergeBadgesFromRemote(userId: userId)
+
+        Logger.info("[GamificationService] Synced - XP: \(userState.totalXP), Level: \(userState.currentLevel), Streak: \(userState.currentStreak)")
+
+        // Notify UI to refresh
+        objectWillChange.send()
+    }
+
     /// Load state from local SQLite only
     private func loadLocalState(userId: String) async -> UserGamificationState? {
         let stateQuery = """
@@ -522,27 +574,34 @@ class GamificationService: ObservableObject {
             await onLevelUp(userId: userId, oldLevel: oldLevel, newLevel: userState.currentLevel)
         }
 
-        // Save to database
-        await saveXPTransaction(
-            userId: userId,
-            action: action,
-            baseXP: baseXP,
-            multiplier: proMultiplier,
-            streakBonus: streakMultiplier - 1.0,
-            totalXP: totalXP,
-            source: source
-        )
+        // Save to database - wrap in transaction for atomicity
+        do {
+            try await sqliteService.transaction {
+                await self.saveXPTransaction(
+                    userId: userId,
+                    action: action,
+                    baseXP: baseXP,
+                    multiplier: proMultiplier,
+                    streakBonus: streakMultiplier - 1.0,
+                    totalXP: totalXP,
+                    source: source
+                )
 
-        await saveUserState(userId: userId)
+                await self.saveUserState(userId: userId)
 
-        // Update daily count
+                // Update badge progress
+                await self.updateBadgeProgress(userId: userId, action: action)
+
+                // Update daily challenge progress
+                await self.updateChallengeProgress(userId: userId, action: action)
+            }
+        } catch {
+            Logger.error("[GamificationService] Failed to save XP transaction: \(error.localizedDescription)")
+            return nil
+        }
+
+        // Update daily count (in-memory only)
         dailyActionCounts[action.rawValue] = (dailyActionCounts[action.rawValue] ?? 0) + 1
-
-        // Update badge progress
-        await updateBadgeProgress(userId: userId, action: action)
-
-        // Update daily challenge progress
-        await updateChallengeProgress(userId: userId, action: action)
 
         // Get challenge progress info for toast (if applicable)
         var challengeProgressInfo: ChallengeProgressInfo?
@@ -673,13 +732,17 @@ class GamificationService: ObservableObject {
             "updated_at": ISO8601DateFormatter().string(from: Date())
         ]
 
-        await SyncManager.shared.queueSync(
-            operation: .upsertRecord(
+        do {
+            try await SyncEngine.shared.queueOperation(
                 table: "user_gamification",
+                operationType: "UPSERT",
                 recordId: userId,
-                record: syncData
+                payload: syncData,
+                dependsOn: nil
             )
-        )
+        } catch {
+            Logger.error("[Gamification] Failed to queue gamification sync: \(error)")
+        }
     }
 
     private func saveXPTransaction(
@@ -723,13 +786,17 @@ class GamificationService: ObservableObject {
             "created_at": now
         ]
 
-        await SyncManager.shared.queueSync(
-            operation: .insertRecord(
+        do {
+            try await SyncEngine.shared.queueOperation(
                 table: "xp_transactions",
+                operationType: "INSERT",
                 recordId: transactionId,
-                record: syncData
+                payload: syncData,
+                dependsOn: nil
             )
-        )
+        } catch {
+            Logger.error("[Gamification] Failed to queue XP transaction sync: \(error)")
+        }
     }
 
     private func loadBadges(userId: String) async {
@@ -884,13 +951,17 @@ class GamificationService: ObservableObject {
             "updated_at": now
         ]
 
-        await SyncManager.shared.queueSync(
-            operation: .upsertRecord(
+        do {
+            try await SyncEngine.shared.queueOperation(
                 table: "user_badges",
+                operationType: "UPSERT",
                 recordId: recordId,
-                record: syncData
+                payload: syncData,
+                dependsOn: nil
             )
-        )
+        } catch {
+            Logger.error("[Gamification] Failed to queue badge sync: \(error)")
+        }
     }
 
     private func onBadgeUnlocked(userId: String, badge: BadgeDefinition) async {
@@ -975,13 +1046,17 @@ class GamificationService: ObservableObject {
                 "created_at": now
             ]
 
-            await SyncManager.shared.queueSync(
-                operation: .insertRecord(
+            do {
+                try await SyncEngine.shared.queueOperation(
                     table: "user_daily_challenges",
+                    operationType: "INSERT",
                     recordId: challengeId,
-                    record: syncData
+                    payload: syncData,
+                    dependsOn: nil
                 )
-            )
+            } catch {
+                Logger.error("[Gamification] Failed to queue challenge sync: \(error)")
+            }
         }
     }
 
@@ -1066,13 +1141,17 @@ class GamificationService: ObservableObject {
             syncData["completed_at"] = completedAt
         }
 
-        await SyncManager.shared.queueSync(
-            operation: .upsertRecord(
+        do {
+            try await SyncEngine.shared.queueOperation(
                 table: "user_daily_challenges",
+                operationType: "UPSERT",
                 recordId: challengeId,
-                record: syncData
+                payload: syncData,
+                dependsOn: nil
             )
-        )
+        } catch {
+            Logger.error("[Gamification] Failed to queue challenge update sync: \(error)")
+        }
     }
 
     private func loadDailyActionCounts(userId: String) async {

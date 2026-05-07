@@ -2,7 +2,7 @@ name: Daily VibeWatch Alerts
 
 on:
   schedule:
-    # Runs at 21:00 UTC every day
+    # Runs at 21:00 UTC every day (9 PM UTC)
     - cron: '0 21 * * *'
   workflow_dispatch: # Allows manual triggering from the Actions tab
   push:

@@ -289,7 +289,6 @@
 "paywall.feature.releaseAlerts" = "🔔 Aviseringar när favoriter blir tillgängliga";
 "paywall.feature.unlimitedClips" = "▶️ Obegränsade klipp och trailers";
 "paywall.proDescription" = "Pro låser upp obegränsade klipp, AI-filmkompis och synkade watchlists.";
-"paywall.foundingMember" = "Grundarmedlems-pris";
 "paywall.plan.annual" = "Årsvis";
 "paywall.plan.monthly" = "Månadsvis";
 "paywall.price.perMonth" = "%@/månad";

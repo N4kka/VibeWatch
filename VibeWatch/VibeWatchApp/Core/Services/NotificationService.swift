@@ -23,13 +23,13 @@ class NotificationService: ObservableObject { // Conform to ObservableObject
     /// and whenever the FCM token is refreshed.
     func registerDeviceToken() {
         guard Messaging.messaging().apnsToken != nil else {
-            print("🔔 NotificationService: APNS token missing, skipping FCM fetch until available.")
+            Logger.debug("[NotificationService] APNS token missing, skipping FCM fetch until available.")
             return
         }
 
         Messaging.messaging().token { token, error in
             if let error = error {
-                print("❌ Error fetching FCM registration token: \(error)")
+                Logger.error("[NotificationService] Error fetching FCM registration token: \(error)")
                 return
             }
 
@@ -41,12 +41,12 @@ class NotificationService: ObservableObject { // Conform to ObservableObject
 
     func processNewFCMToken(_ token: String?) {
         guard let token = token else {
-            print("🔔 NotificationService: Received nil FCM token.")
+            Logger.debug("[NotificationService] Received nil FCM token.")
             return
         }
 
         cachedFCMToken = token
-        print("🔔 NotificationService: Cached FCM token: \(token)")
+        Logger.debug("[NotificationService] Cached FCM token: \(token)")
 
         Task {
             await registerCachedTokenIfPossible()
@@ -118,21 +118,21 @@ class NotificationService: ObservableObject { // Conform to ObservableObject
 
     private func registerCachedTokenIfPossible() async {
         guard let token = cachedFCMToken else {
-            print("🔔 NotificationService: No cached FCM token to register yet.")
+            Logger.debug("[NotificationService] No cached FCM token to register yet.")
             return
         }
 
         guard let userId = AuthService.shared.currentUser?.id else {
-            print("🔔 NotificationService: User not logged in, deferring token registration.")
+            Logger.debug("[NotificationService] User not logged in, deferring token registration.")
             return
         }
 
         do {
-            print("🔔 NotificationService: Registering cached token for user \(userId)")
+            Logger.debug("[NotificationService] Registering cached token for user \(userId)")
             try await AuthService.shared.upsertDeviceToken(token, platform: "ios")
-            print("✅ FCM token saved/updated successfully.")
+            Logger.debug("[NotificationService] FCM token saved/updated successfully.")
         } catch {
-            print("❌ Error saving FCM token to database: \(error.localizedDescription)")
+            Logger.error("[NotificationService] Error saving FCM token to database: \(error.localizedDescription)")
         }
     }
 }

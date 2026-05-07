@@ -57,7 +57,10 @@ struct ListsView: View {
                 
                 combinedFiltersRow
                 
-                if currentLists.isEmpty {
+                if listManager.isLoadingInitial {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if currentLists.isEmpty {
                     emptyStateView
                 } else {
                     contentView
@@ -842,91 +845,18 @@ struct MediaItemRow: View {
         }
     }
     
-    /// Load only streaming providers (description/metadata comes from cached item data)
+    /// Load streaming providers via LiveWatchProvidersRepository (24h SQLite TTL).
+    /// Only hits the network if the cached entry is expired or missing.
     private func loadProviders() async {
         guard !isLoadingProviders else { return }
         isLoadingProviders = true
-
-        let countryCode = LocalizationManager.shared.currentCountry.id
-
-        do {
-            // Fetch providers in parallel
-            async let providersTask = StreamingAvailabilityService.shared.getProviders(tmdbId: item.mediaId, type: item.mediaType, region: countryCode)
-
-            let tmdbProvidersData: WatchProvider
-            if item.mediaType == .movie {
-                tmdbProvidersData = try await tmdbService.getMovieWatchProviders(id: item.mediaId)
-            } else {
-                tmdbProvidersData = try await tmdbService.getTVShowWatchProviders(id: item.mediaId)
-            }
-
-            let watchProviders = try await providersTask
-
-            var finalProviders = watchProviders
-            if let tmdb = tmdbProvidersData.results[countryCode] {
-                finalProviders = mergeProviders(rich: watchProviders, basic: tmdb)
-            }
-
-            processProviders(finalProviders)
-        } catch {
-            print("❌ Error loading providers: \(error.localizedDescription)")
-            await loadTMDBProvidersFallback()
+        let region = LocalizationManager.shared.currentCountry.id
+        for await providers in LiveWatchProvidersRepository.shared.observeProviders(
+            mediaId: item.mediaId, mediaType: item.mediaType, region: region
+        ) {
+            if let providers { processProviders(providers) }
         }
-
         isLoadingProviders = false
-    }
-    
-    private func mergeProviders(rich: CountryProviders, basic: CountryProviders) -> CountryProviders {
-        var merged = rich
-        
-        func mergeList(_ richList: [Provider]?, _ basicList: [Provider]?) -> [Provider]? {
-            guard let basicList = basicList else { return richList }
-            guard var richList = richList else { return basicList }
-            
-            for provider in basicList {
-                if let index = richList.firstIndex(where: { providerNamesMatch($0.providerName, provider.providerName) }) {
-                    let richLogo = richList[index].logoPath.lowercased()
-                    let shouldPreferTMDBLogo = richLogo.isEmpty || richLogo.contains(".svg")
-                    if shouldPreferTMDBLogo && !provider.logoPath.isEmpty {
-                        let existing = richList[index]
-                        richList[index] = Provider(
-                            providerId: existing.providerId,
-                            providerName: existing.providerName,
-                            logoPath: provider.logoPath,
-                            displayPriority: existing.displayPriority,
-                            price: existing.price,
-                            quality: existing.quality,
-                            presentationType: existing.presentationType,
-                            externalLink: existing.externalLink
-                        )
-                    }
-                } else {
-                    richList.append(provider)
-                }
-            }
-            return richList
-        }
-        
-        merged.flatrate = mergeList(rich.flatrate, basic.flatrate)
-        merged.rent = mergeList(rich.rent, basic.rent)
-        merged.buy = mergeList(rich.buy, basic.buy)
-        merged.link = rich.link ?? basic.link
-        
-        return merged
-    }
-    
-    private func providerNamesMatch(_ name1: String, _ name2: String) -> Bool {
-        let n1 = normalize(name1)
-        let n2 = normalize(name2)
-        return n1 == n2 || n1.contains(n2) || n2.contains(n1)
-    }
-    
-    private func normalize(_ name: String) -> String {
-        return name.lowercased()
-            .replacingOccurrences(of: " ", with: "")
-            .replacingOccurrences(of: "+", with: "plus")
-            .replacingOccurrences(of: "-", with: "")
-            .replacingOccurrences(of: "tv", with: "")
     }
 
     private func isValid(_ provider: Provider) -> Bool {
@@ -960,7 +890,7 @@ struct MediaItemRow: View {
                 }
             }
         } catch {
-            print("❌ Error loading TMDB fallback providers: \(error.localizedDescription)")
+            Logger.error("[ListsView] Error loading TMDB fallback providers: \(error.localizedDescription)")
         }
     }
     

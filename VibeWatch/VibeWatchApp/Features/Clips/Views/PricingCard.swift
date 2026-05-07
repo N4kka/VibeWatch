@@ -91,7 +91,7 @@ struct PricingCard_Previews: PreviewProvider {
             VStack(spacing: 20) {
                 PricingCard(
                     planName: "Monthly",
-                    priceText: "€9.99",
+                    priceText: "$4.99",
                     descriptionText: "Billed monthly",
                     trialText: "7 days free",
                     isSelected: true
@@ -99,10 +99,10 @@ struct PricingCard_Previews: PreviewProvider {
 
                 PricingCard(
                     planName: "Annual",
-                    priceText: "€79.99",
+                    priceText: "$39.99",
                     descriptionText: "Billed annually",
                     trialText: "7 days free",
-                    discountText: "Founding member price • 50% OFF",
+                    discountText: "Save 17%",
                     isBestValue: true,
                     isSelected: false
                 ) {}

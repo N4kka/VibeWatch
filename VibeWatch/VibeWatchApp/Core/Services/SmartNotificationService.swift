@@ -1013,13 +1013,17 @@ class SmartNotificationService: NSObject, ObservableObject {
                     "created_at": now
                 ]
 
-                await SyncManager.shared.queueSync(
-                    operation: .upsertRecord(
+                do {
+                    try await SyncEngine.shared.queueOperation(
                         table: "notification_subscriptions",
+                        operationType: "UPSERT",
                         recordId: subscriptionId,
-                        record: record
+                        payload: record,
+                        dependsOn: nil
                     )
-                )
+                } catch {
+                    Logger.error("[SmartNotificationService] Failed to queue actor alert sync: \(error)")
+                }
 
                 Logger.debug("[SmartNotificationService] Registered actor alert for actor ID: \(actorId)")
             } else {
@@ -1072,13 +1076,17 @@ class SmartNotificationService: NSObject, ObservableObject {
                     "created_at": now
                 ]
 
-                await SyncManager.shared.queueSync(
-                    operation: .upsertRecord(
+                do {
+                    try await SyncEngine.shared.queueOperation(
                         table: "notification_subscriptions",
+                        operationType: "UPSERT",
                         recordId: subscriptionId,
-                        record: record
+                        payload: record,
+                        dependsOn: nil
                     )
-                )
+                } catch {
+                    Logger.error("[SmartNotificationService] Failed to queue genre alert sync: \(error)")
+                }
 
                 Logger.debug("[SmartNotificationService] Registered genre alert for genre ID: \(genreId)")
             } else {
@@ -1148,12 +1156,21 @@ extension SmartNotificationService: @MainActor UNUserNotificationCenterDelegate 
     }
 
     private func handleNotificationTap(userInfo: [AnyHashable: Any]) async {
-        guard let type = userInfo["type"] as? String else { return }
-
+        guard let type = userInfo["type"] as? String else {
+            Logger.warning("[SmartNotificationService] Notification tap missing 'type' key — ignoring")
+            return
+        }
         Logger.info("[SmartNotificationService] Notification tapped: \(type)")
 
-        // TODO: Navigate to appropriate screen based on notification type
-        // This will be implemented when integrating with the app's navigation system
+        await MainActor.run {
+            let manager = AppNavigationManager.shared
+            manager.handle(userInfo: userInfo)
+
+            // Fallback: no valid media_id/media_type in payload → navigate to Discovery tab
+            if manager.deepLinkTarget == nil {
+                NotificationCenter.default.post(name: .navigateToDiscoveryTab, object: nil)
+            }
+        }
     }
 }
 

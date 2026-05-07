@@ -940,7 +940,7 @@ class DiscoveryPersonalizationService: ObservableObject {
 
     // MARK: - Private Methods - Embedding Similarity
 
-    private var embeddingModelName: String { "zai-glm-4.6" }
+    private var embeddingModelName: String { "zai-glm-4.7" }
 
     private func rerankSimilarMovies(seedMovieId: Int, candidates: [Movie]) async -> [Movie] {
         guard candidates.count >= 3 else { return candidates }

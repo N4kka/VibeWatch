@@ -37,6 +37,7 @@ class AnalyticsInsightsService: ObservableObject {
             async let genreStats = calculateGenreDistribution(userId: userId, timeframe: timeframe)
             async let viewingPatterns = calculateViewingPatterns(userId: userId)
             async let contentPerformance = calculateContentPerformance(userId: userId, timeframe: timeframe)
+            async let moodStats = calculateMoodAnalysis(userId: userId, timeframe: timeframe)
             async let discoveryInsights = calculateDiscoveryInsights(userId: userId, timeframe: timeframe)
             async let milestones = detectMilestones(userId: userId)
 
@@ -45,7 +46,7 @@ class AnalyticsInsightsService: ObservableObject {
                 genreDistribution: await genreStats,
                 viewingPatterns: await viewingPatterns,
                 contentPerformance: await contentPerformance,
-                moodAnalysis: nil, // Optional: will implement later
+                moodAnalysis: await moodStats,
                 discoveryInsights: await discoveryInsights,
                 milestones: await milestones,
                 generatedAt: Date()
@@ -472,6 +473,46 @@ class AnalyticsInsightsService: ObservableObject {
             fastestBinged: fastestBinged,
             abandoned: abandoned
         )
+    }
+
+    // MARK: - Mood Analysis
+
+    /// Compute mood distribution from user's genre viewing history.
+    /// Returns a non-nil MoodAnalysis with an empty moodDistribution when the user
+    /// has engaged with fewer than 5 distinct genres (placeholder state).
+    ///
+    /// Reads from user_preferences (genre scores written by UserEngagementTracker) rather
+    /// than user_clip_history, which is never written by the iOS app — it only receives
+    /// data via Supabase sync pull and has no genre_ids populated.
+    private func calculateMoodAnalysis(userId: String, timeframe: Timeframe) async -> MoodAnalysis {
+        let genreToMood: [Int: String] = [
+            35: "Light", 16: "Light", 10751: "Light", 10402: "Light",
+            12: "Adventurous", 14: "Adventurous", 878: "Adventurous", 10752: "Adventurous", 37: "Adventurous",
+            28: "Intense", 53: "Intense", 27: "Intense", 80: "Intense",
+            18: "Thoughtful", 99: "Thoughtful", 36: "Thoughtful", 9648: "Thoughtful",
+            10749: "Romantic", 10770: "Romantic"
+        ]
+
+        let sql = """
+            SELECT preference_id, score FROM user_preferences
+            WHERE user_id = ? AND preference_type = 'genre' AND score > 0 AND deleted_at IS NULL
+        """
+        let rows = (try? await sqliteService.queryRaw(sql, parameters: [userId])) ?? []
+
+        guard rows.count >= 5 else {
+            return MoodAnalysis(moodDistribution: [:], preferredMoodByTime: [:], emotionalJourney: [])
+        }
+
+        var moodCounts: [String: Int] = [:]
+        for row in rows {
+            guard let genreIdStr = row["preference_id"] as? String,
+                  let genreId = Int(genreIdStr) else { continue }
+            if let mood = genreToMood[genreId] {
+                moodCounts[mood, default: 0] += 1
+            }
+        }
+
+        return MoodAnalysis(moodDistribution: moodCounts, preferredMoodByTime: [:], emotionalJourney: [])
     }
 
     // MARK: - Discovery Insights

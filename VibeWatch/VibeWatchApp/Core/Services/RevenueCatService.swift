@@ -40,13 +40,12 @@ final class RevenueCatService: ObservableObject {
             self.offerings = offerings
             self.lastRefreshDate = Date()
             self.currentOfferingID = offerings.current?.identifier
-            FoundingMemberService.shared.refreshPromoStatus()
-            
+
             if debug {
                 debugPrintOfferings(offerings)
             }
         } catch {
-            print("❌ [RevenueCat] Failed to fetch offerings: \(error.localizedDescription)")
+            Logger.error("[RevenueCat] Failed to fetch offerings: \(error.localizedDescription)")
         }
     }
     
@@ -101,33 +100,33 @@ final class RevenueCatService: ObservableObject {
     
     /// Prints a human-friendly summary of offerings and packages.
     private func debugPrintOfferings(_ offerings: Offerings) {
-        print("\n================ RevenueCat Offerings ================")
-        print(offerings)
-        print("Current offering: \(offerings.current?.identifier ?? "none")")
-        print("Available offerings: \(offerings.all.keys.joined(separator: ", "))")
-        
+        Logger.debug("[RevenueCat] ================ Offerings ================")
+        Logger.debug("[RevenueCat] \(offerings)")
+        Logger.debug("[RevenueCat] Current offering: \(offerings.current?.identifier ?? "none")")
+        Logger.debug("[RevenueCat] Available offerings: \(offerings.all.keys.joined(separator: ", "))")
+
         for (identifier, offering) in offerings.all {
-            print("\n🧾 Offering: \(identifier)")
+            Logger.debug("[RevenueCat] Offering: \(identifier)")
             for package in offering.availablePackages {
                 let product = package.storeProduct
-                print("  • Package: \(package.identifier)")
-                print("    - Product ID: \(product.productIdentifier)")
-                print("    - Price: \(product.localizedPriceString)")
-                print("    - Subscription period: \(product.subscriptionPeriod?.unit.description ?? "n/a")")
-                
+                Logger.debug("[RevenueCat]   Package: \(package.identifier)")
+                Logger.debug("[RevenueCat]     Product ID: \(product.productIdentifier)")
+                Logger.debug("[RevenueCat]     Price: \(product.localizedPriceString)")
+                Logger.debug("[RevenueCat]     Subscription period: \(product.subscriptionPeriod?.unit.description ?? "n/a")")
+
                 // Show trial info if available
                 if let trial = getTrialInfo(for: package) {
-                    print("    - 🎁 FREE TRIAL: \(trial.localizedDuration)")
+                    Logger.debug("[RevenueCat]     FREE TRIAL: \(trial.localizedDuration)")
                 }
-                
+
                 // Show intro pricing if available (but not free trial)
                 if let discount = product.introductoryDiscount,
                    discount.paymentMode != .freeTrial {
-                    print("    - 💰 INTRO PRICE: \(discount.price) for \(formatTrialDuration(discount.subscriptionPeriod))")
+                    Logger.debug("[RevenueCat]     INTRO PRICE: \(discount.price) for \(formatTrialDuration(discount.subscriptionPeriod))")
                 }
             }
         }
-        print("=====================================================\n")
+        Logger.debug("[RevenueCat] =====================================================")
     }
 }
 
@@ -151,7 +150,7 @@ private extension RevenueCatService {
     
     func setRevenueCatLogLevel(_ debug: Bool) {
         Purchases.logLevel = debug ? .debug : .info
-        print("📊 [RevenueCat] Log level set to \(debug ? "debug" : "info")")
+        Logger.debug("[RevenueCat] Log level set to \(debug ? "debug" : "info")")
     }
 
     /// Reflection helpers keep compatibility with RevenueCat builds that don't expose StoreKit 2 subscriptionOptions in the public API.

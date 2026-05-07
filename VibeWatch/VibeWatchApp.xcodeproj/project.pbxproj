@@ -7,6 +7,14 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		04DE3D44BE064990BC929352 /* SyncEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D914D0452F884693941FF37D /* SyncEngineTests.swift */; };
+		13392337BF1F4B568E9A4B9C /* AppNavigationManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06ECE77A8DA440E92022CE7 /* AppNavigationManagerTests.swift */; };
+		26BD1630A9514E7B9D559ED5 /* DatabaseMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F849736129F54FA8BD1D3247 /* DatabaseMigrationTests.swift */; };
+		3A7518E7EFF7451DA829EBCA /* ClipCommentServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B64FF4907D54457B73097CA /* ClipCommentServiceTests.swift */; };
+		6041113C7B15457BB8A1B4EB /* ConflictResolverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75B51919D2BF4686B686EDCA /* ConflictResolverTests.swift */; };
+		A1B2C3D4E5F6A1B2 /* KeychainStorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A1B3 /* KeychainStorageTests.swift */; };
+		A1B2C3D4E5F6A1B4 /* AuthMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A1B5 /* AuthMigrationTests.swift */; };
+		B276FBD367C144A78E0A9217 /* SyncStateMachineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C39F30EEBCD42B48EC2203D /* SyncStateMachineTests.swift */; };
 		B318DCEE2EC6939A00DB1A9A /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = B318DCED2EC6939A00DB1A9A /* Auth */; };
 		B31D2C442EFFA4020091F030 /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = B31D2C432EFFA4020091F030 /* GoogleMobileAds */; };
 		B32F71142ED399B5001779C5 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = B32F71132ED399B5001779C5 /* RevenueCat */; };
@@ -16,7 +24,10 @@
 		B3E30E122ECCB7AA008A3B6C /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = B3E30E112ECCB7AA008A3B6C /* PostgREST */; };
 		B3E30E142ECCB7AA008A3B6C /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = B3E30E132ECCB7AA008A3B6C /* Supabase */; };
 		B3F2F7E02F14A10000D1A004 /* YouTubeiOSPlayerHelper in Frameworks */ = {isa = PBXBuildFile; productRef = B3F2F7E32F14A10000D1A003 /* YouTubeiOSPlayerHelper */; };
+		C3D4E5F6A1B2C3D4 /* PerformanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3D4E5F6A1B2C3D5 /* PerformanceTests.swift */; };
+		C6877C53B7A3455F88CAEEA9 /* AnalyticsInsightsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C9EEC77D8F045818BF4B264 /* AnalyticsInsightsTests.swift */; };
 		CF1EE317BD6A461DA9DC12F3 /* PostHogClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7288DBFF0484707BB5CD260 /* PostHogClientTests.swift */; };
+		D4E5F6A1B2C3D4E5 /* MultiDeviceSyncTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E5F6A1B2C3D4E6 /* MultiDeviceSyncTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -31,10 +42,21 @@
 
 /* Begin PBXFileReference section */
 		017B09F3416F44179444BCC2 /* VibeWatchAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = VibeWatchAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		3B64FF4907D54457B73097CA /* ClipCommentServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipCommentServiceTests.swift; sourceTree = "<group>"; };
+		4C9EEC77D8F045818BF4B264 /* AnalyticsInsightsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsInsightsTests.swift; sourceTree = "<group>"; };
+		75B51919D2BF4686B686EDCA /* ConflictResolverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConflictResolverTests.swift; sourceTree = "<group>"; };
+		7C39F30EEBCD42B48EC2203D /* SyncStateMachineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncStateMachineTests.swift; sourceTree = "<group>"; };
 		9FBD15ABB0BF4418879D52D9 /* VibeWatchAppTests/Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = VibeWatchAppTests/Info.plist; sourceTree = "<group>"; };
+		A1B2C3D4E5F6A1B3 /* KeychainStorageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStorageTests.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F6A1B5 /* AuthMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthMigrationTests.swift; sourceTree = "<group>"; };
 		B318DC8A2EC6920500DB1A9A /* VibeWatchApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VibeWatchApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B3F0F1A92F2A1B1C00AA1111 /* VibeWatchApp/Config/Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = VibeWatchApp/Config/Secrets.xcconfig; sourceTree = "<group>"; };
+		C3D4E5F6A1B2C3D5 /* PerformanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceTests.swift; sourceTree = "<group>"; };
+		D06ECE77A8DA440E92022CE7 /* AppNavigationManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppNavigationManagerTests.swift; sourceTree = "<group>"; };
+		D914D0452F884693941FF37D /* SyncEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncEngineTests.swift; sourceTree = "<group>"; };
 		E7288DBFF0484707BB5CD260 /* PostHogClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostHogClientTests.swift; sourceTree = "<group>"; };
+		D4E5F6A1B2C3D4E6 /* MultiDeviceSyncTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MultiDeviceSyncTests.swift; path = VibeWatchApp/Tests/MultiDeviceSyncTests.swift; sourceTree = SOURCE_ROOT; };
+		F849736129F54FA8BD1D3247 /* DatabaseMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseMigrationTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -91,6 +113,17 @@
 			children = (
 				9FBD15ABB0BF4418879D52D9 /* VibeWatchAppTests/Info.plist */,
 				E7288DBFF0484707BB5CD260 /* PostHogClientTests.swift */,
+				D914D0452F884693941FF37D /* SyncEngineTests.swift */,
+				7C39F30EEBCD42B48EC2203D /* SyncStateMachineTests.swift */,
+				75B51919D2BF4686B686EDCA /* ConflictResolverTests.swift */,
+				3B64FF4907D54457B73097CA /* ClipCommentServiceTests.swift */,
+				F849736129F54FA8BD1D3247 /* DatabaseMigrationTests.swift */,
+				D06ECE77A8DA440E92022CE7 /* AppNavigationManagerTests.swift */,
+				4C9EEC77D8F045818BF4B264 /* AnalyticsInsightsTests.swift */,
+				A1B2C3D4E5F6A1B3 /* KeychainStorageTests.swift */,
+				A1B2C3D4E5F6A1B5 /* AuthMigrationTests.swift */,
+				C3D4E5F6A1B2C3D5 /* PerformanceTests.swift */,
+				D4E5F6A1B2C3D4E6 /* MultiDeviceSyncTests.swift */,
 			);
 			path = VibeWatchAppTests;
 			sourceTree = "<group>";
@@ -269,6 +302,17 @@
 			buildActionMask = 2147483647;
 			files = (
 				CF1EE317BD6A461DA9DC12F3 /* PostHogClientTests.swift in Sources */,
+				04DE3D44BE064990BC929352 /* SyncEngineTests.swift in Sources */,
+				B276FBD367C144A78E0A9217 /* SyncStateMachineTests.swift in Sources */,
+				6041113C7B15457BB8A1B4EB /* ConflictResolverTests.swift in Sources */,
+				3A7518E7EFF7451DA829EBCA /* ClipCommentServiceTests.swift in Sources */,
+				26BD1630A9514E7B9D559ED5 /* DatabaseMigrationTests.swift in Sources */,
+				13392337BF1F4B568E9A4B9C /* AppNavigationManagerTests.swift in Sources */,
+				C6877C53B7A3455F88CAEEA9 /* AnalyticsInsightsTests.swift in Sources */,
+				A1B2C3D4E5F6A1B2 /* KeychainStorageTests.swift in Sources */,
+				A1B2C3D4E5F6A1B4 /* AuthMigrationTests.swift in Sources */,
+				C3D4E5F6A1B2C3D4 /* PerformanceTests.swift in Sources */,
+				D4E5F6A1B2C3D4E5 /* MultiDeviceSyncTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -440,7 +484,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.4;
+				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.vibewatch.VibeWatchApp.beta;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -483,7 +527,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.4;
+				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.vibewatch.VibeWatchApp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";

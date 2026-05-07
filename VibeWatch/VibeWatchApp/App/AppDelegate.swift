@@ -14,7 +14,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, @MainActor UNUserNotificatio
         CerebrasBackendBackgroundScheduler.shared.scheduleNextRun()
         NotificationBackgroundTask.shared.register()
         NotificationBackgroundTask.shared.scheduleNextRun()
-        UserPreferenceManager.shared.setSyncManager(SyncManager.shared)
+        UserPreferenceManager.shared.setSyncEngine(SyncEngine.shared)
 
         // Initialize Firebase
         FirebaseApp.configure() // Call FirebaseApp.configure() here
@@ -24,7 +24,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, @MainActor UNUserNotificatio
         
         // Initialize LocalizationManager early to ensure translations are loaded before UI
         _ = LocalizationManager.shared
-        print("✅ LocalizationManager initialized: \(LocalizationManager.shared.currentLanguage.name)")
+        Logger.info("[AppDelegate] LocalizationManager initialized: \(LocalizationManager.shared.currentLanguage.name)")
         
         // Configure Firebase Messaging and User Notifications
         Messaging.messaging().delegate = self
@@ -49,7 +49,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, @MainActor UNUserNotificatio
     
     // Handle URL schemes (for OAuth callbacks)
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
-        print("📱 Received URL: \(url.absoluteString)")
+        Logger.info("[AppDelegate] Received URL: \(url.absoluteString)")
         
         let validSchemes = [
             "com.vibewatch.VibeWatchApp",
@@ -63,9 +63,9 @@ class AppDelegate: NSObject, UIApplicationDelegate, @MainActor UNUserNotificatio
             Task {
                 do {
                     try await AuthService.shared.handleAuthCallback(url: url)
-                    print("✅ Auth callback handled successfully")
+                    Logger.info("[AppDelegate] Auth callback handled successfully")
                 } catch {
-                    print("❌ Error handling OAuth callback: \(error.localizedDescription)")
+                    Logger.error("[AppDelegate] Error handling OAuth callback: \(error.localizedDescription)")
                 }
             }
             return true
@@ -87,12 +87,12 @@ class AppDelegate: NSObject, UIApplicationDelegate, @MainActor UNUserNotificatio
         
         // Print message ID.
         if let messageID = userInfo["gcm.message_id"] {
-            print("Message ID: \(messageID)")
+            Logger.debug("[AppDelegate] Message ID: \(messageID)")
         }
-        
+
         // Print full message.
-        print(userInfo)
-        
+        Logger.debug("[AppDelegate] willPresent notification userInfo: \(userInfo)")
+
         // Change this to your preferred presentation option
         completionHandler([[.banner, .sound]])
     }
@@ -103,12 +103,12 @@ class AppDelegate: NSObject, UIApplicationDelegate, @MainActor UNUserNotificatio
         let userInfo = response.notification.request.content.userInfo
         // Print message ID.
         if let messageID = userInfo["gcm.message_id"] {
-            print("Message ID: \(messageID)")
+            Logger.debug("[AppDelegate] Message ID: \(messageID)")
         }
-        
+
         // Print full message.
-        print(userInfo)
-        
+        Logger.debug("[AppDelegate] didReceive notification userInfo: \(userInfo)")
+
         // Handle deep link if present
         AppNavigationManager.shared.handle(userInfo: userInfo)
         
@@ -118,7 +118,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, @MainActor UNUserNotificatio
     // MARK: - MessagingDelegate
     
     func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
-        print("Firebase registration token: \(String(describing: fcmToken))")
+        Logger.info("[AppDelegate] Firebase registration token: \(String(describing: fcmToken))")
         
         NotificationService.shared.processNewFCMToken(fcmToken)
     }
@@ -126,11 +126,11 @@ class AppDelegate: NSObject, UIApplicationDelegate, @MainActor UNUserNotificatio
     // MARK: - APNs Delegate
     
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-        print("APNs token received: \(deviceToken.description)")
+        Logger.info("[AppDelegate] APNs token received: \(deviceToken.description)")
         Messaging.messaging().apnsToken = deviceToken
     }
     
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
-        print("Unable to register for remote notifications: \(error.localizedDescription)")
+        Logger.error("[AppDelegate] Unable to register for remote notifications: \(error.localizedDescription)")
     }
 }

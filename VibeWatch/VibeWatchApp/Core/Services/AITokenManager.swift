@@ -11,7 +11,8 @@ final class AITokenManager: ObservableObject {
     // MARK: - Constants
     private let freeLimit = AppConstants.AI.freeDailyRequestLimit
     private let proLimit = AppConstants.AI.proDailyRequestLimit
-    private let storageKey = "vibe_watch_ai_token_usage"
+    private let db = SQLiteService.shared
+    private let legacyStorageKey = "vibe_watch_ai_token_usage"
     
     // MARK: - State
     @Published private(set) var tokensUsedToday: Int = 0
@@ -21,9 +22,13 @@ final class AITokenManager: ObservableObject {
     private var dayChangeObserver: NSObjectProtocol?
     
     private init() {
-        loadUsage()
         updateLimit()
         startDayChangeMonitoring()
+        Task {
+            await migrateFromUserDefaultsIfNeeded()
+            await loadUsageFromSQLite()
+            checkAndResetDaily()
+        }
     }
     
     deinit {
@@ -112,30 +117,68 @@ final class AITokenManager: ObservableObject {
         }
     }
     
-    // MARK: - Persistence
-    
-    private struct StorageData: Codable {
-        let tokens: Int
-        let date: Date
-    }
-    
-    private func loadUsage() {
-        guard let data = UserDefaults.standard.data(forKey: storageKey),
-              let decoded = try? JSONDecoder().decode(StorageData.self, from: data) else {
-            return
+    // MARK: - Persistence (SQLite)
+
+    /// One-time migration from UserDefaults to SQLite
+    private func migrateFromUserDefaultsIfNeeded() async {
+        guard let data = UserDefaults.standard.data(forKey: legacyStorageKey) else { return }
+
+        struct LegacyData: Codable { let tokens: Int; let date: Date }
+        guard let decoded = try? JSONDecoder().decode(LegacyData.self, from: data) else { return }
+
+        let userId = SupabaseService.shared.currentUser?.id ?? "anonymous"
+        do {
+            let sql = """
+                REPLACE INTO user_ai_token_usage (id, user_id, tokens_used_today, last_reset_at, updated_at)
+                VALUES (?, ?, ?, ?, datetime('now'))
+            """
+            _ = try await db.queryRaw(sql, parameters: [
+                userId, userId, decoded.tokens,
+                ISO8601DateFormatter().string(from: decoded.date)
+            ])
+            UserDefaults.standard.removeObject(forKey: legacyStorageKey)
+            Logger.info("[AITokenManager] Migrated token usage from UserDefaults to SQLite")
+        } catch {
+            Logger.error("[AITokenManager] Migration failed: \(error)")
         }
-        
-        self.tokensUsedToday = decoded.tokens
-        self.lastResetDate = decoded.date
-        
-        // Immediate check in case app was opened on a new day
-        checkAndResetDaily()
     }
-    
+
+    private func loadUsageFromSQLite() async {
+        do {
+            let userId = SupabaseService.shared.currentUser?.id ?? "anonymous"
+            let result = try await db.queryRaw(
+                "SELECT tokens_used_today, last_reset_at FROM user_ai_token_usage WHERE user_id = ? LIMIT 1",
+                parameters: [userId]
+            )
+            if let row = result.first {
+                tokensUsedToday = row["tokens_used_today"] as? Int ?? 0
+                if let str = row["last_reset_at"] as? String,
+                   let date = ISO8601DateFormatter().date(from: str) {
+                    lastResetDate = date
+                }
+            }
+        } catch {
+            Logger.error("[AITokenManager] Failed to load from SQLite: \(error)")
+        }
+    }
+
     private func saveUsage() {
-        let data = StorageData(tokens: tokensUsedToday, date: lastResetDate)
-        if let encoded = try? JSONEncoder().encode(data) {
-            UserDefaults.standard.set(encoded, forKey: storageKey)
+        Task { await saveUsageToSQLite() }
+    }
+
+    private func saveUsageToSQLite() async {
+        do {
+            let userId = SupabaseService.shared.currentUser?.id ?? "anonymous"
+            let sql = """
+                REPLACE INTO user_ai_token_usage (id, user_id, tokens_used_today, last_reset_at, updated_at)
+                VALUES (?, ?, ?, ?, datetime('now'))
+            """
+            _ = try await db.queryRaw(sql, parameters: [
+                userId, userId, tokensUsedToday,
+                ISO8601DateFormatter().string(from: lastResetDate)
+            ])
+        } catch {
+            Logger.error("[AITokenManager] Failed to save to SQLite: \(error)")
         }
     }
 }

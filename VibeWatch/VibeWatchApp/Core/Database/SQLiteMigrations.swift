@@ -392,6 +392,7 @@ extension SQLiteService {
             carousel_title TEXT NOT NULL,
             media_id INTEGER NOT NULL,
             media_type TEXT NOT NULL,
+            media_data TEXT,
             position INTEGER,
             score REAL,
             reason TEXT,

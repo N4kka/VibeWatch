@@ -39,14 +39,13 @@ class OnboardingViewModel: ObservableObject {
     }
     
     func completeOnboarding() {
-        print("🟢 [Onboarding] Completing onboarding flow...")
+        Logger.info("[Onboarding] Completing onboarding flow...")
         UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
-        
+
         // Slight delay to allow animation to complete if needed
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            withAnimation {
-                self.showOnboarding = false
-            }
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 100_000_000)
+            withAnimation { self.showOnboarding = false }
         }
         AnalyticsService.shared.logEvent("onboarding_complete")
     }

@@ -17,7 +17,7 @@ class DiscoveryViewModel: ObservableObject {
     }
     
     private let preferenceManager: UserPreferenceManager
-    private let personalizationService: DiscoveryPersonalizationService
+    private let discoveryRepository: any DiscoveryRepositoryProtocol
     private let sqliteService: SQLiteService
     private let quotaManager: DailyQuotaManager
     private var cancellables = Set<AnyCancellable>()
@@ -37,12 +37,12 @@ class DiscoveryViewModel: ObservableObject {
     init(
         quotaManager: DailyQuotaManager = .shared,
         preferenceManager: UserPreferenceManager = .shared,
-        personalizationService: DiscoveryPersonalizationService = .shared,
+        discoveryRepository: any DiscoveryRepositoryProtocol = LiveDiscoveryRepository.shared,
         sqliteService: SQLiteService = .shared
     ) {
         self.quotaManager = quotaManager
         self.preferenceManager = preferenceManager
-        self.personalizationService = personalizationService
+        self.discoveryRepository = discoveryRepository
         self.sqliteService = sqliteService
         self.globalFilters = GlobalDiscoveryFilters.load()
 
@@ -62,7 +62,11 @@ class DiscoveryViewModel: ObservableObject {
             }
             .store(in: &cancellables)
     }
-    
+
+    deinit {
+        loadTask?.cancel()
+    }
+
     // Alias for loadContent to fix call site compatibility
     func loadDiscoveryContent() async {
         await loadContent()
@@ -78,60 +82,39 @@ class DiscoveryViewModel: ObservableObject {
 
     /// Load content - uses database cache for instant loading!
     func loadContent(forceRefresh: Bool = false) async {
-        print("📺 [DiscoveryViewModel] Loading personalized Discovery... forceRefresh: \(forceRefresh)")
+        Logger.debug("[DiscoveryViewModel] Loading personalized Discovery... forceRefresh: \(forceRefresh)")
 
         // Avoid reloading (and resetting scroll) when coming back from a detail screen.
         if !forceRefresh, hasLoadedOnce, !hasNoContent, !shouldReloadForNewDay() {
             return
         }
 
-        if !forceRefresh, !personalizationService.hasCachedData {
-            let userId = AuthService.shared.currentUser?.id
-            if let cached = await personalizationService.loadCachedCarouselsIfAvailable(userId: userId) {
-                generatedCarousels = cached
-                personalizedCarousels = applyGlobalFilters(to: cached)
-                hasLoadedOnce = true
-            }
-        }
-
-        if !forceRefresh, hasLoadedOnce, !hasNoContent, !shouldReloadForNewDay() {
-            return
-        }
-
-        if forceRefresh {
-            isRefreshing = true
-        } else {
-            // Only show loader if we don't have cached data ready to go
-            if !personalizationService.hasCachedData {
-                isLoading = true
-            }
-        }
+        isLoading = hasNoContent && !forceRefresh
+        isRefreshing = forceRefresh
         error = nil
-        
-        do {
-            let profile = await preferenceManager.aggregatePreferences()
-            let carousels = try await personalizationService.generatePersonalizedCarousels(
-                userProfile: profile,
-                filters: globalFilters,
-                forceRefresh: forceRefresh
-            )
-            generatedCarousels = carousels
-            self.personalizedCarousels = applyGlobalFilters(to: generatedCarousels)
 
-            print("✅ [DiscoveryViewModel] Loaded \(personalizedCarousels.count) personalized carousels")
+        let userId = AuthService.shared.currentUser?.id
+        let profile = await preferenceManager.aggregatePreferences()
+
+        for await carousels in discoveryRepository.observeCarousels(
+            userId: userId,
+            profile: profile,
+            filters: globalFilters,
+            forceRefresh: forceRefresh
+        ) {
+            guard !carousels.isEmpty else { continue }
+            generatedCarousels = carousels
+            self.personalizedCarousels = applyGlobalFilters(to: carousels)
             hasLoadedOnce = true
-            markReloadedForToday()
-            
-        } catch {
-            print("❌ [DiscoveryViewModel] Failed to load personalized content: \(error)")
-            self.error = AppError.network(error)
+            isLoading = false
+            isRefreshing = false
+            Logger.debug("[DiscoveryViewModel] Loaded \(carousels.count) carousels")
         }
-        
+
+        markReloadedForToday()
         isLoading = false
         isRefreshing = false
-        if forceRefresh {
-            refreshToken = UUID()
-        }
+        if forceRefresh { refreshToken = UUID() }
     }
 
     func applyFilters(_ filters: GlobalDiscoveryFilters) {
@@ -363,13 +346,17 @@ class DiscoveryViewModel: ObservableObject {
                 values: record
             )
 
-            await SyncManager.shared.queueSync(
-                operation: .insertRecord(
+            do {
+                try await SyncEngine.shared.queueOperation(
                     table: "user_discovery_interactions",
+                    operationType: "INSERT",
                     recordId: recordId,
-                    record: record.merging(["filter_config": filterConfigJSON]) { _, new in new }
+                    payload: record.merging(["filter_config": filterConfigJSON]) { _, new in new },
+                    dependsOn: nil
                 )
-            )
+            } catch {
+                Logger.error("[DiscoveryViewModel] Failed to queue interaction sync: \(error)")
+            }
         } catch {
             Logger.error("[DiscoveryViewModel] Failed to insert discovery interaction", error: error)
         }
@@ -521,13 +508,17 @@ class DiscoveryViewModel: ObservableObject {
                 "countries": globalFilters.countries.isEmpty ? NSNull() : globalFilters.countries
             ]) { _, new in new }
 
-            await SyncManager.shared.queueSync(
-                operation: .upsertRecord(
+            do {
+                try await SyncEngine.shared.queueOperation(
                     table: "global_discovery_filters",
+                    operationType: "UPSERT",
                     recordId: userId,
-                    record: supabaseRow
+                    payload: supabaseRow,
+                    dependsOn: nil
                 )
-            )
+            } catch {
+                Logger.error("[DiscoveryViewModel] Failed to queue filter sync: \(error)")
+            }
         } catch {
             Logger.warning("[DiscoveryViewModel] Failed to persist global filters: \(error.localizedDescription)")
         }

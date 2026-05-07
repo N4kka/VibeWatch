@@ -125,8 +125,63 @@ enum FilterOption: String, CaseIterable {
     case all = "filter.all"
     case movies = "filter.movies"
     case tvShows = "filter.tvSeries"
-    
+
     var displayName: String {
         rawValue.localizedMainSafe()
+    }
+}
+
+// MARK: - SQLite Dictionary Conversion
+
+extension MediaListItem {
+    /// Create a MediaListItem from a SQLite row dictionary
+    static func from(dictionary row: [String: Any]) -> MediaListItem? {
+        guard let id = row["id"] as? String,
+              let mediaId = row["media_id"] as? Int,
+              let mediaTypeRaw = row["media_type"] as? String,
+              let mediaType = MediaType(rawValue: mediaTypeRaw),
+              let title = row["title"] as? String else {
+            return nil
+        }
+
+        // Parse added_at date
+        let addedAt: Date
+        if let addedAtString = row["added_at"] as? String {
+            addedAt = ISO8601DateFormatter().date(from: addedAtString) ?? Date()
+        } else {
+            addedAt = Date()
+        }
+
+        // Parse origin_country JSON array
+        var originCountry: [String]?
+        if let originCountryJson = row["origin_country"] as? String,
+           let data = originCountryJson.data(using: .utf8),
+           let parsed = try? JSONDecoder().decode([String].self, from: data) {
+            originCountry = parsed
+        }
+
+        // Parse genres JSON array
+        var genres: [Int]?
+        if let genresJson = row["genres"] as? String,
+           let data = genresJson.data(using: .utf8),
+           let parsed = try? JSONDecoder().decode([Int].self, from: data) {
+            genres = parsed
+        }
+
+        return MediaListItem(
+            id: id,
+            mediaId: mediaId,
+            mediaType: mediaType,
+            title: title,
+            posterPath: row["poster_path"] as? String,
+            addedAt: addedAt,
+            runtime: row["runtime"] as? Int,
+            voteAverage: row["vote_average"] as? Double,
+            voteCount: row["vote_count"] as? Int,
+            originCountry: originCountry,
+            releaseDate: row["release_date"] as? String,
+            genres: genres,
+            overview: row["overview"] as? String
+        )
     }
 }

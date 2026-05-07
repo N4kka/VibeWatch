@@ -399,8 +399,8 @@ struct SettingsView: View {
             // Load cache preferences from UserDefaults
             selectedCacheSize = ImageCacheService.shared.getCurrentCacheSizePreference()
             selectedPrefetchOption = ImageCacheService.shared.getCurrentImagePrefetchOption()
-            print("ℹ️ [Settings] Loaded cache size preference: \(selectedCacheSize.rawValue)")
-            print("ℹ️ [Settings] Loaded prefetch option: \(selectedPrefetchOption.rawValue)")
+            Logger.info("[Settings] Loaded cache size preference: \(selectedCacheSize.rawValue)")
+            Logger.info("[Settings] Loaded prefetch option: \(selectedPrefetchOption.rawValue)")
         }
         .overlay {
             if showDeleteAccountPanel {
@@ -470,7 +470,7 @@ struct SettingsView: View {
         // Store in UserDefaults (device-specific, no need for cloud sync)
         ImageCacheService.shared.setCacheSizePreference(preference)
 
-        print("✅ [Settings] Cache size preference updated to \(preference.rawValue)")
+        Logger.info("[Settings] Cache size preference updated to \(preference.rawValue)")
     }
 
     private func updatePrefetchOption(_ option: ImageCacheService.ImagePrefetchOption) {
@@ -480,7 +480,7 @@ struct SettingsView: View {
         // Store in UserDefaults (device-specific, no need for cloud sync)
         ImageCacheService.shared.setImagePrefetchOption(option)
 
-        print("✅ [Settings] Prefetch option updated to \(option.rawValue)")
+        Logger.info("[Settings] Prefetch option updated to \(option.rawValue)")
     }
     
     private func clearCache() {
@@ -502,11 +502,11 @@ struct SettingsView: View {
             }
         }
 
-        print("✅ Cache cleared successfully")
+        Logger.info("[Settings] Cache cleared successfully")
     }
 
     private func triggerRecaching() async {
-        print("🔄 [Cache] Starting auto-recaching after cache clear...")
+        Logger.info("[Cache] Starting auto-recaching after cache clear...")
 
         // Only recache if user is PRO (since prefetching is a PRO feature)
         let isProUser = await ClipQuotaService.shared.checkIsProUser()
@@ -514,9 +514,9 @@ struct SettingsView: View {
         if isProUser {
             // Trigger daily content prefetch with force flag to ignore daily limit
             await DailyContentPrefetchService.shared.executeDailyPrefetch(force: true)
-            print("🔄 [Cache] Recaching completed")
+            Logger.info("[Cache] Recaching completed")
         } else {
-            print("📵 [Cache] Skipping recache - User is not PRO")
+            Logger.info("[Cache] Skipping recache - User is not PRO")
         }
     }
     
@@ -527,7 +527,7 @@ struct SettingsView: View {
             appState.currentUser = nil
             dismiss()
         } catch {
-            print("Error forcing logout: \(error.localizedDescription)")
+            Logger.error("[Settings] Error forcing logout: \(error.localizedDescription)")
         }
     }
     
@@ -564,7 +564,7 @@ struct SettingsView: View {
         // Use StoreKit's native offer code redemption sheet
         // This opens Apple's system UI for entering promo/offer codes
         SKPaymentQueue.default().presentCodeRedemptionSheet()
-        print("🎟️ [Settings] Presenting offer code redemption sheet")
+        Logger.info("[Settings] Presenting offer code redemption sheet")
     }
 
     /// Listen for StoreKit transactions after code redemption
@@ -577,7 +577,7 @@ struct SettingsView: View {
             for await result in Transaction.updates {
                 switch result {
                 case .verified(let transaction):
-                    print("🎟️ [Settings] Transaction detected: \(transaction.productID)")
+                    Logger.info("[Settings] Transaction detected: \(transaction.productID)")
 
                     // Sync with RevenueCat to update entitlements
                     await syncPurchasesWithRevenueCat()
@@ -585,7 +585,7 @@ struct SettingsView: View {
                     // Always finish the transaction
                     await transaction.finish()
                 case .unverified(_, let error):
-                    print("⚠️ [Settings] Transaction verification failed: \(error)")
+                    Logger.warning("[Settings] Transaction verification failed: \(error)")
                 }
             }
         }
@@ -599,7 +599,7 @@ struct SettingsView: View {
             let isPro = customerInfo.entitlements[AppConstants.RevenueCat.proEntitlementID]?.isActive == true
 
             if isPro {
-                print("✅ [Settings] Code redeemed successfully! PRO status activated")
+                Logger.info("[Settings] Code redeemed successfully! PRO status activated")
                 await MainActor.run {
                     DailyQuotaManager.shared.upgradeToPro()
                 }
@@ -607,7 +607,7 @@ struct SettingsView: View {
                 await ClipQuotaService.shared.checkIsProUser()
             }
         } catch {
-            print("⚠️ [Settings] Failed to sync purchases: \(error)")
+            Logger.warning("[Settings] Failed to sync purchases: \(error)")
             // Still try to check PRO status directly
             await ClipQuotaService.shared.checkIsProUser()
         }

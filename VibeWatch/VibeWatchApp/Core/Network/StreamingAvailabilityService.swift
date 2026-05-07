@@ -43,7 +43,7 @@ class StreamingAvailabilityService {
             throw StreamingAvailabilityError.invalidURL
         }
         
-        print("🔍 [StreamingAvailability] Fetching sources: \(url.absoluteString)")
+        Logger.debug("[StreamingAvailability] Fetching sources: \(url.absoluteString)")
         
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
@@ -58,7 +58,7 @@ class StreamingAvailabilityService {
         
         if !(200...299).contains(httpResponse.statusCode) {
             if httpResponse.statusCode == 429 {
-                print("⚠️ [StreamingAvailability] Rate limit reached")
+                Logger.warning("[StreamingAvailability] Rate limit reached")
                 throw StreamingAvailabilityError.rateLimitExceeded
             }
             throw StreamingAvailabilityError.httpError(httpResponse.statusCode)
@@ -73,28 +73,24 @@ class StreamingAvailabilityService {
         
         // Debug: Print available regions
         if let optionsMap = response.streamingOptions {
-            print("🌍 [StreamingAvailability] Available regions in response: \(optionsMap.keys.joined(separator: ", "))")
+            Logger.debug("[StreamingAvailability] Available regions in response: \(optionsMap.keys.joined(separator: ", "))")
         }
         
         // API returns country codes in lowercase
         guard let options = response.streamingOptions?[region.lowercased()] else {
-            print("⚠️ [StreamingAvailability] No options found for region: \(region.lowercased())")
+            Logger.warning("[StreamingAvailability] No options found for region: \(region.lowercased())")
             return []
         }
         
-        print("📊 [StreamingAvailability] Found \(options.count) options for \(region)")
+        Logger.debug("[StreamingAvailability] Found \(options.count) options for \(region)")
         
         for option in options {
             let (displayName, logoUrl) = getServiceDetails(option)
             
             // Debug: Print details for every option found
-            print("   - Service: \(displayName)")
-            print("     Type: \(option.type)")
-            print("     Quality: \(option.quality ?? "nil")")
-            print("     Price: \(option.price?.amount ?? "nil")")
-            print("     Logo URL: \(logoUrl ?? "nil")")
+            Logger.debug("[StreamingAvailability] Service: \(displayName), Type: \(option.type), Quality: \(option.quality ?? "nil"), Price: \(option.price?.amount ?? "nil"), Logo URL: \(logoUrl ?? "nil")")
             if let serviceImages = option.service.imageSet {
-                print("     [Debug] Service Images - Light: \(serviceImages.lightThemeImage ?? "nil"), Dark: \(serviceImages.darkThemeImage ?? "nil"), White: \(serviceImages.whiteImage ?? "nil")")
+                Logger.debug("[StreamingAvailability] Service Images - Light: \(serviceImages.lightThemeImage ?? "nil"), Dark: \(serviceImages.darkThemeImage ?? "nil"), White: \(serviceImages.whiteImage ?? "nil")")
             }
             
             // Map types to internal format

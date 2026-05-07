@@ -148,7 +148,7 @@ struct CommentInputView: View {
                 await MainActor.run {
                     isPosting = false
                     errorMessage = "Failed to post comment. Please try again."
-                    print("❌ [CommentInput] Failed to post comment: \(error)")
+                    Logger.error("[CommentInput] Failed to post comment: \(error)")
                 }
                 
                 // Error haptic
@@ -169,7 +169,7 @@ struct CommentInputView: View {
             userId: "user-456",
             parentCommentId: nil,
             onCommentPosted: { comment in
-                print("Posted comment: \(comment.id)")
+                Logger.debug("[Preview] Posted comment: \(comment.id)")
             }
         )
     }
@@ -184,10 +184,10 @@ struct CommentInputView: View {
             userId: "user-456",
             parentCommentId: "comment-789",
             onCommentPosted: { comment in
-                print("Posted reply: \(comment.id)")
+                Logger.debug("[Preview] Posted reply: \(comment.id)")
             },
             onCancel: {
-                print("Cancelled reply")
+                Logger.debug("[Preview] Cancelled reply")
             }
         )
     }

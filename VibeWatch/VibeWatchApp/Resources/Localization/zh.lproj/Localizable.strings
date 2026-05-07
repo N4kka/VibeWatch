@@ -288,7 +288,6 @@
 "paywall.feature.releaseAlerts" = "🔔 收藏内容上线时提醒";
 "paywall.feature.unlimitedClips" = "▶️ 无限剪辑与预告片";
 "paywall.proDescription" = "Pro 解锁无限剪辑、AI 观影助手和同步观影列表。";
-"paywall.foundingMember" = "创始会员优惠价格";
 "paywall.plan.annual" = "年度方案";
 "paywall.plan.monthly" = "月度方案";
 "paywall.price.perMonth" = "%@/月";

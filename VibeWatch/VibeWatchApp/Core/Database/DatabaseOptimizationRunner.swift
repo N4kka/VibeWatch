@@ -57,6 +57,9 @@ class DatabaseOptimizationRunner {
         // Section 10: Clips Table
         await createClipsIndexes()
 
+        // Section 11: Detail Cache
+        await createDetailCacheIndexes()
+
         // Update statistics
         db.execute("ANALYZE")
         Logger.info("✅ Database statistics updated (ANALYZE completed)")
@@ -67,7 +70,7 @@ class DatabaseOptimizationRunner {
         let duration = CFAbsoluteTimeGetCurrent() - startTime
         Logger.info("=============================================================")
         Logger.info("✅ Database optimization completed in \(String(format: "%.2f", duration))s")
-        Logger.info("   Total indexes created: 25")
+        Logger.info("   Total indexes created: 26")
         Logger.info("   Expected performance improvement: 70-90%")
         Logger.info("=============================================================")
     }
@@ -327,6 +330,20 @@ class DatabaseOptimizationRunner {
         Logger.info("✅ Created idx_clips_genres")
     }
 
+    // MARK: - Section 11: Detail Cache Indexes
+
+    private func createDetailCacheIndexes() async {
+        Logger.info("\n📊 Creating detail_cache indexes...")
+
+        // Index 26: Detail cache lookups by media
+        db.execute("""
+            CREATE INDEX IF NOT EXISTS idx_detail_cache_lookup
+            ON detail_cache(media_id, media_type, expires_at)
+            WHERE deleted_at IS NULL
+        """)
+        Logger.info("✅ Created idx_detail_cache_lookup")
+    }
+
     // MARK: - Maintenance Operations
 
     /// Clean up expired and old data to prevent table bloat
@@ -412,7 +429,7 @@ class DatabaseOptimizationRunner {
             return OptimizationStatus(
                 isOptimized: true,
                 version: "1.0",
-                indexCount: 25,
+                indexCount: 26,
                 lastOptimizedAt: Date()
             )
         } else {
@@ -465,7 +482,8 @@ class DatabaseOptimizationRunner {
                 "idx_movie_reactions_user_media",
                 "idx_movie_reactions_media_type",
                 "idx_clips_active_quality",
-                "idx_clips_genres"
+                "idx_clips_genres",
+                "idx_detail_cache_lookup"
             ]
 
             result.missingIndexes = expectedIndexes.filter { !result.indexNames.contains($0) }

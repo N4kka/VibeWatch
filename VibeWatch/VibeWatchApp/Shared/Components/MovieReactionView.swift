@@ -89,7 +89,7 @@ struct MovieReactionView: View {
             // Load user's reaction
             userReaction = try await reactionService.getUserReaction(mediaId: mediaId, mediaType: mediaType, userId: userId)
         } catch {
-            print("❌ [MovieReactionView] Error loading reactions: \(error)")
+            Logger.error("[MovieReactionView] Error loading reactions: \(error)")
             ErrorHandler.shared.logOnly(error, context: "Load reactions")
         }
     }
@@ -119,7 +119,7 @@ struct MovieReactionView: View {
                 generator.impactOccurred()
                 
             } catch {
-                print("❌ [MovieReactionView] Error toggling reaction: \(error)")
+                Logger.error("[MovieReactionView] Error toggling reaction: \(error)")
                 ErrorHandler.shared.handle(error, context: "Toggle reaction")
             }
         }

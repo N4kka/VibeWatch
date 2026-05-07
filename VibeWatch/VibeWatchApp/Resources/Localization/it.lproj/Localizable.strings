@@ -316,7 +316,6 @@
 "paywall.plan.monthly" = "Mensile";
 "paywall.plan.annual" = "Annuale";
 "paywall.discount.annual" = "33% DI SCONTO";
-"paywall.foundingMember" = "Prezzo Founding Member";
 "paywall.price.perMonth" = "%@/mese";
 "paywall.trial.badge" = "%@ gratis";
 "paywall.restore" = "Ripristina acquisti";

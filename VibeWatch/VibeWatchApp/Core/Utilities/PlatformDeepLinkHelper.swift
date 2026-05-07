@@ -10,18 +10,14 @@ class PlatformDeepLinkHelper {
     ///   - justWatchLink: The JustWatch link from TMDB (shows platform availability)
     ///   - title: The title (for fallback only)
     @MainActor static func openPlatform(provider: Provider, justWatchLink: String?, title: String) {
-        print("🔗 [PlatformDeepLink] Opening platform:")
-        print("   Provider: \(provider.providerName) (ID: \(provider.providerId))")
-        print("   JustWatch Link: \(justWatchLink ?? "nil")")
-        print("   Direct Link: \(provider.externalLink?.absoluteString ?? "nil")")
-        print("   Title: \(title)")
+        Logger.debug("[PlatformDeepLink] Opening platform: \(provider.providerName) (ID: \(provider.providerId)), JustWatch: \(justWatchLink ?? "nil"), Direct: \(provider.externalLink?.absoluteString ?? "nil"), Title: \(title)")
         
         // 1. Try direct deep link from provider (RapidAPI)
         if let directURL = provider.externalLink {
-            print("   🚀 Opening direct deep link: \(directURL.absoluteString)")
+            Logger.debug("[PlatformDeepLink] Opening direct deep link: \(directURL.absoluteString)")
             UIApplication.shared.open(directURL, options: [:]) { success in
                 if !success {
-                    print("   ⚠️ Failed to open deep link, trying fallback...")
+                    Logger.warning("[PlatformDeepLink] Failed to open deep link, trying fallback...")
                     openFallback(provider: provider, justWatchLink: justWatchLink)
                 }
             }
@@ -34,17 +30,17 @@ class PlatformDeepLinkHelper {
     
     @MainActor private static func openFallback(provider: Provider, justWatchLink: String?) {
         if let linkString = justWatchLink, let url = URL(string: linkString) {
-            print("   🌐 Opening TMDB JustWatch page: \(url.absoluteString)")
+            Logger.debug("[PlatformDeepLink] Opening TMDB JustWatch page: \(url.absoluteString)")
             UIApplication.shared.open(url, options: [:])
             return
         }
 
-        print("   ⚠️ No JustWatch link available, opening platform homepage...")
+        Logger.warning("[PlatformDeepLink] No JustWatch link available, opening platform homepage...")
         if let fallbackURL = getPlatformHomepage(provider: provider) ?? getPlatformHomepage(byName: provider.providerName) {
-            print("   🌐 Opening platform homepage: \(fallbackURL.absoluteString)")
+            Logger.debug("[PlatformDeepLink] Opening platform homepage: \(fallbackURL.absoluteString)")
             UIApplication.shared.open(fallbackURL, options: [:])
         } else {
-            print("   ❌ No fallback URL available")
+            Logger.error("[PlatformDeepLink] No fallback URL available")
         }
     }
     

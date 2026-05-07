@@ -5,7 +5,7 @@ final class ClipsService {
     static let shared = ClipsService()
     
     private let tmdbService = TMDBService.shared
-    private let youtubeAPIKey = "AIzaSyCh_tkrvBEGW6ALRvkAN-LYx1B3Cly1160"
+    private let youtubeAPIKey = Config.youtubeApiKey  // Phase 5: Use Config instead of hardcoded key
     private let session: URLSession
 
     // In-memory storage for likes (since you don't have a backend)
@@ -44,7 +44,7 @@ final class ClipsService {
             return updatedClip
         }
         
-        print("✅ Smart feed generated: \(clips.count) clips with personalization & diversity")
+        Logger.info("[ClipsService] Smart feed generated: \(clips.count) clips with personalization & diversity")
         return clips
     }
     

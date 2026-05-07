@@ -58,49 +58,73 @@ class DatabaseClipsService {
 
         let topGenres = Array(Set(engagementTopGenres + unifiedTopGenres))
         let deviceId = getDeviceId()
-        
-        // Fetch ALL active clips from local SQLite, randomized
-        // RANDOMIZE clips on every fetch (app launch) - using SQLite's RANDOM()
-        let response: [[String: Any]] = try await db.queryRaw("""
-            SELECT * FROM clips
-            WHERE is_active = 1 AND deleted_at IS NULL
-            ORDER BY RANDOM()
-        """)
-        
-        Logger.debug("[DatabaseClips] Fetched \(response.count) randomized clips from local SQLite")
-        
+
+        // Fetch active clips from local SQLite using bucket-based randomization (Phase 4 optimization)
+        // Pick a random bucket range instead of ORDER BY RANDOM() for better performance
+        let bucketStart = Int.random(in: 0..<100)
+        let bucketEnd = (bucketStart + 30) % 100  // 30% of clips per fetch
+
+        let response: [[String: Any]]
+        if bucketStart < bucketEnd {
+            response = try await db.queryRaw("""
+                SELECT * FROM clips
+                WHERE is_active = 1 AND deleted_at IS NULL
+                  AND random_bucket >= ? AND random_bucket < ?
+                ORDER BY random_bucket
+            """, parameters: [bucketStart, bucketEnd])
+        } else {
+            // Wrap around case (e.g., 90-20)
+            response = try await db.queryRaw("""
+                SELECT * FROM clips
+                WHERE is_active = 1 AND deleted_at IS NULL
+                  AND (random_bucket >= ? OR random_bucket < ?)
+                ORDER BY random_bucket
+            """, parameters: [bucketStart, bucketEnd])
+        }
+
+        Logger.debug("[DatabaseClips] Fetched \(response.count) clips from bucket range \(bucketStart)-\(bucketEnd)")
+
+        // Phase 4 Fix: Build genre lookup dictionary O(N) instead of O(N²) linear search
+        var genresByClipId: [String: [String]] = [:]
+        for row in response {
+            guard let clipId = row["clip_id"] as? String else { continue }
+            if let genresString = row["genres"] as? String,
+               let genresData = genresString.data(using: .utf8),
+               let genres = try? JSONDecoder().decode([String].self, from: genresData) {
+                genresByClipId[clipId] = genres
+            } else {
+                genresByClipId[clipId] = []
+            }
+        }
+
         // Parse rows to Clip objects
         var clips: [Clip] = response.compactMap { mapClip(from: $0) }
-        
-        // Filter by genres if user has preferences
+
+        // Filter by genres if user has preferences (now O(1) lookup per clip)
         if !topGenres.isEmpty {
             let preferredGenreNames = Set(topGenres.compactMap { genreIdToName($0) })
             let genreFiltered = clips.filter { clip in
-                guard let genresString = response.first(where: { ($0["clip_id"] as? String) == clip.id })?["genres"] as? String,
-                      let genresData = genresString.data(using: .utf8),
-                      let genres = try? JSONDecoder().decode([String].self, from: genresData) else {
-                    return false
-                }
+                let genres = genresByClipId[clip.id] ?? []
                 return !Set(genres).isDisjoint(with: preferredGenreNames)
             }
-            
+
             // Use filtered clips if we have enough
             if genreFiltered.count >= count {
                 clips = genreFiltered
             }
         }
-        
+
         // Filter out already-watched clips
         let watchedClips = await getWatchedClipIdsFromLocal(deviceId: deviceId)
         let unwatchedClips = clips.filter { !watchedClips.contains($0.id) }
-        
+
         // Get liked status in one go
         let likedClipIds = ClipsService.shared.getLikedClipIds()
-        
+
         // Map to final model, setting isLiked status
         let scored = scoreClips(
             clips: unwatchedClips,
-            rawRows: response,
+            genresByClipId: genresByClipId,
             userProfile: userProfile,
             preferredGenreIds: topGenres
         )
@@ -110,14 +134,16 @@ class DatabaseClipsService {
             mutableClip.isLiked = likedClipIds.contains(clip.id)
             return mutableClip
         }
-        
+
         Logger.info("[DatabaseClips] Returning \(finalClips.count) personalized clips from local SQLite")
         return finalClips
     }
 
+    /// Score clips for personalization ranking
+    /// Phase 4 Fix: Uses genresByClipId dictionary for O(1) lookups instead of O(N) linear search
     private func scoreClips(
         clips: [Clip],
-        rawRows: [[String: Any]],
+        genresByClipId: [String: [String]],
         userProfile: UserProfile,
         preferredGenreIds: [Int]
     ) -> [Clip] {
@@ -125,20 +151,11 @@ class DatabaseClipsService {
         let lastSearch = userProfile.recentActivity.lastSearchQuery?.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
         let likedTitles = userProfile.recentActivity.likedMedia.prefix(5).map { $0.title.lowercased() }
 
-        func clipGenres(for clip: Clip) -> [String] {
-            guard let genresString = rawRows.first(where: { ($0["clip_id"] as? String) == clip.id })?["genres"] as? String,
-                  let data = genresString.data(using: .utf8),
-                  let genres = try? JSONDecoder().decode([String].self, from: data) else {
-                return []
-            }
-            return genres
-        }
-
         func score(for clip: Clip) -> Double {
             var score: Double = 0
 
-            // Cross-feature boosts from unified profile
-            let clipGenreNames = Set(clipGenres(for: clip).map { $0.lowercased() })
+            // Cross-feature boosts from unified profile (O(1) dictionary lookup)
+            let clipGenreNames = Set((genresByClipId[clip.id] ?? []).map { $0.lowercased() })
             if !preferredGenreNames.isEmpty, !clipGenreNames.isDisjoint(with: preferredGenreNames) {
                 score += 30
             }
