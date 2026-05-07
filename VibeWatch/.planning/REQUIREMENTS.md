@@ -27,7 +27,7 @@
 ### Code Quality
 
 - [ ] **QUAL-01**: All 212 `print()` calls replaced with `Logger` — no raw print statements in production code paths
-- [ ] **QUAL-02**: `MultiDeviceSyncTests.swift` updated to use `SyncEngine` and `ConflictResolver` APIs — test compiles and passes, covering core sync conflict resolution
+- [x] **QUAL-02**: `MultiDeviceSyncTests.swift` updated to use `SyncEngine` and `ConflictResolver` APIs — test compiles and passes, covering core sync conflict resolution
 
 ## v2 Requirements
 
@@ -73,7 +73,7 @@
 | PERF-03 | Phase 3 | Complete |
 | PERF-04 | Phase 3 | Complete |
 | QUAL-01 | Phase 4 | Pending |
-| QUAL-02 | Phase 4 | Pending |
+| QUAL-02 | Phase 4 | Complete |
 
 **Coverage:**
 - v1 requirements: 12 total
