@@ -344,7 +344,7 @@ final class SQLiteService: ObservableObject {
         }
         
         let currentVersion = Int(migrationVersionString) ?? 0
-        let latestVersion = 4
+        let latestVersion = 5
         
         // Only run migrations if not already at latest version
         if currentVersion >= latestVersion {
@@ -447,6 +447,26 @@ final class SQLiteService: ObservableObject {
             Logger.info("[SQLite] Migration 4: add usage_day to user_ai_token_usage for daily resets")
             if !columnExists("user_ai_token_usage", column: "usage_day") {
                 execute("ALTER TABLE user_ai_token_usage ADD COLUMN usage_day TEXT")
+            }
+        }
+
+        if currentVersion < 5 {
+            Logger.info("[SQLite] Migration 5: add watch_providers table and vote_count to detail_cache")
+            execute("""
+                CREATE TABLE IF NOT EXISTS watch_providers (
+                  id TEXT PRIMARY KEY,
+                  media_id INTEGER NOT NULL,
+                  media_type TEXT NOT NULL,
+                  region TEXT NOT NULL,
+                  providers_json TEXT NOT NULL,
+                  refreshed_at TEXT NOT NULL,
+                  expires_at TEXT NOT NULL,
+                  UNIQUE(media_id, media_type, region)
+                )
+            """)
+            execute("CREATE INDEX IF NOT EXISTS idx_watch_providers_lookup ON watch_providers(media_id, media_type, region)")
+            if !columnExists("detail_cache", column: "vote_count") {
+                execute("ALTER TABLE detail_cache ADD COLUMN vote_count INTEGER DEFAULT 0")
             }
         }
 

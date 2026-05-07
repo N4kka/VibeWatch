@@ -73,7 +73,6 @@ final class DependencyContainer: ObservableObject {
         DiscoveryViewModel(
             quotaManager: dailyQuotaManager,
             preferenceManager: userPreferenceManager,
-            personalizationService: personalizationService,
             sqliteService: sqliteService
         )
     }
@@ -82,10 +81,6 @@ final class DependencyContainer: ObservableObject {
     func makeMovieDetailViewModel(movieId: Int) -> MovieDetailViewModel {
         MovieDetailViewModel(
             movieId: movieId,
-            tmdbService: tmdbService,
-            streamingService: streamingService,
-            detailCache: detailCache,
-            quotaService: clipQuotaService,
             cerebrasService: cerebrasService,
             preferenceManager: userPreferenceManager,
             aiTokenManager: aiTokenManager
@@ -96,10 +91,6 @@ final class DependencyContainer: ObservableObject {
     func makeTVShowDetailViewModel(tvShowId: Int) -> TVShowDetailViewModel {
         TVShowDetailViewModel(
             tvShowId: tvShowId,
-            tmdbService: tmdbService,
-            streamingService: streamingService,
-            detailCache: detailCache,
-            quotaService: clipQuotaService,
             cerebrasService: cerebrasService,
             preferenceManager: userPreferenceManager,
             aiTokenManager: aiTokenManager
