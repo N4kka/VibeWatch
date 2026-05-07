@@ -1,10 +1,11 @@
 ---
 phase: 1
 slug: critical-bug-fixes
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: complete
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-03-05
+audited: 2026-05-07
 ---
 
 # Phase 1 — Validation Strategy
@@ -38,13 +39,13 @@ created: 2026-03-05
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 1-01-01 | 01 | 0 | BUG-01 | unit | `xcodebuild test -scheme VibeWatchApp -only-testing:VibeWatchAppTests/ClipCommentServiceTests` | ❌ W0 | ⬜ pending |
-| 1-01-02 | 01 | 0 | BUG-01 | unit | `xcodebuild test -scheme VibeWatchApp -only-testing:VibeWatchAppTests/DatabaseMigrationTests` | ❌ W0 | ⬜ pending |
-| 1-02-01 | 02 | 0 | BUG-02 | integration | `xcodebuild test -scheme VibeWatchApp -only-testing:VibeWatchAppTests/SyncEngineTests/testUnblockSchemaErrorOperations` | ❌ W0 | ⬜ pending |
-| 1-02-02 | 02 | manual | BUG-02 | manual | Simulator + Supabase: add blocked row, call unblock method, verify status → completed | N/A | ⬜ pending |
-| 1-03-01 | 03 | 0 | BUG-03 | unit | `xcodebuild test -scheme VibeWatchApp -only-testing:VibeWatchAppTests/AppNavigationManagerTests` | ❌ W0 | ⬜ pending |
-| 1-03-02 | 03 | manual | BUG-03 | manual | Kill app, tap notification in Notification Center, verify MovieDetailView opens | N/A | ⬜ pending |
-| 1-04-01 | 04 | 0 | BUG-04 | unit | `xcodebuild test -scheme VibeWatchApp -only-testing:VibeWatchAppTests/AnalyticsInsightsTests` | ❌ W0 | ⬜ pending |
+| 1-01-01 | 01 | 0 | BUG-01 | unit | `xcodebuild test -scheme VibeWatchApp -only-testing:VibeWatchAppTests/ClipCommentServiceTests` | ✅ | ✅ green |
+| 1-01-02 | 01 | 0 | BUG-01 | unit | `xcodebuild test -scheme VibeWatchApp -only-testing:VibeWatchAppTests/DatabaseMigrationTests` | ✅ | ✅ green |
+| 1-02-01 | 02 | 0 | BUG-02 | integration | `xcodebuild test -scheme VibeWatchApp -only-testing:VibeWatchAppTests/SyncEngineTests/testUnblockSchemaErrorOperations` | ✅ | ✅ green |
+| 1-02-02 | 02 | manual | BUG-02 | manual | Simulator + Supabase: add blocked row, call unblock method, verify status → completed | N/A | ⬜ manual |
+| 1-03-01 | 03 | 0 | BUG-03 | unit | `xcodebuild test -scheme VibeWatchApp -only-testing:VibeWatchAppTests/AppNavigationManagerTests` | ✅ | ✅ green |
+| 1-03-02 | 03 | manual | BUG-03 | manual | Kill app, tap notification in Notification Center, verify MovieDetailView opens | N/A | ⬜ manual |
+| 1-04-01 | 04 | 0 | BUG-04 | unit | `xcodebuild test -scheme VibeWatchApp -only-testing:VibeWatchAppTests/AnalyticsInsightsTests` | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -52,11 +53,11 @@ created: 2026-03-05
 
 ## Wave 0 Requirements
 
-- [ ] `VibeWatchAppTests/ClipCommentServiceTests.swift` — verify `commentRPCDisabled` property no longer exists on `ClipCommentService` (BUG-01)
-- [ ] `VibeWatchAppTests/DatabaseMigrationTests.swift` — verify `DatabaseMigrationManager` version increments to 3 and `updated_at` column exists in `clip_comments` after migration (BUG-01)
-- [ ] Add `testUnblockSchemaErrorOperations()` to existing `VibeWatchAppTests/SyncEngineTests.swift` — insert row with `status = 'blocked'` and `last_error LIKE '%PGRST205%'`, call `unblockAndRetryBlockedOperations()`, assert `status = 'pending'` (BUG-02)
-- [ ] `VibeWatchAppTests/AppNavigationManagerTests.swift` — unit test `handle(userInfo:)` with valid movie/TV payloads and missing `media_id` fallback (BUG-03)
-- [ ] `VibeWatchAppTests/AnalyticsInsightsTests.swift` — seed `user_clip_history` with known genre IDs, assert expected mood distribution keys; assert empty state returns non-nil `moodAnalysis` with placeholder (BUG-04)
+- [x] `VibeWatchAppTests/ClipCommentServiceTests.swift` — verify `commentRPCDisabled` property no longer exists on `ClipCommentService` (BUG-01)
+- [x] `VibeWatchAppTests/DatabaseMigrationTests.swift` — verify `DatabaseMigrationManager` version increments to 3 and `updated_at` column exists in `clip_comments` after migration (BUG-01)
+- [x] Add `testUnblockSchemaErrorOperations()` to existing `VibeWatchAppTests/SyncEngineTests.swift` — insert row with `status = 'blocked'` and `last_error LIKE '%PGRST205%'`, call `unblockAndRetryBlockedOperations()`, assert `status = 'pending'` (BUG-02)
+- [x] `VibeWatchAppTests/AppNavigationManagerTests.swift` — unit test `handle(userInfo:)` with valid movie/TV payloads and missing `media_id` fallback (BUG-03)
+- [x] `VibeWatchAppTests/AnalyticsInsightsTests.swift` — seed `user_clip_history` with known genre IDs, assert expected mood distribution keys; assert empty state returns non-nil `moodAnalysis` with placeholder (BUG-04)
 
 ---
 
@@ -71,11 +72,24 @@ created: 2026-03-05
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 120s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 120s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** 2026-05-07
+
+---
+
+## Validation Audit 2026-05-07
+
+| Metric | Count |
+|--------|-------|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
+| Manual-only | 2 |
+
+All 5 automated test files confirmed on disk and GREEN per VERIFICATION.md (verified 2026-03-06, re-verified 2026-05-07). No new tests were needed.
