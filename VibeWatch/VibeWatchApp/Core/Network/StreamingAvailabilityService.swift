@@ -1,9 +1,13 @@
 import Foundation
 
+protocol StreamingAvailabilityProviding: Sendable {
+    func getProviders(tmdbId: Int, type: MediaType, region: String) async throws -> CountryProviders
+}
+
 /// Service for fetching comprehensive streaming availability, pricing, and quality data
 /// Uses the "Movie of the Night" API (via RapidAPI)
 /// Limits: 1,000 requests/month (Free Tier)
-class StreamingAvailabilityService {
+final class StreamingAvailabilityService: StreamingAvailabilityProviding {
     @MainActor static let shared = StreamingAvailabilityService()
     
     private let baseURL = "https://streaming-availability.p.rapidapi.com"

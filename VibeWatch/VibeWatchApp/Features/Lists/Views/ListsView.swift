@@ -547,12 +547,11 @@ struct MediaItemRow: View {
     @State private var providerLink: String?
     @State private var navigateToDetail = false
     @State private var isLoadingProviders = false
+    @State private var providerLookupCompleted = false
     @State private var showNotifyMeAlert = false
     @State private var offset: CGFloat = 0
     @State private var isSwiping = false
     @State private var cardWidth: CGFloat = 0
-    
-    private let tmdbService = TMDBService.shared
     
     private var deleteThreshold: CGFloat {
         // Delete when swiped 75% of the card width
@@ -656,7 +655,16 @@ struct MediaItemRow: View {
                     Spacer()
                     
                     // Watch Now button
-                    if let provider = topProvider {
+                    if isLoadingProviders || !providerLookupCompleted {
+                        HStack {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(Color.theme.accentOrange)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                    } else if let provider = topProvider {
                         Button {
                             PlatformDeepLinkHelper.openPlatform(
                                 provider: provider,
@@ -849,6 +857,9 @@ struct MediaItemRow: View {
     /// Only hits the network if the cached entry is expired or missing.
     private func loadProviders() async {
         guard !isLoadingProviders else { return }
+        providerLookupCompleted = false
+        topProvider = nil
+        providerLink = nil
         isLoadingProviders = true
         let region = LocalizationManager.shared.currentCountry.id
         for await providers in LiveWatchProvidersRepository.shared.observeProviders(
@@ -857,41 +868,13 @@ struct MediaItemRow: View {
             if let providers { processProviders(providers) }
         }
         isLoadingProviders = false
+        providerLookupCompleted = true
     }
 
     private func isValid(_ provider: Provider) -> Bool {
-        guard !provider.logoPath.isEmpty else { return false }
-        let lowerLogo = provider.logoPath.lowercased()
-        if lowerLogo.contains(".svg") { return false }
-        if lowerLogo.contains("logo-white") { return false }
-        return true
-    }
-
-    private func hasValidProviders(_ providers: CountryProviders) -> Bool {
-        let hasFlatrate = providers.flatrate?.contains(where: isValid) == true
-        let hasRent = providers.rent?.contains(where: isValid) == true
-        let hasBuy = providers.buy?.contains(where: isValid) == true
-        return hasFlatrate || hasRent || hasBuy
-    }
-
-    private func loadTMDBProvidersFallback() async {
-        do {
-            if item.mediaType == .movie {
-                let providers = try await tmdbService.getMovieWatchProviders(id: item.mediaId)
-                if let countryProviders = providers.results[LocalizationManager.shared.currentCountry.id] {
-                    // We need to construct a CountryProviders object or just use it directly if types match.
-                    // TMDBService returns WatchProvider.results which is [String: CountryProviders]
-                    processProviders(countryProviders)
-                }
-            } else {
-                let providers = try await tmdbService.getTVShowWatchProviders(id: item.mediaId)
-                if let countryProviders = providers.results[LocalizationManager.shared.currentCountry.id] {
-                    processProviders(countryProviders)
-                }
-            }
-        } catch {
-            Logger.error("[ListsView] Error loading TMDB fallback providers: \(error.localizedDescription)")
-        }
+        guard provider.hasUsableLogo else { return false }
+        if provider.externalLink != nil || providerLink != nil { return true }
+        return PlatformDeepLinkHelper.hasPlatformHomepage(for: provider)
     }
     
     private func processProviders(_ countryProviders: CountryProviders) {

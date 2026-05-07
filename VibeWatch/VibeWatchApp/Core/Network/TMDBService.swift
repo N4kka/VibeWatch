@@ -1,6 +1,11 @@
 import Foundation
 
-protocol TMDBServiceProtocol: Sendable {
+protocol TMDBWatchProvidersServiceProtocol: Sendable {
+    func getMovieWatchProviders(id: Int) async throws -> WatchProvider
+    func getTVShowWatchProviders(id: Int) async throws -> WatchProvider
+}
+
+protocol TMDBServiceProtocol: TMDBWatchProvidersServiceProtocol, Sendable {
     func getTrendingMovies(timeWindow: TimeWindow, page: Int) async throws -> TMDBResponse<Movie>
     func getPopularMovies(page: Int) async throws -> TMDBResponse<Movie>
     func getTopRatedMovies(page: Int) async throws -> TMDBResponse<Movie>
@@ -35,12 +40,10 @@ protocol TMDBServiceProtocol: Sendable {
     func getMovieDetails(id: Int) async throws -> Movie
     func getMovieCredits(id: Int) async throws -> Credits
     func getMovieVideos(id: Int) async throws -> TMDBVideosResponse
-    func getMovieWatchProviders(id: Int) async throws -> WatchProvider
     func getSimilarMovies(id: Int, page: Int) async throws -> TMDBResponse<Movie>
     func getTVShowDetails(id: Int) async throws -> TVShow
     func getTVShowCredits(id: Int) async throws -> Credits
     func getTVShowVideos(id: Int) async throws -> TMDBVideosResponse
-    func getTVShowWatchProviders(id: Int) async throws -> WatchProvider
     func getSimilarTVShows(id: Int, page: Int) async throws -> TMDBResponse<TVShow>
     func getMovieExternalIds(id: Int) async throws -> ExternalIds
     func getTVShowExternalIds(id: Int) async throws -> ExternalIds

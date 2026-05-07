@@ -34,6 +34,18 @@ class DiscoveryViewModel: ObservableObject {
         return formatter
     }()
 
+    static func prioritizeCarouselOrder(_ carousels: [PersonalizedCarousel]) -> [PersonalizedCarousel] {
+        guard let dailyMixIndex = carousels.firstIndex(where: { $0.type == .dailyMix }),
+              dailyMixIndex != carousels.startIndex else {
+            return carousels
+        }
+
+        var orderedCarousels = carousels
+        let dailyMix = orderedCarousels.remove(at: dailyMixIndex)
+        orderedCarousels.insert(dailyMix, at: orderedCarousels.startIndex)
+        return orderedCarousels
+    }
+
     init(
         quotaManager: DailyQuotaManager = .shared,
         preferenceManager: UserPreferenceManager = .shared,
@@ -219,7 +231,7 @@ class DiscoveryViewModel: ObservableObject {
             }
         }
 
-        return filteredCarousels
+        return Self.prioritizeCarouselOrder(filteredCarousels)
     }
 
     private func applyItemFilters(_ items: [Movie]) -> [Movie] {
