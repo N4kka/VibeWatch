@@ -65,12 +65,12 @@ audited: 2026-05-07
 
 ## Manual-Only Verifications
 
-| Behavior | Requirement | Why Manual | Test Instructions |
-|----------|-------------|------------|-------------------|
-| Cold launch Discovery screen appears in <500ms | PERF-01 | Requires device timing — simulator timing unreliable | Kill app, launch, measure time-to-first-content with Xcode Time Profiler |
-| Movie/TV detail loads cached poster/title before network | PERF-04 | Requires network throttling to observe cache-first | Enable Network Link Conditioner (Very Bad Network), open detail screen, verify cached title appears immediately |
-| Discovery cache-first path (full integration) | PERF-04 | `DiscoveryPersonalizationService.memoryCache` is `private`; cannot seed via `@testable import` | Cold launch after prior session with personalized content; verify carousels appear before network completes |
-| Clips cache-first path (full integration) | PERF-04 | `DatabaseClipsService.fetchPersonalizedClips()` requires `UserPreferenceManager` + `UserEngagementTracker` in known state — not achievable without full app bootstrap | Kill app, reopen, confirm clips appear before YouTube API response |
+| Behavior | Requirement | Why Manual | Result |
+|----------|-------------|------------|--------|
+| Cold launch Discovery screen appears in <500ms | PERF-01 | Requires device timing — simulator timing unreliable | ✅ VERIFIED 2026-05-07 — content appears immediately after splash screen (Time Profiler run; qualitative: instant cache hit, no blank-screen wait) |
+| Movie/TV detail loads cached poster/title before network | PERF-04 | Requires network throttling to observe cache-first | ✅ VERIFIED 2026-05-07 — tested with Network Connections instrument; network traffic active in background while cached content displayed |
+| Discovery cache-first path (full integration) | PERF-04 | `DiscoveryPersonalizationService.memoryCache` is `private`; cannot seed via `@testable import` | ✅ VERIFIED 2026-05-07 — carousels visible immediately after splash; network burst confirms background refresh path is active |
+| Clips cache-first path (full integration) | PERF-04 | `DatabaseClipsService.fetchPersonalizedClips()` requires `UserPreferenceManager` + `UserEngagementTracker` in known state — not achievable without full app bootstrap | ⬜ pending — not yet tested independently |
 
 ---
 
@@ -83,7 +83,7 @@ audited: 2026-05-07
 - [x] Feedback latency < 60s
 - [x] `nyquist_compliant: true` set in frontmatter — PERF-04 structural assertions DO run before XCTSkip; integration path is documented in Manual-Only
 
-**Approval:** audited 2026-05-07
+**Approval:** manually verified 2026-05-07 — PERF-01 cold launch PASS; PERF-04 network condition PASS; Clips standalone pending
 
 ---
 
