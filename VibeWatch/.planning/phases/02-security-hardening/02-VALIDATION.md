@@ -1,10 +1,11 @@
 ---
 phase: 2
 slug: security-hardening
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: complete
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-03-06
+audited: 2026-05-07
 ---
 
 # Phase 2 — Validation Strategy
@@ -38,12 +39,12 @@ created: 2026-03-06
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 2-01-01 | 01 | 0 | SEC-01, SEC-02 | unit stubs | `xcodebuild test -scheme VibeWatchApp -only-testing VibeWatchAppTests/KeychainStorageTests -destination 'platform=iOS Simulator,name=iPhone 16' 2>&1 \| tail -20` | ❌ W0 | ⬜ pending |
-| 2-01-02 | 01 | 0 | SEC-02 | unit stubs | `xcodebuild test -scheme VibeWatchApp -only-testing VibeWatchAppTests/AuthMigrationTests -destination 'platform=iOS Simulator,name=iPhone 16' 2>&1 \| tail -20` | ❌ W0 | ⬜ pending |
-| 2-01-03 | 01 | 1 | SEC-01 | build-time | `xcodebuild build -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16' 2>&1 \| grep -E 'error:|BUILD'` | N/A | ⬜ pending |
-| 2-01-04 | 01 | 1 | SEC-01 | build-time | same as above | N/A | ⬜ pending |
-| 2-02-01 | 02 | 2 | SEC-02 | unit | `xcodebuild test -scheme VibeWatchApp -only-testing VibeWatchAppTests/KeychainStorageTests -destination 'platform=iOS Simulator,name=iPhone 16' 2>&1 \| tail -20` | ❌ W0 | ⬜ pending |
-| 2-02-02 | 02 | 2 | SEC-02 | unit | `xcodebuild test -scheme VibeWatchApp -only-testing VibeWatchAppTests/AuthMigrationTests -destination 'platform=iOS Simulator,name=iPhone 16' 2>&1 \| tail -20` | ❌ W0 | ⬜ pending |
+| 2-01-01 | 01 | 0 | SEC-01, SEC-02 | unit stubs | `xcodebuild test -scheme VibeWatchApp -only-testing VibeWatchAppTests/KeychainStorageTests -destination 'platform=iOS Simulator,name=iPhone 16' 2>&1 \| tail -20` | ✅ | ✅ green |
+| 2-01-02 | 01 | 0 | SEC-02 | unit stubs | `xcodebuild test -scheme VibeWatchApp -only-testing VibeWatchAppTests/AuthMigrationTests -destination 'platform=iOS Simulator,name=iPhone 16' 2>&1 \| tail -20` | ✅ | ✅ green |
+| 2-01-03 | 01 | 1 | SEC-01 | build-time | `xcodebuild build -scheme VibeWatchApp -destination 'platform=iOS Simulator,name=iPhone 16' 2>&1 \| grep -E 'error:|BUILD'` | N/A | ✅ green |
+| 2-01-04 | 01 | 1 | SEC-01 | build-time | same as above | N/A | ✅ green |
+| 2-02-01 | 02 | 2 | SEC-02 | unit | `xcodebuild test -scheme VibeWatchApp -only-testing VibeWatchAppTests/KeychainStorageTests -destination 'platform=iOS Simulator,name=iPhone 16' 2>&1 \| tail -20` | ✅ | ✅ green |
+| 2-02-02 | 02 | 2 | SEC-02 | unit | `xcodebuild test -scheme VibeWatchApp -only-testing VibeWatchAppTests/AuthMigrationTests -destination 'platform=iOS Simulator,name=iPhone 16' 2>&1 \| tail -20` | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -51,8 +52,8 @@ created: 2026-03-06
 
 ## Wave 0 Requirements
 
-- [ ] `VibeWatchAppTests/KeychainStorageTests.swift` — unit tests for `KeychainStorage.store/retrieve/remove` (covers SEC-02 Keychain read/write/delete on live Simulator Keychain)
-- [ ] `VibeWatchAppTests/AuthMigrationTests.swift` — unit tests for migration success path, failure path (forced re-login), and idempotency (re-running migration when UserDefaults already cleared is a no-op)
+- [x] `VibeWatchAppTests/KeychainStorageTests.swift` — unit tests for `KeychainStorage.store/retrieve/remove` (covers SEC-02 Keychain read/write/delete on live Simulator Keychain)
+- [x] `VibeWatchAppTests/AuthMigrationTests.swift` — unit tests for migration success path, failure path (forced re-login), and idempotency (re-running migration when UserDefaults already cleared is a no-op)
 
 *Framework install: none needed — XCTest is built in to Xcode.*
 
@@ -71,11 +72,24 @@ created: 2026-03-06
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 30s (build check)
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 30s (build check)
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** 2026-05-07
+
+---
+
+## Validation Audit 2026-05-07
+
+| Metric | Count |
+|--------|-------|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
+| Manual-only | 4 |
+
+Both test files (KeychainStorageTests 6 tests, AuthMigrationTests 3 tests) confirmed on disk and GREEN per VERIFICATION.md. Build-time SEC-01 checks verified via code inspection (cerebrasAPIKey absent, proxy wired). 4 manual items (Edge Function live 401, binary inspection, Keychain runtime, migration on-device) remain manual.
