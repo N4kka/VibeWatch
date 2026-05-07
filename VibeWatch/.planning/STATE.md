@@ -110,6 +110,7 @@ Recent decisions affecting current work:
 - [Phase 04-code-quality]: MultiDeviceSyncTests registered in VibeWatchAppTests target via pbxproj SOURCE_ROOT path — file stays at VibeWatchApp/Tests/ per plan requirement
 - [Phase 04-code-quality]: testWatchlistConflict asserts on source/.record not strategyUsed — union delegates to lastWriteWins when both records are non-deleted
 - [Phase 04-code-quality]: testSyncEngineQueueOperation assertion relaxed to >= 0 — online simulator pushes immediately, draining outbox before count is read
+- [v1.0 milestone audit]: BUG-03 integration gap — pre-existing .sheet(item: $appNavigationManager.deepLinkTarget) in VibeWatchApp.swift was competing with Phase 1 MainTabView.onChange handler; removed in commit 08db5cf; single navigation path now active
 - [Phase 04-code-quality]: Logger level chosen by emoji heuristic: checkmark to info, X to error, warning symbol to warning, search/box/cycle emojis to debug
 - [Phase 04-code-quality]: Multi-line print debug blocks consolidated into single Logger.debug calls
 

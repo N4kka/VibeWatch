@@ -1,9 +1,11 @@
 ---
 phase: 01-critical-bug-fixes
 verified: 2026-03-06T00:00:00Z
+re_verified: 2026-05-07T09:35:00Z
 status: passed
 score: 4/4 success criteria verified
 gaps: []
+re_verification_notes: "BUG-03 integration gap found during v1.0 milestone audit: pre-existing .sheet(item: $appNavigationManager.deepLinkTarget) in VibeWatchApp.swift:58 was competing with the Phase 1 MainTabView.onChange handler. Fixed in commit 08db5cf (removed .sheet block). BUG-03 is now fully satisfied."
 human_verification:
   - test: "Kill the app, send a push notification with a valid media_id and media_type=movie, tap the notification in Notification Center"
     expected: "App opens and navigates directly to MovieDetailView for the referenced content"
@@ -86,7 +88,7 @@ human_verification:
 |-------------|------------|-------------|--------|----------|
 | BUG-01 | 01-02 | Comments sync to Supabase — fix missing `updated_at` column and remove `commentRPCDisabled` flag | SATISFIED | SQL migration file committed; DatabaseMigrationManager migration 3 added; ClipCommentService flag fully removed; tests GREEN |
 | BUG-02 | 01-03 | SyncEngine recovers from PGRST205-blocked operations — recovery path wired at app launch | SATISFIED | `unblockAndRetryBlockedOperations()` public and wired in `performFullSyncOnLaunch()` before `pushPendingChanges()` |
-| BUG-03 | 01-04 | Push notification taps navigate to relevant content via `SmartNotificationService.handleNotificationTap` | SATISFIED | Full implementation; `MainTabView` observer wired; cold-launch path via `.onAppear`; `AppNavigationManagerTests` GREEN |
+| BUG-03 | 01-04 | Push notification taps navigate to relevant content via `SmartNotificationService.handleNotificationTap` | SATISFIED (re-verified 2026-05-07) | Full implementation; `MainTabView` observer wired; cold-launch path via `.onAppear`; `AppNavigationManagerTests` GREEN. Integration gap fixed: competing `.sheet(item: $appNavigationManager.deepLinkTarget)` removed from `VibeWatchApp.swift` in commit `08db5cf` |
 | BUG-04 | 01-05 | Analytics Dashboard shows mood analysis — `calculateMoodAnalysis()` implemented, nil stub removed | SATISFIED | Method implemented with deterministic genre→mood mapping; nil stub removed; `MoodAnalysisCard` with placeholder text; all 3 analytics tests GREEN |
 
 All 4 Phase 1 requirements are SATISFIED. No orphaned requirements found — REQUIREMENTS.md traceability table matches exactly.
@@ -157,7 +159,7 @@ No blocking gaps found. All four success criteria are satisfied in the productio
 
 - **BUG-01:** `commentRPCDisabled` is fully deleted; Supabase migration and SQLite migration 3 both exist and are substantive.
 - **BUG-02:** `unblockAndRetryBlockedOperations()` is public, PGRST205-specific, and wired as the first call in `performFullSyncOnLaunch()` before `pushPendingChanges()`. The automated test uses a semantically broader method (`resetBlockedOperations()`), but this is a test-accuracy observation, not a production defect.
-- **BUG-03:** `handleNotificationTap` is fully implemented (not a stub); the `MainTabView` deep-link chain (onChange + onAppear + handleDeepLinkTarget + clearDeepLinkTarget) is all wired. End-to-end delivery requires human testing on device.
+- **BUG-03:** `handleNotificationTap` is fully implemented (not a stub); the `MainTabView` deep-link chain (onChange + onAppear + handleDeepLinkTarget + clearDeepLinkTarget) is all wired. End-to-end delivery requires human testing on device. **Re-verified 2026-05-07:** Integration gap (competing `.sheet` handler in `VibeWatchApp.swift:58`) found during milestone audit and fixed in commit `08db5cf`.
 - **BUG-04:** `moodAnalysis: nil` is gone; `calculateMoodAnalysis()` with deterministic genre→mood mapping is implemented; `MoodAnalysisCard` with placeholder text is rendered in the dashboard.
 
 ---
