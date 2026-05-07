@@ -27,7 +27,7 @@ struct OnboardingContainerView: View {
                         .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
                         .onAppear {
                             if authService.isAuthenticated {
-                                print("🟢 [Onboarding] User already authenticated, skipping Account step")
+                                Logger.info("[Onboarding] User already authenticated, skipping Account step")
                                 viewModel.nextStep()
                             }
                         }
@@ -42,7 +42,7 @@ struct OnboardingContainerView: View {
         }
         .onChange(of: authService.isAuthenticated) { _, isAuthenticated in
             if isAuthenticated && viewModel.currentStep == .account {
-                print("🟢 [Onboarding] User authenticated, moving to Paywall")
+                Logger.info("[Onboarding] User authenticated, moving to Paywall")
                 viewModel.nextStep()
             }
         }

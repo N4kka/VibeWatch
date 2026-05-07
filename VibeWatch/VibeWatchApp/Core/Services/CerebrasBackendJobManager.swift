@@ -135,6 +135,13 @@ final class CerebrasBackendJobManager {
     }
 
     func processPendingJobs(maxJobs: Int = 4, timeBudgetSeconds: TimeInterval = 25) async {
+        // Guard: skip silently if no active user session — Edge Function requires auth
+        guard let session = try? await AuthService.shared.client?.auth.session,
+              !session.accessToken.isEmpty else {
+            Logger.info("[CerebrasBackend] No active session — skipping background AI jobs")
+            return
+        }
+
         let start = Date()
         var processed = 0
         var successCount = 0

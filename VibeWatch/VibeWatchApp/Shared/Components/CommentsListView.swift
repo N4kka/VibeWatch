@@ -243,7 +243,7 @@ struct CommentsListView: View {
             
             notifyCountChange()
             
-            print("✅ [CommentsList] Loaded \(loadedComments.count) comments")
+            Logger.info("[CommentsList] Loaded \(loadedComments.count) comments")
             
         } catch {
             await MainActor.run {
@@ -251,7 +251,7 @@ struct CommentsListView: View {
                 isLoading = false
             }
             
-            print("❌ [CommentsList] Failed to load comments: \(error)")
+            Logger.error("[CommentsList] Failed to load comments: \(error)")
         }
     }
     
@@ -313,10 +313,10 @@ struct CommentsListView: View {
                 commentReplies[comment.id] = replies
             }
             
-            print("✅ [CommentsList] Loaded \(replies.count) replies for comment \(comment.id)")
+            Logger.info("[CommentsList] Loaded \(replies.count) replies for comment \(comment.id)")
             
         } catch {
-            print("❌ [CommentsList] Failed to load replies: \(error)")
+            Logger.error("[CommentsList] Failed to load replies: \(error)")
         }
     }
     
@@ -352,13 +352,13 @@ struct CommentsListView: View {
                 }
             }
             
-            print("✅ [CommentsList] Toggled like for comment \(comment.id)")
+            Logger.info("[CommentsList] Toggled like for comment \(comment.id)")
             
         } catch {
             await MainActor.run {
                 errorMessage = "Failed to like comment. Please try again."
             }
-            print("❌ [CommentsList] Failed to toggle comment like: \(error)")
+            Logger.error("[CommentsList] Failed to toggle comment like: \(error)")
         }
     }
     
@@ -377,10 +377,10 @@ struct CommentsListView: View {
             }
             notifyCountChange()
             
-            print("✅ [CommentsList] Deleted comment \(comment.id)")
+            Logger.info("[CommentsList] Deleted comment \(comment.id)")
             
         } catch {
-            print("❌ [CommentsList] Failed to delete comment: \(error)")
+            Logger.error("[CommentsList] Failed to delete comment: \(error)")
             
             await MainActor.run {
                 errorMessage = "Failed to delete comment"
@@ -410,10 +410,10 @@ struct CommentsListView: View {
             }
             notifyCountChange()
             
-            print("✅ [CommentsList] Deleted reply \(reply.id)")
+            Logger.info("[CommentsList] Deleted reply \(reply.id)")
             
         } catch {
-            print("❌ [CommentsList] Failed to delete reply: \(error)")
+            Logger.error("[CommentsList] Failed to delete reply: \(error)")
             
             await MainActor.run {
                 errorMessage = "Failed to delete reply"

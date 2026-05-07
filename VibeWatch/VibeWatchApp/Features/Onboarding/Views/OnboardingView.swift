@@ -224,20 +224,20 @@ struct OnboardingPage4: View {
     }
     
     private func skipToDiscovery() {
-        print("🟢 [Onboarding] Skip button tapped")
+        Logger.debug("[Onboarding] Skip button tapped")
         completeOnboarding()
     }
     
     private func completeOnboarding() {
-        print("🟢 [Onboarding] Completing onboarding...")
+        Logger.info("[Onboarding] Completing onboarding...")
         UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
-        print("🟢 [Onboarding] UserDefaults set to true")
+        Logger.debug("[Onboarding] UserDefaults set to true")
         
         // Update binding to hide onboarding and show main app
         DispatchQueue.main.async {
             withAnimation(.easeInOut(duration: 0.3)) {
                 showOnboarding = false
-                print("🟢 [Onboarding] showOnboarding set to false (hiding onboarding)")
+                Logger.debug("[Onboarding] showOnboarding set to false (hiding onboarding)")
             }
         }
     }

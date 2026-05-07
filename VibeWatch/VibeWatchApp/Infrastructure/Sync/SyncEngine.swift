@@ -800,6 +800,13 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
         _ = sqliteService.execute(sql)
     }
 
+    /// Resets all PGRST205-blocked outbox operations to `pending` so they will be retried
+    /// on this launch's sync push. Called once at app launch before pushPendingChanges().
+    public func unblockAndRetryBlockedOperations() {
+        unblockSchemaErrorOperations()
+        Logger.info("[SyncEngine] Unblocked PGRST205-blocked operations for retry on launch")
+    }
+
     private func isSchemaError(_ error: String) -> Bool {
         // PostgREST error when a table isn't present in the schema cache
         error.contains("PGRST205") ||

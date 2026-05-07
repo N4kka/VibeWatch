@@ -1543,7 +1543,7 @@ struct AddToListView: View {
                     
                     dismiss()
                 } catch {
-                    print("Error adding to list: \(error)")
+                    Logger.error("[ClipsView] Error adding to list: \(error)")
                 }
             }
         }

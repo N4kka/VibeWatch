@@ -1156,12 +1156,21 @@ extension SmartNotificationService: @MainActor UNUserNotificationCenterDelegate 
     }
 
     private func handleNotificationTap(userInfo: [AnyHashable: Any]) async {
-        guard let type = userInfo["type"] as? String else { return }
-
+        guard let type = userInfo["type"] as? String else {
+            Logger.warning("[SmartNotificationService] Notification tap missing 'type' key — ignoring")
+            return
+        }
         Logger.info("[SmartNotificationService] Notification tapped: \(type)")
 
-        // TODO: Navigate to appropriate screen based on notification type
-        // This will be implemented when integrating with the app's navigation system
+        await MainActor.run {
+            let manager = AppNavigationManager.shared
+            manager.handle(userInfo: userInfo)
+
+            // Fallback: no valid media_id/media_type in payload → navigate to Discovery tab
+            if manager.deepLinkTarget == nil {
+                NotificationCenter.default.post(name: .navigateToDiscoveryTab, object: nil)
+            }
+        }
     }
 }
 

@@ -16,7 +16,7 @@ final class DatabaseMigrationManager {
     private let versionKey = "unified_migration_version"
 
     /// Current latest migration version
-    private let latestVersion = 2
+    private let latestVersion = 4
 
     private init() {}
 
@@ -67,6 +67,20 @@ final class DatabaseMigrationManager {
                 description: "Add columns present in code but missing from initial schema DDL",
                 type: .schema,
                 execute: migration2_AddMissingColumns
+            ),
+            Migration(
+                version: 3,
+                name: "clip_comments_updated_at",
+                description: "Add updated_at to local SQLite clip_comments table (BUG-01)",
+                type: .schema,
+                execute: migration3_AddClipCommentsUpdatedAt
+            ),
+            Migration(
+                version: 4,
+                name: "user_clip_history_genre_ids",
+                description: "Add genre_ids to user_clip_history for mood analysis (BUG-04)",
+                type: .schema,
+                execute: migration4_AddGenreIdsToClipHistory
             )
         ]
     }
@@ -173,6 +187,27 @@ final class DatabaseMigrationManager {
         }
 
         Logger.info("[Migration 2] All missing columns added successfully")
+    }
+
+    /// Migration 3: Add updated_at to clip_comments (BUG-01 — column missing from local SQLite schema)
+    private func migration3_AddClipCommentsUpdatedAt() async throws {
+        if !db.columnExists("clip_comments", column: "updated_at") {
+            db.execute("ALTER TABLE clip_comments ADD COLUMN updated_at TEXT DEFAULT (datetime('now'))")
+            db.execute("UPDATE clip_comments SET updated_at = datetime('now') WHERE updated_at IS NULL")
+            Logger.info("[Migration 3] Added updated_at to clip_comments")
+        } else {
+            Logger.info("[Migration 3] updated_at column already exists in clip_comments — skipping")
+        }
+    }
+
+    /// Migration 4: Add genre_ids to user_clip_history (BUG-04 — required for mood analysis)
+    private func migration4_AddGenreIdsToClipHistory() async throws {
+        if !db.columnExists("user_clip_history", column: "genre_ids") {
+            db.execute("ALTER TABLE user_clip_history ADD COLUMN genre_ids TEXT")
+            Logger.info("[Migration 4] Added genre_ids to user_clip_history")
+        } else {
+            Logger.info("[Migration 4] genre_ids column already exists in user_clip_history — skipping")
+        }
     }
 
     // MARK: - Version Management

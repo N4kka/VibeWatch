@@ -17,7 +17,7 @@ class DiscoveryViewModel: ObservableObject {
     }
     
     private let preferenceManager: UserPreferenceManager
-    private let personalizationService: DiscoveryPersonalizationService
+    private let discoveryRepository: any DiscoveryRepositoryProtocol
     private let sqliteService: SQLiteService
     private let quotaManager: DailyQuotaManager
     private var cancellables = Set<AnyCancellable>()
@@ -37,12 +37,12 @@ class DiscoveryViewModel: ObservableObject {
     init(
         quotaManager: DailyQuotaManager = .shared,
         preferenceManager: UserPreferenceManager = .shared,
-        personalizationService: DiscoveryPersonalizationService = .shared,
+        discoveryRepository: any DiscoveryRepositoryProtocol = LiveDiscoveryRepository.shared,
         sqliteService: SQLiteService = .shared
     ) {
         self.quotaManager = quotaManager
         self.preferenceManager = preferenceManager
-        self.personalizationService = personalizationService
+        self.discoveryRepository = discoveryRepository
         self.sqliteService = sqliteService
         self.globalFilters = GlobalDiscoveryFilters.load()
 
@@ -89,53 +89,32 @@ class DiscoveryViewModel: ObservableObject {
             return
         }
 
-        if !forceRefresh, !personalizationService.hasCachedData {
-            let userId = AuthService.shared.currentUser?.id
-            if let cached = await personalizationService.loadCachedCarouselsIfAvailable(userId: userId) {
-                generatedCarousels = cached
-                personalizedCarousels = applyGlobalFilters(to: cached)
-                hasLoadedOnce = true
-            }
-        }
-
-        if !forceRefresh, hasLoadedOnce, !hasNoContent, !shouldReloadForNewDay() {
-            return
-        }
-
-        if forceRefresh {
-            isRefreshing = true
-        } else {
-            // Only show loader if we don't have cached data ready to go
-            if !personalizationService.hasCachedData {
-                isLoading = true
-            }
-        }
+        isLoading = hasNoContent && !forceRefresh
+        isRefreshing = forceRefresh
         error = nil
-        
-        do {
-            let profile = await preferenceManager.aggregatePreferences()
-            let carousels = try await personalizationService.generatePersonalizedCarousels(
-                userProfile: profile,
-                filters: globalFilters,
-                forceRefresh: forceRefresh
-            )
-            generatedCarousels = carousels
-            self.personalizedCarousels = applyGlobalFilters(to: generatedCarousels)
 
-            Logger.debug("[DiscoveryViewModel] Loaded \(personalizedCarousels.count) personalized carousels")
+        let userId = AuthService.shared.currentUser?.id
+        let profile = await preferenceManager.aggregatePreferences()
+
+        for await carousels in discoveryRepository.observeCarousels(
+            userId: userId,
+            profile: profile,
+            filters: globalFilters,
+            forceRefresh: forceRefresh
+        ) {
+            guard !carousels.isEmpty else { continue }
+            generatedCarousels = carousels
+            self.personalizedCarousels = applyGlobalFilters(to: carousels)
             hasLoadedOnce = true
-            markReloadedForToday()
-            
-        } catch {
-            Logger.error("[DiscoveryViewModel] Failed to load personalized content: \(error)")
-            self.error = AppError.network(error)
+            isLoading = false
+            isRefreshing = false
+            Logger.debug("[DiscoveryViewModel] Loaded \(carousels.count) carousels")
         }
-        
+
+        markReloadedForToday()
         isLoading = false
         isRefreshing = false
-        if forceRefresh {
-            refreshToken = UUID()
-        }
+        if forceRefresh { refreshToken = UUID() }
     }
 
     func applyFilters(_ filters: GlobalDiscoveryFilters) {

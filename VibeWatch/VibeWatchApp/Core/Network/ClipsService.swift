@@ -44,7 +44,7 @@ final class ClipsService {
             return updatedClip
         }
         
-        print("✅ Smart feed generated: \(clips.count) clips with personalization & diversity")
+        Logger.info("[ClipsService] Smart feed generated: \(clips.count) clips with personalization & diversity")
         return clips
     }
     

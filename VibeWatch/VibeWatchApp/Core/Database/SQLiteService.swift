@@ -84,8 +84,18 @@ final class SQLiteService: ObservableObject {
     @Published var lastError: String?
 
     var db: OpaquePointer?
+    private var readerDb: OpaquePointer?
     private let dbPath: String
-    private let dbQueue = DispatchQueue(label: "com.vibewatch.sqlite", qos: .userInitiated)
+    private let writerQueue = DispatchQueue(label: "com.vibewatch.sqlite.writer", qos: .userInitiated)
+    let readerQueue = DispatchQueue(
+        label: "com.vibewatch.sqlite.reader",
+        qos: .userInitiated,
+        attributes: .concurrent
+    )
+
+    /// True when personalized_discovery table has at least one row.
+    /// Set synchronously at init() before any concurrent access begins.
+    private(set) var hasPersonalizedDiscoveryCache: Bool = false
 
     // Wrappers to allow capturing dynamic SQLite values in @Sendable contexts.
     private struct SQLSendableValue: @unchecked Sendable { let raw: Any }
@@ -109,9 +119,13 @@ final class SQLiteService: ObservableObject {
         
         openDatabase()
         createTables()
+        checkInitialCacheState()
     }
-    
+
     deinit {
+        if let readerDb = readerDb {
+            sqlite3_close(readerDb)
+        }
         if let db = db {
             sqlite3_close(db)
         }
@@ -129,23 +143,28 @@ final class SQLiteService: ObservableObject {
         }
         
         db = nil
+        readerDb = nil
         openDatabase()
         createTables()
+        checkInitialCacheState()
     }
-    
+
     // MARK: - Connection Management
     
     private func openDatabase() {
         if sqlite3_open(dbPath, &db) == SQLITE_OK {
             isConnected = true
             lastError = nil
-            
+
             // Enable foreign keys
             execute("PRAGMA foreign_keys = ON")
-            
+
             // Enable WAL mode for better concurrency
             execute("PRAGMA journal_mode = WAL")
-            
+
+            // Open read-only connection after WAL is confirmed active
+            openReaderConnection()
+
             Logger.info("[SQLite] Database opened successfully")
         } else {
             isConnected = false
@@ -153,13 +172,50 @@ final class SQLiteService: ObservableObject {
             Logger.error("[SQLite] Failed to open database: \(lastError ?? "unknown")")
         }
     }
+
+    private func openReaderConnection() {
+        // SQLITE_OPEN_FULLMUTEX ensures thread safety when readerQueue dispatches
+        // multiple concurrent closures that share this single read-only connection.
+        let flags = SQLITE_OPEN_READONLY | SQLITE_OPEN_FULLMUTEX
+        if sqlite3_open_v2(dbPath, &readerDb, Int32(flags), nil) != SQLITE_OK {
+            Logger.error("[SQLite] Failed to open reader connection: \(String(cString: sqlite3_errmsg(readerDb)))")
+        }
+    }
     
     private func closeDatabase() {
+        if let readerDb = readerDb, sqlite3_close(readerDb) == SQLITE_OK {
+            Logger.info("[SQLite] Reader connection closed")
+        }
         if sqlite3_close(db) == SQLITE_OK {
             Logger.info("[SQLite] Database closed")
         }
     }
-    
+
+    /// Check whether personalized_discovery has any rows.
+    /// Uses raw sqlite3_* calls directly on db — NOT execute() — to avoid
+    /// dbQueue re-entrancy. Safe to call from init() after createTables().
+    private func checkInitialCacheState() {
+        var stmt: OpaquePointer?
+        let sql = "SELECT COUNT(*) FROM personalized_discovery LIMIT 1"
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return }
+        defer { sqlite3_finalize(stmt) }
+        if sqlite3_step(stmt) == SQLITE_ROW {
+            hasPersonalizedDiscoveryCache = sqlite3_column_int(stmt, 0) > 0
+        }
+    }
+
+    /// Returns true when personalized_discovery table has at least one row.
+    /// Reflects the value set synchronously at init().
+    func hasCachedPersonalizedContent() -> Bool {
+        hasPersonalizedDiscoveryCache
+    }
+
+    /// Re-runs the cache state check and updates hasPersonalizedDiscoveryCache.
+    /// Call this after modifying personalized_discovery to keep the property current.
+    func refreshCacheState() {
+        checkInitialCacheState()
+    }
+
     /// Test database connection
     func testConnection() async -> Bool {
         do {
@@ -288,7 +344,7 @@ final class SQLiteService: ObservableObject {
         }
         
         let currentVersion = Int(migrationVersionString) ?? 0
-        let latestVersion = 4
+        let latestVersion = 5
         
         // Only run migrations if not already at latest version
         if currentVersion >= latestVersion {
@@ -394,6 +450,26 @@ final class SQLiteService: ObservableObject {
             }
         }
 
+        if currentVersion < 5 {
+            Logger.info("[SQLite] Migration 5: add watch_providers table and vote_count to detail_cache")
+            execute("""
+                CREATE TABLE IF NOT EXISTS watch_providers (
+                  id TEXT PRIMARY KEY,
+                  media_id INTEGER NOT NULL,
+                  media_type TEXT NOT NULL,
+                  region TEXT NOT NULL,
+                  providers_json TEXT NOT NULL,
+                  refreshed_at TEXT NOT NULL,
+                  expires_at TEXT NOT NULL,
+                  UNIQUE(media_id, media_type, region)
+                )
+            """)
+            execute("CREATE INDEX IF NOT EXISTS idx_watch_providers_lookup ON watch_providers(media_id, media_type, region)")
+            if !columnExists("detail_cache", column: "vote_count") {
+                execute("ALTER TABLE detail_cache ADD COLUMN vote_count INTEGER DEFAULT 0")
+            }
+        }
+
         // Re-enable foreign keys
         execute("PRAGMA foreign_keys = ON")
         
@@ -427,7 +503,7 @@ final class SQLiteService: ObservableObject {
     func execute(_ sql: String, parameters: [Any] = []) -> Bool {
         var success = false
 
-        dbQueue.sync { [weak self] in
+        writerQueue.sync { [weak self] in
             guard let self = self else { return }
 
             var statement: OpaquePointer?
@@ -468,42 +544,42 @@ final class SQLiteService: ObservableObject {
         let safeParameters = parameters.map(SQLSendableValue.init(raw:))
         
         return try await withCheckedThrowingContinuation { continuation in
-            dbQueue.async { [weak self, safeParameters] in
+            readerQueue.async { [weak self, safeParameters] in
                 guard let self = self else {
                     continuation.resume(throwing: SQLiteError.notConnected)
                     return
                 }
-                
+
                 var statement: OpaquePointer?
-                
-                guard sqlite3_prepare_v2(self.db, sql, -1, &statement, nil) == SQLITE_OK else {
-                    let error = String(cString: sqlite3_errmsg(self.db))
+
+                guard sqlite3_prepare_v2(self.readerDb, sql, -1, &statement, nil) == SQLITE_OK else {
+                    let error = String(cString: sqlite3_errmsg(self.readerDb))
                     continuation.resume(throwing: SQLiteError.queryFailed(error))
                     return
                 }
-                
+
                 defer { sqlite3_finalize(statement) }
-                
+
                 // Bind parameters
                 for (index, param) in safeParameters.enumerated() {
                     self.bind(param.raw, to: statement, at: Int32(index + 1))
                 }
-                
+
                 var results: [SQLSendableRecord] = []
-                
+
                 while sqlite3_step(statement) == SQLITE_ROW {
                     var row: [String: Any] = [:]
                     let columnCount = sqlite3_column_count(statement)
-                    
+
                     for i in 0..<columnCount {
                         let columnName = String(cString: sqlite3_column_name(statement, i))
                         let value = self.getValue(from: statement, at: i)
                         row[columnName] = value
                     }
-                    
+
                     results.append(SQLSendableRecord(raw: row))
                 }
-                
+
                 continuation.resume(returning: results.map { $0.raw })
             }
         }
@@ -593,27 +669,27 @@ final class SQLiteService: ObservableObject {
         let parameters = Array(values.values).map(SQLSendableValue.init(raw:))
         
         return try await withCheckedThrowingContinuation { continuation in
-            dbQueue.async { [weak self, parameters] in
+            writerQueue.async { [weak self, parameters] in
                 guard let self = self else {
                     continuation.resume(throwing: SQLiteError.notConnected)
                     return
                 }
-                
+
                 var statement: OpaquePointer?
-                
+
                 guard sqlite3_prepare_v2(self.db, sql, -1, &statement, nil) == SQLITE_OK else {
                     let error = String(cString: sqlite3_errmsg(self.db))
                     continuation.resume(throwing: SQLiteError.queryFailed(error))
                     return
                 }
-                
+
                 defer { sqlite3_finalize(statement) }
-                
+
                 // Bind parameters
                 for (index, param) in parameters.enumerated() {
                     self.bind(param.raw, to: statement, at: Int32(index + 1))
                 }
-                
+
                 if sqlite3_step(statement) == SQLITE_DONE {
                     let rowid = sqlite3_last_insert_rowid(self.db)
                     continuation.resume(returning: rowid)
@@ -719,7 +795,7 @@ final class SQLiteService: ObservableObject {
         let safeRecords = records.map(SQLSendableRecord.init(raw:))
         
         return await withCheckedContinuation { continuation in
-            dbQueue.async { [weak self, safeRecords] in
+            writerQueue.async { [weak self, safeRecords] in
                 guard let self = self, let db = self.db else {
                     continuation.resume(returning: false)
                     return
@@ -732,7 +808,7 @@ final class SQLiteService: ObservableObject {
                 let beginResult = sqlite3_exec(db, "BEGIN TRANSACTION", nil, nil, nil)
                 if beginResult != SQLITE_OK {
                     let error = String(cString: sqlite3_errmsg(db))
-                    print("❌ Batch insert transaction begin failed: \(error)")
+                    Logger.error("Batch insert transaction begin failed: \(error)")
                     continuation.resume(returning: false)
                     return
                 }
@@ -741,7 +817,7 @@ final class SQLiteService: ObservableObject {
                     // Prepare statement once
                     if sqlite3_prepare_v2(db, query, -1, &statement, nil) != SQLITE_OK {
                          let error = String(cString: sqlite3_errmsg(db))
-                         print("❌ Batch insert prepare failed: \(error)")
+                         Logger.error("Batch insert prepare failed: \(error)")
                          sqlite3_exec(db, "ROLLBACK", nil, nil, nil)
                          continuation.resume(returning: false)
                          return
@@ -764,7 +840,7 @@ final class SQLiteService: ObservableObject {
                         
                         if sqlite3_step(statement) != SQLITE_DONE {
                             let error = String(cString: sqlite3_errmsg(db))
-                            print("❌ Batch insert step failed: \(error)")
+                            Logger.error("Batch insert step failed: \(error)")
                             throw SQLiteError.queryFailed(error)
                         }
                     }
@@ -774,12 +850,12 @@ final class SQLiteService: ObservableObject {
                     // Commit transaction
                     if sqlite3_exec(db, "COMMIT", nil, nil, nil) != SQLITE_OK {
                          let error = String(cString: sqlite3_errmsg(db))
-                         print("❌ Batch insert commit failed: \(error)")
+                         Logger.error("Batch insert commit failed: \(error)")
                          throw SQLiteError.transactionFailed
                     }
                     
                 } catch {
-                    print("❌ Batch insert failed: \(error)")
+                    Logger.error("Batch insert failed: \(error)")
                     sqlite3_finalize(statement)
                     sqlite3_exec(db, "ROLLBACK", nil, nil, nil)
                     success = false
@@ -1440,5 +1516,6 @@ enum SQLiteError: LocalizedError {
     }
 }
 
-// Serialized through `dbQueue`, so mark as unchecked Sendable for use inside @Sendable closures.
+// Writes serialized through `writerQueue`; reads dispatched to concurrent `readerQueue`.
+// Mark as @unchecked Sendable for use inside @Sendable closures.
 extension SQLiteService: @unchecked Sendable {}

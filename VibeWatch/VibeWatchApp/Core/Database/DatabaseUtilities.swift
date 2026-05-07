@@ -10,13 +10,13 @@ enum DatabaseUtilities {
         _ operation: @Sendable () async throws -> T
     ) async rethrows -> T {
         // Shared transaction logic (conceptual, actual implementation would depend on database library)
-        print("BEGIN TRANSACTION (conceptual)")
+        Logger.debug("BEGIN TRANSACTION (conceptual)")
         do {
             let result = try await operation()
-            print("COMMIT TRANSACTION (conceptual)")
+            Logger.debug("COMMIT TRANSACTION (conceptual)")
             return result
         } catch {
-            print("ROLLBACK TRANSACTION (conceptual)")
+            Logger.debug("ROLLBACK TRANSACTION (conceptual)")
             throw error
         }
     }

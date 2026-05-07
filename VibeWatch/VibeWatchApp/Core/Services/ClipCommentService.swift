@@ -13,9 +13,6 @@ final class ClipCommentService: ObservableObject {
     // Added: wrapper to safely send arrays of dictionaries across actors
     private struct SendableArrayOfDictionaries: @unchecked Sendable { let raw: [[String: Any]] }
     
-    // Guard to avoid spamming failing RPCs when backend schema is outdated
-    private var commentRPCDisabled = false
-    
     // Cache for clip like counts
     private var likeCountsCache: [String: Int] = [:]
     
@@ -737,7 +734,6 @@ final class ClipCommentService: ObservableObject {
     }
     
     private func supabaseAddComment(clipId: String, content: String, parentId: String?, commentId: String) async -> ClipComment? {
-        if commentRPCDisabled { return nil }
         guard let client = supabase.client, supabase.isAuthenticated else {
             return nil
         }
@@ -757,15 +753,12 @@ final class ClipCommentService: ObservableObject {
             let comment = try await persistSupabaseComment(response)
             return comment
         } catch {
-            if let pgError = error as? PostgrestError, pgError.code == "42703" || pgError.message.contains("updated_at") {
-                commentRPCDisabled = true
-                Logger.warning("[ClipComment] Disabling comment RPC (server schema missing column): \(pgError.message)")
-            }
+            // schema errors are now handled by backend migration
             Logger.warning("[ClipComment] Supabase comment create failed: \(error)")
             return nil
         }
     }
-    
+
     private func supabaseToggleCommentLike(commentId: String, likeId: String) async -> SupabaseToggleCommentLikeResponse? {
         guard let client = supabase.client, supabase.isAuthenticated else {
             return nil
