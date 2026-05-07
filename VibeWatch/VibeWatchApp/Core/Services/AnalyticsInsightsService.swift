@@ -479,9 +479,12 @@ class AnalyticsInsightsService: ObservableObject {
 
     /// Compute mood distribution from user's genre viewing history.
     /// Returns a non-nil MoodAnalysis with an empty moodDistribution when the user
-    /// has fewer than 5 history items with genre data (placeholder state).
+    /// has engaged with fewer than 5 distinct genres (placeholder state).
+    ///
+    /// Reads from user_preferences (genre scores written by UserEngagementTracker) rather
+    /// than user_clip_history, which is never written by the iOS app — it only receives
+    /// data via Supabase sync pull and has no genre_ids populated.
     private func calculateMoodAnalysis(userId: String, timeframe: Timeframe) async -> MoodAnalysis {
-        // Deterministic genre → mood mapping (TMDB genre IDs)
         let genreToMood: [Int: String] = [
             35: "Light", 16: "Light", 10751: "Light", 10402: "Light",
             12: "Adventurous", 14: "Adventurous", 878: "Adventurous", 10752: "Adventurous", 37: "Adventurous",
@@ -490,13 +493,11 @@ class AnalyticsInsightsService: ObservableObject {
             10749: "Romantic", 10770: "Romantic"
         ]
 
-        let since = timeframe.startDate
         let sql = """
-            SELECT genre_ids FROM user_clip_history
-            WHERE user_id = ? AND watched_at >= ?
-              AND genre_ids IS NOT NULL AND genre_ids != ''
+            SELECT preference_id, score FROM user_preferences
+            WHERE user_id = ? AND preference_type = 'genre' AND score > 0 AND deleted_at IS NULL
         """
-        let rows = (try? await sqliteService.queryRaw(sql, parameters: [userId, since.ISO8601Format()])) ?? []
+        let rows = (try? await sqliteService.queryRaw(sql, parameters: [userId])) ?? []
 
         guard rows.count >= 5 else {
             return MoodAnalysis(moodDistribution: [:], preferredMoodByTime: [:], emotionalJourney: [])
@@ -504,14 +505,10 @@ class AnalyticsInsightsService: ObservableObject {
 
         var moodCounts: [String: Int] = [:]
         for row in rows {
-            guard let genreString = row["genre_ids"] as? String else { continue }
-            let genreIds = genreString
-                .split(separator: ",")
-                .compactMap { Int($0.trimmingCharacters(in: .whitespaces)) }
-            for genreId in genreIds {
-                if let mood = genreToMood[genreId] {
-                    moodCounts[mood, default: 0] += 1
-                }
+            guard let genreIdStr = row["preference_id"] as? String,
+                  let genreId = Int(genreIdStr) else { continue }
+            if let mood = genreToMood[genreId] {
+                moodCounts[mood, default: 0] += 1
             }
         }
 
