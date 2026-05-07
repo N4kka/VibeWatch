@@ -128,10 +128,10 @@ actor TMDBService: TMDBServiceProtocol {
             
             guard (200...299).contains(httpResponse.statusCode) else {
                 if httpResponse.statusCode == 429 {
-                    print("⚠️ TMDB Rate Limit Exceeded! Backing off...")
+                    Logger.warning("[TMDBService] Rate Limit Exceeded! Backing off...")
                     try? await Task.sleep(nanoseconds: 1_000_000_000) // Wait 1s
                 }
-                print("❌ TMDB Error: \(httpResponse.statusCode) for \(endpoint)")
+                Logger.error("[TMDBService] Error: \(httpResponse.statusCode) for \(endpoint)")
                 throw AppError.network(TMDBError.httpError(httpResponse.statusCode))
             }
             
@@ -144,7 +144,7 @@ actor TMDBService: TMDBServiceProtocol {
             if error is AppError {
                 throw error
             }
-            print("❌ Decoding or Network Error for \(endpoint): \(error)")
+            Logger.error("[TMDBService] Decoding or Network Error for \(endpoint): \(error)")
             throw AppError.network(error)
         }
     }

@@ -43,7 +43,7 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
             let loadedImage = try await ImageCacheService.shared.loadImage(from: url.absoluteString)
             self.image = loadedImage
         } catch {
-            print("❌ [CachedAsyncImage] Failed to load: \(error.localizedDescription)")
+            Logger.error("[CachedAsyncImage] Failed to load: \(error.localizedDescription)")
         }
     }
 }

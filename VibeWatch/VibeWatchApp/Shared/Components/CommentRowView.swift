@@ -193,12 +193,12 @@ struct CommentRowView: View {
                 createdAt: Date().addingTimeInterval(-3600)
             ),
             userId: "user-2",
-            onLikeTap: { print("Liked") },
-            onReplyTap: { print("Reply") }
+            onLikeTap: { Logger.debug("[Preview] Liked") },
+            onReplyTap: { Logger.debug("[Preview] Reply") }
         )
-        
+
         Divider()
-        
+
         CommentRowView(
             comment: ClipComment(
                 id: "2",
@@ -211,9 +211,9 @@ struct CommentRowView: View {
                 createdAt: Date().addingTimeInterval(-7200)
             ),
             userId: "user-2",
-            onLikeTap: { print("Liked") },
-            onReplyTap: { print("Reply") },
-            onDeleteTap: { print("Delete") }
+            onLikeTap: { Logger.debug("[Preview] Liked") },
+            onReplyTap: { Logger.debug("[Preview] Reply") },
+            onDeleteTap: { Logger.debug("[Preview] Delete") }
         )
     }
     .background(Color.theme.background)
@@ -234,8 +234,8 @@ struct CommentRowView: View {
             deletedAt: Date()
         ),
         userId: "user-2",
-        onLikeTap: { print("Liked") },
-        onReplyTap: { print("Reply") }
+        onLikeTap: { Logger.debug("[Preview] Liked") },
+        onReplyTap: { Logger.debug("[Preview] Reply") }
     )
     .background(Color.theme.background)
 }

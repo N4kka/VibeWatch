@@ -183,7 +183,7 @@ struct ProfileView: View {
         }
         .onAppear {
             if appState.shouldShowSignIn {
-                print("🔄 [ProfileView] Auto-opening Sign In sheet")
+                Logger.info("[ProfileView] Auto-opening Sign In sheet")
                 showSignIn = true
                 // Reset flag
                 appState.shouldShowSignIn = false
@@ -669,7 +669,7 @@ struct ProfileView: View {
             appState.isAuthenticated = false
             appState.currentUser = nil
         } catch {
-            print("Error logging out: \(error.localizedDescription)")
+            Logger.error("[ProfileView] Error logging out: \(error.localizedDescription)")
         }
     }
     
@@ -680,7 +680,7 @@ struct ProfileView: View {
         do {
             // Compress image to JPEG data
             guard let imageData = image.jpegData(compressionQuality: 0.7) else {
-                print("❌ Failed to convert image to data")
+                Logger.error("[ProfileView] Failed to convert image to data")
                 return
             }
             
@@ -690,9 +690,9 @@ struct ProfileView: View {
             // Update app state
             appState.currentUser?.avatarURL = avatarURL
             
-            print("✅ Avatar uploaded and profile updated")
+            Logger.info("[ProfileView] Avatar uploaded and profile updated")
         } catch {
-            print("❌ Error uploading avatar: \(error.localizedDescription)")
+            Logger.error("[ProfileView] Error uploading avatar: \(error.localizedDescription)")
         }
     }
 }

@@ -13,11 +13,11 @@ final class DatabaseMigrationService {
     
     /// Migrate all initial data from Supabase to SQLite
     func migrateInitialData() async {
-        print("📥 [Migration] Starting initial data migration...")
+        Logger.info("[Migration] Starting initial data migration...")
         
         // Check if already migrated
         if UserDefaults.standard.bool(forKey: "initialDataPopulated") {
-            print("✅ [Migration] Already migrated")
+            Logger.info("[Migration] Already migrated")
             return
         }
         
@@ -33,20 +33,20 @@ final class DatabaseMigrationService {
                 UserDefaults.standard.set(true, forKey: "initialDataPopulated")
                 UserDefaults.standard.set(Date(), forKey: "initialDataMigratedDate")
                 
-                print("✅ [Migration] Initial data migration complete!")
+                Logger.info("[Migration] Initial data migration complete!")
             }
         } catch {
-            print("❌ [Migration] Migration failed after retries: \(error)")
+            Logger.error("[Migration] Migration failed after retries: \(error)")
         }
     }
     
     // MARK: - Clip Migration
     
     private func migrateClips() async {
-        print("📥 [Migration] Migrating clips from Supabase...")
+        Logger.info("[Migration] Migrating clips from Supabase...")
         
         guard let client = supabase.client else {
-            print("⚠️ [Migration] Supabase not configured, skipping clips migration")
+            Logger.warning("[Migration] Supabase not configured, skipping clips migration")
             return
         }
         
@@ -60,7 +60,7 @@ final class DatabaseMigrationService {
                 .execute()
                 .value
             
-            print("📦 [Migration] Fetched \(clips.count) clips from Supabase")
+            Logger.debug("[Migration] Fetched \(clips.count) clips from Supabase")
             
             // Insert into local SQLite in batches
             var insertedCount = 0
@@ -105,23 +105,23 @@ final class DatabaseMigrationService {
                 }
                 
                 insertedCount += localBatchInserted
-                print("📦 [Migration] Inserted \(insertedCount)/\(clips.count) clips")
+                Logger.debug("[Migration] Inserted \(insertedCount)/\(clips.count) clips")
             }
             
-            print("✅ [Migration] Successfully migrated \(insertedCount) clips to local SQLite")
+            Logger.info("[Migration] Successfully migrated \(insertedCount) clips to local SQLite")
             
         } catch {
-            print("❌ [Migration] Failed to migrate clips: \(error)")
+            Logger.error("[Migration] Failed to migrate clips: \(error)")
         }
     }
     
     // MARK: - Discovery Cache Migration
     
     private func migrateDiscoveryCache() async {
-        print("📥 [Migration] Migrating discovery cache from Supabase...")
+        Logger.info("[Migration] Migrating discovery cache from Supabase...")
         
         guard let client = supabase.client else {
-            print("⚠️ [Migration] Supabase not configured, skipping discovery cache migration")
+            Logger.warning("[Migration] Supabase not configured, skipping discovery cache migration")
             return
         }
         
@@ -134,7 +134,7 @@ final class DatabaseMigrationService {
                 .execute()
                 .value
             
-            print("📦 [Migration] Fetched \(cacheItems.count) discovery cache items")
+            Logger.debug("[Migration] Fetched \(cacheItems.count) discovery cache items")
             
             // Insert into local SQLite
             try await DatabaseUtilities.executeInTransaction {
@@ -158,10 +158,10 @@ final class DatabaseMigrationService {
                 }
             }
             
-            print("✅ [Migration] Successfully migrated \(cacheItems.count) discovery cache items")
+            Logger.info("[Migration] Successfully migrated \(cacheItems.count) discovery cache items")
             
         } catch {
-            print("❌ [Migration] Failed to migrate discovery cache: \(error)")
+            Logger.error("[Migration] Failed to migrate discovery cache: \(error)")
         }
     }
     

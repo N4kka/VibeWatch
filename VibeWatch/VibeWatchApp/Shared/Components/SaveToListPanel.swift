@@ -126,7 +126,7 @@ struct SaveToListPanel: View {
                             try await listManager.createList(name: newListName)
                             newListName = ""
                         } catch {
-                            print("⚠️ Failed to create list: \(error)")
+                            Logger.warning("[SaveToListPanel] Failed to create list: \(error)")
                         }
                     }
                 }

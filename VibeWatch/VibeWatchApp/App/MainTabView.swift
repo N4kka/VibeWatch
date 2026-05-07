@@ -168,9 +168,9 @@ struct MainTabView: View {
                 OnboardingContainerView(showOnboarding: $showOnboarding)
                     .transition(.opacity)
                     .onChange(of: showOnboarding) {_, newValue in
-                        print("🔵 [MainTabView] showOnboarding changed to: \(newValue)")
+                        Logger.debug("[MainTabView] showOnboarding changed to: \(newValue)")
                         if !newValue {
-                            print("🔵 [MainTabView] Onboarding completed, showing main app")
+                            Logger.debug("[MainTabView] Onboarding completed, showing main app")
                         }
                     }
             } else {
@@ -187,28 +187,28 @@ struct MainTabView: View {
             withAnimation {
                 selectedTab = 0
             }
-            print("🏠 [MainTabView] Navigated to Discovery tab")
+            Logger.debug("[MainTabView] Navigated to Discovery tab")
         }
         .onReceive(NotificationCenter.default.publisher(for: .navigateToClipsTab)) { _ in
             // Navigate to Clips tab
             withAnimation {
                 selectedTab = 1
             }
-            print("🎬 [MainTabView] Navigated to Clips tab")
+            Logger.debug("[MainTabView] Navigated to Clips tab")
         }
         .onReceive(NotificationCenter.default.publisher(for: .navigateToListsTab)) { _ in
             // Navigate to Lists tab
             withAnimation {
                 selectedTab = 3
             }
-            print("📝 [MainTabView] Navigated to Lists tab")
+            Logger.debug("[MainTabView] Navigated to Lists tab")
         }
         .onReceive(NotificationCenter.default.publisher(for: .navigateToAITab)) { _ in
             // Navigate to AI tab
             withAnimation {
                 selectedTab = 2
             }
-            print("🤖 [MainTabView] Navigated to AI tab")
+            Logger.debug("[MainTabView] Navigated to AI tab")
         }
         .onReceive(NotificationCenter.default.publisher(for: .presentProPaywall)) { notification in
             let source = (notification.userInfo?["source"] as? String) ?? "unknown"
@@ -232,7 +232,7 @@ struct MainTabView: View {
 
             // On first launch, clear any persisted auth from keychain
             if !hasClearedAuthOnFreshInstall && !UserDefaults.standard.bool(forKey: "hasLaunchedBefore") {
-                print("🆕 [MainTabView] Fresh install detected - clearing keychain auth")
+                Logger.info("[MainTabView] Fresh install detected - clearing keychain auth")
                 hasClearedAuthOnFreshInstall = true
 
                 // Mark as launched so we don't clear again on next launch
@@ -241,9 +241,9 @@ struct MainTabView: View {
                 // Clear any persisted auth session from keychain
                 do {
                     try await AuthService.shared.signOut(force: true)
-                    print("✅ [MainTabView] Keychain auth cleared for fresh install")
+                    Logger.info("[MainTabView] Keychain auth cleared for fresh install")
                 } catch {
-                    print("⚠️ [MainTabView] Could not clear auth on fresh install: \(error)")
+                    Logger.warning("[MainTabView] Could not clear auth on fresh install: \(error)")
                 }
 
                 // Ensure app state reflects no auth
@@ -334,7 +334,7 @@ struct MainTabView: View {
         }
 
         // Timeout reached, proceed anyway to avoid infinite splash
-        print("⚠️ [MainTabView] Discovery content not ready after timeout, showing UI anyway")
+        Logger.warning("[MainTabView] Discovery content not ready after timeout, showing UI anyway")
     }
 }
 
@@ -438,7 +438,7 @@ extension MainTabView {
         Color.clear
             .onChange(of: scenePhase) { oldPhase, newPhase in
                 if newPhase == .active && oldPhase != .active {
-                    print("🔍 [App] App became active - checking subscription status")
+                    Logger.debug("[App] App became active - checking subscription status")
                     Task {
                         AnalyticsService.shared.trackAppOpen()
                         DailyQuotaManager.shared.refreshForNewDayIfNeeded()

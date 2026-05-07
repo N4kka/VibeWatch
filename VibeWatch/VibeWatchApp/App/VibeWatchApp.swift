@@ -22,8 +22,8 @@ struct VibeWatchApp: App {
         _ = LocalizationManager.shared
         
         // Initialize offline-first database
-        print("🗄️ [App] Initializing SQLite database...")
-        print("✅ [RevenueCat] Configured with API key")
+        Logger.info("[App] Initializing SQLite database...")
+        Logger.info("[App] RevenueCat configured with API key")
     }
     
     var body: some Scene {
@@ -39,18 +39,18 @@ struct VibeWatchApp: App {
                 .preferredColorScheme(.dark)
                 .task {
                     // SyncEngine automatically handles periodic syncs via state machine
-                    print("🔄 [App] SyncEngine initialized")
+                    Logger.info("[App] SyncEngine initialized")
                 }
                 .onOpenURL { url in
                     // Handle deep links from URL schemes (e.g., OAuth)
-                    print("📱 Deep link received via URL (SwiftUI): \(url.absoluteString)")
+                    Logger.info("[App] Deep link received via URL (SwiftUI): \(url.absoluteString)")
                     Task {
                         do {
                             try await AuthService.shared.handleAuthCallback(url: url)
                             appState.isAuthenticated = AuthService.shared.isAuthenticated
                             appState.currentUser = AuthService.shared.currentUser
                         } catch {
-                            print("❌ Error handling deep link from URL: \(error.localizedDescription)")
+                            Logger.error("[App] Error handling deep link from URL: \(error.localizedDescription)")
                         }
                     }
                 }
@@ -106,10 +106,10 @@ class AppState: ObservableObject {
         if hasCachedContent {
             // Show UI immediately with cached content
             self.isPreloading = false
-            print("⚡️ [AppState] Instant launch - showing cached content")
+            Logger.info("[AppState] Instant launch - showing cached content")
         }
 
-        print("📱 [AppState] Initialized with auth state: authenticated=\(isAuthenticated), user=\(currentUser?.email ?? "nil")")
+        Logger.info("[AppState] Initialized with auth state: authenticated=\(isAuthenticated), user=\(currentUser?.email ?? "nil")")
 
         // Background initialization (non-blocking)
         Task(priority: .userInitiated) {
@@ -161,18 +161,18 @@ class AppState: ObservableObject {
         await authService.checkAuthState()
         self.isAuthenticated = authService.isAuthenticated
         self.currentUser = authService.currentUser
-        print("🔄 [AppState] Updated auth state: authenticated=\(isAuthenticated), user=\(currentUser?.email ?? "nil")")
+        Logger.info("[AppState] Updated auth state: authenticated=\(isAuthenticated), user=\(currentUser?.email ?? "nil")")
     }
 
     /// Perform full sync from Supabase on app launch
     /// This ensures data persists across days and devices
     private func performFullSyncOnLaunch() async {
         guard isAuthenticated, let userId = currentUser?.id else {
-            print("📱 [AppState] Skipping sync - not authenticated")
+            Logger.info("[AppState] Skipping sync - not authenticated")
             return
         }
 
-        print("🔄 [AppState] Performing full sync on app launch...")
+        Logger.info("[AppState] Performing full sync on app launch...")
 
         // Check onboarding state from profile first
         await checkOnboardingFromProfile()
@@ -189,7 +189,7 @@ class AppState: ObservableObject {
         // Process any pending outbox operations
         await SyncEngine.shared.pushPendingChanges()
 
-        print("✅ [AppState] Full sync completed on app launch")
+        Logger.info("[AppState] Full sync completed on app launch")
     }
 
     /// Sync user data when app returns to foreground
@@ -204,12 +204,12 @@ class AppState: ObservableObject {
         let twoMinutes: TimeInterval = 2 * 60
 
         guard now - lastSync > twoMinutes else {
-            print("📱 [AppState] Skipping foreground sync - synced recently")
+            Logger.info("[AppState] Skipping foreground sync - synced recently")
             return
         }
 
         UserDefaults.standard.set(now, forKey: lastSyncKey)
-        print("🔄 [AppState] Performing sync on foreground resume...")
+        Logger.info("[AppState] Performing sync on foreground resume...")
 
         // Sync gamification state (may have changed on another device)
         await GamificationService.shared.loadUserState(userId: userId)
@@ -220,7 +220,7 @@ class AppState: ObservableObject {
         // Process pending outbox
         await SyncEngine.shared.pushPendingChanges()
 
-        print("✅ [AppState] Foreground sync completed")
+        Logger.info("[AppState] Foreground sync completed")
     }
 
     /// Check if user completed onboarding on another device
@@ -237,7 +237,7 @@ class AppState: ObservableObject {
                         "onboarding_completed_at": ISO8601DateFormatter().string(from: Date())
                     ])
                 } catch {
-                    print("⚠️ [AppState] Failed to sync onboarding state: \(error)")
+                    Logger.warning("[AppState] Failed to sync onboarding state: \(error)")
                 }
             }
             return
@@ -249,10 +249,10 @@ class AppState: ObservableObject {
                let completed = profile["onboarding_completed"] as? Bool,
                completed {
                 UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
-                print("✅ [AppState] Onboarding already completed on another device")
+                Logger.info("[AppState] Onboarding already completed on another device")
             }
         } catch {
-            print("⚠️ [AppState] Failed to check onboarding from profile: \(error)")
+            Logger.warning("[AppState] Failed to check onboarding from profile: \(error)")
         }
     }
 
@@ -260,7 +260,7 @@ class AppState: ObservableObject {
     /// Called on app launch and when returning to foreground
     private func scheduleSmartNotificationsIfNeeded() async {
         guard let userId = currentUser?.id else {
-            print("📳 [AppState] Skipping notification check - no authenticated user")
+            Logger.debug("[AppState] Skipping notification check - no authenticated user")
             return
         }
 
@@ -271,12 +271,12 @@ class AppState: ObservableObject {
         let thirtyMinutes: TimeInterval = 30 * 60
 
         if now - lastRun < thirtyMinutes {
-            print("📳 [AppState] Skipping notification check - ran recently")
+            Logger.debug("[AppState] Skipping notification check - ran recently")
             return
         }
 
         UserDefaults.standard.set(now, forKey: lastRunKey)
-        print("📳 [AppState] Triggering smart notification check for user: \(userId)")
+        Logger.info("[AppState] Triggering smart notification check for user: \(userId)")
 
         await NotificationBackgroundTask.shared.triggerImmediately()
     }
@@ -306,7 +306,7 @@ class AppState: ObservableObject {
 
         // Refresh discovery content if stale (background)
         if ContentCacheManager.shared.shouldUpdateDiscoveryContent() {
-            print("🔄 [AppState] Refreshing stale discovery content in background...")
+            Logger.info("[AppState] Refreshing stale discovery content in background...")
             do {
                 try await DiscoveryCacheService.shared.refreshContent()
             } catch {
@@ -341,11 +341,11 @@ class AppState: ObservableObject {
         // Check user's prefetch preference
         let prefetchOption = ImageCacheService.shared.getCurrentImagePrefetchOption()
         guard await ImageCacheService.shared.shouldPrefetchImages(preference: prefetchOption) else {
-            print("🖼️ [AppState] Skipping image preload - user preference or network")
+            Logger.info("[AppState] Skipping image preload - user preference or network")
             return
         }
 
-        print("🖼️ [AppState] Preloading discovery images...")
+        Logger.info("[AppState] Preloading discovery images...")
 
         // Collect poster URLs from cached content
         var posterURLs: [String] = []
@@ -376,13 +376,13 @@ class AppState: ObservableObject {
         posterURLs.append(contentsOf: clipThumbnails)
 
         guard !posterURLs.isEmpty else {
-            print("🖼️ [AppState] No images to preload")
+            Logger.info("[AppState] No images to preload")
             return
         }
 
-        print("🖼️ [AppState] Preloading \(posterURLs.count) images...")
+        Logger.info("[AppState] Preloading \(posterURLs.count) images...")
         await ImageCacheService.shared.prefetchImages(posterURLs, onWiFiOnly: prefetchOption == .wifiOnly)
-        print("✅ [AppState] Image preload complete")
+        Logger.info("[AppState] Image preload complete")
     }
     
     private func preloadContent() async {
@@ -393,17 +393,17 @@ class AppState: ObservableObject {
 
         // Check if initial data migration is needed (legacy one-time migration)
         if !UserDefaults.standard.bool(forKey: "initialDataPopulated") {
-            print("📥 [App] First launch detected - migrating data from Supabase to SQLite...")
+            Logger.info("[App] First launch detected - migrating data from Supabase to SQLite...")
             await DatabaseMigrationService.shared.migrateInitialData()
         }
         
         // Sync new content from Supabase (incremental sync)
-        print("🔄 [App] Syncing new content from Supabase...")
+        Logger.info("[App] Syncing new content from Supabase...")
         await SyncEngine.shared.pullFromRemote()
         
         // Optimized parallel preload: Discovery content + 5 initial clips
         // Then background task for 20 more clips
-        print("🚀 Starting optimized preload (parallel tasks)...")
+        Logger.info("[App] Starting optimized preload (parallel tasks)...")
         await dataCoordinator.initializeApp()
         
         // Ensure discovery content exists (fetch from TMDB if needed)
@@ -412,7 +412,7 @@ class AppState: ObservableObject {
         // Pre-warm the personalized discovery cache so the Discovery tab loads instantly
         guard !carouselsGeneratedThisLaunch else { return }
         carouselsGeneratedThisLaunch = true
-        print("📺 [App] Pre-warming Discovery personalization cache...")
+        Logger.info("[App] Pre-warming Discovery personalization cache...")
         let profile = await UserPreferenceManager.shared.aggregatePreferences()
         do {
             // We call this to trigger the cache-miss logic (API fetch + DB cache) if needed.
@@ -421,9 +421,9 @@ class AppState: ObservableObject {
                 userProfile: profile,
                 forceRefresh: false
             )
-            print("✅ [App] Discovery personalization pre-warmed successfully")
+            Logger.info("[App] Discovery personalization pre-warmed successfully")
         } catch {
-            print("⚠️ [App] Failed to pre-warm Discovery personalization: \(error)")
+            Logger.warning("[App] Failed to pre-warm Discovery personalization: \(error)")
         }
         
         isPreloading = false
@@ -439,15 +439,15 @@ class AppState: ObservableObject {
             let totalContent = content.trending.count + content.popular.count + content.topRated.count + content.tv.count
             
             if totalContent > 0 {
-                print("✅ [App] Discovery content exists: \(totalContent) items")
+                Logger.info("[App] Discovery content exists: \(totalContent) items")
             } else {
-                print("⚠️ [App] Discovery cache is empty - fetching fresh from TMDB...")
+                Logger.warning("[App] Discovery cache is empty - fetching fresh from TMDB...")
                 // Cache is empty, force refresh from TMDB
                 try await DiscoveryCacheService.shared.refreshContent()
-                print("✅ [App] Discovery content populated from TMDB")
+                Logger.info("[App] Discovery content populated from TMDB")
             }
         } catch {
-            print("⚠️ [App] Failed to load discovery content: \(error)")
+            Logger.warning("[App] Failed to load discovery content: \(error)")
         }
     }
 }

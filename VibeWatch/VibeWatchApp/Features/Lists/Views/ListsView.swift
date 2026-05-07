@@ -890,7 +890,7 @@ struct MediaItemRow: View {
                 }
             }
         } catch {
-            print("❌ Error loading TMDB fallback providers: \(error.localizedDescription)")
+            Logger.error("[ListsView] Error loading TMDB fallback providers: \(error.localizedDescription)")
         }
     }
     

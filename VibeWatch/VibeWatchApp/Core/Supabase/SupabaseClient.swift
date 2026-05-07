@@ -927,7 +927,7 @@ class SupabaseService: ObservableObject {
             .eq("id", value: userId)
             .execute()
 
-        print("✅ [Supabase] Updated user profile")
+        Logger.info("[Supabase] Updated user profile")
     }
 
     /// Fetch user profile from Supabase

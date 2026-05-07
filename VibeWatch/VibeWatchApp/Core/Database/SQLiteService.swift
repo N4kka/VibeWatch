@@ -808,7 +808,7 @@ final class SQLiteService: ObservableObject {
                 let beginResult = sqlite3_exec(db, "BEGIN TRANSACTION", nil, nil, nil)
                 if beginResult != SQLITE_OK {
                     let error = String(cString: sqlite3_errmsg(db))
-                    print("❌ Batch insert transaction begin failed: \(error)")
+                    Logger.error("Batch insert transaction begin failed: \(error)")
                     continuation.resume(returning: false)
                     return
                 }
@@ -817,7 +817,7 @@ final class SQLiteService: ObservableObject {
                     // Prepare statement once
                     if sqlite3_prepare_v2(db, query, -1, &statement, nil) != SQLITE_OK {
                          let error = String(cString: sqlite3_errmsg(db))
-                         print("❌ Batch insert prepare failed: \(error)")
+                         Logger.error("Batch insert prepare failed: \(error)")
                          sqlite3_exec(db, "ROLLBACK", nil, nil, nil)
                          continuation.resume(returning: false)
                          return
@@ -840,7 +840,7 @@ final class SQLiteService: ObservableObject {
                         
                         if sqlite3_step(statement) != SQLITE_DONE {
                             let error = String(cString: sqlite3_errmsg(db))
-                            print("❌ Batch insert step failed: \(error)")
+                            Logger.error("Batch insert step failed: \(error)")
                             throw SQLiteError.queryFailed(error)
                         }
                     }
@@ -850,12 +850,12 @@ final class SQLiteService: ObservableObject {
                     // Commit transaction
                     if sqlite3_exec(db, "COMMIT", nil, nil, nil) != SQLITE_OK {
                          let error = String(cString: sqlite3_errmsg(db))
-                         print("❌ Batch insert commit failed: \(error)")
+                         Logger.error("Batch insert commit failed: \(error)")
                          throw SQLiteError.transactionFailed
                     }
                     
                 } catch {
-                    print("❌ Batch insert failed: \(error)")
+                    Logger.error("Batch insert failed: \(error)")
                     sqlite3_finalize(statement)
                     sqlite3_exec(db, "ROLLBACK", nil, nil, nil)
                     success = false

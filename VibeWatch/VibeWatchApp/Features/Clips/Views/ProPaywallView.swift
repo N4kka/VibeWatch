@@ -393,7 +393,7 @@ struct ProPaywallView: View {
         startTransactionListener()
 
         SKPaymentQueue.default().presentCodeRedemptionSheet()
-        print("🎟️ [Paywall] Presenting offer code redemption sheet")
+        Logger.info("[Paywall] Presenting offer code redemption sheet")
     }
 
     /// Listen for StoreKit transactions after code redemption
@@ -406,7 +406,7 @@ struct ProPaywallView: View {
             for await result in Transaction.updates {
                 switch result {
                 case .verified(let transaction):
-                    print("🎟️ [Paywall] Transaction detected: \(transaction.productID)")
+                    Logger.info("[Paywall] Transaction detected: \(transaction.productID)")
 
                     // Sync with RevenueCat to update entitlements
                     await syncPurchasesWithRevenueCat()
@@ -414,7 +414,7 @@ struct ProPaywallView: View {
                     // Always finish the transaction
                     await transaction.finish()
                 case .unverified(_, let error):
-                    print("⚠️ [Paywall] Transaction verification failed: \(error)")
+                    Logger.warning("[Paywall] Transaction verification failed: \(error)")
                 }
             }
         }
@@ -428,7 +428,7 @@ struct ProPaywallView: View {
             let isPro = customerInfo.entitlements[AppConstants.RevenueCat.proEntitlementID]?.isActive == true
 
             if isPro {
-                print("✅ [Paywall] Code redeemed successfully! PRO status activated")
+                Logger.info("[Paywall] Code redeemed successfully! PRO status activated")
                 await MainActor.run {
                     quotaManager.upgradeToPro()
                     onPurchased?()
@@ -439,7 +439,7 @@ struct ProPaywallView: View {
                 await ClipQuotaService.shared.checkIsProUser()
             }
         } catch {
-            print("⚠️ [Paywall] Failed to sync purchases: \(error)")
+            Logger.warning("[Paywall] Failed to sync purchases: \(error)")
             // Still try to check PRO status directly
             await ClipQuotaService.shared.checkIsProUser()
         }
@@ -634,12 +634,7 @@ struct ProPaywallView: View {
                                           result.customerInfo.activeSubscriptions.contains(package.storeProduct.productIdentifier)
                 let userCancelled = result.userCancelled
 
-                print("📱 [Purchase Debug]")
-                print("   - User cancelled: \(userCancelled)")
-                print("   - Has active entitlement: \(hasActiveEntitlement)")
-                print("   - Has recent transaction: \(hasRecentTransaction)")
-                print("   - Active subscriptions: \(result.customerInfo.activeSubscriptions)")
-                print("   - Product ID: \(package.storeProduct.productIdentifier)")
+                Logger.debug("[Purchase] userCancelled=\(userCancelled), hasActiveEntitlement=\(hasActiveEntitlement), hasRecentTransaction=\(hasRecentTransaction), activeSubscriptions=\(result.customerInfo.activeSubscriptions), productID=\(package.storeProduct.productIdentifier)")
 
                 await MainActor.run {
                     isPurchasing = false
@@ -661,7 +656,7 @@ struct ProPaywallView: View {
                                 productId: package.storeProduct.productIdentifier,
                                 price: price
                             )
-                            print("🎁 [Trial] Started \(trial.localizedDuration) free trial for \(package.storeProduct.productIdentifier)")
+                            Logger.info("[Trial] Started \(trial.localizedDuration) free trial for \(package.storeProduct.productIdentifier)")
                         }
                         
                         onPurchased?()

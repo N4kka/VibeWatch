@@ -34,11 +34,11 @@ struct BannerAdView: UIViewRepresentable {
 
     class Coordinator: NSObject, BannerViewDelegate {
         func bannerViewDidReceiveAd(_ bannerView: BannerView) {
-            print("Banner ad loaded successfully")
+            Logger.info("[BannerAdView] Banner ad loaded successfully")
         }
 
         func bannerView(_ bannerView: BannerView, didFailToReceiveAdWithError error: Error) {
-            print("Banner ad failed to load: \(error.localizedDescription)")
+            Logger.error("[BannerAdView] Banner ad failed to load: \(error.localizedDescription)")
         }
     }
 }
