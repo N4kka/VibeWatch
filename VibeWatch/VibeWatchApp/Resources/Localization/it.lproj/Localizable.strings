@@ -438,6 +438,9 @@
 "actor.retry" = "Riprova";
 "actor.biography.showMore" = "Mostra Altro";
 "actor.biography.showLess" = "Mostra Meno";
+"actor.birthday" = "Data di nascita: %@";
+"actor.birthday.line" = "%@ (%@ anni)";
+"actor.known_for" = "Noto per";
 
 // Global Discovery Filters
 "filters.mediaType" = "Tipo di media";
@@ -581,3 +584,11 @@
 
 // Error Views
 "error.oops" = "Ops!";
+
+// TV Show Detail - Mark All Seen Confirmation
+"tvDetail.markAllSeenTitle" = "Segna tutti gli episodi come visto";
+"tvDetail.markAllSeenDescription" = "Questa azione si applicherà a tutti gli episodi e le stagioni della serie disponibili.";
+"tvDetail.markAllSeenQuestion" = "Vuoi continuare?";
+"tvDetail.markAllSeenConfirm" = "Sì, segna come visto";
+"tvDetail.markAllSeenCancel" = "No, annulla";
+"tvDetail.seasonSeenShort" = "vista";

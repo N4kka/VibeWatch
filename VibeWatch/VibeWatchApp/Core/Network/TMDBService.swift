@@ -45,6 +45,7 @@ protocol TMDBServiceProtocol: TMDBWatchProvidersServiceProtocol, Sendable {
     func getTVShowCredits(id: Int) async throws -> Credits
     func getTVShowVideos(id: Int) async throws -> TMDBVideosResponse
     func getSimilarTVShows(id: Int, page: Int) async throws -> TMDBResponse<TVShow>
+    func getTVSeasonDetails(showId: Int, seasonNumber: Int) async throws -> SeasonDetail
     func getMovieExternalIds(id: Int) async throws -> ExternalIds
     func getTVShowExternalIds(id: Int) async throws -> ExternalIds
     func getPersonDetails(id: Int) async throws -> PersonDetails
@@ -360,7 +361,11 @@ actor TMDBService: TMDBServiceProtocol {
             URLQueryItem(name: "page", value: "\(page)")
         ])
     }
-    
+
+    func getTVSeasonDetails(showId: Int, seasonNumber: Int) async throws -> SeasonDetail {
+        try await request("/tv/\(showId)/season/\(seasonNumber)")
+    }
+
     // MARK: - External IDs
     
     func getMovieExternalIds(id: Int) async throws -> ExternalIds {

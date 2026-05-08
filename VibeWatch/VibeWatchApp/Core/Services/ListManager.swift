@@ -205,7 +205,7 @@ class ListManager: ObservableObject {
             let listsQuery = """
                 SELECT l.id, l.name, l.description, l.type, l.created_at
                 FROM lists l
-                WHERE l.user_id = ?
+                WHERE l.user_id = ? AND l.deleted_at IS NULL
                 ORDER BY l.created_at DESC
             """
             let listRows = try await db.queryRaw(listsQuery, parameters: [currentUserId])
