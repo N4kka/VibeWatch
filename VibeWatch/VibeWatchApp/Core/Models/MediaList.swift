@@ -110,6 +110,11 @@ struct MediaListItem: Identifiable, Codable {
     }
 }
 
+struct MediaListItemSubtitleComponent: Equatable {
+    let text: String
+    let showsRatingStar: Bool
+}
+
 enum SortOption: String, CaseIterable {
     case dateAdded = "sort.dateAdded"
     case title = "sort.title"
@@ -134,6 +139,94 @@ enum FilterOption: String, CaseIterable {
 // MARK: - SQLite Dictionary Conversion
 
 extension MediaListItem {
+    func displayOverview(fallback: String?) -> String? {
+        if let overview = normalizedOverview(overview) {
+            return overview
+        }
+
+        return normalizedOverview(fallback)
+    }
+
+    func subtitle(seasonCount: Int? = nil, duration: Int? = nil) -> String? {
+        let parts = subtitleComponents(seasonCount: seasonCount, duration: duration).map(\.text)
+        return parts.isEmpty ? nil : parts.joined(separator: " | ")
+    }
+
+    func subtitleComponents(seasonCount: Int? = nil, duration: Int? = nil) -> [MediaListItemSubtitleComponent] {
+        let resolvedDuration = duration ?? runtime
+        var parts: [MediaListItemSubtitleComponent] = []
+
+        if mediaType == .tv, let seasonCount, seasonCount > 0 {
+            parts.append(MediaListItemSubtitleComponent(
+                text: "\(seasonCount) \(seasonCount == 1 ? "season" : "seasons")",
+                showsRatingStar: false
+            ))
+        }
+
+        if let releaseDate, releaseDate.count >= 4 {
+            parts.append(MediaListItemSubtitleComponent(
+                text: String(releaseDate.prefix(4)),
+                showsRatingStar: false
+            ))
+        }
+
+        if let voteAverage, voteAverage > 0 {
+            parts.append(MediaListItemSubtitleComponent(
+                text: String(format: "%.1f", voteAverage),
+                showsRatingStar: true
+            ))
+        }
+
+        if let resolvedDuration, resolvedDuration > 0 {
+            parts.append(MediaListItemSubtitleComponent(
+                text: Self.formatDuration(resolvedDuration),
+                showsRatingStar: false
+            ))
+        }
+
+        return parts
+    }
+
+    func asMovie() -> Movie {
+        Movie(
+            id: mediaId,
+            title: title,
+            overview: overview ?? "",
+            posterPath: posterPath,
+            backdropPath: nil,
+            releaseDate: releaseDate,
+            voteAverage: voteAverage ?? 0.0,
+            voteCount: voteCount ?? 0,
+            genreIds: genres,
+            genres: nil,
+            adult: false,
+            originalLanguage: "",
+            popularity: 0.0,
+            runtime: runtime,
+            status: nil,
+            tagline: nil,
+            productionCountries: nil,
+            imdbId: nil
+        )
+    }
+
+    private func normalizedOverview(_ overview: String?) -> String? {
+        guard let overview else { return nil }
+        let trimmed = overview.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private static func formatDuration(_ minutes: Int) -> String {
+        let hours = minutes / 60
+        let remainder = minutes % 60
+
+        if hours > 0 {
+            return "\(hours)h \(remainder)m"
+        }
+
+        return "\(minutes)m"
+    }
+
     /// Create a MediaListItem from a SQLite row dictionary
     static func from(dictionary row: [String: Any]) -> MediaListItem? {
         guard let id = row["id"] as? String,

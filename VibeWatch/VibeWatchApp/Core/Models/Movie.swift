@@ -157,9 +157,15 @@ struct TVShow: Codable, Identifiable, Hashable {
     let tagline: String?
     let productionCountries: [ProductionCountry]?
     let imdbId: String?
-    
+    let numberOfSeasons: Int?
+    let episodeRunTime: [Int]?
+    let lastAirDate: String?
+    let numberOfEpisodes: Int?
+    let inProduction: Bool?
+    let seasons: [Season]?
+
     enum CodingKeys: String, CodingKey {
-        case id, name, overview, popularity, status, tagline, genres
+        case id, name, overview, popularity, status, tagline, genres, seasons
         case posterPath = "poster_path"
         case backdropPath = "backdrop_path"
         case firstAirDate = "first_air_date"
@@ -169,6 +175,11 @@ struct TVShow: Codable, Identifiable, Hashable {
         case originalLanguage = "original_language"
         case productionCountries = "production_countries"
         case imdbId = "imdb_id"
+        case numberOfSeasons = "number_of_seasons"
+        case episodeRunTime = "episode_run_time"
+        case lastAirDate = "last_air_date"
+        case numberOfEpisodes = "number_of_episodes"
+        case inProduction = "in_production"
     }
     
     var posterURL: URL? {
@@ -185,9 +196,34 @@ struct TVShow: Codable, Identifiable, Hashable {
         guard let firstAirDate = firstAirDate else { return nil }
         return String(firstAirDate.prefix(4))
     }
-    
+
     var rating: String {
         String(format: "%.1f", voteAverage)
+    }
+
+    var ratingPercentage: Int {
+        Int(voteAverage * 10)
+    }
+
+    var airYearRange: String? {
+        guard let firstAirDate, firstAirDate.count >= 4 else { return nil }
+        let firstYear = String(firstAirDate.prefix(4))
+
+        if inProduction == true {
+            let currentYear = String(Calendar.current.component(.year, from: Date()))
+            if let lastAirDate, lastAirDate.count >= 4 {
+                let lastYear = String(lastAirDate.prefix(4))
+                if lastYear < currentYear {
+                    return "\(firstYear)-Present"
+                }
+                return lastYear == firstYear ? firstYear : "\(firstYear)-\(lastYear)"
+            }
+            return "\(firstYear)-Present"
+        }
+
+        guard let lastAirDate, lastAirDate.count >= 4 else { return firstYear }
+        let lastYear = String(lastAirDate.prefix(4))
+        return firstYear == lastYear ? firstYear : "\(firstYear)-\(lastYear)"
     }
 }
 

@@ -257,27 +257,7 @@ struct ListsView: View {
                                     try? await listManager.removeFromList(listId: currentList.id, itemId: item.id)
                                 }
                                 
-                                let movie = Movie(
-                                    id: item.mediaId,
-                                    title: item.title,
-                                    overview: "",
-                                    posterPath: item.posterPath,
-                                    backdropPath: nil,
-                                    releaseDate: nil,
-                                    voteAverage: 0.0,
-                                    voteCount: 0,
-                                    genreIds: nil,
-                                    genres: nil,
-                                    adult: false,
-                                    originalLanguage: "",
-                                    popularity: 0.0,
-                                    runtime: nil,
-                                    status: nil,
-                                    tagline: nil,
-                                    productionCountries: nil,
-                                    imdbId: nil
-                                )
-                                try await listManager.addToList(listId: listManager.seenList.id, movie: movie, mediaType: item.mediaType)
+                                try await listManager.addToList(listId: listManager.seenList.id, movie: item.asMovie(), mediaType: item.mediaType)
                             }
                         },
                         onDelete: {
@@ -552,6 +532,9 @@ struct MediaItemRow: View {
     @State private var offset: CGFloat = 0
     @State private var isSwiping = false
     @State private var cardWidth: CGFloat = 0
+    @State private var fallbackOverview: String?
+    @State private var fallbackSeasonCount: Int?
+    @State private var fallbackDuration: Int?
     
     private var deleteThreshold: CGFloat {
         // Delete when swiped 75% of the card width
@@ -607,7 +590,7 @@ struct MediaItemRow: View {
                                 .font(.system(size: 30))
                                 .foregroundColor(.theme.textSecondary)
                         }
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .clipShape(RoundedRectangle(cornerRadius: 12)) 
                 }
                 
                 // Content - right side
@@ -618,33 +601,29 @@ struct MediaItemRow: View {
                         .foregroundColor(.theme.textPrimary)
                         .lineLimit(2)
                     
-                    // Metadata - use cached item data directly for fast display
-                    HStack(spacing: 8) {
-                        if let releaseDate = item.releaseDate, releaseDate.count >= 4 {
-                            Text(String(releaseDate.prefix(4)))
-                                .font(.system(size: 13))
-                                .foregroundColor(.theme.textSecondary)
-                        }
+                    let subtitleComponents = item.subtitleComponents(seasonCount: fallbackSeasonCount, duration: fallbackDuration)
+                    if !subtitleComponents.isEmpty {
+                        HStack(spacing: 4) {
+                            ForEach(Array(subtitleComponents.enumerated()), id: \.offset) { index, component in
+                                if index > 0 {
+                                    Text("|")
+                                }
 
-                        if let voteAverage = item.voteAverage, voteAverage > 0 {
-                            HStack(spacing: 4) {
-                                Image(systemName: "star.fill")
-                                    .font(.system(size: 10))
-                                    .foregroundColor(.yellow)
-                                Text(String(format: "%.1f", voteAverage))
-                                    .font(.system(size: 13, weight: .medium))
-                                    .foregroundColor(.theme.textPrimary)
+                                if component.showsRatingStar {
+                                    Image(systemName: "star.fill")
+                                        .font(.system(size: 11))
+                                        .foregroundColor(Color.yellow)
+                                }
+
+                                Text(component.text)
                             }
                         }
-
-                        if item.mediaType == .movie, let runtime = item.runtime, runtime > 0 {
-                            Text("| \(runtime / 60)h \(runtime % 60)m")
-                                .font(.system(size: 13))
-                                .foregroundColor(.theme.textSecondary)
-                        }
+                        .font(.system(size: 13))
+                        .foregroundColor(.theme.textSecondary)
+                        .lineLimit(1)
                     }
 
-                    if let overview = item.overview, !overview.isEmpty {
+                    if let overview = item.displayOverview(fallback: fallbackOverview) {
                         Text(overview)
                             .font(.system(size: 13))
                             .foregroundColor(.theme.textSecondary)
@@ -806,6 +785,9 @@ struct MediaItemRow: View {
         .task {
             await loadProviders()
         }
+        .task(id: "\(item.mediaType.rawValue)-\(item.mediaId)") {
+            await loadFallbackDisplayDataIfNeeded()
+        }
         .alert("lists.notifyMeTitle".localized, isPresented: $showNotifyMeAlert) {
             Button("common.ok".localized, role: .cancel) { }
         } message: {
@@ -819,28 +801,81 @@ struct MediaItemRow: View {
         // Ensure it's in watchlist
         Task {
             if !listManager.isInList(listId: listManager.watchlist.id, mediaId: item.mediaId, mediaType: item.mediaType) {
-                let movie = Movie(
-                    id: item.mediaId,
-                    title: item.title,
-                    overview: "",
-                    posterPath: item.posterPath,
-                    backdropPath: nil,
-                    releaseDate: nil,
-                    voteAverage: item.voteAverage ?? 0.0,
-                    voteCount: 0,
-                    genreIds: nil,
-                    genres: nil,
-                    adult: false,
-                    originalLanguage: "",
-                    popularity: 0.0,
-                    runtime: item.runtime,
-                    status: nil,
-                    tagline: nil,
-                    productionCountries: nil,
-                    imdbId: nil
-                )
-                try? await listManager.addToList(listId: listManager.watchlist.id, movie: movie, mediaType: item.mediaType)
+                try? await listManager.addToList(listId: listManager.watchlist.id, movie: item.asMovie(), mediaType: item.mediaType)
             }
+        }
+    }
+
+    private func loadFallbackDisplayDataIfNeeded() async {
+        fallbackOverview = nil
+        fallbackSeasonCount = nil
+        fallbackDuration = nil
+
+        let needsOverview = item.displayOverview(fallback: nil) == nil
+        let needsDuration = item.runtime == nil || item.runtime == 0
+        let needsTVDetails = item.mediaType == .tv
+        guard needsOverview || needsDuration || needsTVDetails else { return }
+
+        switch item.mediaType {
+        case .movie:
+            for await detail in LocalMediaDetailRepository.shared.observeMovie(id: item.mediaId) {
+                applyMovieDisplayFallback(detail.movie)
+                if !needsMovieNetworkFallback {
+                    return
+                }
+            }
+            if let movie = try? await TMDBService.shared.getMovieDetails(id: item.mediaId) {
+                applyMovieDisplayFallback(movie)
+            }
+        case .tv:
+            for await detail in LocalMediaDetailRepository.shared.observeTVShow(id: item.mediaId) {
+                applyTVDisplayFallback(detail.tvShow)
+                if !needsTVNetworkFallback {
+                    return
+                }
+            }
+            if let tvShow = try? await TMDBService.shared.getTVShowDetails(id: item.mediaId) {
+                applyTVDisplayFallback(tvShow)
+            }
+        }
+    }
+
+    private var needsMovieNetworkFallback: Bool {
+        item.displayOverview(fallback: fallbackOverview) == nil ||
+        item.subtitle(seasonCount: fallbackSeasonCount, duration: fallbackDuration) == nil ||
+        ((item.runtime == nil || item.runtime == 0) && fallbackDuration == nil)
+    }
+
+    private var needsTVNetworkFallback: Bool {
+        item.displayOverview(fallback: fallbackOverview) == nil ||
+        fallbackSeasonCount == nil ||
+        fallbackDuration == nil
+    }
+
+    private func applyMovieDisplayFallback(_ movie: Movie) {
+        if fallbackOverview == nil,
+           let overview = item.displayOverview(fallback: movie.overview) {
+            fallbackOverview = overview
+        }
+
+        if fallbackDuration == nil, let runtime = movie.runtime, runtime > 0 {
+            fallbackDuration = runtime
+        }
+    }
+
+    private func applyTVDisplayFallback(_ tvShow: TVShow) {
+        if fallbackOverview == nil,
+           let overview = item.displayOverview(fallback: tvShow.overview) {
+            fallbackOverview = overview
+        }
+
+        if fallbackSeasonCount == nil, let numberOfSeasons = tvShow.numberOfSeasons, numberOfSeasons > 0 {
+            fallbackSeasonCount = numberOfSeasons
+        }
+
+        if fallbackDuration == nil,
+           let runtime = tvShow.episodeRunTime?.first(where: { $0 > 0 }) {
+            fallbackDuration = runtime
         }
     }
     
@@ -1067,27 +1102,7 @@ struct CustomListDetailView: View {
                                         Task {
                                             try? await listManager.removeFromList(listId: list.id, itemId: item.id)
 
-                                            let movie = Movie(
-                                                id: item.mediaId,
-                                                title: item.title,
-                                                overview: "",
-                                                posterPath: item.posterPath,
-                                                backdropPath: nil,
-                                                releaseDate: nil,
-                                                voteAverage: 0.0,
-                                                voteCount: 0,
-                                                genreIds: nil,
-                                                genres: nil,
-                                                adult: false,
-                                                originalLanguage: "",
-                                                popularity: 0.0,
-                                                runtime: nil,
-                                                status: nil,
-                                                tagline: nil,
-                                                productionCountries: nil,
-                                                imdbId: nil
-                                            )
-                                            try await listManager.addToList(listId: listManager.seenList.id, movie: movie, mediaType: item.mediaType)
+                                            try await listManager.addToList(listId: listManager.seenList.id, movie: item.asMovie(), mediaType: item.mediaType)
                                         }
                                     },
                                     onDelete: {

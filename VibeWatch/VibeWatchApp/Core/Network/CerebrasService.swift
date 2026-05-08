@@ -5,6 +5,7 @@ enum CerebrasError: Error {
     case noData
     case decodingError
     case serverError(String)
+    case quotaExceeded
     case unknown
 }
 
@@ -88,8 +89,8 @@ class CerebrasService {
         let host = base.replacingOccurrences(of: ".supabase.co", with: ".functions.supabase.co")
         return "\(host)/cerebras-proxy"
     }()
-    // Zai-glm-4.7 model for backend processing
-    private let defaultModel = "zai-glm-4.7"
+    // User-facing chatbot model for Cerebras-backed requests.
+    private let defaultModel = "llama3.1-8b"
 
     private init() {
         Logger.info("[CerebrasService] Initialized with model: \(defaultModel)")
@@ -292,7 +293,7 @@ class CerebrasService {
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
 
         let requestBody = CerebrasChatRequest(
-            model: defaultModel, // zai-glm-4.7
+            model: defaultModel,
             messages: messages,
             maxTokens: 1024,
             temperature: 0.7,
@@ -312,6 +313,9 @@ class CerebrasService {
         }
 
         guard (200...299).contains(httpResponse.statusCode) else {
+            if httpResponse.statusCode == 402 || httpResponse.statusCode == 429 {
+                throw CerebrasError.quotaExceeded
+            }
             if let errorString = String(data: data, encoding: .utf8) {
                 throw CerebrasError.serverError(errorString)
             }
@@ -488,7 +492,7 @@ class CerebrasService {
     /// - Parameters:
     ///   - prompt: The user's input string
     ///   - systemPrompt: Optional system instruction to guide the AI's behavior
-    ///   - model: The model to use (defaults to zai-glm-4.7)
+    ///   - model: The model to use (defaults to llama3.1-8b)
     /// - Returns: The AI's string response
     func generateResponse(
         prompt: String,
@@ -535,6 +539,9 @@ class CerebrasService {
         }
 
         guard (200...299).contains(httpResponse.statusCode) else {
+            if httpResponse.statusCode == 402 || httpResponse.statusCode == 429 {
+                throw CerebrasError.quotaExceeded
+            }
             if let errorString = String(data: data, encoding: .utf8) {
                 throw CerebrasError.serverError(errorString)
             }

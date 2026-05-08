@@ -129,7 +129,7 @@ class AIRecommendationViewModel: ObservableObject {
         }
         
         guard aiTokenManager.canMakeRequest() else {
-            self.error = "Daily AI token limit reached. Upgrade to Pro for more."
+            self.error = "ai.hardLimitMessage".localized
             return
         }
         
@@ -152,7 +152,7 @@ class AIRecommendationViewModel: ObservableObject {
             return
         }
         guard aiTokenManager.canMakeRequest() else {
-            self.error = "Daily AI token limit reached. Upgrade to Pro for more."
+            self.error = "ai.hardLimitMessage".localized
             return
         }
         
@@ -206,7 +206,7 @@ class AIRecommendationViewModel: ObservableObject {
             messages.append(aiMessage)
             
             // Record Usage
-            aiTokenManager.recordUsage(tokens)
+            aiTokenManager.recordUsage()
             await syncWithTokenManager()
 
             await conversationMemory.append(
@@ -218,6 +218,8 @@ class AIRecommendationViewModel: ObservableObject {
                 tokensUsed: tokens
             )
             
+        } catch CerebrasError.quotaExceeded {
+            self.error = "ai.hardLimitMessage".localized
         } catch {
             Logger.error("[AIRecommendationViewModel] AI Error", error: error)
             self.error = "Failed to get recommendations. Please try again."

@@ -3,7 +3,7 @@ import Combine
 import UIKit
 
 /// Manages AI request quotas and usage tracking.
-/// Enforces daily limits: 5 (Free) vs 20 (Pro).
+/// Enforces daily limits: 5 (Free) vs 10 (Pro).
 @MainActor
 final class AITokenManager: ObservableObject {
     static let shared = AITokenManager()
@@ -59,25 +59,10 @@ final class AITokenManager: ObservableObject {
     func recordUsage(_ tokens: Int = 1) {
         checkAndResetDaily()
         
-        // We now treat each AI message as 1 "token" (request) for simplicity
-        // as requested: 0/5 for free, 0/20 for pro.
+        // We treat each AI message as one request for quota purposes.
+        // Remote usage is recorded by the Cerebras proxy after a successful response.
         tokensUsedToday += 1
         saveUsage()
-        
-        // Sync to Supabase in background
-        if let user = SupabaseService.shared.currentUser {
-            let userIdString = "\(user.id)"
-            if let userId = UUID(uuidString: userIdString) {
-                Task {
-                    let newTotal = try? await SupabaseService.shared.logAITokenUsage(userId: userId, tokensConsumed: 1)
-                    if let newTotal {
-                        await MainActor.run {
-                            self.syncTokens(newTotal)
-                        }
-                    }
-                }
-            }
-        }
     }
     
     /// Returns the remaining requests for today.

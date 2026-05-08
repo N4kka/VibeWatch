@@ -255,9 +255,15 @@ class TVShowDetailViewModel: ObservableObject {
     var mainCast: [Cast] {
         Array(credits?.cast.prefix(10) ?? [])
     }
-    
+
     var trailer: Video? {
         videos.first
+    }
+
+    var displaySeasons: [Season] {
+        (tvShow?.seasons ?? [])
+            .filter { $0.seasonNumber > 0 }
+            .sorted { $0.seasonNumber > $1.seasonNumber }
     }
 
     func generateWhyForMe() async {

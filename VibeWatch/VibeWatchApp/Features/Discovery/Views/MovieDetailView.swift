@@ -17,7 +17,6 @@ struct MovieDetailView: View {
     @State private var isPreparingShare = false
     @State private var showReportBug = false
     @State private var selectedActor: Cast?
-    @State private var filmographySelection: FilmographySelection?
     @State private var showWhyForMeSheet = false
     @State private var showAIPaywall = false
     
@@ -148,17 +147,13 @@ struct MovieDetailView: View {
                     shareItems = []
                 }
         }
-        .sheet(item: $selectedActor) { actor in
+        .navigationDestination(item: $selectedActor) { actor in
             ActorDetailView(
                 actorId: actor.id,
                 initialName: actor.name,
-                initialProfileURL: actor.profileURL
-            ) { credit in
-                handleFilmographySelection(credit)
-            }
-            .presentationDetents([.medium, .large])
-            .presentationDragIndicator(.visible)
-            .presentationBackground(Color.theme.background)
+                initialProfileURL: actor.profileURL,
+                previousTitle: viewModel.movie?.title ?? ""
+            )
         }
         .fullScreenCover(isPresented: $showAuthGate) {
             AuthenticationGateView(isPresented: $showAuthGate)
@@ -183,14 +178,6 @@ struct MovieDetailView: View {
                 paywallType: .aiQuota,
                 source: "why_for_me_quota"
             )
-        }
-        .fullScreenCover(item: $filmographySelection) { selection in
-            switch selection.mediaType {
-            case .movie:
-                MovieDetailView(movieId: selection.mediaId)
-            case .tv:
-                TVShowDetailView(tvShowId: selection.mediaId)
-            }
         }
         .overlay {
             if isPreparingShare {
@@ -352,10 +339,6 @@ struct MovieDetailView: View {
         await MainActor.run { shareItems = items }
     }
     
-    private func handleFilmographySelection(_ credit: PersonCredit) {
-        selectedActor = nil
-        filmographySelection = FilmographySelection(mediaType: credit.mediaType, mediaId: credit.id)
-    }
 }
 
 struct MovieDetailHeaderView: View {

@@ -398,6 +398,10 @@
 "actor.biography.showMore" = "Mostrar mais";
 "actor.biography.showLess" = "Mostrar menos";
 
+"actor.birthday" = "Born: %@";
+"actor.birthday.line" = "%@ (%@ years old)";
+"actor.known_for" = "Known For";
+
 "clips.search.placeholder" = "Buscar clips, personagens ou citações";
 "clips.search.emptyTitle" = "Encontre clips que você ama";
 "clips.search.emptySubtitle" = "Busque qualquer filme, série, personagem ou citação para ver clips correspondentes.";
@@ -514,3 +518,11 @@
 
 "movieDetail.goodFitTitle" = "Why %@ is a good fit for me?";
 "movieDetail.goodFitSubtitle" = "A quick, personalized take based on your taste.";
+
+// TV Show Detail - Mark All Seen Confirmation
+"tvDetail.markAllSeenTitle" = "Mark all episodes as seen";
+"tvDetail.markAllSeenDescription" = "This action will apply to all episodes and seasons of the series available.";
+"tvDetail.markAllSeenQuestion" = "Do you want to continue?";
+"tvDetail.markAllSeenConfirm" = "Yes, mark as seen";
+"tvDetail.markAllSeenCancel" = "No, cancel";
+"tvDetail.seasonSeenShort" = "seen";
