@@ -442,6 +442,9 @@
 "actor.birthday" = "Born: %@";
 "actor.birthday.line" = "%@ (%@ years old)";
 "actor.known_for" = "Known For";
+"actor.search.placeholder" = "필모그래피 검색…";
+"actor.search.noResults" = "검색 결과 없음:";
+"actor.filmography.empty" = "크레딧을 찾을 수 없습니다.";
 
 // Global Discovery Filters
 "filters.mediaType" = "미디어 유형";

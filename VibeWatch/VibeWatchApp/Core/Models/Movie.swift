@@ -205,6 +205,13 @@ struct TVShow: Codable, Identifiable, Hashable {
         Int(voteAverage * 10)
     }
 
+    var formattedEpisodeRuntime: String? {
+        guard let first = episodeRunTime?.first, first > 0 else { return nil }
+        let hours = first / 60
+        let minutes = first % 60
+        return hours > 0 ? "\(hours)h \(minutes)m" : "\(minutes) min"
+    }
+
     var airYearRange: String? {
         guard let firstAirDate, firstAirDate.count >= 4 else { return nil }
         let firstYear = String(firstAirDate.prefix(4))

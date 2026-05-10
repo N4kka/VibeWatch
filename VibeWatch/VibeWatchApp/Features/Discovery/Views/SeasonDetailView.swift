@@ -11,15 +11,22 @@ struct SeasonDetailView: View {
     let showName: String
     let showBackdropPath: String?
     let showPosterPath: String?
+    let tvShow: TVShow?
+    let cast: [Cast]
+    let director: Crew?
 
     @State private var showSavePanel = false
+    @State private var selectedActor: Cast?
 
-    init(showId: Int, seasonNumber: Int, showName: String, showBackdropPath: String?, showPosterPath: String? = nil) {
+    init(showId: Int, seasonNumber: Int, showName: String, showBackdropPath: String?, showPosterPath: String? = nil, tvShow: TVShow? = nil, cast: [Cast] = [], director: Crew? = nil) {
         _viewModel = StateObject(wrappedValue: SeasonDetailViewModel(showId: showId, seasonNumber: seasonNumber))
         self.showId = showId
         self.showName = showName
         self.showBackdropPath = showBackdropPath
         self.showPosterPath = showPosterPath
+        self.tvShow = tvShow
+        self.cast = cast
+        self.director = director
     }
 
     private var heroURL: URL? {
@@ -92,6 +99,7 @@ struct SeasonDetailView: View {
                                     seasonInfoSection(season: season)
                                     seasonActionsSection(season: season)
                                     episodesSection(episodes: season.episodes)
+                                    seasonDetailsInfoSection(season: season)
                                 }
                             }
                             .padding(.horizontal, DetailLayout.seasonContentHorizontalInset)
@@ -110,6 +118,14 @@ struct SeasonDetailView: View {
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
                 .presentationBackground(Color.theme.background)
+        }
+        .navigationDestination(item: $selectedActor) { actor in
+            ActorDetailView(
+                actorId: actor.id,
+                initialName: actor.name,
+                initialProfileURL: actor.profileURL,
+                previousTitle: showName
+            )
         }
     }
 
@@ -162,6 +178,59 @@ struct SeasonDetailView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 20)
+    }
+
+    private func seasonDetailsInfoSection(season: SeasonDetail) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("movieDetail.information".localized)
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(.theme.textPrimary)
+
+                VStack(alignment: .leading, spacing: 12) {
+                    if Int(season.voteAverage * 10) > 0 {
+                        InfoRow(title: "movieDetail.rating".localized, value: "\(Int(season.voteAverage * 10))%")
+                    }
+
+                    if let genres = tvShow?.genres, !genres.isEmpty {
+                        InfoRow(title: "movieDetail.genres".localized, value: genres.map { $0.name }.joined(separator: ", "))
+                    }
+
+                    if let runtime = tvShow?.formattedEpisodeRuntime {
+                        InfoRow(title: "movieDetail.runtime".localized, value: runtime)
+                    }
+
+                    if let countries = tvShow?.productionCountries, !countries.isEmpty {
+                        InfoRow(title: "movieDetail.country".localized, value: countries.first?.name ?? "")
+                    }
+
+                    if let director = director {
+                        InfoRow(title: "movieDetail.director".localized, value: director.name)
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+
+            if !cast.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("movieDetail.cast".localized)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.theme.textPrimary)
+                        .padding(.horizontal, 20)
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
+                            ForEach(cast) { actor in
+                                CastMemberCard(actor: actor) {
+                                    selectedActor = actor
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                    }
+                }
+            }
+        }
     }
 
     private func seasonActionsSection(season: SeasonDetail) -> some View {
@@ -322,7 +391,7 @@ struct EpisodeRow: View {
                     .background(Color.theme.cardBackground.clipShape(RoundedRectangle(cornerRadius: 8)))
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("S\(episode.seasonNumber) - \(episode.name)")
+                    Text("S\(episode.seasonNumber)E\(episode.episodeNumber) - \(episode.name)")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(.theme.textPrimary)
                         .lineLimit(2)

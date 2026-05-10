@@ -442,6 +442,9 @@
 "actor.birthday" = "Born: %@";
 "actor.birthday.line" = "%@ (%@ years old)";
 "actor.known_for" = "Known For";
+"actor.search.placeholder" = "Filmografie doorzoeken…";
+"actor.search.noResults" = "Geen resultaten voor";
+"actor.filmography.empty" = "Geen credits gevonden.";
 
 // Global Discovery Filters
 "filters.mediaType" = "Typ nośnika";

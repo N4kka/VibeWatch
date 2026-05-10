@@ -442,6 +442,9 @@
 "actor.birthday" = "Born: %@";
 "actor.birthday.line" = "%@ (%@ years old)";
 "actor.known_for" = "Known For";
+"actor.search.placeholder" = "Hae filmografiaa…";
+"actor.search.noResults" = "Ei tuloksia haulle";
+"actor.filmography.empty" = "Ei löydettyjä elokuvia.";
 
 // Global Discovery Filters
 "filters.mediaType" = "Mediatyyppi";

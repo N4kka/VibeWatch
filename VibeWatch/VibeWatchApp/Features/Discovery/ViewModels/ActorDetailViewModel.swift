@@ -5,6 +5,7 @@ final class ActorDetailViewModel: ObservableObject {
     @Published var person: PersonDetails?
     @Published private(set) var allCredits: [PersonCredit] = []
     @Published var selectedFilter: MediaFilter = .all
+    @Published var searchText: String = ""
     @Published var isLoading = false
     @Published var error: AppError?
 
@@ -17,11 +18,15 @@ final class ActorDetailViewModel: ObservableObject {
     }
 
     var filteredCredits: [PersonCredit] {
+        let byFilter: [PersonCredit]
         switch selectedFilter {
-        case .all:      return allCredits
-        case .movies:   return allCredits.filter { $0.mediaType == .movie }
-        case .tvSeries: return allCredits.filter { $0.mediaType == .tv }
+        case .all:      byFilter = allCredits
+        case .movies:   byFilter = allCredits.filter { $0.mediaType == .movie }
+        case .tvSeries: byFilter = allCredits.filter { $0.mediaType == .tv }
         }
+        guard !searchText.trimmingCharacters(in: .whitespaces).isEmpty else { return byFilter }
+        let query = searchText.lowercased()
+        return byFilter.filter { $0.title.lowercased().contains(query) }
     }
 
     var mostPopularCredit: PersonCredit? {

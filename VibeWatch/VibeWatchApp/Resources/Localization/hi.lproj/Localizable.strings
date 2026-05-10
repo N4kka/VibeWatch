@@ -442,6 +442,9 @@
 "actor.birthday" = "Born: %@";
 "actor.birthday.line" = "%@ (%@ years old)";
 "actor.known_for" = "Known For";
+"actor.search.placeholder" = "फिल्मोग्राफी खोजें…";
+"actor.search.noResults" = "के लिए कोई परिणाम नहीं";
+"actor.filmography.empty" = "कोई क्रेडिट नहीं मिला।";
 
 // Global Discovery Filters
 "filters.mediaType" = "मीडिया प्रकार";

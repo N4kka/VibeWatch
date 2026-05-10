@@ -300,15 +300,14 @@ struct TVShowDetailView: View {
     
     @ViewBuilder
     private func creditsView(tvShow: TVShow) -> some View {
-        if !viewModel.mainCast.isEmpty {
-            TVShowCreditsSection(
-                cast: viewModel.mainCast,
-                tvShow: tvShow,
-                onActorTap: { actor in
-                    selectedActor = actor
-                }
-            )
-        }
+        TVShowCreditsSection(
+            director: viewModel.director,
+            cast: viewModel.mainCast,
+            tvShow: tvShow,
+            onActorTap: { actor in
+                selectedActor = actor
+            }
+        )
     }
     
     @ViewBuilder
@@ -318,7 +317,10 @@ struct TVShowDetailView: View {
             showId: tvShow.id,
             showName: tvShow.name,
             showBackdropPath: tvShow.backdropPath,
-            showPosterPath: tvShow.posterPath
+            showPosterPath: tvShow.posterPath,
+            tvShow: tvShow,
+            cast: viewModel.mainCast,
+            director: viewModel.director
         )
     }
 
@@ -633,38 +635,49 @@ struct TVShowInfoSection: View {
 }
 
 struct TVShowCreditsSection: View {
+    let director: Crew?
     let cast: [Cast]
     let tvShow: TVShow
     let onActorTap: (Cast) -> Void
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 16) {
                 Text("movieDetail.information".localized)
                     .font(.system(size: 20, weight: .bold))
                     .foregroundColor(.theme.textPrimary)
-                
+
                 VStack(alignment: .leading, spacing: 12) {
-                    InfoRow(title: "Rating", value: "\(Int(tvShow.voteAverage * 10))%")
-                    
-                    if let genres = tvShow.genres, !genres.isEmpty {
-                        InfoRow(title: "Genres", value: genres.map { $0.name }.joined(separator: ", "))
+                    if tvShow.ratingPercentage > 0 {
+                        InfoRow(title: "movieDetail.rating".localized, value: "\(tvShow.ratingPercentage)%")
                     }
-                    
+
+                    if let genres = tvShow.genres, !genres.isEmpty {
+                        InfoRow(title: "movieDetail.genres".localized, value: genres.map { $0.name }.joined(separator: ", "))
+                    }
+
+                    if let runtime = tvShow.formattedEpisodeRuntime {
+                        InfoRow(title: "movieDetail.runtime".localized, value: runtime)
+                    }
+
                     if let countries = tvShow.productionCountries, !countries.isEmpty {
-                        InfoRow(title: "Country", value: countries.first?.name ?? "")
+                        InfoRow(title: "movieDetail.country".localized, value: countries.first?.name ?? "")
+                    }
+
+                    if let director = director {
+                        InfoRow(title: "movieDetail.director".localized, value: director.name)
                     }
                 }
             }
             .padding(.horizontal, 20)
-            
+
             if !cast.isEmpty {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("movieDetail.cast".localized)
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(.theme.textPrimary)
                         .padding(.horizontal, 20)
-                    
+
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 12) {
                             ForEach(cast) { actor in
@@ -742,6 +755,9 @@ struct SeasonsCarouselSection: View {
     let showName: String
     let showBackdropPath: String?
     let showPosterPath: String?
+    let tvShow: TVShow?
+    let cast: [Cast]
+    let director: Crew?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -758,7 +774,10 @@ struct SeasonsCarouselSection: View {
                             seasonNumber: season.seasonNumber,
                             showName: showName,
                             showBackdropPath: showBackdropPath,
-                            showPosterPath: showPosterPath
+                            showPosterPath: showPosterPath,
+                            tvShow: tvShow,
+                            cast: cast,
+                            director: director
                         )) {
                             SeasonCard(season: season)
                         }

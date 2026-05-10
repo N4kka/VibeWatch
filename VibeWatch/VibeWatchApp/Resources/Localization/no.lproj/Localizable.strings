@@ -442,6 +442,9 @@
 "actor.birthday" = "Born: %@";
 "actor.birthday.line" = "%@ (%@ years old)";
 "actor.known_for" = "Known For";
+"actor.search.placeholder" = "Søk i filmografi…";
+"actor.search.noResults" = "Ingen resultater for";
+"actor.filmography.empty" = "Ingen kreditter funnet.";
 
 // Global Discovery Filters
 "filters.mediaType" = "Medietype";

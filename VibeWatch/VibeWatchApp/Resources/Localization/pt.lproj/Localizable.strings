@@ -401,6 +401,9 @@
 "actor.birthday" = "Born: %@";
 "actor.birthday.line" = "%@ (%@ years old)";
 "actor.known_for" = "Known For";
+"actor.search.placeholder" = "Pesquisar filmografia…";
+"actor.search.noResults" = "Sem resultados para";
+"actor.filmography.empty" = "Nenhum crédito encontrado.";
 
 "clips.search.placeholder" = "Buscar clips, personagens ou citações";
 "clips.search.emptyTitle" = "Encontre clips que você ama";

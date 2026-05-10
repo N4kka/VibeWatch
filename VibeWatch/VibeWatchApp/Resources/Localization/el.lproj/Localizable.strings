@@ -442,6 +442,9 @@
 "actor.birthday" = "Born: %@";
 "actor.birthday.line" = "%@ (%@ years old)";
 "actor.known_for" = "Known For";
+"actor.search.placeholder" = "Αναζήτηση φιλμογραφίας…";
+"actor.search.noResults" = "Κανένα αποτέλεσμα για";
+"actor.filmography.empty" = "Δεν βρέθηκαν ταινίες.";
 
 // Global Discovery Filters
 "filters.mediaType" = "Τύπος μέσου";

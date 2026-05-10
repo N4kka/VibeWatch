@@ -401,6 +401,9 @@
 "actor.birthday" = "Born: %@";
 "actor.birthday.line" = "%@ (%@ years old)";
 "actor.known_for" = "Known For";
+"actor.search.placeholder" = "Filmografi ara…";
+"actor.search.noResults" = "Sonuç yok:";
+"actor.filmography.empty" = "Kredi bulunamadı.";
 
 "clips.search.placeholder" = "Klip, karakter veya replik ara";
 "clips.search.emptyTitle" = "Sevdiğin klipleri bul";

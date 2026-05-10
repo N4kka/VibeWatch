@@ -401,6 +401,9 @@
 "actor.birthday" = "Born: %@";
 "actor.birthday.line" = "%@ (%@ years old)";
 "actor.known_for" = "Known For";
+"actor.search.placeholder" = "Поиск фильмографии…";
+"actor.search.noResults" = "Нет результатов для";
+"actor.filmography.empty" = "Кредиты не найдены.";
 
 "clips.search.placeholder" = "Поиск клипов, персонажей или цитат";
 "clips.search.emptyTitle" = "Найдите любимые клипы";

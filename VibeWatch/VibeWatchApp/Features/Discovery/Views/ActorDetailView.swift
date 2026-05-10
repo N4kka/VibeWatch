@@ -4,6 +4,7 @@ struct ActorDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel: ActorDetailViewModel
     @State private var showFullBiography = false
+    @FocusState private var searchFocused: Bool
 
     let initialName: String
     let initialProfileURL: URL?
@@ -38,12 +39,18 @@ struct ActorDetailView: View {
 
                     MediaFilterSwitcher(selectedFilter: $viewModel.selectedFilter)
 
-                    LazyVStack(spacing: 12) {
-                        ForEach(filmographyList) { credit in
-                            NavigationLink(destination: destinationView(for: credit)) {
-                                ActorFilmographyRow(credit: credit)
+                    filmographySearchBar
+
+                    if filmographyList.isEmpty && !viewModel.isLoading {
+                        filmographyEmptyState
+                    } else {
+                        LazyVStack(spacing: 12) {
+                            ForEach(filmographyList) { credit in
+                                NavigationLink(destination: destinationView(for: credit)) {
+                                    ActorFilmographyRow(credit: credit)
+                                }
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
                         }
                     }
                 }
@@ -59,8 +66,8 @@ struct ActorDetailView: View {
 
     private var filmographyList: [PersonCredit] {
         let list = viewModel.filteredCredits
-        // In "All" mode, exclude the Known For card's credit to avoid showing it twice
-        if viewModel.selectedFilter == .all, let top = viewModel.mostPopularCredit {
+        // In "All" mode with no active search, exclude the Known For card's credit to avoid showing it twice
+        if viewModel.selectedFilter == .all && viewModel.searchText.isEmpty, let top = viewModel.mostPopularCredit {
             return list.filter { !($0.id == top.id && $0.mediaType == top.mediaType) }
         }
         return list
@@ -172,6 +179,77 @@ struct ActorDetailView: View {
                     .foregroundColor(.theme.textSecondary)
             }
         }
+    }
+
+    @ViewBuilder
+    private var filmographySearchBar: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundColor(searchFocused ? .theme.accentOrange : .theme.textSecondary)
+                .animation(.easeInOut(duration: 0.2), value: searchFocused)
+
+            TextField("actor.search.placeholder".localized, text: $viewModel.searchText)
+                .font(.system(size: 15))
+                .foregroundColor(.theme.textPrimary)
+                .focused($searchFocused)
+                .autocorrectionDisabled()
+                .submitLabel(.search)
+                .onSubmit { searchFocused = false }
+
+            if !viewModel.searchText.isEmpty {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.15)) {
+                        viewModel.searchText = ""
+                    }
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 15))
+                        .foregroundColor(.theme.textSecondary)
+                }
+                .transition(.scale.combined(with: .opacity))
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color.theme.cardBackground)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(
+                            searchFocused ? Color.theme.accentOrange.opacity(0.5) : Color.clear,
+                            lineWidth: 1
+                        )
+                )
+        )
+        .animation(.easeInOut(duration: 0.2), value: searchFocused)
+    }
+
+    @ViewBuilder
+    private var filmographyEmptyState: some View {
+        VStack(spacing: 14) {
+            Image(systemName: "film.stack")
+                .font(.system(size: 38))
+                .foregroundColor(.theme.textSecondary.opacity(0.4))
+
+            if viewModel.searchText.isEmpty {
+                Text("actor.filmography.empty".localized)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(.theme.textSecondary)
+            } else {
+                VStack(spacing: 4) {
+                    Text("actor.search.noResults".localized)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(.theme.textPrimary)
+                    Text(viewModel.searchText)
+                        .font(.system(size: 13))
+                        .foregroundColor(.theme.accentOrange)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 44)
     }
 
     @ViewBuilder

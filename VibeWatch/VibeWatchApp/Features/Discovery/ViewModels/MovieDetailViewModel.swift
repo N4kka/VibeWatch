@@ -252,6 +252,10 @@ class TVShowDetailViewModel: ObservableObject {
         }
     }
     
+    var director: Crew? {
+        credits?.crew.first { $0.job == "Director" }
+    }
+
     var mainCast: [Cast] {
         Array(credits?.cast.prefix(10) ?? [])
     }

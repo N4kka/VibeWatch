@@ -397,6 +397,9 @@
 "actor.birthday" = "Born: %@";
 "actor.birthday.line" = "%@ (%@ years old)";
 "actor.known_for" = "Known For";
+"actor.search.placeholder" = "搜索作品…";
+"actor.search.noResults" = "没有结果：";
+"actor.filmography.empty" = "未找到作品。";
 
 "clips.search.placeholder" = "搜索剪辑、角色或台词";
 "clips.search.emptyTitle" = "找到你喜欢的剪辑";

@@ -401,6 +401,9 @@
 "actor.birthday" = "Born: %@";
 "actor.birthday.line" = "%@ (%@ years old)";
 "actor.known_for" = "Known For";
+"actor.search.placeholder" = "Sök i filmografi…";
+"actor.search.noResults" = "Inga resultat för";
+"actor.filmography.empty" = "Inga krediter hittades.";
 
 "clips.search.placeholder" = "Sök klipp, karaktärer eller citat";
 "clips.search.emptyTitle" = "Hitta klipp du gillar";

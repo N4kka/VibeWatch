@@ -442,6 +442,9 @@
 "actor.birthday" = "Born: %@";
 "actor.birthday.line" = "%@ (%@ years old)";
 "actor.known_for" = "Known For";
+"actor.search.placeholder" = "フィルモグラフィを検索…";
+"actor.search.noResults" = "検索結果なし：";
+"actor.filmography.empty" = "クレジットが見つかりません。";
 
 // Global Discovery Filters
 "filters.mediaType" = "メディア種別";
