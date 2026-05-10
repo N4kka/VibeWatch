@@ -7,17 +7,22 @@ struct ListsView: View {
     @ObservedObject var localizationManager = LocalizationManager.shared
     @EnvironmentObject var quotaManager: DailyQuotaManager
     @EnvironmentObject var appState: AppState
+    @State private var selectedSection: LibrarySection = .myLists
     @State private var selectedFilter: MediaFilter = .all
     @State private var selectedListType: ListViewType = .watchlist
     @State private var showCreateList = false
     @State private var showAuthGate = false
     @State private var showFilters = false
+    @State private var showSearch = false
+    @State private var showProfile = false
     @State private var refreshID = UUID()
     @State private var filters = GlobalDiscoveryFilters()
-    
+
+    @StateObject private var searchViewModel = SearchViewModel()
+
     @State private var filterRefreshTrigger = false
     @State private var showingPaywall = false
-    @State private var itemsLimit = 50 // State for pagination
+    @State private var itemsLimit = 50
     @State private var searchText = ""
     
     private var mediaFilterBinding: Binding<MediaFilter> {
@@ -45,25 +50,25 @@ struct ListsView: View {
             
             VStack(spacing: 0) {
                 OfflineBanner()
-                
-                headerView
-                
-                ListTypeSwitcher(selectedType: $selectedListType)
-                    .padding(.bottom, 16)
-                
-                searchField
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 16)
-                
-                combinedFiltersRow
-                
-                if listManager.isLoadingInitial {
-                    ProgressView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if currentLists.isEmpty {
-                    emptyStateView
+
+                AppHeaderView(
+                    onSearchTap: { showSearch = true },
+                    onFilterTap: {
+                        withAnimation { showFilters = true }
+                    },
+                    onProfileTap: { showProfile = true },
+                    avatarURL: appState.currentUser?.avatarURL,
+                    isProUser: quotaManager.isProUser,
+                    activeFilterCount: filters.activeFilterCount
+                )
+
+                LibrarySectionSwitcher(selectedSection: $selectedSection)
+                    .padding(.bottom, 8)
+
+                if selectedSection == .myLists {
+                    myListsContent
                 } else {
-                    contentView
+                    TVShowsTrackingView()
                 }
             }
         }
@@ -79,6 +84,12 @@ struct ListsView: View {
                 )
                 .environmentObject(quotaManager)
             }
+        }
+        .fullScreenCover(isPresented: $showSearch) {
+            SearchView(viewModel: searchViewModel)
+        }
+        .sheet(isPresented: $showProfile) {
+            ProfileView()
         }
         .task {
             await viewModel.loadLists()
@@ -126,34 +137,48 @@ struct ListsView: View {
             itemsLimit = 50
         }
     }
-    private var headerView: some View {
-        HStack {
-            Text("lists.myLists".localized)
-                .font(.system(size: 32, weight: .bold))
-                .foregroundColor(.theme.textPrimary)
-            
-            Spacer()
+    private var myListsContent: some View {
+        VStack(spacing: 0) {
+            HStack(alignment: .center, spacing: 0) {
+                ListTypeSwitcher(selectedType: $selectedListType)
+                    .padding(.leading, 20)
 
-            ProUpgradeIconButton(isProUser: quotaManager.isProUser, source: "lists_top_right")
-            
-            Button {
-                guard appState.isAuthenticated else {
-                    showAuthGate = true
-                    return
+                Spacer()
+
+                Button {
+                    guard appState.isAuthenticated else {
+                        showAuthGate = true
+                        return
+                    }
+                    if listManager.canCreateList() {
+                        showCreateList = true
+                    } else {
+                        showingPaywall = true
+                    }
+                } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 26))
+                        .foregroundColor(.theme.accentOrange)
                 }
-                if listManager.canCreateList() {
-                    showCreateList = true
-                } else {
-                    showingPaywall = true
-                }
-            } label: {
-                Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 28))
-                    .foregroundColor(.theme.accentOrange)
+                .padding(.trailing, 20)
+            }
+            .padding(.bottom, 16)
+
+            searchField
+                .padding(.horizontal, 20)
+                .padding(.bottom, 16)
+
+            combinedFiltersRow
+
+            if listManager.isLoadingInitial {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if currentLists.isEmpty {
+                emptyStateView
+            } else {
+                contentView
             }
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 16)
     }
     
     private var searchField: some View {

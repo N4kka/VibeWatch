@@ -598,3 +598,13 @@
 "tvDetail.markAllSeenConfirm" = "Yes, mark as seen";
 "tvDetail.markAllSeenCancel" = "No, cancel";
 "tvDetail.seasonSeenShort" = "seen";
+
+// Library section switcher
+"lists.section.myLists" = "My Lists";
+"lists.section.tvTracking" = "TV Shows Tracking";
+
+// TV Shows Tracking
+"tvTracking.continuing" = "Continue Watching";
+"tvTracking.notStarted" = "Not Started";
+"tvTracking.upToDate" = "Up to Date";
+"tvTracking.emptyState" = "No TV shows found";

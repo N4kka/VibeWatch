@@ -595,3 +595,13 @@
 "tvDetail.markAllSeenConfirm" = "Sì, segna come visto";
 "tvDetail.markAllSeenCancel" = "No, annulla";
 "tvDetail.seasonSeenShort" = "vista";
+
+// Library section switcher
+"lists.section.myLists" = "Le Mie Liste";
+"lists.section.tvTracking" = "Tracking Serie TV";
+
+// TV Shows Tracking
+"tvTracking.continuing" = "Continua a guardare";
+"tvTracking.notStarted" = "Da iniziare";
+"tvTracking.upToDate" = "In pari";
+"tvTracking.emptyState" = "Nessuna serie TV trovata";
