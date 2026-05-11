@@ -16,7 +16,7 @@ final class DatabaseMigrationManager {
     private let versionKey = "unified_migration_version"
 
     /// Current latest migration version
-    private let latestVersion = 4
+    private let latestVersion = 5
 
     private init() {}
 
@@ -81,6 +81,13 @@ final class DatabaseMigrationManager {
                 description: "Add genre_ids to user_clip_history for mood analysis (BUG-04)",
                 type: .schema,
                 execute: migration4_AddGenreIdsToClipHistory
+            ),
+            Migration(
+                version: 5,
+                name: "personalized_discovery_order_columns",
+                description: "Add carousel_order and batch_index to personalized_discovery for stable ordering",
+                type: .schema,
+                execute: migration5_AddCarouselOrderColumns
             )
         ]
     }
@@ -197,6 +204,18 @@ final class DatabaseMigrationManager {
             Logger.info("[Migration 3] Added updated_at to clip_comments")
         } else {
             Logger.info("[Migration 3] updated_at column already exists in clip_comments — skipping")
+        }
+    }
+
+    /// Migration 5: Add carousel_order + batch_index to personalized_discovery for stable sort
+    private func migration5_AddCarouselOrderColumns() async throws {
+        if !db.columnExists("personalized_discovery", column: "carousel_order") {
+            db.execute("ALTER TABLE personalized_discovery ADD COLUMN carousel_order INTEGER DEFAULT 999")
+            Logger.info("[Migration 5] Added carousel_order to personalized_discovery")
+        }
+        if !db.columnExists("personalized_discovery", column: "batch_index") {
+            db.execute("ALTER TABLE personalized_discovery ADD COLUMN batch_index INTEGER DEFAULT 0")
+            Logger.info("[Migration 5] Added batch_index to personalized_discovery")
         }
     }
 

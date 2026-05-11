@@ -478,7 +478,6 @@
 "filters.upgradeToPro" = "Passa a Pro";
 "filters.filtersActive" = "%d filtri attivi";
 "filters.allPlatforms" = "Tutte le piattaforme";
-"filters.proTitle" = "Sblocca filtri avanzati";
 
 // Personalized Carousels
 "carousel.dailyMix" = "Il tuo Mix Quotidiano";
@@ -605,3 +604,22 @@
 "tvTracking.notStarted" = "Da iniziare";
 "tvTracking.upToDate" = "In pari";
 "tvTracking.emptyState" = "Nessuna serie TV trovata";
+
+// New Discovery Carousels
+"carousel.fromActor" = "Altro con %@";
+"carousel.decadeClassics" = "Classici %@";
+"carousel.moodTonight" = "%@ stasera";
+"carousel.regionSpotlight" = "In evidenza: %@";
+"carousel.topInGenre" = "Il meglio di %@";
+"carousel.hotThisWeekInGenre" = "Popolari questa settimana in %@";
+"carousel.quickWatches" = "Da vedere al volo";
+"carousel.epicWatches" = "Visioni epiche";
+"carousel.internationalPicks" = "Scelte internazionali";
+"carousel.throwback" = "Ritorno ai %@";
+"carousel.fromAIChat" = "Dalla tua chat AI";
+"carousel.comingSoon" = "In arrivo";
+"carousel.trendingTVWeek" = "Serie TV di tendenza questa settimana";
+"carousel.criticallyAcclaimedRecent" = "%@ acclamati dalla critica";
+"carousel.returningTV" = "In ritorno a breve";
+"carousel.documentaries" = "Documentari per te";
+"discovery.endOfFeed" = "Sei al passo";

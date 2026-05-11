@@ -64,7 +64,10 @@
 "lists.seen" = "Vistos";
 "lists.softLimitWarning" = "A lista \"{name}\" já tem {limit} itens. Considere criar outra lista para manter tudo organizado.";
 "lists.watchlist" = "Para assistir";
-"lists.watchOn" = "ASSISTIR EM";
+"lists.watchOn" = "ASSISTIR EM %@";
+"lists.notifyMeTitle" = "Avisar-me";
+"lists.notifyMeMessage" = "Enviaremos uma notificação assim que '%@' estiver disponível para streaming, aluguer ou compra.";
+"error.oops" = "Ups!";
 
 // Movie Detail
 "movieDetail.cast" = "Elenco";
@@ -136,7 +139,6 @@
 "clips.noClipsAvailable" = "Nenhum clip disponível";
 "clips.noClipsDescription" = "Volte mais tarde para ver cenas empolgantes dos seus filmes e séries favoritos";
 "clips.noComments" = "Nenhum comentário ainda";
-"clips.noListsYet" = "Nenhuma lista ainda";
 "clips.reply" = "Responder";
 "clips.replies" = "respostas";
 "clips.replyingTo" = "Respondendo a";
@@ -360,6 +362,7 @@
 "profile.faqDetail" = "Encontre respostas rápidas para perguntas comuns sobre contas, assinaturas e recursos.";
 "profile.privacyPolicy" = "Política de privacidade";
 "profile.termsOfUse" = "Termos de uso";
+"profile.terms" = "Termos";
 "profile.feedback.suggestFeature" = "Sugerir nova funcionalidade";
 "profile.feedback.suggestFeatureDescription" = "Conte-nos o que tornaria o VibeWatch melhor para você.";
 "profile.feedback.reportBug" = "Reportar um bug/problema";
@@ -412,6 +415,10 @@
 "clips.search.showcaseSubtitle" = "Busque acima para encontrar clips dos seus filmes e séries favoritos";
 "clips.search.matched" = "Correspondentes";
 "clips.search.recommended" = "Recomendados";
+"clips.search.quotes" = "Citações";
+"clips.search.characters" = "Personagens";
+"clips.search.scenes" = "Cenas";
+"clips.search.popular" = "Popular";
 
 // Redeem Code
 "settings.redeemCode" = "Resgatar código";
@@ -514,6 +521,56 @@
 "auth.resendEmail" = "Reenviar e-mail";
 "auth.changeEmail" = "Alterar e-mail";
 "auth.verificationPending" = "Ainda à espera de verificação...";
+"gamification.levelUp" = "SUBIU DE NÍVEL!";
+"gamification.level" = "Nível";
+"gamification.rankAchieved" = "Classificação \"%@\" alcançada";
+"gamification.xp.base" = "base";
+"gamification.xp.proBoost" = "Impulso Pro";
+"gamification.xp.streakBonus" = "Bónus de sequência";
+"gamification.xp.total" = "XP total";
+"gamification.challengeComplete" = "Desafio concluído!";
+"notifications.title" = "Notificações";
+"notifications.status" = "Estado";
+"notifications.enabled" = "Notificações ativadas";
+"notifications.disabled" = "Notificações desativadas";
+"notifications.enableDescription" = "Ativa as notificações para receber alertas personalizados sobre novos episódios, lançamentos e conteúdo que vais adorar.";
+"notifications.enableButton" = "Ativar notificações";
+"notifications.types" = "Tipos de notificação";
+"notifications.newEpisodes" = "Novos episódios";
+"notifications.newEpisodesDesc" = "Recebe uma notificação quando novos episódios das séries que estás a ver estiverem disponíveis";
+"notifications.personalizedReleases" = "Lançamentos personalizados";
+"notifications.personalizedReleasesDesc" = "Novos filmes e séries de acordo com o teu gosto";
+"notifications.favoriteActors" = "Atores e realizadores favoritos";
+"notifications.favoriteActorsDesc" = "Novo conteúdo de pessoas de quem gostas";
+"notifications.similarContent" = "Conteúdo semelhante";
+"notifications.similarContentDesc" = "Recomendações baseadas no que adoraste";
+"notifications.watchlistAlerts" = "Alertas da watchlist";
+"notifications.watchlistAlertsDesc" = "Quando itens da tua watchlist ficarem disponíveis";
+"notifications.milestones" = "Marcos e conquistas";
+"notifications.milestonesDesc" = "Celebra as tuas sequências e conquistas";
+"notifications.frequency" = "Frequência";
+"notifications.dailyLimit" = "Limite diário";
+"notifications.perDay" = "por dia";
+"notifications.unlimited" = "Ilimitado";
+"notifications.quietHours" = "Horas silenciosas";
+"notifications.startTime" = "Hora de início";
+"notifications.endTime" = "Hora de fim";
+"notifications.quietHoursDesc" = "Não serão enviadas notificações durante estas horas";
+"notifications.proFeatures" = "Funcionalidades Pro";
+"notifications.customActorAlerts" = "Alertas personalizados de atores";
+"notifications.customGenreAlerts" = "Alertas personalizados de géneros";
+"notifications.proFeaturesDesc" = "Recebe alertas para atores e géneros específicos que escolheres";
+"notifications.save" = "Guardar";
+"notifications.settingsSaved" = "Definições guardadas";
+"notifications.preferencesUpdated" = "As tuas preferências de notificação foram atualizadas.";
+"notifications.typesFooter" = "Escolhe que notificações queres receber";
+"notifications.frequencyFooter" = "Número máximo de notificações que receberás por dia";
+"notifications.favoriteActorsTitle" = "Os teus atores favoritos";
+"notifications.favoriteActorsFooter" = "Recebe uma notificação quando estes atores tiverem novo conteúdo";
+"notifications.favoriteGenresTitle" = "Os teus géneros favoritos";
+"notifications.favoriteGenresFooter" = "Recebe notificações sobre novos lançamentos nestes géneros";
+"notifications.fromPreferences" = "Das tuas preferências";
+"lists.notifyMe" = "AVISAR-ME";
 
 "movieDetail.whyForMe" = "Why for me?";
 
@@ -539,3 +596,20 @@
 "tvTracking.notStarted" = "Not Started";
 "tvTracking.upToDate" = "Up to Date";
 "tvTracking.emptyState" = "No TV shows found";
+"carousel.fromActor" = "Mais de %@";
+"carousel.decadeClassics" = "Clássicos %@";
+"carousel.moodTonight" = "%@ esta noite";
+"carousel.regionSpotlight" = "Destaque: %@";
+"carousel.topInGenre" = "Top em %@";
+"carousel.hotThisWeekInGenre" = "Em alta esta semana em %@";
+"carousel.quickWatches" = "Para ver rápido";
+"carousel.epicWatches" = "Para sessões épicas";
+"carousel.internationalPicks" = "Escolhas internacionais";
+"carousel.throwback" = "Regresso a %@";
+"carousel.fromAIChat" = "Do teu chat de IA";
+"carousel.comingSoon" = "Brevemente";
+"carousel.trendingTVWeek" = "TV em destaque esta semana";
+"carousel.criticallyAcclaimedRecent" = "%@ aclamados pela crítica";
+"carousel.returningTV" = "De volta em breve";
+"carousel.documentaries" = "Documentários para ti";
+"discovery.endOfFeed" = "Estás em dia";

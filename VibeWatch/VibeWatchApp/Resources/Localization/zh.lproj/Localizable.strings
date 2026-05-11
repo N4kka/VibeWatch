@@ -63,7 +63,10 @@
 "lists.seen" = "看过";
 "lists.softLimitWarning" = "“{name}” 已有 {limit} 个项目。建议新建一个列表来保持条理清晰。";
 "lists.watchlist" = "稍后观看";
-"lists.watchOn" = "观看平台";
+"lists.watchOn" = "在 %@ 观看";
+"lists.notifyMeTitle" = "通知我";
+"lists.notifyMeMessage" = "一旦“%@”可用于流媒体、租赁或购买，我们就会通知你。";
+"error.oops" = "哎呀！";
 
 // Movie Detail
 "movieDetail.cast" = "演员";
@@ -135,7 +138,6 @@
 "clips.noClipsAvailable" = "暂无剪辑";
 "clips.noClipsDescription" = "稍后再来看看你喜爱影视中的精彩片段吧";
 "clips.noComments" = "还没有评论";
-"clips.noListsYet" = "还没有列表";
 "clips.reply" = "回复";
 "clips.replies" = "条回复";
 "clips.replyingTo" = "正在回复";
@@ -357,6 +359,7 @@
 "profile.faqDetail" = "快速找到关于账号、订阅和功能的常见问题解答。";
 "profile.privacyPolicy" = "隐私政策";
 "profile.termsOfUse" = "使用条款";
+"profile.terms" = "条款";
 "profile.feedback.suggestFeature" = "建议新功能";
 "profile.feedback.suggestFeatureDescription" = "告诉我们什么能让 VibeWatch 对你来说更好用。";
 "profile.feedback.reportBug" = "报告错误/问题";
@@ -408,6 +411,10 @@
 "clips.search.showcaseSubtitle" = "在上方搜索，找到你喜欢的电影和剧集中的剪辑";
 "clips.search.matched" = "匹配";
 "clips.search.recommended" = "推荐";
+"clips.search.quotes" = "台词";
+"clips.search.characters" = "角色";
+"clips.search.scenes" = "场景";
+"clips.search.popular" = "热门";
 
 // Redeem Code
 "settings.redeemCode" = "兑换代码";
@@ -510,6 +517,56 @@
 "auth.resendEmail" = "重新发送电子邮件";
 "auth.changeEmail" = "更改电子邮件";
 "auth.verificationPending" = "仍在等待验证...";
+"gamification.levelUp" = "升级！";
+"gamification.level" = "等级";
+"gamification.rankAchieved" = "已达成“%@”段位";
+"gamification.xp.base" = "基础";
+"gamification.xp.proBoost" = "Pro 加成";
+"gamification.xp.streakBonus" = "连续奖励";
+"gamification.xp.total" = "XP 总计";
+"gamification.challengeComplete" = "挑战完成！";
+"notifications.title" = "通知";
+"notifications.status" = "状态";
+"notifications.enabled" = "通知已开启";
+"notifications.disabled" = "通知已关闭";
+"notifications.enableDescription" = "开启通知，获取关于新剧集、上线内容和你会喜欢的内容的个性化提醒。";
+"notifications.enableButton" = "开启通知";
+"notifications.types" = "通知类型";
+"notifications.newEpisodes" = "新剧集";
+"notifications.newEpisodesDesc" = "你正在观看的剧集有新集数可看时收到通知";
+"notifications.personalizedReleases" = "个性化上线提醒";
+"notifications.personalizedReleasesDesc" = "符合你口味的新电影和剧集";
+"notifications.favoriteActors" = "喜爱的演员和导演";
+"notifications.favoriteActorsDesc" = "你喜欢的人有新内容时提醒";
+"notifications.similarContent" = "相似内容";
+"notifications.similarContentDesc" = "根据你喜欢的内容推荐";
+"notifications.watchlistAlerts" = "片单提醒";
+"notifications.watchlistAlertsDesc" = "当你片单中的内容可观看时提醒";
+"notifications.milestones" = "里程碑与成就";
+"notifications.milestonesDesc" = "庆祝你的观看连续记录和成就";
+"notifications.frequency" = "频率";
+"notifications.dailyLimit" = "每日上限";
+"notifications.perDay" = "每天";
+"notifications.unlimited" = "不限";
+"notifications.quietHours" = "免打扰时段";
+"notifications.startTime" = "开始时间";
+"notifications.endTime" = "结束时间";
+"notifications.quietHoursDesc" = "这些时段内不会发送通知";
+"notifications.proFeatures" = "Pro 功能";
+"notifications.customActorAlerts" = "自定义演员提醒";
+"notifications.customGenreAlerts" = "自定义类型提醒";
+"notifications.proFeaturesDesc" = "接收你选择的特定演员和类型提醒";
+"notifications.save" = "保存";
+"notifications.settingsSaved" = "设置已保存";
+"notifications.preferencesUpdated" = "你的通知偏好已更新。";
+"notifications.typesFooter" = "选择你想接收的通知";
+"notifications.frequencyFooter" = "你每天最多会收到的通知数量";
+"notifications.favoriteActorsTitle" = "你喜爱的演员";
+"notifications.favoriteActorsFooter" = "这些演员有新内容时收到通知";
+"notifications.favoriteGenresTitle" = "你喜爱的类型";
+"notifications.favoriteGenresFooter" = "这些类型有新片上线时收到通知";
+"notifications.fromPreferences" = "来自你的偏好";
+"lists.notifyMe" = "通知我";
 
 "movieDetail.whyForMe" = "Why for me?";
 
@@ -535,3 +592,20 @@
 "tvTracking.notStarted" = "Not Started";
 "tvTracking.upToDate" = "Up to Date";
 "tvTracking.emptyState" = "No TV shows found";
+"carousel.fromActor" = "更多来自 %@";
+"carousel.decadeClassics" = "%@ 经典";
+"carousel.moodTonight" = "今晚看 %@";
+"carousel.regionSpotlight" = "%@ 聚焦";
+"carousel.topInGenre" = "%@ 中的热门";
+"carousel.hotThisWeekInGenre" = "本周 %@ 热门";
+"carousel.quickWatches" = "快速观看";
+"carousel.epicWatches" = "史诗级观看";
+"carousel.internationalPicks" = "国际精选";
+"carousel.throwback" = "怀旧 %@";
+"carousel.fromAIChat" = "来自你的 AI 聊天";
+"carousel.comingSoon" = "即将上线";
+"carousel.trendingTVWeek" = "本周热门剧集";
+"carousel.criticallyAcclaimedRecent" = "广受好评的 %@";
+"carousel.returningTV" = "即将回归";
+"carousel.documentaries" = "为你推荐的纪录片";
+"discovery.endOfFeed" = "你已经看完了";

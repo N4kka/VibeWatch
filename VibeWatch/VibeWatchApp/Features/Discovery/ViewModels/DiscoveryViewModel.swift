@@ -11,9 +11,26 @@ class DiscoveryViewModel: ObservableObject {
     @Published var isRefreshing = false
     @Published var error: AppError?
     @Published var refreshToken = UUID()
-    
+    @Published var visibleCarouselCount: Int = 11  // hero + initial 10
+    @Published var hasMoreCarousels: Bool = false
+    @Published var isLoadingMore: Bool = false
+
+    private let pageSize = 10
+
+    var visibleCarousels: [PersonalizedCarousel] {
+        Array(personalizedCarousels.prefix(visibleCarouselCount))
+    }
+
     var hasNoContent: Bool {
         personalizedCarousels.isEmpty
+    }
+
+    func loadMoreCarousels() {
+        guard !isLoadingMore, visibleCarouselCount < personalizedCarousels.count else { return }
+        isLoadingMore = true
+        visibleCarouselCount = min(visibleCarouselCount + pageSize, personalizedCarousels.count)
+        hasMoreCarousels = visibleCarouselCount < personalizedCarousels.count
+        isLoadingMore = false
     }
     
     private let preferenceManager: UserPreferenceManager
@@ -126,7 +143,12 @@ class DiscoveryViewModel: ObservableObject {
         markReloadedForToday()
         isLoading = false
         isRefreshing = false
-        if forceRefresh { refreshToken = UUID() }
+        hasMoreCarousels = personalizedCarousels.count > visibleCarouselCount
+        if forceRefresh {
+            visibleCarouselCount = 11
+            hasMoreCarousels = personalizedCarousels.count > 11
+            refreshToken = UUID()
+        }
     }
 
     func applyFilters(_ filters: GlobalDiscoveryFilters) {
@@ -140,6 +162,7 @@ class DiscoveryViewModel: ObservableObject {
         globalFilters.save()
 
         personalizedCarousels = applyGlobalFilters(to: generatedCarousels)
+        hasMoreCarousels = personalizedCarousels.count > visibleCarouselCount
         refreshToken = UUID()
 
         Task {
@@ -197,11 +220,12 @@ class DiscoveryViewModel: ObservableObject {
     private func applyGlobalFilters(to carousels: [PersonalizedCarousel]) -> [PersonalizedCarousel] {
         var filteredCarousels: [PersonalizedCarousel] = []
 
+        let tvOnlyTypes: Set<CarouselType> = [.topTVPicks, .trendingTVWeek, .returningTV]
         for carousel in carousels {
-            if globalFilters.mediaType == .movies, carousel.type == .topTVPicks {
+            if globalFilters.mediaType == .movies, tvOnlyTypes.contains(carousel.type) {
                 continue
             }
-            if globalFilters.mediaType == .tvShows, carousel.type != .topTVPicks {
+            if globalFilters.mediaType == .tvShows, !tvOnlyTypes.contains(carousel.type) {
                 continue
             }
 

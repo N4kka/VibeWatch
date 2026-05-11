@@ -64,7 +64,10 @@
 "lists.seen" = "İzlendi";
 "lists.softLimitWarning" = "\"{name}\" listesinde zaten {limit} öğe var. Düzeni korumak için yeni bir liste oluşturmayı düşünebilirsin.";
 "lists.watchlist" = "İzleme Listesi";
-"lists.watchOn" = "İZLE";
+"lists.watchOn" = "%@ ÜZERİNDE İZLE";
+"lists.notifyMeTitle" = "Bana Bildir";
+"lists.notifyMeMessage" = "'%@' streaming, kiralama veya satın alma için hazır olur olmaz sana bildirim göndereceğiz.";
+"error.oops" = "Eyvah!";
 
 // Movie Detail
 "movieDetail.cast" = "Oyuncular";
@@ -136,7 +139,6 @@
 "clips.noClipsAvailable" = "Klip yok";
 "clips.noClipsDescription" = "Favori film ve dizilerinden heyecanlı sahneler için daha sonra tekrar kontrol et";
 "clips.noComments" = "Henüz yorum yok";
-"clips.noListsYet" = "Henüz liste yok";
 "clips.reply" = "Yanıtla";
 "clips.replies" = "yanıt";
 "clips.replyingTo" = "Şuna yanıt veriliyor:";
@@ -360,6 +362,7 @@
 "profile.faqDetail" = "Hesaplar, abonelikler ve özellikler hakkında sık sorulan sorulara hızlı cevaplar bul.";
 "profile.privacyPolicy" = "Gizlilik Politikası";
 "profile.termsOfUse" = "Kullanım Şartları";
+"profile.terms" = "Şartlar";
 "profile.feedback.suggestFeature" = "Yeni özellik öner";
 "profile.feedback.suggestFeatureDescription" = "VibeWatch'u senin için daha iyi yapacak şeyleri anlat.";
 "profile.feedback.reportBug" = "Hata/sorun bildir";
@@ -412,6 +415,10 @@
 "clips.search.showcaseSubtitle" = "Favori film ve dizilerinden klip bulmak için yukarıdan ara";
 "clips.search.matched" = "Eşleşen";
 "clips.search.recommended" = "Önerilen";
+"clips.search.quotes" = "Alıntılar";
+"clips.search.characters" = "Karakterler";
+"clips.search.scenes" = "Sahneler";
+"clips.search.popular" = "Popüler";
 
 // Redeem Code
 "settings.redeemCode" = "Kodu Kullan";
@@ -467,7 +474,7 @@
 "filters.proTitle" = "Gelişmiş Filtrelerin Kilidini Aç";
 "filters.proDescription" = "Özel aralıklar, çoklu ülke seçimi ve gelişmiş filtreleme seçenekleri için Pro'ya yükseltin";
 "filters.upgradeToPro" = "Pro'ya Yükseltme";
-"filters.filtersActive" = "d filtreler etkin";
+"filters.filtersActive" = "%d filtre etkin";
 "carousel.dailyMix" = "Günlük Karışımınız";
 "carousel.trendingInGenre" = "Trend %@";
 "carousel.becauseYouLiked" = "Çünkü %@'yı Beğendiniz";
@@ -513,6 +520,56 @@
 "auth.resendEmail" = "E-postayı Yeniden Gönder";
 "auth.changeEmail" = "E-posta Değiştir";
 "auth.verificationPending" = "Hala doğrulama bekliyorum...";
+"gamification.levelUp" = "SEVİYE ATLADIN!";
+"gamification.level" = "Seviye";
+"gamification.rankAchieved" = "\"%@\" rütbesine ulaşıldı";
+"gamification.xp.base" = "temel";
+"gamification.xp.proBoost" = "Pro Artışı";
+"gamification.xp.streakBonus" = "Seri Bonusu";
+"gamification.xp.total" = "Toplam XP";
+"gamification.challengeComplete" = "Görev Tamamlandı!";
+"notifications.title" = "Bildirimler";
+"notifications.status" = "Durum";
+"notifications.enabled" = "Bildirimler Açık";
+"notifications.disabled" = "Bildirimler Kapalı";
+"notifications.enableDescription" = "Yeni bölümler, yayınlar ve seveceğin içerikler hakkında kişisel uyarılar almak için bildirimleri aç.";
+"notifications.enableButton" = "Bildirimleri Aç";
+"notifications.types" = "Bildirim Türleri";
+"notifications.newEpisodes" = "Yeni Bölümler";
+"notifications.newEpisodesDesc" = "İzlediğin dizilerin yeni bölümleri hazır olduğunda bildirim al";
+"notifications.personalizedReleases" = "Kişiselleştirilmiş Yayınlar";
+"notifications.personalizedReleasesDesc" = "Zevkine uyan yeni filmler ve diziler";
+"notifications.favoriteActors" = "Favori Oyuncular ve Yönetmenler";
+"notifications.favoriteActorsDesc" = "Sevdiğin kişilerden yeni içerikler";
+"notifications.similarContent" = "Benzer İçerik";
+"notifications.similarContentDesc" = "Sevdiklerine göre öneriler";
+"notifications.watchlistAlerts" = "İzleme Listesi Uyarıları";
+"notifications.watchlistAlertsDesc" = "İzleme listendeki içerikler hazır olduğunda";
+"notifications.milestones" = "Kilometre Taşları ve Başarılar";
+"notifications.milestonesDesc" = "İzleme serilerini ve başarılarını kutla";
+"notifications.frequency" = "Sıklık";
+"notifications.dailyLimit" = "Günlük Limit";
+"notifications.perDay" = "günde";
+"notifications.unlimited" = "Sınırsız";
+"notifications.quietHours" = "Sessiz Saatler";
+"notifications.startTime" = "Başlangıç Saati";
+"notifications.endTime" = "Bitiş Saati";
+"notifications.quietHoursDesc" = "Bu saatlerde bildirim gönderilmez";
+"notifications.proFeatures" = "Pro Özellikler";
+"notifications.customActorAlerts" = "Özel Oyuncu Uyarıları";
+"notifications.customGenreAlerts" = "Özel Tür Uyarıları";
+"notifications.proFeaturesDesc" = "Seçtiğin belirli oyuncular ve türler için uyarı al";
+"notifications.save" = "Kaydet";
+"notifications.settingsSaved" = "Ayarlar Kaydedildi";
+"notifications.preferencesUpdated" = "Bildirim tercihlerin güncellendi.";
+"notifications.typesFooter" = "Hangi bildirimleri almak istediğini seç";
+"notifications.frequencyFooter" = "Günde alacağın maksimum bildirim sayısı";
+"notifications.favoriteActorsTitle" = "Favori Oyuncuların";
+"notifications.favoriteActorsFooter" = "Bu oyuncuların yeni içeriği olduğunda bildirim al";
+"notifications.favoriteGenresTitle" = "Favori Türlerin";
+"notifications.favoriteGenresFooter" = "Bu türlerde yeni yayınlar hakkında bildirim al";
+"notifications.fromPreferences" = "Tercihlerinden";
+"lists.notifyMe" = "BANA BİLDİR";
 
 "movieDetail.whyForMe" = "Why for me?";
 
@@ -538,3 +595,20 @@
 "tvTracking.notStarted" = "Not Started";
 "tvTracking.upToDate" = "Up to Date";
 "tvTracking.emptyState" = "No TV shows found";
+"carousel.fromActor" = "%@ ile daha fazlası";
+"carousel.decadeClassics" = "%@ Klasikleri";
+"carousel.moodTonight" = "Bu Gece %@";
+"carousel.regionSpotlight" = "%@ Öne Çıkanlar";
+"carousel.topInGenre" = "%@ içinde En İyiler";
+"carousel.hotThisWeekInGenre" = "Bu Hafta %@ içinde Popüler";
+"carousel.quickWatches" = "Hızlı İzlemeler";
+"carousel.epicWatches" = "Epik İzlemeler";
+"carousel.internationalPicks" = "Uluslararası Seçimler";
+"carousel.throwback" = "Geçmişten %@";
+"carousel.fromAIChat" = "AI Sohbetinden";
+"carousel.comingSoon" = "Yakında";
+"carousel.trendingTVWeek" = "Bu Hafta Popüler TV";
+"carousel.criticallyAcclaimedRecent" = "Eleştirmenlerden Övgü Alan %@";
+"carousel.returningTV" = "Yakında Dönüyor";
+"carousel.documentaries" = "Senin İçin Belgeseller";
+"discovery.endOfFeed" = "Hepsini gördün";

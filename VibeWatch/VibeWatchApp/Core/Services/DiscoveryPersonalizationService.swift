@@ -73,90 +73,47 @@ class DiscoveryPersonalizationService: ObservableObject {
         }
 
         // LEVEL 3: API GENERATION (Slow)
-        var carousels: [PersonalizedCarousel] = []
-        var seenMovieIds: Set<Int> = [] // Track to prevent duplicates
-
         Logger.info("[DiscoveryPersonalizationService] Generating carousels for user: \(userProfile.userId)")
 
-        // Core Carousel 1: Daily Mix
-        let dailyMix = try await generateDailyMix(userProfile: userProfile, filters: filters, excluding: seenMovieIds)
+        var carousels: [PersonalizedCarousel] = []
+        var usedIds: Set<Int> = [] // Daily Mix items are NOT added — hero is independent of dedup
+
+        // Carousel 0: Daily Mix hero (always first, excluded from global dedup)
+        let dailyMix = try await generateDailyMix(userProfile: userProfile, filters: filters, excluding: [])
         carousels.append(dailyMix)
-        seenMovieIds.formUnion(Set(dailyMix.items.map(\.id)))
-        Logger.debug("[DiscoveryPersonalizationService] ✅ Generated Daily Mix with \(dailyMix.items.count) items")
+        Logger.debug("[DiscoveryPersonalizationService] ✅ Daily Mix: \(dailyMix.items.count) items")
 
-        // Core Carousel 2: Trending in Top Genre (with deduplication)
-        if let topGenre = userProfile.topGenres.first {
-            let trendingGenre = try await generateTrendingInGenre(genre: topGenre, userProfile: userProfile, filters: filters, excluding: seenMovieIds)
-            carousels.append(trendingGenre)
-            seenMovieIds.formUnion(Set(trendingGenre.items.map(\.id)))
-            Logger.debug("[DiscoveryPersonalizationService] ✅ Generated Trending Genre with \(trendingGenre.items.count) items")
-        } else {
-            let hotThisWeek = try await generateHotThisWeek(filters: filters, excluding: seenMovieIds)
-            carousels.append(hotThisWeek)
-            seenMovieIds.formUnion(Set(hotThisWeek.items.map(\.id)))
-            Logger.debug("[DiscoveryPersonalizationService] ✅ Generated Hot This Week with \(hotThisWeek.items.count) items")
-        }
+        // Carousels 1…N: definition catalog, deduped globally
+        let defs = buildDefinitionCatalog(userProfile: userProfile)
+        let minItemsPerCarousel = 10
 
-        // Core Carousel 3: Because You Liked (with deduplication)
-        if let likedMedia = userProfile.recentActivity.likedMedia.first {
-            let similarContent = try await generateSimilarContent(to: likedMedia, userProfile: userProfile, excluding: seenMovieIds)
-            carousels.append(similarContent)
-            seenMovieIds.formUnion(Set(similarContent.items.map(\.id)))
-            Logger.debug("[DiscoveryPersonalizationService] ✅ Generated Similar Content with \(similarContent.items.count) items")
-        } else {
-            let awardWinners = try await generateAwardWinners(filters: filters, excluding: seenMovieIds)
-            carousels.append(awardWinners)
-            seenMovieIds.formUnion(Set(awardWinners.items.map(\.id)))
-            Logger.debug("[DiscoveryPersonalizationService] ✅ Generated Award Winners with \(awardWinners.items.count) items")
-        }
-
-        // Rotating Carousels (2-3) with deduplication
-        Logger.debug("[DiscoveryPersonalizationService] Selecting rotating carousels (excluding \(seenMovieIds.count) movies)...")
-        let rotatingCarousels = try await selectRotatingCarousels(
-            userProfile: userProfile,
-            filters: filters,
-            excludingTypes: Set(carousels.map(\.type)),
-            excludingMovies: seenMovieIds
-        )
-        Logger.debug("[DiscoveryPersonalizationService] ✅ Generated \(rotatingCarousels.count) rotating carousels")
-        carousels.append(contentsOf: rotatingCarousels)
-        for carousel in rotatingCarousels {
-            seenMovieIds.formUnion(Set(carousel.items.map(\.id)))
-        }
-
-        // Ensure a stable minimum for new users (fallbacks) with deduplication
-        let minimumCarousels = 5
-        var usedTypes = Set(carousels.map(\.type))
-        if carousels.count < minimumCarousels {
-            Logger.debug("[DiscoveryPersonalizationService] Only \(carousels.count) carousels - adding fallbacks to reach minimum \(minimumCarousels)")
-        }
-        while carousels.count < minimumCarousels {
-            if !usedTypes.contains(.hotThisWeek),
-               let carousel = try? await generateHotThisWeek(filters: filters, excluding: seenMovieIds) {
-                carousels.append(carousel)
-                usedTypes.insert(carousel.type)
-                seenMovieIds.formUnion(Set(carousel.items.map(\.id)))
-                Logger.debug("[DiscoveryPersonalizationService] ✅ Added fallback: Hot This Week with \(carousel.items.count) items")
+        for def in defs {
+            guard def.isEligible(userProfile) else {
+                Logger.debug("[DiscoveryPersonalizationService] Skipping \(def.type.rawValue) — not eligible")
                 continue
             }
-            if !usedTypes.contains(.awardWinners),
-               let carousel = try? await generateAwardWinners(filters: filters, excluding: seenMovieIds) {
-                carousels.append(carousel)
-                usedTypes.insert(carousel.type)
-                seenMovieIds.formUnion(Set(carousel.items.map(\.id)))
-                Logger.debug("[DiscoveryPersonalizationService] ✅ Added fallback: Award Winners with \(carousel.items.count) items")
-                continue
+
+            var carousel: PersonalizedCarousel?
+            for attempt in 0..<3 {
+                do {
+                    let c = try await def.generate(userProfile, filters, usedIds)
+                    if c.items.count >= minItemsPerCarousel {
+                        carousel = c
+                        break
+                    }
+                    Logger.debug("[DiscoveryPersonalizationService] Attempt \(attempt + 1) for \(def.type.rawValue): \(c.items.count) items (need \(minItemsPerCarousel))")
+                } catch {
+                    Logger.debug("[DiscoveryPersonalizationService] Attempt \(attempt + 1) for \(def.type.rawValue) failed: \(error.localizedDescription)")
+                }
             }
-            if !usedTypes.contains(.staffPicks),
-               let carousel = try? await generateStaffPicks(userProfile: userProfile, filters: filters, excluding: seenMovieIds) {
-                carousels.append(carousel)
-                usedTypes.insert(carousel.type)
-                seenMovieIds.formUnion(Set(carousel.items.map(\.id)))
-                Logger.debug("[DiscoveryPersonalizationService] ✅ Added fallback: Staff Picks with \(carousel.items.count) items")
-                continue
+
+            if let c = carousel {
+                carousels.append(c)
+                usedIds.formUnion(c.items.map(\.id))
+                Logger.debug("[DiscoveryPersonalizationService] ✅ \(c.type.rawValue): \(c.items.count) items (total used: \(usedIds.count))")
+            } else {
+                Logger.warning("[DiscoveryPersonalizationService] Dropped \(def.type.rawValue) — insufficient unique items")
             }
-            Logger.warning("[DiscoveryPersonalizationService] Could not reach minimum carousels - stopping at \(carousels.count)")
-            break
         }
 
         carousels = await applyDynamicLoglines(to: carousels, userProfile: userProfile)
@@ -622,101 +579,308 @@ class DiscoveryPersonalizationService: ObservableObject {
         )
     }
 
-    // MARK: - Private Methods - Carousel Selection
+    // MARK: - Private Methods - Carousel Catalog
 
-    private func selectRotatingCarousels(
-        userProfile: UserProfile,
-        filters: GlobalDiscoveryFilters?,
-        excludingTypes excludedTypes: Set<CarouselType> = [],
-        excludingMovies excludedMovies: Set<Int> = []
-    ) async throws -> [PersonalizedCarousel] {
-        var candidates: [CarouselCandidate] = []
+    private func buildDefinitionCatalog(userProfile: UserProfile) -> [CarouselDefinition] {
+        // Derive stable per-user seeds from profile signals
+        let likedMedia = userProfile.recentActivity.likedMedia
+        let preferredDecade = inferDecade(from: likedMedia)
+        let previousDecade = max(preferredDecade - 10, 1920)
 
-        if !excludedTypes.contains(.hotThisWeek) {
-            candidates.append(CarouselCandidate(
-                type: .hotThisWeek,
-                relevance: 85.0,
-                generator: { try await self.generateHotThisWeek(filters: filters, excluding: excludedMovies) }
-            ))
+        let defs: [CarouselDefinition] = [
+            // 1. Because You Liked (prio 100)
+            CarouselDefinition(
+                type: .becauseYouLiked, priority: 100,
+                isEligible: { !$0.recentActivity.likedMedia.isEmpty },
+                generate: { [weak self] profile, filters, ex in
+                    guard let self, let liked = profile.recentActivity.likedMedia.first else { throw PersonalizationError.insufficientData }
+                    return try await self.generateSimilarContent(to: liked, userProfile: profile, excluding: ex)
+                }
+            ),
+            // 2. Top in Genre 1 (prio 95)
+            CarouselDefinition(
+                type: .trendingGenre, priority: 95,
+                isEligible: { !$0.topGenres.isEmpty },
+                generate: { [weak self] profile, filters, ex in
+                    guard let self, let genre = profile.topGenres.first else { throw PersonalizationError.insufficientData }
+                    return try await self.generateTopGenre(genre: genre, type: .trendingGenre, userProfile: profile, filters: filters, excluding: ex)
+                }
+            ),
+            // 3. More from Actor 1 (prio 90)
+            CarouselDefinition(
+                type: .fromActor, priority: 90,
+                isEligible: { !$0.topActors.isEmpty },
+                generate: { [weak self] profile, _, ex in
+                    guard let self, let actor = profile.topActors.first else { throw PersonalizationError.insufficientData }
+                    return try await self.generateFromActor(actor: actor, type: .fromActor, userProfile: profile, excluding: ex)
+                }
+            ),
+            // 4. Hidden Gems (prio 85)
+            CarouselDefinition(
+                type: .hiddenGems, priority: 85,
+                isEligible: { _ in true },
+                generate: { [weak self] profile, filters, ex in
+                    guard let self else { throw PersonalizationError.noResults }
+                    return try await self.generateHiddenGems(userProfile: profile, filters: filters, excluding: ex)
+                }
+            ),
+            // 5. Decade Classics (prio 80)
+            CarouselDefinition(
+                type: .decadeClassics, priority: 80,
+                isEligible: { $0.recentActivity.likedMedia.count >= 3 },
+                generate: { [weak self] profile, filters, ex in
+                    guard let self else { throw PersonalizationError.noResults }
+                    return try await self.generateDecadeCarousel(decade: preferredDecade, type: .decadeClassics, userProfile: profile, filters: filters, excluding: ex)
+                }
+            ),
+            // 6. From Your Searches (prio 75)
+            CarouselDefinition(
+                type: .fromSearches, priority: 75,
+                isEligible: { $0.recentActivity.lastSearchQuery != nil },
+                generate: { [weak self] profile, _, ex in
+                    guard let self else { throw PersonalizationError.noResults }
+                    return try await self.generateFromSearches(userProfile: profile, excluding: ex)
+                }
+            ),
+            // 7. Mood Tonight (prio 72)
+            CarouselDefinition(
+                type: .moodTonight, priority: 72,
+                isEligible: { !$0.preferredMoods.isEmpty },
+                generate: { [weak self] profile, filters, ex in
+                    guard let self, let mood = profile.preferredMoods.first else { throw PersonalizationError.insufficientData }
+                    return try await self.generateMoodTonight(mood: mood, userProfile: profile, filters: filters, excluding: ex)
+                }
+            ),
+            // 8. Continue Your Journey (prio 70)
+            CarouselDefinition(
+                type: .continueJourney, priority: 70,
+                isEligible: { $0.recentActivity.watchlist.count >= 3 },
+                generate: { [weak self] profile, _, ex in
+                    guard let self else { throw PersonalizationError.noResults }
+                    return try await self.generateContinueJourney(userProfile: profile, excluding: ex)
+                }
+            ),
+            // 9. Region Spotlight (prio 68)
+            CarouselDefinition(
+                type: .regionSpotlight, priority: 68,
+                isEligible: { _ in true },
+                generate: { [weak self] profile, filters, ex in
+                    guard let self else { throw PersonalizationError.noResults }
+                    return try await self.generateRegionSpotlight(userProfile: profile, filters: filters, excluding: ex)
+                }
+            ),
+            // 10. TV Picks for You (prio 65)
+            CarouselDefinition(
+                type: .topTVPicks, priority: 65,
+                isEligible: { $0.contentTypePreference.tvRatio >= 0.2 },
+                generate: { [weak self] profile, filters, ex in
+                    guard let self else { throw PersonalizationError.noResults }
+                    return try await self.generateTopTVPicks(userProfile: profile, filters: filters, excluding: ex)
+                }
+            ),
+            // 11. Award Winners (prio 62)
+            CarouselDefinition(
+                type: .awardWinners, priority: 62,
+                isEligible: { _ in true },
+                generate: { [weak self] profile, filters, ex in
+                    guard let self else { throw PersonalizationError.noResults }
+                    return try await self.generateAwardWinners(filters: filters, excluding: ex)
+                }
+            ),
+            // 12. Top in Genre 2 (prio 60)
+            CarouselDefinition(
+                type: .topGenre2, priority: 60,
+                isEligible: { $0.topGenres.count >= 2 },
+                generate: { [weak self] profile, filters, ex in
+                    guard let self, profile.topGenres.count >= 2 else { throw PersonalizationError.insufficientData }
+                    return try await self.generateTopGenre(genre: profile.topGenres[1], type: .topGenre2, userProfile: profile, filters: filters, excluding: ex)
+                }
+            ),
+            // 13. Hot This Week in Genre 1 (prio 58)
+            CarouselDefinition(
+                type: .hotThisWeekInGenre, priority: 58,
+                isEligible: { !$0.topGenres.isEmpty },
+                generate: { [weak self] profile, filters, ex in
+                    guard let self, let genre = profile.topGenres.first else { throw PersonalizationError.insufficientData }
+                    return try await self.generateHotThisWeekInGenre(genre: genre, filters: filters, excluding: ex)
+                }
+            ),
+            // 14. Quick Watches <90min (prio 55)
+            CarouselDefinition(
+                type: .quickWatches, priority: 55,
+                isEligible: { _ in true },
+                generate: { [weak self] profile, filters, ex in
+                    guard let self else { throw PersonalizationError.noResults }
+                    return try await self.generateQuickWatches(userProfile: profile, filters: filters, excluding: ex)
+                }
+            ),
+            // 15. Epic Watches >150min (prio 53)
+            CarouselDefinition(
+                type: .epicWatches, priority: 53,
+                isEligible: { _ in true },
+                generate: { [weak self] profile, filters, ex in
+                    guard let self else { throw PersonalizationError.noResults }
+                    return try await self.generateEpicWatches(userProfile: profile, filters: filters, excluding: ex)
+                }
+            ),
+            // 16. International Picks (prio 50)
+            CarouselDefinition(
+                type: .internationalPicks, priority: 50,
+                isEligible: { _ in true },
+                generate: { [weak self] profile, filters, ex in
+                    guard let self else { throw PersonalizationError.noResults }
+                    return try await self.generateInternationalPicks(userProfile: profile, filters: filters, excluding: ex)
+                }
+            ),
+            // 17. Throwback Decade (prio 48)
+            CarouselDefinition(
+                type: .throwbackDecade, priority: 48,
+                isEligible: { $0.recentActivity.likedMedia.count >= 3 },
+                generate: { [weak self] profile, filters, ex in
+                    guard let self else { throw PersonalizationError.noResults }
+                    return try await self.generateDecadeCarousel(decade: previousDecade, type: .throwbackDecade, userProfile: profile, filters: filters, excluding: ex)
+                }
+            ),
+            // 18. From Your AI Chat (prio 45)
+            CarouselDefinition(
+                type: .fromAIChat, priority: 45,
+                isEligible: { _ in true },
+                generate: { [weak self] profile, _, ex in
+                    guard let self else { throw PersonalizationError.noResults }
+                    return try await self.generateFromAIChat(userProfile: profile, excluding: ex)
+                }
+            ),
+            // 19. Coming Soon (prio 42)
+            CarouselDefinition(
+                type: .comingSoon, priority: 42,
+                isEligible: { _ in true },
+                generate: { [weak self] profile, filters, ex in
+                    guard let self else { throw PersonalizationError.noResults }
+                    return try await self.generateComingSoon(userProfile: profile, filters: filters, excluding: ex)
+                }
+            ),
+            // 20. Trending TV This Week (prio 40)
+            CarouselDefinition(
+                type: .trendingTVWeek, priority: 40,
+                isEligible: { $0.contentTypePreference.tvRatio >= 0.1 },
+                generate: { [weak self] profile, _, ex in
+                    guard let self else { throw PersonalizationError.noResults }
+                    return try await self.generateTrendingTVWeek(userProfile: profile, excluding: ex)
+                }
+            ),
+            // 21. Staff Picks (prio 38)
+            CarouselDefinition(
+                type: .staffPicks, priority: 38,
+                isEligible: { _ in true },
+                generate: { [weak self] profile, filters, ex in
+                    guard let self else { throw PersonalizationError.noResults }
+                    return try await self.generateStaffPicks(userProfile: profile, filters: filters, excluding: ex)
+                }
+            ),
+            // 22. Critically Acclaimed Recent (prio 35)
+            CarouselDefinition(
+                type: .criticallyAcclaimedRecent, priority: 35,
+                isEligible: { _ in true },
+                generate: { [weak self] profile, filters, ex in
+                    guard let self else { throw PersonalizationError.noResults }
+                    return try await self.generateCriticallyAcclaimedRecent(userProfile: profile, filters: filters, excluding: ex)
+                }
+            ),
+            // 23. Top in Genre 3 (prio 32)
+            CarouselDefinition(
+                type: .topGenre3, priority: 32,
+                isEligible: { $0.topGenres.count >= 3 },
+                generate: { [weak self] profile, filters, ex in
+                    guard let self, profile.topGenres.count >= 3 else { throw PersonalizationError.insufficientData }
+                    return try await self.generateTopGenre(genre: profile.topGenres[2], type: .topGenre3, userProfile: profile, filters: filters, excluding: ex)
+                }
+            ),
+            // 24. Returning TV (prio 28)
+            CarouselDefinition(
+                type: .returningTV, priority: 28,
+                isEligible: { $0.contentTypePreference.tvRatio >= 0.1 },
+                generate: { [weak self] profile, filters, ex in
+                    guard let self else { throw PersonalizationError.noResults }
+                    return try await self.generateReturningTV(userProfile: profile, filters: filters, excluding: ex)
+                }
+            ),
+            // 25. Documentaries (prio 25)
+            CarouselDefinition(
+                type: .documentaries, priority: 25,
+                isEligible: { _ in true },
+                generate: { [weak self] profile, filters, ex in
+                    guard let self else { throw PersonalizationError.noResults }
+                    return try await self.generateDocumentaries(userProfile: profile, filters: filters, excluding: ex)
+                }
+            ),
+            // 26. More from Actor 2 (prio 22)
+            CarouselDefinition(
+                type: .fromActor2, priority: 22,
+                isEligible: { $0.topActors.count >= 2 },
+                generate: { [weak self] profile, _, ex in
+                    guard let self, profile.topActors.count >= 2 else { throw PersonalizationError.insufficientData }
+                    return try await self.generateFromActor(actor: profile.topActors[1], type: .fromActor2, userProfile: profile, excluding: ex)
+                }
+            ),
+            // 27. Hot This Week Global (prio 20, ultimate fallback)
+            CarouselDefinition(
+                type: .hotThisWeek, priority: 20,
+                isEligible: { _ in true },
+                generate: { [weak self] profile, filters, ex in
+                    guard let self else { throw PersonalizationError.noResults }
+                    return try await self.generateHotThisWeek(filters: filters, excluding: ex)
+                }
+            )
+        ]
+
+        return defs.sorted { $0.priority > $1.priority }
+    }
+
+    // MARK: - Private Helpers
+
+    private func inferDecade(from likedMedia: [MediaSummary]) -> Int {
+        let years = likedMedia.compactMap { $0.year }
+        guard !years.isEmpty else { return 2010 }
+        let avgYear = years.reduce(0, +) / years.count
+        return (avgYear / 10) * 10
+    }
+
+    private func moodToGenreIds(_ mood: Mood) -> [Int] {
+        switch mood {
+        case .happy: return [35, 10751]
+        case .sad: return [18]
+        case .excited: return [28, 12]
+        case .relaxed: return [35, 10749]
+        case .scared: return [27, 53]
+        case .thoughtful: return [18, 99]
+        case .romantic: return [10749, 18]
+        case .adventurous: return [12, 28]
+        case .nostalgic: return [36, 10751]
+        case .energetic: return [28, 878]
         }
+    }
 
-        if !excludedTypes.contains(.awardWinners) {
-            candidates.append(CarouselCandidate(
-                type: .awardWinners,
-                relevance: 80.0,
-                generator: { try await self.generateAwardWinners(filters: filters, excluding: excludedMovies) }
-            ))
-        }
-
-        // Hidden Gems (always available)
-        if !excludedTypes.contains(.hiddenGems) {
-            candidates.append(CarouselCandidate(
-                type: .hiddenGems,
-                relevance: 70.0,
-                generator: { try await self.generateHiddenGems(userProfile: userProfile, filters: filters, excluding: excludedMovies) }
-            ))
-        }
-
-        // Continue Journey (if watchlist >= 3)
-        if userProfile.recentActivity.watchlist.count >= 3 {
-            if !excludedTypes.contains(.continueJourney) {
-                candidates.append(CarouselCandidate(
-                    type: .continueJourney,
-                    relevance: 90.0,
-                    generator: { try await self.generateContinueJourney(userProfile: userProfile, excluding: excludedMovies) }
-                ))
-            }
-        }
-
-        // From Your Searches (if search history exists)
-        if userProfile.recentActivity.lastSearchQuery != nil {
-            if !excludedTypes.contains(.fromSearches) {
-                candidates.append(CarouselCandidate(
-                    type: .fromSearches,
-                    relevance: 80.0,
-                    generator: { try await self.generateFromSearches(userProfile: userProfile, excluding: excludedMovies) }
-                ))
-            }
-        }
-
-        // TV Picks (if TV preference > 0.5)
-        if userProfile.contentTypePreference.tvRatio > 0.5 {
-            if !excludedTypes.contains(.topTVPicks) {
-                candidates.append(CarouselCandidate(
-                    type: .topTVPicks,
-                    relevance: 75.0,
-                    generator: { try await self.generateTopTVPicks(userProfile: userProfile, filters: filters, excluding: excludedMovies) }
-                ))
-            }
-        }
-
-        // Weekend boost for Staff Picks
-        if Calendar.current.isDateInWeekend(Date()) {
-            if !excludedTypes.contains(.staffPicks) {
-                candidates.append(CarouselCandidate(
-                    type: .staffPicks,
-                    relevance: 85.0,
-                    generator: { try await self.generateStaffPicks(userProfile: userProfile, filters: filters, excluding: excludedMovies) }
-                ))
-            }
-        }
-
-        // Sort by relevance and take top 2-3
-        let selected = candidates
-            .sorted { $0.relevance > $1.relevance }
-            .prefix(3)
-
-        var carousels: [PersonalizedCarousel] = []
-        for candidate in selected {
-            do {
-                let carousel = try await candidate.generator()
-                carousels.append(carousel)
-            } catch {
-                Logger.warning("[DiscoveryPersonalizationService] Failed to generate \(candidate.type): \(error.localizedDescription)")
-            }
-        }
-
-        return carousels
+    private func mapPersonCreditToMovie(_ credit: PersonCredit) -> Movie {
+        Movie(
+            id: credit.id,
+            title: credit.title,
+            overview: credit.overview ?? "",
+            posterPath: credit.posterPath,
+            backdropPath: nil,
+            releaseDate: credit.releaseDate,
+            voteAverage: credit.voteAverage ?? 0,
+            voteCount: 0,
+            genreIds: nil,
+            genres: nil,
+            adult: false,
+            originalLanguage: "",
+            popularity: credit.popularity ?? 0,
+            runtime: nil,
+            status: nil,
+            tagline: nil,
+            productionCountries: nil,
+            imdbId: nil
+        )
     }
 
     // MARK: - Private Methods - Fallback Carousels
@@ -803,6 +967,257 @@ class DiscoveryPersonalizationService: ObservableObject {
             descriptions: [:],
             reason: "Critically acclaimed favorites"
         )
+    }
+
+    // MARK: - Private Methods - New Generators
+
+    private func generateTopGenre(genre: GenrePreference, type: CarouselType, userProfile: UserProfile, filters: GlobalDiscoveryFilters?, excluding: Set<Int> = []) async throws -> PersonalizedCarousel {
+        Logger.debug("[DiscoveryPersonalizationService] Generating Top in \(genre.genreName) (excluding \(excluding.count))")
+        var allCandidates: [Movie] = []
+        for page in 1...5 {
+            let rawCandidates: [Movie]
+            if let filters, filters.isActive {
+                rawCandidates = try await fetchDiscoveredContent(topGenreIds: [genre.genreId], filters: filters, page: page)
+            } else {
+                let response = try await tmdbService.discoverMovies(withGenre: genre.genreId, sortBy: "popularity.desc", page: page, minRuntime: nil, maxRuntime: nil, minRating: nil, maxRating: nil, releaseDateGte: nil, releaseDateLte: nil, country: nil)
+                rawCandidates = response.results
+            }
+            let newItems = rawCandidates.filter { c in !excluding.contains(c.id) && !allCandidates.contains(where: { $0.id == c.id }) }
+            allCandidates.append(contentsOf: newItems)
+            if allCandidates.count >= maxItemsPerCarousel { break }
+        }
+        guard allCandidates.count >= 10 else { throw PersonalizationError.noResults }
+        return PersonalizedCarousel(type: type, title: String(format: "carousel.topInGenre".localized, genre.genreName), items: Array(allCandidates.prefix(maxItemsPerCarousel)), descriptions: [:], reason: "Popular \(genre.genreName) films")
+    }
+
+    private func generateFromActor(actor: ActorPreference, type: CarouselType, userProfile: UserProfile, excluding: Set<Int> = []) async throws -> PersonalizedCarousel {
+        Logger.debug("[DiscoveryPersonalizationService] Generating From Actor \(actor.name) (excluding \(excluding.count))")
+        let credits = try await tmdbService.getPersonCombinedCredits(id: actor.actorId)
+        let movies = credits.cast
+            .filter { $0.mediaType == .movie }
+            .map { mapPersonCreditToMovie($0) }
+            .filter { !excluding.contains($0.id) }
+            .sorted { ($0.popularity) > ($1.popularity) }
+        guard movies.count >= 10 else { throw PersonalizationError.noResults }
+        return PersonalizedCarousel(type: type, title: String(format: "carousel.fromActor".localized, actor.name), items: Array(movies.prefix(maxItemsPerCarousel)), descriptions: [:], reason: "Movies featuring \(actor.name)")
+    }
+
+    private func generateDecadeCarousel(decade: Int, type: CarouselType, userProfile: UserProfile, filters: GlobalDiscoveryFilters?, excluding: Set<Int> = []) async throws -> PersonalizedCarousel {
+        Logger.debug("[DiscoveryPersonalizationService] Generating \(decade)s carousel (excluding \(excluding.count))")
+        let gteDate = "\(decade)-01-01"
+        let lteDate = "\(decade + 9)-12-31"
+        let topGenreId = userProfile.topGenres.first?.genreId
+        var allCandidates: [Movie] = []
+        for page in 1...5 {
+            let response = try await tmdbService.discoverMovies(withGenre: topGenreId, sortBy: "vote_average.desc", page: page, minRuntime: nil, maxRuntime: nil, minRating: 7.0, maxRating: nil, releaseDateGte: gteDate, releaseDateLte: lteDate, country: nil)
+            let newItems = response.results.filter { c in !excluding.contains(c.id) && !allCandidates.contains(where: { $0.id == c.id }) }
+            allCandidates.append(contentsOf: newItems)
+            if allCandidates.count >= maxItemsPerCarousel { break }
+        }
+        guard allCandidates.count >= 10 else { throw PersonalizationError.noResults }
+        let label = "\(decade)s"
+        let title = type == .throwbackDecade
+            ? String(format: "carousel.throwback".localized, label)
+            : String(format: "carousel.decadeClassics".localized, label)
+        return PersonalizedCarousel(type: type, title: title, items: Array(allCandidates.prefix(maxItemsPerCarousel)), descriptions: [:], reason: "Top-rated films from the \(label)")
+    }
+
+    private func generateMoodTonight(mood: Mood, userProfile: UserProfile, filters: GlobalDiscoveryFilters?, excluding: Set<Int> = []) async throws -> PersonalizedCarousel {
+        Logger.debug("[DiscoveryPersonalizationService] Generating Mood Tonight (\(mood.rawValue)) (excluding \(excluding.count))")
+        let genreIds = moodToGenreIds(mood)
+        var allCandidates: [Movie] = []
+        outer: for genreId in genreIds.prefix(2) {
+            for page in 1...3 {
+                let response = try await tmdbService.discoverMovies(withGenre: genreId, sortBy: "popularity.desc", page: page, minRuntime: nil, maxRuntime: nil, minRating: 6.5, maxRating: nil, releaseDateGte: nil, releaseDateLte: nil, country: nil)
+                let newItems = response.results.filter { c in !excluding.contains(c.id) && !allCandidates.contains(where: { $0.id == c.id }) }
+                allCandidates.append(contentsOf: newItems)
+                if allCandidates.count >= maxItemsPerCarousel { break outer }
+            }
+        }
+        guard allCandidates.count >= 10 else { throw PersonalizationError.noResults }
+        return PersonalizedCarousel(type: .moodTonight, title: String(format: "carousel.moodTonight".localized, mood.displayName), items: Array(allCandidates.prefix(maxItemsPerCarousel)), descriptions: [:], reason: "Perfect for when you're feeling \(mood.displayName.lowercased())")
+    }
+
+    private func generateRegionSpotlight(userProfile: UserProfile, filters: GlobalDiscoveryFilters?, excluding: Set<Int> = []) async throws -> PersonalizedCarousel {
+        let countryCode = Locale.current.region?.identifier ?? "US"
+        let countryName = Locale.current.localizedString(forRegionCode: countryCode) ?? countryCode
+        Logger.debug("[DiscoveryPersonalizationService] Generating Region Spotlight (\(countryCode)) (excluding \(excluding.count))")
+        var allCandidates: [Movie] = []
+        for page in 1...5 {
+            let response = try await tmdbService.discoverMovies(withGenre: userProfile.topGenres.first?.genreId, sortBy: "vote_average.desc", page: page, minRuntime: nil, maxRuntime: nil, minRating: 7.0, maxRating: nil, releaseDateGte: nil, releaseDateLte: nil, country: countryCode)
+            let newItems = response.results.filter { c in !excluding.contains(c.id) && !allCandidates.contains(where: { $0.id == c.id }) }
+            allCandidates.append(contentsOf: newItems)
+            if allCandidates.count >= maxItemsPerCarousel { break }
+        }
+        guard allCandidates.count >= 10 else { throw PersonalizationError.noResults }
+        return PersonalizedCarousel(type: .regionSpotlight, title: String(format: "carousel.regionSpotlight".localized, countryName), items: Array(allCandidates.prefix(maxItemsPerCarousel)), descriptions: [:], reason: "Popular in \(countryName)")
+    }
+
+    private func generateHotThisWeekInGenre(genre: GenrePreference, filters: GlobalDiscoveryFilters?, excluding: Set<Int> = []) async throws -> PersonalizedCarousel {
+        Logger.debug("[DiscoveryPersonalizationService] Generating Hot This Week in \(genre.genreName) (excluding \(excluding.count))")
+        var allCandidates: [Movie] = []
+        for page in 1...5 {
+            let trending = try await tmdbService.getTrendingMovies(timeWindow: .week, page: page)
+            let filtered = trending.results.filter { c in (c.genreIds?.contains(genre.genreId) ?? false) && !excluding.contains(c.id) && !allCandidates.contains(where: { $0.id == c.id }) }
+            allCandidates.append(contentsOf: filtered)
+            if allCandidates.count >= maxItemsPerCarousel { break }
+        }
+        guard allCandidates.count >= 10 else { throw PersonalizationError.noResults }
+        return PersonalizedCarousel(type: .hotThisWeekInGenre, title: String(format: "carousel.hotThisWeekInGenre".localized, genre.genreName), items: Array(allCandidates.prefix(maxItemsPerCarousel)), descriptions: [:], reason: "Trending \(genre.genreName) films this week")
+    }
+
+    private func generateQuickWatches(userProfile: UserProfile, filters: GlobalDiscoveryFilters?, excluding: Set<Int> = []) async throws -> PersonalizedCarousel {
+        Logger.debug("[DiscoveryPersonalizationService] Generating Quick Watches (excluding \(excluding.count))")
+        let topGenreId = userProfile.topGenres.first?.genreId
+        var allCandidates: [Movie] = []
+        for page in 1...5 {
+            let response = try await tmdbService.discoverMovies(withGenre: topGenreId, sortBy: "popularity.desc", page: page, minRuntime: nil, maxRuntime: 90, minRating: 6.0, maxRating: nil, releaseDateGte: nil, releaseDateLte: nil, country: nil)
+            let newItems = response.results.filter { c in !excluding.contains(c.id) && !allCandidates.contains(where: { $0.id == c.id }) }
+            allCandidates.append(contentsOf: newItems)
+            if allCandidates.count >= maxItemsPerCarousel { break }
+        }
+        guard allCandidates.count >= 10 else { throw PersonalizationError.noResults }
+        return PersonalizedCarousel(type: .quickWatches, title: "carousel.quickWatches".localized, items: Array(allCandidates.prefix(maxItemsPerCarousel)), descriptions: [:], reason: "Great films under 90 minutes")
+    }
+
+    private func generateEpicWatches(userProfile: UserProfile, filters: GlobalDiscoveryFilters?, excluding: Set<Int> = []) async throws -> PersonalizedCarousel {
+        Logger.debug("[DiscoveryPersonalizationService] Generating Epic Watches (excluding \(excluding.count))")
+        let topGenreId = userProfile.topGenres.first?.genreId
+        var allCandidates: [Movie] = []
+        for page in 1...5 {
+            let response = try await tmdbService.discoverMovies(withGenre: topGenreId, sortBy: "popularity.desc", page: page, minRuntime: 150, maxRuntime: nil, minRating: 6.5, maxRating: nil, releaseDateGte: nil, releaseDateLte: nil, country: nil)
+            let newItems = response.results.filter { c in !excluding.contains(c.id) && !allCandidates.contains(where: { $0.id == c.id }) }
+            allCandidates.append(contentsOf: newItems)
+            if allCandidates.count >= maxItemsPerCarousel { break }
+        }
+        guard allCandidates.count >= 10 else { throw PersonalizationError.noResults }
+        return PersonalizedCarousel(type: .epicWatches, title: "carousel.epicWatches".localized, items: Array(allCandidates.prefix(maxItemsPerCarousel)), descriptions: [:], reason: "Epic films over 2.5 hours")
+    }
+
+    private func generateInternationalPicks(userProfile: UserProfile, filters: GlobalDiscoveryFilters?, excluding: Set<Int> = []) async throws -> PersonalizedCarousel {
+        Logger.debug("[DiscoveryPersonalizationService] Generating International Picks (excluding \(excluding.count))")
+        let countryCodes = ["FR", "ES", "JP", "KR", "DE", "IT", "BR"]
+        let topGenreId = userProfile.topGenres.first?.genreId
+        var allCandidates: [Movie] = []
+        for country in countryCodes {
+            if allCandidates.count >= maxItemsPerCarousel { break }
+            let response = try await tmdbService.discoverMovies(withGenre: topGenreId, sortBy: "vote_average.desc", page: 1, minRuntime: nil, maxRuntime: nil, minRating: 7.0, maxRating: nil, releaseDateGte: nil, releaseDateLte: nil, country: country)
+            let newItems = response.results.filter { c in !excluding.contains(c.id) && !allCandidates.contains(where: { $0.id == c.id }) }
+            allCandidates.append(contentsOf: newItems)
+        }
+        guard allCandidates.count >= 10 else { throw PersonalizationError.noResults }
+        return PersonalizedCarousel(type: .internationalPicks, title: "carousel.internationalPicks".localized, items: Array(allCandidates.prefix(maxItemsPerCarousel)), descriptions: [:], reason: "Hidden gems from world cinema")
+    }
+
+    private func generateFromAIChat(userProfile: UserProfile, excluding: Set<Int> = []) async throws -> PersonalizedCarousel {
+        Logger.debug("[DiscoveryPersonalizationService] Generating From AI Chat (excluding \(excluding.count))")
+        let rows = try await sqliteService.queryRaw("""
+            SELECT mentioned_media_ids FROM ai_conversation_history
+            WHERE user_id = ? AND mentioned_media_ids IS NOT NULL AND mentioned_media_ids != ''
+            ORDER BY created_at DESC LIMIT 20
+        """, parameters: [userProfile.userId])
+        var mediaIds: [Int] = []
+        var seenIds = Set<Int>()
+        for row in rows {
+            guard let json = row["mentioned_media_ids"] as? String,
+                  let data = json.data(using: .utf8),
+                  let ids = try? JSONDecoder().decode([Int].self, from: data) else { continue }
+            for id in ids where seenIds.insert(id).inserted { mediaIds.append(id) }
+            if mediaIds.count >= 50 { break }
+        }
+        guard !mediaIds.isEmpty else { throw PersonalizationError.insufficientData }
+        var movies: [Movie] = []
+        for id in mediaIds where !excluding.contains(id) {
+            if movies.count >= maxItemsPerCarousel * 2 { break }
+            if let movie = try? await tmdbService.getMovieDetails(id: id) { movies.append(movie) }
+        }
+        guard movies.count >= 10 else { throw PersonalizationError.noResults }
+        return PersonalizedCarousel(type: .fromAIChat, title: "carousel.fromAIChat".localized, items: Array(movies.prefix(maxItemsPerCarousel)), descriptions: [:], reason: "Mentioned in your AI conversations")
+    }
+
+    private func generateComingSoon(userProfile: UserProfile, filters: GlobalDiscoveryFilters?, excluding: Set<Int> = []) async throws -> PersonalizedCarousel {
+        Logger.debug("[DiscoveryPersonalizationService] Generating Coming Soon (excluding \(excluding.count))")
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
+        let tomorrowString = formatter.string(from: tomorrow)
+        let topGenreId = userProfile.topGenres.first?.genreId
+        var allCandidates: [Movie] = []
+        for page in 1...5 {
+            let response = try await tmdbService.discoverMovies(withGenre: topGenreId, sortBy: "primary_release_date.asc", page: page, minRuntime: nil, maxRuntime: nil, minRating: nil, maxRating: nil, releaseDateGte: tomorrowString, releaseDateLte: nil, country: nil)
+            let newItems = response.results.filter { c in !excluding.contains(c.id) && !allCandidates.contains(where: { $0.id == c.id }) }
+            allCandidates.append(contentsOf: newItems)
+            if allCandidates.count >= maxItemsPerCarousel { break }
+        }
+        guard allCandidates.count >= 10 else { throw PersonalizationError.noResults }
+        return PersonalizedCarousel(type: .comingSoon, title: "carousel.comingSoon".localized, items: Array(allCandidates.prefix(maxItemsPerCarousel)), descriptions: [:], reason: "Coming to screens soon")
+    }
+
+    private func generateTrendingTVWeek(userProfile: UserProfile, excluding: Set<Int> = []) async throws -> PersonalizedCarousel {
+        Logger.debug("[DiscoveryPersonalizationService] Generating Trending TV Week (excluding \(excluding.count))")
+        let topGenreIds = Set(userProfile.topGenres.prefix(3).map(\.genreId))
+        var allCandidates: [Movie] = []
+        for page in 1...5 {
+            let shows = try await tmdbService.getTrendingTVShows(timeWindow: .week, page: page)
+            let filtered = shows.results
+                .filter { topGenreIds.isEmpty || ($0.genreIds?.contains(where: { topGenreIds.contains($0) }) ?? false) }
+                .map(mapTVShowToMovie)
+                .filter { c in !excluding.contains(c.id) && !allCandidates.contains(where: { $0.id == c.id }) }
+            allCandidates.append(contentsOf: filtered)
+            if allCandidates.count >= maxItemsPerCarousel { break }
+        }
+        guard allCandidates.count >= 10 else { throw PersonalizationError.noResults }
+        return PersonalizedCarousel(type: .trendingTVWeek, title: "carousel.trendingTVWeek".localized, items: Array(allCandidates.prefix(maxItemsPerCarousel)), descriptions: [:], reason: "Trending TV shows this week")
+    }
+
+    private func generateCriticallyAcclaimedRecent(userProfile: UserProfile, filters: GlobalDiscoveryFilters?, excluding: Set<Int> = []) async throws -> PersonalizedCarousel {
+        Logger.debug("[DiscoveryPersonalizationService] Generating Critically Acclaimed Recent (excluding \(excluding.count))")
+        let currentYear = Calendar.current.component(.year, from: Date())
+        let threeYearsAgo = "\(currentYear - 2)-01-01"
+        let topGenreId = userProfile.topGenres.first?.genreId
+        var allCandidates: [Movie] = []
+        for page in 1...5 {
+            let response = try await tmdbService.discoverMovies(withGenre: topGenreId, sortBy: "vote_average.desc", page: page, minRuntime: nil, maxRuntime: nil, minRating: 7.5, maxRating: nil, releaseDateGte: threeYearsAgo, releaseDateLte: nil, country: nil)
+            let newItems = response.results.filter { c in !excluding.contains(c.id) && !allCandidates.contains(where: { $0.id == c.id }) }
+            allCandidates.append(contentsOf: newItems)
+            if allCandidates.count >= maxItemsPerCarousel { break }
+        }
+        guard allCandidates.count >= 10 else { throw PersonalizationError.noResults }
+        let yearRange = "\(currentYear - 2)–\(currentYear)"
+        return PersonalizedCarousel(type: .criticallyAcclaimedRecent, title: String(format: "carousel.criticallyAcclaimedRecent".localized, yearRange), items: Array(allCandidates.prefix(maxItemsPerCarousel)), descriptions: [:], reason: "Recent critically acclaimed films")
+    }
+
+    private func generateReturningTV(userProfile: UserProfile, filters: GlobalDiscoveryFilters?, excluding: Set<Int> = []) async throws -> PersonalizedCarousel {
+        Logger.debug("[DiscoveryPersonalizationService] Generating Returning TV (excluding \(excluding.count))")
+        let topGenreIds = Array(userProfile.topGenres.prefix(3).map(\.genreId))
+        var allCandidates: [Movie] = []
+        for page in 1...5 {
+            let rawCandidates: [Movie]
+            if let filters, filters.isActive {
+                rawCandidates = try await fetchDiscoveredTVContent(topGenreIds: topGenreIds, filters: filters, page: page, forceSortBy: .releaseDateDesc)
+            } else {
+                let response = try await tmdbService.discoverTVShows(withGenre: topGenreIds.first, sortBy: "first_air_date.desc", page: page, minRating: 6.5, maxRating: nil, firstAirDateGte: nil, firstAirDateLte: nil, country: nil)
+                rawCandidates = response.results.map(mapTVShowToMovie)
+            }
+            let newItems = rawCandidates.filter { c in !excluding.contains(c.id) && !allCandidates.contains(where: { $0.id == c.id }) }
+            allCandidates.append(contentsOf: newItems)
+            if allCandidates.count >= maxItemsPerCarousel { break }
+        }
+        guard allCandidates.count >= 10 else { throw PersonalizationError.noResults }
+        return PersonalizedCarousel(type: .returningTV, title: "carousel.returningTV".localized, items: Array(allCandidates.prefix(maxItemsPerCarousel)), descriptions: [:], reason: "TV shows airing recently")
+    }
+
+    private func generateDocumentaries(userProfile: UserProfile, filters: GlobalDiscoveryFilters?, excluding: Set<Int> = []) async throws -> PersonalizedCarousel {
+        Logger.debug("[DiscoveryPersonalizationService] Generating Documentaries (excluding \(excluding.count))")
+        var allCandidates: [Movie] = []
+        for page in 1...5 {
+            let response = try await tmdbService.discoverMovies(withGenre: 99, sortBy: "vote_average.desc", page: page, minRuntime: nil, maxRuntime: nil, minRating: 7.0, maxRating: nil, releaseDateGte: nil, releaseDateLte: nil, country: nil)
+            let newItems = response.results.filter { c in !excluding.contains(c.id) && !allCandidates.contains(where: { $0.id == c.id }) }
+            allCandidates.append(contentsOf: newItems)
+            if allCandidates.count >= maxItemsPerCarousel { break }
+        }
+        guard allCandidates.count >= 10 else { throw PersonalizationError.noResults }
+        return PersonalizedCarousel(type: .documentaries, title: "carousel.documentaries".localized, items: Array(allCandidates.prefix(maxItemsPerCarousel)), descriptions: [:], reason: "Award-winning documentaries")
     }
 
     // MARK: - Private Methods - Filtered Fetching
@@ -1024,11 +1439,10 @@ class DiscoveryPersonalizationService: ObservableObject {
         let isoFormatter = ISO8601DateFormatter()
         let nowString = isoFormatter.string(from: now)
 
-        // Query cached carousel data that hasn't expired
         let rows = try await sqliteService.queryRaw("""
             SELECT * FROM personalized_discovery
             WHERE user_id = ? AND expires_at > ?
-            ORDER BY carousel_type, position ASC
+            ORDER BY COALESCE(carousel_order, 999) ASC, position ASC
         """, parameters: [userId, nowString])
 
         guard !rows.isEmpty else {
@@ -1038,79 +1452,46 @@ class DiscoveryPersonalizationService: ObservableObject {
 
         Logger.debug("[DiscoveryPersonalizationService] Found \(rows.count) cached items, loading movie data...")
 
-        // Group rows by carousel_type and extract movie data
         var carouselMovies: [String: [(movie: Movie, position: Int)]] = [:]
         var carouselMetadata: [String: (title: String, reason: String)] = [:]
-        var descriptions: [String: [String: String]] = [:] // carousel type -> media id -> description
+        var descriptions: [String: [String: String]] = [:]
+        var carouselOrder: [String: Int] = [:]
 
         for row in rows {
             guard let typeString = row["carousel_type"] as? String,
                   let title = row["carousel_title"] as? String,
-                  let position = row["position"] as? Int else {
-                continue
-            }
-
+                  let position = row["position"] as? Int else { continue }
             let reason = row["reason"] as? String ?? ""
-            let description = row["description"] as? String
-
-            // Try to decode movie from cached JSON data
-            var movie: Movie?
-            if let movieDataString = row["media_data"] as? String,
-               !movieDataString.isEmpty,
-               let movieData = movieDataString.data(using: .utf8),
-               let decodedMovie = try? JSONDecoder().decode(Movie.self, from: movieData) {
-                movie = decodedMovie
-            } else {
-                // Cache is in old format without full movie data - invalidate it
+            let order = row["carousel_order"] as? Int ?? 999
+            guard let movieDataString = row["media_data"] as? String,
+                  !movieDataString.isEmpty,
+                  let movieData = movieDataString.data(using: .utf8),
+                  let validMovie = try? JSONDecoder().decode(Movie.self, from: movieData) else {
                 Logger.warning("[DiscoveryPersonalizationService] Cache missing movie data - will regenerate")
                 return nil
             }
-
-            guard let validMovie = movie else { continue }
-
             if carouselMovies[typeString] == nil {
                 carouselMovies[typeString] = []
                 carouselMetadata[typeString] = (title: title, reason: reason)
                 descriptions[typeString] = [:]
             }
-
             carouselMovies[typeString]?.append((movie: validMovie, position: position))
-
-            if let desc = description {
-                descriptions[typeString]?[String(validMovie.id)] = desc
-            }
+            carouselOrder[typeString] = min(carouselOrder[typeString] ?? Int.max, order)
+            if let desc = row["description"] as? String { descriptions[typeString]?[String(validMovie.id)] = desc }
         }
 
-        Logger.debug("[DiscoveryPersonalizationService] Loaded movie data for \(carouselMovies.values.flatMap { $0 }.count) items")
+        Logger.debug("[DiscoveryPersonalizationService] Loaded \(carouselMovies.values.flatMap { $0 }.count) cached items")
 
-        // Convert to PersonalizedCarousel objects with full movie data
         var carousels: [PersonalizedCarousel] = []
         for (typeString, movieItems) in carouselMovies {
-            guard let type = CarouselType(rawValue: typeString),
-                  let metadata = carouselMetadata[typeString] else {
-                continue
-            }
-
-            // Sort by position and get full movie objects
-            let sortedMovies = deduplicateMoviesById(movieItems
-                .sorted { $0.position < $1.position }
-                .map { $0.movie })
-
+            guard let type = CarouselType(rawValue: typeString), let metadata = carouselMetadata[typeString] else { continue }
+            let sortedMovies = deduplicateMoviesById(movieItems.sorted { $0.position < $1.position }.map(\.movie))
             guard !sortedMovies.isEmpty else { continue }
-
-            let carousel = PersonalizedCarousel(
-                type: type,
-                title: metadata.title,
-                items: sortedMovies,
-                descriptions: descriptions[typeString] ?? [:],
-                reason: metadata.reason
-            )
-
-            carousels.append(carousel)
+            carousels.append(PersonalizedCarousel(type: type, title: metadata.title, items: sortedMovies, descriptions: descriptions[typeString] ?? [:], reason: metadata.reason))
         }
+        carousels.sort { (carouselOrder[$0.type.rawValue] ?? 999) < (carouselOrder[$1.type.rawValue] ?? 999) }
 
-        Logger.info("[DiscoveryPersonalizationService] ✅ Loaded \(carousels.count) carousels from cache with full movie details")
-
+        Logger.info("[DiscoveryPersonalizationService] ✅ Loaded \(carousels.count) ordered carousels from cache")
         return carousels.isEmpty ? nil : carousels
     }
 
@@ -1123,7 +1504,7 @@ class DiscoveryPersonalizationService: ObservableObject {
         let rows = try await sqliteService.queryRaw("""
             SELECT * FROM personalized_discovery
             WHERE device_id = ? AND expires_at > ?
-            ORDER BY carousel_type, position ASC
+            ORDER BY COALESCE(carousel_order, 999) ASC, position ASC
         """, parameters: [deviceId, nowString])
 
         guard !rows.isEmpty else {
@@ -1131,76 +1512,46 @@ class DiscoveryPersonalizationService: ObservableObject {
             return nil
         }
 
-        Logger.debug("[DiscoveryPersonalizationService] Found \(rows.count) cached items (device), loading movie data...")
+        Logger.debug("[DiscoveryPersonalizationService] Found \(rows.count) cached items (device)")
 
         var carouselMovies: [String: [(movie: Movie, position: Int)]] = [:]
         var carouselMetadata: [String: (title: String, reason: String)] = [:]
         var descriptions: [String: [String: String]] = [:]
+        var carouselOrder: [String: Int] = [:]
 
         for row in rows {
             guard let typeString = row["carousel_type"] as? String,
                   let title = row["carousel_title"] as? String,
-                  let position = row["position"] as? Int else {
-                continue
-            }
-
+                  let position = row["position"] as? Int else { continue }
             let reason = row["reason"] as? String ?? ""
-            let description = row["description"] as? String
-
-            var movie: Movie?
-            if let movieDataString = row["media_data"] as? String,
-               !movieDataString.isEmpty,
-               let movieData = movieDataString.data(using: .utf8),
-               let decodedMovie = try? JSONDecoder().decode(Movie.self, from: movieData) {
-                movie = decodedMovie
-            } else {
+            let order = row["carousel_order"] as? Int ?? 999
+            guard let movieDataString = row["media_data"] as? String,
+                  !movieDataString.isEmpty,
+                  let movieData = movieDataString.data(using: .utf8),
+                  let validMovie = try? JSONDecoder().decode(Movie.self, from: movieData) else {
                 Logger.warning("[DiscoveryPersonalizationService] Device cache missing movie data - will regenerate")
                 return nil
             }
-
-            guard let validMovie = movie else { continue }
-
             if carouselMovies[typeString] == nil {
                 carouselMovies[typeString] = []
                 carouselMetadata[typeString] = (title: title, reason: reason)
                 descriptions[typeString] = [:]
             }
-
             carouselMovies[typeString]?.append((movie: validMovie, position: position))
-
-            if let desc = description {
-                descriptions[typeString]?[String(validMovie.id)] = desc
-            }
+            carouselOrder[typeString] = min(carouselOrder[typeString] ?? Int.max, order)
+            if let desc = row["description"] as? String { descriptions[typeString]?[String(validMovie.id)] = desc }
         }
-
-        Logger.debug("[DiscoveryPersonalizationService] Loaded movie data for \(carouselMovies.values.flatMap { $0 }.count) items (device)")
 
         var carousels: [PersonalizedCarousel] = []
         for (typeString, movieItems) in carouselMovies {
-            guard let type = CarouselType(rawValue: typeString),
-                  let metadata = carouselMetadata[typeString] else {
-                continue
-            }
-
-            let sortedMovies = deduplicateMoviesById(movieItems
-                .sorted { $0.position < $1.position }
-                .map { $0.movie })
-
+            guard let type = CarouselType(rawValue: typeString), let metadata = carouselMetadata[typeString] else { continue }
+            let sortedMovies = deduplicateMoviesById(movieItems.sorted { $0.position < $1.position }.map(\.movie))
             guard !sortedMovies.isEmpty else { continue }
-
-            let carousel = PersonalizedCarousel(
-                type: type,
-                title: metadata.title,
-                items: sortedMovies,
-                descriptions: descriptions[typeString] ?? [:],
-                reason: metadata.reason
-            )
-
-            carousels.append(carousel)
+            carousels.append(PersonalizedCarousel(type: type, title: metadata.title, items: sortedMovies, descriptions: descriptions[typeString] ?? [:], reason: metadata.reason))
         }
+        carousels.sort { (carouselOrder[$0.type.rawValue] ?? 999) < (carouselOrder[$1.type.rawValue] ?? 999) }
 
-        Logger.info("[DiscoveryPersonalizationService] ✅ Loaded \(carousels.count) carousels from device cache with full movie details")
-
+        Logger.info("[DiscoveryPersonalizationService] ✅ Loaded \(carousels.count) ordered carousels from device cache")
         return carousels.isEmpty ? nil : carousels
     }
 
@@ -1222,41 +1573,32 @@ class DiscoveryPersonalizationService: ObservableObject {
             Logger.warning("[DiscoveryPersonalizationService] Failed to clear old cache: \(error.localizedDescription)")
         }
 
-        for carousel in carousels {
-            for (index, movie) in carousel.items.enumerated() {
-                let id = UUID().uuidString.lowercased()
-                let description = carousel.descriptions[String(movie.id)] ?? ""
-
-                // Encode full movie object to JSON for caching
-                let movieData: String? = {
-                    if let encoded = try? JSONEncoder().encode(movie),
-                       let jsonString = String(data: encoded, encoding: .utf8) {
-                        return jsonString
-                    }
-                    return nil
-                }()
-
-                let values: [String: Any] = [
-                    "id": id,
-                    "user_id": userId,
-                    "device_id": deviceId,
-                    "carousel_type": carousel.type.rawValue,
-                    "carousel_title": carousel.title,
-                    "media_id": movie.id,
-                    "media_type": "movie",
-                    "media_data": movieData ?? NSNull(),  // Store full movie JSON
-                    "position": index,
-                    "score": carousel.items.count - index,
-                    "reason": carousel.reason,
-                    "description": description,
-                    "generated_at": now,
-                    "expires_at": expiresAt
-                ]
-
-                do {
+        try? await sqliteService.transaction {
+            for (carouselIndex, carousel) in carousels.enumerated() {
+                let batchIndex = carouselIndex / 10
+                for (itemIndex, movie) in carousel.items.enumerated() {
+                    let id = UUID().uuidString.lowercased()
+                    let description = carousel.descriptions[String(movie.id)] ?? ""
+                    let movieData: String? = (try? JSONEncoder().encode(movie)).flatMap { String(data: $0, encoding: .utf8) }
+                    let values: [String: Any] = [
+                        "id": id,
+                        "user_id": userId,
+                        "device_id": deviceId,
+                        "carousel_type": carousel.type.rawValue,
+                        "carousel_title": carousel.title,
+                        "media_id": movie.id,
+                        "media_type": "movie",
+                        "media_data": movieData ?? NSNull(),
+                        "position": itemIndex,
+                        "carousel_order": carouselIndex,
+                        "batch_index": batchIndex,
+                        "score": carousel.items.count - itemIndex,
+                        "reason": carousel.reason,
+                        "description": description,
+                        "generated_at": now,
+                        "expires_at": expiresAt
+                    ]
                     _ = try await sqliteService.insert("personalized_discovery", values: values)
-                } catch {
-                    Logger.error("[DiscoveryPersonalizationService] Failed to cache carousel item", error: error)
                 }
             }
         }
@@ -1348,12 +1690,38 @@ enum CarouselType: String, Codable {
     case yearlyRewind = "yearly_rewind"
     case hotThisWeek = "hot_this_week"
     case awardWinners = "award_winners"
+    // New personalized carousels
+    case fromActor = "from_actor"
+    case decadeClassics = "decade_classics"
+    case moodTonight = "mood_tonight"
+    case regionSpotlight = "region_spotlight"
+    case topGenre2 = "top_genre_2"
+    case topGenre3 = "top_genre_3"
+    case hotThisWeekInGenre = "hot_this_week_genre"
+    case quickWatches = "quick_watches"
+    case epicWatches = "epic_watches"
+    case internationalPicks = "international_picks"
+    case throwbackDecade = "throwback_decade"
+    case fromAIChat = "from_ai_chat"
+    case comingSoon = "coming_soon"
+    case trendingTVWeek = "trending_tv_week"
+    case criticallyAcclaimedRecent = "critically_acclaimed_recent"
+    case returningTV = "returning_tv"
+    case documentaries = "documentaries"
+    case fromActor2 = "from_actor_2"
 }
 
 struct CarouselCandidate {
     let type: CarouselType
     let relevance: Double
     let generator: () async throws -> PersonalizedCarousel
+}
+
+private struct CarouselDefinition {
+    let type: CarouselType
+    let priority: Int
+    let isEligible: (UserProfile) -> Bool
+    let generate: (UserProfile, GlobalDiscoveryFilters?, Set<Int>) async throws -> PersonalizedCarousel
 }
 
 struct ScoredItem<T> {

@@ -162,7 +162,7 @@ struct DiscoveryView: View {
                         .padding(.top, 4)
                         .id("header")
                     
-                        ForEach(viewModel.personalizedCarousels, id: \.type.rawValue) { carousel in
+                        ForEach(viewModel.visibleCarousels, id: \.type.rawValue) { carousel in
                             if carousel.type == .dailyMix {
                                 MoodCarouselSection(
                                     movies: carousel.items,
@@ -194,6 +194,19 @@ struct DiscoveryView: View {
                             }
                         }
                     
+                        if viewModel.hasMoreCarousels {
+                            HStack { ProgressView() }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 24)
+                                .onAppear { viewModel.loadMoreCarousels() }
+                        } else if viewModel.personalizedCarousels.count > 11 {
+                            Text("discovery.endOfFeed".localized)
+                                .font(.system(size: 13))
+                                .foregroundColor(.theme.textSecondary)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 24)
+                        }
+
                         Color.clear
                             .frame(height: 80)
                     }
@@ -242,7 +255,7 @@ struct DiscoveryView: View {
 
     private func mediaType(for carouselType: CarouselType) -> MediaType {
         switch carouselType {
-        case .topTVPicks:
+        case .topTVPicks, .trendingTVWeek, .returningTV:
             return .tv
         default:
             return .movie

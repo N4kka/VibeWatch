@@ -607,3 +607,22 @@
 "tvTracking.notStarted" = "Not Started";
 "tvTracking.upToDate" = "Up to Date";
 "tvTracking.emptyState" = "No TV shows found";
+
+// New Discovery Carousels
+"carousel.fromActor" = "More from %@";
+"carousel.decadeClassics" = "%@ Classics";
+"carousel.moodTonight" = "%@ Tonight";
+"carousel.regionSpotlight" = "%@ Spotlight";
+"carousel.topInGenre" = "Top in %@";
+"carousel.hotThisWeekInGenre" = "Hot This Week in %@";
+"carousel.quickWatches" = "Quick Watches";
+"carousel.epicWatches" = "Epic Watches";
+"carousel.internationalPicks" = "International Picks";
+"carousel.throwback" = "Throwback %@";
+"carousel.fromAIChat" = "From Your AI Chat";
+"carousel.comingSoon" = "Coming Soon";
+"carousel.trendingTVWeek" = "Trending TV This Week";
+"carousel.criticallyAcclaimedRecent" = "Critically Acclaimed %@";
+"carousel.returningTV" = "Returning Soon";
+"carousel.documentaries" = "Documentaries for You";
+"discovery.endOfFeed" = "You're all caught up";
