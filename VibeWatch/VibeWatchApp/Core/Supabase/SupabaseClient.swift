@@ -679,11 +679,53 @@ class SupabaseService: ObservableObject {
             let genres: [Int]?
             let overview: String?
         }
+
+        let region = Locale.current.region?.identifier ?? "US"
+        do {
+            let rows: [ListItemWithProvidersResponse] = try await client
+                .rpc(
+                    "get_list_items_with_providers",
+                    params: ListItemsWithProvidersParams(p_list_id: listId, p_country: region)
+                )
+                .execute()
+                .value
+
+            for row in rows {
+                guard let providers = row.countryProviders, providers.hasUsableProviders else { continue }
+                await LocalWatchProvidersRepository.shared.save(
+                    providers,
+                    mediaId: row.item.media_id,
+                    mediaType: MediaType(rawValue: row.item.media_type) ?? .movie,
+                    region: region
+                )
+            }
+
+            return rows.map { row in
+                MediaListItem(
+                    id: row.item.id,
+                    mediaId: row.item.media_id,
+                    mediaType: MediaType(rawValue: row.item.media_type) ?? .movie,
+                    title: row.item.title,
+                    posterPath: row.item.poster_path,
+                    addedAt: row.item.added_at,
+                    runtime: row.item.runtime,
+                    voteAverage: row.item.vote_average,
+                    voteCount: row.item.vote_count,
+                    originCountry: row.item.origin_country,
+                    releaseDate: row.item.release_date,
+                    genres: row.item.genres,
+                    overview: row.item.overview
+                )
+            }
+        } catch {
+            Logger.warning("[Supabase] get_list_items_with_providers failed, falling back to list_items fetch: \(error.localizedDescription)")
+        }
         
         let items: [SupabaseListItem] = try await client
             .from("list_items")
             .select()
             .eq("list_id", value: listId)
+            .is("deleted_at", value: nil)
             .order("added_at", ascending: false)
             .execute()
             .value
@@ -730,6 +772,7 @@ class SupabaseService: ObservableObject {
             let release_date: String?
             let genres: [Int]?
             let overview: String?
+            let deleted_at: String?
         }
         
         let request = AddItemRequest(
@@ -745,7 +788,8 @@ class SupabaseService: ObservableObject {
             origin_country: item.originCountry,
             release_date: item.releaseDate,
             genres: item.genres,
-            overview: item.overview
+            overview: item.overview,
+            deleted_at: nil
         )
         
         struct AddItemResponse: Decodable {
@@ -950,6 +994,85 @@ class SupabaseService: ObservableObject {
         return profile
     }
 
+}
+
+private struct ListItemsWithProvidersParams: Encodable {
+    let p_list_id: String
+    let p_country: String
+}
+
+private struct ListItemWithProvidersResponse: Decodable {
+    let item: RemoteListItem
+    let providers: [RemoteAvailabilityProvider]
+
+    var countryProviders: CountryProviders? {
+        var result = CountryProviders(flatrate: [], rent: [], buy: [], link: nil)
+
+        for remote in providers {
+            guard let provider = remote.provider else { continue }
+            let type = (remote.availability_type ?? remote.monetization_type ?? remote.type ?? "streaming").lowercased()
+
+            if result.link == nil {
+                result.link = remote.link ?? remote.external_link
+            }
+
+            if type.contains("rent") {
+                result.rent?.append(provider)
+            } else if type.contains("buy") || type.contains("purchase") {
+                result.buy?.append(provider)
+            } else {
+                result.flatrate?.append(provider)
+            }
+        }
+
+        if result.flatrate?.isEmpty == true { result.flatrate = nil }
+        if result.rent?.isEmpty == true { result.rent = nil }
+        if result.buy?.isEmpty == true { result.buy = nil }
+
+        return result.hasUsableProviders ? result : nil
+    }
+}
+
+private struct RemoteListItem: Decodable {
+    let id: String
+    let media_id: Int
+    let media_type: String
+    let title: String
+    let poster_path: String?
+    let added_at: Date
+    let runtime: Int?
+    let vote_average: Double?
+    let vote_count: Int?
+    let origin_country: [String]?
+    let release_date: String?
+    let genres: [Int]?
+    let overview: String?
+}
+
+private struct RemoteAvailabilityProvider: Decodable {
+    let provider_id: Int?
+    let provider_name: String?
+    let logo_path: String?
+    let display_priority: Int?
+    let availability_type: String?
+    let monetization_type: String?
+    let type: String?
+    let link: String?
+    let external_link: String?
+
+    var provider: Provider? {
+        guard let provider_id, let provider_name else { return nil }
+        return Provider(
+            providerId: provider_id,
+            providerName: provider_name,
+            logoPath: logo_path ?? "",
+            displayPriority: display_priority ?? 0,
+            price: nil,
+            quality: nil,
+            presentationType: availability_type ?? monetization_type,
+            externalLink: (external_link ?? link).flatMap(URL.init(string:))
+        )
+    }
 }
 
 extension Notification.Name {

@@ -331,8 +331,8 @@ class GamificationService: ObservableObject {
     // MARK: - Dependencies
 
     private let sqliteService = SQLiteService.shared
-    private var dailyActionCounts: [String: Int] = [:]
-    private var lastActionCountsDate: String = ""
+    private let localRepository = LocalGamificationRepository.shared
+    private let liveRepository = LiveGamificationRepository.shared
 
     // MARK: - Initialization
 
@@ -349,49 +349,20 @@ class GamificationService: ObservableObject {
 
         // Load local state first
         let localState = await loadLocalState(userId: userId)
+        if let localState {
+            userState = localState
+        }
 
-        // Fetch remote state and merge (for cross-device sync)
+        // Fetch remote state; Supabase is authoritative for XP, level, and streak.
         let remoteState = await fetchRemoteState(userId: userId)
 
         if let remote = remoteState {
-            // Use higher values (user may have progressed on another device)
-            userState.totalXP = max(localState?.totalXP ?? 0, remote.totalXP)
-            userState.currentLevel = max(localState?.currentLevel ?? 1, remote.currentLevel)
-            userState.longestStreak = max(localState?.longestStreak ?? 0, remote.longestStreak)
-            userState.streakFreezesRemaining = max(localState?.streakFreezesRemaining ?? 0, remote.streakFreezesRemaining)
-
-            // Current streak needs special handling - use most recent
-            if let remoteDate = remote.lastActivityDate,
-               let localDate = localState?.lastActivityDate {
-                if remoteDate > localDate {
-                    userState.currentStreak = remote.currentStreak
-                    userState.lastActivityDate = remoteDate
-                } else {
-                    userState.currentStreak = localState?.currentStreak ?? 0
-                    userState.lastActivityDate = localDate
-                }
-            } else if let remoteDate = remote.lastActivityDate {
-                userState.currentStreak = remote.currentStreak
-                userState.lastActivityDate = remoteDate
-            } else if let localDate = localState?.lastActivityDate {
-                userState.currentStreak = localState?.currentStreak ?? 0
-                userState.lastActivityDate = localDate
-            } else {
-                userState.currentStreak = max(localState?.currentStreak ?? 0, remote.currentStreak)
-            }
-
-            // Recalculate level based on merged XP
-            userState.calculateLevel()
-
-            // Save merged state locally and queue for sync
-            await saveUserState(userId: userId)
-
-            Logger.info("[GamificationService] Merged local/remote state - XP: \(userState.totalXP), Level: \(userState.currentLevel)")
+            userState = remote
+            await localRepository.saveState(remote, userId: userId)
+            Logger.info("[GamificationService] Loaded server state - XP: \(userState.totalXP), Level: \(userState.currentLevel)")
         } else if let local = localState {
-            // No remote state, use local
             userState = local
         } else {
-            // No local or remote state, initialize fresh
             await initializeUserState(userId: userId)
         }
 
@@ -402,12 +373,6 @@ class GamificationService: ObservableObject {
         // Load daily challenge
         await loadOrCreateDailyChallenge(userId: userId)
 
-        // Load daily action counts
-        await loadDailyActionCounts(userId: userId)
-
-        // Check streak status
-        await checkAndUpdateStreak(userId: userId)
-
         isLoaded = true
         Logger.info("[GamificationService] State loaded - Level: \(userState.currentLevel), XP: \(userState.totalXP), Streak: \(userState.currentStreak)")
     }
@@ -417,43 +382,13 @@ class GamificationService: ObservableObject {
     func syncFromSupabase(userId: String) async {
         Logger.info("[GamificationService] Syncing from Supabase for user: \(userId)")
 
-        // Fetch remote state
         guard let remoteState = await fetchRemoteState(userId: userId) else {
             Logger.warning("[GamificationService] No remote state found - using local")
             return
         }
 
-        // Store local values for comparison
-        let localXP = userState.totalXP
-        let localLevel = userState.currentLevel
-        let localStreak = userState.currentStreak
-        let localLongestStreak = userState.longestStreak
-
-        // Merge with local state (take max values)
-        userState.totalXP = max(localXP, remoteState.totalXP)
-        userState.currentLevel = max(localLevel, remoteState.currentLevel)
-        userState.longestStreak = max(localLongestStreak, remoteState.longestStreak)
-
-        // For streak, use the one from the most recent activity
-        if let remoteDate = remoteState.lastActivityDate,
-           let localDate = userState.lastActivityDate {
-            if remoteDate > localDate {
-                userState.currentStreak = remoteState.currentStreak
-                userState.lastActivityDate = remoteDate
-            }
-        } else if let remoteDate = remoteState.lastActivityDate {
-            userState.currentStreak = remoteState.currentStreak
-            userState.lastActivityDate = remoteDate
-        }
-
-        // Recalculate level based on merged XP
-        userState.calculateLevel()
-
-        // If local had higher values, push to Supabase
-        if localXP > remoteState.totalXP || localLevel > remoteState.currentLevel {
-            await saveUserState(userId: userId)
-            Logger.info("[GamificationService] Pushed higher local state to Supabase")
-        }
+        userState = remoteState
+        await localRepository.saveState(remoteState, userId: userId)
 
         // Merge badges from remote
         await mergeBadgesFromRemote(userId: userId)
@@ -466,66 +401,12 @@ class GamificationService: ObservableObject {
 
     /// Load state from local SQLite only
     private func loadLocalState(userId: String) async -> UserGamificationState? {
-        let stateQuery = """
-            SELECT * FROM user_gamification WHERE user_id = ?
-        """
-        let rows = (try? await sqliteService.queryRaw(stateQuery, parameters: [userId])) ?? []
-
-        guard let row = rows.first else { return nil }
-
-        var state = UserGamificationState()
-        state.totalXP = row["total_xp"] as? Int ?? 0
-        state.currentLevel = row["current_level"] as? Int ?? 1
-        state.currentStreak = row["current_streak"] as? Int ?? 0
-        state.longestStreak = row["longest_streak"] as? Int ?? 0
-        state.streakFreezesRemaining = row["streak_freezes_remaining"] as? Int ?? 0
-
-        if let dateStr = row["last_activity_date"] as? String {
-            state.lastActivityDate = ISO8601DateFormatter().date(from: dateStr)
-        }
-
-        return state
+        await localRepository.loadState(userId: userId)
     }
 
     /// Fetch gamification state from Supabase
     private func fetchRemoteState(userId: String) async -> UserGamificationState? {
-        guard let client = SupabaseService.shared.client else {
-            Logger.debug("[GamificationService] No Supabase client available for remote fetch")
-            return nil
-        }
-
-        do {
-            let data = try await client
-                .from("user_gamification")
-                .select()
-                .eq("user_id", value: userId)
-                .limit(1)
-                .execute()
-                .data
-
-            guard let rows = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]],
-                  let row = rows.first else {
-                Logger.debug("[GamificationService] No remote gamification state found")
-                return nil
-            }
-
-            var state = UserGamificationState()
-            state.totalXP = row["total_xp"] as? Int ?? 0
-            state.currentLevel = row["current_level"] as? Int ?? 1
-            state.currentStreak = row["current_streak"] as? Int ?? 0
-            state.longestStreak = row["longest_streak"] as? Int ?? 0
-            state.streakFreezesRemaining = row["streak_freezes_remaining"] as? Int ?? 0
-
-            if let dateStr = row["last_activity_date"] as? String {
-                state.lastActivityDate = ISO8601DateFormatter().date(from: dateStr)
-            }
-
-            Logger.info("[GamificationService] Fetched remote state - XP: \(state.totalXP), Level: \(state.currentLevel)")
-            return state
-        } catch {
-            Logger.warning("[GamificationService] Failed to fetch remote state: \(error.localizedDescription)")
-            return nil
-        }
+        await liveRepository.loadState(userId: userId)
     }
 
     /// Award XP for an action
@@ -536,72 +417,37 @@ class GamificationService: ObservableObject {
         isPro: Bool,
         source: String? = nil
     ) async -> XPEarnedEvent? {
-        // Check daily limit
-        if let limit = action.dailyLimit {
-            let count = dailyActionCounts[action.rawValue] ?? 0
-            if count >= limit {
-                Logger.debug("[GamificationService] Daily limit reached for \(action.rawValue)")
-                return nil
-            }
-        }
-
-        // Update lastActivityDate for any XP-awarding action
-        // This ensures isFirstLaunchOfDay check works correctly in DiscoveryView
-        let today = dateString(for: Date())
-        let wasFirstActionOfDay = userState.lastActivityDate == nil ||
-            dateString(for: userState.lastActivityDate!) != today
-
-        if wasFirstActionOfDay {
-            userState.lastActivityDate = Date()
-            Logger.info("[GamificationService] Updated lastActivityDate to today")
-        }
-
-        let baseXP = customXP ?? action.baseXP
-        let proMultiplier: Double = isPro ? 2.0 : 1.0
-        let streakMultiplier = userState.streakBonusMultiplier
-
-        let proBonus = isPro ? baseXP : 0
-        let streakBonus = Int(Double(baseXP) * (streakMultiplier - 1.0))
-        let totalXP = Int(Double(baseXP) * proMultiplier * streakMultiplier)
-
-        // Update state
         let oldLevel = userState.currentLevel
-        userState.totalXP += totalXP
-        userState.calculateLevel()
+        let result: AwardXPResult
 
-        // Check for level up
+        do {
+            result = try await liveRepository.awardXP(
+                userId: userId,
+                action: action,
+                customXP: customXP,
+                isPro: isPro,
+                source: source
+            )
+        } catch {
+            Logger.warning("[GamificationService] Remote XP award failed: \(error.localizedDescription)")
+            return nil
+        }
+
+        guard result.awarded else {
+            Logger.debug("[GamificationService] XP not awarded for \(action.rawValue): \(result.reason ?? "unknown")")
+            return nil
+        }
+
+        if let remoteState = await fetchRemoteState(userId: userId) {
+            userState = remoteState
+        }
+
         if userState.currentLevel > oldLevel {
             await onLevelUp(userId: userId, oldLevel: oldLevel, newLevel: userState.currentLevel)
         }
 
-        // Save to database - wrap in transaction for atomicity
-        do {
-            try await sqliteService.transaction {
-                await self.saveXPTransaction(
-                    userId: userId,
-                    action: action,
-                    baseXP: baseXP,
-                    multiplier: proMultiplier,
-                    streakBonus: streakMultiplier - 1.0,
-                    totalXP: totalXP,
-                    source: source
-                )
-
-                await self.saveUserState(userId: userId)
-
-                // Update badge progress
-                await self.updateBadgeProgress(userId: userId, action: action)
-
-                // Update daily challenge progress
-                await self.updateChallengeProgress(userId: userId, action: action)
-            }
-        } catch {
-            Logger.error("[GamificationService] Failed to save XP transaction: \(error.localizedDescription)")
-            return nil
-        }
-
-        // Update daily count (in-memory only)
-        dailyActionCounts[action.rawValue] = (dailyActionCounts[action.rawValue] ?? 0) + 1
+        await updateBadgeProgress(userId: userId, action: action)
+        await updateChallengeProgress(userId: userId, action: action)
 
         // Get challenge progress info for toast (if applicable)
         var challengeProgressInfo: ChallengeProgressInfo?
@@ -618,10 +464,10 @@ class GamificationService: ObservableObject {
         // Create event for toast
         var event = XPEarnedEvent(
             actionType: action,
-            baseXP: baseXP,
-            proBonus: proBonus,
-            streakBonus: streakBonus,
-            totalXP: totalXP,
+            baseXP: result.baseXP,
+            proBonus: isPro ? result.baseXP : 0,
+            streakBonus: result.streakBonus,
+            totalXP: result.totalXP,
             isPro: isPro,
             timestamp: Date()
         )
@@ -632,10 +478,10 @@ class GamificationService: ObservableObject {
         // Track analytics
         AnalyticsService.shared.logEvent("xp_earned", parameters: [
             "action_type": action.rawValue,
-            "base_xp": baseXP,
-            "multiplier": proMultiplier,
-            "streak_bonus": streakMultiplier,
-            "total_xp": totalXP
+            "base_xp": result.baseXP,
+            "multiplier": result.multiplier,
+            "streak_bonus": result.streakBonus,
+            "total_xp": result.totalXP
         ])
 
         return event
@@ -643,12 +489,9 @@ class GamificationService: ObservableObject {
 
     /// Record a clip watch (updates streak and awards XP)
     func recordClipWatch(userId: String, clipId: String, completionRate: Double, isPro: Bool) async {
-        // Update last activity for streak
         let today = dateString(for: Date())
         let wasFirstAction = userState.lastActivityDate == nil ||
             dateString(for: userState.lastActivityDate!) != today
-
-        userState.lastActivityDate = Date()
 
         // Award XP if completion > 70%
         if completionRate >= 0.7 {
@@ -659,14 +502,6 @@ class GamificationService: ObservableObject {
         if wasFirstAction {
             _ = await awardXP(userId: userId, action: .firstActionOfDay, isPro: isPro)
             _ = await awardXP(userId: userId, action: .streakDay, isPro: isPro)
-
-            // Update streak
-            userState.currentStreak += 1
-            if userState.currentStreak > userState.longestStreak {
-                userState.longestStreak = userState.currentStreak
-            }
-
-            await saveUserState(userId: userId)
             await updateStreakBadges(userId: userId)
         }
     }
@@ -1151,46 +986,6 @@ class GamificationService: ObservableObject {
             )
         } catch {
             Logger.error("[Gamification] Failed to queue challenge update sync: \(error)")
-        }
-    }
-
-    private func loadDailyActionCounts(userId: String) async {
-        let today = dateString(for: Date())
-
-        if lastActionCountsDate != today {
-            dailyActionCounts = [:]
-            lastActionCountsDate = today
-        }
-
-        let query = """
-            SELECT action_type, COUNT(*) as count
-            FROM xp_transactions
-            WHERE user_id = ? AND DATE(created_at) = ?
-            GROUP BY action_type
-        """
-        let rows = (try? await sqliteService.queryRaw(query, parameters: [userId, today])) ?? []
-
-        for row in rows {
-            if let actionType = row["action_type"] as? String,
-               let count = row["count"] as? Int {
-                dailyActionCounts[actionType] = count
-            }
-        }
-    }
-
-    private func checkAndUpdateStreak(userId: String) async {
-        guard let lastActivity = userState.lastActivityDate else { return }
-
-        let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
-        let lastDay = calendar.startOfDay(for: lastActivity)
-        let daysDiff = calendar.dateComponents([.day], from: lastDay, to: today).day ?? 0
-
-        if daysDiff > 1 {
-            // Streak broken
-            Logger.info("[GamificationService] Streak broken - \(daysDiff) days since last activity")
-            userState.currentStreak = 0
-            await saveUserState(userId: userId)
         }
     }
 

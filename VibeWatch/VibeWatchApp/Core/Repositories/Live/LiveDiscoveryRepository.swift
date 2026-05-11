@@ -5,6 +5,7 @@ import Foundation
 final class LiveDiscoveryRepository: DiscoveryRepositoryProtocol {
     static let shared = LiveDiscoveryRepository()
     private let service = DiscoveryPersonalizationService.shared
+    private let warmFeed = DiscoveryWarmFeedService.shared
     private init() {}
 
     nonisolated func observeCarousels(
@@ -15,6 +16,13 @@ final class LiveDiscoveryRepository: DiscoveryRepositoryProtocol {
     ) -> AsyncStream<[PersonalizedCarousel]> {
         AsyncStream { continuation in
             Task { @MainActor in
+                if !forceRefresh {
+                    let baseline = self.warmFeed.loadBaselineCarousels()
+                    if !baseline.isEmpty {
+                        continuation.yield(baseline)
+                    }
+                }
+
                 // 1. Emit cache immediately if available
                 if !forceRefresh, let cached = await self.service.loadCachedCarouselsIfAvailable(userId: userId) {
                     continuation.yield(cached)

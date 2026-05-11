@@ -2,15 +2,15 @@ import Foundation
 import BackgroundTasks
 import UIKit
 
-/// Manages background task scheduling for smart notifications
-/// Runs every 6 hours to check for new content and schedule notifications
+/// Backup notification sync. Remote push is the primary delivery channel.
+/// Runs every 12 hours to refresh local notification state if iOS grants time.
 class NotificationBackgroundTask {
     static let shared = NotificationBackgroundTask()
 
     // MARK: - Constants
 
     static let identifier = "com.vibewatch.smart-notifications"
-    private let refreshInterval: TimeInterval = 6 * 60 * 60 // 6 hours
+    private let refreshInterval: TimeInterval = 12 * 60 * 60
 
     // MARK: - Dependencies
 
@@ -49,12 +49,11 @@ class NotificationBackgroundTask {
     func scheduleNextRun() {
         let request = BGAppRefreshTaskRequest(identifier: Self.identifier)
 
-        // Schedule 6 hours from now
         request.earliestBeginDate = Date(timeIntervalSinceNow: refreshInterval)
 
         do {
             try BGTaskScheduler.shared.submit(request)
-            Logger.info("[NotificationBackgroundTask] ✅ Scheduled next run in 6 hours")
+            Logger.info("[NotificationBackgroundTask] ✅ Scheduled next backup run in 12 hours")
         } catch {
             Logger.error("[NotificationBackgroundTask] ❌ Failed to schedule", error: error)
         }
@@ -101,7 +100,7 @@ class NotificationBackgroundTask {
                 // Load user preferences
                 await notificationService.loadPreferences(userId: userId)
 
-                // Schedule personalized notifications
+                // Backup only: local scheduling is no longer the primary delivery path.
                 await notificationService.schedulePersonalizedNotifications(userId: userId)
 
                 Logger.info("[NotificationBackgroundTask] ✅ Background task completed successfully")

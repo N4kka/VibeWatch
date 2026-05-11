@@ -21,9 +21,14 @@ struct TVShowsTrackingView: View {
                 } else {
                     LazyVStack(spacing: 0) {
                         ForEach(items) { item in
-                            Text(item.title)
-                                .foregroundColor(.theme.textPrimary)
-                                .padding()
+                            MediaItemRow(
+                                item: item,
+                                isInSeenList: ListManager.shared.isInList(listId: ListManager.shared.seenList.id, mediaId: item.mediaId, mediaType: item.mediaType),
+                                onMarkAsSeen: {},
+                                onDelete: {}
+                            )
+                            .padding(.horizontal, 20)
+                            .padding(.bottom, 16)
                         }
                     }
                 }
@@ -38,6 +43,9 @@ struct TVShowsTrackingView: View {
                 )
                 .environmentObject(quotaManager)
             }
+        }
+        .task {
+            await viewModel.load()
         }
     }
 
