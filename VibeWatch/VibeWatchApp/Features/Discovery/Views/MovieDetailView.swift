@@ -760,6 +760,7 @@ struct WatchNowSection: View {
                 if !listManager.isInList(listId: listManager.watchlist.id, mediaId: movie.id, mediaType: mediaType) {
                     try? await listManager.addToList(listId: listManager.watchlist.id, movie: movie, mediaType: mediaType)
                 }
+                try? await LiveNotificationRepository.shared.toggleAlert(mediaId: movie.id, mediaType: mediaType, enabled: true)
             }
         }
     }

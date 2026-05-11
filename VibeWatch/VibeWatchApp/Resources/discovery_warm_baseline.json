@@ -1,0 +1,177 @@
+[
+  {
+    "type": "hot_this_week",
+    "title": "Trending Worldwide",
+    "reason": "Baseline offline feed",
+    "items": [
+      {
+        "id": 550,
+        "title": "Fight Club",
+        "overview": "An insomniac office worker and a soap maker form an underground fight club.",
+        "poster_path": "/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg",
+        "backdrop_path": null,
+        "release_date": "1999-10-15",
+        "vote_average": 8.4,
+        "vote_count": 29000,
+        "genre_ids": [18],
+        "genres": null,
+        "adult": false,
+        "original_language": "en",
+        "popularity": 80,
+        "runtime": 139,
+        "status": null,
+        "tagline": null,
+        "production_countries": null,
+        "imdb_id": null
+      },
+      {
+        "id": 155,
+        "title": "The Dark Knight",
+        "overview": "Batman faces a criminal mastermind whose chaos tests Gotham.",
+        "poster_path": "/qJ2tW6WMUDux911r6m7haRef0WH.jpg",
+        "backdrop_path": null,
+        "release_date": "2008-07-18",
+        "vote_average": 8.5,
+        "vote_count": 32000,
+        "genre_ids": [28, 80, 18],
+        "genres": null,
+        "adult": false,
+        "original_language": "en",
+        "popularity": 95,
+        "runtime": 152,
+        "status": null,
+        "tagline": null,
+        "production_countries": null,
+        "imdb_id": null
+      }
+    ]
+  },
+  {
+    "type": "staff_picks",
+    "title": "Staff Picks",
+    "reason": "Baseline offline feed",
+    "items": [
+      {
+        "id": 27205,
+        "title": "Inception",
+        "overview": "A thief enters dreams to steal and plant ideas.",
+        "poster_path": "/oYuLEt3zVCKq57qu2F8dT7NIa6f.jpg",
+        "backdrop_path": null,
+        "release_date": "2010-07-16",
+        "vote_average": 8.4,
+        "vote_count": 35000,
+        "genre_ids": [28, 878, 12],
+        "genres": null,
+        "adult": false,
+        "original_language": "en",
+        "popularity": 100,
+        "runtime": 148,
+        "status": null,
+        "tagline": null,
+        "production_countries": null,
+        "imdb_id": null
+      },
+      {
+        "id": 496243,
+        "title": "Parasite",
+        "overview": "A poor family infiltrates a wealthy household with unexpected consequences.",
+        "poster_path": "/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg",
+        "backdrop_path": null,
+        "release_date": "2019-05-30",
+        "vote_average": 8.5,
+        "vote_count": 17000,
+        "genre_ids": [35, 53, 18],
+        "genres": null,
+        "adult": false,
+        "original_language": "ko",
+        "popularity": 75,
+        "runtime": 133,
+        "status": null,
+        "tagline": null,
+        "production_countries": null,
+        "imdb_id": null
+      }
+    ]
+  },
+  {
+    "type": "hidden_gems",
+    "title": "Hidden Gems",
+    "reason": "Baseline offline feed",
+    "items": [
+      {
+        "id": 38,
+        "title": "Eternal Sunshine of the Spotless Mind",
+        "overview": "A couple erase each other from memory after a painful breakup.",
+        "poster_path": "/5MwkWH9tYHv3mV9OdYTMR5qreIz.jpg",
+        "backdrop_path": null,
+        "release_date": "2004-03-19",
+        "vote_average": 8.1,
+        "vote_count": 14000,
+        "genre_ids": [878, 18, 10749],
+        "genres": null,
+        "adult": false,
+        "original_language": "en",
+        "popularity": 60,
+        "runtime": 108,
+        "status": null,
+        "tagline": null,
+        "production_countries": null,
+        "imdb_id": null
+      }
+    ]
+  },
+  {
+    "type": "award_winners",
+    "title": "Award Winners",
+    "reason": "Baseline offline feed",
+    "items": [
+      {
+        "id": 13,
+        "title": "Forrest Gump",
+        "overview": "A kind-hearted man witnesses decades of American history.",
+        "poster_path": "/arw2vcBveWOVZr6pxd9XTd1TdQa.jpg",
+        "backdrop_path": null,
+        "release_date": "1994-06-23",
+        "vote_average": 8.5,
+        "vote_count": 27000,
+        "genre_ids": [35, 18, 10749],
+        "genres": null,
+        "adult": false,
+        "original_language": "en",
+        "popularity": 85,
+        "runtime": 142,
+        "status": null,
+        "tagline": null,
+        "production_countries": null,
+        "imdb_id": null
+      }
+    ]
+  },
+  {
+    "type": "top_tv_picks",
+    "title": "TV Picks",
+    "reason": "Baseline offline feed",
+    "items": [
+      {
+        "id": 1399,
+        "title": "Game of Thrones",
+        "overview": "Noble families fight for control of the Iron Throne.",
+        "poster_path": "/1XS1oqL89opfnbLl8WnZY1O1uJx.jpg",
+        "backdrop_path": null,
+        "release_date": "2011-04-17",
+        "vote_average": 8.4,
+        "vote_count": 24000,
+        "genre_ids": [10765, 18, 10759],
+        "genres": null,
+        "adult": false,
+        "original_language": "en",
+        "popularity": 110,
+        "runtime": null,
+        "status": null,
+        "tagline": null,
+        "production_countries": null,
+        "imdb_id": null
+      }
+    ]
+  }
+]

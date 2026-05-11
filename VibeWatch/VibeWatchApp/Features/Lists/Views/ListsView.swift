@@ -828,6 +828,7 @@ struct MediaItemRow: View {
             if !listManager.isInList(listId: listManager.watchlist.id, mediaId: item.mediaId, mediaType: item.mediaType) {
                 try? await listManager.addToList(listId: listManager.watchlist.id, movie: item.asMovie(), mediaType: item.mediaType)
             }
+            try? await LiveNotificationRepository.shared.toggleAlert(mediaId: item.mediaId, mediaType: item.mediaType, enabled: true)
         }
     }
 

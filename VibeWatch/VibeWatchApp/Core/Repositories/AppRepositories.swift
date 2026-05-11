@@ -11,4 +11,7 @@ final class AppRepositories: ObservableObject {
     let discovery: any DiscoveryRepositoryProtocol = LiveDiscoveryRepository.shared
     let lists: any ListRepositoryProtocol = LiveListRepository.shared
     let watchProviders: any WatchProvidersRepositoryProtocol = LiveWatchProvidersRepository.shared
+    let gamification: any GamificationRepositoryProtocol = LiveGamificationRepository.shared
+    let tvTracking: any TVTrackingRepositoryProtocol = LiveTVTrackingRepository.shared
+    let notifications: any NotificationRepositoryProtocol = LiveNotificationRepository.shared
 }

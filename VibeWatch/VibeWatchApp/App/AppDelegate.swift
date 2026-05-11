@@ -133,4 +133,19 @@ class AppDelegate: NSObject, UIApplicationDelegate, @MainActor UNUserNotificatio
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
         Logger.error("[AppDelegate] Unable to register for remote notifications: \(error.localizedDescription)")
     }
+
+    func application(
+        _ application: UIApplication,
+        didReceiveRemoteNotification userInfo: [AnyHashable: Any],
+        fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
+    ) {
+        Logger.debug("[AppDelegate] didReceiveRemoteNotification userInfo: \(userInfo)")
+
+        Task {
+            if let userId = AuthService.shared.currentUser?.id {
+                await GamificationService.shared.syncFromSupabase(userId: userId)
+            }
+            completionHandler(.newData)
+        }
+    }
 }
