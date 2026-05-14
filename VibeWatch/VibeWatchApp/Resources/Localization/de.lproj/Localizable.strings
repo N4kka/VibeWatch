@@ -9,9 +9,9 @@
 "onboarding.page1.title" = "Intelligentere Auswahl mit KI";
 "onboarding.page1.description" = "KI-gestützte Film- und Serienempfehlungen, abgestimmt auf deine Stimmung, damit du immer weißt, was du als Nächstes schauen sollst.";
 "onboarding.page2.title" = "Organisiere deine Watchlist";
-"onboarding.page2.description" = "Erstelle Watchlists und stimmungsbasierte Sammlungen, um jeden Film und jede Serie zu organisieren.";
+"onboarding.page2.description" = "Erstelle Watchlists und stimmungsbasierte Sammlungen, um jeden Film und jede Serie zu organisieren, die du entdeckst.";
 "onboarding.page3.title" = "Entdecke Trailer & Clips";
-"onboarding.page3.description" = "Schau dir Trailer und Clips an und speichere die besten Funde in deinen Listen.";
+"onboarding.page3.description" = "Schau dir Trailer und Clips an und speichere die besten Funde in deinen Listen, um sie später zu streamen.";
 "onboarding.page4.title" = "Bereit zu starten?";
 "onboarding.page4.description" = "Erstelle ein Konto, um deine Watchlists und Einstellungen auf allen Geräten zu synchronisieren.";
 "onboarding.page4.createAccount" = "Konto erstellen";
@@ -39,7 +39,7 @@
 "list.tvShows" = "TV";
 "lists.myLists" = "Meine Listen";
 "lists.empty" = "Noch keine Listen";
-"lists.emptyDescription" = "Erstelle deine erste Watchlist, um Filme und Serien zu organisieren";
+"lists.emptyDescription" = "Erstelle deine erste Watchlist, um Filme und Serien zu organisieren, die du entdeckst";
 "lists.noItems" = "Noch keine Elemente";
 "lists.createList" = "Liste erstellen";
 "lists.editList" = "Liste bearbeiten";
@@ -332,7 +332,7 @@
 "paywall.feature.advancedFilters" = "🔎 Erweiterte Filter für schnellere Auswahl";
 "paywall.feature.lists" = "📋 Bis zu 100 synchronisierte Watchlists";
 "paywall.feature.offlineMode" = "📵 Offline-Modus für gespeicherte Picks";
-"paywall.feature.releaseAlerts" = "🔔 Benachrichtigungen wenn Favoriten streamen";
+"paywall.feature.releaseAlerts" = "🔔 Benachrichtigungen, wenn Favoriten verfügbar sind";
 
 // Common
 "common.ok" = "OK";
@@ -438,6 +438,12 @@
 "actor.retry" = "Erneut versuchen";
 "actor.biography.showMore" = "Mehr anzeigen";
 "actor.biography.showLess" = "Weniger anzeigen";
+"actor.birthday" = "Geboren: %@";
+"actor.birthday.line" = "%@ (%@ Jahre alt)";
+"actor.known_for" = "Bekannt für";
+"actor.search.placeholder" = "Filmografie durchsuchen…";
+"actor.search.noResults" = "Keine Ergebnisse für";
+"actor.filmography.empty" = "Keine Einträge gefunden.";
 
 // Global Discovery Filters
 "filters.mediaType" = "Medientyp";
@@ -474,11 +480,10 @@
 
 // Filters - Streaming Platforms
 "filters.allPlatforms" = "Alle Plattformen";
-"platforms.title" = "Streaming-Plattformen";
 
 // Personalized Carousels
 "carousel.dailyMix" = "Dein täglicher Mix";
-"carousel.trendingInGenre" = "Trending in %@";
+"carousel.trendingInGenre" = "Im Trend in %@";
 "carousel.becauseYouLiked" = "Weil dir %@ gefallen hat";
 "carousel.hiddenGems" = "Versteckte Perlen in %@";
 "carousel.continueJourney" = "Setze deine Reise fort";
@@ -561,13 +566,23 @@
 "notifications.endTime" = "Endzeit";
 "notifications.quietHoursDesc" = "In diesen Stunden werden keine Benachrichtigungen gesendet";
 "notifications.proFeatures" = "Pro-Features";
-"notifications.customActorAlerts" = "Benutzerdefinierte Actor-Alerts";
+"notifications.customActorAlerts" = "Benutzerdefinierte Schauspieler-Alerts";
 "notifications.customGenreAlerts" = "Benutzerdefinierte Genre-Alerts";
 "notifications.proFeaturesDesc" = "Erhalte Alerts für bestimmte Schauspieler und Genres, die du auswählst";
 "notifications.save" = "Speichern";
 "notifications.settingsSaved" = "Einstellungen gespeichert";
 "notifications.preferencesUpdated" = "Deine Benachrichtigungseinstellungen wurden aktualisiert.";
 "notifications.typesFooter" = "Wähle, welche Benachrichtigungen du erhalten möchtest";
+"notifications.newAvailability" = "Neue Verfügbarkeit";
+"notifications.newAvailabilityDesc" = "Wenn Titel auf deiner Watchlist zum Streamen, Leihen oder Kaufen verfügbar werden";
+"notifications.newRelease" = "Neue Veröffentlichungen";
+"notifications.newReleaseDesc" = "Filme und Serien, bei denen du auf \"Benachrichtigen\" getippt hast, sobald sie erscheinen";
+"notifications.episodeAired" = "Neue Folgen";
+"notifications.episodeAiredDesc" = "Wenn eine neue Folge einer Serie in deinen Listen ausgestrahlt wird";
+"notifications.continueWatching" = "Weiterschauen";
+"notifications.continueWatchingDesc" = "Erinnerungen, Serien weiterzuschauen, die du begonnen hast";
+"notifications.listMilestone" = "Listen-Meilensteine";
+"notifications.listMilestoneDesc" = "Feiere, wenn du Meilensteine beim Schauen erreichst";
 "notifications.frequencyFooter" = "Maximale Anzahl an Benachrichtigungen pro Tag";
 "notifications.favoriteActorsTitle" = "Deine Lieblingsschauspieler";
 "notifications.favoriteActorsFooter" = "Erhalte Alerts, wenn diese Schauspieler neue Inhalte haben";
@@ -583,3 +598,40 @@
 
 // Error Views
 "error.oops" = "Hoppla!";
+
+// TV Show Detail - Mark All Seen Confirmation
+"tvDetail.markAllSeenTitle" = "Alle Episoden als gesehen markieren";
+"tvDetail.markAllSeenDescription" = "Diese Aktion wird auf alle verfügbaren Episoden und Staffeln der Serie angewendet.";
+"tvDetail.markAllSeenQuestion" = "Möchtest du fortfahren?";
+"tvDetail.markAllSeenConfirm" = "Ja, als gesehen markieren";
+"tvDetail.markAllSeenCancel" = "Nein, abbrechen";
+"tvDetail.seasonSeenShort" = "gesehen";
+
+// Library section switcher
+"lists.section.myLists" = "Meine Listen";
+"lists.section.tvTracking" = "Serien-Tracking";
+
+// TV Shows Tracking
+"tvTracking.continuing" = "Weiterschauen";
+"tvTracking.notStarted" = "Nicht gestartet";
+"tvTracking.upToDate" = "Auf dem neuesten Stand";
+"tvTracking.emptyState" = "Keine Serien gefunden";
+
+// New Discovery Carousels
+"carousel.fromActor" = "Mehr von %@";
+"carousel.decadeClassics" = "%@-Klassiker";
+"carousel.moodTonight" = "%@ heute Abend";
+"carousel.regionSpotlight" = "%@ im Fokus";
+"carousel.topInGenre" = "Top in %@";
+"carousel.hotThisWeekInGenre" = "Diese Woche angesagt in %@";
+"carousel.quickWatches" = "Schnelle Picks";
+"carousel.epicWatches" = "Epische Filme";
+"carousel.internationalPicks" = "Internationale Picks";
+"carousel.throwback" = "%@ Rückblick";
+"carousel.fromAIChat" = "Aus deinem KI-Chat";
+"carousel.comingSoon" = "Demnächst";
+"carousel.trendingTVWeek" = "Serien-Trends dieser Woche";
+"carousel.criticallyAcclaimedRecent" = "Kritisch gefeierte %@";
+"carousel.returningTV" = "Bald zurück";
+"carousel.documentaries" = "Dokumentationen für dich";
+"discovery.endOfFeed" = "Du bist auf dem neuesten Stand";

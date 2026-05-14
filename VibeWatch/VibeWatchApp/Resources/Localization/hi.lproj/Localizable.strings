@@ -439,6 +439,13 @@
 "actor.biography.showMore" = "और दिखाएँ";
 "actor.biography.showLess" = "कम दिखाएँ";
 
+"actor.birthday" = "Born: %@";
+"actor.birthday.line" = "%@ (%@ years old)";
+"actor.known_for" = "Known For";
+"actor.search.placeholder" = "फिल्मोग्राफी खोजें…";
+"actor.search.noResults" = "के लिए कोई परिणाम नहीं";
+"actor.filmography.empty" = "कोई क्रेडिट नहीं मिला।";
+
 // Global Discovery Filters
 "filters.mediaType" = "मीडिया प्रकार";
 "filters.movies" = "फ़िल्में";
@@ -568,6 +575,16 @@
 "notifications.settingsSaved" = "सेटिंग्स सेव हो गईं";
 "notifications.preferencesUpdated" = "आपकी सूचना प्राथमिकताएँ अपडेट हो गईं।";
 "notifications.typesFooter" = "चुनें कि आप कौन-सी सूचनाएँ पाना चाहते हैं";
+"notifications.newAvailability" = "नई उपलब्धता";
+"notifications.newAvailabilityDesc" = "जब आपकी वॉचलिस्ट के आइटम स्ट्रीम, किराये या खरीद के लिए उपलब्ध हों";
+"notifications.newRelease" = "नई रिलीज़";
+"notifications.newReleaseDesc" = "वे फ़िल्में और शो जिन पर आपने रिलीज़ होने पर \"मुझे सूचित करें\" टैप किया";
+"notifications.episodeAired" = "नए एपिसोड";
+"notifications.episodeAiredDesc" = "जब आपकी सूचियों में मौजूद टीवी शो का नया एपिसोड प्रसारित हो";
+"notifications.continueWatching" = "देखना जारी रखें";
+"notifications.continueWatchingDesc" = "आप जिन सीरीज़ को देख रहे थे उन्हें फिर से शुरू करने की याद दिलाने वाले रिमाइंडर";
+"notifications.listMilestone" = "सूची माइलस्टोन";
+"notifications.listMilestoneDesc" = "देखने के माइलस्टोन पूरे होने पर जश्न मनाएँ";
 "notifications.frequencyFooter" = "प्रति दिन अधिकतम सूचनाएँ";
 "notifications.favoriteActorsTitle" = "आपके पसंदीदा अभिनेता";
 "notifications.favoriteActorsFooter" = "जब इन अभिनेताओं का नया कंटेंट आए, तो सूचना पाएं";
@@ -583,3 +600,38 @@
 
 // Error Views
 "error.oops" = "ओह!";
+
+// TV Show Detail - Mark All Seen Confirmation
+"tvDetail.markAllSeenTitle" = "Mark all episodes as seen";
+"tvDetail.markAllSeenDescription" = "This action will apply to all episodes and seasons of the series available.";
+"tvDetail.markAllSeenQuestion" = "Do you want to continue?";
+"tvDetail.markAllSeenConfirm" = "Yes, mark as seen";
+"tvDetail.markAllSeenCancel" = "No, cancel";
+"tvDetail.seasonSeenShort" = "seen";
+
+// Library section switcher
+"lists.section.myLists" = "My Lists";
+"lists.section.tvTracking" = "TV Shows Tracking";
+
+// TV Shows Tracking
+"tvTracking.continuing" = "Continue Watching";
+"tvTracking.notStarted" = "Not Started";
+"tvTracking.upToDate" = "Up to Date";
+"tvTracking.emptyState" = "No TV shows found";
+"carousel.fromActor" = "%@ के और";
+"carousel.decadeClassics" = "%@ क्लासिक्स";
+"carousel.moodTonight" = "आज रात %@";
+"carousel.regionSpotlight" = "%@ स्पॉटलाइट";
+"carousel.topInGenre" = "%@ में टॉप";
+"carousel.hotThisWeekInGenre" = "%@ में इस हफ़्ते लोकप्रिय";
+"carousel.quickWatches" = "जल्दी देखे जाने वाले";
+"carousel.epicWatches" = "एपिक देखने योग्य";
+"carousel.internationalPicks" = "अंतरराष्ट्रीय पसंद";
+"carousel.throwback" = "थ्रोबैक %@";
+"carousel.fromAIChat" = "आपकी AI चैट से";
+"carousel.comingSoon" = "जल्द आ रहा है";
+"carousel.trendingTVWeek" = "इस हफ़्ते ट्रेंडिंग TV";
+"carousel.criticallyAcclaimedRecent" = "आलोचकों द्वारा सराहे गए %@";
+"carousel.returningTV" = "जल्द वापस आ रहे हैं";
+"carousel.documentaries" = "आपके लिए डॉक्यूमेंट्री";
+"discovery.endOfFeed" = "आप पूरी तरह अपडेट हैं";

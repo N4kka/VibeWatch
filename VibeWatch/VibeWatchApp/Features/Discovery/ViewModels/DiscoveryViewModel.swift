@@ -11,9 +11,26 @@ class DiscoveryViewModel: ObservableObject {
     @Published var isRefreshing = false
     @Published var error: AppError?
     @Published var refreshToken = UUID()
-    
+    @Published var visibleCarouselCount: Int = 11  // hero + initial 10
+    @Published var hasMoreCarousels: Bool = false
+    @Published var isLoadingMore: Bool = false
+
+    private let pageSize = 10
+
+    var visibleCarousels: [PersonalizedCarousel] {
+        Array(personalizedCarousels.prefix(visibleCarouselCount))
+    }
+
     var hasNoContent: Bool {
         personalizedCarousels.isEmpty
+    }
+
+    func loadMoreCarousels() {
+        guard !isLoadingMore, visibleCarouselCount < personalizedCarousels.count else { return }
+        isLoadingMore = true
+        visibleCarouselCount = min(visibleCarouselCount + pageSize, personalizedCarousels.count)
+        hasMoreCarousels = visibleCarouselCount < personalizedCarousels.count
+        isLoadingMore = false
     }
     
     private let preferenceManager: UserPreferenceManager
@@ -33,6 +50,18 @@ class DiscoveryViewModel: ObservableObject {
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter
     }()
+
+    static func prioritizeCarouselOrder(_ carousels: [PersonalizedCarousel]) -> [PersonalizedCarousel] {
+        guard let dailyMixIndex = carousels.firstIndex(where: { $0.type == .dailyMix }),
+              dailyMixIndex != carousels.startIndex else {
+            return carousels
+        }
+
+        var orderedCarousels = carousels
+        let dailyMix = orderedCarousels.remove(at: dailyMixIndex)
+        orderedCarousels.insert(dailyMix, at: orderedCarousels.startIndex)
+        return orderedCarousels
+    }
 
     init(
         quotaManager: DailyQuotaManager = .shared,
@@ -89,9 +118,14 @@ class DiscoveryViewModel: ObservableObject {
             return
         }
 
-        isLoading = hasNoContent && !forceRefresh
+        isLoading = hasNoContent
         isRefreshing = forceRefresh
         error = nil
+
+        // Reset pagination before the stream starts so the first emission renders correctly.
+        if forceRefresh {
+            visibleCarouselCount = 11
+        }
 
         let userId = AuthService.shared.currentUser?.id
         let profile = await preferenceManager.aggregatePreferences()
@@ -108,13 +142,17 @@ class DiscoveryViewModel: ObservableObject {
             hasLoadedOnce = true
             isLoading = false
             isRefreshing = false
-            Logger.debug("[DiscoveryViewModel] Loaded \(carousels.count) carousels")
+            hasMoreCarousels = personalizedCarousels.count > visibleCarouselCount
+            Logger.debug("[DiscoveryViewModel] Loaded \(carousels.count) carousels, visible: \(visibleCarouselCount), hasMore: \(hasMoreCarousels)")
         }
 
         markReloadedForToday()
         isLoading = false
         isRefreshing = false
-        if forceRefresh { refreshToken = UUID() }
+        hasMoreCarousels = personalizedCarousels.count > visibleCarouselCount
+        if forceRefresh {
+            refreshToken = UUID()
+        }
     }
 
     func applyFilters(_ filters: GlobalDiscoveryFilters) {
@@ -128,6 +166,7 @@ class DiscoveryViewModel: ObservableObject {
         globalFilters.save()
 
         personalizedCarousels = applyGlobalFilters(to: generatedCarousels)
+        hasMoreCarousels = personalizedCarousels.count > visibleCarouselCount
         refreshToken = UUID()
 
         Task {
@@ -168,16 +207,20 @@ class DiscoveryViewModel: ObservableObject {
     private func shouldReloadForNewDay() -> Bool {
         let userId = AuthService.shared.currentUser?.id.lowercased() ?? "anon"
         let key = "discovery_last_loaded_day_\(userId)"
-        let todayKey = Self.dayKeyFormatter.string(from: Date())
         let stored = userDefaults.string(forKey: key)
-        return stored != todayKey
+        return stored != todayLocaleKey
     }
 
     private func markReloadedForToday() {
         let userId = AuthService.shared.currentUser?.id.lowercased() ?? "anon"
         let key = "discovery_last_loaded_day_\(userId)"
-        let todayKey = Self.dayKeyFormatter.string(from: Date())
-        userDefaults.set(todayKey, forKey: key)
+        userDefaults.set(todayLocaleKey, forKey: key)
+    }
+
+    private var todayLocaleKey: String {
+        let date = Self.dayKeyFormatter.string(from: Date())
+        let lang = LocalizationManager.shared.currentLanguage.id
+        return "\(date)-\(lang)"
     }
     
     // MARK: - Filtering
@@ -185,11 +228,12 @@ class DiscoveryViewModel: ObservableObject {
     private func applyGlobalFilters(to carousels: [PersonalizedCarousel]) -> [PersonalizedCarousel] {
         var filteredCarousels: [PersonalizedCarousel] = []
 
+        let tvOnlyTypes: Set<CarouselType> = [.topTVPicks, .trendingTVWeek, .returningTV]
         for carousel in carousels {
-            if globalFilters.mediaType == .movies, carousel.type == .topTVPicks {
+            if globalFilters.mediaType == .movies, tvOnlyTypes.contains(carousel.type) {
                 continue
             }
-            if globalFilters.mediaType == .tvShows, carousel.type != .topTVPicks {
+            if globalFilters.mediaType == .tvShows, !tvOnlyTypes.contains(carousel.type) {
                 continue
             }
 
@@ -210,7 +254,7 @@ class DiscoveryViewModel: ObservableObject {
                 filteredCarousels.append(
                     PersonalizedCarousel(
                         type: carousel.type,
-                        title: carousel.title,
+                        titleSpec: carousel.titleSpec,
                         items: items,
                         descriptions: carousel.descriptions,
                         reason: carousel.reason
@@ -219,7 +263,7 @@ class DiscoveryViewModel: ObservableObject {
             }
         }
 
-        return filteredCarousels
+        return Self.prioritizeCarouselOrder(filteredCarousels)
     }
 
     private func applyItemFilters(_ items: [Movie]) -> [Movie] {

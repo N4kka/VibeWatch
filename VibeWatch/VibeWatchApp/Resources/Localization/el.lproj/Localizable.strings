@@ -439,6 +439,13 @@
 "actor.biography.showMore" = "Εμφάνιση περισσότερων";
 "actor.biography.showLess" = "Εμφάνιση λιγότερων";
 
+"actor.birthday" = "Born: %@";
+"actor.birthday.line" = "%@ (%@ years old)";
+"actor.known_for" = "Known For";
+"actor.search.placeholder" = "Αναζήτηση φιλμογραφίας…";
+"actor.search.noResults" = "Κανένα αποτέλεσμα για";
+"actor.filmography.empty" = "Δεν βρέθηκαν ταινίες.";
+
 // Global Discovery Filters
 "filters.mediaType" = "Τύπος μέσου";
 "filters.movies" = "Ταινίες";
@@ -568,6 +575,16 @@
 "notifications.settingsSaved" = "Οι ρυθμίσεις αποθηκεύτηκαν";
 "notifications.preferencesUpdated" = "Οι προτιμήσεις ειδοποιήσεων ενημερώθηκαν.";
 "notifications.typesFooter" = "Επίλεξε ποιες ειδοποιήσεις θέλεις να λαμβάνεις";
+"notifications.newAvailability" = "Νέα διαθεσιμότητα";
+"notifications.newAvailabilityDesc" = "Όταν στοιχεία στη λίστα παρακολούθησής σου γίνονται διαθέσιμα για streaming, ενοικίαση ή αγορά";
+"notifications.newRelease" = "Νέες κυκλοφορίες";
+"notifications.newReleaseDesc" = "Ταινίες και σειρές στις οποίες πάτησες \"Ειδοποίησέ με\" όταν κυκλοφορήσουν";
+"notifications.episodeAired" = "Νέα επεισόδια";
+"notifications.episodeAiredDesc" = "Όταν προβάλλεται νέο επεισόδιο για τηλεοπτικές σειρές στις λίστες σου";
+"notifications.continueWatching" = "Συνέχεια παρακολούθησης";
+"notifications.continueWatchingDesc" = "Υπενθυμίσεις για να συνεχίσεις σειρές που παρακολουθείς";
+"notifications.listMilestone" = "Ορόσημα λιστών";
+"notifications.listMilestoneDesc" = "Γιόρτασε όταν φτάνεις ορόσημα παρακολούθησης";
 "notifications.frequencyFooter" = "Μέγιστος αριθμός ειδοποιήσεων ανά ημέρα";
 "notifications.favoriteActorsTitle" = "Οι αγαπημένοι σου ηθοποιοί";
 "notifications.favoriteActorsFooter" = "Λάβε ειδοποίηση όταν αυτοί οι ηθοποιοί έχουν νέο περιεχόμενο";
@@ -583,3 +600,38 @@
 
 // Error Views
 "error.oops" = "Ουπς!";
+
+// TV Show Detail - Mark All Seen Confirmation
+"tvDetail.markAllSeenTitle" = "Mark all episodes as seen";
+"tvDetail.markAllSeenDescription" = "This action will apply to all episodes and seasons of the series available.";
+"tvDetail.markAllSeenQuestion" = "Do you want to continue?";
+"tvDetail.markAllSeenConfirm" = "Yes, mark as seen";
+"tvDetail.markAllSeenCancel" = "No, cancel";
+"tvDetail.seasonSeenShort" = "seen";
+
+// Library section switcher
+"lists.section.myLists" = "My Lists";
+"lists.section.tvTracking" = "TV Shows Tracking";
+
+// TV Shows Tracking
+"tvTracking.continuing" = "Continue Watching";
+"tvTracking.notStarted" = "Not Started";
+"tvTracking.upToDate" = "Up to Date";
+"tvTracking.emptyState" = "No TV shows found";
+"carousel.fromActor" = "Περισσότερα από %@";
+"carousel.decadeClassics" = "Κλασικά %@";
+"carousel.moodTonight" = "%@ απόψε";
+"carousel.regionSpotlight" = "Στο επίκεντρο: %@";
+"carousel.topInGenre" = "Κορυφαία σε %@";
+"carousel.hotThisWeekInGenre" = "Δημοφιλή αυτή την εβδομάδα σε %@";
+"carousel.quickWatches" = "Γρήγορες προβολές";
+"carousel.epicWatches" = "Επικές προβολές";
+"carousel.internationalPicks" = "Διεθνείς επιλογές";
+"carousel.throwback" = "Αναδρομή %@";
+"carousel.fromAIChat" = "Από τη συνομιλία AI σου";
+"carousel.comingSoon" = "Έρχονται σύντομα";
+"carousel.trendingTVWeek" = "Δημοφιλείς σειρές αυτή την εβδομάδα";
+"carousel.criticallyAcclaimedRecent" = "Επαινεμένα από κριτικούς %@";
+"carousel.returningTV" = "Επιστρέφουν σύντομα";
+"carousel.documentaries" = "Ντοκιμαντέρ για εσένα";
+"discovery.endOfFeed" = "Τα έχεις δει όλα";

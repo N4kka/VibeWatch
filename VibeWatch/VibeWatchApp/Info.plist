@@ -12,7 +12,11 @@
 	<array>
 		<string>com.vibewatch.refresh-carousels</string>
 		<string>com.vibewatch.cerebras-backend-processing</string>
-		<string>com.vibewatch.smart-notifications</string>
+	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>remote-notification</string>
 	</array>
 	<key>CEREBRAS_API_KEY</key>
 	<string>$(CEREBRAS_API_KEY)</string>

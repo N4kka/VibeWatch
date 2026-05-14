@@ -439,6 +439,13 @@
 "actor.biography.showMore" = "もっと見る";
 "actor.biography.showLess" = "閉じる";
 
+"actor.birthday" = "Born: %@";
+"actor.birthday.line" = "%@ (%@ years old)";
+"actor.known_for" = "Known For";
+"actor.search.placeholder" = "フィルモグラフィを検索…";
+"actor.search.noResults" = "検索結果なし：";
+"actor.filmography.empty" = "クレジットが見つかりません。";
+
 // Global Discovery Filters
 "filters.mediaType" = "メディア種別";
 "filters.movies" = "映画";
@@ -568,6 +575,16 @@
 "notifications.settingsSaved" = "設定を保存しました";
 "notifications.preferencesUpdated" = "通知設定が更新されました。";
 "notifications.typesFooter" = "受け取りたい通知を選択してください";
+"notifications.newAvailability" = "新着配信";
+"notifications.newAvailabilityDesc" = "ウォッチリストの作品がストリーミング、レンタル、購入で利用可能になったとき";
+"notifications.newRelease" = "新作リリース";
+"notifications.newReleaseDesc" = "「通知する」をタップした映画や番組が公開されたとき";
+"notifications.episodeAired" = "新着エピソード";
+"notifications.episodeAiredDesc" = "リスト内のテレビ番組で新しいエピソードが放送されたとき";
+"notifications.continueWatching" = "視聴を続ける";
+"notifications.continueWatchingDesc" = "視聴中のシリーズを再開するためのリマインダー";
+"notifications.listMilestone" = "リストのマイルストーン";
+"notifications.listMilestoneDesc" = "視聴のマイルストーン達成をお祝いします";
 "notifications.frequencyFooter" = "1日に受け取る通知の最大数";
 "notifications.favoriteActorsTitle" = "好きな俳優";
 "notifications.favoriteActorsFooter" = "これらの俳優の新作が出たら通知します";
@@ -583,3 +600,38 @@
 
 // Error Views
 "error.oops" = "おっと！";
+
+// TV Show Detail - Mark All Seen Confirmation
+"tvDetail.markAllSeenTitle" = "Mark all episodes as seen";
+"tvDetail.markAllSeenDescription" = "This action will apply to all episodes and seasons of the series available.";
+"tvDetail.markAllSeenQuestion" = "Do you want to continue?";
+"tvDetail.markAllSeenConfirm" = "Yes, mark as seen";
+"tvDetail.markAllSeenCancel" = "No, cancel";
+"tvDetail.seasonSeenShort" = "seen";
+
+// Library section switcher
+"lists.section.myLists" = "My Lists";
+"lists.section.tvTracking" = "TV Shows Tracking";
+
+// TV Shows Tracking
+"tvTracking.continuing" = "Continue Watching";
+"tvTracking.notStarted" = "Not Started";
+"tvTracking.upToDate" = "Up to Date";
+"tvTracking.emptyState" = "No TV shows found";
+"carousel.fromActor" = "%@の他の作品";
+"carousel.decadeClassics" = "%@の名作";
+"carousel.moodTonight" = "今夜の%@";
+"carousel.regionSpotlight" = "%@特集";
+"carousel.topInGenre" = "%@のトップ作品";
+"carousel.hotThisWeekInGenre" = "%@で今週話題";
+"carousel.quickWatches" = "さくっと観られる作品";
+"carousel.epicWatches" = "壮大な作品";
+"carousel.internationalPicks" = "海外のおすすめ";
+"carousel.throwback" = "懐かしの%@";
+"carousel.fromAIChat" = "AIチャットから";
+"carousel.comingSoon" = "近日公開";
+"carousel.trendingTVWeek" = "今週話題のテレビ";
+"carousel.criticallyAcclaimedRecent" = "批評家に高評価の%@";
+"carousel.returningTV" = "まもなく再開";
+"carousel.documentaries" = "あなた向けドキュメンタリー";
+"discovery.endOfFeed" = "すべてチェック済みです";

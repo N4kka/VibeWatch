@@ -439,6 +439,13 @@
 "actor.biography.showMore" = "Pokaż więcej";
 "actor.biography.showLess" = "Pokaż mniej";
 
+"actor.birthday" = "Born: %@";
+"actor.birthday.line" = "%@ (%@ years old)";
+"actor.known_for" = "Known For";
+"actor.search.placeholder" = "Filmografie doorzoeken…";
+"actor.search.noResults" = "Geen resultaten voor";
+"actor.filmography.empty" = "Geen credits gevonden.";
+
 // Global Discovery Filters
 "filters.mediaType" = "Typ nośnika";
 "filters.movies" = "Filmy";
@@ -568,6 +575,16 @@
 "notifications.settingsSaved" = "Ustawienia zapisane";
 "notifications.preferencesUpdated" = "Twoje preferencje powiadomień zostały zaktualizowane.";
 "notifications.typesFooter" = "Wybierz, jakie powiadomienia chcesz otrzymywać";
+"notifications.newAvailability" = "Nieuwe beschikbaarheid";
+"notifications.newAvailabilityDesc" = "Wanneer items op je watchlist beschikbaar worden om te streamen, huren of kopen";
+"notifications.newRelease" = "Nieuwe releases";
+"notifications.newReleaseDesc" = "Films en series waarvoor je op \"Stuur melding\" tikte wanneer ze uitkomen";
+"notifications.episodeAired" = "Nieuwe afleveringen";
+"notifications.episodeAiredDesc" = "Wanneer er een nieuwe aflevering wordt uitgezonden voor tv-series in je lijsten";
+"notifications.continueWatching" = "Verder kijken";
+"notifications.continueWatchingDesc" = "Herinneringen om series die je aan het kijken was weer op te pakken";
+"notifications.listMilestone" = "Lijstmijlpalen";
+"notifications.listMilestoneDesc" = "Vier het wanneer je kijkmijlpalen bereikt";
 "notifications.frequencyFooter" = "Maksymalna liczba powiadomień dziennie";
 "notifications.favoriteActorsTitle" = "Twoi ulubieni aktorzy";
 "notifications.favoriteActorsFooter" = "Dostaniesz powiadomienie, gdy pojawi się nowa treść z ich udziałem";
@@ -583,3 +600,38 @@
 
 // Error Views
 "error.oops" = "Ups!";
+
+// TV Show Detail - Mark All Seen Confirmation
+"tvDetail.markAllSeenTitle" = "Mark all episodes as seen";
+"tvDetail.markAllSeenDescription" = "This action will apply to all episodes and seasons of the series available.";
+"tvDetail.markAllSeenQuestion" = "Do you want to continue?";
+"tvDetail.markAllSeenConfirm" = "Yes, mark as seen";
+"tvDetail.markAllSeenCancel" = "No, cancel";
+"tvDetail.seasonSeenShort" = "seen";
+
+// Library section switcher
+"lists.section.myLists" = "My Lists";
+"lists.section.tvTracking" = "TV Shows Tracking";
+
+// TV Shows Tracking
+"tvTracking.continuing" = "Continue Watching";
+"tvTracking.notStarted" = "Not Started";
+"tvTracking.upToDate" = "Up to Date";
+"tvTracking.emptyState" = "No TV shows found";
+"carousel.fromActor" = "Meer van %@";
+"carousel.decadeClassics" = "%@ klassiekers";
+"carousel.moodTonight" = "%@ vanavond";
+"carousel.regionSpotlight" = "%@ in de schijnwerpers";
+"carousel.topInGenre" = "Top in %@";
+"carousel.hotThisWeekInGenre" = "Populair deze week in %@";
+"carousel.quickWatches" = "Snel te kijken";
+"carousel.epicWatches" = "Epische kijktips";
+"carousel.internationalPicks" = "Internationale keuzes";
+"carousel.throwback" = "Terugblik %@";
+"carousel.fromAIChat" = "Uit je AI-chat";
+"carousel.comingSoon" = "Binnenkort";
+"carousel.trendingTVWeek" = "Trending tv deze week";
+"carousel.criticallyAcclaimedRecent" = "Door critici geprezen %@";
+"carousel.returningTV" = "Binnenkort terug";
+"carousel.documentaries" = "Documentaires voor jou";
+"discovery.endOfFeed" = "Je bent helemaal bij";

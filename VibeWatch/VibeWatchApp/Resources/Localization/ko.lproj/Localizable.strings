@@ -439,6 +439,13 @@
 "actor.biography.showMore" = "더 보기";
 "actor.biography.showLess" = "접기";
 
+"actor.birthday" = "Born: %@";
+"actor.birthday.line" = "%@ (%@ years old)";
+"actor.known_for" = "Known For";
+"actor.search.placeholder" = "필모그래피 검색…";
+"actor.search.noResults" = "검색 결과 없음:";
+"actor.filmography.empty" = "크레딧을 찾을 수 없습니다.";
+
 // Global Discovery Filters
 "filters.mediaType" = "미디어 유형";
 "filters.movies" = "영화";
@@ -568,6 +575,16 @@
 "notifications.settingsSaved" = "설정이 저장되었습니다";
 "notifications.preferencesUpdated" = "알림 설정이 업데이트되었습니다.";
 "notifications.typesFooter" = "받고 싶은 알림을 선택하세요";
+"notifications.newAvailability" = "새 이용 가능 알림";
+"notifications.newAvailabilityDesc" = "관심 목록의 항목을 스트리밍, 대여 또는 구매할 수 있게 될 때";
+"notifications.newRelease" = "새 출시";
+"notifications.newReleaseDesc" = "\"알림 받기\"를 누른 영화와 시리즈가 공개될 때";
+"notifications.episodeAired" = "새 에피소드";
+"notifications.episodeAiredDesc" = "내 목록의 TV 프로그램에 새 에피소드가 방영될 때";
+"notifications.continueWatching" = "계속 보기";
+"notifications.continueWatchingDesc" = "시청 중이던 시리즈를 이어 보도록 알려주는 리마인더";
+"notifications.listMilestone" = "목록 마일스톤";
+"notifications.listMilestoneDesc" = "시청 마일스톤을 달성하면 축하합니다";
 "notifications.frequencyFooter" = "하루에 받을 알림의 최대 개수";
 "notifications.favoriteActorsTitle" = "좋아하는 배우";
 "notifications.favoriteActorsFooter" = "이 배우들의 새 작품이 나오면 알려드려요";
@@ -583,3 +600,38 @@
 
 // Error Views
 "error.oops" = "이런!";
+
+// TV Show Detail - Mark All Seen Confirmation
+"tvDetail.markAllSeenTitle" = "Mark all episodes as seen";
+"tvDetail.markAllSeenDescription" = "This action will apply to all episodes and seasons of the series available.";
+"tvDetail.markAllSeenQuestion" = "Do you want to continue?";
+"tvDetail.markAllSeenConfirm" = "Yes, mark as seen";
+"tvDetail.markAllSeenCancel" = "No, cancel";
+"tvDetail.seasonSeenShort" = "seen";
+
+// Library section switcher
+"lists.section.myLists" = "My Lists";
+"lists.section.tvTracking" = "TV Shows Tracking";
+
+// TV Shows Tracking
+"tvTracking.continuing" = "Continue Watching";
+"tvTracking.notStarted" = "Not Started";
+"tvTracking.upToDate" = "Up to Date";
+"tvTracking.emptyState" = "No TV shows found";
+"carousel.fromActor" = "%@의 다른 작품";
+"carousel.decadeClassics" = "%@ 클래식";
+"carousel.moodTonight" = "오늘 밤 %@";
+"carousel.regionSpotlight" = "%@ 스포트라이트";
+"carousel.topInGenre" = "%@ 인기작";
+"carousel.hotThisWeekInGenre" = "이번 주 %@ 인기작";
+"carousel.quickWatches" = "짧게 보기 좋은 작품";
+"carousel.epicWatches" = "대작 추천";
+"carousel.internationalPicks" = "해외 추천작";
+"carousel.throwback" = "추억의 %@";
+"carousel.fromAIChat" = "내 AI 채팅에서";
+"carousel.comingSoon" = "곧 공개";
+"carousel.trendingTVWeek" = "이번 주 인기 TV";
+"carousel.criticallyAcclaimedRecent" = "평단의 호평을 받은 %@";
+"carousel.returningTV" = "곧 돌아오는 작품";
+"carousel.documentaries" = "나를 위한 다큐멘터리";
+"discovery.endOfFeed" = "모두 확인했어요";

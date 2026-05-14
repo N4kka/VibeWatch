@@ -63,7 +63,10 @@
 "lists.seen" = "看过";
 "lists.softLimitWarning" = "“{name}” 已有 {limit} 个项目。建议新建一个列表来保持条理清晰。";
 "lists.watchlist" = "稍后观看";
-"lists.watchOn" = "观看平台";
+"lists.watchOn" = "在 %@ 观看";
+"lists.notifyMeTitle" = "通知我";
+"lists.notifyMeMessage" = "一旦“%@”可用于流媒体、租赁或购买，我们就会通知你。";
+"error.oops" = "哎呀！";
 
 // Movie Detail
 "movieDetail.cast" = "演员";
@@ -135,7 +138,6 @@
 "clips.noClipsAvailable" = "暂无剪辑";
 "clips.noClipsDescription" = "稍后再来看看你喜爱影视中的精彩片段吧";
 "clips.noComments" = "还没有评论";
-"clips.noListsYet" = "还没有列表";
 "clips.reply" = "回复";
 "clips.replies" = "条回复";
 "clips.replyingTo" = "正在回复";
@@ -357,6 +359,7 @@
 "profile.faqDetail" = "快速找到关于账号、订阅和功能的常见问题解答。";
 "profile.privacyPolicy" = "隐私政策";
 "profile.termsOfUse" = "使用条款";
+"profile.terms" = "条款";
 "profile.feedback.suggestFeature" = "建议新功能";
 "profile.feedback.suggestFeatureDescription" = "告诉我们什么能让 VibeWatch 对你来说更好用。";
 "profile.feedback.reportBug" = "报告错误/问题";
@@ -394,6 +397,13 @@
 "actor.biography.showMore" = "显示更多";
 "actor.biography.showLess" = "收起";
 
+"actor.birthday" = "Born: %@";
+"actor.birthday.line" = "%@ (%@ years old)";
+"actor.known_for" = "Known For";
+"actor.search.placeholder" = "搜索作品…";
+"actor.search.noResults" = "没有结果：";
+"actor.filmography.empty" = "未找到作品。";
+
 "clips.search.placeholder" = "搜索剪辑、角色或台词";
 "clips.search.emptyTitle" = "找到你喜欢的剪辑";
 "clips.search.emptySubtitle" = "搜索任意电影、剧集、角色或台词，查看匹配的剪辑及相关推荐。";
@@ -401,6 +411,10 @@
 "clips.search.showcaseSubtitle" = "在上方搜索，找到你喜欢的电影和剧集中的剪辑";
 "clips.search.matched" = "匹配";
 "clips.search.recommended" = "推荐";
+"clips.search.quotes" = "台词";
+"clips.search.characters" = "角色";
+"clips.search.scenes" = "场景";
+"clips.search.popular" = "热门";
 
 // Redeem Code
 "settings.redeemCode" = "兑换代码";
@@ -503,6 +517,66 @@
 "auth.resendEmail" = "重新发送电子邮件";
 "auth.changeEmail" = "更改电子邮件";
 "auth.verificationPending" = "仍在等待验证...";
+"gamification.levelUp" = "升级！";
+"gamification.level" = "等级";
+"gamification.rankAchieved" = "已达成“%@”段位";
+"gamification.xp.base" = "基础";
+"gamification.xp.proBoost" = "Pro 加成";
+"gamification.xp.streakBonus" = "连续奖励";
+"gamification.xp.total" = "XP 总计";
+"gamification.challengeComplete" = "挑战完成！";
+"notifications.title" = "通知";
+"notifications.status" = "状态";
+"notifications.enabled" = "通知已开启";
+"notifications.disabled" = "通知已关闭";
+"notifications.enableDescription" = "开启通知，获取关于新剧集、上线内容和你会喜欢的内容的个性化提醒。";
+"notifications.enableButton" = "开启通知";
+"notifications.types" = "通知类型";
+"notifications.newEpisodes" = "新剧集";
+"notifications.newEpisodesDesc" = "你正在观看的剧集有新集数可看时收到通知";
+"notifications.personalizedReleases" = "个性化上线提醒";
+"notifications.personalizedReleasesDesc" = "符合你口味的新电影和剧集";
+"notifications.favoriteActors" = "喜爱的演员和导演";
+"notifications.favoriteActorsDesc" = "你喜欢的人有新内容时提醒";
+"notifications.similarContent" = "相似内容";
+"notifications.similarContentDesc" = "根据你喜欢的内容推荐";
+"notifications.watchlistAlerts" = "片单提醒";
+"notifications.watchlistAlertsDesc" = "当你片单中的内容可观看时提醒";
+"notifications.milestones" = "里程碑与成就";
+"notifications.milestonesDesc" = "庆祝你的观看连续记录和成就";
+"notifications.frequency" = "频率";
+"notifications.dailyLimit" = "每日上限";
+"notifications.perDay" = "每天";
+"notifications.unlimited" = "不限";
+"notifications.quietHours" = "免打扰时段";
+"notifications.startTime" = "开始时间";
+"notifications.endTime" = "结束时间";
+"notifications.quietHoursDesc" = "这些时段内不会发送通知";
+"notifications.proFeatures" = "Pro 功能";
+"notifications.customActorAlerts" = "自定义演员提醒";
+"notifications.customGenreAlerts" = "自定义类型提醒";
+"notifications.proFeaturesDesc" = "接收你选择的特定演员和类型提醒";
+"notifications.save" = "保存";
+"notifications.settingsSaved" = "设置已保存";
+"notifications.preferencesUpdated" = "你的通知偏好已更新。";
+"notifications.typesFooter" = "选择你想接收的通知";
+"notifications.newAvailability" = "新可用内容";
+"notifications.newAvailabilityDesc" = "当你关注列表中的条目可供流媒体播放、租借或购买时";
+"notifications.newRelease" = "新上线";
+"notifications.newReleaseDesc" = "你点按“通知我”的电影和剧集上线时";
+"notifications.episodeAired" = "新剧集";
+"notifications.episodeAiredDesc" = "当你列表中的电视节目播出新一集时";
+"notifications.continueWatching" = "继续观看";
+"notifications.continueWatchingDesc" = "提醒你继续观看正在追的剧集";
+"notifications.listMilestone" = "列表里程碑";
+"notifications.listMilestoneDesc" = "当你达成观看里程碑时一起庆祝";
+"notifications.frequencyFooter" = "你每天最多会收到的通知数量";
+"notifications.favoriteActorsTitle" = "你喜爱的演员";
+"notifications.favoriteActorsFooter" = "这些演员有新内容时收到通知";
+"notifications.favoriteGenresTitle" = "你喜爱的类型";
+"notifications.favoriteGenresFooter" = "这些类型有新片上线时收到通知";
+"notifications.fromPreferences" = "来自你的偏好";
+"lists.notifyMe" = "通知我";
 
 "movieDetail.whyForMe" = "Why for me?";
 
@@ -510,3 +584,38 @@
 
 "movieDetail.goodFitTitle" = "Why %@ is a good fit for me?";
 "movieDetail.goodFitSubtitle" = "A quick, personalized take based on your taste.";
+
+// TV Show Detail - Mark All Seen Confirmation
+"tvDetail.markAllSeenTitle" = "Mark all episodes as seen";
+"tvDetail.markAllSeenDescription" = "This action will apply to all episodes and seasons of the series available.";
+"tvDetail.markAllSeenQuestion" = "Do you want to continue?";
+"tvDetail.markAllSeenConfirm" = "Yes, mark as seen";
+"tvDetail.markAllSeenCancel" = "No, cancel";
+"tvDetail.seasonSeenShort" = "seen";
+
+// Library section switcher
+"lists.section.myLists" = "My Lists";
+"lists.section.tvTracking" = "TV Shows Tracking";
+
+// TV Shows Tracking
+"tvTracking.continuing" = "Continue Watching";
+"tvTracking.notStarted" = "Not Started";
+"tvTracking.upToDate" = "Up to Date";
+"tvTracking.emptyState" = "No TV shows found";
+"carousel.fromActor" = "更多来自 %@";
+"carousel.decadeClassics" = "%@ 经典";
+"carousel.moodTonight" = "今晚看 %@";
+"carousel.regionSpotlight" = "%@ 聚焦";
+"carousel.topInGenre" = "%@ 中的热门";
+"carousel.hotThisWeekInGenre" = "本周 %@ 热门";
+"carousel.quickWatches" = "快速观看";
+"carousel.epicWatches" = "史诗级观看";
+"carousel.internationalPicks" = "国际精选";
+"carousel.throwback" = "怀旧 %@";
+"carousel.fromAIChat" = "来自你的 AI 聊天";
+"carousel.comingSoon" = "即将上线";
+"carousel.trendingTVWeek" = "本周热门剧集";
+"carousel.criticallyAcclaimedRecent" = "广受好评的 %@";
+"carousel.returningTV" = "即将回归";
+"carousel.documentaries" = "为你推荐的纪录片";
+"discovery.endOfFeed" = "你已经看完了";

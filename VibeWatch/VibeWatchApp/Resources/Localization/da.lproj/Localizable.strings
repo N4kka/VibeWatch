@@ -439,6 +439,13 @@
 "actor.biography.showMore" = "Vis mere";
 "actor.biography.showLess" = "Vis mindre";
 
+"actor.birthday" = "Født: %@";
+"actor.birthday.line" = "%@ (%@ år gammel)";
+"actor.known_for" = "Kendt for";
+"actor.search.placeholder" = "Søg i filmografi…";
+"actor.search.noResults" = "Ingen resultater for";
+"actor.filmography.empty" = "Ingen kreditter fundet.";
+
 // Global Discovery Filters
 "filters.mediaType" = "Medietype";
 "filters.movies" = "Film";
@@ -568,6 +575,16 @@
 "notifications.settingsSaved" = "Indstillinger gemt";
 "notifications.preferencesUpdated" = "Dine notifikationsindstillinger er blevet opdateret.";
 "notifications.typesFooter" = "Vælg hvilke notifikationer du vil modtage";
+"notifications.newAvailability" = "Ny tilgængelighed";
+"notifications.newAvailabilityDesc" = "Når titler på din watchlist bliver tilgængelige til streaming, leje eller køb";
+"notifications.newRelease" = "Nye udgivelser";
+"notifications.newReleaseDesc" = "Film og serier, hvor du trykkede på \"Giv mig besked\", når de udkommer";
+"notifications.episodeAired" = "Nye episoder";
+"notifications.episodeAiredDesc" = "Når en ny episode sendes for tv-serier på dine lister";
+"notifications.continueWatching" = "Fortsæt med at se";
+"notifications.continueWatchingDesc" = "Påmindelser om at fortsætte serier, du har set";
+"notifications.listMilestone" = "Listemilepæle";
+"notifications.listMilestoneDesc" = "Fejr, når du når milepæle for visning";
 "notifications.frequencyFooter" = "Maksimalt antal notifikationer du modtager pr. dag";
 "notifications.favoriteActorsTitle" = "Dine favoritskuespillere";
 "notifications.favoriteActorsFooter" = "Få besked, når disse skuespillere har nyt indhold";
@@ -583,3 +600,40 @@
 
 // Error Views
 "error.oops" = "Ups!";
+
+// TV Show Detail - Mark All Seen Confirmation
+"tvDetail.markAllSeenTitle" = "Markér alle episoder som set";
+"tvDetail.markAllSeenDescription" = "Denne handling gælder for alle tilgængelige episoder og sæsoner i serien.";
+"tvDetail.markAllSeenQuestion" = "Vil du fortsætte?";
+"tvDetail.markAllSeenConfirm" = "Ja, markér som set";
+"tvDetail.markAllSeenCancel" = "Nej, annuller";
+"tvDetail.seasonSeenShort" = "set";
+
+// Library section switcher
+"lists.section.myLists" = "Mine lister";
+"lists.section.tvTracking" = "Tracking af TV-serier";
+
+// TV Shows Tracking
+"tvTracking.continuing" = "Fortsæt med at se";
+"tvTracking.notStarted" = "Ikke startet";
+"tvTracking.upToDate" = "Opdateret";
+"tvTracking.emptyState" = "Ingen TV-serier fundet";
+
+// New Discovery Carousels
+"carousel.fromActor" = "Mere fra %@";
+"carousel.decadeClassics" = "%@-klassikere";
+"carousel.moodTonight" = "%@ i aften";
+"carousel.regionSpotlight" = "%@ i fokus";
+"carousel.topInGenre" = "Top i %@";
+"carousel.hotThisWeekInGenre" = "Populært denne uge i %@";
+"carousel.quickWatches" = "Hurtige valg";
+"carousel.epicWatches" = "Episke valg";
+"carousel.internationalPicks" = "Internationale valg";
+"carousel.throwback" = "Throwback %@";
+"carousel.fromAIChat" = "Fra din AI-chat";
+"carousel.comingSoon" = "Kommer snart";
+"carousel.trendingTVWeek" = "Trendende TV denne uge";
+"carousel.criticallyAcclaimedRecent" = "Anmelderroste %@";
+"carousel.returningTV" = "Vender snart tilbage";
+"carousel.documentaries" = "Dokumentarer til dig";
+"discovery.endOfFeed" = "Du er helt opdateret";

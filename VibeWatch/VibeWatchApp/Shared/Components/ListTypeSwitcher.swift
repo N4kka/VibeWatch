@@ -13,24 +13,45 @@ enum ListViewType: String, CaseIterable {
 
 struct ListTypeSwitcher: View {
     @Binding var selectedType: ListViewType
-    
+
+    var body: some View {
+        SegmentedPicker(
+            items: Array(ListViewType.allCases),
+            selection: $selectedType,
+            label: { $0.displayName }
+        )
+    }
+}
+
+enum LibrarySection: String, CaseIterable {
+    case myLists = "lists.section.myLists"
+    case tvTracking = "lists.section.tvTracking"
+
+    var displayName: String {
+        rawValue.localizedMainSafe()
+    }
+}
+
+struct LibrarySectionSwitcher: View {
+    @Binding var selectedSection: LibrarySection
+
     var body: some View {
         HStack(spacing: 8) {
-            ForEach(ListViewType.allCases, id: \.self) { type in
+            ForEach(LibrarySection.allCases, id: \.self) { section in
                 Button {
                     withAnimation(.easeInOut(duration: 0.2)) {
-                        selectedType = type
+                        selectedSection = section
                     }
                 } label: {
-                    Text(type.displayName)
-                        .font(.system(size: 13, weight: selectedType == type ? .semibold : .medium))
-                        .foregroundColor(selectedType == type ? .theme.accentOrange : .theme.textSecondary)
+                    Text(section.displayName)
+                        .font(.system(size: 13, weight: selectedSection == section ? .semibold : .medium))
+                        .foregroundColor(selectedSection == section ? .theme.accentOrange : .theme.textSecondary)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 8)
                         .clipShape(Capsule())
                 }
             }
-            
+
             Spacer()
         }
         .padding(.horizontal, 10)

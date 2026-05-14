@@ -438,6 +438,12 @@
 "actor.retry" = "Riprova";
 "actor.biography.showMore" = "Mostra Altro";
 "actor.biography.showLess" = "Mostra Meno";
+"actor.birthday" = "Data di nascita: %@";
+"actor.birthday.line" = "%@ (%@ anni)";
+"actor.known_for" = "Noto per";
+"actor.search.placeholder" = "Cerca filmografia…";
+"actor.search.noResults" = "Nessun risultato per";
+"actor.filmography.empty" = "Nessun credito trovato.";
 
 // Global Discovery Filters
 "filters.mediaType" = "Tipo di media";
@@ -472,7 +478,6 @@
 "filters.upgradeToPro" = "Passa a Pro";
 "filters.filtersActive" = "%d filtri attivi";
 "filters.allPlatforms" = "Tutte le piattaforme";
-"filters.proTitle" = "Sblocca filtri avanzati";
 
 // Personalized Carousels
 "carousel.dailyMix" = "Il tuo Mix Quotidiano";
@@ -566,6 +571,16 @@
 "notifications.settingsSaved" = "Impostazioni salvate";
 "notifications.preferencesUpdated" = "Le tue preferenze di notifica sono state aggiornate.";
 "notifications.typesFooter" = "Scegli quali notifiche desideri ricevere";
+"notifications.newAvailability" = "Nuova disponibilità";
+"notifications.newAvailabilityDesc" = "Quando i contenuti nella tua watchlist diventano disponibili per streaming, noleggio o acquisto";
+"notifications.newRelease" = "Nuove uscite";
+"notifications.newReleaseDesc" = "Film e serie per cui hai toccato \"Avvisami\" quando escono";
+"notifications.episodeAired" = "Nuovi episodi";
+"notifications.episodeAiredDesc" = "Quando va in onda un nuovo episodio per le serie TV nelle tue liste";
+"notifications.continueWatching" = "Continua a guardare";
+"notifications.continueWatchingDesc" = "Promemoria per riprendere le serie che stavi guardando";
+"notifications.listMilestone" = "Traguardi delle liste";
+"notifications.listMilestoneDesc" = "Festeggia quando raggiungi traguardi di visione";
 "notifications.frequencyFooter" = "Numero massimo di notifiche che riceverai al giorno";
 "notifications.favoriteActorsTitle" = "I tuoi attori preferiti";
 "notifications.favoriteActorsFooter" = "Ricevi una notifica quando questi attori pubblicano nuovi contenuti";
@@ -581,3 +596,40 @@
 
 // Error Views
 "error.oops" = "Ops!";
+
+// TV Show Detail - Mark All Seen Confirmation
+"tvDetail.markAllSeenTitle" = "Segna tutti gli episodi come visto";
+"tvDetail.markAllSeenDescription" = "Questa azione si applicherà a tutti gli episodi e le stagioni della serie disponibili.";
+"tvDetail.markAllSeenQuestion" = "Vuoi continuare?";
+"tvDetail.markAllSeenConfirm" = "Sì, segna come visto";
+"tvDetail.markAllSeenCancel" = "No, annulla";
+"tvDetail.seasonSeenShort" = "vista";
+
+// Library section switcher
+"lists.section.myLists" = "Le Mie Liste";
+"lists.section.tvTracking" = "Tracking Serie TV";
+
+// TV Shows Tracking
+"tvTracking.continuing" = "Continua a guardare";
+"tvTracking.notStarted" = "Da iniziare";
+"tvTracking.upToDate" = "In pari";
+"tvTracking.emptyState" = "Nessuna serie TV trovata";
+
+// New Discovery Carousels
+"carousel.fromActor" = "Altro con %@";
+"carousel.decadeClassics" = "Classici %@";
+"carousel.moodTonight" = "%@ stasera";
+"carousel.regionSpotlight" = "In evidenza: %@";
+"carousel.topInGenre" = "Il meglio di %@";
+"carousel.hotThisWeekInGenre" = "Popolari questa settimana in %@";
+"carousel.quickWatches" = "Da vedere al volo";
+"carousel.epicWatches" = "Visioni epiche";
+"carousel.internationalPicks" = "Scelte internazionali";
+"carousel.throwback" = "Ritorno ai %@";
+"carousel.fromAIChat" = "Dalla tua chat AI";
+"carousel.comingSoon" = "In arrivo";
+"carousel.trendingTVWeek" = "Serie TV di tendenza questa settimana";
+"carousel.criticallyAcclaimedRecent" = "%@ acclamati dalla critica";
+"carousel.returningTV" = "In ritorno a breve";
+"carousel.documentaries" = "Documentari per te";
+"discovery.endOfFeed" = "Sei al passo";

@@ -64,7 +64,10 @@
 "lists.seen" = "Просмотрено";
 "lists.softLimitWarning" = "В списке \"{name}\" уже {limit} элементов. Чтобы всё было в порядке, создайте ещё один список.";
 "lists.watchlist" = "К просмотру";
-"lists.watchOn" = "СМОТРЕТЬ НА";
+"lists.watchOn" = "СМОТРЕТЬ НА %@";
+"lists.notifyMeTitle" = "Уведомить";
+"lists.notifyMeMessage" = "Мы отправим уведомление, как только '%@' станет доступно для стриминга, аренды или покупки.";
+"error.oops" = "Упс!";
 
 // Movie Detail
 "movieDetail.cast" = "В ролях";
@@ -136,7 +139,6 @@
 "clips.noClipsAvailable" = "Нет доступных клипов";
 "clips.noClipsDescription" = "Загляните позже, чтобы увидеть новые сцены из любимых фильмов и сериалов";
 "clips.noComments" = "Пока нет комментариев";
-"clips.noListsYet" = "Пока нет списков";
 "clips.reply" = "Ответить";
 "clips.replies" = "ответов";
 "clips.replyingTo" = "Ответ на";
@@ -360,6 +362,7 @@
 "profile.faqDetail" = "Найдите быстрые ответы на частые вопросы об аккаунтах, подписках и функциях.";
 "profile.privacyPolicy" = "Политика конфиденциальности";
 "profile.termsOfUse" = "Условия использования";
+"profile.terms" = "Условия";
 "profile.feedback.suggestFeature" = "Предложить функцию";
 "profile.feedback.suggestFeatureDescription" = "Расскажите, что сделает VibeWatch лучше для вас.";
 "profile.feedback.reportBug" = "Сообщить об ошибке";
@@ -398,6 +401,13 @@
 "actor.biography.showMore" = "Показать больше";
 "actor.biography.showLess" = "Свернуть";
 
+"actor.birthday" = "Born: %@";
+"actor.birthday.line" = "%@ (%@ years old)";
+"actor.known_for" = "Known For";
+"actor.search.placeholder" = "Поиск фильмографии…";
+"actor.search.noResults" = "Нет результатов для";
+"actor.filmography.empty" = "Кредиты не найдены.";
+
 "clips.search.placeholder" = "Поиск клипов, персонажей или цитат";
 "clips.search.emptyTitle" = "Найдите любимые клипы";
 "clips.search.emptySubtitle" = "Ищите фильмы, сериалы, персонажей или цитаты, чтобы найти подходящие клипы и рекомендации.";
@@ -405,6 +415,10 @@
 "clips.search.showcaseSubtitle" = "Используйте поиск выше, чтобы найти клипы из любимых фильмов и сериалов";
 "clips.search.matched" = "Совпадения";
 "clips.search.recommended" = "Рекомендовано";
+"clips.search.quotes" = "Цитаты";
+"clips.search.characters" = "Персонажи";
+"clips.search.scenes" = "Сцены";
+"clips.search.popular" = "Популярное";
 
 // Redeem Code
 "settings.redeemCode" = "Активировать код";
@@ -506,6 +520,66 @@
 "auth.resendEmail" = "Повторная отправка электронной почты";
 "auth.changeEmail" = "Изменить электронную почту";
 "auth.verificationPending" = "Все еще жду проверки...";
+"gamification.levelUp" = "НОВЫЙ УРОВЕНЬ!";
+"gamification.level" = "Уровень";
+"gamification.rankAchieved" = "Достигнут ранг \"%@\"";
+"gamification.xp.base" = "база";
+"gamification.xp.proBoost" = "Pro-бонус";
+"gamification.xp.streakBonus" = "Бонус за серию";
+"gamification.xp.total" = "Всего XP";
+"gamification.challengeComplete" = "Испытание выполнено!";
+"notifications.title" = "Уведомления";
+"notifications.status" = "Статус";
+"notifications.enabled" = "Уведомления включены";
+"notifications.disabled" = "Уведомления отключены";
+"notifications.enableDescription" = "Включите уведомления, чтобы получать персональные оповещения о новых эпизодах, релизах и контенте, который вам понравится.";
+"notifications.enableButton" = "Включить уведомления";
+"notifications.types" = "Типы уведомлений";
+"notifications.newEpisodes" = "Новые эпизоды";
+"notifications.newEpisodesDesc" = "Получайте уведомления, когда становятся доступны новые эпизоды сериалов, которые вы смотрите";
+"notifications.personalizedReleases" = "Персональные релизы";
+"notifications.personalizedReleasesDesc" = "Новые фильмы и сериалы, соответствующие вашему вкусу";
+"notifications.favoriteActors" = "Любимые актёры и режиссёры";
+"notifications.favoriteActorsDesc" = "Новый контент от людей, которые вам нравятся";
+"notifications.similarContent" = "Похожий контент";
+"notifications.similarContentDesc" = "Рекомендации на основе того, что вам понравилось";
+"notifications.watchlistAlerts" = "Оповещения списка просмотра";
+"notifications.watchlistAlertsDesc" = "Когда элементы из вашего списка просмотра становятся доступны";
+"notifications.milestones" = "Этапы и достижения";
+"notifications.milestonesDesc" = "Отмечайте свои серии просмотров и достижения";
+"notifications.frequency" = "Частота";
+"notifications.dailyLimit" = "Дневной лимит";
+"notifications.perDay" = "в день";
+"notifications.unlimited" = "Без ограничений";
+"notifications.quietHours" = "Тихие часы";
+"notifications.startTime" = "Время начала";
+"notifications.endTime" = "Время окончания";
+"notifications.quietHoursDesc" = "В эти часы уведомления отправляться не будут";
+"notifications.proFeatures" = "Функции Pro";
+"notifications.customActorAlerts" = "Настраиваемые оповещения об актёрах";
+"notifications.customGenreAlerts" = "Настраиваемые оповещения о жанрах";
+"notifications.proFeaturesDesc" = "Получайте оповещения о выбранных актёрах и жанрах";
+"notifications.save" = "Сохранить";
+"notifications.settingsSaved" = "Настройки сохранены";
+"notifications.preferencesUpdated" = "Ваши настройки уведомлений обновлены.";
+"notifications.typesFooter" = "Выберите, какие уведомления хотите получать";
+"notifications.newAvailability" = "Новая доступность";
+"notifications.newAvailabilityDesc" = "Когда элементы из вашего списка просмотра становятся доступны для просмотра, аренды или покупки";
+"notifications.newRelease" = "Новые релизы";
+"notifications.newReleaseDesc" = "Фильмы и сериалы, для которых вы нажали \"Уведомить меня\", когда они выходят";
+"notifications.episodeAired" = "Новые эпизоды";
+"notifications.episodeAiredDesc" = "Когда выходит новый эпизод сериала из ваших списков";
+"notifications.continueWatching" = "Продолжить просмотр";
+"notifications.continueWatchingDesc" = "Напоминания продолжить сериалы, которые вы смотрели";
+"notifications.listMilestone" = "Этапы списков";
+"notifications.listMilestoneDesc" = "Отмечайте достижение этапов просмотра";
+"notifications.frequencyFooter" = "Максимальное количество уведомлений в день";
+"notifications.favoriteActorsTitle" = "Ваши любимые актёры";
+"notifications.favoriteActorsFooter" = "Получайте уведомления, когда у этих актёров появляется новый контент";
+"notifications.favoriteGenresTitle" = "Ваши любимые жанры";
+"notifications.favoriteGenresFooter" = "Получайте уведомления о новых релизах в этих жанрах";
+"notifications.fromPreferences" = "Из ваших предпочтений";
+"lists.notifyMe" = "УВЕДОМИТЬ";
 
 "movieDetail.whyForMe" = "Why for me?";
 
@@ -513,3 +587,38 @@
 
 "movieDetail.goodFitTitle" = "Why %@ is a good fit for me?";
 "movieDetail.goodFitSubtitle" = "A quick, personalized take based on your taste.";
+
+// TV Show Detail - Mark All Seen Confirmation
+"tvDetail.markAllSeenTitle" = "Mark all episodes as seen";
+"tvDetail.markAllSeenDescription" = "This action will apply to all episodes and seasons of the series available.";
+"tvDetail.markAllSeenQuestion" = "Do you want to continue?";
+"tvDetail.markAllSeenConfirm" = "Yes, mark as seen";
+"tvDetail.markAllSeenCancel" = "No, cancel";
+"tvDetail.seasonSeenShort" = "seen";
+
+// Library section switcher
+"lists.section.myLists" = "My Lists";
+"lists.section.tvTracking" = "TV Shows Tracking";
+
+// TV Shows Tracking
+"tvTracking.continuing" = "Continue Watching";
+"tvTracking.notStarted" = "Not Started";
+"tvTracking.upToDate" = "Up to Date";
+"tvTracking.emptyState" = "No TV shows found";
+"carousel.fromActor" = "Больше с %@";
+"carousel.decadeClassics" = "Классика %@";
+"carousel.moodTonight" = "%@ на вечер";
+"carousel.regionSpotlight" = "%@ в центре внимания";
+"carousel.topInGenre" = "Лучшее в %@";
+"carousel.hotThisWeekInGenre" = "Популярное на этой неделе в %@";
+"carousel.quickWatches" = "Быстрый просмотр";
+"carousel.epicWatches" = "Эпичные просмотры";
+"carousel.internationalPicks" = "Международная подборка";
+"carousel.throwback" = "Ностальгия: %@";
+"carousel.fromAIChat" = "Из вашего AI-чата";
+"carousel.comingSoon" = "Скоро";
+"carousel.trendingTVWeek" = "Популярные сериалы недели";
+"carousel.criticallyAcclaimedRecent" = "Признанные критиками %@";
+"carousel.returningTV" = "Скоро вернутся";
+"carousel.documentaries" = "Документальные фильмы для вас";
+"discovery.endOfFeed" = "Вы всё посмотрели";

@@ -439,6 +439,13 @@
 "actor.biography.showMore" = "Vis mer";
 "actor.biography.showLess" = "Vis mindre";
 
+"actor.birthday" = "Born: %@";
+"actor.birthday.line" = "%@ (%@ years old)";
+"actor.known_for" = "Known For";
+"actor.search.placeholder" = "Søk i filmografi…";
+"actor.search.noResults" = "Ingen resultater for";
+"actor.filmography.empty" = "Ingen kreditter funnet.";
+
 // Global Discovery Filters
 "filters.mediaType" = "Medietype";
 "filters.movies" = "Filmer";
@@ -568,6 +575,16 @@
 "notifications.settingsSaved" = "Innstillinger lagret";
 "notifications.preferencesUpdated" = "Varselinnstillingene dine er oppdatert.";
 "notifications.typesFooter" = "Velg hvilke varsler du vil motta";
+"notifications.newAvailability" = "Ny tilgjengelighet";
+"notifications.newAvailabilityDesc" = "Når titler i overvåkningslisten din blir tilgjengelige for strømming, leie eller kjøp";
+"notifications.newRelease" = "Nye utgivelser";
+"notifications.newReleaseDesc" = "Filmer og serier du trykket \"Varsle meg\" på når de kommer ut";
+"notifications.episodeAired" = "Nye episoder";
+"notifications.episodeAiredDesc" = "Når en ny episode sendes for TV-serier i listene dine";
+"notifications.continueWatching" = "Fortsett å se";
+"notifications.continueWatchingDesc" = "Påminnelser om å fortsette serier du har sett på";
+"notifications.listMilestone" = "Listemilepæler";
+"notifications.listMilestoneDesc" = "Feir når du når milepæler for seing";
 "notifications.frequencyFooter" = "Maks antall varsler du får per dag";
 "notifications.favoriteActorsTitle" = "Dine favorittskuespillere";
 "notifications.favoriteActorsFooter" = "Få varsel når disse får nytt innhold";
@@ -583,3 +600,38 @@
 
 // Error Views
 "error.oops" = "Oops!";
+
+// TV Show Detail - Mark All Seen Confirmation
+"tvDetail.markAllSeenTitle" = "Mark all episodes as seen";
+"tvDetail.markAllSeenDescription" = "This action will apply to all episodes and seasons of the series available.";
+"tvDetail.markAllSeenQuestion" = "Do you want to continue?";
+"tvDetail.markAllSeenConfirm" = "Yes, mark as seen";
+"tvDetail.markAllSeenCancel" = "No, cancel";
+"tvDetail.seasonSeenShort" = "seen";
+
+// Library section switcher
+"lists.section.myLists" = "My Lists";
+"lists.section.tvTracking" = "TV Shows Tracking";
+
+// TV Shows Tracking
+"tvTracking.continuing" = "Continue Watching";
+"tvTracking.notStarted" = "Not Started";
+"tvTracking.upToDate" = "Up to Date";
+"tvTracking.emptyState" = "No TV shows found";
+"carousel.fromActor" = "Mer fra %@";
+"carousel.decadeClassics" = "%@-klassikere";
+"carousel.moodTonight" = "%@ i kveld";
+"carousel.regionSpotlight" = "%@ i fokus";
+"carousel.topInGenre" = "Topp i %@";
+"carousel.hotThisWeekInGenre" = "Populært denne uken i %@";
+"carousel.quickWatches" = "Korte valg";
+"carousel.epicWatches" = "Episke valg";
+"carousel.internationalPicks" = "Internasjonale valg";
+"carousel.throwback" = "Tilbakeblikk %@";
+"carousel.fromAIChat" = "Fra AI-chatten din";
+"carousel.comingSoon" = "Kommer snart";
+"carousel.trendingTVWeek" = "Populær TV denne uken";
+"carousel.criticallyAcclaimedRecent" = "Kritikerroste %@";
+"carousel.returningTV" = "Kommer snart tilbake";
+"carousel.documentaries" = "Dokumentarer for deg";
+"discovery.endOfFeed" = "Du er helt à jour";

@@ -12,39 +12,32 @@ class AppDelegate: NSObject, UIApplicationDelegate, @MainActor UNUserNotificatio
         DiscoveryCarouselBackgroundRefresher.shared.scheduleNextRefresh()
         CerebrasBackendBackgroundScheduler.shared.register()
         CerebrasBackendBackgroundScheduler.shared.scheduleNextRun()
-        NotificationBackgroundTask.shared.register()
-        NotificationBackgroundTask.shared.scheduleNextRun()
         UserPreferenceManager.shared.setSyncEngine(SyncEngine.shared)
 
         // Initialize Firebase
-        FirebaseApp.configure() // Call FirebaseApp.configure() here
+        FirebaseApp.configure()
 
         // Initialize Google Mobile Ads SDK
         MobileAds.shared.start(completionHandler: nil)
-        
+
         // Initialize LocalizationManager early to ensure translations are loaded before UI
         _ = LocalizationManager.shared
         Logger.info("[AppDelegate] LocalizationManager initialized: \(LocalizationManager.shared.currentLanguage.name)")
-        
-        // Configure Firebase Messaging and User Notifications
+
+        // Configure Firebase Messaging — AppDelegate is the sole UNUserNotificationCenterDelegate
         Messaging.messaging().delegate = self
         UNUserNotificationCenter.current().delegate = self
-        
-        let authOptions: UNAuthorizationOptions = [.alert, .badge, .sound]
-        UNUserNotificationCenter.current().requestAuthorization(
-            options: authOptions,
-            completionHandler: { _, _ in }
-        )
-        
+
+        // Register for APNs so FCM can obtain a token; authorization prompt is shown
+        // only when the user enables notifications from ProfileView.
         application.registerForRemoteNotifications()
-        
+
         return true
     }
 
     func applicationDidEnterBackground(_ application: UIApplication) {
         DiscoveryCarouselBackgroundRefresher.shared.scheduleNextRefresh()
         CerebrasBackendBackgroundScheduler.shared.scheduleNextRun()
-        NotificationBackgroundTask.shared.scheduleNextRun()
     }
     
     // Handle URL schemes (for OAuth callbacks)
@@ -94,7 +87,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, @MainActor UNUserNotificatio
         Logger.debug("[AppDelegate] willPresent notification userInfo: \(userInfo)")
 
         // Change this to your preferred presentation option
-        completionHandler([[.banner, .sound]])
+        completionHandler([[.banner, .sound, .badge, .list]])
     }
     
     func userNotificationCenter(_ center: UNUserNotificationCenter,
@@ -132,5 +125,20 @@ class AppDelegate: NSObject, UIApplicationDelegate, @MainActor UNUserNotificatio
     
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
         Logger.error("[AppDelegate] Unable to register for remote notifications: \(error.localizedDescription)")
+    }
+
+    func application(
+        _ application: UIApplication,
+        didReceiveRemoteNotification userInfo: [AnyHashable: Any],
+        fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
+    ) {
+        Logger.debug("[AppDelegate] didReceiveRemoteNotification userInfo: \(userInfo)")
+
+        Task {
+            if let userId = AuthService.shared.currentUser?.id {
+                await GamificationService.shared.syncFromSupabase(userId: userId)
+            }
+            completionHandler(.newData)
+        }
     }
 }

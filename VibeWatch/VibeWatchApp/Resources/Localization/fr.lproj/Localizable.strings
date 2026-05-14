@@ -439,6 +439,13 @@
 "actor.biography.showMore" = "Afficher plus";
 "actor.biography.showLess" = "Afficher moins";
 
+"actor.birthday" = "Born: %@";
+"actor.birthday.line" = "%@ (%@ years old)";
+"actor.known_for" = "Known For";
+"actor.search.placeholder" = "Rechercher la filmographie…";
+"actor.search.noResults" = "Aucun résultat pour";
+"actor.filmography.empty" = "Aucun crédit trouvé.";
+
 // Global Discovery Filters
 "filters.mediaType" = "Type de média";
 "filters.movies" = "Films";
@@ -568,6 +575,16 @@
 "notifications.settingsSaved" = "Paramètres enregistrés";
 "notifications.preferencesUpdated" = "Vos préférences de notifications ont été mises à jour.";
 "notifications.typesFooter" = "Choisissez les notifications que vous souhaitez recevoir";
+"notifications.newAvailability" = "Nouvelle disponibilité";
+"notifications.newAvailabilityDesc" = "Quand les titres de votre watchlist deviennent disponibles en streaming, à la location ou à l'achat";
+"notifications.newRelease" = "Nouvelles sorties";
+"notifications.newReleaseDesc" = "Films et séries pour lesquels vous avez touché \"Me prévenir\" lorsqu'ils sortent";
+"notifications.episodeAired" = "Nouveaux épisodes";
+"notifications.episodeAiredDesc" = "Lorsqu'un nouvel épisode est diffusé pour les séries TV de vos listes";
+"notifications.continueWatching" = "Continuer à regarder";
+"notifications.continueWatchingDesc" = "Rappels pour reprendre les séries que vous regardiez";
+"notifications.listMilestone" = "Étapes de listes";
+"notifications.listMilestoneDesc" = "Célébrez vos étapes de visionnage";
 "notifications.frequencyFooter" = "Nombre maximum de notifications par jour";
 "notifications.favoriteActorsTitle" = "Vos acteurs favoris";
 "notifications.favoriteActorsFooter" = "Recevez une alerte quand ces acteurs ont du nouveau contenu";
@@ -583,3 +600,38 @@
 
 // Error Views
 "error.oops" = "Oups !";
+
+// TV Show Detail - Mark All Seen Confirmation
+"tvDetail.markAllSeenTitle" = "Mark all episodes as seen";
+"tvDetail.markAllSeenDescription" = "This action will apply to all episodes and seasons of the series available.";
+"tvDetail.markAllSeenQuestion" = "Do you want to continue?";
+"tvDetail.markAllSeenConfirm" = "Yes, mark as seen";
+"tvDetail.markAllSeenCancel" = "No, cancel";
+"tvDetail.seasonSeenShort" = "seen";
+
+// Library section switcher
+"lists.section.myLists" = "My Lists";
+"lists.section.tvTracking" = "TV Shows Tracking";
+
+// TV Shows Tracking
+"tvTracking.continuing" = "Continue Watching";
+"tvTracking.notStarted" = "Not Started";
+"tvTracking.upToDate" = "Up to Date";
+"tvTracking.emptyState" = "No TV shows found";
+"carousel.fromActor" = "Plus avec %@";
+"carousel.decadeClassics" = "Classiques %@";
+"carousel.moodTonight" = "%@ ce soir";
+"carousel.regionSpotlight" = "Gros plan sur %@";
+"carousel.topInGenre" = "Top en %@";
+"carousel.hotThisWeekInGenre" = "Tendance cette semaine en %@";
+"carousel.quickWatches" = "À regarder vite";
+"carousel.epicWatches" = "À regarder en grand";
+"carousel.internationalPicks" = "Sélections internationales";
+"carousel.throwback" = "Retour vers %@";
+"carousel.fromAIChat" = "Depuis votre chat IA";
+"carousel.comingSoon" = "Bientôt disponible";
+"carousel.trendingTVWeek" = "Séries TV tendance cette semaine";
+"carousel.criticallyAcclaimedRecent" = "%@ salués par la critique";
+"carousel.returningTV" = "Bientôt de retour";
+"carousel.documentaries" = "Documentaires pour vous";
+"discovery.endOfFeed" = "Vous êtes à jour";

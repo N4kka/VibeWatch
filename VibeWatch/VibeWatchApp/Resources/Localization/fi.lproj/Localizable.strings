@@ -439,6 +439,13 @@
 "actor.biography.showMore" = "Näytä lisää";
 "actor.biography.showLess" = "Näytä vähemmän";
 
+"actor.birthday" = "Born: %@";
+"actor.birthday.line" = "%@ (%@ years old)";
+"actor.known_for" = "Known For";
+"actor.search.placeholder" = "Hae filmografiaa…";
+"actor.search.noResults" = "Ei tuloksia haulle";
+"actor.filmography.empty" = "Ei löydettyjä elokuvia.";
+
 // Global Discovery Filters
 "filters.mediaType" = "Mediatyyppi";
 "filters.movies" = "Elokuvat";
@@ -568,6 +575,16 @@
 "notifications.settingsSaved" = "Asetukset tallennettu";
 "notifications.preferencesUpdated" = "Ilmoitusasetuksesi on päivitetty.";
 "notifications.typesFooter" = "Valitse, mistä ilmoituksia haluat";
+"notifications.newAvailability" = "Uusi saatavuus";
+"notifications.newAvailabilityDesc" = "Kun katselulistasi kohteet tulevat saataville suoratoistoon, vuokrattavaksi tai ostettavaksi";
+"notifications.newRelease" = "Uudet julkaisut";
+"notifications.newReleaseDesc" = "Elokuvat ja sarjat, joissa napautit \"Ilmoita minulle\", kun ne julkaistaan";
+"notifications.episodeAired" = "Uudet jaksot";
+"notifications.episodeAiredDesc" = "Kun listojesi TV-sarjoista esitetään uusi jakso";
+"notifications.continueWatching" = "Jatka katselua";
+"notifications.continueWatchingDesc" = "Muistutukset jatkaa sarjoja, joita olet katsonut";
+"notifications.listMilestone" = "Listojen virstanpylväät";
+"notifications.listMilestoneDesc" = "Juhlista katselun virstanpylväitä";
 "notifications.frequencyFooter" = "Ilmoitusten enimmäismäärä päivässä";
 "notifications.favoriteActorsTitle" = "Suosikkinäyttelijäsi";
 "notifications.favoriteActorsFooter" = "Saat ilmoituksen, kun näillä näyttelijöillä on uutta sisältöä";
@@ -583,3 +600,38 @@
 
 // Error Views
 "error.oops" = "Hups!";
+
+// TV Show Detail - Mark All Seen Confirmation
+"tvDetail.markAllSeenTitle" = "Mark all episodes as seen";
+"tvDetail.markAllSeenDescription" = "This action will apply to all episodes and seasons of the series available.";
+"tvDetail.markAllSeenQuestion" = "Do you want to continue?";
+"tvDetail.markAllSeenConfirm" = "Yes, mark as seen";
+"tvDetail.markAllSeenCancel" = "No, cancel";
+"tvDetail.seasonSeenShort" = "seen";
+
+// Library section switcher
+"lists.section.myLists" = "My Lists";
+"lists.section.tvTracking" = "TV Shows Tracking";
+
+// TV Shows Tracking
+"tvTracking.continuing" = "Continue Watching";
+"tvTracking.notStarted" = "Not Started";
+"tvTracking.upToDate" = "Up to Date";
+"tvTracking.emptyState" = "No TV shows found";
+"carousel.fromActor" = "Lisää: %@";
+"carousel.decadeClassics" = "%@-klassikot";
+"carousel.moodTonight" = "%@ tänä iltana";
+"carousel.regionSpotlight" = "%@ valokeilassa";
+"carousel.topInGenre" = "Parhaat kategoriassa %@";
+"carousel.hotThisWeekInGenre" = "Tämän viikon kuumat kategoriassa %@";
+"carousel.quickWatches" = "Nopeat katsottavat";
+"carousel.epicWatches" = "Eeppiset katsottavat";
+"carousel.internationalPicks" = "Kansainväliset poiminnat";
+"carousel.throwback" = "Takaisin: %@";
+"carousel.fromAIChat" = "AI-chatistasi";
+"carousel.comingSoon" = "Tulossa pian";
+"carousel.trendingTVWeek" = "Tämän viikon trendisarjat";
+"carousel.criticallyAcclaimedRecent" = "Kriitikoiden ylistämät %@";
+"carousel.returningTV" = "Palaavat pian";
+"carousel.documentaries" = "Dokumentteja sinulle";
+"discovery.endOfFeed" = "Olet ajan tasalla";

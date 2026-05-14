@@ -17,7 +17,6 @@ struct MovieDetailView: View {
     @State private var isPreparingShare = false
     @State private var showReportBug = false
     @State private var selectedActor: Cast?
-    @State private var filmographySelection: FilmographySelection?
     @State private var showWhyForMeSheet = false
     @State private var showAIPaywall = false
     
@@ -84,7 +83,7 @@ struct MovieDetailView: View {
                             )
 
                             WatchNowSection(
-                                providers: viewModel.watchProviders,
+                                providerState: viewModel.watchProviderState,
                                 mediaType: .movie,
                                 title: movie.title,
                                 year: movie.year,
@@ -148,17 +147,13 @@ struct MovieDetailView: View {
                     shareItems = []
                 }
         }
-        .sheet(item: $selectedActor) { actor in
+        .navigationDestination(item: $selectedActor) { actor in
             ActorDetailView(
                 actorId: actor.id,
                 initialName: actor.name,
-                initialProfileURL: actor.profileURL
-            ) { credit in
-                handleFilmographySelection(credit)
-            }
-            .presentationDetents([.medium, .large])
-            .presentationDragIndicator(.visible)
-            .presentationBackground(Color.theme.background)
+                initialProfileURL: actor.profileURL,
+                previousTitle: viewModel.movie?.title ?? ""
+            )
         }
         .fullScreenCover(isPresented: $showAuthGate) {
             AuthenticationGateView(isPresented: $showAuthGate)
@@ -183,14 +178,6 @@ struct MovieDetailView: View {
                 paywallType: .aiQuota,
                 source: "why_for_me_quota"
             )
-        }
-        .fullScreenCover(item: $filmographySelection) { selection in
-            switch selection.mediaType {
-            case .movie:
-                MovieDetailView(movieId: selection.mediaId)
-            case .tv:
-                TVShowDetailView(tvShowId: selection.mediaId)
-            }
         }
         .overlay {
             if isPreparingShare {
@@ -352,10 +339,6 @@ struct MovieDetailView: View {
         await MainActor.run { shareItems = items }
     }
     
-    private func handleFilmographySelection(_ credit: PersonCredit) {
-        selectedActor = nil
-        filmographySelection = FilmographySelection(mediaType: credit.mediaType, mediaId: credit.id)
-    }
 }
 
 struct MovieDetailHeaderView: View {
@@ -622,7 +605,7 @@ struct TrailerSection: View {
 }
 
 struct WatchNowSection: View {
-    let providers: CountryProviders?
+    let providerState: WatchProviderLoadState
     let mediaType: MediaType
     let title: String
     let year: String?
@@ -633,9 +616,24 @@ struct WatchNowSection: View {
     @StateObject private var listManager = ListManager.shared
     @State private var showNotifyMeAlert = false
 
+    private var providers: CountryProviders? {
+        providerState.providers
+    }
+
+    private func visibleProviders(_ providers: [Provider]?, justWatchLink: String?) -> [Provider] {
+        (providers ?? []).filter { provider in
+            guard provider.hasUsableLogo else { return false }
+            let hasLink = provider.externalLink != nil || justWatchLink != nil
+            if hasLink { return true }
+            return PlatformDeepLinkHelper.hasPlatformHomepage(for: provider)
+        }
+    }
+
     private var hasAnyProvider: Bool {
-        guard let p = providers else { return false }
-        return (p.flatrate?.isEmpty == false) || (p.rent?.isEmpty == false) || (p.buy?.isEmpty == false)
+        guard let providers else { return false }
+        return !visibleProviders(providers.flatrate, justWatchLink: providers.link).isEmpty ||
+        !visibleProviders(providers.rent, justWatchLink: providers.link).isEmpty ||
+        !visibleProviders(providers.buy, justWatchLink: providers.link).isEmpty
     }
 
     private var justWatchURL: URL? {
@@ -654,17 +652,33 @@ struct WatchNowSection: View {
                 .font(.system(size: 20, weight: .bold))
                 .foregroundColor(.theme.textPrimary)
             
-            if hasAnyProvider {
-                if let flatrate = providers?.flatrate, !flatrate.isEmpty {
-                    ProviderGroup(title: "platforms.streaming".localized, providers: flatrate, justWatchLink: providers?.link, mediaTitle: title)
+            if providerState.isLoading {
+                HStack {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .theme.accentOrange))
+                        .frame(maxWidth: .infinity)
                 }
-                
-                if let rent = providers?.rent, !rent.isEmpty {
-                    ProviderGroup(title: "platforms.rent".localized, providers: rent, justWatchLink: providers?.link, mediaTitle: title)
-                }
-                
-                if let buy = providers?.buy, !buy.isEmpty {
-                    ProviderGroup(title: "platforms.buy".localized, providers: buy, justWatchLink: providers?.link, mediaTitle: title)
+                .frame(height: 72)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.white.opacity(0.05))
+                )
+            } else if hasAnyProvider {
+                if let providers {
+                    let flatrate = visibleProviders(providers.flatrate, justWatchLink: providers.link)
+                    if !flatrate.isEmpty {
+                        ProviderGroup(title: "platforms.streaming".localized, providers: flatrate, justWatchLink: providers.link, mediaTitle: title)
+                    }
+
+                    let rent = visibleProviders(providers.rent, justWatchLink: providers.link)
+                    if !rent.isEmpty {
+                        ProviderGroup(title: "platforms.rent".localized, providers: rent, justWatchLink: providers.link, mediaTitle: title)
+                    }
+
+                    let buy = visibleProviders(providers.buy, justWatchLink: providers.link)
+                    if !buy.isEmpty {
+                        ProviderGroup(title: "platforms.buy".localized, providers: buy, justWatchLink: providers.link, mediaTitle: title)
+                    }
                 }
 
                 if let url = justWatchURL {
@@ -746,6 +760,7 @@ struct WatchNowSection: View {
                 if !listManager.isInList(listId: listManager.watchlist.id, mediaId: movie.id, mediaType: mediaType) {
                     try? await listManager.addToList(listId: listManager.watchlist.id, movie: movie, mediaType: mediaType)
                 }
+                try? await LiveNotificationRepository.shared.toggleAlert(mediaId: movie.id, mediaType: mediaType, enabled: true)
             }
         }
     }

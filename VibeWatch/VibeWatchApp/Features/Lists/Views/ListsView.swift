@@ -7,17 +7,22 @@ struct ListsView: View {
     @ObservedObject var localizationManager = LocalizationManager.shared
     @EnvironmentObject var quotaManager: DailyQuotaManager
     @EnvironmentObject var appState: AppState
+    @State private var selectedSection: LibrarySection = .myLists
     @State private var selectedFilter: MediaFilter = .all
     @State private var selectedListType: ListViewType = .watchlist
     @State private var showCreateList = false
     @State private var showAuthGate = false
     @State private var showFilters = false
+    @State private var showSearch = false
+    @State private var showProfile = false
     @State private var refreshID = UUID()
     @State private var filters = GlobalDiscoveryFilters()
-    
+
+    @StateObject private var searchViewModel = SearchViewModel()
+
     @State private var filterRefreshTrigger = false
     @State private var showingPaywall = false
-    @State private var itemsLimit = 50 // State for pagination
+    @State private var itemsLimit = 50
     @State private var searchText = ""
     
     private var mediaFilterBinding: Binding<MediaFilter> {
@@ -45,25 +50,25 @@ struct ListsView: View {
             
             VStack(spacing: 0) {
                 OfflineBanner()
-                
-                headerView
-                
-                ListTypeSwitcher(selectedType: $selectedListType)
-                    .padding(.bottom, 16)
-                
-                searchField
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 16)
-                
-                combinedFiltersRow
-                
-                if listManager.isLoadingInitial {
-                    ProgressView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if currentLists.isEmpty {
-                    emptyStateView
+
+                AppHeaderView(
+                    onSearchTap: { showSearch = true },
+                    onFilterTap: {
+                        withAnimation { showFilters = true }
+                    },
+                    onProfileTap: { showProfile = true },
+                    avatarURL: appState.currentUser?.avatarURL,
+                    isProUser: quotaManager.isProUser,
+                    activeFilterCount: filters.activeFilterCount
+                )
+
+                LibrarySectionSwitcher(selectedSection: $selectedSection)
+                    .padding(.bottom, 8)
+
+                if selectedSection == .myLists {
+                    myListsContent
                 } else {
-                    contentView
+                    TVShowsTrackingView()
                 }
             }
         }
@@ -80,6 +85,12 @@ struct ListsView: View {
                 .environmentObject(quotaManager)
             }
         }
+        .fullScreenCover(isPresented: $showSearch) {
+            SearchView(viewModel: searchViewModel)
+        }
+        .sheet(isPresented: $showProfile) {
+            ProfileView()
+        }
         .task {
             await viewModel.loadLists()
             
@@ -87,7 +98,12 @@ struct ListsView: View {
             AnalyticsService.shared.logScreenView(screenName: "Lists", screenClass: "ListsView")
         }
         .onChange(of: localizationManager.localeDidChange) {_, _ in
-            refreshID = UUID()
+            Task { @MainActor in
+                // Purge stale-locale detail cache so the next TMDB fetch returns
+                // titles and overviews in the new language.
+                await DetailCacheService.shared.clearAll()
+                refreshID = UUID()
+            }
         }
         .onChange(of: filters.streamingPlatforms) { _, platforms in
             if !platforms.isEmpty {
@@ -126,34 +142,48 @@ struct ListsView: View {
             itemsLimit = 50
         }
     }
-    private var headerView: some View {
-        HStack {
-            Text("lists.myLists".localized)
-                .font(.system(size: 32, weight: .bold))
-                .foregroundColor(.theme.textPrimary)
-            
-            Spacer()
+    private var myListsContent: some View {
+        VStack(spacing: 0) {
+            HStack(alignment: .center, spacing: 0) {
+                ListTypeSwitcher(selectedType: $selectedListType)
+                    .padding(.leading, 20)
 
-            ProUpgradeIconButton(isProUser: quotaManager.isProUser, source: "lists_top_right")
-            
-            Button {
-                guard appState.isAuthenticated else {
-                    showAuthGate = true
-                    return
+                Spacer()
+
+                Button {
+                    guard appState.isAuthenticated else {
+                        showAuthGate = true
+                        return
+                    }
+                    if listManager.canCreateList() {
+                        showCreateList = true
+                    } else {
+                        showingPaywall = true
+                    }
+                } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 26))
+                        .foregroundColor(.theme.accentOrange)
                 }
-                if listManager.canCreateList() {
-                    showCreateList = true
-                } else {
-                    showingPaywall = true
-                }
-            } label: {
-                Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 28))
-                    .foregroundColor(.theme.accentOrange)
+                .padding(.trailing, 20)
+            }
+            .padding(.bottom, 16)
+
+            searchField
+                .padding(.horizontal, 20)
+                .padding(.bottom, 16)
+
+            combinedFiltersRow
+
+            if listManager.isLoadingInitial {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if currentLists.isEmpty {
+                emptyStateView
+            } else {
+                contentView
             }
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 16)
     }
     
     private var searchField: some View {
@@ -257,27 +287,7 @@ struct ListsView: View {
                                     try? await listManager.removeFromList(listId: currentList.id, itemId: item.id)
                                 }
                                 
-                                let movie = Movie(
-                                    id: item.mediaId,
-                                    title: item.title,
-                                    overview: "",
-                                    posterPath: item.posterPath,
-                                    backdropPath: nil,
-                                    releaseDate: nil,
-                                    voteAverage: 0.0,
-                                    voteCount: 0,
-                                    genreIds: nil,
-                                    genres: nil,
-                                    adult: false,
-                                    originalLanguage: "",
-                                    popularity: 0.0,
-                                    runtime: nil,
-                                    status: nil,
-                                    tagline: nil,
-                                    productionCountries: nil,
-                                    imdbId: nil
-                                )
-                                try await listManager.addToList(listId: listManager.seenList.id, movie: movie, mediaType: item.mediaType)
+                                try await listManager.addToList(listId: listManager.seenList.id, movie: item.asMovie(), mediaType: item.mediaType)
                             }
                         },
                         onDelete: {
@@ -411,7 +421,7 @@ struct ListsView: View {
         // Apply search filter
         if !searchText.isEmpty {
             lists = lists.filter { list in
-                let nameMatch = list.name.range(of: searchText, options: .caseInsensitive) != nil
+                let nameMatch = list.displayName.range(of: searchText, options: .caseInsensitive) != nil
                 let itemMatch = list.items.contains { $0.title.range(of: searchText, options: .caseInsensitive) != nil }
                 return nameMatch || itemMatch
             }
@@ -547,12 +557,16 @@ struct MediaItemRow: View {
     @State private var providerLink: String?
     @State private var navigateToDetail = false
     @State private var isLoadingProviders = false
+    @State private var providerLookupCompleted = false
     @State private var showNotifyMeAlert = false
     @State private var offset: CGFloat = 0
     @State private var isSwiping = false
     @State private var cardWidth: CGFloat = 0
-    
-    private let tmdbService = TMDBService.shared
+    @State private var fallbackOverview: String?
+    @State private var fallbackSeasonCount: Int?
+    @State private var fallbackDuration: Int?
+    @State private var localizedTitle: String?
+    @State private var localizedOverview: String?
     
     private var deleteThreshold: CGFloat {
         // Delete when swiped 75% of the card width
@@ -608,44 +622,40 @@ struct MediaItemRow: View {
                                 .font(.system(size: 30))
                                 .foregroundColor(.theme.textSecondary)
                         }
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .clipShape(RoundedRectangle(cornerRadius: 12)) 
                 }
                 
                 // Content - right side
                 VStack(alignment: .leading, spacing: 8) {
                     // Title
-                    Text(item.title)
+                    Text(localizedTitle ?? item.title)
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(.theme.textPrimary)
                         .lineLimit(2)
                     
-                    // Metadata - use cached item data directly for fast display
-                    HStack(spacing: 8) {
-                        if let releaseDate = item.releaseDate, releaseDate.count >= 4 {
-                            Text(String(releaseDate.prefix(4)))
-                                .font(.system(size: 13))
-                                .foregroundColor(.theme.textSecondary)
-                        }
+                    let subtitleComponents = item.subtitleComponents(seasonCount: fallbackSeasonCount, duration: fallbackDuration)
+                    if !subtitleComponents.isEmpty {
+                        HStack(spacing: 4) {
+                            ForEach(Array(subtitleComponents.enumerated()), id: \.offset) { index, component in
+                                if index > 0 {
+                                    Text("|")
+                                }
 
-                        if let voteAverage = item.voteAverage, voteAverage > 0 {
-                            HStack(spacing: 4) {
-                                Image(systemName: "star.fill")
-                                    .font(.system(size: 10))
-                                    .foregroundColor(.yellow)
-                                Text(String(format: "%.1f", voteAverage))
-                                    .font(.system(size: 13, weight: .medium))
-                                    .foregroundColor(.theme.textPrimary)
+                                if component.showsRatingStar {
+                                    Image(systemName: "star.fill")
+                                        .font(.system(size: 11))
+                                        .foregroundColor(Color.yellow)
+                                }
+
+                                Text(component.text)
                             }
                         }
-
-                        if item.mediaType == .movie, let runtime = item.runtime, runtime > 0 {
-                            Text("| \(runtime / 60)h \(runtime % 60)m")
-                                .font(.system(size: 13))
-                                .foregroundColor(.theme.textSecondary)
-                        }
+                        .font(.system(size: 13))
+                        .foregroundColor(.theme.textSecondary)
+                        .lineLimit(1)
                     }
 
-                    if let overview = item.overview, !overview.isEmpty {
+                    if let overview = localizedOverview ?? item.displayOverview(fallback: fallbackOverview) {
                         Text(overview)
                             .font(.system(size: 13))
                             .foregroundColor(.theme.textSecondary)
@@ -656,7 +666,16 @@ struct MediaItemRow: View {
                     Spacer()
                     
                     // Watch Now button
-                    if let provider = topProvider {
+                    if isLoadingProviders || !providerLookupCompleted {
+                        HStack {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(Color.theme.accentOrange)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                    } else if let provider = topProvider {
                         Button {
                             PlatformDeepLinkHelper.openPlatform(
                                 provider: provider,
@@ -798,6 +817,9 @@ struct MediaItemRow: View {
         .task {
             await loadProviders()
         }
+        .task(id: "\(item.mediaType.rawValue)-\(item.mediaId)") {
+            await loadFallbackDisplayDataIfNeeded()
+        }
         .alert("lists.notifyMeTitle".localized, isPresented: $showNotifyMeAlert) {
             Button("common.ok".localized, role: .cancel) { }
         } message: {
@@ -811,28 +833,102 @@ struct MediaItemRow: View {
         // Ensure it's in watchlist
         Task {
             if !listManager.isInList(listId: listManager.watchlist.id, mediaId: item.mediaId, mediaType: item.mediaType) {
-                let movie = Movie(
-                    id: item.mediaId,
-                    title: item.title,
-                    overview: "",
-                    posterPath: item.posterPath,
-                    backdropPath: nil,
-                    releaseDate: nil,
-                    voteAverage: item.voteAverage ?? 0.0,
-                    voteCount: 0,
-                    genreIds: nil,
-                    genres: nil,
-                    adult: false,
-                    originalLanguage: "",
-                    popularity: 0.0,
-                    runtime: item.runtime,
-                    status: nil,
-                    tagline: nil,
-                    productionCountries: nil,
-                    imdbId: nil
-                )
-                try? await listManager.addToList(listId: listManager.watchlist.id, movie: movie, mediaType: item.mediaType)
+                try? await listManager.addToList(listId: listManager.watchlist.id, movie: item.asMovie(), mediaType: item.mediaType)
             }
+            try? await LiveNotificationRepository.shared.toggleAlert(mediaId: item.mediaId, mediaType: item.mediaType, enabled: true)
+        }
+    }
+
+    private func loadFallbackDisplayDataIfNeeded() async {
+        fallbackOverview = nil
+        fallbackSeasonCount = nil
+        fallbackDuration = nil
+
+        let needsOverview = item.displayOverview(fallback: nil) == nil
+        let needsDuration = item.runtime == nil || item.runtime == 0
+        let needsTVDetails = item.mediaType == .tv
+        // localizedTitle == nil signals a fresh-locale fetch is needed (state was reset by
+        // view recreation after locale change). In that case skip the early-return guard so
+        // we always reach the TMDB call below.
+        let needsLocalizedStrings = localizedTitle == nil
+        guard needsOverview || needsDuration || needsTVDetails || needsLocalizedStrings else { return }
+
+        switch item.mediaType {
+        case .movie:
+            for await detail in LocalMediaDetailRepository.shared.observeMovie(id: item.mediaId) {
+                applyMovieDisplayFallback(detail.movie)
+                // If we need fresh locale strings, don't trust the local cache — always
+                // fall through to the TMDB call below.
+                if !needsLocalizedStrings, !needsMovieNetworkFallback {
+                    return
+                }
+            }
+            if let movie = try? await TMDBService.shared.getMovieDetails(id: item.mediaId) {
+                applyMovieDisplayFallback(movie)
+            }
+        case .tv:
+            for await detail in LocalMediaDetailRepository.shared.observeTVShow(id: item.mediaId) {
+                applyTVDisplayFallback(detail.tvShow)
+                if !needsLocalizedStrings, !needsTVNetworkFallback {
+                    return
+                }
+            }
+            if let tvShow = try? await TMDBService.shared.getTVShowDetails(id: item.mediaId) {
+                applyTVDisplayFallback(tvShow)
+            }
+        }
+    }
+
+    private var needsMovieNetworkFallback: Bool {
+        item.displayOverview(fallback: fallbackOverview) == nil ||
+        item.subtitle(seasonCount: fallbackSeasonCount, duration: fallbackDuration) == nil ||
+        ((item.runtime == nil || item.runtime == 0) && fallbackDuration == nil)
+    }
+
+    private var needsTVNetworkFallback: Bool {
+        item.displayOverview(fallback: fallbackOverview) == nil ||
+        fallbackSeasonCount == nil ||
+        fallbackDuration == nil
+    }
+
+    private func applyMovieDisplayFallback(_ movie: Movie) {
+        if !movie.title.isEmpty {
+            localizedTitle = movie.title
+        }
+        if !movie.overview.isEmpty {
+            localizedOverview = movie.overview
+        }
+
+        if fallbackOverview == nil,
+           let overview = item.displayOverview(fallback: movie.overview) {
+            fallbackOverview = overview
+        }
+
+        if fallbackDuration == nil, let runtime = movie.runtime, runtime > 0 {
+            fallbackDuration = runtime
+        }
+    }
+
+    private func applyTVDisplayFallback(_ tvShow: TVShow) {
+        if !tvShow.name.isEmpty {
+            localizedTitle = tvShow.name
+        }
+        if !tvShow.overview.isEmpty {
+            localizedOverview = tvShow.overview
+        }
+
+        if fallbackOverview == nil,
+           let overview = item.displayOverview(fallback: tvShow.overview) {
+            fallbackOverview = overview
+        }
+
+        if fallbackSeasonCount == nil, let numberOfSeasons = tvShow.numberOfSeasons, numberOfSeasons > 0 {
+            fallbackSeasonCount = numberOfSeasons
+        }
+
+        if fallbackDuration == nil,
+           let runtime = tvShow.episodeRunTime?.first(where: { $0 > 0 }) {
+            fallbackDuration = runtime
         }
     }
     
@@ -849,6 +945,9 @@ struct MediaItemRow: View {
     /// Only hits the network if the cached entry is expired or missing.
     private func loadProviders() async {
         guard !isLoadingProviders else { return }
+        providerLookupCompleted = false
+        topProvider = nil
+        providerLink = nil
         isLoadingProviders = true
         let region = LocalizationManager.shared.currentCountry.id
         for await providers in LiveWatchProvidersRepository.shared.observeProviders(
@@ -857,41 +956,13 @@ struct MediaItemRow: View {
             if let providers { processProviders(providers) }
         }
         isLoadingProviders = false
+        providerLookupCompleted = true
     }
 
     private func isValid(_ provider: Provider) -> Bool {
-        guard !provider.logoPath.isEmpty else { return false }
-        let lowerLogo = provider.logoPath.lowercased()
-        if lowerLogo.contains(".svg") { return false }
-        if lowerLogo.contains("logo-white") { return false }
-        return true
-    }
-
-    private func hasValidProviders(_ providers: CountryProviders) -> Bool {
-        let hasFlatrate = providers.flatrate?.contains(where: isValid) == true
-        let hasRent = providers.rent?.contains(where: isValid) == true
-        let hasBuy = providers.buy?.contains(where: isValid) == true
-        return hasFlatrate || hasRent || hasBuy
-    }
-
-    private func loadTMDBProvidersFallback() async {
-        do {
-            if item.mediaType == .movie {
-                let providers = try await tmdbService.getMovieWatchProviders(id: item.mediaId)
-                if let countryProviders = providers.results[LocalizationManager.shared.currentCountry.id] {
-                    // We need to construct a CountryProviders object or just use it directly if types match.
-                    // TMDBService returns WatchProvider.results which is [String: CountryProviders]
-                    processProviders(countryProviders)
-                }
-            } else {
-                let providers = try await tmdbService.getTVShowWatchProviders(id: item.mediaId)
-                if let countryProviders = providers.results[LocalizationManager.shared.currentCountry.id] {
-                    processProviders(countryProviders)
-                }
-            }
-        } catch {
-            Logger.error("[ListsView] Error loading TMDB fallback providers: \(error.localizedDescription)")
-        }
+        guard provider.hasUsableLogo else { return false }
+        if provider.externalLink != nil || providerLink != nil { return true }
+        return PlatformDeepLinkHelper.hasPlatformHomepage(for: provider)
     }
     
     private func processProviders(_ countryProviders: CountryProviders) {
@@ -1084,27 +1155,7 @@ struct CustomListDetailView: View {
                                         Task {
                                             try? await listManager.removeFromList(listId: list.id, itemId: item.id)
 
-                                            let movie = Movie(
-                                                id: item.mediaId,
-                                                title: item.title,
-                                                overview: "",
-                                                posterPath: item.posterPath,
-                                                backdropPath: nil,
-                                                releaseDate: nil,
-                                                voteAverage: 0.0,
-                                                voteCount: 0,
-                                                genreIds: nil,
-                                                genres: nil,
-                                                adult: false,
-                                                originalLanguage: "",
-                                                popularity: 0.0,
-                                                runtime: nil,
-                                                status: nil,
-                                                tagline: nil,
-                                                productionCountries: nil,
-                                                imdbId: nil
-                                            )
-                                            try await listManager.addToList(listId: listManager.seenList.id, movie: movie, mediaType: item.mediaType)
+                                            try await listManager.addToList(listId: listManager.seenList.id, movie: item.asMovie(), mediaType: item.mediaType)
                                         }
                                     },
                                     onDelete: {
@@ -1138,7 +1189,7 @@ struct CustomListDetailView: View {
                 }
             }
         }
-        .navigationTitle(currentList.name)
+        .navigationTitle(currentList.displayName)
         .navigationBarTitleDisplayMode(.large)
         .overlay {
             if showFilters {
@@ -1191,7 +1242,7 @@ struct CustomListDetailView: View {
             }
             Button("common.cancel".localized, role: .cancel) { }
         } message: {
-            Text("lists.deleteConfirmation".localized.replacingOccurrences(of: "%@", with: currentList.name))
+            Text("lists.deleteConfirmation".localized.replacingOccurrences(of: "%@", with: currentList.displayName))
         }
         .alert(item: $error) { appError in
             Alert(
@@ -1300,7 +1351,7 @@ struct ListCard: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
 
-            Text(list.name)
+            Text(list.displayName)
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundColor(.theme.textPrimary)
                 .lineLimit(2)

@@ -28,6 +28,12 @@
 		C6877C53B7A3455F88CAEEA9 /* AnalyticsInsightsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C9EEC77D8F045818BF4B264 /* AnalyticsInsightsTests.swift */; };
 		CF1EE317BD6A461DA9DC12F3 /* PostHogClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7288DBFF0484707BB5CD260 /* PostHogClientTests.swift */; };
 		D4E5F6A1B2C3D4E5 /* MultiDeviceSyncTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E5F6A1B2C3D4E6 /* MultiDeviceSyncTests.swift */; };
+		E7D6C5B4A392817060504030 /* DiscoveryCarouselOrderingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7D6C5B4A392817060504031 /* DiscoveryCarouselOrderingTests.swift */; };
+		E8A7B6C5D4E3F20123456789 /* WatchProvidersRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8A7B6C5D4E3F2012345678A /* WatchProvidersRepositoryTests.swift */; };
+		E8A7B6C5D4E3F2012345678B /* WatchProviderLoadStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8A7B6C5D4E3F2012345678C /* WatchProviderLoadStateTests.swift */; };
+		E8B7C6D5A4F3920123456790 /* AIQuotaConfigurationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8B7C6D5A4F3920123456791 /* AIQuotaConfigurationTests.swift */; };
+		E8B7C6D5A4F3920123456792 /* MediaListItemTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8B7C6D5A4F3920123456793 /* MediaListItemTests.swift */; };
+		E8B7C6D5A4F3920123456794 /* DetailLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8B7C6D5A4F3920123456795 /* DetailLayoutTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -53,9 +59,15 @@
 		B3F0F1A92F2A1B1C00AA1111 /* VibeWatchApp/Config/Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = VibeWatchApp/Config/Secrets.xcconfig; sourceTree = "<group>"; };
 		C3D4E5F6A1B2C3D5 /* PerformanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceTests.swift; sourceTree = "<group>"; };
 		D06ECE77A8DA440E92022CE7 /* AppNavigationManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppNavigationManagerTests.swift; sourceTree = "<group>"; };
+		D4E5F6A1B2C3D4E6 /* MultiDeviceSyncTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MultiDeviceSyncTests.swift; path = VibeWatchApp/Tests/MultiDeviceSyncTests.swift; sourceTree = SOURCE_ROOT; };
 		D914D0452F884693941FF37D /* SyncEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncEngineTests.swift; sourceTree = "<group>"; };
 		E7288DBFF0484707BB5CD260 /* PostHogClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostHogClientTests.swift; sourceTree = "<group>"; };
-		D4E5F6A1B2C3D4E6 /* MultiDeviceSyncTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MultiDeviceSyncTests.swift; path = VibeWatchApp/Tests/MultiDeviceSyncTests.swift; sourceTree = SOURCE_ROOT; };
+		E7D6C5B4A392817060504031 /* DiscoveryCarouselOrderingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoveryCarouselOrderingTests.swift; sourceTree = "<group>"; };
+		E8A7B6C5D4E3F2012345678A /* WatchProvidersRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchProvidersRepositoryTests.swift; sourceTree = "<group>"; };
+		E8A7B6C5D4E3F2012345678C /* WatchProviderLoadStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchProviderLoadStateTests.swift; sourceTree = "<group>"; };
+		E8B7C6D5A4F3920123456791 /* AIQuotaConfigurationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIQuotaConfigurationTests.swift; sourceTree = "<group>"; };
+		E8B7C6D5A4F3920123456793 /* MediaListItemTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaListItemTests.swift; sourceTree = "<group>"; };
+		E8B7C6D5A4F3920123456795 /* DetailLayoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailLayoutTests.swift; sourceTree = "<group>"; };
 		F849736129F54FA8BD1D3247 /* DatabaseMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseMigrationTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -120,6 +132,12 @@
 				F849736129F54FA8BD1D3247 /* DatabaseMigrationTests.swift */,
 				D06ECE77A8DA440E92022CE7 /* AppNavigationManagerTests.swift */,
 				4C9EEC77D8F045818BF4B264 /* AnalyticsInsightsTests.swift */,
+				E7D6C5B4A392817060504031 /* DiscoveryCarouselOrderingTests.swift */,
+				E8A7B6C5D4E3F2012345678A /* WatchProvidersRepositoryTests.swift */,
+				E8A7B6C5D4E3F2012345678C /* WatchProviderLoadStateTests.swift */,
+				E8B7C6D5A4F3920123456791 /* AIQuotaConfigurationTests.swift */,
+				E8B7C6D5A4F3920123456793 /* MediaListItemTests.swift */,
+				E8B7C6D5A4F3920123456795 /* DetailLayoutTests.swift */,
 				A1B2C3D4E5F6A1B3 /* KeychainStorageTests.swift */,
 				A1B2C3D4E5F6A1B5 /* AuthMigrationTests.swift */,
 				C3D4E5F6A1B2C3D5 /* PerformanceTests.swift */,
@@ -309,6 +327,12 @@
 				26BD1630A9514E7B9D559ED5 /* DatabaseMigrationTests.swift in Sources */,
 				13392337BF1F4B568E9A4B9C /* AppNavigationManagerTests.swift in Sources */,
 				C6877C53B7A3455F88CAEEA9 /* AnalyticsInsightsTests.swift in Sources */,
+				E7D6C5B4A392817060504030 /* DiscoveryCarouselOrderingTests.swift in Sources */,
+				E8A7B6C5D4E3F20123456789 /* WatchProvidersRepositoryTests.swift in Sources */,
+				E8A7B6C5D4E3F2012345678B /* WatchProviderLoadStateTests.swift in Sources */,
+				E8B7C6D5A4F3920123456790 /* AIQuotaConfigurationTests.swift in Sources */,
+				E8B7C6D5A4F3920123456792 /* MediaListItemTests.swift in Sources */,
+				E8B7C6D5A4F3920123456794 /* DetailLayoutTests.swift in Sources */,
 				A1B2C3D4E5F6A1B2 /* KeychainStorageTests.swift in Sources */,
 				A1B2C3D4E5F6A1B4 /* AuthMigrationTests.swift in Sources */,
 				C3D4E5F6A1B2C3D4 /* PerformanceTests.swift in Sources */,

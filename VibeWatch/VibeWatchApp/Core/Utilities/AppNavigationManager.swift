@@ -55,13 +55,15 @@ class AppNavigationManager: ObservableObject {
         
         // Ensure mediaType is a string
         guard let mediaType = userInfo[mediaTypeKey] as? String else {
-            Logger.error("[AppNavigationManager] Deep link userInfo is missing or has invalid media type key.")
+            Logger.info("[AppNavigationManager] Notification has no media_type — navigating to Discovery.")
+            NotificationCenter.default.post(name: .navigateToDiscoveryTab, object: nil)
             return
         }
-        
+
         // Ensure we have a valid mediaId
         guard let mediaId = parsedMediaId else {
-            Logger.error("[AppNavigationManager] Deep link userInfo is missing or has invalid media id key.")
+            Logger.info("[AppNavigationManager] Notification has no media_id — navigating to Discovery.")
+            NotificationCenter.default.post(name: .navigateToDiscoveryTab, object: nil)
             return
         }
 
@@ -71,7 +73,13 @@ class AppNavigationManager: ObservableObject {
             Logger.debug("[AppNavigationManager] Parsed deep link to \(mediaType) ID \(mediaId)")
         } else {
             Logger.error("[AppNavigationManager] Invalid media_type value in deep link: \(mediaType)")
+            NotificationCenter.default.post(name: .navigateToDiscoveryTab, object: nil)
         }
+    }
+
+    /// Handles tap on notifications that have no associated media (e.g. streak reminders).
+    func handleNoMediaNotification() {
+        NotificationCenter.default.post(name: .navigateToDiscoveryTab, object: nil)
     }
     
     /// Clears the current deep link target after it has been handled by the UI.

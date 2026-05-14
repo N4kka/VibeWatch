@@ -1,21 +1,35 @@
 import Foundation
 
+protocol WatchProvidersCache {
+    func cachedProviders(mediaId: Int, mediaType: MediaType, region: String) async -> CountryProviders?
+    func save(_ providers: CountryProviders, mediaId: Int, mediaType: MediaType, region: String) async
+}
+
 /// Fetches watch providers with a 24-hour SQLite cache.
 /// This is the ONLY component allowed to call the providers network APIs at runtime
 /// in DiscoveryView, ListsView, MovieDetailView, and TVShowDetailView.
 @MainActor
 final class LiveWatchProvidersRepository: WatchProvidersRepositoryProtocol {
     static let shared = LiveWatchProvidersRepository()
-    private let local = LocalWatchProvidersRepository.shared
-    private let tmdb: any TMDBServiceProtocol = TMDBService.shared
-    private let streaming = StreamingAvailabilityService.shared
-    private init() {}
+    private let local: any WatchProvidersCache
+    private let tmdb: any TMDBWatchProvidersServiceProtocol
+    private let streaming: any StreamingAvailabilityProviding
+
+    init(
+        local: any WatchProvidersCache = LocalWatchProvidersRepository.shared,
+        tmdb: any TMDBWatchProvidersServiceProtocol = TMDBService.shared,
+        streaming: any StreamingAvailabilityProviding = StreamingAvailabilityService.shared
+    ) {
+        self.local = local
+        self.tmdb = tmdb
+        self.streaming = streaming
+    }
 
     nonisolated func observeProviders(mediaId: Int, mediaType: MediaType, region: String) -> AsyncStream<CountryProviders?> {
         AsyncStream { continuation in
             Task { @MainActor in
                 let cached = await self.local.cachedProviders(mediaId: mediaId, mediaType: mediaType, region: region)
-                if let cached {
+                if let cached, cached.hasUsableProviders {
                     continuation.yield(cached)
                     continuation.finish()
                     return
@@ -32,7 +46,8 @@ final class LiveWatchProvidersRepository: WatchProvidersRepositoryProtocol {
     }
 
     nonisolated func providers(mediaId: Int, mediaType: MediaType, region: String) async -> CountryProviders? {
-        if let cached = await local.cachedProviders(mediaId: mediaId, mediaType: mediaType, region: region) {
+        if let cached = await local.cachedProviders(mediaId: mediaId, mediaType: mediaType, region: region),
+           cached.hasUsableProviders {
             return cached
         }
         let fresh = await fetchAndMerge(mediaId: mediaId, mediaType: mediaType, region: region)
@@ -43,22 +58,42 @@ final class LiveWatchProvidersRepository: WatchProvidersRepositoryProtocol {
     }
 
     private func fetchAndMerge(mediaId: Int, mediaType: MediaType, region: String) async -> CountryProviders? {
+        let richProviders: CountryProviders?
         do {
-            var richProviders = try await streaming.getProviders(tmdbId: mediaId, type: mediaType, region: region)
+            richProviders = try await streaming.getProviders(tmdbId: mediaId, type: mediaType, region: region)
+        } catch {
+            richProviders = nil
+            Logger.warning("[WatchProvidersRepo] Streaming fetch failed for \(mediaId) (\(mediaType.rawValue)): \(error.localizedDescription)")
+        }
+
+        let basicProviders: CountryProviders?
+        do {
             let tmdbResult: WatchProvider
             if mediaType == .movie {
                 tmdbResult = try await tmdb.getMovieWatchProviders(id: mediaId)
             } else {
                 tmdbResult = try await tmdb.getTVShowWatchProviders(id: mediaId)
             }
-            if let basic = tmdbResult.results[region] {
-                richProviders = merge(rich: richProviders, basic: basic)
-            }
-            return richProviders
+            basicProviders = tmdbResult.results[region] ?? tmdbResult.results[region.uppercased()]
         } catch {
-            Logger.warning("[WatchProvidersRepo] Fetch failed for \(mediaId) (\(mediaType.rawValue)): \(error.localizedDescription)")
-            return nil
+            basicProviders = nil
+            Logger.warning("[WatchProvidersRepo] TMDB fetch failed for \(mediaId) (\(mediaType.rawValue)): \(error.localizedDescription)")
         }
+
+        let merged: CountryProviders?
+        switch (richProviders, basicProviders) {
+        case let (rich?, basic?):
+            merged = merge(rich: rich, basic: basic)
+        case let (rich?, nil):
+            merged = rich
+        case let (nil, basic?):
+            merged = basic
+        case (nil, nil):
+            merged = nil
+        }
+
+        guard let merged, merged.hasUsableProviders else { return nil }
+        return merged
     }
 
     private func merge(rich: CountryProviders, basic: CountryProviders) -> CountryProviders {

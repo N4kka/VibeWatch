@@ -390,6 +390,7 @@ extension SQLiteService {
             device_id TEXT NOT NULL,
             carousel_type TEXT NOT NULL,
             carousel_title TEXT NOT NULL,
+            carousel_title_spec TEXT,
             media_id INTEGER NOT NULL,
             media_type TEXT NOT NULL,
             media_data TEXT,

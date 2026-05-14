@@ -48,8 +48,8 @@
 "lists.error.invalidName" = "Vennligst skriv inn et gyldig listenavn";
 "lists.error.itemAlreadyInList" = "Element som allerede finnes i denne listen";
 "lists.error.listNotFound" = "Liste ikke funnet";
-"lists.error.maxItemsReached" = "Maksimum {grense} elementer nådd for denne listen";
-"lists.error.maxListsReached" = "Maksimum {begrensning} tilpassede lister nådd";
+"lists.error.maxItemsReached" = "Maksimum {limit} elementer nådd for denne listen";
+"lists.error.maxListsReached" = "Maksimum {limit} tilpassede lister nådd";
 "lists.liked" = "Likte";
 "lists.limitInfo" = "{count}/{limit}";
 "lists.listDescriptionPlaceholder" = "Legg til en beskrivelse...";
@@ -60,7 +60,10 @@
 "lists.searchPlaceholder" = "Søk i denne listen";
 "lists.seen" = "Innsjøer";
 "lists.watchlist" = "Overvåkningsliste";
-"lists.watchOn" = "SE PÅ";
+"lists.watchOn" = "SE PÅ %@";
+"lists.notifyMeTitle" = "Varsle meg";
+"lists.notifyMeMessage" = "Vi sender deg et varsel så snart '%@' er tilgjengelig for streaming, leie eller kjøp.";
+"error.oops" = "Oops!";
 "movieDetail.cast" = "Besetning";
 "movieDetail.country" = "Land";
 "movieDetail.director" = "Direktør";
@@ -122,7 +125,6 @@
 "clips.noClipsAvailable" = "Ingen tilgjengelige klipp";
 "clips.noClipsDescription" = "Kom tilbake senere for spennende scener fra favorittfilmene og -seriene dine";
 "clips.noComments" = "Ingen kommentarer ennå";
-"clips.noListsYet" = "Ingen lister ennå";
 "clips.reply" = "Svar";
 "clips.replies" = "svar";
 "clips.replyingTo" = "Svar til";
@@ -315,6 +317,7 @@
 "profile.faqDetail" = "Finn raske svar på vanlige spørsmål om kontoer, abonnementer og funksjoner.";
 "profile.privacyPolicy" = "Retningslinjer for personvern";
 "profile.termsOfUse" = "Vilkår for bruk";
+"profile.terms" = "Vilkår";
 "profile.feedback.suggestFeature" = "Foreslå ny funksjon";
 "profile.feedback.suggestFeatureDescription" = "Fortell oss hva som ville gjort VibeWatch bedre for deg.";
 "profile.feedback.reportBug" = "Rapporter en feil/et problem";
@@ -345,6 +348,13 @@
 "actor.retry" = "Prøv igjen";
 "actor.biography.showMore" = "Vis mer";
 "actor.biography.showLess" = "Vis mindre";
+
+"actor.birthday" = "Born: %@";
+"actor.birthday.line" = "%@ (%@ years old)";
+"actor.known_for" = "Known For";
+"actor.search.placeholder" = "Søk i filmografi…";
+"actor.search.noResults" = "Ingen resultater for";
+"actor.filmography.empty" = "Ingen kreditter funnet.";
 "clips.search.placeholder" = "Søk etter klipp, tegn eller sitater";
 "clips.search.emptyTitle" = "Finn klipp du liker";
 "clips.search.emptySubtitle" = "Søk på en film, serie, karakter eller sitat for å se matchende klipp og relaterte valg.";
@@ -352,6 +362,10 @@
 "clips.search.showcaseSubtitle" = "Søk ovenfor for å finne klipp fra favorittfilmene og -seriene dine";
 "clips.search.matched" = "Matchet";
 "clips.search.recommended" = "Anbefales";
+"clips.search.quotes" = "Sitater";
+"clips.search.characters" = "Karakterer";
+"clips.search.scenes" = "Scener";
+"clips.search.popular" = "Populært";
 "settings.redeemCode" = "Løs inn kode";
 "settings.redeemCode.description" = "Skriv inn en kampanje- eller tilbudskode";
 "paywall.haveCode" = "Har du en kampanjekode?";
@@ -442,7 +456,67 @@
 "auth.resendEmail" = "Send e-post på nytt";
 "auth.changeEmail" = "Endre e-post";
 "auth.verificationPending" = "Venter fortsatt på bekreftelse...";
-"lists.softLimitWarning" = "\\\"{navn}\" har allerede {begrenset} elementer. Vurder å starte en ny liste for å holde orden på ting.";
+"gamification.levelUp" = "NYTT NIVÅ!";
+"gamification.level" = "Nivå";
+"gamification.rankAchieved" = "\"%@\"-rangering oppnådd";
+"gamification.xp.base" = "base";
+"gamification.xp.proBoost" = "Pro-boost";
+"gamification.xp.streakBonus" = "Seriebonus";
+"gamification.xp.total" = "XP totalt";
+"gamification.challengeComplete" = "Utfordring fullført!";
+"notifications.title" = "Varsler";
+"notifications.status" = "Status";
+"notifications.enabled" = "Varsler aktivert";
+"notifications.disabled" = "Varsler deaktivert";
+"notifications.enableDescription" = "Slå på varsler for å få personlige meldinger om nye episoder, utgivelser og innhold du vil like.";
+"notifications.enableButton" = "Slå på varsler";
+"notifications.types" = "Varseltyper";
+"notifications.newEpisodes" = "Nye episoder";
+"notifications.newEpisodesDesc" = "Få varsel når nye episoder av serier du ser på er tilgjengelige";
+"notifications.personalizedReleases" = "Personlige utgivelser";
+"notifications.personalizedReleasesDesc" = "Nye filmer og serier som matcher smaken din";
+"notifications.favoriteActors" = "Favorittskuespillere og regissører";
+"notifications.favoriteActorsDesc" = "Nytt innhold fra personer du liker";
+"notifications.similarContent" = "Lignende innhold";
+"notifications.similarContentDesc" = "Anbefalinger basert på det du likte";
+"notifications.watchlistAlerts" = "Varsler for watchlist";
+"notifications.watchlistAlertsDesc" = "Når elementer i watchlisten din blir tilgjengelige";
+"notifications.milestones" = "Milepæler og prestasjoner";
+"notifications.milestonesDesc" = "Feir seerserier og prestasjoner";
+"notifications.frequency" = "Frekvens";
+"notifications.dailyLimit" = "Daglig grense";
+"notifications.perDay" = "per dag";
+"notifications.unlimited" = "Ubegrenset";
+"notifications.quietHours" = "Stille timer";
+"notifications.startTime" = "Starttid";
+"notifications.endTime" = "Sluttid";
+"notifications.quietHoursDesc" = "Ingen varsler sendes i disse timene";
+"notifications.proFeatures" = "Pro-funksjoner";
+"notifications.customActorAlerts" = "Egendefinerte skuespillervarsler";
+"notifications.customGenreAlerts" = "Egendefinerte sjangervarsler";
+"notifications.proFeaturesDesc" = "Få varsler for bestemte skuespillere og sjangre du velger";
+"notifications.save" = "Lagre";
+"notifications.settingsSaved" = "Innstillinger lagret";
+"notifications.preferencesUpdated" = "Varselinnstillingene dine er oppdatert.";
+"notifications.typesFooter" = "Velg hvilke varsler du vil motta";
+"notifications.newAvailability" = "Ny tilgjengelighet";
+"notifications.newAvailabilityDesc" = "Når titler i overvåkningslisten din blir tilgjengelige for strømming, leie eller kjøp";
+"notifications.newRelease" = "Nye utgivelser";
+"notifications.newReleaseDesc" = "Filmer og serier du trykket \"Varsle meg\" på når de kommer ut";
+"notifications.episodeAired" = "Nye episoder";
+"notifications.episodeAiredDesc" = "Når en ny episode sendes for TV-serier i listene dine";
+"notifications.continueWatching" = "Fortsett å se";
+"notifications.continueWatchingDesc" = "Påminnelser om å fortsette serier du har sett på";
+"notifications.listMilestone" = "Listemilepæler";
+"notifications.listMilestoneDesc" = "Feir når du når milepæler for seing";
+"notifications.frequencyFooter" = "Maksimalt antall varsler du får per dag";
+"notifications.favoriteActorsTitle" = "Favorittskuespillerne dine";
+"notifications.favoriteActorsFooter" = "Få varsel når disse skuespillerne har nytt innhold";
+"notifications.favoriteGenresTitle" = "Favorittsjangrene dine";
+"notifications.favoriteGenresFooter" = "Få varsler om nye utgivelser i disse sjangrene";
+"notifications.fromPreferences" = "Fra preferansene dine";
+"lists.notifyMe" = "VARSLE MEG";
+"lists.softLimitWarning" = "\"{name}\" har allerede {limit} elementer. Vurder å starte en ny liste for å holde orden.";
 "profile.faq.answer4" = "Bruk \"Gi oss beskjed\" på hvilken som helst tittel for å rapportere feil eller dårlige lenker, så fikser vi det raskt.";
 
 "movieDetail.whyForMe" = "Why for me?";
@@ -451,3 +525,38 @@
 
 "movieDetail.goodFitTitle" = "Why %@ is a good fit for me?";
 "movieDetail.goodFitSubtitle" = "A quick, personalized take based on your taste.";
+
+// TV Show Detail - Mark All Seen Confirmation
+"tvDetail.markAllSeenTitle" = "Mark all episodes as seen";
+"tvDetail.markAllSeenDescription" = "This action will apply to all episodes and seasons of the series available.";
+"tvDetail.markAllSeenQuestion" = "Do you want to continue?";
+"tvDetail.markAllSeenConfirm" = "Yes, mark as seen";
+"tvDetail.markAllSeenCancel" = "No, cancel";
+"tvDetail.seasonSeenShort" = "seen";
+
+// Library section switcher
+"lists.section.myLists" = "My Lists";
+"lists.section.tvTracking" = "TV Shows Tracking";
+
+// TV Shows Tracking
+"tvTracking.continuing" = "Continue Watching";
+"tvTracking.notStarted" = "Not Started";
+"tvTracking.upToDate" = "Up to Date";
+"tvTracking.emptyState" = "No TV shows found";
+"carousel.fromActor" = "Mer fra %@";
+"carousel.decadeClassics" = "%@-klassikere";
+"carousel.moodTonight" = "%@ i kveld";
+"carousel.regionSpotlight" = "%@ i fokus";
+"carousel.topInGenre" = "Topp i %@";
+"carousel.hotThisWeekInGenre" = "Populært denne uken i %@";
+"carousel.quickWatches" = "Korte valg";
+"carousel.epicWatches" = "Episke valg";
+"carousel.internationalPicks" = "Internasjonale valg";
+"carousel.throwback" = "Tilbakeblikk %@";
+"carousel.fromAIChat" = "Fra AI-chatten din";
+"carousel.comingSoon" = "Kommer snart";
+"carousel.trendingTVWeek" = "Populær TV denne uken";
+"carousel.criticallyAcclaimedRecent" = "Kritikerroste %@";
+"carousel.returningTV" = "Kommer snart tilbake";
+"carousel.documentaries" = "Dokumentarer for deg";
+"discovery.endOfFeed" = "Du er helt à jour";

@@ -64,7 +64,10 @@
 "lists.searchPlaceholder" = "Sök i denna lista";
 "lists.seen" = "Sett";
 "lists.softLimitWarning" = "\"{name}\" har redan {limit} objekt. Fundera på att skapa en ny lista för att hålla ordning.";
-"lists.watchOn" = "TITTA PÅ";
+"lists.watchOn" = "TITTA PÅ %@";
+"lists.notifyMeTitle" = "Avisera mig";
+"lists.notifyMeMessage" = "Vi skickar en notis så snart '%@' finns tillgänglig för streaming, hyra eller köp.";
+"error.oops" = "Hoppsan!";
 
 // Movie Detail
 "movieDetail.cast" = "Rollista";
@@ -136,7 +139,6 @@
 "clips.noClipsAvailable" = "Inga klipp tillgängliga";
 "clips.noClipsDescription" = "Kom tillbaka senare för spännande scener från dina favoritfilmer och serier";
 "clips.noComments" = "Inga kommentarer ännu";
-"clips.noListsYet" = "Inga listor ännu";
 "clips.reply" = "Svara";
 "clips.replies" = "svar";
 "clips.replyingTo" = "Svarar till";
@@ -360,6 +362,7 @@
 "profile.faqDetail" = "Hitta snabba svar på vanliga frågor om konton, prenumerationer och funktioner.";
 "profile.privacyPolicy" = "Integritetspolicy";
 "profile.termsOfUse" = "Användarvillkor";
+"profile.terms" = "Villkor";
 "profile.feedback.suggestFeature" = "Föreslå ny funktion";
 "profile.feedback.suggestFeatureDescription" = "Berätta vad som skulle göra VibeWatch bättre för dig.";
 "profile.feedback.reportBug" = "Rapportera en bugg eller ett problem";
@@ -398,11 +401,22 @@
 "actor.biography.showMore" = "Visa mer";
 "actor.biography.showLess" = "Visa mindre";
 
+"actor.birthday" = "Born: %@";
+"actor.birthday.line" = "%@ (%@ years old)";
+"actor.known_for" = "Known For";
+"actor.search.placeholder" = "Sök i filmografi…";
+"actor.search.noResults" = "Inga resultat för";
+"actor.filmography.empty" = "Inga krediter hittades.";
+
 "clips.search.placeholder" = "Sök klipp, karaktärer eller citat";
 "clips.search.emptyTitle" = "Hitta klipp du gillar";
 "clips.search.emptySubtitle" = "Sök efter filmer, serier, karaktärer eller citat för att se matchande klipp och relaterade rekommendationer.";
 "clips.search.matched" = "Matchade";
 "clips.search.recommended" = "Rekommenderade";
+"clips.search.quotes" = "Citat";
+"clips.search.characters" = "Karaktärer";
+"clips.search.scenes" = "Scener";
+"clips.search.popular" = "Populärt";
 "clips.search.showcaseSubtitle" = "Sök ovan för att hitta klipp från dina favoritfilmer och -serier";
 
 // Redeem Code
@@ -506,6 +520,66 @@
 "auth.resendEmail" = "Skicka e-post igen";
 "auth.changeEmail" = "Ändra e-post";
 "auth.verificationPending" = "Väntar fortfarande på bekräftelse...";
+"gamification.levelUp" = "NY NIVÅ!";
+"gamification.level" = "Nivå";
+"gamification.rankAchieved" = "Rangen \"%@\" uppnådd";
+"gamification.xp.base" = "bas";
+"gamification.xp.proBoost" = "Pro-boost";
+"gamification.xp.streakBonus" = "Streakbonus";
+"gamification.xp.total" = "XP totalt";
+"gamification.challengeComplete" = "Utmaning slutförd!";
+"notifications.title" = "Notiser";
+"notifications.status" = "Status";
+"notifications.enabled" = "Notiser aktiverade";
+"notifications.disabled" = "Notiser inaktiverade";
+"notifications.enableDescription" = "Aktivera notiser för att få personliga aviseringar om nya avsnitt, premiärer och innehåll du kommer att gilla.";
+"notifications.enableButton" = "Aktivera notiser";
+"notifications.types" = "Notistyper";
+"notifications.newEpisodes" = "Nya avsnitt";
+"notifications.newEpisodesDesc" = "Få en notis när nya avsnitt av serier du tittar på finns tillgängliga";
+"notifications.personalizedReleases" = "Personliga premiärer";
+"notifications.personalizedReleasesDesc" = "Nya filmer och serier som matchar din smak";
+"notifications.favoriteActors" = "Favoritskådespelare och regissörer";
+"notifications.favoriteActorsDesc" = "Nytt innehåll från personer du gillar";
+"notifications.similarContent" = "Liknande innehåll";
+"notifications.similarContentDesc" = "Rekommendationer baserade på det du gillat";
+"notifications.watchlistAlerts" = "Bevakningar i watchlist";
+"notifications.watchlistAlertsDesc" = "När objekt i din watchlist blir tillgängliga";
+"notifications.milestones" = "Milstolpar och prestationer";
+"notifications.milestonesDesc" = "Fira dina tittarsviter och prestationer";
+"notifications.frequency" = "Frekvens";
+"notifications.dailyLimit" = "Daglig gräns";
+"notifications.perDay" = "per dag";
+"notifications.unlimited" = "Obegränsat";
+"notifications.quietHours" = "Tysta timmar";
+"notifications.startTime" = "Starttid";
+"notifications.endTime" = "Sluttid";
+"notifications.quietHoursDesc" = "Inga notiser skickas under dessa timmar";
+"notifications.proFeatures" = "Pro-funktioner";
+"notifications.customActorAlerts" = "Anpassade skådespelaraviseringar";
+"notifications.customGenreAlerts" = "Anpassade genreaviseringar";
+"notifications.proFeaturesDesc" = "Få aviseringar för specifika skådespelare och genrer du väljer";
+"notifications.save" = "Spara";
+"notifications.settingsSaved" = "Inställningar sparade";
+"notifications.preferencesUpdated" = "Dina notisinställningar har uppdaterats.";
+"notifications.typesFooter" = "Välj vilka notiser du vill få";
+"notifications.newAvailability" = "Ny tillgänglighet";
+"notifications.newAvailabilityDesc" = "När titlar i din watchlist blir tillgängliga att streama, hyra eller köpa";
+"notifications.newRelease" = "Nya releaser";
+"notifications.newReleaseDesc" = "Filmer och serier där du tryckte på \"Meddela mig\" när de kommer ut";
+"notifications.episodeAired" = "Nya avsnitt";
+"notifications.episodeAiredDesc" = "När ett nytt avsnitt sänds för tv-serier i dina listor";
+"notifications.continueWatching" = "Fortsätt titta";
+"notifications.continueWatchingDesc" = "Påminnelser om att fortsätta serier du har tittat på";
+"notifications.listMilestone" = "Listmilstolpar";
+"notifications.listMilestoneDesc" = "Fira när du når tittarmilstolpar";
+"notifications.frequencyFooter" = "Maximalt antal notiser du får per dag";
+"notifications.favoriteActorsTitle" = "Dina favoritskådespelare";
+"notifications.favoriteActorsFooter" = "Få en notis när dessa skådespelare har nytt innehåll";
+"notifications.favoriteGenresTitle" = "Dina favoritgenrer";
+"notifications.favoriteGenresFooter" = "Få notiser om nya premiärer i dessa genrer";
+"notifications.fromPreferences" = "Från dina preferenser";
+"lists.notifyMe" = "AVISERA MIG";
 
 "movieDetail.whyForMe" = "Why for me?";
 
@@ -513,3 +587,38 @@
 
 "movieDetail.goodFitTitle" = "Why %@ is a good fit for me?";
 "movieDetail.goodFitSubtitle" = "A quick, personalized take based on your taste.";
+
+// TV Show Detail - Mark All Seen Confirmation
+"tvDetail.markAllSeenTitle" = "Mark all episodes as seen";
+"tvDetail.markAllSeenDescription" = "This action will apply to all episodes and seasons of the series available.";
+"tvDetail.markAllSeenQuestion" = "Do you want to continue?";
+"tvDetail.markAllSeenConfirm" = "Yes, mark as seen";
+"tvDetail.markAllSeenCancel" = "No, cancel";
+"tvDetail.seasonSeenShort" = "seen";
+
+// Library section switcher
+"lists.section.myLists" = "My Lists";
+"lists.section.tvTracking" = "TV Shows Tracking";
+
+// TV Shows Tracking
+"tvTracking.continuing" = "Continue Watching";
+"tvTracking.notStarted" = "Not Started";
+"tvTracking.upToDate" = "Up to Date";
+"tvTracking.emptyState" = "No TV shows found";
+"carousel.fromActor" = "Mer från %@";
+"carousel.decadeClassics" = "%@-klassiker";
+"carousel.moodTonight" = "%@ ikväll";
+"carousel.regionSpotlight" = "%@ i fokus";
+"carousel.topInGenre" = "Topp i %@";
+"carousel.hotThisWeekInGenre" = "Hetast denna vecka i %@";
+"carousel.quickWatches" = "Snabba tittar";
+"carousel.epicWatches" = "Episka tittar";
+"carousel.internationalPicks" = "Internationella val";
+"carousel.throwback" = "Tillbakablick %@";
+"carousel.fromAIChat" = "Från din AI-chatt";
+"carousel.comingSoon" = "Kommer snart";
+"carousel.trendingTVWeek" = "Trendande TV denna vecka";
+"carousel.criticallyAcclaimedRecent" = "Kritikerrosade %@";
+"carousel.returningTV" = "Kommer snart tillbaka";
+"carousel.documentaries" = "Dokumentärer för dig";
+"discovery.endOfFeed" = "Du är helt ikapp";
