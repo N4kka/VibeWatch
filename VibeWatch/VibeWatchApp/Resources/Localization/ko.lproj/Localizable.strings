@@ -575,6 +575,16 @@
 "notifications.settingsSaved" = "설정이 저장되었습니다";
 "notifications.preferencesUpdated" = "알림 설정이 업데이트되었습니다.";
 "notifications.typesFooter" = "받고 싶은 알림을 선택하세요";
+"notifications.newAvailability" = "새 이용 가능 알림";
+"notifications.newAvailabilityDesc" = "관심 목록의 항목을 스트리밍, 대여 또는 구매할 수 있게 될 때";
+"notifications.newRelease" = "새 출시";
+"notifications.newReleaseDesc" = "\"알림 받기\"를 누른 영화와 시리즈가 공개될 때";
+"notifications.episodeAired" = "새 에피소드";
+"notifications.episodeAiredDesc" = "내 목록의 TV 프로그램에 새 에피소드가 방영될 때";
+"notifications.continueWatching" = "계속 보기";
+"notifications.continueWatchingDesc" = "시청 중이던 시리즈를 이어 보도록 알려주는 리마인더";
+"notifications.listMilestone" = "목록 마일스톤";
+"notifications.listMilestoneDesc" = "시청 마일스톤을 달성하면 축하합니다";
 "notifications.frequencyFooter" = "하루에 받을 알림의 최대 개수";
 "notifications.favoriteActorsTitle" = "좋아하는 배우";
 "notifications.favoriteActorsFooter" = "이 배우들의 새 작품이 나오면 알려드려요";

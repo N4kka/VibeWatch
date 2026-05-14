@@ -118,9 +118,14 @@ class DiscoveryViewModel: ObservableObject {
             return
         }
 
-        isLoading = hasNoContent && !forceRefresh
+        isLoading = hasNoContent
         isRefreshing = forceRefresh
         error = nil
+
+        // Reset pagination before the stream starts so the first emission renders correctly.
+        if forceRefresh {
+            visibleCarouselCount = 11
+        }
 
         let userId = AuthService.shared.currentUser?.id
         let profile = await preferenceManager.aggregatePreferences()
@@ -137,7 +142,8 @@ class DiscoveryViewModel: ObservableObject {
             hasLoadedOnce = true
             isLoading = false
             isRefreshing = false
-            Logger.debug("[DiscoveryViewModel] Loaded \(carousels.count) carousels")
+            hasMoreCarousels = personalizedCarousels.count > visibleCarouselCount
+            Logger.debug("[DiscoveryViewModel] Loaded \(carousels.count) carousels, visible: \(visibleCarouselCount), hasMore: \(hasMoreCarousels)")
         }
 
         markReloadedForToday()
@@ -145,8 +151,6 @@ class DiscoveryViewModel: ObservableObject {
         isRefreshing = false
         hasMoreCarousels = personalizedCarousels.count > visibleCarouselCount
         if forceRefresh {
-            visibleCarouselCount = 11
-            hasMoreCarousels = personalizedCarousels.count > 11
             refreshToken = UUID()
         }
     }
@@ -203,16 +207,20 @@ class DiscoveryViewModel: ObservableObject {
     private func shouldReloadForNewDay() -> Bool {
         let userId = AuthService.shared.currentUser?.id.lowercased() ?? "anon"
         let key = "discovery_last_loaded_day_\(userId)"
-        let todayKey = Self.dayKeyFormatter.string(from: Date())
         let stored = userDefaults.string(forKey: key)
-        return stored != todayKey
+        return stored != todayLocaleKey
     }
 
     private func markReloadedForToday() {
         let userId = AuthService.shared.currentUser?.id.lowercased() ?? "anon"
         let key = "discovery_last_loaded_day_\(userId)"
-        let todayKey = Self.dayKeyFormatter.string(from: Date())
-        userDefaults.set(todayKey, forKey: key)
+        userDefaults.set(todayLocaleKey, forKey: key)
+    }
+
+    private var todayLocaleKey: String {
+        let date = Self.dayKeyFormatter.string(from: Date())
+        let lang = LocalizationManager.shared.currentLanguage.id
+        return "\(date)-\(lang)"
     }
     
     // MARK: - Filtering
@@ -246,7 +254,7 @@ class DiscoveryViewModel: ObservableObject {
                 filteredCarousels.append(
                     PersonalizedCarousel(
                         type: carousel.type,
-                        title: carousel.title,
+                        titleSpec: carousel.titleSpec,
                         items: items,
                         descriptions: carousel.descriptions,
                         reason: carousel.reason

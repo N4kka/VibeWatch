@@ -563,6 +563,16 @@
 "notifications.settingsSaved" = "Настройки сохранены";
 "notifications.preferencesUpdated" = "Ваши настройки уведомлений обновлены.";
 "notifications.typesFooter" = "Выберите, какие уведомления хотите получать";
+"notifications.newAvailability" = "Новая доступность";
+"notifications.newAvailabilityDesc" = "Когда элементы из вашего списка просмотра становятся доступны для просмотра, аренды или покупки";
+"notifications.newRelease" = "Новые релизы";
+"notifications.newReleaseDesc" = "Фильмы и сериалы, для которых вы нажали \"Уведомить меня\", когда они выходят";
+"notifications.episodeAired" = "Новые эпизоды";
+"notifications.episodeAiredDesc" = "Когда выходит новый эпизод сериала из ваших списков";
+"notifications.continueWatching" = "Продолжить просмотр";
+"notifications.continueWatchingDesc" = "Напоминания продолжить сериалы, которые вы смотрели";
+"notifications.listMilestone" = "Этапы списков";
+"notifications.listMilestoneDesc" = "Отмечайте достижение этапов просмотра";
 "notifications.frequencyFooter" = "Максимальное количество уведомлений в день";
 "notifications.favoriteActorsTitle" = "Ваши любимые актёры";
 "notifications.favoriteActorsFooter" = "Получайте уведомления, когда у этих актёров появляется новый контент";

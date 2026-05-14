@@ -62,10 +62,9 @@ struct DiscoveryView: View {
             await SQLiteService.shared.debugPrintReactionCounts()
         }
         .onChange(of: localizationManager.localeDidChange) {_, _ in
-            // Reload content when language/country changes
-            Task {
-                await viewModel.loadContent(forceRefresh: true)
-            }
+            // Clears personalized_discovery cache and re-fetches from TMDB in the new locale
+            // so both carousel titles (via CarouselTitleSpec) and movie/TV titles update.
+            Task { await viewModel.refreshContent() }
         }
         .sheet(isPresented: $showProfile) {
             ProfileView()

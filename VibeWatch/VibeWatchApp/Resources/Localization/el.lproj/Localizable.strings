@@ -575,6 +575,16 @@
 "notifications.settingsSaved" = "Οι ρυθμίσεις αποθηκεύτηκαν";
 "notifications.preferencesUpdated" = "Οι προτιμήσεις ειδοποιήσεων ενημερώθηκαν.";
 "notifications.typesFooter" = "Επίλεξε ποιες ειδοποιήσεις θέλεις να λαμβάνεις";
+"notifications.newAvailability" = "Νέα διαθεσιμότητα";
+"notifications.newAvailabilityDesc" = "Όταν στοιχεία στη λίστα παρακολούθησής σου γίνονται διαθέσιμα για streaming, ενοικίαση ή αγορά";
+"notifications.newRelease" = "Νέες κυκλοφορίες";
+"notifications.newReleaseDesc" = "Ταινίες και σειρές στις οποίες πάτησες \"Ειδοποίησέ με\" όταν κυκλοφορήσουν";
+"notifications.episodeAired" = "Νέα επεισόδια";
+"notifications.episodeAiredDesc" = "Όταν προβάλλεται νέο επεισόδιο για τηλεοπτικές σειρές στις λίστες σου";
+"notifications.continueWatching" = "Συνέχεια παρακολούθησης";
+"notifications.continueWatchingDesc" = "Υπενθυμίσεις για να συνεχίσεις σειρές που παρακολουθείς";
+"notifications.listMilestone" = "Ορόσημα λιστών";
+"notifications.listMilestoneDesc" = "Γιόρτασε όταν φτάνεις ορόσημα παρακολούθησης";
 "notifications.frequencyFooter" = "Μέγιστος αριθμός ειδοποιήσεων ανά ημέρα";
 "notifications.favoriteActorsTitle" = "Οι αγαπημένοι σου ηθοποιοί";
 "notifications.favoriteActorsFooter" = "Λάβε ειδοποίηση όταν αυτοί οι ηθοποιοί έχουν νέο περιεχόμενο";

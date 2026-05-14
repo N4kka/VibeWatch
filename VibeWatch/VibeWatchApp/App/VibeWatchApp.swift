@@ -119,8 +119,6 @@ class AppState: ObservableObject {
             // Check and execute daily prefetch for PRO users
             await DailyContentPrefetchService.shared.checkAndExecuteDailyPrefetch()
 
-            // Schedule smart notifications on app launch (background tasks are unreliable)
-            await scheduleSmartNotificationsIfNeeded()
         }
 
         NotificationCenter.default.addObserver(
@@ -134,8 +132,6 @@ class AppState: ObservableObject {
                 // CRITICAL: Sync user data when returning to foreground
                 await self?.performSyncOnForegroundResume()
 
-                // Also check for notifications when returning to foreground
-                await self?.scheduleSmartNotificationsIfNeeded()
             }
         }
     }
@@ -241,31 +237,6 @@ class AppState: ObservableObject {
         } catch {
             Logger.warning("[AppState] Failed to check onboarding from profile: \(error)")
         }
-    }
-
-    /// Schedule smart notifications when user is authenticated
-    /// Called on app launch and when returning to foreground
-    private func scheduleSmartNotificationsIfNeeded() async {
-        guard let userId = currentUser?.id else {
-            Logger.debug("[AppState] Skipping notification check - no authenticated user")
-            return
-        }
-
-        // Throttle: Only run once per 30 minutes
-        let lastRunKey = "lastSmartNotificationCheck"
-        let lastRun = UserDefaults.standard.double(forKey: lastRunKey)
-        let now = Date().timeIntervalSince1970
-        let thirtyMinutes: TimeInterval = 30 * 60
-
-        if now - lastRun < thirtyMinutes {
-            Logger.debug("[AppState] Skipping notification check - ran recently")
-            return
-        }
-
-        UserDefaults.standard.set(now, forKey: lastRunKey)
-        Logger.info("[AppState] Triggering smart notification check for user: \(userId)")
-
-        await NotificationBackgroundTask.shared.triggerImmediately()
     }
 
     private func checkForRequiredUpdate() async {

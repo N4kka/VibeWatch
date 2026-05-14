@@ -575,6 +575,16 @@
 "notifications.settingsSaved" = "Ustawienia zapisane";
 "notifications.preferencesUpdated" = "Twoje preferencje powiadomień zostały zaktualizowane.";
 "notifications.typesFooter" = "Wybierz, jakie powiadomienia chcesz otrzymywać";
+"notifications.newAvailability" = "Nowa dostępność";
+"notifications.newAvailabilityDesc" = "Gdy pozycje z Twojej watchlisty będą dostępne do streamingu, wypożyczenia lub kupienia";
+"notifications.newRelease" = "Nowe premiery";
+"notifications.newReleaseDesc" = "Filmy i seriale, przy których wybrano \"Powiadom mnie\", gdy się pojawią";
+"notifications.episodeAired" = "Nowe odcinki";
+"notifications.episodeAiredDesc" = "Gdy zostanie wyemitowany nowy odcinek serialu z Twoich list";
+"notifications.continueWatching" = "Kontynuuj oglądanie";
+"notifications.continueWatchingDesc" = "Przypomnienia, aby wrócić do seriali, które oglądasz";
+"notifications.listMilestone" = "Kamienie milowe list";
+"notifications.listMilestoneDesc" = "Świętuj osiągnięcie kamieni milowych oglądania";
 "notifications.frequencyFooter" = "Maksymalna liczba powiadomień dziennie";
 "notifications.favoriteActorsTitle" = "Twoi ulubieni aktorzy";
 "notifications.favoriteActorsFooter" = "Dostaniesz powiadomienie, gdy pojawi się nowa treść z ich udziałem";

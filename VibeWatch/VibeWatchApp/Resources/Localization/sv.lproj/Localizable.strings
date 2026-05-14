@@ -563,6 +563,16 @@
 "notifications.settingsSaved" = "Inställningar sparade";
 "notifications.preferencesUpdated" = "Dina notisinställningar har uppdaterats.";
 "notifications.typesFooter" = "Välj vilka notiser du vill få";
+"notifications.newAvailability" = "Ny tillgänglighet";
+"notifications.newAvailabilityDesc" = "När titlar i din watchlist blir tillgängliga att streama, hyra eller köpa";
+"notifications.newRelease" = "Nya releaser";
+"notifications.newReleaseDesc" = "Filmer och serier där du tryckte på \"Meddela mig\" när de kommer ut";
+"notifications.episodeAired" = "Nya avsnitt";
+"notifications.episodeAiredDesc" = "När ett nytt avsnitt sänds för tv-serier i dina listor";
+"notifications.continueWatching" = "Fortsätt titta";
+"notifications.continueWatchingDesc" = "Påminnelser om att fortsätta serier du har tittat på";
+"notifications.listMilestone" = "Listmilstolpar";
+"notifications.listMilestoneDesc" = "Fira när du når tittarmilstolpar";
 "notifications.frequencyFooter" = "Maximalt antal notiser du får per dag";
 "notifications.favoriteActorsTitle" = "Dina favoritskådespelare";
 "notifications.favoriteActorsFooter" = "Få en notis när dessa skådespelare har nytt innehåll";

@@ -573,6 +573,16 @@
 "notifications.settingsSaved" = "Einstellungen gespeichert";
 "notifications.preferencesUpdated" = "Deine Benachrichtigungseinstellungen wurden aktualisiert.";
 "notifications.typesFooter" = "Wähle, welche Benachrichtigungen du erhalten möchtest";
+"notifications.newAvailability" = "Neue Verfügbarkeit";
+"notifications.newAvailabilityDesc" = "Wenn Titel auf deiner Watchlist zum Streamen, Leihen oder Kaufen verfügbar werden";
+"notifications.newRelease" = "Neue Veröffentlichungen";
+"notifications.newReleaseDesc" = "Filme und Serien, bei denen du auf \"Benachrichtigen\" getippt hast, sobald sie erscheinen";
+"notifications.episodeAired" = "Neue Folgen";
+"notifications.episodeAiredDesc" = "Wenn eine neue Folge einer Serie in deinen Listen ausgestrahlt wird";
+"notifications.continueWatching" = "Weiterschauen";
+"notifications.continueWatchingDesc" = "Erinnerungen, Serien weiterzuschauen, die du begonnen hast";
+"notifications.listMilestone" = "Listen-Meilensteine";
+"notifications.listMilestoneDesc" = "Feiere, wenn du Meilensteine beim Schauen erreichst";
 "notifications.frequencyFooter" = "Maximale Anzahl an Benachrichtigungen pro Tag";
 "notifications.favoriteActorsTitle" = "Deine Lieblingsschauspieler";
 "notifications.favoriteActorsFooter" = "Erhalte Alerts, wenn diese Schauspieler neue Inhalte haben";

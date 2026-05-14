@@ -16,7 +16,7 @@ final class DiscoveryWarmFeedService {
             guard let type = CarouselType(rawValue: payload.type), !payload.items.isEmpty else { return nil }
             return PersonalizedCarousel(
                 type: type,
-                title: payload.title,
+                titleSpec: payload.titleSpec,
                 items: payload.items,
                 descriptions: [:],
                 reason: payload.reason
@@ -27,7 +27,7 @@ final class DiscoveryWarmFeedService {
 
 private struct WarmCarouselPayload: Decodable {
     let type: String
-    let title: String
+    let titleSpec: CarouselTitleSpec
     let reason: String
     let items: [Movie]
 }

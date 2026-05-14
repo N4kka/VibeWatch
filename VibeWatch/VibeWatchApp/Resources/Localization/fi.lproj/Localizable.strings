@@ -575,6 +575,16 @@
 "notifications.settingsSaved" = "Asetukset tallennettu";
 "notifications.preferencesUpdated" = "Ilmoitusasetuksesi on päivitetty.";
 "notifications.typesFooter" = "Valitse, mistä ilmoituksia haluat";
+"notifications.newAvailability" = "Uusi saatavuus";
+"notifications.newAvailabilityDesc" = "Kun katselulistasi kohteet tulevat saataville suoratoistoon, vuokrattavaksi tai ostettavaksi";
+"notifications.newRelease" = "Uudet julkaisut";
+"notifications.newReleaseDesc" = "Elokuvat ja sarjat, joissa napautit \"Ilmoita minulle\", kun ne julkaistaan";
+"notifications.episodeAired" = "Uudet jaksot";
+"notifications.episodeAiredDesc" = "Kun listojesi TV-sarjoista esitetään uusi jakso";
+"notifications.continueWatching" = "Jatka katselua";
+"notifications.continueWatchingDesc" = "Muistutukset jatkaa sarjoja, joita olet katsonut";
+"notifications.listMilestone" = "Listojen virstanpylväät";
+"notifications.listMilestoneDesc" = "Juhlista katselun virstanpylväitä";
 "notifications.frequencyFooter" = "Ilmoitusten enimmäismäärä päivässä";
 "notifications.favoriteActorsTitle" = "Suosikkinäyttelijäsi";
 "notifications.favoriteActorsFooter" = "Saat ilmoituksen, kun näillä näyttelijöillä on uutta sisältöä";

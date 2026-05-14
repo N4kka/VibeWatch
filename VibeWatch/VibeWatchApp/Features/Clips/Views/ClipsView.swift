@@ -1584,10 +1584,10 @@ struct ListSelectionRow: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(list.name)
+                    Text(list.displayName)
                         .font(.system(size: 16, weight: .medium))
                         .foregroundColor(.white)
-                    
+
                     Text("\(list.items.count) \("common.items".localized)")
                         .font(.system(size: 13))
                         .foregroundColor(.gray)

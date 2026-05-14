@@ -575,6 +575,16 @@
 "notifications.settingsSaved" = "Ustawienia zapisane";
 "notifications.preferencesUpdated" = "Twoje preferencje powiadomień zostały zaktualizowane.";
 "notifications.typesFooter" = "Wybierz, jakie powiadomienia chcesz otrzymywać";
+"notifications.newAvailability" = "Nieuwe beschikbaarheid";
+"notifications.newAvailabilityDesc" = "Wanneer items op je watchlist beschikbaar worden om te streamen, huren of kopen";
+"notifications.newRelease" = "Nieuwe releases";
+"notifications.newReleaseDesc" = "Films en series waarvoor je op \"Stuur melding\" tikte wanneer ze uitkomen";
+"notifications.episodeAired" = "Nieuwe afleveringen";
+"notifications.episodeAiredDesc" = "Wanneer er een nieuwe aflevering wordt uitgezonden voor tv-series in je lijsten";
+"notifications.continueWatching" = "Verder kijken";
+"notifications.continueWatchingDesc" = "Herinneringen om series die je aan het kijken was weer op te pakken";
+"notifications.listMilestone" = "Lijstmijlpalen";
+"notifications.listMilestoneDesc" = "Vier het wanneer je kijkmijlpalen bereikt";
 "notifications.frequencyFooter" = "Maksymalna liczba powiadomień dziennie";
 "notifications.favoriteActorsTitle" = "Twoi ulubieni aktorzy";
 "notifications.favoriteActorsFooter" = "Dostaniesz powiadomienie, gdy pojawi się nowa treść z ich udziałem";

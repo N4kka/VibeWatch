@@ -575,6 +575,16 @@
 "notifications.settingsSaved" = "Indstillinger gemt";
 "notifications.preferencesUpdated" = "Dine notifikationsindstillinger er blevet opdateret.";
 "notifications.typesFooter" = "Vælg hvilke notifikationer du vil modtage";
+"notifications.newAvailability" = "Ny tilgængelighed";
+"notifications.newAvailabilityDesc" = "Når titler på din watchlist bliver tilgængelige til streaming, leje eller køb";
+"notifications.newRelease" = "Nye udgivelser";
+"notifications.newReleaseDesc" = "Film og serier, hvor du trykkede på \"Giv mig besked\", når de udkommer";
+"notifications.episodeAired" = "Nye episoder";
+"notifications.episodeAiredDesc" = "Når en ny episode sendes for tv-serier på dine lister";
+"notifications.continueWatching" = "Fortsæt med at se";
+"notifications.continueWatchingDesc" = "Påmindelser om at fortsætte serier, du har set";
+"notifications.listMilestone" = "Listemilepæle";
+"notifications.listMilestoneDesc" = "Fejr, når du når milepæle for visning";
 "notifications.frequencyFooter" = "Maksimalt antal notifikationer du modtager pr. dag";
 "notifications.favoriteActorsTitle" = "Dine favoritskuespillere";
 "notifications.favoriteActorsFooter" = "Få besked, når disse skuespillere har nyt indhold";

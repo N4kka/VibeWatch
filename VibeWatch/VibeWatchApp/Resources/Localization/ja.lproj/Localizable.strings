@@ -575,6 +575,16 @@
 "notifications.settingsSaved" = "設定を保存しました";
 "notifications.preferencesUpdated" = "通知設定が更新されました。";
 "notifications.typesFooter" = "受け取りたい通知を選択してください";
+"notifications.newAvailability" = "新着配信";
+"notifications.newAvailabilityDesc" = "ウォッチリストの作品がストリーミング、レンタル、購入で利用可能になったとき";
+"notifications.newRelease" = "新作リリース";
+"notifications.newReleaseDesc" = "「通知する」をタップした映画や番組が公開されたとき";
+"notifications.episodeAired" = "新着エピソード";
+"notifications.episodeAiredDesc" = "リスト内のテレビ番組で新しいエピソードが放送されたとき";
+"notifications.continueWatching" = "視聴を続ける";
+"notifications.continueWatchingDesc" = "視聴中のシリーズを再開するためのリマインダー";
+"notifications.listMilestone" = "リストのマイルストーン";
+"notifications.listMilestoneDesc" = "視聴のマイルストーン達成をお祝いします";
 "notifications.frequencyFooter" = "1日に受け取る通知の最大数";
 "notifications.favoriteActorsTitle" = "好きな俳優";
 "notifications.favoriteActorsFooter" = "これらの俳優の新作が出たら通知します";

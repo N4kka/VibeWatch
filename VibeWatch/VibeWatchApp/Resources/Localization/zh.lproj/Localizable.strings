@@ -560,6 +560,16 @@
 "notifications.settingsSaved" = "设置已保存";
 "notifications.preferencesUpdated" = "你的通知偏好已更新。";
 "notifications.typesFooter" = "选择你想接收的通知";
+"notifications.newAvailability" = "新可用内容";
+"notifications.newAvailabilityDesc" = "当你关注列表中的条目可供流媒体播放、租借或购买时";
+"notifications.newRelease" = "新上线";
+"notifications.newReleaseDesc" = "你点按“通知我”的电影和剧集上线时";
+"notifications.episodeAired" = "新剧集";
+"notifications.episodeAiredDesc" = "当你列表中的电视节目播出新一集时";
+"notifications.continueWatching" = "继续观看";
+"notifications.continueWatchingDesc" = "提醒你继续观看正在追的剧集";
+"notifications.listMilestone" = "列表里程碑";
+"notifications.listMilestoneDesc" = "当你达成观看里程碑时一起庆祝";
 "notifications.frequencyFooter" = "你每天最多会收到的通知数量";
 "notifications.favoriteActorsTitle" = "你喜爱的演员";
 "notifications.favoriteActorsFooter" = "这些演员有新内容时收到通知";

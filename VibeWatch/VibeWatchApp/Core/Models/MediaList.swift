@@ -52,6 +52,16 @@ struct MediaList: Identifiable, Codable {
     let createdAt: Date
     var items: [MediaListItem]
 
+    var displayName: String {
+        switch type {
+        case .watchlist: return "lists.watchlist".localized
+        case .seen: return "lists.seen".localized
+        case .liked: return "lists.liked".localized
+        case .disliked: return "lists.disliked".localized
+        case .custom: return name
+        }
+    }
+
     init(id: String = UUID().uuidString, name: String, description: String? = nil, type: ListType, createdAt: Date = Date(), items: [MediaListItem] = []) {
         self.id = id
         self.name = name

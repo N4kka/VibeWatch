@@ -62,15 +62,15 @@ class ListManager: ObservableObject {
     }
 
     private init() {
-        // Initialize default lists
-        self.watchlist = MediaList(name: "lists.watchlist".localized, type: .watchlist)
-        self.seenList = MediaList(name: "lists.seen".localized, type: .seen)
-        self.likedList = MediaList(name: "lists.liked".localized, type: .liked)
-        self.dislikedList = MediaList(name: "lists.disliked".localized, type: .disliked)
+        // Initialize default lists with stable type-keyed names
+        self.watchlist = MediaList(name: ListType.watchlist.rawValue, type: .watchlist)
+        self.seenList = MediaList(name: ListType.seen.rawValue, type: .seen)
+        self.likedList = MediaList(name: ListType.liked.rawValue, type: .liked)
+        self.dislikedList = MediaList(name: ListType.disliked.rawValue, type: .disliked)
         self.softLimitWarningMessage = nil
 
         loadLists()
-        
+
         // Observe authentication state changes
         authService.$isAuthenticated
             .receive(on: DispatchQueue.main)
@@ -84,6 +84,12 @@ class ListManager: ObservableObject {
                     }
                 }
             }
+            .store(in: &cancellables)
+
+        // Re-publish when language changes so views re-render with updated displayName
+        LocalizationManager.shared.$localeDidChange
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.objectWillChange.send() }
             .store(in: &cancellables)
     }
     
@@ -149,10 +155,10 @@ class ListManager: ObservableObject {
         
         // Clear all lists and revert to empty default lists only
         // This ensures no authenticated user data remains visible
-        let emptyWatchlist = MediaList(name: "lists.watchlist".localized, type: .watchlist)
-        let emptySeenList = MediaList(name: "lists.seen".localized, type: .seen)
-        let emptyLikedList = MediaList(name: "lists.liked".localized, type: .liked)
-        let emptyDislikedList = MediaList(name: "lists.disliked".localized, type: .disliked)
+        let emptyWatchlist = MediaList(name: ListType.watchlist.rawValue, type: .watchlist)
+        let emptySeenList = MediaList(name: ListType.seen.rawValue, type: .seen)
+        let emptyLikedList = MediaList(name: ListType.liked.rawValue, type: .liked)
+        let emptyDislikedList = MediaList(name: ListType.disliked.rawValue, type: .disliked)
         
         // Set lists to only empty default lists
         self.lists = [emptyWatchlist, emptySeenList, emptyLikedList, emptyDislikedList]
@@ -355,16 +361,11 @@ class ListManager: ObservableObject {
     
     private func defaultList(for type: ListType) -> MediaList {
         switch type {
-        case .watchlist:
-            return MediaList(name: "lists.watchlist".localized, type: .watchlist)
-        case .seen:
-            return MediaList(name: "lists.seen".localized, type: .seen)
-        case .liked:
-            return MediaList(name: "lists.liked".localized, type: .liked)
-        case .disliked:
-            return MediaList(name: "lists.disliked".localized, type: .disliked)
-        case .custom:
-            return MediaList(name: "Custom", type: .custom)
+        case .watchlist: return MediaList(name: ListType.watchlist.rawValue, type: .watchlist)
+        case .seen: return MediaList(name: ListType.seen.rawValue, type: .seen)
+        case .liked: return MediaList(name: ListType.liked.rawValue, type: .liked)
+        case .disliked: return MediaList(name: ListType.disliked.rawValue, type: .disliked)
+        case .custom: return MediaList(name: "custom", type: .custom)
         }
     }
     

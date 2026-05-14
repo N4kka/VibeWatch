@@ -98,7 +98,12 @@ struct ListsView: View {
             AnalyticsService.shared.logScreenView(screenName: "Lists", screenClass: "ListsView")
         }
         .onChange(of: localizationManager.localeDidChange) {_, _ in
-            refreshID = UUID()
+            Task { @MainActor in
+                // Purge stale-locale detail cache so the next TMDB fetch returns
+                // titles and overviews in the new language.
+                await DetailCacheService.shared.clearAll()
+                refreshID = UUID()
+            }
         }
         .onChange(of: filters.streamingPlatforms) { _, platforms in
             if !platforms.isEmpty {
@@ -416,7 +421,7 @@ struct ListsView: View {
         // Apply search filter
         if !searchText.isEmpty {
             lists = lists.filter { list in
-                let nameMatch = list.name.range(of: searchText, options: .caseInsensitive) != nil
+                let nameMatch = list.displayName.range(of: searchText, options: .caseInsensitive) != nil
                 let itemMatch = list.items.contains { $0.title.range(of: searchText, options: .caseInsensitive) != nil }
                 return nameMatch || itemMatch
             }
@@ -560,6 +565,8 @@ struct MediaItemRow: View {
     @State private var fallbackOverview: String?
     @State private var fallbackSeasonCount: Int?
     @State private var fallbackDuration: Int?
+    @State private var localizedTitle: String?
+    @State private var localizedOverview: String?
     
     private var deleteThreshold: CGFloat {
         // Delete when swiped 75% of the card width
@@ -621,7 +628,7 @@ struct MediaItemRow: View {
                 // Content - right side
                 VStack(alignment: .leading, spacing: 8) {
                     // Title
-                    Text(item.title)
+                    Text(localizedTitle ?? item.title)
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(.theme.textPrimary)
                         .lineLimit(2)
@@ -648,7 +655,7 @@ struct MediaItemRow: View {
                         .lineLimit(1)
                     }
 
-                    if let overview = item.displayOverview(fallback: fallbackOverview) {
+                    if let overview = localizedOverview ?? item.displayOverview(fallback: fallbackOverview) {
                         Text(overview)
                             .font(.system(size: 13))
                             .foregroundColor(.theme.textSecondary)
@@ -840,13 +847,19 @@ struct MediaItemRow: View {
         let needsOverview = item.displayOverview(fallback: nil) == nil
         let needsDuration = item.runtime == nil || item.runtime == 0
         let needsTVDetails = item.mediaType == .tv
-        guard needsOverview || needsDuration || needsTVDetails else { return }
+        // localizedTitle == nil signals a fresh-locale fetch is needed (state was reset by
+        // view recreation after locale change). In that case skip the early-return guard so
+        // we always reach the TMDB call below.
+        let needsLocalizedStrings = localizedTitle == nil
+        guard needsOverview || needsDuration || needsTVDetails || needsLocalizedStrings else { return }
 
         switch item.mediaType {
         case .movie:
             for await detail in LocalMediaDetailRepository.shared.observeMovie(id: item.mediaId) {
                 applyMovieDisplayFallback(detail.movie)
-                if !needsMovieNetworkFallback {
+                // If we need fresh locale strings, don't trust the local cache — always
+                // fall through to the TMDB call below.
+                if !needsLocalizedStrings, !needsMovieNetworkFallback {
                     return
                 }
             }
@@ -856,7 +869,7 @@ struct MediaItemRow: View {
         case .tv:
             for await detail in LocalMediaDetailRepository.shared.observeTVShow(id: item.mediaId) {
                 applyTVDisplayFallback(detail.tvShow)
-                if !needsTVNetworkFallback {
+                if !needsLocalizedStrings, !needsTVNetworkFallback {
                     return
                 }
             }
@@ -879,6 +892,13 @@ struct MediaItemRow: View {
     }
 
     private func applyMovieDisplayFallback(_ movie: Movie) {
+        if !movie.title.isEmpty {
+            localizedTitle = movie.title
+        }
+        if !movie.overview.isEmpty {
+            localizedOverview = movie.overview
+        }
+
         if fallbackOverview == nil,
            let overview = item.displayOverview(fallback: movie.overview) {
             fallbackOverview = overview
@@ -890,6 +910,13 @@ struct MediaItemRow: View {
     }
 
     private func applyTVDisplayFallback(_ tvShow: TVShow) {
+        if !tvShow.name.isEmpty {
+            localizedTitle = tvShow.name
+        }
+        if !tvShow.overview.isEmpty {
+            localizedOverview = tvShow.overview
+        }
+
         if fallbackOverview == nil,
            let overview = item.displayOverview(fallback: tvShow.overview) {
             fallbackOverview = overview
@@ -1162,7 +1189,7 @@ struct CustomListDetailView: View {
                 }
             }
         }
-        .navigationTitle(currentList.name)
+        .navigationTitle(currentList.displayName)
         .navigationBarTitleDisplayMode(.large)
         .overlay {
             if showFilters {
@@ -1215,7 +1242,7 @@ struct CustomListDetailView: View {
             }
             Button("common.cancel".localized, role: .cancel) { }
         } message: {
-            Text("lists.deleteConfirmation".localized.replacingOccurrences(of: "%@", with: currentList.name))
+            Text("lists.deleteConfirmation".localized.replacingOccurrences(of: "%@", with: currentList.displayName))
         }
         .alert(item: $error) { appError in
             Alert(
@@ -1324,7 +1351,7 @@ struct ListCard: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
 
-            Text(list.name)
+            Text(list.displayName)
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundColor(.theme.textPrimary)
                 .lineLimit(2)

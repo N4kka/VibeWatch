@@ -575,6 +575,16 @@
 "notifications.settingsSaved" = "सेटिंग्स सेव हो गईं";
 "notifications.preferencesUpdated" = "आपकी सूचना प्राथमिकताएँ अपडेट हो गईं।";
 "notifications.typesFooter" = "चुनें कि आप कौन-सी सूचनाएँ पाना चाहते हैं";
+"notifications.newAvailability" = "नई उपलब्धता";
+"notifications.newAvailabilityDesc" = "जब आपकी वॉचलिस्ट के आइटम स्ट्रीम, किराये या खरीद के लिए उपलब्ध हों";
+"notifications.newRelease" = "नई रिलीज़";
+"notifications.newReleaseDesc" = "वे फ़िल्में और शो जिन पर आपने रिलीज़ होने पर \"मुझे सूचित करें\" टैप किया";
+"notifications.episodeAired" = "नए एपिसोड";
+"notifications.episodeAiredDesc" = "जब आपकी सूचियों में मौजूद टीवी शो का नया एपिसोड प्रसारित हो";
+"notifications.continueWatching" = "देखना जारी रखें";
+"notifications.continueWatchingDesc" = "आप जिन सीरीज़ को देख रहे थे उन्हें फिर से शुरू करने की याद दिलाने वाले रिमाइंडर";
+"notifications.listMilestone" = "सूची माइलस्टोन";
+"notifications.listMilestoneDesc" = "देखने के माइलस्टोन पूरे होने पर जश्न मनाएँ";
 "notifications.frequencyFooter" = "प्रति दिन अधिकतम सूचनाएँ";
 "notifications.favoriteActorsTitle" = "आपके पसंदीदा अभिनेता";
 "notifications.favoriteActorsFooter" = "जब इन अभिनेताओं का नया कंटेंट आए, तो सूचना पाएं";

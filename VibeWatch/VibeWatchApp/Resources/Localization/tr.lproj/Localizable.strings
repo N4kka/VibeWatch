@@ -563,6 +563,16 @@
 "notifications.settingsSaved" = "Ayarlar Kaydedildi";
 "notifications.preferencesUpdated" = "Bildirim tercihlerin güncellendi.";
 "notifications.typesFooter" = "Hangi bildirimleri almak istediğini seç";
+"notifications.newAvailability" = "Yeni erişilebilirlik";
+"notifications.newAvailabilityDesc" = "İzleme listenizdeki öğeler izleme, kiralama veya satın alma için erişilebilir olduğunda";
+"notifications.newRelease" = "Yeni çıkanlar";
+"notifications.newReleaseDesc" = "Çıktıklarında \"Bana bildir\"e dokunduğunuz film ve diziler";
+"notifications.episodeAired" = "Yeni bölümler";
+"notifications.episodeAiredDesc" = "Listelerinizdeki TV dizileri için yeni bir bölüm yayınlandığında";
+"notifications.continueWatching" = "İzlemeye devam et";
+"notifications.continueWatchingDesc" = "İzlediğiniz dizilere devam etmeniz için hatırlatmalar";
+"notifications.listMilestone" = "Liste dönüm noktaları";
+"notifications.listMilestoneDesc" = "İzleme dönüm noktalarına ulaştığınızda kutlayın";
 "notifications.frequencyFooter" = "Günde alacağın maksimum bildirim sayısı";
 "notifications.favoriteActorsTitle" = "Favori Oyuncuların";
 "notifications.favoriteActorsFooter" = "Bu oyuncuların yeni içeriği olduğunda bildirim al";

@@ -204,6 +204,15 @@ class DetailCacheService {
         return try parseCachedTVShowDetail(from: row)
     }
 
+    // MARK: - Cache Invalidation
+
+    /// Clears all cached detail entries. Called when the app language changes so the next
+    /// TMDB fetch returns titles and overviews in the new locale.
+    func clearAll() async {
+        _ = try? await db.delete("detail_cache", where: "1 = 1", parameters: [], hard: true)
+        Logger.debug("[DetailCache] Cleared all entries (locale change)")
+    }
+
     // MARK: - Parsing Helpers
 
     private func parseCachedMovieDetail(from row: [String: Any]) throws -> CachedMovieDetail {

@@ -574,6 +574,16 @@
 "notifications.settingsSaved" = "Settings Saved";
 "notifications.preferencesUpdated" = "Your notification preferences have been updated.";
 "notifications.typesFooter" = "Choose which notifications you'd like to receive";
+"notifications.newAvailability" = "New Availability";
+"notifications.newAvailabilityDesc" = "When items on your watchlist become available to stream, rent, or buy";
+"notifications.newRelease" = "New Releases";
+"notifications.newReleaseDesc" = "Movies and shows you tapped \"Notify me\" on when they come out";
+"notifications.episodeAired" = "New Episodes";
+"notifications.episodeAiredDesc" = "When a new episode airs for TV shows in your lists";
+"notifications.continueWatching" = "Continue Watching";
+"notifications.continueWatchingDesc" = "Reminders to pick up series you've been watching";
+"notifications.listMilestone" = "List Milestones";
+"notifications.listMilestoneDesc" = "Celebrate when you hit watching milestones";
 "notifications.frequencyFooter" = "Maximum number of notifications you'll receive per day";
 "notifications.favoriteActorsTitle" = "Your Favorite Actors";
 "notifications.favoriteActorsFooter" = "Get notified when these actors have new content";
