@@ -21,6 +21,9 @@ VibeWatchApp/Scripts/.DS_Store
 # Local secrets
 VibeWatchApp/Config/Secrets.xcconfig
 
+# Firebase config (contiene API_KEY; restringere la chiave in Google Cloud Console)
+VibeWatchApp/GoogleService-Info.plist
+
 # Local-only docs, scripts, and migrations
 docs/
 supabase/
