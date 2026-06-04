@@ -1303,3 +1303,64 @@ final class ClipFormattersTests: XCTestCase {
                        "date nel futuro -> componenti non positive -> now")
     }
 }
+
+// MARK: - ProviderSelection (scelta provider Flatrate>Rent>Buy, estratta da ListsView)
+
+final class ProviderSelectionTests: XCTestCase {
+
+    private func provider(id: Int, name: String = "Unknown", logo: String = "/x.jpg",
+                          link: URL? = nil) -> Provider {
+        Provider(providerId: id, providerName: name, logoPath: logo, displayPriority: 0,
+                 price: nil, quality: nil, presentationType: nil, externalLink: link)
+    }
+
+    func test_flatrateBeatsRentAndBuy() {
+        let cp = CountryProviders(
+            flatrate: [provider(id: 1, link: URL(string: "https://a")!)],
+            rent: [provider(id: 2, link: URL(string: "https://b")!)],
+            buy: [provider(id: 3, link: URL(string: "https://c")!)],
+            link: nil)
+        XCTAssertEqual(ProviderSelection.selectTopProvider(from: cp).top?.id, 1)
+    }
+
+    func test_picksFirstValidInTier_skipsInvalid() {
+        // primo provider ha logo inusabile (.svg) -> scartato; vince il secondo valido
+        let cp = CountryProviders(
+            flatrate: [provider(id: 1, logo: "/x.svg", link: URL(string: "https://a")!),
+                       provider(id: 2, link: URL(string: "https://b")!)],
+            rent: nil, buy: nil, link: nil)
+        XCTAssertEqual(ProviderSelection.selectTopProvider(from: cp).top?.id, 2)
+    }
+
+    func test_fallsThroughToRentWhenFlatrateHasNoValid() {
+        let cp = CountryProviders(
+            flatrate: [provider(id: 1, logo: "")], // logo vuoto -> inusabile
+            rent: [provider(id: 2, link: URL(string: "https://b")!)],
+            buy: nil, link: nil)
+        XCTAssertEqual(ProviderSelection.selectTopProvider(from: cp).top?.id, 2)
+    }
+
+    func test_countryLinkMakesUsableProviderValid() {
+        // nessun externalLink né homepage nota, ma cp.link != nil -> valido
+        let cp = CountryProviders(
+            flatrate: [provider(id: 1)], rent: nil, buy: nil,
+            link: "https://region-page")
+        let result = ProviderSelection.selectTopProvider(from: cp)
+        XCTAssertEqual(result.link, "https://region-page")
+        XCTAssertEqual(result.top?.id, 1)
+    }
+
+    func test_noReachability_yieldsNilTop() {
+        // logo usabile ma: niente externalLink, niente cp.link, nome senza homepage nota
+        let cp = CountryProviders(
+            flatrate: [provider(id: 1, name: "Unknown")], rent: nil, buy: nil, link: nil)
+        XCTAssertNil(ProviderSelection.selectTopProvider(from: cp).top)
+    }
+
+    func test_knownPlatformHomepageMakesValidWithoutLinks() {
+        let cp = CountryProviders(
+            flatrate: [provider(id: 1, name: "Netflix")], rent: nil, buy: nil, link: nil)
+        XCTAssertEqual(ProviderSelection.selectTopProvider(from: cp).top?.id, 1,
+                       "homepage piattaforma nota -> valido anche senza link")
+    }
+}

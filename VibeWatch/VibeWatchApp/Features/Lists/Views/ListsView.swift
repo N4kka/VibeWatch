@@ -872,23 +872,12 @@ struct MediaItemRow: View {
         providerLookupCompleted = true
     }
 
-    private func isValid(_ provider: Provider) -> Bool {
-        guard provider.hasUsableLogo else { return false }
-        if provider.externalLink != nil || providerLink != nil { return true }
-        return PlatformDeepLinkHelper.hasPlatformHomepage(for: provider)
-    }
-    
     private func processProviders(_ countryProviders: CountryProviders) {
-        providerLink = countryProviders.link
-        
-        // Priority: Flatrate > Rent > Buy
-        if let flatrate = countryProviders.flatrate, let valid = flatrate.first(where: isValid) {
-            topProvider = valid
-        } else if let rent = countryProviders.rent, let valid = rent.first(where: isValid) {
-            topProvider = valid
-        } else if let buy = countryProviders.buy, let valid = buy.first(where: isValid) {
-            topProvider = valid
-        }
+        let result = ProviderSelection.selectTopProvider(from: countryProviders)
+        providerLink = result.link
+        // topProvider è aggiornato solo se troviamo un provider valido (non azzeriamo
+        // quello già mostrato), come nel comportamento originale.
+        if let top = result.top { topProvider = top }
     }
 }
 
