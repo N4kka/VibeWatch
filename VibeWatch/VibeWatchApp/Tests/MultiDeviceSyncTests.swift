@@ -1545,6 +1545,27 @@ final class MovieShareTextBuilderTests: XCTestCase {
     }
 }
 
+// MARK: - MoviePosterShareURLBuilder (URL poster share estratto da MovieDetailView)
+
+final class MoviePosterShareURLBuilderTests: XCTestCase {
+
+    func test_nilPosterPathProducesNoURL() {
+        XCTAssertNil(MoviePosterShareURLBuilder.url(posterPath: nil))
+    }
+
+    func test_validPosterPathUsesTMDBW500Base() {
+        let url = MoviePosterShareURLBuilder.url(posterPath: "/abc123.jpg")
+
+        XCTAssertEqual(url?.absoluteString, "https://image.tmdb.org/t/p/w500/abc123.jpg")
+    }
+
+    func test_emptyPosterPathStillProducesBaseSizeURL() {
+        let url = MoviePosterShareURLBuilder.url(posterPath: "")
+
+        XCTAssertEqual(url?.absoluteString, "https://image.tmdb.org/t/p/w500")
+    }
+}
+
 // MARK: - MovieCreditsInfoBuilder (righe informative estratte da MovieDetailView)
 
 final class MovieCreditsInfoBuilderTests: XCTestCase {

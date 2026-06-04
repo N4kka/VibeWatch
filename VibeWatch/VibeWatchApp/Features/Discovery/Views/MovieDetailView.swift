@@ -326,8 +326,7 @@ struct MovieDetailView: View {
     
     private func prepareShareItems(movie: Movie) async {
         var items: [Any] = []
-        if let posterPath = movie.posterPath,
-           let url = URL(string: "https://image.tmdb.org/t/p/w500\(posterPath)"),
+        if let url = MoviePosterShareURLBuilder.url(posterPath: movie.posterPath),
            let (data, _) = try? await URLSession.shared.data(from: url),
            let image = UIImage(data: data) {
             items.append(image)
