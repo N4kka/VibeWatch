@@ -602,7 +602,7 @@ struct MediaItemRow: View {
                 // Poster image - left side
                 if let posterPath = item.posterPath,
                    let url = URL(string: "https://image.tmdb.org/t/p/w342\(posterPath)") {
-                    CachedAsyncImage(url: url) { image in
+                    CachedAsyncImage(url: url, maxPixelSize: 630) { image in
                         image
                             .resizable()
                             .aspectRatio(contentMode: .fill)
@@ -1298,7 +1298,7 @@ struct ListCard: View {
                 if let lastItem = list.items.last,
                    let posterPath = lastItem.posterPath,
                    let url = URL(string: "https://image.tmdb.org/t/p/w342\(posterPath)") {
-                    CachedAsyncImage(url: url) { image in
+                    CachedAsyncImage(url: url, maxPixelSize: 630) { image in
                         image
                             .resizable()
                             .aspectRatio(2/3, contentMode: .fit)
@@ -1328,7 +1328,7 @@ struct ListCard: View {
                         ForEach(lastFourItems) { item in
                             if let posterPath = item.posterPath,
                                let url = URL(string: "https://image.tmdb.org/t/p/w342\(posterPath)") {
-                                CachedAsyncImage(url: url) { image in
+                                CachedAsyncImage(url: url, maxPixelSize: 630) { image in
                                     image
                                         .resizable()
                                         .aspectRatio(2/3, contentMode: .fit)

@@ -429,7 +429,7 @@ struct MediaCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            CachedAsyncImage(url: movie.posterURL)
+            CachedAsyncImage(url: movie.posterURL, maxPixelSize: 630)
                 .aspectRatio(contentMode: .fill)
                 .frame(width: 140, height: 210)
                 .clipShape(RoundedRectangle(cornerRadius: 12))

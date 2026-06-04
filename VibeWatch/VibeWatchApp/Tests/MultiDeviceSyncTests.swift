@@ -765,3 +765,36 @@ final class ContentCacheTests: XCTestCase {
         XCTAssertEqual(v, 2, "una nuova insert sulla stessa chiave sovrascrive")
     }
 }
+
+// MARK: - ImageCacheService downsampling (Fase 3 §2.2)
+import UIKit
+
+final class ImageDownsampleTests: XCTestCase {
+
+    private func makeImageData(width: Int, height: Int) -> Data {
+        let size = CGSize(width: width, height: height)
+        let renderer = UIGraphicsImageRenderer(size: size)
+        let img = renderer.image { ctx in
+            UIColor.systemBlue.setFill()
+            ctx.fill(CGRect(origin: .zero, size: size))
+        }
+        return img.pngData()!
+    }
+
+    func test_downsample_reducesToMaxPixelSize() throws {
+        let data = makeImageData(width: 1000, height: 1500)
+        let thumb = try XCTUnwrap(ImageCacheService.downsample(data: data, maxPixelSize: 300))
+        // UIImage(cgImage:) ha scale 1 → .size è in pixel.
+        let maxDim = max(thumb.size.width, thumb.size.height)
+        XCTAssertLessThanOrEqual(maxDim, 301, "il lato lungo deve essere <= maxPixelSize")
+        XCTAssertGreaterThan(maxDim, 0)
+        // Aspect ratio 2:3 preservato (entro arrotondamento).
+        let ratio = thumb.size.height / thumb.size.width
+        XCTAssertEqual(ratio, 1.5, accuracy: 0.05)
+    }
+
+    func test_downsample_invalidData_returnsNil() {
+        let thumb = ImageCacheService.downsample(data: Data([0x00, 0x01, 0x02]), maxPixelSize: 100)
+        XCTAssertNil(thumb)
+    }
+}
