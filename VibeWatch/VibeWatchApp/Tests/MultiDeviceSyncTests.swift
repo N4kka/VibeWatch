@@ -1113,8 +1113,10 @@ final class ListItemFiltererTests: XCTestCase {
         XCTAssertEqual(out.map(\.id), ["2", "1"])
     }
 
-    // Comportamento CHIAVE preservato: il filtro periodo/anno si applica SOLO col flag true
-    // (list-detail principale), NON nella CustomListDetailView (flag false).
+    // Contratto del filterer: il flag governa il filtro periodo/anno (true=applica, false=no).
+    // NB: dopo il fix del bug, ENTRAMBe le list-detail (principale + CustomListDetailView)
+    // passano `true`; il ramo `false` resta testato come contratto dell'API, non più come
+    // comportamento di una View.
     func test_releasePeriodFilter_onlyWhenFlagTrue() {
         let items = [item(id: "1", title: "Old", year: "2015-01-01"),
                      item(id: "2", title: "New", year: "2022-01-01")]
@@ -1127,7 +1129,7 @@ final class ListItemFiltererTests: XCTestCase {
 
         let withoutYear = ListItemFilterer.filteredAndSorted(items, searchText: "",
             filters: f, availabilityByItemId: [:], applyReleasePeriodFilter: false)
-        XCTAssertEqual(Set(withoutYear.map(\.id)), ["1", "2"], "flag false → NON filtra per anno (comportamento storico)")
+        XCTAssertEqual(Set(withoutYear.map(\.id)), ["1", "2"], "flag false → NON filtra per anno (contratto API)")
     }
 
     func test_streamingFilter_usesInjectedAvailability() {

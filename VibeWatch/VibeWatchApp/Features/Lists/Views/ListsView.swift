@@ -920,15 +920,15 @@ struct CustomListDetailView: View {
     }
 
     private var filteredAndSortedItems: [MediaListItem] {
-        // NB: applyReleasePeriodFilter:false preserva il comportamento STORICO di questo
-        // struct, che (a differenza della list-detail principale) NON applicava il filtro
-        // periodo/anno. Probabile bug latente da unificare — vedi ListItemFilterer.
+        // Fix bug filtro: ora applica il filtro periodo/anno come la list-detail principale.
+        // Storicamente questo struct lo OMETTEVA (omissione copia-incolla), così il filtro
+        // periodo non aveva effetto nelle liste custom. Unificato a `true` — vedi ListItemFilterer.
         ListItemFilterer.filteredAndSorted(
             currentList.items,
             searchText: searchText,
             filters: filters,
             availabilityByItemId: availabilityService.availableItems,
-            applyReleasePeriodFilter: false
+            applyReleasePeriodFilter: true
         )
     }
 
