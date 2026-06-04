@@ -1039,3 +1039,33 @@ final class ClipPrefetchGateTests: XCTestCase {
                        "no Wi-Fi + Low-Power → bloccato")
     }
 }
+
+// MARK: - SQL column identifier hardening (Fase 5 §1.10)
+//
+// I nomi colonna provenienti dai dizionari dei chiamanti vengono interpolati nello SQL
+// (i VALUES passano da `?`). Congela la funzione pura che li valida come identificatori
+// SQL semplici, così i frammenti `columns`/`setClause` restano injection-proof.
+
+final class SQLColumnIdentifierTests: XCTestCase {
+
+    func test_acceptsPlainIdentifiers() {
+        for col in ["id", "user_id", "media_id", "poster_path", "vote_average", "_private", "a1b2"] {
+            XCTAssertTrue(SQLiteService.isValidColumnIdentifier(col), "\(col) è un identificatore valido")
+        }
+    }
+
+    func test_rejectsInjectionAndMalformed() {
+        for col in [
+            "",                       // vuoto
+            "1col",                   // inizia con cifra
+            "user id",                // spazio
+            "name; DROP TABLE lists", // statement injection
+            "col)--",                 // chiusura paren + commento
+            "col, evil",              // virgola (colonna extra)
+            "\"quoted\"",             // virgolette
+            "col='x'"                 // operatore
+        ] {
+            XCTAssertFalse(SQLiteService.isValidColumnIdentifier(col), "\(col) deve essere rifiutato")
+        }
+    }
+}

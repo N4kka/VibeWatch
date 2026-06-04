@@ -108,6 +108,22 @@ final class SQLiteService: ObservableObject {
             throw SQLiteError.invalidTableName(table)
         }
     }
+
+    /// Phase 5 (1.10): a column name is a plain SQL identifier (letters, digits, underscore,
+    /// not starting with a digit). Column names from caller-provided dictionaries are
+    /// interpolated into SQL (the VALUES go through `?`), so they must be validated to keep
+    /// the `columns`/`setClause` fragments injection-proof. Pure function for testability.
+    nonisolated static func isValidColumnIdentifier(_ name: String) -> Bool {
+        name.range(of: "^[A-Za-z_][A-Za-z0-9_]*$", options: .regularExpression) != nil
+    }
+
+    /// Validate caller-provided column identifiers before interpolating them into SQL.
+    private func validateColumnNames(_ names: some Collection<String>) throws {
+        for name in names where !Self.isValidColumnIdentifier(name) {
+            Logger.error("[SQLite] SQL injection attempt blocked: invalid column '\(name)'")
+            throw SQLiteError.invalidColumnName(name)
+        }
+    }
     
     /// Designated initializer. Tests can pass a temporary/isolated database file path
     /// to exercise real persistence without touching the production store.
@@ -668,6 +684,7 @@ final class SQLiteService: ObservableObject {
     /// Insert a record and return the rowid
     func insert(_ table: String, values: [String: Any]) async throws -> Int64 {
         try validateTableName(table)  // Phase 5: SQL injection prevention
+        try validateColumnNames(values.keys)  // Phase 5 (1.10): column identifiers
         let columns = values.keys.joined(separator: ", ")
         let placeholders = values.keys.map { _ in "?" }.joined(separator: ", ")
         let sql = "INSERT INTO \(table) (\(columns)) VALUES (\(placeholders))"
@@ -710,6 +727,7 @@ final class SQLiteService: ObservableObject {
     /// Update records
     func update(_ table: String, values: [String: Any], where condition: String, parameters: [Any] = []) async throws {
         try validateTableName(table)  // Phase 5: SQL injection prevention
+        try validateColumnNames(values.keys)  // Phase 5 (1.10): column identifiers
         let setClause = values.keys.map { "\($0) = ?" }.joined(separator: ", ")
         let sql = "UPDATE \(table) SET \(setClause) WHERE \(condition)"
         
@@ -762,6 +780,7 @@ final class SQLiteService: ObservableObject {
     
     /// Count records
     func count(_ table: String, where condition: String? = nil, parameters: [Any] = []) async throws -> Int {
+        try validateTableName(table)  // Phase 5: SQL injection prevention (gap: era non validato)
         var sql = "SELECT COUNT(*) as count FROM \(table)"
         
         if let condition = condition {
@@ -793,7 +812,18 @@ final class SQLiteService: ObservableObject {
     @MainActor
     func performBatchInsert(table: String, records: [[String: Any]]) async -> Bool {
         guard !records.isEmpty else { return true }
-        
+
+        // Phase 5 (1.10): table + column identifiers interpolati → valida prima.
+        // Questo metodo non è throwing: su input invalido logga e ritorna false.
+        guard SQLiteTable.isValid(table) else {
+            Logger.error("[SQLite] SQL injection attempt blocked: invalid table '\(table)'")
+            return false
+        }
+        guard records[0].keys.allSatisfy(Self.isValidColumnIdentifier) else {
+            Logger.error("[SQLite] SQL injection attempt blocked: invalid column in batch insert into '\(table)'")
+            return false
+        }
+
         let columns = records[0].keys.joined(separator: ", ")
         let placeholders = "(" + Array(repeating: "?", count: records[0].keys.count).joined(separator: ", ") + ")"
         let query = "INSERT OR REPLACE INTO \(table) (\(columns)) VALUES \(placeholders)"
@@ -1505,6 +1535,7 @@ enum SQLiteError: LocalizedError {
     case invalidData
     case transactionFailed
     case invalidTableName(String)  // Phase 5: SQL injection prevention
+    case invalidColumnName(String) // Phase 5: SQL injection prevention
 
     var errorDescription: String? {
         switch self {
@@ -1518,6 +1549,8 @@ enum SQLiteError: LocalizedError {
             return "Transaction failed"
         case .invalidTableName(let table):
             return "Invalid table name: \(table)"
+        case .invalidColumnName(let column):
+            return "Invalid column name: \(column)"
         }
     }
 }
