@@ -1,3 +1,5 @@
+// Tooling di debug: escluso dalle build di release (Fase 0 — isolamento tooling).
+#if DEBUG
 import Foundation
 
 /// Database optimization runner for applying performance indexes and maintenance tasks
@@ -524,3 +526,4 @@ struct IndexVerificationResult {
     var missingIndexes: [String] = []
     var allIndexesPresent: Bool = false
 }
+#endif
