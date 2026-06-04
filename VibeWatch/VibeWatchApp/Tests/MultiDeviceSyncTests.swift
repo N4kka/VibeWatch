@@ -2019,3 +2019,76 @@ final class LevelCalculatorTests: XCTestCase {
         }
     }
 }
+
+// MARK: - SeasonDetailViewModel (DI proof-of-pattern: protocolli stretti + fake)
+
+private struct DummyTMDBError: Error {}
+
+private final class FakeTVSeasonProvider: TVSeasonProviding, @unchecked Sendable {
+    var result: Result<SeasonDetail, Error>
+    private(set) var callCount = 0
+    init(_ result: Result<SeasonDetail, Error>) { self.result = result }
+    func getTVSeasonDetails(showId: Int, seasonNumber: Int) async throws -> SeasonDetail {
+        callCount += 1
+        return try result.get()
+    }
+}
+
+private final class FakeTVSeasonCache: TVSeasonCaching, @unchecked Sendable {
+    var cached: SeasonDetail?
+    private(set) var writes: [SeasonDetail] = []
+    init(cached: SeasonDetail? = nil) { self.cached = cached }
+    func getCachedTVSeason(showId: Int, seasonNumber: Int) async throws -> SeasonDetail? { cached }
+    func cacheTVSeason(_ season: SeasonDetail, showId: Int, seasonNumber: Int) async throws { writes.append(season) }
+}
+
+@MainActor
+final class SeasonDetailViewModelTests: XCTestCase {
+
+    private func season(id: Int, name: String) -> SeasonDetail {
+        SeasonDetail(id: id, name: name, overview: "", posterPath: nil, seasonNumber: 1,
+                     airDate: "2022-01-01", voteAverage: 8, episodes: [])
+    }
+
+    func test_noCache_loadsFromTMDB_andCaches() async {
+        let fresh = season(id: 1, name: "S1")
+        let tmdb = FakeTVSeasonProvider(.success(fresh))
+        let cache = FakeTVSeasonCache(cached: nil)
+        let vm = SeasonDetailViewModel(showId: 10, seasonNumber: 1, tmdb: tmdb, cache: cache)
+
+        await vm.loadSeasonDetails()
+
+        XCTAssertEqual(vm.season?.id, 1)
+        XCTAssertNil(vm.error)
+        XCTAssertFalse(vm.isLoading)
+        XCTAssertEqual(tmdb.callCount, 1, "cache miss -> chiede a TMDB")
+        XCTAssertEqual(cache.writes.map(\.id), [1], "il fresh viene messo in cache")
+    }
+
+    func test_noCache_tmdbThrows_setsError() async {
+        let tmdb = FakeTVSeasonProvider(.failure(DummyTMDBError()))
+        let cache = FakeTVSeasonCache(cached: nil)
+        let vm = SeasonDetailViewModel(showId: 10, seasonNumber: 1, tmdb: tmdb, cache: cache)
+
+        await vm.loadSeasonDetails()
+
+        XCTAssertNil(vm.season)
+        XCTAssertNotNil(vm.error, "errore TMDB -> error settato")
+        XCTAssertFalse(vm.isLoading)
+        XCTAssertTrue(cache.writes.isEmpty)
+    }
+
+    func test_cacheHit_setsSeasonImmediately() async {
+        let cached = season(id: 99, name: "cached")
+        // provider che lancia: il refresh in background non sovrascrive (guard try?), test deterministico
+        let tmdb = FakeTVSeasonProvider(.failure(DummyTMDBError()))
+        let cache = FakeTVSeasonCache(cached: cached)
+        let vm = SeasonDetailViewModel(showId: 10, seasonNumber: 1, tmdb: tmdb, cache: cache)
+
+        await vm.loadSeasonDetails()
+
+        XCTAssertEqual(vm.season?.id, 99, "cache hit -> usa il valore in cache")
+        XCTAssertFalse(vm.isLoading)
+        XCTAssertNil(vm.error)
+    }
+}

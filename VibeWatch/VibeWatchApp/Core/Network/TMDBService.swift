@@ -5,7 +5,7 @@ protocol TMDBWatchProvidersServiceProtocol: Sendable {
     func getTVShowWatchProviders(id: Int) async throws -> WatchProvider
 }
 
-protocol TMDBServiceProtocol: TMDBWatchProvidersServiceProtocol, Sendable {
+protocol TMDBServiceProtocol: TMDBWatchProvidersServiceProtocol, TVSeasonProviding, Sendable {
     func getTrendingMovies(timeWindow: TimeWindow, page: Int) async throws -> TMDBResponse<Movie>
     func getPopularMovies(page: Int) async throws -> TMDBResponse<Movie>
     func getTopRatedMovies(page: Int) async throws -> TMDBResponse<Movie>
@@ -45,7 +45,7 @@ protocol TMDBServiceProtocol: TMDBWatchProvidersServiceProtocol, Sendable {
     func getTVShowCredits(id: Int) async throws -> Credits
     func getTVShowVideos(id: Int) async throws -> TMDBVideosResponse
     func getSimilarTVShows(id: Int, page: Int) async throws -> TMDBResponse<TVShow>
-    func getTVSeasonDetails(showId: Int, seasonNumber: Int) async throws -> SeasonDetail
+    // getTVSeasonDetails è ereditato da TVSeasonProviding (capability segregata, DI proof-of-pattern)
     func getMovieExternalIds(id: Int) async throws -> ExternalIds
     func getTVShowExternalIds(id: Int) async throws -> ExternalIds
     func getPersonDetails(id: Int) async throws -> PersonDetails
