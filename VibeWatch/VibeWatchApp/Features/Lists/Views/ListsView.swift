@@ -1088,12 +1088,13 @@ struct CustomListDetailView: View {
         return items
     }
 
-    private var paginatedItems: [MediaListItem] {
-        Array(filteredAndSortedItems.prefix(itemsLimit))
-    }
-
     var body: some View {
-        ZStack(alignment: .top) {
+        // Memoizzazione (2.4): filtro+sort calcolati UNA volta per render. Prima erano
+        // ricalcolati separatamente da paginatedItems, .isEmpty e .count → 3-4 passate di
+        // filter+sort sull'intera lista a ogni render.
+        let items = filteredAndSortedItems
+        let paginated = Array(items.prefix(itemsLimit))
+        return ZStack(alignment: .top) {
             Color.theme.background.ignoresSafeArea()
 
             VStack(spacing: 0) {
@@ -1132,7 +1133,7 @@ struct CustomListDetailView: View {
                 .padding(.horizontal, 20)
                 .padding(.vertical, 12)
 
-                if filteredAndSortedItems.isEmpty {
+                if items.isEmpty {
                     VStack(spacing: 16) {
                         Image(systemName: "list.bullet")
                             .font(.system(size: 60))
@@ -1146,7 +1147,7 @@ struct CustomListDetailView: View {
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 20) {
-                            ForEach(paginatedItems) { item in
+                            ForEach(paginated) { item in
                                 MediaItemRow(
                                     item: item,
                                     isInSeenList: false,
@@ -1169,7 +1170,7 @@ struct CustomListDetailView: View {
                         .padding(.bottom, 100)
                     }
                     .overlay(alignment: .bottom) {
-                        if filteredAndSortedItems.count > paginatedItems.count {
+                        if items.count > paginated.count {
                             Button {
                                 itemsLimit += 100
                             } label: {
