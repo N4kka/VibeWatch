@@ -603,10 +603,6 @@ struct WatchNowSection: View {
         providerState.providers
     }
 
-    private func visibleProviders(_ providers: [Provider]?, justWatchLink: String?) -> [Provider] {
-        WatchProviderDisplayFiltering.visibleProviders(providers, justWatchLink: justWatchLink)
-    }
-
     private var hasAnyProvider: Bool {
         guard let providers else { return false }
         return WatchProviderDisplayFiltering.hasAnyVisibleProvider(in: providers)
