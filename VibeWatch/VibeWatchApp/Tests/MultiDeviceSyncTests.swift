@@ -1139,3 +1139,127 @@ final class ListItemFiltererTests: XCTestCase {
         XCTAssertEqual(out.map(\.id), ["1"], "solo gli item disponibili su una piattaforma selezionata")
     }
 }
+
+// MARK: - DiscoveryRanking (scoring + diversity puri estratti da DiscoveryPersonalizationService)
+
+final class DiscoveryRankingTests: XCTestCase {
+
+    private func movie(
+        id: Int, voteAverage: Double = 0, popularity: Double = 0,
+        genreIds: [Int]? = nil, releaseDate: String? = nil
+    ) -> Movie {
+        Movie(
+            id: id, title: "M\(id)", overview: "", posterPath: nil, backdropPath: nil,
+            releaseDate: releaseDate, voteAverage: voteAverage, voteCount: 0, genreIds: genreIds,
+            genres: nil, adult: false, originalLanguage: "en", popularity: popularity, runtime: nil,
+            status: nil, tagline: nil, productionCountries: nil, imdbId: nil
+        )
+    }
+
+    private func profile(topGenres: [GenrePreference]) -> UserProfile {
+        UserProfile(
+            userId: "u", topGenres: topGenres, topActors: [], preferredMoods: [],
+            watchPatterns: WatchPattern(),
+            contentTypePreference: ContentTypeRatio(movieRatio: 0.5, tvRatio: 0.5),
+            recentActivity: RecentActivity()
+        )
+    }
+
+    /// La componente random è `Double.random(in: 0...5)`, quindi lo score deterministico D
+    /// soddisfa sempre `D <= score <= D + 5`. Questo pinna esattamente la formula.
+    private func assertScore(_ score: Double, deterministic D: Double,
+                             file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertGreaterThanOrEqual(score, D - 1e-9, "score sotto il minimo deterministico", file: file, line: line)
+        XCTAssertLessThanOrEqual(score, D + 5 + 1e-9, "score oltre deterministico + jitter max", file: file, line: line)
+    }
+
+    // MARK: personalizationScore
+
+    func test_score_baseline_isJitterOnly() {
+        let s = DiscoveryRanking.personalizationScore(movie: movie(id: 1), userProfile: profile(topGenres: []))
+        assertScore(s, deterministic: 0) // solo jitter 0...5
+    }
+
+    func test_score_genreMatchAndPreferenceStrength() {
+        // 1 match * 15 + pref.totalScore(10) * 2 = 15 + 20 = 35
+        let m = movie(id: 1, genreIds: [28])
+        let p = profile(topGenres: [GenrePreference(genreId: 28, genreName: "Action", totalScore: 10)])
+        assertScore(DiscoveryRanking.personalizationScore(movie: m, userProfile: p), deterministic: 35)
+    }
+
+    func test_score_quality_andPopularityCap() {
+        // voteAverage 8 * 2 = 16 ; popularity 5000/100 = 50 -> cap 10 ; totale 26
+        let m = movie(id: 1, voteAverage: 8, popularity: 5000)
+        assertScore(DiscoveryRanking.personalizationScore(movie: m, userProfile: profile(topGenres: [])), deterministic: 26)
+    }
+
+    func test_score_recencyBias_appliesFrom2020() {
+        // 2023 -> (2023-2020)*2 = 6
+        let recent = movie(id: 1, releaseDate: "2023-06-01")
+        assertScore(DiscoveryRanking.personalizationScore(movie: recent, userProfile: profile(topGenres: [])), deterministic: 6)
+        // 2015 < 2020 -> nessun bonus recency
+        let old = movie(id: 2, releaseDate: "2015-06-01")
+        assertScore(DiscoveryRanking.personalizationScore(movie: old, userProfile: profile(topGenres: [])), deterministic: 0)
+    }
+
+    // MARK: ensureDiversity
+
+    private func scored(_ genreIds: [Int]?, id: Int) -> ScoredItem<Movie> {
+        ScoredItem(item: movie(id: id, genreIds: genreIds), score: 0)
+    }
+
+    func test_diversity_capsPerGenre() {
+        let items = (1...5).map { scored([28], id: $0) }
+        let out = DiscoveryRanking.ensureDiversity(items, maxPerGenre: 2, maxItems: 10)
+        XCTAssertEqual(out.count, 2, "stesso genere: ammessi al massimo maxPerGenre")
+        XCTAssertEqual(out.map(\.item.id), [1, 2], "ordine preservato")
+    }
+
+    func test_diversity_capsTotalItems() {
+        let items = (1...10).map { scored([$0], id: $0) } // generi tutti distinti
+        let out = DiscoveryRanking.ensureDiversity(items, maxPerGenre: 5, maxItems: 3)
+        XCTAssertEqual(out.count, 3, "tetto globale maxItems")
+        XCTAssertEqual(out.map(\.item.id), [1, 2, 3])
+    }
+
+    func test_diversity_nilGenresAlwaysAdmitted() {
+        let items = (1...4).map { scored(nil, id: $0) }
+        let out = DiscoveryRanking.ensureDiversity(items, maxPerGenre: 1, maxItems: 10)
+        XCTAssertEqual(out.count, 4, "item senza generi non sono mai vincolati dal limite per-genere")
+    }
+
+    // MARK: cosineSimilarity
+
+    func test_cosine_identicalVectors_isOne() {
+        XCTAssertEqual(DiscoveryRanking.cosineSimilarity([1, 2, 3], [1, 2, 3]), 1, accuracy: 1e-9)
+    }
+
+    func test_cosine_orthogonal_isZero() {
+        XCTAssertEqual(DiscoveryRanking.cosineSimilarity([1, 0], [0, 1]), 0, accuracy: 1e-9)
+    }
+
+    func test_cosine_emptyOrZeroNorm_isZero() {
+        XCTAssertEqual(DiscoveryRanking.cosineSimilarity([], [1, 2]), 0)
+        XCTAssertEqual(DiscoveryRanking.cosineSimilarity([0, 0], [1, 2]), 0)
+    }
+
+    func test_cosine_usesOverlappingPrefix() {
+        // confronta solo i primi 2 elementi -> identico
+        XCTAssertEqual(DiscoveryRanking.cosineSimilarity([1, 2], [1, 2, 99]), 1, accuracy: 1e-9)
+    }
+
+    // MARK: dedup
+
+    func test_deduplicateMoviesById_keepsFirstSeenOrder() {
+        let movies = [movie(id: 1), movie(id: 2), movie(id: 1), movie(id: 3), movie(id: 2)]
+        XCTAssertEqual(DiscoveryRanking.deduplicateMoviesById(movies).map(\.id), [1, 2, 3])
+    }
+
+    func test_collectUniqueMovies_acrossCarousels() {
+        let c1 = PersonalizedCarousel(type: .hiddenGems, titleSpec: CarouselTitleSpec(key: "k"),
+            items: [movie(id: 1), movie(id: 2)], descriptions: [:], reason: "")
+        let c2 = PersonalizedCarousel(type: .staffPicks, titleSpec: CarouselTitleSpec(key: "k"),
+            items: [movie(id: 2), movie(id: 3)], descriptions: [:], reason: "")
+        XCTAssertEqual(DiscoveryRanking.collectUniqueMovies(from: [c1, c2]).map(\.id), [1, 2, 3])
+    }
+}
