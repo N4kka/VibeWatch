@@ -332,10 +332,7 @@ struct MovieDetailView: View {
            let image = UIImage(data: data) {
             items.append(image)
         }
-        var text = "Check out \(movie.title)"
-        if let year = movie.year { text += " (\(year))" }
-        if !movie.overview.isEmpty { text += "\n\n\(movie.overview)" }
-        items.append(text)
+        items.append(MovieShareTextBuilder.text(title: movie.title, year: movie.year, overview: movie.overview))
         await MainActor.run { shareItems = items }
     }
     

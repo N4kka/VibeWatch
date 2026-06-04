@@ -1463,6 +1463,32 @@ final class JustWatchLinkBuilderTests: XCTestCase {
     }
 }
 
+// MARK: - MovieShareTextBuilder (testo share estratto da MovieDetailView)
+
+final class MovieShareTextBuilderTests: XCTestCase {
+
+    func test_titleOnly() {
+        XCTAssertEqual(
+            MovieShareTextBuilder.text(title: "Dune", year: nil, overview: ""),
+            "Check out Dune"
+        )
+    }
+
+    func test_titleWithYear() {
+        XCTAssertEqual(
+            MovieShareTextBuilder.text(title: "Dune", year: "2021", overview: ""),
+            "Check out Dune (2021)"
+        )
+    }
+
+    func test_titleYearAndOverview() {
+        XCTAssertEqual(
+            MovieShareTextBuilder.text(title: "Dune", year: "2021", overview: "A mythic journey."),
+            "Check out Dune (2021)\n\nA mythic journey."
+        )
+    }
+}
+
 // MARK: - GamificationLeveling (curva XP->livello unificata da GamificationService + ConflictResolver)
 
 final class GamificationLevelingTests: XCTestCase {
