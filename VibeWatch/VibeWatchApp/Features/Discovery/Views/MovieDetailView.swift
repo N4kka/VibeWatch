@@ -630,13 +630,11 @@ struct WatchNowSection: View {
     }
 
     private var justWatchURL: URL? {
-        if let linkString = providers?.link, let url = URL(string: linkString) {
-            return url
-        }
-
-        let country = LocalizationManager.shared.currentCountry.id.lowercased()
-        let encodedQuery = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? title
-        return URL(string: "https://www.justwatch.com/\(country)/search?q=\(encodedQuery)")
+        JustWatchLinkBuilder.url(
+            providerLink: providers?.link,
+            countryId: LocalizationManager.shared.currentCountry.id,
+            title: title
+        )
     }
 
     var body: some View {

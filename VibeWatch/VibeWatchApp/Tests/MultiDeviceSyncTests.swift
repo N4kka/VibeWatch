@@ -1427,6 +1427,42 @@ final class WatchProviderDisplayFilteringTests: XCTestCase {
     }
 }
 
+// MARK: - JustWatchLinkBuilder (URL JustWatch estratto da MovieDetailView)
+
+final class JustWatchLinkBuilderTests: XCTestCase {
+
+    func test_validProviderLinkWins() {
+        let url = JustWatchLinkBuilder.url(
+            providerLink: "https://www.justwatch.com/us/movie/example",
+            countryId: "IT",
+            title: "The Matrix"
+        )
+
+        XCTAssertEqual(url?.absoluteString, "https://www.justwatch.com/us/movie/example")
+    }
+
+    func test_relativeProviderLinkStillWins() {
+        let url = JustWatchLinkBuilder.url(
+            providerLink: "not a url",
+            countryId: "IT",
+            title: "The Matrix"
+        )
+
+        XCTAssertEqual(url?.absoluteString, "not%20a%20url",
+                       "URL(string:) accepted this in the original MovieDetailView code, so the helper preserves it")
+    }
+
+    func test_fallbackLowercasesCountryAndEncodesTitle() {
+        let url = JustWatchLinkBuilder.url(
+            providerLink: nil,
+            countryId: "US",
+            title: "The Matrix Reloaded"
+        )
+
+        XCTAssertEqual(url?.absoluteString, "https://www.justwatch.com/us/search?q=The%20Matrix%20Reloaded")
+    }
+}
+
 // MARK: - GamificationLeveling (curva XP->livello unificata da GamificationService + ConflictResolver)
 
 final class GamificationLevelingTests: XCTestCase {
