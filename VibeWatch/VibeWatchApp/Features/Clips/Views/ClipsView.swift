@@ -1052,13 +1052,7 @@ struct ClipActionButton: View {
     }
     
     private func formatCount(_ count: Int) -> String {
-        if count >= 1_000_000 {
-            return String(format: "%.1fM", Double(count) / 1_000_000)
-        } else if count >= 1_000 {
-            return String(format: "%.1fK", Double(count) / 1_000)
-        } else {
-            return "\(count)"
-        }
+        ClipFormatters.shortCount(count)
     }
 }
 
@@ -1225,23 +1219,7 @@ struct CommentRow: View {
     }
     
     private func timeAgoString(from date: Date) -> String {
-        let calendar = Calendar.current
-        let now = Date()
-        let components = calendar.dateComponents([.second, .minute, .hour, .day, .weekOfYear], from: date, to: now)
-        
-        if let weeks = components.weekOfYear, weeks > 0 {
-            return "\(weeks)w"
-        } else if let days = components.day, days > 0 {
-            return "\(days)d"
-        } else if let hours = components.hour, hours > 0 {
-            return "\(hours)h"
-        } else if let minutes = components.minute, minutes > 0 {
-            return "\(minutes)m"
-        } else if let seconds = components.second, seconds > 0 {
-            return "\(seconds)s"
-        } else {
-            return "now"
-        }
+        ClipFormatters.shortTimeAgo(from: date)
     }
 }
 
@@ -1325,23 +1303,7 @@ struct ReplyRow: View {
     }
     
     private func timeAgoString(from date: Date) -> String {
-        let calendar = Calendar.current
-        let now = Date()
-        let components = calendar.dateComponents([.second, .minute, .hour, .day, .weekOfYear], from: date, to: now)
-        
-        if let weeks = components.weekOfYear, weeks > 0 {
-            return "\(weeks)w"
-        } else if let days = components.day, days > 0 {
-            return "\(days)d"
-        } else if let hours = components.hour, hours > 0 {
-            return "\(hours)h"
-        } else if let minutes = components.minute, minutes > 0 {
-            return "\(minutes)m"
-        } else if let seconds = components.second, seconds > 0 {
-                return "\(seconds)s"
-        } else {
-            return "now"
-        }
+        ClipFormatters.shortTimeAgo(from: date)
     }
 }
 

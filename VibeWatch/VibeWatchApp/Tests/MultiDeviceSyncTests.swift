@@ -1263,3 +1263,43 @@ final class DiscoveryRankingTests: XCTestCase {
         XCTAssertEqual(DiscoveryRanking.collectUniqueMovies(from: [c1, c2]).map(\.id), [1, 2, 3])
     }
 }
+
+// MARK: - ClipFormatters (count + relative-time puri estratti da ClipsView)
+
+final class ClipFormattersTests: XCTestCase {
+
+    func test_shortCount_belowThousand_isPlain() {
+        XCTAssertEqual(ClipFormatters.shortCount(0), "0")
+        XCTAssertEqual(ClipFormatters.shortCount(999), "999")
+    }
+
+    func test_shortCount_thousands() {
+        XCTAssertEqual(ClipFormatters.shortCount(1_000), "1.0K")
+        XCTAssertEqual(ClipFormatters.shortCount(1_500), "1.5K")
+        XCTAssertEqual(ClipFormatters.shortCount(999_999), "1000.0K") // 999999/1000 = 999.999 -> %.1f arrotonda
+    }
+
+    func test_shortCount_millions() {
+        XCTAssertEqual(ClipFormatters.shortCount(1_000_000), "1.0M")
+        XCTAssertEqual(ClipFormatters.shortCount(2_500_000), "2.5M")
+    }
+
+    func test_shortTimeAgo_picksLargestNonZeroUnit() {
+        let now = Date(timeIntervalSince1970: 1_000_000_000)
+        func ago(_ seconds: TimeInterval) -> String {
+            ClipFormatters.shortTimeAgo(from: now.addingTimeInterval(-seconds), to: now)
+        }
+        XCTAssertEqual(ago(30), "30s")
+        XCTAssertEqual(ago(5 * 60), "5m")
+        XCTAssertEqual(ago(3 * 3600), "3h")
+        XCTAssertEqual(ago(2 * 86_400), "2d")
+        XCTAssertEqual(ago(3 * 7 * 86_400), "3w")
+    }
+
+    func test_shortTimeAgo_nowAndFuture() {
+        let now = Date(timeIntervalSince1970: 1_000_000_000)
+        XCTAssertEqual(ClipFormatters.shortTimeAgo(from: now, to: now), "now")
+        XCTAssertEqual(ClipFormatters.shortTimeAgo(from: now.addingTimeInterval(60), to: now), "now",
+                       "date nel futuro -> componenti non positive -> now")
+    }
+}
