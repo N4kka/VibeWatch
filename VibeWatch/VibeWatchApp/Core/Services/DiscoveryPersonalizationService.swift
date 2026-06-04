@@ -31,7 +31,9 @@ class DiscoveryPersonalizationService: ObservableObject {
     // MARK: - Initialization
 
     private init(
-        tmdbService: TMDBServiceProtocol = TMDBService.shared,
+        // 4.1: la generazione caroselli passa per un budget (coalescing + tetto di concorrenza)
+        // così le ~27 famiglie di carosello non producono il burst >100 richieste TMDB.
+        tmdbService: TMDBServiceProtocol = BudgetedTMDBService(wrapping: TMDBService.shared),
         preferenceManager: UserPreferenceManager = .shared,
         sqliteService: SQLiteService = .shared,
         cerebrasService: CerebrasService = .shared

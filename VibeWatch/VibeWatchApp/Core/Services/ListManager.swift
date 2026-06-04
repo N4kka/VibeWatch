@@ -50,7 +50,7 @@ class ListManager: ObservableObject {
     
     private let db: SQLiteService
     private let sync: SyncEngineProtocol
-    private let supabase: SupabaseService
+    private let supabase: ListsRemoteDataSource
     private let authService: AuthStatusProviding
     private var cancellables = Set<AnyCancellable>()
     private var userId: String {
@@ -68,7 +68,7 @@ class ListManager: ObservableObject {
     init(
         db: SQLiteService = .shared,
         sync: SyncEngineProtocol = SyncEngine.shared,
-        supabase: SupabaseService = .shared,
+        supabase: ListsRemoteDataSource = SupabaseService.shared,
         authService: AuthStatusProviding = AuthService.shared,
         autoStart: Bool = true
     ) {
@@ -138,30 +138,52 @@ class ListManager: ObservableObject {
             remoteLists = ensureCoreLists(in: remoteLists)
             
             // 4. Handle custom local lists that might not be on Supabase yet
-            //    These are lists created by the user when they were anonymous on this device
+            //    These are lists created by the user when they were anonymous on this device.
+            //    Single remote writer (4.3): l'upload va via outbox/SyncEngine, NON più con
+            //    N chiamate dirette supabase.createList + supabase.addItemToList (burst N+1 al
+            //    login). Accodiamo lista + item sull'outbox (persistendoli anche localmente) e
+            //    li flushiamo in coda con UNA singola apply_mutations batch.
+            var didEnqueueLocalUploads = false
             for localList in localListsBeforeSync where localList.type == .custom {
-                if !remoteLists.contains(where: { $0.id == localList.id }) {
-                    // This custom list exists locally but not remotely. Try to upload it.
-                    do {
-                        // Create it on Supabase - using the local list's data
-                        _ = try await supabase.createList(id: localList.id, name: localList.name, description: localList.description, type: .custom)
-                        Logger.info("[ListManager] Uploaded local custom list '\(localList.name)' to Supabase.")
-                        
-                        // Upload its items too
-                        for item in localList.items {
-                            _ = try await supabase.addItemToList(listId: localList.id, item: item)
-                            Logger.debug("[ListManager] Uploaded item '\(item.title)' to Supabase for list '\(localList.name)'.")
-                        }
-                        remoteLists.append(localList) // Add to our working set of lists
-                    } catch {
-                        Logger.error("[ListManager] Failed to upload local custom list '\(localList.name)': \(error)")
-                    }
+                guard !remoteLists.contains(where: { $0.id == localList.id }) else { continue }
+
+                await ensureListInSQLite(localList)
+                let now = ISO8601DateFormatter().string(from: Date())
+                try await sync.queueOperation(
+                    table: "lists",
+                    operationType: "INSERT",
+                    recordId: localList.id,
+                    payload: [
+                        "id": localList.id,
+                        "user_id": authenticatedUserId,
+                        "name": localList.name,
+                        "description": localList.description ?? "",
+                        "type": ListType.custom.rawValue,
+                        "created_at": ISO8601DateFormatter().string(from: localList.createdAt),
+                        "updated_at": now
+                    ],
+                    dependsOn: nil
+                )
+
+                // addItemToSQLite persiste in SQLite E accoda INSERT list_items sull'outbox.
+                for item in localList.items {
+                    await addItemToSQLite(item, listId: localList.id)
                 }
+
+                remoteLists.append(localList) // Add to our working set of lists
+                didEnqueueLocalUploads = true
+                Logger.info("[ListManager] Queued local custom list '\(localList.name)' (\(localList.items.count) items) for remote sync.")
             }
-            
+
             // 5. Update local state with the merged lists
             applyLists(remoteLists)
             await saveListsToSQLite()
+
+            // 6. Flush subito le liste locali-only appena accodate, così restano "caricate al
+            //    login" come prima — ma in UNA apply_mutations batch invece del vecchio N+1.
+            if didEnqueueLocalUploads {
+                await sync.pushPendingChanges()
+            }
 
             Logger.info("[ListManager] Lists synced successfully for authenticated user.")
             

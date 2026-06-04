@@ -426,3 +426,212 @@ final class MockAuth: AuthStatusProviding {
         authSubject.eraseToAnyPublisher()
     }
 }
+
+// MARK: - Mock remote liste (role-protocol ListsRemoteDataSource)
+
+/// Stub del path remoto liste: niente rete. Registra le chiamate dirette (createList/addItemToList)
+/// così la caratterizzazione del sync-path può asserire se l'upload avviene N+1-diretto o via outbox.
+@MainActor
+final class MockListsRemote: ListsRemoteDataSource {
+    var user: User?
+    var remoteLists: [MediaList] = []
+    private(set) var createListCalls: [String] = []
+
+    init(user: User?) { self.user = user }
+
+    var currentUser: User? { user }
+    func fetchLists() async throws -> [MediaList] { remoteLists }
+    func fetchListItems(listId: String) async throws -> [MediaListItem] { [] }
+    func createList(id: String, name: String, description: String?, type: ListType) async throws -> MediaList {
+        createListCalls.append(id)
+        return MediaList(id: id, name: name, description: description, type: type, createdAt: Date(), items: [])
+    }
+}
+
+// MARK: - ListManager Sync Characterization (Fase 2 task #7 — 4.3 N+1 al login)
+//
+// syncListsForAuthenticatedUser carica le liste custom create da anonimo su questo device
+// quando l'utente fa login. Questi test FOTOGRAFANO come avviene l'upload: oggi (CURRENT)
+// con N chiamate dirette supabase.createList + supabase.addItemToList (burst N+1); il refactor
+// 4.3 deve spostarlo sull'outbox/SyncEngine (single batched apply_mutations), senza scritture
+// remote dirette. Rete di sicurezza prima del cambio.
+@MainActor
+final class ListManagerSyncCharacterizationTests: XCTestCase {
+
+    private var db: SQLiteService!
+    private var dbPath: String!
+    private var sync: MockSyncEngine!
+    private var remote: MockListsRemote!
+    private var auth: MockAuth!
+    private var manager: ListManager!
+
+    override func setUp() async throws {
+        try await super.setUp()
+        dbPath = (NSTemporaryDirectory() as NSString)
+            .appendingPathComponent("vw_sync_\(UUID().uuidString).sqlite")
+        db = SQLiteService(dbPath: dbPath)
+        _ = db.execute("PRAGMA foreign_keys = OFF")
+        sync = MockSyncEngine()
+        remote = MockListsRemote(user: User(id: "user-1", email: "u@test"))
+        auth = MockAuth(user: User(id: "user-1", email: "u@test"))
+        // autoStart:false → niente loadLists/observer; chiamiamo il sync esplicitamente.
+        manager = ListManager(db: db, sync: sync, supabase: remote, authService: auth, autoStart: false)
+    }
+
+    override func tearDown() async throws {
+        manager = nil; db = nil; sync = nil; remote = nil; auth = nil
+        if let dbPath { try? FileManager.default.removeItem(atPath: dbPath) }
+        try await super.tearDown()
+    }
+
+    /// 4.3: la lista custom locale-only viene caricata SOLO via outbox/SyncEngine (INSERT lists +
+    /// INSERT list_items per item), senza scritture remote dirette (niente più N+1 al login).
+    func test_syncForAuthenticatedUser_localOnlyCustomList_enqueuesOutbox_noDirectWrites() async throws {
+        let item1 = MediaListItem(mediaId: 11, mediaType: .movie, title: "M11", posterPath: nil)
+        let item2 = MediaListItem(mediaId: 12, mediaType: .movie, title: "M12", posterPath: nil)
+        let local = MediaList(id: "local-custom", name: "Anon", type: .custom, items: [item1, item2])
+        manager.lists = [local]
+        remote.remoteLists = []   // il server non ha questa lista
+
+        await manager.syncListsForAuthenticatedUser()
+
+        // Nessuna scrittura remota diretta: l'upload passa per l'outbox.
+        XCTAssertTrue(remote.createListCalls.isEmpty,
+                      "4.3: niente supabase.createList diretto (no N+1)")
+
+        let listInserts = sync.queued.filter { $0.table == "lists" && $0.operationType == "INSERT" }
+        XCTAssertEqual(listInserts.count, 1, "deve accodare un INSERT lists per la lista locale-only")
+        XCTAssertEqual(listInserts.first?.recordId, "local-custom")
+        XCTAssertEqual(listInserts.first?.payload["user_id"] as? String, "user-1",
+                       "user_id deve essere quello autenticato, non il deviceId anonimo")
+
+        let itemInserts = sync.queued.filter { $0.table == "list_items" && $0.operationType == "INSERT" }
+        XCTAssertEqual(itemInserts.count, 2, "deve accodare un INSERT list_items per ogni item")
+    }
+
+    /// Una lista già presente sul remoto non viene ri-accodata (no upload duplicato).
+    func test_syncForAuthenticatedUser_listAlreadyRemote_doesNotReenqueue() async throws {
+        let local = MediaList(id: "dup", name: "Shared", type: .custom, items: [])
+        manager.lists = [local]
+        remote.remoteLists = [MediaList(id: "dup", name: "Shared", type: .custom, items: [])]
+
+        await manager.syncListsForAuthenticatedUser()
+
+        XCTAssertTrue(sync.queued.filter { $0.table == "lists" && $0.recordId == "dup" }.isEmpty,
+                      "una lista già remota non deve essere ri-accodata")
+    }
+}
+
+// MARK: - TMDBRequestBudget (Fase 2 task #7 — 4.1 budget richieste TMDB)
+//
+// Testano la LOGICA del budget (coalescing + cache TTL + tetto di concorrenza) con closure
+// banali, senza dover stubbare i ~30 metodi di TMDBServiceProtocol. Il decorator
+// BudgetedTMDBService è poi semplice delega verificata dal build.
+
+private actor BudgetCallCounter {
+    private(set) var value = 0
+    func increment() { value += 1 }
+}
+
+private actor BudgetConcurrencyTracker {
+    private(set) var current = 0
+    private(set) var maxObserved = 0
+    func enter() { current += 1; maxObserved = max(maxObserved, current) }
+    func exit() { current -= 1 }
+}
+
+final class TMDBRequestBudgetTests: XCTestCase {
+
+    /// Coalescing: N richieste identiche concorrenti condividono UN solo task.
+    func test_coalescesConcurrentIdenticalRequests() async throws {
+        let budget = TMDBRequestBudget(maxConcurrent: 8, ttl: 30)
+        let counter = BudgetCallCounter()
+
+        await withTaskGroup(of: Int.self) { group in
+            for _ in 0..<20 {
+                group.addTask {
+                    (try? await budget.run(key: "same") {
+                        await counter.increment()
+                        try? await Task.sleep(nanoseconds: 20_000_000) // tieni il task in volo
+                        return 42
+                    }) ?? -1
+                }
+            }
+            for await _ in group {}
+        }
+
+        let calls = await counter.value
+        XCTAssertEqual(calls, 1, "20 richieste identiche concorrenti devono coalescere in 1 sola op")
+    }
+
+    /// Cache TTL: ripetizioni sequenziali della stessa key entro il TTL servono dalla cache.
+    func test_servesFromCacheWithinTTL() async throws {
+        let budget = TMDBRequestBudget(maxConcurrent: 4, ttl: 30)
+        let counter = BudgetCallCounter()
+
+        for _ in 0..<5 {
+            let v = try await budget.run(key: "same") { await counter.increment(); return 7 }
+            XCTAssertEqual(v, 7)
+        }
+
+        let cachedCalls = await counter.value
+        XCTAssertEqual(cachedCalls, 1, "le ripetizioni entro il TTL non devono ri-eseguire l'op")
+    }
+
+    /// ttl=0 → niente cache: ogni esecuzione sequenziale ri-parte (no riuso indebito).
+    func test_zeroTTL_doesNotCache() async throws {
+        let budget = TMDBRequestBudget(maxConcurrent: 4, ttl: 0)
+        let counter = BudgetCallCounter()
+
+        for _ in 0..<3 {
+            _ = try await budget.run(key: "same") { await counter.increment(); return 1 }
+        }
+
+        let noCacheCalls = await counter.value
+        XCTAssertEqual(noCacheCalls, 3, "con ttl=0 ogni richiesta sequenziale ri-esegue")
+    }
+
+    /// maxConcurrent: con key distinte (no coalescing) non ci sono più di N op in volo.
+    func test_respectsMaxConcurrent() async throws {
+        let budget = TMDBRequestBudget(maxConcurrent: 3, ttl: 0)
+        let tracker = BudgetConcurrencyTracker()
+
+        await withTaskGroup(of: Void.self) { group in
+            for i in 0..<15 {
+                group.addTask {
+                    _ = try? await budget.run(key: "k\(i)") {
+                        await tracker.enter()
+                        try? await Task.sleep(nanoseconds: 25_000_000)
+                        await tracker.exit()
+                        return i
+                    }
+                }
+            }
+            for await _ in group {}
+        }
+
+        let peak = await tracker.maxObserved
+        XCTAssertLessThanOrEqual(peak, 3, "non devono esserci più di maxConcurrent op TMDB in volo (peak=\(peak))")
+        XCTAssertGreaterThan(peak, 1, "il test deve davvero esercitare la concorrenza")
+    }
+
+    /// L'errore si propaga e NON viene messo in cache (la richiesta successiva ri-prova).
+    func test_errorPropagatesAndIsNotCached() async throws {
+        let budget = TMDBRequestBudget(maxConcurrent: 2, ttl: 30)
+        let counter = BudgetCallCounter()
+
+        struct Boom: Error {}
+        do {
+            _ = try await budget.run(key: "same") { () async throws -> Int in
+                await counter.increment()
+                throw Boom()
+            }
+            XCTFail("doveva propagare l'errore")
+        } catch is Boom { /* atteso */ }
+
+        // Seconda chiamata: deve ri-eseguire (l'errore non è cachato).
+        _ = try? await budget.run(key: "same") { await counter.increment(); return 1 }
+        let calls = await counter.value
+        XCTAssertEqual(calls, 2, "un errore non deve essere servito dalla cache")
+    }
+}
