@@ -1427,6 +1427,62 @@ final class WatchProviderDisplayFilteringTests: XCTestCase {
     }
 }
 
+// MARK: - WatchProviderTierGroupsBuilder (gruppi provider estratti da MovieDetailView)
+
+final class WatchProviderTierGroupsBuilderTests: XCTestCase {
+
+    private func provider(id: Int, name: String = "Unknown", logo: String = "/x.jpg",
+                          link: URL? = nil) -> Provider {
+        Provider(providerId: id, providerName: name, logoPath: logo, displayPriority: 0,
+                 price: nil, quality: nil, presentationType: nil, externalLink: link)
+    }
+
+    func test_groupsPreserveStreamingRentBuyOrder() {
+        let providers = CountryProviders(
+            flatrate: [provider(id: 1)],
+            rent: [provider(id: 2)],
+            buy: [provider(id: 3)],
+            link: "https://justwatch.example/movie"
+        )
+
+        let groups = WatchProviderTierGroupsBuilder.groups(in: providers)
+
+        XCTAssertEqual(groups.map(\.titleKey), [
+            "platforms.streaming",
+            "platforms.rent",
+            "platforms.buy"
+        ])
+        XCTAssertEqual(groups.map { $0.providers.map(\.id) }, [[1], [2], [3]])
+    }
+
+    func test_groupsOmitEmptyAndNonVisibleTiers() {
+        let providers = CountryProviders(
+            flatrate: [provider(id: 1, logo: "")],
+            rent: nil,
+            buy: [provider(id: 3, link: URL(string: "https://buy")!)],
+            link: nil
+        )
+
+        let groups = WatchProviderTierGroupsBuilder.groups(in: providers)
+
+        XCTAssertEqual(groups.map(\.titleKey), ["platforms.buy"])
+        XCTAssertEqual(groups.first?.providers.map(\.id), [3])
+    }
+
+    func test_groupsCarryCountryJustWatchLink() {
+        let providers = CountryProviders(
+            flatrate: [provider(id: 1)],
+            rent: nil,
+            buy: nil,
+            link: "https://justwatch.example/movie"
+        )
+
+        let groups = WatchProviderTierGroupsBuilder.groups(in: providers)
+
+        XCTAssertEqual(groups.first?.justWatchLink, "https://justwatch.example/movie")
+    }
+}
+
 // MARK: - JustWatchLinkBuilder (URL JustWatch estratto da MovieDetailView)
 
 final class JustWatchLinkBuilderTests: XCTestCase {

@@ -640,19 +640,13 @@ struct WatchNowSection: View {
                 )
             } else if hasAnyProvider {
                 if let providers {
-                    let flatrate = visibleProviders(providers.flatrate, justWatchLink: providers.link)
-                    if !flatrate.isEmpty {
-                        ProviderGroup(title: "platforms.streaming".localized, providers: flatrate, justWatchLink: providers.link, mediaTitle: title)
-                    }
-
-                    let rent = visibleProviders(providers.rent, justWatchLink: providers.link)
-                    if !rent.isEmpty {
-                        ProviderGroup(title: "platforms.rent".localized, providers: rent, justWatchLink: providers.link, mediaTitle: title)
-                    }
-
-                    let buy = visibleProviders(providers.buy, justWatchLink: providers.link)
-                    if !buy.isEmpty {
-                        ProviderGroup(title: "platforms.buy".localized, providers: buy, justWatchLink: providers.link, mediaTitle: title)
+                    ForEach(WatchProviderTierGroupsBuilder.groups(in: providers), id: \.titleKey) { group in
+                        ProviderGroup(
+                            title: group.titleKey.localized,
+                            providers: group.providers,
+                            justWatchLink: group.justWatchLink,
+                            mediaTitle: title
+                        )
                     }
                 }
 
