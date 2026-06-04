@@ -109,17 +109,23 @@ final class SQLiteService: ObservableObject {
         }
     }
     
-    private init() {
-        // Store in app's Documents directory
-        let fileManager = FileManager.default
-        let urls = fileManager.urls(for: .documentDirectory, in: .userDomainMask)
-        dbPath = urls[0].appendingPathComponent("vibewatch_local.sqlite").path
-        
+    /// Designated initializer. Tests can pass a temporary/isolated database file path
+    /// to exercise real persistence without touching the production store.
+    init(dbPath: String) {
+        self.dbPath = dbPath
+
         Logger.info("[SQLite] Database path: \(dbPath)")
-        
+
         openDatabase()
         createTables()
         checkInitialCacheState()
+    }
+
+    private convenience init() {
+        // Store in app's Documents directory
+        let fileManager = FileManager.default
+        let urls = fileManager.urls(for: .documentDirectory, in: .userDomainMask)
+        self.init(dbPath: urls[0].appendingPathComponent("vibewatch_local.sqlite").path)
     }
 
     deinit {

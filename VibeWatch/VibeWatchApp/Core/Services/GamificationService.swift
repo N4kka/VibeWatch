@@ -994,4 +994,24 @@ class GamificationService: ObservableObject {
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.string(from: date)
     }
+
+    // MARK: - Daily Login Gate
+
+    private func dailyOpenKey(userId: String) -> String {
+        "lastDailyOpenAward_\(userId)"
+    }
+
+    /// True at most once per local calendar day per user. Used to gate the daily-login
+    /// XP award + toast so it only appears once a day, independently of remote state
+    /// (which can be unreliable across cold launches / offline).
+    func shouldAwardDailyOpen(userId: String) -> Bool {
+        let last = UserDefaults.standard.string(forKey: dailyOpenKey(userId: userId))
+        return last != dateString(for: Date())
+    }
+
+    /// Record that today's daily-login award has been granted, so subsequent launches
+    /// today skip it.
+    func markDailyOpenAwarded(userId: String) {
+        UserDefaults.standard.set(dateString(for: Date()), forKey: dailyOpenKey(userId: userId))
+    }
 }

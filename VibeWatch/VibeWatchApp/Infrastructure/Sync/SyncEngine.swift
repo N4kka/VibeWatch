@@ -421,6 +421,14 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             return
         }
 
+        // Remote sync is an authenticated-only feature: anonymous users are local-only
+        // (see OVERVIEW tier model). The hardened apply_mutations rejects unauthenticated
+        // callers, so attempting a push here would only generate failed retries.
+        guard AuthService.shared.currentUser != nil else {
+            Logger.debug("[SyncEngine] Push skipped - not authenticated (local-only mode)")
+            return
+        }
+
         guard stateMachine.startSync(.push, reason: "Pushing pending changes") else {
             Logger.debug("[SyncEngine] Push skipped - failed to start sync")
             return

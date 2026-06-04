@@ -194,6 +194,49 @@ class DiscoveryPersonalizationService: ObservableObject {
         return nil
     }
 
+    /// Load any available cache (stale or fresh) and warm the in-memory cache.
+    /// Ignores expiry — staleness is determined separately via `isCacheStale(userId:)`.
+    func loadAnyCachedCarouselsIfAvailable(userId: String?) async -> [PersonalizedCarousel]? {
+        if let cached = memoryCache {
+            return cached
+        }
+        do {
+            if let userId, !userId.isEmpty,
+               let cached = try await loadFromCache(userId: userId, ignoreExpiry: true) {
+                memoryCache = cached
+                return cached
+            }
+            let deviceId = await sqliteService.getOrCreateDeviceId()
+            if let cached = try await loadFromCache(deviceId: deviceId, ignoreExpiry: true) {
+                memoryCache = cached
+                return cached
+            }
+        } catch {
+            Logger.warning("[DiscoveryPersonalizationService] Failed to load any cache: \(error.localizedDescription)")
+        }
+        return nil
+    }
+
+    /// Returns true if the persisted cache is expired or absent.
+    func isCacheStale(userId: String?) async -> Bool {
+        let now = ISO8601DateFormatter().string(from: Date())
+        if let userId, !userId.isEmpty,
+           let rows = try? await sqliteService.queryRaw(
+               "SELECT MAX(expires_at) AS max_expires FROM personalized_discovery WHERE user_id = ?",
+               parameters: [userId]),
+           let maxExpires = rows.first?["max_expires"] as? String {
+            return maxExpires <= now
+        }
+        let deviceId = await sqliteService.getOrCreateDeviceId()
+        if let rows = try? await sqliteService.queryRaw(
+            "SELECT MAX(expires_at) AS max_expires FROM personalized_discovery WHERE device_id = ?",
+            parameters: [deviceId]),
+           let maxExpires = rows.first?["max_expires"] as? String {
+            return maxExpires <= now
+        }
+        return true
+    }
+
     /// Calculate personalization score for a movie/show
     func calculatePersonalizationScore(
         movie: Movie,
@@ -1615,14 +1658,9 @@ class DiscoveryPersonalizationService: ObservableObject {
         }()
         let expiresAt = ISO8601DateFormatter().string(from: nextMidnight)
 
-        // First, delete old cache for this user
-        do {
-            _ = try await sqliteService.delete("personalized_discovery", where: "user_id = ?", parameters: [userId], hard: true)
-        } catch {
-            Logger.warning("[DiscoveryPersonalizationService] Failed to clear old cache: \(error.localizedDescription)")
-        }
-
+        // Delete old rows and insert new ones atomically so readers never see an empty cache.
         try? await sqliteService.transaction {
+            try await sqliteService.delete("personalized_discovery", where: "user_id = ?", parameters: [userId], hard: true)
             for (carouselIndex, carousel) in carousels.enumerated() {
                 let batchIndex = carouselIndex / 10
                 for (itemIndex, movie) in carousel.items.enumerated() {

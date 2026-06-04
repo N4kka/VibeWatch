@@ -2,7 +2,6 @@ import SwiftUI
 
 struct ListsView: View {
     @StateObject private var viewModel = ListsViewModel()
-    @StateObject private var listManager = ListManager.shared
     @StateObject private var availabilityService = ListAvailabilityService.shared
     @ObservedObject var localizationManager = LocalizationManager.shared
     @EnvironmentObject var quotaManager: DailyQuotaManager
@@ -155,7 +154,7 @@ struct ListsView: View {
                         showAuthGate = true
                         return
                     }
-                    if listManager.canCreateList() {
+                    if viewModel.canCreateList() {
                         showCreateList = true
                     } else {
                         showingPaywall = true
@@ -175,7 +174,7 @@ struct ListsView: View {
 
             combinedFiltersRow
 
-            if listManager.isLoadingInitial {
+            if viewModel.isLoadingInitial {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if currentLists.isEmpty {
@@ -213,13 +212,13 @@ struct ListsView: View {
         
         switch selectedListType {
         case .myLists:
-            lists = listManager.lists.filter { $0.type == .custom }
+            lists = viewModel.customLists
         case .watchlist:
-            lists = [listManager.watchlist]
+            lists = [viewModel.watchlist]
         case .seen:
-            lists = [listManager.seenList]
+            lists = [viewModel.seenList]
         case .liked:
-            lists = [listManager.likedList]
+            lists = [viewModel.likedList]
         }
 
         return lists
@@ -284,16 +283,16 @@ struct ListsView: View {
                         onMarkAsSeen: {
                             Task {
                                 if let currentList = currentLists.first {
-                                    try? await listManager.removeFromList(listId: currentList.id, itemId: item.id)
+                                    try? await viewModel.removeFromList(listId: currentList.id, itemId: item.id)
                                 }
-                                
-                                try await listManager.addToList(listId: listManager.seenList.id, movie: item.asMovie(), mediaType: item.mediaType)
+
+                                try await viewModel.addToList(listId: viewModel.seenList.id, movie: item.asMovie(), mediaType: item.mediaType)
                             }
                         },
                         onDelete: {
                             Task {
                                 if let currentList = currentLists.first {
-                                    try? await listManager.removeFromList(listId: currentList.id, itemId: item.id)
+                                    try? await viewModel.removeFromList(listId: currentList.id, itemId: item.id)
                                 }
                             }
                         }

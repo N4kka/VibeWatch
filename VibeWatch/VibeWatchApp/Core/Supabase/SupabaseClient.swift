@@ -759,6 +759,7 @@ class SupabaseService: ObservableObject {
         }
         
         struct AddItemRequest: Encodable {
+            let id: String
             let list_id: String
             let user_id: String
             let media_id: Int
@@ -774,8 +775,13 @@ class SupabaseService: ObservableObject {
             let overview: String?
             let deleted_at: String?
         }
-        
+
         let request = AddItemRequest(
+            // Use the local item's id so the remote row, local SQLite row, and in-memory
+            // item all share one id. Without this the server generates its own id, which
+            // diverges from the id used by removeItemFromList/sync — leaving orphan remote
+            // rows that reappear (e.g. a "mark as seen" reverting to the watchlist on relaunch).
+            id: item.id,
             list_id: listId,
             user_id: userId,
             media_id: item.mediaId,
