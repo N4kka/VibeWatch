@@ -262,14 +262,12 @@ class AppState: ObservableObject {
         // Initialize app coordinator (background)
         await dataCoordinator.initializeApp()
 
-        // Refresh discovery content if stale (background)
-        if ContentCacheManager.shared.shouldUpdateDiscoveryContent() {
-            Logger.info("[AppState] Refreshing stale discovery content in background...")
-            do {
-                try await DiscoveryCacheService.shared.refreshContent()
-            } catch {
-                Logger.error("[AppState] Failed to refresh discovery content: \(error.localizedDescription)")
-            }
+        // Refresh discovery content in background
+        Logger.info("[AppState] Refreshing discovery content in background...")
+        do {
+            try await DiscoveryCacheService.shared.refreshContent()
+        } catch {
+            Logger.error("[AppState] Failed to refresh discovery content: \(error.localizedDescription)")
         }
 
         // Phase 4: Preload images for instant display
@@ -307,24 +305,6 @@ class AppState: ObservableObject {
 
         // Collect poster URLs from cached content
         var posterURLs: [String] = []
-
-        // From cached movies
-        if let movies = ContentCacheManager.shared.getCachedDiscoveryMovies() {
-            let moviePosters = movies.prefix(20).compactMap { movie -> String? in
-                guard let posterPath = movie.posterPath else { return nil }
-                return "https://image.tmdb.org/t/p/w342\(posterPath)"
-            }
-            posterURLs.append(contentsOf: moviePosters)
-        }
-
-        // From cached TV shows
-        if let tvShows = ContentCacheManager.shared.getCachedDiscoveryTVShows() {
-            let tvPosters = tvShows.prefix(10).compactMap { show -> String? in
-                guard let posterPath = show.posterPath else { return nil }
-                return "https://image.tmdb.org/t/p/w342\(posterPath)"
-            }
-            posterURLs.append(contentsOf: tvPosters)
-        }
 
         // From cached clips (thumbnails)
         let clipThumbnails = ContentCacheManager.shared.cachedClips.prefix(10).compactMap { clip -> String? in

@@ -249,7 +249,8 @@ class ListManager: ObservableObject {
     }
 
     /// Load lists from SQLite (single source of truth)
-    private func loadListsFromSQLite() async {
+    /// Internal (not private) so the full-set load invariant can be characterized in tests.
+    func loadListsFromSQLite() async {
         let currentUserId = authService.currentUser?.id ?? getDeviceId()
 
         do {

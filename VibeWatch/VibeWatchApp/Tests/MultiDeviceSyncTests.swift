@@ -798,3 +798,225 @@ final class ImageDownsampleTests: XCTestCase {
         XCTAssertNil(thumb)
     }
 }
+
+// MARK: - Discovery pipeline characterization (Fase 3 §1.4 — item 1)
+//
+// Congela il CONTRATTO del seam `DiscoveryRepositoryProtocol → DiscoveryViewModel`,
+// l'unico path che lo SCHERMO Discovery vede davvero. Qualunque collasso delle pipeline
+// di prefetch/warm (DiscoveryCacheService, ContentCacheManager, array di DataCoordinator)
+// avviene DIETRO questo protocollo: se questi test restano verdi, il render non regredisce.
+//
+// Caratterizzazione (comportamento ATTUALE, nessuna modifica al codice di produzione):
+//  - una sola emissione popola personalizedCarousels (filtri default = passthrough);
+//  - un'emissione vuota viene SALTATA (guard !carousels.isEmpty);
+//  - stale→fresh: l'ultima emissione vince (stale-while-revalidate);
+//  - finestra di paginazione: visibleCarousels = prefix(11), loadMoreCarousels() +10.
+
+/// Repository di Discovery scriptato: emette in sequenza gli array forniti, poi finisce.
+@MainActor
+final class MockDiscoveryRepository: DiscoveryRepositoryProtocol {
+    private let scripted: [[PersonalizedCarousel]]
+    init(emitting scripted: [[PersonalizedCarousel]]) { self.scripted = scripted }
+
+    nonisolated func observeCarousels(
+        userId: String?,
+        profile: UserProfile,
+        filters: GlobalDiscoveryFilters,
+        forceRefresh: Bool
+    ) -> AsyncStream<[PersonalizedCarousel]> {
+        let scripted = self.scripted
+        return AsyncStream { continuation in
+            for batch in scripted { continuation.yield(batch) }
+            continuation.finish()
+        }
+    }
+}
+
+@MainActor
+final class DiscoveryPipelineCharacterizationTests: XCTestCase {
+
+    private static func movie(id: Int) -> Movie {
+        Movie(
+            id: id, title: "Movie \(id)", overview: "", posterPath: nil, backdropPath: nil,
+            releaseDate: "2022-01-01", voteAverage: 8, voteCount: 100, genreIds: nil, genres: nil,
+            adult: false, originalLanguage: "en", popularity: Double(id), runtime: nil, status: nil,
+            tagline: nil, productionCountries: nil, imdbId: nil
+        )
+    }
+
+    /// Carosello con type non-tv (passa il gate mediaType=.both) e 1 item che supera i filtri default.
+    private static func carousel(_ type: CarouselType) -> PersonalizedCarousel {
+        PersonalizedCarousel(
+            type: type,
+            titleSpec: CarouselTitleSpec(key: "carousel.test"),
+            items: [movie(id: type.hashValue & 0xFFFF)],
+            descriptions: [:],
+            reason: "test"
+        )
+    }
+
+    private func makeViewModel(emitting batches: [[PersonalizedCarousel]]) -> DiscoveryViewModel {
+        DiscoveryViewModel(discoveryRepository: MockDiscoveryRepository(emitting: batches))
+    }
+
+    func test_singleEmission_populatesCarousels() async {
+        let batch = [Self.carousel(.hiddenGems), Self.carousel(.hotThisWeek), Self.carousel(.staffPicks)]
+        let vm = makeViewModel(emitting: [batch])
+
+        await vm.loadContent(forceRefresh: true)
+
+        XCTAssertEqual(vm.personalizedCarousels.count, 3, "una emissione deve popolare tutti i caroselli")
+        XCTAssertFalse(vm.hasNoContent)
+        XCTAssertFalse(vm.isLoading)
+        XCTAssertFalse(vm.isRefreshing)
+        XCTAssertEqual(vm.visibleCarousels.count, 3, "meno di 11 → tutti visibili")
+        XCTAssertFalse(vm.hasMoreCarousels)
+    }
+
+    func test_emptyEmission_isSkipped() async {
+        let vm = makeViewModel(emitting: [[]])
+
+        await vm.loadContent(forceRefresh: true)
+
+        XCTAssertTrue(vm.hasNoContent, "un'emissione vuota non deve popolare nulla (guard !isEmpty)")
+        XCTAssertTrue(vm.personalizedCarousels.isEmpty)
+    }
+
+    func test_staleThenFresh_lastEmissionWins() async {
+        let stale = [Self.carousel(.hiddenGems), Self.carousel(.hotThisWeek)]
+        let fresh = [Self.carousel(.staffPicks), Self.carousel(.awardWinners),
+                     Self.carousel(.documentaries), Self.carousel(.comingSoon)]
+        let vm = makeViewModel(emitting: [stale, fresh])
+
+        await vm.loadContent(forceRefresh: true)
+
+        XCTAssertEqual(vm.personalizedCarousels.count, 4, "stale-while-revalidate: l'ultima emissione (fresh) vince")
+    }
+
+    func test_pagination_windowsAndLoadsMore() async {
+        // 25 caroselli (type ripetuto è ammesso: applyGlobalFilters non deduplica per type).
+        let batch = (0..<25).map { _ in Self.carousel(.hiddenGems) }
+        let vm = makeViewModel(emitting: [batch])
+
+        await vm.loadContent(forceRefresh: true)
+
+        XCTAssertEqual(vm.personalizedCarousels.count, 25)
+        XCTAssertEqual(vm.visibleCarousels.count, 11, "finestra iniziale: hero + 10")
+        XCTAssertTrue(vm.hasMoreCarousels)
+
+        vm.loadMoreCarousels()
+        XCTAssertEqual(vm.visibleCarousels.count, 21, "loadMore deve aggiungere una pagina (+10)")
+        XCTAssertTrue(vm.hasMoreCarousels)
+
+        vm.loadMoreCarousels()
+        XCTAssertEqual(vm.visibleCarousels.count, 25, "ultima pagina troncata al totale")
+        XCTAssertFalse(vm.hasMoreCarousels)
+    }
+}
+
+// MARK: - ReadinessWaiter (splash dismissal — Fase 3 §1.4 follow-up)
+//
+// La splash di MainTabView usava un poll su una cache discovery ormai sempre-nil
+// → di fatto un'attesa fissa di 3s. Ora poll-a `hasCachedPersonalizedContent()` via
+// ReadinessWaiter, dismissando appena il pre-warm in background popola i caroselli.
+// Questi test fissano il contratto del waiter: immediato se già pronto, early-return
+// se diventa pronto durante l'attesa, timeout se non lo diventa mai.
+
+@MainActor
+final class ReadinessWaiterTests: XCTestCase {
+
+    func test_alreadyReady_returnsImmediately() async {
+        let start = Date()
+        let ready = await ReadinessWaiter.waitUntilReady(maxWait: 3.0) { true }
+        let elapsed = Date().timeIntervalSince(start)
+
+        XCTAssertTrue(ready)
+        XCTAssertLessThan(elapsed, 0.1, "se già pronto non deve attendere alcun poll")
+    }
+
+    func test_becomesReadyMidWait_returnsEarly() async {
+        var calls = 0
+        let start = Date()
+        // Diventa pronto dopo ~3 poll da 50ms (~150ms), ben prima del timeout di 3s.
+        let ready = await ReadinessWaiter.waitUntilReady(maxWait: 3.0, pollInterval: 0.05) {
+            calls += 1
+            return calls >= 4
+        }
+        let elapsed = Date().timeIntervalSince(start)
+
+        XCTAssertTrue(ready)
+        XCTAssertLessThan(elapsed, 1.0, "deve uscire appena pronto, non aspettare il timeout")
+    }
+
+    func test_neverReady_timesOut() async {
+        let start = Date()
+        let ready = await ReadinessWaiter.waitUntilReady(maxWait: 0.3, pollInterval: 0.05) { false }
+        let elapsed = Date().timeIntervalSince(start)
+
+        XCTAssertFalse(ready)
+        XCTAssertGreaterThanOrEqual(elapsed, 0.3, "se mai pronto deve attendere fino a maxWait")
+    }
+}
+
+// MARK: - List load full-set invariant (Fase 3 §2.4 — item 2, caratterizzazione PRIMA)
+//
+// `ListManager.loadListsFromSQLite` oggi carica TUTTI gli item di una lista in `list.items`
+// (nessun LIMIT/OFFSET) e l'intera app assume `list.items` = insieme COMPLETO: count
+// (canAddToList / soft-limit / label), membership (isInList), re-save (saveItemsToSQLite).
+// Questo test congela quell'invariante: qualunque paginazione (2.4) NON deve troncare
+// `list.items` al punto da rompere count/membership. È la zona del bug 141→1 → guard-rail.
+
+@MainActor
+final class ListLoadFullSetCharacterizationTests: XCTestCase {
+
+    private var db: SQLiteService!
+    private var dbPath: String!
+    private var sync: MockSyncEngine!
+    private var manager: ListManager!
+    private let listId = "custom-big"
+    private let uid = "u1"
+
+    override func setUp() async throws {
+        try await super.setUp()
+        dbPath = (NSTemporaryDirectory() as NSString)
+            .appendingPathComponent("vw_lmfull_\(UUID().uuidString).sqlite")
+        db = SQLiteService(dbPath: dbPath)
+        _ = db.execute("PRAGMA foreign_keys = OFF")
+        sync = MockSyncEngine()
+        manager = ListManager(db: db, sync: sync, authService: MockAuth(user: User(id: uid, email: "u@test")), autoStart: false)
+    }
+
+    override func tearDown() async throws {
+        manager = nil; db = nil; sync = nil
+        if let dbPath { try? FileManager.default.removeItem(atPath: dbPath) }
+        try await super.tearDown()
+    }
+
+    private func seedList(itemCount: Int) async throws {
+        _ = try await db.insert("lists", values: [
+            "id": listId, "user_id": uid, "name": "Big", "type": "custom",
+            "created_at": "2024-01-01T00:00:00Z"
+        ])
+        for i in 1...itemCount {
+            _ = try await db.insert("list_items", values: [
+                "id": "it-\(i)", "list_id": listId, "user_id": uid,
+                "media_id": i, "media_type": "movie", "title": "Movie \(i)",
+                "added_at": String(format: "2024-01-01T00:%02d:00Z", i % 60)
+            ])
+        }
+    }
+
+    // INVARIANTE: il load porta in RAM l'INTERO insieme (count completo + membership sull'ultimo).
+    func test_loadFromSQLite_loadsFullItemSet_countAndMembership() async throws {
+        try await seedList(itemCount: 141)
+
+        await manager.loadListsFromSQLite()
+
+        let list = try XCTUnwrap(manager.lists.first { $0.id == listId })
+        XCTAssertEqual(list.items.count, 141, "il load deve portare in RAM TUTTI i 141 item (no troncamento)")
+        XCTAssertTrue(manager.isInList(listId: listId, mediaId: 141, mediaType: .movie),
+                      "la membership deve valere anche per l'ultimo item (oltre una eventuale prima pagina)")
+        XCTAssertTrue(manager.canAddToList(listId: listId),
+                      "canAddToList riflette il count pieno (141 < \(ListManager.maxItemsPerList))")
+    }
+}
