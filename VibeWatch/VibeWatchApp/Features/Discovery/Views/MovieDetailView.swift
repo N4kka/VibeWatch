@@ -665,11 +665,11 @@ struct WatchNowSection: View {
                     }
                     
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Unluckily \(title) isn't currently available.")
+                        Text(MovieUnavailableNotificationCopyBuilder.unavailableMessage(title: title))
                             .font(.system(size: 14))
                             .foregroundColor(.theme.textSecondary)
                         
-                        Text("Would you like to be notified?")
+                        Text(MovieUnavailableNotificationCopyBuilder.notificationQuestion)
                             .font(.system(size: 16, weight: .bold))
                             .foregroundColor(.white)
                     }
@@ -679,7 +679,7 @@ struct WatchNowSection: View {
                     Button {
                         handleNotifyMe()
                     } label: {
-                        Text("Notify Me")
+                        Text(MovieUnavailableNotificationCopyBuilder.notifyButtonTitle)
                             .font(.system(size: 13, weight: .bold))
                             .foregroundColor(.white)
                             .padding(.horizontal, 12)
@@ -714,10 +714,10 @@ struct WatchNowSection: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 20)
-        .alert("Notify Me", isPresented: $showNotifyMeAlert) {
+        .alert(MovieUnavailableNotificationCopyBuilder.alertTitle, isPresented: $showNotifyMeAlert) {
             Button("OK", role: .cancel) { }
         } message: {
-            Text("We'll send you a notification as soon as '\(title)' is available for streaming, rent, or buy.")
+            Text(MovieUnavailableNotificationCopyBuilder.alertMessage(title: title))
         }
     }
     
