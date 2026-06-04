@@ -1489,6 +1489,81 @@ final class MovieShareTextBuilderTests: XCTestCase {
     }
 }
 
+// MARK: - MovieCreditsInfoBuilder (righe informative estratte da MovieDetailView)
+
+final class MovieCreditsInfoBuilderTests: XCTestCase {
+
+    private func movie(
+        voteAverage: Double = 8.4,
+        genres: [Genre]? = [Genre(id: 1, name: "Drama"), Genre(id: 2, name: "Sci-Fi")],
+        runtime: Int? = 155,
+        countries: [ProductionCountry]? = [ProductionCountry(iso: "US", name: "United States")]
+    ) -> Movie {
+        Movie(
+            id: 1,
+            title: "Dune",
+            overview: "A mythic journey.",
+            posterPath: nil,
+            backdropPath: nil,
+            releaseDate: "2021-10-22",
+            voteAverage: voteAverage,
+            voteCount: 100,
+            genreIds: nil,
+            genres: genres,
+            adult: false,
+            originalLanguage: "en",
+            popularity: 10,
+            runtime: runtime,
+            status: nil,
+            tagline: nil,
+            productionCountries: countries,
+            imdbId: nil
+        )
+    }
+
+    func test_rowsPreserveCurrentOrderAndValues() {
+        let director = Crew(id: 10, name: "Denis Villeneuve", job: "Director", department: "Directing", profilePath: nil)
+
+        let rows = MovieCreditsInfoBuilder.rows(movie: movie(), director: director)
+
+        XCTAssertEqual(rows.map(\.titleKey), [
+            "movieDetail.rating",
+            "movieDetail.genres",
+            "movieDetail.runtime",
+            "movieDetail.country",
+            "movieDetail.director"
+        ])
+        XCTAssertEqual(rows.map(\.value), [
+            "84%",
+            "Drama, Sci-Fi",
+            "2h 35m",
+            "United States",
+            "Denis Villeneuve"
+        ])
+    }
+
+    func test_rowsOmitEmptyOptionalInformation() {
+        let rows = MovieCreditsInfoBuilder.rows(
+            movie: movie(voteAverage: 0, genres: [], runtime: nil, countries: []),
+            director: nil
+        )
+
+        XCTAssertTrue(rows.isEmpty)
+    }
+
+    func test_rowsUseFirstProductionCountryOnly() {
+        let rows = MovieCreditsInfoBuilder.rows(
+            movie: movie(countries: [
+                ProductionCountry(iso: "CA", name: "Canada"),
+                ProductionCountry(iso: "US", name: "United States")
+            ]),
+            director: nil
+        )
+
+        XCTAssertEqual(rows.first(where: { $0.titleKey == "movieDetail.country" })?.value, "Canada")
+    }
+}
+
 // MARK: - GamificationLeveling (curva XP->livello unificata da GamificationService + ConflictResolver)
 
 final class GamificationLevelingTests: XCTestCase {

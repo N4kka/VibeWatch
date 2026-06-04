@@ -1041,24 +1041,8 @@ struct MovieCreditsSection: View {
                     .foregroundColor(.theme.textPrimary)
                 
                 VStack(alignment: .leading, spacing: 12) {
-                    if movie.ratingPercentage > 0 {
-                        InfoRow(title: "movieDetail.rating".localized, value: "\(movie.ratingPercentage)%")
-                    }
-                    
-                    if let genres = movie.genres, !genres.isEmpty {
-                        InfoRow(title: "movieDetail.genres".localized, value: genres.map { $0.name }.joined(separator: ", "))
-                    }
-                    
-                    if let runtime = movie.formattedRuntime {
-                        InfoRow(title: "movieDetail.runtime".localized, value: runtime)
-                    }
-                    
-                    if let countries = movie.productionCountries, !countries.isEmpty {
-                        InfoRow(title: "movieDetail.country".localized, value: countries.first?.name ?? "")
-                    }
-                    
-                    if let director = director {
-                        InfoRow(title: "movieDetail.director".localized, value: director.name)
+                    ForEach(MovieCreditsInfoBuilder.rows(movie: movie, director: director), id: \.titleKey) { row in
+                        InfoRow(title: row.titleKey.localized, value: row.value)
                     }
                 }
             }
