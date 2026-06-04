@@ -274,9 +274,11 @@ struct ListsView: View {
     }
     
     private var itemsGrid: some View {
-        ScrollView {
+        // Memoizzazione (2.4): paginatedItems (→ filter+sort) calcolato UNA volta per render.
+        let paginated = paginatedItems
+        return ScrollView {
             LazyVStack(spacing: 20) {
-                ForEach(paginatedItems) { item in
+                ForEach(paginated) { item in
                     MediaItemRow(
                         item: item,
                         isInSeenList: selectedListType == .seen,
@@ -299,7 +301,7 @@ struct ListsView: View {
                     )
                     .onAppear {
                         // When the last item appears, load more
-                        if item.id == paginatedItems.last?.id {
+                        if item.id == paginated.last?.id {
                             itemsLimit += 50
                         }
                     }
