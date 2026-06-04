@@ -23,7 +23,7 @@ final class ClipQuotaService: ObservableObject {
 
     // MARK: - Constants
 
-    private let anonymousLimit = 25
+    private let anonymousLimit = AppConstants.Clips.freeUserDailyLimit
     private let defaults = UserDefaults.standard
 
     private enum Keys {
@@ -63,7 +63,7 @@ final class ClipQuotaService: ObservableObject {
     
     /// Returns true if an anonymous user can watch another clip.
     func canWatchClipAnonymous() -> Bool {
-        anonymousClipsWatched < anonymousLimit
+        ClipEntitlementPolicy.canConsumeClip(tier: .anonymous, clipsWatched: anonymousClipsWatched)
     }
     
     /// Records a clip watch for an anonymous user. Call this as soon as a clip starts.
@@ -95,7 +95,7 @@ final class ClipQuotaService: ObservableObject {
     
     /// Returns the gate type to show for the current anonymous state.
     func gateTypeForAnonymousUser() -> ClipGateType? {
-        canWatchClipAnonymous() ? nil : .accountCreation
+        ClipEntitlementPolicy.gate(tier: .anonymous, clipsWatched: anonymousClipsWatched)
     }
     
     // MARK: - RevenueCat Pro Status

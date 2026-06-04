@@ -2092,3 +2092,43 @@ final class SeasonDetailViewModelTests: XCTestCase {
         XCTAssertNil(vm.error)
     }
 }
+
+// MARK: - ClipEntitlementPolicy (policy quota clip unificata, primo passo EntitlementService §1.3)
+
+final class ClipEntitlementPolicyTests: XCTestCase {
+
+    private let limit = AppConstants.Clips.freeUserDailyLimit // 25
+
+    func test_dailyLimit_perTier() {
+        XCTAssertEqual(ClipEntitlementPolicy.dailyClipLimit(for: .anonymous), limit)
+        XCTAssertEqual(ClipEntitlementPolicy.dailyClipLimit(for: .free), limit)
+        XCTAssertNil(ClipEntitlementPolicy.dailyClipLimit(for: .pro), "Pro: illimitato")
+    }
+
+    func test_canConsume_freeAndAnonymous_underAndAtLimit() {
+        for tier in [UserTier.free, .anonymous] {
+            XCTAssertTrue(ClipEntitlementPolicy.canConsumeClip(tier: tier, clipsWatched: 0))
+            XCTAssertTrue(ClipEntitlementPolicy.canConsumeClip(tier: tier, clipsWatched: limit - 1))
+            XCTAssertFalse(ClipEntitlementPolicy.canConsumeClip(tier: tier, clipsWatched: limit),
+                           "al limite NON può più (preserva watched < limit)")
+        }
+    }
+
+    func test_canConsume_pro_alwaysTrue() {
+        XCTAssertTrue(ClipEntitlementPolicy.canConsumeClip(tier: .pro, clipsWatched: 10_000))
+    }
+
+    func test_remainingClips() {
+        XCTAssertEqual(ClipEntitlementPolicy.remainingClips(tier: .free, clipsWatched: 0), limit)
+        XCTAssertEqual(ClipEntitlementPolicy.remainingClips(tier: .free, clipsWatched: limit + 5), 0,
+                       "mai negativo")
+        XCTAssertEqual(ClipEntitlementPolicy.remainingClips(tier: .pro, clipsWatched: 999), Int.max)
+    }
+
+    func test_gate_byTier() {
+        XCTAssertNil(ClipEntitlementPolicy.gate(tier: .free, clipsWatched: 0), "sotto limite: nessun gate")
+        XCTAssertEqual(ClipEntitlementPolicy.gate(tier: .anonymous, clipsWatched: limit), .accountCreation)
+        XCTAssertEqual(ClipEntitlementPolicy.gate(tier: .free, clipsWatched: limit), .proPaywall)
+        XCTAssertNil(ClipEntitlementPolicy.gate(tier: .pro, clipsWatched: 10_000), "Pro: mai gate")
+    }
+}
