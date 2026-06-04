@@ -621,19 +621,12 @@ struct WatchNowSection: View {
     }
 
     private func visibleProviders(_ providers: [Provider]?, justWatchLink: String?) -> [Provider] {
-        (providers ?? []).filter { provider in
-            guard provider.hasUsableLogo else { return false }
-            let hasLink = provider.externalLink != nil || justWatchLink != nil
-            if hasLink { return true }
-            return PlatformDeepLinkHelper.hasPlatformHomepage(for: provider)
-        }
+        WatchProviderDisplayFiltering.visibleProviders(providers, justWatchLink: justWatchLink)
     }
 
     private var hasAnyProvider: Bool {
         guard let providers else { return false }
-        return !visibleProviders(providers.flatrate, justWatchLink: providers.link).isEmpty ||
-        !visibleProviders(providers.rent, justWatchLink: providers.link).isEmpty ||
-        !visibleProviders(providers.buy, justWatchLink: providers.link).isEmpty
+        return WatchProviderDisplayFiltering.hasAnyVisibleProvider(in: providers)
     }
 
     private var justWatchURL: URL? {
@@ -809,15 +802,7 @@ struct ProviderGroup: View {
     let mediaTitle: String
 
     private var visibleProviders: [Provider] {
-        providers.filter { provider in
-            guard !provider.logoPath.isEmpty else { return false }
-            let lowerLogo = provider.logoPath.lowercased()
-            if lowerLogo.contains(".svg") { return false }
-            if lowerLogo.contains("logo-white") { return false }
-            let hasLink = provider.externalLink != nil || justWatchLink != nil
-            if hasLink { return true }
-            return PlatformDeepLinkHelper.hasPlatformHomepage(for: provider)
-        }
+        WatchProviderDisplayFiltering.visibleProviders(providers, justWatchLink: justWatchLink)
     }
     
     var body: some View {

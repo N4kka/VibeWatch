@@ -1365,6 +1365,68 @@ final class ProviderSelectionTests: XCTestCase {
     }
 }
 
+// MARK: - WatchProviderDisplayFiltering (provider visibili in MovieDetailView)
+
+final class WatchProviderDisplayFilteringTests: XCTestCase {
+
+    private func provider(id: Int, name: String = "Unknown", logo: String = "/x.jpg",
+                          link: URL? = nil) -> Provider {
+        Provider(providerId: id, providerName: name, logoPath: logo, displayPriority: 0,
+                 price: nil, quality: nil, presentationType: nil, externalLink: link)
+    }
+
+    func test_visibleProviders_filtersUnusableLogos() {
+        let providers = [
+            provider(id: 1, logo: "", link: URL(string: "https://a")!),
+            provider(id: 2, logo: "/logo.svg", link: URL(string: "https://b")!),
+            provider(id: 3, logo: "/logo-white.png", link: URL(string: "https://c")!),
+            provider(id: 4, logo: "/logo.png", link: URL(string: "https://d")!)
+        ]
+
+        let visible = WatchProviderDisplayFiltering.visibleProviders(providers, justWatchLink: nil)
+        XCTAssertEqual(visible.map(\.id), [4])
+    }
+
+    func test_visibleProviders_keepsProviderWithExternalLink() {
+        let providers = [provider(id: 1, link: URL(string: "https://direct")!)]
+
+        let visible = WatchProviderDisplayFiltering.visibleProviders(providers, justWatchLink: nil)
+        XCTAssertEqual(visible.map(\.id), [1])
+    }
+
+    func test_visibleProviders_countryLinkMakesProviderReachable() {
+        let providers = [provider(id: 1)]
+
+        let visible = WatchProviderDisplayFiltering.visibleProviders(providers, justWatchLink: "https://region-page")
+        XCTAssertEqual(visible.map(\.id), [1])
+    }
+
+    func test_visibleProviders_knownHomepageMakesProviderReachableWithoutLinks() {
+        let providers = [provider(id: 1, name: "Netflix")]
+
+        let visible = WatchProviderDisplayFiltering.visibleProviders(providers, justWatchLink: nil)
+        XCTAssertEqual(visible.map(\.id), [1])
+    }
+
+    func test_visibleProviders_unknownWithoutLinksIsHidden() {
+        let providers = [provider(id: 1, name: "Unknown")]
+
+        let visible = WatchProviderDisplayFiltering.visibleProviders(providers, justWatchLink: nil)
+        XCTAssertTrue(visible.isEmpty)
+    }
+
+    func test_hasAnyVisibleProvider_checksEveryTier() {
+        let countryProviders = CountryProviders(
+            flatrate: [provider(id: 1, logo: "")],
+            rent: [provider(id: 2, link: URL(string: "https://rent")!)],
+            buy: nil,
+            link: nil
+        )
+
+        XCTAssertTrue(WatchProviderDisplayFiltering.hasAnyVisibleProvider(in: countryProviders))
+    }
+}
+
 // MARK: - GamificationLeveling (curva XP->livello unificata da GamificationService + ConflictResolver)
 
 final class GamificationLevelingTests: XCTestCase {
