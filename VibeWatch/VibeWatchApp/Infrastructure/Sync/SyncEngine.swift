@@ -102,8 +102,15 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
     /// Exponential backoff schedule in seconds: 60s, 5min, 15min, 1hr, 4hr
     private let backoffSchedule: [TimeInterval] = [60, 300, 900, 3600, 14400]
 
-    /// Interval between periodic sync attempts (60 seconds)
-    private let periodicSyncInterval: TimeInterval = 60
+    /// Interval between periodic sync attempts.
+    ///
+    /// Fase 4 (3.2 — batteria): era 60s, alzato a 5 min come SOLO fallback. Il push non
+    /// dipende più da questo timer per la latenza: `queueOperation` fa già un push
+    /// immediato quando online (event-driven), e foreground-resume / network-restored
+    /// triggerano una sync. Inoltre il push periodico skippa subito se l'outbox è vuota
+    /// (pushPendingChangesInternal). Allungare l'intervallo taglia i wakeup CPU periodici
+    /// a parità di comportamento osservabile.
+    private let periodicSyncInterval: TimeInterval = 300
 
     /// Minimum time in background before triggering full sync on resume (2 minutes)
     private let backgroundThreshold: TimeInterval = 120

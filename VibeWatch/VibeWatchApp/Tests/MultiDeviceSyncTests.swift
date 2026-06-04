@@ -1020,3 +1020,22 @@ final class ListLoadFullSetCharacterizationTests: XCTestCase {
                       "canAddToList riflette il count pieno (141 < \(ListManager.maxItemsPerList))")
     }
 }
+
+// MARK: - Clip prefetch gate (Fase 4 §3.1 — batteria)
+//
+// Il prefetch clip pesante (validazione YouTube + scritture Supabase) deve girare SOLO
+// su Wi-Fi e fuori da Low-Power Mode. Congela la funzione pura del gate.
+
+final class ClipPrefetchGateTests: XCTestCase {
+
+    func test_allowed_onlyOnWiFiAndNotLowPower() {
+        XCTAssertTrue(ClipsPrefetchService.isPrefetchAllowed(isWiFi: true, isLowPowerMode: false),
+                      "Wi-Fi + non Low-Power → consentito")
+        XCTAssertFalse(ClipsPrefetchService.isPrefetchAllowed(isWiFi: false, isLowPowerMode: false),
+                       "no Wi-Fi (es. cellulare) → bloccato")
+        XCTAssertFalse(ClipsPrefetchService.isPrefetchAllowed(isWiFi: true, isLowPowerMode: true),
+                       "Low-Power Mode → bloccato anche su Wi-Fi")
+        XCTAssertFalse(ClipsPrefetchService.isPrefetchAllowed(isWiFi: false, isLowPowerMode: true),
+                       "no Wi-Fi + Low-Power → bloccato")
+    }
+}
