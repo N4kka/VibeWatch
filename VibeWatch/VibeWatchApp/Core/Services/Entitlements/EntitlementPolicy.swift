@@ -13,7 +13,24 @@ enum UserTier {
 /// `ListManager` (col limite clip `25` hard-coded in due punti). È il nucleo della
 /// consolidazione verso un EntitlementService unico (§1.3): i manager esistenti delegano qui,
 /// comportamento preservato. Side-effect (persistenza, RevenueCat) restano nei manager.
+/// Esito unificato della richiesta di guardare una clip (fonde il booleano can-watch col
+/// gate da mostrare). È la forma che il futuro `EntitlementService` esporrà.
+enum ClipAllowance: Equatable {
+    case allowed         // può guardare
+    case gateAccount     // anonimo esaurito → schermata crea-account
+    case paywall         // free esaurito → paywall Pro
+}
+
 enum EntitlementPolicy {
+
+    // MARK: - Derivazione tier (fonte unica)
+
+    /// Deriva il tier dallo stato Pro (RevenueCat) e di autenticazione.
+    /// Centralizza la logica `isPro ? .pro : (loggato ? .free : .anonymous)` oggi ripetuta inline.
+    static func tier(isPro: Bool, isAuthenticated: Bool) -> UserTier {
+        if isPro { return .pro }
+        return isAuthenticated ? .free : .anonymous
+    }
 
     // MARK: - Clip quota giornaliera
 
@@ -44,6 +61,15 @@ enum EntitlementPolicy {
         switch tier {
         case .anonymous: return .accountCreation
         case .free, .pro: return .proPaywall
+        }
+    }
+
+    /// Esito unificato (allowed / gateAccount / paywall) per la richiesta di una clip.
+    static func clipAllowance(tier: UserTier, clipsWatched: Int) -> ClipAllowance {
+        switch gate(tier: tier, clipsWatched: clipsWatched) {
+        case .none: return .allowed
+        case .accountCreation: return .gateAccount
+        case .proPaywall: return .paywall
         }
     }
 

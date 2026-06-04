@@ -2152,4 +2152,18 @@ final class EntitlementPolicyTests: XCTestCase {
         XCTAssertTrue(EntitlementPolicy.shouldShowAds(for: .free))
         XCTAssertFalse(EntitlementPolicy.shouldShowAds(for: .pro))
     }
+
+    func test_tierDerivation() {
+        XCTAssertEqual(EntitlementPolicy.tier(isPro: true, isAuthenticated: true), .pro)
+        XCTAssertEqual(EntitlementPolicy.tier(isPro: true, isAuthenticated: false), .pro, "Pro vince sempre")
+        XCTAssertEqual(EntitlementPolicy.tier(isPro: false, isAuthenticated: true), .free)
+        XCTAssertEqual(EntitlementPolicy.tier(isPro: false, isAuthenticated: false), .anonymous)
+    }
+
+    func test_clipAllowance_unifiesGate() {
+        XCTAssertEqual(EntitlementPolicy.clipAllowance(tier: .free, clipsWatched: 0), .allowed)
+        XCTAssertEqual(EntitlementPolicy.clipAllowance(tier: .anonymous, clipsWatched: limit), .gateAccount)
+        XCTAssertEqual(EntitlementPolicy.clipAllowance(tier: .free, clipsWatched: limit), .paywall)
+        XCTAssertEqual(EntitlementPolicy.clipAllowance(tier: .pro, clipsWatched: 10_000), .allowed)
+    }
 }
