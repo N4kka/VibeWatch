@@ -520,6 +520,64 @@ final class ListManagerSyncCharacterizationTests: XCTestCase {
         XCTAssertTrue(sync.queued.filter { $0.table == "lists" && $0.recordId == "dup" }.isEmpty,
                       "una lista già remota non deve essere ri-accodata")
     }
+
+    // MARK: - ensureListsInDatabase (4.3b — N+1 a ogni avvio)
+
+    /// 4.3b: lista non ancora sincronizzata (synced_at NULL). Default → outbox; custom → createList
+    /// diretto insert-or-fail (no resurrection).
+    func test_ensureListsInDatabase_unsynced_defaultViaOutbox_customDirect() async throws {
+        let watchlist = MediaList(name: ListType.watchlist.rawValue, type: .watchlist)
+        let custom = MediaList(id: "c-1", name: "Mine", type: .custom, items: [])
+        manager.lists = [watchlist, custom]
+        // ensureListsInDatabase fa ensureListInSQLite (INSERT OR IGNORE, synced_at NULL) → entrambe unsynced.
+
+        await manager.ensureListsInDatabase()
+
+        // Default → outbox, NON createList diretto.
+        let defaultInserts = sync.queued.filter { $0.table == "lists" && $0.recordId == watchlist.id }
+        XCTAssertEqual(defaultInserts.count, 1, "la default unsynced va accodata sull'outbox")
+        XCTAssertFalse(remote.createListCalls.contains(watchlist.id),
+                       "la default NON deve usare createList diretto")
+
+        // Custom → createList diretto insert-or-fail, NON outbox.
+        XCTAssertTrue(remote.createListCalls.contains("c-1"),
+                      "la custom unsynced usa createList diretto (no resurrection)")
+        XCTAssertTrue(sync.queued.filter { $0.table == "lists" && $0.recordId == "c-1" }.isEmpty,
+                      "la custom NON deve passare per l'outbox (rischio resurrection)")
+    }
+
+    /// 4.3b: liste già riconciliate col remoto (synced_at valorizzato) → nessun lavoro remoto
+    /// (taglio del burst N+1 a ogni avvio per gli utenti esistenti).
+    func test_ensureListsInDatabase_syncedLists_noRemoteWork() async throws {
+        let watchlist = MediaList(name: ListType.watchlist.rawValue, type: .watchlist)
+        let custom = MediaList(id: "c-2", name: "Synced", type: .custom, items: [])
+        manager.lists = [watchlist, custom]
+
+        // Pre-inserisci le righe con synced_at valorizzato; ensureListInSQLite è INSERT OR IGNORE
+        // → non sovrascrive, quindi restano "synced".
+        for l in [watchlist, custom] {
+            _ = db.execute(
+                "INSERT INTO lists (id, user_id, name, type, created_at, synced_at) VALUES (?,?,?,?,?,?)",
+                parameters: [l.id, "user-1", l.name, l.type.rawValue, "2024-01-01T00:00:00Z", "2024-01-02T00:00:00Z"]
+            )
+        }
+
+        await manager.ensureListsInDatabase()
+
+        XCTAssertTrue(remote.createListCalls.isEmpty, "nessun createList diretto per liste già synced")
+        XCTAssertTrue(sync.queued.filter { $0.table == "lists" }.isEmpty, "nessun enqueue per liste già synced")
+    }
+
+    /// 4.3b: utente anonimo → nessuna scrittura/enqueue remota (solo persistenza locale).
+    func test_ensureListsInDatabase_anonymous_noRemote() async throws {
+        let anonManager = ListManager(db: db, sync: sync, supabase: remote, authService: MockAuth(user: nil), autoStart: false)
+        anonManager.lists = [MediaList(name: ListType.watchlist.rawValue, type: .watchlist)]
+
+        await anonManager.ensureListsInDatabase()
+
+        XCTAssertTrue(remote.createListCalls.isEmpty)
+        XCTAssertTrue(sync.queued.filter { $0.table == "lists" }.isEmpty)
+    }
 }
 
 // MARK: - TMDBRequestBudget (Fase 2 task #7 — 4.1 budget richieste TMDB)

@@ -312,26 +312,76 @@ class ListManager: ObservableObject {
         }
     }
     
-    /// Ensure all in-memory lists exist in both SQLite and Supabase
-    private func ensureListsInDatabase() async {
+    /// Ensure all in-memory lists exist in both SQLite and Supabase.
+    ///
+    /// 4.3b — taglio dell'N+1 a ogni avvio: prima questo metodo faceva `supabase.createList`
+    /// DIRETTO per OGNI lista a ogni cold launch (4+ round-trip per lo più falliti per conflitto
+    /// PK). Ora:
+    ///  - lo facciamo SOLO per le liste non ancora riconciliate col remoto (`synced_at IS NULL`):
+    ///    per gli utenti esistenti (liste già pull-ate) il costo remoto al lancio è ZERO.
+    ///  - liste di DEFAULT (non cancellabili) → via outbox/SyncEngine (single remote writer 4.2);
+    ///    `apply_mutations` fa un upsert idempotente e, non potendo essere soft-deleted, non c'è
+    ///    rischio di "resurrection".
+    ///  - liste CUSTOM → restano sul `createList` DIRETTO insert-or-fail. È deliberato: le custom
+    ///    SONO cancellabili e `apply_mutations` su `lists` è un upsert → un INSERT via outbox
+    ///    potrebbe riportare in vita una custom soft-deleted su un altro device (famiglia 141→1).
+    ///    L'insert-or-fail (fallisce su riga esistente) preserva la non-resurrection.
+    func ensureListsInDatabase() async {
         // First, ensure device profile exists in SQLite (for foreign key constraint)
         await ensureDeviceProfileInSQLite()
-        
+
         for list in lists {
             // Ensure in SQLite
             await ensureListInSQLite(list)
-            
-            // Ensure in Supabase if authenticated
-            if authService.currentUser != nil {
+        }
+
+        guard authService.currentUser != nil else { return }
+
+        for list in lists {
+            // Salta le liste già riconciliate col remoto: niente più burst a ogni avvio.
+            guard await listNeedsRemoteEnsure(list.id) else { continue }
+
+            if list.type == .custom {
+                // Custom: createList diretto insert-or-fail (no resurrection, vedi doc sopra).
                 do {
                     _ = try await supabase.createList(id: list.id, name: list.name, description: list.description, type: list.type)
-                    Logger.debug("[ListManager] Ensured list '\(list.name)' exists in Supabase")
+                    Logger.debug("[ListManager] Ensured custom list '\(list.name)' exists in Supabase")
                 } catch {
                     // List might already exist, which is fine
-                    Logger.debug("[ListManager] List '\(list.name)' may already exist in Supabase: \(error)")
+                    Logger.debug("[ListManager] Custom list '\(list.name)' may already exist in Supabase: \(error)")
                 }
+            } else {
+                // Default: via outbox (single remote writer).
+                let now = ISO8601DateFormatter().string(from: Date())
+                try? await sync.queueOperation(
+                    table: "lists",
+                    operationType: "INSERT",
+                    recordId: list.id,
+                    payload: [
+                        "id": list.id,
+                        "user_id": userId,
+                        "name": list.name,
+                        "description": list.description ?? "",
+                        "type": list.type.rawValue,
+                        "created_at": ISO8601DateFormatter().string(from: list.createdAt),
+                        "updated_at": now
+                    ],
+                    dependsOn: nil
+                )
+                Logger.debug("[ListManager] Queued default list '\(list.name)' for remote ensure")
             }
         }
+    }
+
+    /// True se la lista locale non risulta ancora riconciliata col remoto (`synced_at IS NULL`),
+    /// quindi va garantita lato server. Il pull remoto popola `synced_at` (vedi SQLiteService.upsert).
+    private func listNeedsRemoteEnsure(_ id: String) async -> Bool {
+        let rows = (try? await db.queryRaw(
+            "SELECT synced_at FROM lists WHERE id = ?",
+            parameters: [id]
+        )) ?? []
+        guard let row = rows.first else { return true }
+        return (row["synced_at"] as? String) == nil
     }
     
     /// Ensure device profile exists in SQLite (required for foreign key constraint)
