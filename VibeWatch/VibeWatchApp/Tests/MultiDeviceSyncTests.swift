@@ -1591,6 +1591,55 @@ final class MovieUnavailableNotificationCopyBuilderTests: XCTestCase {
     }
 }
 
+// MARK: - SupabasePullRowNormalizer (normalizzazione righe remote estratta da SupabaseClient)
+
+final class SupabasePullRowNormalizerTests: XCTestCase {
+
+    func test_invalidMediaTypeForListItemsDefaultsToMovie() {
+        let normalized = SupabasePullRowNormalizer.normalize(
+            row: ["id": "item-1", "media_type": "podcast"],
+            table: "list_items"
+        )
+
+        XCTAssertEqual(normalized["media_type"] as? String, "movie")
+    }
+
+    func test_validMediaTypeForClipsIsPreserved() {
+        let normalized = SupabasePullRowNormalizer.normalize(
+            row: ["id": "clip-1", "media_type": "tv"],
+            table: "clips"
+        )
+
+        XCTAssertEqual(normalized["media_type"] as? String, "tv")
+    }
+
+    func test_unrelatedTableKeepsMediaTypeUnchanged() {
+        let normalized = SupabasePullRowNormalizer.normalize(
+            row: ["id": "profile-1", "media_type": "podcast"],
+            table: "profiles"
+        )
+
+        XCTAssertEqual(normalized["media_type"] as? String, "podcast")
+    }
+
+    func test_arrayFieldsBecomeJSONStringFields() {
+        let normalized = SupabasePullRowNormalizer.normalize(
+            row: [
+                "genres": ["Drama", "Sci-Fi"],
+                "actors": ["A", "B"],
+                "keywords": ["space"],
+                "origin_country": ["US", "IT"]
+            ],
+            table: "clips"
+        )
+
+        XCTAssertEqual(normalized["genres"] as? String, "[\"Drama\",\"Sci-Fi\"]")
+        XCTAssertEqual(normalized["actors"] as? String, "[\"A\",\"B\"]")
+        XCTAssertEqual(normalized["keywords"] as? String, "[\"space\"]")
+        XCTAssertEqual(normalized["origin_country"] as? String, "[\"US\",\"IT\"]")
+    }
+}
+
 // MARK: - MovieCreditsInfoBuilder (righe informative estratte da MovieDetailView)
 
 final class MovieCreditsInfoBuilderTests: XCTestCase {

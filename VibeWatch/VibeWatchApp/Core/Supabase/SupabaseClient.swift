@@ -255,33 +255,7 @@ class SupabaseService: ObservableObject {
         guard let rows = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return }
 
         // Normalize rows per table (media_type, JSON fields)
-        let normalized: [[String: Any]] = rows.map { row in
-            var r = row
-
-            // Ensure media_type is valid
-            if name == "clips" || name == "list_items" {
-                if let mt = r["media_type"] as? String, !["movie", "tv"].contains(mt) {
-                    r["media_type"] = "movie"
-                }
-            }
-
-            // Convert Postgres array (decoded as [Any]) to JSON string for local JSON columns
-            func normalizeArray(_ key: String) {
-                if let arr = r[key] as? [Any] {
-                    if let data = try? JSONSerialization.data(withJSONObject: arr),
-                       let str = String(data: data, encoding: .utf8) {
-                        r[key] = str
-                    }
-                }
-            }
-
-            normalizeArray("genres")
-            normalizeArray("actors")
-            normalizeArray("keywords")
-            normalizeArray("origin_country")
-
-            return r
-        }
+        let normalized = rows.map { SupabasePullRowNormalizer.normalize(row: $0, table: name) }
 
         // Conflict handling
         let policy = conflictPolicy(for: name)
