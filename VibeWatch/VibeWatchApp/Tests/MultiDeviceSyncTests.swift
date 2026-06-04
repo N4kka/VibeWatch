@@ -1984,3 +1984,38 @@ final class AuthCallbackURLParserTests: XCTestCase {
             from: URL(string: "vibewatch://auth/callback?error_code=other")!))
     }
 }
+
+// MARK: - LevelCalculator (riconciliato sulla curva canonica GamificationLeveling)
+
+final class LevelCalculatorTests: XCTestCase {
+
+    func test_getLevelInfo_derivesFromGamificationLeveling() {
+        for level in 1...50 {
+            let info = LevelCalculator.getLevelInfo(level: level)
+            XCTAssertEqual(info.xpStart, GamificationLeveling.threshold(for: level))
+            XCTAssertEqual(info.xpEnd, GamificationLeveling.threshold(for: level + 1))
+            XCTAssertEqual(info.rank.name, UserRank.forLevel(level).name)
+        }
+    }
+
+    func test_getLevelInfo_clampsOutOfRange() {
+        XCTAssertEqual(LevelCalculator.getLevelInfo(level: 0).xpStart, GamificationLeveling.threshold(for: 1))
+        let top = LevelCalculator.getLevelInfo(level: 999)
+        XCTAssertEqual(top.xpStart, GamificationLeveling.threshold(for: 50))
+        XCTAssertEqual(top.xpEnd, GamificationLeveling.threshold(for: 51))
+    }
+
+    /// Il FIX: per qualunque totalXP, il bracket del livello corrente contiene totalXP,
+    /// quindi la progress (totalXP - xpStart)/(xpEnd - xpStart) è sempre in [0, 1).
+    /// Prima (curva divergente) poteva essere negativa.
+    func test_currentLevelBracketContainsXP_noNegativeProgress() {
+        for xp in stride(from: 0, through: 200_000, by: 113) {
+            let currentLevel = GamificationLeveling.level(forTotalXP: xp)
+            let info = LevelCalculator.getLevelInfo(level: currentLevel)
+            XCTAssertLessThanOrEqual(info.xpStart, xp, "xpStart <= totalXP (no progress negativa) a xp=\(xp)")
+            if currentLevel < 50 {
+                XCTAssertLessThan(xp, info.xpEnd, "totalXP < xpEnd del livello corrente a xp=\(xp)")
+            }
+        }
+    }
+}

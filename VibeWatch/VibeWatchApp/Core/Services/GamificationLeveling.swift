@@ -6,8 +6,8 @@ import Foundation
 /// and in `ConflictResolver`; both now delegate here (Fase 5 file-splitting / de-dup,
 /// same approach as `ListItemFilterer`). Behavior is preserved exactly.
 ///
-/// NB: `LevelCalculator` in `LevelProgressView` uses a *different* curve and is intentionally
-/// left untouched — reconciling that divergence would change the level shown in the UI.
+/// `LevelCalculator` in `LevelProgressView` also derives its XP brackets from this curve,
+/// so the level-progress UI stays consistent with the user's actual `currentLevel`.
 enum GamificationLeveling {
 
     /// Cumulative XP required to *reach* a given level (exponential growth curve).
