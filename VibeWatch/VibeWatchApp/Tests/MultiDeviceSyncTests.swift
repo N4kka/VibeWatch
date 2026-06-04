@@ -1931,3 +1931,54 @@ final class DiscoveryQueryDerivationTests: XCTestCase {
         XCTAssertNil(r2.lte)
     }
 }
+
+// MARK: - AuthCallbackURLParser (parsing URL callback Supabase, estratto da AuthService)
+
+final class AuthCallbackURLParserTests: XCTestCase {
+
+    func test_combinedQueryItems_mergesQueryAndFragment() {
+        let url = URL(string: "vibewatch://auth/callback?type=recovery#access_token=abc&refresh_token=def")!
+        let items = AuthCallbackURLParser.combinedQueryItems(from: url)
+        let dict = Dictionary(items.compactMap { item in item.value.map { (item.name, $0) } },
+                              uniquingKeysWith: { a, _ in a })
+        XCTAssertEqual(dict["type"], "recovery")
+        XCTAssertEqual(dict["access_token"], "abc")
+        XCTAssertEqual(dict["refresh_token"], "def")
+    }
+
+    func test_isPasswordRecovery_query() {
+        XCTAssertTrue(AuthCallbackURLParser.isPasswordRecovery(
+            URL(string: "vibewatch://auth/callback?type=recovery")!))
+        XCTAssertFalse(AuthCallbackURLParser.isPasswordRecovery(
+            URL(string: "vibewatch://auth/callback?type=signup")!))
+    }
+
+    func test_isPasswordRecovery_fragment() {
+        // type nel fragment deve comunque essere rilevato
+        XCTAssertTrue(AuthCallbackURLParser.isPasswordRecovery(
+            URL(string: "vibewatch://auth/callback#type=recovery&access_token=x")!))
+    }
+
+    func test_moveFragmentToQueryIfNeeded_movesTokens() {
+        let url = URL(string: "vibewatch://auth/callback?a=1#b=2&c=3")!
+        let moved = AuthCallbackURLParser.moveFragmentToQueryIfNeeded(url)
+        XCTAssertNil(URLComponents(url: moved, resolvingAgainstBaseURL: false)?.fragment,
+                     "il fragment deve essere svuotato")
+        let names = Set(URLComponents(url: moved, resolvingAgainstBaseURL: false)?.queryItems?.map(\.name) ?? [])
+        XCTAssertEqual(names, ["a", "b", "c"], "tutti gli item finiscono in query")
+    }
+
+    func test_moveFragmentToQueryIfNeeded_noFragment_returnsUnchanged() {
+        let url = URL(string: "vibewatch://auth/callback?a=1")!
+        XCTAssertEqual(AuthCallbackURLParser.moveFragmentToQueryIfNeeded(url), url)
+    }
+
+    func test_shouldShowRecoveryError() {
+        XCTAssertTrue(AuthCallbackURLParser.shouldShowRecoveryError(
+            from: URL(string: "vibewatch://auth/callback?type=recovery")!))
+        XCTAssertTrue(AuthCallbackURLParser.shouldShowRecoveryError(
+            from: URL(string: "vibewatch://auth/callback?error_code=otp_expired")!))
+        XCTAssertFalse(AuthCallbackURLParser.shouldShowRecoveryError(
+            from: URL(string: "vibewatch://auth/callback?error_code=other")!))
+    }
+}

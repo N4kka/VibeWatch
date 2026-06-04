@@ -1075,65 +1075,28 @@ class AuthService: AuthServiceProtocol {
     }
 
     private func isPasswordRecoveryURL(_ url: URL) -> Bool {
-        let queryItems = combinedQueryItems(from: url)
-
         // Debug: Print all keys found
-        let keys = queryItems.map { $0.name }
+        let keys = combinedQueryItems(from: url).map { $0.name }
         Logger.debug("[Auth] Callback Params: \(keys)")
 
-        let isRecovery = queryItems.contains(where: { item in
-            item.name == "type" && item.value == "recovery"
-        })
-
+        let isRecovery = AuthCallbackURLParser.isPasswordRecovery(url)
         Logger.debug("[Auth] Is Recovery: \(isRecovery)")
         return isRecovery
     }
 
     /// Combine query items from both the query string and the fragment portion (#) to support Supabase OAuth/recovery redirects.
     private func combinedQueryItems(from url: URL) -> [URLQueryItem] {
-        var items: [URLQueryItem] = []
-
-        let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
-        if let query = components?.queryItems {
-            items.append(contentsOf: query)
-        }
-
-        if let fragment = components?.fragment,
-           let fragComponents = URLComponents(string: "?\(fragment)"),
-           let fragItems = fragComponents.queryItems {
-            items.append(contentsOf: fragItems)
-        }
-
-        return items
+        AuthCallbackURLParser.combinedQueryItems(from: url)
     }
 
     /// Supabase sometimes returns tokens in the fragment; this helper moves them into the query string for proper parsing.
     private func moveFragmentToQueryIfNeeded(_ url: URL) -> URL {
-        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-              let fragment = components.fragment,
-              !fragment.isEmpty,
-              var merged = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
-            return url
-        }
-
-        // Merge existing query items with fragment items
-        var queryItems = merged.queryItems ?? []
-        if let fragComponents = URLComponents(string: "?\(fragment)"),
-           let fragItems = fragComponents.queryItems {
-            queryItems.append(contentsOf: fragItems)
-        }
-        merged.fragment = nil
-        merged.queryItems = queryItems
-        return merged.url ?? url
+        AuthCallbackURLParser.moveFragmentToQueryIfNeeded(url)
     }
 
     /// Show a user-facing message if the recovery link is expired/invalid.
     private func handleRecoveryErrorIfNeeded(from url: URL) {
-        let items = combinedQueryItems(from: url)
-        let errorCode = items.first(where: { $0.name == "error_code" })?.value
-        let isRecovery = items.contains(where: { $0.name == "type" && $0.value == "recovery" })
-
-        if isRecovery || errorCode == "otp_expired" {
+        if AuthCallbackURLParser.shouldShowRecoveryError(from: url) {
             let message = "Email link is invalid or has expired. Please request a new password reset link."
             AppState.shared.toastMessage = message
             AppState.shared.showErrorToast = true
