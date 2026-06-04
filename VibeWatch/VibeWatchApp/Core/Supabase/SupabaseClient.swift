@@ -31,24 +31,16 @@ class SupabaseService: ObservableObject {
     private let localDB = SQLiteService.shared
     private let deviceId: String
 
-    private static let dayKeyFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = .current
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter
-    }()
-
     private func localDayKey(for date: Date = Date()) -> String {
-        Self.dayKeyFormatter.string(from: date)
+        SupabaseSyncFormatting.localDayKey(for: date)
     }
 
     private func isDateInTodayLocal(_ date: Date) -> Bool {
-        Calendar.current.isDateInToday(date)
+        SupabaseSyncFormatting.isDateInTodayLocal(date)
     }
 
     private func normalizeUserId(_ userId: String) -> String {
-        userId.lowercased()
+        SupabaseSyncFormatting.normalizeUserId(userId)
     }
 
     private struct LocalAITokenUsageState {
@@ -167,14 +159,7 @@ class SupabaseService: ObservableObject {
     }
 
     private func parseDate(_ value: Any?) -> Date? {
-        guard let string = value as? String else { return nil }
-        let iso = ISO8601DateFormatter()
-        if let d = iso.date(from: string) { return d }
-        let df = DateFormatter()
-        df.locale = Locale(identifier: "en_US_POSIX")
-        df.timeZone = TimeZone(secondsFromGMT: 0)
-        df.dateFormat = "yyyy-MM-dd HH:mm:ss"
-        return df.date(from: string)
+        SupabaseSyncFormatting.parseDate(value)
     }
 
     // MARK: - Clip Signals

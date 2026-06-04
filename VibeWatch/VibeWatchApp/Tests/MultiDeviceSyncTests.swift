@@ -1640,6 +1640,51 @@ final class SupabasePullRowNormalizerTests: XCTestCase {
     }
 }
 
+// MARK: - SupabaseSyncFormatting (formatting/parsing estratti da SupabaseClient)
+
+final class SupabaseSyncFormattingTests: XCTestCase {
+
+    func test_normalizeUserIdLowercasesCurrentBehavior() {
+        XCTAssertEqual(SupabaseSyncFormatting.normalizeUserId("ABC-Def-123"), "abc-def-123")
+    }
+
+    func test_parseDateAcceptsISO8601Strings() {
+        let date = SupabaseSyncFormatting.parseDate("2026-06-04T16:35:00Z")
+
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        XCTAssertEqual(calendar.component(.year, from: date!), 2026)
+        XCTAssertEqual(calendar.component(.month, from: date!), 6)
+        XCTAssertEqual(calendar.component(.day, from: date!), 4)
+        XCTAssertEqual(calendar.component(.hour, from: date!), 16)
+    }
+
+    func test_parseDateAcceptsSQLTimestampInUTC() {
+        let date = SupabaseSyncFormatting.parseDate("2026-06-04 16:35:00")
+
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        XCTAssertEqual(calendar.component(.year, from: date!), 2026)
+        XCTAssertEqual(calendar.component(.month, from: date!), 6)
+        XCTAssertEqual(calendar.component(.day, from: date!), 4)
+        XCTAssertEqual(calendar.component(.hour, from: date!), 16)
+    }
+
+    func test_parseDateRejectsNonStringValues() {
+        XCTAssertNil(SupabaseSyncFormatting.parseDate(123))
+        XCTAssertNil(SupabaseSyncFormatting.parseDate(nil))
+    }
+
+    func test_localDayKeyUsesCurrentLocalCalendarDay() {
+        let calendar = Calendar.current
+        let date = calendar.date(from: DateComponents(year: 2026, month: 6, day: 4, hour: 12))!
+
+        XCTAssertEqual(SupabaseSyncFormatting.localDayKey(for: date), "2026-06-04")
+    }
+}
+
 // MARK: - MovieCreditsInfoBuilder (righe informative estratte da MovieDetailView)
 
 final class MovieCreditsInfoBuilderTests: XCTestCase {
