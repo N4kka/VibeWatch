@@ -860,25 +860,11 @@ class DiscoveryPersonalizationService: ObservableObject {
     // MARK: - Private Helpers
 
     private func inferDecade(from likedMedia: [MediaSummary]) -> Int {
-        let years = likedMedia.compactMap { $0.year }
-        guard !years.isEmpty else { return 2010 }
-        let avgYear = years.reduce(0, +) / years.count
-        return (avgYear / 10) * 10
+        DiscoveryQueryDerivation.inferDecade(from: likedMedia)
     }
 
     private func moodToGenreIds(_ mood: Mood) -> [Int] {
-        switch mood {
-        case .happy: return [35, 10751]
-        case .sad: return [18]
-        case .excited: return [28, 12]
-        case .relaxed: return [35, 10749]
-        case .scared: return [27, 53]
-        case .thoughtful: return [18, 99]
-        case .romantic: return [10749, 18]
-        case .adventurous: return [12, 28]
-        case .nostalgic: return [36, 10751]
-        case .energetic: return [28, 878]
-        }
+        DiscoveryQueryDerivation.moodToGenreIds(mood)
     }
 
     private func mapPersonCreditToMovie(_ credit: PersonCredit) -> Movie {
@@ -1344,10 +1330,7 @@ class DiscoveryPersonalizationService: ObservableObject {
     }
 
     private func yearDateRange(filters: GlobalDiscoveryFilters) -> (gte: String?, lte: String?) {
-        let yearRange = filters.getYearRange()
-        let gte = yearRange.start.map { "\($0)-01-01" }
-        let lte = yearRange.end.map { "\($0)-12-31" }
-        return (gte, lte)
+        DiscoveryQueryDerivation.yearDateRange(filters: filters)
     }
 
     private func mapTVShowToMovie(_ show: TVShow) -> Movie {

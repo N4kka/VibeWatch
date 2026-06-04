@@ -1892,3 +1892,42 @@ final class GamificationLevelingTests: XCTestCase {
         }
     }
 }
+
+// MARK: - DiscoveryQueryDerivation (derivazione query da preferenze/filtri, estratta da DiscoveryPersonalizationService)
+
+final class DiscoveryQueryDerivationTests: XCTestCase {
+
+    private func media(_ year: Int?) -> MediaSummary { MediaSummary(id: 1, title: "m", year: year) }
+
+    func test_inferDecade() {
+        XCTAssertEqual(DiscoveryQueryDerivation.inferDecade(from: []), 2010, "fallback senza dati")
+        XCTAssertEqual(DiscoveryQueryDerivation.inferDecade(from: [media(nil), media(nil)]), 2010,
+                       "tutti anni nil -> fallback")
+        // [2001,2009,2014]: avg = 6024/3 = 2008 -> decade 2000
+        XCTAssertEqual(DiscoveryQueryDerivation.inferDecade(from: [media(2001), media(2009), media(2014)]), 2000)
+        // anni nil ignorati: [nil,1995,2005] -> avg 2000 -> 2000
+        XCTAssertEqual(DiscoveryQueryDerivation.inferDecade(from: [media(nil), media(1995), media(2005)]), 2000)
+    }
+
+    func test_moodToGenreIds() {
+        XCTAssertEqual(DiscoveryQueryDerivation.moodToGenreIds(.happy), [35, 10751])
+        XCTAssertEqual(DiscoveryQueryDerivation.moodToGenreIds(.energetic), [28, 878])
+        XCTAssertEqual(DiscoveryQueryDerivation.moodToGenreIds(.sad), [18])
+    }
+
+    func test_yearDateRange() {
+        var f = GlobalDiscoveryFilters()
+        f.releasePeriodPreset = .custom
+        f.customYearStart = 2000
+        f.customYearEnd = 2010
+        let r = DiscoveryQueryDerivation.yearDateRange(filters: f)
+        XCTAssertEqual(r.gte, "2000-01-01")
+        XCTAssertEqual(r.lte, "2010-12-31")
+
+        var empty = GlobalDiscoveryFilters()
+        empty.releasePeriodPreset = .custom // start/end nil -> bounds nil
+        let r2 = DiscoveryQueryDerivation.yearDateRange(filters: empty)
+        XCTAssertNil(r2.gte)
+        XCTAssertNil(r2.lte)
+    }
+}
