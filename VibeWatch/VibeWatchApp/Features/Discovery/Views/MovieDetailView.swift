@@ -459,38 +459,25 @@ struct ActionButtonsSection: View {
     let onLikedTap: () -> Void
     let onDislikedTap: () -> Void
     
-    private var isInAnyList: Bool {
-        listManager.lists.contains { list in
-            list.items.contains { $0.mediaId == movie.id && $0.mediaType == mediaType }
-        }
-    }
-    
-    private var isInSeen: Bool {
-        listManager.isInList(listId: listManager.seenList.id, mediaId: movie.id, mediaType: mediaType)
-    }
-    
-    private var isInLiked: Bool {
-        listManager.isInList(listId: listManager.likedList.id, mediaId: movie.id, mediaType: mediaType)
-    }
-    
-    private var isInDisliked: Bool {
-        listManager.isInList(listId: listManager.dislikedList.id, mediaId: movie.id, mediaType: mediaType)
-    }
-    
-    private var likesCount: Int {
-        listManager.likedList.items.filter { $0.mediaId == movie.id && $0.mediaType == mediaType }.count
-    }
-    
-    private var dislikesCount: Int {
-        listManager.dislikedList.items.filter { $0.mediaId == movie.id && $0.mediaType == mediaType }.count
+    private var actionState: MovieActionButtonStateBuilder.State {
+        MovieActionButtonStateBuilder.state(
+            mediaId: movie.id,
+            mediaType: mediaType,
+            lists: listManager.lists,
+            seenList: listManager.seenList,
+            likedList: listManager.likedList,
+            dislikedList: listManager.dislikedList
+        )
     }
     
     var body: some View {
+        let state = actionState
+
         HStack(spacing: 12) {
             ActionButton(
                 icon: "bookmark.fill",
                 title: "movieDetail.save".localized,
-                isActive: isInAnyList
+                isActive: state.isInAnyList
             ) {
                 onSaveTap()
             }
@@ -498,7 +485,7 @@ struct ActionButtonsSection: View {
             ActionButton(
                 icon: "eye.fill",
                 title: "movieDetail.seen".localized,
-                isActive: isInSeen
+                isActive: state.isInSeen
             ) {
                 withAnimation {
                     onSeenTap()
@@ -508,8 +495,8 @@ struct ActionButtonsSection: View {
             ActionButton(
                 icon: "hand.thumbsup.fill",
                 title: "",
-                isActive: isInLiked,
-                count: likesCount
+                isActive: state.isInLiked,
+                count: state.likesCount
             ) {
                 withAnimation {
                     onLikedTap()
@@ -519,8 +506,8 @@ struct ActionButtonsSection: View {
             ActionButton(
                 icon: "hand.thumbsdown.fill",
                 title: "",
-                isActive: isInDisliked,
-                count: dislikesCount
+                isActive: state.isInDisliked,
+                count: state.dislikesCount
             ) {
                 withAnimation {
                     onDislikedTap()

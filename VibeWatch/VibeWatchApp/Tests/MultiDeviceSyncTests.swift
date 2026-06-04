@@ -1564,6 +1564,99 @@ final class MovieCreditsInfoBuilderTests: XCTestCase {
     }
 }
 
+// MARK: - MovieActionButtonStateBuilder (stato pulsanti azione estratto da MovieDetailView)
+
+final class MovieActionButtonStateBuilderTests: XCTestCase {
+
+    private func item(
+        id: String = UUID().uuidString,
+        mediaId: Int = 1,
+        mediaType: MediaType = .movie
+    ) -> MediaListItem {
+        MediaListItem(
+            id: id,
+            mediaId: mediaId,
+            mediaType: mediaType,
+            title: "Dune",
+            posterPath: nil
+        )
+    }
+
+    private func list(
+        id: String,
+        type: ListType,
+        items: [MediaListItem]
+    ) -> MediaList {
+        MediaList(id: id, name: id, type: type, items: items)
+    }
+
+    func test_stateDetectsMembershipAcrossLists() {
+        let seen = list(id: "seen", type: .seen, items: [item(mediaId: 1)])
+        let liked = list(id: "liked", type: .liked, items: [])
+        let disliked = list(id: "disliked", type: .disliked, items: [])
+        let custom = list(id: "custom", type: .custom, items: [item(mediaId: 2)])
+
+        let state = MovieActionButtonStateBuilder.state(
+            mediaId: 1,
+            mediaType: .movie,
+            lists: [custom, seen, liked, disliked],
+            seenList: seen,
+            likedList: liked,
+            dislikedList: disliked
+        )
+
+        XCTAssertTrue(state.isInAnyList)
+        XCTAssertTrue(state.isInSeen)
+        XCTAssertFalse(state.isInLiked)
+        XCTAssertFalse(state.isInDisliked)
+    }
+
+    func test_stateRequiresMatchingMediaType() {
+        let seen = list(id: "seen", type: .seen, items: [item(mediaId: 1, mediaType: .tv)])
+        let liked = list(id: "liked", type: .liked, items: [])
+        let disliked = list(id: "disliked", type: .disliked, items: [])
+
+        let state = MovieActionButtonStateBuilder.state(
+            mediaId: 1,
+            mediaType: .movie,
+            lists: [seen, liked, disliked],
+            seenList: seen,
+            likedList: liked,
+            dislikedList: disliked
+        )
+
+        XCTAssertFalse(state.isInAnyList)
+        XCTAssertFalse(state.isInSeen)
+    }
+
+    func test_stateCountsMatchingLikesAndDislikes() {
+        let seen = list(id: "seen", type: .seen, items: [])
+        let liked = list(id: "liked", type: .liked, items: [
+            item(id: "like-1", mediaId: 1),
+            item(id: "like-2", mediaId: 1),
+            item(id: "like-other", mediaId: 2)
+        ])
+        let disliked = list(id: "disliked", type: .disliked, items: [
+            item(id: "dislike-1", mediaId: 1),
+            item(id: "dislike-tv", mediaId: 1, mediaType: .tv)
+        ])
+
+        let state = MovieActionButtonStateBuilder.state(
+            mediaId: 1,
+            mediaType: .movie,
+            lists: [seen, liked, disliked],
+            seenList: seen,
+            likedList: liked,
+            dislikedList: disliked
+        )
+
+        XCTAssertTrue(state.isInLiked)
+        XCTAssertTrue(state.isInDisliked)
+        XCTAssertEqual(state.likesCount, 2)
+        XCTAssertEqual(state.dislikesCount, 1)
+    }
+}
+
 // MARK: - GamificationLeveling (curva XP->livello unificata da GamificationService + ConflictResolver)
 
 final class GamificationLevelingTests: XCTestCase {
