@@ -1364,3 +1364,43 @@ final class ProviderSelectionTests: XCTestCase {
                        "homepage piattaforma nota -> valido anche senza link")
     }
 }
+
+// MARK: - GamificationLeveling (curva XP->livello unificata da GamificationService + ConflictResolver)
+
+final class GamificationLevelingTests: XCTestCase {
+
+    func test_thresholds_atBracketBoundaries() {
+        // valori di confine dei vari segmenti della curva esponenziale
+        XCTAssertEqual(GamificationLeveling.threshold(for: 1), 0)
+        XCTAssertEqual(GamificationLeveling.threshold(for: 2), 100)
+        XCTAssertEqual(GamificationLeveling.threshold(for: 5), 400)
+        XCTAssertEqual(GamificationLeveling.threshold(for: 6), 800)
+        XCTAssertEqual(GamificationLeveling.threshold(for: 10), 2000)
+        XCTAssertEqual(GamificationLeveling.threshold(for: 15), 5000)
+        XCTAssertEqual(GamificationLeveling.threshold(for: 20), 10000)
+        XCTAssertEqual(GamificationLeveling.threshold(for: 30), 40000)
+        XCTAssertEqual(GamificationLeveling.threshold(for: 40), 80000)
+        XCTAssertEqual(GamificationLeveling.threshold(for: 41), 85000)
+    }
+
+    func test_level_mapsXPToLevel() {
+        XCTAssertEqual(GamificationLeveling.level(forTotalXP: 0), 1)
+        XCTAssertEqual(GamificationLeveling.level(forTotalXP: 99), 1)
+        XCTAssertEqual(GamificationLeveling.level(forTotalXP: 100), 2, "raggiunta la soglia del livello 2")
+        XCTAssertEqual(GamificationLeveling.level(forTotalXP: 399), 4)
+        XCTAssertEqual(GamificationLeveling.level(forTotalXP: 400), 5)
+    }
+
+    func test_level_cappedAt50() {
+        XCTAssertEqual(GamificationLeveling.level(forTotalXP: 10_000_000), 50)
+    }
+
+    /// Caratterizza l'equivalenza tra la curva e il vecchio loop di UserGamificationState.
+    func test_calculateLevel_matchesThresholdLoop() {
+        for xp in stride(from: 0, through: 120_000, by: 137) {
+            var state = UserGamificationState(totalXP: xp)
+            state.calculateLevel()
+            XCTAssertEqual(state.currentLevel, GamificationLeveling.level(forTotalXP: xp))
+        }
+    }
+}
