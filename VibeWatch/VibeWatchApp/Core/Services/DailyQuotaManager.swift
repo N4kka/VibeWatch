@@ -62,12 +62,12 @@ class DailyQuotaManager: ObservableObject {
 
     /// Check if user can watch more clips today
     func canWatchMoreClips() -> Bool {
-        ClipEntitlementPolicy.canConsumeClip(tier: tier, clipsWatched: clipsWatchedToday)
+        EntitlementPolicy.canConsumeClip(tier: tier, clipsWatched: clipsWatchedToday)
     }
 
     /// Get remaining clips for today
     func remainingClips() -> Int {
-        ClipEntitlementPolicy.remainingClips(tier: tier, clipsWatched: clipsWatchedToday)
+        EntitlementPolicy.remainingClips(tier: tier, clipsWatched: clipsWatchedToday)
     }
     
     /// Increment clip count when user watches a clip

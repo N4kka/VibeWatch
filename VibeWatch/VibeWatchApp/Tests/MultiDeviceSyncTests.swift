@@ -2093,42 +2093,63 @@ final class SeasonDetailViewModelTests: XCTestCase {
     }
 }
 
-// MARK: - ClipEntitlementPolicy (policy quota clip unificata, primo passo EntitlementService §1.3)
+// MARK: - EntitlementPolicy (policy entitlement unificata per tier: clip/AI/liste/ads §1.3)
 
-final class ClipEntitlementPolicyTests: XCTestCase {
+final class EntitlementPolicyTests: XCTestCase {
 
     private let limit = AppConstants.Clips.freeUserDailyLimit // 25
 
     func test_dailyLimit_perTier() {
-        XCTAssertEqual(ClipEntitlementPolicy.dailyClipLimit(for: .anonymous), limit)
-        XCTAssertEqual(ClipEntitlementPolicy.dailyClipLimit(for: .free), limit)
-        XCTAssertNil(ClipEntitlementPolicy.dailyClipLimit(for: .pro), "Pro: illimitato")
+        XCTAssertEqual(EntitlementPolicy.dailyClipLimit(for: .anonymous), limit)
+        XCTAssertEqual(EntitlementPolicy.dailyClipLimit(for: .free), limit)
+        XCTAssertNil(EntitlementPolicy.dailyClipLimit(for: .pro), "Pro: illimitato")
     }
 
     func test_canConsume_freeAndAnonymous_underAndAtLimit() {
         for tier in [UserTier.free, .anonymous] {
-            XCTAssertTrue(ClipEntitlementPolicy.canConsumeClip(tier: tier, clipsWatched: 0))
-            XCTAssertTrue(ClipEntitlementPolicy.canConsumeClip(tier: tier, clipsWatched: limit - 1))
-            XCTAssertFalse(ClipEntitlementPolicy.canConsumeClip(tier: tier, clipsWatched: limit),
+            XCTAssertTrue(EntitlementPolicy.canConsumeClip(tier: tier, clipsWatched: 0))
+            XCTAssertTrue(EntitlementPolicy.canConsumeClip(tier: tier, clipsWatched: limit - 1))
+            XCTAssertFalse(EntitlementPolicy.canConsumeClip(tier: tier, clipsWatched: limit),
                            "al limite NON può più (preserva watched < limit)")
         }
     }
 
     func test_canConsume_pro_alwaysTrue() {
-        XCTAssertTrue(ClipEntitlementPolicy.canConsumeClip(tier: .pro, clipsWatched: 10_000))
+        XCTAssertTrue(EntitlementPolicy.canConsumeClip(tier: .pro, clipsWatched: 10_000))
     }
 
     func test_remainingClips() {
-        XCTAssertEqual(ClipEntitlementPolicy.remainingClips(tier: .free, clipsWatched: 0), limit)
-        XCTAssertEqual(ClipEntitlementPolicy.remainingClips(tier: .free, clipsWatched: limit + 5), 0,
+        XCTAssertEqual(EntitlementPolicy.remainingClips(tier: .free, clipsWatched: 0), limit)
+        XCTAssertEqual(EntitlementPolicy.remainingClips(tier: .free, clipsWatched: limit + 5), 0,
                        "mai negativo")
-        XCTAssertEqual(ClipEntitlementPolicy.remainingClips(tier: .pro, clipsWatched: 999), Int.max)
+        XCTAssertEqual(EntitlementPolicy.remainingClips(tier: .pro, clipsWatched: 999), Int.max)
     }
 
     func test_gate_byTier() {
-        XCTAssertNil(ClipEntitlementPolicy.gate(tier: .free, clipsWatched: 0), "sotto limite: nessun gate")
-        XCTAssertEqual(ClipEntitlementPolicy.gate(tier: .anonymous, clipsWatched: limit), .accountCreation)
-        XCTAssertEqual(ClipEntitlementPolicy.gate(tier: .free, clipsWatched: limit), .proPaywall)
-        XCTAssertNil(ClipEntitlementPolicy.gate(tier: .pro, clipsWatched: 10_000), "Pro: mai gate")
+        XCTAssertNil(EntitlementPolicy.gate(tier: .free, clipsWatched: 0), "sotto limite: nessun gate")
+        XCTAssertEqual(EntitlementPolicy.gate(tier: .anonymous, clipsWatched: limit), .accountCreation)
+        XCTAssertEqual(EntitlementPolicy.gate(tier: .free, clipsWatched: limit), .proPaywall)
+        XCTAssertNil(EntitlementPolicy.gate(tier: .pro, clipsWatched: 10_000), "Pro: mai gate")
+    }
+
+    func test_aiDailyLimit_andConsume() {
+        XCTAssertEqual(EntitlementPolicy.aiDailyLimit(for: .free), AppConstants.AI.freeDailyRequestLimit)
+        XCTAssertEqual(EntitlementPolicy.aiDailyLimit(for: .anonymous), AppConstants.AI.freeDailyRequestLimit)
+        XCTAssertEqual(EntitlementPolicy.aiDailyLimit(for: .pro), AppConstants.AI.proDailyRequestLimit)
+        let freeMax = AppConstants.AI.freeDailyRequestLimit
+        XCTAssertTrue(EntitlementPolicy.canConsumeAIRequest(tier: .free, requestsUsed: freeMax - 1))
+        XCTAssertFalse(EntitlementPolicy.canConsumeAIRequest(tier: .free, requestsUsed: freeMax))
+    }
+
+    func test_maxCustomLists_perTier() {
+        XCTAssertEqual(EntitlementPolicy.maxCustomLists(for: .anonymous), 0)
+        XCTAssertEqual(EntitlementPolicy.maxCustomLists(for: .free), ListManager.freeMaxCustomLists)
+        XCTAssertEqual(EntitlementPolicy.maxCustomLists(for: .pro), ListManager.proMaxCustomLists)
+    }
+
+    func test_shouldShowAds_onlyNonPro() {
+        XCTAssertTrue(EntitlementPolicy.shouldShowAds(for: .anonymous))
+        XCTAssertTrue(EntitlementPolicy.shouldShowAds(for: .free))
+        XCTAssertFalse(EntitlementPolicy.shouldShowAds(for: .pro))
     }
 }

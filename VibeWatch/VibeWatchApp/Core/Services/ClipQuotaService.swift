@@ -63,7 +63,7 @@ final class ClipQuotaService: ObservableObject {
     
     /// Returns true if an anonymous user can watch another clip.
     func canWatchClipAnonymous() -> Bool {
-        ClipEntitlementPolicy.canConsumeClip(tier: .anonymous, clipsWatched: anonymousClipsWatched)
+        EntitlementPolicy.canConsumeClip(tier: .anonymous, clipsWatched: anonymousClipsWatched)
     }
     
     /// Records a clip watch for an anonymous user. Call this as soon as a clip starts.
@@ -95,7 +95,7 @@ final class ClipQuotaService: ObservableObject {
     
     /// Returns the gate type to show for the current anonymous state.
     func gateTypeForAnonymousUser() -> ClipGateType? {
-        ClipEntitlementPolicy.gate(tier: .anonymous, clipsWatched: anonymousClipsWatched)
+        EntitlementPolicy.gate(tier: .anonymous, clipsWatched: anonymousClipsWatched)
     }
     
     // MARK: - RevenueCat Pro Status

@@ -58,7 +58,7 @@ class ListManager: ObservableObject {
     }
 
     var currentCustomListLimit: Int {
-        DailyQuotaManager.shared.isProUser ? Self.proMaxCustomLists : Self.freeMaxCustomLists
+        EntitlementPolicy.maxCustomLists(for: DailyQuotaManager.shared.isProUser ? .pro : .free)
     }
 
     /// Designated initializer with injectable dependencies (test enabler).
