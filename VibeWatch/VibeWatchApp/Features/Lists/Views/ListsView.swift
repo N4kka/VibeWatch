@@ -319,101 +319,13 @@ struct ListsView: View {
     
     private var filteredAndSortedItems: [MediaListItem] {
         guard let list = currentLists.first else { return [] }
-        var items = list.items
-        
-        // Apply search filter
-        if !searchText.isEmpty {
-            items = items.filter { $0.title.range(of: searchText, options: .caseInsensitive) != nil }
-        }
-        
-        // Apply runtime filter (movies only)
-        if filters.runtimePreset != .any || filters.customRuntimeMin != nil || filters.customRuntimeMax != nil {
-            let (min, max) = filters.getRuntimeRange()
-            items = items.filter { item in
-                guard item.mediaType == .movie, let runtime = item.runtime else { return false }
-                
-                if let minRuntime = min, runtime < minRuntime { return false }
-                if let maxRuntime = max, runtime > maxRuntime { return false }
-                return true
-            }
-        }
-        
-        // Apply rating filter
-        if filters.ratingPreset != .any || filters.customRatingMin != nil || filters.customRatingMax != nil {
-            let (min, max) = filters.getRatingRange()
-            items = items.filter { item in
-                guard let voteAverage = item.voteAverage else { return false }
-                if let minRating = min, voteAverage < minRating { return false }
-                if let maxRating = max, voteAverage > maxRating { return false }
-                return true
-            }
-        }
-        
-        // Apply release period filter
-        if filters.releasePeriodPreset != .any || filters.customYearStart != nil || filters.customYearEnd != nil {
-             let (start, end) = filters.getYearRange()
-             items = items.filter { item in
-                 guard let releaseDate = item.releaseDate, let year = Int(releaseDate.prefix(4)) else { return false }
-                 if let startYear = start, year < startYear { return false }
-                 if let endYear = end, year > endYear { return false }
-                 return true
-             }
-        }
-        
-        // Apply country filter
-        if !filters.countries.isEmpty {
-            items = items.filter { item in
-                guard let originCountry = item.originCountry else { return false }
-                // Check if any of the item's origin countries are in the selected countries
-                return !Set(originCountry).isDisjoint(with: Set(filters.countries))
-            }
-        }
-        
-        // Apply Streaming Platforms filter
-        if !filters.streamingPlatforms.isEmpty {
-            items = items.filter { item in
-                // If availability not loaded yet, include it (optimistic) or exclude? 
-                // Exclude is safer for "Show me only Netflix", but UX is bad if loading.
-                // Let's exclude, but ensure we trigger load.
-                guard let availableOn = availabilityService.availableItems[item.id] else {
-                    return false 
-                }
-                
-                // Map platform Names (from TMDB) to our StreamingPlatform enum rawValues if needed
-                // Our cache stores Provider Names. Filters store StreamingPlatform.rawValue (which are names like "Netflix", "Disney+").
-                // TMDB names usually match well.
-                
-                // Check intersection
-                return !availableOn.isDisjoint(with: filters.streamingPlatforms)
-            }
-        }
-        
-        // Apply media type filter
-        switch filters.mediaType {
-        case .both:
-            break
-        case .movies:
-            items = items.filter { $0.mediaType == .movie }
-        case .tvShows:
-            items = items.filter { $0.mediaType == .tv }
-        }
-        
-        // Apply sorting
-        switch filters.sortBy {
-        case .popularityDesc, .popularityAsc:
-            // Sort by date added as fallback (no popularity data stored)
-            items.sort { $0.addedAt > $1.addedAt }
-        case .ratingDesc:
-            items.sort { ($0.voteAverage ?? 0) > ($1.voteAverage ?? 0) }
-        case .ratingAsc:
-            items.sort { ($0.voteAverage ?? 0) < ($1.voteAverage ?? 0) }
-        case .releaseDateDesc:
-            items.sort { ($0.releaseDate ?? "") > ($1.releaseDate ?? "") }
-        case .releaseDateAsc:
-            items.sort { ($0.releaseDate ?? "") < ($1.releaseDate ?? "") }
-        }
-        
-        return items
+        return ListItemFilterer.filteredAndSorted(
+            list.items,
+            searchText: searchText,
+            filters: filters,
+            availabilityByItemId: availabilityService.availableItems,
+            applyReleasePeriodFilter: true
+        )
     }
     
     private var filteredAndSortedLists: [MediaList] {
@@ -1019,75 +931,16 @@ struct CustomListDetailView: View {
     }
 
     private var filteredAndSortedItems: [MediaListItem] {
-        var items = currentList.items
-
-        if !searchText.isEmpty {
-            items = items.filter { $0.title.range(of: searchText, options: .caseInsensitive) != nil }
-        }
-
-        // Apply runtime filter
-        if filters.runtimePreset != .any || filters.customRuntimeMin != nil || filters.customRuntimeMax != nil {
-            let (min, max) = filters.getRuntimeRange()
-            items = items.filter { item in
-                guard item.mediaType == .movie, let runtime = item.runtime else { return false }
-                if let minRuntime = min, runtime < minRuntime { return false }
-                if let maxRuntime = max, runtime > maxRuntime { return false }
-                return true
-            }
-        }
-
-        // Apply rating filter
-        if filters.ratingPreset != .any || filters.customRatingMin != nil || filters.customRatingMax != nil {
-            let (min, max) = filters.getRatingRange()
-            items = items.filter { item in
-                guard let voteAverage = item.voteAverage else { return false }
-                if let minRating = min, voteAverage < minRating { return false }
-                if let maxRating = max, voteAverage > maxRating { return false }
-                return true
-            }
-        }
-
-        // Apply country filter
-        if !filters.countries.isEmpty {
-            items = items.filter { item in
-                guard let originCountry = item.originCountry else { return false }
-                return !Set(originCountry).isDisjoint(with: Set(filters.countries))
-            }
-        }
-
-        // Apply Streaming Platforms filter
-        if !filters.streamingPlatforms.isEmpty {
-            items = items.filter { item in
-                guard let availableOn = availabilityService.availableItems[item.id] else {
-                    return false
-                }
-                return !availableOn.isDisjoint(with: filters.streamingPlatforms)
-            }
-        }
-
-        switch filters.mediaType {
-        case .both:
-            break
-        case .movies:
-            items = items.filter { $0.mediaType == .movie }
-        case .tvShows:
-            items = items.filter { $0.mediaType == .tv }
-        }
-
-        switch filters.sortBy {
-        case .popularityDesc, .popularityAsc:
-            items.sort { $0.addedAt > $1.addedAt }
-        case .ratingDesc:
-            items.sort { ($0.voteAverage ?? 0) > ($1.voteAverage ?? 0) }
-        case .ratingAsc:
-            items.sort { ($0.voteAverage ?? 0) < ($1.voteAverage ?? 0) }
-        case .releaseDateDesc:
-            items.sort { ($0.releaseDate ?? "") > ($1.releaseDate ?? "") }
-        case .releaseDateAsc:
-            items.sort { ($0.releaseDate ?? "") < ($1.releaseDate ?? "") }
-        }
-
-        return items
+        // NB: applyReleasePeriodFilter:false preserva il comportamento STORICO di questo
+        // struct, che (a differenza della list-detail principale) NON applicava il filtro
+        // periodo/anno. Probabile bug latente da unificare — vedi ListItemFilterer.
+        ListItemFilterer.filteredAndSorted(
+            currentList.items,
+            searchText: searchText,
+            filters: filters,
+            availabilityByItemId: availabilityService.availableItems,
+            applyReleasePeriodFilter: false
+        )
     }
 
     var body: some View {

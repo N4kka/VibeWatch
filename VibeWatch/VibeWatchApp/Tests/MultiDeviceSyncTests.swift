@@ -1069,3 +1069,73 @@ final class SQLColumnIdentifierTests: XCTestCase {
         }
     }
 }
+
+// MARK: - List item filter+sort (Fase 5 — logica estratta da ListsView)
+//
+// La logica filtro+sort era DUPLICATA in due struct di ListsView; estratta in
+// ListItemFilterer (pura). Questi test la congelano, incluso il flag che preserva
+// l'unica differenza storica tra i due chiamanti (filtro periodo/anno).
+
+final class ListItemFiltererTests: XCTestCase {
+
+    private func item(
+        id: String, title: String, type: MediaType = .movie,
+        rating: Double? = nil, year: String? = nil, runtime: Int? = nil,
+        countries: [String]? = nil
+    ) -> MediaListItem {
+        MediaListItem(
+            id: id, mediaId: Int(id) ?? 0, mediaType: type, title: title, posterPath: nil,
+            addedAt: Date(timeIntervalSince1970: TimeInterval(Int(id) ?? 0)),
+            runtime: runtime, voteAverage: rating, originCountry: countries, releaseDate: year
+        )
+    }
+
+    func test_search_matchesTitleCaseInsensitive() {
+        let items = [item(id: "1", title: "Inception"), item(id: "2", title: "Tenet")]
+        let out = ListItemFilterer.filteredAndSorted(items, searchText: "incep",
+            filters: GlobalDiscoveryFilters(), availabilityByItemId: [:], applyReleasePeriodFilter: true)
+        XCTAssertEqual(out.map(\.id), ["1"])
+    }
+
+    func test_mediaTypeMovies_excludesTV() {
+        let items = [item(id: "1", title: "A", type: .movie), item(id: "2", title: "B", type: .tv)]
+        var f = GlobalDiscoveryFilters(); f.mediaType = .movies
+        let out = ListItemFilterer.filteredAndSorted(items, searchText: "",
+            filters: f, availabilityByItemId: [:], applyReleasePeriodFilter: true)
+        XCTAssertEqual(out.map(\.id), ["1"])
+    }
+
+    func test_sortRatingDesc() {
+        let items = [item(id: "1", title: "A", rating: 6), item(id: "2", title: "B", rating: 9)]
+        var f = GlobalDiscoveryFilters(); f.sortBy = .ratingDesc
+        let out = ListItemFilterer.filteredAndSorted(items, searchText: "",
+            filters: f, availabilityByItemId: [:], applyReleasePeriodFilter: true)
+        XCTAssertEqual(out.map(\.id), ["2", "1"])
+    }
+
+    // Comportamento CHIAVE preservato: il filtro periodo/anno si applica SOLO col flag true
+    // (list-detail principale), NON nella CustomListDetailView (flag false).
+    func test_releasePeriodFilter_onlyWhenFlagTrue() {
+        let items = [item(id: "1", title: "Old", year: "2015-01-01"),
+                     item(id: "2", title: "New", year: "2022-01-01")]
+        // getYearRange() usa customYearStart solo con preset .custom.
+        var f = GlobalDiscoveryFilters(); f.releasePeriodPreset = .custom; f.customYearStart = 2020
+
+        let withYear = ListItemFilterer.filteredAndSorted(items, searchText: "",
+            filters: f, availabilityByItemId: [:], applyReleasePeriodFilter: true)
+        XCTAssertEqual(withYear.map(\.id), ["2"], "flag true → filtra per anno")
+
+        let withoutYear = ListItemFilterer.filteredAndSorted(items, searchText: "",
+            filters: f, availabilityByItemId: [:], applyReleasePeriodFilter: false)
+        XCTAssertEqual(Set(withoutYear.map(\.id)), ["1", "2"], "flag false → NON filtra per anno (comportamento storico)")
+    }
+
+    func test_streamingFilter_usesInjectedAvailability() {
+        let items = [item(id: "1", title: "A"), item(id: "2", title: "B")]
+        var f = GlobalDiscoveryFilters(); f.streamingPlatforms = ["Netflix"]
+        let availability: [String: Set<String>] = ["1": ["Netflix"], "2": ["Disney+"]]
+        let out = ListItemFilterer.filteredAndSorted(items, searchText: "",
+            filters: f, availabilityByItemId: availability, applyReleasePeriodFilter: true)
+        XCTAssertEqual(out.map(\.id), ["1"], "solo gli item disponibili su una piattaforma selezionata")
+    }
+}
