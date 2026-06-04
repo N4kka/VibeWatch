@@ -580,7 +580,7 @@ struct TrailerSection: View {
                     Button {
                         isPlaying = true
                     } label: {
-                        CachedAsyncImage(url: trailer.thumbnailURL)
+                        CachedAsyncImage(url: trailer.thumbnailURL, maxPixelSize: 600)
                             .aspectRatio(contentMode: .fill)
                             .frame(height: 200)
                             .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -836,7 +836,7 @@ struct ProviderGroup: View {
                                 PlatformDeepLinkHelper.openPlatform(provider: provider, justWatchLink: justWatchLink, title: mediaTitle)
                             } label: {
                                 VStack(spacing: 6) {
-                                    CachedAsyncImage(url: provider.logoURL)
+                                    CachedAsyncImage(url: provider.logoURL, maxPixelSize: 180)
                                         .frame(width: 60, height: 60)
                                         .aspectRatio(contentMode: .fit)
                                         .background(Color.white)
@@ -1136,7 +1136,7 @@ struct CastMemberCard: View {
             onTap?()
         } label: {
             VStack(spacing: 8) {
-                CachedAsyncImage(url: actor.profileURL)
+                CachedAsyncImage(url: actor.profileURL, maxPixelSize: 240)
                     .aspectRatio(contentMode: .fill)
                     .frame(width: 80, height: 80)
                     .clipShape(Circle())

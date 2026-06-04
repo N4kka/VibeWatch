@@ -84,7 +84,7 @@ struct ActorDetailView: View {
     @ViewBuilder
     private var actorHeaderView: some View {
         ZStack(alignment: .top) {
-            CachedAsyncImage(url: viewModel.person?.profileURL ?? initialProfileURL)
+            CachedAsyncImage(url: viewModel.person?.profileURL ?? initialProfileURL, maxPixelSize: 600)
                 .aspectRatio(contentMode: .fill)
                 .frame(maxWidth: .infinity, maxHeight: 300)
                 .clipped()

@@ -384,7 +384,7 @@ struct EpisodeRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: 12) {
-                CachedAsyncImage(url: episode.stillURL)
+                CachedAsyncImage(url: episode.stillURL, maxPixelSize: 600)
                     .aspectRatio(contentMode: .fill)
                     .frame(width: 120, height: 68)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
