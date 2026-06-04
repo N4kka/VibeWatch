@@ -693,3 +693,75 @@ final class TMDBRequestBudgetTests: XCTestCase {
         XCTAssertEqual(calls, 2, "un errore non deve essere servito dalla cache")
     }
 }
+
+// MARK: - ContentCache (Fase 3 §1.4 — cache generica unica TTL+LRU)
+//
+// Testano la LOGICA deterministica: hit/miss, scadenza TTL, rimozione, isolamento per chiave.
+// NSCache evince in modo best-effort (non deterministico) sotto pressione/limiti: non asseriamo
+// l'eviction esatta per countLimit, che non è garantita dall'API.
+final class ContentCacheTests: XCTestCase {
+
+    func test_insertThenValue_returnsValue() async {
+        let cache = ContentCache<String, Int>(ttl: 60)
+        await cache.insert(42, for: "k")
+        let v = await cache.value(for: "k")
+        XCTAssertEqual(v, 42)
+    }
+
+    func test_missingKey_returnsNil() async {
+        let cache = ContentCache<String, Int>(ttl: 60)
+        let v = await cache.value(for: "nope")
+        XCTAssertNil(v)
+    }
+
+    func test_expiredEntry_returnsNil() async throws {
+        let cache = ContentCache<String, Int>(ttl: 0.05)
+        await cache.insert(7, for: "k")
+        try await Task.sleep(nanoseconds: 120_000_000) // > ttl
+        let v = await cache.value(for: "k")
+        XCTAssertNil(v, "una entry scaduta non deve essere servita")
+    }
+
+    func test_zeroTTL_expiresImmediately() async {
+        let cache = ContentCache<String, Int>(ttl: 0)
+        await cache.insert(1, for: "k")
+        let v = await cache.value(for: "k")
+        XCTAssertNil(v, "ttl=0 → scaduta all'istante")
+    }
+
+    func test_removeValue() async {
+        let cache = ContentCache<String, Int>(ttl: 60)
+        await cache.insert(1, for: "k")
+        await cache.removeValue(for: "k")
+        let v = await cache.value(for: "k")
+        XCTAssertNil(v)
+    }
+
+    func test_removeAll() async {
+        let cache = ContentCache<String, Int>(ttl: 60)
+        await cache.insert(1, for: "a")
+        await cache.insert(2, for: "b")
+        await cache.removeAll()
+        let a = await cache.value(for: "a")
+        let b = await cache.value(for: "b")
+        XCTAssertNil(a); XCTAssertNil(b)
+    }
+
+    func test_distinctKeysIsolated() async {
+        let cache = ContentCache<String, String>(ttl: 60)
+        await cache.insert("va", for: "a")
+        await cache.insert("vb", for: "b")
+        let a = await cache.value(for: "a")
+        let b = await cache.value(for: "b")
+        XCTAssertEqual(a, "va")
+        XCTAssertEqual(b, "vb")
+    }
+
+    func test_insertOverwritesSameKey() async {
+        let cache = ContentCache<String, Int>(ttl: 60)
+        await cache.insert(1, for: "k")
+        await cache.insert(2, for: "k")
+        let v = await cache.value(for: "k")
+        XCTAssertEqual(v, 2, "una nuova insert sulla stessa chiave sovrascrive")
+    }
+}
