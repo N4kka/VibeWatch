@@ -174,7 +174,7 @@ struct ListsView: View {
 
             combinedFiltersRow
 
-            if viewModel.isLoadingInitial {
+            if viewModel.isLoadingInitial && viewModel.lists.isEmpty {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if currentLists.isEmpty {

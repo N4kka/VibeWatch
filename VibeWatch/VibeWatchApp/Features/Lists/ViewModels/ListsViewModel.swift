@@ -32,6 +32,14 @@ class ListsViewModel: ObservableObject {
     /// Back-compat per i call-site esistenti che iniettano un ListManager.
     convenience init(listManager: ListManager = .shared) {
         self.init(repository: ListManagerListsRepository(manager: listManager))
+        // Seed SINCRONO dallo stato corrente del manager: ListsView viene distrutta/ricreata a
+        // ogni cambio tab (MainTabView usa `if selectedTab == 3 { ListsView() }`), quindi a ogni
+        // ingresso nasce un nuovo ViewModel. Senza seed, `isLoadingInitial` parte da `true` (default)
+        // e `lists` da `[]`, e si vedono per un frame il ProgressView / l'empty-state prima che lo
+        // stream e il binding consegnino i valori → glitch di "ricaricamento". Seedando qui i valori
+        // correnti, un VM ricreato parte già pronto.
+        self.lists = listManager.lists
+        self.isLoadingInitial = listManager.isLoadingInitial
         // Lo stato di caricamento iniziale è una concern UI: lo riflettiamo dal manager.
         listManager.$isLoadingInitial.assign(to: &$isLoadingInitial)
     }
