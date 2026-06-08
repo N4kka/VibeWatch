@@ -7,6 +7,7 @@ protocol ImageCacheServiceProtocol: AnyObject {
     // MARK: - Image Loading
 
     func loadImage(from urlString: String) async throws -> UIImage
+    func loadImage(from urlString: String, maxPixelSize: CGFloat?) async throws -> UIImage
     func prefetchImages(_ urls: [String], onWiFiOnly: Bool) async
 
     // MARK: - Cache Management

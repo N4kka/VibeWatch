@@ -1,3 +1,5 @@
+// Tooling di debug: escluso dalle build di release (Fase 0 — isolamento tooling).
+#if DEBUG
 import Foundation
 
 /// Database optimization runner for applying performance indexes and maintenance tasks
@@ -264,6 +266,17 @@ class DatabaseOptimizationRunner {
             WHERE deleted_at IS NULL
         """)
         Logger.info("✅ Created idx_list_items_added")
+
+        // Index 19b: ListManager.loadListsFromSQLite filters by `list_id IN (...) AND
+        // deleted_at IS NULL ORDER BY added_at DESC` WITHOUT a user_id predicate, so
+        // idx_list_items_added (which leads with user_id) can't serve it optimally.
+        // This partial index matches that load query exactly.
+        db.execute("""
+            CREATE INDEX IF NOT EXISTS idx_list_items_list_added
+            ON list_items(list_id, added_at DESC)
+            WHERE deleted_at IS NULL
+        """)
+        Logger.info("✅ Created idx_list_items_list_added")
     }
 
     // MARK: - Section 8: Sync Operation Indexes
@@ -477,6 +490,7 @@ class DatabaseOptimizationRunner {
                 "idx_clip_history_session",
                 "idx_list_items_media",
                 "idx_list_items_added",
+                "idx_list_items_list_added",
                 "idx_sync_outbox_pending_priority",
                 "idx_sync_outbox_dependencies",
                 "idx_movie_reactions_user_media",
@@ -512,3 +526,4 @@ struct IndexVerificationResult {
     var missingIndexes: [String] = []
     var allIndexesPresent: Bool = false
 }
+#endif

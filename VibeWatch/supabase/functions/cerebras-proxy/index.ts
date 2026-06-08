@@ -14,6 +14,18 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '
 const CEREBRAS_API_KEY = Deno.env.get('CEREBRAS_API_KEY') ?? ''
 const CEREBRAS_ENDPOINT = 'https://api.cerebras.ai/v1/chat/completions'
 
+// RevenueCat REST API: fonte autorevole dello stato Pro.
+// NB: il client puo forgiare user_daily_quota.is_pro (RLS owner-scoped), quindi quel
+// valore NON e affidabile per il gating. Verifichiamo direttamente con RevenueCat.
+// L'app_user_id RevenueCat coincide con l'auth uid Supabase (AuthService.syncRevenueCatUser).
+const REVENUECAT_API_KEY = Deno.env.get('REVENUECAT_API_KEY') ?? ''
+const PRO_ENTITLEMENT_ID = Deno.env.get('PRO_ENTITLEMENT_ID') ?? 'StartingVibe Pro'
+const PRO_CACHE_TTL_MS = 5 * 60 * 1000
+
+// Cache a livello di istanza (persiste tra richieste su un'istanza "calda")
+// per evitare una chiamata RevenueCat ad ogni richiesta AI.
+const proStatusCache = new Map<string, { isPro: boolean; expiresAt: number }>()
+
 type SupabaseAdminClient = any
 
 function jsonResponse(body: Record<string, unknown>, status: number) {
@@ -23,24 +35,47 @@ function jsonResponse(body: Record<string, unknown>, status: number) {
   })
 }
 
-async function isProUser(adminSupabase: SupabaseAdminClient, userId: string): Promise<boolean> {
-  try {
-    const { data, error } = await adminSupabase
-      .from('user_daily_quota')
-      .select('is_pro, updated_at')
-      .eq('user_id', userId)
-      .order('updated_at', { ascending: false })
-      .limit(1)
+function isEntitlementActive(entitlement: { expires_date?: string | null } | undefined): boolean {
+  if (!entitlement) return false
+  // expires_date null => entitlement a vita (lifetime). Altrimenti deve essere nel futuro.
+  if (entitlement.expires_date == null) return true
+  return new Date(entitlement.expires_date).getTime() > Date.now()
+}
 
-    if (error) {
-      console.warn('Failed to read Pro status:', error.message)
-      return false
+// Verifica lo stato Pro interrogando RevenueCat (autorevole), con cache breve.
+// In caso di errore/secret mancante NON si ricade sul DB forgiabile: si usa l'ultimo
+// stato noto in cache (se presente) o, in assenza, il tier Free (default sicuro).
+async function isProUser(userId: string): Promise<boolean> {
+  const now = Date.now()
+  const cached = proStatusCache.get(userId)
+  if (cached && cached.expiresAt > now) {
+    return cached.isPro
+  }
+
+  if (!REVENUECAT_API_KEY) {
+    console.warn('REVENUECAT_API_KEY non configurata; uso ultimo stato noto / Free')
+    return cached?.isPro ?? false
+  }
+
+  try {
+    const resp = await fetch(
+      `https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(userId)}`,
+      { headers: { Authorization: `Bearer ${REVENUECAT_API_KEY}` } },
+    )
+
+    if (!resp.ok) {
+      console.warn(`RevenueCat lookup fallita (${resp.status}); uso ultimo stato noto / Free`)
+      return cached?.isPro ?? false
     }
 
-    return data?.[0]?.is_pro === true
+    const json = await resp.json()
+    const entitlement = json?.subscriber?.entitlements?.[PRO_ENTITLEMENT_ID]
+    const isPro = isEntitlementActive(entitlement)
+    proStatusCache.set(userId, { isPro, expiresAt: now + PRO_CACHE_TTL_MS })
+    return isPro
   } catch (error) {
-    console.warn('Failed to read Pro status:', error)
-    return false
+    console.warn('Errore lookup RevenueCat; uso ultimo stato noto / Free:', error)
+    return cached?.isPro ?? false
   }
 }
 
@@ -140,7 +175,7 @@ serve(async (req) => {
 
     const adminSupabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
     const todayKey = usageDayKey()
-    const isPro = await isProUser(adminSupabase, user.id)
+    const isPro = await isProUser(user.id)
     const usedToday = await requestsUsedToday(adminSupabase, user.id, todayKey)
     const dailyLimit = dailyLimitForTier(isPro)
 

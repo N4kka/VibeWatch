@@ -303,43 +303,19 @@ struct MainTabView: View {
     }
 
     /// Wait for Discovery content to be ready before dismissing splash screen
-    /// This prevents showing an empty DiscoveryPage with a loader
+    /// This prevents showing an empty DiscoveryPage with a loader.
+    ///
+    /// Returns as soon as the personalized carousels are cached — either already
+    /// present, or hydrated by the background pre-warm during the wait — capped at
+    /// 3s to avoid an infinite splash on a cold first install.
     private func waitForDiscoveryContentReady() async {
-        // SQLite personalized cache → AppState already set isPreloading=false and
-        // will hydrate ContentCacheManager in background. Skip the 3s wait entirely.
-        if SQLiteService.shared.hasCachedPersonalizedContent() {
-            return
+        let ready = await ReadinessWaiter.waitUntilReady(maxWait: 3.0) {
+            SQLiteService.shared.hasCachedPersonalizedContent()
         }
 
-        // Check in-memory cache as fallback
-        let hasCachedMovies = ContentCacheManager.shared.getCachedDiscoveryMovies() != nil
-        let hasCachedTVShows = ContentCacheManager.shared.getCachedDiscoveryTVShows() != nil
-
-        if hasCachedMovies || hasCachedTVShows {
-            return
+        if !ready {
+            Logger.warning("[MainTabView] Discovery content not ready after timeout, showing UI anyway")
         }
-
-        // No cached content, wait for Discovery content to be fetched
-        // Maximum wait time: 3 seconds to avoid infinite splash
-        let maxWaitTime: TimeInterval = 3.0
-        let startTime = Date()
-
-        while Date().timeIntervalSince(startTime) < maxWaitTime {
-            // Check if Discovery content is now available
-            let hasMovies = ContentCacheManager.shared.getCachedDiscoveryMovies() != nil
-            let hasTVShows = ContentCacheManager.shared.getCachedDiscoveryTVShows() != nil
-
-            if hasMovies || hasTVShows {
-                // Content is ready, exit
-                return
-            }
-
-            // Wait 100ms before checking again
-            try? await Task.sleep(nanoseconds: 100_000_000)
-        }
-
-        // Timeout reached, proceed anyway to avoid infinite splash
-        Logger.warning("[MainTabView] Discovery content not ready after timeout, showing UI anyway")
     }
 }
 

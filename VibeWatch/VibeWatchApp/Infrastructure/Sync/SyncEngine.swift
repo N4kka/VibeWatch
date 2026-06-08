@@ -102,11 +102,75 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
     /// Exponential backoff schedule in seconds: 60s, 5min, 15min, 1hr, 4hr
     private let backoffSchedule: [TimeInterval] = [60, 300, 900, 3600, 14400]
 
-    /// Interval between periodic sync attempts (60 seconds)
-    private let periodicSyncInterval: TimeInterval = 60
+    /// Interval between periodic sync attempts.
+    ///
+    /// Fase 4 (3.2 — batteria): era 60s, alzato a 5 min come SOLO fallback. Il push non
+    /// dipende più da questo timer per la latenza: `queueOperation` fa già un push
+    /// immediato quando online (event-driven), e foreground-resume / network-restored
+    /// triggerano una sync. Inoltre il push periodico skippa subito se l'outbox è vuota
+    /// (pushPendingChangesInternal). Allungare l'intervallo taglia i wakeup CPU periodici
+    /// a parità di comportamento osservabile.
+    private let periodicSyncInterval: TimeInterval = 300
 
     /// Minimum time in background before triggering full sync on resume (2 minutes)
     private let backgroundThreshold: TimeInterval = 120
+
+    nonisolated static func normalizedMutationRecord(
+        table: String,
+        operationType: String,
+        recordId: String,
+        payload: [String: Any]
+    ) -> [String: Any] {
+        var record = payload
+        if record["id"] == nil {
+            record["id"] = recordId
+        }
+
+        if ["clips", "list_items", "movie_reactions"].contains(table),
+           let mediaType = record["media_type"] as? String,
+           !["movie", "tv"].contains(mediaType) {
+            record["media_type"] = "movie"
+        }
+
+        let op = operationType.uppercased()
+        if table == "list_items", op == "INSERT" || op == "UPDATE" || op == "UPSERT" {
+            let now = ISO8601DateFormatter().string(from: Date())
+            let addedAt = timestampString(record["added_at"]) ?? timestampString(record["created_at"]) ?? now
+            record["added_at"] = timestampString(record["added_at"]) ?? addedAt
+            record["created_at"] = timestampString(record["created_at"]) ?? addedAt
+            record["updated_at"] = timestampString(record["updated_at"]) ?? now
+        }
+
+        return record
+    }
+
+    nonisolated static func recoverRetryableListItemOperationsSQL(maxRetries: Int) -> String {
+        """
+            UPDATE sync_outbox
+            SET status = 'pending',
+                attempts = 0,
+                next_retry_at = NULL,
+                last_error = NULL
+            WHERE table_name = 'list_items'
+              AND operation_type IN ('INSERT', 'UPDATE', 'UPSERT')
+              AND status IN ('pending', 'failed', 'blocked', 'stuck')
+              AND (
+                    attempts >= \(maxRetries)
+                    OR next_retry_at IS NOT NULL
+                    OR payload NOT LIKE '%"created_at"%'
+                  )
+        """
+    }
+
+    private nonisolated static func timestampString(_ value: Any?) -> String? {
+        if let string = value as? String, !string.isEmpty {
+            return string
+        }
+        if let date = value as? Date {
+            return ISO8601DateFormatter().string(from: date)
+        }
+        return nil
+    }
 
     // MARK: - Internal State
 
@@ -291,9 +355,15 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
     ) async throws {
         let operationId = UUID().uuidString
         let now = ISO8601DateFormatter().string(from: Date())
+        let normalizedPayload = Self.normalizedMutationRecord(
+            table: table,
+            operationType: operationType,
+            recordId: recordId,
+            payload: payload
+        )
 
         // Serialize payload to JSON
-        let payloadData = try JSONSerialization.data(withJSONObject: payload)
+        let payloadData = try JSONSerialization.data(withJSONObject: normalizedPayload)
         let payloadString = String(data: payloadData, encoding: .utf8) ?? "{}"
 
         // Get current user ID
@@ -418,6 +488,14 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
 
         guard networkMonitor.isConnected else {
             Logger.debug("[SyncEngine] Push skipped - offline")
+            return
+        }
+
+        // Remote sync is an authenticated-only feature: anonymous users are local-only
+        // (see OVERVIEW tier model). The hardened apply_mutations rejects unauthenticated
+        // callers, so attempting a push here would only generate failed retries.
+        guard AuthService.shared.currentUser != nil else {
+            Logger.debug("[SyncEngine] Push skipped - not authenticated (local-only mode)")
             return
         }
 
@@ -685,17 +763,12 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
 
     private func executeOperation(_ operation: SyncOutboxOperation) async throws {
         // Build mutation for Supabase
-        var record = operation.payload
-        if record["id"] == nil {
-            record["id"] = operation.recordId
-        }
-
-        // Sanitize media_type for tables that require it
-        if ["clips", "list_items", "movie_reactions"].contains(operation.tableName) {
-            if let mt = record["media_type"] as? String, !["movie", "tv"].contains(mt) {
-                record["media_type"] = "movie"
-            }
-        }
+        let record = Self.normalizedMutationRecord(
+            table: operation.tableName,
+            operationType: operation.operationType,
+            recordId: operation.recordId,
+            payload: operation.payload
+        )
 
         let mutation: [String: Any] = [
             "op": operation.operationType.uppercased(),
@@ -798,6 +871,7 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             WHERE status = 'blocked' AND last_error LIKE '%PGRST205%'
         """
         _ = sqliteService.execute(sql)
+        _ = sqliteService.execute(Self.recoverRetryableListItemOperationsSQL(maxRetries: maxRetries))
     }
 
     /// Resets all PGRST205-blocked outbox operations to `pending` so they will be retried

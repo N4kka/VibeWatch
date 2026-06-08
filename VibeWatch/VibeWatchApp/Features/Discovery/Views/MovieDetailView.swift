@@ -326,16 +326,12 @@ struct MovieDetailView: View {
     
     private func prepareShareItems(movie: Movie) async {
         var items: [Any] = []
-        if let posterPath = movie.posterPath,
-           let url = URL(string: "https://image.tmdb.org/t/p/w500\(posterPath)"),
+        if let url = MoviePosterShareURLBuilder.url(posterPath: movie.posterPath),
            let (data, _) = try? await URLSession.shared.data(from: url),
            let image = UIImage(data: data) {
             items.append(image)
         }
-        var text = "Check out \(movie.title)"
-        if let year = movie.year { text += " (\(year))" }
-        if !movie.overview.isEmpty { text += "\n\n\(movie.overview)" }
-        items.append(text)
+        items.append(MovieShareTextBuilder.text(title: movie.title, year: movie.year, overview: movie.overview))
         await MainActor.run { shareItems = items }
     }
     
@@ -462,38 +458,25 @@ struct ActionButtonsSection: View {
     let onLikedTap: () -> Void
     let onDislikedTap: () -> Void
     
-    private var isInAnyList: Bool {
-        listManager.lists.contains { list in
-            list.items.contains { $0.mediaId == movie.id && $0.mediaType == mediaType }
-        }
-    }
-    
-    private var isInSeen: Bool {
-        listManager.isInList(listId: listManager.seenList.id, mediaId: movie.id, mediaType: mediaType)
-    }
-    
-    private var isInLiked: Bool {
-        listManager.isInList(listId: listManager.likedList.id, mediaId: movie.id, mediaType: mediaType)
-    }
-    
-    private var isInDisliked: Bool {
-        listManager.isInList(listId: listManager.dislikedList.id, mediaId: movie.id, mediaType: mediaType)
-    }
-    
-    private var likesCount: Int {
-        listManager.likedList.items.filter { $0.mediaId == movie.id && $0.mediaType == mediaType }.count
-    }
-    
-    private var dislikesCount: Int {
-        listManager.dislikedList.items.filter { $0.mediaId == movie.id && $0.mediaType == mediaType }.count
+    private var actionState: MovieActionButtonStateBuilder.State {
+        MovieActionButtonStateBuilder.state(
+            mediaId: movie.id,
+            mediaType: mediaType,
+            lists: listManager.lists,
+            seenList: listManager.seenList,
+            likedList: listManager.likedList,
+            dislikedList: listManager.dislikedList
+        )
     }
     
     var body: some View {
+        let state = actionState
+
         HStack(spacing: 12) {
             ActionButton(
                 icon: "bookmark.fill",
                 title: "movieDetail.save".localized,
-                isActive: isInAnyList
+                isActive: state.isInAnyList
             ) {
                 onSaveTap()
             }
@@ -501,7 +484,7 @@ struct ActionButtonsSection: View {
             ActionButton(
                 icon: "eye.fill",
                 title: "movieDetail.seen".localized,
-                isActive: isInSeen
+                isActive: state.isInSeen
             ) {
                 withAnimation {
                     onSeenTap()
@@ -511,8 +494,8 @@ struct ActionButtonsSection: View {
             ActionButton(
                 icon: "hand.thumbsup.fill",
                 title: "",
-                isActive: isInLiked,
-                count: likesCount
+                isActive: state.isInLiked,
+                count: state.likesCount
             ) {
                 withAnimation {
                     onLikedTap()
@@ -522,8 +505,8 @@ struct ActionButtonsSection: View {
             ActionButton(
                 icon: "hand.thumbsdown.fill",
                 title: "",
-                isActive: isInDisliked,
-                count: dislikesCount
+                isActive: state.isInDisliked,
+                count: state.dislikesCount
             ) {
                 withAnimation {
                     onDislikedTap()
@@ -580,7 +563,7 @@ struct TrailerSection: View {
                     Button {
                         isPlaying = true
                     } label: {
-                        CachedAsyncImage(url: trailer.thumbnailURL)
+                        CachedAsyncImage(url: trailer.thumbnailURL, maxPixelSize: 600)
                             .aspectRatio(contentMode: .fill)
                             .frame(height: 200)
                             .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -620,30 +603,17 @@ struct WatchNowSection: View {
         providerState.providers
     }
 
-    private func visibleProviders(_ providers: [Provider]?, justWatchLink: String?) -> [Provider] {
-        (providers ?? []).filter { provider in
-            guard provider.hasUsableLogo else { return false }
-            let hasLink = provider.externalLink != nil || justWatchLink != nil
-            if hasLink { return true }
-            return PlatformDeepLinkHelper.hasPlatformHomepage(for: provider)
-        }
-    }
-
     private var hasAnyProvider: Bool {
         guard let providers else { return false }
-        return !visibleProviders(providers.flatrate, justWatchLink: providers.link).isEmpty ||
-        !visibleProviders(providers.rent, justWatchLink: providers.link).isEmpty ||
-        !visibleProviders(providers.buy, justWatchLink: providers.link).isEmpty
+        return WatchProviderDisplayFiltering.hasAnyVisibleProvider(in: providers)
     }
 
     private var justWatchURL: URL? {
-        if let linkString = providers?.link, let url = URL(string: linkString) {
-            return url
-        }
-
-        let country = LocalizationManager.shared.currentCountry.id.lowercased()
-        let encodedQuery = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? title
-        return URL(string: "https://www.justwatch.com/\(country)/search?q=\(encodedQuery)")
+        JustWatchLinkBuilder.url(
+            providerLink: providers?.link,
+            countryId: LocalizationManager.shared.currentCountry.id,
+            title: title
+        )
     }
 
     var body: some View {
@@ -665,19 +635,13 @@ struct WatchNowSection: View {
                 )
             } else if hasAnyProvider {
                 if let providers {
-                    let flatrate = visibleProviders(providers.flatrate, justWatchLink: providers.link)
-                    if !flatrate.isEmpty {
-                        ProviderGroup(title: "platforms.streaming".localized, providers: flatrate, justWatchLink: providers.link, mediaTitle: title)
-                    }
-
-                    let rent = visibleProviders(providers.rent, justWatchLink: providers.link)
-                    if !rent.isEmpty {
-                        ProviderGroup(title: "platforms.rent".localized, providers: rent, justWatchLink: providers.link, mediaTitle: title)
-                    }
-
-                    let buy = visibleProviders(providers.buy, justWatchLink: providers.link)
-                    if !buy.isEmpty {
-                        ProviderGroup(title: "platforms.buy".localized, providers: buy, justWatchLink: providers.link, mediaTitle: title)
+                    ForEach(WatchProviderTierGroupsBuilder.groups(in: providers), id: \.titleKey) { group in
+                        ProviderGroup(
+                            title: group.titleKey.localized,
+                            providers: group.providers,
+                            justWatchLink: group.justWatchLink,
+                            mediaTitle: title
+                        )
                     }
                 }
 
@@ -697,11 +661,11 @@ struct WatchNowSection: View {
                     }
                     
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Unluckily \(title) isn't currently available.")
+                        Text(MovieUnavailableNotificationCopyBuilder.unavailableMessage(title: title))
                             .font(.system(size: 14))
                             .foregroundColor(.theme.textSecondary)
                         
-                        Text("Would you like to be notified?")
+                        Text(MovieUnavailableNotificationCopyBuilder.notificationQuestion)
                             .font(.system(size: 16, weight: .bold))
                             .foregroundColor(.white)
                     }
@@ -711,7 +675,7 @@ struct WatchNowSection: View {
                     Button {
                         handleNotifyMe()
                     } label: {
-                        Text("Notify Me")
+                        Text(MovieUnavailableNotificationCopyBuilder.notifyButtonTitle)
                             .font(.system(size: 13, weight: .bold))
                             .foregroundColor(.white)
                             .padding(.horizontal, 12)
@@ -746,10 +710,10 @@ struct WatchNowSection: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 20)
-        .alert("Notify Me", isPresented: $showNotifyMeAlert) {
+        .alert(MovieUnavailableNotificationCopyBuilder.alertTitle, isPresented: $showNotifyMeAlert) {
             Button("OK", role: .cancel) { }
         } message: {
-            Text("We'll send you a notification as soon as '\(title)' is available for streaming, rent, or buy.")
+            Text(MovieUnavailableNotificationCopyBuilder.alertMessage(title: title))
         }
     }
     
@@ -809,15 +773,7 @@ struct ProviderGroup: View {
     let mediaTitle: String
 
     private var visibleProviders: [Provider] {
-        providers.filter { provider in
-            guard !provider.logoPath.isEmpty else { return false }
-            let lowerLogo = provider.logoPath.lowercased()
-            if lowerLogo.contains(".svg") { return false }
-            if lowerLogo.contains("logo-white") { return false }
-            let hasLink = provider.externalLink != nil || justWatchLink != nil
-            if hasLink { return true }
-            return PlatformDeepLinkHelper.hasPlatformHomepage(for: provider)
-        }
+        WatchProviderDisplayFiltering.visibleProviders(providers, justWatchLink: justWatchLink)
     }
     
     var body: some View {
@@ -836,7 +792,7 @@ struct ProviderGroup: View {
                                 PlatformDeepLinkHelper.openPlatform(provider: provider, justWatchLink: justWatchLink, title: mediaTitle)
                             } label: {
                                 VStack(spacing: 6) {
-                                    CachedAsyncImage(url: provider.logoURL)
+                                    CachedAsyncImage(url: provider.logoURL, maxPixelSize: 180)
                                         .frame(width: 60, height: 60)
                                         .aspectRatio(contentMode: .fit)
                                         .background(Color.white)
@@ -1061,24 +1017,8 @@ struct MovieCreditsSection: View {
                     .foregroundColor(.theme.textPrimary)
                 
                 VStack(alignment: .leading, spacing: 12) {
-                    if movie.ratingPercentage > 0 {
-                        InfoRow(title: "movieDetail.rating".localized, value: "\(movie.ratingPercentage)%")
-                    }
-                    
-                    if let genres = movie.genres, !genres.isEmpty {
-                        InfoRow(title: "movieDetail.genres".localized, value: genres.map { $0.name }.joined(separator: ", "))
-                    }
-                    
-                    if let runtime = movie.formattedRuntime {
-                        InfoRow(title: "movieDetail.runtime".localized, value: runtime)
-                    }
-                    
-                    if let countries = movie.productionCountries, !countries.isEmpty {
-                        InfoRow(title: "movieDetail.country".localized, value: countries.first?.name ?? "")
-                    }
-                    
-                    if let director = director {
-                        InfoRow(title: "movieDetail.director".localized, value: director.name)
+                    ForEach(MovieCreditsInfoBuilder.rows(movie: movie, director: director), id: \.titleKey) { row in
+                        InfoRow(title: row.titleKey.localized, value: row.value)
                     }
                 }
             }
@@ -1136,7 +1076,7 @@ struct CastMemberCard: View {
             onTap?()
         } label: {
             VStack(spacing: 8) {
-                CachedAsyncImage(url: actor.profileURL)
+                CachedAsyncImage(url: actor.profileURL, maxPixelSize: 240)
                     .aspectRatio(contentMode: .fill)
                     .frame(width: 80, height: 80)
                     .clipShape(Circle())

@@ -77,16 +77,39 @@ class ClipsPrefetchService: ObservableObject {
     
     // MARK: - Main Pre-fetch Function
     
+    /// Whether the heavy clip prefetch (YouTube validation + DB writes) is allowed to run.
+    ///
+    /// Fase 4 (3.1 — batteria): il prefetch gira SOLO su Wi-Fi e fuori da Low-Power Mode.
+    /// Funzione pura (no I/O) per testabilità; la composizione con l'ambiente reale
+    /// (NetworkMonitor + ProcessInfo) avviene in `prefetchClips`.
+    nonisolated static func isPrefetchAllowed(isWiFi: Bool, isLowPowerMode: Bool) -> Bool {
+        isWiFi && !isLowPowerMode
+    }
+
     /// Pre-fetch clips and store in Supabase
-    /// - Parameter targetCount: How many VALID clips to store in DB (default: 800)
+    /// - Parameter targetCount: How many VALID clips to store in DB (default: 100)
     /// - Returns: Number of clips successfully cached
+    ///
+    /// Fase 4 (3.1): target abbassato da 800 a 100 (incrementale: fetcha solo `target - currentDBCount`)
+    /// e gating Wi-Fi/Low-Power. Su pool vuoto valida ~100 invece di 800 (8× meno YouTube/TMDB);
+    /// su pool già pieno ritorna subito.
     @discardableResult
-    func prefetchClips(targetCount: Int = 800) async throws -> Int {
+    func prefetchClips(targetCount: Int = 100) async throws -> Int {
         guard !isFetching else {
             Logger.warning("[ClipsPrefetch] Already fetching, skipping...")
             return 0
         }
-        
+
+        // Gate batteria/rete: solo Wi-Fi + non Low-Power Mode.
+        let allowed = Self.isPrefetchAllowed(
+            isWiFi: await NetworkMonitor.shared.isOnWiFi(),
+            isLowPowerMode: ProcessInfo.processInfo.isLowPowerModeEnabled
+        )
+        guard allowed else {
+            Logger.info("[ClipsPrefetch] Skipping prefetch — not on Wi-Fi or Low-Power Mode enabled")
+            return 0
+        }
+
         Logger.info("[ClipsPrefetch] Starting pre-fetch - Target: \(targetCount) VALID clips in DB...")
         isFetching = true
         fetchProgress = 0.0

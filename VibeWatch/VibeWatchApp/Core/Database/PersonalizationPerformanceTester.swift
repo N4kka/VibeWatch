@@ -1,3 +1,5 @@
+// Tooling di debug: escluso dalle build di release (Fase 0 — isolamento tooling).
+#if DEBUG
 import Foundation
 
 /// Performance testing suite for user preferences & personalization system
@@ -673,3 +675,4 @@ class PersonalizationPerformanceTester {
         }
     }
 }
+#endif

@@ -19,7 +19,7 @@ final class DiscoveryCarouselOrderingTests: XCTestCase {
     private static func carousel(type: CarouselType, title: String) -> PersonalizedCarousel {
         PersonalizedCarousel(
             type: type,
-            title: title,
+            titleSpec: .init(key: title),
             items: [movie(id: abs(type.rawValue.hashValue))],
             descriptions: [:],
             reason: ""

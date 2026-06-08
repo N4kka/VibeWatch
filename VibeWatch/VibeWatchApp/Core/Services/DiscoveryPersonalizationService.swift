@@ -31,7 +31,9 @@ class DiscoveryPersonalizationService: ObservableObject {
     // MARK: - Initialization
 
     private init(
-        tmdbService: TMDBServiceProtocol = TMDBService.shared,
+        // 4.1: la generazione caroselli passa per un budget (coalescing + tetto di concorrenza)
+        // così le ~27 famiglie di carosello non producono il burst >100 richieste TMDB.
+        tmdbService: TMDBServiceProtocol = BudgetedTMDBService(wrapping: TMDBService.shared),
         preferenceManager: UserPreferenceManager = .shared,
         sqliteService: SQLiteService = .shared,
         cerebrasService: CerebrasService = .shared
@@ -194,48 +196,55 @@ class DiscoveryPersonalizationService: ObservableObject {
         return nil
     }
 
+    /// Load any available cache (stale or fresh) and warm the in-memory cache.
+    /// Ignores expiry — staleness is determined separately via `isCacheStale(userId:)`.
+    func loadAnyCachedCarouselsIfAvailable(userId: String?) async -> [PersonalizedCarousel]? {
+        if let cached = memoryCache {
+            return cached
+        }
+        do {
+            if let userId, !userId.isEmpty,
+               let cached = try await loadFromCache(userId: userId, ignoreExpiry: true) {
+                memoryCache = cached
+                return cached
+            }
+            let deviceId = await sqliteService.getOrCreateDeviceId()
+            if let cached = try await loadFromCache(deviceId: deviceId, ignoreExpiry: true) {
+                memoryCache = cached
+                return cached
+            }
+        } catch {
+            Logger.warning("[DiscoveryPersonalizationService] Failed to load any cache: \(error.localizedDescription)")
+        }
+        return nil
+    }
+
+    /// Returns true if the persisted cache is expired or absent.
+    func isCacheStale(userId: String?) async -> Bool {
+        let now = ISO8601DateFormatter().string(from: Date())
+        if let userId, !userId.isEmpty,
+           let rows = try? await sqliteService.queryRaw(
+               "SELECT MAX(expires_at) AS max_expires FROM personalized_discovery WHERE user_id = ?",
+               parameters: [userId]),
+           let maxExpires = rows.first?["max_expires"] as? String {
+            return maxExpires <= now
+        }
+        let deviceId = await sqliteService.getOrCreateDeviceId()
+        if let rows = try? await sqliteService.queryRaw(
+            "SELECT MAX(expires_at) AS max_expires FROM personalized_discovery WHERE device_id = ?",
+            parameters: [deviceId]),
+           let maxExpires = rows.first?["max_expires"] as? String {
+            return maxExpires <= now
+        }
+        return true
+    }
+
     /// Calculate personalization score for a movie/show
     func calculatePersonalizationScore(
         movie: Movie,
         userProfile: UserProfile
     ) -> Double {
-        var score = 0.0
-
-        // Genre match (0-50 points)
-        let genreMatches = movie.genreIds?.filter { genreId in
-            userProfile.topGenres.contains { $0.genreId == genreId }
-        } ?? []
-        score += Double(genreMatches.count) * 15.0
-
-        // Genre preference strength (0-30 points)
-        for genreId in movie.genreIds ?? [] {
-            if let preference = userProfile.topGenres.first(where: { $0.genreId == genreId }) {
-                score += preference.totalScore * 2.0
-            }
-        }
-
-        // Quality score (0-20 points)
-        score += movie.voteAverage * 2.0
-
-        // Popularity factor (0-10 points)
-        score += min(movie.popularity / 100.0, 10.0)
-
-        // Recency bias (0-15 points) - prefer newer content
-        if let releaseDate = movie.releaseDate {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "yyyy-MM-dd"
-            if let date = formatter.date(from: releaseDate) {
-                let year = Calendar.current.component(.year, from: date)
-                if year >= 2020 {
-                    score += Double(year - 2020) * 2.0
-                }
-            }
-        }
-
-        // Diversity randomness (0-5 points)
-        score += Double.random(in: 0...5)
-
-        return score
+        DiscoveryRanking.personalizationScore(movie: movie, userProfile: userProfile)
     }
 
     /// Ensure diversity in recommendations to prevent filter bubble
@@ -243,34 +252,7 @@ class DiscoveryPersonalizationService: ObservableObject {
         _ items: [ScoredItem<T>],
         maxPerGenre: Int = 5
     ) -> [ScoredItem<T>] {
-        var result: [ScoredItem<T>] = []
-        var genreCounts: [Int: Int] = [:]
-
-        for item in items {
-            let genres = item.item.genreIds ?? []
-
-            // Check if adding this item would exceed genre limit
-            var canAdd = true
-            for genre in genres {
-                if genreCounts[genre, default: 0] >= maxPerGenre {
-                    canAdd = false
-                    break
-                }
-            }
-
-            if canAdd {
-                result.append(item)
-                for genre in genres {
-                    genreCounts[genre, default: 0] += 1
-                }
-            }
-
-            if result.count >= maxItemsPerCarousel {
-                break
-            }
-        }
-
-        return result
+        DiscoveryRanking.ensureDiversity(items, maxPerGenre: maxPerGenre, maxItems: maxItemsPerCarousel)
     }
 
     // MARK: - Private Methods - Carousel Generators
@@ -878,25 +860,11 @@ class DiscoveryPersonalizationService: ObservableObject {
     // MARK: - Private Helpers
 
     private func inferDecade(from likedMedia: [MediaSummary]) -> Int {
-        let years = likedMedia.compactMap { $0.year }
-        guard !years.isEmpty else { return 2010 }
-        let avgYear = years.reduce(0, +) / years.count
-        return (avgYear / 10) * 10
+        DiscoveryQueryDerivation.inferDecade(from: likedMedia)
     }
 
     private func moodToGenreIds(_ mood: Mood) -> [Int] {
-        switch mood {
-        case .happy: return [35, 10751]
-        case .sad: return [18]
-        case .excited: return [28, 12]
-        case .relaxed: return [35, 10749]
-        case .scared: return [27, 53]
-        case .thoughtful: return [18, 99]
-        case .romantic: return [10749, 18]
-        case .adventurous: return [12, 28]
-        case .nostalgic: return [36, 10751]
-        case .energetic: return [28, 878]
-        }
+        DiscoveryQueryDerivation.moodToGenreIds(mood)
     }
 
     private func mapPersonCreditToMovie(_ credit: PersonCredit) -> Movie {
@@ -1362,10 +1330,7 @@ class DiscoveryPersonalizationService: ObservableObject {
     }
 
     private func yearDateRange(filters: GlobalDiscoveryFilters) -> (gte: String?, lte: String?) {
-        let yearRange = filters.getYearRange()
-        let gte = yearRange.start.map { "\($0)-01-01" }
-        let lte = yearRange.end.map { "\($0)-12-31" }
-        return (gte, lte)
+        DiscoveryQueryDerivation.yearDateRange(filters: filters)
     }
 
     private func mapTVShowToMovie(_ show: TVShow) -> Movie {
@@ -1451,21 +1416,7 @@ class DiscoveryPersonalizationService: ObservableObject {
     }
 
     private func cosineSimilarity(_ a: [Double], _ b: [Double]) -> Double {
-        let count = min(a.count, b.count)
-        guard count > 0 else { return 0 }
-
-        var dot = 0.0
-        var normA = 0.0
-        var normB = 0.0
-        for i in 0..<count {
-            dot += a[i] * b[i]
-            normA += a[i] * a[i]
-            normB += b[i] * b[i]
-        }
-
-        let denom = (sqrt(normA) * sqrt(normB))
-        if denom == 0 { return 0 }
-        return dot / denom
+        DiscoveryRanking.cosineSimilarity(a, b)
     }
 
     // MARK: - Private Methods - Caching
@@ -1615,14 +1566,9 @@ class DiscoveryPersonalizationService: ObservableObject {
         }()
         let expiresAt = ISO8601DateFormatter().string(from: nextMidnight)
 
-        // First, delete old cache for this user
-        do {
-            _ = try await sqliteService.delete("personalized_discovery", where: "user_id = ?", parameters: [userId], hard: true)
-        } catch {
-            Logger.warning("[DiscoveryPersonalizationService] Failed to clear old cache: \(error.localizedDescription)")
-        }
-
+        // Delete old rows and insert new ones atomically so readers never see an empty cache.
         try? await sqliteService.transaction {
+            try await sqliteService.delete("personalized_discovery", where: "user_id = ?", parameters: [userId], hard: true)
             for (carouselIndex, carousel) in carousels.enumerated() {
                 let batchIndex = carouselIndex / 10
                 for (itemIndex, movie) in carousel.items.enumerated() {
@@ -1658,16 +1604,7 @@ class DiscoveryPersonalizationService: ObservableObject {
     }
 
     private func deduplicateMoviesById(_ movies: [Movie]) -> [Movie] {
-        var seen: Set<Int> = []
-        var result: [Movie] = []
-        result.reserveCapacity(movies.count)
-
-        for movie in movies {
-            if seen.insert(movie.id).inserted {
-                result.append(movie)
-            }
-        }
-        return result
+        DiscoveryRanking.deduplicateMoviesById(movies)
     }
 
     private func applyDynamicLoglines(
@@ -1708,14 +1645,7 @@ class DiscoveryPersonalizationService: ObservableObject {
     }
 
     private func collectUniqueMovies(from carousels: [PersonalizedCarousel]) -> [Movie] {
-        var seen = Set<Int>()
-        var result: [Movie] = []
-        for carousel in carousels {
-            for movie in carousel.items where seen.insert(movie.id).inserted {
-                result.append(movie)
-            }
-        }
-        return result
+        DiscoveryRanking.collectUniqueMovies(from: carousels)
     }
 }
 

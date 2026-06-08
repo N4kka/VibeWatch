@@ -48,20 +48,35 @@ class ListManager: ObservableObject {
     @Published var softLimitWarningMessage: String?
     @Published var isLoadingInitial = true
     
-    private let db = SQLiteService.shared
-    private let sync = SyncEngine.shared
-    private let supabase = SupabaseService.shared
-    private let authService = AuthService.shared
+    private let db: SQLiteService
+    private let sync: SyncEngineProtocol
+    private let supabase: ListsRemoteDataSource
+    private let authService: AuthStatusProviding
     private var cancellables = Set<AnyCancellable>()
     private var userId: String {
         authService.currentUser?.id ?? getDeviceId()
     }
 
     var currentCustomListLimit: Int {
-        DailyQuotaManager.shared.isProUser ? Self.proMaxCustomLists : Self.freeMaxCustomLists
+        EntitlementPolicy.maxCustomLists(for: DailyQuotaManager.shared.isProUser ? .pro : .free)
     }
 
-    private init() {
+    /// Designated initializer with injectable dependencies (test enabler).
+    /// Production keeps using `.shared` with the singleton defaults; tests can pass a
+    /// SQLiteService backed by a temp DB plus mocks, and set `autoStart: false` to avoid
+    /// triggering the initial load and the auth/locale observers.
+    init(
+        db: SQLiteService = .shared,
+        sync: SyncEngineProtocol = SyncEngine.shared,
+        supabase: ListsRemoteDataSource = SupabaseService.shared,
+        authService: AuthStatusProviding = AuthService.shared,
+        autoStart: Bool = true
+    ) {
+        self.db = db
+        self.sync = sync
+        self.supabase = supabase
+        self.authService = authService
+
         // Initialize default lists with stable type-keyed names
         self.watchlist = MediaList(name: ListType.watchlist.rawValue, type: .watchlist)
         self.seenList = MediaList(name: ListType.seen.rawValue, type: .seen)
@@ -69,10 +84,12 @@ class ListManager: ObservableObject {
         self.dislikedList = MediaList(name: ListType.disliked.rawValue, type: .disliked)
         self.softLimitWarningMessage = nil
 
+        guard autoStart else { return }
+
         loadLists()
 
         // Observe authentication state changes
-        authService.$isAuthenticated
+        authService.isAuthenticatedPublisher
             .receive(on: DispatchQueue.main)
             .sink { [weak self] isAuthenticated in
                 guard let self = self else { return }
@@ -101,8 +118,21 @@ class ListManager: ObservableObject {
         }
 
         Logger.info("[ListManager] Syncing lists for authenticated user: \(authenticatedUserId.prefix(8))...")
-        
+
+        // Garantisce la riga profiles(authenticatedUserId) PRIMA di scrivere lists/list_items
+        // sotto quell'id: lists.user_id e list_items.user_id hanno FK → profiles(id). Se il
+        // profilo manca (la riga viene creata da ensureDeviceProfileInSQLite all'avvio, spesso
+        // ancora con il deviceId perché l'auth non è stata ripristinata), ogni insert locale
+        // dell'utente autenticato fallirebbe in silenzio nel catch.
+        await ensureDeviceProfileInSQLite()
+
         do {
+            // 0. Flush any locally-queued changes (adds/removes/moves) to Supabase BEFORE
+            //    pulling remote state. Otherwise a pull can clobber local edits that haven't
+            //    synced yet — e.g. a "mark as seen" done just before relaunch would be
+            //    overwritten by stale remote rows and appear to revert to the watchlist.
+            await sync.pushPendingChanges()
+
             // 1. Fetch remote lists for the authenticated user
             var remoteLists = try await supabase.fetchLists()
             Logger.info("[ListManager] Fetched \(remoteLists.count) remote lists from Supabase.")
@@ -115,38 +145,77 @@ class ListManager: ObservableObject {
             remoteLists = ensureCoreLists(in: remoteLists)
             
             // 4. Handle custom local lists that might not be on Supabase yet
-            //    These are lists created by the user when they were anonymous on this device
+            //    These are lists created by the user when they were anonymous on this device.
+            //    Single remote writer (4.3): l'upload va via outbox/SyncEngine, NON più con
+            //    N chiamate dirette supabase.createList + supabase.addItemToList (burst N+1 al
+            //    login). Accodiamo lista + item sull'outbox (persistendoli anche localmente) e
+            //    li flushiamo in coda con UNA singola apply_mutations batch.
+            var didEnqueueLocalUploads = false
             for localList in localListsBeforeSync where localList.type == .custom {
-                if !remoteLists.contains(where: { $0.id == localList.id }) {
-                    // This custom list exists locally but not remotely. Try to upload it.
-                    do {
-                        // Create it on Supabase - using the local list's data
-                        _ = try await supabase.createList(id: localList.id, name: localList.name, description: localList.description, type: .custom)
-                        Logger.info("[ListManager] Uploaded local custom list '\(localList.name)' to Supabase.")
-                        
-                        // Upload its items too
-                        for item in localList.items {
-                            _ = try await supabase.addItemToList(listId: localList.id, item: item)
-                            Logger.debug("[ListManager] Uploaded item '\(item.title)' to Supabase for list '\(localList.name)'.")
-                        }
-                        remoteLists.append(localList) // Add to our working set of lists
-                    } catch {
-                        Logger.error("[ListManager] Failed to upload local custom list '\(localList.name)': \(error)")
-                    }
+                guard !remoteLists.contains(where: { $0.id == localList.id }) else { continue }
+
+                await ensureListInSQLite(localList)
+                let now = ISO8601DateFormatter().string(from: Date())
+                try await sync.queueOperation(
+                    table: "lists",
+                    operationType: "INSERT",
+                    recordId: localList.id,
+                    payload: [
+                        "id": localList.id,
+                        "user_id": authenticatedUserId,
+                        "name": localList.name,
+                        "description": localList.description ?? "",
+                        "type": ListType.custom.rawValue,
+                        "created_at": ISO8601DateFormatter().string(from: localList.createdAt),
+                        "updated_at": now
+                    ],
+                    dependsOn: nil
+                )
+
+                // addItemToSQLite persiste in SQLite E accoda INSERT list_items sull'outbox.
+                for item in localList.items {
+                    await addItemToSQLite(item, listId: localList.id)
                 }
+
+                remoteLists.append(localList) // Add to our working set of lists
+                didEnqueueLocalUploads = true
+                Logger.info("[ListManager] Queued local custom list '\(localList.name)' (\(localList.items.count) items) for remote sync.")
             }
-            
+
             // 5. Update local state with the merged lists
             applyLists(remoteLists)
+            // Il pull può aver portato in memoria liste core con un id REMOTO diverso dalla
+            // canonica locale. Con l'indice univoco parziale su lists(user_id, type) quell'id
+            // remoto non può essere persistito (INSERT OR IGNORE lo salta) → un add successivo
+            // fallirebbe la FK e l'item sparirebbe. Riallinea le core all'id canonico locale
+            // PRIMA di salvare, così saveListsToSQLite scrive su righe realmente esistenti.
+            await reconcileCoreListIdentities()
             await saveListsToSQLite()
 
+            // 6. Flush subito le liste locali-only appena accodate, così restano "caricate al
+            //    login" come prima — ma in UNA apply_mutations batch invece del vecchio N+1.
+            if didEnqueueLocalUploads {
+                await sync.pushPendingChanges()
+            }
+
             Logger.info("[ListManager] Lists synced successfully for authenticated user.")
-            
+
         } catch {
             Logger.error("[ListManager] Error syncing lists for authenticated user: \(error)")
             // If fetching remote lists fails, perhaps revert to local only or show error
             // For now, we'll just log and keep whatever local state was there
         }
+
+        // Ricarica SEMPRE lo stato LOCALE per l'utente autenticato (offline-first), anche se il
+        // pull remoto sopra è fallito. Decisivo per il bug "gli item spariscono al riavvio": al
+        // cold launch loadListsFromSQLite gira con il deviceId (la sessione auth non è ancora
+        // ripristinata) e carica le liste del DEVICE, vuote; i passi 1-5 ricostruiscono lo stato
+        // in memoria dal REMOTO (fetchLists), che però può non contenere gli item non ancora
+        // sincronizzati (es. push outbox fallito) → gli item già in SQLite sotto l'id autenticato
+        // non venivano MAI caricati in memoria. Ora `currentUser` è valorizzato: questa load legge
+        // le liste+item locali dell'utente autenticato e li rende visibili (il remoto è già stato
+        // fuso in SQLite da saveListsToSQLite, INSERT OR IGNORE non distruttivo).
+        await loadListsFromSQLite()
     }
     
     // Call this when user logs out
@@ -204,8 +273,9 @@ class ListManager: ObservableObject {
     }
 
     /// Load lists from SQLite (single source of truth)
-    private func loadListsFromSQLite() async {
-        let currentUserId = AuthService.shared.currentUser?.id ?? getDeviceId()
+    /// Internal (not private) so the full-set load invariant can be characterized in tests.
+    func loadListsFromSQLite() async {
+        let currentUserId = authService.currentUser?.id ?? getDeviceId()
 
         do {
             let listsQuery = """
@@ -259,6 +329,7 @@ class ListManager: ObservableObject {
             }
 
             applyLists(loadedLists)
+            await reconcileCoreListIdentities()
             Logger.info("[ListManager] Loaded \(loadedLists.count) lists with \(itemRows.count) items from SQLite")
         } catch {
             Logger.error("[ListManager] Failed to load from SQLite: \(error)")
@@ -267,48 +338,151 @@ class ListManager: ObservableObject {
         }
     }
     
-    /// Ensure all in-memory lists exist in both SQLite and Supabase
-    private func ensureListsInDatabase() async {
+    /// Riallinea ogni lista core in memoria (watchlist/seen/liked/disliked) all'id CANONICO
+    /// presente in SQLite, così le scritture (addItemToSQLite) puntano sempre a una riga che
+    /// esiste davvero.
+    ///
+    /// Dopo la migrazione 6 esiste UNA sola lista core attiva per (user, type) — la più vecchia
+    /// con item. Ma il pull remoto (`fetchLists` → `applyLists`) può mettere in memoria una core
+    /// con id remoto diverso; l'indice univoco parziale impedisce di persistere quell'id, quindi
+    /// un item aggiunto contro di esso colpirebbe la FK e sparirebbe. Qui adottiamo l'id canonico
+    /// e fondiamo gli item per (mediaId, mediaType) così nulla scompare visivamente.
+    func reconcileCoreListIdentities() async {
+        let coreTypes: [ListType] = [.watchlist, .seen, .liked, .disliked]
+        for type in coreTypes {
+            guard let memIndex = lists.firstIndex(where: { $0.type == type }) else { continue }
+            let current = lists[memIndex]
+
+            let rows = (try? await db.queryRaw(
+                "SELECT id, created_at FROM lists WHERE user_id = ? AND type = ? AND deleted_at IS NULL ORDER BY created_at ASC, id ASC LIMIT 1",
+                parameters: [userId, type.rawValue]
+            )) ?? []
+
+            guard let canonId = rows.first?["id"] as? String else {
+                // Nessuna riga canonica: persisti quella in memoria così diventa la canonica.
+                await ensureListInSQLite(current)
+                continue
+            }
+
+            guard canonId != current.id else { continue }
+
+            var seenKeys = Set<String>()
+            let mergedItems = current.items.filter {
+                seenKeys.insert("\($0.mediaId)-\($0.mediaType.rawValue)").inserted
+            }
+            let createdAt = ISO8601DateFormatter().date(from: rows.first?["created_at"] as? String ?? "") ?? current.createdAt
+            lists[memIndex] = MediaList(
+                id: canonId,
+                name: current.name,
+                description: current.description,
+                type: type,
+                createdAt: createdAt,
+                items: mergedItems
+            )
+        }
+        updateDefaultReferences(from: lists)
+    }
+
+    /// Ensure all in-memory lists exist in both SQLite and Supabase.
+    ///
+    /// 4.3b — taglio dell'N+1 a ogni avvio: prima questo metodo faceva `supabase.createList`
+    /// DIRETTO per OGNI lista a ogni cold launch (4+ round-trip per lo più falliti per conflitto
+    /// PK). Ora:
+    ///  - lo facciamo SOLO per le liste non ancora riconciliate col remoto (`synced_at IS NULL`):
+    ///    per gli utenti esistenti (liste già pull-ate) il costo remoto al lancio è ZERO.
+    ///  - liste di DEFAULT (non cancellabili) → via outbox/SyncEngine (single remote writer 4.2);
+    ///    `apply_mutations` fa un upsert idempotente e, non potendo essere soft-deleted, non c'è
+    ///    rischio di "resurrection".
+    ///  - liste CUSTOM → restano sul `createList` DIRETTO insert-or-fail. È deliberato: le custom
+    ///    SONO cancellabili e `apply_mutations` su `lists` è un upsert → un INSERT via outbox
+    ///    potrebbe riportare in vita una custom soft-deleted su un altro device (famiglia 141→1).
+    ///    L'insert-or-fail (fallisce su riga esistente) preserva la non-resurrection.
+    func ensureListsInDatabase() async {
         // First, ensure device profile exists in SQLite (for foreign key constraint)
         await ensureDeviceProfileInSQLite()
-        
+
         for list in lists {
             // Ensure in SQLite
             await ensureListInSQLite(list)
-            
-            // Ensure in Supabase if authenticated
-            if authService.currentUser != nil {
+        }
+
+        guard authService.currentUser != nil else { return }
+
+        for list in lists {
+            // Salta le liste già riconciliate col remoto: niente più burst a ogni avvio.
+            guard await listNeedsRemoteEnsure(list.id) else { continue }
+
+            if list.type == .custom {
+                // Custom: createList diretto insert-or-fail (no resurrection, vedi doc sopra).
                 do {
                     _ = try await supabase.createList(id: list.id, name: list.name, description: list.description, type: list.type)
-                    Logger.debug("[ListManager] Ensured list '\(list.name)' exists in Supabase")
+                    Logger.debug("[ListManager] Ensured custom list '\(list.name)' exists in Supabase")
                 } catch {
                     // List might already exist, which is fine
-                    Logger.debug("[ListManager] List '\(list.name)' may already exist in Supabase: \(error)")
+                    Logger.debug("[ListManager] Custom list '\(list.name)' may already exist in Supabase: \(error)")
                 }
+            } else {
+                // Default: via outbox (single remote writer).
+                let now = ISO8601DateFormatter().string(from: Date())
+                try? await sync.queueOperation(
+                    table: "lists",
+                    operationType: "INSERT",
+                    recordId: list.id,
+                    payload: [
+                        "id": list.id,
+                        "user_id": userId,
+                        "name": list.name,
+                        "description": list.description ?? "",
+                        "type": list.type.rawValue,
+                        "created_at": ISO8601DateFormatter().string(from: list.createdAt),
+                        "updated_at": now
+                    ],
+                    dependsOn: nil
+                )
+                Logger.debug("[ListManager] Queued default list '\(list.name)' for remote ensure")
             }
         }
+    }
+
+    /// True se la lista locale non risulta ancora riconciliata col remoto (`synced_at IS NULL`),
+    /// quindi va garantita lato server. Il pull remoto popola `synced_at` (vedi SQLiteService.upsert).
+    private func listNeedsRemoteEnsure(_ id: String) async -> Bool {
+        let rows = (try? await db.queryRaw(
+            "SELECT synced_at FROM lists WHERE id = ?",
+            parameters: [id]
+        )) ?? []
+        guard let row = rows.first else { return true }
+        return (row["synced_at"] as? String) == nil
     }
     
     /// Ensure device profile exists in SQLite (required for foreign key constraint)
     private func ensureDeviceProfileInSQLite() async {
+        // `profiles.email` ha un vincolo UNIQUE. Usare una email fissa ("device@local") per
+        // OGNI profilo significa che, dopo il login, l'INSERT OR IGNORE del profilo dell'utente
+        // autenticato collide sull'email del profilo-device già esistente e viene SALTATO in
+        // silenzio → la riga profiles(authedUserId) non nasce mai → ogni scrittura su
+        // lists/list_items con quel user_id viola la FK (foreign_keys=ON) e l'item "sparisce".
+        // Email univoca per user_id → ogni profilo (device o autenticato) viene creato.
+        let placeholderEmail = "\(userId)@local"
         let success = db.execute("""
             INSERT OR IGNORE INTO profiles (id, email, display_name, avatar_url, created_at, updated_at)
             VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))
         """, parameters: [
             userId,
-            "device@local",
+            placeholderEmail,
             "Local User",
             nil as String? as Any
         ])
-        
+
         if success {
-            Logger.debug("[ListManager] Ensured device profile exists in SQLite")
+            Logger.debug("[ListManager] Ensured profile \(userId.prefix(8)) exists in SQLite")
         } else {
-            Logger.warning("[ListManager] Failed to ensure device profile in SQLite")
+            Logger.warning("[ListManager] Failed to ensure profile in SQLite")
         }
     }
     
     private func ensureListInSQLite(_ list: MediaList) async {
+        await ensureDeviceProfileInSQLite()
         let success = db.execute("""
             INSERT OR IGNORE INTO lists (id, name, description, type, created_at, user_id)
             VALUES (?, ?, ?, ?, ?, ?)
@@ -427,13 +601,40 @@ class ListManager: ObservableObject {
             throw ListError.authenticationRequired
         }
         
-        // Generate a local ID first
+        // Offline-first: genera l'ID e costruisci la lista LOCALMENTE (prima era remote-first:
+        // se offline la creazione falliva del tutto).
         let listId = UUID().uuidString
-        let newList = try await supabase.createList(id: listId, name: trimmedName, description: description, type: .custom)
-        
+        let newList = MediaList(
+            id: listId,
+            name: trimmedName,
+            description: description,
+            type: .custom,
+            createdAt: Date(),
+            items: []
+        )
+
         lists.append(newList)
         await ensureListInSQLite(newList)
-        
+
+        // Single remote writer (4.2): la creazione remota va via outbox/SyncEngine
+        // (apply_mutations gestisce l'INSERT su `lists`), non più diretta a Supabase.
+        let now = ISO8601DateFormatter().string(from: Date())
+        try await sync.queueOperation(
+            table: "lists",
+            operationType: "INSERT",
+            recordId: listId,
+            payload: [
+                "id": listId,
+                "user_id": userId,
+                "name": trimmedName,
+                "description": description ?? "",
+                "type": ListType.custom.rawValue,
+                "created_at": now,
+                "updated_at": now
+            ],
+            dependsOn: nil
+        )
+
         // Analytics: Track list creation
         AnalyticsService.shared.logListCreated(listType: "custom", listName: trimmedName)
         
@@ -448,10 +649,6 @@ class ListManager: ObservableObject {
         guard !trimmedName.isEmpty else {
             throw ListError.invalidName
         }
-        if supabase.currentUser != nil {
-            try await supabase.updateList(id: id, name: trimmedName, description: description)
-        }
-        
         let existing = lists[index]
         let updated = MediaList(
             id: existing.id,
@@ -464,7 +661,30 @@ class ListManager: ObservableObject {
         lists[index] = updated
         updateDefaultReferences(from: lists)
         notifySoftLimitIfNeeded(for: lists[index])
-        Task { await ensureListInSQLite(updated) }
+
+        // Local-first: ensureListInSQLite usa INSERT OR IGNORE → per un update serve una
+        // UPDATE esplicita, altrimenti il nuovo nome non viene persistito localmente.
+        _ = db.execute(
+            "UPDATE lists SET name = ?, description = ?, updated_at = datetime('now') WHERE id = ?",
+            parameters: [trimmedName, description ?? "", id]
+        )
+
+        // Single remote writer (4.2): propaga via outbox/SyncEngine, non più diretto a Supabase.
+        try await sync.queueOperation(
+            table: "lists",
+            operationType: "UPDATE",
+            recordId: id,
+            payload: [
+                "id": id,
+                "user_id": userId,
+                "name": trimmedName,
+                "description": description ?? "",
+                "type": existing.type.rawValue,
+                "created_at": ISO8601DateFormatter().string(from: existing.createdAt),
+                "updated_at": ISO8601DateFormatter().string(from: Date())
+            ],
+            dependsOn: nil
+        )
     }
     
     func deleteList(id: String) async throws {
@@ -476,21 +696,27 @@ class ListManager: ObservableObject {
         }
         let listType = lists[index].type.rawValue
         
-        if supabase.currentUser != nil {
-            try await supabase.deleteList(id: id)
-        }
         lists.remove(at: index)
-        // Soft delete from SQLite
-        Task {
-            let success = db.execute(
-                "UPDATE lists SET deleted_at = datetime('now') WHERE id = ?",
-                parameters: [id]
-            )
-            if !success {
-                Logger.error("[ListManager] Failed to soft-delete list \(id) from SQLite")
-            }
+
+        // Local-first: soft delete locale (awaited, deterministico).
+        let success = db.execute(
+            "UPDATE lists SET deleted_at = datetime('now') WHERE id = ?",
+            parameters: [id]
+        )
+        if !success {
+            Logger.error("[ListManager] Failed to soft-delete list \(id) from SQLite")
         }
-        
+
+        // Single remote writer (4.2): la cancellazione remota va via outbox/SyncEngine,
+        // non più diretta a Supabase. apply_mutations fa il soft-delete owner-scoped.
+        try await sync.queueOperation(
+            table: "lists",
+            operationType: "DELETE",
+            recordId: id,
+            payload: ["id": id, "user_id": userId],
+            dependsOn: nil
+        )
+
         // Analytics: Track list deletion
         AnalyticsService.shared.logListDeleted(listType: listType)
     }
@@ -548,23 +774,15 @@ class ListManager: ObservableObject {
         objectWillChange.send()
         lists[index].items.append(item)
         
-        // Try to sync to Supabase if authenticated (but don't fail if it doesn't work)
-        if supabase.currentUser != nil {
-            Task {
-                do {
-                    _ = try await supabase.addItemToList(listId: listId, item: item)
-                    Logger.debug("[ListManager] Synced item to Supabase")
-                } catch {
-                    Logger.warning("[ListManager] Failed to sync to Supabase: \(error)")
-                    // Don't throw - local save already succeeded
-                }
-            }
-        }
-        
-        // Also save to local SQLite for offline access
-        Task {
-            await addItemToSQLite(item, listId: listId)
-        }
+        // Single remote writer (4.2): la sincronizzazione remota avviene SOLO via
+        // outbox/SyncEngine (vedi addItemToSQLite → queueOperation). Rimossa la scrittura
+        // diretta a Supabase (dual-write) che causava id-divergence tra i due path.
+
+        // Also save to local SQLite for offline access.
+        // Awaited (non più fire-and-forget) così la persistenza locale e l'enqueue
+        // sull'outbox completano prima del ritorno → comportamento deterministico/testabile.
+        // L'append in-memory è già avvenuto sopra, quindi la UI resta reattiva.
+        await addItemToSQLite(item, listId: listId)
 
         updateDefaultReferences(from: lists)
         notifySoftLimitIfNeeded(for: lists[index])
@@ -631,33 +849,25 @@ class ListManager: ObservableObject {
         lists[listIndex].items.removeAll { $0.id == itemId }
         updateDefaultReferences(from: lists)
 
-        // Try to sync to Supabase if authenticated (but don't fail if it doesn't work)
-        if supabase.currentUser != nil {
-            Task {
-                do {
-                    try await supabase.removeItemFromList(itemId: itemId)
-                    Logger.debug("[ListManager] Synced removal to Supabase")
-                } catch {
-                    Logger.warning("[ListManager] Failed to sync removal to Supabase: \(error)")
-                    // Don't throw - local removal already succeeded
-                }
-            }
-        }
+        // Single remote writer (4.2): la rimozione remota avviene SOLO via outbox/SyncEngine
+        // (vedi removeItemFromSQLite → queueOperation DELETE). Rimossa la scrittura diretta.
 
-        // Also remove from local SQLite
-        Task {
-            await removeItemFromSQLite(itemId)
-        }
+        // Also remove from local SQLite.
+        // Awaited (non più fire-and-forget) così l'enqueue sull'outbox è deterministico/testabile.
+        await removeItemFromSQLite(itemId)
     }
     
     private func removeItemFromSQLite(_ itemId: String) async {
         do {
             // Soft delete in local SQLite
-            _ = try await db.queryRaw("""
+            let success = db.execute("""
                 UPDATE list_items
-                SET deleted_at = datetime('now')
+                SET deleted_at = datetime('now'), updated_at = datetime('now')
                 WHERE id = ?
             """, parameters: [itemId])
+            guard success else {
+                throw SQLiteError.queryFailed("Failed to soft-delete list item")
+            }
             
             // Queue for sync
             try await sync.queueOperation(
@@ -680,11 +890,41 @@ class ListManager: ObservableObject {
         return list.items.contains(where: { $0.mediaId == mediaId && $0.mediaType == mediaType })
     }
     
+    /// Restituisce l'id lista contro cui SCRIVERE gli item, garantendo che esistano sia la riga
+    /// `profiles(userId)` sia la riga `lists` (FK con `foreign_keys=ON`). Per le liste core
+    /// ritorna l'id CANONICO per (user, type): così una scrittura non punta mai a un id
+    /// sintetizzato (race d'avvio tra loadLists/ensureListsInDatabase/sync, o cambio user_id su
+    /// login-logout) che l'indice univoco parziale rifiuterebbe di persistere → l'INSERT non
+    /// fallisce più in silenzio lasciando l'item solo in memoria (causa "sparisce al riavvio").
+    private func persistedListId(forWriting listId: String) async -> String {
+        await ensureDeviceProfileInSQLite()
+        guard let list = lists.first(where: { $0.id == listId }) else {
+            return listId
+        }
+        if list.type == .custom {
+            await ensureListInSQLite(list)
+            return list.id
+        }
+        let rows = (try? await db.queryRaw(
+            "SELECT id FROM lists WHERE user_id = ? AND type = ? AND deleted_at IS NULL ORDER BY created_at ASC, id ASC LIMIT 1",
+            parameters: [userId, list.type.rawValue]
+        )) ?? []
+        if let canon = rows.first?["id"] as? String {
+            return canon
+        }
+        await ensureListInSQLite(list)
+        return list.id
+    }
+
     private func addItemToSQLite(_ item: MediaListItem, listId: String) async {
+        // Risolvi (e garantisci) la riga lista canonica + profilo PRIMA dell'INSERT.
+        let targetListId = await persistedListId(forWriting: listId)
         do {
+            let addedAt = ISO8601DateFormatter().string(from: item.addedAt)
+            let updatedAt = ISO8601DateFormatter().string(from: Date())
             let values: [String: Any] = [
                 "id": item.id,
-                "list_id": listId,
+                "list_id": targetListId,
                 "user_id": userId,
                 "media_id": item.mediaId,
                 "media_type": item.mediaType.rawValue,
@@ -697,18 +937,23 @@ class ListManager: ObservableObject {
                 "release_date": item.releaseDate ?? "",
                 "genres": intArray(item.genres),
                 "overview": item.overview ?? "",
-                "added_at": ISO8601DateFormatter().string(from: Date())
+                "added_at": addedAt,
+                "updated_at": updatedAt
             ]
             
             // Insert to local SQLite
             _ = try await db.insert("list_items", values: values)
+
+            var syncPayload = values
+            syncPayload["created_at"] = addedAt
+            syncPayload["updated_at"] = updatedAt
             
             // Queue for sync
             try await sync.queueOperation(
                 table: "list_items",
                 operationType: "INSERT",
                 recordId: item.id,
-                payload: values,
+                payload: syncPayload,
                 dependsOn: nil
             )
             

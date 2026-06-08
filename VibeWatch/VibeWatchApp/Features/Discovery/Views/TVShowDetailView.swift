@@ -724,7 +724,7 @@ struct TVShowCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            CachedAsyncImage(url: tvShow.posterURL)
+            CachedAsyncImage(url: tvShow.posterURL, maxPixelSize: 630)
                 .aspectRatio(contentMode: .fill)
                 .frame(width: 140, height: 210)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -853,7 +853,7 @@ struct SeasonCard: View {
         VStack(alignment: .leading, spacing: 8) {
             ZStack(alignment: .topLeading) {
                 if let url = season.posterURL {
-                    CachedAsyncImage(url: url)
+                    CachedAsyncImage(url: url, maxPixelSize: 630)
                         .aspectRatio(contentMode: .fill)
                         .frame(width: 140, height: 210)
                         .clipShape(RoundedRectangle(cornerRadius: 12))

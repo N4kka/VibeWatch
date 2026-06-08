@@ -7,8 +7,10 @@ class MovieReactionService: ObservableObject {
     private let db = SQLiteService.shared
     private let supabase = SupabaseService.shared
     
-    // Cache for reaction counts to avoid repeated DB queries
-    private var countsCache: [String: MovieReactionCounts] = [:]
+    // Cache for reaction counts (Fase 3 §1.4): ContentCache unica con TTL + capacità,
+    // al posto del vecchio [String:...] che cresceva senza limite né scadenza (2.1).
+    // TTL 5 min: i conteggi reazioni non sono critici e si rinfrescano dal DB/Supabase.
+    private let countsCache = ContentCache<String, MovieReactionCounts>(ttl: 300, countLimit: 500)
     
     private init() {}
     
@@ -19,7 +21,7 @@ class MovieReactionService: ObservableObject {
         let cacheKey = "\(mediaType.rawValue)_\(mediaId)"
         
         // Return cached if available
-        if let cached = countsCache[cacheKey] {
+        if let cached = await countsCache.value(for: cacheKey) {
             return cached
         }
         
@@ -27,7 +29,7 @@ class MovieReactionService: ObservableObject {
         if supabase.currentUser != nil {
             do {
                 let counts = try await fetchCountsFromSupabase(mediaId: mediaId, mediaType: mediaType)
-                countsCache[cacheKey] = counts
+                await countsCache.insert(counts, for: cacheKey)
                 return counts
             } catch {
                 Logger.warning("[MovieReaction] Failed to fetch from Supabase: \(error)")
@@ -37,7 +39,7 @@ class MovieReactionService: ObservableObject {
         
         // Fetch from local SQLite
         let counts = try await fetchCountsFromSQLite(mediaId: mediaId, mediaType: mediaType)
-        countsCache[cacheKey] = counts
+        await countsCache.insert(counts, for: cacheKey)
         return counts
     }
     
@@ -73,8 +75,8 @@ class MovieReactionService: ObservableObject {
         
         // Clear cache
         let cacheKey = "\(mediaType.rawValue)_\(mediaId)"
-        countsCache.removeValue(forKey: cacheKey)
-        
+        await countsCache.removeValue(for: cacheKey)
+
         // Sync to Supabase if authenticated
         if supabase.currentUser != nil {
             Task {
@@ -134,8 +136,8 @@ class MovieReactionService: ObservableObject {
         
         // Clear cache to force refresh
         let cacheKey = "\(mediaType.rawValue)_\(mediaId)"
-        countsCache.removeValue(forKey: cacheKey)
-        
+        await countsCache.removeValue(for: cacheKey)
+
         // Analytics
         AnalyticsService.shared.logEventWithContext(
             currentReaction == reaction ? "reaction_removed" : "reaction_added",
@@ -421,11 +423,13 @@ class MovieReactionService: ObservableObject {
     // MARK: - Cache Management
 
     func clearCache() {
-        countsCache.removeAll()
+        // Firma sincrona mantenuta (MovieReactionServiceProtocol): l'invalidazione della
+        // cache-attore è best-effort, incapsulata in un Task.
+        Task { await countsCache.removeAll() }
     }
-    
+
     func clearCache(for mediaId: Int, mediaType: MediaType) {
         let cacheKey = "\(mediaType.rawValue)_\(mediaId)"
-        countsCache.removeValue(forKey: cacheKey)
+        Task { await countsCache.removeValue(for: cacheKey) }
     }
 }

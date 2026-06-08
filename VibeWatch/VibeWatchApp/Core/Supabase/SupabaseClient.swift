@@ -31,24 +31,16 @@ class SupabaseService: ObservableObject {
     private let localDB = SQLiteService.shared
     private let deviceId: String
 
-    private static let dayKeyFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = .current
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter
-    }()
-
     private func localDayKey(for date: Date = Date()) -> String {
-        Self.dayKeyFormatter.string(from: date)
+        SupabaseSyncFormatting.localDayKey(for: date)
     }
 
     private func isDateInTodayLocal(_ date: Date) -> Bool {
-        Calendar.current.isDateInToday(date)
+        SupabaseSyncFormatting.isDateInTodayLocal(date)
     }
 
     private func normalizeUserId(_ userId: String) -> String {
-        userId.lowercased()
+        SupabaseSyncFormatting.normalizeUserId(userId)
     }
 
     private struct LocalAITokenUsageState {
@@ -167,14 +159,7 @@ class SupabaseService: ObservableObject {
     }
 
     private func parseDate(_ value: Any?) -> Date? {
-        guard let string = value as? String else { return nil }
-        let iso = ISO8601DateFormatter()
-        if let d = iso.date(from: string) { return d }
-        let df = DateFormatter()
-        df.locale = Locale(identifier: "en_US_POSIX")
-        df.timeZone = TimeZone(secondsFromGMT: 0)
-        df.dateFormat = "yyyy-MM-dd HH:mm:ss"
-        return df.date(from: string)
+        SupabaseSyncFormatting.parseDate(value)
     }
 
     // MARK: - Clip Signals
@@ -255,33 +240,7 @@ class SupabaseService: ObservableObject {
         guard let rows = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return }
 
         // Normalize rows per table (media_type, JSON fields)
-        let normalized: [[String: Any]] = rows.map { row in
-            var r = row
-
-            // Ensure media_type is valid
-            if name == "clips" || name == "list_items" {
-                if let mt = r["media_type"] as? String, !["movie", "tv"].contains(mt) {
-                    r["media_type"] = "movie"
-                }
-            }
-
-            // Convert Postgres array (decoded as [Any]) to JSON string for local JSON columns
-            func normalizeArray(_ key: String) {
-                if let arr = r[key] as? [Any] {
-                    if let data = try? JSONSerialization.data(withJSONObject: arr),
-                       let str = String(data: data, encoding: .utf8) {
-                        r[key] = str
-                    }
-                }
-            }
-
-            normalizeArray("genres")
-            normalizeArray("actors")
-            normalizeArray("keywords")
-            normalizeArray("origin_country")
-
-            return r
-        }
+        let normalized = rows.map { SupabasePullRowNormalizer.normalize(row: $0, table: name) }
 
         // Conflict handling
         let policy = conflictPolicy(for: name)
@@ -759,6 +718,7 @@ class SupabaseService: ObservableObject {
         }
         
         struct AddItemRequest: Encodable {
+            let id: String
             let list_id: String
             let user_id: String
             let media_id: Int
@@ -774,8 +734,13 @@ class SupabaseService: ObservableObject {
             let overview: String?
             let deleted_at: String?
         }
-        
+
         let request = AddItemRequest(
+            // Use the local item's id so the remote row, local SQLite row, and in-memory
+            // item all share one id. Without this the server generates its own id, which
+            // diverges from the id used by removeItemFromList/sync — leaving orphan remote
+            // rows that reappear (e.g. a "mark as seen" reverting to the watchlist on relaunch).
+            id: item.id,
             list_id: listId,
             user_id: userId,
             media_id: item.mediaId,

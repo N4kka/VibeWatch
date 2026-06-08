@@ -74,7 +74,7 @@ final class AITokenManager: ObservableObject {
     /// Call this when subscription state changes.
     func updateLimit() {
         let isPro = DailyQuotaManager.shared.isProUser
-        dailyLimit = isPro ? proLimit : freeLimit
+        dailyLimit = EntitlementPolicy.aiDailyLimit(for: isPro ? .pro : .free)
     }
     
     // MARK: - Internal Logic

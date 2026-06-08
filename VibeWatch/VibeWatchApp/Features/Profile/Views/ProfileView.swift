@@ -428,7 +428,7 @@ struct ProfileView: View {
             ZStack(alignment: .bottomTrailing) {
                 if let avatarURL = appState.currentUser?.avatarURL,
                    let url = URL(string: avatarURL) {
-                    CachedAsyncImage(url: url) { image in
+                    CachedAsyncImage(url: url, maxPixelSize: 240) { image in
                         image
                             .resizable()
                             .scaledToFill()

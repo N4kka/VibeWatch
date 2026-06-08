@@ -21,7 +21,7 @@ struct DiscoveryView: View {
     var body: some View {
         ZStack {
             if viewModel.isLoading && viewModel.hasNoContent {
-                ProgressView()
+                DiscoverySkeletonView()
             } else if let error = viewModel.error, viewModel.hasNoContent {
                 errorView(error)
             } else {
@@ -41,18 +41,18 @@ struct DiscoveryView: View {
             if let userId = appState.currentUser?.id {
                 await gamificationService.loadUserState(userId: userId)
 
-                // Only award and show XP if this is first launch of day
+                // Award (and show the toast for) the daily-login bonus at most once per
+                // local calendar day. The local gate is authoritative so the popup never
+                // re-appears on repeat launches the same day, even if the remote state is
+                // stale or unavailable. We only persist the "shown today" marker once the
+                // award actually succeeds, so a failed/offline attempt can retry next launch.
                 let isPro = quotaManager.isProUser
-                let today = Calendar.current.startOfDay(for: Date())
-                let lastActivity = gamificationService.userState.lastActivityDate
-
-                let isFirstLaunchOfDay = lastActivity == nil ||
-                    Calendar.current.startOfDay(for: lastActivity!) < today
-
-                if isFirstLaunchOfDay {
-                    _ = await gamificationService.awardXP(userId: userId, action: .dailyOpen, isPro: isPro)
+                if gamificationService.shouldAwardDailyOpen(userId: userId) {
+                    let event = await gamificationService.awardXP(userId: userId, action: .dailyOpen, isPro: isPro)
+                    if event != nil {
+                        gamificationService.markDailyOpenAwarded(userId: userId)
+                    }
                 }
-                // If not first launch, don't call awardXP at all - no toast will show
             }
 
             // Analytics: Track screen view
@@ -429,7 +429,7 @@ struct MediaCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            CachedAsyncImage(url: movie.posterURL)
+            CachedAsyncImage(url: movie.posterURL, maxPixelSize: 630)
                 .aspectRatio(contentMode: .fill)
                 .frame(width: 140, height: 210)
                 .clipShape(RoundedRectangle(cornerRadius: 12))

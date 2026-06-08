@@ -58,7 +58,7 @@ struct AppHeaderView: View {
 
                 Button(action: onProfileTap) {
                     if let avatarURL = avatarURL, let url = URL(string: avatarURL) {
-                        CachedAsyncImage(url: url) { image in
+                        CachedAsyncImage(url: url, maxPixelSize: 120) { image in
                             image
                                 .resizable()
                                 .scaledToFill()

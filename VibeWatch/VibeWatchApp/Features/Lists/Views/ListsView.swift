@@ -2,7 +2,6 @@ import SwiftUI
 
 struct ListsView: View {
     @StateObject private var viewModel = ListsViewModel()
-    @StateObject private var listManager = ListManager.shared
     @StateObject private var availabilityService = ListAvailabilityService.shared
     @ObservedObject var localizationManager = LocalizationManager.shared
     @EnvironmentObject var quotaManager: DailyQuotaManager
@@ -155,7 +154,7 @@ struct ListsView: View {
                         showAuthGate = true
                         return
                     }
-                    if listManager.canCreateList() {
+                    if viewModel.canCreateList() {
                         showCreateList = true
                     } else {
                         showingPaywall = true
@@ -175,7 +174,7 @@ struct ListsView: View {
 
             combinedFiltersRow
 
-            if listManager.isLoadingInitial {
+            if viewModel.isLoadingInitial && viewModel.lists.isEmpty {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if currentLists.isEmpty {
@@ -213,13 +212,13 @@ struct ListsView: View {
         
         switch selectedListType {
         case .myLists:
-            lists = listManager.lists.filter { $0.type == .custom }
+            lists = viewModel.customLists
         case .watchlist:
-            lists = [listManager.watchlist]
+            lists = [viewModel.watchlist]
         case .seen:
-            lists = [listManager.seenList]
+            lists = [viewModel.seenList]
         case .liked:
-            lists = [listManager.likedList]
+            lists = [viewModel.likedList]
         }
 
         return lists
@@ -275,32 +274,34 @@ struct ListsView: View {
     }
     
     private var itemsGrid: some View {
-        ScrollView {
+        // Memoizzazione (2.4): paginatedItems (→ filter+sort) calcolato UNA volta per render.
+        let paginated = paginatedItems
+        return ScrollView {
             LazyVStack(spacing: 20) {
-                ForEach(paginatedItems) { item in
+                ForEach(paginated) { item in
                     MediaItemRow(
                         item: item,
                         isInSeenList: selectedListType == .seen,
                         onMarkAsSeen: {
                             Task {
                                 if let currentList = currentLists.first {
-                                    try? await listManager.removeFromList(listId: currentList.id, itemId: item.id)
+                                    try? await viewModel.removeFromList(listId: currentList.id, itemId: item.id)
                                 }
-                                
-                                try await listManager.addToList(listId: listManager.seenList.id, movie: item.asMovie(), mediaType: item.mediaType)
+
+                                try await viewModel.addToList(listId: viewModel.seenList.id, movie: item.asMovie(), mediaType: item.mediaType)
                             }
                         },
                         onDelete: {
                             Task {
                                 if let currentList = currentLists.first {
-                                    try? await listManager.removeFromList(listId: currentList.id, itemId: item.id)
+                                    try? await viewModel.removeFromList(listId: currentList.id, itemId: item.id)
                                 }
                             }
                         }
                     )
                     .onAppear {
                         // When the last item appears, load more
-                        if item.id == paginatedItems.last?.id {
+                        if item.id == paginated.last?.id {
                             itemsLimit += 50
                         }
                     }
@@ -318,101 +319,13 @@ struct ListsView: View {
     
     private var filteredAndSortedItems: [MediaListItem] {
         guard let list = currentLists.first else { return [] }
-        var items = list.items
-        
-        // Apply search filter
-        if !searchText.isEmpty {
-            items = items.filter { $0.title.range(of: searchText, options: .caseInsensitive) != nil }
-        }
-        
-        // Apply runtime filter (movies only)
-        if filters.runtimePreset != .any || filters.customRuntimeMin != nil || filters.customRuntimeMax != nil {
-            let (min, max) = filters.getRuntimeRange()
-            items = items.filter { item in
-                guard item.mediaType == .movie, let runtime = item.runtime else { return false }
-                
-                if let minRuntime = min, runtime < minRuntime { return false }
-                if let maxRuntime = max, runtime > maxRuntime { return false }
-                return true
-            }
-        }
-        
-        // Apply rating filter
-        if filters.ratingPreset != .any || filters.customRatingMin != nil || filters.customRatingMax != nil {
-            let (min, max) = filters.getRatingRange()
-            items = items.filter { item in
-                guard let voteAverage = item.voteAverage else { return false }
-                if let minRating = min, voteAverage < minRating { return false }
-                if let maxRating = max, voteAverage > maxRating { return false }
-                return true
-            }
-        }
-        
-        // Apply release period filter
-        if filters.releasePeriodPreset != .any || filters.customYearStart != nil || filters.customYearEnd != nil {
-             let (start, end) = filters.getYearRange()
-             items = items.filter { item in
-                 guard let releaseDate = item.releaseDate, let year = Int(releaseDate.prefix(4)) else { return false }
-                 if let startYear = start, year < startYear { return false }
-                 if let endYear = end, year > endYear { return false }
-                 return true
-             }
-        }
-        
-        // Apply country filter
-        if !filters.countries.isEmpty {
-            items = items.filter { item in
-                guard let originCountry = item.originCountry else { return false }
-                // Check if any of the item's origin countries are in the selected countries
-                return !Set(originCountry).isDisjoint(with: Set(filters.countries))
-            }
-        }
-        
-        // Apply Streaming Platforms filter
-        if !filters.streamingPlatforms.isEmpty {
-            items = items.filter { item in
-                // If availability not loaded yet, include it (optimistic) or exclude? 
-                // Exclude is safer for "Show me only Netflix", but UX is bad if loading.
-                // Let's exclude, but ensure we trigger load.
-                guard let availableOn = availabilityService.availableItems[item.id] else {
-                    return false 
-                }
-                
-                // Map platform Names (from TMDB) to our StreamingPlatform enum rawValues if needed
-                // Our cache stores Provider Names. Filters store StreamingPlatform.rawValue (which are names like "Netflix", "Disney+").
-                // TMDB names usually match well.
-                
-                // Check intersection
-                return !availableOn.isDisjoint(with: filters.streamingPlatforms)
-            }
-        }
-        
-        // Apply media type filter
-        switch filters.mediaType {
-        case .both:
-            break
-        case .movies:
-            items = items.filter { $0.mediaType == .movie }
-        case .tvShows:
-            items = items.filter { $0.mediaType == .tv }
-        }
-        
-        // Apply sorting
-        switch filters.sortBy {
-        case .popularityDesc, .popularityAsc:
-            // Sort by date added as fallback (no popularity data stored)
-            items.sort { $0.addedAt > $1.addedAt }
-        case .ratingDesc:
-            items.sort { ($0.voteAverage ?? 0) > ($1.voteAverage ?? 0) }
-        case .ratingAsc:
-            items.sort { ($0.voteAverage ?? 0) < ($1.voteAverage ?? 0) }
-        case .releaseDateDesc:
-            items.sort { ($0.releaseDate ?? "") > ($1.releaseDate ?? "") }
-        case .releaseDateAsc:
-            items.sort { ($0.releaseDate ?? "") < ($1.releaseDate ?? "") }
-        }
-        
-        return items
+        return ListItemFilterer.filteredAndSorted(
+            list.items,
+            searchText: searchText,
+            filters: filters,
+            availabilityByItemId: availabilityService.availableItems,
+            applyReleasePeriodFilter: true
+        )
     }
     
     private var filteredAndSortedLists: [MediaList] {
@@ -603,7 +516,7 @@ struct MediaItemRow: View {
                 // Poster image - left side
                 if let posterPath = item.posterPath,
                    let url = URL(string: "https://image.tmdb.org/t/p/w342\(posterPath)") {
-                    CachedAsyncImage(url: url) { image in
+                    CachedAsyncImage(url: url, maxPixelSize: 630) { image in
                         image
                             .resizable()
                             .aspectRatio(contentMode: .fill)
@@ -959,23 +872,12 @@ struct MediaItemRow: View {
         providerLookupCompleted = true
     }
 
-    private func isValid(_ provider: Provider) -> Bool {
-        guard provider.hasUsableLogo else { return false }
-        if provider.externalLink != nil || providerLink != nil { return true }
-        return PlatformDeepLinkHelper.hasPlatformHomepage(for: provider)
-    }
-    
     private func processProviders(_ countryProviders: CountryProviders) {
-        providerLink = countryProviders.link
-        
-        // Priority: Flatrate > Rent > Buy
-        if let flatrate = countryProviders.flatrate, let valid = flatrate.first(where: isValid) {
-            topProvider = valid
-        } else if let rent = countryProviders.rent, let valid = rent.first(where: isValid) {
-            topProvider = valid
-        } else if let buy = countryProviders.buy, let valid = buy.first(where: isValid) {
-            topProvider = valid
-        }
+        let result = ProviderSelection.selectTopProvider(from: countryProviders)
+        providerLink = result.link
+        // topProvider è aggiornato solo se troviamo un provider valido (non azzeriamo
+        // quello già mostrato), come nel comportamento originale.
+        if let top = result.top { topProvider = top }
     }
 }
 
@@ -1018,83 +920,25 @@ struct CustomListDetailView: View {
     }
 
     private var filteredAndSortedItems: [MediaListItem] {
-        var items = currentList.items
-
-        if !searchText.isEmpty {
-            items = items.filter { $0.title.range(of: searchText, options: .caseInsensitive) != nil }
-        }
-
-        // Apply runtime filter
-        if filters.runtimePreset != .any || filters.customRuntimeMin != nil || filters.customRuntimeMax != nil {
-            let (min, max) = filters.getRuntimeRange()
-            items = items.filter { item in
-                guard item.mediaType == .movie, let runtime = item.runtime else { return false }
-                if let minRuntime = min, runtime < minRuntime { return false }
-                if let maxRuntime = max, runtime > maxRuntime { return false }
-                return true
-            }
-        }
-
-        // Apply rating filter
-        if filters.ratingPreset != .any || filters.customRatingMin != nil || filters.customRatingMax != nil {
-            let (min, max) = filters.getRatingRange()
-            items = items.filter { item in
-                guard let voteAverage = item.voteAverage else { return false }
-                if let minRating = min, voteAverage < minRating { return false }
-                if let maxRating = max, voteAverage > maxRating { return false }
-                return true
-            }
-        }
-
-        // Apply country filter
-        if !filters.countries.isEmpty {
-            items = items.filter { item in
-                guard let originCountry = item.originCountry else { return false }
-                return !Set(originCountry).isDisjoint(with: Set(filters.countries))
-            }
-        }
-
-        // Apply Streaming Platforms filter
-        if !filters.streamingPlatforms.isEmpty {
-            items = items.filter { item in
-                guard let availableOn = availabilityService.availableItems[item.id] else {
-                    return false
-                }
-                return !availableOn.isDisjoint(with: filters.streamingPlatforms)
-            }
-        }
-
-        switch filters.mediaType {
-        case .both:
-            break
-        case .movies:
-            items = items.filter { $0.mediaType == .movie }
-        case .tvShows:
-            items = items.filter { $0.mediaType == .tv }
-        }
-
-        switch filters.sortBy {
-        case .popularityDesc, .popularityAsc:
-            items.sort { $0.addedAt > $1.addedAt }
-        case .ratingDesc:
-            items.sort { ($0.voteAverage ?? 0) > ($1.voteAverage ?? 0) }
-        case .ratingAsc:
-            items.sort { ($0.voteAverage ?? 0) < ($1.voteAverage ?? 0) }
-        case .releaseDateDesc:
-            items.sort { ($0.releaseDate ?? "") > ($1.releaseDate ?? "") }
-        case .releaseDateAsc:
-            items.sort { ($0.releaseDate ?? "") < ($1.releaseDate ?? "") }
-        }
-
-        return items
-    }
-
-    private var paginatedItems: [MediaListItem] {
-        Array(filteredAndSortedItems.prefix(itemsLimit))
+        // Fix bug filtro: ora applica il filtro periodo/anno come la list-detail principale.
+        // Storicamente questo struct lo OMETTEVA (omissione copia-incolla), così il filtro
+        // periodo non aveva effetto nelle liste custom. Unificato a `true` — vedi ListItemFilterer.
+        ListItemFilterer.filteredAndSorted(
+            currentList.items,
+            searchText: searchText,
+            filters: filters,
+            availabilityByItemId: availabilityService.availableItems,
+            applyReleasePeriodFilter: true
+        )
     }
 
     var body: some View {
-        ZStack(alignment: .top) {
+        // Memoizzazione (2.4): filtro+sort calcolati UNA volta per render. Prima erano
+        // ricalcolati separatamente da paginatedItems, .isEmpty e .count → 3-4 passate di
+        // filter+sort sull'intera lista a ogni render.
+        let items = filteredAndSortedItems
+        let paginated = Array(items.prefix(itemsLimit))
+        return ZStack(alignment: .top) {
             Color.theme.background.ignoresSafeArea()
 
             VStack(spacing: 0) {
@@ -1133,7 +977,7 @@ struct CustomListDetailView: View {
                 .padding(.horizontal, 20)
                 .padding(.vertical, 12)
 
-                if filteredAndSortedItems.isEmpty {
+                if items.isEmpty {
                     VStack(spacing: 16) {
                         Image(systemName: "list.bullet")
                             .font(.system(size: 60))
@@ -1147,7 +991,7 @@ struct CustomListDetailView: View {
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 20) {
-                            ForEach(paginatedItems) { item in
+                            ForEach(paginated) { item in
                                 MediaItemRow(
                                     item: item,
                                     isInSeenList: false,
@@ -1170,7 +1014,7 @@ struct CustomListDetailView: View {
                         .padding(.bottom, 100)
                     }
                     .overlay(alignment: .bottom) {
-                        if filteredAndSortedItems.count > paginatedItems.count {
+                        if items.count > paginated.count {
                             Button {
                                 itemsLimit += 100
                             } label: {
@@ -1299,7 +1143,7 @@ struct ListCard: View {
                 if let lastItem = list.items.last,
                    let posterPath = lastItem.posterPath,
                    let url = URL(string: "https://image.tmdb.org/t/p/w342\(posterPath)") {
-                    CachedAsyncImage(url: url) { image in
+                    CachedAsyncImage(url: url, maxPixelSize: 630) { image in
                         image
                             .resizable()
                             .aspectRatio(2/3, contentMode: .fit)
@@ -1329,7 +1173,7 @@ struct ListCard: View {
                         ForEach(lastFourItems) { item in
                             if let posterPath = item.posterPath,
                                let url = URL(string: "https://image.tmdb.org/t/p/w342\(posterPath)") {
-                                CachedAsyncImage(url: url) { image in
+                                CachedAsyncImage(url: url, maxPixelSize: 630) { image in
                                     image
                                         .resizable()
                                         .aspectRatio(2/3, contentMode: .fit)

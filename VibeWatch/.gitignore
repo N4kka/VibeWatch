@@ -21,9 +21,14 @@ VibeWatchApp/Scripts/.DS_Store
 # Local secrets
 VibeWatchApp/Config/Secrets.xcconfig
 
+# Firebase config (contiene API_KEY; restringere la chiave in Google Cloud Console)
+VibeWatchApp/GoogleService-Info.plist
+
 # Local-only docs, scripts, and migrations
 docs/
-supabase/
+# Anchored (leading slash) so it ignores ONLY the top-level migrations folder and
+# NOT source dirs like VibeWatchApp/Core/Supabase/ (case-insensitive FS would match it).
+/supabase/
 VibeWatchApp/Scripts/
 VibeWatchApp/Config/
 *.md

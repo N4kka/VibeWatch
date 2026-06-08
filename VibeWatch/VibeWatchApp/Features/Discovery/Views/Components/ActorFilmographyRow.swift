@@ -78,7 +78,7 @@ struct ActorFilmographyRow: View {
     @ViewBuilder
     private var posterView: some View {
         if let url = credit.posterURL342 {
-            CachedAsyncImage(url: url) { image in
+            CachedAsyncImage(url: url, maxPixelSize: 630) { image in
                 image
                     .resizable()
                     .aspectRatio(contentMode: .fill)
@@ -178,7 +178,7 @@ struct ActorFilmographyRow: View {
                 )
             } label: {
                 HStack {
-                    CachedAsyncImage(url: provider.logoURL)
+                    CachedAsyncImage(url: provider.logoURL, maxPixelSize: 60)
                         .frame(width: 20, height: 20)
                         .background(Color.white)
                         .clipShape(RoundedRectangle(cornerRadius: 4))

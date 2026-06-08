@@ -255,11 +255,11 @@ struct UserGamificationState {
     }
 
     var xpForCurrentLevel: Int {
-        levelThreshold(for: currentLevel)
+        GamificationLeveling.threshold(for: currentLevel)
     }
 
     var xpForNextLevel: Int {
-        levelThreshold(for: currentLevel + 1)
+        GamificationLeveling.threshold(for: currentLevel + 1)
     }
 
     var xpProgressInLevel: Int {
@@ -288,27 +288,8 @@ struct UserGamificationState {
         Int((streakBonusMultiplier - 1.0) * 100)
     }
 
-    private func levelThreshold(for level: Int) -> Int {
-        // Exponential growth curve
-        switch level {
-        case 1: return 0
-        case 2...5: return (level - 1) * 100
-        case 6...10: return 500 + (level - 5) * 300
-        case 11...15: return 2000 + (level - 10) * 600
-        case 16...20: return 5000 + (level - 15) * 1000
-        case 21...25: return 10000 + (level - 20) * 2000
-        case 26...30: return 20000 + (level - 25) * 4000
-        case 31...40: return 40000 + (level - 30) * 4000
-        default: return 80000 + (level - 40) * 5000
-        }
-    }
-
     mutating func calculateLevel() {
-        var level = 1
-        while levelThreshold(for: level + 1) <= totalXP && level < 50 {
-            level += 1
-        }
-        currentLevel = level
+        currentLevel = GamificationLeveling.level(forTotalXP: totalXP)
     }
 }
 
@@ -993,5 +974,25 @@ class GamificationService: ObservableObject {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.string(from: date)
+    }
+
+    // MARK: - Daily Login Gate
+
+    private func dailyOpenKey(userId: String) -> String {
+        "lastDailyOpenAward_\(userId)"
+    }
+
+    /// True at most once per local calendar day per user. Used to gate the daily-login
+    /// XP award + toast so it only appears once a day, independently of remote state
+    /// (which can be unreliable across cold launches / offline).
+    func shouldAwardDailyOpen(userId: String) -> Bool {
+        let last = UserDefaults.standard.string(forKey: dailyOpenKey(userId: userId))
+        return last != dateString(for: Date())
+    }
+
+    /// Record that today's daily-login award has been granted, so subsequent launches
+    /// today skip it.
+    func markDailyOpenAwarded(userId: String) {
+        UserDefaults.standard.set(dateString(for: Date()), forKey: dailyOpenKey(userId: userId))
     }
 }

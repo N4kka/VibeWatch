@@ -102,11 +102,7 @@ class DiscoveryViewModel: ObservableObject {
     }
 
     func loadContentIfNeeded() async {
-        if shouldReloadForNewDay() {
-            await loadContent(forceRefresh: true)
-        } else {
-            await loadContent(forceRefresh: false)
-        }
+        await loadContent(forceRefresh: false)
     }
 
     /// Load content - uses database cache for instant loading!
@@ -118,7 +114,10 @@ class DiscoveryViewModel: ObservableObject {
             return
         }
 
-        isLoading = hasNoContent
+        // Full-screen spinner only on a true cold start with nothing cached (first install).
+        // When any cached rows exist we skip straight to instant paint — the stale-while-revalidate
+        // stream yields the cache immediately, so a spinner would just flash over content.
+        isLoading = hasNoContent && !sqliteService.hasCachedPersonalizedContent()
         isRefreshing = forceRefresh
         error = nil
 
@@ -138,7 +137,12 @@ class DiscoveryViewModel: ObservableObject {
         ) {
             guard !carousels.isEmpty else { continue }
             generatedCarousels = carousels
-            self.personalizedCarousels = applyGlobalFilters(to: carousels)
+            // Animate only when swapping over existing content (stale → fresh).
+            // First paint (empty → cache) stays instant so cached items appear immediately.
+            let animate = !hasNoContent
+            withAnimation(animate ? .easeInOut(duration: 0.35) : nil) {
+                self.personalizedCarousels = applyGlobalFilters(to: carousels)
+            }
             hasLoadedOnce = true
             isLoading = false
             isRefreshing = false

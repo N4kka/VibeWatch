@@ -215,7 +215,7 @@ struct SearchResultRow: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            CachedAsyncImage(url: result.posterURL)
+            CachedAsyncImage(url: result.posterURL, maxPixelSize: 630)
                 .aspectRatio(contentMode: .fill)
                 .frame(width: 80, height: 120)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
