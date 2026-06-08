@@ -21,8 +21,10 @@ VibeWatchApp/Scripts/.DS_Store
 # Local secrets
 VibeWatchApp/Config/Secrets.xcconfig
 
-# Firebase config (contiene API_KEY; restringere la chiave in Google Cloud Console)
-VibeWatchApp/GoogleService-Info.plist
+# Firebase config: tracciato di proposito (chiavi CLIENT, già presenti nella history e
+# negli altri branch). Tenerlo tracciato evita che `git checkout`/merge tra branch lo
+# cancellino dal disco rompendo FirebaseApp.configure(). Restringere comunque la API key
+# al bundle id iOS + App Check in Google Cloud Console (repo pubblico).
 
 # Local-only docs, scripts, and migrations
 docs/
