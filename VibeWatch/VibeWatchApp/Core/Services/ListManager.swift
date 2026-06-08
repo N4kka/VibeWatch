@@ -118,7 +118,14 @@ class ListManager: ObservableObject {
         }
 
         Logger.info("[ListManager] Syncing lists for authenticated user: \(authenticatedUserId.prefix(8))...")
-        
+
+        // Garantisce la riga profiles(authenticatedUserId) PRIMA di scrivere lists/list_items
+        // sotto quell'id: lists.user_id e list_items.user_id hanno FK → profiles(id). Se il
+        // profilo manca (la riga viene creata da ensureDeviceProfileInSQLite all'avvio, spesso
+        // ancora con il deviceId perché l'auth non è stata ripristinata), ogni insert locale
+        // dell'utente autenticato fallirebbe in silenzio nel catch.
+        await ensureDeviceProfileInSQLite()
+
         do {
             // 0. Flush any locally-queued changes (adds/removes/moves) to Supabase BEFORE
             //    pulling remote state. Otherwise a pull can clobber local edits that haven't
@@ -177,6 +184,12 @@ class ListManager: ObservableObject {
 
             // 5. Update local state with the merged lists
             applyLists(remoteLists)
+            // Il pull può aver portato in memoria liste core con un id REMOTO diverso dalla
+            // canonica locale. Con l'indice univoco parziale su lists(user_id, type) quell'id
+            // remoto non può essere persistito (INSERT OR IGNORE lo salta) → un add successivo
+            // fallirebbe la FK e l'item sparirebbe. Riallinea le core all'id canonico locale
+            // PRIMA di salvare, così saveListsToSQLite scrive su righe realmente esistenti.
+            await reconcileCoreListIdentities()
             await saveListsToSQLite()
 
             // 6. Flush subito le liste locali-only appena accodate, così restano "caricate al
@@ -186,12 +199,23 @@ class ListManager: ObservableObject {
             }
 
             Logger.info("[ListManager] Lists synced successfully for authenticated user.")
-            
+
         } catch {
             Logger.error("[ListManager] Error syncing lists for authenticated user: \(error)")
             // If fetching remote lists fails, perhaps revert to local only or show error
             // For now, we'll just log and keep whatever local state was there
         }
+
+        // Ricarica SEMPRE lo stato LOCALE per l'utente autenticato (offline-first), anche se il
+        // pull remoto sopra è fallito. Decisivo per il bug "gli item spariscono al riavvio": al
+        // cold launch loadListsFromSQLite gira con il deviceId (la sessione auth non è ancora
+        // ripristinata) e carica le liste del DEVICE, vuote; i passi 1-5 ricostruiscono lo stato
+        // in memoria dal REMOTO (fetchLists), che però può non contenere gli item non ancora
+        // sincronizzati (es. push outbox fallito) → gli item già in SQLite sotto l'id autenticato
+        // non venivano MAI caricati in memoria. Ora `currentUser` è valorizzato: questa load legge
+        // le liste+item locali dell'utente autenticato e li rende visibili (il remoto è già stato
+        // fuso in SQLite da saveListsToSQLite, INSERT OR IGNORE non distruttivo).
+        await loadListsFromSQLite()
     }
     
     // Call this when user logs out
@@ -305,6 +329,7 @@ class ListManager: ObservableObject {
             }
 
             applyLists(loadedLists)
+            await reconcileCoreListIdentities()
             Logger.info("[ListManager] Loaded \(loadedLists.count) lists with \(itemRows.count) items from SQLite")
         } catch {
             Logger.error("[ListManager] Failed to load from SQLite: \(error)")
@@ -313,6 +338,51 @@ class ListManager: ObservableObject {
         }
     }
     
+    /// Riallinea ogni lista core in memoria (watchlist/seen/liked/disliked) all'id CANONICO
+    /// presente in SQLite, così le scritture (addItemToSQLite) puntano sempre a una riga che
+    /// esiste davvero.
+    ///
+    /// Dopo la migrazione 6 esiste UNA sola lista core attiva per (user, type) — la più vecchia
+    /// con item. Ma il pull remoto (`fetchLists` → `applyLists`) può mettere in memoria una core
+    /// con id remoto diverso; l'indice univoco parziale impedisce di persistere quell'id, quindi
+    /// un item aggiunto contro di esso colpirebbe la FK e sparirebbe. Qui adottiamo l'id canonico
+    /// e fondiamo gli item per (mediaId, mediaType) così nulla scompare visivamente.
+    func reconcileCoreListIdentities() async {
+        let coreTypes: [ListType] = [.watchlist, .seen, .liked, .disliked]
+        for type in coreTypes {
+            guard let memIndex = lists.firstIndex(where: { $0.type == type }) else { continue }
+            let current = lists[memIndex]
+
+            let rows = (try? await db.queryRaw(
+                "SELECT id, created_at FROM lists WHERE user_id = ? AND type = ? AND deleted_at IS NULL ORDER BY created_at ASC, id ASC LIMIT 1",
+                parameters: [userId, type.rawValue]
+            )) ?? []
+
+            guard let canonId = rows.first?["id"] as? String else {
+                // Nessuna riga canonica: persisti quella in memoria così diventa la canonica.
+                await ensureListInSQLite(current)
+                continue
+            }
+
+            guard canonId != current.id else { continue }
+
+            var seenKeys = Set<String>()
+            let mergedItems = current.items.filter {
+                seenKeys.insert("\($0.mediaId)-\($0.mediaType.rawValue)").inserted
+            }
+            let createdAt = ISO8601DateFormatter().date(from: rows.first?["created_at"] as? String ?? "") ?? current.createdAt
+            lists[memIndex] = MediaList(
+                id: canonId,
+                name: current.name,
+                description: current.description,
+                type: type,
+                createdAt: createdAt,
+                items: mergedItems
+            )
+        }
+        updateDefaultReferences(from: lists)
+    }
+
     /// Ensure all in-memory lists exist in both SQLite and Supabase.
     ///
     /// 4.3b — taglio dell'N+1 a ogni avvio: prima questo metodo faceva `supabase.createList`
@@ -387,24 +457,32 @@ class ListManager: ObservableObject {
     
     /// Ensure device profile exists in SQLite (required for foreign key constraint)
     private func ensureDeviceProfileInSQLite() async {
+        // `profiles.email` ha un vincolo UNIQUE. Usare una email fissa ("device@local") per
+        // OGNI profilo significa che, dopo il login, l'INSERT OR IGNORE del profilo dell'utente
+        // autenticato collide sull'email del profilo-device già esistente e viene SALTATO in
+        // silenzio → la riga profiles(authedUserId) non nasce mai → ogni scrittura su
+        // lists/list_items con quel user_id viola la FK (foreign_keys=ON) e l'item "sparisce".
+        // Email univoca per user_id → ogni profilo (device o autenticato) viene creato.
+        let placeholderEmail = "\(userId)@local"
         let success = db.execute("""
             INSERT OR IGNORE INTO profiles (id, email, display_name, avatar_url, created_at, updated_at)
             VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))
         """, parameters: [
             userId,
-            "device@local",
+            placeholderEmail,
             "Local User",
             nil as String? as Any
         ])
-        
+
         if success {
-            Logger.debug("[ListManager] Ensured device profile exists in SQLite")
+            Logger.debug("[ListManager] Ensured profile \(userId.prefix(8)) exists in SQLite")
         } else {
-            Logger.warning("[ListManager] Failed to ensure device profile in SQLite")
+            Logger.warning("[ListManager] Failed to ensure profile in SQLite")
         }
     }
     
     private func ensureListInSQLite(_ list: MediaList) async {
+        await ensureDeviceProfileInSQLite()
         let success = db.execute("""
             INSERT OR IGNORE INTO lists (id, name, description, type, created_at, user_id)
             VALUES (?, ?, ?, ?, ?, ?)
@@ -782,11 +860,14 @@ class ListManager: ObservableObject {
     private func removeItemFromSQLite(_ itemId: String) async {
         do {
             // Soft delete in local SQLite
-            _ = try await db.queryRaw("""
+            let success = db.execute("""
                 UPDATE list_items
-                SET deleted_at = datetime('now')
+                SET deleted_at = datetime('now'), updated_at = datetime('now')
                 WHERE id = ?
             """, parameters: [itemId])
+            guard success else {
+                throw SQLiteError.queryFailed("Failed to soft-delete list item")
+            }
             
             // Queue for sync
             try await sync.queueOperation(
@@ -809,11 +890,41 @@ class ListManager: ObservableObject {
         return list.items.contains(where: { $0.mediaId == mediaId && $0.mediaType == mediaType })
     }
     
+    /// Restituisce l'id lista contro cui SCRIVERE gli item, garantendo che esistano sia la riga
+    /// `profiles(userId)` sia la riga `lists` (FK con `foreign_keys=ON`). Per le liste core
+    /// ritorna l'id CANONICO per (user, type): così una scrittura non punta mai a un id
+    /// sintetizzato (race d'avvio tra loadLists/ensureListsInDatabase/sync, o cambio user_id su
+    /// login-logout) che l'indice univoco parziale rifiuterebbe di persistere → l'INSERT non
+    /// fallisce più in silenzio lasciando l'item solo in memoria (causa "sparisce al riavvio").
+    private func persistedListId(forWriting listId: String) async -> String {
+        await ensureDeviceProfileInSQLite()
+        guard let list = lists.first(where: { $0.id == listId }) else {
+            return listId
+        }
+        if list.type == .custom {
+            await ensureListInSQLite(list)
+            return list.id
+        }
+        let rows = (try? await db.queryRaw(
+            "SELECT id FROM lists WHERE user_id = ? AND type = ? AND deleted_at IS NULL ORDER BY created_at ASC, id ASC LIMIT 1",
+            parameters: [userId, list.type.rawValue]
+        )) ?? []
+        if let canon = rows.first?["id"] as? String {
+            return canon
+        }
+        await ensureListInSQLite(list)
+        return list.id
+    }
+
     private func addItemToSQLite(_ item: MediaListItem, listId: String) async {
+        // Risolvi (e garantisci) la riga lista canonica + profilo PRIMA dell'INSERT.
+        let targetListId = await persistedListId(forWriting: listId)
         do {
+            let addedAt = ISO8601DateFormatter().string(from: item.addedAt)
+            let updatedAt = ISO8601DateFormatter().string(from: Date())
             let values: [String: Any] = [
                 "id": item.id,
-                "list_id": listId,
+                "list_id": targetListId,
                 "user_id": userId,
                 "media_id": item.mediaId,
                 "media_type": item.mediaType.rawValue,
@@ -826,18 +937,23 @@ class ListManager: ObservableObject {
                 "release_date": item.releaseDate ?? "",
                 "genres": intArray(item.genres),
                 "overview": item.overview ?? "",
-                "added_at": ISO8601DateFormatter().string(from: Date())
+                "added_at": addedAt,
+                "updated_at": updatedAt
             ]
             
             // Insert to local SQLite
             _ = try await db.insert("list_items", values: values)
+
+            var syncPayload = values
+            syncPayload["created_at"] = addedAt
+            syncPayload["updated_at"] = updatedAt
             
             // Queue for sync
             try await sync.queueOperation(
                 table: "list_items",
                 operationType: "INSERT",
                 recordId: item.id,
-                payload: values,
+                payload: syncPayload,
                 dependsOn: nil
             )
             

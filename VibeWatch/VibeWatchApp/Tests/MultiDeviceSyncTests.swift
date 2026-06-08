@@ -308,6 +308,94 @@ final class MockSyncEngine: SyncEngineProtocol, @unchecked Sendable {
     func pullFromRemote() async {}
 }
 
+final class SyncEnginePayloadNormalizationTests: XCTestCase {
+
+    func test_listItemsInsertPayloadMissingRemoteTimestampsIsNormalized() {
+        let addedAt = "2026-06-08T12:00:00Z"
+        let normalized = SyncEngine.normalizedMutationRecord(
+            table: "list_items",
+            operationType: "INSERT",
+            recordId: "item-1",
+            payload: [
+                "id": "item-1",
+                "list_id": "list-1",
+                "user_id": "user-1",
+                "media_id": 10,
+                "media_type": "movie",
+                "title": "Movie 10",
+                "added_at": addedAt
+            ]
+        )
+
+        XCTAssertEqual(normalized["created_at"] as? String, addedAt)
+        XCTAssertNotNil(normalized["updated_at"] as? String)
+        XCTAssertEqual(normalized["added_at"] as? String, addedAt)
+    }
+
+    func test_recoverRetryableListItemOperationsSQLResetsExhaustedFailedInserts() async throws {
+        let dbPath = (NSTemporaryDirectory() as NSString)
+            .appendingPathComponent("vw_outbox_recovery_\(UUID().uuidString).sqlite")
+        let db = SQLiteService(dbPath: dbPath)
+        defer { try? FileManager.default.removeItem(atPath: dbPath) }
+
+        XCTAssertTrue(db.execute("""
+            INSERT INTO sync_outbox (
+                operation_id, user_id, table_name, operation_type, record_id,
+                payload, status, attempts, next_retry_at, last_error
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, parameters: [
+            "op-1",
+            "user-1",
+            "list_items",
+            "INSERT",
+            "item-1",
+            #"{"id":"item-1","list_id":"list-1","user_id":"user-1","media_id":10,"media_type":"movie","title":"Movie 10","added_at":"2026-06-08T12:00:00Z"}"#,
+            "failed",
+            5,
+            "2099-01-01T00:00:00Z",
+            "missing created_at"
+        ]))
+
+        XCTAssertTrue(db.execute(SyncEngine.recoverRetryableListItemOperationsSQL(maxRetries: 5)))
+
+        let rows = try await db.queryRaw(
+            "SELECT status, attempts, next_retry_at, last_error FROM sync_outbox WHERE operation_id = ?",
+            parameters: ["op-1"]
+        )
+        let row = try XCTUnwrap(rows.first)
+        XCTAssertEqual(row["status"] as? String, "pending")
+        XCTAssertEqual(row["attempts"] as? Int, 0)
+        XCTAssertNil(row["next_retry_at"] as? String)
+        XCTAssertNil(row["last_error"] as? String)
+    }
+}
+
+final class DatabaseMigrationIndexTests: XCTestCase {
+
+    private var db: SQLiteService!
+    private var dbPath: String!
+
+    override func setUp() async throws {
+        try await super.setUp()
+        dbPath = (NSTemporaryDirectory() as NSString)
+            .appendingPathComponent("vw_migration_index_\(UUID().uuidString).sqlite")
+        db = SQLiteService(dbPath: dbPath)
+    }
+
+    override func tearDown() async throws {
+        db = nil
+        if let dbPath { try? FileManager.default.removeItem(atPath: dbPath) }
+        try await super.tearDown()
+    }
+
+    func test_listItemsPaginationIndexSQLTargetsExistingColumns() {
+        XCTAssertTrue(
+            db.execute(DatabaseMigrationManager.listItemsPaginationIndexSQL),
+            "L'indice list_items della unified migration deve usare colonne esistenti nello schema locale"
+        )
+    }
+}
+
 // MARK: - ListManager Write Characterization (Fase 2 — rete pre #6 dual-write)
 //
 // Fotografano il comportamento di SCRITTURA: le mutazioni passano dall'outbox (SyncEngine).
@@ -360,6 +448,15 @@ final class ListManagerWriteCharacterizationTests: XCTestCase {
         XCTAssertEqual(inserts.first?.payload["media_id"] as? Int, 42)
     }
 
+    func test_addToList_enqueuesListItemsInsertWithRemoteTimestamps() async throws {
+        try await manager.addToList(listId: watchlistId, movie: Self.movie(id: 43), mediaType: .movie)
+
+        let insert = try XCTUnwrap(sync.queued.first { $0.table == "list_items" && $0.operationType == "INSERT" })
+        XCTAssertNotNil(insert.payload["added_at"] as? String, "list_items INSERT deve inviare added_at al backend")
+        XCTAssertNotNil(insert.payload["created_at"] as? String, "list_items INSERT deve inviare created_at per apply_mutations")
+        XCTAssertNotNil(insert.payload["updated_at"] as? String, "list_items INSERT deve inviare updated_at per conflict/sync")
+    }
+
     func test_removeFromList_enqueuesListItemsDelete() async throws {
         try await manager.addToList(listId: watchlistId, movie: Self.movie(id: 7), mediaType: .movie)
         let item = try XCTUnwrap(manager.lists.first { $0.type == .watchlist }?.items.first)
@@ -408,6 +505,68 @@ final class ListManagerWriteCharacterizationTests: XCTestCase {
         XCTAssertEqual(inserts.count, 1, "createList deve accodare un INSERT lists sull'outbox")
         XCTAssertEqual(inserts.first?.payload["name"] as? String, "My List")
         XCTAssertEqual(inserts.first?.payload["user_id"] as? String, "user-1")
+    }
+}
+
+@MainActor
+final class ListManagerSQLitePersistenceTests: XCTestCase {
+
+    private var db: SQLiteService!
+    private var dbPath: String!
+    private var sync: MockSyncEngine!
+    private var manager: ListManager!
+
+    override func setUp() async throws {
+        try await super.setUp()
+        dbPath = (NSTemporaryDirectory() as NSString)
+            .appendingPathComponent("vw_lm_fk_\(UUID().uuidString).sqlite")
+        db = SQLiteService(dbPath: dbPath)
+        sync = MockSyncEngine()
+        manager = ListManager(db: db, sync: sync, authService: MockAuth(user: nil), autoStart: false)
+        manager.lists = [manager.watchlist, manager.seenList, manager.likedList, manager.dislikedList]
+    }
+
+    override func tearDown() async throws {
+        manager = nil; db = nil; sync = nil
+        if let dbPath { try? FileManager.default.removeItem(atPath: dbPath) }
+        try await super.tearDown()
+    }
+
+    private static func movie(id: Int) -> Movie {
+        Movie(
+            id: id, title: "Movie \(id)", overview: "", posterPath: nil, backdropPath: nil,
+            releaseDate: "2026-01-01", voteAverage: 7, voteCount: 1, genreIds: nil, genres: nil,
+            adult: false, originalLanguage: "en", popularity: 1, runtime: 100, status: nil,
+            tagline: nil, productionCountries: nil, imdbId: nil
+        )
+    }
+
+    func test_removeFromList_softDeletesSQLiteRowWithForeignKeysOn() async throws {
+        let watchlistId = manager.watchlist.id
+        try await manager.addToList(listId: watchlistId, movie: Self.movie(id: 700), mediaType: .movie)
+        let item = try XCTUnwrap(manager.watchlist.items.first { $0.mediaId == 700 })
+
+        try await manager.removeFromList(listId: watchlistId, itemId: item.id)
+
+        let rows = try await db.queryRaw(
+            "SELECT deleted_at FROM list_items WHERE id = ?",
+            parameters: [item.id]
+        )
+        let deletedAt = rows.first?["deleted_at"] as? String
+        XCTAssertNotNil(deletedAt, "removeFromList deve soft-deletare la riga SQLite, non solo mutare la memoria")
+    }
+
+    func test_createList_persistsCustomListWithForeignKeysOn() async throws {
+        let auth = MockAuth(user: User(id: "user-fk", email: "u@test"))
+        manager = ListManager(db: db, sync: sync, authService: auth, autoStart: false)
+
+        let created = try await manager.createList(name: "Persisted Custom")
+
+        let rows = try await db.queryRaw(
+            "SELECT id FROM lists WHERE id = ? AND user_id = ? AND deleted_at IS NULL",
+            parameters: [created.id, "user-fk"]
+        )
+        XCTAssertEqual(rows.count, 1, "createList deve creare anche la riga SQLite della custom list con FK attive")
     }
 }
 
@@ -519,6 +678,35 @@ final class ListManagerSyncCharacterizationTests: XCTestCase {
 
         XCTAssertTrue(sync.queued.filter { $0.table == "lists" && $0.recordId == "dup" }.isEmpty,
                       "una lista già remota non deve essere ri-accodata")
+    }
+
+    /// Boundary di regressione "gli item spariscono al riavvio" (il layer che nessun fix precedente
+    /// copriva): al cold launch `loadListsFromSQLite` gira col deviceId (sessione auth non ancora
+    /// ripristinata) e carica le liste DEVICE, vuote; poi `syncListsForAuthenticatedUser` ricostruiva
+    /// lo stato in memoria SOLO dal remoto (qui vuoto, es. push outbox fallito 42703) senza mai
+    /// ricaricare le liste/item LOCALI dell'utente autenticato → gli item già presenti in SQLite non
+    /// venivano mai caricati in memoria. Il fix termina il sync con `loadListsFromSQLite()` (ora con
+    /// l'id autenticato) e li rende visibili.
+    func test_syncForAuthenticatedUser_reloadsLocalAuthedItems_whenRemoteEmpty() async throws {
+        // Item già persistito in SQLite sotto l'utente autenticato (come dopo un add fatto da loggato).
+        _ = db.execute("""
+            INSERT INTO lists (id, name, description, type, created_at, user_id)
+            VALUES ('seen-local', 'seen', '', 'seen', '2020-01-01T00:00:00Z', 'user-1')
+        """)
+        _ = db.execute("""
+            INSERT INTO list_items (id, list_id, user_id, media_id, media_type, title, added_at)
+            VALUES ('it-1', 'seen-local', 'user-1', 999, 'movie', 'Persisted Movie', '2020-01-01T00:00:00Z')
+        """)
+        // Stato in memoria "vuoto" come dopo un cold-launch che ha caricato liste device vuote.
+        manager.lists = []
+        remote.remoteLists = []   // remoto vuoto (es. push outbox fallito)
+
+        await manager.syncListsForAuthenticatedUser()
+
+        let seen = manager.lists.first { $0.type == .seen }
+        XCTAssertNotNil(seen, "deve esserci una lista seen in memoria dopo il sync")
+        XCTAssertTrue(seen?.items.contains { $0.id == "it-1" } ?? false,
+                      "l'item locale dell'utente autenticato deve essere ricaricato in memoria, non perso al riavvio")
     }
 
     // MARK: - ensureListsInDatabase (4.3b — N+1 a ogni avvio)

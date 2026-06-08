@@ -9,6 +9,11 @@ import SQLite3
 final class DatabaseMigrationManager {
     static let shared = DatabaseMigrationManager()
 
+    nonisolated static let listItemsPaginationIndexSQL = """
+        CREATE INDEX IF NOT EXISTS idx_list_items_list_added_unified
+        ON list_items(list_id, added_at DESC) WHERE deleted_at IS NULL
+    """
+
     private let db = SQLiteService.shared
     private let supabase = SupabaseService.shared
 
@@ -150,11 +155,8 @@ final class DatabaseMigrationManager {
             ON movie_reactions(user_id, media_id, media_type)
         """)
 
-        // 6. Lists pagination index
-        db.execute("""
-            CREATE INDEX IF NOT EXISTS idx_list_items_list_position
-            ON list_items(list_id, position ASC) WHERE deleted_at IS NULL
-        """)
+        // 6. Lists pagination index. list_items has added_at, not position.
+        db.execute(Self.listItemsPaginationIndexSQL)
 
         Logger.info("[Migration 1] Performance indexes added successfully")
     }

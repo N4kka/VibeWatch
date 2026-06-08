@@ -366,7 +366,7 @@ final class SQLiteService: ObservableObject {
         }
         
         let currentVersion = Int(migrationVersionString) ?? 0
-        let latestVersion = 5
+        let latestVersion = 6
         
         // Only run migrations if not already at latest version
         if currentVersion >= latestVersion {
@@ -492,9 +492,106 @@ final class SQLiteService: ObservableObject {
             }
         }
 
+        if currentVersion < 6 {
+            // Migration 6: collapse duplicate CORE lists (watchlist/seen/liked/disliked).
+            //
+            // Bug "gli item spariscono al riavvio": una nuova quaterna di liste core con UUID
+            // nuovi veniva sintetizzata quasi a ogni avvio (ensureCoreLists + ensureListsInDatabase
+            // + syncListsForAuthenticatedUser). loadListsFromSQLite ordina created_at DESC e la UI
+            // prende `.first` per tipo → la duplicata PIÙ RECENTE, che è VUOTA. Gli item reali
+            // restavano incagliati su una riga più vecchia → apparivano persi.
+            //
+            // Collapse NON distruttivo: per ogni (user_id, type) core si elegge una canonica
+            // (quella con più item, tie-break created_at più vecchio), vi si ri-puntano tutti gli
+            // item delle duplicate (soft-deletando i soli item realmente duplicati per evitare
+            // conflitti su UNIQUE(list_id, media_id, media_type)) e si soft-deletano le duplicate.
+            // Infine un indice univoco parziale impedisce strutturalmente nuove duplicate attive.
+            Logger.info("[SQLite] Migration 6: collapse duplicate core lists + guard index")
+
+            execute("DROP TABLE IF EXISTS _canon")
+            execute("""
+                CREATE TEMP TABLE _canon AS
+                SELECT user_id, type, id AS canon_id FROM (
+                  SELECT l.user_id, l.type, l.id,
+                    ROW_NUMBER() OVER (
+                      PARTITION BY l.user_id, l.type
+                      ORDER BY (SELECT count(*) FROM list_items i WHERE i.list_id = l.id AND i.deleted_at IS NULL) DESC,
+                               l.created_at ASC,
+                               l.id ASC
+                    ) AS rn
+                  FROM lists l
+                  WHERE l.type IN ('watchlist','seen','liked','disliked') AND l.deleted_at IS NULL
+                ) WHERE rn = 1
+            """)
+
+            execute("DROP TABLE IF EXISTS _listmap")
+            execute("""
+                CREATE TEMP TABLE _listmap AS
+                SELECT l.id AS old_id, c.canon_id AS new_id
+                FROM lists l
+                JOIN _canon c ON l.user_id = c.user_id AND l.type = c.type
+                WHERE l.type IN ('watchlist','seen','liked','disliked')
+                  AND l.deleted_at IS NULL
+                  AND l.id <> c.canon_id
+            """)
+
+            // Soft-delete duplicate items keyed by EFFECTIVE target list (canon if mover, else self)
+            // + media, keeping the earliest added_at. Prevents UNIQUE collisions when re-pointing.
+            execute("""
+                UPDATE list_items
+                SET deleted_at = datetime('now'), updated_at = datetime('now')
+                WHERE id IN (
+                  SELECT id FROM (
+                    SELECT li.id,
+                      ROW_NUMBER() OVER (
+                        PARTITION BY COALESCE((SELECT m.new_id FROM _listmap m WHERE m.old_id = li.list_id), li.list_id),
+                                     li.media_id, li.media_type
+                        ORDER BY li.added_at ASC, li.id ASC
+                      ) AS rn
+                    FROM list_items li
+                    WHERE li.deleted_at IS NULL
+                      AND COALESCE((SELECT m.new_id FROM _listmap m WHERE m.old_id = li.list_id), li.list_id)
+                          IN (SELECT canon_id FROM _canon)
+                  ) WHERE rn > 1
+                )
+            """)
+
+            // Re-point the remaining (now conflict-free) items to their canonical list.
+            execute("""
+                UPDATE list_items
+                SET list_id = (SELECT m.new_id FROM _listmap m WHERE m.old_id = list_items.list_id),
+                    updated_at = datetime('now')
+                WHERE deleted_at IS NULL
+                  AND list_id IN (SELECT old_id FROM _listmap)
+            """)
+
+            // Soft-delete the now-redundant non-canonical core lists.
+            execute("""
+                UPDATE lists
+                SET deleted_at = datetime('now'), updated_at = datetime('now')
+                WHERE id IN (SELECT old_id FROM _listmap)
+            """)
+
+            execute("DROP TABLE IF EXISTS _canon")
+            execute("DROP TABLE IF EXISTS _listmap")
+
+            // Structural guard: at most ONE active core list per (user_id, type) going forward.
+            // With this in place a stray INSERT OR IGNORE for a new-UUID core list is a no-op,
+            // and ListManager.reconcileCoreListIdentities() keeps the in-memory id canonical.
+            execute("""
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_lists_one_core_per_user_type
+                ON lists(user_id, type)
+                WHERE type IN ('watchlist','seen','liked','disliked') AND deleted_at IS NULL
+            """)
+
+            // Purge unrecoverable list_items outbox ops stuck on the legacy `created_at` column
+            // mismatch (Postgres 42703). The items themselves live locally; these ops only retry-fail.
+            execute("DELETE FROM sync_outbox WHERE table_name = 'list_items' AND last_error LIKE '%42703%'")
+        }
+
         // Re-enable foreign keys
         execute("PRAGMA foreign_keys = ON")
-        
+
         // Mark migration as complete
         execute("INSERT OR REPLACE INTO app_metadata (key_name, value_text) VALUES ('migration_version', '\(latestVersion)')")
         Logger.info("[SQLite] Migrations complete - now at version \(latestVersion)")
