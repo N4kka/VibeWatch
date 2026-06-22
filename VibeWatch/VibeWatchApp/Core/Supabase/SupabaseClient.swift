@@ -961,6 +961,64 @@ class SupabaseService: ObservableObject {
 
 }
 
+// MARK: - Public Lists (Fase 1)
+
+extension SupabaseService {
+    /// Feed liste pubbliche via RPC `get_public_lists` (ricerca parziale + scope explore/followed).
+    /// La RPC applica già block, auto-hide oltre soglia report e l'esclusione di sé/non-pubbliche.
+    func fetchPublicLists(search: String?, scope: PublicListsScope, limit: Int, offset: Int) async throws -> [PublicList] {
+        guard let client = client else { throw SupabaseError.notConfigured }
+        let trimmed = search?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let rows: [PublicListRow] = try await client
+            .rpc("get_public_lists", params: PublicListsParams(
+                p_search: (trimmed?.isEmpty == false) ? trimmed : nil,
+                p_scope: scope.rawValue,
+                p_limit: limit,
+                p_offset: offset
+            ))
+            .execute()
+            .value
+
+        return rows.map { row in
+            PublicList(
+                id: row.id,
+                name: row.name,
+                description: row.description,
+                type: ListType(rawValue: row.type) ?? .custom,
+                itemCount: row.item_count,
+                coverPosterPaths: row.cover_poster_paths ?? [],
+                followerCount: row.follower_count,
+                updatedAt: row.updated_at,
+                isFollowing: row.is_following
+            )
+        }
+    }
+
+    /// Blocca l'autore di una lista pubblica (owner risolto lato server: nessun user_id esposto).
+    func blockListOwner(listId: String) async throws {
+        _ = try await callRPC(function: "block_list_owner", payload: ["p_list_id": listId])
+    }
+}
+
+private struct PublicListsParams: Encodable {
+    let p_search: String?
+    let p_scope: String
+    let p_limit: Int
+    let p_offset: Int
+}
+
+private struct PublicListRow: Decodable {
+    let id: String
+    let name: String
+    let description: String?
+    let type: String
+    let updated_at: Date?
+    let item_count: Int
+    let cover_poster_paths: [String]?
+    let follower_count: Int
+    let is_following: Bool
+}
+
 private struct ListItemsWithProvidersParams: Encodable {
     let p_list_id: String
     let p_country: String

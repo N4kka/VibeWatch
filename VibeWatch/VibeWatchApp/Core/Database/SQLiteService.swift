@@ -18,6 +18,12 @@ enum SQLiteTable: String, CaseIterable {
     case lists
     case listItems = "list_items"
 
+    // Public lists (Fase 1)
+    case listFollows = "list_follows"
+    case userBlocks = "user_blocks"
+    case listReports = "list_reports"
+    case publicListsCache = "public_lists_cache"
+
     // User activity tables
     case userClipHistory = "user_clip_history"
     case userClipSignals = "user_clip_signals"
@@ -308,6 +314,10 @@ final class SQLiteService: ObservableObject {
             createProfilesTable(),
             createListsTable(),
             createListItemsTable(),
+            createListFollowsTable(),
+            createUserBlocksTable(),
+            createListReportsTable(),
+            createPublicListsCacheTable(),
             createUserClipHistoryTable(),
             createUserClipSignalsTable(),
             createUserPreferencesTable(),
@@ -366,7 +376,7 @@ final class SQLiteService: ObservableObject {
         }
         
         let currentVersion = Int(migrationVersionString) ?? 0
-        let latestVersion = 6
+        let latestVersion = 7
         
         // Only run migrations if not already at latest version
         if currentVersion >= latestVersion {
@@ -587,6 +597,21 @@ final class SQLiteService: ObservableObject {
             // Purge unrecoverable list_items outbox ops stuck on the legacy `created_at` column
             // mismatch (Postgres 42703). The items themselves live locally; these ops only retry-fail.
             execute("DELETE FROM sync_outbox WHERE table_name = 'list_items' AND last_error LIKE '%42703%'")
+        }
+
+        if currentVersion < 7 {
+            // Migration 7: Liste Pubbliche (Fase 1).
+            // - `is_public` su lists (mirror locale dello stato server; solo custom diventano pubbliche)
+            // - tabelle locali per outbox/offline: list_follows, user_blocks, list_reports
+            // - cache metadati per la tab "Followed" offline
+            Logger.info("[SQLite] Migration 7: public lists (is_public + follows/blocks/reports + cache)")
+            if !columnExists("lists", column: "is_public") {
+                execute("ALTER TABLE lists ADD COLUMN is_public INTEGER NOT NULL DEFAULT 0")
+            }
+            execute(createListFollowsTable())
+            execute(createUserBlocksTable())
+            execute(createListReportsTable())
+            execute(createPublicListsCacheTable())
         }
 
         // Re-enable foreign keys
@@ -1208,6 +1233,7 @@ extension SQLiteService {
           name TEXT NOT NULL,
           description TEXT,
           type TEXT,
+          is_public INTEGER NOT NULL DEFAULT 0,
           created_at TEXT DEFAULT (datetime('now')),
           updated_at TEXT DEFAULT (datetime('now')),
           deleted_at TEXT,
@@ -1216,6 +1242,75 @@ extension SQLiteService {
         );
         CREATE INDEX IF NOT EXISTS idx_lists_user_id ON lists(user_id);
         CREATE INDEX IF NOT EXISTS idx_lists_deleted ON lists(deleted_at);
+        """
+    }
+
+    // MARK: - Public Lists (Fase 1)
+
+    /// Bookmark live verso liste pubbliche altrui (outbox → apply_mutations). `id` stabile per
+    /// (user, list) così follow/unfollow riusano la stessa riga (soft-delete su deleted_at).
+    private func createListFollowsTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS list_follows (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          list_id TEXT NOT NULL,
+          created_at TEXT DEFAULT (datetime('now')),
+          updated_at TEXT DEFAULT (datetime('now')),
+          deleted_at TEXT,
+          synced_at TEXT,
+          UNIQUE(user_id, list_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_list_follows_user ON list_follows(user_id);
+        CREATE INDEX IF NOT EXISTS idx_list_follows_list ON list_follows(list_id);
+        """
+    }
+
+    /// Blocco utente: le sue liste pubbliche spariscono dal feed.
+    private func createUserBlocksTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS user_blocks (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          blocked_user_id TEXT NOT NULL,
+          created_at TEXT DEFAULT (datetime('now')),
+          updated_at TEXT DEFAULT (datetime('now')),
+          deleted_at TEXT,
+          synced_at TEXT,
+          UNIQUE(user_id, blocked_user_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_user_blocks_user ON user_blocks(user_id);
+        """
+    }
+
+    /// Segnalazione lista (insert-only, idempotente per coppia).
+    private func createListReportsTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS list_reports (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          list_id TEXT NOT NULL,
+          reason TEXT,
+          created_at TEXT DEFAULT (datetime('now')),
+          synced_at TEXT,
+          UNIQUE(user_id, list_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_list_reports_list ON list_reports(list_id);
+        """
+    }
+
+    /// Cache leggero dei metadati delle liste pubbliche per la tab "Followed" offline.
+    private func createPublicListsCacheTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS public_lists_cache (
+          list_id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          description TEXT,
+          item_count INTEGER DEFAULT 0,
+          cover_paths TEXT,
+          updated_at TEXT,
+          cached_at TEXT DEFAULT (datetime('now'))
+        );
         """
     }
     

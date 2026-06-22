@@ -633,3 +633,33 @@
 "carousel.returningTV" = "In ritorno a breve";
 "carousel.documentaries" = "Documentari per te";
 "discovery.endOfFeed" = "Sei al passo";
+/* MARK: - Liste Pubbliche (Fase 1) */
+"lists.section.publicLists" = "Liste Pubbliche";
+"lists.public.scope.explore" = "Esplora";
+"lists.public.scope.followed" = "Seguite";
+"lists.public.searchPlaceholder" = "Cerca liste pubbliche";
+"lists.public.empty.explore" = "Nessuna lista pubblica trovata";
+"lists.public.empty.followed" = "Non segui ancora nessuna lista";
+"lists.public.follow" = "Segui";
+"lists.public.following" = "Seguita";
+"lists.public.unavailable" = "Questa lista non è più disponibile";
+"lists.public.report" = "Segnala lista";
+"lists.public.report.confirm" = "Segnalare questa lista come inappropriata?";
+"lists.public.report.done" = "Grazie, la tua segnalazione è stata ricevuta";
+"lists.public.block" = "Blocca utente";
+"lists.public.block.confirm" = "Bloccare questo utente? Le sue liste pubbliche verranno nascoste.";
+"lists.public.createFromThis" = "Crea lista pubblica da questa";
+"lists.public.toggle" = "Lista pubblica";
+"lists.public.toggle.footer" = "Le liste pubbliche possono essere scoperte e seguite dagli altri utenti.";
+"lists.public.profanity.title" = "Contenuto inappropriato";
+"lists.public.profanity" = "Rimuovi il linguaggio inappropriato dal nome o dalla descrizione prima di pubblicare.";
+"lists.public.guidelines.title" = "Linee guida della community";
+"lists.public.guidelines.body" = "Pubblicando una lista accetti le linee guida della community: nessun contenuto offensivo, d'odio o illegale. Le liste che le violano possono essere nascoste e gli utenti segnalati rimossi.";
+"lists.public.guidelines.accept" = "Accetta e pubblica";
+"lists.duplicateName" = "Copia di %@";
+/* MARK: - TV Tracking (card stile JustWatch) */
+"tvTracking.titlesCount" = "%d titoli";
+"tvTracking.episodesRemaining" = "%d episodi rimanenti";
+"tvTracking.lastSeen" = "ULTIMO VISTO %@";
+"tvTracking.soon" = "soon";
+"tvTracking.watchNow" = "Guarda ora";

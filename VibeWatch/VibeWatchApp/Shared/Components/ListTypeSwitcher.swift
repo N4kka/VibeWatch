@@ -26,6 +26,7 @@ struct ListTypeSwitcher: View {
 enum LibrarySection: String, CaseIterable {
     case myLists = "lists.section.myLists"
     case tvTracking = "lists.section.tvTracking"
+    case publicLists = "lists.section.publicLists"
 
     var displayName: String {
         rawValue.localizedMainSafe()

@@ -279,7 +279,7 @@ class ListManager: ObservableObject {
 
         do {
             let listsQuery = """
-                SELECT l.id, l.name, l.description, l.type, l.created_at
+                SELECT l.id, l.name, l.description, l.type, l.created_at, l.is_public
                 FROM lists l
                 WHERE l.user_id = ? AND l.deleted_at IS NULL
                 ORDER BY l.created_at DESC
@@ -323,7 +323,8 @@ class ListManager: ObservableObject {
                     description: row["description"] as? String,
                     type: type,
                     createdAt: ISO8601DateFormatter().date(from: row["created_at"] as? String ?? "") ?? Date(),
-                    items: items
+                    items: items,
+                    isPublic: (row["is_public"] as? Int ?? 0) != 0
                 )
                 loadedLists.append(list)
             }
@@ -656,7 +657,10 @@ class ListManager: ObservableObject {
             description: description,
             type: existing.type,
             createdAt: existing.createdAt,
-            items: existing.items
+            items: existing.items,
+            // Preserva la visibilità: senza questo, rinominare una lista pubblica la riportava
+            // a privata in memoria (toggle che "non resta attivo").
+            isPublic: existing.isPublic
         )
         lists[index] = updated
         updateDefaultReferences(from: lists)
@@ -770,10 +774,15 @@ class ListManager: ObservableObject {
             overview: movie.overview
         )
 
+        // Tipo della lista catturato PRIMA dell'await: l'indice non va tenuto attraverso una
+        // sospensione (durante `await addItemToSQLite` un evento auth/sync può riassegnare `lists`
+        // → `lists[index]` andava out-of-range, crash visto nel fork della watchlist).
+        let listType = lists[index].type
+
         // Always save locally first
         objectWillChange.send()
         lists[index].items.append(item)
-        
+
         // Single remote writer (4.2): la sincronizzazione remota avviene SOLO via
         // outbox/SyncEngine (vedi addItemToSQLite → queueOperation). Rimossa la scrittura
         // diretta a Supabase (dual-write) che causava id-divergence tra i due path.
@@ -785,23 +794,32 @@ class ListManager: ObservableObject {
         await addItemToSQLite(item, listId: listId)
 
         updateDefaultReferences(from: lists)
-        notifySoftLimitIfNeeded(for: lists[index])
+        // Ri-risolvi la lista per id DOPO l'await (l'indice può essere stale).
+        if let current = lists.first(where: { $0.id == listId }) {
+            notifySoftLimitIfNeeded(for: current)
+        }
         // Item already saved to SQLite via addItemToSQLite above
 
         // Analytics: Track item added
         AnalyticsService.shared.logItemAddedToList(
-            listType: lists[index].type.rawValue,
+            listType: listType.rawValue,
             mediaType: mediaType.rawValue,
             context: analyticsContext
         )
 
         PaywallTriggerService.shared.recordSavedToList()
-        
+
         // Prompt for a review after a successful save action (gated by heuristics)
         ReviewPromptManager.shared.recordPositiveAction()
-        
+
+        // Unificazione TV tracking: marcare una serie come "vista" (lista seen) la porta "in pari"
+        // anche nel tracking episodi, così detail page e tracking restano coerenti.
+        if listType == .seen, mediaType == .tv {
+            EpisodeSeenManager.shared.markShowSeen(showId: movie.id)
+        }
+
         // Prefetch image for offline viewing (watchlist only, WiFi only)
-        if lists[index].type == .watchlist, let posterPath = item.posterPath {
+        if listType == .watchlist, let posterPath = item.posterPath {
             Task.detached(priority: .utility) {
                 let imageURL = "https://image.tmdb.org/t/p/w500\(posterPath)"
                 await ImageCacheService.shared.prefetchImages([imageURL], onWiFiOnly: true)
@@ -842,6 +860,14 @@ class ListManager: ObservableObject {
     func removeFromList(listId: String, itemId: String) async throws {
         guard let listIndex = lists.firstIndex(where: { $0.id == listId }) else {
             throw ListError.listNotFound
+        }
+
+        // Cattura prima della rimozione: se sto togliendo una serie dalla lista "seen",
+        // la riporto a "non vista" anche nel tracking episodi (contraltare del markShowSeen).
+        let removedItem = lists[listIndex].items.first { $0.id == itemId }
+        if lists[listIndex].type == .seen,
+           let removedItem, removedItem.mediaType == .tv {
+            EpisodeSeenManager.shared.unmarkShowSeen(showId: removedItem.mediaId)
         }
 
         // Always remove locally first
@@ -964,8 +990,155 @@ class ListManager: ObservableObject {
         }
     }
     
+    // MARK: - Public Lists (Fase 1)
+
+    /// Rende pubblica/privata una lista CUSTOM. Mirror locale + outbox (apply_mutations forza
+    /// comunque is_public solo per type='custom', difesa in profondità).
+    func setListVisibility(listId: String, isPublic: Bool) async throws {
+        guard let index = lists.firstIndex(where: { $0.id == listId }) else {
+            throw ListError.listNotFound
+        }
+        guard lists[index].type == .custom else {
+            throw ListError.defaultListImmutable
+        }
+
+        objectWillChange.send()
+        lists[index].isPublic = isPublic
+        updateDefaultReferences(from: lists)
+
+        let now = ISO8601DateFormatter().string(from: Date())
+        _ = db.execute(
+            "UPDATE lists SET is_public = ?, updated_at = datetime('now') WHERE id = ?",
+            parameters: [isPublic ? 1 : 0, listId]
+        )
+
+        let existing = lists[index]
+        try await sync.queueOperation(
+            table: "lists",
+            operationType: "UPDATE",
+            recordId: listId,
+            payload: [
+                "id": listId,
+                "user_id": userId,
+                "name": existing.name,
+                "description": existing.description ?? "",
+                "type": existing.type.rawValue,
+                "is_public": isPublic,
+                "created_at": ISO8601DateFormatter().string(from: existing.createdAt),
+                "updated_at": now
+            ],
+            dependsOn: nil
+        )
+    }
+
+    /// Crea una NUOVA lista custom (snapshot scollegato) copiando gli item della sorgente.
+    /// Usata per condividere una lista core senza esporre la core stessa. Resta PRIVATA: la
+    /// pubblicazione avviene poi dall'editor (toggle visibilità), così non esistono mai liste
+    /// pubbliche "Watchlist"/"Seen".
+    @discardableResult
+    func duplicateAsNewList(from sourceListId: String, name: String? = nil) async throws -> MediaList {
+        guard let source = lists.first(where: { $0.id == sourceListId }) else {
+            throw ListError.listNotFound
+        }
+        let trimmed = name?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let newName = (trimmed?.isEmpty == false ? trimmed! : source.displayName)
+        let newList = try await createList(name: newName, description: source.description)
+        for item in source.items {
+            try? await addToList(listId: newList.id, movie: item.asMovie(), mediaType: item.mediaType)
+        }
+        return lists.first(where: { $0.id == newList.id }) ?? newList
+    }
+
+    private func existingFollowId(listId: String) async -> String? {
+        let rows = (try? await db.queryRaw(
+            "SELECT id FROM list_follows WHERE user_id = ? AND list_id = ?",
+            parameters: [userId, listId]
+        )) ?? []
+        return rows.first?["id"] as? String
+    }
+
+    /// Segue una lista pubblica (bookmark live). Riusa la riga locale per (user, list).
+    func followList(listId: String) async throws {
+        guard authService.currentUser != nil else { throw ListError.authenticationRequired }
+        let now = ISO8601DateFormatter().string(from: Date())
+        let followId = await existingFollowId(listId: listId) ?? UUID().uuidString
+        _ = db.execute("""
+            INSERT INTO list_follows (id, user_id, list_id, created_at, updated_at, deleted_at)
+            VALUES (?, ?, ?, ?, ?, NULL)
+            ON CONFLICT(user_id, list_id) DO UPDATE SET deleted_at = NULL, updated_at = ?
+        """, parameters: [followId, userId, listId, now, now, now])
+
+        try await sync.queueOperation(
+            table: "list_follows",
+            operationType: "INSERT",
+            recordId: followId,
+            payload: ["id": followId, "user_id": userId, "list_id": listId, "created_at": now],
+            dependsOn: nil
+        )
+    }
+
+    func unfollowList(listId: String) async throws {
+        guard let followId = await existingFollowId(listId: listId) else { return }
+        let now = ISO8601DateFormatter().string(from: Date())
+        _ = db.execute(
+            "UPDATE list_follows SET deleted_at = ?, updated_at = ? WHERE id = ?",
+            parameters: [now, now, followId]
+        )
+        try await sync.queueOperation(
+            table: "list_follows",
+            operationType: "DELETE",
+            recordId: followId,
+            payload: ["id": followId, "user_id": userId],
+            dependsOn: nil
+        )
+    }
+
+    /// Blocca un utente: le sue liste pubbliche spariscono dal feed (lato server le RPC le filtrano).
+    func blockUser(_ blockedUserId: String) async throws {
+        guard authService.currentUser != nil else { throw ListError.authenticationRequired }
+        guard blockedUserId != userId else { return }
+        let now = ISO8601DateFormatter().string(from: Date())
+        let rows = (try? await db.queryRaw(
+            "SELECT id FROM user_blocks WHERE user_id = ? AND blocked_user_id = ?",
+            parameters: [userId, blockedUserId]
+        )) ?? []
+        let blockId = rows.first?["id"] as? String ?? UUID().uuidString
+        _ = db.execute("""
+            INSERT INTO user_blocks (id, user_id, blocked_user_id, created_at, updated_at, deleted_at)
+            VALUES (?, ?, ?, ?, ?, NULL)
+            ON CONFLICT(user_id, blocked_user_id) DO UPDATE SET deleted_at = NULL, updated_at = ?
+        """, parameters: [blockId, userId, blockedUserId, now, now, now])
+
+        try await sync.queueOperation(
+            table: "user_blocks",
+            operationType: "INSERT",
+            recordId: blockId,
+            payload: ["id": blockId, "user_id": userId, "blocked_user_id": blockedUserId, "created_at": now],
+            dependsOn: nil
+        )
+    }
+
+    /// Segnala una lista pubblica. Idempotente per (utente, lista); oltre soglia il server la nasconde.
+    func reportList(listId: String, reason: String? = nil) async throws {
+        guard authService.currentUser != nil else { throw ListError.authenticationRequired }
+        let now = ISO8601DateFormatter().string(from: Date())
+        let reportId = UUID().uuidString
+        _ = db.execute("""
+            INSERT OR IGNORE INTO list_reports (id, user_id, list_id, reason, created_at)
+            VALUES (?, ?, ?, ?, ?)
+        """, parameters: [reportId, userId, listId, reason ?? "", now])
+
+        try await sync.queueOperation(
+            table: "list_reports",
+            operationType: "INSERT",
+            recordId: reportId,
+            payload: ["id": reportId, "user_id": userId, "list_id": listId, "reason": reason ?? "", "created_at": now],
+            dependsOn: nil
+        )
+    }
+
     // MARK: - Helper Methods
-    
+
     private func getDeviceId() -> String {
         let key = "deviceIdentifier"
         if let existing = UserDefaults.standard.string(forKey: key) {

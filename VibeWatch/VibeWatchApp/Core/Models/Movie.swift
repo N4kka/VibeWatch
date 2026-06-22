@@ -140,6 +140,21 @@ struct Video: Codable, Identifiable, Hashable {
 }
 
 
+/// Episodio "stub" da TMDB (next_episode_to_air / last_episode_to_air): solo i campi che servono.
+struct TVEpisodeStub: Codable, Hashable {
+    let name: String?
+    let airDate: String?
+    let episodeNumber: Int?
+    let seasonNumber: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case name
+        case airDate = "air_date"
+        case episodeNumber = "episode_number"
+        case seasonNumber = "season_number"
+    }
+}
+
 struct TVShow: Codable, Identifiable, Hashable {
     let id: Int
     let name: String
@@ -163,6 +178,8 @@ struct TVShow: Codable, Identifiable, Hashable {
     let numberOfEpisodes: Int?
     let inProduction: Bool?
     let seasons: [Season]?
+    /// Prossimo episodio in uscita (TMDB) — usato per il badge "soon" nel tracking In pari.
+    let nextEpisodeToAir: TVEpisodeStub?
 
     enum CodingKeys: String, CodingKey {
         case id, name, overview, popularity, status, tagline, genres, seasons
@@ -180,7 +197,11 @@ struct TVShow: Codable, Identifiable, Hashable {
         case lastAirDate = "last_air_date"
         case numberOfEpisodes = "number_of_episodes"
         case inProduction = "in_production"
+        case nextEpisodeToAir = "next_episode_to_air"
     }
+
+    /// True se TMDB segnala un episodio futuro (badge "soon").
+    var hasUpcomingEpisode: Bool { nextEpisodeToAir != nil }
     
     var posterURL: URL? {
         guard let posterPath = posterPath else { return nil }
