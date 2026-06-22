@@ -2355,3 +2355,126 @@ final class EntitlementPolicyTests: XCTestCase {
         XCTAssertEqual(EntitlementPolicy.clipAllowance(tier: .pro, clipsWatched: 10_000), .allowed)
     }
 }
+
+// MARK: - Public Lists (Fase 1) — write-path characterization
+
+/// Verifica che i metodi delle Liste Pubbliche accodino l'operazione corretta sull'outbox
+/// (single remote writer → apply_mutations), riusando i mock del write-path.
+@MainActor
+final class PublicListsWritePathTests: XCTestCase {
+
+    private var db: SQLiteService!
+    private var dbPath: String!
+    private var sync: MockSyncEngine!
+    private var auth: MockAuth!
+    private var manager: ListManager!
+
+    override func setUp() async throws {
+        try await super.setUp()
+        dbPath = (NSTemporaryDirectory() as NSString)
+            .appendingPathComponent("vw_public_\(UUID().uuidString).sqlite")
+        db = SQLiteService(dbPath: dbPath)
+        _ = db.execute("PRAGMA foreign_keys = OFF")
+        sync = MockSyncEngine()
+        auth = MockAuth(user: User(id: "user-1", email: "u@test"))
+        manager = ListManager(db: db, sync: sync, authService: auth, autoStart: false)
+    }
+
+    override func tearDown() async throws {
+        manager = nil; db = nil; sync = nil; auth = nil
+        if let dbPath { try? FileManager.default.removeItem(atPath: dbPath) }
+        try await super.tearDown()
+    }
+
+    func test_setListVisibility_enqueuesListsUpdateWithIsPublic() async throws {
+        let custom = MediaList(id: "c1", name: "Romantici", type: .custom)
+        manager.lists = [custom]
+
+        try await manager.setListVisibility(listId: "c1", isPublic: true)
+
+        // Stato in-memory aggiornato
+        XCTAssertEqual(manager.lists.first(where: { $0.id == "c1" })?.isPublic, true)
+
+        let updates = sync.queued.filter { $0.table == "lists" && $0.operationType == "UPDATE" }
+        XCTAssertEqual(updates.count, 1)
+        XCTAssertEqual(updates.first?.recordId, "c1")
+        XCTAssertEqual(updates.first?.payload["is_public"] as? Bool, true)
+        XCTAssertEqual(updates.first?.payload["user_id"] as? String, "user-1")
+    }
+
+    func test_setListVisibility_onCoreList_throwsImmutable() async {
+        manager.lists = [MediaList(name: ListType.watchlist.rawValue, type: .watchlist)]
+        do {
+            try await manager.setListVisibility(listId: manager.lists[0].id, isPublic: true)
+            XCTFail("le liste core non possono diventare pubbliche")
+        } catch {
+            XCTAssertEqual(error as? ListError, .defaultListImmutable)
+        }
+    }
+
+    func test_followThenUnfollow_enqueuesInsertThenDelete() async throws {
+        try await manager.followList(listId: "remote-list-1")
+        let inserts = sync.queued.filter { $0.table == "list_follows" && $0.operationType == "INSERT" }
+        XCTAssertEqual(inserts.count, 1)
+        XCTAssertEqual(inserts.first?.payload["list_id"] as? String, "remote-list-1")
+        XCTAssertEqual(inserts.first?.payload["user_id"] as? String, "user-1")
+
+        try await manager.unfollowList(listId: "remote-list-1")
+        let deletes = sync.queued.filter { $0.table == "list_follows" && $0.operationType == "DELETE" }
+        XCTAssertEqual(deletes.count, 1, "unfollow accoda un soft-delete del follow")
+        // L'unfollow riusa lo stesso record id dell'insert (riga locale stabile per coppia)
+        XCTAssertEqual(deletes.first?.recordId, inserts.first?.recordId)
+    }
+
+    func test_reportList_enqueuesReportInsert() async throws {
+        try await manager.reportList(listId: "remote-list-2", reason: "spam")
+        let reports = sync.queued.filter { $0.table == "list_reports" && $0.operationType == "INSERT" }
+        XCTAssertEqual(reports.count, 1)
+        XCTAssertEqual(reports.first?.payload["list_id"] as? String, "remote-list-2")
+        XCTAssertEqual(reports.first?.payload["reason"] as? String, "spam")
+    }
+
+    /// Regressione: rinominare una lista pubblica non deve azzerare `isPublic` (il "toggle che
+    /// non resta attivo"). `updateList` ricostruiva `MediaList` senza propagare `isPublic`.
+    func test_updateList_preservesIsPublic() async throws {
+        manager.lists = [MediaList(id: "c1", name: "Romantici", type: .custom, isPublic: true)]
+        try await manager.updateList(id: "c1", name: "Romantici 2026", description: nil)
+        XCTAssertEqual(manager.lists.first(where: { $0.id == "c1" })?.isPublic, true)
+    }
+
+    func test_duplicateAsNewList_createsDetachedCustomCopyWithItems() async throws {
+        let item1 = MediaListItem(mediaId: 21, mediaType: .movie, title: "A", posterPath: nil)
+        let item2 = MediaListItem(mediaId: 22, mediaType: .tv, title: "B", posterPath: nil)
+        // Sorgente = lista CORE (così la copia non sfora il limite custom)
+        let core = MediaList(name: ListType.watchlist.rawValue, type: .watchlist, items: [item1, item2])
+        manager.lists = [core]
+
+        let copy = try await manager.duplicateAsNewList(from: core.id, name: "La mia lista")
+
+        XCTAssertEqual(copy.type, .custom, "il fork è una nuova lista custom")
+        XCTAssertNotEqual(copy.id, core.id, "scollegata dalla core sorgente")
+        XCTAssertFalse(copy.isPublic, "il fork nasce privato; si pubblica dall'editor")
+        XCTAssertEqual(copy.items.count, 2, "gli item della sorgente sono copiati")
+        // La core sorgente resta invariata (non viene mai resa pubblica)
+        XCTAssertEqual(manager.lists.first(where: { $0.type == .watchlist })?.items.count, 2)
+    }
+}
+
+// MARK: - ProfanityFilter (moderazione UGC)
+
+final class ProfanityFilterTests: XCTestCase {
+    func test_cleanText_passes() {
+        XCTAssertFalse(ProfanityFilter.containsProfanity("Migliori film romantici 2026"))
+        XCTAssertTrue(ProfanityFilter.validateForPublishing(name: "Cult horror", description: "I miei preferiti"))
+    }
+
+    func test_profanity_isBlocked_caseAndDiacriticsInsensitive() {
+        XCTAssertTrue(ProfanityFilter.containsProfanity("Lista di MERDA"))
+        XCTAssertFalse(ProfanityFilter.validateForPublishing(name: "ok", description: "che cazzo"))
+    }
+
+    func test_substringDoesNotFalsePositive() {
+        // "classic" non deve matchare (no Scunthorpe problem); match solo su token interi
+        XCTAssertFalse(ProfanityFilter.containsProfanity("classic assortment"))
+    }
+}

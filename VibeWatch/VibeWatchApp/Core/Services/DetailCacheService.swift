@@ -283,7 +283,8 @@ class DetailCacheService {
             lastAirDate: nil,
             numberOfEpisodes: nil,
             inProduction: nil,
-            seasons: nil
+            seasons: nil,
+            nextEpisodeToAir: nil
         )
 
         // Decode complex objects

@@ -635,3 +635,33 @@
 "carousel.returningTV" = "まもなく再開";
 "carousel.documentaries" = "あなた向けドキュメンタリー";
 "discovery.endOfFeed" = "すべてチェック済みです";
+/* MARK: - Public Lists (Fase 1) */
+"lists.section.publicLists" = "Public Lists";
+"lists.public.scope.explore" = "Explore";
+"lists.public.scope.followed" = "Followed";
+"lists.public.searchPlaceholder" = "Search public lists";
+"lists.public.empty.explore" = "No public lists found";
+"lists.public.empty.followed" = "You're not following any list yet";
+"lists.public.follow" = "Follow";
+"lists.public.following" = "Following";
+"lists.public.unavailable" = "This list is no longer available";
+"lists.public.report" = "Report list";
+"lists.public.report.confirm" = "Report this list as inappropriate?";
+"lists.public.report.done" = "Thanks, your report has been received";
+"lists.public.block" = "Block user";
+"lists.public.block.confirm" = "Block this user? Their public lists will be hidden.";
+"lists.public.createFromThis" = "Create public list from this";
+"lists.public.toggle" = "Public list";
+"lists.public.toggle.footer" = "Public lists can be discovered and followed by other users.";
+"lists.public.profanity.title" = "Inappropriate content";
+"lists.public.profanity" = "Please remove inappropriate language from the name or description before publishing.";
+"lists.public.guidelines.title" = "Community guidelines";
+"lists.public.guidelines.body" = "By publishing a list you agree to our community guidelines: no offensive, hateful or illegal content. Lists that violate them may be hidden and reported users may be removed.";
+"lists.public.guidelines.accept" = "Accept and publish";
+"lists.duplicateName" = "Copy of %@";
+/* MARK: - TV Tracking (card stile JustWatch) */
+"tvTracking.titlesCount" = "%d titles";
+"tvTracking.episodesRemaining" = "%d episodes remaining";
+"tvTracking.lastSeen" = "LAST SEEN %@";
+"tvTracking.soon" = "soon";
+"tvTracking.watchNow" = "Watch now";

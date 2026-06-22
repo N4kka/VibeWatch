@@ -240,7 +240,8 @@ class DiscoveryCacheService {
             lastAirDate: nil,
             numberOfEpisodes: nil,
             inProduction: nil,
-            seasons: nil
+            seasons: nil,
+            nextEpisodeToAir: nil
         )
     }
 
@@ -487,7 +488,8 @@ struct DiscoveryCacheRow: Codable {
             lastAirDate: nil,
             numberOfEpisodes: nil,
             inProduction: nil,
-            seasons: nil
+            seasons: nil,
+            nextEpisodeToAir: nil
         )
     }
 }

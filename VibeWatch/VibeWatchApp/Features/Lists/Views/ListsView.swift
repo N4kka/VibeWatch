@@ -23,7 +23,8 @@ struct ListsView: View {
     @State private var showingPaywall = false
     @State private var itemsLimit = 50
     @State private var searchText = ""
-    
+    @State private var forkedList: MediaList?
+
     private var mediaFilterBinding: Binding<MediaFilter> {
         Binding(
             get: {
@@ -43,6 +44,20 @@ struct ListsView: View {
         )
     }
     
+    /// Crea una lista pubblicabile a partire dalla lista core attualmente visualizzata
+    /// (snapshot scollegato): apre l'editor sulla nuova lista per rinominarla e renderla pubblica.
+    private func duplicateCurrentCoreList() {
+        guard appState.isAuthenticated else { showAuthGate = true; return }
+        guard let source = currentLists.first else { return }
+        guard viewModel.canCreateList() else { showingPaywall = true; return }
+        Task {
+            let copyName = String(format: "lists.duplicateName".localized, source.displayName)
+            if let newList = try? await ListManager.shared.duplicateAsNewList(from: source.id, name: copyName) {
+                await MainActor.run { forkedList = newList }
+            }
+        }
+    }
+
     var body: some View {
         ZStack {
             Color.theme.background.ignoresSafeArea()
@@ -66,8 +81,10 @@ struct ListsView: View {
 
                 if selectedSection == .myLists {
                     myListsContent
-                } else {
+                } else if selectedSection == .tvTracking {
                     TVShowsTrackingView()
+                } else {
+                    PublicListsView()
                 }
             }
         }
@@ -129,6 +146,9 @@ struct ListsView: View {
                 .presentationDragIndicator(.visible)
                 .presentationBackground(Color.theme.background)
         }
+        .sheet(item: $forkedList) { newList in
+            EditListView(list: newList)
+        }
         .sheet(isPresented: $showAuthGate) {
             AuthenticationGateView(isPresented: $showAuthGate)
                 .presentationBackground(.clear)
@@ -148,6 +168,21 @@ struct ListsView: View {
                     .padding(.leading, 20)
 
                 Spacer()
+
+                if selectedListType != .myLists {
+                    Menu {
+                        Button {
+                            duplicateCurrentCoreList()
+                        } label: {
+                            Label("lists.public.createFromThis".localized, systemImage: "square.on.square")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                            .font(.system(size: 24))
+                            .foregroundColor(.theme.accentOrange)
+                    }
+                    .padding(.trailing, 12)
+                }
 
                 Button {
                     guard appState.isAuthenticated else {
@@ -455,6 +490,8 @@ struct MediaItemRow: View {
     let isInSeenList: Bool // From parent context (which list we're viewing)
     let onMarkAsSeen: () -> Void
     let onDelete: () -> Void
+    /// Liste pubbliche altrui: nasconde il checkmark "visto" e disabilita lo swipe-to-delete.
+    var isReadOnly: Bool = false
 
     @ObservedObject private var listManager = ListManager.shared
 
@@ -633,6 +670,7 @@ struct MediaItemRow: View {
                 }
                 
                 // Checkmark button - top right
+                if !isReadOnly {
                 VStack {
                     Button {
                         if isActuallyInSeenList {
@@ -662,6 +700,7 @@ struct MediaItemRow: View {
 
                     Spacer()
                 }
+                }
             }
             .padding(12)
             }
@@ -676,6 +715,7 @@ struct MediaItemRow: View {
             .simultaneousGesture(
                 DragGesture(minimumDistance: 20)
                     .onChanged { gesture in
+                        guard !isReadOnly else { return }
                         // Only activate swipe if horizontal movement is significantly more than vertical
                         let horizontalAmount = abs(gesture.translation.width)
                         let verticalAmount = abs(gesture.translation.height)
@@ -1065,6 +1105,10 @@ struct CustomListDetailView: View {
         .onChange(of: searchText) {_, _ in itemsLimit = 100 }
         .toolbar {
             ToolbarItemGroup(placement: .navigationBarTrailing) {
+                if currentList.isPublic {
+                    Image(systemName: "globe")
+                        .foregroundColor(.theme.accentOrange)
+                }
                 Button {
                     showEditSheet = true
                 } label: {
@@ -1195,10 +1239,17 @@ struct ListCard: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
 
-            Text(list.displayName)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(.theme.textPrimary)
-                .lineLimit(2)
+            HStack(spacing: 6) {
+                if list.isPublic {
+                    Image(systemName: "globe")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.theme.accentOrange)
+                }
+                Text(list.displayName)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.theme.textPrimary)
+                    .lineLimit(2)
+            }
 
             Text("\(list.items.count) \("common.items".localized)")
                 .font(.system(size: 12))
@@ -1213,8 +1264,11 @@ struct CreateListView: View {
     @StateObject private var listManager = ListManager.shared
     @State private var listName = ""
     @State private var listDescription = ""
+    @State private var isPublic = false
+    @State private var showGuidelines = false
+    @State private var showProfanityError = false
     @State private var error: AppError?
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // Header
@@ -1279,6 +1333,20 @@ struct CreateListView: View {
                             .background(Color.white.opacity(0.1))
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
+
+                    // Visibilità pubblica (solo liste custom)
+                    VStack(alignment: .leading, spacing: 6) {
+                        Toggle(isOn: $isPublic) {
+                            Text("lists.public.toggle".localized)
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundColor(.theme.textPrimary)
+                        }
+                        .tint(.theme.accentOrange)
+
+                        Text("lists.public.toggle.footer".localized)
+                            .font(.system(size: 12))
+                            .foregroundColor(.theme.textSecondary)
+                    }
                 }
                 .padding(20)
                 
@@ -1286,14 +1354,7 @@ struct CreateListView: View {
                 
                 // Create Button
                 Button {
-                    Task {
-                        do {
-                            try await viewModel.createList(title: listName, description: listDescription.isEmpty ? nil : listDescription)
-                            dismiss()
-                        } catch {
-                            self.error = .database(error)
-                        }
-                    }
+                    attemptCreate()
                 } label: {
                     Text("lists.createList".localized)
                         .font(.system(size: 16, weight: .semibold))
@@ -1315,22 +1376,71 @@ struct CreateListView: View {
                 dismissButton: .default(Text("common.ok".localized))
                         )
                     }
-                }
+        .alert("lists.public.profanity.title".localized, isPresented: $showProfanityError) {
+            Button("common.ok".localized, role: .cancel) { }
+        } message: {
+            Text("lists.public.profanity".localized)
+        }
+        .alert("lists.public.guidelines.title".localized, isPresented: $showGuidelines) {
+            Button("lists.public.guidelines.accept".localized) {
+                UserDefaults.standard.set(true, forKey: EditListView.guidelinesKey)
+                Task { await performCreate() }
             }
-            
-            struct EditListView: View {
+            Button("common.cancel".localized, role: .cancel) { }
+        } message: {
+            Text("lists.public.guidelines.body".localized)
+        }
+                }
+
+    private func attemptCreate() {
+        if isPublic {
+            guard ProfanityFilter.validateForPublishing(name: listName, description: listDescription.isEmpty ? nil : listDescription) else {
+                showProfanityError = true
+                return
+            }
+            if !UserDefaults.standard.bool(forKey: EditListView.guidelinesKey) {
+                showGuidelines = true
+                return
+            }
+        }
+        Task { await performCreate() }
+    }
+
+    private func performCreate() async {
+        do {
+            let newList = try await listManager.createList(name: listName, description: listDescription.isEmpty ? nil : listDescription)
+            if isPublic {
+                try await listManager.setListVisibility(listId: newList.id, isPublic: true)
+            }
+            dismiss()
+        } catch {
+            self.error = .database(error)
+        }
+    }
+            }
+
+struct EditListView: View {
     @Environment(\.dismiss) private var dismiss
     let list: MediaList
     @StateObject private var listManager = ListManager.shared
     @State private var name: String
     @State private var description: String
+    @State private var isPublic: Bool
     @State private var showError = false
     @State private var errorMessage = ""
+    @State private var showGuidelines = false
+
+    static let guidelinesKey = "publicListsGuidelinesAccepted"
 
     init(list: MediaList) {
         self.list = list
         _name = State(initialValue: list.name)
         _description = State(initialValue: list.description ?? "")
+        _isPublic = State(initialValue: list.isPublic)
+    }
+
+    private var canPublishContent: Bool {
+        ProfanityFilter.validateForPublishing(name: name, description: description.isEmpty ? nil : description)
     }
 
     var body: some View {
@@ -1342,6 +1452,11 @@ struct CreateListView: View {
                 Section(header: Text("lists.description".localized)) {
                     TextField("lists.descriptionPlaceholder".localized, text: $description)
                 }
+                if list.type == .custom {
+                    Section(footer: Text("lists.public.toggle.footer".localized)) {
+                        Toggle("lists.public.toggle".localized, isOn: $isPublic)
+                    }
+                }
             }
             .navigationTitle("lists.editList".localized)
             .toolbar {
@@ -1349,9 +1464,7 @@ struct CreateListView: View {
                     Button("common.cancel".localized) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("common.save".localized) {
-                        Task { await saveChanges() }
-                    }
+                    Button("common.save".localized) { attemptSave() }
                     .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
@@ -1360,7 +1473,32 @@ struct CreateListView: View {
             } message: {
                 Text(errorMessage)
             }
+            .alert("lists.public.guidelines.title".localized, isPresented: $showGuidelines) {
+                Button("lists.public.guidelines.accept".localized) {
+                    UserDefaults.standard.set(true, forKey: Self.guidelinesKey)
+                    Task { await saveChanges() }
+                }
+                Button("common.cancel".localized, role: .cancel) { }
+            } message: {
+                Text("lists.public.guidelines.body".localized)
+            }
         }
+    }
+
+    private func attemptSave() {
+        if isPublic {
+            guard canPublishContent else {
+                errorMessage = "lists.public.profanity".localized
+                showError = true
+                return
+            }
+            // Consenso linee guida UGC al primo publish (App Store 1.2).
+            if !list.isPublic && !UserDefaults.standard.bool(forKey: Self.guidelinesKey) {
+                showGuidelines = true
+                return
+            }
+        }
+        Task { await saveChanges() }
     }
 
     private func saveChanges() async {
@@ -1368,6 +1506,9 @@ struct CreateListView: View {
         guard !trimmed.isEmpty else { return }
         do {
             try await listManager.updateList(id: list.id, name: trimmed, description: description.isEmpty ? nil : description)
+            if list.type == .custom && isPublic != list.isPublic {
+                try await listManager.setListVisibility(listId: list.id, isPublic: isPublic)
+            }
             await MainActor.run { dismiss() }
         } catch {
             await MainActor.run {

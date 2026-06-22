@@ -89,6 +89,33 @@ final class EpisodeSeenManager: ObservableObject {
         persistEpisodes()
     }
 
+    // MARK: - Single episode (tracking card: avanzamento forward / un-mark)
+
+    /// Marca un singolo episodio come visto (avanzamento dal tab tracking).
+    func markEpisodeSeen(showId: Int, seasonNumber: Int, episodeNumber: Int) {
+        seenKeys.insert(makeKey(showId: showId, season: seasonNumber, episode: episodeNumber))
+        persistEpisodes()
+    }
+
+    /// Smarca un singolo episodio.
+    func unmarkEpisodeSeen(showId: Int, seasonNumber: Int, episodeNumber: Int) {
+        seenKeys.remove(makeKey(showId: showId, season: seasonNumber, episode: episodeNumber))
+        persistEpisodes()
+    }
+
+    /// Espande il flag whole-show in chiavi per-episodio, così è possibile poi smarcarne uno
+    /// specifico (usato dal check "In pari" → torna a "Continua a guardare"). `allEpisodes` sono
+    /// le coppie (stagione, episodio) di tutta la serie, enumerabili dagli episodeCount.
+    func expandWholeShowToEpisodes(showId: Int, allEpisodes: [(season: Int, episode: Int)]) {
+        guard seenShowIds.contains(showId) else { return }
+        seenShowIds.remove(showId)
+        for e in allEpisodes {
+            seenKeys.insert(makeKey(showId: showId, season: e.season, episode: e.episode))
+        }
+        persistShows()
+        persistEpisodes()
+    }
+
     // MARK: - Private
 
     private func makeKey(showId: Int, season: Int, episode: Int) -> String {
