@@ -289,7 +289,10 @@ class SupabaseService: ObservableObject {
         if let client,
            let session = try? await client.auth.session {
             request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
-        } else {
+        } else if Config.supabaseAnonKey.hasPrefix("eyJ") {
+            // Legacy anon key is a JWT and is valid in the Authorization header. New publishable
+            // keys (sb_publishable_...) are NOT JWTs — the API gateway rejects them here as
+            // "Invalid JWT", so when using one we send it only via the apikey header.
             request.setValue("Bearer \(Config.supabaseAnonKey)", forHTTPHeaderField: "Authorization")
         }
 
@@ -347,7 +350,10 @@ class SupabaseService: ObservableObject {
         if let client,
            let session = try? await client.auth.session {
             request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
-        } else {
+        } else if Config.supabaseAnonKey.hasPrefix("eyJ") {
+            // Legacy anon key is a JWT and is valid in the Authorization header. New publishable
+            // keys (sb_publishable_...) are NOT JWTs — the API gateway rejects them here as
+            // "Invalid JWT", so when using one we send it only via the apikey header.
             request.setValue("Bearer \(Config.supabaseAnonKey)", forHTTPHeaderField: "Authorization")
         }
 
@@ -396,7 +402,10 @@ class SupabaseService: ObservableObject {
         if let client,
            let session = try? await client.auth.session {
             request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
-        } else {
+        } else if Config.supabaseAnonKey.hasPrefix("eyJ") {
+            // Legacy anon key is a JWT and is valid in the Authorization header. New publishable
+            // keys (sb_publishable_...) are NOT JWTs — the API gateway rejects them here as
+            // "Invalid JWT", so when using one we send it only via the apikey header.
             request.setValue("Bearer \(Config.supabaseAnonKey)", forHTTPHeaderField: "Authorization")
         }
 
@@ -437,7 +446,10 @@ class SupabaseService: ObservableObject {
         if let client,
            let session = try? await client.auth.session {
             request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
-        } else {
+        } else if Config.supabaseAnonKey.hasPrefix("eyJ") {
+            // Legacy anon key is a JWT and is valid in the Authorization header. New publishable
+            // keys (sb_publishable_...) are NOT JWTs — the API gateway rejects them here as
+            // "Invalid JWT", so when using one we send it only via the apikey header.
             request.setValue("Bearer \(Config.supabaseAnonKey)", forHTTPHeaderField: "Authorization")
         }
 
