@@ -267,7 +267,7 @@ class DiscoveryCacheService {
         
         do {
             // Clear old cache first
-            _ = try await db.queryRaw("DELETE FROM discovery_cache")
+            try await db.executeWrite("DELETE FROM discovery_cache")
             Logger.debug("[DiscoveryCache] Cleared old local cache")
             
             // Helper to convert genre IDs array to JSON string

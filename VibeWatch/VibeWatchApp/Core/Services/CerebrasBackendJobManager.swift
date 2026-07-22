@@ -593,7 +593,7 @@ final class CerebrasBackendJobManager {
     }
 
     private func setMetadataValue(key: String, value: String) async throws {
-        _ = try await sqliteService.queryRaw("""
+        try await sqliteService.executeWrite("""
             INSERT OR REPLACE INTO app_metadata (key_name, value_text)
             VALUES (?, ?)
         """, parameters: [key, value])

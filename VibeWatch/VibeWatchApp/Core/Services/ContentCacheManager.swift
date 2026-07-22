@@ -65,7 +65,7 @@ class ContentCacheManager: ObservableObject {
 
     private func deleteMetadata(key: String) async {
         do {
-            _ = try await db.queryRaw(
+            try await db.executeWrite(
                 "DELETE FROM app_metadata WHERE key_name = ?",
                 parameters: [key]
             )
@@ -87,7 +87,7 @@ class ContentCacheManager: ObservableObject {
 
     private func saveMetadataRaw(key: String, json: String) async {
         do {
-            _ = try await db.queryRaw(
+            try await db.executeWrite(
                 "REPLACE INTO app_metadata (key_name, value_json, updated_at) VALUES (?, ?, datetime('now'))",
                 parameters: [key, json]
             )

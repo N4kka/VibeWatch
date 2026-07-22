@@ -4,6 +4,14 @@ import { SignJWT, importPKCS8 } from 'https://esm.sh/jose@v5.2.3'
 
 console.log('🚀 process-notifications function booting up...')
 
+// Delivery is sequential and network-bound, so a run has to stay well inside the platform's
+// wall-clock limit. The cron fires every 5 minutes, so a leftover queue drains on the next
+// run instead of being pushed through a single oversized batch.
+const BATCH_SIZE = 25
+// Stop issuing new sends past this point and return normally. Being killed mid-loop is what
+// used to strand delivered pushes in an unsent state.
+const RUN_BUDGET_MS = 100_000
+
 type NotificationRow = {
   id: string
   user_id: string
@@ -243,6 +251,7 @@ async function sendEmail(
 }
 
 serve(async (_req) => {
+  const deadline = Date.now() + RUN_BUDGET_MS
   try {
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -264,12 +273,15 @@ serve(async (_req) => {
 
     const firebaseServiceAccount = JSON.parse(firebaseServiceAccountJson)
 
+    // Each notification costs a device lookup, one FCM call per device and usually an email,
+    // all sequential. At 100 per run the loop routinely blew past the platform's ~150s limit
+    // and the invocation was killed mid-flight (a long run of 504s in the logs).
     const { data: notifications, error: fetchError } = await supabaseClient
       .from('notifications')
       .select('*')
       .eq('is_sent', false)
       .or(`next_retry_at.is.null,next_retry_at.lte.${new Date().toISOString()}`)
-      .limit(100)
+      .limit(BATCH_SIZE)
 
     if (fetchError) {
       throw new Error(`Error fetching notifications: ${fetchError.message}`)
@@ -293,14 +305,25 @@ serve(async (_req) => {
     })
 
     const firebaseAccessToken = await getFirebaseAccessToken(firebaseServiceAccount)
-    const sentNotificationIds: string[] = []
+    // Notifications that were never delivered to anyone, so batching their bookkeeping to the
+    // end of the run is safe: if the invocation dies first, nothing was sent and nothing is
+    // duplicated. Actually-delivered notifications are marked one by one, inline, instead.
+    const suppressedByPreferences: string[] = []
     const skippedForQuietHours: string[] = []
+    let deliveredCount = 0
+    let stoppedOnDeadline = false
 
     for (const notification of notifications as NotificationRow[]) {
+      // Leave the remaining rows untouched rather than being killed mid-delivery.
+      if (Date.now() > deadline) {
+        stoppedOnDeadline = true
+        break
+      }
+
       const preferences = preferencesByUser.get(notification.user_id)
 
       if (!preferenceAllows(notification, preferences)) {
-        sentNotificationIds.push(notification.id)
+        suppressedByPreferences.push(notification.id)
         continue
       }
 
@@ -317,8 +340,20 @@ serve(async (_req) => {
       )
 
       if (result.sent) {
+        // Mark it before anything else can fail. This used to be batched after the whole loop,
+        // so a timeout left every already-delivered push still flagged is_sent = false and the
+        // next cron run re-sent the lot — the source of the duplicate notification storms.
+        const { error: markError } = await supabaseClient
+          .from('notifications')
+          .update({ is_sent: true, sent_at: new Date().toISOString(), last_error: null })
+          .eq('id', notification.id)
+
+        if (markError) {
+          console.error(`Failed to mark ${notification.id} as sent:`, markError.message)
+        }
+
+        deliveredCount += 1
         await sendEmail(supabaseClient, notification, resendApiKey, fromEmail)
-        sentNotificationIds.push(notification.id)
       } else {
         const retryCount = (notification.retry_count ?? 0) + 1
         const nextRetryAt = new Date(Date.now() + retryDelayMinutes(retryCount) * 60 * 1000).toISOString()
@@ -333,14 +368,14 @@ serve(async (_req) => {
       }
     }
 
-    if (sentNotificationIds.length > 0) {
+    if (suppressedByPreferences.length > 0) {
       const { error: updateError } = await supabaseClient
         .from('notifications')
         .update({ is_sent: true, sent_at: new Date().toISOString(), last_error: null })
-        .in('id', sentNotificationIds)
+        .in('id', suppressedByPreferences)
 
       if (updateError) {
-        throw new Error(`Error marking notifications as sent: ${updateError.message}`)
+        throw new Error(`Error retiring suppressed notifications: ${updateError.message}`)
       }
     }
 
@@ -354,9 +389,11 @@ serve(async (_req) => {
     return new Response(
       JSON.stringify({
         message: 'Function executed.',
-        processed: notifications.length,
-        sent: sentNotificationIds.length,
+        fetched: notifications.length,
+        delivered: deliveredCount,
+        suppressedByPreferences: suppressedByPreferences.length,
         quietHoursSkipped: skippedForQuietHours.length,
+        stoppedOnDeadline,
       }),
       { headers: { 'Content-Type': 'application/json' }, status: 200 }
     )

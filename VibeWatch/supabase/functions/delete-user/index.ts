@@ -37,11 +37,48 @@ serve(async (req) => {
 
   const userId = userResult.user.id
 
-  // Clean up dependent rows first to avoid FK constraints
+  // Most user-owned tables carry an ON DELETE CASCADE foreign key to auth.users, so
+  // auth.admin.deleteUser below clears them. These do not: user_daily_quota, user_clip_history
+  // and user_preferences have no foreign key at all, and profiles references auth.users with
+  // NO ACTION — which also means it has to go before the auth user, or that delete is rejected.
+  // (user_ai_token_usage and user_clip_signals cascade from profiles.)
+  const failures: string[] = []
+
   const tables = ['user_daily_quota', 'user_ai_token_usage', 'user_clip_history', 'user_preferences', 'profiles']
   for (const table of tables) {
     const { error } = await adminClient.from(table).delete().eq(table === 'profiles' ? 'id' : 'user_id', userId)
-    if (error) console.log(`Cleanup error for ${table}:`, error.message)
+    if (error) {
+      console.log(`Cleanup error for ${table}:`, error.message)
+      failures.push(`${table}: ${error.message}`)
+    }
+  }
+
+  // revenuecat_webhook_logs has no foreign key either, but it holds billing records that are
+  // retained for accounting purposes, so it is pseudonymized rather than deleted. The pseudonym
+  // is a SHA-256 digest of the user id: deterministic, so rows still group per (former) user,
+  // but not reversible back to the id.
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(userId))
+  const pseudonym = 'anon_' + Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
+
+  const { error: pseudonymError } = await adminClient.rpc('pseudonymize_revenuecat_logs', {
+    p_user_id: userId,
+    p_pseudonym: pseudonym,
+  })
+  if (pseudonymError) {
+    console.log('pseudonymize_revenuecat_logs error:', pseudonymError.message)
+    failures.push(`revenuecat_webhook_logs: ${pseudonymError.message}`)
+  }
+
+  // Stop before removing the auth user. Deleting it now would report success while leaving
+  // identifiable rows behind, and without the auth record the caller could not retry knowingly.
+  // Leaving the account intact keeps the request safely repeatable.
+  if (failures.length > 0) {
+    return new Response(
+      JSON.stringify({ error: 'Account not deleted: cleanup failed', details: failures }),
+      { headers: { 'Content-Type': 'application/json' }, status: 500 },
+    )
   }
 
   const { error: deleteError } = await adminClient.auth.admin.deleteUser(userId)

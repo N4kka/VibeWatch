@@ -490,7 +490,7 @@ class PersonalizationPerformanceTester {
         let startTime = CFAbsoluteTimeGetCurrent()
 
         do {
-            _ = try await db.queryRaw("""
+            try await db.executeWrite("""
                 UPDATE unified_user_preferences
                 SET score = score + 1.0,
                     score_from_discovery = score_from_discovery + 1.0,
@@ -664,10 +664,10 @@ class PersonalizationPerformanceTester {
         Logger.info("🧹 Cleaning up test data...")
 
         do {
-            _ = try await db.queryRaw("DELETE FROM unified_user_preferences WHERE user_id LIKE 'test-%' OR user_id LIKE 'batch-test-%'")
-            _ = try await db.queryRaw("DELETE FROM user_discovery_interactions WHERE user_id LIKE 'test-%'")
-            _ = try await db.queryRaw("DELETE FROM user_search_history WHERE user_id LIKE 'test-%'")
-            _ = try await db.queryRaw("DELETE FROM ai_conversation_history WHERE user_id LIKE 'test-%'")
+            try await db.executeWrite("DELETE FROM unified_user_preferences WHERE user_id LIKE 'test-%' OR user_id LIKE 'batch-test-%'")
+            try await db.executeWrite("DELETE FROM user_discovery_interactions WHERE user_id LIKE 'test-%'")
+            try await db.executeWrite("DELETE FROM user_search_history WHERE user_id LIKE 'test-%'")
+            try await db.executeWrite("DELETE FROM ai_conversation_history WHERE user_id LIKE 'test-%'")
 
             Logger.info("✅ Test data cleaned up")
         } catch {

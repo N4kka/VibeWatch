@@ -474,6 +474,16 @@ class AuthService: AuthServiceProtocol {
             throw AppAuthError.notConfigured
         }
 
+        // Flush local edits while the session is still valid: signing out invalidates the token,
+        // and cleanupLocalUserData() below wipes the local database. Best effort and bounded —
+        // a slow or offline network must not trap the user in a half-signed-out state, and a
+        // forced sign-out (invalid session) has no usable token to push with anyway.
+        if !force {
+            await withTimeout(seconds: 5) {
+                await SyncEngine.shared.pushPendingChanges()
+            }
+        }
+
         try await client.auth.signOut()
 
         self.currentUser = nil
@@ -487,10 +497,24 @@ class AuthService: AuthServiceProtocol {
         // Analytics: Clear user ID
         AnalyticsService.shared.setUserId(nil)
 
-        // Clear Discovery memory cache
-        DiscoveryPersonalizationService.shared.clearMemoryCache()
+        // The local SQLite store is not scoped per account, so leaving it in place let the next
+        // user to sign in on this device read the previous one's lists, history and preferences —
+        // and re-upload them under their own id on the next sync. Deleting an account already
+        // went through this cleanup; signing out has to do the same.
+        await cleanupLocalUserData()
 
         Logger.info("[Auth] User signed out successfully")
+    }
+
+    /// Run `operation`, giving up after `seconds`. Used where a slow network must not block
+    /// a user-initiated action that has to complete regardless.
+    private func withTimeout(seconds: Double, operation: @escaping @Sendable () async -> Void) async {
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask { await operation() }
+            group.addTask { try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000)) }
+            await group.next()
+            group.cancelAll()
+        }
     }
 
     func sendPasswordReset(email: String) async throws {
@@ -906,6 +930,9 @@ class AuthService: AuthServiceProtocol {
         DailyQuotaManager.shared.downgradeToFree()
         ClipQuotaService.shared.resetAll()
         ContentCacheManager.shared.clearAllCaches()
+        // In-memory, so wiping the database alone would leave the previous user's
+        // personalization live until the process restarts.
+        DiscoveryPersonalizationService.shared.clearMemoryCache()
         SQLiteService.shared.resetDatabase()
 
         // Clear any cached auth state
