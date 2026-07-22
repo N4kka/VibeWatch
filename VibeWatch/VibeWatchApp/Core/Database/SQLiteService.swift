@@ -683,6 +683,48 @@ final class SQLiteService: ObservableObject {
         return success
     }
     
+    /// Execute a write statement (INSERT/UPDATE/DELETE/REPLACE) on the writer connection.
+    /// Unlike `queryRaw`, whose connection is opened `SQLITE_OPEN_READONLY`, this can actually
+    /// write — and it throws on failure instead of returning an empty result set.
+    func executeWrite(_ sql: String, parameters: [Any] = []) async throws {
+        let safeParameters = parameters.map(SQLSendableValue.init(raw:))
+
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            writerQueue.async { [weak self, safeParameters] in
+                guard let self = self else {
+                    continuation.resume(throwing: SQLiteError.notConnected)
+                    return
+                }
+
+                var statement: OpaquePointer?
+
+                guard sqlite3_prepare_v2(self.db, sql, -1, &statement, nil) == SQLITE_OK else {
+                    let error = String(cString: sqlite3_errmsg(self.db))
+                    Logger.error("[SQLite] Write prepare failed: \(error). SQL: \(sql)")
+                    continuation.resume(throwing: SQLiteError.queryFailed(error))
+                    return
+                }
+
+                defer { sqlite3_finalize(statement) }
+
+                for (index, param) in safeParameters.enumerated() {
+                    self.bind(param.raw, to: statement, at: Int32(index + 1))
+                }
+
+                // RETURNING clauses step to SQLITE_ROW; plain writes step to SQLITE_DONE.
+                let rc = sqlite3_step(statement)
+                guard rc == SQLITE_DONE || rc == SQLITE_ROW else {
+                    let error = String(cString: sqlite3_errmsg(self.db))
+                    Logger.error("[SQLite] Write failed (rc \(rc)): \(error). SQL: \(sql)")
+                    continuation.resume(throwing: SQLiteError.queryFailed(error))
+                    return
+                }
+
+                continuation.resume(returning: ())
+            }
+        }
+    }
+
     /// Query and return rows as dictionaries
     func queryRaw(_ sql: String, parameters: [Any] = []) async throws -> [[String: Any]] {
         let safeParameters = parameters.map(SQLSendableValue.init(raw:))
@@ -703,6 +745,28 @@ final class SQLiteService: ObservableObject {
                 }
 
                 defer { sqlite3_finalize(statement) }
+
+                // This connection is SQLITE_OPEN_READONLY: a write statement prepares fine but
+                // steps to SQLITE_READONLY, which the row loop below would swallow as an empty
+                // result — a silent no-op. Reroute it to the writer connection instead of losing it.
+                if sqlite3_stmt_readonly(statement) == 0 {
+                    sqlite3_finalize(statement)
+                    statement = nil  // defer above finalizes nil, which is a no-op
+                    Logger.error("[SQLite] Write statement passed to queryRaw; rerouted to the writer connection. Use executeWrite instead. SQL: \(sql)")
+                    Task { [weak self, safeParameters] in
+                        guard let self = self else {
+                            continuation.resume(throwing: SQLiteError.notConnected)
+                            return
+                        }
+                        do {
+                            try await self.executeWrite(sql, parameters: safeParameters.map(\.raw))
+                            continuation.resume(returning: [])
+                        } catch {
+                            continuation.resume(throwing: error)
+                        }
+                    }
+                    return
+                }
 
                 // Bind parameters
                 for (index, param) in safeParameters.enumerated() {
@@ -775,7 +839,7 @@ final class SQLiteService: ObservableObject {
             let colsJoined = keys.joined(separator: ",")
             let sql = "REPLACE INTO \(table) (\(colsJoined)) VALUES (\(placeholders))"
             let params = keys.map { filtered[$0] ?? NSNull() }
-            _ = try await queryRaw(sql, parameters: params)
+            try await executeWrite(sql, parameters: params)
         }
     }
     
@@ -855,8 +919,8 @@ final class SQLiteService: ObservableObject {
         
         let valueParams = Array(values.values)
         let allParams = valueParams + parameters
-        
-        _ = try await queryRaw(sql, parameters: allParams)
+
+        try await executeWrite(sql, parameters: allParams)
     }
     
     /// Delete records (soft delete by default)
@@ -864,11 +928,11 @@ final class SQLiteService: ObservableObject {
         try validateTableName(table)  // Phase 5: SQL injection prevention
         if hard {
             let sql = "DELETE FROM \(table) WHERE \(condition)"
-            _ = try await queryRaw(sql, parameters: parameters)
+            try await executeWrite(sql, parameters: parameters)
         } else {
             // Soft delete
             let sql = "UPDATE \(table) SET deleted_at = datetime('now') WHERE \(condition)"
-            _ = try await queryRaw(sql, parameters: parameters)
+            try await executeWrite(sql, parameters: parameters)
         }
     }
 

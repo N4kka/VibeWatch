@@ -198,7 +198,7 @@ class DailyQuotaManager: ObservableObject {
                 REPLACE INTO user_daily_quota (id, user_id, device_id, clips_watched_today, last_reset_at, is_pro, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
             """
-            _ = try await db.queryRaw(sql, parameters: [
+            try await db.executeWrite(sql, parameters: [
                 quotaId, userId, deviceId, oldCount,
                 ISO8601DateFormatter().string(from: oldReset),
                 isProUser ? 1 : 0
@@ -248,7 +248,7 @@ class DailyQuotaManager: ObservableObject {
                 REPLACE INTO user_daily_quota (id, user_id, device_id, clips_watched_today, last_reset_at, is_pro, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
             """
-            _ = try await db.queryRaw(sql, parameters: [
+            try await db.executeWrite(sql, parameters: [
                 quotaId, userId, deviceId, clipsWatchedToday,
                 ISO8601DateFormatter().string(from: lastResetDate),
                 isProUser ? 1 : 0

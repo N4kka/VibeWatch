@@ -966,7 +966,7 @@ final class ClipCommentService: ObservableObject {
     }
     
     private func setLocalClipCommentCount(clipId: String, count: Int) async throws {
-        _ = try await sqlite.queryRaw("""
+        try await sqlite.executeWrite("""
             UPDATE clips
             SET comments = ?
             WHERE clip_id = ?

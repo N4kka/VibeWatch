@@ -193,7 +193,7 @@ class UserEngagementTracker: ObservableObject {
                     REPLACE INTO user_preferences (id, user_id, device_id, preference_type, preference_id, score, updated_at)
                     VALUES (?, ?, ?, 'genre', ?, ?, datetime('now'))
                 """
-                _ = try await db.queryRaw(sql, parameters: [prefId, userId, deviceId, String(genreId), score])
+                try await db.executeWrite(sql, parameters: [prefId, userId, deviceId, String(genreId), score])
             }
 
             // Save movie scores
@@ -203,7 +203,7 @@ class UserEngagementTracker: ObservableObject {
                     REPLACE INTO user_preferences (id, user_id, device_id, preference_type, preference_id, score, updated_at)
                     VALUES (?, ?, ?, 'movie', ?, ?, datetime('now'))
                 """
-                _ = try await db.queryRaw(sql, parameters: [prefId, userId, deviceId, String(movieId), score])
+                try await db.executeWrite(sql, parameters: [prefId, userId, deviceId, String(movieId), score])
             }
 
             // Save actor scores
@@ -213,7 +213,7 @@ class UserEngagementTracker: ObservableObject {
                     REPLACE INTO user_preferences (id, user_id, device_id, preference_type, preference_id, score, updated_at)
                     VALUES (?, ?, ?, 'actor', ?, ?, datetime('now'))
                 """
-                _ = try await db.queryRaw(sql, parameters: [prefId, userId, deviceId, String(actorId), score])
+                try await db.executeWrite(sql, parameters: [prefId, userId, deviceId, String(actorId), score])
             }
         } catch {
             Logger.error("[Engagement] Failed to save to SQLite: \(error)")
@@ -282,7 +282,7 @@ class UserEngagementTracker: ObservableObject {
         Task {
             let userId = await SupabaseService.shared.currentUser?.id ?? "anonymous"
             do {
-                _ = try await db.queryRaw(
+                try await db.executeWrite(
                     "DELETE FROM user_preferences WHERE user_id = ?",
                     parameters: [userId]
                 )

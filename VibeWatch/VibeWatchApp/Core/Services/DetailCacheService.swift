@@ -380,7 +380,7 @@ class DetailCacheService {
     /// Clear expired cache entries
     func clearExpiredCache() async throws {
         let now = ISO8601DateFormatter().string(from: Date())
-        _ = try await db.queryRaw("""
+        try await db.executeWrite("""
             UPDATE detail_cache
             SET deleted_at = ?
             WHERE expires_at <= ? AND deleted_at IS NULL
@@ -392,7 +392,7 @@ class DetailCacheService {
     /// Clear all cached details
     func clearAllCache() async throws {
         let now = ISO8601DateFormatter().string(from: Date())
-        _ = try await db.queryRaw("""
+        try await db.executeWrite("""
             UPDATE detail_cache
             SET deleted_at = ?
             WHERE deleted_at IS NULL

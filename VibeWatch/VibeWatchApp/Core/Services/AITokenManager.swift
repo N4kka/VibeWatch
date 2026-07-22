@@ -117,7 +117,7 @@ final class AITokenManager: ObservableObject {
                 REPLACE INTO user_ai_token_usage (id, user_id, tokens_used_today, last_reset_at, updated_at)
                 VALUES (?, ?, ?, ?, datetime('now'))
             """
-            _ = try await db.queryRaw(sql, parameters: [
+            try await db.executeWrite(sql, parameters: [
                 userId, userId, decoded.tokens,
                 ISO8601DateFormatter().string(from: decoded.date)
             ])
@@ -158,7 +158,7 @@ final class AITokenManager: ObservableObject {
                 REPLACE INTO user_ai_token_usage (id, user_id, tokens_used_today, last_reset_at, updated_at)
                 VALUES (?, ?, ?, ?, datetime('now'))
             """
-            _ = try await db.queryRaw(sql, parameters: [
+            try await db.executeWrite(sql, parameters: [
                 userId, userId, tokensUsedToday,
                 ISO8601DateFormatter().string(from: lastResetDate)
             ])
