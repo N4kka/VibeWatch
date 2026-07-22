@@ -38,6 +38,7 @@
 "list.movies" = "Films";
 "list.tvShows" = "TV";
 "lists.myLists" = "Mes listes";
+"lists.collections" = "Collections";
 "lists.empty" = "Aucune liste pour l’instant";
 "lists.emptyDescription" = "Créez votre première watchlist pour organiser les films et séries que vous découvrez";
 "lists.noItems" = "Aucun élément pour l’instant";

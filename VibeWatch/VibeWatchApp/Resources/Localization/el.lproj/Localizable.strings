@@ -38,6 +38,7 @@
 "list.movies" = "Ταινίες";
 "list.tvShows" = "TV";
 "lists.myLists" = "Οι λίστες μου";
+"lists.collections" = "Συλλογές";
 "lists.empty" = "Δεν υπάρχουν λίστες ακόμα";
 "lists.emptyDescription" = "Δημιούργησε την πρώτη σου watchlist για να οργανώσεις ταινίες και σειρές που ανακαλύπτεις";
 "lists.noItems" = "Δεν υπάρχουν στοιχεία ακόμα";

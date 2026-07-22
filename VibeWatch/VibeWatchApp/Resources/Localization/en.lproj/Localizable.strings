@@ -38,6 +38,7 @@
 "list.movies" = "Movies";
 "list.tvShows" = "TV";
 "lists.myLists" = "My Lists";
+"lists.collections" = "Collections";
 "lists.empty" = "No Lists Yet";
 "lists.emptyDescription" = "Create your first watchlist to organize movies and shows you discover";
 "lists.noItems" = "No items yet";

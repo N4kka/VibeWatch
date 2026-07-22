@@ -39,6 +39,13 @@ struct GlobalFilterView: View {
                 Spacer()
 
                 VStack(spacing: 0) {
+                    // Grabber
+                    Capsule()
+                        .fill(Color.white.opacity(0.18))
+                        .frame(width: 40, height: 5)
+                        .padding(.top, 10)
+                        .padding(.bottom, 4)
+
                     // Header
                     HStack {
                         Text("filters.title".localized)
@@ -67,7 +74,7 @@ struct GlobalFilterView: View {
                     .background(Color.theme.cardBackground)
 
                     ScrollView(showsIndicators: false) {
-                        VStack(spacing: 24) {
+                        VStack(spacing: 12) {
                             // Media Type Filter (FREE)
                             GlobalFilterSection(title: "filters.mediaType".localized, isPro: false) {
                                 mediaTypeFilter
@@ -105,10 +112,6 @@ struct GlobalFilterView: View {
 
                             // Pro Only Filters
                             if quotaManager.isProUser {
-                                Divider()
-                                    .background(Color.white.opacity(0.1))
-                                    .padding(.vertical, 8)
-
                                 GlobalFilterSection(title: "filters.proFilters".localized, isPro: true) {
                                     proOnlyFilters
                                 }
@@ -148,22 +151,10 @@ struct GlobalFilterView: View {
     // MARK: - Media Type Filter
 
     private var mediaTypeFilter: some View {
-        HStack(spacing: 12) {
+        FlowLayout(spacing: 8) {
             ForEach(MediaTypeFilter.allCases) { type in
-                Button {
+                FilterChip(title: type.displayName, isSelected: tempFilters.mediaType == type) {
                     tempFilters.mediaType = type
-                } label: {
-                    Text(type.displayName)
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(tempFilters.mediaType == type ? .white : .theme.textSecondary)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(
-                            tempFilters.mediaType == type ?
-                            Color.theme.accentOrange :
-                            Color.white.opacity(0.1)
-                        )
-                        .clipShape(Capsule())
                 }
             }
         }
@@ -174,26 +165,14 @@ struct GlobalFilterView: View {
     private var runtimeFilter: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Free presets
-            HStack(spacing: 12) {
+            FlowLayout(spacing: 8) {
                 ForEach(RuntimePreset.allCases) { preset in
-                    Button {
+                    FilterChip(title: preset.displayName, isSelected: tempFilters.runtimePreset == preset) {
                         tempFilters.runtimePreset = preset
                         if !quotaManager.isProUser {
                             tempFilters.customRuntimeMin = nil
                             tempFilters.customRuntimeMax = nil
                         }
-                    } label: {
-                        Text(preset.displayName)
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(tempFilters.runtimePreset == preset ? .white : .theme.textSecondary)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .background(
-                                tempFilters.runtimePreset == preset ?
-                                Color.theme.accentOrange :
-                                Color.white.opacity(0.1)
-                            )
-                            .clipShape(Capsule())
                     }
                 }
             }
@@ -242,26 +221,14 @@ struct GlobalFilterView: View {
     private var ratingFilter: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Free presets
-            HStack(spacing: 12) {
+            FlowLayout(spacing: 8) {
                 ForEach(RatingPreset.allCases) { preset in
-                    Button {
+                    FilterChip(title: preset.displayName, isSelected: tempFilters.ratingPreset == preset) {
                         tempFilters.ratingPreset = preset
                         if !quotaManager.isProUser {
                             tempFilters.customRatingMin = nil
                             tempFilters.customRatingMax = nil
                         }
-                    } label: {
-                        Text(preset.displayName)
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(tempFilters.ratingPreset == preset ? .white : .theme.textSecondary)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .background(
-                                tempFilters.ratingPreset == preset ?
-                                Color.theme.accentOrange :
-                                Color.white.opacity(0.1)
-                            )
-                            .clipShape(Capsule())
                     }
                 }
             }
@@ -310,26 +277,14 @@ struct GlobalFilterView: View {
     private var releasePeriodFilter: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Free presets
-            HStack(spacing: 12) {
+            FlowLayout(spacing: 8) {
                 ForEach(ReleasePeriodPreset.allCases.prefix(3)) { preset in
-                    Button {
+                    FilterChip(title: preset.displayName, isSelected: tempFilters.releasePeriodPreset == preset) {
                         tempFilters.releasePeriodPreset = preset
                         if !quotaManager.isProUser {
                             tempFilters.customYearStart = nil
                             tempFilters.customYearEnd = nil
                         }
-                    } label: {
-                        Text(preset.displayName)
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(tempFilters.releasePeriodPreset == preset ? .white : .theme.textSecondary)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .background(
-                                tempFilters.releasePeriodPreset == preset ?
-                                Color.theme.accentOrange :
-                                Color.white.opacity(0.1)
-                            )
-                            .clipShape(Capsule())
                     }
                 }
             }
@@ -507,52 +462,50 @@ struct GlobalFilterView: View {
     
     private var platformFilter: some View {
         VStack(spacing: 12) {
-            ScrollView {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 100))], spacing: 10) {
-                    ForEach(StreamingPlatform.allCases) { platform in
-                        Button {
-                            if tempFilters.streamingPlatforms.contains(platform.rawValue) {
-                                tempFilters.streamingPlatforms.remove(platform.rawValue)
-                            } else {
-                                tempFilters.streamingPlatforms.insert(platform.rawValue)
-                            }
-                        } label: {
-                            VStack(spacing: 8) {
-                                ZStack {
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color.white.opacity(0.08))
-                                        .frame(height: 50)
-                                    
-                                    if let logo = platform.logoAssetName {
-                                        Image(logo)
-                                            .resizable()
-                                            .aspectRatio(contentMode: .fit)
-                                            .frame(height: 30)
-                                            .cornerRadius(6)
-                                    } else {
-                                        Image(systemName: platform.icon)
-                                            .font(.system(size: 24))
-                                            .foregroundColor(platform.color)
-                                    }
-                                    
-                                    if tempFilters.streamingPlatforms.contains(platform.rawValue) {
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .stroke(Color.theme.accentOrange, lineWidth: 2)
-                                    }
+            // No nested scroll: the grid flows in the sheet's single scroll so no row is clipped.
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 96), spacing: 10)], spacing: 10) {
+                ForEach(StreamingPlatform.allCases) { platform in
+                    let isSelected = tempFilters.streamingPlatforms.contains(platform.rawValue)
+                    Button {
+                        if isSelected {
+                            tempFilters.streamingPlatforms.remove(platform.rawValue)
+                        } else {
+                            tempFilters.streamingPlatforms.insert(platform.rawValue)
+                        }
+                    } label: {
+                        VStack(spacing: 8) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color.white.opacity(0.08))
+                                    .frame(height: 50)
+
+                                if let logo = platform.logoAssetName {
+                                    Image(logo)
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fit)
+                                        .frame(height: 30)
+                                        .cornerRadius(6)
+                                } else {
+                                    Image(systemName: platform.icon)
+                                        .font(.system(size: 24))
+                                        .foregroundColor(platform.color)
                                 }
-                                
-                                Text(platform.rawValue)
-                                    .font(.system(size: 11, weight: .medium))
-                                    .foregroundColor(tempFilters.streamingPlatforms.contains(platform.rawValue) ? .theme.accentOrange : .theme.textSecondary)
-                                    .lineLimit(1)
+
+                                if isSelected {
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.theme.accentOrange, lineWidth: 2)
+                                }
                             }
+
+                            Text(platform.rawValue)
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(isSelected ? .theme.accentOrange : .theme.textSecondary)
+                                .lineLimit(1)
                         }
                     }
                 }
-                .padding(.vertical, 4)
             }
-            .frame(height: 180)
-            
+
             if !tempFilters.streamingPlatforms.isEmpty {
                 Button {
                     tempFilters.streamingPlatforms.removeAll()
@@ -595,9 +548,13 @@ struct GlobalFilterView: View {
                     .background(
                         tempFilters.sortBy == option ?
                         Color.theme.accentOrange.opacity(0.2) :
-                        Color.white.opacity(0.05)
+                        Color.white.opacity(0.07)
                     )
                     .cornerRadius(10)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(tempFilters.sortBy == option ? Color.theme.accentOrange.opacity(0.5) : .clear, lineWidth: 1)
+                    )
                 }
             }
         }
@@ -711,11 +668,12 @@ struct GlobalFilterSection<Content: View>: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 6) {
-                Text(title)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.theme.textPrimary)
+                Text(title.uppercased())
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.theme.textSecondary)
+                    .tracking(0.6)
 
                 if isPro {
                     Image(systemName: "crown.fill")
@@ -726,6 +684,39 @@ struct GlobalFilterSection<Content: View>: View {
 
             content
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(Color.white.opacity(0.04))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.white.opacity(0.06), lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - Filter Chip
+
+/// A single selectable pill. `fixedSize` guarantees the label never wraps or truncates —
+/// the FlowLayout below wraps whole chips onto the next line instead.
+struct FilterChip: View {
+    let title: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(isSelected ? .white : .theme.textSecondary)
+                .lineLimit(1)
+                .fixedSize()
+                .padding(.horizontal, 16)
+                .padding(.vertical, 9)
+                .background(isSelected ? Color.theme.accentOrange : Color.white.opacity(0.08))
+                .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
     }
 }
 

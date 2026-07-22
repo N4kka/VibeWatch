@@ -38,6 +38,7 @@
 "list.movies" = "映画";
 "list.tvShows" = "TV";
 "lists.myLists" = "マイリスト";
+"lists.collections" = "コレクション";
 "lists.empty" = "まだリストがありません";
 "lists.emptyDescription" = "最初のウォッチリストを作成して、発見した映画やドラマを整理しましょう";
 "lists.noItems" = "まだ項目がありません";

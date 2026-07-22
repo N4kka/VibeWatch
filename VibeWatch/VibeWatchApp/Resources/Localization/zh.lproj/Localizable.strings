@@ -58,6 +58,7 @@
 "lists.listName" = "列表名称";
 "lists.listNamePlaceholder" = "新列表";
 "lists.myLists" = "我的列表";
+"lists.collections" = "合集";
 "lists.noItems" = "还没有项目";
 "lists.searchPlaceholder" = "搜索此列表";
 "lists.seen" = "看过";

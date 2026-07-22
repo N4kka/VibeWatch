@@ -38,6 +38,7 @@
 "list.movies" = "Elokuvat";
 "list.tvShows" = "TV";
 "lists.myLists" = "Omat listani";
+"lists.collections" = "Kokoelmat";
 "lists.empty" = "Ei listoja vielä";
 "lists.emptyDescription" = "Luo ensimmäinen katselulistasi järjestääksesi löytämäsi elokuvat ja sarjat";
 "lists.noItems" = "Ei kohteita vielä";

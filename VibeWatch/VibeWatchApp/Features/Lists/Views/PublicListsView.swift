@@ -267,6 +267,8 @@ struct PublicListDetailView: View {
     @State private var isLoading = true
     @State private var loadFailed = false
     @State private var searchText = ""
+    @State private var showInlineSearch = false
+    @FocusState private var searchFieldFocused: Bool
     @State private var filters = GlobalDiscoveryFilters()
     @State private var showFilters = false
     @State private var filterRefreshTrigger = false
@@ -317,27 +319,37 @@ struct PublicListDetailView: View {
             Color.theme.background.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                searchField
-                    .padding(.horizontal, 20)
-                    .padding(.top, 12)
-
-                HStack(spacing: 12) {
+                HStack(spacing: 10) {
                     MediaFilterSwitcher(selectedFilter: mediaFilterBinding)
+
                     Spacer()
-                    Button { withAnimation { showFilters = true } } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "slider.horizontal.3").font(.system(size: 14))
-                            Text("filters.title".localized).font(.system(size: 14, weight: .medium))
+
+                    ListsFilterRow.searchToggle(isOn: showInlineSearch) {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            showInlineSearch.toggle()
+                            if showInlineSearch {
+                                searchFieldFocused = true
+                            } else {
+                                searchText = ""
+                                searchFieldFocused = false
+                            }
                         }
-                        .foregroundColor(.theme.textPrimary)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
-                        .background(Color.white.opacity(0.1))
-                        .clipShape(Capsule())
+                    }
+
+                    ListsFilterRow.filtersButton(count: filters.activeFilterCount) {
+                        withAnimation { showFilters = true }
                     }
                 }
                 .padding(.horizontal, 20)
-                .padding(.vertical, 12)
+                .padding(.top, 12)
+                .padding(.bottom, 12)
+
+                if showInlineSearch {
+                    searchField
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 12)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
 
                 content(visible: visible, paginated: paginated)
             }
@@ -447,6 +459,16 @@ struct PublicListDetailView: View {
             TextField("lists.searchPlaceholder".localized, text: $searchText)
                 .textInputAutocapitalization(.words)
                 .disableAutocorrection(true)
+                .focused($searchFieldFocused)
+
+            if !searchText.isEmpty {
+                Button {
+                    searchText = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.theme.textSecondary)
+                }
+            }
         }
         .padding(12)
         .background(Color.white.opacity(0.08))

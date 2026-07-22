@@ -38,6 +38,7 @@
 "list.movies" = "Filmer";
 "list.tvShows" = "TV";
 "lists.myLists" = "Mine lister";
+"lists.collections" = "Samlinger";
 "lists.empty" = "Ingen lister ennå";
 "lists.emptyDescription" = "Opprett din første watchlist for å organisere filmer og serier du oppdager";
 "lists.noItems" = "Ingen elementer ennå";

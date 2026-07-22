@@ -60,6 +60,7 @@
 "lists.listName" = "Listnamn";
 "lists.listNamePlaceholder" = "Ny lista";
 "lists.myLists" = "Mina listor";
+"lists.collections" = "Samlingar";
 "lists.noItems" = "Inga objekt ännu";
 "lists.searchPlaceholder" = "Sök i denna lista";
 "lists.seen" = "Sett";

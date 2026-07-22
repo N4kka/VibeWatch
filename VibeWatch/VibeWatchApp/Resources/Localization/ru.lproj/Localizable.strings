@@ -59,6 +59,7 @@
 "lists.listName" = "Название списка";
 "lists.listNamePlaceholder" = "Новый список";
 "lists.myLists" = "Мои списки";
+"lists.collections" = "Коллекции";
 "lists.noItems" = "Пока нет элементов";
 "lists.searchPlaceholder" = "Поиск в этом списке";
 "lists.seen" = "Просмотрено";
