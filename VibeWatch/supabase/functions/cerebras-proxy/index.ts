@@ -9,8 +9,18 @@ import {
 } from './quota.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
-const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+// Client-facing (low-priv) key: prefer new publishable key, fall back to legacy anon.
+const SUPABASE_ANON_KEY = (() => {
+  const s = Deno.env.get('SUPABASE_PUBLISHABLE_KEYS')
+  if (s) { try { const k = JSON.parse(s)?.default; if (k) return k as string } catch { /* fall back */ } }
+  return Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+})()
+// Admin (RLS-bypassing) key: prefer new secret key, fall back to legacy service_role.
+const SUPABASE_SERVICE_ROLE_KEY = (() => {
+  const s = Deno.env.get('SUPABASE_SECRET_KEYS')
+  if (s) { try { const k = JSON.parse(s)?.default; if (k) return k as string } catch { /* fall back */ } }
+  return Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+})()
 const CEREBRAS_API_KEY = Deno.env.get('CEREBRAS_API_KEY') ?? ''
 const CEREBRAS_ENDPOINT = 'https://api.cerebras.ai/v1/chat/completions'
 
