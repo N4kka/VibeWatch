@@ -11,7 +11,7 @@ final class StreamingAvailabilityService: StreamingAvailabilityProviding {
     @MainActor static let shared = StreamingAvailabilityService()
     
     private let baseURL = "https://streaming-availability.p.rapidapi.com"
-    private let rapidAPIKey = "4f23d6c502msh1c6ccc90b956bb3p18cabcjsn051c85bd5b33"
+    private let rapidAPIKey = Config.rapidAPIKey
     private let rapidAPIHost = "streaming-availability.p.rapidapi.com"
     private let session: URLSession
     
