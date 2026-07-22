@@ -26,11 +26,16 @@ VibeWatchApp/Config/Secrets.xcconfig
 # cancellino dal disco rompendo FirebaseApp.configure(). Restringere comunque la API key
 # al bundle id iOS + App Check in Google Cloud Console (repo pubblico).
 
-# Local-only docs, scripts, and migrations
+# Local-only docs and scripts
 docs/
-# Anchored (leading slash) so it ignores ONLY the top-level migrations folder and
-# NOT source dirs like VibeWatchApp/Core/Supabase/ (case-insensitive FS would match it).
-/supabase/
+# NOTE: `/supabase/` used to live here. The leading slash kept it from matching source dirs
+# like VibeWatchApp/Core/Supabase/ on a case-insensitive filesystem, but it also ignored the
+# whole supabase/ tree — so every new Edge Function and migration was invisible to git and had
+# to be force-added to be committed at all. The 12 functions already tracked predate the rule;
+# check-availability, added after it, never made it into the repo. Secrets and local CLI state
+# are ignored by the targeted rules above instead.
+# Deployment artifact: uploaded to Supabase Storage, not served from the repo.
+supabase/update.json
 VibeWatchApp/Scripts/
 VibeWatchApp/Config/
 *.md

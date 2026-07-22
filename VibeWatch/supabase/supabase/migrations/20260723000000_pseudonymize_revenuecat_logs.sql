@@ -51,10 +51,21 @@ BEGIN
                 )
            ELSE '{}'::jsonb
          END
-  WHERE app_user_id = p_user_id
-     OR payload ->> 'app_user_id' = p_user_id
-     OR payload ->> 'original_app_user_id' = p_user_id
-     OR (jsonb_typeof(payload -> 'aliases') = 'array' AND payload -> 'aliases' ? p_user_id);
+  -- Matching is case-insensitive on purpose: RevenueCat stores the app_user_id uppercased,
+  -- while auth.users.id is the canonical lowercase UUID. An exact comparison matches almost
+  -- nothing (19 of 20 known ids differ only by case), which would leave the rows identifiable
+  -- while the function still reported success.
+  WHERE lower(app_user_id) = lower(p_user_id)
+     OR lower(payload ->> 'app_user_id') = lower(p_user_id)
+     OR lower(payload ->> 'original_app_user_id') = lower(p_user_id)
+     OR (
+          jsonb_typeof(payload -> 'aliases') = 'array'
+          AND EXISTS (
+            SELECT 1
+            FROM jsonb_array_elements_text(payload -> 'aliases') AS alias
+            WHERE lower(alias) = lower(p_user_id)
+          )
+        );
 
   GET DIAGNOSTICS affected = ROW_COUNT;
   RETURN affected;
