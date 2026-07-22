@@ -98,6 +98,34 @@ final class SQLiteWritePathTests: XCTestCase {
             "queryRaw must reroute writes to the writer connection instead of swallowing them")
     }
 
+    /// Sign-out wipes the local store through resetDatabase() so the next account on this
+    /// device cannot read the previous one's rows. If this stops clearing, the data-bleed
+    /// returns silently.
+    func testResetDatabaseClearsUserRows() async throws {
+        let id = "writepath-\(UUID().uuidString)"
+        try await service.upsert(table: "profiles", rows: [["id": id, "display_name": "previous user"]])
+
+        service.resetDatabase()
+
+        let rows = try await service.queryRaw("SELECT id FROM profiles WHERE id = ?", parameters: [id])
+        XCTAssertTrue(rows.isEmpty, "resetDatabase must leave no rows from the previous account")
+    }
+
+    /// resetDatabase() closes and reopens both connections, so the writer has to come back
+    /// usable — otherwise the account signing in after a sign-out would silently persist nothing.
+    func testWritesStillPersistAfterResetDatabase() async throws {
+        service.resetDatabase()
+
+        let id = "writepath-\(UUID().uuidString)"
+        try await service.upsert(table: "profiles", rows: [["id": id, "display_name": "next user"]])
+
+        let rows = try await service.queryRaw(
+            "SELECT display_name FROM profiles WHERE id = ?", parameters: [id]
+        )
+        XCTAssertEqual(rows.first?["display_name"] as? String, "next user",
+            "the writer connection must still work after resetDatabase")
+    }
+
     /// A genuinely broken write must throw rather than resolve as an empty result set.
     func testFailingWriteThrows() async {
         do {
