@@ -8,7 +8,12 @@ serve(async (_req) => {
     // Create a Supabase client with the service role key
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      // Prefer the new secret key, fall back to the legacy service_role during migration.
+      (() => {
+        const s = Deno.env.get('SUPABASE_SECRET_KEYS')
+        if (s) { try { const k = JSON.parse(s)?.default; if (k) return k as string } catch { /* fall back */ } }
+        return Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      })()
     )
 
     console.log('✅ Supabase client initialized.');
@@ -68,7 +73,12 @@ serve(async (_req) => {
     // 3. Sequentially invoke the 'check-availability' function for each item
     // We do this sequentially to avoid rate-limiting and overwhelming the system.
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    // Prefer the new secret key, fall back to the legacy service_role during migration.
+    const serviceRoleKey = (() => {
+      const s = Deno.env.get('SUPABASE_SECRET_KEYS')
+      if (s) { try { const k = JSON.parse(s)?.default; if (k) return k as string } catch { /* fall back */ } }
+      return Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    })()
 
     for (const item of mediaToCheck) {
         console.log(`🎬 Invoking check-availability for ${item.mediaType} ID: ${item.mediaId}`);
@@ -78,6 +88,10 @@ serve(async (_req) => {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    // New sb_secret keys must travel on the apikey header (they are not JWTs).
+                    // Authorization kept for the legacy transition window. NOTE: the target
+                    // `check-availability` must have verify_jwt=false once legacy keys are disabled.
+                    'apikey': serviceRoleKey,
                     'Authorization': `Bearer ${serviceRoleKey}`,
                 },
                 body: JSON.stringify({

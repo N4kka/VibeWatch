@@ -246,7 +246,12 @@ serve(async (_req) => {
   try {
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      // Prefer the new secret key, fall back to the legacy service_role during migration.
+      (() => {
+        const s = Deno.env.get('SUPABASE_SECRET_KEYS')
+        if (s) { try { const k = JSON.parse(s)?.default; if (k) return k as string } catch { /* fall back */ } }
+        return Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      })()
     )
 
     const firebaseServiceAccountJson = Deno.env.get('FIREBASE_SERVICE_ACCOUNT')

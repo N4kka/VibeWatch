@@ -12,7 +12,13 @@ import { serve } from 'https://deno.land/std@0.131.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+// Prefer the new secret key (sb_secret_..., auto-injected as SUPABASE_SECRET_KEYS json),
+// falling back to the legacy service_role during the migration window.
+const SUPABASE_SERVICE_ROLE_KEY = (() => {
+  const s = Deno.env.get('SUPABASE_SECRET_KEYS')
+  if (s) { try { const k = JSON.parse(s)?.default; if (k) return k as string } catch { /* fall back */ } }
+  return Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+})()
 const REVENUECAT_WEBHOOK_SECRET = Deno.env.get('REVENUECAT_WEBHOOK_SECRET') ?? ''
 // Secret API key RevenueCat (sk_...), la stessa usata da cerebras-proxy per /v1/subscribers.
 const REVENUECAT_API_KEY = Deno.env.get('REVENUECAT_API_KEY') ?? ''
