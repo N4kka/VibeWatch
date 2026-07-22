@@ -23,6 +23,8 @@ struct ListsView: View {
     @State private var showingPaywall = false
     @State private var itemsLimit = 50
     @State private var searchText = ""
+    @State private var showInlineSearch = false
+    @FocusState private var searchFieldFocused: Bool
     @State private var forkedList: MediaList?
 
     private var mediaFilterBinding: Binding<MediaFilter> {
@@ -65,15 +67,13 @@ struct ListsView: View {
             VStack(spacing: 0) {
                 OfflineBanner()
 
+                // No filter button here: the Lists tab has its own inline "Filtri" control,
+                // so the header keeps just search + avatar (one door to the filter sheet).
                 AppHeaderView(
                     onSearchTap: { showSearch = true },
-                    onFilterTap: {
-                        withAnimation { showFilters = true }
-                    },
                     onProfileTap: { showProfile = true },
                     avatarURL: appState.currentUser?.avatarURL,
-                    isProUser: quotaManager.isProUser,
-                    activeFilterCount: filters.activeFilterCount
+                    isProUser: quotaManager.isProUser
                 )
 
                 LibrarySectionSwitcher(selectedSection: $selectedSection)
@@ -203,11 +203,14 @@ struct ListsView: View {
             }
             .padding(.bottom, 16)
 
-            searchField
-                .padding(.horizontal, 20)
-                .padding(.bottom, 16)
-
             combinedFiltersRow
+
+            if showInlineSearch {
+                searchField
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 16)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
 
             if viewModel.isLoadingInitial && viewModel.lists.isEmpty {
                 ProgressView()
@@ -227,7 +230,8 @@ struct ListsView: View {
             TextField("lists.searchPlaceholder".localized, text: $searchText)
                 .textInputAutocapitalization(.words)
                 .disableAutocorrection(true)
-            
+                .focused($searchFieldFocused)
+
             if !searchText.isEmpty {
                 Button {
                     searchText = ""
@@ -260,42 +264,32 @@ struct ListsView: View {
     }
     
     private var combinedFiltersRow: some View {
-        HStack(spacing: 12) {
-            // Media filter switcher
+        HStack(spacing: 10) {
+            // Quick media filter (fast path; stays in sync with the Filtri sheet)
             MediaFilterSwitcher(selectedFilter: mediaFilterBinding)
-            
+
             Spacer()
-            
-            // Advanced Filters Button with indicator
-            Button {
-                withAnimation {
-                    showFilters = true
-                }
-            } label: {
-                ZStack(alignment: .topTrailing) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "slider.horizontal.3")
-                            .font(.system(size: 14))
-                        Text("filters.title".localized)
-                            .font(.system(size: 14, weight: .medium))
-                    }
-                    .foregroundColor(.theme.textPrimary)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(Color.white.opacity(0.1))
-                    .clipShape(Capsule())
-                    
-                    if filters.isActive {
-                        Circle()
-                            .fill(Color.theme.accentOrange)
-                            .frame(width: 10, height: 10)
-                            .offset(x: 4, y: -2)
+
+            // Search this list — collapses to an icon, expands inline on tap
+            ListsFilterRow.searchToggle(isOn: showInlineSearch) {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    showInlineSearch.toggle()
+                    if showInlineSearch {
+                        searchFieldFocused = true
+                    } else {
+                        searchText = ""
+                        searchFieldFocused = false
                     }
                 }
             }
+
+            // Advanced filters — single door to GlobalFilterView, with active-count badge
+            ListsFilterRow.filtersButton(count: filters.activeFilterCount) {
+                withAnimation { showFilters = true }
+            }
         }
         .padding(.horizontal, 20)
-        .padding(.bottom, 20)
+        .padding(.bottom, 16)
     }
     
     private var contentView: some View {
@@ -517,7 +511,13 @@ struct MediaItemRow: View {
     @State private var fallbackDuration: Int?
     @State private var localizedTitle: String?
     @State private var localizedOverview: String?
-    
+    @State private var ambientTint: Color = .clear
+
+    /// Card geometry — tighter than before so ~3–4 cards breathe per screen.
+    private let cardHeight: CGFloat = 180
+    private let posterWidth: CGFloat = 104
+    private let posterHeight: CGFloat = 156
+
     private var deleteThreshold: CGFloat {
         // Delete when swiped 75% of the card width
         return -(cardWidth * 0.75)
@@ -540,16 +540,32 @@ struct MediaItemRow: View {
                                     .opacity(abs(offset) > 50 ? 1 : 0.5)
                             )
                     }
-                    .frame(height: 204)
+                    .frame(height: cardHeight)
                 }
-                
+
                 // Main content
                 ZStack {
-            // Background container
+            // Background container — neutral surface with a faint per-poster ambient wash
+            // at the poster (leading) edge, plus a hairline border. The wash is the
+            // "signature": each row picks up its own film's dominant color, subtly.
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color.theme.accentOrange.opacity(0.2))
-            
-            HStack(alignment: .top, spacing: 16) {
+                .fill(Color.theme.cardBackground)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(
+                            LinearGradient(
+                                colors: [ambientTint.opacity(0.34), .clear],
+                                startPoint: .leading,
+                                endPoint: UnitPoint(x: 0.42, y: 0.5)
+                            )
+                        )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.white.opacity(0.07), lineWidth: 1)
+                )
+
+            HStack(alignment: .top, spacing: 14) {
                 // Poster image - left side
                 if let posterPath = item.posterPath,
                    let url = URL(string: "https://image.tmdb.org/t/p/w342\(posterPath)") {
@@ -561,27 +577,28 @@ struct MediaItemRow: View {
                         Rectangle()
                             .fill(Color.theme.backgroundDark.opacity(0.5))
                     }
-                    .frame(width: 120, height: 180)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .frame(width: posterWidth, height: posterHeight)
+                    .clipShape(RoundedRectangle(cornerRadius: 11))
                 } else {
                     Rectangle()
                         .fill(Color.theme.backgroundDark.opacity(0.5))
-                        .frame(width: 120, height: 180)
+                        .frame(width: posterWidth, height: posterHeight)
                         .overlay {
                             Image(systemName: "film")
                                 .font(.system(size: 30))
                                 .foregroundColor(.theme.textSecondary)
                         }
-                        .clipShape(RoundedRectangle(cornerRadius: 12)) 
+                        .clipShape(RoundedRectangle(cornerRadius: 11))
                 }
                 
                 // Content - right side
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 7) {
                     // Title
                     Text(localizedTitle ?? item.title)
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.system(size: 17, weight: .bold))
                         .foregroundColor(.theme.textPrimary)
                         .lineLimit(2)
+                        .padding(.trailing, 34)
                     
                     let subtitleComponents = item.subtitleComponents(seasonCount: fallbackSeasonCount, duration: fallbackDuration)
                     if !subtitleComponents.isEmpty {
@@ -609,22 +626,16 @@ struct MediaItemRow: View {
                         Text(overview)
                             .font(.system(size: 13))
                             .foregroundColor(.theme.textSecondary)
-                            .lineLimit(3)
-                            .padding(.top, 4)
+                            .lineLimit(2)
+                            .padding(.top, 2)
                     }
-                    
-                    Spacer()
-                    
-                    // Watch Now button
+
+                    Spacer(minLength: 4)
+
+                    // Watch action — a compact chip, not a full-width orange bar.
+                    // checking → quiet skeleton · available → provider chip · unknown → notify chip
                     if isLoadingProviders || !providerLookupCompleted {
-                        HStack {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(Color.theme.accentOrange)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        providerSkeletonChip
                     } else if let provider = topProvider {
                         Button {
                             PlatformDeepLinkHelper.openPlatform(
@@ -633,38 +644,41 @@ struct MediaItemRow: View {
                                 title: item.title
                             )
                         } label: {
-                            HStack {
+                            HStack(spacing: 7) {
                                 CachedAsyncImage(url: provider.logoURL)
-                                    .frame(width: 20, height: 20)
+                                    .frame(width: 22, height: 22)
                                     .background(Color.white)
-                                    .clipShape(RoundedRectangle(cornerRadius: 4))
-                                
-                                Text(String(format: "lists.watchOn".localized, provider.providerName.uppercased()))
-                                    .font(.system(size: 12, weight: .bold))
+                                    .clipShape(RoundedRectangle(cornerRadius: 6))
+
+                                Text(provider.providerName)
+                                    .font(.system(size: 12.5, weight: .semibold))
                                     .lineLimit(1)
                             }
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 10)
-                            .background(Color.theme.accentOrange)
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                            .foregroundColor(.theme.textPrimary)
+                            .padding(.leading, 8)
+                            .padding(.trailing, 14)
+                            .padding(.vertical, 8)
+                            .background(Color.white.opacity(0.07))
+                            .clipShape(Capsule())
+                            .overlay(Capsule().stroke(Color.white.opacity(0.07), lineWidth: 1))
                         }
                     } else {
                         Button {
                             handleNotifyMe()
                         } label: {
-                            HStack(spacing: 4) {
+                            HStack(spacing: 5) {
+                                Image(systemName: "bell")
+                                    .font(.system(size: 12, weight: .semibold))
                                 Text("lists.notifyMe".localized)
-                                    .font(.system(size: 12, weight: .bold))
-                                Text("🔔")
-                                    .font(.system(size: 12))
+                                    .font(.system(size: 12.5, weight: .semibold))
+                                    .lineLimit(1)
                             }
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 10)
-                            .background(Color.theme.accentOrange)
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                            .foregroundColor(.theme.textSecondary)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 9)
+                            .background(Color.white.opacity(0.07))
+                            .clipShape(Capsule())
+                            .overlay(Capsule().stroke(Color.white.opacity(0.07), lineWidth: 1))
                         }
                     }
                 }
@@ -689,12 +703,15 @@ struct MediaItemRow: View {
                     } label: {
                         ZStack {
                             Circle()
-                                .fill(isActuallyInSeenList ? Color.green.opacity(0.2) : Color.white.opacity(0.2))
-                                .frame(width: 36, height: 36)
+                                .fill(isActuallyInSeenList ? Color.theme.accentOrange : Color.white.opacity(0.07))
+                                .frame(width: 30, height: 30)
+                                .overlay(
+                                    Circle().stroke(Color.white.opacity(0.07), lineWidth: isActuallyInSeenList ? 0 : 1)
+                                )
 
-                            Image(systemName: isActuallyInSeenList ? "checkmark.circle.fill" : "checkmark")
-                                .font(.system(size: isActuallyInSeenList ? 20 : 16, weight: .semibold))
-                                .foregroundColor(isActuallyInSeenList ? .green : .theme.textSecondary)
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(isActuallyInSeenList ? .white : .theme.textSecondary)
                         }
                     }
 
@@ -704,7 +721,7 @@ struct MediaItemRow: View {
             }
             .padding(12)
             }
-            .frame(height: 204)
+            .frame(height: cardHeight)
             .offset(x: offset)
             .contentShape(Rectangle())
             .onTapGesture {
@@ -763,7 +780,7 @@ struct MediaItemRow: View {
             }
             }
         }
-        .frame(height: 204)
+        .frame(height: cardHeight)
         .navigationDestination(isPresented: $navigateToDetail) {
             destinationView
         }
@@ -773,6 +790,9 @@ struct MediaItemRow: View {
         .task(id: "\(item.mediaType.rawValue)-\(item.mediaId)") {
             await loadFallbackDisplayDataIfNeeded()
         }
+        .task(id: item.posterPath) {
+            await loadAmbientTint()
+        }
         .alert("lists.notifyMeTitle".localized, isPresented: $showNotifyMeAlert) {
             Button("common.ok".localized, role: .cancel) { }
         } message: {
@@ -780,9 +800,44 @@ struct MediaItemRow: View {
         }
     }
     
+    /// Quiet placeholder shown while streaming availability is still being looked up —
+    /// replaces the old loud orange spinner bar.
+    private var providerSkeletonChip: some View {
+        HStack(spacing: 8) {
+            RoundedRectangle(cornerRadius: 6)
+                .fill(Color.white.opacity(0.10))
+                .frame(width: 22, height: 22)
+            RoundedRectangle(cornerRadius: 5)
+                .fill(Color.white.opacity(0.10))
+                .frame(width: 72, height: 10)
+        }
+        .shimmering()
+        .padding(.leading, 8)
+        .padding(.trailing, 14)
+        .padding(.vertical, 8)
+        .background(Color.white.opacity(0.05))
+        .clipShape(Capsule())
+        .overlay(Capsule().stroke(Color.white.opacity(0.07), lineWidth: 1))
+    }
+
+    /// Sample a subtle ambient tint from the poster (computed once, memoized by URL).
+    private func loadAmbientTint() async {
+        guard let posterPath = item.posterPath,
+              let url = URL(string: "https://image.tmdb.org/t/p/w342\(posterPath)") else { return }
+        let key = url.absoluteString
+        if let hit = PosterTint.cached(for: key) {
+            ambientTint = hit
+            return
+        }
+        if let image = try? await ImageCacheService.shared.loadImage(from: key, maxPixelSize: 120) {
+            let tint = PosterTint.compute(from: image, key: key)
+            await MainActor.run { ambientTint = tint }
+        }
+    }
+
     private func handleNotifyMe() {
         showNotifyMeAlert = true
-        
+
         // Ensure it's in watchlist
         Task {
             if !listManager.isInList(listId: listManager.watchlist.id, mediaId: item.mediaId, mediaType: item.mediaType) {
@@ -930,6 +985,8 @@ struct CustomListDetailView: View {
     @State private var showFilters = false
     @State private var filterRefreshTrigger = false
     @State private var searchText = ""
+    @State private var showInlineSearch = false
+    @FocusState private var searchFieldFocused: Bool
     @State private var itemsLimit = 100
     @State private var showEditSheet = false
     @State private var showDeleteAlert = false
@@ -982,40 +1039,37 @@ struct CustomListDetailView: View {
             Color.theme.background.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                searchField
-                    .padding(.horizontal, 20)
-                    .padding(.top, 12)
-
-                HStack(spacing: 12) {
+                HStack(spacing: 10) {
                     MediaFilterSwitcher(selectedFilter: mediaFilterBinding)
-                    Spacer()
-                    Button {
-                        withAnimation { showFilters = true }
-                    } label: {
-                        ZStack(alignment: .topTrailing) {
-                            HStack(spacing: 6) {
-                                Image(systemName: "slider.horizontal.3")
-                                    .font(.system(size: 14))
-                                Text("filters.title".localized)
-                                    .font(.system(size: 14, weight: .medium))
-                            }
-                            .foregroundColor(.theme.textPrimary)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 10)
-                            .background(Color.white.opacity(0.1))
-                            .clipShape(Capsule())
 
-                            if filters.isActive {
-                                Circle()
-                                    .fill(Color.theme.accentOrange)
-                                    .frame(width: 10, height: 10)
-                                    .offset(x: 4, y: -2)
+                    Spacer()
+
+                    ListsFilterRow.searchToggle(isOn: showInlineSearch) {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            showInlineSearch.toggle()
+                            if showInlineSearch {
+                                searchFieldFocused = true
+                            } else {
+                                searchText = ""
+                                searchFieldFocused = false
                             }
                         }
                     }
+
+                    ListsFilterRow.filtersButton(count: filters.activeFilterCount) {
+                        withAnimation { showFilters = true }
+                    }
                 }
                 .padding(.horizontal, 20)
-                .padding(.vertical, 12)
+                .padding(.top, 12)
+                .padding(.bottom, 12)
+
+                if showInlineSearch {
+                    searchField
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 12)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
 
                 if items.isEmpty {
                     VStack(spacing: 16) {
@@ -1148,6 +1202,16 @@ struct CustomListDetailView: View {
             TextField("lists.searchPlaceholder".localized, text: $searchText)
                 .textInputAutocapitalization(.words)
                 .disableAutocorrection(true)
+                .focused($searchFieldFocused)
+
+            if !searchText.isEmpty {
+                Button {
+                    searchText = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.theme.textSecondary)
+                }
+            }
         }
         .padding(12)
         .background(Color.white.opacity(0.08))

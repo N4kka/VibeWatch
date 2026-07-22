@@ -38,6 +38,7 @@
 "list.movies" = "फ़िल्में";
 "list.tvShows" = "टीवी";
 "lists.myLists" = "मेरी सूचियाँ";
+"lists.collections" = "संग्रह";
 "lists.empty" = "अभी तक कोई सूची नहीं";
 "lists.emptyDescription" = "जो फ़िल्में और शो आप खोजते हैं उन्हें व्यवस्थित करने के लिए अपनी पहली वॉचलिस्ट बनाएं।";
 "lists.noItems" = "अभी कोई आइटम नहीं";

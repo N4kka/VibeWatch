@@ -2,11 +2,13 @@ import SwiftUI
 
 struct AppHeaderView: View {
     let onSearchTap: () -> Void
-    let onFilterTap: () -> Void
+    /// Optional: when nil, the filter button is hidden entirely (e.g. the Lists tab, which has
+    /// its own inline Filtri control and shouldn't show a second door to the same sheet).
+    var onFilterTap: (() -> Void)? = nil
     let onProfileTap: () -> Void
     let avatarURL: String?
     let isProUser: Bool
-    let activeFilterCount: Int
+    var activeFilterCount: Int = 0
 
     var body: some View {
         HStack(spacing: 16) {
@@ -34,24 +36,26 @@ struct AppHeaderView: View {
                         .clipShape(Circle())
                 }
 
-                Button(action: onFilterTap) {
-                    Image(systemName: "line.3.horizontal.decrease.circle")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundColor(.theme.textPrimary)
-                        .frame(width: 40, height: 40)
-                        .background(Color.white.opacity(0.1))
-                        .clipShape(Circle())
-                        .overlay(alignment: .topTrailing) {
-                            if activeFilterCount > 0 {
-                                Text("\(activeFilterCount)")
-                                    .font(.system(size: 11, weight: .bold))
-                                    .foregroundColor(.white)
-                                    .frame(width: 18, height: 18)
-                                    .background(Color.theme.accentOrange)
-                                    .clipShape(Circle())
-                                    .offset(x: 4, y: -4)
+                if let onFilterTap {
+                    Button(action: onFilterTap) {
+                        Image(systemName: "line.3.horizontal.decrease.circle")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundColor(.theme.textPrimary)
+                            .frame(width: 40, height: 40)
+                            .background(Color.white.opacity(0.1))
+                            .clipShape(Circle())
+                            .overlay(alignment: .topTrailing) {
+                                if activeFilterCount > 0 {
+                                    Text("\(activeFilterCount)")
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundColor(.white)
+                                        .frame(width: 18, height: 18)
+                                        .background(Color.theme.accentOrange)
+                                        .clipShape(Circle())
+                                        .offset(x: 4, y: -4)
+                                }
                             }
-                        }
+                    }
                 }
 
                 ProUpgradeIconButton(isProUser: isProUser, source: "app_header")

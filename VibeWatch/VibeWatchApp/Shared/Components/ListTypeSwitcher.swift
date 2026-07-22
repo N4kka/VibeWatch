@@ -7,16 +7,24 @@ enum ListViewType: String, CaseIterable {
     case liked = "lists.liked"
     
     var displayName: String {
-        rawValue.localizedMainSafe()
+        switch self {
+        // "Le Mie Liste" collided with the section tab of the same name, so the custom-lists
+        // chip is now labelled "Raccolte" / "Collections".
+        case .myLists: return "lists.collections".localizedMainSafe()
+        default: return rawValue.localizedMainSafe()
+        }
     }
 }
 
 struct ListTypeSwitcher: View {
     @Binding var selectedType: ListViewType
 
+    /// System lists first, the custom-lists collection ("Raccolte") last — matches the redesign.
+    private static let orderedTypes: [ListViewType] = [.watchlist, .seen, .liked, .myLists]
+
     var body: some View {
         SegmentedPicker(
-            items: Array(ListViewType.allCases),
+            items: Self.orderedTypes,
             selection: $selectedType,
             label: { $0.displayName }
         )
@@ -35,27 +43,45 @@ enum LibrarySection: String, CaseIterable {
 
 struct LibrarySectionSwitcher: View {
     @Binding var selectedSection: LibrarySection
+    @Namespace private var underline
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 24) {
             ForEach(LibrarySection.allCases, id: \.self) { section in
+                let isSelected = selectedSection == section
                 Button {
                     withAnimation(.easeInOut(duration: 0.2)) {
                         selectedSection = section
                     }
                 } label: {
-                    Text(section.displayName)
-                        .font(.system(size: 13, weight: selectedSection == section ? .semibold : .medium))
-                        .foregroundColor(selectedSection == section ? .theme.accentOrange : .theme.textSecondary)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .clipShape(Capsule())
+                    VStack(spacing: 8) {
+                        Text(section.displayName)
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(isSelected ? .theme.textPrimary : .theme.textSecondary)
+                            .fixedSize(horizontal: true, vertical: false)
+
+                        ZStack {
+                            Capsule().fill(Color.clear).frame(height: 2.5)
+                            if isSelected {
+                                Capsule()
+                                    .fill(Color.theme.accentOrange)
+                                    .frame(height: 2.5)
+                                    .matchedGeometryEffect(id: "sectionUnderline", in: underline)
+                            }
+                        }
+                    }
                 }
+                .buttonStyle(.plain)
             }
 
-            Spacer()
+            Spacer(minLength: 0)
         }
-        .padding(.horizontal, 10)
+        .padding(.horizontal, 20)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(Color.white.opacity(0.07))
+                .frame(height: 1)
+        }
     }
 }
 

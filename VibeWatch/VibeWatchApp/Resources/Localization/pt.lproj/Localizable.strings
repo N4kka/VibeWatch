@@ -59,6 +59,7 @@
 "lists.listName" = "Nome da lista";
 "lists.listNamePlaceholder" = "Nova lista";
 "lists.myLists" = "Minhas listas";
+"lists.collections" = "Coleções";
 "lists.noItems" = "Nenhum item ainda";
 "lists.searchPlaceholder" = "Buscar nesta lista";
 "lists.seen" = "Vistos";

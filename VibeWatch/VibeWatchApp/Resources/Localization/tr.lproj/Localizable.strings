@@ -59,6 +59,7 @@
 "lists.listName" = "Liste Adı";
 "lists.listNamePlaceholder" = "Yeni Liste";
 "lists.myLists" = "Listelerim";
+"lists.collections" = "Koleksiyonlar";
 "lists.noItems" = "Henüz öğe yok";
 "lists.searchPlaceholder" = "Bu listede ara";
 "lists.seen" = "İzlendi";

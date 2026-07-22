@@ -38,6 +38,7 @@
 "list.movies" = "영화";
 "list.tvShows" = "TV";
 "lists.myLists" = "내 리스트";
+"lists.collections" = "컬렉션";
 "lists.empty" = "아직 리스트가 없어요";
 "lists.emptyDescription" = "첫 번째 시청 목록을 만들어 영화와 시리즈를 정리하세요";
 "lists.noItems" = "아직 항목이 없어요";
