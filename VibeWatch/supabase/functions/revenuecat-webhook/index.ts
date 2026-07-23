@@ -126,6 +126,19 @@ async function fetchIsProFromRevenueCat(userId: string): Promise<boolean | null>
 
 async function upsertIsPro(userId: string, isPro: boolean | null): Promise<void> {
   if (isPro === null) return
+  // Fonte autorevole dell'entitlement (SEC-005). user_daily_quota.is_pro resta una cache che il
+  // client scrive sulla propria riga, quindi forgiabile: nessuna decisione puo poggiarci sopra.
+  // user_entitlements e scrivibile solo da service_role ed e cio che award_xp legge.
+  const { error: entErr } = await supabase
+    .from('user_entitlements')
+    .upsert(
+      { user_id: userId, is_pro: isPro, source: 'revenuecat', verified_at: new Date().toISOString() },
+      { onConflict: 'user_id' },
+    )
+  if (entErr) {
+    console.error('Errore upsert user_entitlements:', entErr.message)
+  }
+
   const { error } = await supabase
     .from('user_daily_quota')
     .upsert(

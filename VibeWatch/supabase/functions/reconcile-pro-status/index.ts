@@ -91,6 +91,14 @@ serve(async (req) => {
     if (isPro === null) {
       skippedIndeterminate++
     } else if (isPro === false) {
+      // Fonte autorevole prima (SEC-005), poi la cache client-side.
+      await supabase
+        .from('user_entitlements')
+        .upsert(
+          { user_id: userId, is_pro: false, source: 'reconcile', verified_at: new Date().toISOString() },
+          { onConflict: 'user_id' },
+        )
+
       const { error: updErr } = await supabase
         .from('user_daily_quota')
         .update({ is_pro: false, updated_at: new Date().toISOString() })
