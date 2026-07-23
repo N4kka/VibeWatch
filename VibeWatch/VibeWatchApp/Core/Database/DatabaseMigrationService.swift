@@ -23,33 +23,42 @@ final class DatabaseMigrationService {
         
         do {
             try await DatabaseUtilities.retryOnFailure(maxAttempts: 3) { @MainActor in
-                // Migrate clips (this is the most important)
-                await self.migrateClips()
-                
-                // Migrate discovery cache
+                // Migrate clips (this is the most important). Throws on a real failure — a missing
+                // Supabase client or a fetch error — so retryOnFailure retries, and, crucially, the
+                // "completed" flag below is NOT written. Before, migrateClips swallowed its own
+                // errors and always returned, so the migration marked itself done even when it had
+                // imported nothing, and never ran again.
+                try await self.migrateClips()
+
+                // Discovery cache is a refillable warm cache, not essential data: it stays
+                // best-effort and never blocks completion.
                 await self.migrateDiscoveryCache()
-                
-                // Mark as completed
+
+                // Mark as completed — reached only when clips actually migrated.
                 UserDefaults.standard.set(true, forKey: "initialDataPopulated")
                 UserDefaults.standard.set(Date(), forKey: "initialDataMigratedDate")
-                
+
                 Logger.info("[Migration] Initial data migration complete!")
             }
         } catch {
-            Logger.error("[Migration] Migration failed after retries: \(error)")
+            Logger.error("[Migration] Migration failed after retries, will retry next launch: \(error)")
         }
+    }
+
+    enum MigrationError: Error {
+        case supabaseNotConfigured
     }
     
     // MARK: - Clip Migration
     
-    private func migrateClips() async {
+    private func migrateClips() async throws {
         Logger.info("[Migration] Migrating clips from Supabase...")
-        
+
         guard let client = supabase.client else {
-            Logger.warning("[Migration] Supabase not configured, skipping clips migration")
-            return
+            Logger.warning("[Migration] Supabase not configured — clips migration cannot complete")
+            throw MigrationError.supabaseNotConfigured
         }
-        
+
         do {
             // Fetch all active clips from Supabase
             let clips: [SupabaseClip] = try await client
@@ -104,9 +113,11 @@ final class DatabaseMigrationService {
             }
             
             Logger.info("[Migration] Successfully migrated \(insertedCount) clips to local SQLite")
-            
+
         } catch {
+            // Re-raise: a failed clips import must NOT be recorded as a completed migration.
             Logger.error("[Migration] Failed to migrate clips: \(error)")
+            throw error
         }
     }
     
