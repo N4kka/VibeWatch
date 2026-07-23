@@ -19,13 +19,7 @@ class SupabaseService: ObservableObject {
     }
     
     private init() {
-        if let savedDeviceId = UserDefaults.standard.string(forKey: "deviceIdentifier") {
-            self.deviceId = savedDeviceId
-        } else {
-            let newDeviceId = UUID().uuidString
-            UserDefaults.standard.set(newDeviceId, forKey: "deviceIdentifier")
-            self.deviceId = newDeviceId
-        }
+        self.deviceId = DeviceIdentity.installation
     }
 
     private let localDB = SQLiteService.shared

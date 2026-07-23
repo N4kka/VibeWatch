@@ -39,13 +39,7 @@ class UserPreferenceManager: ObservableObject {
         self.supabaseClient = supabaseClient
 
         // Get or create device ID
-        if let savedDeviceId = UserDefaults.standard.string(forKey: "deviceIdentifier") {
-            self.deviceId = savedDeviceId
-        } else {
-            let newDeviceId = UUID().uuidString
-            UserDefaults.standard.set(newDeviceId, forKey: "deviceIdentifier")
-            self.deviceId = newDeviceId
-        }
+        self.deviceId = DeviceIdentity.installation
 
         Logger.info("[UserPreferenceManager] Initialized with device ID: \(deviceId)")
     }

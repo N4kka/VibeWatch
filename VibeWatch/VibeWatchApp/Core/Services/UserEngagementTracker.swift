@@ -183,7 +183,7 @@ class UserEngagementTracker: ObservableObject {
 
     private func saveToSQLite() async {
         let userId = await SupabaseService.shared.currentUser?.id ?? "anonymous"
-        let deviceId = UserDefaults.standard.string(forKey: "deviceIdentifier") ?? "unknown"
+        let deviceId = DeviceIdentity.installation
 
         do {
             // Save genre scores

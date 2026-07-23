@@ -54,7 +54,7 @@ class ListManager: ObservableObject {
     private let authService: AuthStatusProviding
     private var cancellables = Set<AnyCancellable>()
     private var userId: String {
-        authService.currentUser?.id ?? getDeviceId()
+        authService.currentUser?.id ?? DeviceIdentity.installation
     }
 
     var currentCustomListLimit: Int {
@@ -275,7 +275,7 @@ class ListManager: ObservableObject {
     /// Load lists from SQLite (single source of truth)
     /// Internal (not private) so the full-set load invariant can be characterized in tests.
     func loadListsFromSQLite() async {
-        let currentUserId = authService.currentUser?.id ?? getDeviceId()
+        let currentUserId = authService.currentUser?.id ?? DeviceIdentity.installation
 
         do {
             let listsQuery = """
@@ -1151,15 +1151,6 @@ class ListManager: ObservableObject {
 
     // MARK: - Helper Methods
 
-    private func getDeviceId() -> String {
-        let key = "deviceIdentifier"
-        if let existing = UserDefaults.standard.string(forKey: key) {
-            return existing
-        }
-        let newId = UUID().uuidString
-        UserDefaults.standard.set(newId, forKey: key)
-        return newId
-    }
     
     private func parseStringArray(_ json: String?) -> [String]? {
         guard let json = json,

@@ -201,13 +201,7 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
         self.stateMachine = stateMachine ?? SyncStateMachine()
 
         // Load or create device ID
-        if let savedDeviceId = UserDefaults.standard.string(forKey: "deviceIdentifier") {
-            self.deviceId = savedDeviceId
-        } else {
-            let newDeviceId = UUID().uuidString
-            UserDefaults.standard.set(newDeviceId, forKey: "deviceIdentifier")
-            self.deviceId = newDeviceId
-        }
+        self.deviceId = DeviceIdentity.installation
 
         // Load last sync time
         if let lastSync = UserDefaults.standard.object(forKey: "SyncEngine.lastSyncTimestamp") as? Date {

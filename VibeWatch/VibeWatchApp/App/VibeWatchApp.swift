@@ -11,7 +11,6 @@ struct VibeWatchApp: App {
     @StateObject private var appNavigationManager = AppNavigationManager.shared
     @StateObject private var authService = AuthService.shared
     @StateObject private var quotaManager = DailyQuotaManager.shared
-    @StateObject private var dependencies = DependencyContainer.shared
     
     init() {
         // Configure RevenueCat with appropriate log level
@@ -35,7 +34,6 @@ struct VibeWatchApp: App {
                 .environmentObject(appNavigationManager)
                 .environmentObject(authService)
                 .environmentObject(quotaManager)
-                .environmentObject(dependencies)
                 .preferredColorScheme(.dark)
                 .task {
                     // SyncEngine automatically handles periodic syncs via state machine

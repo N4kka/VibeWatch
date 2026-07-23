@@ -229,11 +229,17 @@ final class SyncEngineTests: XCTestCase {
     // MARK: - Sync State Tests
 
     func testIsSyncingFlag() async {
-        // Initially not syncing
-        let isSyncing = await MainActor.run { syncEngine.isSyncing }
-        XCTAssertFalse(isSyncing, "Should not be syncing initially")
+        // `syncEngine` is the shared singleton, and `queueOperation` kicks off an immediate push
+        // when online, so "is it syncing right now?" is a race, not an invariant: whether this
+        // reads true or false depends on what ran before it. What the flag actually guarantees is
+        // that it *settles* to false once no sync is in flight — so assert that instead.
+        var isSyncing = await MainActor.run { syncEngine.isSyncing }
+        for _ in 0..<50 where isSyncing {
+            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1s, up to 5s total
+            isSyncing = await MainActor.run { syncEngine.isSyncing }
+        }
 
-        print("isSyncing flag test passed")
+        XCTAssertFalse(isSyncing, "isSyncing should settle to false when no sync is in flight")
     }
 
     func testPendingOperationsCount() async throws {

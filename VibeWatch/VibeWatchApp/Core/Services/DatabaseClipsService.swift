@@ -57,7 +57,7 @@ class DatabaseClipsService {
         let unifiedTopGenres = userProfile.topGenres.prefix(5).map { $0.genreId }
 
         let topGenres = Array(Set(engagementTopGenres + unifiedTopGenres))
-        let deviceId = getDeviceId()
+        let deviceId = DeviceIdentity.installation
 
         // Fetch active clips from local SQLite using bucket-based randomization (Phase 4 optimization)
         // Pick a random bucket range instead of ORDER BY RANDOM() for better performance
@@ -269,15 +269,6 @@ class DatabaseClipsService {
         }
     }
     
-    private func getDeviceId() -> String {
-        let key = "deviceIdentifier"
-        if let existing = UserDefaults.standard.string(forKey: key) {
-            return existing
-        }
-        let newId = UUID().uuidString
-        UserDefaults.standard.set(newId, forKey: key)
-        return newId
-    }
     
     private func getInstallDate() -> Date {
         let key = "appInstallDate"

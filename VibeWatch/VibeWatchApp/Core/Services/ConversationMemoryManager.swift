@@ -91,7 +91,7 @@ final class ConversationMemoryManager: ObservableObject {
             return
         }
 
-        let deviceId = UserDefaults.standard.string(forKey: "deviceIdentifier") ?? "unknown"
+        let deviceId = DeviceIdentity.installation
         let now = ISO8601DateFormatter().string(from: Date())
 
         let record: [String: Any] = [

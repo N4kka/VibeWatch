@@ -16,9 +16,7 @@ struct ActorDetailView: View {
         initialProfileURL: URL? = nil,
         previousTitle: String
     ) {
-        _viewModel = StateObject(
-            wrappedValue: DependencyContainer.shared.makeActorDetailViewModel(personId: actorId)
-        )
+        _viewModel = StateObject(wrappedValue: ActorDetailViewModel(personId: actorId))
         self.initialName = initialName
         self.initialProfileURL = initialProfileURL
         self.previousTitle = previousTitle

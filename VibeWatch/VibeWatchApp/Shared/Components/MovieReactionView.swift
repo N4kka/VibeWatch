@@ -12,7 +12,7 @@ struct MovieReactionView: View {
     @State private var isLoading = false
     
     private var userId: String {
-        authService.currentUser?.id ?? getDeviceId()
+        authService.currentUser?.id ?? DeviceIdentity.installation
     }
     
     var body: some View {
@@ -127,15 +127,6 @@ struct MovieReactionView: View {
     
     // MARK: - Helpers
     
-    private func getDeviceId() -> String {
-        let key = "deviceIdentifier"
-        if let existing = UserDefaults.standard.string(forKey: key) {
-            return existing
-        }
-        let newId = UUID().uuidString
-        UserDefaults.standard.set(newId, forKey: key)
-        return newId
-    }
 }
 
 // MARK: - Preview
