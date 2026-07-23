@@ -49,4 +49,26 @@ final class DatabaseMigrationTests: XCTestCase {
         XCTAssertFalse(rows.isEmpty,
             "clip_comments must have an updated_at column (expected from DatabaseMigrationManager version 3)")
     }
+
+    // STAB-003: runMigrations now refuses to record the latest version until every migration's
+    // end-state artifact is actually present. This guards against the *opposite* regression — that
+    // the artifact list wrongly names something the real schema doesn't produce, which would block
+    // the version bump forever and re-run migrations on every launch. On the fully-initialised
+    // shared DB, every checked artifact (table, column, index) must exist.
+    func testEveryVerifiedMigrationArtifactExistsOnRealSchema() {
+        let db = SQLiteService.shared
+        // Columns
+        XCTAssertTrue(db.columnExists("clip_reactions", column: "updated_at"))
+        XCTAssertTrue(db.columnExists("clip_reactions", column: "synced_at"))
+        XCTAssertTrue(db.columnExists("user_ai_token_usage", column: "usage_day"))
+        XCTAssertTrue(db.columnExists("detail_cache", column: "vote_count"))
+        XCTAssertTrue(db.columnExists("lists", column: "is_public"))
+        // Tables / indexes
+        XCTAssertTrue(db.objectExists("watch_providers"))
+        XCTAssertTrue(db.objectExists("idx_lists_one_core_per_user_type"))
+        XCTAssertTrue(db.objectExists("list_follows"))
+        XCTAssertTrue(db.objectExists("public_lists_cache"))
+        // Sanity: the helper says no when something truly isn't there.
+        XCTAssertFalse(db.objectExists("definitely_not_a_real_table_xyz"))
+    }
 }

@@ -661,9 +661,55 @@ final class SQLiteService: ObservableObject {
         // Re-enable foreign keys
         execute("PRAGMA foreign_keys = ON")
 
-        // Mark migration as complete
+        // STAB-003: only record the new version if the schema it promises is actually there.
+        // Every execute() above returns a Bool that the migration ignored, so a failed ALTER/CREATE
+        // used to be invisible and the version was bumped anyway — leaving a store permanently
+        // half-migrated (next launch sees version >= latest and skips, so it never heals). Instead
+        // of a transactional rewrite of this launch-critical path (high risk, no tests), we verify
+        // the distinctive artifact of each migration and refuse to claim the version until they're
+        // all present. A partial migration then simply retries on the next launch.
+        let missing = missingMigrationArtifacts()
+        guard missing.isEmpty else {
+            Logger.error("[SQLite] Migration incomplete — NOT recording version \(latestVersion). "
+                         + "Missing: \(missing.joined(separator: ", ")). Will retry next launch.")
+            return
+        }
+
         execute("INSERT OR REPLACE INTO app_metadata (key_name, value_text) VALUES ('migration_version', '\(latestVersion)')")
         Logger.info("[SQLite] Migrations complete - now at version \(latestVersion)")
+    }
+
+    /// Returns the labels of any expected end-state artifacts (columns, tables, indexes) that the
+    /// migrations 1–7 should have produced but didn't. Empty means the schema matches what the
+    /// latest version promises. Used to gate the version bump (STAB-003).
+    private func missingMigrationArtifacts() -> [String] {
+        var missing: [String] = []
+        func requireColumn(_ table: String, _ column: String) {
+            if !columnExists(table, column: column) { missing.append("\(table).\(column)") }
+        }
+        func requireObject(_ name: String) {
+            if !objectExists(name) { missing.append(name) }
+        }
+        requireColumn("clip_reactions", "updated_at")   // migration 2
+        requireColumn("clip_reactions", "synced_at")    // migration 3
+        requireColumn("user_ai_token_usage", "usage_day") // migration 4
+        requireObject("watch_providers")                // migration 5
+        requireColumn("detail_cache", "vote_count")     // migration 5
+        requireObject("idx_lists_one_core_per_user_type") // migration 6
+        requireColumn("lists", "is_public")             // migration 7
+        requireObject("list_follows")                   // migration 7
+        requireObject("public_lists_cache")             // migration 7
+        return missing
+    }
+
+    /// True if a table or index with this name exists. Sync, C-API, mirrors columnExists.
+    func objectExists(_ name: String) -> Bool {
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+        let sql = "SELECT 1 FROM sqlite_master WHERE type IN ('table','index') AND name = ? LIMIT 1"
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else { return false }
+        sqlite3_bind_text(statement, 1, (name as NSString).utf8String, -1, nil)
+        return sqlite3_step(statement) == SQLITE_ROW
     }
     
     func columnExists(_ table: String, column: String) -> Bool {
