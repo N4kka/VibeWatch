@@ -48,6 +48,10 @@ iOSInjectionProject/
 
 # API Keys and Secrets (IMPORTANT!)
 Config.swift
+# ...but not the app's own Config.swift, which holds no secret VALUES: it only names the
+# Info.plist keys to read (the values come from the untracked Secrets.xcconfig). It is
+# required source, and excluding it means a clean checkout cannot build.
+!VibeWatch/VibeWatchApp/Core/Network/Config.swift
 APIKeys.plist
 *.secret
 
