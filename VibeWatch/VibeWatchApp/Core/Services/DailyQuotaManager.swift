@@ -195,8 +195,13 @@ class DailyQuotaManager: ObservableObject {
 
         do {
             let sql = """
-                REPLACE INTO user_daily_quota (id, user_id, device_id, clips_watched_today, last_reset_at, is_pro, created_at, updated_at)
+                INSERT INTO user_daily_quota (id, user_id, device_id, clips_watched_today, last_reset_at, is_pro, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+                ON CONFLICT(user_id, device_id) DO UPDATE SET
+                    clips_watched_today = excluded.clips_watched_today,
+                    last_reset_at = excluded.last_reset_at,
+                    is_pro = excluded.is_pro,
+                    updated_at = excluded.updated_at
             """
             try await db.executeWrite(sql, parameters: [
                 quotaId, userId, deviceId, oldCount,
@@ -245,8 +250,13 @@ class DailyQuotaManager: ObservableObject {
             let userId = SupabaseService.shared.currentUser?.id ?? "anonymous"
             let quotaId = "\(userId)_\(deviceId)"
             let sql = """
-                REPLACE INTO user_daily_quota (id, user_id, device_id, clips_watched_today, last_reset_at, is_pro, updated_at)
+                INSERT INTO user_daily_quota (id, user_id, device_id, clips_watched_today, last_reset_at, is_pro, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+                ON CONFLICT(user_id, device_id) DO UPDATE SET
+                    clips_watched_today = excluded.clips_watched_today,
+                    last_reset_at = excluded.last_reset_at,
+                    is_pro = excluded.is_pro,
+                    updated_at = excluded.updated_at
             """
             try await db.executeWrite(sql, parameters: [
                 quotaId, userId, deviceId, clipsWatchedToday,

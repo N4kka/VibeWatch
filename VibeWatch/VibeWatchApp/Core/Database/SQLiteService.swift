@@ -1155,10 +1155,26 @@ final class SQLiteService: ObservableObject {
             return false
         }
 
-        let columns = records[0].keys.joined(separator: ", ")
-        let placeholders = "(" + Array(repeating: "?", count: records[0].keys.count).joined(separator: ", ") + ")"
-        let query = "INSERT OR REPLACE INTO \(table) (\(columns)) VALUES \(placeholders)"
-        
+        let recordCols = Array(records[0].keys)
+        let columns = recordCols.joined(separator: ", ")
+        let placeholders = "(" + Array(repeating: "?", count: recordCols.count).joined(separator: ", ") + ")"
+
+        // Was `INSERT OR REPLACE`, which deletes the conflicting row and re-inserts. On list_items
+        // that resurrected soft-deleted rows (the incoming record carries no deleted_at, so the
+        // fresh row defaults it to NULL) and, more dangerously in general, fires ON DELETE CASCADE.
+        // Same fix and same conflict-target derivation as `upsert()`: mutate in place, and never
+        // touch columns the caller didn't provide — so a soft-deleted item stays deleted.
+        let targets = (try? await conflictTargets(for: table)) ?? []
+        var query = "INSERT INTO \(table) (\(columns)) VALUES \(placeholders)"
+        for target in targets {
+            let assignments = recordCols
+                .filter { !target.contains($0) }
+                .map { "\($0)=excluded.\($0)" }
+                .joined(separator: ", ")
+            let onConflict = "ON CONFLICT(\(target.joined(separator: ", ")))"
+            query += assignments.isEmpty ? " \(onConflict) DO NOTHING" : " \(onConflict) DO UPDATE SET \(assignments)"
+        }
+
         let safeRecords = records.map(SQLSendableRecord.init(raw:))
         
         return await withCheckedContinuation { continuation in

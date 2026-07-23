@@ -522,9 +522,17 @@ class GamificationService: ObservableObject {
 
     private func saveUserState(userId: String) async {
         let sql = """
-            INSERT OR REPLACE INTO user_gamification
+            INSERT INTO user_gamification
             (user_id, total_xp, current_level, current_streak, longest_streak, last_activity_date, streak_freezes_remaining, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
+            ON CONFLICT(user_id) DO UPDATE SET
+                total_xp = excluded.total_xp,
+                current_level = excluded.current_level,
+                current_streak = excluded.current_streak,
+                longest_streak = excluded.longest_streak,
+                last_activity_date = excluded.last_activity_date,
+                streak_freezes_remaining = excluded.streak_freezes_remaining,
+                updated_at = excluded.updated_at
         """
         sqliteService.execute(sql, parameters: [
             userId,
@@ -743,8 +751,13 @@ class GamificationService: ObservableObject {
         let now = ISO8601DateFormatter().string(from: Date())
 
         let sql = """
-            INSERT OR REPLACE INTO user_badges (id, user_id, badge_id, progress, target, unlocked_at, updated_at)
+            INSERT INTO user_badges (id, user_id, badge_id, progress, target, unlocked_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(user_id, badge_id) DO UPDATE SET
+                progress = excluded.progress,
+                target = excluded.target,
+                unlocked_at = excluded.unlocked_at,
+                updated_at = excluded.updated_at
         """
         sqliteService.execute(sql, parameters: [
             recordId,

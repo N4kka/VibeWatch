@@ -222,8 +222,12 @@ final class ClipCommentService: ObservableObject {
             // Build Any/NSNull inside the @Sendable closure to avoid capturing non-Sendable Any
             let parentSQLParam: Any = parentIdParam ?? NSNull()
             
+            // Plain INSERT, not REPLACE: commentId is a fresh UUID, so this only ever inserts.
+            // It also matters that clip_comments is a CASCADE parent (of its own replies and of
+            // clip_comment_likes) — a REPLACE here was the one site of ARCH-010 whose delete could
+            // have fired those cascades, had the id ever collided.
             let success = sqlite.execute("""
-                INSERT OR REPLACE INTO clip_comments (
+                INSERT INTO clip_comments (
                     id, clip_id, user_id, parent_comment_id, content,
                     like_count, reply_count, created_at, updated_at, synced_at
                 ) VALUES (?, ?, ?, ?, ?, 0, 0, ?, ?, NULL)
@@ -802,8 +806,11 @@ final class ClipCommentService: ObservableObject {
             
             let now = isoFormatter.string(from: Date())
             let success = sqlite.execute("""
-                INSERT OR REPLACE INTO clip_reactions (id, clip_id, user_id, reaction_type, created_at, updated_at, synced_at)
+                INSERT INTO clip_reactions (id, clip_id, user_id, reaction_type, created_at, updated_at, synced_at)
                 VALUES (?, ?, ?, 'like', ?, ?, ?)
+                ON CONFLICT(user_id, clip_id, reaction_type) DO UPDATE SET
+                    updated_at = excluded.updated_at,
+                    synced_at = excluded.synced_at
             """, parameters: [reactionId, clipId, userId, now, now, markSynced ? now : NSNull()])
             
             guard success else {
@@ -844,8 +851,10 @@ final class ClipCommentService: ObservableObject {
         if liked && !wasLiked {
             let now = isoFormatter.string(from: Date())
             let success = sqlite.execute("""
-                INSERT OR REPLACE INTO clip_comment_likes (id, comment_id, user_id, created_at, synced_at)
+                INSERT INTO clip_comment_likes (id, comment_id, user_id, created_at, synced_at)
                 VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(user_id, comment_id) DO UPDATE SET
+                    synced_at = excluded.synced_at
             """, parameters: [likeId, commentId, userId, now, markSynced ? now : NSNull()])
             
             guard success else {

@@ -190,8 +190,12 @@ class UserEngagementTracker: ObservableObject {
             for (genreId, score) in genreScores {
                 let prefId = "\(userId)_genre_\(genreId)"
                 let sql = """
-                    REPLACE INTO user_preferences (id, user_id, device_id, preference_type, preference_id, score, updated_at)
+                    INSERT INTO user_preferences (id, user_id, device_id, preference_type, preference_id, score, updated_at)
                     VALUES (?, ?, ?, 'genre', ?, ?, datetime('now'))
+                    ON CONFLICT(user_id, preference_type, preference_id) DO UPDATE SET
+                        device_id = excluded.device_id,
+                        score = excluded.score,
+                        updated_at = excluded.updated_at
                 """
                 try await db.executeWrite(sql, parameters: [prefId, userId, deviceId, String(genreId), score])
             }
@@ -200,8 +204,12 @@ class UserEngagementTracker: ObservableObject {
             for (movieId, score) in movieScores {
                 let prefId = "\(userId)_movie_\(movieId)"
                 let sql = """
-                    REPLACE INTO user_preferences (id, user_id, device_id, preference_type, preference_id, score, updated_at)
+                    INSERT INTO user_preferences (id, user_id, device_id, preference_type, preference_id, score, updated_at)
                     VALUES (?, ?, ?, 'movie', ?, ?, datetime('now'))
+                    ON CONFLICT(user_id, preference_type, preference_id) DO UPDATE SET
+                        device_id = excluded.device_id,
+                        score = excluded.score,
+                        updated_at = excluded.updated_at
                 """
                 try await db.executeWrite(sql, parameters: [prefId, userId, deviceId, String(movieId), score])
             }
@@ -210,8 +218,12 @@ class UserEngagementTracker: ObservableObject {
             for (actorId, score) in actorScores {
                 let prefId = "\(userId)_actor_\(actorId)"
                 let sql = """
-                    REPLACE INTO user_preferences (id, user_id, device_id, preference_type, preference_id, score, updated_at)
+                    INSERT INTO user_preferences (id, user_id, device_id, preference_type, preference_id, score, updated_at)
                     VALUES (?, ?, ?, 'actor', ?, ?, datetime('now'))
+                    ON CONFLICT(user_id, preference_type, preference_id) DO UPDATE SET
+                        device_id = excluded.device_id,
+                        score = excluded.score,
+                        updated_at = excluded.updated_at
                 """
                 try await db.executeWrite(sql, parameters: [prefId, userId, deviceId, String(actorId), score])
             }

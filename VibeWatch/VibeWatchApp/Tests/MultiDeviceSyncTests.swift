@@ -258,11 +258,11 @@ final class ListsPersistenceCharacterizationTests: XCTestCase {
         XCTAssertEqual(intValue(rows, "c"), 141, "Tutti i 141 item devono sopravvivere al relaunch")
     }
 
-    // CARATTERIZZAZIONE del footgun attuale: performBatchInsert (usato da saveItemsToSQLite)
-    // e' INSERT OR REPLACE e i record NON includono deleted_at -> un re-save RESUSCITA un
-    // item soft-deleted. Questo test congela il comportamento ATTUALE; lo strangler-fig
-    // dovra' cambiarlo deliberatamente (preservare deleted_at), non per caso.
-    func test_performBatchInsert_replaceResurrectsSoftDeleted_CURRENT_BEHAVIOR() async throws {
+    // Il footgun descritto qui — performBatchInsert era INSERT OR REPLACE, e poiche' i record NON
+    // includono deleted_at un re-save RESUSCITAVA un item soft-deleted — e' stato chiuso (ARCH-010).
+    // Ora usa ON CONFLICT DO UPDATE sui soli campi forniti, quindi deleted_at (non fornito) resta.
+    // Questo test asserisce il comportamento CORRETTO: l'item soft-deleted non riemerge.
+    func test_performBatchInsert_preservesSoftDelete() async throws {
         try await insertItem(id: "x", mediaId: 9, deletedAt: "2024-02-01T00:00:00Z")
 
         let record: [String: Any] = [
@@ -278,8 +278,57 @@ final class ListsPersistenceCharacterizationTests: XCTestCase {
         XCTAssertTrue(ok)
 
         let rows = try await db.queryRaw("SELECT deleted_at FROM list_items WHERE id = ?", parameters: ["x"])
-        XCTAssertNil(rows.first?["deleted_at"] as? String,
-                     "COMPORTAMENTO ATTUALE: INSERT OR REPLACE senza deleted_at resuscita l'item (footgun da fixare nel refactor)")
+        XCTAssertEqual(rows.first?["deleted_at"] as? String, "2024-02-01T00:00:00Z",
+                       "ON CONFLICT DO UPDATE non tocca deleted_at (non fornito) -> l'item resta soft-deleted")
+    }
+
+    // ARCH-010 guard: `REPLACE INTO` (e `INSERT OR REPLACE`) sono ammessi SOLO su tabelle senza
+    // figli in ON DELETE CASCADE — oggi `app_metadata` e `device_info`. Ovunque altrove la DELETE
+    // implicita di REPLACE puo' propagare cascate o resuscitare soft-delete (vedi il test sopra).
+    // Questo test fa da diga: se qualcuno introduce un nuovo REPLACE a mano su un'altra tabella,
+    // fallisce qui invece che come perdita dati in produzione.
+    //
+    // E' un guard di dev/CI: usa i sorgenti accanto a #filePath e si salta dove non ci sono
+    // (es. run on-device), perche' non e' un invariante di runtime ma di codice.
+    func test_noHandRolledReplaceIntoOutsideSafeTables() throws {
+        let allowedTables: Set<String> = ["app_metadata", "device_info"]
+
+        let testFile = URL(fileURLWithPath: #filePath)
+        let appRoot = testFile.deletingLastPathComponent().deletingLastPathComponent() // .../VibeWatchApp
+        let fm = FileManager.default
+        guard fm.fileExists(atPath: appRoot.appendingPathComponent("Core").path) else {
+            throw XCTSkip("Sorgenti non disponibili accanto a #filePath (run on-device): guard saltato")
+        }
+
+        let pattern = try NSRegularExpression(
+            pattern: #"(?:INSERT\s+OR\s+)?REPLACE\s+INTO\s+([A-Za-z_][A-Za-z0-9_]*)"#,
+            options: [.caseInsensitive])
+        let selfFile = testFile.lastPathComponent
+
+        var offenders: [String] = []
+        let enumerator = fm.enumerator(at: appRoot, includingPropertiesForKeys: nil)
+        while let url = enumerator?.nextObject() as? URL {
+            guard url.pathExtension == "swift", url.lastPathComponent != selfFile else { continue }
+            guard let src = try? String(contentsOf: url, encoding: .utf8) else { continue }
+            for rawLine in src.split(separator: "\n", omittingEmptySubsequences: false) {
+                let line = String(rawLine)
+                // Salta le righe di commento: i doc-comment del codebase citano `REPLACE INTO
+                // profiles` per spiegare il footgun di STAB-001, e non sono codice.
+                let trimmed = line.trimmingCharacters(in: .whitespaces)
+                if trimmed.hasPrefix("//") || trimmed.hasPrefix("*") || trimmed.hasPrefix("/*") { continue }
+                let ns = line as NSString
+                for m in pattern.matches(in: line, range: NSRange(location: 0, length: ns.length)) {
+                    let table = ns.substring(with: m.range(at: 1))
+                    if !allowedTables.contains(table) {
+                        offenders.append("\(url.lastPathComponent): REPLACE INTO \(table)")
+                    }
+                }
+            }
+        }
+
+        XCTAssertTrue(offenders.isEmpty,
+                      "REPLACE INTO a mano su tabelle non consentite (usare INSERT ... ON CONFLICT):\n"
+                      + offenders.joined(separator: "\n"))
     }
 }
 

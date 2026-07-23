@@ -114,8 +114,12 @@ final class AITokenManager: ObservableObject {
         let userId = SupabaseService.shared.currentUser?.id ?? "anonymous"
         do {
             let sql = """
-                REPLACE INTO user_ai_token_usage (id, user_id, tokens_used_today, last_reset_at, updated_at)
+                INSERT INTO user_ai_token_usage (id, user_id, tokens_used_today, last_reset_at, updated_at)
                 VALUES (?, ?, ?, ?, datetime('now'))
+                ON CONFLICT(user_id) DO UPDATE SET
+                    tokens_used_today = excluded.tokens_used_today,
+                    last_reset_at = excluded.last_reset_at,
+                    updated_at = excluded.updated_at
             """
             try await db.executeWrite(sql, parameters: [
                 userId, userId, decoded.tokens,
@@ -155,8 +159,12 @@ final class AITokenManager: ObservableObject {
         do {
             let userId = SupabaseService.shared.currentUser?.id ?? "anonymous"
             let sql = """
-                REPLACE INTO user_ai_token_usage (id, user_id, tokens_used_today, last_reset_at, updated_at)
+                INSERT INTO user_ai_token_usage (id, user_id, tokens_used_today, last_reset_at, updated_at)
                 VALUES (?, ?, ?, ?, datetime('now'))
+                ON CONFLICT(user_id) DO UPDATE SET
+                    tokens_used_today = excluded.tokens_used_today,
+                    last_reset_at = excluded.last_reset_at,
+                    updated_at = excluded.updated_at
             """
             try await db.executeWrite(sql, parameters: [
                 userId, userId, requestsUsedToday,

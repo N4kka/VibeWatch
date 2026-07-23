@@ -22,9 +22,17 @@ final class LocalGamificationRepository: GamificationRepositoryProtocol {
 
     func saveState(_ state: UserGamificationState, userId: String) async {
         let sql = """
-            INSERT OR REPLACE INTO user_gamification
+            INSERT INTO user_gamification
             (user_id, total_xp, current_level, current_streak, longest_streak, last_activity_date, streak_freezes_remaining, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
+            ON CONFLICT(user_id) DO UPDATE SET
+                total_xp = excluded.total_xp,
+                current_level = excluded.current_level,
+                current_streak = excluded.current_streak,
+                longest_streak = excluded.longest_streak,
+                last_activity_date = excluded.last_activity_date,
+                streak_freezes_remaining = excluded.streak_freezes_remaining,
+                updated_at = excluded.updated_at
         """
         db.execute(sql, parameters: [
             userId,
