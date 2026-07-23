@@ -24,7 +24,21 @@ final class PaywallTriggerService {
     // MARK: - Private
 
     private func shouldConsiderAutoPaywall() -> Bool {
-        if DailyQuotaManager.shared.isProUser || ClipQuotaService.shared.isProUser {
+        let dailyPro = DailyQuotaManager.shared.isProUser
+        let clipPro = ClipQuotaService.shared.isProUser
+
+        // ARCH-002 instrumentation. Pro state lives in two independent copies: DailyQuotaManager
+        // (UserDefaults-backed cache) and ClipQuotaService (the one derived from RevenueCat). The
+        // `||` below deliberately resolves any disagreement in the user's favour, which masks
+        // divergence. Before committing to an EntitlementStore refactor, measure whether they ever
+        // actually diverge in the field. If this never fires across a release, ARCH-002 is LOW and
+        // the refactor isn't worth it; if it fires, this is the evidence — and which side is stale.
+        if dailyPro != clipPro {
+            Logger.warning("[Entitlement] Pro-state divergence: DailyQuotaManager=\(dailyPro) "
+                           + "ClipQuotaService=\(clipPro) — resolving as Pro (permissive)")
+        }
+
+        if dailyPro || clipPro {
             return false
         }
 
