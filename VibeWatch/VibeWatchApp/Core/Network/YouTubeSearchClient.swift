@@ -1,20 +1,21 @@
 import Foundation
 
-/// Single entry point for YouTube Data API `search.list` calls.
+/// Single entry point for every YouTube Data API call the app makes.
 ///
 /// `search.list` is the most expensive endpoint the API offers: **100 quota units per call**,
 /// against a project default of **10.000 units/day**. That is roughly **100 searches per day for
-/// the whole app**, shared across every user — not per device.
+/// the whole app**, shared across every user — not per device. `videos.list` costs 1 unit.
 ///
-/// The four call sites this replaces each built the same URL by hand, and none of them could tell
-/// an exhausted quota from an empty result: two checked only for a non-2xx status and returned
-/// `nil`, the other two decoded the body directly and threw a decoding error. So when the project
-/// ran out of quota the clip feature degraded silently, and the app kept firing requests that could
-/// not possibly succeed for the rest of the day.
+/// The five call sites this replaces each built their URL by hand, and none of them could tell an
+/// exhausted quota from an empty result: some checked only for a non-2xx status and returned `nil`,
+/// the others decoded the body directly and threw a decoding error. So when the project ran out of
+/// quota the clip feature degraded silently, and the app kept firing requests that could not
+/// possibly succeed for the rest of the day.
 ///
 /// This client detects the `quotaExceeded` reason, records it, and short-circuits every subsequent
 /// call until the quota resets — which YouTube does at midnight **US/Pacific**, not at local
-/// midnight.
+/// midnight. The cheap `videos.list` calls are gated too: once the budget is gone they cannot
+/// succeed either, and validating a video is pointless if no search can find one.
 actor YouTubeSearchClient {
 
     static let shared = YouTubeSearchClient()
@@ -75,21 +76,46 @@ actor YouTubeSearchClient {
         return until
     }
 
-    /// Searches YouTube, or throws `.quotaExhausted` without spending a request when the daily
-    /// quota is already known to be gone.
-    func search(query: String, relevanceLanguage: String? = nil) async throws -> [YouTubeSearchItem] {
-        if let until = quotaExhaustedUntil {
-            throw SearchError.quotaExhausted(until: until)
-        }
-
+    /// Searches YouTube (`search.list`, **100 quota units**), or throws `.quotaExhausted` without
+    /// spending a request when the daily budget is already known to be gone.
+    func search(
+        query: String,
+        relevanceLanguage: String? = nil,
+        maxResults: Int = 1
+    ) async throws -> [YouTubeSearchItem] {
         guard let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
             throw SearchError.invalidQuery
         }
 
         var urlString = "https://www.googleapis.com/youtube/v3/search"
-            + "?part=snippet&q=\(encoded)&type=video&videoDuration=short&maxResults=1&key=\(apiKey)"
+            + "?part=snippet&q=\(encoded)&type=video&videoDuration=short"
+            + "&maxResults=\(max(1, min(maxResults, 50)))&key=\(apiKey)"
         if let relevanceLanguage {
             urlString += "&relevanceLanguage=\(relevanceLanguage)"
+        }
+
+        let data = try await get(urlString, endpoint: "search.list")
+        return try JSONDecoder().decode(YouTubeSearchResponse.self, from: data).items
+    }
+
+    /// Fetches video status/contentDetails (`videos.list`, **1 quota unit**). Gated on the same
+    /// budget: when it is spent this call cannot succeed either.
+    func videoDetails(id: String) async throws -> YouTubeVideoItem? {
+        guard let encoded = id.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
+            throw SearchError.invalidQuery
+        }
+
+        let urlString = "https://www.googleapis.com/youtube/v3/videos"
+            + "?part=status,contentDetails&id=\(encoded)&key=\(apiKey)"
+
+        let data = try await get(urlString, endpoint: "videos.list")
+        return try JSONDecoder().decode(YouTubeVideoResponse.self, from: data).items.first
+    }
+
+    /// Shared transport: the quota gate lives here so no call site can bypass it.
+    private func get(_ urlString: String, endpoint: String) async throws -> Data {
+        if let until = quotaExhaustedUntil {
+            throw SearchError.quotaExhausted(until: until)
         }
 
         guard let url = URL(string: urlString) else { throw SearchError.invalidQuery }
@@ -104,15 +130,15 @@ actor YouTubeSearchClient {
                 let until = Self.nextQuotaReset(after: now())
                 defaults.set(until, forKey: Self.exhaustedUntilKey)
                 Logger.error(
-                    "[YouTube] Daily quota exhausted — search disabled until \(until). "
-                    + "search.list costs 100 units of the project's 10.000/day."
+                    "[YouTube] Daily quota exhausted on \(endpoint) — all YouTube calls disabled "
+                    + "until \(until). search.list costs 100 of the project's 10.000 units/day."
                 )
                 throw SearchError.quotaExhausted(until: until)
             }
             throw SearchError.httpError(status: http.statusCode)
         }
 
-        return try JSONDecoder().decode(YouTubeSearchResponse.self, from: data).items
+        return data
     }
 
     /// YouTube answers `403` with `reason: "quotaExceeded"` (or `dailyLimitExceeded`) in the error

@@ -13,7 +13,7 @@ class ClipsPrefetchService: ObservableObject {
     
     private let supabase = SupabaseService.shared
     private let tmdbService = TMDBService.shared
-    private let youtubeAPIKey = Config.youtubeApiKey  // Phase 5: Use Config instead of hardcoded key
+    // The YouTube key now lives only in YouTubeSearchClient, which owns the quota gate.
     
     private let userDefaults = UserDefaults.standard
     private let lastFetchKey = "lastClipsPrefetchDate"
@@ -27,17 +27,10 @@ class ClipsPrefetchService: ObservableObject {
     
     /// Validate if a YouTube video is playable and embeddable
     private func isVideoValid(videoId: String) async -> Bool {
-        let urlString = "https://www.googleapis.com/youtube/v3/videos?part=status,contentDetails&id=\(videoId)&key=\(youtubeAPIKey)"
-        
-        guard let url = URL(string: urlString) else {
-            return false
-        }
-        
         do {
-            let (data, _) = try await URLSession.shared.data(from: url)
-            let response = try JSONDecoder().decode(YouTubeVideoResponse.self, from: data)
-            
-            guard let video = response.items.first else {
+            // videos.list costs 1 unit, not 100 — but it shares the project budget, so it goes
+            // through the same gate. See YouTubeSearchClient.
+            guard let video = try await YouTubeSearchClient.shared.videoDetails(id: videoId) else {
                 Logger.warning("[Validation] Video \(videoId): Not found")
                 return false
             }
