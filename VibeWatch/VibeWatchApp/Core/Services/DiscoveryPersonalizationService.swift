@@ -1602,8 +1602,8 @@ class DiscoveryPersonalizationService: ObservableObject {
         let expiresAt = ISO8601DateFormatter().string(from: nextMidnight)
 
         // Delete old rows and insert new ones atomically so readers never see an empty cache.
-        try? await sqliteService.transaction {
-            try await sqliteService.delete("personalized_discovery", where: "user_id = ?", parameters: [userId], hard: true)
+        try? sqliteService.transaction { txn in
+            try txn.delete("personalized_discovery", where: "user_id = ?", parameters: [userId], hard: true)
             for (carouselIndex, carousel) in carousels.enumerated() {
                 let batchIndex = carouselIndex / 10
                 for (itemIndex, movie) in carousel.items.enumerated() {
@@ -1630,7 +1630,7 @@ class DiscoveryPersonalizationService: ObservableObject {
                         "generated_at": now,
                         "expires_at": expiresAt
                     ]
-                    _ = try await sqliteService.insert("personalized_discovery", values: values)
+                    try txn.insert("personalized_discovery", values: values)
                 }
             }
         }

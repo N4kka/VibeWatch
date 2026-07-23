@@ -136,4 +136,62 @@ final class SQLiteWritePathTests: XCTestCase {
             // expected
         }
     }
+
+    // MARK: - STAB-002: transaction atomicity
+
+    /// A transaction that throws part-way must leave NO rows behind. The old async transaction()
+    /// issued BEGIN/COMMIT on separate writerQueue hops, so its ROLLBACK didn't reliably undo the
+    /// body's writes. The synchronous single-block version must roll back cleanly.
+    func testTransactionRollsBackOnThrow() async throws {
+        let idA = "txn-\(UUID().uuidString)"
+        let idB = "txn-\(UUID().uuidString)"
+
+        struct Boom: Error {}
+        XCTAssertThrowsError(
+            try service.transaction { txn in
+                try txn.insert("profiles", values: ["id": idA, "display_name": "a"])
+                try txn.insert("profiles", values: ["id": idB, "display_name": "b"])
+                throw Boom()   // after two successful inserts
+            }
+        )
+
+        let rows = try await service.queryRaw(
+            "SELECT id FROM profiles WHERE id IN (?, ?)", parameters: [idA, idB]
+        )
+        XCTAssertEqual(rows.count, 0, "a thrown transaction must roll back every write it made")
+    }
+
+    /// A transaction that completes must persist all of its writes atomically.
+    func testTransactionCommitsAllWrites() async throws {
+        let idA = "txn-\(UUID().uuidString)"
+        let idB = "txn-\(UUID().uuidString)"
+
+        try service.transaction { txn in
+            try txn.insert("profiles", values: ["id": idA, "display_name": "a"])
+            try txn.insert("profiles", values: ["id": idB, "display_name": "b"])
+        }
+
+        let rows = try await service.queryRaw(
+            "SELECT id FROM profiles WHERE id IN (?, ?)", parameters: [idA, idB]
+        )
+        XCTAssertEqual(rows.count, 2, "a completed transaction must commit all of its writes")
+    }
+
+    /// A failing statement inside the transaction propagates and rolls back the earlier ones.
+    func testTransactionRollsBackOnStatementError() async throws {
+        let idA = "txn-\(UUID().uuidString)"
+
+        XCTAssertThrowsError(
+            try service.transaction { txn in
+                try txn.insert("profiles", values: ["id": idA, "display_name": "a"])
+                // Invalid table → txn.execute throws, aborting the transaction.
+                try txn.execute("INSERT INTO no_such_table (id) VALUES (?)", parameters: ["x"])
+            }
+        )
+
+        let rows = try await service.queryRaw(
+            "SELECT id FROM profiles WHERE id = ?", parameters: [idA]
+        )
+        XCTAssertEqual(rows.count, 0, "the earlier insert must be undone when a later statement fails")
+    }
 }

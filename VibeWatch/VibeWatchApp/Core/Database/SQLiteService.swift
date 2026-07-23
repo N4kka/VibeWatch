@@ -755,7 +755,7 @@ final class SQLiteService: ObservableObject {
 
             // Bind parameters
             for (index, param) in parameters.enumerated() {
-                bind(param, to: statement, at: Int32(index + 1))
+                Self.bindValue(param, to: statement, at: Int32(index + 1))
             }
 
             if sqlite3_step(statement) != SQLITE_DONE {
@@ -831,7 +831,7 @@ final class SQLiteService: ObservableObject {
                 defer { sqlite3_finalize(statement) }
 
                 for (index, param) in safeParameters.enumerated() {
-                    self.bind(param.raw, to: statement, at: Int32(index + 1))
+                    Self.bindValue(param.raw, to: statement, at: Int32(index + 1))
                 }
 
                 // RETURNING clauses step to SQLITE_ROW; plain writes step to SQLITE_DONE.
@@ -893,7 +893,7 @@ final class SQLiteService: ObservableObject {
 
                 // Bind parameters
                 for (index, param) in safeParameters.enumerated() {
-                    self.bind(param.raw, to: statement, at: Int32(index + 1))
+                    Self.bindValue(param.raw, to: statement, at: Int32(index + 1))
                 }
 
                 var results: [SQLSendableRecord] = []
@@ -1044,15 +1044,39 @@ final class SQLiteService: ObservableObject {
     }
     
     // MARK: - Transaction Support
-    
-    func transaction(_ operations: @Sendable () async throws -> Void) async throws {
-        execute("BEGIN TRANSACTION")
-        do {
-            try await operations()
-            execute("COMMIT")
-        } catch {
-            execute("ROLLBACK")
-            throw error
+
+    /// Runs `body` inside a single, genuinely atomic transaction (STAB-002).
+    ///
+    /// The old version was `async` and called `execute("BEGIN")`, then `await operations()`, then
+    /// `execute("COMMIT")` — three *separate* hops on the shared serial `writerQueue`, with `await`
+    /// suspension points between them. Because SQLite transactions are per-connection and every
+    /// other writer uses the same `db`, another task's write could be scheduled on the writer queue
+    /// *between* BEGIN and COMMIT, landing inside this transaction; and a ROLLBACK then either
+    /// undid their write too or, worse, the interleaving corrupted the boundaries — the demonstrated
+    /// "ROLLBACK non annulla nulla".
+    ///
+    /// Now BEGIN, the whole body, and COMMIT/ROLLBACK run in one `writerQueue.sync` block. The queue
+    /// is serial, so nothing else can interleave, and there are no suspension points inside. The
+    /// body is synchronous and writes through the passed `SQLiteTransaction`, whose statements run
+    /// directly on the writer thread (no re-dispatch, which would deadlock or escape the block).
+    func transaction(_ body: (SQLiteTransaction) throws -> Void) throws {
+        try writerQueue.sync {
+            guard let db = self.db else { throw SQLiteError.notConnected }
+
+            guard sqlite3_exec(db, "BEGIN", nil, nil, nil) == SQLITE_OK else {
+                throw SQLiteError.queryFailed(String(cString: sqlite3_errmsg(db)))
+            }
+            do {
+                try body(SQLiteTransaction(db))
+                guard sqlite3_exec(db, "COMMIT", nil, nil, nil) == SQLITE_OK else {
+                    let commitError = String(cString: sqlite3_errmsg(db))
+                    sqlite3_exec(db, "ROLLBACK", nil, nil, nil)
+                    throw SQLiteError.queryFailed(commitError)
+                }
+            } catch {
+                sqlite3_exec(db, "ROLLBACK", nil, nil, nil)
+                throw error
+            }
         }
     }
     
@@ -1087,7 +1111,7 @@ final class SQLiteService: ObservableObject {
 
                 // Bind parameters
                 for (index, param) in parameters.enumerated() {
-                    self.bind(param.raw, to: statement, at: Int32(index + 1))
+                    Self.bindValue(param.raw, to: statement, at: Int32(index + 1))
                 }
 
                 if sqlite3_step(statement) == SQLITE_DONE {
@@ -1264,7 +1288,7 @@ final class SQLiteService: ObservableObject {
                         for (index, key) in sortedKeys.enumerated() {
                             // Use existing helper to bind values
                             // index is 1-based in SQLite
-                            self.bind(record.raw[key] ?? NSNull(), to: statement, at: Int32(index + 1))
+                            Self.bindValue(record.raw[key] ?? NSNull(), to: statement, at: Int32(index + 1))
                         }
                         
                         if sqlite3_step(statement) != SQLITE_DONE {
@@ -1297,7 +1321,7 @@ final class SQLiteService: ObservableObject {
 
     // MARK: - Helper Methods
     
-    private func bind(_ value: Any, to statement: OpaquePointer?, at index: Int32) {
+    nonisolated static func bindValue(_ value: Any, to statement: OpaquePointer?, at index: Int32) {
         switch value {
         case let val as String:
             sqlite3_bind_text(statement, index, (val as NSString).utf8String, -1, nil)
@@ -1352,6 +1376,54 @@ final class SQLiteService: ObservableObject {
     }
 }
 
+
+// MARK: - Transaction Context
+
+/// The synchronous write surface handed to `SQLiteService.transaction(_:)`. Every call runs
+/// directly on the writer thread inside the transaction's single `writerQueue.sync` block, so the
+/// statements are part of the same atomic unit and nothing else can interleave (STAB-002).
+///
+/// It intentionally does NOT re-enter `writerQueue` (that would deadlock) and offers only the
+/// operations the five transaction call sites actually use: raw `execute`, `insert`, `delete`.
+final class SQLiteTransaction {
+    private let db: OpaquePointer
+
+    fileprivate init(_ db: OpaquePointer) { self.db = db }
+
+    /// Run a statement. Throws on prepare/step failure so the enclosing transaction rolls back.
+    func execute(_ sql: String, parameters: [Any] = []) throws {
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw SQLiteError.queryFailed(String(cString: sqlite3_errmsg(db)))
+        }
+        defer { sqlite3_finalize(statement) }
+        for (index, param) in parameters.enumerated() {
+            SQLiteService.bindValue(param, to: statement, at: Int32(index + 1))
+        }
+        guard sqlite3_step(statement) == SQLITE_DONE else {
+            throw SQLiteError.queryFailed(String(cString: sqlite3_errmsg(db)))
+        }
+    }
+
+    func insert(_ table: String, values: [String: Any]) throws {
+        guard SQLiteTable.isValid(table) else { throw SQLiteError.invalidTableName(table) }
+        for key in values.keys where !SQLiteService.isValidColumnIdentifier(key) {
+            throw SQLiteError.invalidColumnName(key)
+        }
+        let columns = values.keys.joined(separator: ", ")
+        let placeholders = values.keys.map { _ in "?" }.joined(separator: ", ")
+        try execute("INSERT INTO \(table) (\(columns)) VALUES (\(placeholders))",
+                    parameters: Array(values.values))
+    }
+
+    func delete(_ table: String, where condition: String, parameters: [Any] = [], hard: Bool = false) throws {
+        guard SQLiteTable.isValid(table) else { throw SQLiteError.invalidTableName(table) }
+        let sql = hard
+            ? "DELETE FROM \(table) WHERE \(condition)"
+            : "UPDATE \(table) SET deleted_at = datetime('now') WHERE \(condition)"
+        try execute(sql, parameters: parameters)
+    }
+}
 
 // MARK: - Helper Structures
 

@@ -76,9 +76,9 @@ final class DatabaseMigrationService {
             let batchSize = 100
             
             for batch in clips.chunked(into: batchSize) {
-                try await db.transaction {
+                try db.transaction { txn in
                     for clip in batch {
-                        let values: [String: Any] = await [
+                        let values: [String: Any] = [
                             "id": clip.id,
                             "clip_id": clip.clipId,
                             "video_id": clip.videoId,
@@ -103,7 +103,7 @@ final class DatabaseMigrationService {
                             "is_premium": clip.isPremium ?? false
                         ]
 
-                        _ = try await db.insert("clips", values: values)
+                        try txn.insert("clips", values: values)
                     }
                 }
 
@@ -145,9 +145,9 @@ final class DatabaseMigrationService {
             // Insert into local SQLite. This used to go through DatabaseUtilities
             // .executeInTransaction, which never opened a transaction: a failure part-way left the
             // cache half-populated instead of empty.
-            try await db.transaction {
+            try db.transaction { txn in
                 for item in cacheItems {
-                    let values: [String: Any] = await [
+                    let values: [String: Any] = [
                         "id": item.id,
                         "content_type": item.contentType,
                         "tmdb_id": item.tmdbId,
@@ -161,8 +161,8 @@ final class DatabaseMigrationService {
                         "cached_at": ISO8601DateFormatter().string(from: item.cachedAt),
                         "expires_at": ISO8601DateFormatter().string(from: item.expiresAt)
                     ]
-                    
-                    _ = try await db.insert("discovery_cache", values: values)
+
+                    try txn.insert("discovery_cache", values: values)
                 }
             }
             
