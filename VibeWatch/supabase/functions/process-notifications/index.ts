@@ -70,9 +70,12 @@ type PushResult = {
   retryable: boolean
   permanent: boolean
   error?: string
-  // False when the user has no registered device at all — the only case where email stands in
-  // for a push instead of doubling it.
-  hadDevice: boolean
+  // 'push'             delivered to at least one live token
+  // 'no-live-token'    the user registered devices once, but every token is dead (uninstalled or
+  //                    revoked permission). Silence is the correct outcome — emailing them would
+  //                    turn an uninstall into a mailing list.
+  // 'never-registered' no device row has ever existed, so email is the only channel there is.
+  outcome: 'push' | 'no-live-token' | 'never-registered'
 }
 
 async function getFirebaseAccessToken(serviceAccount: any) {
@@ -212,28 +215,34 @@ async function sendPush(
   accessToken: string,
   projectId: string
 ): Promise<PushResult> {
+  // Rows are read including dead tokens so "never had a device" stays distinguishable from
+  // "device died"; only the live ones are actually sent to.
   const { data: devices, error: deviceError } = await supabaseClient
     .from('user_devices')
     .select('fcm_token')
     .eq('user_id', userId)
-    .not('fcm_token', 'is', null)
     // Newest first: stale rows left behind by token rotation sit at the bottom and are dropped.
     .order('updated_at', { ascending: false })
     .limit(MAX_DEVICES_PER_USER)
 
   if (deviceError) {
-    return { sent: false, retryable: true, permanent: false, error: deviceError.message, hadDevice: true }
+    return { sent: false, retryable: true, permanent: false, error: deviceError.message, outcome: 'push' }
   }
 
   if (!devices || devices.length === 0) {
-    return { sent: true, retryable: false, permanent: false, hadDevice: false }
+    return { sent: true, retryable: false, permanent: false, outcome: 'never-registered' }
+  }
+
+  const liveDevices = devices.filter((device: { fcm_token: string | null }) => device.fcm_token)
+  if (liveDevices.length === 0) {
+    return { sent: true, retryable: false, permanent: false, outcome: 'no-live-token' }
   }
 
   let sawRetryable = false
   let sawPermanent = false
   let lastError: string | undefined
 
-  for (const device of devices) {
+  for (const device of liveDevices) {
     const fcmToken = device.fcm_token
     const priority = payload.notificationType === 'streak_reminder' ? '5' : '10'
 
@@ -297,7 +306,7 @@ async function sendPush(
     retryable: sawRetryable,
     permanent: sawPermanent,
     error: lastError,
-    hadDevice: true,
+    outcome: 'push',
   }
 }
 
@@ -433,6 +442,8 @@ serve(async (_req) => {
 
     const nowIso = () => new Date().toISOString()
     let deliveredCount = 0
+    let emailedCount = 0
+    let silencedCount = 0
     let digestCount = 0
     let cappedCount = 0
     let stoppedOnDeadline = false
@@ -506,18 +517,28 @@ serve(async (_req) => {
 
         await markSent(batch.rows.map((row) => row.id))
 
-        if (result.hadDevice) {
-          deliveredCount += batch.rows.length
-          if (asDigest) digestCount += 1
-          await supabaseClient.from('notification_delivery_log').insert({
-            user_id: userId,
-            kind: asDigest ? 'digest' : 'single',
-            notification_count: batch.rows.length,
-          })
-        } else {
-          // No reachable device: email is the delivery, not a duplicate of it.
-          await sendEmail(supabaseClient, userId, batch.payload, resendApiKey, fromEmail)
+        if (result.outcome === 'no-live-token') {
+          // Nothing was delivered and nothing should be: no push, no email, no budget spent.
+          silencedCount += batch.rows.length
+          continue
         }
+
+        if (result.outcome === 'never-registered') {
+          // Email is the delivery here, not a duplicate of it.
+          await sendEmail(supabaseClient, userId, batch.payload, resendApiKey, fromEmail)
+          emailedCount += batch.rows.length
+        } else {
+          deliveredCount += batch.rows.length
+        }
+
+        if (asDigest) digestCount += 1
+        // Logged for email too: the daily cap has to cover every channel, otherwise a user with
+        // no device would receive an uncapped stream of mail.
+        await supabaseClient.from('notification_delivery_log').insert({
+          user_id: userId,
+          kind: asDigest ? 'digest' : 'single',
+          notification_count: batch.rows.length,
+        })
       }
     }
 
@@ -551,6 +572,8 @@ serve(async (_req) => {
         message: 'Function executed.',
         fetched: notifications.length,
         delivered: deliveredCount,
+        emailedFallback: emailedCount,
+        silencedNoLiveToken: silencedCount,
         digests: digestCount,
         cappedForDailyLimit: cappedCount,
         expired: expired.length,

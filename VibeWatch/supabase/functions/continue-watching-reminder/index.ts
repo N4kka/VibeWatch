@@ -9,81 +9,93 @@ const SUPABASE_SERVICE_ROLE_KEY = (() => {
   if (s) { try { const k = JSON.parse(s)?.default; if (k) return k as string } catch { /* fall back */ } }
   return Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 })()
-const TMDB_API_KEY = Deno.env.get('TMDB_API_KEY') ?? ''
 
-// Remind users who added a TV show to their list at least 3 days ago
-// but have not received a continue-watching nudge in the last 7 days.
+// A nudge is a suggestion, so it is worth exactly one notification. The old version queued one
+// per series, which meant a user with nine shows got nine pushes in four seconds and then the
+// same nine together again a week later.
+const REMINDER_AGE_DAYS = 3
+// Cooldown on the *user*, not on the pair (user, series). This is what stops the burst.
+const USER_COOLDOWN_DAYS = 7
+// Rotate through the list instead of nagging about the same show forever.
+const SERIES_COOLDOWN_DAYS = 30
+
+type ListItem = {
+  user_id: string
+  media_id: number
+  title: string | null
+  created_at: string
+}
+
 serve(async () => {
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
-    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+    const now = Date.now()
+    const addedBefore = new Date(now - REMINDER_AGE_DAYS * 24 * 60 * 60 * 1000).toISOString()
+    const seriesCooldownStart = new Date(now - SERIES_COOLDOWN_DAYS * 24 * 60 * 60 * 1000).toISOString()
+    const userCooldownStart = new Date(now - USER_COOLDOWN_DAYS * 24 * 60 * 60 * 1000).toISOString()
 
-    // TV shows added to any list at least 3 days ago
+    // Most recently added first: whatever the user saved last is the best guess at what they
+    // still mean to watch. `title` is denormalised onto the row, so no TMDB round trip is needed.
     const { data: items, error } = await supabase
       .from('list_items')
-      .select('user_id, media_id, created_at')
+      .select('user_id, media_id, title, created_at')
       .eq('media_type', 'tv')
-      .lte('created_at', threeDaysAgo)
+      .is('deleted_at', null) // removed items must stop nagging
+      .lte('created_at', addedBefore)
+      .order('created_at', { ascending: false })
 
     if (error) throw error
 
-    // Deduplicate by (user_id, media_id)
-    const seen = new Set<string>()
-    const unique: Array<{ user_id: string; media_id: number }> = []
-    for (const item of items ?? []) {
-      const key = `${item.user_id}:${item.media_id}`
-      if (!seen.has(key)) {
-        seen.add(key)
-        unique.push(item)
-      }
+    // One pass over the recent nudges instead of a count query per candidate.
+    const { data: recentNudges, error: nudgeError } = await supabase
+      .from('notifications')
+      .select('user_id, media_id, created_at')
+      .eq('notification_type', 'continue_watching')
+      .gte('created_at', seriesCooldownStart)
+
+    if (nudgeError) throw nudgeError
+
+    const usersInCooldown = new Set<string>()
+    const seriesInCooldown = new Set<string>()
+    for (const nudge of recentNudges ?? []) {
+      seriesInCooldown.add(`${nudge.user_id}:${nudge.media_id}`)
+      if (nudge.created_at >= userCooldownStart) usersInCooldown.add(nudge.user_id)
     }
 
-    const tmdbCache = new Map<number, string>()
+    const candidatesByUser = new Map<string, ListItem[]>()
+    for (const item of (items ?? []) as ListItem[]) {
+      if (usersInCooldown.has(item.user_id)) continue
+      const bucket = candidatesByUser.get(item.user_id)
+      if (bucket) bucket.push(item)
+      else candidatesByUser.set(item.user_id, [item])
+    }
+
     let created = 0
+    for (const [userId, candidates] of candidatesByUser) {
+      const pick = candidates.find(
+        (item) => !seriesInCooldown.has(`${userId}:${item.media_id}`)
+      )
+      if (!pick) continue // every series was nudged recently; stay quiet this round
 
-    for (const item of unique) {
-      // Skip if a continue-watching notification was already sent in the last 7 days
-      const { count } = await supabase
-        .from('notifications')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', item.user_id)
-        .eq('media_id', item.media_id)
-        .eq('notification_type', 'continue_watching')
-        .gte('created_at', sevenDaysAgo)
-
-      if ((count ?? 0) > 0) continue
-
-      // Fetch show name from TMDB (cached per show)
-      let showName = tmdbCache.get(item.media_id)
-      if (!showName) {
-        const res = await fetch(
-          `https://api.themoviedb.org/3/tv/${item.media_id}?api_key=${TMDB_API_KEY}&language=en-US`
-        )
-        if (!res.ok) continue
-        const json = await res.json()
-        showName = json.name ?? 'A series in your list'
-        tmdbCache.set(item.media_id, showName)
-      }
-
+      const showName = pick.title?.trim() || 'A series in your list'
       const { error: insertError } = await supabase
         .from('notifications')
         .insert({
-          user_id: item.user_id,
+          user_id: userId,
           notification_type: 'continue_watching',
           title: 'Continue watching',
           body: `Pick up where you left off with ${showName}.`,
-          media_id: item.media_id,
+          media_id: pick.media_id,
           media_type: 'tv',
           is_sent: false,
           category: 'continue_watching',
-          thread_id: `continue:${item.media_id}`,
+          thread_id: `continue:${pick.media_id}`,
         })
 
       if (!insertError) created += 1
     }
 
-    return new Response(JSON.stringify({ created }), {
+    return new Response(JSON.stringify({ created, usersConsidered: candidatesByUser.size }), {
       headers: { 'Content-Type': 'application/json' },
       status: 200,
     })
