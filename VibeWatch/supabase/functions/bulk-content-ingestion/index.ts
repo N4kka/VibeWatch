@@ -5,6 +5,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { rejectIfNotServiceCaller } from '../_shared/cronAuth.ts'
 
 // Country distribution targets
 const COUNTRY_TARGETS = [
@@ -78,6 +79,11 @@ interface IngestionStats {
 }
 
 serve(async (req) => {
+  // Cron/service callers only: this used to run for anyone holding the app's publishable
+  // key. See _shared/cronAuth.ts.
+  const unauthorized = rejectIfNotServiceCaller(req)
+  if (unauthorized) return unauthorized
+
   try {
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!

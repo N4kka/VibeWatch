@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { SignJWT, importPKCS8 } from 'https://esm.sh/jose@v5.2.3'
+import { rejectIfNotServiceCaller } from '../_shared/cronAuth.ts'
 
 console.log('🚀 process-notifications function booting up...')
 
@@ -337,7 +338,12 @@ async function sendEmail(
   })
 }
 
-serve(async (_req) => {
+serve(async (req) => {
+  // Cron/service callers only: this used to run for anyone holding the app's publishable
+  // key. See _shared/cronAuth.ts.
+  const unauthorized = rejectIfNotServiceCaller(req)
+  if (unauthorized) return unauthorized
+
   const deadline = Date.now() + RUN_BUDGET_MS
   try {
     const supabaseClient = createClient(

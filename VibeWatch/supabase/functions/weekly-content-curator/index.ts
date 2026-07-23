@@ -4,6 +4,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { rejectIfNotServiceCaller } from '../_shared/cronAuth.ts'
 
 // YouTube API configuration
 const YOUTUBE_API_KEY = Deno.env.get('YOUTUBE_API_KEY')!
@@ -18,6 +19,11 @@ const SUPABASE_SERVICE_ROLE_KEY = (() => {
 })()
 
 serve(async (req) => {
+  // Cron/service callers only: this used to run for anyone holding the app's publishable
+  // key. See _shared/cronAuth.ts.
+  const unauthorized = rejectIfNotServiceCaller(req)
+  if (unauthorized) return unauthorized
+
   try {
     console.log('🎬 [Curator] Starting weekly content curation...')
 

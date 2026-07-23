@@ -7,6 +7,7 @@
 // Gira come service_role -> il trigger trg_enforce_is_pro lascia passare la scrittura.
 import { serve } from 'https://deno.land/std@0.131.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { rejectIfNotServiceCaller } from '../_shared/cronAuth.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 // Prefer the new secret key (sb_secret_..., auto-injected as SUPABASE_SECRET_KEYS json),
@@ -58,6 +59,11 @@ async function revenueCatIsPro(userId: string): Promise<boolean | null> {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 serve(async (req) => {
+  // Cron/service callers only: this used to run for anyone holding the app's publishable
+  // key. See _shared/cronAuth.ts.
+  const unauthorized = rejectIfNotServiceCaller(req)
+  if (unauthorized) return unauthorized
+
   if (!authorized(req.headers.get('Authorization'))) {
     return new Response('Unauthorized', { status: 401 })
   }

@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { rejectIfNotServiceCaller } from '../_shared/cronAuth.ts'
 
 const TMDB_API_KEY = Deno.env.get('TMDB_API_KEY')!
 const TMDB_API_URL = 'https://api.themoviedb.org/3'
@@ -30,6 +31,11 @@ interface MediaDetails {
 }
 
 serve(async (req) => {
+  // Cron/service callers only: this used to run for anyone holding the app's publishable
+  // key. See _shared/cronAuth.ts.
+  const unauthorized = rejectIfNotServiceCaller(req)
+  if (unauthorized) return unauthorized
+
   try {
     const { mediaId, mediaType } = await req.json()
 

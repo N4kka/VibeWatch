@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { rejectIfNotServiceCaller } from '../_shared/cronAuth.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 // Prefer the new secret key (sb_secret_..., auto-injected as SUPABASE_SECRET_KEYS json),
@@ -28,6 +29,11 @@ function isoDay(offsetDays = 0) {
 }
 
 serve(async (req) => {
+  // Cron/service callers only: this used to run for anyone holding the app's publishable
+  // key. See _shared/cronAuth.ts.
+  const unauthorized = rejectIfNotServiceCaller(req)
+  if (unauthorized) return unauthorized
+
   try {
     // Diagnostics only. `dryRun` reports what would be queued without touching the table, and
     // `windowDays` widens the airing window so the predicate can be exercised on a day when
