@@ -129,27 +129,16 @@ class UserPreferenceManager: ObservableObject {
 
                 Logger.debug("[UserPreferenceManager] Recorded \(signals.count) signals from \(interaction.source)")
 
-                // Queue for cloud sync if engine is available
-                if let syncEngine = syncEngine {
+                // Queue for cloud sync. STAB-010: the old payload here was
+                // {category, id, name, weight, source} with a recordId of "category_id" — no
+                // user_id, none of the column names the table has, and a non-uuid id. So
+                // apply_mutations rejected every row (user_id_mismatch / table_not_handled) and
+                // unified_user_preferences stopped syncing. Now we push the *persisted local row*
+                // (real columns, real uuid, absolute accumulated scores), which the new
+                // apply_mutations branch upserts on the natural key.
+                if let userId = AuthService.shared.currentUser?.id {
                     for signal in signals {
-                        let payload: [String: Any] = [
-                            "category": signal.category,
-                            "id": signal.id,
-                            "name": signal.name,
-                            "weight": signal.weight,
-                            "source": signal.source.rawValue
-                        ]
-                        do {
-                            try await syncEngine.queueOperation(
-                                table: "unified_user_preferences",
-                                operationType: "UPSERT",
-                                recordId: "\(signal.category)_\(signal.id)",
-                                payload: payload,
-                                dependsOn: nil
-                            )
-                        } catch {
-                            Logger.error("[UserPreferenceManager] Failed to queue preference sync: \(error)")
-                        }
+                        await queueUnifiedPreferenceSync(userId: userId, category: signal.category, id: signal.id)
                     }
                 }
             } catch {
@@ -611,6 +600,33 @@ class UserPreferenceManager: ObservableObject {
     }
 
     // MARK: - Private Methods - Preference Updates
+
+    /// Queues the current persisted state of one preference row for cloud sync (STAB-010).
+    /// Reads the row back so the payload carries the real columns, the real uuid, and the absolute
+    /// accumulated scores — last-write-wins per device, which matches how the client accumulates.
+    private func queueUnifiedPreferenceSync(userId: String, category: String, id: String) async {
+        guard let syncEngine else { return }
+        let rows = (try? await sqliteService.queryRaw("""
+            SELECT id, user_id, device_id, preference_category, preference_id, preference_name,
+                   score, score_from_clips, score_from_discovery, score_from_search, score_from_ai,
+                   score_from_lists, interaction_count, last_interaction_at, updated_at
+            FROM unified_user_preferences
+            WHERE user_id = ? AND preference_category = ? AND preference_id = ?
+        """, parameters: [userId, category, id])) ?? []
+
+        guard let row = rows.first, let recordId = row["id"] as? String else { return }
+        do {
+            try await syncEngine.queueOperation(
+                table: "unified_user_preferences",
+                operationType: "UPSERT",
+                recordId: recordId,
+                payload: row,
+                dependsOn: nil
+            )
+        } catch {
+            Logger.error("[UserPreferenceManager] Failed to queue preference sync: \(error)")
+        }
+    }
 
     private func upsertUnifiedPreference(
         category: String,

@@ -673,6 +673,9 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             "lists",
             "list_items",
             "user_preferences",
+            // unified_user_preferences now has a working push path again (STAB-010), so pull it too
+            // to keep the discovery-personalization store consistent across devices.
+            "unified_user_preferences",
             // "movie_reactions" was removed from this list because the table did not exist on
             // Supabase and pulling it failed on every sync. The table now exists, with RLS scoped
             // to auth.uid() and a natural key of (user_id, media_id, media_type), so the pull is
