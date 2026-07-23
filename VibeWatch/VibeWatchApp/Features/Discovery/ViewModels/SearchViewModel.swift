@@ -17,6 +17,7 @@ class SearchViewModel: ObservableObject {
     
     private var searchTask: Task<Void, Never>?
     private let tmdbService: any TMDBServiceProtocol
+    private let localSearch: any LocalTitleSearching
     private let preferenceManager: UserPreferenceManager
     private let visitedItemsKey = "latestVisitedItems" // UserDefaults key
     private let maxVisitedItems = 2 // Max items to store
@@ -25,9 +26,11 @@ class SearchViewModel: ObservableObject {
 
     init(
         tmdbService: any TMDBServiceProtocol = TMDBService.shared,
+        localSearch: any LocalTitleSearching = SQLiteLocalTitleSearch(),
         preferenceManager: UserPreferenceManager = .shared
     ) {
         self.tmdbService = tmdbService
+        self.localSearch = localSearch
         self.preferenceManager = preferenceManager
         Logger.debug("[SearchViewModel] init() called")
         self.loadTrendingSearches()
@@ -44,17 +47,28 @@ class SearchViewModel: ObservableObject {
         let currentQuery = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !currentQuery.isEmpty else {
             searchResults = []
+            isLoading = false
+            error = nil
             return
         }
-        
+
+        isLoading = true
+        error = nil
+
         searchTask = Task {
+            // Cached titles first, with no debounce and no network: something relevant is on
+            // screen from the first keystroke instead of an empty view for 350 ms + a round trip.
+            // Overwritten below as soon as TMDB answers.
+            let local = await localSearch.search(matching: currentQuery, limit: 20)
+            guard !Task.isCancelled else { return }
+            if !local.isEmpty {
+                searchResults = local
+            }
+
             // Debounce input so we don't spam both TMDB and search-history logging.
             try? await Task.sleep(nanoseconds: 350_000_000)
             guard !Task.isCancelled else { return }
 
-            isLoading = true
-            error = nil
-            
             do {
                 let response = try await tmdbService.searchMulti(query: currentQuery, page: 1)
                 if !Task.isCancelled {

@@ -170,11 +170,14 @@ struct SearchResultsSection: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            if isLoading {
+            // Results win over the spinner: cached titles are on screen while the remote search is
+            // still in flight, so a full-screen ProgressView would hide the very thing it is
+            // waiting for. The spinner only stands in when there is nothing at all to show.
+            if isLoading && results.isEmpty {
                 ProgressView()
                     .frame(maxWidth: .infinity)
                     .padding(.top, 40)
-            } else if let error = error {
+            } else if let error = error, results.isEmpty {
                 Text(error.errorDescription ?? "An error occurred")
                     .foregroundColor(.theme.textSecondary)
                     .frame(maxWidth: .infinity)
@@ -191,11 +194,18 @@ struct SearchResultsSection: View {
                 .frame(maxWidth: .infinity)
                 .padding(.top, 60)
             } else {
-                Text("search.results".localized)
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(.theme.textPrimary)
-                    .padding(.horizontal, 20)
-                
+                HStack(spacing: 8) {
+                    Text("search.results".localized)
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(.theme.textPrimary)
+                    // Keeps the "more is coming" signal without covering what is already there.
+                    if isLoading {
+                        ProgressView()
+                            .scaleEffect(0.7)
+                    }
+                }
+                .padding(.horizontal, 20)
+
                 LazyVStack(spacing: 12) {
                     ForEach(results) { result in
                         SearchResultRow(result: result)
