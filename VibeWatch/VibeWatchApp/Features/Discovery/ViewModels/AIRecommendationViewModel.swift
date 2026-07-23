@@ -65,7 +65,7 @@ class AIRecommendationViewModel: ObservableObject {
 
         // Limit is now managed by AITokenManager (requests)
         self.dailyRequestLimit = aiTokenManager.dailyLimit
-        self.requestsUsedToday = aiTokenManager.tokensUsedToday
+        self.requestsUsedToday = aiTokenManager.requestsUsedToday
 
         startDayChangeMonitoring()
         Task {
@@ -105,7 +105,7 @@ class AIRecommendationViewModel: ObservableObject {
             let userIdString = "\(user.id)"
             if let userId = UUID(uuidString: userIdString) {
                 if let newTotal = try? await SupabaseService.shared.getAITokenUsage(userId: userId) {
-                    aiTokenManager.syncTokens(newTotal)
+                    aiTokenManager.syncRequests(newTotal)
                 }
             }
         }
@@ -115,7 +115,7 @@ class AIRecommendationViewModel: ObservableObject {
     @MainActor
     private func syncWithTokenManager() async {
         self.dailyRequestLimit = aiTokenManager.dailyLimit
-        self.requestsUsedToday = aiTokenManager.tokensUsedToday
+        self.requestsUsedToday = aiTokenManager.requestsUsedToday
     }
     
     func sendMessage() async {

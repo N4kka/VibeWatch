@@ -831,40 +831,13 @@ class SupabaseService: ObservableObject {
             }
         }
     }
-    // MARK: - AI Token Usage
-    
-    func logAITokenUsage(userId: UUID, tokensConsumed: Int) async throws -> Int {
-        guard let client = client else {
-            throw SupabaseError.notConfigured
-        }
-        
-        // Try to use remote RPC first; if it fails (e.g., missing function in debug), fall back to local cache.
-        let normalizedUserId = userId.uuidString.lowercased()
-        let state = await normalizeLocalAITokenUsageForToday(userId: normalizedUserId)
-        if state?.didResetForNewDay == true {
-            await resetRemoteAITokenUsageIfPossible(userId: normalizedUserId)
-        }
-        
-        struct LogUsageRequest: Encodable {
-            let p_user_id: UUID
-            let p_tokens_consumed: Int
-        }
-        
-        let request = LogUsageRequest(p_user_id: userId, p_tokens_consumed: tokensConsumed)
-        do {
-            let newTotalTokens: Int = try await client.rpc("log_ai_token_usage", params: request).execute().value
-            await saveLocalAITokenUsage(userId: normalizedUserId, tokensUsed: newTotalTokens)
-            return newTotalTokens
-        } catch {
-            // Fallback: update local cache so UI stays consistent even if RPC is unavailable (common in debug).
-            let currentLocal = await getLocalAITokenUsage(userId: normalizedUserId) ?? 0
-            let fallbackTotal = currentLocal + tokensConsumed
-            await saveLocalAITokenUsage(userId: normalizedUserId, tokensUsed: fallbackTotal)
-            Logger.warning("[Supabase] log_ai_token_usage RPC failed; using local fallback. Error: \(error.localizedDescription)")
-            return fallbackTotal
-        }
-    }
-    
+    // MARK: - AI Request Usage
+    //
+    // Writes to the remote counter go through cerebras-proxy (the server that gates the daily AI
+    // request limit), which is the single writer. The client only reads via getAITokenUsage and
+    // keeps a local mirror; there is deliberately no client-side writer, so nothing here can
+    // desynchronize the server's request count. (A dead logAITokenUsage that added token counts to
+    // this request counter used to live here; it was removed.)
     func getAITokenUsage(userId: UUID) async throws -> Int {
         guard let client = client else {
             throw SupabaseError.notConfigured

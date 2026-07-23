@@ -97,7 +97,7 @@ async function requestsUsedToday(
   try {
     const { data, error } = await adminSupabase
       .from('user_ai_token_usage')
-      .select('total_tokens_used, usage_date, last_updated')
+      .select('request_count, usage_date, last_updated')
       .eq('user_id', userId)
       .limit(1)
 
@@ -128,32 +128,21 @@ async function requestsUsedToday(
 async function recordSuccessfulRequest(
   adminSupabase: SupabaseAdminClient,
   userId: string,
-  previousUsage: number,
-  todayKey: string,
 ) {
-  const now = new Date().toISOString()
-  const { error } = await adminSupabase
-    .from('user_ai_token_usage')
-    .upsert({
-      user_id: userId,
-      total_tokens_used: previousUsage + 1,
-      usage_date: todayKey,
-      last_updated: now,
-    }, { onConflict: 'user_id' })
-
-  if (!error) return
-  console.warn('Direct AI request usage upsert failed:', error.message)
-
+  // Single writer for the daily request counter: the log_ai_token_usage RPC. It increments
+  // request_count atomically on (user_id, usage_date), so it needs no read-modify-write and
+  // has no conflict-target bug. (The previous direct upsert used onConflict 'user_id' while the
+  // primary key is (user_id, usage_date), so it never succeeded and always fell through to here.)
   try {
-    const { error: rpcError } = await adminSupabase.rpc('log_ai_token_usage', {
+    const { error } = await adminSupabase.rpc('log_ai_token_usage', {
       p_user_id: userId,
-      p_tokens_consumed: 1,
+      p_requests: 1,
     })
-    if (rpcError) {
-      console.warn('RPC AI request usage logging failed:', rpcError.message)
+    if (error) {
+      console.warn('AI request usage logging failed:', error.message)
     }
-  } catch (rpcError) {
-    console.warn('RPC AI request usage logging failed:', rpcError)
+  } catch (error) {
+    console.warn('AI request usage logging failed:', error)
   }
 }
 
@@ -227,7 +216,7 @@ serve(async (req) => {
     }
 
     // 4. Count one successful chatbot request.
-    await recordSuccessfulRequest(adminSupabase, user.id, usedToday, todayKey)
+    await recordSuccessfulRequest(adminSupabase, user.id)
 
     // 5. Return raw Cerebras response.
     return new Response(respBody, {

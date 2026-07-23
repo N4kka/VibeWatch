@@ -15,7 +15,7 @@ final class AITokenManager: ObservableObject {
     private let legacyStorageKey = "vibe_watch_ai_token_usage"
     
     // MARK: - State
-    @Published private(set) var tokensUsedToday: Int = 0
+    @Published private(set) var requestsUsedToday: Int = 0
     @Published private(set) var dailyLimit: Int = 5
     
     private var lastResetDate: Date = Date()
@@ -42,16 +42,16 @@ final class AITokenManager: ObservableObject {
     /// Checks if the user has enough remaining quota for a request.
     func canMakeRequest() -> Bool {
         checkAndResetDaily()
-        return tokensUsedToday < dailyLimit
+        return requestsUsedToday < dailyLimit
     }
     
     /// Updates tokens from a remote source.
-    func syncTokens(_ count: Int) {
+    func syncRequests(_ count: Int) {
         checkAndResetDaily()
         // If we just reset for a new day, ignore older remote counts that might be from "yesterday"
         // unless we know for sure they are for today. 
         // SupabaseService already handles the day boundary check, so we can trust it.
-        self.tokensUsedToday = count
+        self.requestsUsedToday = count
         saveUsage()
     }
     
@@ -61,13 +61,13 @@ final class AITokenManager: ObservableObject {
         
         // We treat each AI message as one request for quota purposes.
         // Remote usage is recorded by the Cerebras proxy after a successful response.
-        tokensUsedToday += 1
+        requestsUsedToday += 1
         saveUsage()
     }
     
     /// Returns the remaining requests for today.
-    var remainingTokens: Int {
-        return max(0, dailyLimit - tokensUsedToday)
+    var remainingRequests: Int {
+        return max(0, dailyLimit - requestsUsedToday)
     }
     
     /// Updates the daily limit based on subscription status.
@@ -96,7 +96,7 @@ final class AITokenManager: ObservableObject {
         let calendar = Calendar.current
         if !calendar.isDateInToday(lastResetDate) {
             Logger.info("[AITokenManager] New day detected. Resetting quota.")
-            tokensUsedToday = 0
+            requestsUsedToday = 0
             lastResetDate = Date()
             saveUsage()
         }
@@ -136,7 +136,7 @@ final class AITokenManager: ObservableObject {
                 parameters: [userId]
             )
             if let row = result.first {
-                tokensUsedToday = row["tokens_used_today"] as? Int ?? 0
+                requestsUsedToday = row["tokens_used_today"] as? Int ?? 0
                 if let str = row["last_reset_at"] as? String,
                    let date = ISO8601DateFormatter().date(from: str) {
                     lastResetDate = date
@@ -159,7 +159,7 @@ final class AITokenManager: ObservableObject {
                 VALUES (?, ?, ?, ?, datetime('now'))
             """
             try await db.executeWrite(sql, parameters: [
-                userId, userId, tokensUsedToday,
+                userId, userId, requestsUsedToday,
                 ISO8601DateFormatter().string(from: lastResetDate)
             ])
         } catch {
