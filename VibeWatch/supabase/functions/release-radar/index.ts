@@ -11,16 +11,33 @@ const SUPABASE_SERVICE_ROLE_KEY = (() => {
 })()
 const TMDB_API_KEY = Deno.env.get('TMDB_API_KEY') ?? ''
 
+// Only alerts the user explicitly asked for. `watchlist` rows are created by the
+// list_items_create_alert trigger for *every* item added to a watchlist — they exist so
+// check-availability knows who to tell when a title reaches streaming, not so we can announce
+// that a decades-old catalogue title "is out now". Including them here is what produced the
+// 2026-07-23 storm ("The Shawshank Redemption is out now").
+const NOTIFIABLE_SOURCES = ['notify_me', 'release_calendar']
+
+// A release is news for a couple of days, not forever. The window absorbs a missed cron run
+// without ever reaching back into the catalogue.
+const RELEASE_WINDOW_DAYS = 2
+
+function isoDay(offsetDays = 0) {
+  return new Date(Date.now() + offsetDays * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+}
+
 serve(async () => {
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
-    const today = new Date().toISOString().slice(0, 10)
+    const today = isoDay()
+    const windowStart = isoDay(-RELEASE_WINDOW_DAYS)
 
     const { data: alerts, error } = await supabase
       .from('release_alerts')
       .select('user_id, media_id, media_type, country_code, last_notified_at')
       .eq('is_active', true)
-      .in('source', ['notify_me', 'watchlist', 'release_calendar'])
+      .is('last_notified_at', null) // a release happens once; never re-announce it
+      .in('source', NOTIFIABLE_SOURCES)
 
     if (error) throw error
 
@@ -33,8 +50,9 @@ serve(async () => {
 
       const details = await response.json()
       const releaseDate = alert.media_type === 'tv' ? details.first_air_date : details.release_date
-      if (!releaseDate || releaseDate > today) continue
-      if (alert.last_notified_at?.slice(0, 10) === today) continue
+      // Out in the last RELEASE_WINDOW_DAYS days only. The old check was `releaseDate > today`,
+      // which skipped future releases and announced everything already released.
+      if (!releaseDate || releaseDate > today || releaseDate < windowStart) continue
 
       const title = details.title ?? details.name ?? 'New release'
       const { error: insertError } = await supabase

@@ -68,7 +68,12 @@ serve(async (req) => {
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      // Prefer the new secret key, fall back to the legacy service_role during migration.
+      (() => {
+        const s = Deno.env.get('SUPABASE_SECRET_KEYS')
+        if (s) { try { const k = JSON.parse(s)?.default; if (k) return k as string } catch { /* fall back */ } }
+        return Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      })()
     )
 
     // 1. Get previously stored availability
@@ -87,9 +92,9 @@ serve(async (req) => {
 
     // 2. Process newly fetched availability and identify new platforms
     const newProviders: (Provider & { type: string })[] = []
-    const availabilityToUpsert = []
+    const availabilityToUpsert: Record<string, unknown>[] = []
 
-    const processProviders = (providers: Provider[], type: 'stream' | 'rent' | 'buy') => {
+    const processProviders = (providers: Provider[] | undefined, type: 'stream' | 'rent' | 'buy') => {
       if (!providers) return
       for (const provider of providers) {
         const providerKey = `${provider.provider_id}:${type}`
@@ -128,24 +133,34 @@ serve(async (req) => {
       if (users && users.length > 0) {
         const notificationsToInsert = []
         for (const user of users) {
-          for (const provider of newProviders) {
-            // Check if user wants alerts for this availability type
-            const wantsAlert =
-              (provider.type === 'stream' && user.alert_on_stream) ||
-              (provider.type === 'rent' && user.alert_on_rent) ||
-              (provider.type === 'buy' && user.alert_on_buy)
+          // One notification per user per title, never one per provider. A title landing on
+          // Netflix + Prime + three rental stores used to queue five separate pushes for the
+          // same movie; that was the bulk of the 2026-07-22 burst.
+          const wanted = newProviders.filter((provider) =>
+            (provider.type === 'stream' && user.alert_on_stream) ||
+            (provider.type === 'rent' && user.alert_on_rent) ||
+            (provider.type === 'buy' && user.alert_on_buy)
+          )
 
-            if (wantsAlert) {
-              notificationsToInsert.push({
-                user_id: user.user_id,
-                media_id: mediaId,
-                media_type: mediaType,
-                title: `${mediaTitle} is now available!`,
-                body: `It's now available to ${provider.type} on ${provider.provider_name}.`,
-                notification_type: 'new_availability',
-              })
-            }
-          }
+          if (wanted.length === 0) continue
+
+          // Streaming is the headline when it's there; otherwise lead with whatever came in.
+          const headline = wanted.find((provider) => provider.type === 'stream') ?? wanted[0]
+          const others = wanted.length - 1
+          const body = others > 0
+            ? `It's now available to ${headline.type} on ${headline.provider_name} and ${others} more.`
+            : `It's now available to ${headline.type} on ${headline.provider_name}.`
+
+          notificationsToInsert.push({
+            user_id: user.user_id,
+            media_id: mediaId,
+            media_type: mediaType,
+            title: `${mediaTitle} is now available!`,
+            body,
+            notification_type: 'new_availability',
+            category: 'new_availability',
+            thread_id: `availability:${mediaType}:${mediaId}`,
+          })
         }
 
         if (notificationsToInsert.length > 0) {
@@ -176,7 +191,8 @@ serve(async (req) => {
       headers: { 'Content-Type': 'application/json' },
     })
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    const message = error instanceof Error ? error.message : String(error)
+    return new Response(JSON.stringify({ error: message }), {
       headers: { 'Content-Type': 'application/json' },
       status: 500,
     })

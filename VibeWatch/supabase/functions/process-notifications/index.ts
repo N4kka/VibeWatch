@@ -12,6 +12,18 @@ const BATCH_SIZE = 25
 // used to strand delivered pushes in an unsent state.
 const RUN_BUDGET_MS = 100_000
 
+// How many pushes a single user may receive in any rolling 24 hours. Anything beyond this is
+// collapsed into one digest push; if even that does not fit, the rows wait for the window to
+// reopen. Before this cap a single morning cron run delivered 27 separate banners to one user.
+const DAILY_PUSH_CAP = 2
+// A user who reinstalls or reinstates permissions accumulates a new user_devices row every time
+// FCM rotates the token, and nothing ever prunes them (one account had 66). Sending to all of
+// them means the same handset can be hit several times for one notification.
+const MAX_DEVICES_PER_USER = 10
+// Queued content that nobody delivered in a week is noise, not news. Retire it rather than
+// dumping a backlog the moment the pipeline recovers.
+const MAX_QUEUE_AGE_MS = 7 * 24 * 60 * 60 * 1000
+
 type NotificationRow = {
   id: string
   user_id: string
@@ -23,6 +35,21 @@ type NotificationRow = {
   retry_count?: number | null
   category?: string | null
   thread_id?: string | null
+  created_at?: string | null
+}
+
+// What actually goes to FCM. A digest has no backing notifications row, so delivery is described
+// separately from the queue rows it settles.
+type PushPayload = {
+  dataId: string
+  notificationType: string
+  title: string
+  body: string
+  mediaId?: number | string | null
+  mediaType?: string | null
+  category: string
+  threadId: string
+  collapseId: string
 }
 
 type NotificationPreferences = {
@@ -43,6 +70,9 @@ type PushResult = {
   retryable: boolean
   permanent: boolean
   error?: string
+  // False when the user has no registered device at all — the only case where email stands in
+  // for a push instead of doubling it.
+  hadDevice: boolean
 }
 
 async function getFirebaseAccessToken(serviceAccount: any) {
@@ -119,11 +149,10 @@ function isInQuietHours(preferences?: NotificationPreferences | null) {
   return now >= start || now < end
 }
 
-function classifyFcmError(status: number, body: string): PushResult {
+function classifyFcmError(status: number, body: string) {
   const permanent = body.includes('UNREGISTERED') || body.includes('INVALID_ARGUMENT')
   const retryable = status === 429 || status >= 500
   return {
-    sent: false,
     permanent,
     retryable: !permanent && retryable,
     error: body,
@@ -134,24 +163,70 @@ function retryDelayMinutes(retryCount: number) {
   return Math.min(60, Math.pow(2, Math.max(0, retryCount))) // 1,2,4... max 60 min
 }
 
-async function sendPushNotification(
+function payloadForNotification(notification: NotificationRow): PushPayload {
+  return {
+    dataId: String(notification.id),
+    notificationType: notification.notification_type,
+    title: notification.title,
+    body: notification.body,
+    mediaId: notification.media_id,
+    mediaType: notification.media_type,
+    category: notification.category ?? notification.notification_type,
+    threadId: notification.thread_id ?? notification.notification_type,
+    collapseId: `${notification.notification_type}:${notification.media_type ?? 'none'}:${notification.media_id ?? notification.id}`,
+  }
+}
+
+const DIGEST_COPY: Record<string, (count: number) => string> = {
+  new_release: (n) => `${n} titles from your list are out now.`,
+  new_availability: (n) => `${n} titles from your list are now streaming.`,
+  episode_aired: (n) => `${n} series you follow have new episodes.`,
+  continue_watching: (n) => `${n} series are waiting for you.`,
+}
+
+// One push standing in for several queued rows. It carries no media_id on purpose: the client
+// falls back to the Discovery tab (AppNavigationManager) rather than deep-linking to an
+// arbitrary one of the collapsed items.
+function digestPayload(userId: string, rows: NotificationRow[]): PushPayload {
+  const types = new Set(rows.map((row) => row.notification_type))
+  const singleType = types.size === 1 ? [...types][0] : null
+  const copy = singleType ? DIGEST_COPY[singleType] : undefined
+
+  return {
+    dataId: rows[0].id,
+    notificationType: singleType ?? 'digest',
+    title: 'VibeWatch',
+    body: copy ? copy(rows.length) : `You have ${rows.length} new updates.`,
+    mediaId: null,
+    mediaType: null,
+    category: 'digest',
+    threadId: 'digest',
+    collapseId: `digest:${userId}`,
+  }
+}
+
+async function sendPush(
   supabaseClient: SupabaseClient,
-  notification: NotificationRow,
+  userId: string,
+  payload: PushPayload,
   accessToken: string,
   projectId: string
 ): Promise<PushResult> {
   const { data: devices, error: deviceError } = await supabaseClient
     .from('user_devices')
     .select('fcm_token')
-    .eq('user_id', notification.user_id)
+    .eq('user_id', userId)
     .not('fcm_token', 'is', null)
+    // Newest first: stale rows left behind by token rotation sit at the bottom and are dropped.
+    .order('updated_at', { ascending: false })
+    .limit(MAX_DEVICES_PER_USER)
 
   if (deviceError) {
-    return { sent: false, retryable: true, permanent: false, error: deviceError.message }
+    return { sent: false, retryable: true, permanent: false, error: deviceError.message, hadDevice: true }
   }
 
   if (!devices || devices.length === 0) {
-    return { sent: true, retryable: false, permanent: false }
+    return { sent: true, retryable: false, permanent: false, hadDevice: false }
   }
 
   let sawRetryable = false
@@ -160,33 +235,32 @@ async function sendPushNotification(
 
   for (const device of devices) {
     const fcmToken = device.fcm_token
-    const collapseId = `${notification.notification_type}:${notification.media_type ?? 'none'}:${notification.media_id ?? notification.id}`
-    const priority = notification.notification_type === 'streak_reminder' ? '5' : '10'
+    const priority = payload.notificationType === 'streak_reminder' ? '5' : '10'
 
     const message = {
       message: {
         token: fcmToken,
         notification: {
-          title: notification.title,
-          body: notification.body,
+          title: payload.title,
+          body: payload.body,
         },
         data: {
-          notification_id: String(notification.id),
-          notification_type: notification.notification_type,
-          media_id: String(notification.media_id ?? ''),
-          media_type: String(notification.media_type ?? ''),
+          notification_id: payload.dataId,
+          notification_type: payload.notificationType,
+          media_id: String(payload.mediaId ?? ''),
+          media_type: String(payload.mediaType ?? ''),
         },
         apns: {
           headers: {
             'apns-priority': priority,
-            'apns-collapse-id': collapseId,
+            'apns-collapse-id': payload.collapseId,
           },
           payload: {
             aps: {
               sound: 'default',
               badge: 1,
-              category: notification.category ?? notification.notification_type,
-              'thread-id': notification.thread_id ?? notification.notification_type,
+              category: payload.category,
+              'thread-id': payload.threadId,
             },
           },
         },
@@ -223,16 +297,20 @@ async function sendPushNotification(
     retryable: sawRetryable,
     permanent: sawPermanent,
     error: lastError,
+    hadDevice: true,
   }
 }
 
+// Fallback channel only. This used to fire after *every* delivered push, so the 27-push morning
+// was also 27 emails. It now runs solely when the user has no device we can reach.
 async function sendEmail(
   supabaseClient: SupabaseClient,
-  notification: NotificationRow,
+  userId: string,
+  payload: PushPayload,
   resendApiKey: string,
   fromEmail: string
 ) {
-  const { data: { user }, error: userError } = await supabaseClient.auth.admin.getUserById(notification.user_id)
+  const { data: { user }, error: userError } = await supabaseClient.auth.admin.getUserById(userId)
   if (userError || !user?.email) return
 
   await fetch('https://api.resend.com/emails', {
@@ -244,8 +322,8 @@ async function sendEmail(
     body: JSON.stringify({
       from: fromEmail,
       to: user.email,
-      subject: notification.title,
-      html: `<p>${notification.body}</p><p>Log in to VibeWatch to see more.</p>`,
+      subject: payload.title,
+      html: `<p>${payload.body}</p><p>Log in to VibeWatch to see more.</p>`,
     }),
   })
 }
@@ -305,22 +383,23 @@ serve(async (_req) => {
     })
 
     const firebaseAccessToken = await getFirebaseAccessToken(firebaseServiceAccount)
-    // Notifications that were never delivered to anyone, so batching their bookkeeping to the
-    // end of the run is safe: if the invocation dies first, nothing was sent and nothing is
-    // duplicated. Actually-delivered notifications are marked one by one, inline, instead.
+
+    // Rows that never reach a device, so batching their bookkeeping to the end of the run is
+    // safe: if the invocation dies first, nothing was sent and nothing is duplicated.
+    // Actually-delivered rows are marked inline instead.
     const suppressedByPreferences: string[] = []
     const skippedForQuietHours: string[] = []
-    let deliveredCount = 0
-    let stoppedOnDeadline = false
+    const expired: string[] = []
+    const eligibleByUser = new Map<string, NotificationRow[]>()
+    const staleBefore = Date.now() - MAX_QUEUE_AGE_MS
 
     for (const notification of notifications as NotificationRow[]) {
-      // Leave the remaining rows untouched rather than being killed mid-delivery.
-      if (Date.now() > deadline) {
-        stoppedOnDeadline = true
-        break
-      }
-
       const preferences = preferencesByUser.get(notification.user_id)
+
+      if (notification.created_at && Date.parse(notification.created_at) < staleBefore) {
+        expired.push(notification.id)
+        continue
+      }
 
       if (!preferenceAllows(notification, preferences)) {
         suppressedByPreferences.push(notification.id)
@@ -332,46 +411,127 @@ serve(async (_req) => {
         continue
       }
 
-      const result = await sendPushNotification(
-        supabaseClient,
-        notification,
-        firebaseAccessToken,
-        firebaseServiceAccount.project_id
-      )
+      const bucket = eligibleByUser.get(notification.user_id)
+      if (bucket) bucket.push(notification)
+      else eligibleByUser.set(notification.user_id, [notification])
+    }
 
-      if (result.sent) {
-        // Mark it before anything else can fail. This used to be batched after the whole loop,
-        // so a timeout left every already-delivered push still flagged is_sent = false and the
-        // next cron run re-sent the lot — the source of the duplicate notification storms.
-        const { error: markError } = await supabaseClient
-          .from('notifications')
-          .update({ is_sent: true, sent_at: new Date().toISOString(), last_error: null })
-          .eq('id', notification.id)
+    // How much of each user's 24h budget is already spent. One query for the whole batch.
+    const windowStart = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    const spentByUser = new Map<string, number>()
+    if (eligibleByUser.size > 0) {
+      const { data: recentDeliveries } = await supabaseClient
+        .from('notification_delivery_log')
+        .select('user_id')
+        .in('user_id', [...eligibleByUser.keys()])
+        .gte('delivered_at', windowStart)
 
-        if (markError) {
-          console.error(`Failed to mark ${notification.id} as sent:`, markError.message)
-        }
+      recentDeliveries?.forEach((row: { user_id: string }) => {
+        spentByUser.set(row.user_id, (spentByUser.get(row.user_id) ?? 0) + 1)
+      })
+    }
 
-        deliveredCount += 1
-        await sendEmail(supabaseClient, notification, resendApiKey, fromEmail)
-      } else {
-        const retryCount = (notification.retry_count ?? 0) + 1
-        const nextRetryAt = new Date(Date.now() + retryDelayMinutes(retryCount) * 60 * 1000).toISOString()
+    const nowIso = () => new Date().toISOString()
+    let deliveredCount = 0
+    let digestCount = 0
+    let cappedCount = 0
+    let stoppedOnDeadline = false
+
+    const markSent = async (ids: string[]) => {
+      const { error: markError } = await supabaseClient
+        .from('notifications')
+        .update({ is_sent: true, sent_at: nowIso(), last_error: null })
+        .in('id', ids)
+
+      // Marking happens before anything else can fail. This used to be batched after the whole
+      // loop, so a timeout left every already-delivered push flagged is_sent = false and the next
+      // cron run re-sent the lot — the original duplicate-notification storm.
+      if (markError) console.error(`Failed to mark ${ids.length} rows as sent:`, markError.message)
+    }
+
+    const markFailed = async (rows: NotificationRow[], error?: string) => {
+      for (const row of rows) {
+        const retryCount = (row.retry_count ?? 0) + 1
         await supabaseClient
           .from('notifications')
           .update({
             retry_count: retryCount,
-            next_retry_at: nextRetryAt,
-            last_error: result.error ?? 'unknown push failure',
+            next_retry_at: new Date(Date.now() + retryDelayMinutes(retryCount) * 60 * 1000).toISOString(),
+            last_error: error ?? 'unknown push failure',
           })
-          .eq('id', notification.id)
+          .eq('id', row.id)
       }
+    }
+
+    for (const [userId, rows] of eligibleByUser) {
+      // Leave the remaining rows untouched rather than being killed mid-delivery.
+      if (Date.now() > deadline) {
+        stoppedOnDeadline = true
+        break
+      }
+
+      const remaining = DAILY_PUSH_CAP - (spentByUser.get(userId) ?? 0)
+
+      if (remaining <= 0) {
+        // Budget spent. Hold the rows — they are not lost, they go out (collapsed) once the
+        // rolling window reopens, or get retired by the staleness rule if nobody cares by then.
+        cappedCount += rows.length
+        await supabaseClient
+          .from('notifications')
+          .update({ next_retry_at: new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString() })
+          .in('id', rows.map((row) => row.id))
+        continue
+      }
+
+      // Within budget: each item keeps its own banner and its own deep link. Over budget: one
+      // digest for the lot, which costs a single unit of budget.
+      const asDigest = rows.length > remaining
+      const batches = asDigest
+        ? [{ payload: digestPayload(userId, rows), rows }]
+        : rows.map((row) => ({ payload: payloadForNotification(row), rows: [row] }))
+
+      for (const batch of batches) {
+        const result = await sendPush(
+          supabaseClient,
+          userId,
+          batch.payload,
+          firebaseAccessToken,
+          firebaseServiceAccount.project_id
+        )
+
+        if (!result.sent) {
+          await markFailed(batch.rows, result.error)
+          continue
+        }
+
+        await markSent(batch.rows.map((row) => row.id))
+
+        if (result.hadDevice) {
+          deliveredCount += batch.rows.length
+          if (asDigest) digestCount += 1
+          await supabaseClient.from('notification_delivery_log').insert({
+            user_id: userId,
+            kind: asDigest ? 'digest' : 'single',
+            notification_count: batch.rows.length,
+          })
+        } else {
+          // No reachable device: email is the delivery, not a duplicate of it.
+          await sendEmail(supabaseClient, userId, batch.payload, resendApiKey, fromEmail)
+        }
+      }
+    }
+
+    if (expired.length > 0) {
+      await supabaseClient
+        .from('notifications')
+        .update({ is_sent: true, sent_at: nowIso(), last_error: 'expired: older than 7 days' })
+        .in('id', expired)
     }
 
     if (suppressedByPreferences.length > 0) {
       const { error: updateError } = await supabaseClient
         .from('notifications')
-        .update({ is_sent: true, sent_at: new Date().toISOString(), last_error: null })
+        .update({ is_sent: true, sent_at: nowIso(), last_error: null })
         .in('id', suppressedByPreferences)
 
       if (updateError) {
@@ -391,6 +551,9 @@ serve(async (_req) => {
         message: 'Function executed.',
         fetched: notifications.length,
         delivered: deliveredCount,
+        digests: digestCount,
+        cappedForDailyLimit: cappedCount,
+        expired: expired.length,
         suppressedByPreferences: suppressedByPreferences.length,
         quietHoursSkipped: skippedForQuietHours.length,
         stoppedOnDeadline,
