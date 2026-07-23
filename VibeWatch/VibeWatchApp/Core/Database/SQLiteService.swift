@@ -103,6 +103,13 @@ final class SQLiteService: ObservableObject {
     /// Set synchronously at init() before any concurrent access begins.
     private(set) var hasPersonalizedDiscoveryCache: Bool = false
 
+    /// Bumped whenever the CREATE TABLE / CREATE INDEX scripts below change. `createTables()` is
+    /// on the launch path and runs on the main thread, so it re-runs only when this differs from
+    /// what is stored in app_metadata. Raised to 1.1.0 because until now every declared index was
+    /// being discarded (see executeScript), so existing installs need one more creation pass to
+    /// finally get them.
+    private static let schemaVersion = "1.1.0"
+
     // Wrappers to allow capturing dynamic SQLite values in @Sendable contexts.
     private struct SQLSendableValue: @unchecked Sendable { let raw: Any }
     private struct SQLSendableRecord: @unchecked Sendable { var raw: [String: Any] }
@@ -224,12 +231,12 @@ final class SQLiteService: ObservableObject {
     /// dbQueue re-entrancy. Safe to call from init() after createTables().
     private func checkInitialCacheState() {
         var stmt: OpaquePointer?
-        let sql = "SELECT COUNT(*) FROM personalized_discovery LIMIT 1"
+        // Only "does a row exist" is needed. COUNT(*) is an aggregate, so `LIMIT 1` bounded
+        // nothing and the whole table was scanned — on the main thread, at every launch.
+        let sql = "SELECT 1 FROM personalized_discovery LIMIT 1"
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return }
         defer { sqlite3_finalize(stmt) }
-        if sqlite3_step(stmt) == SQLITE_ROW {
-            hasPersonalizedDiscoveryCache = sqlite3_column_int(stmt, 0) > 0
-        }
+        hasPersonalizedDiscoveryCache = sqlite3_step(stmt) == SQLITE_ROW
     }
 
     /// Returns true when personalized_discovery table has at least one row.
@@ -304,6 +311,18 @@ final class SQLiteService: ObservableObject {
     // MARK: - Schema Creation
     
     private func createTables() {
+        // app_metadata has to exist before its own version marker can be read.
+        executeScript(createAppMetadataTable())
+
+        // The scripts below are idempotent but not free, and this runs on the main thread before
+        // the first frame on every single launch. Skip the whole pass once the stored schema
+        // version matches; migrations below stay outside the gate since they carry their own.
+        if readSchemaVersion() == Self.schemaVersion {
+            runMigrations()
+            runPersonalizationMigrations()
+            return
+        }
+
         // Read schema from file or create inline
         let tables = [
             createClipsTable(),
@@ -340,25 +359,50 @@ final class SQLiteService: ObservableObject {
             createXPTransactionsTable()
         ]
         
+        // executeScript, not execute: each of these strings is a CREATE TABLE followed by its
+        // CREATE INDEX statements, and prepare_v2 would compile only the first of them.
         for table in tables {
-            execute(table)
+            executeScript(table)
         }
-        
+
         // Initialize metadata
         execute("""
             INSERT OR IGNORE INTO app_metadata (key_name, value_text) VALUES
             ('app_install_date', datetime('now')),
-            ('db_schema_version', '1.0.0'),
             ('last_full_sync', NULL)
         """)
-        
-        Logger.info("[SQLite] All tables created")
+
+        writeSchemaVersion(Self.schemaVersion)
+
+        Logger.info("[SQLite] Schema created (version \(Self.schemaVersion))")
 
         // Run migrations
         runMigrations()
 
         // Run personalization migrations (Phase 1)
         runPersonalizationMigrations()
+    }
+
+    /// Reads the stored schema marker directly, without going through the async query path:
+    /// this is called from init() on the launch path.
+    private func readSchemaVersion() -> String? {
+        var statement: OpaquePointer?
+        let sql = "SELECT value_text FROM app_metadata WHERE key_name = 'db_schema_version'"
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else { return nil }
+        defer { sqlite3_finalize(statement) }
+        guard sqlite3_step(statement) == SQLITE_ROW,
+              let value = sqlite3_column_text(statement, 0) else { return nil }
+        return String(cString: value)
+    }
+
+    private func writeSchemaVersion(_ version: String) {
+        execute(
+            """
+            INSERT INTO app_metadata (key_name, value_text) VALUES ('db_schema_version', ?)
+            ON CONFLICT(key_name) DO UPDATE SET value_text = excluded.value_text
+            """,
+            parameters: [version]
+        )
     }
     
     private func runMigrations() {
@@ -682,7 +726,40 @@ final class SQLiteService: ObservableObject {
 
         return success
     }
-    
+
+    /// Execute a multi-statement SQL script.
+    ///
+    /// `execute(_:)` above compiles with `sqlite3_prepare_v2`, which only ever compiles the FIRST
+    /// statement in the string — the rest is reachable solely through the `pzTail` out-parameter,
+    /// which is passed as nil. Every `createXTable()` returns a CREATE TABLE followed by its
+    /// CREATE INDEX statements in one string, so all 73 declared indexes were being silently
+    /// dropped: production databases only ever had the implicit PRIMARY KEY autoindexes.
+    ///
+    /// `sqlite3_exec` runs the whole script. Splitting on ";" would have been the obvious fix and
+    /// is wrong — it breaks on any semicolon inside a string literal or trigger body.
+    @discardableResult
+    func executeScript(_ sql: String) -> Bool {
+        var success = false
+
+        writerQueue.sync { [weak self] in
+            guard let self = self else { return }
+
+            var errorPointer: UnsafeMutablePointer<CChar>?
+            if sqlite3_exec(self.db, sql, nil, nil, &errorPointer) == SQLITE_OK {
+                success = true
+            } else {
+                let error = errorPointer.map { String(cString: $0) } ?? "unknown error"
+                Logger.error("[SQLite] Script failed: \(error). SQL: \(sql)")
+                DispatchQueue.main.async { [weak self] in
+                    self?.lastError = error
+                }
+            }
+            if let errorPointer { sqlite3_free(errorPointer) }
+        }
+
+        return success
+    }
+
     /// Execute a write statement (INSERT/UPDATE/DELETE/REPLACE) on the writer connection.
     /// Unlike `queryRaw`, whose connection is opened `SQLITE_OPEN_READONLY`, this can actually
     /// write — and it throws on failure instead of returning an empty result set.

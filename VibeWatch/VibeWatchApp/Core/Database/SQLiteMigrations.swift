@@ -8,7 +8,7 @@ extension SQLiteService {
     /// Run personalization migrations (Phase 1)
     func runPersonalizationMigrations() {
         let currentVersion = getPersonalizationMigrationVersion()
-        let latestVersion = 6
+        let latestVersion = 7
 
         guard currentVersion < latestVersion else {
             Logger.info("[SQLite] Personalization migrations already applied (version \(currentVersion))")
@@ -41,6 +41,9 @@ extension SQLiteService {
             }
             if currentVersion < 6 {
                 migration6_AddNotificationSubscriptions()
+            }
+            if currentVersion < 7 {
+                migration7_BackfillMissingIndexes()
             }
 
             // Update migration version
@@ -83,22 +86,22 @@ extension SQLiteService {
         Logger.info("[SQLite] Migration 1: Creating user preferences & personalization tables")
 
         // 1. user_search_history
-        execute(createUserSearchHistoryTable())
+        executeScript(createUserSearchHistoryTable())
 
         // 2. user_discovery_interactions
-        execute(createUserDiscoveryInteractionsTable())
+        executeScript(createUserDiscoveryInteractionsTable())
 
         // 3. unified_user_preferences (CRITICAL)
-        execute(createUnifiedUserPreferencesTable())
+        executeScript(createUnifiedUserPreferencesTable())
 
         // 4. personalized_discovery
-        execute(createPersonalizedDiscoveryTable())
+        executeScript(createPersonalizedDiscoveryTable())
 
         // 5. ai_conversation_history
-        execute(createAIConversationHistoryTable())
+        executeScript(createAIConversationHistoryTable())
 
         // 6. global_discovery_filters
-        execute(createGlobalDiscoveryFiltersTable())
+        executeScript(createGlobalDiscoveryFiltersTable())
 
         // 7. Modify existing user_preferences table
         migrateExistingUserPreferences()
@@ -117,9 +120,9 @@ extension SQLiteService {
     private func migration2_AddCerebrasJobQueueAndEmbeddings() {
         Logger.info("[SQLite] Migration 2: Creating Cerebras job queue + embeddings tables")
 
-        execute(createCerebrasJobQueueTable())
-        execute(createMediaEmbeddingsTable())
-        execute(createUserBehaviorInsightsTable())
+        executeScript(createCerebrasJobQueueTable())
+        executeScript(createMediaEmbeddingsTable())
+        executeScript(createUserBehaviorInsightsTable())
 
         Logger.info("[SQLite] Migration 2 complete - Cerebras backend tables created")
     }
@@ -129,7 +132,7 @@ extension SQLiteService {
     private func migration3_AddJobMetrics() {
         Logger.info("[SQLite] Migration 3: Creating job metrics table for monitoring")
 
-        execute(createCerebrasJobMetricsTable())
+        executeScript(createCerebrasJobMetricsTable())
 
         Logger.info("[SQLite] Migration 3 complete - Job metrics table created")
     }
@@ -139,7 +142,7 @@ extension SQLiteService {
     private func migration4_AddTimeOfDayPatterns() {
         Logger.info("[SQLite] Migration 4: Creating time-of-day pattern tracking table")
 
-        execute(createUserTimePatternsTable())
+        executeScript(createUserTimePatternsTable())
 
         Logger.info("[SQLite] Migration 4 complete - Time pattern tracking enabled")
     }
@@ -149,8 +152,8 @@ extension SQLiteService {
     private func migration5_AddSmartNotifications() {
         Logger.info("[SQLite] Migration 5: Creating smart notification tables")
 
-        execute(createNotificationHistoryTable())
-        execute(createUserNotificationPreferencesTable())
+        executeScript(createNotificationHistoryTable())
+        executeScript(createUserNotificationPreferencesTable())
 
         Logger.info("[SQLite] Migration 5 complete - Smart notifications enabled")
     }
@@ -160,9 +163,37 @@ extension SQLiteService {
     private func migration6_AddNotificationSubscriptions() {
         Logger.info("[SQLite] Migration 6: Creating notification subscriptions table for Pro features")
 
-        execute(createNotificationSubscriptionsTable())
+        executeScript(createNotificationSubscriptionsTable())
 
         Logger.info("[SQLite] Migration 6 complete - Pro notification subscriptions enabled")
+    }
+
+    // MARK: - Migration 7: Backfill indexes lost to prepare_v2
+
+    /// Migrations 1-6 created their tables with `execute`, which compiles only the first statement
+    /// of a string. Every CREATE INDEX that followed a CREATE TABLE in the same script was
+    /// discarded, so these tables have run without indexes since they were introduced. The scripts
+    /// are re-run through `executeScript`; every statement in them is IF NOT EXISTS, so existing
+    /// tables and data are untouched and only the missing indexes get built.
+    private func migration7_BackfillMissingIndexes() {
+        Logger.info("[SQLite] Migration 7: Backfilling indexes dropped by prepare_v2")
+
+        executeScript(createUserSearchHistoryTable())
+        executeScript(createUserDiscoveryInteractionsTable())
+        executeScript(createUnifiedUserPreferencesTable())
+        executeScript(createPersonalizedDiscoveryTable())
+        executeScript(createAIConversationHistoryTable())
+        executeScript(createGlobalDiscoveryFiltersTable())
+        executeScript(createCerebrasJobQueueTable())
+        executeScript(createMediaEmbeddingsTable())
+        executeScript(createUserBehaviorInsightsTable())
+        executeScript(createCerebrasJobMetricsTable())
+        executeScript(createUserTimePatternsTable())
+        executeScript(createNotificationHistoryTable())
+        executeScript(createUserNotificationPreferencesTable())
+        executeScript(createNotificationSubscriptionsTable())
+
+        Logger.info("[SQLite] Migration 7 complete - indexes backfilled")
     }
 
     // MARK: - Table Creation Methods
