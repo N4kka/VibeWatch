@@ -42,8 +42,6 @@
 	</array>
 	<key>NSUserTrackingUsageDescription</key>
 	<string>We use tracking to understand what works, improve the app experience, and measure marketing performance.</string>
-	<key>OPENAI_API_KEY</key>
-	<string>$(OPENAI_API_KEY)</string>
 	<key>POSTHOG_API_KEY</key>
 	<string>$(POSTHOG_API_KEY)</string>
 	<key>POSTHOG_HOST</key>
