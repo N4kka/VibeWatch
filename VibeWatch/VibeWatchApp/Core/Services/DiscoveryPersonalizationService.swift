@@ -50,10 +50,17 @@ class DiscoveryPersonalizationService: ObservableObject {
 
     /// Generate 5-6 personalized carousels for the user
     /// Uses cache-first strategy for instant loading
+    /// - Parameter onPartialResults: chiamato ogni volta che un batch è pronto, con l'elenco
+    ///   completo dei caroselli disponibili fino a quel momento. Serve a togliere la generazione
+    ///   dal percorso critico: misurata a freddo costa ~5 s in ~4 ondate di latenza TMDB, e senza
+    ///   questo l'utente le aspetta tutte prima di vedere qualsiasi cosa. Non viene invocato sui
+    ///   rami di cache (là il chiamante ha già i dati) né a generazione conclusa: l'ultima parola
+    ///   resta il valore di ritorno, che è l'unico ad avere le logline dinamiche applicate.
     func generatePersonalizedCarousels(
         userProfile: UserProfile,
         filters: GlobalDiscoveryFilters? = nil,
-        forceRefresh: Bool = false
+        forceRefresh: Bool = false,
+        onPartialResults: (@MainActor ([PersonalizedCarousel]) -> Void)? = nil
     ) async throws -> [PersonalizedCarousel] {
 
         // LEVEL 1: MEMORY CACHE (Instant)
@@ -91,6 +98,11 @@ class DiscoveryPersonalizationService: ObservableObject {
         let dailyMix = try await generateDailyMix(userProfile: userProfile, filters: filters, excluding: [])
         carousels.append(dailyMix)
         Logger.debug("[DiscoveryPersonalizationService] ✅ Daily Mix: \(dailyMix.items.count) items")
+
+        // L'hero è pronto dopo la prima ondata di richieste: mostrarlo subito invece di tenerlo
+        // in ostaggio dei batch successivi.
+        onPartialResults?(carousels)
+        Logger.debug("[DiscoveryPerf] parziale: hero pronto a \(String(format: "%.2f", Date().timeIntervalSince(generationStart)))s")
 
         // Carousels 1…N: parallel batch generation (5 at a time to respect TMDB rate limits).
         // Within each batch every generator uses the same exclusion snapshot so they run
@@ -142,6 +154,12 @@ class DiscoveryPersonalizationService: ObservableObject {
                 usedIds.formUnion(uniqueItems.map(\.id))
                 Logger.debug("[DiscoveryPersonalizationService] ✅ \(deduped.type.rawValue): \(deduped.items.count) items (used: \(usedIds.count))")
             }
+
+            // Emissione dopo ogni batch, non solo alla fine. Il dedup resta sequenziale (ogni
+            // batch parte dalla snapshot aggiornata dal precedente), quindi non si paga il
+            // carosello perso che costava allargare batchSize.
+            onPartialResults?(carousels)
+            Logger.debug("[DiscoveryPerf] parziale: \(carousels.count) caroselli a \(String(format: "%.2f", Date().timeIntervalSince(generationStart)))s")
         }
 
         if let stats = await budgeted?.budgetStats() {
