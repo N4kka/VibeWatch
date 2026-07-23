@@ -885,8 +885,62 @@ final class SQLiteService: ObservableObject {
         return names
     }
 
-    /// REPLACE INTO upsert for arbitrary rows. Only columns existing in the table are written.
+    /// Cache of conflict targets per table, alongside `tableColumnsCache`.
+    private var tableConflictTargetsCache: [String: [[String]]] = [:]
+
+    /// The conflict targets usable in an `ON CONFLICT (…) DO UPDATE` clause for a table:
+    /// its PRIMARY KEY plus every non-partial UNIQUE index.
+    ///
+    /// Partial unique indexes are deliberately excluded. SQLite requires their WHERE clause to be
+    /// repeated verbatim in the conflict target, and reconstructing it from `sqlite_master` is more
+    /// fragile than it is worth: a collision on one of them raises instead, which is loud but safe.
+    private func conflictTargets(for table: String) async throws -> [[String]] {
+        try validateTableName(table)
+        if let cached = tableConflictTargetsCache[table] { return cached }
+
+        var targets: [[String]] = []
+
+        // PRIMARY KEY, in declaration order — `pk` is 1-based and identifies the position of the
+        // column within a composite key, so it doubles as the sort key.
+        let primaryKey = try await queryRaw("PRAGMA table_info(\(table))")
+            .compactMap { row -> (Int, String)? in
+                guard let position = row["pk"] as? Int, position > 0,
+                      let name = row["name"] as? String else { return nil }
+                return (position, name)
+            }
+            .sorted { $0.0 < $1.0 }
+            .map(\.1)
+        if !primaryKey.isEmpty { targets.append(primaryKey) }
+
+        for index in try await queryRaw("PRAGMA index_list(\(table))") {
+            guard let name = index["name"] as? String,
+                  index["unique"] as? Int == 1,
+                  index["partial"] as? Int ?? 0 == 0,
+                  index["origin"] as? String != "pk" else { continue }
+
+            let escaped = name.replacingOccurrences(of: "\"", with: "\"\"")
+            let indexColumns = try await queryRaw("PRAGMA index_info(\"\(escaped)\")")
+                .compactMap { $0["name"] as? String }
+
+            if !indexColumns.isEmpty, !targets.contains(indexColumns) {
+                targets.append(indexColumns)
+            }
+        }
+
+        tableConflictTargetsCache[table] = targets
+        return targets
+    }
+
+    /// Upsert arbitrary rows. Only columns existing in the table are written.
     /// If the table has a synced_at column and it's missing, it's set to now().
+    ///
+    /// This used to emit `REPLACE INTO`, which is not an upsert: on a constraint violation it
+    /// DELETEs the conflicting row and inserts a new one. With `PRAGMA foreign_keys = ON` — set in
+    /// `openDatabase()` — that delete runs the `ON DELETE CASCADE` actions, and 21 tables cascade
+    /// from `profiles(id)`. Since `profiles` is the first table the remote pull upserts, a single
+    /// `REPLACE INTO profiles` wiped the user's entire local database on every sync; the pull then
+    /// refilled 13 of those tables from the server and left the rest empty. `ON CONFLICT DO UPDATE`
+    /// mutates the existing row in place, so nothing cascades.
     @MainActor
     func upsert(table: String, rows: [[String: Any]]) async throws {
         try validateTableName(table)  // Phase 5: SQL injection prevention
@@ -897,6 +951,7 @@ final class SQLiteService: ObservableObject {
 
         let hasSyncedAt = cols.contains("synced_at")
         let now = ISO8601DateFormatter().string(from: Date())
+        let targets = try await conflictTargets(for: table)
 
         for row in safeRows {
             var filtered: [String: Any] = [:]
@@ -914,7 +969,22 @@ final class SQLiteService: ObservableObject {
 
             let placeholders = Array(repeating: "?", count: keys.count).joined(separator: ",")
             let colsJoined = keys.joined(separator: ",")
-            let sql = "REPLACE INTO \(table) (\(colsJoined)) VALUES (\(placeholders))"
+
+            // One clause per conflict target, so a row colliding on a natural key (say
+            // list_items' UNIQUE(list_id, media_id, media_type)) still converges instead of
+            // raising — which is what REPLACE used to buy us, without the delete.
+            var sql = "INSERT INTO \(table) (\(colsJoined)) VALUES (\(placeholders))"
+            for target in targets {
+                let assignments = keys
+                    .filter { !target.contains($0) }
+                    .map { "\($0)=excluded.\($0)" }
+                    .joined(separator: ",")
+                let onConflict = "ON CONFLICT(\(target.joined(separator: ",")))"
+                sql += assignments.isEmpty
+                    ? " \(onConflict) DO NOTHING"
+                    : " \(onConflict) DO UPDATE SET \(assignments)"
+            }
+
             let params = keys.map { filtered[$0] ?? NSNull() }
             try await executeWrite(sql, parameters: params)
         }

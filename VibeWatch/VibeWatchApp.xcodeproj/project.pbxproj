@@ -13,6 +13,7 @@
 		3A7518E7EFF7451DA829EBCA /* ClipCommentServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B64FF4907D54457B73097CA /* ClipCommentServiceTests.swift */; };
 		6041113C7B15457BB8A1B4EB /* ConflictResolverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75B51919D2BF4686B686EDCA /* ConflictResolverTests.swift */; };
 		A1B2C3D40001E5F600000001 /* SQLiteWritePathTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40001E5F600000002 /* SQLiteWritePathTests.swift */; };
+		A1B2C3D40001E5F600000101 /* UpsertCascadeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40001E5F600000102 /* UpsertCascadeTests.swift */; };
 		A1B2C3D40002E5F600000001 /* LocalTitleSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40002E5F600000002 /* LocalTitleSearchTests.swift */; };
 		A1B2C3D4E5F6A1B2 /* KeychainStorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A1B3 /* KeychainStorageTests.swift */; };
 		A1B2C3D4E5F6A1B4 /* AuthMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A1B5 /* AuthMigrationTests.swift */; };
@@ -56,6 +57,7 @@
 		7C39F30EEBCD42B48EC2203D /* SyncStateMachineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncStateMachineTests.swift; sourceTree = "<group>"; };
 		9FBD15ABB0BF4418879D52D9 /* VibeWatchAppTests/Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = VibeWatchAppTests/Info.plist; sourceTree = "<group>"; };
 		A1B2C3D40001E5F600000002 /* SQLiteWritePathTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteWritePathTests.swift; sourceTree = "<group>"; };
+		A1B2C3D40001E5F600000102 /* UpsertCascadeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpsertCascadeTests.swift; sourceTree = "<group>"; };
 		A1B2C3D40002E5F600000002 /* LocalTitleSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalTitleSearchTests.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F6A1B3 /* KeychainStorageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStorageTests.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F6A1B5 /* AuthMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthMigrationTests.swift; sourceTree = "<group>"; };
@@ -135,6 +137,7 @@
 				3B64FF4907D54457B73097CA /* ClipCommentServiceTests.swift */,
 				F849736129F54FA8BD1D3247 /* DatabaseMigrationTests.swift */,
 				A1B2C3D40001E5F600000002 /* SQLiteWritePathTests.swift */,
+				A1B2C3D40001E5F600000102 /* UpsertCascadeTests.swift */,
 				A1B2C3D40002E5F600000002 /* LocalTitleSearchTests.swift */,
 				D06ECE77A8DA440E92022CE7 /* AppNavigationManagerTests.swift */,
 				4C9EEC77D8F045818BF4B264 /* AnalyticsInsightsTests.swift */,
@@ -332,6 +335,7 @@
 				3A7518E7EFF7451DA829EBCA /* ClipCommentServiceTests.swift in Sources */,
 				26BD1630A9514E7B9D559ED5 /* DatabaseMigrationTests.swift in Sources */,
 				A1B2C3D40001E5F600000001 /* SQLiteWritePathTests.swift in Sources */,
+				A1B2C3D40001E5F600000101 /* UpsertCascadeTests.swift in Sources */,
 				A1B2C3D40002E5F600000001 /* LocalTitleSearchTests.swift in Sources */,
 				13392337BF1F4B568E9A4B9C /* AppNavigationManagerTests.swift in Sources */,
 				C6877C53B7A3455F88CAEEA9 /* AnalyticsInsightsTests.swift in Sources */,
