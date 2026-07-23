@@ -24,6 +24,11 @@ DerivedData/
 Packages/
 Package.pins
 Package.resolved
+# ...except the app's own lockfile. Ignoring Package.resolved is the convention for a
+# library, whose consumers resolve their own graph. This is an App Store application:
+# without the lockfile committed, a clean checkout re-resolves against the version ranges
+# in the pbxproj and can build against different dependency versions than the ones shipped.
+!VibeWatch/VibeWatchApp.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
 
 # CocoaPods
 Pods/
