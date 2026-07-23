@@ -659,11 +659,12 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             "lists",
             "list_items",
             "user_preferences",
-            // "movie_reactions" is deliberately absent: the table does not exist on Supabase, so
-            // pulling it failed on every single sync. That was invisible while failures were
-            // swallowed; now that a failed table marks the sync as failed, keeping it here would
-            // report every sync as broken forever. The write side of that feature
-            // (MovieReactionService) still targets the missing table and is tracked separately.
+            // "movie_reactions" was removed from this list because the table did not exist on
+            // Supabase and pulling it failed on every sync. The table now exists, with RLS scoped
+            // to auth.uid() and a natural key of (user_id, media_id, media_type), so the pull is
+            // back. Its aggregate companion, movie_reaction_counts, is deliberately NOT pulled:
+            // it is global rather than user-scoped, and a trigger maintains it server-side.
+            "movie_reactions",
             "user_gamification",
             "user_badges",
             "user_daily_challenges",

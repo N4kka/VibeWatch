@@ -77,18 +77,11 @@ class MovieReactionService: ObservableObject {
         let cacheKey = "\(mediaType.rawValue)_\(mediaId)"
         await countsCache.removeValue(for: cacheKey)
 
-        // Sync to Supabase if authenticated
-        if supabase.currentUser != nil {
-            Task {
-                do {
-                    try await syncCountsToSupabase(mediaId: mediaId, mediaType: mediaType)
-                    Logger.debug("[MovieReaction] Synced counts to Supabase")
-                } catch {
-                    Logger.warning("[MovieReaction] Failed to sync counts to Supabase: \(error)")
-                }
-            }
-        }
-        
+        // I conteggi remoti NON vengono più spinti dal client. `movie_reaction_counts` è un
+        // aggregato globale: lasciarlo scrivere a ogni device significherebbe permettere a chiunque
+        // di fissare like_count a piacere su qualsiasi titolo. Ora lo mantiene un trigger su
+        // `movie_reactions`, e la tabella è di sola lettura per i client.
+
         // Analytics
         if let new = newReaction {
             AnalyticsService.shared.logEvent(
@@ -153,9 +146,12 @@ class MovieReactionService: ObservableObject {
     // MARK: - Private Helpers
     
     private func setReaction(mediaId: Int, mediaType: MediaType, userId: String, reaction: ReactionType, previousReaction: ReactionType?) async throws {
-        let reactionId = UUID().uuidString
+        // Lowercased: la colonna id su Postgres è `uuid`, che normalizza in minuscolo. Generarlo
+        // maiuscolo qui farebbe tornare dal pull un id diverso da quello locale, e la riga
+        // verrebbe duplicata invece che riconosciuta.
+        let reactionId = UUID().uuidString.lowercased()
         let now = ISO8601DateFormatter().string(from: Date())
-        
+
         // 1. Insert or update reaction in SQLite
         let upsertQuery = """
             INSERT INTO movie_reactions (id, user_id, media_id, media_type, reaction_type, created_at, updated_at)
@@ -302,7 +298,10 @@ class MovieReactionService: ObservableObject {
         }
 
         let now = ISO8601DateFormatter().string(from: Date())
-        let reactionId = "\(userId)_\(mediaId)_\(mediaType.rawValue)"
+        guard let reactionId = await localReactionId(mediaId: mediaId, mediaType: mediaType, userId: userId) else {
+            Logger.warning("[MovieReaction] No local row to sync for \(mediaType.rawValue) \(mediaId)")
+            return
+        }
 
         struct ReactionRecord: Encodable {
             let id: String
@@ -358,42 +357,25 @@ class MovieReactionService: ObservableObject {
         }
     }
     
-    private func syncCountsToSupabase(mediaId: Int, mediaType: MediaType) async throws {
-        guard let client = supabase.client else { return }
-
-        // Get current local counts
-        let counts = try await fetchCountsFromSQLite(mediaId: mediaId, mediaType: mediaType)
-        let now = ISO8601DateFormatter().string(from: Date())
-
-        struct CountsRecord: Encodable {
-            let media_id: Int
-            let media_type: String
-            let like_count: Int
-            let dislike_count: Int
-            let updated_at: String
-        }
-
-        let record = CountsRecord(
-            media_id: mediaId,
-            media_type: mediaType.rawValue,
-            like_count: counts.likeCount,
-            dislike_count: counts.dislikeCount,
-            updated_at: now
-        )
-
-        do {
-            try await client.from("movie_reaction_counts")
-                .upsert(record)
-                .execute()
-
-            Logger.debug("[MovieReaction] Synced counts to Supabase: \(counts.likeCount) likes, \(counts.dislikeCount) dislikes")
-        } catch {
-            Logger.warning("[MovieReaction] Failed to sync counts: \(error)")
-        }
+    /// L'id della riga locale per questa reazione.
+    ///
+    /// Va letto, non ricostruito: locale e remoto devono avere lo **stesso** id, altrimenti il pull
+    /// riporta indietro una riga che `fetchLocalRecord(id:)` non riconosce e la duplica. Prima qui
+    /// si componeva `"{userId}_{mediaId}_{mediaType}"`, che non coincideva con l'UUID scritto da
+    /// `setReaction` — e non era nemmeno un uuid valido per la colonna su Postgres.
+    private func localReactionId(mediaId: Int, mediaType: MediaType, userId: String) async -> String? {
+        let rows = try? await db.queryRaw("""
+            SELECT id FROM movie_reactions
+            WHERE user_id = ? AND media_id = ? AND media_type = ?
+        """, parameters: [userId, mediaId, mediaType.rawValue])
+        return rows?.first?["id"] as? String
     }
-    
+
     private func queueReactionForSync(mediaId: Int, mediaType: MediaType, userId: String, reaction: ReactionType) async {
-        let reactionId = "\(userId)_\(mediaId)_\(mediaType.rawValue)"
+        guard let reactionId = await localReactionId(mediaId: mediaId, mediaType: mediaType, userId: userId) else {
+            Logger.warning("[MovieReaction] No local row to queue for \(mediaType.rawValue) \(mediaId)")
+            return
+        }
         let now = ISO8601DateFormatter().string(from: Date())
 
         let payload: [String: Any] = [
