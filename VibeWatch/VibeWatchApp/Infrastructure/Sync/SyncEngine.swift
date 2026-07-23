@@ -439,42 +439,68 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
 
         postNotification(SyncEngine.syncStartedNotification, trigger: trigger)
 
-        do {
-            // Push pending changes first
-            if trigger.shouldPushChanges {
-                await pushPendingChangesInternal()
-            }
+        // Neither half throws — they absorb their own errors and report them — so this used to sit
+        // inside a do/catch whose catch could never run. A sync where every table and every queued
+        // operation failed still reached completeSync(), logged "completed successfully", advanced
+        // lastSyncAt and cleared lastError, and syncFailedNotification was never posted anywhere in
+        // the app. The outcomes below are what makes a failure observable.
+        var outcome = SyncOutcome()
 
-            // Pull remote changes
-            if trigger.shouldPullChanges {
-                await pullFromRemoteInternal()
-            }
+        if trigger.shouldPushChanges {
+            outcome.merge(await pushPendingChangesInternal())
+        }
 
-            // Update state
-            let now = Date()
-            lastSyncAt = now
-            UserDefaults.standard.set(now, forKey: "SyncEngine.lastSyncTimestamp")
-            lastError = nil
+        if trigger.shouldPullChanges {
+            outcome.merge(await pullFromRemoteInternal())
+        }
 
-            // Transition to idle state
-            stateMachine.completeSync(reason: "Sync completed for \(trigger.logDescription)")
+        guard !outcome.hasFailures else {
+            let stateError = SyncStateError.partialFailure(failed: outcome.failed, total: outcome.attempted)
+            lastError = stateError.localizedDescription
 
-            postNotification(SyncEngine.syncCompletedNotification, trigger: trigger)
-            Logger.info("[SyncEngine] Sync completed successfully (\(trigger.logDescription))")
-
-        } catch {
-            lastError = error.localizedDescription
-
-            // Determine if error is network-related
-            let stateError = SyncStateError.from(error)
-            if case .networkFailure = stateError {
-                stateMachine.goOffline(reason: "Network lost during sync")
+            // A sync that failed because the network went away is offline, not broken.
+            if networkMonitor.isConnected {
+                stateMachine.failSync(with: stateError, reason: "Sync failed: \(lastError ?? "")")
             } else {
-                stateMachine.failSync(with: stateError, reason: "Sync failed: \(error.localizedDescription)")
+                stateMachine.goOffline(reason: "Network lost during sync")
             }
 
-            postNotification(SyncEngine.syncFailedNotification, trigger: trigger, error: error)
-            Logger.error("[SyncEngine] Sync failed (\(trigger.logDescription))", error: error)
+            postNotification(SyncEngine.syncFailedNotification, trigger: trigger, error: stateError)
+            Logger.error("[SyncEngine] Sync failed (\(trigger.logDescription)): \(lastError ?? "")")
+            return
+        }
+
+        // lastSyncAt only advances on a clean sync: it is what tells us how stale the device is.
+        let now = Date()
+        lastSyncAt = now
+        UserDefaults.standard.set(now, forKey: "SyncEngine.lastSyncTimestamp")
+        lastError = nil
+
+        stateMachine.completeSync(reason: "Sync completed for \(trigger.logDescription)")
+
+        postNotification(SyncEngine.syncCompletedNotification, trigger: trigger)
+        Logger.info("[SyncEngine] Sync completed successfully (\(trigger.logDescription))")
+    }
+
+    /// What one half of a sync actually managed to do.
+    struct SyncOutcome {
+        /// Operations or tables the sync tried to process.
+        private(set) var attempted = 0
+        /// How many of those failed.
+        private(set) var failed = 0
+
+        var hasFailures: Bool { failed > 0 }
+
+        mutating func recordSuccess() { attempted += 1 }
+
+        mutating func recordFailure() {
+            attempted += 1
+            failed += 1
+        }
+
+        mutating func merge(_ other: SyncOutcome) {
+            attempted += other.attempted
+            failed += other.failed
         }
     }
 
@@ -504,15 +530,25 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             return
         }
 
-        await pushPendingChangesInternal()
+        let outcome = await pushPendingChangesInternal()
 
         // Complete the sync if we're still in syncing state
         if stateMachine.currentState.isSyncing {
-            stateMachine.completeSync(reason: "Push completed")
+            if outcome.hasFailures {
+                stateMachine.failSync(
+                    with: .partialFailure(failed: outcome.failed, total: outcome.attempted),
+                    reason: "Push failed"
+                )
+            } else {
+                stateMachine.completeSync(reason: "Push completed")
+            }
         }
     }
 
-    private func pushPendingChangesInternal() async {
+    @discardableResult
+    private func pushPendingChangesInternal() async -> SyncOutcome {
+        var outcome = SyncOutcome()
+
         do {
             // Unblock previously blocked schema-missing operations
             unblockSchemaErrorOperations()
@@ -522,7 +558,7 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
 
             guard !operations.isEmpty else {
                 Logger.debug("[SyncEngine] No pending operations to push")
-                return
+                return outcome
             }
 
             Logger.info("[SyncEngine] Pushing \(operations.count) pending operations")
@@ -536,6 +572,7 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
                     try await executeOperation(operation)
                     try await markOperationCompleted(operationId: operation.operationId)
                     successCount += 1
+                    outcome.recordSuccess()
                 } catch {
                     let errorMessage = error.localizedDescription
 
@@ -556,6 +593,7 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
                         Logger.warning("[SyncEngine] Operation failed: \(operation.tableName) - \(errorMessage)")
                     }
                     failCount += 1
+                    outcome.recordFailure()
                 }
             }
 
@@ -563,8 +601,12 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             Logger.info("[SyncEngine] Push complete: \(successCount) succeeded, \(failCount) failed")
 
         } catch {
+            // Reaching here means the outbox itself could not be read: nothing was pushed.
+            outcome.recordFailure()
             Logger.error("[SyncEngine] Push failed", error: error)
         }
+
+        return outcome
     }
 
     // MARK: - Pull Changes
@@ -585,18 +627,28 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             return
         }
 
-        await pullFromRemoteInternal()
+        let outcome = await pullFromRemoteInternal()
 
         // Complete the sync if we're still in syncing state
         if stateMachine.currentState.isSyncing {
-            stateMachine.completeSync(reason: "Pull completed")
+            if outcome.hasFailures {
+                stateMachine.failSync(
+                    with: .partialFailure(failed: outcome.failed, total: outcome.attempted),
+                    reason: "Pull failed"
+                )
+            } else {
+                stateMachine.completeSync(reason: "Pull completed")
+            }
         }
     }
 
-    private func pullFromRemoteInternal() async {
+    @discardableResult
+    private func pullFromRemoteInternal() async -> SyncOutcome {
+        var outcome = SyncOutcome()
+
         guard let userId = AuthService.shared.currentUser?.id else {
             Logger.debug("[SyncEngine] Pull skipped - not authenticated")
-            return
+            return outcome
         }
 
         Logger.info("[SyncEngine] Pulling remote changes for user \(userId)")
@@ -607,7 +659,11 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             "lists",
             "list_items",
             "user_preferences",
-            "movie_reactions",
+            // "movie_reactions" is deliberately absent: the table does not exist on Supabase, so
+            // pulling it failed on every single sync. That was invisible while failures were
+            // swallowed; now that a failed table marks the sync as failed, keeping it here would
+            // report every sync as broken forever. The write side of that feature
+            // (MovieReactionService) still targets the missing table and is tracked separately.
             "user_gamification",
             "user_badges",
             "user_daily_challenges",
@@ -622,13 +678,16 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
         for table in userTables {
             do {
                 try await pullTableWithConflictResolution(name: table, userId: userId)
+                outcome.recordSuccess()
                 Logger.debug("[SyncEngine] Pulled \(table)")
             } catch {
+                outcome.recordFailure()
                 Logger.warning("[SyncEngine] Failed to pull \(table): \(error.localizedDescription)")
             }
         }
 
-        Logger.info("[SyncEngine] Pull complete")
+        Logger.info("[SyncEngine] Pull complete: \(outcome.attempted - outcome.failed) of \(outcome.attempted) tables")
+        return outcome
     }
 
     /// Pulls a table from remote with conflict resolution applied.

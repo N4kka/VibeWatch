@@ -1000,15 +1000,13 @@ final class SQLiteService: ObservableObject {
     // MARK: - Transaction Support
     
     func transaction(_ operations: @Sendable () async throws -> Void) async throws {
-        try await DatabaseUtilities.executeInTransaction {
-            self.execute("BEGIN TRANSACTION")
-            do {
-                try await operations()
-                self.execute("COMMIT")
-            } catch {
-                self.execute("ROLLBACK")
-                throw error
-            }
+        execute("BEGIN TRANSACTION")
+        do {
+            try await operations()
+            execute("COMMIT")
+        } catch {
+            execute("ROLLBACK")
+            throw error
         }
     }
     

@@ -590,4 +590,78 @@ extension SyncEngineTests {
 
         print("Concurrent queue test passed")
     }
+
+    // MARK: - Sync failure visibility (STAB-004)
+
+    /// `performFullSync` used to wrap two non-throwing calls in a do/catch, so its catch could never
+    /// run: a sync where every table and every queued operation failed still reached
+    /// `completeSync()`, logged "completed successfully", advanced `lastSyncAt` and never posted
+    /// `syncFailedNotification`.
+    ///
+    /// `SyncEngine.init` is private, so the end-to-end path cannot be driven from a test without
+    /// injecting a failing Supabase client. What these cover is the decision logic that replaced the
+    /// dead catch — whether an outcome is classified as a failure at all.
+
+    func testSyncOutcomeReportsFailuresOnlyWhenSomethingFailed() {
+        var clean = SyncEngine.SyncOutcome()
+        clean.recordSuccess()
+        clean.recordSuccess()
+        XCTAssertFalse(clean.hasFailures, "an all-success outcome must not report a failure")
+        XCTAssertEqual(clean.attempted, 2)
+        XCTAssertEqual(clean.failed, 0)
+
+        var partial = SyncEngine.SyncOutcome()
+        partial.recordSuccess()
+        partial.recordFailure()
+        XCTAssertTrue(partial.hasFailures,
+            "one failed table out of two must still mark the sync as failed")
+        XCTAssertEqual(partial.attempted, 2)
+        XCTAssertEqual(partial.failed, 1)
+    }
+
+    /// A sync that had nothing to do is not a failed sync — otherwise every idle periodic sync
+    /// would report an error.
+    func testEmptySyncOutcomeIsNotAFailure() {
+        let empty = SyncEngine.SyncOutcome()
+        XCTAssertFalse(empty.hasFailures)
+        XCTAssertEqual(empty.attempted, 0)
+    }
+
+    func testSyncOutcomeMergeCombinesPushAndPull() {
+        var push = SyncEngine.SyncOutcome()
+        push.recordSuccess()
+        push.recordFailure()
+
+        var pull = SyncEngine.SyncOutcome()
+        pull.recordSuccess()
+
+        push.merge(pull)
+        XCTAssertEqual(push.attempted, 3)
+        XCTAssertEqual(push.failed, 1)
+        XCTAssertTrue(push.hasFailures, "a push failure must survive merging a clean pull")
+    }
+
+    /// The error a failed sync now reports has to be retryable, otherwise surfacing failures would
+    /// strand the engine: `handleForegroundResume` keeps non-retryable errors across resume.
+    func testPartialFailureIsRetryable() {
+        let error = SyncStateError.partialFailure(failed: 3, total: 14)
+        XCTAssertTrue(error.isRetryable,
+            "a partially failed sync must be retryable, not a terminal state")
+        XCTAssertEqual(error.errorDescription, "Sync incomplete: 3 of 14 operations failed")
+    }
+
+    /// Entering the error state must not wedge the engine: the next sync has to be able to start.
+    @MainActor
+    func testEngineCanStartSyncingAgainAfterAPartialFailure() {
+        let machine = SyncStateMachine(initialState: .idle)
+        XCTAssertTrue(machine.startSync(.fullSync))
+        XCTAssertTrue(machine.failSync(with: .partialFailure(failed: 1, total: 14)))
+
+        guard case .error(_, let retryable) = machine.currentState else {
+            return XCTFail("a failed sync must land in .error, not .idle")
+        }
+        XCTAssertTrue(retryable)
+        XCTAssertTrue(machine.startSync(.fullSync),
+            "the following sync must be able to start from the error state")
+    }
 }

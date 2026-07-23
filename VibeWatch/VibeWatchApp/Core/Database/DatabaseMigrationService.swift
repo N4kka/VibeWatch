@@ -67,44 +67,39 @@ final class DatabaseMigrationService {
             let batchSize = 100
             
             for batch in clips.chunked(into: batchSize) {
-                // Compute inserted count for this batch within the transaction,
-                // and return it instead of mutating a captured var.
-                let localBatchInserted: Int = try await DatabaseUtilities.executeInTransaction {
-                    try await db.transaction {
-                        for clip in batch {
-                            let values: [String: Any] = await [
-                                "id": clip.id,
-                                "clip_id": clip.clipId,
-                                "video_id": clip.videoId,
-                                "title": clip.title,
-                                "description": clip.description ?? "",
-                                "video_url": clip.videoUrl,
-                                "thumbnail_url": clip.thumbnailUrl ?? "",
-                                "movie_id": clip.movieId as Any,
-                                "tv_show_id": clip.tvShowId as Any,
-                                "media_type": clip.mediaType ?? "",
-                                "genres": jsonString(from: clip.genres) ?? "[]",
-                                "actors": jsonString(from: clip.actors) ?? "[]",
-                                "mood": clip.mood ?? "",
-                                "keywords": jsonString(from: clip.keywords) ?? "[]",
-                                "likes": clip.likes ?? 0,
-                                "comments": clip.comments ?? 0,
-                                "views": clip.views ?? 0,
-                                "youtube_views": clip.youtubeViews as Any,
-                                "tmdb_rating": clip.tmdbRating as Any,
-                                "quality_score": clip.qualityScore as Any,
-                                "is_active": true,
-                                "is_premium": clip.isPremium ?? false
-                            ]
-                            
-                            _ = try await db.insert("clips", values: values)
-                        }
+                try await db.transaction {
+                    for clip in batch {
+                        let values: [String: Any] = await [
+                            "id": clip.id,
+                            "clip_id": clip.clipId,
+                            "video_id": clip.videoId,
+                            "title": clip.title,
+                            "description": clip.description ?? "",
+                            "video_url": clip.videoUrl,
+                            "thumbnail_url": clip.thumbnailUrl ?? "",
+                            "movie_id": clip.movieId as Any,
+                            "tv_show_id": clip.tvShowId as Any,
+                            "media_type": clip.mediaType ?? "",
+                            "genres": jsonString(from: clip.genres) ?? "[]",
+                            "actors": jsonString(from: clip.actors) ?? "[]",
+                            "mood": clip.mood ?? "",
+                            "keywords": jsonString(from: clip.keywords) ?? "[]",
+                            "likes": clip.likes ?? 0,
+                            "comments": clip.comments ?? 0,
+                            "views": clip.views ?? 0,
+                            "youtube_views": clip.youtubeViews as Any,
+                            "tmdb_rating": clip.tmdbRating as Any,
+                            "quality_score": clip.qualityScore as Any,
+                            "is_active": true,
+                            "is_premium": clip.isPremium ?? false
+                        ]
+
+                        _ = try await db.insert("clips", values: values)
                     }
-                    // If we reach here without throwing, the whole batch was inserted.
-                    return batch.count
                 }
-                
-                insertedCount += localBatchInserted
+
+                // Reaching here without throwing means the whole batch committed.
+                insertedCount += batch.count
                 Logger.debug("[Migration] Inserted \(insertedCount)/\(clips.count) clips")
             }
             
@@ -136,8 +131,10 @@ final class DatabaseMigrationService {
             
             Logger.debug("[Migration] Fetched \(cacheItems.count) discovery cache items")
             
-            // Insert into local SQLite
-            try await DatabaseUtilities.executeInTransaction {
+            // Insert into local SQLite. This used to go through DatabaseUtilities
+            // .executeInTransaction, which never opened a transaction: a failure part-way left the
+            // cache half-populated instead of empty.
+            try await db.transaction {
                 for item in cacheItems {
                     let values: [String: Any] = await [
                         "id": item.id,

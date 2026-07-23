@@ -66,6 +66,13 @@ public enum SyncStateError: LocalizedError, Equatable, Sendable {
     /// Operation timeout
     case timeout
 
+    /// Part of a sync failed while the rest succeeded.
+    ///
+    /// `pushPendingChangesInternal` and `pullFromRemoteInternal` absorb their own errors — they
+    /// report per-operation and per-table failures instead of throwing — so without this case a
+    /// sync where everything failed was indistinguishable from one where everything worked.
+    case partialFailure(failed: Int, total: Int)
+
     /// Unknown/generic error
     case unknown(String)
 
@@ -90,6 +97,8 @@ public enum SyncStateError: LocalizedError, Equatable, Sendable {
             return "Unresolved conflict in \(table)"
         case .timeout:
             return "Operation timed out"
+        case .partialFailure(let failed, let total):
+            return "Sync incomplete: \(failed) of \(total) operations failed"
         case .unknown(let message):
             return message
         }
@@ -100,7 +109,7 @@ public enum SyncStateError: LocalizedError, Equatable, Sendable {
     /// Whether this error can potentially be resolved by retrying
     public var isRetryable: Bool {
         switch self {
-        case .networkFailure, .timeout, .serverError, .rateLimited:
+        case .networkFailure, .timeout, .serverError, .rateLimited, .partialFailure:
             return true
         case .authenticationRequired, .databaseError, .unresolvedConflict, .unknown:
             return false
