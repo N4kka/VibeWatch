@@ -102,7 +102,7 @@ class DatabaseClipsService {
 
         // Filter by genres if user has preferences (now O(1) lookup per clip)
         if !topGenres.isEmpty {
-            let preferredGenreNames = Set(topGenres.compactMap { genreIdToName($0) })
+            let preferredGenreNames = Set(topGenres.compactMap { TMDBGenres.name(for: $0) })
             let genreFiltered = clips.filter { clip in
                 let genres = genresByClipId[clip.id] ?? []
                 return !Set(genres).isDisjoint(with: preferredGenreNames)
@@ -147,7 +147,7 @@ class DatabaseClipsService {
         userProfile: UserProfile,
         preferredGenreIds: [Int]
     ) -> [Clip] {
-        let preferredGenreNames = Set(preferredGenreIds.compactMap { genreIdToName($0)?.lowercased() })
+        let preferredGenreNames = Set(preferredGenreIds.compactMap { TMDBGenres.name(for: $0)?.lowercased() })
         let lastSearch = userProfile.recentActivity.lastSearchQuery?.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
         let likedTitles = userProfile.recentActivity.likedMedia.prefix(5).map { $0.title.lowercased() }
 
@@ -232,7 +232,7 @@ class DatabaseClipsService {
     
     private func shouldFetchFromDatabase() -> Bool {
         // Get install date (or use current date if not set)
-        let installDate = getInstallDate()
+        let installDate = AppInstall.date
         let daysSinceInstall = Calendar.current.dateComponents([.day], from: installDate, to: Date()).day ?? 1
         
         // After day 7 or on day 7, ALWAYS use DB (100%)
@@ -270,16 +270,6 @@ class DatabaseClipsService {
     }
     
     
-    private func getInstallDate() -> Date {
-        let key = "appInstallDate"
-        if let existing = UserDefaults.standard.object(forKey: key) as? Date {
-            return existing
-        }
-        // Set install date to yesterday so day count starts at 1, not 0
-        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
-        UserDefaults.standard.set(yesterday, forKey: key)
-        return yesterday
-    }
     
     private func mapClip(from row: [String: Any]) -> Clip? {
         guard
@@ -328,16 +318,6 @@ class DatabaseClipsService {
         )
     }
     
-    private func genreIdToName(_ id: Int) -> String? {
-        let genreMap: [Int: String] = [
-            28: "Action", 12: "Adventure", 16: "Animation", 35: "Comedy",
-            80: "Crime", 99: "Documentary", 18: "Drama", 10751: "Family",
-            14: "Fantasy", 36: "History", 27: "Horror", 10402: "Music",
-            9648: "Mystery", 10749: "Romance", 878: "Sci-Fi", 10770: "TV Movie",
-            53: "Thriller", 10752: "War", 37: "Western"
-        ]
-        return genreMap[id]
-    }
 }
 
 // MARK: - Database Models

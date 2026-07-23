@@ -231,7 +231,7 @@ class ClipsPrefetchService: ObservableObject {
         let isToday = calendar.isDateInToday(lastFetch)
         
         // During first week: always return true if not fetched today
-        let installDate = getInstallDate()
+        let installDate = AppInstall.date
         let daysSinceInstall = calendar.dateComponents([.day], from: installDate, to: Date()).day ?? 1
         
         if daysSinceInstall <= 7 {
@@ -243,15 +243,6 @@ class ClipsPrefetchService: ObservableObject {
     }
     
     /// Get install date
-    private func getInstallDate() -> Date {
-        let key = "appInstallDate"
-        if let existing = UserDefaults.standard.object(forKey: key) as? Date {
-            return existing
-        }
-        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
-        UserDefaults.standard.set(yesterday, forKey: key)
-        return yesterday
-    }
     
     /// Check if we need a weekly refresh
     func shouldRefreshWeekly() -> Bool {
@@ -442,7 +433,7 @@ class ClipsPrefetchService: ObservableObject {
                 movieId: movie.id,
                 tvShowId: nil,
                 mediaType: "movie",
-                genres: movie.genreIds?.compactMap { genreIdToName($0) } ?? [],
+                genres: movie.genreIds?.compactMap { TMDBGenres.name(for: $0) } ?? [],
                 tmdbRating: movie.voteAverage,
                 youtubeViews: 0,
                 qualityScore: 0.5
@@ -488,7 +479,7 @@ class ClipsPrefetchService: ObservableObject {
                 movieId: nil,
                 tvShowId: tvShow.id,
                 mediaType: "tv",
-                genres: tvShow.genreIds?.compactMap { genreIdToName($0) } ?? [],
+                genres: tvShow.genreIds?.compactMap { TMDBGenres.name(for: $0) } ?? [],
                 tmdbRating: tvShow.voteAverage,
                 youtubeViews: 0,
                 qualityScore: 0.5
@@ -562,16 +553,6 @@ class ClipsPrefetchService: ObservableObject {
     
     // MARK: - Utilities
     
-    private func genreIdToName(_ id: Int) -> String? {
-        let genreMap: [Int: String] = [
-            28: "Action", 12: "Adventure", 16: "Animation", 35: "Comedy",
-            80: "Crime", 99: "Documentary", 18: "Drama", 10751: "Family",
-            14: "Fantasy", 36: "History", 27: "Horror", 10402: "Music",
-            9648: "Mystery", 10749: "Romance", 878: "Sci-Fi", 10770: "TV Movie",
-            53: "Thriller", 10752: "War", 37: "Western"
-        ]
-        return genreMap[id]
-    }
     
     private func loadLastFetchDate() {
         if let timestamp = userDefaults.object(forKey: lastFetchKey) as? Date {
