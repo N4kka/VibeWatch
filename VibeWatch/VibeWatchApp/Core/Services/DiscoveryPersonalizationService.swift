@@ -77,6 +77,13 @@ class DiscoveryPersonalizationService: ObservableObject {
         // LEVEL 3: API GENERATION (Slow)
         Logger.info("[DiscoveryPersonalizationService] Generating carousels for user: \(userProfile.userId)")
 
+        // Il costo di questa passata è il vero costo del "content loading". Contarlo è l'unico
+        // modo per sapere se il collo di bottiglia è il fan-out (troppe richieste distinte) o la
+        // latenza per richiesta — e quindi quale intervento abbia senso.
+        let budgeted = tmdbService as? BudgetedTMDBService
+        await budgeted?.resetBudgetStats()
+        let generationStart = Date()
+
         var carousels: [PersonalizedCarousel] = []
         var usedIds: Set<Int> = [] // Daily Mix items are NOT added — hero is independent of dedup
 
@@ -135,6 +142,16 @@ class DiscoveryPersonalizationService: ObservableObject {
                 usedIds.formUnion(uniqueItems.map(\.id))
                 Logger.debug("[DiscoveryPersonalizationService] ✅ \(deduped.type.rawValue): \(deduped.items.count) items (used: \(usedIds.count))")
             }
+        }
+
+        if let stats = await budgeted?.budgetStats() {
+            let elapsed = Date().timeIntervalSince(generationStart)
+            Logger.info(
+                "[DiscoveryPerf] cold generation: \(String(format: "%.2f", elapsed))s · "
+                + "definizioni=\(defs.count) caroselli=\(carousels.count) · "
+                + "chiamate TMDB=\(stats.total) (rete=\(stats.network), chiavi distinte=\(stats.distinctNetworkKeys), "
+                + "coalesced=\(stats.coalesced), cache=\(stats.cacheHits))"
+            )
         }
 
         carousels = await applyDynamicLoglines(to: carousels, userProfile: userProfile)

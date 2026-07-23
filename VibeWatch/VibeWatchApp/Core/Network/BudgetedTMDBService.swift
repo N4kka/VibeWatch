@@ -21,6 +21,16 @@ final class BudgetedTMDBService: TMDBServiceProtocol {
         await budget.reset()
     }
 
+    /// Azzera i contatori: chiamato all'inizio di una generazione per misurarla in isolamento.
+    func resetBudgetStats() async {
+        await budget.resetStats()
+    }
+
+    /// Costo reale della passata appena conclusa.
+    func budgetStats() async -> TMDBRequestBudget.Stats {
+        await budget.currentStats()
+    }
+
     // MARK: - Movies
 
     func getTrendingMovies(timeWindow: TimeWindow, page: Int) async throws -> TMDBResponse<Movie> {
