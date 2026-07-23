@@ -144,6 +144,26 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
         return record
     }
 
+    /// Recovers outbox operations that have exhausted their retries, for **every** table — not
+    /// just list_items (STAB-007). Safe to reset unconditionally because every push goes through
+    /// `apply_mutations`, which now dead-letters deterministic per-item failures server-side
+    /// (logging them to `sync_rejected_mutations` and returning 200). So a client op that stays
+    /// failing did so on transport/5xx errors, which are transient and worth retrying on a later
+    /// run. Also catches the pre-existing backlog: legacy exhausted ops sit at status
+    /// 'pending'/'failed' with high `attempts`, from before exhaustion set 'stuck'.
+    /// 'blocked' (schema-missing) rows are left to their own PGRST205 recovery.
+    nonisolated static func recoverStuckOperationsSQL(maxRetries: Int) -> String {
+        """
+            UPDATE sync_outbox
+            SET status = 'pending',
+                attempts = 0,
+                next_retry_at = NULL,
+                last_error = NULL
+            WHERE status = 'stuck'
+               OR (status IN ('pending', 'failed') AND attempts >= \(maxRetries))
+        """
+    }
+
     nonisolated static func recoverRetryableListItemOperationsSQL(maxRetries: Int) -> String {
         """
             UPDATE sync_outbox
@@ -891,14 +911,19 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
         let nextRetry = calculateNextRetryTime(attempts: attempts)
         let nextRetryString = ISO8601DateFormatter().string(from: nextRetry)
 
+        // When this increment reaches the retry ceiling, mark the op 'stuck' so it leaves the
+        // active pool explicitly instead of lingering as a high-`attempts` 'failed' row that
+        // fetchPendingOperations silently skips forever (STAB-007). Launch-time recovery
+        // (recoverStuckOperationsSQL) then gives it a fresh chance on a later run.
         let sql = """
             UPDATE sync_outbox
             SET attempts = attempts + 1,
                 last_error = ?,
-                next_retry_at = ?
+                next_retry_at = ?,
+                status = CASE WHEN attempts + 1 >= ? THEN 'stuck' ELSE status END
             WHERE operation_id = ?
         """
-        let success = sqliteService.execute(sql, parameters: [error, nextRetryString, operationId])
+        let success = sqliteService.execute(sql, parameters: [error, nextRetryString, maxRetries, operationId])
         if !success {
             throw SyncEngineError.databaseError
         }
@@ -932,7 +957,10 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
     /// on this launch's sync push. Called once at app launch before pushPendingChanges().
     public func unblockAndRetryBlockedOperations() {
         unblockSchemaErrorOperations()
-        Logger.info("[SyncEngine] Unblocked PGRST205-blocked operations for retry on launch")
+        // Once per launch (not per push, so in-session backoff is preserved): give retry-exhausted
+        // ops of every table a fresh chance. STAB-007.
+        _ = sqliteService.execute(Self.recoverStuckOperationsSQL(maxRetries: maxRetries))
+        Logger.info("[SyncEngine] Unblocked PGRST205-blocked and retry-exhausted operations for retry on launch")
     }
 
     private func isSchemaError(_ error: String) -> Bool {
