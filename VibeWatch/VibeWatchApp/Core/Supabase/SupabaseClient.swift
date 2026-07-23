@@ -114,20 +114,21 @@ class SupabaseService: ObservableObject {
     private func resetRemoteAITokenUsageIfPossible(userId: String) async {
         guard let client else { return }
 
-        struct ResetUpdate: Encodable {
-            let tokens_used_today: Int
-            let updated_at: String
+        // Goes through the reset_ai_token_usage RPC rather than a table update: the previous direct
+        // .update() sent tokens_used_today (a local-only column; the remote schema uses
+        // total_tokens_used) and could not create today's row at all, since the table has no INSERT
+        // RLS policy. The RPC upserts under SECURITY DEFINER and only touches the caller's own row.
+        guard let uuid = UUID(uuidString: normalizeUserId(userId)) else {
+            Logger.warning("[Supabase] Skipping remote AI token reset: invalid user id \(userId)")
+            return
         }
 
-        let now = ISO8601DateFormatter().string(from: Date())
-        let payload = ResetUpdate(tokens_used_today: 0, updated_at: now)
+        struct ResetRequest: Encodable {
+            let p_user_id: UUID
+        }
 
         do {
-            try await client
-                .from("user_ai_token_usage")
-                .update(payload)
-                .eq("user_id", value: normalizeUserId(userId))
-                .execute()
+            try await client.rpc("reset_ai_token_usage", params: ResetRequest(p_user_id: uuid)).execute()
         } catch {
             // Ignore: offline / RLS / schema differences should not break local quota behavior.
             Logger.warning("[Supabase] Failed to reset remote AI token usage: \(error.localizedDescription)")
