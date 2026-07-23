@@ -349,7 +349,7 @@ struct AnalyticsDashboardView: View {
 
                 ViewingHeatmapCard(patterns: stats.viewingPatterns)
 
-                TopContentCard(performance: stats.contentPerformance)
+                // TopContentCard removed (ARCH-001): its metrics had no honest data source.
 
                 DiscoveryInsightsCard(insights: stats.discoveryInsights)
             } else if let error = analyticsService.error {
@@ -365,7 +365,10 @@ struct AnalyticsDashboardView: View {
             StatItem(title: "Movies", value: "\(stats.totalMovies)", icon: "film", color: .blue)
             StatItem(title: "Episodes", value: "\(stats.totalEpisodes)", icon: "tv", color: .purple)
             StatItem(title: "Watch Time", value: "\(stats.totalWatchTimeHours)h", icon: "clock.fill", color: .orange)
-            StatItem(title: "Completion", value: "\(Int(stats.completionRate * 100))%", icon: "checkmark.circle.fill", color: .green)
+            // "Library" = share of your tracked titles (seen + watchlist) you've marked seen.
+            // Relabelled from "Completion" (ARCH-001): it's a backlog metric, not a per-title
+            // viewing-completion rate, which the app has no data for.
+            StatItem(title: "Library", value: "\(Int(stats.completionRate * 100))%", icon: "checkmark.circle.fill", color: .green)
         }
     }
 
@@ -533,7 +536,9 @@ struct ViewingHeatmapCard: View {
             HStack {
                 Image(systemName: "calendar")
                     .foregroundColor(.blue)
-                Text("Viewing Patterns")
+                // Relabelled (ARCH-001): the heatmap is built on when you add titles to lists
+                // (added_at = activity), not on watch times, which the app doesn't record.
+                Text("When You're Active")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(.white)
                 Spacer()
