@@ -461,29 +461,12 @@ class DataCoordinator: ObservableObject {
             Logger.warning("[DataCoordinator] TMDB videos failed for \(movie.title): \(error.localizedDescription)")
         }
 
-        // Fallback to YouTube search with timeout and retry
+        // Fallback to YouTube search. Goes through YouTubeSearchClient so an exhausted daily quota
+        // is recognised as such instead of being read as "no results" — see that type for why.
         do {
-            let query = "\(movie.title) official trailer"
-            guard let encodedQuery = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
-                return nil
-            }
+            let items = try await YouTubeSearchClient.shared.search(query: "\(movie.title) official trailer")
 
-            let urlString = "https://www.googleapis.com/youtube/v3/search?part=snippet&q=\(encodedQuery)&type=video&videoDuration=short&maxResults=1&key=\(Config.youtubeApiKey)"
-
-            guard let url = URL(string: urlString) else { return nil }
-
-            let (data, response) = try await youtubeSession.data(from: url)
-
-            // Validate response
-            guard let httpResponse = response as? HTTPURLResponse,
-                  (200...299).contains(httpResponse.statusCode) else {
-                Logger.warning("[DataCoordinator] YouTube API returned error for \(movie.title)")
-                return nil
-            }
-
-            let decodedResponse = try JSONDecoder().decode(YouTubeSearchResponse.self, from: data)
-
-            guard let item = decodedResponse.items.first else { return nil }
+            guard let item = items.first else { return nil }
 
             let clip = Clip(
                 id: "\(movie.id)-yt-\(item.id.videoId)",
@@ -557,29 +540,11 @@ class DataCoordinator: ObservableObject {
             Logger.warning("[DataCoordinator] TMDB videos failed for \(tvShow.name): \(error.localizedDescription)")
         }
 
-        // Fallback to YouTube search with timeout and retry
+        // Fallback to YouTube search, through the quota-aware client (see YouTubeSearchClient).
         do {
-            let query = "\(tvShow.name) official trailer"
-            guard let encodedQuery = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
-                return nil
-            }
+            let items = try await YouTubeSearchClient.shared.search(query: "\(tvShow.name) official trailer")
 
-            let urlString = "https://www.googleapis.com/youtube/v3/search?part=snippet&q=\(encodedQuery)&type=video&videoDuration=short&maxResults=1&key=\(Config.youtubeApiKey)"
-
-            guard let url = URL(string: urlString) else { return nil }
-
-            let (data, response) = try await youtubeSession.data(from: url)
-
-            // Validate response
-            guard let httpResponse = response as? HTTPURLResponse,
-                  (200...299).contains(httpResponse.statusCode) else {
-                Logger.warning("[DataCoordinator] YouTube API returned error for \(tvShow.name)")
-                return nil
-            }
-
-            let decodedResponse = try JSONDecoder().decode(YouTubeSearchResponse.self, from: data)
-
-            guard let item = decodedResponse.items.first else { return nil }
+            guard let item = items.first else { return nil }
 
             let clip = Clip(
                 id: "\(tvShow.id)-yt-\(item.id.videoId)",
