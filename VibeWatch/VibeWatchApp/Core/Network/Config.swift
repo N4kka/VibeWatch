@@ -10,7 +10,8 @@ struct Config {
     static let posthogHost = string(for: "POSTHOG_HOST")
     static let updateConfigURL = string(for: "UPDATE_CONFIG_URL")
     static let appStoreURL = string(for: "APP_STORE_URL")
-    static let youtubeApiKey = string(for: "YOUTUBE_API_KEY")
+    // YOUTUBE_API_KEY no longer ships in the bundle either: YouTube goes through the
+    // `youtube-search` Edge Function, which holds the key server-side (audit DEP-004).
     // RAPIDAPI_KEY no longer ships in the bundle: streaming availability goes through the
     // `watch-providers` Edge Function, which holds the key server-side (audit DEP-005).
 }

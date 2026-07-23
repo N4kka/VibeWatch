@@ -1,12 +1,16 @@
 import XCTest
 @testable import VibeWatchApp
 
-/// Covers the quota gate added for DEP-004.
+/// Covers the quota gate and the proxy contract (audit DEP-004).
 ///
 /// `search.list` costs 100 of the project's 10.000 daily quota units, so the app can afford roughly
-/// 100 searches per day across all users. The four call sites this client replaced could not tell
-/// an exhausted quota from an empty result — two returned `nil` on any non-2xx, two decoded the
+/// 100 searches per day across all users. The five call sites this client replaced could not tell
+/// an exhausted quota from an empty result — some returned `nil` on any non-2xx, others decoded the
 /// error body and threw a decoding error — so the app kept firing requests that could not succeed.
+///
+/// Calls now go through the `youtube-search` Edge Function, which caches answers so one request
+/// serves every user, and which returns **two different 429s**: `quota_exhausted` (the daily budget
+/// is gone) and `rate_limited` (the per-caller hourly cap). Conflating them is a bug either way.
 final class YouTubeSearchClientTests: XCTestCase {
 
     private var defaults: UserDefaults!
@@ -30,25 +34,25 @@ final class YouTubeSearchClientTests: XCTestCase {
         config.protocolClasses = [StubURLProtocol.self]
         return YouTubeSearchClient(
             session: URLSession(configuration: config),
-            apiKey: "test-key",
+            endpoint: "https://example.functions.supabase.co/youtube-search",
+            supabaseKey: "test-publishable-key",
             defaults: defaults,
             now: now
         )
     }
 
-    private static let quotaBody = """
-    {"error":{"code":403,"errors":[{"reason":"quotaExceeded","domain":"youtube.quota"}]}}
-    """
+    private static let quotaBody = #"{"error":"quota_exhausted","scope":"global"}"#
+    private static let rateLimitBody = #"{"error":"rate_limited","scope":"caller"}"#
 
-    private static let okBody = """
+    private static let searchBody = """
     {"items":[{"id":{"videoId":"abc123"},"snippet":{"title":"Trailer",
-    "thumbnails":{"high":{"url":"https://img.youtube.com/vi/abc123/hq.jpg"}}}}]}
+    "thumbnails":{"high":{"url":"https://img.youtube.com/vi/abc123/hq.jpg"}}}}],"cached":true}
     """
 
     // MARK: - Happy path
 
-    func testSearchReturnsItems() async throws {
-        StubURLProtocol.stub(status: 200, body: Self.okBody)
+    func testSearchDecodesTheProxyEnvelope() async throws {
+        StubURLProtocol.stub(status: 200, body: Self.searchBody)
         let items = try await makeClient().search(query: "Dune official trailer")
 
         XCTAssertEqual(items.count, 1)
@@ -56,10 +60,44 @@ final class YouTubeSearchClientTests: XCTestCase {
         XCTAssertEqual(StubURLProtocol.requestCount, 1)
     }
 
-    // MARK: - Quota detection
+    /// The proxy is a POST API with the publishable key attached; a GET to googleapis would 404.
+    func testRequestIsAPostCarryingTheSupabaseKey() async throws {
+        StubURLProtocol.stub(status: 200, body: Self.searchBody)
+        _ = try await makeClient().search(query: "Dune", relevanceLanguage: "it", maxResults: 5)
 
-    func testQuotaExceededIsRecognisedAndRecorded() async throws {
-        StubURLProtocol.stub(status: 403, body: Self.quotaBody)
+        let request = try XCTUnwrap(StubURLProtocol.lastRequest)
+        XCTAssertEqual(request.httpMethod, "POST")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "apikey"), "test-publishable-key")
+        XCTAssertEqual(request.url?.host, "example.functions.supabase.co")
+
+        let body = try XCTUnwrap(StubURLProtocol.lastBody)
+        let json = try XCTUnwrap(try JSONSerialization.jsonObject(with: body) as? [String: Any])
+        XCTAssertEqual(json["action"] as? String, "search")
+        XCTAssertEqual(json["query"] as? String, "Dune")
+        XCTAssertEqual(json["relevanceLanguage"] as? String, "it")
+        XCTAssertEqual(json["maxResults"] as? Int, 5)
+    }
+
+    func testVideoDetailsUsesTheVideoDetailsAction() async throws {
+        StubURLProtocol.stub(status: 200, body: """
+        {"items":[{"status":{"embeddable":true,"uploadStatus":"processed","privacyStatus":"public"},
+        "contentDetails":{"contentRating":{}}}],"cached":false}
+        """)
+
+        let video = try await makeClient().videoDetails(id: "abc123")
+        XCTAssertNotNil(video)
+
+        let json = try XCTUnwrap(
+            try JSONSerialization.jsonObject(with: XCTUnwrap(StubURLProtocol.lastBody)) as? [String: Any]
+        )
+        XCTAssertEqual(json["action"] as? String, "videoDetails")
+        XCTAssertEqual(json["videoId"] as? String, "abc123")
+    }
+
+    // MARK: - The two 429s
+
+    func testQuotaExhaustedIsRecognisedAndRecorded() async throws {
+        StubURLProtocol.stub(status: 429, body: Self.quotaBody)
         let client = makeClient()
 
         do {
@@ -75,9 +113,9 @@ final class YouTubeSearchClientTests: XCTestCase {
         XCTAssertNotNil(until, "the exhaustion has to be recorded, or the next call spends a request")
     }
 
-    /// The point of the gate: once the quota is gone, stop calling.
+    /// The point of the gate: once the daily budget is gone, stop calling.
     func testNoFurtherRequestIsSentWhileQuotaIsExhausted() async throws {
-        StubURLProtocol.stub(status: 403, body: Self.quotaBody)
+        StubURLProtocol.stub(status: 429, body: Self.quotaBody)
         let client = makeClient()
 
         _ = try? await client.search(query: "first")
@@ -90,30 +128,47 @@ final class YouTubeSearchClientTests: XCTestCase {
             "calls made while the quota is known to be spent must not reach the network")
     }
 
-    /// A 403 also covers a key restricted to another bundle id — retrying tomorrow would not fix
-    /// that, so it must not be recorded as a quota exhaustion.
-    func testForbiddenForOtherReasonsIsNotTreatedAsQuota() async throws {
-        StubURLProtocol.stub(status: 403, body: """
-        {"error":{"code":403,"errors":[{"reason":"ipRefererBlocked"}]}}
-        """)
+    /// The per-caller hourly cap clears on its own. Arming the daily gate on it would silence
+    /// YouTube for the rest of the day over a transient limit.
+    func testRateLimitDoesNotArmTheDailyGate() async throws {
+        StubURLProtocol.stub(status: 429, body: Self.rateLimitBody)
         let client = makeClient()
 
         do {
             _ = try await client.search(query: "Dune")
             XCTFail("expected a throw")
         } catch let error as YouTubeSearchClient.SearchError {
-            guard case .httpError(403) = error else {
-                return XCTFail("expected .httpError(403), got \(error)")
-            }
+            XCTAssertEqual(error, .rateLimited)
         }
 
         let until = await client.quotaExhaustedUntil
-        XCTAssertNil(until, "a non-quota 403 must not disable search for the rest of the day")
+        XCTAssertNil(until, "an hourly cap must not disable YouTube until the daily reset")
+
+        // And the next call must still be attempted.
+        StubURLProtocol.stub(status: 200, body: Self.searchBody)
+        let items = try await client.search(query: "Dune")
+        XCTAssertEqual(items.count, 1)
+        XCTAssertEqual(StubURLProtocol.requestCount, 2)
+    }
+
+    func testOtherHttpErrorsDoNotArmTheDailyGate() async throws {
+        StubURLProtocol.stub(status: 502, body: #"{"error":"upstream_error","status":403}"#)
+        let client = makeClient()
+
+        do {
+            _ = try await client.search(query: "Dune")
+            XCTFail("expected a throw")
+        } catch let error as YouTubeSearchClient.SearchError {
+            XCTAssertEqual(error, .httpError(status: 502))
+        }
+
+        let until = await client.quotaExhaustedUntil
+        XCTAssertNil(until, "a proxy/upstream failure is not an exhausted quota")
     }
 
     /// The gate has to lift by itself, otherwise one exhausted day disables the feature forever.
     func testQuotaGateExpiresAfterTheResetTime() async throws {
-        StubURLProtocol.stub(status: 403, body: Self.quotaBody)
+        StubURLProtocol.stub(status: 429, body: Self.quotaBody)
 
         let start = Date()
         let exhausted = makeClient(now: { start })
@@ -127,7 +182,7 @@ final class YouTubeSearchClientTests: XCTestCase {
         XCTAssertNil(stillBlocked, "the gate must lift once the quota window has rolled over")
 
         StubURLProtocol.reset()
-        StubURLProtocol.stub(status: 200, body: Self.okBody)
+        StubURLProtocol.stub(status: 200, body: Self.searchBody)
         let items = try await afterReset.search(query: "after reset")
         XCTAssertEqual(items.count, 1)
     }
@@ -153,6 +208,8 @@ private final class StubURLProtocol: URLProtocol {
     nonisolated(unsafe) private static var status = 200
     nonisolated(unsafe) private static var body = ""
     nonisolated(unsafe) private(set) static var requestCount = 0
+    nonisolated(unsafe) private(set) static var lastRequest: URLRequest?
+    nonisolated(unsafe) private(set) static var lastBody: Data?
     private static let lock = NSLock()
 
     static func stub(status: Int, body: String) {
@@ -166,6 +223,8 @@ private final class StubURLProtocol: URLProtocol {
         requestCount = 0
         status = 200
         body = ""
+        lastRequest = nil
+        lastBody = nil
     }
 
     override class func canInit(with request: URLRequest) -> Bool { true }
@@ -174,6 +233,20 @@ private final class StubURLProtocol: URLProtocol {
     override func startLoading() {
         Self.lock.lock()
         Self.requestCount += 1
+        Self.lastRequest = request
+        // URLProtocol strips httpBody into a stream; read it back so assertions can see it.
+        Self.lastBody = request.httpBody ?? request.httpBodyStream.map { stream in
+            stream.open()
+            defer { stream.close() }
+            var data = Data()
+            var buffer = [UInt8](repeating: 0, count: 4096)
+            while stream.hasBytesAvailable {
+                let read = stream.read(&buffer, maxLength: buffer.count)
+                if read <= 0 { break }
+                data.append(buffer, count: read)
+            }
+            return data
+        }
         let status = Self.status
         let body = Self.body
         Self.lock.unlock()

@@ -60,7 +60,5 @@
 	<string>$(APP_STORE_URL)</string>
 	<key>TMDB_API_KEY</key>
 	<string>$(TMDB_API_KEY)</string>
-	<key>YOUTUBE_API_KEY</key>
-	<string>$(YOUTUBE_API_KEY)</string>
 </dict>
 </plist>

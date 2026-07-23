@@ -1,28 +1,37 @@
 import Foundation
 
-/// Single entry point for every YouTube Data API call the app makes.
+/// Single entry point for every YouTube Data API call the app makes, via the `youtube-search`
+/// Edge Function.
 ///
 /// `search.list` is the most expensive endpoint the API offers: **100 quota units per call**,
 /// against a project default of **10.000 units/day**. That is roughly **100 searches per day for
 /// the whole app**, shared across every user — not per device. `videos.list` costs 1 unit.
 ///
-/// The five call sites this replaces each built their URL by hand, and none of them could tell an
-/// exhausted quota from an empty result: some checked only for a non-2xx status and returned `nil`,
-/// the others decoded the body directly and threw a decoding error. So when the project ran out of
-/// quota the clip feature degraded silently, and the app kept firing requests that could not
-/// possibly succeed for the rest of the day.
+/// Two things follow from that, and this type is where both are handled.
 ///
-/// This client detects the `quotaExceeded` reason, records it, and short-circuits every subsequent
-/// call until the quota resets — which YouTube does at midnight **US/Pacific**, not at local
-/// midnight. The cheap `videos.list` calls are gated too: once the budget is gone they cannot
-/// succeed either, and validating a video is pointless if no search can find one.
+/// **The call goes through the server.** Asking YouTube directly meant every device paid 100 units
+/// for the same "Dune official trailer" query; the proxy caches the answer, so the second device
+/// onwards pays nothing. It also keeps the API key out of the app bundle.
+///
+/// **An exhausted quota is recognised as such.** The five call sites this replaced each built their
+/// URL by hand and none could tell a spent quota from an empty result: some checked only for a
+/// non-2xx status and returned `nil`, the others decoded the body directly and threw a decoding
+/// error. The clip feature degraded silently while the app kept firing requests that could not
+/// succeed. Now the exhaustion is recorded and every subsequent call short-circuits until the reset
+/// — which YouTube does at midnight **US/Pacific**, not at local midnight.
+///
+/// Note the two 429s the proxy can return are *not* the same thing: `quota_exhausted` means the
+/// daily budget is gone and nothing will work until the reset, while `rate_limited` is the
+/// per-caller hourly cap and clears on its own. Only the first one arms the gate.
 actor YouTubeSearchClient {
 
     static let shared = YouTubeSearchClient()
 
     enum SearchError: LocalizedError, Equatable {
-        /// The project's daily quota is spent. Retrying before `until` cannot succeed.
+        /// The daily quota is spent. Retrying before `until` cannot succeed.
         case quotaExhausted(until: Date)
+        /// The per-caller hourly cap. Transient: this clears without waiting for the daily reset.
+        case rateLimited
         case invalidQuery
         case httpError(status: Int)
 
@@ -30,25 +39,36 @@ actor YouTubeSearchClient {
             switch self {
             case .quotaExhausted(let until):
                 return "YouTube daily quota exhausted, resets at \(until)"
+            case .rateLimited:
+                return "Too many YouTube searches from this device in the last hour"
             case .invalidQuery:
                 return "Query could not be encoded"
             case .httpError(let status):
-                return "YouTube API returned HTTP \(status)"
+                return "YouTube proxy returned HTTP \(status)"
             }
         }
     }
 
     private let session: URLSession
-    private let apiKey: String
+    private let endpoint: String
+    private let supabaseKey: String
     private let defaults: UserDefaults
     private let now: @Sendable () -> Date
 
     /// Survives relaunches: a quota exhausted at 11:00 is still exhausted after a restart at 11:05.
     private static let exhaustedUntilKey = "YouTubeSearchClient.quotaExhaustedUntil"
 
+    private static func defaultEndpoint() -> String {
+        let base = Config.supabaseURL
+        guard !base.isEmpty else { return "" }
+        let host = base.replacingOccurrences(of: ".supabase.co", with: ".functions.supabase.co")
+        return "\(host)/youtube-search"
+    }
+
     init(
         session: URLSession? = nil,
-        apiKey: String = Config.youtubeApiKey,
+        endpoint: String? = nil,
+        supabaseKey: String = Config.supabaseAnonKey,
         defaults: UserDefaults = .standard,
         now: @escaping @Sendable () -> Date = { Date() }
     ) {
@@ -61,7 +81,8 @@ actor YouTubeSearchClient {
             config.waitsForConnectivity = false
             self.session = URLSession(configuration: config)
         }
-        self.apiKey = apiKey
+        self.endpoint = endpoint ?? Self.defaultEndpoint()
+        self.supabaseKey = supabaseKey
         self.defaults = defaults
         self.now = now
     }
@@ -76,64 +97,84 @@ actor YouTubeSearchClient {
         return until
     }
 
-    /// Searches YouTube (`search.list`, **100 quota units**), or throws `.quotaExhausted` without
-    /// spending a request when the daily budget is already known to be gone.
+    /// Searches YouTube (`search.list`, **100 quota units** on a cache miss), or throws
+    /// `.quotaExhausted` without making a request when the daily budget is known to be gone.
     func search(
         query: String,
         relevanceLanguage: String? = nil,
         maxResults: Int = 1
     ) async throws -> [YouTubeSearchItem] {
-        guard let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
-            throw SearchError.invalidQuery
-        }
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { throw SearchError.invalidQuery }
 
-        var urlString = "https://www.googleapis.com/youtube/v3/search"
-            + "?part=snippet&q=\(encoded)&type=video&videoDuration=short"
-            + "&maxResults=\(max(1, min(maxResults, 50)))&key=\(apiKey)"
-        if let relevanceLanguage {
-            urlString += "&relevanceLanguage=\(relevanceLanguage)"
-        }
+        var payload: [String: Any] = [
+            "action": "search",
+            "query": trimmed,
+            "maxResults": max(1, min(maxResults, 50))
+        ]
+        if let relevanceLanguage { payload["relevanceLanguage"] = relevanceLanguage }
 
-        let data = try await get(urlString, endpoint: "search.list")
-        return try JSONDecoder().decode(YouTubeSearchResponse.self, from: data).items
+        let data = try await post(payload, describing: "search.list")
+        return try JSONDecoder().decode(ItemsEnvelope<YouTubeSearchItem>.self, from: data).items
     }
 
     /// Fetches video status/contentDetails (`videos.list`, **1 quota unit**). Gated on the same
     /// budget: when it is spent this call cannot succeed either.
     func videoDetails(id: String) async throws -> YouTubeVideoItem? {
-        guard let encoded = id.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
-            throw SearchError.invalidQuery
-        }
+        let trimmed = id.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { throw SearchError.invalidQuery }
 
-        let urlString = "https://www.googleapis.com/youtube/v3/videos"
-            + "?part=status,contentDetails&id=\(encoded)&key=\(apiKey)"
+        let data = try await post(
+            ["action": "videoDetails", "videoId": trimmed], describing: "videos.list"
+        )
+        return try JSONDecoder().decode(ItemsEnvelope<YouTubeVideoItem>.self, from: data).items.first
+    }
 
-        let data = try await get(urlString, endpoint: "videos.list")
-        return try JSONDecoder().decode(YouTubeVideoResponse.self, from: data).items.first
+    /// The proxy answers `{ "items": [...], "cached": Bool }` for both actions.
+    private struct ItemsEnvelope<T: Decodable>: Decodable {
+        let items: [T]
     }
 
     /// Shared transport: the quota gate lives here so no call site can bypass it.
-    private func get(_ urlString: String, endpoint: String) async throws -> Data {
+    private func post(_ payload: [String: Any], describing endpointName: String) async throws -> Data {
         if let until = quotaExhaustedUntil {
             throw SearchError.quotaExhausted(until: until)
         }
 
-        guard let url = URL(string: urlString) else { throw SearchError.invalidQuery }
+        guard !endpoint.isEmpty, let url = URL(string: endpoint) else {
+            throw SearchError.invalidQuery
+        }
 
-        let (data, response) = try await session.data(from: url)
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(supabaseKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(supabaseKey)", forHTTPHeaderField: "Authorization")
+        request.httpBody = try JSONSerialization.data(withJSONObject: payload)
+
+        let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else {
             throw SearchError.httpError(status: -1)
         }
 
         guard (200...299).contains(http.statusCode) else {
-            if isQuotaExceeded(status: http.statusCode, body: data) {
-                let until = Self.nextQuotaReset(after: now())
-                defaults.set(until, forKey: Self.exhaustedUntilKey)
-                Logger.error(
-                    "[YouTube] Daily quota exhausted on \(endpoint) — all YouTube calls disabled "
-                    + "until \(until). search.list costs 100 of the project's 10.000 units/day."
-                )
-                throw SearchError.quotaExhausted(until: until)
+            // Both are 429, and conflating them would be a bug in either direction: arming the
+            // daily gate on an hourly cap silences YouTube for the rest of the day, and not arming
+            // it on a real exhaustion keeps the app hammering a budget that is gone.
+            if http.statusCode == 429 {
+                switch proxyError(in: data) {
+                case "quota_exhausted":
+                    let until = Self.nextQuotaReset(after: now())
+                    defaults.set(until, forKey: Self.exhaustedUntilKey)
+                    Logger.error(
+                        "[YouTube] Daily quota exhausted on \(endpointName) — all YouTube calls "
+                        + "disabled until \(until). search.list costs 100 of 10.000 units/day."
+                    )
+                    throw SearchError.quotaExhausted(until: until)
+                default:
+                    Logger.warning("[YouTube] Rate limited on \(endpointName); will retry later")
+                    throw SearchError.rateLimited
+                }
             }
             throw SearchError.httpError(status: http.statusCode)
         }
@@ -141,12 +182,8 @@ actor YouTubeSearchClient {
         return data
     }
 
-    /// YouTube answers `403` with `reason: "quotaExceeded"` (or `dailyLimitExceeded`) in the error
-    /// payload. The status alone is not enough: `403` also covers a key restricted to another
-    /// bundle id, which retrying tomorrow would not fix.
-    private func isQuotaExceeded(status: Int, body: Data) -> Bool {
-        guard status == 403, let text = String(data: body, encoding: .utf8) else { return false }
-        return text.contains("quotaExceeded") || text.contains("dailyLimitExceeded")
+    private func proxyError(in body: Data) -> String? {
+        (try? JSONSerialization.jsonObject(with: body) as? [String: Any])?["error"] as? String
     }
 
     /// The quota window resets at midnight Pacific Time, not at the device's local midnight.
