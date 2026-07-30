@@ -1,0 +1,105 @@
+-- Impalcatura per far girare le migration su un Postgres vuoto.
+--
+-- Ricrea il minimo indispensabile di cio' che su Supabase esiste gia' ma la cui migration
+-- PRECEDE questo repo (per anni l'intero albero supabase/ e' stato gitignorato, vedi il commento
+-- in .gitignore). Non e' uno stub "per far passare i test": e' la parte di produzione che i test
+-- devono poter presupporre.
+
+-- Ruoli di Supabase. Servono ai grant per colonna e alle prove di RLS.
+do $$
+begin
+  if not exists (select 1 from pg_roles where rolname = 'anon') then
+    create role anon nologin;
+  end if;
+  if not exists (select 1 from pg_roles where rolname = 'authenticated') then
+    create role authenticated nologin;
+  end if;
+end $$;
+
+grant usage on schema public to anon, authenticated;
+alter default privileges in schema public
+  grant select, insert, update, delete on tables to authenticated;
+alter default privileges in schema public grant select on tables to anon;
+
+-- Schema auth: solo cio' che le migration referenziano (FK su auth.users, auth.uid()).
+create schema if not exists auth;
+
+create table if not exists auth.users (
+  id    uuid primary key default gen_random_uuid(),
+  email text
+);
+
+-- Su Supabase legge il claim `sub` del JWT. Qui lo pilota il test con
+-- `set local request.jwt.claim.sub = '<uuid>'`.
+create or replace function auth.uid() returns uuid
+language sql stable as $$
+  select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid;
+$$;
+
+-- Preferenze: la colonna count_specials_in_progress la aggiunge la migration di §1.3.
+create table if not exists public.unified_user_preferences (
+  user_id    uuid primary key references auth.users on delete cascade,
+  updated_at timestamptz not null default now()
+);
+
+-- Il fuso dell'utente, gia' usato in produzione dalle quiet hours di process-notifications.
+create table if not exists public.user_notification_preferences (
+  user_id  uuid primary key references auth.users on delete cascade,
+  timezone text
+);
+
+-- Lo schema morto che la migration 20260730030000 deve rimuovere: senza queste, il drop
+-- passerebbe per il solo fatto che non c'e' niente da droppare.
+create table if not exists public.tv_tracking (
+  user_id    uuid not null,
+  tv_show_id integer not null,
+  status     text,
+  primary key (user_id, tv_show_id)
+);
+create table if not exists public.tv_episode_progress (
+  user_id        uuid not null,
+  tv_show_id     integer not null,
+  season_number  integer not null,
+  episode_number integer not null,
+  primary key (user_id, tv_show_id, season_number, episode_number)
+);
+create or replace view public.v_tv_tracking_buckets as
+  select user_id, tv_show_id, 'Continuing'::text as bucket from public.tv_tracking;
+create or replace function public.get_tv_tracking_buckets()
+returns setof public.v_tv_tracking_buckets
+language sql stable security definer as $$ select * from public.v_tv_tracking_buckets; $$;
+
+-- Asserzioni. Una fallita alza un'eccezione: con ON_ERROR_STOP il runner esce diverso da zero.
+-- Accessibili anche da `authenticated`, perche' una parte dei test gira impersonando il client.
+create schema if not exists t;
+grant usage on schema t to anon, authenticated;
+alter default privileges in schema t grant execute on functions to anon, authenticated;
+
+create or replace function t.eq(actual anyelement, expected anyelement, label text)
+returns void language plpgsql as $$
+begin
+  if actual is distinct from expected then
+    raise exception 'FAIL  %  (atteso %, ottenuto %)', label, expected, actual;
+  end if;
+  raise notice 'ok    %', label;
+end $$;
+
+create or replace function t.is_true(actual boolean, label text)
+returns void language plpgsql as $$
+begin
+  if actual is not true then
+    raise exception 'FAIL  %  (atteso true, ottenuto %)', label, actual;
+  end if;
+  raise notice 'ok    %', label;
+end $$;
+
+/* Esegue uno statement e verifica che venga rifiutato. */
+create or replace function t.rejects(statement text, label text)
+returns void language plpgsql as $$
+begin
+  execute statement;
+  raise exception 'FAIL  %  (lo statement e'' passato, doveva essere rifiutato)', label;
+exception
+  when raise_exception then raise;
+  when others then raise notice 'ok    %  (% )', label, sqlstate;
+end $$;
