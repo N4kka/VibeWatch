@@ -75,15 +75,31 @@ Deno.test('two shows under one id is ambiguous, not a guess', () => {
   assertEquals(row.tmdb_show_id, null)
 })
 
-Deno.test('an id that also means something else is ambiguous', () => {
-  // TVDB numbers series and episodes in separate spaces, so the same number can be both. Picking
-  // one is how someone's history ends up on an unrelated show.
-  const row = resolveFromFind(4711, 'series', {
+Deno.test('an id TMDB also knows as an episode still resolves', () => {
+  // The real case: /find/121361 (Game of Thrones) answers tv: 1, tv_episode: 1. Treating that as
+  // ambiguous sent most of a real import to the manual pile. Only the requested bucket decides;
+  // the other one is ignored.
+  const row = resolveFromFind(121361, 'series', {
     tv_results: [{ id: 1399 }],
     tv_episode_results: [{ id: 63056, show_id: 66732, season_number: 1, episode_number: 1 }],
   }, NOW)
 
-  assertEquals(row.resolution, 'ambiguous')
+  assertEquals(row.resolution, 'found')
+  assertEquals(row.tmdb_show_id, 1399, 'the series wins, not the unrelated episode\'s show')
+})
+
+Deno.test('an episode resolves even when that number is also a series', () => {
+  // The mirror image: an episode is asked for, and TMDB knows the number as a series too. The
+  // requested bucket has exactly one hit, so that is the answer.
+  const row = resolveFromFind(4711, 'episode', {
+    tv_results: [{ id: 1399 }],
+    tv_episode_results: [{ id: 63056, show_id: 66732, season_number: 3, episode_number: 9 }],
+  }, NOW)
+
+  assertEquals(row.resolution, 'found')
+  assertEquals(row.tmdb_show_id, 66732)
+  assertEquals(row.season_number, 3)
+  assertEquals(row.episode_number, 9)
 })
 
 Deno.test('a hit in the wrong bucket does not resolve the entity', () => {

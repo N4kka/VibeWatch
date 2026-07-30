@@ -1,6 +1,6 @@
 # Blocco 2 — Catalogo condiviso e risoluzione TVDB→TMDB
 
-> SPEC v3 §3.1 e §6. Aggiornato: 2026-07-30. **Non ancora deployato.**
+> SPEC v3 §3.1 e §6. Aggiornato: 2026-07-31. **Deployato** su `rqhxhkijzhqivljivirq`.
 
 ## Cosa contiene
 
@@ -50,10 +50,14 @@ La seconda chiamata identica deve rispondere con `cache_hits: 1` e `upstream_cal
 
 ## Decisioni prese qui, che la spec non fissava
 
-- **Un id che TMDB conosce sotto un altro tipo diventa `ambiguous`, non viene risolto.** Gli id
-  TVDB sono unici solo dentro il proprio spazio, quindi lo stesso numero può essere sia una serie
-  sia un episodio. Indovinare è il modo in cui la cronologia di qualcuno finisce su una serie che
-  non ha mai visto.
+- **Decide solo il bucket richiesto: un hit in un altro tipo si ignora.** Gli id TVDB sono unici
+  solo dentro il proprio spazio, quindi lo stesso numero può essere sia una serie sia un episodio —
+  e in pratica lo è spessissimo: `/find/121361` (Game of Thrones) risponde `tv: 1, tv_episode: 1`.
+  La prima versione marcava `ambiguous` qualunque collisione fra bucket, e allo smoke test si è
+  visto che avrebbe mandato alla pila manuale la maggior parte di un import vero. Ora un solo
+  risultato nel bucket richiesto risolve; zero o più di uno restano `ambiguous`. Ciò che non deve
+  mai succedere è risolvere dal bucket **sbagliato**, e da quello il codice è protetto: il bucket
+  lo sceglie l'`entity_type` del chiamante, che viene dalla struttura dell'export.
 - **TTL differenziato**: 90 giorni per una serie conclusa e non più in produzione, 7 per tutte le
   altre. Una serie finita non cambia più.
 - **Budget**: 600 chiamate/ora per utente e 50.000/giorno globali, sul contatore già esistente

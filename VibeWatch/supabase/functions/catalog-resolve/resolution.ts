@@ -28,6 +28,49 @@ export interface FindResponse {
   tv_results?: { id: number }[]
   tv_episode_results?: { id: number; show_id: number; season_number: number; episode_number: number }[]
   movie_results?: { id: number }[]
+  tv_season_results?: { id: number }[]
+  person_results?: { id: number }[]
+}
+
+/**
+ * What TMDB actually returned, per bucket, plus the ids of the matching one.
+ *
+ * Returned to the caller for anything that did not resolve. §6 says an `ambiguous` row is
+ * "da risolvere a mano": whoever does that needs to see WHY it was ambiguous, and going back to
+ * TMDB by hand to find out is exactly the friction that leaves those rows unresolved forever.
+ */
+export interface FindDiagnostics {
+  tvdb_id: number
+  entity_type: EntityType
+  resolution: Resolution
+  counts: Record<string, number>
+  matching_ids: number[]
+}
+
+export function findDiagnostics(
+  tvdbId: number,
+  entityType: EntityType,
+  find: FindResponse,
+  resolution: Resolution,
+): FindDiagnostics {
+  const tv = find.tv_results ?? []
+  const episodes = find.tv_episode_results ?? []
+  const movies = find.movie_results ?? []
+  const matching = entityType === 'series' ? tv : entityType === 'episode' ? episodes : movies
+
+  return {
+    tvdb_id: tvdbId,
+    entity_type: entityType,
+    resolution,
+    counts: {
+      tv: tv.length,
+      tv_episode: episodes.length,
+      movie: movies.length,
+      tv_season: (find.tv_season_results ?? []).length,
+      person: (find.person_results ?? []).length,
+    },
+    matching_ids: matching.map((r) => r.id),
+  }
 }
 
 export interface ShowPayload {
@@ -83,13 +126,17 @@ export const SEASONS_PER_APPEND = 20
  * Maps a `/find` answer onto a `tvdb_tmdb_map` row.
  *
  * A TVDB id is only unique within its own entity space, so the same number can be both a series
- * and an episode on TMDB. Two rules follow:
+ * and an episode on TMDB — and in practice it very often is. Game of Thrones (tvdb 121361) comes
+ * back as `tv: 1, tv_episode: 1`.
  *
- *   - only the bucket matching the requested `entity_type` can resolve it;
- *   - anything else that TMDB knows under that id makes it `ambiguous`, to be settled by hand.
+ * So the rule is: **only the bucket matching the requested `entity_type` decides.** One hit there
+ * resolves it; zero or several make it `ambiguous`. A hit in another bucket is ignored — asking
+ * for a series and getting exactly one series is not an ambiguity, and treating it as one would
+ * have sent most of a real import to the manual pile.
  *
- * Resolving from the wrong bucket is how an import silently attributes someone's viewing history
- * to a different show.
+ * What must never happen is resolving from the wrong bucket: that is how an import silently
+ * attributes someone's viewing history to a different show. The bucket is chosen by the caller's
+ * `entity_type`, which comes from the export's own structure, never guessed from the numbers.
  */
 export function resolveFromFind(
   tvdbId: number,
@@ -116,10 +163,9 @@ export function resolveFromFind(
   }
 
   const matching = entityType === 'series' ? tv : entityType === 'episode' ? episodes : movies
-  const others = (tv.length + episodes.length + movies.length) - matching.length
 
-  // More than one hit in our own bucket, or the id also means something else: not decidable here.
-  if (matching.length !== 1 || others > 0) {
+  // Zero or several hits in our own bucket: not decidable here, it needs a human (§6).
+  if (matching.length !== 1) {
     return { ...base, resolution: 'ambiguous', method: 'tmdb_find' }
   }
 

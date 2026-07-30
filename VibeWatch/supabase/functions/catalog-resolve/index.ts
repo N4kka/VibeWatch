@@ -27,6 +27,8 @@ import {
 import {
   EntityType,
   episodeRowsFromSeasons,
+  FindDiagnostics,
+  findDiagnostics,
   FindResponse,
   initialSeasonChunk,
   MapRow,
@@ -137,6 +139,9 @@ serve(async (req: Request) => {
 
   const remaining: RequestedEntity[] = []
   const freshRows: MapRow[] = []
+  // Cosa TMDB ha risposto per cio' che non si e' risolto: senza, un `ambiguous` e' un vicolo
+  // cieco e chi deve risolverlo a mano deve rifare la chiamata per capire perche'.
+  const diagnostics: FindDiagnostics[] = []
   let budgetExhausted = false
 
   // 2. Resolve what is missing, one `/find` per entity.
@@ -173,9 +178,13 @@ serve(async (req: Request) => {
     freshRows.push(row)
     resolved.push(row)
 
-    if (row.resolution === 'found') stats.resolved_now++
-    else if (row.resolution === 'not_found') stats.not_found++
-    else stats.ambiguous++
+    if (row.resolution === 'found') {
+      stats.resolved_now++
+    } else {
+      if (row.resolution === 'not_found') stats.not_found++
+      else stats.ambiguous++
+      diagnostics.push(findDiagnostics(entity.tvdb_id, entity.entity_type, find ?? {}, row.resolution))
+    }
   }
 
   if (freshRows.length > 0) {
@@ -213,6 +222,7 @@ serve(async (req: Request) => {
   return jsonResponse({
     resolved,
     remaining,
+    diagnostics,
     budget_exhausted: budgetExhausted,
     stats,
   }, 200)
