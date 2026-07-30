@@ -40,10 +40,16 @@ final class LocalWatchProvidersRepository: WatchProvidersCache {
             "SELECT id FROM watch_providers WHERE media_id = ? AND media_type = ? AND region = ?",
             parameters: [mediaId, mediaType.rawValue, region]
         )) ?? []
-        if let existingId = existing.first?["id"] as? String {
-            try? await db.update("watch_providers", values: values, where: "id = ?", parameters: [existingId])
-        } else {
-            _ = try? await db.insert("watch_providers", values: values)
+        // No `try?` here: this write failed on every call for as long as `watch_providers` was
+        // missing from the SQLiteTable whitelist, and the swallowed error is why nobody noticed.
+        do {
+            if let existingId = existing.first?["id"] as? String {
+                try await db.update("watch_providers", values: values, where: "id = ?", parameters: [existingId])
+            } else {
+                _ = try await db.insert("watch_providers", values: values)
+            }
+        } catch {
+            Logger.error("[WatchProviders] failed to cache providers for \(mediaType.rawValue) \(mediaId): \(error)")
         }
     }
 }

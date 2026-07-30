@@ -72,6 +72,10 @@ enum SQLiteTable: String, CaseIterable {
     case userNotificationPreferences = "user_notification_preferences"
     case notificationSubscriptions = "notification_subscriptions"
 
+    // Watch providers (created by migration 5, never whitelisted: every insert/update from
+    // LocalWatchProvidersRepository threw invalidTableName and died under a `try?`).
+    case watchProviders = "watch_providers"
+
     /// All valid table names as a Set for O(1) lookup
     static let validTableNames: Set<String> = Set(SQLiteTable.allCases.map(\.rawValue))
 
@@ -114,10 +118,24 @@ final class SQLiteService: ObservableObject {
     private struct SQLSendableValue: @unchecked Sendable { let raw: Any }
     private struct SQLSendableRecord: @unchecked Sendable { var raw: [String: Any] }
 
-    /// Validate table name to prevent SQL injection (Phase 5 Security)
+    /// Set to false only by the test that asserts the throw itself. See `validateTableName`.
+    static var trapsOnUnknownTable = true
+
+    /// Validate table name to prevent SQL injection (Phase 5 Security).
+    ///
+    /// P1: an unknown table is almost never an injection attempt — it is a table that exists in
+    /// SQLite but was never added to the whitelist, and the resulting throw kept dying under a
+    /// `try?` at the call site (`watch_providers` did exactly that: created by migration 5, absent
+    /// from the enum, every write lost with no log anyone read). Debug builds now trap, so a
+    /// missing whitelist entry surfaces on the first write during development instead of in
+    /// production as missing data.
     private func validateTableName(_ table: String) throws {
         guard SQLiteTable.isValid(table) else {
-            Logger.error("[SQLite] SQL injection attempt blocked: invalid table '\(table)'")
+            Logger.error("[SQLite] Rejected statement on non-whitelisted table '\(table)'. "
+                         + "If the table is legitimate, add it to SQLiteTable.")
+            if Self.trapsOnUnknownTable {
+                assertionFailure("[SQLite] non-whitelisted table '\(table)' — add it to SQLiteTable")
+            }
             throw SQLiteError.invalidTableName(table)
         }
     }
