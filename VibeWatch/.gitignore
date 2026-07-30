@@ -44,3 +44,6 @@ VibeWatchApp/Config/
 
 # macOS Finder metadata — after the !.planning/** un-ignore so it wins there too.
 .DS_Store
+
+# Python bytecode (build_oracle.py / test_oracle.py)
+__pycache__/
