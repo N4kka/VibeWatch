@@ -118,6 +118,7 @@ returns boolean
 language sql
 immutable
 parallel safe
+set search_path = public
 as $$
   select coalesce(season_number, 0) = 0;
 $$;

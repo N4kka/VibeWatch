@@ -253,6 +253,28 @@ select t.rejects($$
   update public.tv_show_state set watched_count = 9999 where tmdb_show_id = 100
 $$, 'un client non puo'' scriversi watched_count');
 
+-- Le funzioni di ricalcolo non sono chiamabili via API: sono SECURITY DEFINER, e in `public`
+-- ogni funzione e' automaticamente un endpoint /rest/v1/rpc/<nome>. Esposte, un anonimo potrebbe
+-- far ricalcolare (e scrivere) lo stato di chiunque, o innescare refresh_backlog_since() in loop.
+select t.eq(has_function_privilege('public.recompute_tv_show_state(uuid,integer)', 'execute'), false,
+            'recompute non e'' chiamabile dal client');
+select t.eq(has_function_privilege('public.refresh_backlog_since()', 'execute'), false,
+            'refresh_backlog_since non e'' chiamabile dal client');
+select t.eq(has_function_privilege('public.user_counts_specials(uuid)', 'execute'), false,
+            'user_counts_specials non e'' chiamabile dal client');
+-- Eccezione voluta: `v_tv_tracking` e' security_invoker e la chiama.
+select t.eq(has_function_privilege('public.user_today(uuid)', 'execute'), true,
+            'user_today resta chiamabile: senza, la vista non leggerebbe piu'' niente');
+
+-- E il trigger deve scattare lo stesso. Postgres verifica l'EXECUTE quando si CREA il trigger,
+-- non quando scatta: se questa assunzione fosse sbagliata, ogni "segna visto" dell'app
+-- fallirebbe subito dopo l'hardening.
+insert into public.watch_events
+  (user_id, media_type, tmdb_show_id, season_number, episode_number, watched_at, source)
+values ('11111111-1111-1111-1111-111111111111', 'tv', 300, 1, 1, now(), 'manual');
+select t.eq((select watched_count from public.tv_show_state where tmdb_show_id = 300), 1,
+            'il trigger ricalcola anche se il client non puo'' chiamare le funzioni');
+
 update public.tv_show_state set user_status = 'for_later' where tmdb_show_id = 100;
 select t.eq((select user_status from public.tv_show_state where tmdb_show_id = 100), 'for_later',
             'ma puo'' cambiare user_status, che e'' una sua scelta');

@@ -295,6 +295,7 @@ create or replace function public.tv_tracking_bucket(
 returns text
 language sql
 stable
+set search_path = public
 as $$
   select case
     when p_user_status in ('dropped','archived') then p_user_status
@@ -360,3 +361,29 @@ begin
     raise notice 'pg_cron assente: schedulare refresh_backlog_since() a mano (05:00 UTC)';
   end if;
 end $$;
+
+-- 8) Chiusura delle funzioni verso l'API pubblica.
+--
+-- Ogni funzione in `public` e' automaticamente un endpoint `/rest/v1/rpc/<nome>`. Queste sono
+-- SECURITY DEFINER, quindi esposte sarebbero:
+--
+--   recompute_tv_show_state(user_id, show_id)  scrittura su tv_show_state per un user_id
+--                                              ARBITRARIO, da parte di chiunque;
+--   refresh_backlog_since()                    ricalcolo di OGNI riga attiva: una leva di DoS;
+--   user_counts_specials(user_id)              la preferenza di un altro utente;
+--   tg_watch_events_recompute()                funzione di trigger, senza senso fuori dal trigger.
+--
+-- Va revocato a PUBLIC, non ad anon/authenticated: Postgres concede EXECUTE a PUBLIC di default
+-- e i due ruoli lo ereditano da li', quindi revocarlo solo a loro non toglie niente. (Verificato
+-- in produzione con has_function_privilege: dopo il revoke mirato risultava ancora true.)
+revoke execute on function public.recompute_tv_show_state(uuid, integer) from public, anon, authenticated;
+revoke execute on function public.refresh_backlog_since()                 from public, anon, authenticated;
+revoke execute on function public.user_counts_specials(uuid)              from public, anon, authenticated;
+revoke execute on function public.tg_watch_events_recompute()             from public, anon, authenticated;
+revoke execute on function public.user_today(uuid)                        from public, anon, authenticated;
+
+-- `user_today` e' l'eccezione: `v_tv_tracking` e' security_invoker e la chiama per calcolare
+-- `is_next_available`, quindi senza questo grant la schermata Tracking non leggerebbe piu'
+-- niente. Espone una data, per un uuid che il chiamante deve gia' conoscere. Resta chiusa ad
+-- anon; le altre, che scrivono o ricalcolano, restano chiuse a tutti.
+grant execute on function public.user_today(uuid) to authenticated;
