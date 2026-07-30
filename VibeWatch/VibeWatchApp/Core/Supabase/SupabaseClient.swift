@@ -886,58 +886,12 @@ class SupabaseService: ObservableObject {
     }
 
     // MARK: - User Profile
-
-    /// Update user profile fields in Supabase
-    func updateUserProfile(_ fields: [String: Any]) async throws {
-        guard let client = client, let userId = currentUser?.id else {
-            throw SupabaseError.notConfigured
-        }
-
-        var updateFields = fields
-        updateFields["updated_at"] = ISO8601DateFormatter().string(from: Date())
-
-        // Build the update payload as Encodable
-        struct ProfileUpdate: Encodable {
-            let onboarding_completed: Bool?
-            let onboarding_completed_at: String?
-            let updated_at: String
-
-            init(from fields: [String: Any]) {
-                self.onboarding_completed = fields["onboarding_completed"] as? Bool
-                self.onboarding_completed_at = fields["onboarding_completed_at"] as? String
-                self.updated_at = fields["updated_at"] as? String ?? ISO8601DateFormatter().string(from: Date())
-            }
-        }
-
-        let update = ProfileUpdate(from: updateFields)
-
-        try await client.from("profiles")
-            .update(update)
-            .eq("id", value: userId)
-            .execute()
-
-        Logger.info("[Supabase] Updated user profile")
-    }
-
-    /// Fetch user profile from Supabase
-    func fetchUserProfile() async throws -> [String: Any]? {
-        guard let client = client, let userId = currentUser?.id else {
-            return nil
-        }
-
-        let response = try await client.from("profiles")
-            .select()
-            .eq("id", value: userId)
-            .limit(1)
-            .execute()
-
-        guard let rows = try? JSONSerialization.jsonObject(with: response.data) as? [[String: Any]],
-              let profile = rows.first else {
-            return nil
-        }
-
-        return profile
-    }
+    //
+    // P5 (SPEC v3): `updateUserProfile(_:)` and `fetchUserProfile()` lived here and existed only
+    // to serve AppState.checkOnboardingFromProfile(). The update encoded a fixed payload of
+    // `onboarding_completed` / `onboarding_completed_at`, two columns `profiles` does not have,
+    // so every call was a guaranteed round-trip to a 42703. Both callers are gone; profile reads
+    // for auth go through AuthService.fetchUserProfile(userId:), which reads columns that exist.
 
 }
 

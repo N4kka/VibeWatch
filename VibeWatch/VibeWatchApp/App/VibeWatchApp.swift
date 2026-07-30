@@ -155,9 +155,6 @@ class AppState: ObservableObject {
 
         Logger.info("[AppState] Performing full sync on app launch...")
 
-        // Check onboarding state from profile first
-        await checkOnboardingFromProfile()
-
         // Sync gamification state first (XP, level, streak, badges)
         await GamificationService.shared.loadUserState(userId: userId)
 
@@ -204,38 +201,12 @@ class AppState: ObservableObject {
         Logger.info("[AppState] Foreground sync completed")
     }
 
-    /// Check if user completed onboarding on another device
-    private func checkOnboardingFromProfile() async {
-        guard isAuthenticated else { return }
-
-        // If already completed locally, sync to profile if needed
-        if UserDefaults.standard.bool(forKey: "hasCompletedOnboarding") {
-            // Ensure it's synced to profile
-            Task {
-                do {
-                    try await SupabaseService.shared.updateUserProfile([
-                        "onboarding_completed": true,
-                        "onboarding_completed_at": ISO8601DateFormatter().string(from: Date())
-                    ])
-                } catch {
-                    Logger.warning("[AppState] Failed to sync onboarding state: \(error)")
-                }
-            }
-            return
-        }
-
-        // Check if completed on another device
-        do {
-            if let profile = try await SupabaseService.shared.fetchUserProfile(),
-               let completed = profile["onboarding_completed"] as? Bool,
-               completed {
-                UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
-                Logger.info("[AppState] Onboarding already completed on another device")
-            }
-        } catch {
-            Logger.warning("[AppState] Failed to check onboarding from profile: \(error)")
-        }
-    }
+    // P5 (SPEC v3): `checkOnboardingFromProfile()` lived here and pretended to sync the onboarding
+    // flag across devices. `profiles` has neither `onboarding_completed` nor
+    // `onboarding_completed_at`, so the write always failed into a Logger.warning and the read
+    // always returned nil. The real flag is UserDefaults["hasCompletedOnboarding"], per-device.
+    // Removed rather than fixed: cross-device onboarding is not a goal, and `profiles` gets
+    // reworked in this same spec (§3.6).
 
     private func checkForRequiredUpdate() async {
         updateRequirement = await UpdateCheckService.shared.checkForRequiredUpdate()
