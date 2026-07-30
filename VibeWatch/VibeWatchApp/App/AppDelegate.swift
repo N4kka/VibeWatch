@@ -17,6 +17,13 @@ class AppDelegate: NSObject, UIApplicationDelegate, @MainActor UNUserNotificatio
         // Initialize Firebase
         FirebaseApp.configure()
 
+        // Crash reporting (P3): Crashlytics starts with Firebase, but collection has to follow the
+        // analytics opt-out, and the install id makes a crash traceable before sign-in.
+        CrashReportingService.start(
+            isEnabled: UserDefaults.standard.object(forKey: "analytics.isEnabled") as? Bool ?? true,
+            installId: InstallIDService.getOrCreateInstallId()
+        )
+
         // Initialize Google Mobile Ads SDK
         MobileAds.shared.start(completionHandler: nil)
 
