@@ -6,8 +6,15 @@
 -- mette in guardia P1, solo sul lato server — e sarebbe successo al primo "segna visto" del
 -- blocco 5 e a ogni evento dell'import (§7.2 fase 4 scrive proprio via apply_mutations).
 --
--- Il resto della funzione e' identico alla versione precedente: qui cambia solo l'aggiunta dei
--- due rami prima di `else`.
+-- Il resto della funzione e' identico a quella in produzione.
+--
+-- ATTENZIONE all'ordine delle migration in questa cartella: `movie_reactions` (20260723135625) e
+-- `unified_user_preferences` (20260723205456 in remoto, 20260723140500 come file) sono state
+-- aggiunte per splice sul `prosrc`, ma i due file che riscrivono la funzione intera
+-- (`_complete`, `_per_item_isolation`) hanno un nome che li mette DOPO. In produzione l'ordine
+-- di applicazione reale era l'inverso e i due rami ci sono; replicando i file da zero
+-- sparirebbero. Questo file li ricopia dal `prosrc` reale, cosi' le due strade convergono: e' la
+-- definizione completa, ed essendo l'ultima vince in entrambi i casi.
 
 create or replace function public.apply_mutations(batch jsonb)
 returns void
@@ -358,6 +365,77 @@ as $function$
               completed_at = excluded.completed_at
             where t.user_id = v_uid;
           end if;
+        end if;
+
+      elsif tbl = 'movie_reactions' then
+        -- STAB-011. Ricopiato QUI dal `prosrc` reale, non dedotto: in produzione questo branch
+        -- era stato aggiunto per splice (20260723135625), e riscrivere la funzione intera senza
+        -- ricopiarlo lo avrebbe cancellato — ogni reaction sarebbe tornata a `table_not_handled`.
+        if v_write then
+          if coalesce(rec->>'media_id','') = '' or coalesce(rec->>'media_type','') = ''
+             or coalesce(rec->>'reaction_type','') = '' then
+            v_handled := false;
+            v_reason := 'missing_required_field';
+          else
+            insert into public.movie_reactions as t
+              (id, user_id, media_id, media_type, reaction_type, created_at, updated_at, deleted_at, synced_at)
+            values
+              (coalesce(nullif(rec->>'id','')::uuid, gen_random_uuid()), v_uid,
+               (rec->>'media_id')::int, rec->>'media_type', rec->>'reaction_type',
+               coalesce(nullif(rec->>'created_at','')::timestamptz, now()),
+               coalesce(nullif(rec->>'updated_at','')::timestamptz, now()),
+               nullif(rec->>'deleted_at','')::timestamptz, now())
+            on conflict (user_id, media_id, media_type) do update set
+              reaction_type = excluded.reaction_type,
+              updated_at = excluded.updated_at,
+              deleted_at = excluded.deleted_at,
+              synced_at = now()
+            where t.user_id = v_uid;
+          end if;
+        elsif op = 'DELETE' then
+          delete from public.movie_reactions where id = rec_id::uuid and user_id = v_uid;
+        end if;
+
+      elsif tbl = 'unified_user_preferences' then
+        -- STAB-010, stessa storia: splice in produzione (20260723205456), ricopiato qui.
+        if v_write then
+          if coalesce(rec->>'preference_category','') = '' or coalesce(rec->>'preference_id','') = '' then
+            v_handled := false;
+            v_reason := 'missing_required_field';
+          else
+            insert into public.unified_user_preferences as t
+              (id, user_id, device_id, preference_category, preference_id, preference_name,
+               score, score_from_clips, score_from_discovery, score_from_search, score_from_ai,
+               score_from_lists, interaction_count, last_interaction_at, created_at, updated_at)
+            values
+              (coalesce(nullif(rec->>'id','')::uuid, gen_random_uuid()), v_uid,
+               coalesce(nullif(rec->>'device_id',''),'unknown'), rec->>'preference_category', rec->>'preference_id',
+               rec->>'preference_name',
+               coalesce(nullif(rec->>'score','')::real, 0),
+               coalesce(nullif(rec->>'score_from_clips','')::real, 0),
+               coalesce(nullif(rec->>'score_from_discovery','')::real, 0),
+               coalesce(nullif(rec->>'score_from_search','')::real, 0),
+               coalesce(nullif(rec->>'score_from_ai','')::real, 0),
+               coalesce(nullif(rec->>'score_from_lists','')::real, 0),
+               coalesce(nullif(rec->>'interaction_count','')::int, 0),
+               nullif(rec->>'last_interaction_at','')::timestamptz,
+               now(),
+               coalesce(nullif(rec->>'updated_at','')::timestamptz, now()))
+            on conflict (user_id, preference_category, preference_id) do update set
+              preference_name = excluded.preference_name,
+              score = excluded.score,
+              score_from_clips = excluded.score_from_clips,
+              score_from_discovery = excluded.score_from_discovery,
+              score_from_search = excluded.score_from_search,
+              score_from_ai = excluded.score_from_ai,
+              score_from_lists = excluded.score_from_lists,
+              interaction_count = excluded.interaction_count,
+              last_interaction_at = excluded.last_interaction_at,
+              updated_at = excluded.updated_at
+            where t.user_id = v_uid;
+          end if;
+        elsif op = 'DELETE' then
+          delete from public.unified_user_preferences where id = rec_id::uuid and user_id = v_uid;
         end if;
 
       elsif tbl in ('user_gamification','xp_transactions') then

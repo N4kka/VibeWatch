@@ -1,25 +1,13 @@
 # SPEC v3 — stato del lavoro e ripresa
 
-> Aggiornato: 2026-07-31, fine sessione. Branch: `refactoring/spec-v3-prereqs-oracle`.
+> Aggiornato: 2026-07-31. Branch: `refactoring/spec-v3-prereqs-oracle`.
 > Progetto Supabase: `rqhxhkijzhqivljivirq` (VibeWatch, eu-west-1, Postgres 17.6).
 
 ## Da fare per prima cosa
 
-**Applicare `supabase/supabase/migrations/20260731010000_apply_mutations_tracking.sql`** e
-collaudarla. È scritta, verificata con diff (72 righe aggiunte, 3 rimosse) e committata, ma **non
-applicata**: è il write path di tutto il sync — liste, reaction, preferenze, gamification — e
-merita un collaudo completo, non un invio a fine budget.
+**Blocco 4, la paginazione del pull.** Tocca il client iOS: serve poter buildare (Xcode).
 
-Collaudo minimo prima di considerarla chiusa:
-
-1. creare un utente di prova (dashboard → Authentication → Add user, con *Auto Confirm*);
-2. chiamare `apply_mutations` con un batch su `watch_events` e verificare che la riga atterri,
-   che il trigger scriva `tv_show_state` e che `sync_rejected_mutations` resti vuota;
-3. rilanciare lo **stesso** batch: non deve duplicare (criterio 2 di §13) né produrre rifiuti;
-4. una mutazione su `lists`, per confermare che il resto del dispatch è intatto;
-5. cancellare l'utente di prova e le righe create.
-
-Non serve Xcode. Serve il permesso MCP `mcp__claude_ai_Supabase__apply_migration`.
+`apply_mutations` è applicata e collaudata — vedi sotto.
 
 ## Stato dei blocchi di §12
 
@@ -29,8 +17,8 @@ Non serve Xcode. Serve il permesso MCP `mcp__claude_ai_Supabase__apply_migration
 | 1 | Oracolo + fixture + harness | **fatto**. 22 test Python verdi, baseline 399/31/37 |
 | 2 | Catalogo + `catalog-resolve` | **fatto e in produzione**, verificato end-to-end su Game of Thrones |
 | 3 | `watch_events` + `tv_show_state` | **fatto e in produzione**. Harness SQL, 64 asserzioni verdi |
-| — | `apply_mutations` (§4, §7.2) | **scritto, da applicare** ← ripartire da qui |
-| 4 | Paginazione del pull | da fare. **Tocca il client iOS: serve poter buildare** |
+| — | `apply_mutations` (§4, §7.2) | **fatto e in produzione**, collaudato su utente usa-e-getta |
+| 4 | Paginazione del pull | da fare ← ripartire da qui. **Tocca il client iOS: serve poter buildare** |
 | 5+ | Integrazione client, import, UI, sociale | da fare |
 
 ## Cosa gira in produzione adesso
@@ -40,6 +28,13 @@ Non serve Xcode. Serve il permesso MCP `mcp__claude_ai_Supabase__apply_migration
   `tv_show_state`.
 - `recompute_tv_show_state`, `refresh_backlog_since`, `user_today`, `user_counts_specials`,
   `is_special_episode`, `tv_tracking_bucket`, vista `v_tv_tracking`, 2 trigger statement-level.
+- `apply_mutations` con 17 rami, inclusi `watch_events` e `tv_show_state`. Il collaudo (utente
+  usa-e-getta dentro una transazione fatta fallire apposta, quindi zero residui in produzione) ha
+  verificato: 2 eventi atterrano e il trigger scrive `tv_show_state` 2/73/73 con `next=S1E3`; lo
+  **stesso batch rigiocato** non duplica e non produce rifiuti (criterio 2 di §13); un client che
+  manda `watched_count: 999` si vede tenere i contatori del server e cambiare solo `user_status`
+  (§4 `serverWins`); una DELETE fa soft-delete e il ricalcolo riporta `next` a S1E2. Zero righe in
+  `sync_rejected_mutations` in tutti e quattro i passaggi.
 - Job `pg_cron` `refresh-backlog` alle 05:00 UTC.
 - Edge Function `catalog-resolve` versione 3, `verify_jwt` attivo.
 - Droppati: `tv_tracking`, `tv_episode_progress`, `v_tv_tracking_buckets`,
@@ -47,6 +42,20 @@ Non serve Xcode. Serve il permesso MCP `mcp__claude_ai_Supabase__apply_migration
 - Catalogo popolato con una sola serie di prova: Game of Thrones (1399), 373 episodi.
 
 ## Cose imparate che risparmiano tempo
+
+- **L'ordine dei file di migration non è l'ordine con cui sono stati applicati.** `movie_reactions`
+  e `unified_user_preferences` erano stati aggiunti ad `apply_mutations` per *splice* sul `prosrc`
+  reale, ma i due file che riscrivono la funzione intera (`_complete`, `_per_item_isolation`) hanno
+  un nome che li mette **dopo**. In produzione l'ordine vero era l'inverso e i due rami c'erano;
+  riscrivere la funzione partendo dal file `_per_item_isolation` li avrebbe cancellati in silenzio,
+  mandando ogni reaction e ogni preferenza in `table_not_handled` — la stessa perdita di dati contro
+  cui la migration si proponeva di proteggere. **Prima di un `create or replace` su una funzione
+  vecchia, confrontare con il `prosrc` reale, non con l'ultimo file in cartella.** Il confronto
+  costa poco: `md5` del `prosrc` normalizzato (commenti via, spazi collassati) contro lo stesso
+  calcolo fatto in locale.
+- **Un collaudo in produzione si può fare senza lasciare residui**: tutto dentro un `do $$ ... $$`
+  che finisce con `raise exception 'REPORT %', rep`. Il messaggio dell'errore torna indietro come
+  output, e il rollback porta via utente di prova e righe. Niente da ricordarsi di cancellare.
 
 - **I revoke sulle funzioni vanno fatti a `PUBLIC`**, non ad `anon`/`authenticated`: Postgres
   concede EXECUTE a PUBLIC di default e i due ruoli lo ereditano. Un revoke mirato non toglie
