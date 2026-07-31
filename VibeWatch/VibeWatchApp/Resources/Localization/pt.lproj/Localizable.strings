@@ -240,6 +240,7 @@
 "auth.error.invalidResponse" = "Resposta inválida do servidor.";
 "auth.error.userNotFound" = "Usuário não encontrado.";
 "auth.error.invalidCredentials" = "Email ou senha inválidos.";
+"auth.error.tooManyAttempts" = "Muitas tentativas. Tente novamente mais tarde.";
 "auth.error.networkError" = "Erro de rede. Por favor, verifique sua conexão.";
 "auth.error.databaseError" = "Erro de banco de dados ao salvar o perfil. Por favor, tente novamente.";
 "auth.error.signUpFailed" = "Cadastro falhou. Por favor, tente novamente.";

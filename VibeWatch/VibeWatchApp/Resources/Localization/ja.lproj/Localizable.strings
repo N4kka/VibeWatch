@@ -242,6 +242,7 @@
 "auth.error.invalidResponse" = "サーバーからの応答が無効です。";
 "auth.error.userNotFound" = "ユーザーが見つかりません。";
 "auth.error.invalidCredentials" = "メールまたはパスワードが正しくありません。";
+"auth.error.tooManyAttempts" = "試行回数が多すぎます。しばらくしてからお試しください。";
 "auth.error.networkError" = "ネットワークエラー。接続を確認してください。";
 "auth.error.databaseError" = "プロフィール保存中にデータベースエラーが発生しました。もう一度お試しください。";
 "auth.error.signUpFailed" = "登録に失敗しました。もう一度お試しください。";

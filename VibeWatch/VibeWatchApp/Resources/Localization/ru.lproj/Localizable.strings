@@ -240,6 +240,7 @@
 "auth.error.invalidResponse" = "Некорректный ответ от сервера.";
 "auth.error.userNotFound" = "Пользователь не найден.";
 "auth.error.invalidCredentials" = "Неверный email или пароль.";
+"auth.error.tooManyAttempts" = "Слишком много попыток. Попробуйте позже.";
 "auth.error.networkError" = "Ошибка сети. Проверьте подключение.";
 "auth.error.databaseError" = "Ошибка базы данных при сохранении профиля. Попробуйте снова.";
 "auth.error.signUpFailed" = "Ошибка регистрации. Попробуйте снова.";

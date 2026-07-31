@@ -242,6 +242,7 @@
 "auth.error.invalidResponse" = "Ugyldig svar fra serveren.";
 "auth.error.userNotFound" = "Bruker ikke funnet.";
 "auth.error.invalidCredentials" = "Ugyldig e-post eller passord.";
+"auth.error.tooManyAttempts" = "For mange forsøk. Prøv igjen senere.";
 "auth.error.networkError" = "Nettverksfeil. Sjekk tilkoblingen din.";
 "auth.error.databaseError" = "Databasefeil ved lagring av brukerprofil. Prøv igjen.";
 "auth.error.signUpFailed" = "Registreringen mislyktes. Prøv igjen.";

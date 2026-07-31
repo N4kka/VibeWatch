@@ -242,6 +242,7 @@
 "auth.error.invalidResponse" = "सर्वर से अमान्य प्रतिक्रिया।";
 "auth.error.userNotFound" = "उपयोगकर्ता नहीं मिला।";
 "auth.error.invalidCredentials" = "अमान्य ईमेल या पासवर्ड।";
+"auth.error.tooManyAttempts" = "बहुत अधिक प्रयास। बाद में फिर से कोशिश करें।";
 "auth.error.networkError" = "नेटवर्क त्रुटि। कृपया अपना कनेक्शन जांचें।";
 "auth.error.databaseError" = "प्रोफ़ाइल सहेजते समय डेटाबेस त्रुटि। कृपया पुनः प्रयास करें।";
 "auth.error.signUpFailed" = "साइन अप विफल हुआ। कृपया पुनः प्रयास करें।";

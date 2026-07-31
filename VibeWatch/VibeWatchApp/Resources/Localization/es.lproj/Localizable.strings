@@ -243,6 +243,7 @@
 "auth.error.invalidResponse" = "Respuesta inválida del servidor.";
 "auth.error.userNotFound" = "Usuario no encontrado.";
 "auth.error.invalidCredentials" = "Email o contraseña inválidos.";
+"auth.error.tooManyAttempts" = "Demasiados intentos. Inténtalo más tarde.";
 "auth.error.networkError" = "Error de red. Por favor, comprueba tu conexión.";
 "auth.error.databaseError" = "Error de base de datos al guardar el perfil. Por favor, inténtalo de nuevo.";
 "auth.error.signUpFailed" = "Registro fallido. Por favor, inténtalo de nuevo.";

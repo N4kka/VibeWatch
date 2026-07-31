@@ -240,6 +240,7 @@
 "auth.error.invalidResponse" = "Ogiltigt svar från servern.";
 "auth.error.userNotFound" = "Användare hittades inte.";
 "auth.error.invalidCredentials" = "Ogiltig e-post eller lösenord.";
+"auth.error.tooManyAttempts" = "För många försök. Försök igen senare.";
 "auth.error.networkError" = "Nätverksfel. Kontrollera din anslutning.";
 "auth.error.databaseError" = "Databasfel när användarprofilen sparades. Försök igen.";
 "auth.error.signUpFailed" = "Registrering misslyckades. Försök igen.";

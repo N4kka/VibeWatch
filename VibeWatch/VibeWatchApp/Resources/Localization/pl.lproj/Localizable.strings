@@ -242,6 +242,7 @@
 "auth.error.invalidResponse" = "Nieprawidłowa odpowiedź z serwera.";
 "auth.error.userNotFound" = "Użytkownik nie został znaleziony.";
 "auth.error.invalidCredentials" = "Nieprawidłowy e-mail lub hasło.";
+"auth.error.tooManyAttempts" = "Zbyt wiele prób. Spróbuj ponownie później.";
 "auth.error.networkError" = "Błąd sieci. Sprawdź połączenie.";
 "auth.error.databaseError" = "Błąd bazy danych przy zapisie profilu. Spróbuj ponownie.";
 "auth.error.signUpFailed" = "Rejestracja nie powiodła się. Spróbuj ponownie.";

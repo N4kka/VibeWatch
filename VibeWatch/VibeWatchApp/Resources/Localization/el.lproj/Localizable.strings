@@ -242,6 +242,7 @@
 "auth.error.invalidResponse" = "Μη έγκυρη απάντηση από τον server.";
 "auth.error.userNotFound" = "Ο χρήστης δεν βρέθηκε.";
 "auth.error.invalidCredentials" = "Λάθος email ή κωδικός.";
+"auth.error.tooManyAttempts" = "Πολλές προσπάθειες. Δοκίμασε ξανά αργότερα.";
 "auth.error.networkError" = "Σφάλμα δικτύου. Έλεγξε τη σύνδεσή σου.";
 "auth.error.databaseError" = "Σφάλμα βάσης δεδομένων κατά την αποθήκευση προφίλ. Δοκίμασε ξανά.";
 "auth.error.signUpFailed" = "Η εγγραφή απέτυχε. Δοκίμασε ξανά.";

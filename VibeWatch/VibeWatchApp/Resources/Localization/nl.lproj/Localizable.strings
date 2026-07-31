@@ -242,6 +242,7 @@
 "auth.error.invalidResponse" = "Ongeldig antwoord van de server.";
 "auth.error.userNotFound" = "Gebruiker niet gevonden.";
 "auth.error.invalidCredentials" = "Ongeldig e-mailadres of wachtwoord.";
+"auth.error.tooManyAttempts" = "Te veel pogingen. Probeer het later opnieuw.";
 "auth.error.networkError" = "Netwerkfout. Controleer je verbinding.";
 "auth.error.databaseError" = "Databasefout bij het opslaan van je profiel. Probeer het opnieuw.";
 "auth.error.signUpFailed" = "Registreren is mislukt. Probeer het opnieuw.";

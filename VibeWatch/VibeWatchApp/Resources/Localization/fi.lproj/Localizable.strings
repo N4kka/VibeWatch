@@ -242,6 +242,7 @@
 "auth.error.invalidResponse" = "Virheellinen vastaus palvelimelta.";
 "auth.error.userNotFound" = "Käyttäjää ei löytynyt.";
 "auth.error.invalidCredentials" = "Virheellinen sähköposti tai salasana.";
+"auth.error.tooManyAttempts" = "Liikaa yrityksiä. Yritä myöhemmin uudelleen.";
 "auth.error.networkError" = "Verkkovirhe. Tarkista yhteytesi.";
 "auth.error.databaseError" = "Tietokantavirhe käyttäjäprofiilin tallennuksessa. Yritä uudelleen.";
 "auth.error.signUpFailed" = "Rekisteröityminen epäonnistui. Yritä uudelleen.";

@@ -144,20 +144,43 @@ la metà che si dimentica), `SocialActions` (l'unico posto che scrive `follower_
 tradotte nelle 20 lingue. 11 test in `SocialProfileTests` (file **registrato a mano nel
 pbxproj**, nei soliti quattro punti).
 
-Del blocco 8 resta solo il login con username (sotto). Il prossimo blocco è il **9** (favorites,
-rating in stelle, stats, diario), che si appoggia a `get_public_profile` per la parte pubblica.
+Il blocco 8 è **chiuso** (manca solo la prova su dispositivo del login con username, sotto). Il
+prossimo blocco è il **9** (favorites, rating in stelle, stats, diario), che si appoggia a
+`get_public_profile` per la parte pubblica.
 
-### Il login con username è ancora rotto, e la spec si contraddice
+### Il login con username — chiuso il 2026-07-31, Edge Function `login-with-username`
 
-`getEmailFromUsername` legge `profiles.email` da chiamante anonimo; la RLS lo blocca, quindi
-`signIn` con username **fallisce sempre**. §3.7 dice che con `public_profiles` "la risoluzione
-diventa possibile" — ma quella vista esclude l'email di proposito, quindi la risoluzione da lì è
-impossibile per costruzione.
+La strada vecchia era doppiamente indifendibile: `getEmailFromUsername` cercava `profiles.email`
+con un **ilike fuzzy su `display_name`** — un endpoint di raccolta indirizzi, se la RLS non
+l'avesse bloccato facendo fallire ogni login con username. Rimossa.
 
-Le vere alternative sono due, e vanno decise prima di scrivere: una RPC che restituisce l'email
-dato lo username — cioè un endpoint di raccolta indirizzi, da scartare — oppure una Edge Function
-che fa **tutto** il login server-side (username → email → GoTrue) e restituisce la sessione senza
-che l'email passi mai dal client. La seconda è l'unica difendibile.
+Ora risoluzione e autenticazione sono **atomiche** nella funzione (`verify_jwt` spento al deploy:
+il chiamante non ha ancora una sessione, è il login): username → email con la chiave di servizio →
+grant password verso GoTrue → la sessione torna al client, che la installa con `setSession`.
+L'email non lascia mai il server senza la password giusta. Tre difese, ciascuna col suo perché:
+
+1. **ogni fallimento di credenziali risponde `invalid_credentials`, identico** — distinguere
+   "username inesistente" da "password sbagliata" sarebbe un oracolo sugli username (uno username
+   fuori forma pure: è una credenziale sbagliata, non una richiesta malformata);
+2. **per uno username inesistente il giro verso GoTrue si fa comunque**, con un'email esca su TLD
+   `.invalid` (RFC 2606) — senza, la latenza direbbe quali username esistono;
+3. **tetto per IP** (30/ora, provider `auth_login` in `api_proxy_budget`, migration
+   `20260801160000`): GoTrue da dietro la funzione vede l'IP della funzione, non del client,
+   quindi il suo rate limiting sul brute force non basta più. Il 429 al client dice "troppi
+   tentativi" (`auth.error.tooManyAttempts`, 20 lingue): non rivela niente e non confonde.
+
+**Collaudato via HTTP in produzione** su utente usa-e-getta (creato con `crypt` e colonne token a
+`''`, cancellato alla fine, residui zero): credenziali giuste → sessione **spendibile** (REST
+sotto RLS risponde con la propria riga); maiuscole e spazi normalizzati; password sbagliata e
+username inesistente → **corpi identici**; campo mancante → `invalid_request`; senza chiave →
+401; il budget conta i tentativi di credenziali e **non** le richieste malformate. Nota emersa:
+la **legacy anon key è disabilitata** sul progetto — la funzione parla con GoTrue con la chiave
+dell'ambiente e funziona, ma qualsiasi codice che si aspetti una anon key JWT valida è già rotto
+oggi.
+
+6 test Deno sulla logica pura (`deno test supabase/functions/login-with-username/`).
+**Da provare sul dispositivo**: login con `@username` + password da un account email (gli account
+OAuth una password non ce l'hanno — per loro il campo resta email o niente).
 
 ## Il blocco 8, quello che è già in produzione
 
@@ -402,7 +425,7 @@ nota.
 | 5 | Integrazione client | **fatto per la lettura**. SQLite + whitelist + pull + conflitti verificati su dati veri; il percorso di scrittura è cablato ma senza chiamanti (arrivano col blocco 7) |
 | 6 | Pipeline import + report | **fasi 1-4 in produzione e collaudate end-to-end**; fasi 5-6 scritte e verdi in SQL, `import-finalize` da deployare |
 | 7 | UI Tracking | **chiuso.** Schermata, tab bar e migrazione dello storico in produzione; 971 episodi migrati sul dispositivo dell'autore al primo tentativo; §13.6 misurato a **208,9 ms** su 300; 20 lingue allineate |
-| 8 | Username, `public_profiles`, ricerca, follow | **tutto in produzione e in repo**: schema, backfill, schermata di scelta, `user_follows`, `search_users`, `get_public_profile`, ramo in `apply_mutations`, sync client e UI (ricerca + profilo). La UI social **non è mai stata provata sul dispositivo**; manca il login con username |
+| 8 | Username, `public_profiles`, ricerca, follow | **chiuso, tutto in produzione**: schema, backfill, schermata di scelta, `user_follows`, `search_users`, `get_public_profile`, ramo in `apply_mutations`, sync client, UI (provata sul dispositivo) e login con username via Edge Function (collaudato via HTTP; da provare sul dispositivo) |
 | 9-10 | Favorites, stats, diario, universal links | da fare |
 
 ## Cosa gira in produzione adesso
@@ -428,7 +451,10 @@ nota.
   `postgres=X, service_role=X, authenticated=X` — **niente `anon`**.
 - **`user_follows`** (RLS, trigger `user_follows_blocked` che applica i blocchi in scrittura) e
   **`search_users`** (`security definer`, solo `authenticated`, `proacl` verificato). Dal
-  2026-07-31, migration `20260801130000`.
+  2026-07-31, migration `20260801130000`. Più **`get_public_profile`** (`20260801150000`) e il
+  ramo `user_follows` in `apply_mutations` (`20260801140000`, splice sul `prosrc` reale).
+- Edge Function **`login-with-username`**, `verify_jwt` spento, con budget per IP
+  (provider `auth_login`, 30/ora, migration `20260801160000`).
 - **Import**: tabelle `import_jobs` e `import_staging` (RLS con sole policy di lettura: le fasi le
   muove il server), bucket privato `imports` con policy che confinano ogni utente alla propria
   cartella, Edge Function `import-parse` (fase 2, **versione 3**), `import-resolve` (fase 3) e
@@ -798,6 +824,7 @@ supabase/tests/run.sh                      # Postgres usa-e-getta, migration x2
                                            # tracking_test 80 asserzioni + social_test 82
 python3 test_oracle.py                     # oracolo, 31 test
 cd supabase/functions/catalog-resolve && deno test            # logica pura, 28 test
+cd supabase/functions/login-with-username && deno test        # login con username, 6 test
 cd supabase/functions/import-parse   && deno test --allow-read  # parser, 14 test
 
 # Il 15° test del parser (l'apertura dell'archivio) gira solo se gli si dà l'export vero,
