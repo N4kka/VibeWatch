@@ -685,3 +685,22 @@
 /* Chiavi chiamate dal codice e mai tradotte */
 "auth.error.invalidLink" = "Den här länken är ogiltig eller har gått ut.";
 "clips.noListsYet" = "Inga listor ännu";
+
+/* SPEC v3 §3.7 — scelta dello username */
+"username.confirm.title" = "Bekräfta ditt användarnamn";
+"username.confirm.subtitle" = "Vi tog det från ditt namn. Så hittar andra dig — behåll det eller välj ett annat.";
+"username.confirm.action" = "Bekräfta";
+"username.choose.title" = "Välj ditt användarnamn";
+"username.choose.subtitle" = "Du behöver ett för att synas på VibeWatch: så hittar andra din profil och dina listor.";
+"username.choose.action" = "Fortsätt";
+"username.placeholder" = "användarnamn";
+"username.hint" = "Små bokstäver, siffror och _ — 3 till 20 tecken.";
+"username.checking" = "Kontrollerar…";
+"username.available" = "Ledigt";
+"username.later" = "Inte nu";
+"username.error.empty" = "Välj ett användarnamn.";
+"username.error.tooShort" = "Minst 3 tecken.";
+"username.error.tooLong" = "Högst 20 tecken.";
+"username.error.invalidCharacters" = "Bara små bokstäver, siffror och _.";
+"username.error.taken" = "Redan taget.";
+"username.error.reserved" = "Det här är reserverat.";

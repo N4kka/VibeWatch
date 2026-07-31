@@ -385,6 +385,53 @@ class SupabaseService: ObservableObject {
         }
     }
 
+    // MARK: - Username (SPEC v3 §3.7)
+
+    /// Lo stato dello username del proprietario: qual è, e se l'ha mai confermato.
+    ///
+    /// `username_confirmed_at` nullo significa "assegnato dal backfill e mai visto da chi lo
+    /// porta": è il segnale che fa comparire la schermata di scelta. Un `username` nullo significa
+    /// che il nome non era derivabile — sono 19 profili — e per quelli la schermata non è una
+    /// conferma ma l'unico modo di comparire in `public_profiles`.
+    func usernameState() async throws -> (username: String?, confirmed: Bool)? {
+        guard let client, let userId = currentUser?.id else { throw SupabaseError.notAuthenticated }
+
+        struct Row: Decodable {
+            let username: String?
+            let usernameConfirmedAt: Date?
+            enum CodingKeys: String, CodingKey {
+                case username
+                case usernameConfirmedAt = "username_confirmed_at"
+            }
+        }
+
+        let rows: [Row] = try await client
+            .from("profiles")
+            .select("username,username_confirmed_at")
+            .eq("id", value: userId)
+            .limit(1)
+            .execute()
+            .value
+
+        guard let row = rows.first else { return nil }
+        return (row.username, row.usernameConfirmedAt != nil)
+    }
+
+    /// Libero? Il server decide: qui non si può sapere se un nome è riservato.
+    func usernameAvailable(_ username: String) async throws -> Bool {
+        let data = try await callRPC(
+            function: "username_available", payload: ["p_username": username])
+        return (try? JSONSerialization.jsonObject(with: data)) as? Bool ?? false
+    }
+
+    /// Sceglie o conferma. Gli esiti "occupato" e "riservato" tornano come risposta, non come
+    /// eccezione: in questa schermata sono la cosa più probabile che succeda.
+    func setUsername(_ username: String) async throws -> SetUsernameOutcome {
+        let data = try await callRPC(function: "set_username", payload: ["p_username": username])
+        let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
+        return SetUsernameOutcome(json: json)
+    }
+
     private func callRPC(function: String, payload: [String: Any]) async throws -> Data {
         guard let baseURL = URL(string: Config.supabaseURL) else {
             throw SupabaseError.notConfigured

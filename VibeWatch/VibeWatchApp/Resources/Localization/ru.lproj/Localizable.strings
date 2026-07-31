@@ -685,3 +685,22 @@
 /* Chiavi chiamate dal codice e mai tradotte */
 "auth.error.invalidLink" = "Эта ссылка недействительна или устарела.";
 "clips.noListsYet" = "Списков пока нет";
+
+/* SPEC v3 §3.7 — scelta dello username */
+"username.confirm.title" = "Подтвердите имя пользователя";
+"username.confirm.subtitle" = "Мы составили его из вашего имени. По нему вас найдут другие — оставьте это или выберите другое.";
+"username.confirm.action" = "Подтвердить";
+"username.choose.title" = "Выберите имя пользователя";
+"username.choose.subtitle" = "Оно нужно, чтобы вас было видно в VibeWatch: по нему другие находят ваш профиль и списки.";
+"username.choose.action" = "Продолжить";
+"username.placeholder" = "имя пользователя";
+"username.hint" = "Строчные буквы, цифры и _ — от 3 до 20 символов.";
+"username.checking" = "Проверяем…";
+"username.available" = "Свободно";
+"username.later" = "Не сейчас";
+"username.error.empty" = "Выберите имя пользователя.";
+"username.error.tooShort" = "Не менее 3 символов.";
+"username.error.tooLong" = "Не более 20 символов.";
+"username.error.invalidCharacters" = "Только строчные латинские буквы, цифры и _.";
+"username.error.taken" = "Уже занято.";
+"username.error.reserved" = "Это имя зарезервировано.";

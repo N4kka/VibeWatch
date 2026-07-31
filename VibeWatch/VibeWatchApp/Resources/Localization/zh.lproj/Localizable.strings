@@ -682,3 +682,22 @@
 /* Chiavi chiamate dal codice e mai tradotte */
 "auth.error.invalidLink" = "此链接无效或已过期。";
 "clips.noListsYet" = "还没有列表";
+
+/* SPEC v3 §3.7 — scelta dello username */
+"username.confirm.title" = "确认你的用户名";
+"username.confirm.subtitle" = "这是根据你的名字生成的。别人会用它找到你——保留它，或者换一个。";
+"username.confirm.action" = "确认";
+"username.choose.title" = "选择你的用户名";
+"username.choose.subtitle" = "你需要一个才能出现在 VibeWatch 上：别人用它找到你的主页和列表。";
+"username.choose.action" = "继续";
+"username.placeholder" = "用户名";
+"username.hint" = "小写字母、数字和 _ —— 3 到 20 个字符。";
+"username.checking" = "检查中…";
+"username.available" = "可以使用";
+"username.later" = "以后再说";
+"username.error.empty" = "请选择一个用户名。";
+"username.error.tooShort" = "至少 3 个字符。";
+"username.error.tooLong" = "最多 20 个字符。";
+"username.error.invalidCharacters" = "只能用小写字母、数字和 _。";
+"username.error.taken" = "已被占用。";
+"username.error.reserved" = "该名称已被保留。";

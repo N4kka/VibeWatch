@@ -699,3 +699,22 @@
 /* Chiavi chiamate dal codice e mai tradotte */
 "auth.error.invalidLink" = "Dette link er ugyldigt eller udløbet.";
 "clips.noListsYet" = "Ingen lister endnu";
+
+/* SPEC v3 §3.7 — scelta dello username */
+"username.confirm.title" = "Bekræft dit brugernavn";
+"username.confirm.subtitle" = "Vi valgte det ud fra dit navn. Det er sådan andre finder dig — behold det, eller vælg et andet.";
+"username.confirm.action" = "Bekræft";
+"username.choose.title" = "Vælg dit brugernavn";
+"username.choose.subtitle" = "Du skal have et for at være med på VibeWatch: det er sådan andre finder din profil og dine lister.";
+"username.choose.action" = "Fortsæt";
+"username.placeholder" = "brugernavn";
+"username.hint" = "Små bogstaver, tal og _ — 3 til 20 tegn.";
+"username.checking" = "Tjekker…";
+"username.available" = "Ledigt";
+"username.later" = "Ikke nu";
+"username.error.empty" = "Vælg et brugernavn.";
+"username.error.tooShort" = "Mindst 3 tegn.";
+"username.error.tooLong" = "Højst 20 tegn.";
+"username.error.invalidCharacters" = "Kun små bogstaver, tal og _.";
+"username.error.taken" = "Allerede taget.";
+"username.error.reserved" = "Dette er reserveret.";

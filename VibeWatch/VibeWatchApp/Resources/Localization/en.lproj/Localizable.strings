@@ -698,3 +698,22 @@
 /* Chiavi chiamate dal codice e mai tradotte */
 "auth.error.invalidLink" = "This link is invalid or has expired.";
 "clips.noListsYet" = "No lists yet";
+
+/* SPEC v3 §3.7 — scelta dello username */
+"username.confirm.title" = "Confirm your username";
+"username.confirm.subtitle" = "We picked this one from your name. It's how other people will find you — keep it or choose another.";
+"username.confirm.action" = "Confirm";
+"username.choose.title" = "Choose your username";
+"username.choose.subtitle" = "You need one to appear on VibeWatch: it's how other people find your profile and your lists.";
+"username.choose.action" = "Continue";
+"username.placeholder" = "username";
+"username.hint" = "Lowercase letters, numbers and _ — 3 to 20 characters.";
+"username.checking" = "Checking…";
+"username.available" = "Available";
+"username.later" = "Not now";
+"username.error.empty" = "Pick a username.";
+"username.error.tooShort" = "At least 3 characters.";
+"username.error.tooLong" = "20 characters at most.";
+"username.error.invalidCharacters" = "Only lowercase letters, numbers and _.";
+"username.error.taken" = "Already taken.";
+"username.error.reserved" = "This one is reserved.";

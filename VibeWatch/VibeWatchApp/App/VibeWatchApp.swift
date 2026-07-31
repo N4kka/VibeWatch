@@ -65,6 +65,13 @@ struct VibeWatchApp: App {
                 .fullScreenCover(item: $appState.updateRequirement) { requirement in
                     UpdateRequiredView(requirement: requirement)
                 }
+                // §3.7: "richiesta di conferma al primo accesso". Uno `sheet` e non un
+                // `fullScreenCover`: chi rimanda deve poterla chiudere, e la ritrova al prossimo
+                // avvio. Una schermata da cui non si esce e' una trappola, e questa app ne ha gia'
+                // avuta una.
+                .sheet(isPresented: $appState.showUsernameSetup) {
+                    UsernameSetupView { appState.showUsernameSetup = false }
+                }
         }
     }
 }
@@ -81,6 +88,9 @@ class AppState: ObservableObject {
     @Published var isPreloading = true // Track splash state
     @Published var shouldShowSignIn = false // Trigger for redirecting to sign in flow
     @Published var updateRequirement: UpdateRequirement?
+    /// §3.7. Vero quando l'utente non ha uno username, oppure ne ha uno che gli abbiamo assegnato
+    /// noi col backfill e che non ha mai confermato.
+    @Published var showUsernameSetup = false
     
     private let authService: AuthService
     private let dataCoordinator = DataCoordinator.shared
@@ -182,6 +192,11 @@ class AppState: ObservableObject {
         // Tracking e' vuota. Va dopo il sync delle liste, che e' una delle sorgenti che legge.
         // Una tantum, con flag in app_metadata: dopo la prima volta costa una SELECT.
         await LegacyTrackingMigration.shared.runIfNeeded(userId: userId)
+
+        // SPEC v3 §3.7. La domanda la fa il server: `username_confirmed_at` nullo significa
+        // "assegnato dal backfill e mai visto da chi lo porta". Un flag locale si perderebbe alla
+        // reinstallazione e la schermata ricomparirebbe a chi aveva gia' scelto.
+        showUsernameSetup = await UsernameSetupViewModel.isNeeded()
 
         Logger.info("[AppState] Full sync completed on app launch")
     }

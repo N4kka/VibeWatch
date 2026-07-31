@@ -697,3 +697,22 @@
 /* Chiavi chiamate dal codice e mai tradotte */
 "auth.error.invalidLink" = "このリンクは無効か、有効期限が切れています。";
 "clips.noListsYet" = "リストがまだありません";
+
+/* SPEC v3 §3.7 — scelta dello username */
+"username.confirm.title" = "ユーザー名を確認";
+"username.confirm.subtitle" = "お名前から候補を作りました。ほかの人はこの名前であなたを見つけます。このまま使うか、変更してください。";
+"username.confirm.action" = "確認";
+"username.choose.title" = "ユーザー名を選ぶ";
+"username.choose.subtitle" = "VibeWatch に表示されるために必要です。ほかの人はこの名前であなたのプロフィールとリストを見つけます。";
+"username.choose.action" = "続ける";
+"username.placeholder" = "ユーザー名";
+"username.hint" = "半角小文字・数字・_ の 3〜20 文字。";
+"username.checking" = "確認中…";
+"username.available" = "使えます";
+"username.later" = "あとで";
+"username.error.empty" = "ユーザー名を入力してください。";
+"username.error.tooShort" = "3 文字以上にしてください。";
+"username.error.tooLong" = "20 文字以内にしてください。";
+"username.error.invalidCharacters" = "半角小文字・数字・_ のみ使えます。";
+"username.error.taken" = "すでに使われています。";
+"username.error.reserved" = "この名前は使用できません。";

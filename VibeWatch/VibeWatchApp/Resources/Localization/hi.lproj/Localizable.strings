@@ -697,3 +697,22 @@
 /* Chiavi chiamate dal codice e mai tradotte */
 "auth.error.invalidLink" = "यह लिंक अमान्य है या समाप्त हो चुका है।";
 "clips.noListsYet" = "अभी कोई सूची नहीं";
+
+/* SPEC v3 §3.7 — scelta dello username */
+"username.confirm.title" = "अपना यूज़रनेम पक्का करें";
+"username.confirm.subtitle" = "यह हमने आपके नाम से चुना है। दूसरे आपको इसी से खोजेंगे — इसे रखें या दूसरा चुनें।";
+"username.confirm.action" = "पक्का करें";
+"username.choose.title" = "अपना यूज़रनेम चुनें";
+"username.choose.subtitle" = "VibeWatch पर दिखने के लिए यह ज़रूरी है: दूसरे इसी से आपकी प्रोफ़ाइल और लिस्ट खोजते हैं।";
+"username.choose.action" = "आगे बढ़ें";
+"username.placeholder" = "यूज़रनेम";
+"username.hint" = "छोटे अक्षर, अंक और _ — 3 से 20 वर्ण।";
+"username.checking" = "जाँच हो रही है…";
+"username.available" = "उपलब्ध";
+"username.later" = "अभी नहीं";
+"username.error.empty" = "कोई यूज़रनेम चुनें।";
+"username.error.tooShort" = "कम से कम 3 वर्ण।";
+"username.error.tooLong" = "ज़्यादा से ज़्यादा 20 वर्ण।";
+"username.error.invalidCharacters" = "सिर्फ़ छोटे अक्षर, अंक और _।";
+"username.error.taken" = "पहले से लिया जा चुका है।";
+"username.error.reserved" = "यह सुरक्षित रखा गया है।";

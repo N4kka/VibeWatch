@@ -697,3 +697,22 @@
 /* Chiavi chiamate dal codice e mai tradotte */
 "auth.error.invalidLink" = "Deze link is ongeldig of verlopen.";
 "clips.noListsYet" = "Nog geen lijsten";
+
+/* SPEC v3 §3.7 — scelta dello username */
+"username.confirm.title" = "Bevestig je gebruikersnaam";
+"username.confirm.subtitle" = "Deze hebben we uit je naam afgeleid. Zo vinden anderen je — houd hem, of kies een andere.";
+"username.confirm.action" = "Bevestigen";
+"username.choose.title" = "Kies je gebruikersnaam";
+"username.choose.subtitle" = "Je hebt er een nodig om zichtbaar te zijn op VibeWatch: zo vinden anderen je profiel en je lijsten.";
+"username.choose.action" = "Doorgaan";
+"username.placeholder" = "gebruikersnaam";
+"username.hint" = "Kleine letters, cijfers en _ — 3 tot 20 tekens.";
+"username.checking" = "Controleren…";
+"username.available" = "Beschikbaar";
+"username.later" = "Niet nu";
+"username.error.empty" = "Kies een gebruikersnaam.";
+"username.error.tooShort" = "Minstens 3 tekens.";
+"username.error.tooLong" = "Hoogstens 20 tekens.";
+"username.error.invalidCharacters" = "Alleen kleine letters, cijfers en _.";
+"username.error.taken" = "Al bezet.";
+"username.error.reserved" = "Deze is gereserveerd.";

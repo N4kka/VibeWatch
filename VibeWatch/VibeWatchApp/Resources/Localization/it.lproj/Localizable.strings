@@ -696,3 +696,22 @@
 /* Chiavi chiamate dal codice e mai tradotte */
 "auth.error.invalidLink" = "Questo link non è valido o è scaduto.";
 "clips.noListsYet" = "Nessuna lista";
+
+/* SPEC v3 §3.7 — scelta dello username */
+"username.confirm.title" = "Conferma il tuo username";
+"username.confirm.subtitle" = "Questo l'abbiamo scelto dal tuo nome. È come ti troveranno gli altri: tienilo o cambialo.";
+"username.confirm.action" = "Conferma";
+"username.choose.title" = "Scegli il tuo username";
+"username.choose.subtitle" = "Ti serve per comparire su VibeWatch: è come gli altri trovano il tuo profilo e le tue liste.";
+"username.choose.action" = "Continua";
+"username.placeholder" = "username";
+"username.hint" = "Minuscole, cifre e _ — da 3 a 20 caratteri.";
+"username.checking" = "Controllo…";
+"username.available" = "Disponibile";
+"username.later" = "Non ora";
+"username.error.empty" = "Scegli uno username.";
+"username.error.tooShort" = "Almeno 3 caratteri.";
+"username.error.tooLong" = "Al massimo 20 caratteri.";
+"username.error.invalidCharacters" = "Solo minuscole, cifre e _.";
+"username.error.taken" = "Già preso.";
+"username.error.reserved" = "Questo è riservato.";

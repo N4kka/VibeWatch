@@ -282,6 +282,81 @@ select t.is_true((select array_to_string(p.proacl, ',') like '%authenticated=X%'
                     from pg_proc p where p.proname = 'username_available'),
             'username_available lo e'' da authenticated');
 
+\echo ''
+\echo '=== §3.7 set_username: scegliere e confermare'
+
+-- Si riparte dallo stato che lascia il backfill: username assegnato, mai cambiato dall'utente,
+-- mai confermato. I test sopra hanno scritto `username_changed_at` con UPDATE dirette, e
+-- ereditarle qui misurerebbe la storia del file invece del comportamento di `set_username`.
+-- Il trigger si spegne per la stessa ragione per cui lo spegne il backfill: sul ramo "username
+-- invariato" riscriverebbe il vecchio valore sopra il null.
+alter table public.profiles disable trigger profiles_username_changed;
+update public.profiles set username = 'anna_rossi', username_changed_at = null,
+                           username_confirmed_at = null
+ where id = 'aaaaaaaa-0000-0000-0000-000000000001';
+alter table public.profiles enable trigger profiles_username_changed;
+
+set local role authenticated;
+set local request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
+
+-- Il caso dei 295 del backfill: confermare il nome che si ha gia'.
+select t.eq(public.set_username('anna_rossi')->>'ok', 'true', 'confermare il proprio nome riesce');
+select t.eq(public.set_username('anna_rossi')->>'changed', 'false',
+            'e non conta come cambio: non e'' un nome nuovo');
+select t.is_true((select username_confirmed_at is not null from public.profiles
+                   where id = 'aaaaaaaa-0000-0000-0000-000000000001'),
+            'ma segna la conferma, che e'' cio'' che fa sparire la schermata');
+select t.is_true((select username_changed_at is null from public.profiles
+                   where id = 'aaaaaaaa-0000-0000-0000-000000000001'),
+            'e non tocca username_changed_at: un futuro limite di frequenza non deve scattare qui');
+
+-- Gli esiti, che sono risposte e non errori.
+select t.eq(public.set_username('anna_rossi2')->>'reason', 'taken', 'un nome occupato');
+select t.eq(public.set_username('admin')->>'reason', 'reserved',
+            'un nome riservato si distingue da uno occupato: il client non puo'' saperlo da solo');
+select t.eq(public.set_username('ab')->>'reason', 'invalid_format', 'troppo corto');
+select t.eq(public.set_username('Anna')->>'reason', 'invalid_format', 'maiuscole');
+select t.eq(public.set_username(null)->>'reason', 'invalid_format', 'null non esplode');
+
+-- Il cambio vero.
+select t.eq(public.set_username('anna_r')->>'ok', 'true', 'cambiare in un nome libero riesce');
+select t.eq((select username::text from public.profiles
+              where id = 'aaaaaaaa-0000-0000-0000-000000000001'), 'anna_r', 'e la riga cambia');
+select t.is_true((select username_changed_at is not null from public.profiles
+                   where id = 'aaaaaaaa-0000-0000-0000-000000000001'),
+            'questo si'' che e'' un cambio, e la data lo dice');
+select t.eq(public.username_available('anna_rossi'), true, 'e il nome lasciato torna libero');
+
+\echo ''
+\echo '=== il buco che il backfill aveva lasciato: i riservati valgono anche su un PATCH diretto'
+
+-- `username_reserved` la consultavano solo le funzioni che *propongono*. Un client che scrive
+-- direttamente su profiles passava il formato, passava l'indice unico, e si prendeva @admin.
+select t.rejects($$
+  update public.profiles set username = 'admin'
+   where id = 'aaaaaaaa-0000-0000-0000-000000000001'
+$$, 'un PATCH diretto su un nome riservato viene rifiutato dal trigger');
+
+select t.rejects($$
+  update public.profiles set username = 'VibeWatch'
+   where id = 'aaaaaaaa-0000-0000-0000-000000000001'
+$$, 'e nemmeno cambiando le maiuscole (il formato lo ferma comunque)');
+
+select t.eq((select username::text from public.profiles
+              where id = 'aaaaaaaa-0000-0000-0000-000000000001'), 'anna_r',
+            'e il nome non e'' cambiato');
+
+reset role;
+
+-- Chi puo' chiamarla.
+select t.eq((select count(*)::integer from pg_proc p
+              where p.proname = 'set_username'
+                and array_to_string(p.proacl, ',') like '%anon=X%'), 0,
+            'set_username non e'' chiamabile da anon');
+select t.is_true((select array_to_string(p.proacl, ',') like '%authenticated=X%'
+                    from pg_proc p where p.proname = 'set_username'),
+            'ma lo e'' da authenticated');
+
 rollback;
 
 \echo ''

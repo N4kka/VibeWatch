@@ -697,3 +697,22 @@
 /* Chiavi chiamate dal codice e mai tradotte */
 "auth.error.invalidLink" = "Tämä linkki on virheellinen tai vanhentunut.";
 "clips.noListsYet" = "Ei vielä listoja";
+
+/* SPEC v3 §3.7 — scelta dello username */
+"username.confirm.title" = "Vahvista käyttäjänimesi";
+"username.confirm.subtitle" = "Valitsimme sen nimesi perusteella. Näin muut löytävät sinut — pidä se tai valitse toinen.";
+"username.confirm.action" = "Vahvista";
+"username.choose.title" = "Valitse käyttäjänimi";
+"username.choose.subtitle" = "Tarvitset sen näkyäksesi VibeWatchissa: näin muut löytävät profiilisi ja listasi.";
+"username.choose.action" = "Jatka";
+"username.placeholder" = "käyttäjänimi";
+"username.hint" = "Pieniä kirjaimia, numeroita ja _ — 3–20 merkkiä.";
+"username.checking" = "Tarkistetaan…";
+"username.available" = "Vapaa";
+"username.later" = "Ei nyt";
+"username.error.empty" = "Valitse käyttäjänimi.";
+"username.error.tooShort" = "Vähintään 3 merkkiä.";
+"username.error.tooLong" = "Enintään 20 merkkiä.";
+"username.error.invalidCharacters" = "Vain pieniä kirjaimia, numeroita ja _.";
+"username.error.taken" = "Jo varattu.";
+"username.error.reserved" = "Tämä on varattu käyttöön.";

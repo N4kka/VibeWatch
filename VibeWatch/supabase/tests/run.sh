@@ -59,6 +59,7 @@ for file in "$MIGRATIONS"/*.sql; do
     20260801000000_legacy_seen_shows_expansion.sql) ;;
     20260801100000_usernames_and_public_profiles.sql) ;;
     20260801110000_backfill_usernames.sql) ;;
+    20260801120000_set_username.sql) ;;
     *) continue ;;
   esac
   [ "$pass" = 1 ] && echo "   $(basename "$file")"

@@ -697,3 +697,22 @@
 /* Chiavi chiamate dal codice e mai tradotte */
 "auth.error.invalidLink" = "Αυτός ο σύνδεσμος δεν είναι έγκυρος ή έχει λήξει.";
 "clips.noListsYet" = "Καμία λίστα ακόμα";
+
+/* SPEC v3 §3.7 — scelta dello username */
+"username.confirm.title" = "Επιβεβαίωσε το όνομα χρήστη";
+"username.confirm.subtitle" = "Το επιλέξαμε από το όνομά σου. Έτσι θα σε βρίσκουν οι άλλοι — κράτησέ το ή διάλεξε άλλο.";
+"username.confirm.action" = "Επιβεβαίωση";
+"username.choose.title" = "Διάλεξε όνομα χρήστη";
+"username.choose.subtitle" = "Το χρειάζεσαι για να εμφανίζεσαι στο VibeWatch: έτσι βρίσκουν οι άλλοι το προφίλ και τις λίστες σου.";
+"username.choose.action" = "Συνέχεια";
+"username.placeholder" = "όνομα χρήστη";
+"username.hint" = "Πεζά, αριθμοί και _ — από 3 έως 20 χαρακτήρες.";
+"username.checking" = "Έλεγχος…";
+"username.available" = "Διαθέσιμο";
+"username.later" = "Όχι τώρα";
+"username.error.empty" = "Διάλεξε ένα όνομα χρήστη.";
+"username.error.tooShort" = "Τουλάχιστον 3 χαρακτήρες.";
+"username.error.tooLong" = "Το πολύ 20 χαρακτήρες.";
+"username.error.invalidCharacters" = "Μόνο πεζά, αριθμοί και _.";
+"username.error.taken" = "Χρησιμοποιείται ήδη.";
+"username.error.reserved" = "Αυτό είναι δεσμευμένο.";

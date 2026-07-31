@@ -685,3 +685,22 @@
 /* Chiavi chiamate dal codice e mai tradotte */
 "auth.error.invalidLink" = "Bu bağlantı geçersiz ya da süresi dolmuş.";
 "clips.noListsYet" = "Henüz liste yok";
+
+/* SPEC v3 §3.7 — scelta dello username */
+"username.confirm.title" = "Kullanıcı adını onayla";
+"username.confirm.subtitle" = "Bunu adından türettik. Başkaları seni böyle bulacak — bunu tut ya da başka bir tane seç.";
+"username.confirm.action" = "Onayla";
+"username.choose.title" = "Kullanıcı adını seç";
+"username.choose.subtitle" = "VibeWatch'ta görünmek için gerekli: başkaları profilini ve listelerini böyle buluyor.";
+"username.choose.action" = "Devam";
+"username.placeholder" = "kullanıcı adı";
+"username.hint" = "Küçük harf, rakam ve _ — 3 ile 20 karakter.";
+"username.checking" = "Kontrol ediliyor…";
+"username.available" = "Uygun";
+"username.later" = "Şimdi değil";
+"username.error.empty" = "Bir kullanıcı adı seç.";
+"username.error.tooShort" = "En az 3 karakter.";
+"username.error.tooLong" = "En fazla 20 karakter.";
+"username.error.invalidCharacters" = "Yalnızca küçük harf, rakam ve _.";
+"username.error.taken" = "Zaten alınmış.";
+"username.error.reserved" = "Bu ad ayrılmış.";

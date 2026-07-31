@@ -695,3 +695,22 @@
 /* Chiavi chiamate dal codice e mai tradotte */
 "auth.error.invalidLink" = "Este enlace no es válido o ha caducado.";
 "clips.noListsYet" = "Todavía no hay listas";
+
+/* SPEC v3 §3.7 — scelta dello username */
+"username.confirm.title" = "Confirma tu nombre de usuario";
+"username.confirm.subtitle" = "Lo hemos sacado de tu nombre. Así te encontrarán los demás: consérvalo o elige otro.";
+"username.confirm.action" = "Confirmar";
+"username.choose.title" = "Elige tu nombre de usuario";
+"username.choose.subtitle" = "Lo necesitas para aparecer en VibeWatch: así los demás encuentran tu perfil y tus listas.";
+"username.choose.action" = "Continuar";
+"username.placeholder" = "nombre de usuario";
+"username.hint" = "Minúsculas, números y _ — de 3 a 20 caracteres.";
+"username.checking" = "Comprobando…";
+"username.available" = "Disponible";
+"username.later" = "Ahora no";
+"username.error.empty" = "Elige un nombre de usuario.";
+"username.error.tooShort" = "Al menos 3 caracteres.";
+"username.error.tooLong" = "Como máximo 20 caracteres.";
+"username.error.invalidCharacters" = "Solo minúsculas, números y _.";
+"username.error.taken" = "Ya está en uso.";
+"username.error.reserved" = "Este está reservado.";
