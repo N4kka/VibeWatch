@@ -5,9 +5,15 @@
 
 ## Da fare per prima cosa
 
-**Blocco 4, la paginazione del pull.** Tocca il client iOS: serve poter buildare (Xcode).
+**Blocco 5, integrazione client** (SQLite, whitelist, outbox, pull, conflitti). Dipende da 3 e 4,
+entrambi chiusi.
 
-`apply_mutations` è applicata e collaudata — vedi sotto.
+Una decisione da prendere lì, lasciata aperta di proposito dal blocco 4: §5 suggerisce di **non
+ritirare mai `watch_events` per intero** sul client, ma solo `tv_show_state` (una riga per serie) e
+gli eventi degli ultimi N mesi per il diario. Oggi `watch_events` non è ancora nella pull-list, e
+`SyncPagination.walk` non sa filtrare: il filtro va aggiunto quando la tabella entra nella lista,
+non prima. Con la paginazione in piedi, ritirare 20.000 eventi ora *funziona* — la domanda è se
+convenga, non se si possa.
 
 ## Stato dei blocchi di §12
 
@@ -18,8 +24,8 @@
 | 2 | Catalogo + `catalog-resolve` | **fatto e in produzione**, verificato end-to-end su Game of Thrones |
 | 3 | `watch_events` + `tv_show_state` | **fatto e in produzione**. Harness SQL, 64 asserzioni verdi |
 | — | `apply_mutations` (§4, §7.2) | **fatto e in produzione**, collaudato su utente usa-e-getta |
-| 4 | Paginazione del pull | da fare ← ripartire da qui. **Tocca il client iOS: serve poter buildare** |
-| 5+ | Integrazione client, import, UI, sociale | da fare |
+| 4 | Paginazione del pull | **fatto**. `SyncPagination`, 8 test verdi |
+| 5+ | Integrazione client, import, UI, sociale | da fare ← ripartire da qui |
 
 ## Cosa gira in produzione adesso
 
@@ -42,6 +48,21 @@
 - Catalogo popolato con una sola serie di prova: Game of Thrones (1399), 373 episodi.
 
 ## Cose imparate che risparmiano tempo
+
+- **Il `DA VERIFICARE` di §5 era vero**: il pull faceva `select("*")` senza `range()` *e* senza
+  `order()`. Il tetto di questo progetto però non è PostgREST — `pgrst.db_max_rows` non è impostato
+  (verificato il 2026-07-31 su `pg_db_role_setting`) — ma lo **`statement_timeout = 8s` del ruolo
+  `authenticated`**: 20.000 righe in una richiesta sola non tornavano troncate in silenzio, non
+  tornavano affatto. Il troncamento silenzioso resta però a un `ALTER ROLE` di distanza.
+- **`order()` non è cosmetico quando si pagina.** Senza `ORDER BY` Postgres può restituire le righe
+  in ordine diverso a ogni richiesta, e due finestre sulla stessa tabella riescono a sovrapporsi e a
+  saltare righe contemporaneamente. Si ordina per chiave primaria, che è unica dentro l'insieme
+  filtrato.
+- **Il target `VibeWatchAppTests` non è un gruppo sincronizzato col filesystem, il target app sì.**
+  Un file nuovo sotto `VibeWatchApp/` viene compilato da solo; uno nuovo sotto `VibeWatchAppTests/`
+  va aggiunto a mano al `project.pbxproj` in quattro punti (`PBXBuildFile`, `PBXFileReference`,
+  figli del gruppo, fase `Sources`), altrimenti `xcodebuild test -only-testing:` risponde
+  **"Executed 0 tests"** e conclude **TEST SUCCEEDED**. Un test che non esiste non fallisce mai.
 
 - **L'ordine dei file di migration non è l'ordine con cui sono stati applicati.** `movie_reactions`
   e `unified_user_preferences` erano stati aggiunti ad `apply_mutations` per *splice* sul `prosrc`

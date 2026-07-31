@@ -712,25 +712,63 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
     ///
     /// For each remote record, checks if a local record exists and uses
     /// the appropriate conflict resolution strategy to merge them.
+    ///
+    /// The fetch is paginated (see `SyncPagination`): an unbounded `select("*")` over a table the
+    /// size of an imported TV Time history either times out against the 8s `statement_timeout` or,
+    /// on a project with `db-max-rows` set, comes back truncated without saying so.
     private func pullTableWithConflictResolution(name: String, userId: String) async throws {
         guard let client = SupabaseService.shared.client else {
             throw SyncEngineError.notAuthenticated
         }
 
-        // Fetch remote records
-        var query = client.from(name).select("*")
-        if name == "profiles" {
-            query = query.eq("id", value: userId)
-        } else {
-            query = query.eq("user_id", value: userId)
+        let keyColumn = getPrimaryKeyColumn(for: name)
+        var totalConflictsResolved = 0
+
+        let rowsPulled = try await SyncPagination.walk(
+            table: name,
+            fetchPage: { offset, limit in
+                var query = client.from(name).select("*")
+                if name == "profiles" {
+                    query = query.eq("id", value: userId)
+                } else {
+                    query = query.eq("user_id", value: userId)
+                }
+
+                // Ordering is what makes paging correct, not just deterministic output. Without an
+                // ORDER BY, Postgres may return rows in a different order for each request, so
+                // two windows over the same table can overlap and miss rows at the same time. The
+                // primary key is unique within the filtered set, which is what a stable sort needs.
+                let data = try await query
+                    .order(keyColumn, ascending: true)
+                    .range(from: offset, to: offset + limit - 1)
+                    .execute()
+                    .data
+
+                return (try? JSONSerialization.jsonObject(with: data)) as? [[String: Any]] ?? []
+            },
+            handlePage: { remoteRows in
+                let resolved = await self.resolvePage(remoteRows, table: name)
+                totalConflictsResolved += resolved.conflictsResolved
+
+                if !resolved.rows.isEmpty {
+                    try await self.sqliteService.upsert(table: name, rows: resolved.rows)
+                }
+            }
+        )
+
+        if totalConflictsResolved > 0 {
+            let strategy = TableConflictMapping.strategy(for: name)
+            Logger.info("[SyncEngine] Resolved \(totalConflictsResolved) conflicts in \(name) using \(strategy.rawValue) strategy")
         }
 
-        let data = try await query.execute().data
-        guard let remoteRows = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
-            return
-        }
+        Logger.debug("[SyncEngine] Pulled \(rowsPulled) rows from \(name)")
+    }
 
-        let strategy = TableConflictMapping.strategy(for: name)
+    /// Applies conflict resolution to one page of remote rows.
+    private func resolvePage(
+        _ remoteRows: [[String: Any]],
+        table name: String
+    ) async -> (rows: [[String: Any]], conflictsResolved: Int) {
         var resolvedRows: [[String: Any]] = []
         var conflictsResolved = 0
 
@@ -765,14 +803,7 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             }
         }
 
-        // Upsert resolved records to local database
-        if !resolvedRows.isEmpty {
-            try await sqliteService.upsert(table: name, rows: resolvedRows)
-        }
-
-        if conflictsResolved > 0 {
-            Logger.info("[SyncEngine] Resolved \(conflictsResolved) conflicts in \(name) using \(strategy.rawValue) strategy")
-        }
+        return (resolvedRows, conflictsResolved)
     }
 
     /// Fetches a local record by ID for conflict resolution.
