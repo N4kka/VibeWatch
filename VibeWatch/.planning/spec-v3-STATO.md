@@ -79,11 +79,39 @@ Entrambe le modalità verificate sul dispositivo (account `feicaccaunt777@gmail.
    della funzione dichiara di non fare per i caratteri. Tolto il taglio: il 21° carattere resta nel
    campo e diventa un `.tooLong` visibile, pulsante spento, niente giro di rete.
 
+## `user_follows` + `search_users` — in produzione dal 2026-07-31
+
+Migration `20260801130000_user_follows_and_search.sql`, applicata e verificata (`proacl`, grant,
+trigger, ricerca di fumo su `nakka`). Il commento in testa alla migration spiega i due perché;
+qui il riassunto:
+
+| | |
+|---|---|
+| `user_follows` | forma di §3.6: PK `(follower_id, followee_id)`, niente id sintetico, soft delete come `user_blocks` |
+| RLS | si vedono le righe in cui si è uno dei due capi; **scrive solo il follower** (insert e soft delete) |
+| Indici | la PK copre "chi seguo", `user_follows_followee` (parziale) copre "chi mi segue" |
+| `search_users(p_query, p_limit)` | legge da `public_profiles`, `ilike` sugli indici GIN trigram esistenti, similarità solo per l'**ordine**; `%`/`_`/`\` nella query sono caratteri, non jolly |
+| Blocchi | esclusi **nei due versi** dalla ricerca, e — lezione di `username_reserved` — anche in **scrittura**: il trigger `user_follows_blocked` rifiuta il follow attraverso un blocco |
+| Chi chiama | `search_users` solo `authenticated` (verificato su `proacl`); la funzione del trigger nessun ruolo client |
+
+**Perché `security definer`, due volte.** `user_blocks` ha `blocks_select_own`: il verso "mi ha
+bloccato" è invisibile al chiamante per costruzione. Un invoker vedrebbe metà dei blocchi — nella
+ricerca mostrerebbe a B chi l'ha bloccato, e nel trigger lascerebbe passare il follow. **Provato
+rompendo**: rimessi invoker, la suite fallisce su "a non segue chi l'ha bloccato".
+
+**27 asserzioni nuove in `social_test.sql` (82 → 109).** Il harness ora ricrea anche
+`user_blocks` (la sua migration precede il repo, forma verificata su `pg_policy` in produzione)
+e `run.sh` ha la migration nuova nella whitelist.
+
+**Cosa manca lato client (§4), per quando si cabla la UI:** `user_follows` va aggiunta alla
+whitelist `SQLiteTable`, alla pull-list del `SyncEngine`, a `TableConflictMapping` (**`union`**,
+mai perdere un follow — e mai nel `default`, lezione delle viste del tracking), e serve il ramo
+`user_follows` in `apply_mutations` (oggi risponderebbe `table_not_handled`). Per quel ramo vale
+il monito del `create or replace`: confrontare col `prosrc` reale, non con l'ultimo file.
+
 Da fare, in ordine:
 
-1. **`user_follows` + `search_users`** con `pg_trgm`. Gli indici GIN su `username` e `display_name`
-   ci sono già.
-2. Il **profilo pubblico** (`/@{username}`, §9.3) e la ricerca utenti nella UI.
+1. Il **profilo pubblico** (`/@{username}`, §9.3) e la ricerca utenti nella UI.
 
 ### Il login con username è ancora rotto, e la spec si contraddice
 
@@ -340,7 +368,7 @@ nota.
 | 5 | Integrazione client | **fatto per la lettura**. SQLite + whitelist + pull + conflitti verificati su dati veri; il percorso di scrittura è cablato ma senza chiamanti (arrivano col blocco 7) |
 | 6 | Pipeline import + report | **fasi 1-4 in produzione e collaudate end-to-end**; fasi 5-6 scritte e verdi in SQL, `import-finalize` da deployare |
 | 7 | UI Tracking | **chiuso.** Schermata, tab bar e migrazione dello storico in produzione; 971 episodi migrati sul dispositivo dell'autore al primo tentativo; §13.6 misurato a **208,9 ms** su 300; 20 lingue allineate |
-| 8 | Username, `public_profiles`, ricerca, follow | **schema, backfill e schermata di scelta in produzione.** Mancano `user_follows`, `search_users`, il profilo pubblico e il login con username |
+| 8 | Username, `public_profiles`, ricerca, follow | **schema, backfill, schermata di scelta, `user_follows` e `search_users` in produzione.** Mancano la UI (profilo pubblico, ricerca), il sync client di `user_follows` e il login con username |
 | 9-10 | Favorites, stats, diario, universal links | da fare |
 
 ## Cosa gira in produzione adesso
@@ -364,6 +392,9 @@ nota.
   visti.
 - `expand_seen_shows_to_watch_events(jsonb)`, `security definer`, `proacl` verificato:
   `postgres=X, service_role=X, authenticated=X` — **niente `anon`**.
+- **`user_follows`** (RLS, trigger `user_follows_blocked` che applica i blocchi in scrittura) e
+  **`search_users`** (`security definer`, solo `authenticated`, `proacl` verificato). Dal
+  2026-07-31, migration `20260801130000`.
 - **Import**: tabelle `import_jobs` e `import_staging` (RLS con sole policy di lettura: le fasi le
   muove il server), bucket privato `imports` con policy che confinano ogni utente alla propria
   cartella, Edge Function `import-parse` (fase 2, **versione 3**), `import-resolve` (fase 3) e
