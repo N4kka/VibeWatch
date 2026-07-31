@@ -714,6 +714,9 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             // back. Its aggregate companion, movie_reaction_counts, is deliberately NOT pulled:
             // it is global rather than user-scoped, and a trigger maintains it server-side.
             "movie_reactions",
+            // SPEC v3 §3.6 (blocco 8). Non ha user_id: il filtro e l'ordinamento hanno i loro
+            // casi speciali qui sotto, perche' l'identita' e' la coppia (follower, followee).
+            "user_follows",
             "user_gamification",
             "user_badges",
             "user_daily_challenges",
@@ -723,9 +726,9 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             "ai_conversation_history",
             "global_discovery_filters",
             "device_info",
-            // SPEC v3 §4. `user_ratings`, `user_favorites` e `user_follows` sono nell'elenco di §4
-            // ma restano fuori finché i blocchi 8 e 9 non le creano lato server: una tabella
-            // inesistente qui è un PGRST205 a ogni sync, non una riga in meno.
+            // SPEC v3 §4. `user_ratings` e `user_favorites` sono nell'elenco di §4 ma restano
+            // fuori finché il blocco 9 non le crea lato server: una tabella inesistente qui è un
+            // PGRST205 a ogni sync, non una riga in meno.
             "watch_events",
             "tv_show_state",
             // §9.2: le due viste che la schermata Tracking legge. Sono viste e non tabelle, ma
@@ -773,6 +776,11 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
                 var query = client.from(name).select("*")
                 if name == "profiles" {
                     query = query.eq("id", value: userId)
+                } else if name == "user_follows" {
+                    // Niente user_id: si è uno dei due capi. La RLS filtra comunque le righe
+                    // altrui; il filtro esplicito qui tiene la richiesta uguale ovunque e le
+                    // pagine deterministiche.
+                    query = query.or("follower_id.eq.\(userId),followee_id.eq.\(userId)")
                 } else {
                     query = query.eq("user_id", value: userId)
                 }
@@ -786,8 +794,14 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
                 // ORDER BY, Postgres may return rows in a different order for each request, so
                 // two windows over the same table can overlap and miss rows at the same time. The
                 // primary key is unique within the filtered set, which is what a stable sort needs.
-                let data = try await query
-                    .order(keyColumn, ascending: true)
+                var ordered = query.order(keyColumn, ascending: true)
+                if name == "user_follows" {
+                    // La chiave e' la coppia: follower_id da solo non e' unico nel sottoinsieme
+                    // dell'utente (seguo in molti, mi seguono in molti), e un ordinamento non
+                    // totale fa sovrapporre le pagine (§5). Il secondo order chiude la coppia.
+                    ordered = ordered.order("followee_id", ascending: true)
+                }
+                let data = try await ordered
                     .range(from: offset, to: offset + limit - 1)
                     .execute()
                     .data
@@ -834,14 +848,8 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             // Normalize remote row
             let normalizedRemote = normalizeRow(remoteRow, for: name)
 
-            // Get the record ID
-            guard let recordId = getRecordId(from: normalizedRemote, table: name) else {
-                resolvedRows.append(normalizedRemote)
-                continue
-            }
-
-            // Check for local record
-            if let localRow = await fetchLocalRecord(table: name, id: recordId) {
+            // Check for local record (keyed by the table's key columns, composite included)
+            if let localRow = await fetchLocalRecord(table: name, row: normalizedRemote) {
                 // Conflict exists - resolve it
                 let resolved = conflictResolver.resolve(
                     table: name,
@@ -864,18 +872,33 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
         return (resolvedRows, conflictsResolved)
     }
 
-    /// Fetches a local record by ID for conflict resolution.
-    private func fetchLocalRecord(table: String, id: String) async -> [String: Any]? {
-        let idColumn = getPrimaryKeyColumn(for: table)
+    /// Fetches the local counterpart of a remote row for conflict resolution.
+    ///
+    /// Prende la riga e non un id: per `user_follows` la chiave è la coppia
+    /// (follower_id, followee_id) e non esiste una colonna sola che identifichi la riga.
+    /// Cercare per il solo `follower_id` confronterebbe righe sbagliate — l'union "risolverebbe"
+    /// un conflitto fra due follow diversi.
+    private func fetchLocalRecord(table: String, row: [String: Any]) async -> [String: Any]? {
+        let keyColumns = getKeyColumns(for: table)
+        let values = keyColumns.compactMap { row[$0].map { String(describing: $0) } }
+        guard values.count == keyColumns.count else { return nil }
+
         let local = SyncEngine.localTable(for: table)
-        let sql = "SELECT * FROM \(local) WHERE \(idColumn) = ? LIMIT 1"
+        let whereClause = keyColumns.map { "\($0) = ?" }.joined(separator: " AND ")
+        let sql = "SELECT * FROM \(local) WHERE \(whereClause) LIMIT 1"
 
         do {
-            let rows = try await sqliteService.queryRaw(sql, parameters: [id])
+            let rows = try await sqliteService.queryRaw(sql, parameters: values)
             return rows.first
         } catch {
             return nil
         }
+    }
+
+    /// Le colonne che identificano una riga. Una sola per quasi tutte; la coppia per i follow.
+    private func getKeyColumns(for table: String) -> [String] {
+        if table == "user_follows" { return ["follower_id", "followee_id"] }
+        return [getPrimaryKeyColumn(for: table)]
     }
 
     /// In quale tabella locale atterra una sorgente remota.
@@ -914,6 +937,11 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             // dentro quel sottoinsieme tmdb_show_id è unico, che è quanto serve sia per
             // identificare la riga sia per ordinare le pagine in modo stabile.
             return "tmdb_show_id"
+        case "user_follows":
+            // La chiave vera è la coppia: questa è solo la PRIMA colonna d'ordinamento delle
+            // pagine (il pull aggiunge followee_id) e non basta da sola a identificare una riga —
+            // per quello c'è getKeyColumns.
+            return "follower_id"
         default:
             return "id"
         }
@@ -937,15 +965,6 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
         default:
             return nil
         }
-    }
-
-    /// Gets the record ID from a row based on table type.
-    private func getRecordId(from row: [String: Any], table: String) -> String? {
-        let keyColumn = getPrimaryKeyColumn(for: table)
-        if let id = row[keyColumn] {
-            return String(describing: id)
-        }
-        return nil
     }
 
     /// Normalizes a row for storage (handles media_type, JSON arrays, etc.).

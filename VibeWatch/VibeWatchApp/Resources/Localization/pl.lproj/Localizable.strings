@@ -717,3 +717,17 @@
 "username.error.taken" = "Już zajęta.";
 "username.error.checkFailed" = "Nie udało się sprawdzić. Spróbuj ponownie.";
 "username.error.reserved" = "Ta jest zastrzeżona.";
+
+// Social (SPEC v3 blocco 8)
+"social.search.title" = "Znajdź znajomych";
+"social.search.placeholder" = "Nazwa użytkownika lub imię";
+"social.search.prompt" = "Szukaj osób po nazwie użytkownika lub imieniu, aby zobaczyć ich profil.";
+"social.search.noResults" = "Nikogo nie znaleziono.";
+"social.search.failed" = "Wyszukiwanie nie powiodło się. Sprawdź połączenie.";
+"social.profile.followers" = "Obserwujący";
+"social.profile.following" = "Obserwowani";
+"social.follow" = "Obserwuj";
+"social.unfollow" = "Przestań obserwować";
+"social.followsYou" = "Obserwuje cię";
+"social.profile.notFound" = "Ten profil nie istnieje.";
+"social.profile.loadFailed" = "Nie udało się wczytać profilu.";

@@ -717,3 +717,17 @@
 "username.error.taken" = "Jo varattu.";
 "username.error.checkFailed" = "Tarkistus epäonnistui. Yritä uudelleen.";
 "username.error.reserved" = "Tämä on varattu käyttöön.";
+
+// Social (SPEC v3 blocco 8)
+"social.search.title" = "Löydä ystäviä";
+"social.search.placeholder" = "Käyttäjänimi tai nimi";
+"social.search.prompt" = "Etsi ihmisiä käyttäjänimellä tai nimellä nähdäksesi heidän profiilinsa.";
+"social.search.noResults" = "Ketään ei löytynyt.";
+"social.search.failed" = "Haku epäonnistui. Tarkista yhteytesi.";
+"social.profile.followers" = "Seuraajat";
+"social.profile.following" = "Seuratut";
+"social.follow" = "Seuraa";
+"social.unfollow" = "Lopeta seuraaminen";
+"social.followsYou" = "Seuraa sinua";
+"social.profile.notFound" = "Tätä profiilia ei ole.";
+"social.profile.loadFailed" = "Profiilia ei voitu ladata.";

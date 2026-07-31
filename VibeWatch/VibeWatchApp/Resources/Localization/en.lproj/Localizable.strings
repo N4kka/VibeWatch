@@ -718,3 +718,17 @@
 "username.error.taken" = "Already taken.";
 "username.error.checkFailed" = "Couldn't check. Try again.";
 "username.error.reserved" = "This one is reserved.";
+
+// Social (SPEC v3 blocco 8)
+"social.search.title" = "Find friends";
+"social.search.placeholder" = "Username or name";
+"social.search.prompt" = "Search people by username or name to see their profile.";
+"social.search.noResults" = "No one found.";
+"social.search.failed" = "Search failed. Check your connection.";
+"social.profile.followers" = "Followers";
+"social.profile.following" = "Following";
+"social.follow" = "Follow";
+"social.unfollow" = "Unfollow";
+"social.followsYou" = "Follows you";
+"social.profile.notFound" = "This profile doesn't exist.";
+"social.profile.loadFailed" = "Couldn't load this profile.";

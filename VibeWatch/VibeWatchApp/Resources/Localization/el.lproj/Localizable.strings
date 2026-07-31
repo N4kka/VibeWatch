@@ -717,3 +717,17 @@
 "username.error.taken" = "Χρησιμοποιείται ήδη.";
 "username.error.checkFailed" = "Ο έλεγχος απέτυχε. Δοκίμασε ξανά.";
 "username.error.reserved" = "Αυτό είναι δεσμευμένο.";
+
+// Social (SPEC v3 blocco 8)
+"social.search.title" = "Βρες φίλους";
+"social.search.placeholder" = "Όνομα χρήστη ή όνομα";
+"social.search.prompt" = "Αναζήτησε άτομα με όνομα χρήστη ή όνομα για να δεις το προφίλ τους.";
+"social.search.noResults" = "Δεν βρέθηκε κανείς.";
+"social.search.failed" = "Η αναζήτηση απέτυχε. Έλεγξε τη σύνδεσή σου.";
+"social.profile.followers" = "Ακόλουθοι";
+"social.profile.following" = "Ακολουθείς";
+"social.follow" = "Ακολούθησε";
+"social.unfollow" = "Κατάργηση ακολούθησης";
+"social.followsYou" = "Σε ακολουθεί";
+"social.profile.notFound" = "Αυτό το προφίλ δεν υπάρχει.";
+"social.profile.loadFailed" = "Δεν ήταν δυνατή η φόρτωση του προφίλ.";

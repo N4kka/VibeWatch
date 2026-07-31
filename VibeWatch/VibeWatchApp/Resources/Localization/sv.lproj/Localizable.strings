@@ -705,3 +705,17 @@
 "username.error.taken" = "Redan taget.";
 "username.error.checkFailed" = "Kunde inte kontrollera. Försök igen.";
 "username.error.reserved" = "Det här är reserverat.";
+
+// Social (SPEC v3 blocco 8)
+"social.search.title" = "Hitta vänner";
+"social.search.placeholder" = "Användarnamn eller namn";
+"social.search.prompt" = "Sök personer på användarnamn eller namn för att se deras profil.";
+"social.search.noResults" = "Ingen hittades.";
+"social.search.failed" = "Sökningen misslyckades. Kontrollera din anslutning.";
+"social.profile.followers" = "Följare";
+"social.profile.following" = "Följer";
+"social.follow" = "Följ";
+"social.unfollow" = "Sluta följa";
+"social.followsYou" = "Följer dig";
+"social.profile.notFound" = "Den här profilen finns inte.";
+"social.profile.loadFailed" = "Profilen kunde inte läsas in.";

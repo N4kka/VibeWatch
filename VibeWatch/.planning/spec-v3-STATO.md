@@ -103,15 +103,41 @@ rompendo**: rimessi invoker, la suite fallisce su "a non segue chi l'ha bloccato
 `user_blocks` (la sua migration precede il repo, forma verificata su `pg_policy` in produzione)
 e `run.sh` ha la migration nuova nella whitelist.
 
-**Cosa manca lato client (§4), per quando si cabla la UI:** `user_follows` va aggiunta alla
-whitelist `SQLiteTable`, alla pull-list del `SyncEngine`, a `TableConflictMapping` (**`union`**,
-mai perdere un follow — e mai nel `default`, lezione delle viste del tracking), e serve il ramo
-`user_follows` in `apply_mutations` (oggi risponderebbe `table_not_handled`). Per quel ramo vale
-il monito del `create or replace`: confrontare col `prosrc` reale, non con l'ultimo file.
+## Il pezzo client — scritto il 2026-07-31, **mai provato sul dispositivo**
+
+Tutto in repo, test verdi, ma nessuna prova contro il server vero: è la stessa situazione in cui
+stava la schermata username prima dei suoi due difetti. **La prova su dispositivo è il primo
+passo della prossima sessione.**
+
+**Il sync di `user_follows`, con le sue tre specificità:**
+
+- whitelist `SQLiteTable` + migration SQLite **10** (chiave = la coppia, niente id sintetico) +
+  pull-list + `TableConflictMapping` a **`union`** (mai nel `default`, lezione delle viste);
+- il filtro del pull non è `user_id` (che non esiste): `or(follower_id.eq.X,followee_id.eq.X)`;
+- l'ordinamento di pagina usa **entrambe** le colonne della coppia — nessuna da sola è unica nel
+  sottoinsieme dell'utente, e un ordine non totale fa sovrapporre le pagine (§5);
+- la risoluzione dei conflitti cerca la riga locale per **chiave composita**
+  (`getKeyColumns`/`fetchLocalRecord(table:row:)`): cercare per il solo `follower_id`
+  confronterebbe follow diversi fra loro.
+
+**Il ramo `user_follows` in `apply_mutations` è in produzione** (migration `20260801140000`),
+applicato per **splice sul `prosrc` reale** con tre guardie md5 — mai col file in cartella. Il
+cancello d'identità ora confronta la colonna giusta per tabella (`follower_id`, non `user_id`).
+Collaudato con transazione fatta fallire: follow, rigioco idempotente, unfollow soft, forgiato
+respinto, bloccato respinto dal trigger (`constraint_23514`), DELETE col followee in `id`.
+
+**La UI:** `UserSearchView` (tre stati distinti: invito / nessuno / **ricerca fallita con
+riprova** — mai schiacciati l'uno sull'altro), `PublicProfileView` (header §9.3, contatori dal
+server via `get_public_profile`, pulsante segui con stato in volo e rilettura dopo la scrittura —
+la metà che si dimentica), `SocialActions` (l'unico posto che scrive `follower_id`, come
+`TrackingActions` per `user_id`), ingresso da `ProfileView` ("Trova amici"). 12 chiavi nuove
+tradotte nelle 20 lingue. 11 test in `SocialProfileTests` (file **registrato a mano nel
+pbxproj**, nei soliti quattro punti).
 
 Da fare, in ordine:
 
-1. Il **profilo pubblico** (`/@{username}`, §9.3) e la ricerca utenti nella UI.
+1. **Provare sul dispositivo** ricerca, profilo, follow/unfollow (due account: `nakka` e uno dei
+   19 senza username, che non deve comparire).
 
 ### Il login con username è ancora rotto, e la spec si contraddice
 
@@ -368,7 +394,7 @@ nota.
 | 5 | Integrazione client | **fatto per la lettura**. SQLite + whitelist + pull + conflitti verificati su dati veri; il percorso di scrittura è cablato ma senza chiamanti (arrivano col blocco 7) |
 | 6 | Pipeline import + report | **fasi 1-4 in produzione e collaudate end-to-end**; fasi 5-6 scritte e verdi in SQL, `import-finalize` da deployare |
 | 7 | UI Tracking | **chiuso.** Schermata, tab bar e migrazione dello storico in produzione; 971 episodi migrati sul dispositivo dell'autore al primo tentativo; §13.6 misurato a **208,9 ms** su 300; 20 lingue allineate |
-| 8 | Username, `public_profiles`, ricerca, follow | **schema, backfill, schermata di scelta, `user_follows` e `search_users` in produzione.** Mancano la UI (profilo pubblico, ricerca), il sync client di `user_follows` e il login con username |
+| 8 | Username, `public_profiles`, ricerca, follow | **tutto in produzione e in repo**: schema, backfill, schermata di scelta, `user_follows`, `search_users`, `get_public_profile`, ramo in `apply_mutations`, sync client e UI (ricerca + profilo). La UI social **non è mai stata provata sul dispositivo**; manca il login con username |
 | 9-10 | Favorites, stats, diario, universal links | da fare |
 
 ## Cosa gira in produzione adesso

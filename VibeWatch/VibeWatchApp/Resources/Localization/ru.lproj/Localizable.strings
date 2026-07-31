@@ -705,3 +705,17 @@
 "username.error.taken" = "Уже занято.";
 "username.error.checkFailed" = "Не удалось проверить. Попробуйте ещё раз.";
 "username.error.reserved" = "Это имя зарезервировано.";
+
+// Social (SPEC v3 blocco 8)
+"social.search.title" = "Найти друзей";
+"social.search.placeholder" = "Имя пользователя или имя";
+"social.search.prompt" = "Ищите людей по имени пользователя или имени, чтобы увидеть их профиль.";
+"social.search.noResults" = "Никого не найдено.";
+"social.search.failed" = "Поиск не удался. Проверьте подключение.";
+"social.profile.followers" = "Подписчики";
+"social.profile.following" = "Подписки";
+"social.follow" = "Подписаться";
+"social.unfollow" = "Отписаться";
+"social.followsYou" = "Подписан на вас";
+"social.profile.notFound" = "Этот профиль не существует.";
+"social.profile.loadFailed" = "Не удалось загрузить профиль.";

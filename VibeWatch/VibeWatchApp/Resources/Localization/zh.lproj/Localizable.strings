@@ -702,3 +702,17 @@
 "username.error.taken" = "已被占用。";
 "username.error.checkFailed" = "无法检查。请重试。";
 "username.error.reserved" = "该名称已被保留。";
+
+// Social (SPEC v3 blocco 8)
+"social.search.title" = "查找好友";
+"social.search.placeholder" = "用户名或姓名";
+"social.search.prompt" = "按用户名或姓名搜索，即可查看对方主页。";
+"social.search.noResults" = "没有找到任何人。";
+"social.search.failed" = "搜索失败。请检查网络连接。";
+"social.profile.followers" = "粉丝";
+"social.profile.following" = "关注";
+"social.follow" = "关注";
+"social.unfollow" = "取消关注";
+"social.followsYou" = "关注了你";
+"social.profile.notFound" = "该主页不存在。";
+"social.profile.loadFailed" = "无法加载该主页。";

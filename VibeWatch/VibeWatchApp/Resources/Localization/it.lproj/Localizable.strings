@@ -716,3 +716,17 @@
 "username.error.taken" = "Già preso.";
 "username.error.checkFailed" = "Verifica non riuscita. Riprova.";
 "username.error.reserved" = "Questo è riservato.";
+
+// Social (SPEC v3 blocco 8)
+"social.search.title" = "Trova amici";
+"social.search.placeholder" = "Username o nome";
+"social.search.prompt" = "Cerca le persone per username o nome per vedere il loro profilo.";
+"social.search.noResults" = "Nessuno trovato.";
+"social.search.failed" = "Ricerca non riuscita. Controlla la connessione.";
+"social.profile.followers" = "Follower";
+"social.profile.following" = "Seguiti";
+"social.follow" = "Segui";
+"social.unfollow" = "Non seguire più";
+"social.followsYou" = "Ti segue";
+"social.profile.notFound" = "Questo profilo non esiste.";
+"social.profile.loadFailed" = "Impossibile caricare questo profilo.";

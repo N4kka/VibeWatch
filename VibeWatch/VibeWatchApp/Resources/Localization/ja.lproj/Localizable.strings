@@ -717,3 +717,17 @@
 "username.error.taken" = "すでに使われています。";
 "username.error.checkFailed" = "確認できませんでした。もう一度お試しください。";
 "username.error.reserved" = "この名前は使用できません。";
+
+// Social (SPEC v3 blocco 8)
+"social.search.title" = "友達を探す";
+"social.search.placeholder" = "ユーザー名または名前";
+"social.search.prompt" = "ユーザー名または名前で検索して、プロフィールを見られます。";
+"social.search.noResults" = "見つかりませんでした。";
+"social.search.failed" = "検索に失敗しました。接続を確認してください。";
+"social.profile.followers" = "フォロワー";
+"social.profile.following" = "フォロー中";
+"social.follow" = "フォロー";
+"social.unfollow" = "フォロー解除";
+"social.followsYou" = "フォローされています";
+"social.profile.notFound" = "このプロフィールは存在しません。";
+"social.profile.loadFailed" = "プロフィールを読み込めませんでした。";

@@ -717,3 +717,17 @@
 "username.error.taken" = "Al bezet.";
 "username.error.checkFailed" = "Controleren is niet gelukt. Probeer opnieuw.";
 "username.error.reserved" = "Deze is gereserveerd.";
+
+// Social (SPEC v3 blocco 8)
+"social.search.title" = "Vind vrienden";
+"social.search.placeholder" = "Gebruikersnaam of naam";
+"social.search.prompt" = "Zoek mensen op gebruikersnaam of naam om hun profiel te zien.";
+"social.search.noResults" = "Niemand gevonden.";
+"social.search.failed" = "Zoeken mislukt. Controleer je verbinding.";
+"social.profile.followers" = "Volgers";
+"social.profile.following" = "Volgend";
+"social.follow" = "Volgen";
+"social.unfollow" = "Ontvolgen";
+"social.followsYou" = "Volgt jou";
+"social.profile.notFound" = "Dit profiel bestaat niet.";
+"social.profile.loadFailed" = "Profiel kon niet worden geladen.";

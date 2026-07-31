@@ -114,6 +114,11 @@ public enum TableConflictMapping {
         case "v_tv_tracking", "v_tv_timeline":
             return .serverWins
 
+        // SPEC v3 §4: un follow non si perde mai. Il soft delete e' l'unfollow e viaggia come
+        // contenuto della riga, quindi l'union lo conserva come conserva il resto.
+        case "user_follows":
+            return .union
+
         // Default fallback for unknown tables
         default:
             return .lastWriteWins

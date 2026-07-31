@@ -705,3 +705,17 @@
 "username.error.taken" = "Zaten alınmış.";
 "username.error.checkFailed" = "Kontrol edilemedi. Tekrar dene.";
 "username.error.reserved" = "Bu ad ayrılmış.";
+
+// Social (SPEC v3 blocco 8)
+"social.search.title" = "Arkadaş bul";
+"social.search.placeholder" = "Kullanıcı adı veya isim";
+"social.search.prompt" = "Profillerini görmek için kişileri kullanıcı adı veya isimle ara.";
+"social.search.noResults" = "Kimse bulunamadı.";
+"social.search.failed" = "Arama başarısız oldu. Bağlantını kontrol et.";
+"social.profile.followers" = "Takipçiler";
+"social.profile.following" = "Takip edilenler";
+"social.follow" = "Takip et";
+"social.unfollow" = "Takibi bırak";
+"social.followsYou" = "Seni takip ediyor";
+"social.profile.notFound" = "Bu profil mevcut değil.";
+"social.profile.loadFailed" = "Profil yüklenemedi.";

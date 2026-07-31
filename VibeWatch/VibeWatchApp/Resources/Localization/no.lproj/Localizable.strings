@@ -717,3 +717,17 @@
 "username.error.taken" = "Allerede tatt.";
 "username.error.checkFailed" = "Kunne ikke sjekke. Prøv på nytt.";
 "username.error.reserved" = "Dette er reservert.";
+
+// Social (SPEC v3 blocco 8)
+"social.search.title" = "Finn venner";
+"social.search.placeholder" = "Brukernavn eller navn";
+"social.search.prompt" = "Søk etter folk på brukernavn eller navn for å se profilen deres.";
+"social.search.noResults" = "Fant ingen.";
+"social.search.failed" = "Søket mislyktes. Sjekk tilkoblingen din.";
+"social.profile.followers" = "Følgere";
+"social.profile.following" = "Følger";
+"social.follow" = "Følg";
+"social.unfollow" = "Slutt å følge";
+"social.followsYou" = "Følger deg";
+"social.profile.notFound" = "Denne profilen finnes ikke.";
+"social.profile.loadFailed" = "Kunne ikke laste profilen.";

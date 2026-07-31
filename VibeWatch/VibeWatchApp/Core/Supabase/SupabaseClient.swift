@@ -445,6 +445,33 @@ class SupabaseService: ObservableObject {
         return SetUsernameOutcome(json: json)
     }
 
+    // MARK: - Social (SPEC v3 §3.7 / §9.3)
+
+    /// Ricerca utenti. Il server decide tutto: superficie pubblica, blocchi nei due versi, ordine.
+    func searchUsers(_ query: String, limit: Int = 20) async throws -> [PublicProfile] {
+        let data = try await callRPC(
+            function: "search_users", payload: ["p_query": query, "p_limit": limit])
+        guard let rows = (try? JSONSerialization.jsonObject(with: data)) as? [[String: Any]] else {
+            throw SupabaseError.unexpectedResponse(
+                body: String(data: data.prefix(300), encoding: .utf8) ?? "<non-UTF8>")
+        }
+        return rows.compactMap(PublicProfile.init(json:))
+    }
+
+    /// Il profilo pubblico di §9.3, coi contatori e la relazione col chiamante.
+    ///
+    /// `nil` significa "non esiste" — che per scelta del server copre anche privato, cancellato,
+    /// senza username e bloccato in uno dei due versi: che un blocco esista è privato.
+    func publicProfile(username: String) async throws -> PublicProfileDetail? {
+        let data = try await callRPC(
+            function: "get_public_profile", payload: ["p_username": username])
+        guard let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else {
+            throw SupabaseError.unexpectedResponse(
+                body: String(data: data.prefix(300), encoding: .utf8) ?? "<non-UTF8>")
+        }
+        return PublicProfileDetail(json: json)
+    }
+
     private func callRPC(function: String, payload: [String: Any]) async throws -> Data {
         guard let baseURL = URL(string: Config.supabaseURL) else {
             throw SupabaseError.notConfigured

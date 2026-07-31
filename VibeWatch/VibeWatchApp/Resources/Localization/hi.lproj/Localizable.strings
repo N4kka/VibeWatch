@@ -717,3 +717,17 @@
 "username.error.taken" = "पहले से लिया जा चुका है।";
 "username.error.checkFailed" = "जाँच नहीं हो सकी। फिर से प्रयास करें।";
 "username.error.reserved" = "यह सुरक्षित रखा गया है।";
+
+// Social (SPEC v3 blocco 8)
+"social.search.title" = "दोस्त खोजें";
+"social.search.placeholder" = "यूज़रनेम या नाम";
+"social.search.prompt" = "प्रोफ़ाइल देखने के लिए यूज़रनेम या नाम से लोगों को खोजें।";
+"social.search.noResults" = "कोई नहीं मिला।";
+"social.search.failed" = "खोज विफल रही। अपना कनेक्शन जाँचें।";
+"social.profile.followers" = "फ़ॉलोअर";
+"social.profile.following" = "फ़ॉलो कर रहे हैं";
+"social.follow" = "फ़ॉलो करें";
+"social.unfollow" = "अनफ़ॉलो करें";
+"social.followsYou" = "आपको फ़ॉलो करता है";
+"social.profile.notFound" = "यह प्रोफ़ाइल मौजूद नहीं है।";
+"social.profile.loadFailed" = "प्रोफ़ाइल लोड नहीं हो सकी।";

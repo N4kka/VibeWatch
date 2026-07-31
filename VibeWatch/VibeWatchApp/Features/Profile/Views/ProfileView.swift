@@ -77,6 +77,7 @@ struct ProfileView: View {
     @State private var showLogoutConfirmation = false
     @State private var showPlatformSelector = false
     @State private var showSettings = false
+    @State private var showUserSearch = false
     @State private var showChangePassword = false
     @State private var showHelpSupport = false
     @State private var showFeedback = false
@@ -208,6 +209,9 @@ struct ProfileView: View {
             SettingsView()
                 .environmentObject(appState)
                 .environmentObject(authService)
+        }
+        .sheet(isPresented: $showUserSearch) {
+            UserSearchView()
         }
         .fullScreenCover(isPresented: $showUpgradePaywall) {
             ProPaywallView(isPresented: $showUpgradePaywall, source: "profile_banner")
@@ -558,6 +562,17 @@ struct ProfileView: View {
                 Divider()
                     .background(Color.white.opacity(0.1))
                 
+                SettingsRow(
+                    icon: "person.2",
+                    title: "social.search.title".localized,
+                    action: {
+                        showUserSearch = true
+                    }
+                )
+
+                Divider()
+                    .background(Color.white.opacity(0.1))
+
                 SettingsRow(
                     icon: "play.tv",
                     title: "profile.streamingServices".localized,

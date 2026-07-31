@@ -8,7 +8,7 @@ extension SQLiteService {
     /// Run personalization migrations (Phase 1)
     func runPersonalizationMigrations() {
         let currentVersion = getPersonalizationMigrationVersion()
-        let latestVersion = 9
+        let latestVersion = 10
 
         guard currentVersion < latestVersion else {
             Logger.info("[SQLite] Personalization migrations already applied (version \(currentVersion))")
@@ -50,6 +50,9 @@ extension SQLiteService {
             }
             if currentVersion < 9 {
                 migration9_AddTrackingViewMirrors()
+            }
+            if currentVersion < 10 {
+                migration10_AddUserFollows()
             }
 
             // Update migration version
@@ -234,7 +237,37 @@ extension SQLiteService {
         Logger.info("[SQLite] Migration 9 complete")
     }
 
+    /// SPEC v3 §3.6 — lo specchio locale di `user_follows`.
+    ///
+    /// Strategia `union` (§4): un follow non si perde mai. La chiave e' la coppia, identica al
+    /// server — niente id sintetico. La scrittura passa dall'outbox (`apply_mutations` ha il suo
+    /// ramo dal 2026-07-31); il pull riporta indietro anche le righe in cui si e' il followee,
+    /// che servono a "chi mi segue".
+    private func migration10_AddUserFollows() {
+        Logger.info("[SQLite] Migration 10: Adding user_follows")
+
+        executeScript(createUserFollowsTable())
+
+        Logger.info("[SQLite] Migration 10 complete")
+    }
+
     // MARK: - Table Creation Methods
+
+    private func createUserFollowsTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS user_follows (
+            follower_id TEXT NOT NULL,
+            followee_id TEXT NOT NULL,
+            created_at TEXT,
+            deleted_at TEXT,
+            synced_at TEXT,
+            PRIMARY KEY (follower_id, followee_id)
+        );
+        -- La PK copre "chi seguo"; questo copre "chi mi segue".
+        CREATE INDEX IF NOT EXISTS idx_user_follows_followee
+            ON user_follows(followee_id);
+        """
+    }
 
     private func createTVTrackingMirrorTable() -> String {
         """

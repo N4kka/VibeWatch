@@ -717,3 +717,17 @@
 "username.error.taken" = "이미 사용 중입니다.";
 "username.error.checkFailed" = "확인하지 못했습니다. 다시 시도해 주세요.";
 "username.error.reserved" = "사용할 수 없는 이름입니다.";
+
+// Social (SPEC v3 blocco 8)
+"social.search.title" = "친구 찾기";
+"social.search.placeholder" = "사용자 이름 또는 이름";
+"social.search.prompt" = "사용자 이름이나 이름으로 검색해 프로필을 볼 수 있습니다.";
+"social.search.noResults" = "아무도 찾지 못했습니다.";
+"social.search.failed" = "검색에 실패했습니다. 연결을 확인해 주세요.";
+"social.profile.followers" = "팔로워";
+"social.profile.following" = "팔로잉";
+"social.follow" = "팔로우";
+"social.unfollow" = "팔로우 취소";
+"social.followsYou" = "회원님을 팔로우합니다";
+"social.profile.notFound" = "이 프로필은 존재하지 않습니다.";
+"social.profile.loadFailed" = "프로필을 불러오지 못했습니다.";
