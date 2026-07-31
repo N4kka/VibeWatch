@@ -357,6 +357,166 @@ select t.is_true((select array_to_string(p.proacl, ',') like '%authenticated=X%'
                     from pg_proc p where p.proname = 'set_username'),
             'ma lo e'' da authenticated');
 
+-- =====================================================================================
+-- §3.6 user_follows + §3.7 search_users
+--
+-- Stato azzerato di proposito: le sezioni sopra mutano username e cancellano profili, e questi
+-- test non devono misurare la storia del file. a/b si somigliano per costruzione (la ricerca
+-- deve trovarli entrambi), c resta senza username (senza, non si esiste socialmente), d e' il
+-- terzo incomodo che blocchera' a.
+-- =====================================================================================
+
+reset role;
+update public.profiles set deleted_at = null, is_profile_public = true
+ where id::text like 'aaaaaaaa-%';
+update public.profiles set username = 'anna_r'
+ where id = 'aaaaaaaa-0000-0000-0000-000000000001';   -- display: Anna Rossi
+update public.profiles set username = 'anna_rossi2'
+ where id = 'aaaaaaaa-0000-0000-0000-000000000002';   -- display: anna rossi
+update public.profiles set username = null
+ where id = 'aaaaaaaa-0000-0000-0000-000000000003';   -- display: Jo
+update public.profiles set username = 'zed'
+ where id = 'aaaaaaaa-0000-0000-0000-000000000004';   -- display: Zed
+delete from public.user_blocks;
+delete from public.user_follows;
+
+\echo ''
+\echo '=== §3.6 user_follows: la forma e la RLS'
+
+select t.rejects($$
+  insert into public.user_follows (follower_id, followee_id) values
+    ('aaaaaaaa-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000001')
+$$, 'seguire se'' stessi lo vieta il CHECK, prima ancora della RLS');
+
+set local role authenticated;
+set local request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
+
+insert into public.user_follows (follower_id, followee_id) values
+  ('aaaaaaaa-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000002');
+select t.eq((select count(*)::integer from public.user_follows
+              where follower_id = 'aaaaaaaa-0000-0000-0000-000000000001'), 1,
+            'a segue b, e vede il proprio follow');
+
+select t.rejects($$
+  insert into public.user_follows (follower_id, followee_id) values
+    ('aaaaaaaa-0000-0000-0000-000000000002', 'aaaaaaaa-0000-0000-0000-000000000004')
+$$, 'ma non puo'' firmare un follow a nome di b');
+
+select t.rejects($$
+  insert into public.user_follows (follower_id, followee_id) values
+    ('aaaaaaaa-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000002')
+$$, 'due volte la stessa coppia la ferma la PK: un follow e'' la coppia, non una riga nuova');
+
+-- Unfollow e re-follow riusano la riga: soft delete, come user_blocks.
+update public.user_follows set deleted_at = now()
+ where follower_id = 'aaaaaaaa-0000-0000-0000-000000000001'
+   and followee_id = 'aaaaaaaa-0000-0000-0000-000000000002';
+update public.user_follows set deleted_at = null
+ where follower_id = 'aaaaaaaa-0000-0000-0000-000000000001'
+   and followee_id = 'aaaaaaaa-0000-0000-0000-000000000002';
+select t.eq((select count(*)::integer from public.user_follows where deleted_at is null), 1,
+            'unfollow e re-follow: stessa riga, nessun duplicato');
+
+-- Il followee vede chi lo segue, ma non tocca la riga: seguire e' un atto del follower.
+set local request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000002';
+select t.eq((select count(*)::integer from public.user_follows
+              where followee_id = 'aaaaaaaa-0000-0000-0000-000000000002'), 1,
+            'b vede il proprio follower');
+with upd as (
+  update public.user_follows set deleted_at = now()
+   where follower_id = 'aaaaaaaa-0000-0000-0000-000000000001'
+  returning 1)
+select t.eq((select count(*)::integer from upd), 0,
+            'ma non puo'' cancellare il follow di a: la RLS filtra, zero righe toccate');
+
+set local role anon;
+select t.rejects($$ select count(*) from public.user_follows $$,
+            'anon non legge i follow di nessuno');
+
+\echo ''
+\echo '=== il blocco vale anche in scrittura, non solo nella ricerca'
+
+-- La lezione di username_reserved: un''esclusione applicata solo dove si propone (la ricerca)
+-- e non dove si scrive (l''INSERT) e' una decorazione.
+reset role;
+insert into public.user_blocks (user_id, blocked_user_id) values
+  ('aaaaaaaa-0000-0000-0000-000000000004', 'aaaaaaaa-0000-0000-0000-000000000001');
+
+set local role authenticated;
+set local request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
+select t.rejects($$
+  insert into public.user_follows (follower_id, followee_id) values
+    ('aaaaaaaa-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000004')
+$$, 'a non segue chi l''ha bloccato — e la RLS da sola non potrebbe dirlo, il verso e'' invisibile');
+
+set local request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000004';
+select t.rejects($$
+  insert into public.user_follows (follower_id, followee_id) values
+    ('aaaaaaaa-0000-0000-0000-000000000004', 'aaaaaaaa-0000-0000-0000-000000000001')
+$$, 'e il bloccante non segue il bloccato: vale nei due versi');
+
+\echo ''
+\echo '=== §3.7 search_users'
+
+set local request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
+
+select t.eq((select username::text from public.search_users('anna', 10) limit 1), 'anna_r',
+            'il piu'' simile per primo — e se stessi si compare: "come appaio?" merita risposta');
+select t.eq((select count(*)::integer from public.search_users('anna', 10)), 2,
+            'trova per username entrambe le anna');
+select t.eq((select count(*)::integer from public.search_users('rossi', 10)), 2,
+            'e per display_name, che uno username non lo contiene');
+select t.eq((select count(*)::integer from public.search_users('jo', 10)), 0,
+            'c non ha username: senza, non si esiste socialmente (e'' fuori da public_profiles)');
+select t.eq((select count(*)::integer from public.search_users('zed', 10)), 0,
+            'd mi ha bloccato: non lo vedo, anche se il blocco per me e'' invisibile');
+
+set local request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000004';
+select t.eq((select count(*)::integer from public.search_users('anna_r', 10)
+              where id = 'aaaaaaaa-0000-0000-0000-000000000001'), 0,
+            'e d non vede chi ha bloccato');
+select t.eq((select count(*)::integer from public.search_users('anna_rossi2', 10)), 1,
+            'ma il blocco esclude la coppia, non il resto del mondo');
+
+-- I jolly di LIKE nella query sono caratteri da cercare, non pattern: senza escape una query
+-- di soli underscore o un percento combacerebbero con chiunque.
+set local request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000002';
+select t.eq((select count(*)::integer from public.search_users('%', 10)), 0,
+            'il percento non e'' un jolly');
+select t.eq((select count(*)::integer from public.search_users('__', 10)), 0,
+            'e nemmeno l''underscore doppio (quello singolo dentro anna_r si trova eccome)');
+select t.eq((select count(*)::integer from public.search_users('a_r', 10)), 2,
+            'a_r si cerca come sottostringa letterale: anna_r e anna_rossi2, non "a<qualunque>r"');
+
+select t.eq((select count(*)::integer from public.search_users('anna', 1)), 1,
+            'il limite si rispetta');
+select t.eq((select count(*)::integer from public.search_users('', 10)), 0,
+            'query vuota: niente risultati, niente esplosione');
+select t.eq((select count(*)::integer from public.search_users(null, 10)), 0, 'idem null');
+
+-- Un profilo privato sparisce anche dalla ricerca: search_users legge da public_profiles,
+-- non da profiles, e questo test inchioda la scelta.
+reset role;
+update public.profiles set is_profile_public = false
+ where id = 'aaaaaaaa-0000-0000-0000-000000000002';
+set local role authenticated;
+set local request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
+select t.eq((select count(*)::integer from public.search_users('anna_rossi2', 10)), 0,
+            'un profilo privato non si trova');
+
+reset role;
+
+-- Chi puo' chiamare cosa.
+select t.eq((select count(*)::integer from pg_proc p
+              where p.proname = 'search_users'
+                and array_to_string(p.proacl, ',') like '%anon=X%'), 0,
+            'search_users non e'' chiamabile da anon');
+select t.is_true((select array_to_string(p.proacl, ',') like '%authenticated=X%'
+                    from pg_proc p where p.proname = 'search_users'),
+            'ma lo e'' da authenticated');
+select t.eq(has_table_privilege('anon', 'public.user_follows', 'select'), false,
+            'e user_follows non ha grant per anon, prima ancora della RLS');
+
 rollback;
 
 \echo ''

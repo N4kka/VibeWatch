@@ -133,3 +133,33 @@ create policy profiles_select_own on public.profiles
 drop policy if exists profiles_update_own on public.profiles;
 create policy profiles_update_own on public.profiles
   for update using ((select auth.uid()) = id) with check ((select auth.uid()) = id);
+
+-- `user_blocks` come in produzione (verificato su pg_policy il 2026-07-31): la sua migration
+-- precede questo repo. La forma conta per due ragioni: `blocks_select_own` e' cio' che rende
+-- necessario il `security definer` di `search_users` (il verso "mi ha bloccato" e' invisibile al
+-- chiamante), e il trigger di `user_follows` la legge in scrittura. In produzione il default di
+-- `id` e' uuid_generate_v4() (uuid-ossp); qui gen_random_uuid(), che e' builtin — cambia il
+-- generatore, non il comportamento.
+create table if not exists public.user_blocks (
+  id              uuid primary key default gen_random_uuid(),
+  user_id         uuid not null references auth.users on delete cascade,
+  blocked_user_id uuid not null references auth.users on delete cascade,
+  created_at      timestamptz default now(),
+  deleted_at      timestamptz,
+  synced_at       timestamptz
+);
+
+alter table public.user_blocks enable row level security;
+
+drop policy if exists blocks_select_own on public.user_blocks;
+create policy blocks_select_own on public.user_blocks
+  for select using ((select auth.uid()) = user_id);
+drop policy if exists blocks_insert_own on public.user_blocks;
+create policy blocks_insert_own on public.user_blocks
+  for insert with check ((select auth.uid()) = user_id);
+drop policy if exists blocks_update_own on public.user_blocks;
+create policy blocks_update_own on public.user_blocks
+  for update using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+drop policy if exists blocks_delete_own on public.user_blocks;
+create policy blocks_delete_own on public.user_blocks
+  for delete using ((select auth.uid()) = user_id);
