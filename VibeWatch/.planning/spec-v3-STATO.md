@@ -20,15 +20,26 @@ fallisca — fatto anche in questa sessione sul `security definer` di `search_us
 (specchi SQLite, pull, conflitti, `RatingActions`/`FavoritesActions`). Vedi la sezione *Il blocco
 9, il pezzo dati* qui sotto per le decisioni. **Resta:**
 
-1. **Stats §9.3 lato server** — il tempo di visione totale è un **aggregato server** (§13.7): in
-   cache c'è solo un anno di eventi, sommare dal client mente. Serve una funzione (o l'estensione
-   di `get_public_profile`) con: tempo totale dai runtime reali, film/serie/episodi visti; le
-   stats avanzate (per anno, generi, decadi, distribuzione voti) sono **Pro** (§10). I favorites
-   pubblici nel profilo passano da `get_public_profile` (definer), non da un rilassamento RLS —
-   la RLS delle due tabelle nuove è owner-only apposta.
-2. **UI**: stelle a mezze (il valore è un intero 1-10, mai float), slot favorites (due righe da
-   4, §9.3), diario (eventi dei 12 mesi in cache, oltre = Pro). Stati errore distinti da "vuoto",
-   chiavi nelle **20 lingue** (`LocalizationCoverageTests` rompe altrimenti).
+~~1. **Stats §9.3 lato server**~~ — **fatto** (migration `20260801190000`): `get_my_stats()`
+   (invoker, runtime reali con ripiego sul catalogo, rewatch nel tempo ma non negli episodi
+   distinti) e `get_public_profile` v2 coi favorites. Le stats avanzate restano Pro (§10) e
+   **aspettano il dato sui generi**, che il catalogo non ha; le stats altrui restano chiuse
+   (scelta di privacy, la spec non chiede di pubblicarle). Collaudato in produzione, residui
+   zero; il prosrc di `get_public_profile` verificato con md5 prima e dopo.
+~~2. **UI, prima metà**~~ — **fatto**: `StarRatingSection` sui due dettagli (mezzi passi, intero
+   1-10, stato in volo, errore che riporta lo stato vero), favorites nel profilo pubblico
+   (`FavoritePosterTile`, poster dal catalogo via client), `ProfileStatsSection` sul proprio
+   profilo (tre stati distinti). 10 chiavi nuove nelle 20 lingue; 16 test nel file
+   `FavoritesRatingsActionsTests`.
+
+**Resta del blocco 9:**
+
+1. **Diario** (§9.3): eventi dei 12 mesi in cache locale, ordine cronologico inverso, data di
+   visione reale; oltre i 12 mesi è Pro (§10). I nomi delle serie stanno nello specchio
+   `tv_tracking`; per i film il nome va risolto dal client (catalogo film server non esiste).
+2. **Modifica dei favorites**: `FavoritesActions` è pronta e collaudata; manca il punto di
+   ingresso UI (candidato: context menu sui dettagli film/serie "aggiungi ai preferiti" con
+   scelta slot, o gestione dal proprio profilo).
 3. **Prova su dispositivo** di tutto il giro (voto → server → pull → schermo), come per i follow.
 4. Poi il **blocco 10**: universal links, rotte profilo.
 
@@ -507,7 +518,7 @@ nota.
 | 6 | Pipeline import + report | **fasi 1-4 in produzione e collaudate end-to-end**; fasi 5-6 scritte e verdi in SQL, `import-finalize` da deployare |
 | 7 | UI Tracking | **chiuso.** Schermata, tab bar e migrazione dello storico in produzione; 971 episodi migrati sul dispositivo dell'autore al primo tentativo; §13.6 misurato a **208,9 ms** su 300; 20 lingue allineate |
 | 8 | Username, `public_profiles`, ricerca, follow | **chiuso, tutto in produzione e provato sul dispositivo**: schema, backfill, schermata di scelta, `user_follows`, `search_users`, `get_public_profile`, ramo in `apply_mutations`, sync client, UI social e login con username via Edge Function |
-| 9 | Favorites, rating, stats, diario | **metà dati fatta e in produzione** (tabelle, RLS, apply_mutations, sync client, azioni); restano stats server, UI, 20 lingue, prova su dispositivo |
+| 9 | Favorites, rating, stats, diario | **dati, stats server e prima metà UI fatti** (tabelle, RLS, apply_mutations, sync, azioni, get_my_stats, stelle, favorites nel profilo, stats, 20 lingue); restano diario, modifica favorites, prova su dispositivo |
 | 10 | Universal links | da fare |
 
 ## Cosa gira in produzione adesso
