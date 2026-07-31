@@ -121,6 +121,8 @@ convenga, non se si possa.
 
 ```bash
 supabase/tests/run.sh                      # Postgres usa-e-getta, migration x2, 64 asserzioni
+# iOS: se la config è incompleta, l'app si ferma all'avvio in DEBUG con l'elenco
+# delle chiavi mancanti (Config.validateAtLaunch). Non è un bug: sono i segreti.
 python3 test_oracle.py                     # oracolo, 22 test
 cd supabase/functions/catalog-resolve && deno test    # logica pura, 24 test
 xcodebuild test -project VibeWatchApp.xcodeproj -scheme VibeWatchApp \
