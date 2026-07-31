@@ -13,39 +13,48 @@ colpo, vale la pena rompere apposta ciò che dovrebbe coprire e controllare che 
 `assignRewatchIndex` l'ho fatto e ho scoperto che il test dell'oracolo non copriva il caso che
 credevo.
 
+## §13.6 è soddisfatto — misurato sul dispositivo, 2026-07-31
+
+Il blocco 7 è chiuso. Due misure su dispositivo, entrambe dentro il budget:
+
+| Percorso | Totale | di cui lettura | Budget |
+|---|---:|---:|---:|
+| **A freddo** — tap, lettura da SQLite, contenuto a schermo | **208,9 ms** | 34,1 ms | 300 ms |
+| A schermata già popolata — il disegno da solo | 147,5 ms | — | 300 ms |
+
+**Il numero che conta è 208,9 ms**: è il percorso che §13.6 descrive — "renderizza da cache locale,
+zero chiamate di rete, sotto i 300 ms". Margine ~30%. Il secondo caso capita perché il ViewModel si
+ricarica anche su `syncEngineCompleted`, quindi aprendo la tab le sezioni possono esserci già: è
+una misura valida ma risponde a una domanda più facile, e va letta come tale.
+
+**Dove sta il tempo.** La lettura è 34 ms, il disegno gli altri 175. Il collo di bottiglia **non è
+SQLite**: è SwiftUI. Se un giorno servisse margine, è lì che va cercato — non nella query, che era
+già stata misurata a 0,66 ms di mediana su un DB seminato (i 34 ms sul dispositivo sono la stessa
+query a freddo, con la cache delle pagine vuota).
+
+**Cosa questi numeri non dicono.** Sono due campioni, non una distribuzione, e su un dispositivo
+solo. Se servisse una misura ripetibile c'è già l'aggancio: `XCTOSSignpostMetric(subsystem:
+"com.vibewatch.app", category: "Tracking", name: "TrackingFirstFrame")`. Se le misure fossero state
+prese in DEBUG il numero è conservativo — Swift non ottimizzato è più lento, quindi in Release il
+margine è maggiore, mai minore.
+
+### Come rifarla
+
+Console.app col telefono collegato, filtro su sottosistema `com.vibewatch.app` e categoria
+`TrackingPerf`; poi si apre la tab Tracking. Il log passa da `os.Logger` e non dal `Logger` del
+progetto proprio per questo: quello è tutto dentro `#if DEBUG` e in Release non stampa una riga.
+In alternativa Instruments, template *Points of Interest*, intervallo `TrackingFirstFrame`.
+
+Per il caso a freddo va chiusa l'app e aperto il Tracking come prima cosa; altrimenti si misura il
+disegno e basta. **Se compare `misura abbandonata`**, l'intervallo è troppo lungo per essere un
+fotogramma — di solito un rientro sulla tab molto dopo — e non c'è nessun numero da credere.
+
 ## Da fare per prima cosa
 
-**Misurare §13.6 sul dispositivo, in Release.** È l'ultimo pezzo aperto del blocco 7, ed è l'unico
-che non si può fare da qui: serve il telefono. La sonda è pronta e corretta (vedi sotto — aveva un
-difetto che l'avrebbe resa inutile anche con dati veri).
-
-Come si legge, in ordine di comodità:
-
-1. **Console.app** col telefono collegato, filtro su sottosistema `com.vibewatch.app` e categoria
-   `TrackingPerf`. Passa da `os.Logger` e non dal `Logger` del progetto proprio per questo: quello
-   è tutto dentro `#if DEBUG` e in Release non stampa una riga.
-2. **Instruments**, template *Points of Interest*, intervallo `TrackingFirstFrame`.
-3. Un test con `XCTOSSignpostMetric(subsystem: "com.vibewatch.app", category: "Tracking",
-   name: "TrackingFirstFrame")`, che dà una distribuzione invece di un aneddoto.
-
-Cosa aspettarsi in console:
-
-```
-§13.6 dati pronti in 12.3 ms (24 righe)
-§13.6 OK: totale 148.2 ms (di cui lettura 12.3 ms) — budget 300 ms
-```
-
-oppure, quando la schermata aveva già contenuto al momento del tap (succede: il ViewModel si
-ricarica anche su `syncEngineCompleted`), che è comunque una misura valida:
-
-```
-§13.6 OK: totale 8.4 ms (schermata già popolata) — budget 300 ms
-```
-
-**Se compare `misura abbandonata`**, l'intervallo è troppo lungo per essere un fotogramma — di
-solito un rientro sulla tab molto dopo. Non c'è nessun numero da credere: riapri la tab.
-
-**La misura in DEBUG non vale**: Swift non ottimizzato dà un numero pessimista e inutile.
+**Il blocco 8**: username, `public_profiles`, ricerca utenti, follow (§3.6, §3.7). Il pezzo centrale
+non è il login con username ma **assegnare uno username agli utenti che già ci sono**: 312 utenti,
+di cui 98 con identità email — due terzi entrano con Apple o Google e uno username non ce l'hanno
+mai avuto.
 
 ### La sonda ha sbagliato due volte, e la seconda l'ha trovata l'esecuzione
 
@@ -212,8 +221,8 @@ nota.
 
 ### Il resto del blocco 7
 
-- **§13.6 non è ancora verificato**, ed è l'unica cosa rimasta del blocco 7: serve il telefono.
-  Vedi in cima per come si legge e perché il `61,9 ms` di prima non valeva.
+- ~~**§13.6 non è ancora verificato**~~ — **fatto**, 208,9 ms a freddo contro 300 di budget. Vedi
+  in cima.
 - ~~**18 lingue**~~ — **fatto.** Le 20 lingue hanno le stesse 597 chiavi, zero duplicate, zero
   valori vuoti, segnaposto identici all'inglese, e `LocalizationCoverageTests` (6 test) impedisce
   che il disallineamento torni. Vedi *Le traduzioni* più sotto: l'allineamento ha scoperto altri
@@ -231,8 +240,9 @@ nota.
 | 4 | Paginazione del pull | **fatto e verificato**. `SyncPagination`, 8 test verdi + pull reale sul dispositivo, nessun `Failed to pull` |
 | 5 | Integrazione client | **fatto per la lettura**. SQLite + whitelist + pull + conflitti verificati su dati veri; il percorso di scrittura è cablato ma senza chiamanti (arrivano col blocco 7) |
 | 6 | Pipeline import + report | **fasi 1-4 in produzione e collaudate end-to-end**; fasi 5-6 scritte e verdi in SQL, `import-finalize` da deployare |
-| 7 | UI Tracking | **schermata, tab bar e migrazione dello storico in produzione e collaudate.** La migrazione è girata sul dispositivo dell'autore: 971 episodi, primo tentativo. Resta la misura di §13.6; le 20 lingue sono allineate |
-| 8+ | Sociale, stats | da fare |
+| 7 | UI Tracking | **chiuso.** Schermata, tab bar e migrazione dello storico in produzione; 971 episodi migrati sul dispositivo dell'autore al primo tentativo; §13.6 misurato a **208,9 ms** su 300; 20 lingue allineate |
+| 8 | Username, `public_profiles`, ricerca, follow | **il prossimo** |
+| 9-10 | Favorites, stats, diario, universal links | da fare |
 
 ## Cosa gira in produzione adesso
 
