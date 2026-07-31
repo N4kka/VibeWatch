@@ -59,8 +59,22 @@ enum TrackingPerformanceProbe {
     /// il punto di arrivo è il turno di runloop successivo alla comparsa del primo elemento —
     /// dopo cioè che il layout è stato calcolato e il commit inviato. Sbaglia per meno di un
     /// fotogramma (16 ms a 60 Hz), che su un budget di 300 ms non cambia il verdetto.
-    static func firstFrameRendered() {
-        guard let start = startedAt, let id = signpostID else { return }
+    /// - Returns: i millisecondi misurati, o `nil` se la misura è stata scartata. Il valore di
+    ///   ritorno esiste per il test: senza, l'unica prova che una misura sia stata scartata
+    ///   sarebbe una riga di log, e la regola che questa funzione fa rispettare è già stata
+    ///   violata una volta in silenzio.
+    @discardableResult
+    static func firstFrameRendered() -> Double? {
+        guard let start = startedAt, let id = signpostID else { return nil }
+
+        // Rete di sicurezza per il difetto gia' pagato una volta: se il capolinea scatta prima che
+        // i dati siano arrivati, si stava misurando il disegno di una lista **vuota**. Non si
+        // chiude niente e lo si dice — un numero mancante e' una diagnosi, un numero sbagliato no.
+        guard dataReadyAt != nil else {
+            printer.error("§13.6 misura scartata: primo fotogramma prima dei dati, sarebbe stata su schermata vuota")
+            return nil
+        }
+
         defer { startedAt = nil; signpostID = nil; dataReadyAt = nil }
 
         let total = Self.ms(from: start)
@@ -69,7 +83,7 @@ enum TrackingPerformanceProbe {
         os_signpost(.end, log: log, name: intervalName, signpostID: id,
                     "totale %.1f ms", total)
 
-        let verdetto = total <= 300 ? "OK" : "OLTRE IL BUDGET"
+        let verdetto = total <= budgetMs ? "OK" : "OLTRE IL BUDGET"
         if let render {
             printer.info("""
             §13.6 \(verdetto, privacy: .public): totale \(total, format: .fixed(precision: 1), privacy: .public) ms \
@@ -78,7 +92,11 @@ enum TrackingPerformanceProbe {
         } else {
             printer.info("§13.6 \(verdetto, privacy: .public): totale \(total, format: .fixed(precision: 1), privacy: .public) ms — budget 300 ms")
         }
+        return total
     }
+
+    /// Il budget di §13.6, in millisecondi. Sta qui e non sparso fra il verdetto e i test.
+    static let budgetMs: Double = 300
 
     private static func ms(from t: CFAbsoluteTime) -> Double {
         ((CFAbsoluteTimeGetCurrent() - t) * 1000 * 10).rounded() / 10

@@ -47,15 +47,24 @@ struct TVShowsTrackingView: View {
             emptyState
         } else {
             List {
-                // Il capolinea della misura: il primo fotogramma con contenuto. Si chiude un
+                // Il capolinea della misura: il primo fotogramma **con contenuto**. Si chiude un
                 // turno di runloop dopo la comparsa, cioe' a layout calcolato e commit inviato.
-                Color.clear.frame(height: 0)
-                    .onAppear {
-                        DispatchQueue.main.async { TrackingPerformanceProbe.firstFrameRendered() }
-                    }
-                    .listRowInsets(EdgeInsets())
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
+                //
+                // `if !isEmpty` non e' una precauzione, e' la misura stessa. La riga stava fuori
+                // dalla condizione, e la sequenza era: `begin()`, `isLoading = true`, SwiftUI
+                // ridisegna, la List compare **vuota** (i dati sono ancora dentro l'`await`),
+                // questa riga appare e chiudeva il cronometro. Cioe' si misurava il tempo di
+                // disegnare una lista vuota, e il numero sarebbe stato lusinghiero e falso anche
+                // con dati veri — non solo sull'account senza storico a cui era stato attribuito.
+                if !viewModel.sections.isEmpty {
+                    Color.clear.frame(height: 0)
+                        .onAppear {
+                            DispatchQueue.main.async { TrackingPerformanceProbe.firstFrameRendered() }
+                        }
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
 
                 ForEach(viewModel.sections.timeline, id: \.group) { group, entries in
                     Section(header: Text(group.titleKey.localized)) {

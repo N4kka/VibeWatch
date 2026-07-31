@@ -162,4 +162,49 @@ final class TrackingSyncTests: XCTestCase {
             showName: "Breaking Bad", posterPath: nil, nextStillPath: nil
         )
     }
+
+    // MARK: - La sonda di §13.6
+
+    /// Il difetto che rendeva la misura inutile, e che nessuno vedeva perche' un numero c'era.
+    ///
+    /// La sequenza reale era: `begin()`, `isLoading = true`, SwiftUI ridisegna, la `List` compare
+    /// **vuota** — i dati sono ancora dentro l'`await` — e il capolinea scattava li'. Si misurava
+    /// il tempo di disegnare una lista vuota. Il `61,9 ms` gia' registrato era stato attribuito
+    /// all'account senza storico, ma sarebbe stato altrettanto falso con dati veri.
+    func testUnaMisuraChiusaPrimaDeiDatiSiScarta() {
+        TrackingPerformanceProbe.begin()
+
+        XCTAssertNil(TrackingPerformanceProbe.firstFrameRendered(),
+                     "senza dati non c'e' niente da misurare: meglio nessun numero che uno falso")
+    }
+
+    func testUnaMisuraCompletaTornaIlTempo() {
+        TrackingPerformanceProbe.begin()
+        TrackingPerformanceProbe.dataReady(rows: 24)
+
+        let ms = TrackingPerformanceProbe.firstFrameRendered()
+
+        XCTAssertNotNil(ms)
+        XCTAssertGreaterThanOrEqual(ms ?? -1, 0)
+    }
+
+    /// Chiudere senza aver mai aperto non produce un numero: sarebbe il tempo dall'avvio dell'app.
+    func testChiudereSenzaAvereApertoNonMisuraNiente() {
+        _ = TrackingPerformanceProbe.firstFrameRendered()   // svuota un eventuale residuo
+        XCTAssertNil(TrackingPerformanceProbe.firstFrameRendered())
+    }
+
+    /// Una misura chiusa non si puo' chiudere due volte: il secondo `onAppear` di una `List` che
+    /// si ricompone darebbe un tempo piu' lungo per lo stesso evento.
+    func testLaMisuraSiChiudeUnaVoltaSola() {
+        TrackingPerformanceProbe.begin()
+        TrackingPerformanceProbe.dataReady(rows: 1)
+
+        XCTAssertNotNil(TrackingPerformanceProbe.firstFrameRendered())
+        XCTAssertNil(TrackingPerformanceProbe.firstFrameRendered())
+    }
+
+    func testIlBudgetEQuelloDiSpec() {
+        XCTAssertEqual(TrackingPerformanceProbe.budgetMs, 300, "§13.6")
+    }
 }

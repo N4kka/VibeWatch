@@ -15,9 +15,45 @@ credevo.
 
 ## Da fare per prima cosa
 
-**Misurare §13.6, adesso che ci sono dati veri.** È l'ultimo pezzo aperto del blocco 7. La sonda
-c'è; va rifatta in Release, su dispositivo, e i numeri vecchi (`61,9 ms` su schermata vuota) non
-valgono.
+**Misurare §13.6 sul dispositivo, in Release.** È l'ultimo pezzo aperto del blocco 7, ed è l'unico
+che non si può fare da qui: serve il telefono. La sonda è pronta e corretta (vedi sotto — aveva un
+difetto che l'avrebbe resa inutile anche con dati veri).
+
+Come si legge, in ordine di comodità:
+
+1. **Console.app** col telefono collegato, filtro su sottosistema `com.vibewatch.app` e categoria
+   `TrackingPerf`. Passa da `os.Logger` e non dal `Logger` del progetto proprio per questo: quello
+   è tutto dentro `#if DEBUG` e in Release non stampa una riga.
+2. **Instruments**, template *Points of Interest*, intervallo `TrackingFirstFrame`.
+3. Un test con `XCTOSSignpostMetric(subsystem: "com.vibewatch.app", category: "Tracking",
+   name: "TrackingFirstFrame")`, che dà una distribuzione invece di un aneddoto.
+
+Cosa aspettarsi in console:
+
+```
+§13.6 dati pronti in 12.3 ms (24 righe)
+§13.6 OK: totale 148.2 ms (dati + disegno 135.9 ms) — budget 300 ms
+```
+
+**Se compare `misura scartata`**, il capolinea è scattato prima dei dati e non c'è nessun numero da
+credere: è la rete di sicurezza, non un guasto della schermata.
+
+**La misura in DEBUG non vale**: Swift non ottimizzato dà un numero pessimista e inutile.
+
+### La sonda misurava la cosa sbagliata — corretto
+
+Il `61,9 ms` registrato in precedenza era stato attribuito all'account senza storico. Non era
+quello: era **strutturale**, e avrebbe dato un numero falso anche con 24 serie in lista.
+
+La sequenza reale: `begin()`, `isLoading = true`, SwiftUI ridisegna, la `List` compare **vuota**
+— i dati sono ancora dentro l'`await` di `fetchSections()` — la riga sentinella appare e chiudeva
+il cronometro. Si misurava il tempo di disegnare una lista vuota, cioè il contrario di ciò che
+§13.6 chiede.
+
+Due correzioni, perché una sola non basta: la sentinella ora esiste **solo se ci sono sezioni**
+(quindi il capolinea è il primo fotogramma con contenuto), e `firstFrameRendered()` scarta la
+misura se `dataReady` non è mai arrivato, lo dichiara nel log e restituisce `nil` invece di un
+numero. Cinque test in `TrackingSyncTests` fissano l'invariante, provati togliendo la guardia.
 
 ### La migrazione è girata, sul dispositivo dell'autore
 
@@ -146,12 +182,8 @@ nota.
 
 ### Il resto del blocco 7
 
-- **§13.6 non è ancora verificato.** La sonda c'è e funziona — sul dispositivo ha stampato
-  `§13.6 OK: totale 61.9 ms`, ma **su schermata vuota**, quindi quel numero non vale. Va rifatta
-  dopo la migrazione, con dati veri, in Release e su dispositivo. Come si legge: console di Xcode,
-  oppure Instruments con il template *Points of Interest* (intervallo `TrackingFirstFrame`),
-  oppure un test con `XCTOSSignpostMetric(subsystem: "com.vibewatch.app", category: "Tracking",
-  name: "TrackingFirstFrame")`.
+- **§13.6 non è ancora verificato**, ed è l'unica cosa rimasta del blocco 7: serve il telefono.
+  Vedi in cima per come si legge e perché il `61,9 ms` di prima non valeva.
 - ~~**18 lingue**~~ — **fatto.** Le 20 lingue hanno le stesse 597 chiavi, zero duplicate, zero
   valori vuoti, segnaposto identici all'inglese, e `LocalizationCoverageTests` (6 test) impedisce
   che il disallineamento torni. Vedi *Le traduzioni* più sotto: l'allineamento ha scoperto altri
