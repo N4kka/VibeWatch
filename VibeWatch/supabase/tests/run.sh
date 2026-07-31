@@ -55,6 +55,7 @@ for file in "$MIGRATIONS"/*.sql; do
     202607300*) ;;
     20260731120000_create_import_jobs.sql) ;;
     20260731140000_import_report.sql) ;;
+    20260731180000_tracking_views_with_catalog.sql) ;;
     *) continue ;;
   esac
   [ "$pass" = 1 ] && echo "   $(basename "$file")"

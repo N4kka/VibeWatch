@@ -389,6 +389,106 @@ select t.is_true((public.import_report('aaaaaaaa-0000-4000-8000-000000000002')->
                  <> 'null'::jsonb,
             'il campo non e'' il json null, che il client mostrerebbe come vuoto');
 
+\echo ''
+\echo '=== §9.2 le viste della schermata Tracking'
+
+-- La card ha bisogno del catalogo: senza, resterebbe senza titolo e senza poster.
+select t.eq((select show_name from public.v_tv_tracking
+              where user_id = '11111111-1111-1111-1111-111111111111' and tmdb_show_id = 100),
+            'Test Show', 'la vista porta il nome della serie, non solo i contatori');
+
+-- Il nome dell'episodio e' quello del PROSSIMO, agganciato per (stagione, episodio). Si nomina
+-- l'episodio che lo stato indica come prossimo invece di assumere quale sia: assumerlo rendeva il
+-- test dipendente dall'ordine delle asserzioni sopra, ed e' cosi' che e' fallito la prima volta.
+select t.is_true((select next_season is not null and next_episode is not null
+                    from public.tv_show_state
+                   where user_id = '11111111-1111-1111-1111-111111111111' and tmdb_show_id = 100),
+            'precondizione: la serie ha un prossimo episodio da mostrare');
+
+update public.tmdb_episodes e set name = 'Il prossimo'
+  from public.tv_show_state s
+ where s.user_id = '11111111-1111-1111-1111-111111111111'
+   and s.tmdb_show_id = 100
+   and e.tmdb_show_id = s.tmdb_show_id
+   and e.season_number = s.next_season
+   and e.episode_number = s.next_episode;
+
+select t.eq((select next_episode_name from public.v_tv_tracking
+              where user_id = '11111111-1111-1111-1111-111111111111' and tmdb_show_id = 100),
+            'Il prossimo', 'e il titolo del prossimo episodio, agganciato per S/E');
+
+-- §13.6: una serie tracciata senza catalogo risolto deve restare nella lista, non sparire.
+insert into public.tv_show_state (user_id, tmdb_show_id, user_status, watched_count)
+values ('11111111-1111-1111-1111-111111111111', 999999, 'active', 3);
+select t.eq((select count(*) from public.v_tv_tracking
+              where user_id = '11111111-1111-1111-1111-111111111111' and tmdb_show_id = 999999),
+            1::bigint, 'una serie senza catalogo compare lo stesso (LEFT JOIN, non INNER)');
+select t.is_true((select show_name is null from public.v_tv_tracking
+                   where user_id = '11111111-1111-1111-1111-111111111111' and tmdb_show_id = 999999),
+            'col nome vuoto, che la UI puo'' gestire');
+
+-- Timeline. Il blocco si porta il proprio stato invece di ereditare quello dei test sopra:
+-- assumerlo e' gia' costato due asserzioni sbagliate in questo stesso file.
+update public.tv_show_state set user_status = 'active'
+ where user_id = '11111111-1111-1111-1111-111111111111' and tmdb_show_id = 100;
+
+-- Confronto con un conteggio calcolato a parte, non con un numero scritto a mano: se domani
+-- cambiano gli episodi di prova, il test resta vero senza doverlo riscrivere.
+select t.eq((select count(*) from public.v_tv_timeline
+              where user_id = '11111111-1111-1111-1111-111111111111'),
+            (select count(*)
+               from public.tmdb_episodes e
+              where e.air_date between current_date and current_date + 30
+                and exists (select 1 from public.tv_show_state st
+                             where st.user_id = '11111111-1111-1111-1111-111111111111'
+                               and st.tmdb_show_id = e.tmdb_show_id
+                               and st.user_status = 'active')),
+            'la timeline e'' esattamente cio'' che esce da oggi a +30 giorni');
+select t.is_true((select coalesce(bool_and(air_date >= current_date), true)
+                    from public.v_tv_timeline
+                   where user_id = '11111111-1111-1111-1111-111111111111'),
+            'e nessuna uscita e'' nel passato');
+
+-- §1.3: uno speciale futuro compare ed e' MARCATO, non filtrato.
+insert into public.tmdb_episodes (tmdb_show_id, season_number, episode_number, air_date, name)
+values (100, 0, 2, current_date + 3, 'Speciale di Natale');
+select t.eq((select is_special from public.v_tv_timeline
+              where user_id = '11111111-1111-1111-1111-111111111111'
+                and season_number = 0 and episode_number = 2),
+            true, 'lo speciale in timeline c''e'' ed e'' marcato (§1.3)');
+
+-- Le serie non attive non hanno uscite da mostrare.
+update public.tv_show_state set user_status = 'dropped'
+ where user_id = '11111111-1111-1111-1111-111111111111' and tmdb_show_id = 100;
+-- Si guarda la serie abbandonata, non il totale: l'utente ne segue un'altra che esce oggi, e
+-- pretendere zero righe misurerebbe quella invece di questa.
+select t.eq((select count(*) from public.v_tv_timeline
+              where user_id = '11111111-1111-1111-1111-111111111111' and tmdb_show_id = 100),
+            0::bigint, 'una serie abbandonata sparisce dalla timeline');
+select t.is_true((select count(*) > 0 from public.v_tv_timeline
+                   where user_id = '11111111-1111-1111-1111-111111111111'),
+            'ma le altre serie attive restano: sparisce quella, non la timeline');
+
+-- L'isolamento fra utenti NON si puo' verificare qui: l'harness gira come superutente e la RLS
+-- non si applica, quindi una query che sembra provarlo starebbe solo leggendo i dati legittimi
+-- dell'altro utente. Si verifica invece la cosa da cui l'isolamento dipende davvero, ed e' anche
+-- quella che un `create or replace` distratto porterebbe via in silenzio: senza
+-- `security_invoker`, una vista di proprieta' di `postgres` scavalca la RLS di `tv_show_state` e
+-- ogni utente vede il tracking di tutti.
+select t.is_true(
+  (select 'security_invoker=on' = any(c.reloptions)
+     from pg_class c join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public' and c.relname = 'v_tv_tracking'),
+  'v_tv_tracking e'' security_invoker: senza, scavalca la RLS di tv_show_state');
+select t.is_true(
+  (select 'security_invoker=on' = any(c.reloptions)
+     from pg_class c join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public' and c.relname = 'v_tv_timeline'),
+  'v_tv_timeline idem');
+
+delete from public.tv_show_state
+ where user_id = '11111111-1111-1111-1111-111111111111' and tmdb_show_id = 999999;
+
 rollback;
 
 \echo ''
