@@ -49,19 +49,37 @@ Per il caso a freddo va chiusa l'app e aperto il Tracking come prima cosa; altri
 disegno e basta. **Se compare `misura abbandonata`**, l'intervallo è troppo lungo per essere un
 fotogramma — di solito un rientro sulla tab molto dopo — e non c'è nessun numero da credere.
 
-## Da fare per prima cosa
+## La schermata username, provata sul server vero — chiusa il 2026-07-31
 
-**Provare sul dispositivo la schermata di scelta dello username.** È compilata e coperta dai test
-coi doppi, ma non è mai stata eseguita contro il server vero. Due cose da guardare, perché sono
-due schermate diverse:
+Entrambe le modalità verificate sul dispositivo (account `feicaccaunt777@gmail.com`, id
+`9b339294-6f14-49a6-b977-693213ae89fb`):
 
-- con un account fra i **295** (username assegnato dal backfill): deve comparire in modalità
-  *conferma*, col nome già scritto nel campo e il pulsante attivo subito;
-- con uno dei **19** senza username: modalità *scelta*, campo vuoto, pulsante spento finché non si
-  scrive qualcosa di libero. Per verificarlo basta
-  `update profiles set username = null, username_confirmed_at = null where id = '…'`.
+- **conferma**: schermata comparsa perché `confirmed_at` era null, `nakka` precompilato dal
+  backfill, la conferma ha scritto `username_confirmed_at` lasciando `username_changed_at` a null
+  (confermare il nome invariato non è un cambio);
+- **scelta** (dopo l'`update … set username = null, username_confirmed_at = null`): comparsa
+  giusta, `nakka` riscelto e salvato; stavolta `username_changed_at` è valorizzato, perché
+  null → `nakka` è un cambio vero.
 
-Poi, in ordine:
+**Due difetti trovati usandola, entrambi corretti e coperti (17 test in `UsernameSetupTests`):**
+
+1. **Ogni nome risultava "già preso".** Non era il server: `username_available` restituisce
+   `boolean`, e PostgREST lo serializza come `true`/`false` **nudo** — un frammento JSON di primo
+   livello, che `JSONSerialization.jsonObject` senza `.fragmentsAllowed` rifiuta. Il `try?`
+   ingoiava il parse fallito e il `?? false` lo spacciava per "occupato", anche sui `true`. Stessa
+   famiglia dei fallimenti silenziosi in testa a questo documento, e **i test coi doppi erano verdi
+   col difetto dentro**: il `Fake` non passa dal parse. Corretto su due strati:
+   `SupabaseService.parseBooleanRPCResponse` (frammento ammesso; una risposta illeggibile **lancia**
+   `unexpectedResponse` invece di diventare un "no") e il ViewModel, dove un errore di verifica ora
+   mostra `username.error.checkFailed` (chiave nuova, tradotta in tutte e 20 le lingue) invece di
+   "già preso". Gli altri `callRPC` sono salvi perché ricevono oggetti jsonb, non scalari.
+2. **Oltre i 20 caratteri diceva "disponibile".** `normalizeTyping` tagliava a 20 con `.prefix`,
+   quindi si verificava — e si sarebbe salvato — il prefisso: un nome mai digitato, col
+   suggerimento a fianco che diceva "da 3 a 20". Era la stessa riscrittura muta che il commento
+   della funzione dichiara di non fare per i caratteri. Tolto il taglio: il 21° carattere resta nel
+   campo e diventa un `.tooLong` visibile, pulsante spento, niente giro di rete.
+
+Da fare, in ordine:
 
 1. **`user_follows` + `search_users`** con `pg_trgm`. Gli indici GIN su `username` e `display_name`
    ci sono già.
