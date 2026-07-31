@@ -14,6 +14,10 @@ struct MainTabView: View {
     @StateObject private var aiViewModel = AIRecommendationViewModel()
     @State private var showProPaywall = false
     @State private var proPaywallSource = "unknown"
+    /// §9.1 `DECISO`: l'AI esce dai tab e diventa un pulsante flottante persistente. Il tab che
+    /// libera va al Tracking, che e' la schermata che un utente TV Time apre ogni giorno e che
+    /// la spec vuole "a un tap".
+    @State private var showAI = false
 
     private var passwordRecoveryBinding: Binding<Bool> {
         Binding(
@@ -39,7 +43,7 @@ struct MainTabView: View {
                     }
 
                     if selectedTab == 2 {
-                        AIRecommendationsView(viewModel: aiViewModel)
+                        TVShowsTrackingView()
                             .transition(.opacity)
                     }
 
@@ -52,6 +56,15 @@ struct MainTabView: View {
 
                 VStack(spacing: 0) {
                     Spacer()
+
+                    // Il FAB sta sopra la barra e non dentro: e' persistente, quindi non deve
+                    // spostarsi ne' cambiare stato quando si cambia tab (§9.1).
+                    HStack {
+                        Spacer()
+                        AIFloatingButton { showAI = true }
+                            .padding(.trailing, 22)
+                            .padding(.bottom, 12)
+                    }
 
                     LiquidGlassBottomBar(selectedTab: $selectedTab)
                         .padding(.horizontal, 16)
@@ -91,9 +104,9 @@ struct MainTabView: View {
                     }
                     .tag(1)
 
-                AIRecommendationsView(viewModel: aiViewModel)
+                TVShowsTrackingView()
                     .tabItem {
-                        Label("tab.ai".localized, systemImage: "sparkles")
+                        Label("tab.tracking".localized, systemImage: "tv")
                     }
                     .tag(2)
 
@@ -115,6 +128,11 @@ struct MainTabView: View {
             }
             .onAppear {
                 configureNativeTabBar()
+            }
+            .overlay(alignment: .bottomTrailing) {
+                AIFloatingButton { showAI = true }
+                    .padding(.trailing, 22)
+                    .padding(.bottom, 8)
             }
         }
         .transition(.opacity)
@@ -204,11 +222,17 @@ struct MainTabView: View {
             Logger.debug("[MainTabView] Navigated to Lists tab")
         }
         .onReceive(NotificationCenter.default.publisher(for: .navigateToAITab)) { _ in
-            // Navigate to AI tab
-            withAnimation {
-                selectedTab = 2
-            }
-            Logger.debug("[MainTabView] Navigated to AI tab")
+            // L'AI non e' piu' un tab (§9.1): la stessa notifica ora apre il pannello. Il nome
+            // resta quello per non rompere i chiamanti, che sono deep link e scorciatoie.
+            showAI = true
+            Logger.debug("[MainTabView] Opened AI panel")
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .navigateToTrackingTab)) { _ in
+            withAnimation { selectedTab = 2 }
+            Logger.debug("[MainTabView] Navigated to Tracking tab")
+        }
+        .fullScreenCover(isPresented: $showAI) {
+            AIRecommendationsView(viewModel: aiViewModel)
         }
         .onReceive(NotificationCenter.default.publisher(for: .presentProPaywall)) { notification in
             let source = (notification.userInfo?["source"] as? String) ?? "unknown"
@@ -343,8 +367,8 @@ struct LiquidGlassBottomBar: View {
             }
 
             TabBarButton(
-                icon: "sparkles",
-                title: "AI",
+                icon: "tv",
+                title: "tab.tracking".localized,
                 isSelected: selectedTab == 2
             ) {
                 selectedTab = 2

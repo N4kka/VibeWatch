@@ -81,8 +81,6 @@ struct ListsView: View {
 
                 if selectedSection == .myLists {
                     myListsContent
-                } else if selectedSection == .tvTracking {
-                    TVShowsTrackingView()
                 } else {
                     PublicListsView()
                 }

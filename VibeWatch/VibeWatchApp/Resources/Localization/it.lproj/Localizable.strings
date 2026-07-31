@@ -688,3 +688,5 @@
 "tracking.error.title" = "Qualcosa è andato storto";
 "tracking.error.notAuthenticated" = "Devi aver effettuato l'accesso.";
 "tracking.error.noNextEpisode" = "Questa serie non ha un prossimo episodio.";
+
+"tab.tracking" = "Tracking";

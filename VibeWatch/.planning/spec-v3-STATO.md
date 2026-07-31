@@ -41,7 +41,8 @@ invocazione, `status='failed'` scritto sul job in caso di eccezione.
 | 4 | Paginazione del pull | **fatto e verificato**. `SyncPagination`, 8 test verdi + pull reale sul dispositivo, nessun `Failed to pull` |
 | 5 | Integrazione client | **fatto per la lettura**. SQLite + whitelist + pull + conflitti verificati su dati veri; il percorso di scrittura è cablato ma senza chiamanti (arrivano col blocco 7) |
 | 6 | Pipeline import + report | **fasi 1-4 in produzione e collaudate end-to-end**; fasi 5-6 scritte e verdi in SQL, `import-finalize` da deployare |
-| 7+ | UI, sociale, stats | da fare |
+| 7 | UI Tracking | **schermata e tab bar fatte**: viste + mirror SQLite + repository + card riscritta + `Discovery · Clips · Tracking · Liste` con FAB AI. Manca la misura di §13.6 sul dispositivo e 18 lingue |
+| 8+ | Sociale, stats | da fare |
 
 ## Cosa gira in produzione adesso
 
@@ -191,6 +192,25 @@ Quattro interventi, tutti in repo:
 che per `tvdb_episode_id`. Risparmierebbe circa il 57% delle chiamate ed è l'unica scorciatoia che
 §6 vieta esplicitamente — Digimon ha 253 id distinti su 107 coppie, quindi il match per numero
 assegnerebbe l'episodio sbagliato **in silenzio**.
+
+## Il blocco 7, cosa c'e' e cosa manca
+
+**Fatto.** `v_tv_tracking` e `v_tv_timeline` (catalogo incluso) -> pull -> tabelle SQLite
+`tv_tracking` e `tv_timeline` (migration 9) -> `LocalTrackingRepository`, che restituisce sezioni
+gia' ordinate e in bucket. `TVTrackingCard` non calcola piu' niente: le sessanta righe di computed
+properties e la chiamata TMDB per card sono **eliminate**, non spostate (§1.1). La barra e'
+`Discovery · Clips · Tracking · Liste` con l'AI su un pulsante flottante persistente, e il
+Tracking non e' piu' una sezione dentro Liste.
+
+**Misurato, ma solo in parte.** La query da 430 serie — il caso peggiore reale — costa **0,66 ms**
+di mediana su un SQLite seminato con dati realistici, contro i 300 ms di budget di §13.6. È il
+pezzo dominante ma **non e' tutto**: manca il rendering SwiftUI e il tempo di apertura della tab,
+che si misurano solo sul dispositivo con un utente vero. **Il requisito di §13.6 non e' ancora
+verificato**, e in questa sessione ogni numero stimato invece che misurato e' stato smentito
+almeno una volta.
+
+**Da fare prima del rilascio.** Le chiavi di localizzazione nuove esistono solo in `en` e `it`:
+le altre 18 lingue ricadono sull'inglese.
 
 ## Due cose da sapere prima del blocco 7
 

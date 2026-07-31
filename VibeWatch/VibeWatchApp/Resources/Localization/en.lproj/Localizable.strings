@@ -691,3 +691,5 @@
 "tracking.error.title" = "Something went wrong";
 "tracking.error.notAuthenticated" = "You need to be signed in.";
 "tracking.error.noNextEpisode" = "This series has no next episode.";
+
+"tab.tracking" = "Tracking";
