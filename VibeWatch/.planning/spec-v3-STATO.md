@@ -1,17 +1,43 @@
 # SPEC v3 — stato del lavoro e ripresa
 
-> Aggiornato: 2026-07-31, fine sessione. Branch: `refactoring/spec-v3-prereqs-oracle`.
+> Aggiornato: 2026-07-31, fine giornata (due sessioni). Branch: `refactoring/spec-v3-prereqs-oracle`.
 > Progetto Supabase: `rqhxhkijzhqivljivirq` (VibeWatch, eu-west-1, Postgres 17.6).
 > Repo: `/Users/nicola/Documents/StartingVibe/VibeWatch` (git root un livello sopra).
 
-**Il filo conduttore di questa sessione, se ne va letto uno solo.** Ogni problema costato tempo era
+**Il filo conduttore di queste sessioni, se ne va letto uno solo.** Ogni problema costato tempo era
 un fallimento *silenzioso*, non un errore: un `try?` che ingoiava un 401, un `?? ""` che rendeva
-una chiave mancante indistinguibile da una vuota, un `create or replace` che avrebbe cancellato due
-rami senza dirlo, un IDOR che rispondeva come se il job fosse tuo. Nessuno di questi si vede
-leggendo il codice: si vedono **eseguendolo e provando a romperlo**. Quando un test passa al primo
-colpo, vale la pena rompere apposta ciò che dovrebbe coprire e controllare che fallisca — su
-`assignRewatchIndex` l'ho fatto e ho scoperto che il test dell'oracolo non copriva il caso che
-credevo.
+una chiave mancante indistinguibile da una vuota, un parse fallito spacciato per "username già
+preso", un pulsante Segui sul proprio profilo il cui tap moriva come rifiuto muto. Nessuno di
+questi si vede leggendo il codice: si vedono **eseguendolo e provando a romperlo**. Quando un test
+passa al primo colpo, vale la pena rompere apposta ciò che dovrebbe coprire e controllare che
+fallisca — fatto anche in questa sessione sul `security definer` di `search_users`: rimesso
+`invoker`, la suite fallisce esattamente dove deve.
+
+## Da fare per prima cosa: il blocco 9
+
+**Il blocco 8 è chiuso** — schema, backfill, schermata username, `user_follows`, `search_users`,
+`get_public_profile`, sync client, UI social e login con username: tutto in produzione e tutto
+provato sul dispositivo (username screen, follow/unfollow fra due account veri, login con
+`@username`). Il prossimo è il **blocco 9**: favorites, rating in stelle, stats, diario (§9.3, DDL
+in §3.6 della spec: `user_favorites` con 4+4 slot espliciti, `user_ratings` con mezze stelle 1-10).
+
+**La checklist per ogni tabella nuova, distillata dal blocco 8** (l'ordine è quello giusto):
+
+1. migration server: tabella + RLS + grant, revoke a PUBLIC *e* anon/authenticated, fa fede
+   `proacl`; asserzioni in `supabase/tests/` (whitelist di `run.sh`!) e collaudo in produzione
+   dentro un `do $$ … raise exception` (rollback, zero residui);
+2. ramo in `apply_mutations` **per splice sul `prosrc` reale** con guardie md5 — mai dal file in
+   cartella; attenzione al cancello d'identità se la colonna non si chiama `user_id`;
+3. client: whitelist `SQLiteTable`, migration SQLite (`SQLiteMigrations.swift`, versione++),
+   pull-list del `SyncEngine`, `TableConflictMapping` (mai lasciare il `default`), e chiave
+   composita in `getKeyColumns` se la PK non è `id`;
+4. le azioni di scrittura in una classe sola che riempie l'identità (modello `TrackingActions` /
+   `SocialActions`), e dopo ogni scrittura **si rilegge dal server**;
+5. UI: stati errore distinti da "vuoto" (mai un errore travestito da risposta), chiavi in **tutte
+   e 20 le lingue** (`LocalizationCoverageTests` rompe altrimenti), test in un file che per il
+   target test va **registrato a mano nel pbxproj in 4 punti**;
+6. per le stats di §9.3: il tempo di visione totale è un **aggregato server** (§13.7) — in cache
+   c'è solo un anno di eventi; e le stats avanzate sono Pro (§10).
 
 ## §13.6 è soddisfatto — misurato sul dispositivo, 2026-07-31
 
@@ -179,8 +205,8 @@ dell'ambiente e funziona, ma qualsiasi codice che si aspetti una anon key JWT va
 oggi.
 
 6 test Deno sulla logica pura (`deno test supabase/functions/login-with-username/`).
-**Da provare sul dispositivo**: login con `@username` + password da un account email (gli account
-OAuth una password non ce l'hanno — per loro il campo resta email o niente).
+**Provato anche sul dispositivo il 2026-07-31: funziona.** (Vale per gli account email; gli
+account OAuth una password non ce l'hanno — per loro il campo resta email o niente.)
 
 ## Il blocco 8, quello che è già in produzione
 
@@ -425,7 +451,7 @@ nota.
 | 5 | Integrazione client | **fatto per la lettura**. SQLite + whitelist + pull + conflitti verificati su dati veri; il percorso di scrittura è cablato ma senza chiamanti (arrivano col blocco 7) |
 | 6 | Pipeline import + report | **fasi 1-4 in produzione e collaudate end-to-end**; fasi 5-6 scritte e verdi in SQL, `import-finalize` da deployare |
 | 7 | UI Tracking | **chiuso.** Schermata, tab bar e migrazione dello storico in produzione; 971 episodi migrati sul dispositivo dell'autore al primo tentativo; §13.6 misurato a **208,9 ms** su 300; 20 lingue allineate |
-| 8 | Username, `public_profiles`, ricerca, follow | **chiuso, tutto in produzione**: schema, backfill, schermata di scelta, `user_follows`, `search_users`, `get_public_profile`, ramo in `apply_mutations`, sync client, UI (provata sul dispositivo) e login con username via Edge Function (collaudato via HTTP; da provare sul dispositivo) |
+| 8 | Username, `public_profiles`, ricerca, follow | **chiuso, tutto in produzione e provato sul dispositivo**: schema, backfill, schermata di scelta, `user_follows`, `search_users`, `get_public_profile`, ramo in `apply_mutations`, sync client, UI social e login con username via Edge Function |
 | 9-10 | Favorites, stats, diario, universal links | da fare |
 
 ## Cosa gira in produzione adesso
@@ -821,7 +847,7 @@ con due codici e si somigliano al 73% per costruzione. Provato rimettendo la cop
 
 ```bash
 supabase/tests/run.sh                      # Postgres usa-e-getta, migration x2
-                                           # tracking_test 80 asserzioni + social_test 82
+                                           # tracking_test 80 asserzioni + social_test 126
 python3 test_oracle.py                     # oracolo, 31 test
 cd supabase/functions/catalog-resolve && deno test            # logica pura, 28 test
 cd supabase/functions/login-with-username && deno test        # login con username, 6 test
@@ -834,7 +860,7 @@ TVTIME_ZIP=~/Downloads/gdpr-data.zip deno test --allow-read --allow-env
 # iOS: se la config è incompleta, l'app si ferma all'avvio in DEBUG con l'elenco
 # delle chiavi mancanti (Config.validateAtLaunch). Non è un bug: sono i segreti.
 xcodebuild test -project VibeWatchApp.xcodeproj -scheme VibeWatchApp \
-  -destination 'id=601C4430-6213-49E3-8A4D-3564B2B57E2A'   # 403 test, 3 fallimenti PREESISTENTI
+  -destination 'id=601C4430-6213-49E3-8A4D-3564B2B57E2A'   # ~425 test, 3 fallimenti PREESISTENTI
 
 # Deploy di una Edge Function: dalla radice del repo, non da supabase/
 supabase functions deploy import-parse --project-ref rqhxhkijzhqivljivirq
@@ -867,7 +893,7 @@ Due modi, entrambi già usati:
 - `.planning/spec-v3-oracle.md` — le 31 divergenze dell'oracolo, 4 ancora da risolvere
 - `.planning/spec-v3-blocco2-catalogo.md` — catalogo e risoluzione TVDB→TMDB
 - `.planning/spec-v3-blocco3-tracking.md` — eventi, stato, trigger, cron
-- `supabase/tests/social_test.sql` — le 82 asserzioni del blocco 8. Il commento in testa a ogni
+- `supabase/tests/social_test.sql` — le 126 asserzioni del blocco 8. Il commento in testa a ogni
   migration di `supabase/supabase/migrations/2026080*` spiega **perché**, non cosa: è lì che stanno
   le ragioni che questo documento riassume
 - `audit/HANDOFF.md` — l'audit del 2026-07-23. **Attenzione: parla di un'altra clone**
