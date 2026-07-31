@@ -1,0 +1,196 @@
+// Fase 3 dell'import TV Time (SPEC v3 §7.2): dagli id TVDB in staging agli id TMDB.
+//
+// Non risolve nulla da sé: delega a `catalog-resolve`, che è già in produzione, ha il suo budget e
+// scrive `tvdb_tmdb_map` — una mappa **globale** (§1.5), quindi il primo utente che importa una
+// serie paga la chiamata e tutti gli altri la trovano già fatta. Qui si fa solo il lavoro di
+// cucitura: capire quali id mancano, chiederli a 50 per volta, e riportare l'esito sulle righe.
+//
+// Il principio di §6 vale anche qui: **non si deduce mai un episodio dai numeri di stagione e
+// episodio**. TVDB e TMDB numerano diversamente — l'oracolo mostra 31 serie su 430 in disaccordo —
+// quindi si risolve per `tvdb_id` e i numeri si prendono dalla risposta di TMDB.
+
+import { serve } from 'https://deno.land/std@0.131.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { adminClient, jsonResponse } from '../_shared/proxy.ts'
+
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
+const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+
+/** §7.2: l'import risolve in batch da 50 — è anche il massimo che `catalog-resolve` accetta. */
+const BATCH = 50
+/** Righe di staging annotate per invocazione. */
+const ROWS_PER_INVOCATION = 4_000
+
+/**
+ * Legge il job **come il chiamante**: è la policy `import_jobs_select_own` a decidere se esiste.
+ * Leggerlo da admin e confrontare `user_id` a mano è come è nato l'IDOR della fase 2.
+ */
+function callerClient(req: Request) {
+  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } },
+    auth: { persistSession: false },
+  })
+}
+
+interface MapRow {
+  tvdb_id: number
+  entity_type: string
+  tmdb_show_id: number | null
+  tmdb_movie_id: number | null
+  season_number: number | null
+  episode_number: number | null
+  resolution: string
+}
+
+serve(async (req: Request) => {
+  if (req.method !== 'POST') return jsonResponse({ error: 'method_not_allowed' }, 405)
+
+  let jobId: string
+  try {
+    jobId = (await req.json()).job_id
+    if (typeof jobId !== 'string' || jobId.length === 0) throw new Error('job_id')
+  } catch {
+    return jsonResponse({ error: 'job_id_required' }, 400)
+  }
+
+  const admin = adminClient()
+
+  const { data: job, error: jobError } = await callerClient(req)
+    .from('import_jobs')
+    .select('id, phase, status, totals')
+    .eq('id', jobId)
+    .maybeSingle()
+
+  if (jobError) return jsonResponse({ error: 'job_lookup_failed', detail: jobError.message }, 401)
+  if (!job) return jsonResponse({ error: 'job_not_found' }, 404)
+  if (job.phase !== 'resolving') return jsonResponse({ error: 'wrong_phase', phase: job.phase }, 409)
+
+  try {
+    // Solo gli eventi hanno bisogno del catalogo. I voti si agganciano per tvdb_episode_id nella
+    // fase di scrittura, quindi restano `pending` fin lì.
+    const { data: pending, error: pendingError } = await admin
+      .from('import_staging')
+      .select('row_index, raw')
+      .eq('job_id', jobId)
+      .eq('status', 'pending')
+      .eq('raw->>row_kind', 'event')
+      .order('row_index', { ascending: true })
+      .limit(ROWS_PER_INVOCATION)
+
+    if (pendingError) throw new Error(`lettura staging fallita: ${pendingError.message}`)
+
+    if (!pending || pending.length === 0) {
+      const { error } = await admin.from('import_jobs')
+        .update({ phase: 'writing', checkpoint: {} }).eq('id', jobId)
+      if (error) throw new Error(`avanzamento non salvato: ${error.message}`)
+      return jsonResponse({ done: true, phase: 'writing', annotated: 0 }, 200)
+    }
+
+    const episodeIds = [
+      ...new Set(
+        pending
+          .map((r) => Number((r.raw as Record<string, unknown>).tvdb_episode_id))
+          .filter((n) => Number.isFinite(n) && n > 0),
+      ),
+    ]
+
+    // Cosa la mappa globale sa già. Chiedere a `catalog-resolve` ciò che è noto costerebbe una
+    // chiamata TMDB per niente, e con 432 serie la differenza è tutta lì.
+    const noti = new Map<number, MapRow>()
+    for (let i = 0; i < episodeIds.length; i += 500) {
+      const { data, error } = await admin
+        .from('tvdb_tmdb_map')
+        .select('tvdb_id, entity_type, tmdb_show_id, tmdb_movie_id, season_number, episode_number, resolution')
+        .eq('entity_type', 'episode')
+        .in('tvdb_id', episodeIds.slice(i, i + 500))
+      if (error) throw new Error(`lettura mappa fallita: ${error.message}`)
+      for (const row of (data ?? []) as MapRow[]) noti.set(row.tvdb_id, row)
+    }
+
+    const mancanti = episodeIds.filter((id) => !noti.has(id))
+
+    // Un batch per invocazione: `catalog-resolve` ha il suo budget e la sua scadenza interna, e
+    // sfondarli da qui significherebbe farsi rifiutare il resto del lavoro.
+    let richiesti = 0
+    if (mancanti.length > 0) {
+      const lotto = mancanti.slice(0, BATCH)
+      richiesti = lotto.length
+
+      const risposta = await fetch(`${SUPABASE_URL}/functions/v1/catalog-resolve`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          // Si inoltra il JWT dell'utente: `catalog-resolve` vuole un token vero, non la chiave
+          // di servizio, ed è giusto che il budget sia attribuito a chi sta importando.
+          'Authorization': req.headers.get('Authorization') ?? '',
+          'apikey': SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({
+          entities: lotto.map((id) => ({ tvdb_id: id, entity_type: 'episode' })),
+        }),
+      })
+
+      if (!risposta.ok) {
+        const detail = (await risposta.text()).slice(0, 300)
+        throw new Error(`catalog-resolve ha risposto ${risposta.status}: ${detail}`)
+      }
+
+      const esito = await risposta.json()
+      // Non si annota nulla in questo giro per gli id appena chiesti: si torna, si rilegge la
+      // mappa e li si trova. Un giro in più costa una query, dedurre l'esito dalla risposta
+      // costerebbe una seconda interpretazione delle stesse regole.
+      return jsonResponse({
+        done: false,
+        phase: 'resolving',
+        richiesti,
+        ancora_da_risolvere: Math.max(0, mancanti.length - richiesti),
+        budget_exhausted: esito?.budget_exhausted ?? false,
+      }, 200)
+    }
+
+    // Tutti gli id di questo blocco sono nella mappa: si annotano le righe.
+    let risolte = 0
+    let irrisolte = 0
+
+    for (const riga of pending) {
+      const raw = riga.raw as Record<string, unknown>
+      const mappa = noti.get(Number(raw.tvdb_episode_id))
+      const trovato = mappa?.resolution === 'found' && mappa.tmdb_show_id !== null
+
+      const { error } = await admin.from('import_staging').update({
+        // I numeri vengono da TMDB, mai da quelli dell'export (§6).
+        resolved: trovato
+          ? {
+            tmdb_show_id: mappa!.tmdb_show_id,
+            season_number: mappa!.season_number,
+            episode_number: mappa!.episode_number,
+          }
+          : null,
+        status: trovato ? 'resolved' : 'unresolved',
+        error: trovato ? null : `catalogo: ${mappa?.resolution ?? 'assente'}`,
+      }).eq('job_id', jobId).eq('row_index', riga.row_index)
+
+      if (error) throw new Error(`annotazione fallita a ${riga.row_index}: ${error.message}`)
+      trovato ? risolte++ : irrisolte++
+    }
+
+    // I non riconosciuti sono materiale obbligatorio del report (§7.4): un import che perde 200
+    // episodi in silenzio è peggio di uno che dichiara il problema.
+    const totals = {
+      ...(job.totals as Record<string, unknown> ?? {}),
+      resolved: ((job.totals as Record<string, number>)?.resolved ?? 0) + risolte,
+      unresolved: ((job.totals as Record<string, number>)?.unresolved ?? 0) + irrisolte,
+    }
+
+    const { error: updateError } = await admin.from('import_jobs')
+      .update({ totals }).eq('id', jobId)
+    if (updateError) throw new Error(`totali non salvati: ${updateError.message}`)
+
+    return jsonResponse({ done: false, phase: 'resolving', risolte, irrisolte, totals }, 200)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    await admin.from('import_jobs')
+      .update({ status: 'failed', error: message.slice(0, 500) }).eq('id', jobId)
+    return jsonResponse({ error: 'resolve_failed', detail: message }, 500)
+  }
+})
