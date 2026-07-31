@@ -715,4 +715,5 @@
 "username.error.tooLong" = "20 文字以内にしてください。";
 "username.error.invalidCharacters" = "半角小文字・数字・_ のみ使えます。";
 "username.error.taken" = "すでに使われています。";
+"username.error.checkFailed" = "確認できませんでした。もう一度お試しください。";
 "username.error.reserved" = "この名前は使用できません。";

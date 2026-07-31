@@ -38,7 +38,12 @@ final class UsernameSetupTests: XCTestCase {
         XCTAssertEqual(UsernameRules.normalizeTyping("MARIO"), "mario")
         XCTAssertEqual(UsernameRules.normalizeTyping("mario.rossi"), "mario.rossi",
                        "il punto resta e diventa un errore visibile, non una sostituzione muta")
-        XCTAssertEqual(UsernameRules.normalizeTyping(String(repeating: "a", count: 30)).count, 20)
+        // Trovato sul dispositivo: il taglio a 20 faceva dire "disponibile" al prefisso di un
+        // nome piu' lungo — un nome mai digitato — col suggerimento a fianco che diceva "3-20".
+        let lungo = String(repeating: "a", count: 30)
+        XCTAssertEqual(UsernameRules.normalizeTyping(lungo), lungo,
+                       "la lunghezza non si corregge di nascosto: diventa un .tooLong visibile")
+        XCTAssertEqual(UsernameRules.problem(with: lungo), .tooLong)
     }
 
     // MARK: - L'esito dell'RPC
@@ -50,6 +55,21 @@ final class UsernameSetupTests: XCTestCase {
         XCTAssertEqual(SetUsernameOutcome(json: ["ok": false, "reason": "reserved"]), .reserved)
         // Una risposta che non si capisce non diventa un successo.
         XCTAssertEqual(SetUsernameOutcome(json: [:]), .invalidFormat)
+    }
+
+    /// PostgREST serializza una funzione `returns boolean` come `true`/`false` nudo: un frammento
+    /// JSON di primo livello. Il parse senza `.fragmentsAllowed` falliva su **ogni** risposta, e il
+    /// `?? false` la traduceva in "già preso" — anche per i nomi liberi. Trovato sul dispositivo:
+    /// i doppi di questi test non passano dal parse, quindi erano verdi col difetto dentro.
+    func testLaRispostaBooleanaNudaDiPostgRESTSiLegge() throws {
+        XCTAssertTrue(try SupabaseService.parseBooleanRPCResponse(Data("true".utf8)))
+        XCTAssertFalse(try SupabaseService.parseBooleanRPCResponse(Data("false".utf8)))
+    }
+
+    /// Una risposta che non si capisce è un errore, non un "no".
+    func testUnaRispostaIllegibileEUnErroreNonUnNo() {
+        XCTAssertThrowsError(try SupabaseService.parseBooleanRPCResponse(Data("<html>".utf8)))
+        XCTAssertThrowsError(try SupabaseService.parseBooleanRPCResponse(Data()))
     }
 
     // MARK: - Le due schermate
@@ -110,6 +130,22 @@ final class UsernameSetupTests: XCTestCase {
         XCTAssertEqual(fake.availabilityChecks, 0, "il server non e' stato interpellato")
     }
 
+    /// Il 21° carattere non sparisce: resta nel campo e il nome diventa un errore visibile,
+    /// coerente col suggerimento "da 3 a 20 caratteri".
+    func testOltreVentiCaratteriSiDiceTroppoLungoNonDisponibile() async throws {
+        let fake = Fake(username: nil)
+        let vm = UsernameSetupViewModel(backend: fake, debounce: .milliseconds(1))
+        await vm.load()
+
+        vm.typed = String(repeating: "a", count: 21)
+        try await Task.sleep(for: .milliseconds(50))
+
+        XCTAssertEqual(vm.typed.count, 21, "il campo tiene cio' che l'utente ha scritto")
+        XCTAssertEqual(vm.status, .unavailable(messageKey: "username.error.tooLong"))
+        XCTAssertFalse(vm.canSubmit)
+        XCTAssertEqual(fake.availabilityChecks, 0, "la lunghezza si vede da qui, niente rete")
+    }
+
     func testUnNomeLiberoDiventaSelezionabile() async throws {
         let vm = UsernameSetupViewModel(backend: Fake(username: nil), debounce: .milliseconds(1))
         await vm.load()
@@ -119,6 +155,33 @@ final class UsernameSetupTests: XCTestCase {
 
         XCTAssertEqual(vm.status, .available)
         XCTAssertTrue(vm.canSubmit)
+    }
+
+    func testUnNomeOccupatoSiDiceOccupato() async throws {
+        let vm = UsernameSetupViewModel(backend: Fake(username: nil, available: false),
+                                        debounce: .milliseconds(1))
+        await vm.load()
+
+        vm.typed = "anna_rossi"
+        try await Task.sleep(for: .milliseconds(80))
+
+        XCTAssertEqual(vm.status, .unavailable(messageKey: "username.error.taken"))
+        XCTAssertFalse(vm.canSubmit)
+    }
+
+    /// Il difetto trovato sul dispositivo, dal lato del ViewModel: un errore nella verifica
+    /// diventava "già preso". Un guasto si dice per quello che è, non spacciandolo per una
+    /// risposta del server.
+    func testUnErroreDiVerificaNonDiventaGiaPreso() async throws {
+        let vm = UsernameSetupViewModel(backend: Fake(username: nil, availabilityFails: true),
+                                        debounce: .milliseconds(1))
+        await vm.load()
+
+        vm.typed = "anna_rossi"
+        try await Task.sleep(for: .milliseconds(80))
+
+        XCTAssertEqual(vm.status, .unavailable(messageKey: "username.error.checkFailed"))
+        XCTAssertFalse(vm.canSubmit, "senza una risposta vera non si va avanti")
     }
 
     /// "Occupato" e "riservato" sono risposte, non errori di sistema: si mostrano accanto al campo.
@@ -145,15 +208,19 @@ final class UsernameSetupTests: XCTestCase {
         private let confirmed: Bool
         private let outcome: SetUsernameOutcome
         private let failing: Bool
+        private let available: Bool
+        private let availabilityFails: Bool
         struct Rotto: Error {}
 
         init(username: String? = nil, confirmed: Bool = false,
              outcome: SetUsernameOutcome = .saved(username: "x", changed: true),
-             failing: Bool = false) {
+             failing: Bool = false, available: Bool = true, availabilityFails: Bool = false) {
             self.username = username
             self.confirmed = confirmed
             self.outcome = outcome
             self.failing = failing
+            self.available = available
+            self.availabilityFails = availabilityFails
         }
 
         func currentState() async throws -> (username: String?, confirmed: Bool) {
@@ -162,7 +229,8 @@ final class UsernameSetupTests: XCTestCase {
         }
         func isAvailable(_ username: String) async throws -> Bool {
             availabilityChecks += 1
-            return true
+            if availabilityFails { throw Rotto() }
+            return available
         }
         func save(_ username: String) async throws -> SetUsernameOutcome { outcome }
     }

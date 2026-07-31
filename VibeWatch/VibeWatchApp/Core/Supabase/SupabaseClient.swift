@@ -421,7 +421,20 @@ class SupabaseService: ObservableObject {
     func usernameAvailable(_ username: String) async throws -> Bool {
         let data = try await callRPC(
             function: "username_available", payload: ["p_username": username])
-        return (try? JSONSerialization.jsonObject(with: data)) as? Bool ?? false
+        return try Self.parseBooleanRPCResponse(data)
+    }
+
+    /// Una funzione SQL che restituisce `boolean` arriva da PostgREST come `true`/`false` nudo:
+    /// un frammento JSON di primo livello, che `jsonObject` senza `.fragmentsAllowed` rifiuta.
+    /// Una risposta che non si capisce è un errore, non un "no": tradurla in `false` faceva
+    /// rispondere "già preso" a ogni nome, compresi i liberi.
+    static func parseBooleanRPCResponse(_ data: Data) throws -> Bool {
+        guard let value = (try? JSONSerialization.jsonObject(
+            with: data, options: [.fragmentsAllowed])) as? Bool else {
+            throw SupabaseError.unexpectedResponse(
+                body: String(data: data, encoding: .utf8) ?? "<non-UTF8>")
+        }
+        return value
     }
 
     /// Sceglie o conferma. Gli esiti "occupato" e "riservato" tornano come risposta, non come
@@ -1149,6 +1162,7 @@ enum SupabaseError: LocalizedError {
     case authenticationFailed
     case networkError
     case httpError(statusCode: Int, body: String)
+    case unexpectedResponse(body: String)
     
     var errorDescription: String? {
         switch self {
@@ -1164,6 +1178,10 @@ enum SupabaseError: LocalizedError {
             let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
             let short = trimmed.count > 300 ? String(trimmed.prefix(300)) + "…" : trimmed
             return "Supabase HTTP \(statusCode): \(short.isEmpty ? "No response body" : short)"
+        case .unexpectedResponse(let body):
+            let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
+            let short = trimmed.count > 300 ? String(trimmed.prefix(300)) + "…" : trimmed
+            return "Unexpected Supabase response: \(short.isEmpty ? "empty body" : short)"
         }
     }
 }

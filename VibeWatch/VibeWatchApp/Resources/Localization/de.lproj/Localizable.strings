@@ -716,4 +716,5 @@
 "username.error.tooLong" = "Höchstens 20 Zeichen.";
 "username.error.invalidCharacters" = "Nur Kleinbuchstaben, Zahlen und _.";
 "username.error.taken" = "Schon vergeben.";
+"username.error.checkFailed" = "Prüfung nicht möglich. Erneut versuchen.";
 "username.error.reserved" = "Dieser ist reserviert.";

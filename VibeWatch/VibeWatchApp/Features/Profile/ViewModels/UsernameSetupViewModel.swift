@@ -132,11 +132,18 @@ final class UsernameSetupViewModel: ObservableObject {
         checkTask = Task { [weak self, debounce, backend] in
             try? await Task.sleep(for: debounce)
             guard !Task.isCancelled else { return }
-            let free = (try? await backend.isAvailable(candidate)) ?? false
+            // "Occupato" è la risposta del server; un errore è un'altra cosa e si dice per quello
+            // che è. Il `?? false` che stava qui trasformava ogni guasto — rete giù, risposta
+            // illeggibile — in "già preso", per qualsiasi nome.
+            let free = try? await backend.isAvailable(candidate)
             guard !Task.isCancelled else { return }
             await MainActor.run {
                 guard let self, self.typed == candidate else { return }   // ha continuato a scrivere
-                self.status = free ? .available : .unavailable(messageKey: "username.error.taken")
+                switch free {
+                case true: self.status = .available
+                case false: self.status = .unavailable(messageKey: "username.error.taken")
+                case nil: self.status = .unavailable(messageKey: "username.error.checkFailed")
+                }
             }
         }
     }

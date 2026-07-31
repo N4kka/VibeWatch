@@ -715,4 +715,5 @@
 "username.error.tooLong" = "Enintään 20 merkkiä.";
 "username.error.invalidCharacters" = "Vain pieniä kirjaimia, numeroita ja _.";
 "username.error.taken" = "Jo varattu.";
+"username.error.checkFailed" = "Tarkistus epäonnistui. Yritä uudelleen.";
 "username.error.reserved" = "Tämä on varattu käyttöön.";

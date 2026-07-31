@@ -717,4 +717,5 @@
 "username.error.tooLong" = "Højst 20 tegn.";
 "username.error.invalidCharacters" = "Kun små bogstaver, tal og _.";
 "username.error.taken" = "Allerede taget.";
+"username.error.checkFailed" = "Kunne ikke tjekke. Prøv igen.";
 "username.error.reserved" = "Dette er reserveret.";

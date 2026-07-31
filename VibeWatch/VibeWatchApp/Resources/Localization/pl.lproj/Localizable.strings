@@ -715,4 +715,5 @@
 "username.error.tooLong" = "Najwyżej 20 znaków.";
 "username.error.invalidCharacters" = "Tylko małe litery, cyfry i _.";
 "username.error.taken" = "Już zajęta.";
+"username.error.checkFailed" = "Nie udało się sprawdzić. Spróbuj ponownie.";
 "username.error.reserved" = "Ta jest zastrzeżona.";

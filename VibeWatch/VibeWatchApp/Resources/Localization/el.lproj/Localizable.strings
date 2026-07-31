@@ -715,4 +715,5 @@
 "username.error.tooLong" = "Το πολύ 20 χαρακτήρες.";
 "username.error.invalidCharacters" = "Μόνο πεζά, αριθμοί και _.";
 "username.error.taken" = "Χρησιμοποιείται ήδη.";
+"username.error.checkFailed" = "Ο έλεγχος απέτυχε. Δοκίμασε ξανά.";
 "username.error.reserved" = "Αυτό είναι δεσμευμένο.";

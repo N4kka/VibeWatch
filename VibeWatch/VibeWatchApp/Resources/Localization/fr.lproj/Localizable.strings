@@ -715,4 +715,5 @@
 "username.error.tooLong" = "20 caractères maximum.";
 "username.error.invalidCharacters" = "Uniquement minuscules, chiffres et _.";
 "username.error.taken" = "Déjà pris.";
+"username.error.checkFailed" = "Vérification impossible. Réessayez.";
 "username.error.reserved" = "Celui-ci est réservé.";

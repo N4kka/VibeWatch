@@ -703,4 +703,5 @@
 "username.error.tooLong" = "En fazla 20 karakter.";
 "username.error.invalidCharacters" = "Yalnızca küçük harf, rakam ve _.";
 "username.error.taken" = "Zaten alınmış.";
+"username.error.checkFailed" = "Kontrol edilemedi. Tekrar dene.";
 "username.error.reserved" = "Bu ad ayrılmış.";

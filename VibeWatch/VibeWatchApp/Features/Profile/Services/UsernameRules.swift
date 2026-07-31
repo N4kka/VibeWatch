@@ -58,10 +58,13 @@ enum UsernameRules {
     /// non intenzioni; **non** si sostituiscono gli altri caratteri, perché farlo trasformerebbe
     /// `mario.rossi` in `mario_rossi` senza dirlo e l'utente si ritroverebbe un nome che non ha
     /// scelto. Quello lo fa `username_seed`, che serve a *proporre*, non a correggere.
+    ///
+    /// Vale anche per la lunghezza: niente taglio a `maxLength`. Il taglio faceva dire
+    /// "disponibile" al prefisso di 20 caratteri di un nome più lungo — un nome mai digitato —
+    /// mentre il suggerimento a fianco diceva "da 3 a 20". Il 21° carattere resta nel campo e
+    /// diventa un `.tooLong` visibile, come ogni altro errore di forma.
     static func normalizeTyping(_ raw: String) -> String {
-        String(raw.trimmingCharacters(in: .whitespacesAndNewlines)
-            .lowercased()
-            .prefix(maxLength))
+        raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     }
 }
 

@@ -641,4 +641,5 @@
 "username.error.tooLong" = "Maks 20 tegn.";
 "username.error.invalidCharacters" = "Bare små bokstaver, tall og _.";
 "username.error.taken" = "Allerede tatt.";
+"username.error.checkFailed" = "Kunne ikke sjekke. Prøv på nytt.";
 "username.error.reserved" = "Dette er reservert.";

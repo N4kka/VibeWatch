@@ -715,4 +715,5 @@
 "username.error.tooLong" = "ज़्यादा से ज़्यादा 20 वर्ण।";
 "username.error.invalidCharacters" = "सिर्फ़ छोटे अक्षर, अंक और _।";
 "username.error.taken" = "पहले से लिया जा चुका है।";
+"username.error.checkFailed" = "जाँच नहीं हो सकी। फिर से प्रयास करें।";
 "username.error.reserved" = "यह सुरक्षित रखा गया है।";

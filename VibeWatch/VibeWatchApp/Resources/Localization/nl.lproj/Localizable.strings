@@ -715,4 +715,5 @@
 "username.error.tooLong" = "Hoogstens 20 tekens.";
 "username.error.invalidCharacters" = "Alleen kleine letters, cijfers en _.";
 "username.error.taken" = "Al bezet.";
+"username.error.checkFailed" = "Controleren is niet gelukt. Probeer opnieuw.";
 "username.error.reserved" = "Deze is gereserveerd.";

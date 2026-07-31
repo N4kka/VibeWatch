@@ -700,4 +700,5 @@
 "username.error.tooLong" = "最多 20 个字符。";
 "username.error.invalidCharacters" = "只能用小写字母、数字和 _。";
 "username.error.taken" = "已被占用。";
+"username.error.checkFailed" = "无法检查。请重试。";
 "username.error.reserved" = "该名称已被保留。";

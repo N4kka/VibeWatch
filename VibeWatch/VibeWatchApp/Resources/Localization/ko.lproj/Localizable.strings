@@ -715,4 +715,5 @@
 "username.error.tooLong" = "20자를 넘을 수 없습니다.";
 "username.error.invalidCharacters" = "소문자, 숫자, _만 쓸 수 있습니다.";
 "username.error.taken" = "이미 사용 중입니다.";
+"username.error.checkFailed" = "확인하지 못했습니다. 다시 시도해 주세요.";
 "username.error.reserved" = "사용할 수 없는 이름입니다.";

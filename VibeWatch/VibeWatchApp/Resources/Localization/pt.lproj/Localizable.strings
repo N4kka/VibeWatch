@@ -703,4 +703,5 @@
 "username.error.tooLong" = "No máximo 20 caracteres.";
 "username.error.invalidCharacters" = "Apenas minúsculas, números e _.";
 "username.error.taken" = "Já está em uso.";
+"username.error.checkFailed" = "Não foi possível verificar. Tente novamente.";
 "username.error.reserved" = "Este é reservado.";

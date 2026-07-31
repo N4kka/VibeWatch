@@ -703,4 +703,5 @@
 "username.error.tooLong" = "Högst 20 tecken.";
 "username.error.invalidCharacters" = "Bara små bokstäver, siffror och _.";
 "username.error.taken" = "Redan taget.";
+"username.error.checkFailed" = "Kunde inte kontrollera. Försök igen.";
 "username.error.reserved" = "Det här är reserverat.";

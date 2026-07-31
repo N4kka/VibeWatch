@@ -716,4 +716,5 @@
 "username.error.tooLong" = "20 characters at most.";
 "username.error.invalidCharacters" = "Only lowercase letters, numbers and _.";
 "username.error.taken" = "Already taken.";
+"username.error.checkFailed" = "Couldn't check. Try again.";
 "username.error.reserved" = "This one is reserved.";

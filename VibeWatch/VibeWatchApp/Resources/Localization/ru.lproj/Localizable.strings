@@ -703,4 +703,5 @@
 "username.error.tooLong" = "Не более 20 символов.";
 "username.error.invalidCharacters" = "Только строчные латинские буквы, цифры и _.";
 "username.error.taken" = "Уже занято.";
+"username.error.checkFailed" = "Не удалось проверить. Попробуйте ещё раз.";
 "username.error.reserved" = "Это имя зарезервировано.";
