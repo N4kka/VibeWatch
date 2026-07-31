@@ -25,7 +25,8 @@ convenga, non se si possa.
 | 3 | `watch_events` + `tv_show_state` | **fatto e in produzione**. Harness SQL, 64 asserzioni verdi |
 | — | `apply_mutations` (§4, §7.2) | **fatto e in produzione**, collaudato su utente usa-e-getta |
 | 4 | Paginazione del pull | **fatto e verificato**. `SyncPagination`, 8 test verdi + pull reale sul dispositivo, nessun `Failed to pull` |
-| 5+ | Integrazione client, import, UI, sociale | da fare ← ripartire da qui |
+| 5 | Integrazione client | **in corso**. SQLite + whitelist + pull + conflitti fatti; il percorso di scrittura è cablato ma senza chiamanti (arrivano col blocco 7) |
+| 6+ | Import, UI, sociale | da fare ← ripartire da qui |
 
 ## Cosa gira in produzione adesso
 
@@ -46,6 +47,16 @@ convenga, non se si possa.
 - Droppati: `tv_tracking`, `tv_episode_progress`, `v_tv_tracking_buckets`,
   `get_tv_tracking_buckets()` (erano a 0 righe, verificato subito prima).
 - Catalogo popolato con una sola serie di prova: Game of Thrones (1399), 373 episodi.
+
+## Due cose da sapere prima del blocco 7
+
+- **Chi accoda una mutazione su `watch_events` deve mettere `user_id` nel record.**
+  `apply_mutations` confronta `rec->>'user_id'` con `auth.uid()` e, se non combacia o manca,
+  scrive `user_id_mismatch` in `sync_rejected_mutations` e va avanti: nessun errore visibile al
+  client. `normalizedMutationRecord` riempie `id` ma non `user_id`.
+- **Il totale di tempo di visione (§13.7) non può più essere sommato dal client**, perché in cache
+  c'è solo un anno di eventi. Deve arrivare dal server come aggregato — coerente con §1.1, e serve
+  comunque alle stats del blocco 9.
 
 ## Cose imparate che risparmiano tempo
 

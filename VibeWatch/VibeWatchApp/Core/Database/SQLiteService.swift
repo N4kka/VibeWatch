@@ -76,6 +76,12 @@ enum SQLiteTable: String, CaseIterable {
     // LocalWatchProvidersRepository threw invalidTableName and died under a `try?`).
     case watchProviders = "watch_providers"
 
+    // Tracking episodi (SPEC v3 §4). `user_ratings`, `user_favorites` e `user_follows` sono
+    // nell'elenco di §4 ma NON qui: non esistono ancora lato server (arrivano coi blocchi 8 e 9),
+    // e metterle ora significherebbe un PGRST205 a ogni sync.
+    case watchEvents = "watch_events"
+    case tvShowState = "tv_show_state"
+
     /// All valid table names as a Set for O(1) lookup
     static let validTableNames: Set<String> = Set(SQLiteTable.allCases.map(\.rawValue))
 

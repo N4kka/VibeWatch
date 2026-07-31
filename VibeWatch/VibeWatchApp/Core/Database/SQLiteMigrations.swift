@@ -8,7 +8,7 @@ extension SQLiteService {
     /// Run personalization migrations (Phase 1)
     func runPersonalizationMigrations() {
         let currentVersion = getPersonalizationMigrationVersion()
-        let latestVersion = 7
+        let latestVersion = 8
 
         guard currentVersion < latestVersion else {
             Logger.info("[SQLite] Personalization migrations already applied (version \(currentVersion))")
@@ -44,6 +44,9 @@ extension SQLiteService {
             }
             if currentVersion < 7 {
                 migration7_BackfillMissingIndexes()
+            }
+            if currentVersion < 8 {
+                migration8_AddTrackingTables()
             }
 
             // Update migration version
@@ -196,7 +199,84 @@ extension SQLiteService {
         Logger.info("[SQLite] Migration 7 complete - indexes backfilled")
     }
 
+    /// SPEC v3 §4 — lo specchio locale del tracking episodi.
+    ///
+    /// `watch_events` è append-only e la strategia di conflitto è `union`: non si perde mai una
+    /// visione. `tv_show_state` è derivato e il server è autorevole (§1.1), quindi in locale è solo
+    /// una cache di lettura — ciò che il client può cambiare è `user_status`, e passa dall'outbox.
+    private func migration8_AddTrackingTables() {
+        Logger.info("[SQLite] Migration 8: Adding watch_events and tv_show_state")
+
+        executeScript(createWatchEventsTable())
+        executeScript(createTVShowStateTable())
+
+        Logger.info("[SQLite] Migration 8 complete")
+    }
+
     // MARK: - Table Creation Methods
+
+    private func createWatchEventsTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS watch_events (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            media_type TEXT NOT NULL,
+            tmdb_movie_id INTEGER,
+            tmdb_show_id INTEGER,
+            season_number INTEGER,
+            episode_number INTEGER,
+            watched_at TEXT NOT NULL,
+            logged_at TEXT,
+            watched_at_precision TEXT NOT NULL DEFAULT 'exact',
+            runtime_seconds INTEGER,
+            is_special INTEGER NOT NULL DEFAULT 0,
+            rewatch_index INTEGER NOT NULL DEFAULT 0,
+            source TEXT NOT NULL DEFAULT 'manual',
+            external_ref TEXT,
+            dedup_key TEXT,
+            device_id TEXT,
+            deleted_at TEXT,
+            synced_at TEXT
+        );
+        -- Il diario: eventi di un utente in ordine cronologico inverso. È l'unica lettura calda
+        -- di questa tabella sul client, ed è quella che deve stare sotto i 300 ms (§13.6).
+        CREATE INDEX IF NOT EXISTS idx_watch_events_user_watched
+            ON watch_events(user_id, watched_at DESC);
+        -- Il progresso di una singola serie, per la schermata di dettaglio.
+        CREATE INDEX IF NOT EXISTS idx_watch_events_user_show
+            ON watch_events(user_id, tmdb_show_id, season_number, episode_number);
+        -- La dedup locale prima di accodare un evento all'outbox: stessa chiave del server, così
+        -- un re-import non genera 20.000 mutazioni destinate a essere scartate a destinazione.
+        CREATE INDEX IF NOT EXISTS idx_watch_events_dedup
+            ON watch_events(user_id, dedup_key);
+        """
+    }
+
+    private func createTVShowStateTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS tv_show_state (
+            user_id TEXT NOT NULL,
+            tmdb_show_id INTEGER NOT NULL,
+            user_status TEXT NOT NULL DEFAULT 'active',
+            watched_count INTEGER NOT NULL DEFAULT 0,
+            aired_count INTEGER NOT NULL DEFAULT 0,
+            total_count INTEGER NOT NULL DEFAULT 0,
+            last_watched_at TEXT,
+            next_season INTEGER,
+            next_episode INTEGER,
+            next_air_date TEXT,
+            backlog_since TEXT,
+            first_watched_at TEXT,
+            completed_at TEXT,
+            updated_at TEXT,
+            synced_at TEXT,
+            PRIMARY KEY (user_id, tmdb_show_id)
+        );
+        -- L'ordinamento della schermata Tracking: prima chi ha un arretrato più vecchio.
+        CREATE INDEX IF NOT EXISTS idx_tv_show_state_user_backlog
+            ON tv_show_state(user_id, user_status, backlog_since);
+        """
+    }
 
     private func createCerebrasJobQueueTable() -> String {
         """

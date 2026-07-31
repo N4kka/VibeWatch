@@ -690,7 +690,12 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             "user_clip_signals",
             "ai_conversation_history",
             "global_discovery_filters",
-            "device_info"
+            "device_info",
+            // SPEC v3 §4. `user_ratings`, `user_favorites` e `user_follows` sono nell'elenco di §4
+            // ma restano fuori finché i blocchi 8 e 9 non le creano lato server: una tabella
+            // inesistente qui è un PGRST205 a ogni sync, non una riga in meno.
+            "watch_events",
+            "tv_show_state"
         ]
 
         for table in userTables {
@@ -732,6 +737,11 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
                     query = query.eq("id", value: userId)
                 } else {
                     query = query.eq("user_id", value: userId)
+                }
+
+                if let window = SyncEngine.pullWindow(for: name),
+                   let cutoff = Calendar.current.date(byAdding: .month, value: -window.months, to: Date()) {
+                    query = query.gte(window.column, value: ISO8601DateFormatter().string(from: cutoff))
                 }
 
                 // Ordering is what makes paging correct, not just deterministic output. Without an
@@ -837,8 +847,33 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             return "device_id"
         case "global_discovery_filters":
             return "user_id"
+        case "tv_show_state":
+            // Chiave composta (user_id, tmdb_show_id): dato che il pull filtra già per user_id,
+            // dentro quel sottoinsieme tmdb_show_id è unico, che è quanto serve sia per
+            // identificare la riga sia per ordinare le pagine in modo stabile.
+            return "tmdb_show_id"
         default:
             return "id"
+        }
+    }
+
+    /// Quanta storia ritira il pull per una tabella.
+    ///
+    /// Il fixture reale di un import TV Time contiene 21.344 eventi su 432 serie: il **94,5% ha
+    /// più di 12 mesi**, e il solo 2015 ne conta 7.801. Ritirarli tutti costa ~12 MB e 25 richieste
+    /// a ogni sync completo per righe che nessuna schermata legge — §10 mette il diario oltre i 12
+    /// mesi dietro il paywall, quindi per un utente free quelle righe non sono nemmeno mostrabili.
+    /// Con la finestra: 1.605 righe, ~0,8 MB, 5 richieste.
+    ///
+    /// Conseguenza da non dimenticare: il totale di tempo di visione (§13.7) **non** può più essere
+    /// sommato dal client, perché in cache c'è solo un anno. Deve arrivare dal server come
+    /// aggregato — che è comunque ciò che §1.1 prescrive e che serve alle stats del blocco 9.
+    nonisolated static func pullWindow(for table: String) -> (column: String, months: Int)? {
+        switch table {
+        case "watch_events":
+            return ("watched_at", 12)
+        default:
+            return nil
         }
     }
 

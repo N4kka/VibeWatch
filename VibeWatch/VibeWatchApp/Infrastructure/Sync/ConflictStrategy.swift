@@ -96,6 +96,16 @@ public enum TableConflictMapping {
         case "clips":
             return .serverWins
 
+        // SPEC v3 §4. Gli eventi sono append-only: non si perde mai una visione, e due dispositivi
+        // che ne registrano di diversi li tengono entrambi.
+        case "watch_events":
+            return .union
+
+        // Derivata dagli eventi e ricalcolata dal server (§1.1). Il client scrive solo
+        // `user_status`, e lo fa via outbox: qui vince sempre ciò che arriva.
+        case "tv_show_state":
+            return .serverWins
+
         // Default fallback for unknown tables
         default:
             return .lastWriteWins
