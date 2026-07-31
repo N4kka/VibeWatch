@@ -25,7 +25,7 @@ convenga, non se si possa.
 | 3 | `watch_events` + `tv_show_state` | **fatto e in produzione**. Harness SQL, 64 asserzioni verdi |
 | — | `apply_mutations` (§4, §7.2) | **fatto e in produzione**, collaudato su utente usa-e-getta |
 | 4 | Paginazione del pull | **fatto e verificato**. `SyncPagination`, 8 test verdi + pull reale sul dispositivo, nessun `Failed to pull` |
-| 5 | Integrazione client | **in corso**. SQLite + whitelist + pull + conflitti fatti; il percorso di scrittura è cablato ma senza chiamanti (arrivano col blocco 7) |
+| 5 | Integrazione client | **in corso**. SQLite + whitelist + pull + conflitti fatti e verificati su dati veri; il percorso di scrittura è cablato ma senza chiamanti (arrivano col blocco 7) |
 | 6+ | Import, UI, sociale | da fare ← ripartire da qui |
 
 ## Cosa gira in produzione adesso
@@ -47,6 +47,18 @@ convenga, non se si possa.
 - Droppati: `tv_tracking`, `tv_episode_progress`, `v_tv_tracking_buckets`,
   `get_tv_tracking_buckets()` (erano a 0 righe, verificato subito prima).
 - Catalogo popolato con una sola serie di prova: Game of Thrones (1399), 373 episodi.
+
+## La finestra a 12 mesi, verificata
+
+Collaudo del 2026-07-31 su utente usa-e-getta (transazione fatta fallire, zero residui): 5 eventi
+scritti fra il 2015 e il 2026, di cui 3 fuori finestra. Risultato:
+
+- il client ne ritira **2**, i soli dentro i 12 mesi — il filtro funziona sotto RLS, letto col ruolo
+  `authenticated`;
+- `tv_show_state` conta **5/73/73**: i contatori restano completi anche sugli eventi che il client
+  non scaricherà mai. È il punto centrale dell'opzione B — il progresso non si degrada;
+- tre pagine da una riga danno `[5][4][vuota]`: righe distinte, nessuna sovrapposizione, e la
+  pagina vuota chiude la camminata come `SyncPagination` si aspetta.
 
 ## Due cose da sapere prima del blocco 7
 
