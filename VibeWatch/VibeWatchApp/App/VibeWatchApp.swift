@@ -13,6 +13,16 @@ struct VibeWatchApp: App {
     @StateObject private var quotaManager = DailyQuotaManager.shared
     
     init() {
+        // Per prima cosa, prima di qualunque consumatore: una chiave mancante non si presenta come
+        // errore di configurazione ma come sintomo lontano — TMDB 401 e Scopri bianca, oppure
+        // RevenueCat "Invalid API Key" due righe piu' sotto. Elencarle qui e' la differenza fra
+        // cinque secondi e un pomeriggio.
+        //
+        // In Release questo non lascia traccia visibile: `Logger` e' interamente dentro
+        // `#if DEBUG`. Se un giorno serve accorgersene anche in produzione, il posto giusto e'
+        // qui, mandando `problems` a Crashlytics come non-fatal.
+        Config.validateAtLaunch()
+
         // Configure RevenueCat with appropriate log level
         RevenueCatService.shared.applyCurrentLogLevel()
         Purchases.configure(withAPIKey: Config.revenueCatAPIKey)
