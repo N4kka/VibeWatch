@@ -32,12 +32,20 @@ final class TVShowsTrackingViewModel: ObservableObject {
             .store(in: &cancellables)
     }
 
-    func load() async {
+    /// - Parameter measuring: se `true`, cronometra il percorso per §13.6. Lo fa solo la prima
+    ///   apertura della schermata: un `refreshable` o un ricarico dopo il sync non sono il caso
+    ///   che il requisito descrive, e mescolarli falserebbe la misura verso il basso.
+    func load(measuring: Bool = false) async {
+        if measuring { TrackingPerformanceProbe.begin() }
         isLoading = true
         defer { isLoading = false }
 
         do {
             sections = try await repository.fetchSections()
+            if measuring {
+                TrackingPerformanceProbe.dataReady(
+                    rows: sections.sections.reduce(0) { $0 + $1.rows.count })
+            }
             lastError = nil
         } catch {
             // Si dichiara e si logga. Un `try?` qui produrrebbe una schermata vuota

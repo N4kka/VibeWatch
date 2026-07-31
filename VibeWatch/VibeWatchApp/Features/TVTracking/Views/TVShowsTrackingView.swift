@@ -15,11 +15,18 @@ import SwiftUI
 struct TVShowsTrackingView: View {
     @StateObject private var viewModel = TVShowsTrackingViewModel()
     @State private var actionError: String?
+    /// §13.6 si misura sulla PRIMA apertura: dopo, la cache di SwiftUI e quella delle immagini
+    /// rendono il numero piu' bello e meno vero.
+    @State private var hasMeasured = false
 
     var body: some View {
         content
             .background(Color.theme.backgroundDark.ignoresSafeArea())
-            .task { await viewModel.load() }
+            .task {
+                let first = !hasMeasured
+                hasMeasured = true
+                await viewModel.load(measuring: first)
+            }
             .alert(
                 "tracking.error.title".localized,
                 isPresented: Binding(get: { actionError != nil }, set: { if !$0 { actionError = nil } })
@@ -36,6 +43,16 @@ struct TVShowsTrackingView: View {
             emptyState
         } else {
             List {
+                // Il capolinea della misura: il primo fotogramma con contenuto. Si chiude un
+                // turno di runloop dopo la comparsa, cioe' a layout calcolato e commit inviato.
+                Color.clear.frame(height: 0)
+                    .onAppear {
+                        DispatchQueue.main.async { TrackingPerformanceProbe.firstFrameRendered() }
+                    }
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+
                 ForEach(viewModel.sections.timeline, id: \.group) { group, entries in
                     Section(header: Text(group.titleKey.localized)) {
                         ForEach(entries) { entry in
