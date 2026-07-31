@@ -1,6 +1,6 @@
 # SPEC v3 — stato del lavoro e ripresa
 
-> Aggiornato: 2026-07-31, fine giornata (due sessioni). Branch: `refactoring/spec-v3-prereqs-oracle`.
+> Aggiornato: 2026-07-31, fine giornata (tre sessioni). Branch: `refactoring/spec-v3-prereqs-oracle`.
 > Progetto Supabase: `rqhxhkijzhqivljivirq` (VibeWatch, eu-west-1, Postgres 17.6).
 > Repo: `/Users/nicola/Documents/StartingVibe/VibeWatch` (git root un livello sopra).
 
@@ -13,13 +13,24 @@ passa al primo colpo, vale la pena rompere apposta ciò che dovrebbe coprire e c
 fallisca — fatto anche in questa sessione sul `security definer` di `search_users`: rimesso
 `invoker`, la suite fallisce esattamente dove deve.
 
-## Da fare per prima cosa: il blocco 9
+## Da fare per prima cosa: il blocco 9, la metà che resta
 
-**Il blocco 8 è chiuso** — schema, backfill, schermata username, `user_follows`, `search_users`,
-`get_public_profile`, sync client, UI social e login con username: tutto in produzione e tutto
-provato sul dispositivo (username screen, follow/unfollow fra due account veri, login con
-`@username`). Il prossimo è il **blocco 9**: favorites, rating in stelle, stats, diario (§9.3, DDL
-in §3.6 della spec: `user_favorites` con 4+4 slot espliciti, `user_ratings` con mezze stelle 1-10).
+**Del blocco 9 è fatta la metà dati** (2026-07-31, terza sessione): `user_favorites` e
+`user_ratings` sono in produzione con RLS e rami in `apply_mutations`, e il client le sincronizza
+(specchi SQLite, pull, conflitti, `RatingActions`/`FavoritesActions`). Vedi la sezione *Il blocco
+9, il pezzo dati* qui sotto per le decisioni. **Resta:**
+
+1. **Stats §9.3 lato server** — il tempo di visione totale è un **aggregato server** (§13.7): in
+   cache c'è solo un anno di eventi, sommare dal client mente. Serve una funzione (o l'estensione
+   di `get_public_profile`) con: tempo totale dai runtime reali, film/serie/episodi visti; le
+   stats avanzate (per anno, generi, decadi, distribuzione voti) sono **Pro** (§10). I favorites
+   pubblici nel profilo passano da `get_public_profile` (definer), non da un rilassamento RLS —
+   la RLS delle due tabelle nuove è owner-only apposta.
+2. **UI**: stelle a mezze (il valore è un intero 1-10, mai float), slot favorites (due righe da
+   4, §9.3), diario (eventi dei 12 mesi in cache, oltre = Pro). Stati errore distinti da "vuoto",
+   chiavi nelle **20 lingue** (`LocalizationCoverageTests` rompe altrimenti).
+3. **Prova su dispositivo** di tutto il giro (voto → server → pull → schermo), come per i follow.
+4. Poi il **blocco 10**: universal links, rotte profilo.
 
 **La checklist per ogni tabella nuova, distillata dal blocco 8** (l'ordine è quello giusto):
 
@@ -38,6 +49,50 @@ in §3.6 della spec: `user_favorites` con 4+4 slot espliciti, `user_ratings` con
    target test va **registrato a mano nel pbxproj in 4 punti**;
 6. per le stats di §9.3: il tempo di visione totale è un **aggregato server** (§13.7) — in cache
    c'è solo un anno di eventi; e le stats avanzate sono Pro (§10).
+
+## Il blocco 9, il pezzo dati — in produzione dal 2026-07-31
+
+Migration `20260801170000` (tabelle) e `20260801180000` (`apply_mutations`), entrambe applicate e
+collaudate in produzione dentro transazioni fatte fallire (residui verificati a zero, due volte).
+
+**Due aggiunte al DDL di §3.6, entrambe additive e col perché scritto nella migration:**
+`deleted_at` su `user_favorites` (il pull fa solo upsert: senza lapide uno slot svuotato non
+arriva mai agli altri dispositivi) e il CHECK di forma su `user_ratings` (famiglia di
+`watch_events_shape`: un voto a episodio senza numeri si rifiuta alla nascita, dove si vede).
+
+**`user_ratings` non ha id sintetico, e questo decide tutto il resto.** L'indice unico è
+**parziale** (`where deleted_at is null`, come da spec), quindi `ON CONFLICT` non vede la riga
+già cancellata: il ramo in `apply_mutations` fa **update-or-insert sulla chiave naturale** —
+l'UPDATE rianima la lapide riusando la riga, l'INSERT nasce solo se della chiave non c'è traccia.
+Collaudato: dopo lapide e re-voto le righe totali sono **1**, non 2. Un insert cieco avrebbe
+fatto divergere i dispositivi a ogni re-voto.
+
+**I grant sono esatti e c'è una lezione nuova:** revocare a PUBLIC e ad anon **non basta nemmeno
+per authenticated** — i default privileges gli regalano DELETE alla creazione della tabella, e il
+modello qui è la lapide. Terzo revoke esplicito, poi il grant: `authenticated=arw` su `relacl`,
+niente `d`. Il collaudo verifica che la DELETE fisica risponda `42501`.
+
+**Nello specchio SQLite stagione/episodio sono `NOT NULL DEFAULT -1`.** Una PK SQLite con una
+colonna NULL considera ogni NULL diverso dagli altri: lo stesso voto a un film arriverebbe due
+volte come due righe. Il -1 è lo stesso sentinello del `coalesce(season_number,-1)` dell'indice
+remoto; la conversione NULL → -1 sta in `normalizeRow` (solo pull — le azioni parlano al server
+coi NULL). Senza, `fetchLocalRecord` non ritroverebbe mai la riga e la risoluzione dei conflitti
+verrebbe saltata in silenzio.
+
+**L'ordinamento di pagina ora deriva da `getKeyColumns`**: tutte le colonne della chiave, per
+qualunque tabella a chiave composta, senza un `if` per-tabella da ricordare (§5).
+
+**Le azioni** (`RatingActions`/`FavoritesActions`, modello `SocialActions`): identità riempita lì
+e solo lì, forma fuori regola = errore vero **prima** di accodare, e dopo ogni scrittura
+`pullProfileContent()` — mirato, due tabelle, non venti. La DELETE dell'outbox porta la chiave
+naturale **nel record** (la chiave non entra in `id`); un record senza chiave è un rifiuto
+registrato, mai un no-op muto.
+
+**Test:** 30 asserzioni SQL nuove (`favorites_ratings_test.sql`, nel giro di `run.sh`), 9 in
+`FavoritesRatingsActionsTests` (pbxproj, i soliti 4 punti). Provati rompendo: senza CHECK di
+forma, senza revoke ad authenticated, senza rilettura post-scrittura — falliscono dove devono.
+Il test di `TrackingSyncTests` che teneva le due tabelle FUORI dalla whitelist fissava una
+premessa scaduta: ora fissa il positivo (dentro, `lastWriteWins` esplicito).
 
 ## §13.6 è soddisfatto — misurato sul dispositivo, 2026-07-31
 
@@ -452,7 +507,8 @@ nota.
 | 6 | Pipeline import + report | **fasi 1-4 in produzione e collaudate end-to-end**; fasi 5-6 scritte e verdi in SQL, `import-finalize` da deployare |
 | 7 | UI Tracking | **chiuso.** Schermata, tab bar e migrazione dello storico in produzione; 971 episodi migrati sul dispositivo dell'autore al primo tentativo; §13.6 misurato a **208,9 ms** su 300; 20 lingue allineate |
 | 8 | Username, `public_profiles`, ricerca, follow | **chiuso, tutto in produzione e provato sul dispositivo**: schema, backfill, schermata di scelta, `user_follows`, `search_users`, `get_public_profile`, ramo in `apply_mutations`, sync client, UI social e login con username via Edge Function |
-| 9-10 | Favorites, stats, diario, universal links | da fare |
+| 9 | Favorites, rating, stats, diario | **metà dati fatta e in produzione** (tabelle, RLS, apply_mutations, sync client, azioni); restano stats server, UI, 20 lingue, prova su dispositivo |
+| 10 | Universal links | da fare |
 
 ## Cosa gira in produzione adesso
 
@@ -481,6 +537,11 @@ nota.
   ramo `user_follows` in `apply_mutations` (`20260801140000`, splice sul `prosrc` reale).
 - Edge Function **`login-with-username`**, `verify_jwt` spento, con budget per IP
   (provider `auth_login`, 30/ora, migration `20260801160000`).
+- **`user_favorites`** e **`user_ratings`** (blocco 9, migration `20260801170000`): RLS
+  owner-only, `authenticated=arw` senza DELETE (si toglie con la lapide), CHECK di forma sui
+  voti, indice unico parziale sulla chiave naturale. Rami in `apply_mutations`
+  (`20260801180000`, splice sul prosrc reale con tre guardie md5; il ramo voti fa
+  update-or-insert con revive della lapide).
 - **Import**: tabelle `import_jobs` e `import_staging` (RLS con sole policy di lettura: le fasi le
   muove il server), bucket privato `imports` con policy che confinano ogni utente alla propria
   cartella, Edge Function `import-parse` (fase 2, **versione 3**), `import-resolve` (fase 3) e
