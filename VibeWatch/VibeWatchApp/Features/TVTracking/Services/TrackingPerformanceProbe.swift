@@ -34,17 +34,26 @@ enum TrackingPerformanceProbe {
     private static var dataReadyAt: CFAbsoluteTime?
 
     /// L'utente ha chiesto la schermata. Da chiamare **prima** di qualunque lettura.
-    static func begin() {
+    ///
+    /// - Parameter at: l'istante di partenza. Ha un default perché in produzione è sempre "adesso";
+    ///   esiste come parametro perché la soglia di abbandono si prova solo potendo far passare
+    ///   quaranta secondi, e aspettarli davvero in un test non è un'opzione.
+    static func begin(at: CFAbsoluteTime = CFAbsoluteTimeGetCurrent()) {
         let id = OSSignpostID(log: log)
         signpostID = id
-        startedAt = CFAbsoluteTimeGetCurrent()
+        startedAt = at
         dataReadyAt = nil
         os_signpost(.begin, log: log, name: intervalName, signpostID: id)
     }
 
-    /// I dati sono in mano al ViewModel. Non è ancora la fine: manca il disegno, che su una lista
-    /// con immagini è spesso la parte più costosa — misurare solo fin qui darebbe un numero
-    /// lusinghiero e falso.
+    /// I dati sono in mano al ViewModel.
+    ///
+    /// **Informativo, non un cancello.** Dice quanto è costata la lettura da SQLite, che è il pezzo
+    /// che si può ottimizzare; ma può arrivare *dopo* il capolinea, e allora non c'è niente da
+    /// annotare. Succede quando la schermata aveva già contenuto al momento del tap — il
+    /// ViewModel si ricarica anche su `syncEngineCompleted`, quindi al primo `.task` le sezioni
+    /// possono esserci già. In quel caso il numero giusto di §13.6 è "quasi zero", e gateare la
+    /// chiusura su questo evento faceva scartare proprio la misura buona.
     static func dataReady(rows: Int) {
         guard let start = startedAt, let id = signpostID else { return }
         dataReadyAt = CFAbsoluteTimeGetCurrent()
@@ -64,33 +73,45 @@ enum TrackingPerformanceProbe {
     ///   sarebbe una riga di log, e la regola che questa funzione fa rispettare è già stata
     ///   violata una volta in silenzio.
     @discardableResult
-    static func firstFrameRendered() -> Double? {
+    static func firstFrameRendered(at: CFAbsoluteTime = CFAbsoluteTimeGetCurrent()) -> Double? {
         guard let start = startedAt, let id = signpostID else { return nil }
 
-        // Rete di sicurezza per il difetto gia' pagato una volta: se il capolinea scatta prima che
-        // i dati siano arrivati, si stava misurando il disegno di una lista **vuota**. Non si
-        // chiude niente e lo si dice — un numero mancante e' una diagnosi, un numero sbagliato no.
-        guard dataReadyAt != nil else {
-            printer.error("§13.6 misura scartata: primo fotogramma prima dei dati, sarebbe stata su schermata vuota")
-            return nil
-        }
-
+        // **Si disarma sempre**, anche quando si scarta. Nella prima misura sul dispositivo la
+        // versione precedente scartava e lasciava il cronometro armato: quaranta secondi dopo,
+        // tornando sulla tab, un secondo `onAppear` lo chiudeva e stampava
+        // `OLTRE IL BUDGET: totale 40500.6 ms`. Un numero assurdo e' peggio di nessun numero,
+        // perche' qualcuno potrebbe crederci.
         defer { startedAt = nil; signpostID = nil; dataReadyAt = nil }
 
-        let total = Self.ms(from: start)
-        let render = dataReadyAt.map { Self.ms(from: $0) }
+        let total = Self.round1((at - start) * 1000)
+
+        // Nessun fotogramma costa secondi. Oltre questa soglia non si sta misurando un disegno ma
+        // un intervallo fra due cose scollegate — tipicamente un ritorno sulla tab molto dopo.
+        guard total <= abandonAfterMs else {
+            printer.error("""
+            §13.6 misura abbandonata: \(total, format: .fixed(precision: 0), privacy: .public) ms \
+            e' un intervallo, non un fotogramma. Riapri la tab per rifarla.
+            """)
+            return nil
+        }
 
         os_signpost(.end, log: log, name: intervalName, signpostID: id,
                     "totale %.1f ms", total)
 
         let verdetto = total <= budgetMs ? "OK" : "OLTRE IL BUDGET"
-        if let render {
+        // Il tempo di lettura si annota solo se è arrivato prima: quando la schermata aveva già
+        // contenuto, `dataReady` arriva dopo e sottrarlo darebbe un numero negativo.
+        if let dataReady = dataReadyAt, dataReady <= at {
+            let lettura = Self.round1((dataReady - start) * 1000)
             printer.info("""
             §13.6 \(verdetto, privacy: .public): totale \(total, format: .fixed(precision: 1), privacy: .public) ms \
-            (dati + disegno \(render, format: .fixed(precision: 1), privacy: .public) ms) — budget 300 ms
+            (di cui lettura \(lettura, format: .fixed(precision: 1), privacy: .public) ms) — budget \(Int(budgetMs), privacy: .public) ms
             """)
         } else {
-            printer.info("§13.6 \(verdetto, privacy: .public): totale \(total, format: .fixed(precision: 1), privacy: .public) ms — budget 300 ms")
+            printer.info("""
+            §13.6 \(verdetto, privacy: .public): totale \(total, format: .fixed(precision: 1), privacy: .public) ms \
+            (schermata già popolata) — budget \(Int(budgetMs), privacy: .public) ms
+            """)
         }
         return total
     }
@@ -98,7 +119,14 @@ enum TrackingPerformanceProbe {
     /// Il budget di §13.6, in millisecondi. Sta qui e non sparso fra il verdetto e i test.
     static let budgetMs: Double = 300
 
+    /// Oltre questa soglia non si sta più misurando un fotogramma. Larga di proposito: deve
+    /// scartare l'assurdo (i 40 s osservati), non arbitrare fra "lento" e "molto lento" — quello
+    /// lo fa `budgetMs`, e un 900 ms vero va visto, non nascosto.
+    static let abandonAfterMs: Double = 5_000
+
     private static func ms(from t: CFAbsoluteTime) -> Double {
-        ((CFAbsoluteTimeGetCurrent() - t) * 1000 * 10).rounded() / 10
+        round1((CFAbsoluteTimeGetCurrent() - t) * 1000)
     }
+
+    private static func round1(_ v: Double) -> Double { (v * 10).rounded() / 10 }
 }

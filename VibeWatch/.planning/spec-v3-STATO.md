@@ -32,28 +32,58 @@ Cosa aspettarsi in console:
 
 ```
 §13.6 dati pronti in 12.3 ms (24 righe)
-§13.6 OK: totale 148.2 ms (dati + disegno 135.9 ms) — budget 300 ms
+§13.6 OK: totale 148.2 ms (di cui lettura 12.3 ms) — budget 300 ms
 ```
 
-**Se compare `misura scartata`**, il capolinea è scattato prima dei dati e non c'è nessun numero da
-credere: è la rete di sicurezza, non un guasto della schermata.
+oppure, quando la schermata aveva già contenuto al momento del tap (succede: il ViewModel si
+ricarica anche su `syncEngineCompleted`), che è comunque una misura valida:
+
+```
+§13.6 OK: totale 8.4 ms (schermata già popolata) — budget 300 ms
+```
+
+**Se compare `misura abbandonata`**, l'intervallo è troppo lungo per essere un fotogramma — di
+solito un rientro sulla tab molto dopo. Non c'è nessun numero da credere: riapri la tab.
 
 **La misura in DEBUG non vale**: Swift non ottimizzato dà un numero pessimista e inutile.
 
-### La sonda misurava la cosa sbagliata — corretto
+### La sonda ha sbagliato due volte, e la seconda l'ha trovata l'esecuzione
 
-Il `61,9 ms` registrato in precedenza era stato attribuito all'account senza storico. Non era
-quello: era **strutturale**, e avrebbe dato un numero falso anche con 24 serie in lista.
+**Primo giro.** La sentinella stava fuori dalla condizione sul contenuto, quindi la sequenza era:
+`begin()`, `isLoading = true`, SwiftUI ridisegna, la `List` compare **vuota** — i dati sono ancora
+dentro l'`await` — e il capolinea scattava lì. Il `61,9 ms` era stato attribuito all'account senza
+storico; era invece strutturale, e avrebbe mentito anche con 24 serie. Corretto mettendo la
+sentinella dentro `if !sections.isEmpty` e aggiungendo una guardia che scartava la misura se
+`dataReady` non era ancora arrivato.
 
-La sequenza reale: `begin()`, `isLoading = true`, SwiftUI ridisegna, la `List` compare **vuota**
-— i dati sono ancora dentro l'`await` di `fetchSections()` — la riga sentinella appare e chiudeva
-il cronometro. Si misurava il tempo di disegnare una lista vuota, cioè il contrario di ciò che
-§13.6 chiede.
+**La guardia era sbagliata, e l'esecuzione l'ha detto subito:**
 
-Due correzioni, perché una sola non basta: la sentinella ora esiste **solo se ci sono sezioni**
-(quindi il capolinea è il primo fotogramma con contenuto), e `firstFrameRendered()` scarta la
-misura se `dataReady` non è mai arrivato, lo dichiara nel log e restituisce `nil` invece di un
-numero. Cinque test in `TrackingSyncTests` fissano l'invariante, provati togliendo la guardia.
+```
+§13.6 misura scartata: primo fotogramma prima dei dati, sarebbe stata su schermata vuota
+§13.6 dati pronti in 133.5 ms (24 righe)
+§13.6 OLTRE IL BUDGET: totale 40500.6 ms (dati + disegno 40367.1 ms) — budget 300 ms
+```
+
+Due cose insieme, ed entrambe contavano:
+
+1. **Il capolinea prima di `dataReady` non è un errore.** Il ViewModel si ricarica anche su
+   `syncEngineCompleted`, quindi quando l'utente apre la tab le sezioni **possono esserci già**.
+   In quel caso il contenuto è a schermo subito e la risposta giusta di §13.6 è "quasi zero": la
+   guardia scartava proprio la misura buona. `dataReady` è tornato a essere informativo.
+2. **Scartare senza disarmare è peggio che non scartare.** Il cronometro restava armato, e
+   quaranta secondi dopo — rientrando sulla tab — un secondo `onAppear` lo chiudeva stampando
+   `40500.6 ms` come se fosse un tempo di disegno. Un numero assurdo è peggio di nessun numero,
+   perché qualcuno potrebbe crederci.
+
+Ora: si **disarma sempre**, e c'è una soglia (`abandonAfterMs = 5 s`) che scarta ciò che non può
+essere un fotogramma. Larga di proposito — deve buttare l'assurdo, non arbitrare fra "lento" e
+"molto lento": un 900 ms vero va visto, e c'è un test che lo verifica.
+
+**Il primo test del disarmo passava anche col difetto rimesso.** Chiamava due volte
+`firstFrameRendered()` con lo stesso istante: la seconda veniva scartata di nuovo dalla soglia, e
+la guardia mancante non cambiava niente. Riscritto per chiudere con un intervallo *plausibile* —
+se il cronometro fosse rimasto armato tornerebbe 50 ms. È lo stesso errore contro cui mette in
+guardia la testa di questo documento, commesso mentre lo si applicava.
 
 ### La migrazione è girata, sul dispositivo dell'autore
 
