@@ -14,8 +14,31 @@
 // scrive in upsert. Riprendere dal punto sbagliato duplica nulla, al massimo rifà lavoro.
 
 import { serve } from 'https://deno.land/std@0.131.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { adminClient, jsonResponse } from '../_shared/proxy.ts'
 import { buildRows, FILE_V1, FILE_V2, RATING_FILES, readCsvEntries } from './archive.ts'
+
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
+const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+
+/**
+ * Cerca il job **come il chiamante**, non come admin.
+ *
+ * La prima versione lo leggeva con la chiave di servizio e non confrontava mai `user_id`: chiunque
+ * fosse autenticato poteva passare il `job_id` di un altro e far rielaborare il suo import,
+ * leggerne i totali nella risposta e marcarglielo come fallito. Verificato in produzione prima di
+ * chiudere questa falla.
+ *
+ * Il confronto non si fa a mano perché un `if` dimenticato è esattamente com'è nato il problema:
+ * la lettura passa dal JWT dell'utente, quindi è la policy `import_jobs_select_own` — già scritta e
+ * collaudata — a decidere. Un job altrui semplicemente non esiste, e la funzione risponde 404.
+ */
+function callerClient(req: Request) {
+  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } },
+    auth: { persistSession: false },
+  })
+}
 
 /** Righe di staging scritte per invocazione. */
 const ROWS_PER_INVOCATION = 4_000
@@ -42,7 +65,7 @@ serve(async (req: Request) => {
 
   const admin = adminClient()
 
-  const { data: job, error: jobError } = await admin
+  const { data: job, error: jobError } = await callerClient(req)
     .from('import_jobs')
     .select('id, user_id, phase, status, storage_path, checkpoint, totals')
     .eq('id', jobId)
