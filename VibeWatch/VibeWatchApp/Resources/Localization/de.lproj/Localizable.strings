@@ -666,3 +666,35 @@
 "tvTracking.lastSeen" = "LAST SEEN %@";
 "tvTracking.soon" = "soon";
 "tvTracking.watchNow" = "Watch now";
+
+/* SPEC v3 §9.2 — schermata Tracking */
+"tracking.title" = "Tracking";
+"tracking.bucket.upNext" = "Als Nächstes";
+"tracking.bucket.stale" = "Länger nicht gesehen";
+"tracking.bucket.forLater" = "Für später";
+"tracking.bucket.upToDate" = "Auf dem neuesten Stand";
+"tracking.bucket.notStarted" = "Nicht begonnen";
+"tracking.bucket.dropped" = "Abgebrochen";
+"tracking.bucket.archived" = "Archiviert";
+"tracking.timeline.today" = "Heute neu";
+"tracking.timeline.tomorrow" = "Morgen";
+"tracking.timeline.thisWeek" = "Diese Woche";
+"tracking.timeline.thisMonth" = "Diesen Monat";
+"tracking.action.watched" = "Gesehen";
+"tracking.action.later" = "Später";
+"tracking.caughtUp" = "Auf dem neuesten Stand";
+"tracking.unknownShow" = "Unbekannte Serie";
+"tracking.special" = "SPECIAL";
+"tracking.empty.title" = "Noch nichts zu sehen";
+"tracking.empty.subtitle" = "Folge einer Serie oder importiere deinen TV-Time-Verlauf, dann taucht sie hier auf.";
+"tracking.error.title" = "Etwas ist schiefgelaufen";
+"tracking.error.notAuthenticated" = "Du musst angemeldet sein.";
+"tracking.error.noNextEpisode" = "Diese Serie hat keine nächste Folge.";
+
+"tab.tracking" = "Tracking";
+
+"common.close" = "Schließen";
+
+/* Chiavi chiamate dal codice e mai tradotte */
+"auth.error.invalidLink" = "Dieser Link ist ungültig oder abgelaufen.";
+"clips.noListsYet" = "Noch keine Listen";

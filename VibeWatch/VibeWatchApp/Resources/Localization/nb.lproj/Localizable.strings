@@ -591,3 +591,35 @@
 "tvTracking.lastSeen" = "LAST SEEN %@";
 "tvTracking.soon" = "soon";
 "tvTracking.watchNow" = "Watch now";
+
+/* SPEC v3 §9.2 — schermata Tracking */
+"tracking.title" = "Tracking";
+"tracking.bucket.upNext" = "Skal ses";
+"tracking.bucket.stale" = "Ikke sett på lenge";
+"tracking.bucket.forLater" = "Til senere";
+"tracking.bucket.upToDate" = "Ajour";
+"tracking.bucket.notStarted" = "Ikke startet";
+"tracking.bucket.dropped" = "Droppet";
+"tracking.bucket.archived" = "Arkivert";
+"tracking.timeline.today" = "Kommer i dag";
+"tracking.timeline.tomorrow" = "I morgen";
+"tracking.timeline.thisWeek" = "Denne uken";
+"tracking.timeline.thisMonth" = "Denne måneden";
+"tracking.action.watched" = "Sett";
+"tracking.action.later" = "Senere";
+"tracking.caughtUp" = "Ajour";
+"tracking.unknownShow" = "Ukjent serie";
+"tracking.special" = "SPESIAL";
+"tracking.empty.title" = "Ingenting å se ennå";
+"tracking.empty.subtitle" = "Følg en serie, eller importer TV Time-historikken din, så dukker den opp her.";
+"tracking.error.title" = "Noe gikk galt";
+"tracking.error.notAuthenticated" = "Du må være logget inn.";
+"tracking.error.noNextEpisode" = "Denne serien har ingen neste episode.";
+
+"tab.tracking" = "Tracking";
+
+"common.close" = "Lukk";
+
+/* Chiavi chiamate dal codice e mai tradotte */
+"auth.error.invalidLink" = "Denne lenken er ugyldig eller utløpt.";
+"clips.noListsYet" = "Ingen lister ennå";

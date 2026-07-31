@@ -650,3 +650,35 @@
 "tvTracking.lastSeen" = "LAST SEEN %@";
 "tvTracking.soon" = "soon";
 "tvTracking.watchNow" = "Watch now";
+
+/* SPEC v3 §9.2 — schermata Tracking */
+"tracking.title" = "追剧";
+"tracking.bucket.upNext" = "待观看";
+"tracking.bucket.stale" = "很久没看";
+"tracking.bucket.forLater" = "稍后再看";
+"tracking.bucket.upToDate" = "已追完";
+"tracking.bucket.notStarted" = "未开始";
+"tracking.bucket.dropped" = "已弃剧";
+"tracking.bucket.archived" = "已归档";
+"tracking.timeline.today" = "今天更新";
+"tracking.timeline.tomorrow" = "明天";
+"tracking.timeline.thisWeek" = "本周";
+"tracking.timeline.thisMonth" = "本月";
+"tracking.action.watched" = "已观看";
+"tracking.action.later" = "稍后";
+"tracking.caughtUp" = "已追完";
+"tracking.unknownShow" = "未知剧集";
+"tracking.special" = "特别篇";
+"tracking.empty.title" = "暂时没有可看的内容";
+"tracking.empty.subtitle" = "关注一部剧集，或导入你的 TV Time 记录，它就会出现在这里。";
+"tracking.error.title" = "出了点问题";
+"tracking.error.notAuthenticated" = "需要先登录。";
+"tracking.error.noNextEpisode" = "这部剧集没有下一集。";
+
+"tab.tracking" = "追剧";
+
+"common.close" = "关闭";
+
+/* Chiavi chiamate dal codice e mai tradotte */
+"auth.error.invalidLink" = "此链接无效或已过期。";
+"clips.noListsYet" = "还没有列表";

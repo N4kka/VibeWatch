@@ -207,7 +207,6 @@
 // Platforms
 "platform.title" = "配信プラットフォーム";
 "platform.selectionCount" = "%d / %d 選択済み";
-"platforms.title" = "プラットフォーム";
 "platforms.streaming" = "配信";
 "platforms.rent" = "レンタル";
 "platforms.buy" = "購入";
@@ -666,3 +665,35 @@
 "tvTracking.lastSeen" = "LAST SEEN %@";
 "tvTracking.soon" = "soon";
 "tvTracking.watchNow" = "Watch now";
+
+/* SPEC v3 §9.2 — schermata Tracking */
+"tracking.title" = "トラッキング";
+"tracking.bucket.upNext" = "次に観る";
+"tracking.bucket.stale" = "しばらく観ていない";
+"tracking.bucket.forLater" = "あとで観る";
+"tracking.bucket.upToDate" = "最新まで視聴済み";
+"tracking.bucket.notStarted" = "未視聴";
+"tracking.bucket.dropped" = "視聴中止";
+"tracking.bucket.archived" = "アーカイブ済み";
+"tracking.timeline.today" = "本日配信";
+"tracking.timeline.tomorrow" = "明日";
+"tracking.timeline.thisWeek" = "今週";
+"tracking.timeline.thisMonth" = "今月";
+"tracking.action.watched" = "視聴済み";
+"tracking.action.later" = "あとで";
+"tracking.caughtUp" = "最新まで視聴済み";
+"tracking.unknownShow" = "不明なシリーズ";
+"tracking.special" = "スペシャル";
+"tracking.empty.title" = "まだ観るものがありません";
+"tracking.empty.subtitle" = "シリーズをフォローするか、TV Time の履歴をインポートすると、ここに表示されます。";
+"tracking.error.title" = "問題が発生しました";
+"tracking.error.notAuthenticated" = "サインインが必要です。";
+"tracking.error.noNextEpisode" = "このシリーズに次のエピソードはありません。";
+
+"tab.tracking" = "トラッキング";
+
+"common.close" = "閉じる";
+
+/* Chiavi chiamate dal codice e mai tradotte */
+"auth.error.invalidLink" = "このリンクは無効か、有効期限が切れています。";
+"clips.noListsYet" = "リストがまだありません";

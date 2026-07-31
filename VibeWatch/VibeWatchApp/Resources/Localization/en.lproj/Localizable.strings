@@ -207,7 +207,6 @@
 // Platforms
 "platform.title" = "Streaming Platforms";
 "platform.selectionCount" = "%d of %d selected";
-"platforms.title" = "Platforms";
 "platforms.streaming" = "Streaming";
 "platforms.rent" = "Rent";
 "platforms.buy" = "Buy";
@@ -695,3 +694,7 @@
 "tab.tracking" = "Tracking";
 
 "common.close" = "Close";
+
+/* Chiavi chiamate dal codice e mai tradotte */
+"auth.error.invalidLink" = "This link is invalid or has expired.";
+"clips.noListsYet" = "No lists yet";

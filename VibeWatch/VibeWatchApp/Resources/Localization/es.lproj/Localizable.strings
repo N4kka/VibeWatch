@@ -663,3 +663,35 @@
 "tvTracking.lastSeen" = "LAST SEEN %@";
 "tvTracking.soon" = "soon";
 "tvTracking.watchNow" = "Watch now";
+
+/* SPEC v3 §9.2 — schermata Tracking */
+"tracking.title" = "Seguimiento";
+"tracking.bucket.upNext" = "Por ver";
+"tracking.bucket.stale" = "Sin ver desde hace tiempo";
+"tracking.bucket.forLater" = "Para más adelante";
+"tracking.bucket.upToDate" = "Al día";
+"tracking.bucket.notStarted" = "Sin empezar";
+"tracking.bucket.dropped" = "Abandonadas";
+"tracking.bucket.archived" = "Archivadas";
+"tracking.timeline.today" = "Se estrena hoy";
+"tracking.timeline.tomorrow" = "Mañana";
+"tracking.timeline.thisWeek" = "Esta semana";
+"tracking.timeline.thisMonth" = "Este mes";
+"tracking.action.watched" = "Visto";
+"tracking.action.later" = "Más tarde";
+"tracking.caughtUp" = "Al día";
+"tracking.unknownShow" = "Serie desconocida";
+"tracking.special" = "ESPECIAL";
+"tracking.empty.title" = "Todavía no hay nada que ver";
+"tracking.empty.subtitle" = "Sigue una serie o importa tu historial de TV Time y aparecerá aquí.";
+"tracking.error.title" = "Algo ha salido mal";
+"tracking.error.notAuthenticated" = "Tienes que haber iniciado sesión.";
+"tracking.error.noNextEpisode" = "Esta serie no tiene un próximo episodio.";
+
+"tab.tracking" = "Seguimiento";
+
+"common.close" = "Cerrar";
+
+/* Chiavi chiamate dal codice e mai tradotte */
+"auth.error.invalidLink" = "Este enlace no es válido o ha caducado.";
+"clips.noListsYet" = "Todavía no hay listas";

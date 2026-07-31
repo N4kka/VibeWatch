@@ -207,7 +207,6 @@
 // Platforms
 "platform.title" = "Suoratoistoalustat";
 "platform.selectionCount" = "%d of %d selected";
-"platforms.title" = "Alustat";
 "platforms.streaming" = "Suoratoisto";
 "platforms.rent" = "Vuokraa";
 "platforms.buy" = "Osta";
@@ -666,3 +665,35 @@
 "tvTracking.lastSeen" = "LAST SEEN %@";
 "tvTracking.soon" = "soon";
 "tvTracking.watchNow" = "Watch now";
+
+/* SPEC v3 §9.2 — schermata Tracking */
+"tracking.title" = "Seuranta";
+"tracking.bucket.upNext" = "Katsottavat";
+"tracking.bucket.stale" = "Ei katsottu vähään aikaan";
+"tracking.bucket.forLater" = "Myöhemmäksi";
+"tracking.bucket.upToDate" = "Ajan tasalla";
+"tracking.bucket.notStarted" = "Aloittamatta";
+"tracking.bucket.dropped" = "Lopetetut";
+"tracking.bucket.archived" = "Arkistoidut";
+"tracking.timeline.today" = "Julkaistaan tänään";
+"tracking.timeline.tomorrow" = "Huomenna";
+"tracking.timeline.thisWeek" = "Tällä viikolla";
+"tracking.timeline.thisMonth" = "Tässä kuussa";
+"tracking.action.watched" = "Katsottu";
+"tracking.action.later" = "Myöhemmin";
+"tracking.caughtUp" = "Ajan tasalla";
+"tracking.unknownShow" = "Tuntematon sarja";
+"tracking.special" = "ERIKOISJAKSO";
+"tracking.empty.title" = "Ei vielä mitään katsottavaa";
+"tracking.empty.subtitle" = "Seuraa sarjaa tai tuo TV Time -historiasi, niin se näkyy täällä.";
+"tracking.error.title" = "Jokin meni pieleen";
+"tracking.error.notAuthenticated" = "Sinun täytyy olla kirjautuneena.";
+"tracking.error.noNextEpisode" = "Tällä sarjalla ei ole seuraavaa jaksoa.";
+
+"tab.tracking" = "Seuranta";
+
+"common.close" = "Sulje";
+
+/* Chiavi chiamate dal codice e mai tradotte */
+"auth.error.invalidLink" = "Tämä linkki on virheellinen tai vanhentunut.";
+"clips.noListsYet" = "Ei vielä listoja";

@@ -207,7 +207,6 @@
 // Platforms
 "platform.title" = "Streaming-platforme";
 "platform.selectionCount" = "%d af %d valgt";
-"platforms.title" = "Platforme";
 "platforms.streaming" = "Streaming";
 "platforms.rent" = "Lej";
 "platforms.buy" = "Køb";
@@ -668,3 +667,35 @@
 "tvTracking.lastSeen" = "LAST SEEN %@";
 "tvTracking.soon" = "soon";
 "tvTracking.watchNow" = "Watch now";
+
+/* SPEC v3 §9.2 — schermata Tracking */
+"tracking.title" = "Tracking";
+"tracking.bucket.upNext" = "Skal ses";
+"tracking.bucket.stale" = "Ikke set længe";
+"tracking.bucket.forLater" = "Til senere";
+"tracking.bucket.upToDate" = "Ajour";
+"tracking.bucket.notStarted" = "Ikke begyndt";
+"tracking.bucket.dropped" = "Droppet";
+"tracking.bucket.archived" = "Arkiveret";
+"tracking.timeline.today" = "Udkommer i dag";
+"tracking.timeline.tomorrow" = "I morgen";
+"tracking.timeline.thisWeek" = "Denne uge";
+"tracking.timeline.thisMonth" = "Denne måned";
+"tracking.action.watched" = "Set";
+"tracking.action.later" = "Senere";
+"tracking.caughtUp" = "Ajour";
+"tracking.unknownShow" = "Ukendt serie";
+"tracking.special" = "SPECIAL";
+"tracking.empty.title" = "Der er ikke noget at se endnu";
+"tracking.empty.subtitle" = "Følg en serie, eller importér din TV Time-historik, så dukker den op her.";
+"tracking.error.title" = "Noget gik galt";
+"tracking.error.notAuthenticated" = "Du skal være logget ind.";
+"tracking.error.noNextEpisode" = "Denne serie har ingen næste episode.";
+
+"tab.tracking" = "Tracking";
+
+"common.close" = "Luk";
+
+/* Chiavi chiamate dal codice e mai tradotte */
+"auth.error.invalidLink" = "Dette link er ugyldigt eller udløbet.";
+"clips.noListsYet" = "Ingen lister endnu";

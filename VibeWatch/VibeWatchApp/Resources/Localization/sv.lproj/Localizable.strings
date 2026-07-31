@@ -653,3 +653,35 @@
 "tvTracking.lastSeen" = "LAST SEEN %@";
 "tvTracking.soon" = "soon";
 "tvTracking.watchNow" = "Watch now";
+
+/* SPEC v3 §9.2 — schermata Tracking */
+"tracking.title" = "Bevakning";
+"tracking.bucket.upNext" = "Att se";
+"tracking.bucket.stale" = "Inte sett på länge";
+"tracking.bucket.forLater" = "Till senare";
+"tracking.bucket.upToDate" = "Ikapp";
+"tracking.bucket.notStarted" = "Inte påbörjade";
+"tracking.bucket.dropped" = "Avbrutna";
+"tracking.bucket.archived" = "Arkiverade";
+"tracking.timeline.today" = "Släpps i dag";
+"tracking.timeline.tomorrow" = "I morgon";
+"tracking.timeline.thisWeek" = "Denna vecka";
+"tracking.timeline.thisMonth" = "Denna månad";
+"tracking.action.watched" = "Sedd";
+"tracking.action.later" = "Senare";
+"tracking.caughtUp" = "Ikapp";
+"tracking.unknownShow" = "Okänd serie";
+"tracking.special" = "SPECIAL";
+"tracking.empty.title" = "Inget att se ännu";
+"tracking.empty.subtitle" = "Följ en serie, eller importera din TV Time-historik, så dyker den upp här.";
+"tracking.error.title" = "Något gick fel";
+"tracking.error.notAuthenticated" = "Du måste vara inloggad.";
+"tracking.error.noNextEpisode" = "Den här serien har inget nästa avsnitt.";
+
+"tab.tracking" = "Bevakning";
+
+"common.close" = "Stäng";
+
+/* Chiavi chiamate dal codice e mai tradotte */
+"auth.error.invalidLink" = "Den här länken är ogiltig eller har gått ut.";
+"clips.noListsYet" = "Inga listor ännu";

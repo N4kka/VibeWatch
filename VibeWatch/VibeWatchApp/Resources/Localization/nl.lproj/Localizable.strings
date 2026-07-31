@@ -207,7 +207,6 @@
 // Platforms
 "platform.title" = "Platformy streamingowe";
 "platform.selectionCount" = "Wybrano %d z %d";
-"platforms.title" = "Platformy";
 "platforms.streaming" = "Streaming";
 "platforms.rent" = "Wypożycz";
 "platforms.buy" = "Kup";
@@ -666,3 +665,35 @@
 "tvTracking.lastSeen" = "LAST SEEN %@";
 "tvTracking.soon" = "soon";
 "tvTracking.watchNow" = "Watch now";
+
+/* SPEC v3 §9.2 — schermata Tracking */
+"tracking.title" = "Tracking";
+"tracking.bucket.upNext" = "Te kijken";
+"tracking.bucket.stale" = "Al een tijd niet gekeken";
+"tracking.bucket.forLater" = "Voor later";
+"tracking.bucket.upToDate" = "Helemaal bij";
+"tracking.bucket.notStarted" = "Nog niet begonnen";
+"tracking.bucket.dropped" = "Gestopt";
+"tracking.bucket.archived" = "Gearchiveerd";
+"tracking.timeline.today" = "Vandaag uit";
+"tracking.timeline.tomorrow" = "Morgen";
+"tracking.timeline.thisWeek" = "Deze week";
+"tracking.timeline.thisMonth" = "Deze maand";
+"tracking.action.watched" = "Gezien";
+"tracking.action.later" = "Later";
+"tracking.caughtUp" = "Helemaal bij";
+"tracking.unknownShow" = "Onbekende serie";
+"tracking.special" = "SPECIAL";
+"tracking.empty.title" = "Nog niets te kijken";
+"tracking.empty.subtitle" = "Volg een serie of importeer je TV Time-geschiedenis, dan verschijnt hij hier.";
+"tracking.error.title" = "Er ging iets mis";
+"tracking.error.notAuthenticated" = "Je moet ingelogd zijn.";
+"tracking.error.noNextEpisode" = "Deze serie heeft geen volgende aflevering.";
+
+"tab.tracking" = "Tracking";
+
+"common.close" = "Sluiten";
+
+/* Chiavi chiamate dal codice e mai tradotte */
+"auth.error.invalidLink" = "Deze link is ongeldig of verlopen.";
+"clips.noListsYet" = "Nog geen lijsten";

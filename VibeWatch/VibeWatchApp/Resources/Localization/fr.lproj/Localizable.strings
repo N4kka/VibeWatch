@@ -207,7 +207,6 @@
 // Platforms
 "platform.title" = "Plateformes de streaming";
 "platform.selectionCount" = "%d sur %d sélectionnés";
-"platforms.title" = "Plateformes";
 "platforms.streaming" = "Streaming";
 "platforms.rent" = "Louer";
 "platforms.buy" = "Acheter";
@@ -666,3 +665,35 @@
 "tvTracking.lastSeen" = "LAST SEEN %@";
 "tvTracking.soon" = "soon";
 "tvTracking.watchNow" = "Watch now";
+
+/* SPEC v3 §9.2 — schermata Tracking */
+"tracking.title" = "Suivi";
+"tracking.bucket.upNext" = "À regarder";
+"tracking.bucket.stale" = "Pas vues depuis longtemps";
+"tracking.bucket.forLater" = "Pour plus tard";
+"tracking.bucket.upToDate" = "À jour";
+"tracking.bucket.notStarted" = "Pas commencées";
+"tracking.bucket.dropped" = "Abandonnées";
+"tracking.bucket.archived" = "Archivées";
+"tracking.timeline.today" = "Sort aujourd’hui";
+"tracking.timeline.tomorrow" = "Demain";
+"tracking.timeline.thisWeek" = "Cette semaine";
+"tracking.timeline.thisMonth" = "Ce mois-ci";
+"tracking.action.watched" = "Vu";
+"tracking.action.later" = "Plus tard";
+"tracking.caughtUp" = "À jour";
+"tracking.unknownShow" = "Série inconnue";
+"tracking.special" = "SPÉCIAL";
+"tracking.empty.title" = "Rien à regarder pour l’instant";
+"tracking.empty.subtitle" = "Suivez une série ou importez votre historique TV Time, et elle apparaîtra ici.";
+"tracking.error.title" = "Une erreur est survenue";
+"tracking.error.notAuthenticated" = "Vous devez être connecté.";
+"tracking.error.noNextEpisode" = "Cette série n’a pas d’épisode suivant.";
+
+"tab.tracking" = "Suivi";
+
+"common.close" = "Fermer";
+
+/* Chiavi chiamate dal codice e mai tradotte */
+"auth.error.invalidLink" = "Ce lien est invalide ou a expiré.";
+"clips.noListsYet" = "Aucune liste pour l’instant";

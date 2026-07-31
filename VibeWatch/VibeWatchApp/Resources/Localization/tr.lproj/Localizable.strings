@@ -653,3 +653,35 @@
 "tvTracking.lastSeen" = "LAST SEEN %@";
 "tvTracking.soon" = "soon";
 "tvTracking.watchNow" = "Watch now";
+
+/* SPEC v3 §9.2 — schermata Tracking */
+"tracking.title" = "Takip";
+"tracking.bucket.upNext" = "İzlenecekler";
+"tracking.bucket.stale" = "Uzun süredir izlenmedi";
+"tracking.bucket.forLater" = "Sonrası için";
+"tracking.bucket.upToDate" = "Güncel";
+"tracking.bucket.notStarted" = "Başlanmadı";
+"tracking.bucket.dropped" = "Bırakılanlar";
+"tracking.bucket.archived" = "Arşivlenenler";
+"tracking.timeline.today" = "Bugün çıkıyor";
+"tracking.timeline.tomorrow" = "Yarın";
+"tracking.timeline.thisWeek" = "Bu hafta";
+"tracking.timeline.thisMonth" = "Bu ay";
+"tracking.action.watched" = "İzlendi";
+"tracking.action.later" = "Sonra";
+"tracking.caughtUp" = "Güncel";
+"tracking.unknownShow" = "Bilinmeyen dizi";
+"tracking.special" = "ÖZEL";
+"tracking.empty.title" = "Henüz izlenecek bir şey yok";
+"tracking.empty.subtitle" = "Bir diziyi takip et ya da TV Time geçmişini içe aktar; burada görünecek.";
+"tracking.error.title" = "Bir şeyler ters gitti";
+"tracking.error.notAuthenticated" = "Giriş yapmış olman gerekiyor.";
+"tracking.error.noNextEpisode" = "Bu dizinin sonraki bölümü yok.";
+
+"tab.tracking" = "Takip";
+
+"common.close" = "Kapat";
+
+/* Chiavi chiamate dal codice e mai tradotte */
+"auth.error.invalidLink" = "Bu bağlantı geçersiz ya da süresi dolmuş.";
+"clips.noListsYet" = "Henüz liste yok";

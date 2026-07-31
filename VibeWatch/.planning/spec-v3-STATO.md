@@ -15,9 +15,12 @@ credevo.
 
 ## Da fare per prima cosa
 
-**Misurare §13.6, adesso che ci sono dati veri.** È l'ultimo pezzo aperto del blocco 7 insieme
-alle 18 lingue. La sonda c'è; va rifatta in Release, su dispositivo, e i numeri vecchi
-(`61,9 ms` su schermata vuota) non valgono.
+**Misurare §13.6, adesso che ci sono dati veri.** È l'ultimo pezzo aperto del blocco 7. La sonda
+c'è; va rifatta in Release, su dispositivo, e i numeri vecchi (`61,9 ms` su schermata vuota) non
+valgono.
+
+**E decidere cosa fare di `nl.lproj`, che contiene polacco** (vedi *Le traduzioni*): è un difetto
+preesistente che riguarda ogni utente olandese, non solo il tracking.
 
 ### La migrazione è girata, sul dispositivo dell'autore
 
@@ -152,8 +155,10 @@ nota.
   oppure Instruments con il template *Points of Interest* (intervallo `TrackingFirstFrame`),
   oppure un test con `XCTOSSignpostMetric(subsystem: "com.vibewatch.app", category: "Tracking",
   name: "TrackingFirstFrame")`.
-- **18 lingue**: le chiavi `tracking.*`, `tab.tracking` e `common.close` esistono solo in `en` e
-  `it`; le altre ricadono sull'inglese.
+- ~~**18 lingue**~~ — **fatto.** Le 20 lingue hanno le stesse 597 chiavi, zero duplicate, zero
+  valori vuoti, segnaposto identici all'inglese, e `LocalizationCoverageTests` (5 test) impedisce
+  che il disallineamento torni. Vedi *Le traduzioni* più sotto: l'allineamento ha scoperto altri
+  tre difetti, di cui uno grosso.
 
 ## Stato dei blocchi di §12
 
@@ -167,7 +172,7 @@ nota.
 | 4 | Paginazione del pull | **fatto e verificato**. `SyncPagination`, 8 test verdi + pull reale sul dispositivo, nessun `Failed to pull` |
 | 5 | Integrazione client | **fatto per la lettura**. SQLite + whitelist + pull + conflitti verificati su dati veri; il percorso di scrittura è cablato ma senza chiamanti (arrivano col blocco 7) |
 | 6 | Pipeline import + report | **fasi 1-4 in produzione e collaudate end-to-end**; fasi 5-6 scritte e verdi in SQL, `import-finalize` da deployare |
-| 7 | UI Tracking | **schermata, tab bar e migrazione dello storico in produzione e collaudate.** La migrazione è girata sul dispositivo dell'autore: 971 episodi, primo tentativo. Restano la misura di §13.6 e 18 lingue |
+| 7 | UI Tracking | **schermata, tab bar e migrazione dello storico in produzione e collaudate.** La migrazione è girata sul dispositivo dell'autore: 971 episodi, primo tentativo. Resta la misura di §13.6; le 20 lingue sono allineate |
 | 8+ | Sociale, stats | da fare |
 
 ## Cosa gira in produzione adesso
@@ -350,8 +355,39 @@ che si misurano solo sul dispositivo con un utente vero. **Il requisito di §13.
 verificato**, e in questa sessione ogni numero stimato invece che misurato e' stato smentito
 almeno una volta.
 
-**Da fare prima del rilascio.** Le chiavi di localizzazione nuove esistono solo in `en` e `it`:
-le altre 18 lingue ricadono sull'inglese.
+## Le traduzioni, e i tre difetti che l'allineamento ha scoperto
+
+Le 20 lingue hanno ora le **stesse 597 chiavi**: `en` e `it` erano già identiche (595 chiavi), le
+altre 18 erano indietro di 24 — tutta la schermata Tracking. Aggiunte e tradotte, non copiate
+dall'inglese. `LocalizationCoverageTests` blocca la deriva: stesse chiavi, nessun duplicato,
+nessun valore vuoto, segnaposto identici a `en`, e ogni `"chiave".localized` del codice esiste in
+`en`. I quattro test sono stati provati rompendo apposta i quattro casi.
+
+**1. `platforms.title` era definita due volte in 11 lingue**, con valori diversi ("Platforms" e
+"Streaming Platforms"). Il caricatore di `.strings` non protesta: tiene l'ultima, in silenzio.
+Tolta la prima, così ciò che si vede oggi non cambia.
+
+**2. Il portoghese mostrava un `ai.placeholder` troncato a metà frase.** Stessa causa, effetto
+opposto: la seconda definizione vinceva ed era rotta — `"Por exemplo, \"Ficção científica com uma
+reviravolta no enredo` — virgoletta aperta e mai chiusa. Tolta quella, torna visibile la prima,
+corretta.
+
+**3. Due chiavi che il codice chiama non esistevano in nessuna lingua**: `clips.noListsYet` e
+`auth.error.invalidLink`. `.localized` restituisce la chiave quando la traduzione manca, quindi
+sullo schermo compariva letteralmente `auth.error.invalidLink`. Scritte in tutte e 20.
+
+### `nl.lproj` contiene polacco, non olandese — aperto
+
+**Il difetto peggiore trovato in questo giro, ed è preesistente.** `nl.lproj` è una copia di
+`pl.lproj`: differiscono per **14 stringhe su 571**. Un utente olandese apre l'app e legge
+`"Odkrywaj"`, `"Listy"`, `"Anuluj"`. Verificato che è l'unico caso: le altre 18 lingue sono
+coerenti con sé stesse (controllate su `tab.discovery`, `tab.lists`, `common.cancel`,
+`common.save`, `lists.watchlist`).
+
+Le 26 chiavi aggiunte in questo giro sono in **olandese vero**. Le altre 571 no, e ritradurle è un
+lavoro a sé che non è stato fatto: va deciso, non fatto di nascosto. Finché non si fa, la scelta
+onesta sarebbe **togliere `nl` dalle lingue supportate**, perché ricadere sull'inglese è meglio
+che mostrare polacco.
 
 ## Due cose da sapere prima del blocco 7
 

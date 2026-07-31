@@ -207,7 +207,6 @@
 // Platforms
 "platform.title" = "Πλατφόρμες streaming";
 "platform.selectionCount" = "%d από %d επιλεγμένα";
-"platforms.title" = "Πλατφόρμες";
 "platforms.streaming" = "Streaming";
 "platforms.rent" = "Ενοικίαση";
 "platforms.buy" = "Αγορά";
@@ -666,3 +665,35 @@
 "tvTracking.lastSeen" = "LAST SEEN %@";
 "tvTracking.soon" = "soon";
 "tvTracking.watchNow" = "Watch now";
+
+/* SPEC v3 §9.2 — schermata Tracking */
+"tracking.title" = "Παρακολούθηση";
+"tracking.bucket.upNext" = "Για να δεις";
+"tracking.bucket.stale" = "Δεν τα είδες για καιρό";
+"tracking.bucket.forLater" = "Για αργότερα";
+"tracking.bucket.upToDate" = "Ενημερωμένα";
+"tracking.bucket.notStarted" = "Δεν ξεκίνησαν";
+"tracking.bucket.dropped" = "Εγκαταλείφθηκαν";
+"tracking.bucket.archived" = "Αρχειοθετημένα";
+"tracking.timeline.today" = "Βγαίνει σήμερα";
+"tracking.timeline.tomorrow" = "Αύριο";
+"tracking.timeline.thisWeek" = "Αυτή την εβδομάδα";
+"tracking.timeline.thisMonth" = "Αυτόν τον μήνα";
+"tracking.action.watched" = "Το είδα";
+"tracking.action.later" = "Αργότερα";
+"tracking.caughtUp" = "Ενημερωμένα";
+"tracking.unknownShow" = "Άγνωστη σειρά";
+"tracking.special" = "ΕΙΔΙΚΟ";
+"tracking.empty.title" = "Δεν υπάρχει τίποτα για να δεις ακόμα";
+"tracking.empty.subtitle" = "Ακολούθησε μια σειρά ή εισήγαγε το ιστορικό σου από το TV Time και θα εμφανιστεί εδώ.";
+"tracking.error.title" = "Κάτι πήγε στραβά";
+"tracking.error.notAuthenticated" = "Πρέπει να έχεις συνδεθεί.";
+"tracking.error.noNextEpisode" = "Αυτή η σειρά δεν έχει επόμενο επεισόδιο.";
+
+"tab.tracking" = "Παρακολούθηση";
+
+"common.close" = "Κλείσιμο";
+
+/* Chiavi chiamate dal codice e mai tradotte */
+"auth.error.invalidLink" = "Αυτός ο σύνδεσμος δεν είναι έγκυρος ή έχει λήξει.";
+"clips.noListsYet" = "Καμία λίστα ακόμα";

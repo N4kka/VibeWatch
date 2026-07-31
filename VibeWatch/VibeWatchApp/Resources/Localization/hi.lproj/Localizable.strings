@@ -207,7 +207,6 @@
 // Platforms
 "platform.title" = "स्ट्रीमिंग प्लेटफ़ॉर्म";
 "platform.selectionCount" = "%d / %d चुने गए";
-"platforms.title" = "प्लेटफ़ॉर्म";
 "platforms.streaming" = "स्ट्रीमिंग";
 "platforms.rent" = "किराए पर लें";
 "platforms.buy" = "खरीदें";
@@ -666,3 +665,35 @@
 "tvTracking.lastSeen" = "LAST SEEN %@";
 "tvTracking.soon" = "soon";
 "tvTracking.watchNow" = "Watch now";
+
+/* SPEC v3 §9.2 — schermata Tracking */
+"tracking.title" = "ट्रैकिंग";
+"tracking.bucket.upNext" = "आगे देखें";
+"tracking.bucket.stale" = "काफ़ी समय से नहीं देखा";
+"tracking.bucket.forLater" = "बाद के लिए";
+"tracking.bucket.upToDate" = "अप टू डेट";
+"tracking.bucket.notStarted" = "शुरू नहीं की";
+"tracking.bucket.dropped" = "छोड़ी गई";
+"tracking.bucket.archived" = "संग्रहित";
+"tracking.timeline.today" = "आज रिलीज़";
+"tracking.timeline.tomorrow" = "कल";
+"tracking.timeline.thisWeek" = "इस हफ़्ते";
+"tracking.timeline.thisMonth" = "इस महीने";
+"tracking.action.watched" = "देख लिया";
+"tracking.action.later" = "बाद में";
+"tracking.caughtUp" = "अप टू डेट";
+"tracking.unknownShow" = "अज्ञात सीरीज़";
+"tracking.special" = "स्पेशल";
+"tracking.empty.title" = "अभी देखने के लिए कुछ नहीं है";
+"tracking.empty.subtitle" = "कोई सीरीज़ फ़ॉलो करें या अपनी TV Time हिस्ट्री इम्पोर्ट करें, वह यहाँ दिखेगी।";
+"tracking.error.title" = "कुछ ग़लत हो गया";
+"tracking.error.notAuthenticated" = "आपको साइन इन करना होगा।";
+"tracking.error.noNextEpisode" = "इस सीरीज़ का कोई अगला एपिसोड नहीं है।";
+
+"tab.tracking" = "ट्रैकिंग";
+
+"common.close" = "बंद करें";
+
+/* Chiavi chiamate dal codice e mai tradotte */
+"auth.error.invalidLink" = "यह लिंक अमान्य है या समाप्त हो चुका है।";
+"clips.noListsYet" = "अभी कोई सूची नहीं";

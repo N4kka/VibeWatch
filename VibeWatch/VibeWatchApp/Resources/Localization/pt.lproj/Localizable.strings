@@ -446,7 +446,6 @@
 "carousel.awardWinners" = "Vencedores de prêmios que você vai amar";
 
 // --- Synced from en.lproj ---
-"ai.placeholder" = "Por exemplo, \"Ficção científica com uma reviravolta no enredo";
 "filters.mediaType" = "Tipo de suporte";
 "filters.movies" = "Filmes";
 "filters.tvShows" = "Programas de TV";
@@ -654,3 +653,35 @@
 "tvTracking.lastSeen" = "LAST SEEN %@";
 "tvTracking.soon" = "soon";
 "tvTracking.watchNow" = "Watch now";
+
+/* SPEC v3 §9.2 — schermata Tracking */
+"tracking.title" = "Acompanhamento";
+"tracking.bucket.upNext" = "Para assistir";
+"tracking.bucket.stale" = "Sem assistir há tempo";
+"tracking.bucket.forLater" = "Para depois";
+"tracking.bucket.upToDate" = "Em dia";
+"tracking.bucket.notStarted" = "Não começadas";
+"tracking.bucket.dropped" = "Abandonadas";
+"tracking.bucket.archived" = "Arquivadas";
+"tracking.timeline.today" = "Estreia hoje";
+"tracking.timeline.tomorrow" = "Amanhã";
+"tracking.timeline.thisWeek" = "Esta semana";
+"tracking.timeline.thisMonth" = "Este mês";
+"tracking.action.watched" = "Assistido";
+"tracking.action.later" = "Depois";
+"tracking.caughtUp" = "Em dia";
+"tracking.unknownShow" = "Série desconhecida";
+"tracking.special" = "ESPECIAL";
+"tracking.empty.title" = "Ainda não há nada para assistir";
+"tracking.empty.subtitle" = "Siga uma série ou importe seu histórico do TV Time, e ela aparecerá aqui.";
+"tracking.error.title" = "Algo deu errado";
+"tracking.error.notAuthenticated" = "Você precisa estar conectado.";
+"tracking.error.noNextEpisode" = "Esta série não tem um próximo episódio.";
+
+"tab.tracking" = "Acompanhar";
+
+"common.close" = "Fechar";
+
+/* Chiavi chiamate dal codice e mai tradotte */
+"auth.error.invalidLink" = "Este link é inválido ou expirou.";
+"clips.noListsYet" = "Ainda não há listas";

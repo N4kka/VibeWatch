@@ -653,3 +653,35 @@
 "tvTracking.lastSeen" = "LAST SEEN %@";
 "tvTracking.soon" = "soon";
 "tvTracking.watchNow" = "Watch now";
+
+/* SPEC v3 §9.2 — schermata Tracking */
+"tracking.title" = "Трекинг";
+"tracking.bucket.upNext" = "К просмотру";
+"tracking.bucket.stale" = "Давно не смотрели";
+"tracking.bucket.forLater" = "На потом";
+"tracking.bucket.upToDate" = "Всё просмотрено";
+"tracking.bucket.notStarted" = "Не начатые";
+"tracking.bucket.dropped" = "Брошенные";
+"tracking.bucket.archived" = "В архиве";
+"tracking.timeline.today" = "Выходит сегодня";
+"tracking.timeline.tomorrow" = "Завтра";
+"tracking.timeline.thisWeek" = "На этой неделе";
+"tracking.timeline.thisMonth" = "В этом месяце";
+"tracking.action.watched" = "Просмотрено";
+"tracking.action.later" = "Позже";
+"tracking.caughtUp" = "Всё просмотрено";
+"tracking.unknownShow" = "Неизвестный сериал";
+"tracking.special" = "СПЕЦВЫПУСК";
+"tracking.empty.title" = "Пока нечего смотреть";
+"tracking.empty.subtitle" = "Подпишитесь на сериал или импортируйте историю из TV Time — и он появится здесь.";
+"tracking.error.title" = "Что-то пошло не так";
+"tracking.error.notAuthenticated" = "Нужно войти в аккаунт.";
+"tracking.error.noNextEpisode" = "У этого сериала нет следующей серии.";
+
+"tab.tracking" = "Трекинг";
+
+"common.close" = "Закрыть";
+
+/* Chiavi chiamate dal codice e mai tradotte */
+"auth.error.invalidLink" = "Эта ссылка недействительна или устарела.";
+"clips.noListsYet" = "Списков пока нет";

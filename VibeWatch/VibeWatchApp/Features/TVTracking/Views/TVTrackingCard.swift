@@ -34,10 +34,10 @@ struct TVTrackingCard: View {
                         .lineLimit(1)
                 }
                 Spacer(minLength: 4)
+                // Un solo modo di segnare visto, quello in alto a destra. La pillola qui sotto
+                // faceva la stessa cosa e occupava il posto peggiore: due comandi identici sulla
+                // stessa card obbligano a chiedersi in cosa differiscono.
                 progressBar
-                if row.isNextAvailable && row.nextLabel != nil {
-                    watchButton
-                }
             }
             .padding(.vertical, 2)
         }
@@ -124,19 +124,6 @@ struct TVTrackingCard: View {
                 .font(.system(size: 11, weight: .medium))
                 .foregroundColor(.theme.textSecondary)
         }
-    }
-
-    private var watchButton: some View {
-        Button(action: onMarkWatched) {
-            Text("tracking.action.watched".localized)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(.black)
-                .padding(.horizontal, 14).padding(.vertical, 7)
-                .background(Color.theme.accentOrange.opacity(isBusy ? 0.5 : 1))
-                .clipShape(Capsule())
-        }
-        .buttonStyle(PlainButtonStyle())
-        .disabled(isBusy)
     }
 
     @ViewBuilder
