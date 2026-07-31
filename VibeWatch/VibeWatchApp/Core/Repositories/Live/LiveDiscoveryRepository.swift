@@ -41,15 +41,24 @@ final class LiveDiscoveryRepository: DiscoveryRepositoryProtocol {
                 if shouldRefresh {
                     // Emissioni 2…N: i caroselli man mano che i batch si completano, poi il
                     // risultato finale (l'unico con le logline dinamiche applicate).
-                    if let fresh = try? await self.service.generatePersonalizedCarousels(
-                        userProfile: profile,
-                        filters: filters,
-                        forceRefresh: true,
-                        onPartialResults: { partial in
-                            continuation.yield(partial)
-                        }
-                    ) {
+                    //
+                    // L'errore va loggato, non ingoiato. Era un `try?`: al primo install non c'e'
+                    // cache da dipingere, quindi se la generazione lancia non viene emesso niente
+                    // e la schermata resta bianca **senza un errore da nessuna parte** — ne' a
+                    // schermo ne' nel log. Un fallimento di rete diventava indistinguibile da un
+                    // catalogo vuoto.
+                    do {
+                        let fresh = try await self.service.generatePersonalizedCarousels(
+                            userProfile: profile,
+                            filters: filters,
+                            forceRefresh: true,
+                            onPartialResults: { partial in
+                                continuation.yield(partial)
+                            }
+                        )
                         continuation.yield(fresh)
+                    } catch {
+                        Logger.error("[LiveDiscoveryRepository] Generazione caroselli fallita: \(error)")
                     }
                 }
 
