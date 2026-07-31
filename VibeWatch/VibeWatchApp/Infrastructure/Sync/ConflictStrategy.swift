@@ -106,6 +106,14 @@ public enum TableConflictMapping {
         case "tv_show_state":
             return .serverWins
 
+        // Le due viste di §9.2 sono cache di righe già pronte per la schermata: nessuno in locale
+        // le scrive mai, quindi non esiste un caso in cui la copia locale debba vincere. Erano
+        // finite nel `default` (`lastWriteWins`), che le confronta per `updated_at` — e
+        // `v_tv_timeline` un `updated_at` non ce l'ha nemmeno. Con `serverWins` la riga che arriva
+        // sostituisce quella che c'è, che è l'unico comportamento sensato per uno specchio.
+        case "v_tv_tracking", "v_tv_timeline":
+            return .serverWins
+
         // Default fallback for unknown tables
         default:
             return .lastWriteWins

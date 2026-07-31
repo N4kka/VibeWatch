@@ -352,9 +352,12 @@ final class MockSyncEngine: SyncEngineProtocol, @unchecked Sendable {
     func queueOperation(table: String, operationType: String, recordId: String, payload: [String: Any], dependsOn: Int?) async throws {
         queued.append(QueuedOp(table: table, operationType: operationType, recordId: recordId, payload: payload))
     }
+    private(set) var trackingPulls = 0
+
     func performFullSync(trigger: SyncTrigger) async {}
     func pushPendingChanges() async {}
     func pullFromRemote() async {}
+    func pullTrackingState() async { trackingPulls += 1 }
 }
 
 final class SyncEnginePayloadNormalizationTests: XCTestCase {

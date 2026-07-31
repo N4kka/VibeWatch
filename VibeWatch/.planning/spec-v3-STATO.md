@@ -15,20 +15,53 @@ credevo.
 
 ## Da fare per prima cosa
 
-**Provare l'app sul dispositivo con un utente vero.** Il lato server è deployato e collaudato (vedi
-sotto); il lato client è compilato, verde e mai eseguito contro dati reali. È il pezzo che manca, e
-va fatto **prima** di §13.6, perché la misura su schermata vuota non vale niente — è già successo.
+**Misurare §13.6, adesso che ci sono dati veri.** È l'ultimo pezzo aperto del blocco 7 insieme
+alle 18 lingue. La sonda c'è; va rifatta in Release, su dispositivo, e i numeri vecchi
+(`61,9 ms` su schermata vuota) non valgono.
 
-Cosa guardare nei log (DEBUG: in Release `Logger` non stampa una riga):
+### La migrazione è girata, sul dispositivo dell'autore
 
 ```
-[LegacyMigration] N episodi, M serie viste per intero, K serie da riscaldare — tentativo 1
-[LegacyMigration] N episodi + E da espansione, completata=true
+[LegacyMigration] 4 episodi, 22 serie viste per intero, 24 serie da riscaldare — tentativo 1
+[LegacyMigration] 4 episodi + 967 da espansione, completata=true
 ```
 
-`completata=false` con un elenco di `serie senza catalogo` è un esito **previsto**, non un guasto:
-il riscaldamento può essere stato tagliato dal budget o dalla deadline di `catalog-resolve`, e il
-prossimo avvio riprova. Dopo 3 tentativi si chiude comunque.
+**967 episodi da 22 serie**, primo tentativo, nessuna serie rimasta senza catalogo. Il rapporto
+4:967 è la conferma pratica del punto centrale del progetto: quasi tutto lo storico di questo
+utente stava in `seenShowIds` e nella lista `seen`, cioè nella forma che **non dice quali
+episodi**. La strada "scrivo solo `user_status`" avrebbe migrato 4 episodi su 971 e messo 22 serie
+finite fra le "Da iniziare".
+
+`completata=false` con un elenco di serie senza catalogo resta un esito **previsto**, non un
+guasto: il riscaldamento può essere tagliato dal budget o dalla deadline di `catalog-resolve`, e il
+prossimo avvio riprova (3 tentativi, poi si chiude).
+
+### Il difetto trovato subito dopo: "visto" non faceva niente
+
+Premere il segno di spunta scriveva l'evento in produzione e **non cambiava niente sullo schermo**.
+Non era il tap: era che `TrackingActions` accodava la mutazione e la spingeva, ma il progresso lo
+ricalcola il server (§1.1) e la schermata legge lo specchio locale `tv_tracking`, **che solo un
+pull aggiorna**. `queueOperation` fa `pushPendingChanges()` e basta. Quindi `viewModel.load()`
+rileggeva righe identiche.
+
+È la forma di guasto peggiore fra quelle di questa sessione: non un errore, non un log, e l'invito
+implicito a premere di nuovo — cioè a marcare due episodi.
+
+Tre correzioni:
+
+1. **`SyncEngine.pullTrackingState()`**, mirato su `tv_show_state` + le due viste. Un
+   `pullFromRemote()` qui sarebbe 19 tabelle per un tocco. Lo chiamano `markNextWatched` e
+   `setStatus` dopo aver accodato.
+2. **`v_tv_tracking` e `v_tv_timeline` erano nel `default` di `TableConflictMapping`**, cioè
+   `lastWriteWins`, che confronta per `updated_at` — e `v_tv_timeline` un `updated_at` non ce l'ha.
+   Sono specchi che nessuno scrive in locale: ora `serverWins`, come `tv_show_state`.
+3. **Stato "in volo" sulla card.** Fra il tap e la card aggiornata c'è un giro di rete: il pulsante
+   mostra un indicatore e si disabilita, e un'azione per volta.
+
+**Nota su cosa è disabilitato di proposito:** su una serie in pari il segno di spunta è pieno e
+verde e **non fa niente**, perché non c'è un prossimo episodio da marcare. Dopo la migrazione sono
+22 serie su 24, quindi è la condizione più comune. Se dovesse sembrare un guasto, è lì che va
+guardata la UI — non il percorso di scrittura.
 
 ### Il collaudo in produzione, 2026-07-31 — fatto
 
@@ -134,7 +167,7 @@ nota.
 | 4 | Paginazione del pull | **fatto e verificato**. `SyncPagination`, 8 test verdi + pull reale sul dispositivo, nessun `Failed to pull` |
 | 5 | Integrazione client | **fatto per la lettura**. SQLite + whitelist + pull + conflitti verificati su dati veri; il percorso di scrittura è cablato ma senza chiamanti (arrivano col blocco 7) |
 | 6 | Pipeline import + report | **fasi 1-4 in produzione e collaudate end-to-end**; fasi 5-6 scritte e verdi in SQL, `import-finalize` da deployare |
-| 7 | UI Tracking | **schermata, tab bar e migrazione dello storico scritte e verdi** (19 test iOS, 16 asserzioni SQL, 4 test Deno). La migrazione **non è deployata**: vedi in cima. Restano la misura di §13.6 con dati veri e 18 lingue |
+| 7 | UI Tracking | **schermata, tab bar e migrazione dello storico in produzione e collaudate.** La migrazione è girata sul dispositivo dell'autore: 971 episodi, primo tentativo. Restano la misura di §13.6 e 18 lingue |
 | 8+ | Sociale, stats | da fare |
 
 ## Cosa gira in produzione adesso
@@ -351,6 +384,16 @@ le altre 18 lingue ricadono sull'inglese.
   client **non è chiamabile apposta** — è una delle cose che il test di §1.1 verifica. Definer,
   allora, ma il punto che conta non è l'etichetta: è che **non esiste un parametro con l'identità**.
   L'IDOR di `import-parse` aveva la forma opposta, un id preso dalla richiesta e mai confrontato.
+- **Server-authoritative vuol dire che dopo una scrittura bisogna ricordarsi di rileggere.** §1.1
+  toglie il calcolo dal client, e questa è la metà che si dimentica: se la schermata legge uno
+  specchio che solo il pull aggiorna, una scrittura riuscita non produce **niente di visibile**.
+  `queueOperation` spinge e basta. Ogni azione nuova sul tracking deve chiudersi con un
+  `pullTrackingState()`, e ogni azione che tarda più di mezzo secondo deve dirlo sullo schermo,
+  altrimenti l'utente la ripete.
+- **Il `default` di una mappa di strategie è una decisione, anche quando non la si prende.** Le due
+  viste di §9.2 sono finite in `lastWriteWins` per omissione, che le confronta per `updated_at` —
+  che una delle due non ha. Aggiungere una tabella al pull significa aggiungerla anche a
+  `TableConflictMapping`, sempre.
 - **Una nuova strada in una funzione vecchia richiede un ingresso nuovo, non un adattatore.**
   `catalog-resolve` era interamente costruita attorno agli id TVDB dell'export. Il client ha id
   TMDB da sempre, e per lui `/find` non è inutile: è impossibile. Costruire un id TVDB finto per

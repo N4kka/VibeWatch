@@ -10,6 +10,10 @@ import SwiftUI
 /// 300 ms — e ciò che evita di riscriverla una seconda volta in TypeScript per la web app.
 struct TVTrackingCard: View {
     let row: TrackingRow
+    /// L'azione è partita e il server non ha ancora risposto. Serve perché il progresso lo
+    /// ricalcola il server (§1.1): fra il tap e la card aggiornata c'è un giro di rete, e senza
+    /// dirlo un utente che non vede niente tocca di nuovo — marcando due episodi invece di uno.
+    var isBusy: Bool = false
     var onMarkWatched: () -> Void = {}
     var onSnooze: () -> Void = {}
 
@@ -87,13 +91,19 @@ struct TVTrackingCard: View {
                 Circle()
                     .fill(row.nextLabel == nil ? Color.green.opacity(0.25) : Color.white.opacity(0.18))
                     .frame(width: 34, height: 34)
-                Image(systemName: row.nextLabel == nil ? "checkmark.circle.fill" : "checkmark")
-                    .font(.system(size: row.nextLabel == nil ? 20 : 15, weight: .semibold))
-                    .foregroundColor(row.nextLabel == nil ? .green : .theme.textSecondary)
+                if isBusy {
+                    ProgressView().scaleEffect(0.7).tint(.theme.textSecondary)
+                } else {
+                    Image(systemName: row.nextLabel == nil ? "checkmark.circle.fill" : "checkmark")
+                        .font(.system(size: row.nextLabel == nil ? 20 : 15, weight: .semibold))
+                        .foregroundColor(row.nextLabel == nil ? .green : .theme.textSecondary)
+                }
             }
         }
         .buttonStyle(PlainButtonStyle())
-        .disabled(row.nextLabel == nil)
+        // In pari: non c'è un prossimo episodio da marcare, e il segno di spunta pieno lo dice
+        // già. Un tap che scrivesse qualcosa qui dovrebbe inventare quale episodio.
+        .disabled(row.nextLabel == nil || isBusy)
     }
 
     private var progressBar: some View {
@@ -122,10 +132,11 @@ struct TVTrackingCard: View {
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundColor(.black)
                 .padding(.horizontal, 14).padding(.vertical, 7)
-                .background(Color.theme.accentOrange)
+                .background(Color.theme.accentOrange.opacity(isBusy ? 0.5 : 1))
                 .clipShape(Capsule())
         }
         .buttonStyle(PlainButtonStyle())
+        .disabled(isBusy)
     }
 
     @ViewBuilder

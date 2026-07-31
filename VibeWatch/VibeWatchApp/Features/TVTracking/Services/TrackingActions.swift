@@ -71,6 +71,12 @@ final class TrackingActions {
             payload: payload,
             dependsOn: nil
         )
+
+        // Senza questo il tap non produce **niente di visibile**: l'evento parte, il trigger
+        // ricalcola `tv_show_state` sul server, e la schermata continua a leggere lo specchio
+        // locale `tv_tracking`, che solo un pull aggiorna. Il progresso lo decide il server
+        // (§1.1) — quindi l'unico modo di sapere qual è il prossimo episodio è chiederglielo.
+        await syncEngine.pullTrackingState()
     }
 
     /// "Più avanti": sposta la serie nel bucket `for_later` (§3.4).
@@ -100,5 +106,9 @@ final class TrackingActions {
             payload: payload,
             dependsOn: nil
         )
+
+        // Come sopra: il bucket lo calcola `tv_tracking_bucket` lato server, e finché non si
+        // ritira la vista la serie resta dov'era.
+        await syncEngine.pullTrackingState()
     }
 }

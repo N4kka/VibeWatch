@@ -61,4 +61,105 @@ final class TrackingSyncTests: XCTestCase {
         XCTAssertNil(SyncEngine.pullWindow(for: "profiles"))
         XCTAssertNil(SyncEngine.pullWindow(for: "movie_reactions"))
     }
+
+    // MARK: - Le azioni della schermata (§9.2)
+
+    /// Il difetto trovato usando l'app: premere "visto" scriveva l'evento in produzione e **non
+    /// cambiava niente sullo schermo**. Il progresso lo ricalcola il server (§1.1) e la schermata
+    /// legge lo specchio locale `tv_tracking`, che solo un pull aggiorna — quindi la card restava
+    /// identica e sembrava che il tap non fosse arrivato.
+    @MainActor
+    func testSegnareVistoRitiraLoStatoRicalcolatoDalServer() async throws {
+        let sync = MockSyncEngine()
+        let actions = TrackingActions(syncEngine: sync, currentUserId: { "u-1" })
+
+        try await actions.markNextWatched(rigaConProssimoEpisodio())
+
+        XCTAssertEqual(sync.queued.first?.table, "watch_events")
+        XCTAssertEqual(sync.trackingPulls, 1,
+                       "senza il pull la schermata resta ferma e il tap sembra perso")
+    }
+
+    /// `user_id` nel record non è un dettaglio: `apply_mutations` lo confronta con `auth.uid()` e,
+    /// se manca, scrive `user_id_mismatch` in `sync_rejected_mutations` **e prosegue**.
+    @MainActor
+    func testLEventoPortaSempreUserIdEPrecisioneEsatta() async throws {
+        let sync = MockSyncEngine()
+        let actions = TrackingActions(syncEngine: sync, currentUserId: { "u-1" })
+
+        try await actions.markNextWatched(rigaConProssimoEpisodio())
+
+        let record = try XCTUnwrap(sync.queued.first?.payload)
+        XCTAssertEqual(record["user_id"] as? String, "u-1")
+        // Qui la data di visione è davvero adesso: è l'utente che sta premendo il pulsante.
+        XCTAssertEqual(record["watched_at_precision"] as? String, "exact")
+        XCTAssertNil(record["dedup_key"], "il rewatch manuale è intenzionalmente ripetibile (§3.2)")
+    }
+
+    /// "Più avanti" cambia il bucket, e il bucket lo calcola `tv_tracking_bucket` sul server.
+    @MainActor
+    func testRimandareRitiraAncheLuiLoStato() async throws {
+        let sync = MockSyncEngine()
+        let actions = TrackingActions(syncEngine: sync, currentUserId: { "u-1" })
+
+        try await actions.snooze(rigaConProssimoEpisodio())
+
+        XCTAssertEqual(sync.queued.first?.table, "tv_show_state")
+        XCTAssertEqual(sync.queued.first?.payload["user_status"] as? String, "for_later")
+        XCTAssertEqual(sync.trackingPulls, 1)
+    }
+
+    /// Una serie in pari non ha un prossimo episodio: si rifiuta invece di inventarne uno.
+    @MainActor
+    func testSenzaProssimoEpisodioNonSiScriveNiente() async {
+        let sync = MockSyncEngine()
+        let actions = TrackingActions(syncEngine: sync, currentUserId: { "u-1" })
+
+        do {
+            try await actions.markNextWatched(rigaSenzaProssimoEpisodio())
+            XCTFail("doveva rifiutare")
+        } catch {}
+
+        XCTAssertTrue(sync.queued.isEmpty)
+        XCTAssertEqual(sync.trackingPulls, 0)
+    }
+
+    /// Il pull mirato tocca le tre tabelle del tracking e nient'altro: un pull completo per un
+    /// tocco sarebbe 19 tabelle.
+    func testIlPullMiratoToccaSoloLeTabelleDelTracking() {
+        XCTAssertEqual(SyncEngine.trackingTables,
+                       ["tv_show_state", "v_tv_tracking", "v_tv_timeline"])
+    }
+
+    /// Le due viste sono specchi: nessuno in locale le scrive, quindi la riga che arriva deve
+    /// sostituire quella che c'è. Erano nel `default`, `lastWriteWins`, che le confronta per
+    /// `updated_at` — e `v_tv_timeline` un `updated_at` non ce l'ha.
+    func testLeVisteDelTrackingSonoSpecchiDelServer() {
+        XCTAssertEqual(TableConflictMapping.strategy(for: "v_tv_tracking"), .serverWins)
+        XCTAssertEqual(TableConflictMapping.strategy(for: "v_tv_timeline"), .serverWins)
+    }
+
+    // MARK: - Righe di prova
+
+    private func rigaConProssimoEpisodio() -> TrackingRow {
+        TrackingRow(
+            showId: 1396, userStatus: "active", bucket: .upNext,
+            watchedCount: 10, airedCount: 62, totalCount: 62,
+            nextSeason: 2, nextEpisode: 3, nextEpisodeName: "Bit by a Dead Bee",
+            nextAirDate: nil, isNextAvailable: true,
+            backlogSince: nil, lastWatchedAt: nil,
+            showName: "Breaking Bad", posterPath: nil, nextStillPath: nil
+        )
+    }
+
+    private func rigaSenzaProssimoEpisodio() -> TrackingRow {
+        TrackingRow(
+            showId: 1396, userStatus: "active", bucket: .upToDate,
+            watchedCount: 62, airedCount: 62, totalCount: 62,
+            nextSeason: nil, nextEpisode: nil, nextEpisodeName: nil,
+            nextAirDate: nil, isNextAvailable: false,
+            backlogSince: nil, lastWatchedAt: nil,
+            showName: "Breaking Bad", posterPath: nil, nextStillPath: nil
+        )
+    }
 }

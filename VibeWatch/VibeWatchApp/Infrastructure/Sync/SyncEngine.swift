@@ -44,6 +44,9 @@ public protocol SyncEngineProtocol: AnyObject {
     /// Pull only changes from the remote server.
     /// Typically used for pull-to-refresh.
     func pullFromRemote() async
+
+    /// Ritira lo stato del tracking e nient'altro, dopo un'azione sulla schermata (§9.2).
+    func pullTrackingState() async
 }
 
 // MARK: - SyncEngine Implementation
@@ -652,6 +655,35 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
                 )
             } else {
                 stateMachine.completeSync(reason: "Pull completed")
+            }
+        }
+    }
+
+    /// Le sole tabelle che servono a ridisegnare la schermata Tracking (§9.2).
+    ///
+    /// `tv_show_state` prima delle due viste: sono derivate da lui, e ritirarle nell'ordine
+    /// inverso non cambia il risultato ma rende illeggibile un log letto in fretta.
+    nonisolated static let trackingTables = ["tv_show_state", "v_tv_tracking", "v_tv_timeline"]
+
+    /// Ritira **solo** lo stato del tracking, dopo un "visto" o un "più avanti".
+    ///
+    /// **Perché serve una cosa a parte invece di un `pullFromRemote()`.** Marcare un episodio
+    /// accoda una mutazione e la spinge; il progresso però lo ricalcola il server (§1.1), e la
+    /// schermata legge lo specchio locale `tv_tracking`, che **solo un pull aggiorna**. Senza
+    /// questo, premere "visto" scriveva l'evento in produzione e non cambiava niente sullo
+    /// schermo: la forma di guasto peggiore, perché sembra che il tap non sia arrivato e invita a
+    /// premere di nuovo. Un pull completo qui sarebbe 19 tabelle per un tocco.
+    public func pullTrackingState() async {
+        guard networkMonitor.isConnected else { return }
+        guard let userId = AuthService.shared.currentUser?.id else { return }
+
+        for table in Self.trackingTables {
+            do {
+                try await pullTableWithConflictResolution(name: table, userId: userId)
+            } catch {
+                // Si dichiara. La schermata resterà indietro di un'azione fino al sync successivo,
+                // ed è meglio saperlo dal log che dedurlo da una card che non avanza.
+                Logger.warning("[SyncEngine] Tracking pull failed on \(table): \(error.localizedDescription)")
             }
         }
     }

@@ -15,6 +15,10 @@ import SwiftUI
 struct TVShowsTrackingView: View {
     @StateObject private var viewModel = TVShowsTrackingViewModel()
     @State private var actionError: String?
+    /// La serie su cui c'è un'azione in volo. Il progresso lo ricalcola il server, quindi fra il
+    /// tap e la card aggiornata passa un giro di rete: senza dirlo, chi non vede niente tocca di
+    /// nuovo e si ritrova due episodi marcati invece di uno.
+    @State private var busyShowId: Int?
     /// §13.6 si misura sulla PRIMA apertura: dopo, la cache di SwiftUI e quella delle immagini
     /// rendono il numero piu' bello e meno vero.
     @State private var hasMeasured = false
@@ -67,11 +71,12 @@ struct TVShowsTrackingView: View {
                             ForEach(rows) { row in
                                 TVTrackingCard(
                                     row: row,
+                                    isBusy: busyShowId == row.showId,
                                     onMarkWatched: {
-                                        perform { try await TrackingActions.shared.markNextWatched(row) }
+                                        perform(row) { try await TrackingActions.shared.markNextWatched(row) }
                                     },
                                     onSnooze: {
-                                        perform { try await TrackingActions.shared.snooze(row) }
+                                        perform(row) { try await TrackingActions.shared.snooze(row) }
                                     }
                                 )
                                 .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
@@ -126,10 +131,14 @@ struct TVShowsTrackingView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    /// L'azione si accoda, poi la schermata si rilegge. L'errore si mostra invece di sparire: una
-    /// mutazione persa qui è una serie che non avanza, e l'utente non ha modo di accorgersene.
-    private func perform(_ action: @escaping () async throws -> Void) {
+    /// L'azione si accoda, il server ricalcola, si ritira, poi la schermata si rilegge. L'errore
+    /// si mostra invece di sparire: una mutazione persa qui è una serie che non avanza, e l'utente
+    /// non ha modo di accorgersene.
+    private func perform(_ row: TrackingRow, _ action: @escaping () async throws -> Void) {
+        guard busyShowId == nil else { return }
+        busyShowId = row.showId
         Task {
+            defer { busyShowId = nil }
             do {
                 try await action()
                 await viewModel.load()
