@@ -51,10 +51,61 @@ fotogramma — di solito un rientro sulla tab molto dopo — e non c'è nessun n
 
 ## Da fare per prima cosa
 
-**Il blocco 8**: username, `public_profiles`, ricerca utenti, follow (§3.6, §3.7). Il pezzo centrale
-non è il login con username ma **assegnare uno username agli utenti che già ci sono**: 312 utenti,
-di cui 98 con identità email — due terzi entrano con Apple o Google e uno username non ce l'hanno
-mai avuto.
+**La schermata di scelta dello username** (§3.7: "con richiesta di conferma al primo accesso"). Lo
+schema e il backfill sono in produzione; manca il pezzo iOS. Deve servire due casi diversi:
+
+- i **295** che uno username ce l'hanno già, derivato dal loro nome: conferma o cambio;
+- i **19** che non ce l'hanno: finché non scelgono non compaiono in `public_profiles`, quindi non
+  sono cercabili e non hanno un profilo pubblico. Per loro la schermata non è una conferma, è
+  l'unico modo di esistere socialmente.
+
+`username_available(text)` è già chiamabile da `authenticated` ed è pensata per dire "libero"
+mentre si digita. `suggest_username` **non** lo è: proporre nomi è lavoro del server, e da client
+sarebbe un oracolo su chi esiste.
+
+Poi: `user_follows` + `search_users` con `pg_trgm` (gli indici GIN ci sono già).
+
+### Il login con username è ancora rotto, e la spec si contraddice
+
+`getEmailFromUsername` legge `profiles.email` da chiamante anonimo; la RLS lo blocca, quindi
+`signIn` con username **fallisce sempre**. §3.7 dice che con `public_profiles` "la risoluzione
+diventa possibile" — ma quella vista esclude l'email di proposito, quindi la risoluzione da lì è
+impossibile per costruzione.
+
+Le vere alternative sono due, e vanno decise: una RPC che restituisce l'email dato lo username —
+cioè un endpoint di raccolta indirizzi, da scartare — oppure una Edge Function che fa **tutto** il
+login server-side (username → email → GoTrue) e restituisce la sessione senza che l'email passi
+mai dal client. La seconda è l'unica difendibile, e non è stata scritta.
+
+## Il blocco 8, quello che è già in produzione
+
+Schema (`20260801100000`) e backfill (`20260801110000`), applicati e verificati.
+
+| | |
+|---|---|
+| `profiles` | `username` (citext), `bio`, `is_profile_public`, `username_changed_at` |
+| Unicità | indice **parziale**: un profilo cancellato non tiene occupato il nome per sempre |
+| `public_profiles` | sei colonne — `id, username, display_name, avatar_url, bio, created_at`. Niente email, niente `fcm_token`, niente billing |
+| Generazione | `username_seed` (pura), `username_available` (l'unica che il client può chiamare), `suggest_username` |
+| `username_reserved` | 64 nomi, RLS senza policy: l'elenco non si legge dal client |
+| Backfill | **295 assegnati, 19 lasciati null, 295 univoci, zero fuori formato, zero già datati** |
+
+**La simulazione prima della scrittura ha trovato una fuga.** Derivare lo username dalla parte
+locale dell'email sembrava il ripiego ovvio per chi ha un nome non riducibile a `[a-z0-9_]` (nomi
+cinesi, cirillici). Sui dati veri: dei 18 profili che ci sarebbero ricaduti, **9 hanno un indirizzo
+`@privaterelay.appleid.com`** — la parte locale è il token di relay di Apple, e pubblicarla come
+`@8xp9vsbgxm` ricostruisce un indirizzo contattabile — e 3 hanno un locale che è un **numero di
+telefono** (`@qq.com`, `@139.com`). Tutta §3.7 esiste per tenere l'email fuori dalla superficie
+pubblica; farcela rientrare dal ripiego sarebbe stato il modo più silenzioso di annullarla.
+`suggest_username` esiste come funzione che **non scrive** proprio per rendere possibile quella
+simulazione.
+
+**Il trigger avrebbe annullato la propria correzione.** Il backfill data 295 profili come "username
+appena cambiato", il che è vero alla lettera e falso nella sostanza — quel nome non l'ha scelto
+l'utente. Con un futuro limite di frequenza, i 295 nascerebbero bloccati proprio sulla conferma che
+§3.7 pretende. Rimetterlo a null con una UPDATE **non funziona**: `profiles_username_changed` è
+`before update` e sul ramo "username invariato" riscrive il vecchio valore sopra il null. Il
+backfill spegne il trigger, e c'è un test che documenta perché.
 
 ### La sonda ha sbagliato due volte, e la seconda l'ha trovata l'esecuzione
 

@@ -212,6 +212,16 @@ create temporary table prima as
   select username_changed_at from public.profiles
    where id = 'aaaaaaaa-0000-0000-0000-000000000004';
 
+-- Il ramo "username invariato" **riscrive il vecchio valore**, quindi una UPDATE che prova a
+-- rimettere `username_changed_at` a null non aggiorna niente e non lo dice. E' il motivo per cui
+-- il backfill spegne il trigger invece di ripulire dopo: senza questa prova, quella UPDATE
+-- sembrerebbe funzionare.
+update public.profiles set username_changed_at = null
+ where id = 'aaaaaaaa-0000-0000-0000-000000000004';
+select t.is_true((select username_changed_at is not null from public.profiles
+                   where id = 'aaaaaaaa-0000-0000-0000-000000000004'),
+            'rimettere la data a null senza cambiare username non funziona: il trigger la ripristina');
+
 update public.profiles set display_name = 'Zed Zed'
  where id = 'aaaaaaaa-0000-0000-0000-000000000004';
 
