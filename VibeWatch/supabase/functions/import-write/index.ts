@@ -98,6 +98,13 @@ serve(async (req: Request) => {
 
     const { mutations, written, skipped } = buildBatch(pending as StagingRow[], job.user_id)
 
+    // Quante di queste ci sono già. Senza questo conteggio `totals.written` direbbe quante
+    // mutazioni sono state *costruite*, non quante righe sono nate: rigiocando lo stesso lotto
+    // il report dichiarerebbe il doppio degli episodi importati. Misurato nel collaudo — 558
+    // eventi in tabella e 1116 dichiarati — ed è il genere di bugia che §7.4 esiste per evitare.
+    const chiavi = mutations.map((m) => m.record.dedup_key as string)
+    const giaPresenti = await countExisting(admin, job.user_id, chiavi)
+
     // `apply_mutations` non torna un esito per elemento: quello che rifiuta lo scrive in
     // `sync_rejected_mutations` e prosegue. Si conta prima e si confronta dopo, altrimenti una
     // perdita parziale passerebbe per un successo.
@@ -137,9 +144,11 @@ serve(async (req: Request) => {
     }
 
     const totaliPrecedenti = (job.totals as Record<string, number>) ?? {}
+    const nuovi = written.length - giaPresenti
     const totals = {
       ...(job.totals as Record<string, unknown> ?? {}),
-      written: (totaliPrecedenti.written ?? 0) + written.length,
+      written: (totaliPrecedenti.written ?? 0) + nuovi,
+      already_present: (totaliPrecedenti.already_present ?? 0) + giaPresenti,
       not_written: (totaliPrecedenti.not_written ?? 0) + skipped.length,
     }
 
@@ -150,7 +159,8 @@ serve(async (req: Request) => {
     return jsonResponse({
       done: false,
       phase: 'writing',
-      written: written.length,
+      written: nuovi,
+      already_present: giaPresenti,
       skipped: skipped.length,
       totals,
     }, 200)
@@ -180,6 +190,35 @@ async function countRejected(
     .eq('user_id', userId)
   if (error) throw new Error(`conteggio dei rifiuti fallito: ${error.message}`)
   return (data ?? []).reduce((sum, r) => sum + (r.occurrences ?? 0), 0)
+}
+
+/**
+ * Quante delle `dedup_key` di questo lotto sono già in `watch_events`.
+ *
+ * Si chiede a blocchi e non tutte insieme perché `in.(...)` finisce nella query string: 500
+ * chiavi da ~25 caratteri fanno un URL da 12 KB, che è il genere di limite che si scopre quando
+ * qualcuno importa più di quanto si sia provato.
+ */
+async function countExisting(
+  admin: ReturnType<typeof adminClient>,
+  userId: string,
+  dedupKeys: string[],
+): Promise<number> {
+  const BLOCCO = 100
+  let presenti = 0
+
+  for (let i = 0; i < dedupKeys.length; i += BLOCCO) {
+    const { data, error } = await admin
+      .from('watch_events')
+      .select('dedup_key')
+      .eq('user_id', userId)
+      .is('deleted_at', null)
+      .in('dedup_key', dedupKeys.slice(i, i + BLOCCO))
+    if (error) throw new Error(`conteggio dei già presenti fallito: ${error.message}`)
+    presenti += data?.length ?? 0
+  }
+
+  return presenti
 }
 
 /**

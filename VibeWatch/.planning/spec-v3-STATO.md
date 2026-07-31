@@ -15,12 +15,12 @@ credevo.
 
 ## Da fare per prima cosa
 
-**Blocco 6, fasi 4-6 dell'import** (§7.2). Le fasi 1-3 sono fatte, deployate e collaudate su dati
-veri; restano:
+**Blocco 6, fasi 5-6 dell'import** (§7.2). Le fasi 1-4 sono fatte, deployate e collaudate
+end-to-end sull'export vero; restano:
 
 | Fase | Cosa manca | Note per chi la scrive |
 |---|---|---|
-| 4. `writing` | **scritta, unit-testata, NON ancora deployata né collaudata end-to-end** (`supabase/functions/import-write/`, 11 test Deno) | Legge da `import_staging` le righe `status='resolved'`. **Il record DEVE contenere `user_id`**, altrimenti `apply_mutations` scrive `user_id_mismatch` in `sync_rejected_mutations` e prosegue in silenzio. `dedup_key` è già nello staging e rende l'operazione idempotente (criterio 2 di §13). **`is_special` va derivato dalla stagione RISOLTA da TMDB** (`resolved->>'season_number'`), non dal record grezzo: dopo il `resolving` la stagione autorevole è quella di TMDB, ed è quella che `recompute_tv_show_state` filtra con `is_special_episode`. Il flag originale di TV Time sta in `tvtime_is_special_raw` e va in `external_ref`. Una riga con `numbering_known = false` rimasta irrisolta **non è scrivibile** (il CHECK `watch_events_shape` vuole stagione ed episodio non nulli): va nel report, mai scritta con un numero inventato. |
+| 4. `writing` | **fatta, deployata e collaudata** (`supabase/functions/import-write/`, 11 test Deno + collaudo end-to-end) | Legge da `import_staging` le righe `status='resolved'`. **Il record DEVE contenere `user_id`**, altrimenti `apply_mutations` scrive `user_id_mismatch` in `sync_rejected_mutations` e prosegue in silenzio. `dedup_key` è già nello staging e rende l'operazione idempotente (criterio 2 di §13). **`is_special` va derivato dalla stagione RISOLTA da TMDB** (`resolved->>'season_number'`), non dal record grezzo: dopo il `resolving` la stagione autorevole è quella di TMDB, ed è quella che `recompute_tv_show_state` filtra con `is_special_episode`. Il flag originale di TV Time sta in `tvtime_is_special_raw` e va in `external_ref`. Una riga con `numbering_known = false` rimasta irrisolta **non è scrivibile** (il CHECK `watch_events_shape` vuole stagione ed episodio non nulli): va nel report, mai scritta con un numero inventato. |
 | 5. `recomputing` | ricalcolo `tv_show_state` per le serie toccate | **Domanda risolta: non serve per la correttezza, conviene come assicurazione.** Il trigger `watch_events_recompute_insert` è statement-level e ricalcola ogni `(user, show)` distinto di ogni INSERT; `apply_mutations` inserisce un elemento per volta, quindi lo stato è già giusto a fine fase 4. Misurato in produzione (utente usa-e-getta, transazione fatta fallire): **100 insert con trigger = 250 ms**, un ricalcolo singolo = **2,6 ms**, stima sull'export vero **~53 s** di lavoro DB contro ~1 s che costerebbe un giro finale su ~430 serie. Lo spreco è reale ma assoluto piccolo; la fase 5 vale come garanzia che un job interrotto fra due lotti finisca comunque consistente. |
 | 6. `done` | il report di §7.4 | **Obbligatorio, non decorativo.** Deve dire: N episodi/serie/film, intervallo di date, **N non riconosciuti con l'elenco dei titoli**, N voti indecodificabili. I dati ci sono già: `import_jobs.totals` e le righe `status='unresolved'` con la loro `error`. |
 
@@ -39,7 +39,7 @@ invocazione, `status='failed'` scritto sul job in caso di eccezione.
 | — | `apply_mutations` (§4, §7.2) | **fatto e in produzione**, collaudato su utente usa-e-getta |
 | 4 | Paginazione del pull | **fatto e verificato**. `SyncPagination`, 8 test verdi + pull reale sul dispositivo, nessun `Failed to pull` |
 | 5 | Integrazione client | **fatto per la lettura**. SQLite + whitelist + pull + conflitti verificati su dati veri; il percorso di scrittura è cablato ma senza chiamanti (arrivano col blocco 7) |
-| 6 | Pipeline import + report | **fasi 1-3 fatte e collaudate** ← ripartire dalla fase 4 |
+| 6 | Pipeline import + report | **fasi 1-4 fatte, deployate e collaudate end-to-end sull'export vero** ← ripartire dalla fase 5 |
 | 7+ | UI, sociale, stats | da fare |
 
 ## Cosa gira in produzione adesso
@@ -60,11 +60,12 @@ invocazione, `status='failed'` scritto sul job in caso di eccezione.
 - Edge Function `catalog-resolve` versione 3, `verify_jwt` attivo.
 - **Import**: tabelle `import_jobs` e `import_staging` (RLS con sole policy di lettura: le fasi le
   muove il server), bucket privato `imports` con policy che confinano ogni utente alla propria
-  cartella, Edge Function `import-parse` (fase 2, **versione 3**) e `import-resolve` (fase 3).
-  Nessun `import_jobs` residuo: lo staging del collaudo non è rimasto in produzione.
+  cartella, Edge Function `import-parse` (fase 2, **versione 3**), `import-resolve` (fase 3) e
+  `import-write` (fase 4). Nessun `import_jobs` residuo: lo staging dei collaudi è stato cancellato.
 - Droppati: `tv_tracking`, `tv_episode_progress`, `v_tv_tracking_buckets`,
   `get_tv_tracking_buckets()` (erano a 0 righe, verificato subito prima).
-- Catalogo popolato con una sola serie di prova: Game of Thrones (1399), 373 episodi.
+- Catalogo: **1.912 episodi e 592 voci di `tvdb_tmdb_map`**, residuo *voluto* del collaudo — è
+  §1.5, il primo che importa paga e tutti gli altri trovano la serie già risolta.
 
 ## La finestra a 12 mesi, verificata
 
@@ -104,6 +105,42 @@ visioni.
 2. **`zip.js` decomprime su web worker e non li chiude**: in una Edge Function sarebbero worker che
    sopravvivono alla risposta. Risolto con `configure({ useWebWorkers: false })` e
    `terminateWorkers()` nel `finally`. L'ha trovato il rilevatore di leak dei test.
+
+## Il collaudo end-to-end delle fasi 2-4 (2026-07-31)
+
+Utente usa-e-getta, ZIP vero caricato su Storage col JWT dell'utente, pipeline intera, **tutti i
+dati utente cancellati alla fine** (verificato a zero); il catalogo risolto è rimasto, ed è il
+punto di §1.5: 1.912 episodi e 592 voci di mappa che il prossimo import trova già fatte.
+
+**Cosa ha funzionato.** La fase 2 ha prodotto esattamente i numeri di `build_oracle.py` (21.344
+eventi, 380 voti, 21.724 righe, 139 v1 inutilizzabili, 15.906 scartati) e le regole nuove sono
+atterrate nello staging identiche all'oracolo: **195 numerazioni perse, 613 speciali tutti in
+stagione 0, zero eventi con specialità non derivata dalla stagione, 128 flag in disaccordo**.
+La fase 4 ha scritto 558 eventi su 14 serie con zero rifiuti. **Criterio 2 di §13 verificato su
+dati veri**: rigiocando lo stesso lotto restano 558 eventi e zero rifiuti. **Criterio 1 sul
+sottoinsieme**: delle 14 serie, 8 sono state importate per intero e **8 su 8 riproducono il
+progresso dell'oracolo**.
+
+**Tre problemi trovati, di cui uno grosso.**
+
+1. **Un import reale richiede ~35 ore.** `catalog-resolve` fa **una chiamata `/find` per
+   episodio** e `CALLER_CALLS_PER_HOUR` è 600: 21.189 episodi distinti = 35,3 ore. Il budget
+   globale (50.000/giorno) non è il vincolo, lo è il tetto orario per utente. Misurato: 12
+   invocazioni hanno risolto 600 episodi e poi il tetto ha chiuso, esattamente come previsto.
+   È il momento di acquisizione (§10) e la spec promette "una push a fine import": va deciso se
+   alzare il tetto per i job di import, se raggruppare le `/find`, o se cambiare la promessa.
+2. **`import-resolve` si impianta a budget esaurito.** Non annota **nessuna** riga finché
+   *tutti* gli id del blocco sono in mappa: con 994 mancanti in un blocco e 600/ora, passano due
+   ore prima che una sola riga venga annotata, e nel frattempo ogni invocazione torna
+   `done: false` senza aver fatto progressi. Andrebbe annotato ciò che è già risolvibile.
+3. **`ROWS_PER_INVOCATION = 4000` in `import-resolve` è una costante che mente**, per il tetto
+   PostgREST qui sopra. Non è perdita di dati — il ciclo continua — ma la fase costa quattro
+   volte le invocazioni previste.
+
+**Un difetto mio, corretto subito:** `totals.written` contava le mutazioni *costruite*, non le
+righe nate. Dopo il rigioco dichiarava 1116 episodi importati con 558 in tabella. Ora conta gli
+inserimenti veri e tiene `already_present` separato — un report che gonfia i numeri è
+esattamente ciò che §7.4 vieta.
 
 ## Due cose da sapere prima del blocco 7
 
@@ -165,6 +202,13 @@ visioni.
   (verificato il 2026-07-31 su `pg_db_role_setting`) — ma lo **`statement_timeout = 8s` del ruolo
   `authenticated`**: 20.000 righe in una richiesta sola non tornavano troncate in silenzio, non
   tornavano affatto. Il troncamento silenzioso resta però a un `ALTER ROLE` di distanza.
+  > **CORREZIONE del 2026-07-31, misurata:** il tetto PostgREST **c'è ed è 1000 righe.**
+  > `pgrst.db_max_rows` è davvero nullo sul ruolo — guardare lì è ciò che aveva portato alla
+  > conclusione sbagliata — ma il limite sta nella configurazione PostgREST del progetto, dove
+  > `pg_db_role_setting` non lo vede. Scoperto perché `import-resolve` chiede `.limit(4000)` e ne
+  > riceve 1000: sull'export vero le prime 4.000 righe contengono 3.994 episodi distinti, e la
+  > funzione ne vedeva 994. **Ogni `.limit()` sopra 1000 in questo progetto è già troncato oggi**,
+  > in silenzio: `SyncPagination` è salvo solo perché pagina a 1000 esatti.
 - **`order()` non è cosmetico quando si pagina.** Senza `ORDER BY` Postgres può restituire le righe
   in ordine diverso a ogni richiesta, e due finestre sulla stessa tabella riescono a sovrapporsi e a
   saltare righe contemporaneamente. Si ordina per chiave primaria, che è unica dentro l'insieme
