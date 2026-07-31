@@ -113,10 +113,13 @@ as $$
                  order by episodi desc, titolo), '[]'::jsonb)
            from non_riconosciuti),
 
-    'voti_stelle',        (select coalesce(n, 0) from voti where tipo = 'star'),
-    'voti_reaction',      (select coalesce(n, 0) from voti where tipo = 'reaction'),
+    -- Il coalesce va FUORI dalla sottoquery: dentro non viene mai eseguito quando la sottoquery
+    -- non trova righe, e il report dichiarava `null` invece di zero. Un report che dice "null
+    -- voti" non e' un report onesto, e' un report rotto.
+    'voti_stelle',        coalesce((select n from voti where tipo = 'star'), 0),
+    'voti_reaction',      coalesce((select n from voti where tipo = 'reaction'), 0),
     'voti_indecodificabili',
-                          (select coalesce(n, 0) from voti where tipo = 'undecodable'),
+                          coalesce((select n from voti where tipo = 'undecodable'), 0),
     -- §3.6: `user_ratings` arriva col blocco 9. Finche' non c'e', i voti sono rinviati e va detto.
     'voti_importati',     false,
 

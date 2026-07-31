@@ -100,14 +100,19 @@ serve(async (req: Request) => {
       .rpc('import_report', { p_job_id: jobId })
     if (reportError) throw new Error(`report non generato: ${reportError.message}`)
 
-    const totals = { ...(job.totals as Record<string, unknown> ?? {}), report }
+    // Il report viene calcolato mentre il job è ancora `recomputing`, quindi la fotografia che si
+    // archivia direbbe "status: running" per sempre. Si sovrascrivono i due campi qui, in modo
+    // esplicito, invece di rigenerare il report dopo la chiusura: rigenerarlo vorrebbe dire un
+    // secondo giro che, fallendo, lascerebbe un job `done` con un report che si contraddice.
+    const reportFinale = { ...(report as Record<string, unknown>), phase: 'done', status: 'done' }
+    const totals = { ...(job.totals as Record<string, unknown> ?? {}), report: reportFinale }
 
     const { error: closeError } = await admin.from('import_jobs')
       .update({ phase: 'done', status: 'done', checkpoint: {}, totals, error: null })
       .eq('id', jobId)
     if (closeError) throw new Error(`chiusura del job fallita: ${closeError.message}`)
 
-    return jsonResponse({ done: true, phase: 'done', report }, 200)
+    return jsonResponse({ done: true, phase: 'done', report: reportFinale }, 200)
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     await admin.from('import_jobs')

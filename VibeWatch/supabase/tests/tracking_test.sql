@@ -377,6 +377,18 @@ values ('aaaaaaaa-0000-4000-8000-000000000002',
 select t.eq((public.import_report('aaaaaaaa-0000-4000-8000-000000000002')->>'episodi_importati')::int,
             0, 'un job senza righe dichiara zero episodi');
 
+-- Zero non e' null. Il coalesce dentro la sottoquery non veniva mai eseguito quando la sottoquery
+-- non trovava righe, e il report diceva "voti_stelle: null" invece di 0 — visto in produzione.
+select t.eq((public.import_report('aaaaaaaa-0000-4000-8000-000000000002')->>'voti_stelle')::int,
+            0, 'nessun voto in stelle si dichiara come 0, non come null');
+select t.eq((public.import_report('aaaaaaaa-0000-4000-8000-000000000002')->>'voti_reaction')::int,
+            0, 'idem per le reaction');
+select t.eq((public.import_report('aaaaaaaa-0000-4000-8000-000000000002')->>'voti_indecodificabili')::int,
+            0, 'idem per gli indecodificabili');
+select t.is_true((public.import_report('aaaaaaaa-0000-4000-8000-000000000002')->'voti_stelle')
+                 <> 'null'::jsonb,
+            'il campo non e'' il json null, che il client mostrerebbe come vuoto');
+
 rollback;
 
 \echo ''
