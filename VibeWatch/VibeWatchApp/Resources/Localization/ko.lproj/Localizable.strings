@@ -745,3 +745,12 @@
 "profile.stats.shows" = "시리즈";
 "profile.stats.episodes" = "에피소드";
 "profile.stats.loadFailed" = "통계를 불러오지 못했습니다.";
+
+// Blocco 9, seconda meta' (§9.3): diario e modifica dei favorites
+"diary.title" = "다이어리";
+"diary.empty" = "아직 아무것도 없습니다. 시청한 작품이 여기에 표시됩니다.";
+"diary.loadFailed" = "다이어리를 불러오지 못했습니다.";
+"favorites.add" = "즐겨찾기에 추가";
+"favorites.remove" = "즐겨찾기에서 제거";
+"favorites.slot" = "슬롯 %d";
+"favorites.saveFailed" = "즐겨찾기를 업데이트하지 못했습니다. 다시 시도해 주세요.";

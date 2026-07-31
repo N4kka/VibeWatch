@@ -745,3 +745,12 @@
 "profile.stats.shows" = "番組";
 "profile.stats.episodes" = "エピソード";
 "profile.stats.loadFailed" = "統計を読み込めませんでした。";
+
+// Blocco 9, seconda meta' (§9.3): diario e modifica dei favorites
+"diary.title" = "日記";
+"diary.empty" = "まだ何もありません。視聴した作品がここに表示されます。";
+"diary.loadFailed" = "日記を読み込めませんでした。";
+"favorites.add" = "お気に入りに追加";
+"favorites.remove" = "お気に入りから削除";
+"favorites.slot" = "スロット%d";
+"favorites.saveFailed" = "お気に入りを更新できませんでした。もう一度お試しください。";

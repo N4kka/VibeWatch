@@ -745,3 +745,12 @@
 "profile.stats.shows" = "Σειρές";
 "profile.stats.episodes" = "Επεισόδια";
 "profile.stats.loadFailed" = "Δεν ήταν δυνατή η φόρτωση των στατιστικών.";
+
+// Blocco 9, seconda meta' (§9.3): diario e modifica dei favorites
+"diary.title" = "Ημερολόγιο";
+"diary.empty" = "Τίποτα ακόμη — ό,τι βλέπεις θα εμφανίζεται εδώ.";
+"diary.loadFailed" = "Δεν ήταν δυνατή η ανάγνωση του ημερολογίου.";
+"favorites.add" = "Προσθήκη στα αγαπημένα";
+"favorites.remove" = "Αφαίρεση από τα αγαπημένα";
+"favorites.slot" = "Θέση %d";
+"favorites.saveFailed" = "Δεν ήταν δυνατή η ενημέρωση των αγαπημένων. Δοκίμασε ξανά.";

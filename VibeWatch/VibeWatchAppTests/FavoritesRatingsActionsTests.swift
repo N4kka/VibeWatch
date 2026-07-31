@@ -221,6 +221,116 @@ final class FavoritesRatingsActionsTests: XCTestCase {
         XCTAssertTrue(engine.queued.isEmpty)
     }
 
+    // MARK: - Il diario (§9.3)
+
+    private func diaryEntry(id: String, mediaType: String = "tv") -> DiaryEntry {
+        DiaryEntry(id: id, mediaType: mediaType, tmdbId: 900,
+                   title: mediaType == "tv" ? "Show" : nil,
+                   episodeLabel: mediaType == "tv" ? "S1E1" : nil,
+                   posterPath: nil, watchedAt: Date(timeIntervalSince1970: 0), isInferred: false)
+    }
+
+    /// Vuoto, righe e lettura fallita sono tre stati, mai schiacciati.
+    func testIlDiarioVuotoNonEUnErrore() async {
+        let vuoto = DiaryViewModel(fetchPage: { _, _ in [] }, resolveMovieTitle: { _ in nil })
+        await vuoto.load()
+        XCTAssertEqual(vuoto.phase, .empty)
+
+        struct Rotto: Error {}
+        let rotto = DiaryViewModel(fetchPage: { _, _ in throw Rotto() }, resolveMovieTitle: { _ in nil })
+        await rotto.load()
+        XCTAssertEqual(rotto.phase, .failed, "una lettura fallita non e' 'non hai visto niente'")
+    }
+
+    func testIlDiarioPaginaSenzaPerdereLeRigheGiaMostrate() async {
+        let prima = (0..<DiaryViewModel.pageSize).map { self.diaryEntry(id: "e\($0)") }
+        let seconda = [diaryEntry(id: "extra1"), diaryEntry(id: "extra2")]
+        let vm = DiaryViewModel(
+            fetchPage: { _, offset in offset == 0 ? prima : seconda },
+            resolveMovieTitle: { _ in nil })
+        await vm.load()
+        await vm.loadMoreIfNeeded(current: prima.last!)
+
+        guard case .loaded(let entries, let hasMore) = vm.phase else {
+            return XCTFail("doveva essere loaded, era \(vm.phase)")
+        }
+        XCTAssertEqual(entries.count, DiaryViewModel.pageSize + 2)
+        XCTAssertFalse(hasMore, "una pagina corta chiude la camminata")
+    }
+
+    func testIlTitoloDeiFilmSiRisolveDalClient() async {
+        let vm = DiaryViewModel(
+            fetchPage: { _, _ in [self.diaryEntry(id: "m1", mediaType: "movie")] },
+            resolveMovieTitle: { id in id == 900 ? "Heat" : nil })
+        await vm.load()
+        XCTAssertEqual(vm.movieTitles[900], "Heat",
+                       "il catalogo film locale non esiste: il nome arriva dal client")
+    }
+
+    /// La forma della riga: la data dedotta si dichiara, l'episodio porta la sua etichetta.
+    func testUnaRigaDelDiarioSiLeggeDallaCache() {
+        let tv = LocalDiaryRepository.entry(from: [
+            "id": "e1", "media_type": "tv", "tmdb_show_id": 900,
+            "season_number": 1, "episode_number": 3,
+            "watched_at": "2026-07-31T10:00:00Z", "watched_at_precision": "inferred",
+            "show_name": "Stats Show", "show_poster_path": "/p.jpg",
+        ])
+        XCTAssertEqual(tv?.title, "Stats Show")
+        XCTAssertEqual(tv?.episodeLabel, "S1E3")
+        XCTAssertEqual(tv?.isInferred, true, "una data dedotta non si spaccia per esatta")
+
+        let film = LocalDiaryRepository.entry(from: [
+            "id": "e2", "media_type": "movie", "tmdb_movie_id": 603,
+            "watched_at": "2026-07-31T10:00:00Z",
+        ])
+        XCTAssertEqual(film?.tmdbId, 603)
+        XCTAssertNil(film?.title, "il nome del film non c'e' in cache: lo risolve il chiamante")
+
+        XCTAssertNil(LocalDiaryRepository.entry(from: ["id": "e3", "media_type": "tv",
+                                                       "watched_at": "non-una-data"]),
+                     "una riga illeggibile si scarta, non si inventa")
+    }
+
+    // MARK: - Il pulsante dei favorites (§3.6)
+
+    func testLoSlotSiSceglieEScrive() async {
+        let vm = FavoriteButtonViewModel(
+            mediaType: "movie", tmdbId: 603,
+            actions: FavoritesActions(syncEngine: engine, sqlite: .shared, currentUserId: { "u1" }),
+            sqlite: .shared, currentUserId: { "u1" })
+        await vm.setSlot(2)
+
+        XCTAssertEqual(vm.currentSlot, 2)
+        XCTAssertTrue(vm.occupiedSlots.contains(2))
+        XCTAssertEqual(engine.queued.first?.payload["slot"] as? Int, 2)
+    }
+
+    func testUnFavoritoCheFallisceTornaIndietro() async {
+        let vm = FavoriteButtonViewModel(
+            mediaType: "movie", tmdbId: 603,
+            actions: FavoritesActions(syncEngine: engine, sqlite: .shared, currentUserId: { nil }),
+            sqlite: .shared, currentUserId: { "u1" })
+        await vm.setSlot(3)
+
+        XCTAssertNil(vm.currentSlot, "lo stato torna quello vero")
+        XCTAssertFalse(vm.occupiedSlots.contains(3))
+        XCTAssertTrue(vm.saveFailed, "e il fallimento si dichiara")
+        XCTAssertTrue(engine.queued.isEmpty)
+    }
+
+    func testRimuovereLiberaLoSlotEViaggiaComeDelete() async {
+        let vm = FavoriteButtonViewModel(
+            mediaType: "movie", tmdbId: 603,
+            actions: FavoritesActions(syncEngine: engine, sqlite: .shared, currentUserId: { "u1" }),
+            sqlite: .shared, currentUserId: { "u1" })
+        await vm.setSlot(1)
+        await vm.remove()
+
+        XCTAssertNil(vm.currentSlot)
+        XCTAssertFalse(vm.occupiedSlots.contains(1))
+        XCTAssertEqual(engine.queued.last?.operationType, "DELETE")
+    }
+
     // MARK: - Helper
 
     private func XCTAssertThrowsInvalidShape(_ body: @escaping () async throws -> Void,

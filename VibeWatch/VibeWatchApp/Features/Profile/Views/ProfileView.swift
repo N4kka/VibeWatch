@@ -78,6 +78,7 @@ struct ProfileView: View {
     @State private var showPlatformSelector = false
     @State private var showSettings = false
     @State private var showUserSearch = false
+    @State private var showDiary = false
     @State private var showChangePassword = false
     @State private var showHelpSupport = false
     @State private var showFeedback = false
@@ -212,6 +213,9 @@ struct ProfileView: View {
         }
         .sheet(isPresented: $showUserSearch) {
             UserSearchView()
+        }
+        .sheet(isPresented: $showDiary) {
+            NavigationView { DiaryView() }
         }
         .fullScreenCover(isPresented: $showUpgradePaywall) {
             ProPaywallView(isPresented: $showUpgradePaywall, source: "profile_banner")
@@ -570,6 +574,18 @@ struct ProfileView: View {
                     title: "social.search.title".localized,
                     action: {
                         showUserSearch = true
+                    }
+                )
+
+                Divider()
+                    .background(Color.white.opacity(0.1))
+
+                // §9.3: il diario. Si legge dalla cache locale (12 mesi, §5), zero rete.
+                SettingsRow(
+                    icon: "book",
+                    title: "diary.title".localized,
+                    action: {
+                        showDiary = true
                     }
                 )
 

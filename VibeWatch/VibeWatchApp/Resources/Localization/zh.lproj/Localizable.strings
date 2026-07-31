@@ -730,3 +730,12 @@
 "profile.stats.shows" = "剧集";
 "profile.stats.episodes" = "集数";
 "profile.stats.loadFailed" = "无法加载统计数据。";
+
+// Blocco 9, seconda meta' (§9.3): diario e modifica dei favorites
+"diary.title" = "日记";
+"diary.empty" = "这里还没有内容——你看过的内容会显示在这里。";
+"diary.loadFailed" = "无法读取日记。";
+"favorites.add" = "添加到收藏";
+"favorites.remove" = "从收藏中移除";
+"favorites.slot" = "位置%d";
+"favorites.saveFailed" = "无法更新收藏,请重试。";

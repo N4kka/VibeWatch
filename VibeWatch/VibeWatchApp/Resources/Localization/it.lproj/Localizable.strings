@@ -744,3 +744,12 @@
 "profile.stats.shows" = "Serie";
 "profile.stats.episodes" = "Episodi";
 "profile.stats.loadFailed" = "Impossibile caricare le statistiche.";
+
+// Blocco 9, seconda meta' (§9.3): diario e modifica dei favorites
+"diary.title" = "Diario";
+"diary.empty" = "Ancora niente qui — quello che guardi comparirà qui.";
+"diary.loadFailed" = "Impossibile leggere il diario.";
+"favorites.add" = "Aggiungi ai preferiti";
+"favorites.remove" = "Rimuovi dai preferiti";
+"favorites.slot" = "Slot %d";
+"favorites.saveFailed" = "Impossibile aggiornare i preferiti. Riprova.";

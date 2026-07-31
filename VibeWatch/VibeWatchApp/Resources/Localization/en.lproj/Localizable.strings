@@ -746,3 +746,12 @@
 "profile.stats.shows" = "Shows";
 "profile.stats.episodes" = "Episodes";
 "profile.stats.loadFailed" = "Couldn't load stats.";
+
+// Blocco 9, seconda meta' (§9.3): diario e modifica dei favorites
+"diary.title" = "Diary";
+"diary.empty" = "Nothing here yet — what you watch will show up here.";
+"diary.loadFailed" = "Couldn't read the diary.";
+"favorites.add" = "Add to favorites";
+"favorites.remove" = "Remove from favorites";
+"favorites.slot" = "Slot %d";
+"favorites.saveFailed" = "Couldn't update favorites. Try again.";

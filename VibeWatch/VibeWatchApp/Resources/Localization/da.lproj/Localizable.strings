@@ -747,3 +747,12 @@
 "profile.stats.shows" = "Serier";
 "profile.stats.episodes" = "Afsnit";
 "profile.stats.loadFailed" = "Statistikken kunne ikke indlæses.";
+
+// Blocco 9, seconda meta' (§9.3): diario e modifica dei favorites
+"diary.title" = "Dagbog";
+"diary.empty" = "Intet her endnu — det du ser, vises her.";
+"diary.loadFailed" = "Dagbogen kunne ikke læses.";
+"favorites.add" = "Føj til favoritter";
+"favorites.remove" = "Fjern fra favoritter";
+"favorites.slot" = "Plads %d";
+"favorites.saveFailed" = "Favoritterne kunne ikke opdateres. Prøv igen.";

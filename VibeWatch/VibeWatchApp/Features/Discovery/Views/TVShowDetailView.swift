@@ -269,6 +269,7 @@ struct TVShowDetailView: View {
                         )
                         // §3.6: stelle = giudizio, cuore = "mi rappresenta". Coesistono.
                         StarRatingSection(mediaType: "tv", tmdbId: tvShow.id)
+                        FavoriteButton(mediaType: "tv", tmdbId: tvShow.id)
                         GoodFitSection(
                             title: String(format: "movieDetail.goodFitTitle".localized, tvShow.name),
                             subtitle: "movieDetail.goodFitSubtitle".localized,

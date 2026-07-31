@@ -733,3 +733,12 @@
 "profile.stats.shows" = "Diziler";
 "profile.stats.episodes" = "Bölümler";
 "profile.stats.loadFailed" = "İstatistikler yüklenemedi.";
+
+// Blocco 9, seconda meta' (§9.3): diario e modifica dei favorites
+"diary.title" = "Günlük";
+"diary.empty" = "Henüz bir şey yok — izlediklerin burada görünecek.";
+"diary.loadFailed" = "Günlük okunamadı.";
+"favorites.add" = "Favorilere ekle";
+"favorites.remove" = "Favorilerden kaldır";
+"favorites.slot" = "Slot %d";
+"favorites.saveFailed" = "Favoriler güncellenemedi. Tekrar dene.";

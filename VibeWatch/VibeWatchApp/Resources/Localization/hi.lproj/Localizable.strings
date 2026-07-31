@@ -745,3 +745,12 @@
 "profile.stats.shows" = "शो";
 "profile.stats.episodes" = "एपिसोड";
 "profile.stats.loadFailed" = "आँकड़े लोड नहीं हो सके।";
+
+// Blocco 9, seconda meta' (§9.3): diario e modifica dei favorites
+"diary.title" = "डायरी";
+"diary.empty" = "अभी यहाँ कुछ नहीं है — आप जो देखेंगे वह यहाँ दिखेगा।";
+"diary.loadFailed" = "डायरी पढ़ी नहीं जा सकी।";
+"favorites.add" = "पसंदीदा में जोड़ें";
+"favorites.remove" = "पसंदीदा से हटाएँ";
+"favorites.slot" = "स्लॉट %d";
+"favorites.saveFailed" = "पसंदीदा अपडेट नहीं हो सके। फिर से कोशिश करें।";
