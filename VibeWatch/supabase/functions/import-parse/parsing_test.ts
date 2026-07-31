@@ -2,6 +2,8 @@ import { assertEquals } from 'jsr:@std/assert@1'
 import {
   assignRewatchIndex,
   dedupV1IntoV2,
+  hasKnownNumbering,
+  isSpecialEpisode,
   parseRatings,
   parseV1Events,
   parseV2Events,
@@ -42,16 +44,45 @@ Deno.test('v2: un evento marcato in blocco non ha un orario attendibile', () => 
   assertEquals(events[2].bulk_type, null)
 })
 
-Deno.test('v2: is_special arriva dal file, non dalla stagione', () => {
+Deno.test('§1.3: is_special arriva dalla stagione, mai dal flag del file', () => {
   const rows: Row[] = [
+    // Stagione 0 senza flag: è lo stesso uno speciale. Sull'export reale sono 113 eventi, e
+    // leggerli dal flag faceva contare 8 speciali di One-Punch Man dentro il progresso.
     { key: 'watch-episode-a-1', s_id: '1', ep_id: '10', season_number: '0', is_special: 'false' },
+    // Flag 'true' in una stagione numerata: NON è uno speciale. Sono 15 eventi sull'export
+    // reale, 13 dei quali di X Factor.
     { key: 'watch-episode-a-2', s_id: '1', ep_id: '11', season_number: '3', is_special: 'true' },
   ]
 
   const events = parseV2Events(rows)
 
-  assertEquals(events[0].is_special, false)
-  assertEquals(events[1].is_special, true)
+  assertEquals(events[0].is_special, true)
+  assertEquals(events[1].is_special, false)
+
+  // Il flag grezzo non si butta: TV Time ci contava sopra e finisce in `external_ref`.
+  assertEquals(events[0].tvtime_is_special_raw, false)
+  assertEquals(events[1].tvtime_is_special_raw, true)
+})
+
+Deno.test('§6: episode_number 0 è una numerazione persa, non l episodio zero', () => {
+  const rows: Row[] = [
+    // Il caso Mario: id distinti, tutti senza numero, che fusi su (3,0) diventavano un
+    // episodio solo. Qui restano due eventi separati, da risolvere su TMDB per id.
+    { key: 'watch-episode-a-1', s_id: '1', ep_id: '10', season_number: '3', episode_number: '0', runtime: '0' },
+    { key: 'watch-episode-a-2', s_id: '1', ep_id: '11', season_number: '3', episode_number: '0', runtime: '0' },
+    { key: 'watch-episode-a-3', s_id: '1', ep_id: '12', season_number: '1', episode_number: '1' },
+    // In stagione 0 l'episodio 0 non è un problema: non entra comunque nel progresso.
+    { key: 'watch-episode-a-4', s_id: '1', ep_id: '13', season_number: '0', episode_number: '0' },
+  ]
+
+  const events = parseV2Events(rows)
+
+  assertEquals(events.map((e) => e.numbering_known), [false, false, true, true])
+  assertEquals(
+    new Set(events.filter((e) => !e.numbering_known).map((e) => e.tvdb_episode_id)).size,
+    2,
+    'due episodi senza numero restano due, identificati per id',
+  )
 })
 
 // --------------------------------------------------------------------------- v1
@@ -71,7 +102,7 @@ Deno.test('v1: le righe senza id non sono eventi e vanno contate', () => {
   assertEquals(unusable, 2, 'i contatori senza id vanno nel report, non fatti sparire')
 })
 
-Deno.test('v1: senza is_special, la stagione 0 è l unico segnale', () => {
+Deno.test('v1: la stagione 0 decide, come in v2', () => {
   const rows: Row[] = [
     { entity_type: 'episode', type: 'watch', series_id: '1', episode_id: '10', season_number: '0' },
     { entity_type: 'episode', type: 'watch', series_id: '1', episode_id: '11', season_number: '2' },
@@ -221,12 +252,26 @@ Deno.test('oracolo: gli indici di rewatch coincidono sui dati reali', async () =
     watched_at: e.watched_at,
     runtime_seconds: e.runtime_seconds,
     is_special: e.is_special,
+    tvtime_is_special_raw: e.tvtime_is_special_raw,
+    numbering_known: e.numbering_known,
     series_name: e.series_name,
     event_kind: e.event_kind,
     bulk_type: e.bulk_type,
     watched_at_precision: e.watched_at_precision,
     origin: e.origin,
   }))
+
+  // Le due regole di §1.3 e §6 devono dare lo stesso esito qui e in `build_oracle.py`: se
+  // divergono, l'oracolo smette di essere la specifica dell'importer e diventa un secondo
+  // parere. Sul fixture vero sono 613 speciali e 195 eventi senza numerazione.
+  for (const e of attesi) {
+    assertEquals(e.is_special, isSpecialEpisode(e.season_number),
+      `speciale non derivato dalla stagione: episodio ${e.tvdb_episode_id}`)
+    assertEquals(e.numbering_known, hasKnownNumbering(e.season_number, e.episode_number),
+      `numerazione non concorde: episodio ${e.tvdb_episode_id}`)
+  }
+  assertEquals(attesi.filter((e) => !e.numbering_known).length, 195)
+  assertEquals(attesi.filter((e) => e.is_special).length, 613)
 
   assignRewatchIndex(ingresso)
 

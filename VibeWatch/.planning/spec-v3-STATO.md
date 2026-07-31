@@ -20,7 +20,7 @@ veri; restano:
 
 | Fase | Cosa manca | Note per chi la scrive |
 |---|---|---|
-| 4. `writing` | `watch_events` in batch via `apply_mutations` | Legge da `import_staging` le righe `status='resolved'`. **Il record DEVE contenere `user_id`**, altrimenti `apply_mutations` scrive `user_id_mismatch` in `sync_rejected_mutations` e prosegue in silenzio. `dedup_key` è già nello staging e rende l'operazione idempotente (criterio 2 di §13). |
+| 4. `writing` | `watch_events` in batch via `apply_mutations` | Legge da `import_staging` le righe `status='resolved'`. **Il record DEVE contenere `user_id`**, altrimenti `apply_mutations` scrive `user_id_mismatch` in `sync_rejected_mutations` e prosegue in silenzio. `dedup_key` è già nello staging e rende l'operazione idempotente (criterio 2 di §13). **`is_special` va derivato dalla stagione RISOLTA da TMDB** (`resolved->>'season_number'`), non dal record grezzo: dopo il `resolving` la stagione autorevole è quella di TMDB, ed è quella che `recompute_tv_show_state` filtra con `is_special_episode`. Il flag originale di TV Time sta in `tvtime_is_special_raw` e va in `external_ref`. Una riga con `numbering_known = false` rimasta irrisolta **non è scrivibile** (il CHECK `watch_events_shape` vuole stagione ed episodio non nulli): va nel report, mai scritta con un numero inventato. |
 | 5. `recomputing` | ricalcolo `tv_show_state` per le serie toccate | `public.recompute_tv_show_state(uid, tmdb_show_id)` esiste già. I trigger lo fanno da soli sugli insert, quindi verificare se questa fase serve davvero o se basta un giro finale sulle serie con eventi importati. |
 | 6. `done` | il report di §7.4 | **Obbligatorio, non decorativo.** Deve dire: N episodi/serie/film, intervallo di date, **N non riconosciuti con l'elenco dei titoli**, N voti indecodificabili. I dati ci sono già: `import_jobs.totals` e le righe `status='unresolved'` con la loro `error`. |
 
@@ -33,7 +33,7 @@ invocazione, `status='failed'` scritto sul job in caso di eccezione.
 | # | Blocco | Stato |
 |---|---|---|
 | 0 | Prerequisiti P1-P5 | **fatto**, in repo. P2/P3 non verificabili senza un build reale |
-| 1 | Oracolo + fixture + harness | **fatto**. 22 test Python verdi, baseline 399/31/37 |
+| 1 | Oracolo + fixture + harness | **fatto**. 31 test Python verdi, baseline 389/41/37, **zero divergenze senza spiegazione** |
 | 2 | Catalogo + `catalog-resolve` | **fatto e in produzione**, verificato end-to-end su Game of Thrones |
 | 3 | `watch_events` + `tv_show_state` | **fatto e in produzione**. Harness SQL, 64 asserzioni verdi |
 | — | `apply_mutations` (§4, §7.2) | **fatto e in produzione**, collaudato su utente usa-e-getta |
@@ -60,7 +60,8 @@ invocazione, `status='failed'` scritto sul job in caso di eccezione.
 - Edge Function `catalog-resolve` versione 3, `verify_jwt` attivo.
 - **Import**: tabelle `import_jobs` e `import_staging` (RLS con sole policy di lettura: le fasi le
   muove il server), bucket privato `imports` con policy che confinano ogni utente alla propria
-  cartella, Edge Function `import-parse` (fase 2) e `import-resolve` (fase 3).
+  cartella, Edge Function `import-parse` (fase 2, **versione 3**) e `import-resolve` (fase 3).
+  Nessun `import_jobs` residuo: lo staging del collaudo non è rimasto in produzione.
 - Droppati: `tv_tracking`, `tv_episode_progress`, `v_tv_tracking_buckets`,
   `get_tv_tracking_buckets()` (erano a 0 righe, verificato subito prima).
 - Catalogo popolato con una sola serie di prova: Game of Thrones (1399), 373 episodi.
@@ -116,6 +117,28 @@ visioni.
 
 ## Cose imparate che risparmiano tempo
 
+- **Un oracolo che combacia troppo sta misurando la cosa sbagliata.** Le 4 divergenze "da
+  risolvere" erano in realtà 2 difetti del parser, presenti sia in `build_oracle.py` sia in
+  `parsing.ts`. (a) `is_special` veniva letto dal flag dell'export invece che dalla stagione: TV
+  Time lo popola solo sui record recenti, quindi 128 eventi lo hanno in disaccordo con la propria
+  stagione, **in entrambe le direzioni**. (b) `episode_number = 0` veniva preso per "episodio
+  zero" quando invece significa "TV Time ha perso la numerazione" (`ep_no: 0`, `runtime: 0`,
+  `updated_at` 2023): 195 eventi su 12 serie, che venivano fusi su un'unica coppia — Mario perdeva
+  16 episodi distinti dentro uno. Il sintomo era **il contrario di un fallimento**: la baseline
+  diceva 399/31, e 10 di quelle coincidenze erano false perche' l'oracolo replicava il criterio di
+  TV Time invece di quello di §1.3. Game of Thrones e' il caso di controllo: l'oracolo diceva 74,
+  `recompute_tv_show_state` dice 73. Baseline corretta: **389/41, zero divergenze inspiegate**.
+- **Una causa di divergenza si assegna sommando termini misurati, non scegliendo una categoria.**
+  Ogni divergenza porta ora un campo `explained_by` con la combinazione che chiude lo scarto: e' la
+  prova aritmetica, e permette di rivalutarla senza rifare l'analisi. I termini sugli speciali sono
+  **due** (per stagione e per flag) perche' `ep_watch_count` e' un contatore incrementato per un
+  decennio da versioni diverse dell'app e le due ere hanno lasciato entrambe il segno: Spartacus e
+  Doctor Who contano per stagione, Naruto e X Factor per flag.
+- **Un'ipotesi che spiega la serie che stai guardando va provata su tutte le altre.** Per
+  Billionaires' Bunker (2 vs 8) l'ipotesi ovvia era "TV Time non conta i `fill-previous`": provata
+  sull'export intero, **131 serie su 132 li contano**. Ristretta alla forma esatta del caso (il
+  backfill precede la nascita della riga contatore), 14 su 15 li contano. E' un'eccezione — un
+  contatore nato a 1 invece che a 7 — non una regola, e il test lo verifica.
 - **Questa clone non aveva i segreti.** `VibeWatchApp/Config/Secrets.xcconfig` è gitignored ed era
   nato come placeholder vuoto "perché il progetto compilasse e i test girassero": 6 chiavi su 8
   senza valore. I valori veri stanno nella clone dell'audit,
@@ -188,11 +211,12 @@ visioni.
 
 ```bash
 supabase/tests/run.sh                      # Postgres usa-e-getta, migration x2, 64 asserzioni
-python3 test_oracle.py                     # oracolo, 22 test
+python3 test_oracle.py                     # oracolo, 31 test
 cd supabase/functions/catalog-resolve && deno test            # logica pura, 24 test
-cd supabase/functions/import-parse   && deno test --allow-read  # parser, 13 test
+cd supabase/functions/import-parse   && deno test --allow-read  # parser, 14 test
 
-# Il 14° test del parser gira solo se gli si dà l'export vero, che non è in repo:
+# Il 15° test del parser (l'apertura dell'archivio) gira solo se gli si dà l'export vero,
+# che non è in repo — senza `--allow-env` la suite fallisce sul permesso, non sul codice:
 TVTIME_ZIP=~/Downloads/gdpr-data.zip deno test --allow-read --allow-env
 
 # iOS: se la config è incompleta, l'app si ferma all'avvio in DEBUG con l'elenco
@@ -235,18 +259,15 @@ Due modi, entrambi già usati:
 
 ## Cose che restano aperte, in ordine di costo
 
-1. **4 serie divergenti dell'oracolo** (Mario, Attack on Titan, One-Punch Man, Billionaires'
-   Bunker). `.planning/spec-v3-oracle.md` le chiama la lista di lavoro prima del rilascio; erano
-   bloccate dalla risoluzione TVDB→TMDB, che ora esiste. Nessuno le ha riprese.
-2. **`Config.string(for:)` restituisce `""` in silenzio** per una chiave mancante. Ora c'è
+1. **`Config.string(for:)` restituisce `""` in silenzio** per una chiave mancante. Ora c'è
    `validateAtLaunch` che elenca le chiavi vuote o malformate, ma **in Release non lascia traccia**
    perché `Logger` è tutto dentro `#if DEBUG`. Il posto dove agganciare Crashlytics è segnato nel
    punto di chiamata.
-3. **`import-parse` risponde 500 senza JWT valido** (`Expected 3 parts in JWT`). Fallisce chiuso,
+2. **`import-parse` risponde 500 senza JWT valido** (`Expected 3 parts in JWT`). Fallisce chiuso,
    quindi non è un buco, ma un 401 sarebbe più onesto e non farebbe scattare i retry del client.
-4. **Rifiuti veri in `sync_rejected_mutations`**: `lists` con `constraint_23505` su
+3. **Rifiuti veri in `sync_rejected_mutations`**: `lists` con `constraint_23505` su
    `idx_lists_one_active_default_per_user_type`, 6 occorrenze fra il 27 e il 29 luglio. Il client
    prova a ricreare una lista di default che esiste già.
-5. **`delete-user` cancella 5 tabelle su ~30** (audit §3b) e `profiles.id` non ha
+4. **`delete-user` cancella 5 tabelle su ~30** (audit §3b) e `profiles.id` non ha
    `ON DELETE CASCADE`: cancellare un utente fallisce se non si toglie prima il profilo. È materia
    GDPR.

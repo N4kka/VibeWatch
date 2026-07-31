@@ -5,10 +5,18 @@ Harness dell'oracolo (SPEC v3 §8, blocco 1 di §12).
 Due gruppi di test:
 
 1. Sul FIXTURE (`oracle_fixture.json`, generato da `build_oracle.py` sull'export reale):
-   blocca la baseline che l'import dovra' riprodurre — 399 serie che combaciano, 31 che
-   divergono, 37 con stato ma senza eventi — e verifica le invarianti su cui si appoggiano
-   i criteri di accettazione: dedup v1/v2, idempotenza delle dedup_key, speciali fuori dal
-   progresso, decodifica dei voti.
+   blocca la baseline che l'import dovra' riprodurre — 389 serie che combaciano, 41 che
+   divergono con una causa ciascuna, 37 con stato ma senza eventi — e verifica le invarianti
+   su cui si appoggiano i criteri di accettazione: dedup v1/v2, idempotenza delle dedup_key,
+   speciali fuori dal progresso, decodifica dei voti.
+
+   La baseline e' 389/41 e non 399/31 perche' l'oracolo ora calcola cio' che VibeWatch
+   produrra' (stagione 0 fuori dal progresso, §1.3) invece di cio' che TV Time aveva
+   contato. Prima leggeva la specialita' dal flag dell'export, che TV Time popola solo sui
+   record recenti: su 10 serie questo faceva combaciare l'oracolo con TV Time mentre la
+   produzione — che usa `is_special_episode(season_number)` — avrebbe prodotto un altro
+   numero. Game of Thrones e' il caso di controllo: l'oracolo diceva 74, la produzione dice
+   73, e 73 e' il valore giusto.
 
 2. Sulle FUNZIONI di `build_oracle.py`, con righe sintetiche: sono le regole che il
    parser dell'import dovra' replicare, e vanno testate senza dipendere dall'export di
@@ -28,13 +36,19 @@ FIXTURE = Path(__file__).with_name('oracle_fixture.json')
 
 # Baseline misurata sull'export reale in repo. Se cambia, o e' cambiato il fixture o e'
 # cambiata una regola: in entrambi i casi va aggiornata a mano, mai in automatico.
-EXPECTED_MATCHING = 399
-EXPECTED_DIVERGING = 31
+EXPECTED_MATCHING = 389
+EXPECTED_DIVERGING = 41
 EXPECTED_WITHOUT_EVENTS = 37
 
 # §8: le divergenze senza spiegazione meccanica sono la lista di lavoro prima del rilascio.
-UNRESOLVED_CAUSES = {'needs_manual_review', 'episode_id_collision_partial'}
-MAX_UNRESOLVED = 4
+# Ora e' vuota: ogni scarto e' ricostruito sommando termini misurati (`explained_by`) oppure
+# e' drift del contatore entro 2 episodi. Il tetto sta a 0 apposta — una divergenza nuova che
+# nessuna regola spiega deve rompere il test, non scivolare dentro una quota residua.
+UNRESOLVED_CAUSES = {'needs_manual_review'}
+MAX_UNRESOLVED = 0
+
+# 195 eventi su 12 serie hanno episode_number = 0: TV Time ne aveva perso la numerazione.
+EXPECTED_UNNUMBERED_EVENTS = 195
 
 
 def load_fixture():
@@ -77,6 +91,45 @@ class FixtureBaselineTests(unittest.TestCase):
             + ', '.join(f"{d['series_name']} ({d['tvtime_count']} vs {d['recomputed_count']})"
                         for d in unresolved),
         )
+
+    def test_structural_causes_carry_the_arithmetic_that_proves_them(self):
+        """
+        Una causa strutturale non e' un'etichetta: e' una somma che torna.
+
+        Solo `tvtime_counter_drift` puo' restare senza termini, ed e' proprio la categoria che
+        dichiara di non avere una spiegazione.
+        """
+        for d in self.data['comparison']['divergences']:
+            if d['cause'] == 'tvtime_counter_drift':
+                self.assertIsNone(d['explained_by'],
+                                  f"{d['series_name']}: drift con una spiegazione disponibile")
+                self.assertLessEqual(abs(d['delta']), build_oracle.COUNTER_DRIFT_TOLERANCE)
+                continue
+            self.assertTrue(d['explained_by'],
+                            f"{d['series_name']}: causa {d['cause']} senza termini che la provino")
+
+    def test_specials_divergences_are_expected_by_design(self):
+        """§1.3: TV Time teneva gli speciali nel totale, VibeWatch no. La differenza e' voluta."""
+        specials = [d for d in self.data['comparison']['divergences']
+                    if d['cause'] == 'specials_counted_by_tvtime']
+        self.assertGreater(len(specials), 0)
+        for d in specials:
+            self.assertTrue(
+                {'specials_by_season', 'specials_by_flag'} & set(d['explained_by']),
+                f"{d['series_name']}: dichiarata sugli speciali ma spiegata da altro",
+            )
+
+    def test_game_of_thrones_matches_what_production_computes(self):
+        """
+        Caso di controllo della regola sugli speciali.
+
+        Su TMDB Game of Thrones ha 300 speciali su 373 episodi. `recompute_tv_show_state` in
+        produzione conta 73, perche' filtra con `is_special_episode(season_number)`. L'oracolo
+        deve dire 73: quando diceva 74 stava misurando TV Time, non VibeWatch.
+        """
+        got = next(s for s in self.data['recomputed_from_events'].values()
+                   if s['series_name'] == 'Game of Thrones')
+        self.assertEqual(got['distinct_episode_count'], 73)
 
 
 class FixtureInvariantTests(unittest.TestCase):
@@ -128,6 +181,49 @@ class FixtureInvariantTests(unittest.TestCase):
                 state['distinct_episode_count'] + state['special_episode_count'],
                 f'serie {series_id}: gli speciali non tornano',
             )
+
+    def test_specialness_comes_from_the_season_never_from_the_export_flag(self):
+        """
+        §1.3 `DECISO`: un solo punto di verita', `is_special_episode(season_number)`.
+
+        Il flag dell'export e' in disaccordo con la stagione su 128 eventi — TV Time lo popola
+        solo sui record recenti — quindi leggerlo significherebbe avere due definizioni di
+        "speciale" e un `watch_events.is_special` che mente a `recompute_tv_show_state`.
+        """
+        for event in self.events:
+            self.assertEqual(event['is_special'], (event['season_number'] or 0) == 0,
+                             f"evento {event['tvdb_episode_id']}: specialita non dalla stagione")
+
+        disagreeing = [e for e in self.events
+                       if e['origin'] == 'v2' and e['is_special'] != e['tvtime_is_special_raw']]
+        self.assertGreater(len(disagreeing), 0,
+                           'se il flag non fosse mai in disaccordo, la regola non sarebbe testata')
+
+    def test_lost_numbering_is_never_merged_onto_a_single_pair(self):
+        """
+        `episode_number = 0` non e' l'episodio zero: e' una numerazione che TV Time ha perso.
+
+        Fonderli per (stagione, episodio) faceva sparire 16 episodi distinti di Mario dentro
+        uno solo. Restano eventi a pieno titolo, identificati per `tvdb_episode_id`, e la fase
+        `resolving` recupera i numeri da TMDB (§6).
+        """
+        unnumbered = [e for e in self.events if not e['numbering_known']]
+        self.assertEqual(len(unnumbered), EXPECTED_UNNUMBERED_EVENTS)
+
+        for event in unnumbered:
+            self.assertGreater(event['season_number'], 0, 'in stagione 0 la numerazione non conta')
+            self.assertTrue(event['tvdb_episode_id'],
+                            'senza id un evento senza numero non e piu recuperabile')
+
+        # Nessuno di questi entra nel progresso: il conteggio e' fatto di coppie vere.
+        by_series = defaultdict(set)
+        for event in self.events:
+            if event['numbering_known'] and not event['is_special']:
+                by_series[event['tvdb_series_id']].add(
+                    (event['season_number'], event['episode_number']))
+        for series_id, state in self.data['recomputed_from_events'].items():
+            self.assertEqual(state['distinct_episode_count'], len(by_series[series_id]),
+                             f'serie {series_id}: il progresso non e fatto di sole coppie note')
 
     def test_bulk_marked_events_are_flagged_as_inferred(self):
         """§3.2: il timestamp di un 'segna stagione' non e' l'ora di visione."""
@@ -286,30 +382,124 @@ class ParserRuleTests(unittest.TestCase):
         self.assertEqual(state['special_episode_count'], 1, 'ma resta tracciato')
         self.assertEqual(state['last_season'], 1, "l'ultimo visto non puo essere uno speciale")
 
-    def test_explain_divergence_distinguishes_ids_from_numbers(self):
-        """Il caso Digimon: 253 id TVDB su 107 coppie (stagione, episodio)."""
-        cause = build_oracle.explain_divergence(
-            {'ep_watch_count': 253},
-            {'distinct_episode_count': 107, 'distinct_with_specials': 107,
-             'distinct_episode_ids': 253, 'special_episode_count': 0, 'rewatch_count': 0},
-        )
-        self.assertEqual(cause, 'tvtime_counted_episode_ids')
+    def test_season_zero_is_the_only_definition_of_special(self):
+        """§1.3: il flag dell'export non decide, nemmeno quando c'e' ed e' esplicito."""
+        events = build_oracle.parse_v2_events([
+            {   # stagione 0 ma flag assente: e' comunque uno speciale (il caso One-Punch Man)
+                'key': 'watch-episode-a', 's_id': '1', 'ep_id': '100', 'season_number': '0',
+                'episode_number': '1', 'created_at': '2019-01-01 10:00:00', 'runtime': '1440',
+                'series_name': 'Show', 'bulk_type': '',
+            },
+            {   # flag 'true' in una stagione numerata: NON e' uno speciale (il caso X Factor)
+                'key': 'watch-episode-b', 's_id': '1', 'ep_id': '101', 'season_number': '2',
+                'episode_number': '5', 'created_at': '2025-01-01 10:00:00', 'runtime': '1440',
+                'is_special': 'true', 'series_name': 'Show', 'bulk_type': '',
+            },
+        ])
+        self.assertEqual([e['is_special'] for e in events], [True, False])
+        # ...ma il flag grezzo non si perde: TV Time ci contava sopra, e serve a spiegare
+        # le divergenze e a popolare external_ref alla scrittura.
+        self.assertEqual([e['tvtime_is_special_raw'] for e in events], [False, True])
 
-    def test_explain_divergence_recognises_specials(self):
-        cause = build_oracle.explain_divergence(
-            {'ep_watch_count': 39},
-            {'distinct_episode_count': 33, 'distinct_with_specials': 39,
-             'distinct_episode_ids': 39, 'special_episode_count': 6, 'rewatch_count': 0},
-        )
-        self.assertEqual(cause, 'specials_counted_by_tvtime')
+    def test_episode_number_zero_means_numbering_lost(self):
+        """Il caso Mario: 16 id distinti che finivano tutti su (3, 0)."""
+        events = build_oracle.parse_v2_events([
+            {'key': 'watch-episode-a', 's_id': '1', 'ep_id': '100', 'season_number': '3',
+             'episode_number': '0', 'created_at': '2015-10-20 05:32:52', 'runtime': '0',
+             'series_name': 'Show', 'bulk_type': ''},
+            {'key': 'watch-episode-b', 's_id': '1', 'ep_id': '101', 'season_number': '3',
+             'episode_number': '0', 'created_at': '2015-10-20 05:32:52', 'runtime': '0',
+             'series_name': 'Show', 'bulk_type': ''},
+            {'key': 'watch-episode-c', 's_id': '1', 'ep_id': '102', 'season_number': '1',
+             'episode_number': '1', 'created_at': '2015-10-20 05:32:41', 'runtime': '1440',
+             'series_name': 'Show', 'bulk_type': ''},
+        ])
+        build_oracle.assign_rewatch_index(events)
+        state = build_oracle.recompute_state(events)['1']
 
-    def test_explain_divergence_admits_when_it_cannot_explain(self):
-        cause = build_oracle.explain_divergence(
-            {'ep_watch_count': 2},
-            {'distinct_episode_count': 8, 'distinct_with_specials': 8,
-             'distinct_episode_ids': 8, 'special_episode_count': 0, 'rewatch_count': 0},
-        )
-        self.assertEqual(cause, 'needs_manual_review')
+        self.assertEqual([e['numbering_known'] for e in events], [False, False, True])
+        self.assertEqual(state['distinct_episode_count'], 1,
+                         'due episodi senza numero non sono un episodio: sono zero coppie note')
+        self.assertEqual(state['unnumbered_episode_count'], 2,
+                         'restano contati per id, per il report di §7.4')
+
+    def test_divergence_terms_must_add_up_exactly(self):
+        """Una causa si assegna solo se una somma la chiude. Il caso Spartacus: 39 = 33 + 6."""
+        expected = {'ep_watch_count': 39}
+        got = {'distinct_episode_count': 33, 'special_episode_count': 6,
+               'unflagged_special_in_season_zero': 0, 'flagged_special_in_numbered_season': 0,
+               'unnumbered_episode_count': 0, 'rewatch_count': 0,
+               'backfilled_episode_count': 0}
+        self.assertEqual(build_oracle.matching_terms(expected, got), ('specials_by_season',))
+        self.assertEqual(build_oracle.explain_divergence(expected, got),
+                         'specials_counted_by_tvtime')
+
+    def test_a_divergence_no_term_can_close_is_declared_uncovered(self):
+        """
+        Nessuna somma chiude lo scarto e 6 supera la tolleranza: va dichiarata scoperta.
+
+        E' il comportamento che tiene onesta la baseline — senza, una serie inspiegata
+        scivolerebbe dentro `tvtime_counter_drift` e sparirebbe dalla lista di lavoro.
+        """
+        expected = {'ep_watch_count': 2}
+        got = {'distinct_episode_count': 8, 'special_episode_count': 0,
+               'unflagged_special_in_season_zero': 0, 'flagged_special_in_numbered_season': 0,
+               'unnumbered_episode_count': 0, 'rewatch_count': 0,
+               'backfilled_episode_count': 0}
+        self.assertIsNone(build_oracle.matching_terms(expected, got))
+        self.assertEqual(build_oracle.explain_divergence(expected, got), 'needs_manual_review')
+
+    def test_the_proof_of_a_cause_contains_no_null_addend(self):
+        """
+        `explained_by` e' una prova aritmetica: ogni termine dentro deve contribuire davvero.
+
+        Sul fixture attuale la ricerca per combinazioni corte scavalcherebbe i termini nulli
+        anche senza il filtro esplicito, quindi questo test presidia il campo, non il filtro:
+        serve quando l'insieme dei termini cambiera'.
+        """
+        terms = build_oracle.DIVERGENCE_TERMS
+        for d in load_fixture()['comparison']['divergences']:
+            for name in (d['explained_by'] or ()):
+                got = next(s for s in load_fixture()['recomputed_from_events'].values()
+                           if s['series_name'] == d['series_name'])
+                self.assertNotEqual(terms[name](got), 0,
+                                    f"{d['series_name']}: {name} vale 0 dentro la prova")
+
+    def test_the_two_special_terms_resolve_in_a_declared_order(self):
+        """
+        Quando entrambi i termini sugli speciali chiudono lo scarto vince quello per stagione.
+
+        Non e' estetica: e' il criterio di §1.3, ed e' l'unico che resta vero se domani un
+        campo cambia nome e l'ordine alfabetico con lui.
+        """
+        got = {'distinct_episode_count': 33, 'special_episode_count': 6,
+               'unflagged_special_in_season_zero': 6, 'flagged_special_in_numbered_season': 0,
+               'unnumbered_episode_count': 0, 'rewatch_count': 0, 'backfilled_episode_count': 0}
+        self.assertEqual(build_oracle.matching_terms({'ep_watch_count': 39}, got),
+                         ('specials_by_season',))
+
+    def test_backfill_explains_only_when_it_predates_the_counter(self):
+        """
+        Il caso Billionaires' Bunker, e il motivo per cui non e' una regola generale.
+
+        Il contatore spiega lo scarto solo se e' nato dopo il backfill. Con un contatore piu'
+        vecchio degli eventi il termine non si applica: delle 15 serie con backfill, 14 li
+        contano correttamente.
+        """
+        got = {'distinct_episode_count': 8, 'special_episode_count': 0,
+               'unflagged_special_in_season_zero': 0, 'flagged_special_in_numbered_season': 0,
+               'unnumbered_episode_count': 0, 'rewatch_count': 0,
+               'backfilled_episode_count': 6,
+               'backfilled_last_watched_at': '2025-10-11 20:37:56'}
+
+        nato_col_backfill = {'ep_watch_count': 2, 'counter_created_at': '2025-10-11 20:37:56'}
+        self.assertEqual(build_oracle.matching_terms(nato_col_backfill, got),
+                         ('backfill_at_counter_creation',))
+        self.assertEqual(build_oracle.explain_divergence(nato_col_backfill, got),
+                         'backfill_missed_by_tvtime_counter')
+
+        gia_esistente = {'ep_watch_count': 2, 'counter_created_at': '2020-01-01 00:00:00'}
+        self.assertIsNone(build_oracle.matching_terms(gia_esistente, got))
 
 
 if __name__ == '__main__':
