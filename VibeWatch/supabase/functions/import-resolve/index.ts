@@ -28,6 +28,8 @@ const BATCH = 50
  * distinti e ne vedeva 994. Non perdeva dati, perché il ciclo continua, ma la costante mentiva.
  */
 const ROWS_PER_INVOCATION = 1_000
+/** Righe per singola scrittura: oltre, il payload inizia a pesare piu' del round-trip. */
+const ROWS_PER_UPSERT = 500
 
 /**
  * Legge il job **come il chiamante**: è la policy `import_jobs_select_own` a decidere se esiste.
@@ -186,29 +188,46 @@ serve(async (req: Request) => {
     let risolte = 0
     let irrisolte = 0
 
+    // **Si scrive in blocco, non riga per riga.** Una UPDATE per riga sono ~47 ms di andata e
+    // ritorno l'una: misurato, annotare 1000 righe costava **47 secondi**, cioe' piu' di tutte le
+    // chiamate a TMDB dello stesso blocco messe insieme. Dopo aver parallelizzato le `/find` era
+    // diventato il collo di bottiglia vero — il posto dove si perde tempo si sposta appena si
+    // sistema il precedente, e l'unico modo di saperlo e' cronometrare invece di dedurre.
+    //
+    // L'upsert vuole la riga intera perche' `raw` e' NOT NULL: si rimanda indietro quella letta,
+    // senza toccarla. La chiave (job_id, row_index) fa il resto.
+    const daScrivere = []
     for (const riga of pending) {
       const raw = riga.raw as Record<string, unknown>
       const mappa = noti.get(Number(raw.tvdb_episode_id))
       // Con il budget esaurito si arriva qui con parte del blocco ancora fuori mappa: quelle
       // righe restano `pending` e le riprende il giro dopo, invece di essere marcate irrisolte.
       if (!mappa) continue
-      const trovato = mappa?.resolution === 'found' && mappa.tmdb_show_id !== null
+      const trovato = mappa.resolution === 'found' && mappa.tmdb_show_id !== null
 
-      const { error } = await admin.from('import_staging').update({
+      daScrivere.push({
+        job_id: jobId,
+        row_index: riga.row_index,
+        raw,
         // I numeri vengono da TMDB, mai da quelli dell'export (§6).
         resolved: trovato
           ? {
-            tmdb_show_id: mappa!.tmdb_show_id,
-            season_number: mappa!.season_number,
-            episode_number: mappa!.episode_number,
+            tmdb_show_id: mappa.tmdb_show_id,
+            season_number: mappa.season_number,
+            episode_number: mappa.episode_number,
           }
           : null,
         status: trovato ? 'resolved' : 'unresolved',
-        error: trovato ? null : `catalogo: ${mappa?.resolution ?? 'assente'}`,
-      }).eq('job_id', jobId).eq('row_index', riga.row_index)
-
-      if (error) throw new Error(`annotazione fallita a ${riga.row_index}: ${error.message}`)
+        error: trovato ? null : `catalogo: ${mappa.resolution ?? 'assente'}`,
+      })
       trovato ? risolte++ : irrisolte++
+    }
+
+    for (let i = 0; i < daScrivere.length; i += ROWS_PER_UPSERT) {
+      const { error } = await admin
+        .from('import_staging')
+        .upsert(daScrivere.slice(i, i + ROWS_PER_UPSERT), { onConflict: 'job_id,row_index' })
+      if (error) throw new Error(`annotazione fallita dal blocco ${i}: ${error.message}`)
     }
 
     // I non riconosciuti sono materiale obbligatorio del report (§7.4): un import che perde 200
