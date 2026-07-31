@@ -15,19 +15,57 @@ credevo.
 
 ## Da fare per prima cosa
 
-**Blocco 6: resta il collaudo delle fasi 5-6 e la decisione sul budget TMDB.** Le fasi 1-4 sono
-fatte, deployate e collaudate end-to-end sull'export vero. Le fasi 5-6 sono scritte e collaudate
-in SQL, ma `import-finalize` **non è ancora deployata**.
+**Migrare lo storico degli utenti esistenti in `watch_events`.** È il buco che rende la schermata
+Tracking inutilizzabile per chi usa già VibeWatch, ed è un pezzo che il blocco 6 non prevedeva:
+l'import è stato progettato per chi arriva da TV Time, non per chi ha già dati qui dentro.
 
-| Fase | Cosa manca | Note per chi la scrive |
-|---|---|---|
-| 4. `writing` | **fatta, deployata e collaudata** (`supabase/functions/import-write/`, 11 test Deno + collaudo end-to-end) | Legge da `import_staging` le righe `status='resolved'`. **Il record DEVE contenere `user_id`**, altrimenti `apply_mutations` scrive `user_id_mismatch` in `sync_rejected_mutations` e prosegue in silenzio. `dedup_key` è già nello staging e rende l'operazione idempotente (criterio 2 di §13). **`is_special` va derivato dalla stagione RISOLTA da TMDB** (`resolved->>'season_number'`), non dal record grezzo: dopo il `resolving` la stagione autorevole è quella di TMDB, ed è quella che `recompute_tv_show_state` filtra con `is_special_episode`. Il flag originale di TV Time sta in `tvtime_is_special_raw` e va in `external_ref`. Una riga con `numbering_known = false` rimasta irrisolta **non è scrivibile** (il CHECK `watch_events_shape` vuole stagione ed episodio non nulli): va nel report, mai scritta con un numero inventato. |
-| 5. `recomputing` | **scritta** (`import-finalize`), da deployare | **Domanda risolta: non serve per la correttezza, conviene come assicurazione.** Il trigger `watch_events_recompute_insert` è statement-level e ricalcola ogni `(user, show)` distinto di ogni INSERT; `apply_mutations` inserisce un elemento per volta, quindi lo stato è già giusto a fine fase 4. Misurato in produzione (utente usa-e-getta, transazione fatta fallire): **100 insert con trigger = 250 ms**, un ricalcolo singolo = **2,6 ms**, stima sull'export vero **~53 s** di lavoro DB contro ~1 s che costerebbe un giro finale su ~430 serie. Lo spreco è reale ma assoluto piccolo; la fase 5 vale come garanzia che un job interrotto fra due lotti finisca comunque consistente. |
-| 6. `done` | **scritta**: `public.import_report(job_id)` + `import-finalize`, 13 asserzioni SQL | **Obbligatorio, non decorativo.** Dice: N episodi/serie/film, intervallo di date, **N non riconosciuti con l'elenco dei titoli**, N voti indecodificabili. I dati ci sono già: `import_jobs.totals` e le righe `status='unresolved'` con la loro `error`. |
+**Come si è visto** (sessione del 2026-07-31, sul dispositivo dell'autore): schermata Tracking
+vuota. I log dicono che non è un guasto — il pull funziona, 19 tabelle su 19 — ma che il server
+non ha niente per quell'utente:
 
-Il modello da seguire per le nuove Edge Function è `import-resolve/index.ts`, che è la più recente
-e incorpora tutte le lezioni: lettura del job col JWT del chiamante, lavoro limitato per
-invocazione, `status='failed'` scritto sul job in caso di eccezione.
+```
+Pulled 0 rows from watch_events
+Pulled 0 rows from tv_show_state
+Pulled 0 rows from v_tv_tracking
+Loaded 6 lists with 429 items from SQLite    ← i dati ci sono, ma nel vecchio sistema
+```
+
+**Nessun dato è andato perso.** Lo storico vive dove è sempre vissuto: `EpisodeSeenManager`
+(UserDefaults) e le liste. La schermata nuova legge `watch_events`, che per quell'utente non è mai
+stata riempita.
+
+### Cosa deve fare la migrazione
+
+| | |
+|---|---|
+| **Sorgente** | `EpisodeSeenManager.seenKeys` — chiavi `"{showId}_{season}_{episode}"` in UserDefaults — più `seenShowIds` (serie marcate viste per intero) e le serie nella lista di tipo `seen` |
+| **Destinazione** | un `watch_events` per episodio |
+| **`watched_at_precision`** | **`inferred`**, mai `exact`: la data di visione vera non esiste in UserDefaults, e marcarla esatta significherebbe inventarla. §3.2 esiste proprio per questa distinzione |
+| **`watched_at`** | non c'è una risposta giusta. Valutare la data di aggiunta alla lista, se recuperabile, altrimenti `now()` — e dichiararlo, perché finisce nel diario |
+| **`dedup_key`** | `'legacy:' \|\| showId \|\| ':' \|\| season \|\| ':' \|\| episode`, così la migrazione si può rigiocare senza duplicare |
+| **`user_id`** | **obbligatorio nel record.** Senza, `apply_mutations` scrive `user_id_mismatch` in `sync_rejected_mutations` e prosegue in silenzio |
+| **`is_special`** | dalla stagione (`season == 0`), mai da un flag: §1.3 |
+| **Una tantum** | flag in `app_metadata`, come le altre migration |
+
+**`seenShowIds` è il caso difficile**: "serie vista per intero" non dice *quali* episodi, e per
+scriverli servirebbe il catalogo — che per quella serie potrebbe non essere ancora risolto. Due
+strade: scrivere solo `tv_show_state.user_status` e lasciare `watched_count` al ricalcolo (perde il
+dettaglio ma non inventa nulla), oppure espandere dagli episodi di `tmdb_episodes` quando ci sono.
+La prima è più onesta.
+
+**Da provare su una copia del database prima che su quello di un utente vero.** È l'unico pezzo di
+questo lavoro che tocca dati personali già esistenti, e non è rigiocabile all'indietro.
+
+### Il resto del blocco 7
+
+- **§13.6 non è ancora verificato.** La sonda c'è e funziona — sul dispositivo ha stampato
+  `§13.6 OK: totale 61.9 ms`, ma **su schermata vuota**, quindi quel numero non vale. Va rifatta
+  dopo la migrazione, con dati veri, in Release e su dispositivo. Come si legge: console di Xcode,
+  oppure Instruments con il template *Points of Interest* (intervallo `TrackingFirstFrame`),
+  oppure un test con `XCTOSSignpostMetric(subsystem: "com.vibewatch.app", category: "Tracking",
+  name: "TrackingFirstFrame")`.
+- **18 lingue**: le chiavi `tracking.*`, `tab.tracking` e `common.close` esistono solo in `en` e
+  `it`; le altre ricadono sull'inglese.
 
 ## Stato dei blocchi di §12
 
@@ -41,7 +79,7 @@ invocazione, `status='failed'` scritto sul job in caso di eccezione.
 | 4 | Paginazione del pull | **fatto e verificato**. `SyncPagination`, 8 test verdi + pull reale sul dispositivo, nessun `Failed to pull` |
 | 5 | Integrazione client | **fatto per la lettura**. SQLite + whitelist + pull + conflitti verificati su dati veri; il percorso di scrittura è cablato ma senza chiamanti (arrivano col blocco 7) |
 | 6 | Pipeline import + report | **fasi 1-4 in produzione e collaudate end-to-end**; fasi 5-6 scritte e verdi in SQL, `import-finalize` da deployare |
-| 7 | UI Tracking | **schermata e tab bar fatte**: viste + mirror SQLite + repository + card riscritta + `Discovery · Clips · Tracking · Liste` con FAB AI. Manca la misura di §13.6 sul dispositivo e 18 lingue |
+| 7 | UI Tracking | **schermata e tab bar fatte e compilate**. Manca la **migrazione dello storico esistente** (vedi in cima: senza, la schermata è vuota per gli utenti attuali), la misura di §13.6 con dati veri, e 18 lingue |
 | 8+ | Sociale, stats | da fare |
 
 ## Cosa gira in produzione adesso
@@ -194,6 +232,15 @@ che per `tvdb_episode_id`. Risparmierebbe circa il 57% delle chiamate ed è l'un
 assegnerebbe l'episodio sbagliato **in silenzio**.
 
 ## Il blocco 7, cosa c'e' e cosa manca
+
+> **Provato sul dispositivo il 2026-07-31.** Compila e gira. Tre difetti trovati usandolo, tutti
+> corretti tranne il primo, che è aperto e sta in cima a questo documento:
+> 1. schermata vuota per un utente esistente → **manca la migrazione**;
+> 2. il FAB derivava in diagonale — era l'animazione `repeatForever` che ci avevo messo io: dentro
+>    lo stack della tab bar il layout la raccoglie e il pulsante si sposta. Tolta;
+> 3. il pannello AI era un `fullScreenCover` senza pulsante di chiusura, cioè una stanza senza
+>    porta. Ora è un `sheet` (swipe verso il basso) con anche un pulsante esplicito.
+
 
 **Fatto.** `v_tv_tracking` e `v_tv_timeline` (catalogo incluso) -> pull -> tabelle SQLite
 `tv_tracking` e `tv_timeline` (migration 9) -> `LocalTrackingRepository`, che restituisce sezioni
