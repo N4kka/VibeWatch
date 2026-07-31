@@ -1,19 +1,32 @@
 # SPEC v3 — stato del lavoro e ripresa
 
-> Aggiornato: 2026-07-31. Branch: `refactoring/spec-v3-prereqs-oracle`.
+> Aggiornato: 2026-07-31, fine sessione. Branch: `refactoring/spec-v3-prereqs-oracle`.
 > Progetto Supabase: `rqhxhkijzhqivljivirq` (VibeWatch, eu-west-1, Postgres 17.6).
+> Repo: `/Users/nicola/Documents/StartingVibe/VibeWatch` (git root un livello sopra).
+
+**Il filo conduttore di questa sessione, se ne va letto uno solo.** Ogni problema costato tempo era
+un fallimento *silenzioso*, non un errore: un `try?` che ingoiava un 401, un `?? ""` che rendeva
+una chiave mancante indistinguibile da una vuota, un `create or replace` che avrebbe cancellato due
+rami senza dirlo, un IDOR che rispondeva come se il job fosse tuo. Nessuno di questi si vede
+leggendo il codice: si vedono **eseguendolo e provando a romperlo**. Quando un test passa al primo
+colpo, vale la pena rompere apposta ciò che dovrebbe coprire e controllare che fallisca — su
+`assignRewatchIndex` l'ho fatto e ho scoperto che il test dell'oracolo non copriva il caso che
+credevo.
 
 ## Da fare per prima cosa
 
-**Blocco 5, integrazione client** (SQLite, whitelist, outbox, pull, conflitti). Dipende da 3 e 4,
-entrambi chiusi.
+**Blocco 6, fasi 4-6 dell'import** (§7.2). Le fasi 1-3 sono fatte, deployate e collaudate su dati
+veri; restano:
 
-Una decisione da prendere lì, lasciata aperta di proposito dal blocco 4: §5 suggerisce di **non
-ritirare mai `watch_events` per intero** sul client, ma solo `tv_show_state` (una riga per serie) e
-gli eventi degli ultimi N mesi per il diario. Oggi `watch_events` non è ancora nella pull-list, e
-`SyncPagination.walk` non sa filtrare: il filtro va aggiunto quando la tabella entra nella lista,
-non prima. Con la paginazione in piedi, ritirare 20.000 eventi ora *funziona* — la domanda è se
-convenga, non se si possa.
+| Fase | Cosa manca | Note per chi la scrive |
+|---|---|---|
+| 4. `writing` | `watch_events` in batch via `apply_mutations` | Legge da `import_staging` le righe `status='resolved'`. **Il record DEVE contenere `user_id`**, altrimenti `apply_mutations` scrive `user_id_mismatch` in `sync_rejected_mutations` e prosegue in silenzio. `dedup_key` è già nello staging e rende l'operazione idempotente (criterio 2 di §13). |
+| 5. `recomputing` | ricalcolo `tv_show_state` per le serie toccate | `public.recompute_tv_show_state(uid, tmdb_show_id)` esiste già. I trigger lo fanno da soli sugli insert, quindi verificare se questa fase serve davvero o se basta un giro finale sulle serie con eventi importati. |
+| 6. `done` | il report di §7.4 | **Obbligatorio, non decorativo.** Deve dire: N episodi/serie/film, intervallo di date, **N non riconosciuti con l'elenco dei titoli**, N voti indecodificabili. I dati ci sono già: `import_jobs.totals` e le righe `status='unresolved'` con la loro `error`. |
+
+Il modello da seguire per le nuove Edge Function è `import-resolve/index.ts`, che è la più recente
+e incorpora tutte le lezioni: lettura del job col JWT del chiamante, lavoro limitato per
+invocazione, `status='failed'` scritto sul job in caso di eccezione.
 
 ## Stato dei blocchi di §12
 
@@ -25,8 +38,9 @@ convenga, non se si possa.
 | 3 | `watch_events` + `tv_show_state` | **fatto e in produzione**. Harness SQL, 64 asserzioni verdi |
 | — | `apply_mutations` (§4, §7.2) | **fatto e in produzione**, collaudato su utente usa-e-getta |
 | 4 | Paginazione del pull | **fatto e verificato**. `SyncPagination`, 8 test verdi + pull reale sul dispositivo, nessun `Failed to pull` |
-| 5 | Integrazione client | **in corso**. SQLite + whitelist + pull + conflitti fatti e verificati su dati veri; il percorso di scrittura è cablato ma senza chiamanti (arrivano col blocco 7) |
-| 6+ | Import, UI, sociale | da fare ← ripartire da qui |
+| 5 | Integrazione client | **fatto per la lettura**. SQLite + whitelist + pull + conflitti verificati su dati veri; il percorso di scrittura è cablato ma senza chiamanti (arrivano col blocco 7) |
+| 6 | Pipeline import + report | **fasi 1-3 fatte e collaudate** ← ripartire dalla fase 4 |
+| 7+ | UI, sociale, stats | da fare |
 
 ## Cosa gira in produzione adesso
 
@@ -44,6 +58,9 @@ convenga, non se si possa.
   `sync_rejected_mutations` in tutti e quattro i passaggi.
 - Job `pg_cron` `refresh-backlog` alle 05:00 UTC.
 - Edge Function `catalog-resolve` versione 3, `verify_jwt` attivo.
+- **Import**: tabelle `import_jobs` e `import_staging` (RLS con sole policy di lettura: le fasi le
+  muove il server), bucket privato `imports` con policy che confinano ogni utente alla propria
+  cartella, Edge Function `import-parse` (fase 2) e `import-resolve` (fase 3).
 - Droppati: `tv_tracking`, `tv_episode_progress`, `v_tv_tracking_buckets`,
   `get_tv_tracking_buckets()` (erano a 0 righe, verificato subito prima).
 - Catalogo popolato con una sola serie di prova: Game of Thrones (1399), 373 episodi.
@@ -59,6 +76,33 @@ scritti fra il 2015 e il 2026, di cui 3 fuori finestra. Risultato:
   non scaricherà mai. È il punto centrale dell'opzione B — il progresso non si degrada;
 - tre pagine da una riga danno `[5][4][vuota]`: righe distinte, nessuna sovrapposizione, e la
   pagina vuota chiude la camminata come `SyncPagination` si aspetta.
+
+## L'import, collaudato sull'export vero
+
+Lo ZIP reale (`gdpr-data.zip`, **non** in repo: è l'archivio GDPR di una persona) è stato caricato
+su Storage e fatto passare per le fasi 2 e 3. Numeri, identici a quelli di `build_oracle.py` sullo
+stesso archivio:
+
+```
+21.344 eventi · 380 voti · 21.724 righe di staging · 21.344 dedup_key distinte
+v1 inutilizzabili: 139 · v1 scartati come duplicati: 15.906
+6 invocazioni di import-parse, checkpoint 0→4000→…→21724, fase finale `resolving`
+```
+
+Quel 15.906 è la conferma pratica di §7.3: il file legacy contiene quasi gli stessi eventi di v2, e
+fonderli per `(stagione, episodio)` invece che per `tvdb_episode_id` avrebbe inventato migliaia di
+visioni.
+
+**Due difetti trovati eseguendo, non leggendo** — entrambi corretti:
+
+1. **IDOR in `import-parse`**: cercava il job con la chiave di servizio e selezionava `user_id`
+   senza confrontarlo mai. Un utente autenticato poteva passare il `job_id` di un altro, far
+   rielaborare il suo import, leggerne i totali e marcarglielo come fallito. Riprodotto fra due
+   utenti prima di chiuderlo. La correzione non aggiunge un `if` — la lettura passa dal JWT del
+   chiamante, quindi decide la policy. **Fare lo stesso in ogni funzione nuova.**
+2. **`zip.js` decomprime su web worker e non li chiude**: in una Edge Function sarebbero worker che
+   sopravvivono alla risposta. Risolto con `configure({ useWebWorkers: false })` e
+   `terminateWorkers()` nel `finally`. L'ha trovato il rilevatore di leak dei test.
 
 ## Due cose da sapere prima del blocco 7
 
@@ -144,16 +188,37 @@ scritti fra il 2015 e il 2026, di cui 3 fuori finestra. Risultato:
 
 ```bash
 supabase/tests/run.sh                      # Postgres usa-e-getta, migration x2, 64 asserzioni
+python3 test_oracle.py                     # oracolo, 22 test
+cd supabase/functions/catalog-resolve && deno test            # logica pura, 24 test
+cd supabase/functions/import-parse   && deno test --allow-read  # parser, 13 test
+
+# Il 14° test del parser gira solo se gli si dà l'export vero, che non è in repo:
+TVTIME_ZIP=~/Downloads/gdpr-data.zip deno test --allow-read --allow-env
+
 # iOS: se la config è incompleta, l'app si ferma all'avvio in DEBUG con l'elenco
 # delle chiavi mancanti (Config.validateAtLaunch). Non è un bug: sono i segreti.
-python3 test_oracle.py                     # oracolo, 22 test
-cd supabase/functions/catalog-resolve && deno test    # logica pura, 24 test
 xcodebuild test -project VibeWatchApp.xcodeproj -scheme VibeWatchApp \
   -destination 'id=601C4430-6213-49E3-8A4D-3564B2B57E2A'   # iOS: 3 fallimenti PREESISTENTI
+
+# Deploy di una Edge Function: dalla radice del repo, non da supabase/
+supabase functions deploy import-parse --project-ref rqhxhkijzhqivljivirq
 ```
 
 I 3 test iOS che falliscono (`ConflictResolverTests` x2, `SyncStateMachineTests.testIdleToIdle`)
 fallivano già prima di questo lavoro e sono fuori scope.
+
+### Collaudare in produzione senza lasciare residui
+
+Due modi, entrambi già usati:
+
+- **Solo SQL** — tutto dentro un `do $$ … $$` che finisce con `raise exception 'REPORT %', rep`: il
+  messaggio torna indietro come output e il rollback porta via utente di prova e righe.
+- **Con HTTP** (serve un JWT vero, quindi niente rollback) — creare l'utente con
+  `crypt('password', gen_salt('bf'))` e **valorizzare a `''` le colonne token** di `auth.users`
+  (`confirmation_token`, `recovery_token`, `email_change*`, `phone_change*`,
+  `reauthentication_token`): a `NULL` GoTrue risponde *"Database error querying schema"* e il login
+  fallisce. Alla fine cancellare **prima** la riga in `public.profiles` e poi l'utente: la FK
+  `profiles_id_fkey` non ha `ON DELETE CASCADE`.
 
 ## Documenti di riferimento
 
@@ -161,3 +226,27 @@ fallivano già prima di questo lavoro e sono fuori scope.
 - `.planning/spec-v3-oracle.md` — le 31 divergenze dell'oracolo, 4 ancora da risolvere
 - `.planning/spec-v3-blocco2-catalogo.md` — catalogo e risoluzione TVDB→TMDB
 - `.planning/spec-v3-blocco3-tracking.md` — eventi, stato, trigger, cron
+- `audit/HANDOFF.md` — l'audit del 2026-07-23. **Attenzione: parla di un'altra clone**
+  (`/Users/nicola/Documents/VibeWatch/VibeWatch/`), ed è da lì che vengono i segreti. Il §3b elenca
+  bug preesistenti mai chiusi; quello sul `readerDb` readonly è già risolto (verificato: `upsert`
+  passa da `executeWrite`), gli altri no.
+- `build_oracle.py` — **la specifica eseguibile del parsing**. Le regole dell'import stanno lì
+  prima che nella spec: se una regola sembra arbitraria, è perché un export reale l'ha resa tale.
+
+## Cose che restano aperte, in ordine di costo
+
+1. **4 serie divergenti dell'oracolo** (Mario, Attack on Titan, One-Punch Man, Billionaires'
+   Bunker). `.planning/spec-v3-oracle.md` le chiama la lista di lavoro prima del rilascio; erano
+   bloccate dalla risoluzione TVDB→TMDB, che ora esiste. Nessuno le ha riprese.
+2. **`Config.string(for:)` restituisce `""` in silenzio** per una chiave mancante. Ora c'è
+   `validateAtLaunch` che elenca le chiavi vuote o malformate, ma **in Release non lascia traccia**
+   perché `Logger` è tutto dentro `#if DEBUG`. Il posto dove agganciare Crashlytics è segnato nel
+   punto di chiamata.
+3. **`import-parse` risponde 500 senza JWT valido** (`Expected 3 parts in JWT`). Fallisce chiuso,
+   quindi non è un buco, ma un 401 sarebbe più onesto e non farebbe scattare i retry del client.
+4. **Rifiuti veri in `sync_rejected_mutations`**: `lists` con `constraint_23505` su
+   `idx_lists_one_active_default_per_user_type`, 6 occorrenze fra il 27 e il 29 luglio. Il client
+   prova a ricreare una lista di default che esiste già.
+5. **`delete-user` cancella 5 tabelle su ~30** (audit §3b) e `profiles.id` non ha
+   `ON DELETE CASCADE`: cancellare un utente fallisce se non si toglie prima il profilo. È materia
+   GDPR.
