@@ -32,16 +32,18 @@ fallisca — fatto anche in questa sessione sul `security definer` di `search_us
    profilo (tre stati distinti). 10 chiavi nuove nelle 20 lingue; 16 test nel file
    `FavoritesRatingsActionsTests`.
 
-**Resta del blocco 9:**
+~~3. **Diario e modifica dei favorites**~~ — **fatti** (quarta sessione): `DiaryView` dal proprio
+   profilo (cache locale, pagine da 100 con ordine totale, date dedotte marcate con `≈`, tre
+   stati distinti) e `FavoriteButton` sui dettagli film/serie (lo slot si sceglie da un dialog
+   coi 4 slot, gli occupati segnati **prima** del tap). Altre 7 chiavi nelle 20 lingue, 23 test
+   nel file `FavoritesRatingsActionsTests`.
 
-1. **Diario** (§9.3): eventi dei 12 mesi in cache locale, ordine cronologico inverso, data di
-   visione reale; oltre i 12 mesi è Pro (§10). I nomi delle serie stanno nello specchio
-   `tv_tracking`; per i film il nome va risolto dal client (catalogo film server non esiste).
-2. **Modifica dei favorites**: `FavoritesActions` è pronta e collaudata; manca il punto di
-   ingresso UI (candidato: context menu sui dettagli film/serie "aggiungi ai preferiti" con
-   scelta slot, o gestione dal proprio profilo).
-3. **Prova su dispositivo** di tutto il giro (voto → server → pull → schermo), come per i follow.
-4. Poi il **blocco 10**: universal links, rotte profilo.
+**Resta del blocco 9, ed è una cosa sola:**
+
+1. **Prova su dispositivo** di tutto il giro — voto → server → pull → schermo, slot dei
+   favorites fra due account, diario dopo la migrazione, stats sul profilo — come per i follow.
+   Serve la clone coi segreti veri (`/Users/nicola/Documents/VibeWatch/VibeWatch/`).
+2. Poi il **blocco 10**: universal links, rotte profilo.
 
 **La checklist per ogni tabella nuova, distillata dal blocco 8** (l'ordine è quello giusto):
 
@@ -518,7 +520,7 @@ nota.
 | 6 | Pipeline import + report | **fasi 1-4 in produzione e collaudate end-to-end**; fasi 5-6 scritte e verdi in SQL, `import-finalize` da deployare |
 | 7 | UI Tracking | **chiuso.** Schermata, tab bar e migrazione dello storico in produzione; 971 episodi migrati sul dispositivo dell'autore al primo tentativo; §13.6 misurato a **208,9 ms** su 300; 20 lingue allineate |
 | 8 | Username, `public_profiles`, ricerca, follow | **chiuso, tutto in produzione e provato sul dispositivo**: schema, backfill, schermata di scelta, `user_follows`, `search_users`, `get_public_profile`, ramo in `apply_mutations`, sync client, UI social e login con username via Edge Function |
-| 9 | Favorites, rating, stats, diario | **dati, stats server e prima metà UI fatti** (tabelle, RLS, apply_mutations, sync, azioni, get_my_stats, stelle, favorites nel profilo, stats, 20 lingue); restano diario, modifica favorites, prova su dispositivo |
+| 9 | Favorites, rating, stats, diario | **codice completo**: dati, stats server e UI intera (stelle, favorites con scelta slot, stats, diario) in repo e in produzione, 20 lingue; **manca solo la prova su dispositivo** |
 | 10 | Universal links | da fare |
 
 ## Cosa gira in produzione adesso
