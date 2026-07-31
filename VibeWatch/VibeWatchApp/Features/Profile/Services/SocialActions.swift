@@ -30,7 +30,14 @@ final class SocialActions {
 
     enum ActionError: LocalizedError {
         case notAuthenticated
-        var errorDescription: String? { "You must be signed in to follow people" }
+        case selfFollow
+
+        var errorDescription: String? {
+            switch self {
+            case .notAuthenticated: return "You must be signed in to follow people"
+            case .selfFollow: return "You can't follow yourself"
+            }
+        }
     }
 
     func follow(userId followeeId: String) async throws {
@@ -45,6 +52,10 @@ final class SocialActions {
     /// l'unfollow e il re-follow riusa la riga, identico al server.
     private func write(followeeId: String, deletedAt: String?) async throws {
         guard let userId = currentUserId() else { throw ActionError.notAuthenticated }
+        // Difesa in profondita': la UI il pulsante non lo mostra piu' sul proprio profilo, ma un
+        // self-follow accodato qui morirebbe comunque sul CHECK del server come rifiuto muto in
+        // sync_rejected_mutations — meglio un errore vero prima di scrivere qualsiasi cosa.
+        guard followeeId != userId else { throw ActionError.selfFollow }
 
         var record: [String: Any] = [
             "follower_id": userId,

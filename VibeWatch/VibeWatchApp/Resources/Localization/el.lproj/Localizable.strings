@@ -730,4 +730,5 @@
 "social.unfollow" = "Κατάργηση ακολούθησης";
 "social.followsYou" = "Σε ακολουθεί";
 "social.profile.notFound" = "Αυτό το προφίλ δεν υπάρχει.";
+"social.profile.you" = "Είσαι εσύ.";
 "social.profile.loadFailed" = "Δεν ήταν δυνατή η φόρτωση του προφίλ.";

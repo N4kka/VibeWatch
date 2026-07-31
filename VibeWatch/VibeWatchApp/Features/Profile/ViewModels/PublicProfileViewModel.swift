@@ -25,15 +25,28 @@ final class PublicProfileViewModel: ObservableObject {
     private let load: (String) async throws -> PublicProfileDetail?
     private let follow: (String) async throws -> Void
     private let unfollow: (String) async throws -> Void
+    private let currentUserId: @MainActor () -> String?
 
     init(username: String,
          load: ((String) async throws -> PublicProfileDetail?)? = nil,
          follow: ((String) async throws -> Void)? = nil,
-         unfollow: ((String) async throws -> Void)? = nil) {
+         unfollow: ((String) async throws -> Void)? = nil,
+         currentUserId: (@MainActor () -> String?)? = nil) {
         self.username = username
         self.load = load ?? { try await SupabaseService.shared.publicProfile(username: $0) }
         self.follow = follow ?? { try await SocialActions.shared.follow(userId: $0) }
         self.unfollow = unfollow ?? { try await SocialActions.shared.unfollow(userId: $0) }
+        self.currentUserId = currentUserId ?? { SupabaseService.shared.currentUser?.id }
+    }
+
+    /// Il proprio profilo si può guardare — "come appaio?" merita risposta — ma non seguire.
+    ///
+    /// Trovato sul dispositivo: il pulsante c'era anche qui, il tap partiva, il CHECK
+    /// `follower <> followee` lo respingeva, e la schermata tornava com'era senza dire niente —
+    /// il fallimento invisibile che invita a ripremere. Il pulsante non deve esistere.
+    var isOwnProfile: Bool {
+        guard case .loaded(let detail) = phase else { return false }
+        return detail.profile.id == currentUserId()
     }
 
     func loadProfile() async {
@@ -51,7 +64,7 @@ final class PublicProfileViewModel: ObservableObject {
     }
 
     func toggleFollow() async {
-        guard case .loaded(let detail) = phase, !isTogglingFollow else { return }
+        guard case .loaded(let detail) = phase, !isTogglingFollow, !isOwnProfile else { return }
         isTogglingFollow = true
         defer { isTogglingFollow = false }
 

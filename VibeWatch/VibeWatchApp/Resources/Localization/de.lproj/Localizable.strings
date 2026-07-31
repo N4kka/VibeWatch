@@ -731,4 +731,5 @@
 "social.unfollow" = "Entfolgen";
 "social.followsYou" = "Folgt dir";
 "social.profile.notFound" = "Dieses Profil existiert nicht.";
+"social.profile.you" = "Das bist du.";
 "social.profile.loadFailed" = "Profil konnte nicht geladen werden.";

@@ -730,4 +730,5 @@
 "social.unfollow" = "フォロー解除";
 "social.followsYou" = "フォローされています";
 "social.profile.notFound" = "このプロフィールは存在しません。";
+"social.profile.you" = "自分のプロフィールです。";
 "social.profile.loadFailed" = "プロフィールを読み込めませんでした。";

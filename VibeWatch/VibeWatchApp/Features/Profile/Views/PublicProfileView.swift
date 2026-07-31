@@ -43,7 +43,16 @@ struct PublicProfileView: View {
                 VStack(spacing: 20) {
                     header(detail)
                     counters(detail)
-                    followButton(detail)
+                    // Sul proprio profilo il pulsante non esiste: un self-follow morirebbe sul
+                    // CHECK del server come rifiuto muto, e un pulsante che non fa niente invita
+                    // a ripremere (trovato sul dispositivo il 2026-07-31).
+                    if viewModel.isOwnProfile {
+                        Text("social.profile.you".localized)
+                            .font(.system(size: 13))
+                            .foregroundColor(.theme.textSecondary)
+                    } else {
+                        followButton(detail)
+                    }
                     if let bio = detail.profile.bio, !bio.isEmpty {
                         Text(bio)
                             .font(.system(size: 14))

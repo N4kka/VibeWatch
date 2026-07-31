@@ -728,4 +728,5 @@
 "social.unfollow" = "Dejar de seguir";
 "social.followsYou" = "Te sigue";
 "social.profile.notFound" = "Este perfil no existe.";
+"social.profile.you" = "Eres tú.";
 "social.profile.loadFailed" = "No se pudo cargar este perfil.";

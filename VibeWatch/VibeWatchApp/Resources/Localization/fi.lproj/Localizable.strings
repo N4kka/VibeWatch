@@ -730,4 +730,5 @@
 "social.unfollow" = "Lopeta seuraaminen";
 "social.followsYou" = "Seuraa sinua";
 "social.profile.notFound" = "Tätä profiilia ei ole.";
+"social.profile.you" = "Tämä olet sinä.";
 "social.profile.loadFailed" = "Profiilia ei voitu ladata.";

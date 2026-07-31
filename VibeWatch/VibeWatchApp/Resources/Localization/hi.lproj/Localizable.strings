@@ -730,4 +730,5 @@
 "social.unfollow" = "अनफ़ॉलो करें";
 "social.followsYou" = "आपको फ़ॉलो करता है";
 "social.profile.notFound" = "यह प्रोफ़ाइल मौजूद नहीं है।";
+"social.profile.you" = "यह आप हैं।";
 "social.profile.loadFailed" = "प्रोफ़ाइल लोड नहीं हो सकी।";

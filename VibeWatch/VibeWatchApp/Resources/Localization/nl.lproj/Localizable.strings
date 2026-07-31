@@ -730,4 +730,5 @@
 "social.unfollow" = "Ontvolgen";
 "social.followsYou" = "Volgt jou";
 "social.profile.notFound" = "Dit profiel bestaat niet.";
+"social.profile.you" = "Dit ben jij.";
 "social.profile.loadFailed" = "Profiel kon niet worden geladen.";

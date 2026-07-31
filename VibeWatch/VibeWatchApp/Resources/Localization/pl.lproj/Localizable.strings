@@ -730,4 +730,5 @@
 "social.unfollow" = "Przestań obserwować";
 "social.followsYou" = "Obserwuje cię";
 "social.profile.notFound" = "Ten profil nie istnieje.";
+"social.profile.you" = "To ty.";
 "social.profile.loadFailed" = "Nie udało się wczytać profilu.";

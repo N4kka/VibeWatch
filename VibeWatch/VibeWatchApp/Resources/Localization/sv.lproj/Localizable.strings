@@ -718,4 +718,5 @@
 "social.unfollow" = "Sluta följa";
 "social.followsYou" = "Följer dig";
 "social.profile.notFound" = "Den här profilen finns inte.";
+"social.profile.you" = "Det här är du.";
 "social.profile.loadFailed" = "Profilen kunde inte läsas in.";

@@ -718,4 +718,5 @@
 "social.unfollow" = "Takibi bırak";
 "social.followsYou" = "Seni takip ediyor";
 "social.profile.notFound" = "Bu profil mevcut değil.";
+"social.profile.you" = "Bu sensin.";
 "social.profile.loadFailed" = "Profil yüklenemedi.";

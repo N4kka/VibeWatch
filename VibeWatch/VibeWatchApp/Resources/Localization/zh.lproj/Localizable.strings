@@ -715,4 +715,5 @@
 "social.unfollow" = "取消关注";
 "social.followsYou" = "关注了你";
 "social.profile.notFound" = "该主页不存在。";
+"social.profile.you" = "这是你的主页。";
 "social.profile.loadFailed" = "无法加载该主页。";

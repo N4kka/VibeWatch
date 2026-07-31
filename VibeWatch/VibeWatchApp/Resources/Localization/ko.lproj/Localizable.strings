@@ -730,4 +730,5 @@
 "social.unfollow" = "팔로우 취소";
 "social.followsYou" = "회원님을 팔로우합니다";
 "social.profile.notFound" = "이 프로필은 존재하지 않습니다.";
+"social.profile.you" = "내 프로필입니다.";
 "social.profile.loadFailed" = "프로필을 불러오지 못했습니다.";

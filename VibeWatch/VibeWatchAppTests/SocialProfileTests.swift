@@ -140,6 +140,32 @@ final class SocialProfileTests: XCTestCase {
         XCTAssertEqual(vm.phase, .loaded(dettaglio(isFollowing: false)))
     }
 
+    /// Trovato sul dispositivo il 2026-07-31: il proprio profilo (raggiungibile dalla ricerca,
+    /// e va bene cosi') mostrava il pulsante "Segui". Il tap partiva, il CHECK del server lo
+    /// respingeva come rifiuto muto, la schermata tornava com'era — l'invito a ripremere.
+    func testIlProprioProfiloNonSiSegue() async {
+        let vm = PublicProfileViewModel(
+            username: "zed",
+            load: { _ in self.dettaglio() },
+            follow: { _ in XCTFail("un self-follow non deve nemmeno partire") },
+            unfollow: { _ in XCTFail("nemmeno l'unfollow") },
+            currentUserId: { "u2" })   // il profilo mostrato e' il chiamante
+        await vm.loadProfile()
+
+        XCTAssertTrue(vm.isOwnProfile, "e' cosi' che la View sa di nascondere il pulsante")
+        await vm.toggleFollow()
+        XCTAssertEqual(vm.phase, .loaded(dettaglio()), "niente e' cambiato, niente e' partito")
+    }
+
+    func testIlProfiloDiUnAltroNonEIlProprio() async {
+        let vm = PublicProfileViewModel(
+            username: "zed", load: { _ in self.dettaglio() },
+            follow: { _ in }, unfollow: { _ in },
+            currentUserId: { "u1" })
+        await vm.loadProfile()
+        XCTAssertFalse(vm.isOwnProfile)
+    }
+
     /// Se la scrittura fallisce lo stato torna quello del server, non quello sperato.
     func testUnFollowFallitoNonMenteSulloStato() async {
         struct Rotto: Error {}

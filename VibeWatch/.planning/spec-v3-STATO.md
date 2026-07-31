@@ -103,11 +103,21 @@ rompendo**: rimessi invoker, la suite fallisce su "a non segue chi l'ha bloccato
 `user_blocks` (la sua migration precede il repo, forma verificata su `pg_policy` in produzione)
 e `run.sh` ha la migration nuova nella whitelist.
 
-## Il pezzo client — scritto il 2026-07-31, **mai provato sul dispositivo**
+## Il pezzo client — scritto e **provato sul dispositivo** il 2026-07-31
 
-Tutto in repo, test verdi, ma nessuna prova contro il server vero: è la stessa situazione in cui
-stava la schermata username prima dei suoi due difetti. **La prova su dispositivo è il primo
-passo della prossima sessione.**
+Follow e unfollow verificati fra due account veri (`nakka` → `nicola_sarli_23`): sul server una
+riga sola, creata e poi soft-cancellata — stessa riga riusata, union end-to-end via outbox, zero
+duplicati.
+
+**Il collaudo ha trovato il terzo difetto della giornata, e ha la stessa forma degli altri due.**
+Il proprio profilo, raggiungibile dalla ricerca (e va bene così: "come appaio?" merita risposta),
+mostrava il pulsante "Segui". Il tap accodava un self-follow; il CHECK `follower <> followee` lo
+respingeva **come rifiuto muto** in `sync_rejected_mutations` (`constraint_23514`, registrato
+alle 18:32:23 — è la prova, ed è spiegato); la schermata tornava com'era. Fallimento invisibile
+che invita a ripremere. Tre correzioni: sul proprio profilo il pulsante **non esiste** (al suo
+posto "Sei tu.", chiave nuova nelle 20 lingue), `isOwnProfile` fa da guardia anche in
+`toggleFollow`, e `SocialActions` rifiuta il self-follow con un errore vero **prima** di
+accodare — la difesa in profondità per ogni chiamante futuro. Due test lo fissano.
 
 **Il sync di `user_follows`, con le sue tre specificità:**
 
@@ -134,10 +144,8 @@ la metà che si dimentica), `SocialActions` (l'unico posto che scrive `follower_
 tradotte nelle 20 lingue. 11 test in `SocialProfileTests` (file **registrato a mano nel
 pbxproj**, nei soliti quattro punti).
 
-Da fare, in ordine:
-
-1. **Provare sul dispositivo** ricerca, profilo, follow/unfollow (due account: `nakka` e uno dei
-   19 senza username, che non deve comparire).
+Del blocco 8 resta solo il login con username (sotto). Il prossimo blocco è il **9** (favorites,
+rating in stelle, stats, diario), che si appoggia a `get_public_profile` per la parte pubblica.
 
 ### Il login con username è ancora rotto, e la spec si contraddice
 

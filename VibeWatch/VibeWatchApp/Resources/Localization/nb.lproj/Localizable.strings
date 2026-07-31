@@ -656,4 +656,5 @@
 "social.unfollow" = "Slutt å følge";
 "social.followsYou" = "Følger deg";
 "social.profile.notFound" = "Denne profilen finnes ikke.";
+"social.profile.you" = "Dette er deg.";
 "social.profile.loadFailed" = "Kunne ikke laste profilen.";

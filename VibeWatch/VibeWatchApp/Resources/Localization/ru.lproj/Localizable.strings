@@ -718,4 +718,5 @@
 "social.unfollow" = "Отписаться";
 "social.followsYou" = "Подписан на вас";
 "social.profile.notFound" = "Этот профиль не существует.";
+"social.profile.you" = "Это вы.";
 "social.profile.loadFailed" = "Не удалось загрузить профиль.";
