@@ -51,19 +51,21 @@ fotogramma — di solito un rientro sulla tab molto dopo — e non c'è nessun n
 
 ## Da fare per prima cosa
 
-**La schermata di scelta dello username** (§3.7: "con richiesta di conferma al primo accesso"). Lo
-schema e il backfill sono in produzione; manca il pezzo iOS. Deve servire due casi diversi:
+**Provare sul dispositivo la schermata di scelta dello username.** È compilata e coperta dai test
+coi doppi, ma non è mai stata eseguita contro il server vero. Due cose da guardare, perché sono
+due schermate diverse:
 
-- i **295** che uno username ce l'hanno già, derivato dal loro nome: conferma o cambio;
-- i **19** che non ce l'hanno: finché non scelgono non compaiono in `public_profiles`, quindi non
-  sono cercabili e non hanno un profilo pubblico. Per loro la schermata non è una conferma, è
-  l'unico modo di esistere socialmente.
+- con un account fra i **295** (username assegnato dal backfill): deve comparire in modalità
+  *conferma*, col nome già scritto nel campo e il pulsante attivo subito;
+- con uno dei **19** senza username: modalità *scelta*, campo vuoto, pulsante spento finché non si
+  scrive qualcosa di libero. Per verificarlo basta
+  `update profiles set username = null, username_confirmed_at = null where id = '…'`.
 
-`username_available(text)` è già chiamabile da `authenticated` ed è pensata per dire "libero"
-mentre si digita. `suggest_username` **non** lo è: proporre nomi è lavoro del server, e da client
-sarebbe un oracolo su chi esiste.
+Poi, in ordine:
 
-Poi: `user_follows` + `search_users` con `pg_trgm` (gli indici GIN ci sono già).
+1. **`user_follows` + `search_users`** con `pg_trgm`. Gli indici GIN su `username` e `display_name`
+   ci sono già.
+2. Il **profilo pubblico** (`/@{username}`, §9.3) e la ricerca utenti nella UI.
 
 ### Il login con username è ancora rotto, e la spec si contraddice
 
@@ -72,23 +74,51 @@ Poi: `user_follows` + `search_users` con `pg_trgm` (gli indici GIN ci sono già)
 diventa possibile" — ma quella vista esclude l'email di proposito, quindi la risoluzione da lì è
 impossibile per costruzione.
 
-Le vere alternative sono due, e vanno decise: una RPC che restituisce l'email dato lo username —
-cioè un endpoint di raccolta indirizzi, da scartare — oppure una Edge Function che fa **tutto** il
-login server-side (username → email → GoTrue) e restituisce la sessione senza che l'email passi
-mai dal client. La seconda è l'unica difendibile, e non è stata scritta.
+Le vere alternative sono due, e vanno decise prima di scrivere: una RPC che restituisce l'email
+dato lo username — cioè un endpoint di raccolta indirizzi, da scartare — oppure una Edge Function
+che fa **tutto** il login server-side (username → email → GoTrue) e restituisce la sessione senza
+che l'email passi mai dal client. La seconda è l'unica difendibile.
 
 ## Il blocco 8, quello che è già in produzione
 
-Schema (`20260801100000`) e backfill (`20260801110000`), applicati e verificati.
+Tre migration applicate e verificate: schema (`20260801100000`), backfill (`20260801110000`),
+`set_username` (`20260801120000`). Più il pezzo iOS.
 
 | | |
 |---|---|
-| `profiles` | `username` (citext), `bio`, `is_profile_public`, `username_changed_at` |
+| `profiles` | `username` (citext), `bio`, `is_profile_public`, `username_changed_at`, `username_confirmed_at` |
 | Unicità | indice **parziale**: un profilo cancellato non tiene occupato il nome per sempre |
 | `public_profiles` | sei colonne — `id, username, display_name, avatar_url, bio, created_at`. Niente email, niente `fcm_token`, niente billing |
 | Generazione | `username_seed` (pura), `username_available` (l'unica che il client può chiamare), `suggest_username` |
+| Scrittura | `set_username(text)` → `jsonb`: `{ok, username, changed}` oppure `{ok:false, reason}` con `taken` / `reserved` / `invalid_format` |
 | `username_reserved` | 64 nomi, RLS senza policy: l'elenco non si legge dal client |
 | Backfill | **295 assegnati, 19 lasciati null, 295 univoci, zero fuori formato, zero già datati** |
+| iOS | `UsernameRules` (pura), `UsernameSetupViewModel`, `UsernameSetupView`, sheet agganciato in `VibeWatchApp.swift` dopo il sync di avvio |
+
+**`username_confirmed_at` è il segnale che fa comparire la schermata**, e sta sul server apposta:
+un flag locale si perderebbe alla reinstallazione e la schermata ricomparirebbe a chi aveva già
+scelto. Nullo significa "assegnato dal backfill e mai visto da chi lo porta".
+
+**I riservati valevano solo per chi li chiedeva gentilmente.** `username_reserved` la consultavano
+`username_available` e `suggest_username`, cioè le due funzioni che *propongono*. Niente la
+consultava in **scrittura**: `profiles_update_own` permette al proprietario di aggiornare la
+propria riga, e il CHECK sul formato non sa niente dei nomi riservati — un PATCH diretto su
+`profiles.username = 'admin'` passava tutto e si prendeva `@admin`. Ora lo ferma il trigger
+`profiles_username_changed`, che è l'unico punto non scavalcabile: un CHECK non può leggere
+un'altra tabella. C'è un test che, rimettendo il difetto, fallisce.
+
+**Perché `set_username` è un'RPC e non un PATCH.** Tre ragioni pratiche: il client non può leggere
+`username_reserved` (e non deve), quindi da solo mostrerebbe "occupato" al posto di "riservato";
+fra il controllo di disponibilità e la scrittura c'è una finestra in cui un altro può prendere lo
+stesso nome, e qui la chiude l'indice unico restituendo un esito invece di un `23505` da
+interpretare; e `username_confirmed_at` si scrive lì e solo lì, insieme al nome.
+
+**Cosa il client duplica e cosa no.** Duplica la **forma** (`UsernameRules.pattern`, identica al
+CHECK) per rispondere mentre si digita senza un giro di rete per carattere. **Non** duplica
+l'elenco dei riservati: non può leggerlo, e indovinarlo sarebbe la copia che diverge davvero.
+`normalizeTyping` abbassa le maiuscole e toglie gli spazi ai bordi — errori di battitura — ma non
+sostituisce il resto: trasformare `mario.rossi` in `mario_rossi` di nascosto darebbe all'utente un
+nome che non ha scelto. Quello lo fa `username_seed`, che serve a *proporre*.
 
 **La simulazione prima della scrittura ha trovato una fuga.** Derivare lo username dalla parte
 locale dell'email sembrava il ripiego ovvio per chi ha un nome non riducibile a `[a-z0-9_]` (nomi
@@ -292,7 +322,7 @@ nota.
 | 5 | Integrazione client | **fatto per la lettura**. SQLite + whitelist + pull + conflitti verificati su dati veri; il percorso di scrittura è cablato ma senza chiamanti (arrivano col blocco 7) |
 | 6 | Pipeline import + report | **fasi 1-4 in produzione e collaudate end-to-end**; fasi 5-6 scritte e verdi in SQL, `import-finalize` da deployare |
 | 7 | UI Tracking | **chiuso.** Schermata, tab bar e migrazione dello storico in produzione; 971 episodi migrati sul dispositivo dell'autore al primo tentativo; §13.6 misurato a **208,9 ms** su 300; 20 lingue allineate |
-| 8 | Username, `public_profiles`, ricerca, follow | **il prossimo** |
+| 8 | Username, `public_profiles`, ricerca, follow | **schema, backfill e schermata di scelta in produzione.** Mancano `user_follows`, `search_users`, il profilo pubblico e il login con username |
 | 9-10 | Favorites, stats, diario, universal links | da fare |
 
 ## Cosa gira in produzione adesso
@@ -559,6 +589,16 @@ con due codici e si somigliano al 73% per costruzione. Provato rimettendo la cop
   viste di §9.2 sono finite in `lastWriteWins` per omissione, che le confronta per `updated_at` —
   che una delle due non ha. Aggiungere una tabella al pull significa aggiungerla anche a
   `TableConflictMapping`, sempre.
+- **Simulare prima di scrivere ha trovato più difetti che rileggere il codice.** Nel blocco 8 due
+  su due: la fuga del relay Apple (`suggest_username` non scrive niente **apposta**, così il
+  backfill su 314 profili veri si prova con una SELECT) e il trigger che avrebbe annullato la
+  propria correzione. Nessuno dei due si vedeva leggendo. Vale la pena costruire le funzioni in
+  modo che una prova a vuoto sia possibile, anche quando costa una firma più scomoda.
+- **Una lista di eccezioni va applicata dove si scrive, non dove si propone.** `username_reserved`
+  era consultata da `username_available` e `suggest_username` — le funzioni che *suggeriscono* — e
+  da nessuna parte in scrittura. Chi passava dalla porta principale (un PATCH su `profiles`) si
+  prendeva `@admin`. La regola generale: se un vincolo non è esprimibile come CHECK, il posto è un
+  trigger, non la funzione gentile che qualcuno *dovrebbe* chiamare.
 - **Una nuova strada in una funzione vecchia richiede un ingresso nuovo, non un adattatore.**
   `catalog-resolve` era interamente costruita attorno agli id TVDB dell'export. Il client ha id
   TMDB da sempre, e per lui `/find` non è inutile: è impossibile. Costruire un id TVDB finto per
@@ -671,7 +711,8 @@ con due codici e si somigliano al 73% per costruzione. Provato rimettendo la cop
 ## Come si collauda
 
 ```bash
-supabase/tests/run.sh                      # Postgres usa-e-getta, migration x2, 80 asserzioni
+supabase/tests/run.sh                      # Postgres usa-e-getta, migration x2
+                                           # tracking_test 80 asserzioni + social_test 82
 python3 test_oracle.py                     # oracolo, 31 test
 cd supabase/functions/catalog-resolve && deno test            # logica pura, 28 test
 cd supabase/functions/import-parse   && deno test --allow-read  # parser, 14 test
@@ -683,14 +724,19 @@ TVTIME_ZIP=~/Downloads/gdpr-data.zip deno test --allow-read --allow-env
 # iOS: se la config è incompleta, l'app si ferma all'avvio in DEBUG con l'elenco
 # delle chiavi mancanti (Config.validateAtLaunch). Non è un bug: sono i segreti.
 xcodebuild test -project VibeWatchApp.xcodeproj -scheme VibeWatchApp \
-  -destination 'id=601C4430-6213-49E3-8A4D-3564B2B57E2A'   # iOS: 3 fallimenti PREESISTENTI
+  -destination 'id=601C4430-6213-49E3-8A4D-3564B2B57E2A'   # 403 test, 3 fallimenti PREESISTENTI
 
 # Deploy di una Edge Function: dalla radice del repo, non da supabase/
 supabase functions deploy import-parse --project-ref rqhxhkijzhqivljivirq
 ```
 
 I 3 test iOS che falliscono (`ConflictResolverTests` x2, `SyncStateMachineTests.testIdleToIdle`)
-fallivano già prima di questo lavoro e sono fuori scope.
+fallivano già prima di questo lavoro e sono fuori scope. Il conteggio "9 fallimenti" che compare
+nel riepilogo non sono nove test: sono gli stessi 3 ripetuti su più configurazioni del piano.
+
+**Un file nuovo sotto `VibeWatchAppTests/` non viene compilato da solo**: va aggiunto al
+`project.pbxproj` in quattro punti (`PBXBuildFile`, `PBXFileReference`, figli del gruppo, fase
+`Sources`). Altrimenti `-only-testing:` risponde "Executed 0 tests" e conclude TEST SUCCEEDED.
 
 ### Collaudare in produzione senza lasciare residui
 
@@ -711,6 +757,9 @@ Due modi, entrambi già usati:
 - `.planning/spec-v3-oracle.md` — le 31 divergenze dell'oracolo, 4 ancora da risolvere
 - `.planning/spec-v3-blocco2-catalogo.md` — catalogo e risoluzione TVDB→TMDB
 - `.planning/spec-v3-blocco3-tracking.md` — eventi, stato, trigger, cron
+- `supabase/tests/social_test.sql` — le 82 asserzioni del blocco 8. Il commento in testa a ogni
+  migration di `supabase/supabase/migrations/2026080*` spiega **perché**, non cosa: è lì che stanno
+  le ragioni che questo documento riassume
 - `audit/HANDOFF.md` — l'audit del 2026-07-23. **Attenzione: parla di un'altra clone**
   (`/Users/nicola/Documents/VibeWatch/VibeWatch/`), ed è da lì che vengono i segreti. Il §3b elenca
   bug preesistenti mai chiusi; quello sul `readerDb` readonly è già risolto (verificato: `upsert`
