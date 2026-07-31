@@ -62,6 +62,7 @@ for file in "$MIGRATIONS"/*.sql; do
     20260801120000_set_username.sql) ;;
     20260801130000_user_follows_and_search.sql) ;;
     20260801150000_get_public_profile.sql) ;;
+    20260801170000_user_favorites_and_ratings.sql) ;;
     *) continue ;;
   esac
   [ "$pass" = 1 ] && echo "   $(basename "$file")"
@@ -74,3 +75,6 @@ run -f "$HERE/tracking_test.sql"
 
 echo "→ test: sociale"
 run -f "$HERE/social_test.sql"
+
+echo "→ test: favorites e rating"
+run -f "$HERE/favorites_ratings_test.sql"
