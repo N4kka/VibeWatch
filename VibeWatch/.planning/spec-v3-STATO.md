@@ -49,6 +49,27 @@ convenga, non se si possa.
 
 ## Cose imparate che risparmiano tempo
 
+- **Questa clone non aveva i segreti.** `VibeWatchApp/Config/Secrets.xcconfig` è gitignored ed era
+  nato come placeholder vuoto "perché il progetto compilasse e i test girassero": 6 chiavi su 8
+  senza valore. I valori veri stanno nella clone dell'audit,
+  `/Users/nicola/Documents/VibeWatch/VibeWatch/`. Conseguenza a runtime: TMDB 401, Scopri bianca,
+  RevenueCat "Invalid API Key" — e **build e test tutti verdi**, perché nessuno dei due percorsi
+  tocca la rete reale. Escluse di proposito `RAPIDAPI_KEY` e `YOUTUBE_API_KEY`, che
+  `audit/04-dependencies.md` aveva rimosso.
+- **Negli URL dentro xcconfig le barre si scrivono `https:\/\/host`.** Scrivere `https:$()//host`
+  **tronca il valore a `https:`**: xcconfig toglie i commenti *prima* di espandere le variabili,
+  quindi vede il `//` letterale. Era il caso di `SUPABASE_URL`, cioè ogni chiamata a Supabase
+  partiva verso un URL spazzatura. `Config.string(for:)` ripara `https:/` → `https://`, ma su
+  `https:` non c'è niente da riparare. **Verificare l'`Info.plist` del bundle costruito**, non il
+  file sorgente: `PlistBuddy -c "Print :SUPABASE_URL" .../VibeWatchApp.app/Info.plist`.
+- **Lo schema gira in Release e `Logger` è interamente dentro `#if DEBUG`.** In Release l'app non
+  stampa una riga: nessun `[SyncEngine]`, nessun `[DiscoveryViewModel]`. Prima di chiedere un log a
+  qualcuno, controllare che quel log possa esistere.
+- **Tre fallimenti silenziosi in un giorno, stesso schema**: `try?` nel pull (introdotto e
+  corretto), `try?` in `LiveDiscoveryRepository` (preesistente, ora logga), `?? ""` in
+  `Config.string(for:)` (ancora lì). Il costo non è il bug, è la diagnosi: un segreto mancante si è
+  presentato come una schermata bianca e ha portato a sospettare prima il blocco 4, poi una VPN.
+
 - **Il `DA VERIFICARE` di §5 era vero**: il pull faceva `select("*")` senza `range()` *e* senza
   `order()`. Il tetto di questo progetto però non è PostgREST — `pgrst.db_max_rows` non è impostato
   (verificato il 2026-07-31 su `pg_db_role_setting`) — ma lo **`statement_timeout = 8s` del ruolo
