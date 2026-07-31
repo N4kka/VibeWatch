@@ -125,6 +125,47 @@ final class LocalizationCoverageTests: XCTestCase {
         }
     }
 
+    /// Nessun file è la copia di un altro.
+    ///
+    /// `nl.lproj` è stato per mesi una copia di `pl.lproj` — differivano per 14 stringhe su 571 —
+    /// e ogni utente olandese leggeva polacco. Nessun controllo se ne accorgeva: il file esisteva,
+    /// aveva tutte le chiavi giuste e passava ogni verifica di completezza. La sola cosa che lo
+    /// distingueva da una traduzione vera era il **contenuto**, e questo test guarda quello.
+    ///
+    /// La soglia sta all'85% perché due file di lingue diverse condividono solo prestiti e
+    /// simboli: la coppia più simile dopo `nb`/`no` sta al 24%, mentre `nl`/`pl` stava al 97%.
+    func testNessunaLinguaEUnaCopiaDiUnAltra() throws {
+        let file = try leggiTutte()
+        // Bokmål e "norvegese" sono la stessa lingua con due codici, e i due file si somigliano
+        // per costruzione: è l'unica coppia legittima, e sta scritta qui invece che nella soglia.
+        let coppieAmmesse: Set<Set<String>> = [["nb", "no"]]
+
+        // Un dizionario per file, costruito una volta: `valore(_:)` scandisce le voci in ordine,
+        // e 190 coppie × 597 chiavi di scansioni lineari facevano di questo test il più lento
+        // della suite per nessuna ragione.
+        let mappe: [(lingua: String, valori: [String: String])] = file.map { f in
+            var m: [String: String] = [:]
+            for v in f.voci { m[v.chiave] = v.valore }   // l'ultima vince, come a runtime
+            return (f.lingua, m)
+        }
+
+        for i in mappe.indices {
+            for j in (i + 1)..<mappe.count {
+                let (a, b) = (mappe[i], mappe[j])
+                if coppieAmmesse.contains([a.lingua, b.lingua]) { continue }
+
+                let comuni = Set(a.valori.keys).intersection(b.valori.keys)
+                guard !comuni.isEmpty else { continue }
+                let uguali = comuni.filter { a.valori[$0] == b.valori[$0] }.count
+                let quota = Double(uguali) / Double(comuni.count)
+
+                XCTAssertLessThan(quota, 0.85, String(
+                    format: "%@ e %@ sono identici al %.0f%%: uno dei due non è tradotto",
+                    a.lingua, b.lingua, quota * 100))
+            }
+        }
+    }
+
     /// Ogni `"chiave".localized` del codice deve esistere in `en`. Senza, `.localized`
     /// restituisce la chiave e l'utente legge `auth.error.invalidLink` sullo schermo.
     func testOgniChiaveUsataNelCodiceEsiste() throws {

@@ -19,9 +19,6 @@ credevo.
 c'è; va rifatta in Release, su dispositivo, e i numeri vecchi (`61,9 ms` su schermata vuota) non
 valgono.
 
-**E decidere cosa fare di `nl.lproj`, che contiene polacco** (vedi *Le traduzioni*): è un difetto
-preesistente che riguarda ogni utente olandese, non solo il tracking.
-
 ### La migrazione è girata, sul dispositivo dell'autore
 
 ```
@@ -156,7 +153,7 @@ nota.
   oppure un test con `XCTOSSignpostMetric(subsystem: "com.vibewatch.app", category: "Tracking",
   name: "TrackingFirstFrame")`.
 - ~~**18 lingue**~~ — **fatto.** Le 20 lingue hanno le stesse 597 chiavi, zero duplicate, zero
-  valori vuoti, segnaposto identici all'inglese, e `LocalizationCoverageTests` (5 test) impedisce
+  valori vuoti, segnaposto identici all'inglese, e `LocalizationCoverageTests` (6 test) impedisce
   che il disallineamento torni. Vedi *Le traduzioni* più sotto: l'allineamento ha scoperto altri
   tre difetti, di cui uno grosso.
 
@@ -360,8 +357,9 @@ almeno una volta.
 Le 20 lingue hanno ora le **stesse 597 chiavi**: `en` e `it` erano già identiche (595 chiavi), le
 altre 18 erano indietro di 24 — tutta la schermata Tracking. Aggiunte e tradotte, non copiate
 dall'inglese. `LocalizationCoverageTests` blocca la deriva: stesse chiavi, nessun duplicato,
-nessun valore vuoto, segnaposto identici a `en`, e ogni `"chiave".localized` del codice esiste in
-`en`. I quattro test sono stati provati rompendo apposta i quattro casi.
+nessun valore vuoto, segnaposto identici a `en`, ogni `"chiave".localized` del codice esiste in
+`en`, e nessun file è la copia di un altro. Tutti e sei provati rompendo apposta il caso che
+coprono.
 
 **1. `platforms.title` era definita due volte in 11 lingue**, con valori diversi ("Platforms" e
 "Streaming Platforms"). Il caricatore di `.strings` non protesta: tiene l'ultima, in silenzio.
@@ -376,18 +374,26 @@ corretta.
 `auth.error.invalidLink`. `.localized` restituisce la chiave quando la traduzione manca, quindi
 sullo schermo compariva letteralmente `auth.error.invalidLink`. Scritte in tutte e 20.
 
-### `nl.lproj` contiene polacco, non olandese — aperto
+### `nl.lproj` conteneva polacco — risolto
 
-**Il difetto peggiore trovato in questo giro, ed è preesistente.** `nl.lproj` è una copia di
-`pl.lproj`: differiscono per **14 stringhe su 571**. Un utente olandese apre l'app e legge
-`"Odkrywaj"`, `"Listy"`, `"Anuluj"`. Verificato che è l'unico caso: le altre 18 lingue sono
+**Il difetto peggiore trovato in questo giro, ed era preesistente.** `nl.lproj` era una copia di
+`pl.lproj`: differivano per **14 stringhe su 571**. Un utente olandese apriva l'app e leggeva
+`"Odkrywaj"`, `"Listy"`, `"Anuluj"`. Verificato che era l'unico caso: le altre 18 lingue sono
 coerenti con sé stesse (controllate su `tab.discovery`, `tab.lists`, `common.cancel`,
 `common.save`, `lists.watchlist`).
 
-Le 26 chiavi aggiunte in questo giro sono in **olandese vero**. Le altre 571 no, e ritradurle è un
-lavoro a sé che non è stato fatto: va deciso, non fatto di nascosto. Finché non si fa, la scelta
-onesta sarebbe **togliere `nl` dalle lingue supportate**, perché ricadere sull'inglese è meglio
-che mostrare polacco.
+**Tutte e 571 tradotte in olandese.** Struttura, commenti e ordine del file restano quelli di
+prima: si sono sostituiti i valori, non le righe, così il confronto con gli altri `.lproj` resta
+leggibile. Le 15 stringhe che dopo la traduzione risultano ancora identiche al polacco sono
+prestiti e simboli che nelle due lingue coincidono davvero (`AI`, `TV`, `OK`, `PRO`, `FAQ`,
+`Min`, `Max`, `Status`, `JustWatch`, `{count}/{limit}`, `< 90 min`…).
+
+**Perché nessun controllo se ne era accorto, e cosa c'è ora.** Il file esisteva, aveva tutte le
+chiavi giuste e passava ogni verifica di completezza: la sola cosa che lo distingueva da una
+traduzione vera era il **contenuto**. `testNessunaLinguaEUnaCopiaDiUnAltra` confronta i valori a
+coppie e fallisce sopra l'85% di uguaglianza — `nl`/`pl` stava al 97%, la coppia più simile fra
+lingue diverse sta al **24%**. L'unica eccezione dichiarata è `nb`/`no`, che sono la stessa lingua
+con due codici e si somigliano al 73% per costruzione. Provato rimettendo la copia: fallisce.
 
 ## Due cose da sapere prima del blocco 7
 
