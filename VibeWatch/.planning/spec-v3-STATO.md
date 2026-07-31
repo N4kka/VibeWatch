@@ -141,10 +141,29 @@ esattamente ciò che §7.4 vieta.
 Il problema non era uno ma due, indipendenti, e **nessuno dei due era TMDB**: misurato, TMDB non
 restituisce header di rate limit e accetta 30 chiamate in parallelo senza un solo 429.
 
-| Causa | Prima | Dopo |
+**Tutti i numeri qui sotto sono cronometrati sull'export vero, non stimati** — e servivano,
+perché ogni stima fatta in questa sessione è stata smentita dalla misura almeno una volta.
+
+| Collo di bottiglia | Prima | Dopo |
 |---|---|---|
 | `CALLER_CALLS_PER_HOUR = 600` — un tetto nostro | 35 ore | tetto da import dedicato |
-| ciclo `/find` **sequenziale** (258 ms l'una, misurati) | 1,5 ore anche senza budget | ~9 min |
+| ciclo `/find` **sequenziale** (258 ms l'una) | ~13 s per 50 episodi | **3-5 s** |
+| annotazione dello staging, una UPDATE per riga | **47 s** per 1000 righe | **1,0 s** |
+
+**Un import completo: da ~35 ore a ~31 minuti.** Misurato su un blocco reale da 1000 righe:
+85,6 s (20 chiamate di risoluzione + 1 di annotazione) × 22 blocchi.
+
+Il terzo collo di bottiglia è comparso solo dopo aver sistemato il secondo: parallelizzate le
+`/find`, il tempo si era spostato tutto sull'annotazione, che costava più di tutte le chiamate a
+TMDB dello stesso blocco messe insieme. **Il posto dove si perde tempo si sposta appena si sistema
+il precedente**, e l'unico modo di saperlo è cronometrare.
+
+**Dove sta il tempo adesso, se qualcuno volesse spingere oltre.** I 4 s per 50 episodi non sono
+TMDB: con 10 chiamate in parallelo a 258 ms il pavimento sarebbe ~1,3 s. La differenza è il budget,
+che fa **due RPC a Postgres prima di ogni chiamata** (`trySpend` per lo scope del chiamante e per
+quello globale) — 100 round-trip al database per invocazione. Si risolverebbe prenotando N unità in
+una volta e restituendo quelle non spese. Non è stato fatto: 31 minuti in background con una push
+alla fine sono già ciò che §7.2 promette, e il resto è rendimento decrescente.
 
 Quattro interventi, tutti in repo:
 
