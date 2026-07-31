@@ -60,10 +60,36 @@ struct PublicProfileView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.horizontal, 24)
                     }
+                    // §9.3: due righe da 4. Una riga vuota non si mostra — un profilo senza
+                    // favorites non è un profilo rotto.
+                    if !detail.favoriteMovies.isEmpty {
+                        favoritesRow(titleKey: "profile.favorites.movies",
+                                     slots: detail.favoriteMovies, mediaType: "movie")
+                    }
+                    if !detail.favoriteShows.isEmpty {
+                        favoritesRow(titleKey: "profile.favorites.shows",
+                                     slots: detail.favoriteShows, mediaType: "tv")
+                    }
                 }
                 .padding(.vertical, 24)
             }
         }
+    }
+
+    private func favoritesRow(titleKey: String, slots: [FavoriteSlot], mediaType: String) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(titleKey.localized)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.theme.textSecondary)
+            HStack(spacing: 10) {
+                ForEach(slots) { slot in
+                    FavoritePosterTile(mediaType: mediaType, tmdbId: slot.tmdbId)
+                }
+                Spacer(minLength: 0)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 24)
     }
 
     private func header(_ detail: PublicProfileDetail) -> some View {

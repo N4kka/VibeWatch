@@ -734,3 +734,15 @@
 "social.profile.notFound" = "Dieses Profil existiert nicht.";
 "social.profile.you" = "Das bist du.";
 "social.profile.loadFailed" = "Profil konnte nicht geladen werden.";
+
+// Blocco 9 (SPEC v3 §3.6/§9.3): voti in stelle, favorites, stats
+"rating.title" = "Deine Bewertung";
+"rating.saveFailed" = "Bewertung konnte nicht gespeichert werden. Versuch es erneut.";
+"profile.favorites.movies" = "Lieblingsfilme";
+"profile.favorites.shows" = "Lieblingsserien";
+"profile.stats.title" = "Deine Statistiken";
+"profile.stats.watchTime" = "Sehzeit";
+"profile.stats.movies" = "Filme";
+"profile.stats.shows" = "Serien";
+"profile.stats.episodes" = "Folgen";
+"profile.stats.loadFailed" = "Statistiken konnten nicht geladen werden.";

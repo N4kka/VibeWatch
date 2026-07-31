@@ -721,3 +721,15 @@
 "social.profile.notFound" = "Этот профиль не существует.";
 "social.profile.you" = "Это вы.";
 "social.profile.loadFailed" = "Не удалось загрузить профиль.";
+
+// Blocco 9 (SPEC v3 §3.6/§9.3): voti in stelle, favorites, stats
+"rating.title" = "Ваша оценка";
+"rating.saveFailed" = "Не удалось сохранить оценку. Попробуйте ещё раз.";
+"profile.favorites.movies" = "Любимые фильмы";
+"profile.favorites.shows" = "Любимые сериалы";
+"profile.stats.title" = "Ваша статистика";
+"profile.stats.watchTime" = "Время просмотра";
+"profile.stats.movies" = "Фильмы";
+"profile.stats.shows" = "Сериалы";
+"profile.stats.episodes" = "Эпизоды";
+"profile.stats.loadFailed" = "Не удалось загрузить статистику.";

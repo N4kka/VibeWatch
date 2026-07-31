@@ -733,3 +733,15 @@
 "social.profile.notFound" = "यह प्रोफ़ाइल मौजूद नहीं है।";
 "social.profile.you" = "यह आप हैं।";
 "social.profile.loadFailed" = "प्रोफ़ाइल लोड नहीं हो सकी।";
+
+// Blocco 9 (SPEC v3 §3.6/§9.3): voti in stelle, favorites, stats
+"rating.title" = "आपकी रेटिंग";
+"rating.saveFailed" = "आपकी रेटिंग सहेजी नहीं जा सकी। फिर से कोशिश करें।";
+"profile.favorites.movies" = "पसंदीदा फ़िल्में";
+"profile.favorites.shows" = "पसंदीदा शो";
+"profile.stats.title" = "आपके आँकड़े";
+"profile.stats.watchTime" = "देखने का समय";
+"profile.stats.movies" = "फ़िल्में";
+"profile.stats.shows" = "शो";
+"profile.stats.episodes" = "एपिसोड";
+"profile.stats.loadFailed" = "आँकड़े लोड नहीं हो सके।";

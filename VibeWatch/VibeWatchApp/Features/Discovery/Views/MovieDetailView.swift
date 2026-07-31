@@ -76,6 +76,9 @@ struct MovieDetailView: View {
                                 }
                             )
 
+                            // §3.6: stelle = giudizio, cuore = "mi rappresenta". Coesistono.
+                            StarRatingSection(mediaType: "movie", tmdbId: movie.id)
+
                             GoodFitSection(
                                 title: String(format: "movieDetail.goodFitTitle".localized, movie.title),
                                 subtitle: "movieDetail.goodFitSubtitle".localized,

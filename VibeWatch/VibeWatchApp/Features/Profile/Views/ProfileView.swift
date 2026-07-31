@@ -363,7 +363,10 @@ struct ProfileView: View {
         ScrollView {
             VStack(spacing: 12) {
                 profileHeader
-                
+
+                // §9.3/§13.7: i numeri li fa il server, il client non somma niente.
+                ProfileStatsSection()
+
                 settingsSection
                 
                 Button {

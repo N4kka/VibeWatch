@@ -733,3 +733,15 @@
 "social.profile.notFound" = "このプロフィールは存在しません。";
 "social.profile.you" = "自分のプロフィールです。";
 "social.profile.loadFailed" = "プロフィールを読み込めませんでした。";
+
+// Blocco 9 (SPEC v3 §3.6/§9.3): voti in stelle, favorites, stats
+"rating.title" = "あなたの評価";
+"rating.saveFailed" = "評価を保存できませんでした。もう一度お試しください。";
+"profile.favorites.movies" = "お気に入りの映画";
+"profile.favorites.shows" = "お気に入りの番組";
+"profile.stats.title" = "あなたの統計";
+"profile.stats.watchTime" = "視聴時間";
+"profile.stats.movies" = "映画";
+"profile.stats.shows" = "番組";
+"profile.stats.episodes" = "エピソード";
+"profile.stats.loadFailed" = "統計を読み込めませんでした。";

@@ -721,3 +721,15 @@
 "social.profile.notFound" = "Den här profilen finns inte.";
 "social.profile.you" = "Det här är du.";
 "social.profile.loadFailed" = "Profilen kunde inte läsas in.";
+
+// Blocco 9 (SPEC v3 §3.6/§9.3): voti in stelle, favorites, stats
+"rating.title" = "Ditt betyg";
+"rating.saveFailed" = "Betyget kunde inte sparas. Försök igen.";
+"profile.favorites.movies" = "Favoritfilmer";
+"profile.favorites.shows" = "Favoritserier";
+"profile.stats.title" = "Din statistik";
+"profile.stats.watchTime" = "Tittartid";
+"profile.stats.movies" = "Filmer";
+"profile.stats.shows" = "Serier";
+"profile.stats.episodes" = "Avsnitt";
+"profile.stats.loadFailed" = "Statistiken kunde inte läsas in.";

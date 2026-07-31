@@ -267,6 +267,8 @@ struct TVShowDetailView: View {
                             onLikedTap: { Task { await handleLikedTap(tvShow: tvShow, movie: movie) } },
                             onDislikedTap: { Task { await handleDislikedTap(tvShow: tvShow, movie: movie) } }
                         )
+                        // §3.6: stelle = giudizio, cuore = "mi rappresenta". Coesistono.
+                        StarRatingSection(mediaType: "tv", tmdbId: tvShow.id)
                         GoodFitSection(
                             title: String(format: "movieDetail.goodFitTitle".localized, tvShow.name),
                             subtitle: "movieDetail.goodFitSubtitle".localized,

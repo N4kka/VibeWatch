@@ -721,3 +721,15 @@
 "social.profile.notFound" = "Bu profil mevcut değil.";
 "social.profile.you" = "Bu sensin.";
 "social.profile.loadFailed" = "Profil yüklenemedi.";
+
+// Blocco 9 (SPEC v3 §3.6/§9.3): voti in stelle, favorites, stats
+"rating.title" = "Puanın";
+"rating.saveFailed" = "Puan kaydedilemedi. Tekrar dene.";
+"profile.favorites.movies" = "Favori filmler";
+"profile.favorites.shows" = "Favori diziler";
+"profile.stats.title" = "İstatistiklerin";
+"profile.stats.watchTime" = "İzleme süresi";
+"profile.stats.movies" = "Filmler";
+"profile.stats.shows" = "Diziler";
+"profile.stats.episodes" = "Bölümler";
+"profile.stats.loadFailed" = "İstatistikler yüklenemedi.";

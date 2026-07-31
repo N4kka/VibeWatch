@@ -733,3 +733,15 @@
 "social.profile.notFound" = "Tätä profiilia ei ole.";
 "social.profile.you" = "Tämä olet sinä.";
 "social.profile.loadFailed" = "Profiilia ei voitu ladata.";
+
+// Blocco 9 (SPEC v3 §3.6/§9.3): voti in stelle, favorites, stats
+"rating.title" = "Arviosi";
+"rating.saveFailed" = "Arvion tallennus epäonnistui. Yritä uudelleen.";
+"profile.favorites.movies" = "Lempielokuvat";
+"profile.favorites.shows" = "Lempisarjat";
+"profile.stats.title" = "Tilastosi";
+"profile.stats.watchTime" = "Katseluaika";
+"profile.stats.movies" = "Elokuvat";
+"profile.stats.shows" = "Sarjat";
+"profile.stats.episodes" = "Jaksot";
+"profile.stats.loadFailed" = "Tilastojen lataus epäonnistui.";

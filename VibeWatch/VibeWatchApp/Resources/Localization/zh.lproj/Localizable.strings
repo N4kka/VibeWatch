@@ -718,3 +718,15 @@
 "social.profile.notFound" = "该主页不存在。";
 "social.profile.you" = "这是你的主页。";
 "social.profile.loadFailed" = "无法加载该主页。";
+
+// Blocco 9 (SPEC v3 §3.6/§9.3): voti in stelle, favorites, stats
+"rating.title" = "我的评分";
+"rating.saveFailed" = "无法保存评分,请重试。";
+"profile.favorites.movies" = "最爱的电影";
+"profile.favorites.shows" = "最爱的剧集";
+"profile.stats.title" = "我的统计";
+"profile.stats.watchTime" = "观看时长";
+"profile.stats.movies" = "电影";
+"profile.stats.shows" = "剧集";
+"profile.stats.episodes" = "集数";
+"profile.stats.loadFailed" = "无法加载统计数据。";

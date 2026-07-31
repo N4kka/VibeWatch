@@ -472,6 +472,18 @@ class SupabaseService: ObservableObject {
         return PublicProfileDetail(json: json)
     }
 
+    /// Le stats di base di §9.3, calcolate dal server (§13.7): il client non somma niente.
+    /// Una risposta illeggibile è un errore, mai un pannello di zeri.
+    func myStats() async throws -> UserStats {
+        let data = try await callRPC(function: "get_my_stats", payload: [:])
+        guard let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+              let stats = UserStats(json: json) else {
+            throw SupabaseError.unexpectedResponse(
+                body: String(data: data.prefix(300), encoding: .utf8) ?? "<non-UTF8>")
+        }
+        return stats
+    }
+
     private func callRPC(function: String, payload: [String: Any]) async throws -> Data {
         guard let baseURL = URL(string: Config.supabaseURL) else {
             throw SupabaseError.notConfigured

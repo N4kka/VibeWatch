@@ -735,3 +735,15 @@
 "social.profile.notFound" = "Denne profil findes ikke.";
 "social.profile.you" = "Det er dig.";
 "social.profile.loadFailed" = "Profilen kunne ikke indlæses.";
+
+// Blocco 9 (SPEC v3 §3.6/§9.3): voti in stelle, favorites, stats
+"rating.title" = "Din vurdering";
+"rating.saveFailed" = "Vurderingen kunne ikke gemmes. Prøv igen.";
+"profile.favorites.movies" = "Yndlingsfilm";
+"profile.favorites.shows" = "Yndlingsserier";
+"profile.stats.title" = "Din statistik";
+"profile.stats.watchTime" = "Seertid";
+"profile.stats.movies" = "Film";
+"profile.stats.shows" = "Serier";
+"profile.stats.episodes" = "Afsnit";
+"profile.stats.loadFailed" = "Statistikken kunne ikke indlæses.";

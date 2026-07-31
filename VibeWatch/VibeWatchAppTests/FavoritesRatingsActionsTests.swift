@@ -145,6 +145,82 @@ final class FavoritesRatingsActionsTests: XCTestCase {
         XCTAssertEqual(engine.profileContentPulls, 1)
     }
 
+    // MARK: - Parsing (§9.3)
+
+    func testIlProfiloPortaIFavorites() {
+        let detail = PublicProfileDetail(json: [
+            "found": true, "id": "u1", "username": "anna_r",
+            "favorites": [
+                "movie": [["slot": 1, "tmdb_id": 603], ["slot": 3, "tmdb_id": 604]],
+                "tv": [["slot": 2, "tmdb_id": 1399]],
+            ],
+        ])
+        XCTAssertEqual(detail?.favoriteMovies, [FavoriteSlot(slot: 1, tmdbId: 603),
+                                                FavoriteSlot(slot: 3, tmdbId: 604)])
+        XCTAssertEqual(detail?.favoriteShows, [FavoriteSlot(slot: 2, tmdbId: 1399)])
+    }
+
+    func testUnProfiloSenzaFavoritesNonERotto() {
+        let detail = PublicProfileDetail(json: ["found": true, "id": "u1", "username": "anna_r"])
+        XCTAssertEqual(detail?.favoriteMovies, [])
+        XCTAssertEqual(detail?.favoriteShows, [])
+    }
+
+    func testLeStatsSiLeggono() {
+        let stats = UserStats(json: ["watch_time_seconds": 14100, "episodes_watched": 3,
+                                     "shows_watched": 1, "movies_watched": 1, "ratings_given": 4])
+        XCTAssertEqual(stats?.watchTimeSeconds, 14100)
+        XCTAssertEqual(stats?.episodesWatched, 3)
+    }
+
+    /// Una risposta senza il tempo non diventa un pannello di zeri: e' un errore del chiamante.
+    func testStatsIllegibiliSonoNilNonZeri() {
+        XCTAssertNil(UserStats(json: [:]))
+        XCTAssertNil(UserStats(json: ["episodes_watched": 3]))
+    }
+
+    // MARK: - Le stelle (§3.6)
+
+    func testLaStellaScriveELoStatoResta() async {
+        let vm = StarRatingViewModel(
+            mediaType: "movie", tmdbId: 603,
+            actions: RatingActions(syncEngine: engine, sqlite: .shared, currentUserId: { "u1" }),
+            sqlite: .shared, currentUserId: { "u1" })
+        await vm.setRating(7)
+
+        XCTAssertEqual(vm.rating, 7)
+        XCTAssertFalse(vm.saveFailed)
+        XCTAssertEqual(engine.queued.first?.payload["rating"] as? Int, 7)
+    }
+
+    /// Toccare lo stesso valore toglie il voto, come Letterboxd: parte una DELETE, non un upsert.
+    func testToccareLoStessoValoreToglieIlVoto() async {
+        let vm = StarRatingViewModel(
+            mediaType: "movie", tmdbId: 603,
+            actions: RatingActions(syncEngine: engine, sqlite: .shared, currentUserId: { "u1" }),
+            sqlite: .shared, currentUserId: { "u1" })
+        await vm.setRating(7)
+        await vm.setRating(7)
+
+        XCTAssertEqual(vm.rating, 0)
+        XCTAssertEqual(engine.queued.last?.operationType, "DELETE")
+    }
+
+    /// La regola di tutta la sessione: un voto che il server non ha mai saputo non resta sullo
+    /// schermo a mentire.
+    func testLaStellaCheFallisceTornaIndietro() async {
+        // currentUserId nil dentro le azioni: la scrittura fallisce con notAuthenticated.
+        let vm = StarRatingViewModel(
+            mediaType: "movie", tmdbId: 603,
+            actions: RatingActions(syncEngine: engine, sqlite: .shared, currentUserId: { nil }),
+            sqlite: .shared, currentUserId: { "u1" })
+        await vm.setRating(8)
+
+        XCTAssertEqual(vm.rating, 0, "lo stato torna quello vero")
+        XCTAssertTrue(vm.saveFailed, "e il fallimento si dichiara")
+        XCTAssertTrue(engine.queued.isEmpty)
+    }
+
     // MARK: - Helper
 
     private func XCTAssertThrowsInvalidShape(_ body: @escaping () async throws -> Void,

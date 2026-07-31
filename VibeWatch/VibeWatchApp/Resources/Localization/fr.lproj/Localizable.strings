@@ -733,3 +733,15 @@
 "social.profile.notFound" = "Ce profil n'existe pas.";
 "social.profile.you" = "C'est vous.";
 "social.profile.loadFailed" = "Impossible de charger ce profil.";
+
+// Blocco 9 (SPEC v3 §3.6/§9.3): voti in stelle, favorites, stats
+"rating.title" = "Ta note";
+"rating.saveFailed" = "Impossible d'enregistrer la note. Réessaie.";
+"profile.favorites.movies" = "Films préférés";
+"profile.favorites.shows" = "Séries préférées";
+"profile.stats.title" = "Tes statistiques";
+"profile.stats.watchTime" = "Temps de visionnage";
+"profile.stats.movies" = "Films";
+"profile.stats.shows" = "Séries";
+"profile.stats.episodes" = "Épisodes";
+"profile.stats.loadFailed" = "Impossible de charger les statistiques.";
