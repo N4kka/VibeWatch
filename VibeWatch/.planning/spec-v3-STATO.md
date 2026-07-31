@@ -24,7 +24,7 @@ convenga, non se si possa.
 | 2 | Catalogo + `catalog-resolve` | **fatto e in produzione**, verificato end-to-end su Game of Thrones |
 | 3 | `watch_events` + `tv_show_state` | **fatto e in produzione**. Harness SQL, 64 asserzioni verdi |
 | — | `apply_mutations` (§4, §7.2) | **fatto e in produzione**, collaudato su utente usa-e-getta |
-| 4 | Paginazione del pull | **fatto**. `SyncPagination`, 8 test verdi |
+| 4 | Paginazione del pull | **fatto e verificato**. `SyncPagination`, 8 test verdi + pull reale sul dispositivo, nessun `Failed to pull` |
 | 5+ | Integrazione client, import, UI, sociale | da fare ← ripartire da qui |
 
 ## Cosa gira in produzione adesso
