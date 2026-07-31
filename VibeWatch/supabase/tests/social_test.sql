@@ -506,6 +506,63 @@ select t.eq((select count(*)::integer from public.search_users('anna_rossi2', 10
 
 reset role;
 
+\echo ''
+\echo '=== §9.3 get_public_profile: contatori dal server, blocchi indistinguibili dal nulla'
+
+-- Lo stato ereditato dalla sezione sopra: a segue b (follow attivo), d blocca a, b e' privato.
+-- b torna pubblico; il resto si riusa.
+update public.profiles set is_profile_public = true
+ where id = 'aaaaaaaa-0000-0000-0000-000000000002';
+
+set local role authenticated;
+set local request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
+
+select t.eq((public.get_public_profile('anna_rossi2'))->>'found', 'true', 'b si trova');
+select t.eq((public.get_public_profile('anna_rossi2'))->>'followers', '1',
+            'e ha un follower: il conteggio arriva dal definer, la RLS al chiamante lo negherebbe');
+select t.eq((public.get_public_profile('anna_rossi2'))->>'is_following', 'true',
+            'a sa di seguirlo');
+select t.eq((public.get_public_profile('anna_rossi2'))->>'follows_me', 'false',
+            'b non ricambia');
+select t.eq((public.get_public_profile('ANNA_ROSSI2'))->>'found', 'true',
+            'lo username e'' citext anche qui: le maiuscole non nascondono nessuno');
+
+set local request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000002';
+select t.eq((public.get_public_profile('anna_r'))->>'following', '1',
+            'dal lato di b: a segue una persona');
+select t.eq((public.get_public_profile('anna_r'))->>'followers', '0', 'e nessuno segue a');
+select t.eq((public.get_public_profile('anna_r'))->>'follows_me', 'true', 'a segue b, e b lo sa');
+
+select t.eq((public.get_public_profile('nessuno'))->>'found', 'false',
+            'un profilo inesistente risponde found:false, non un errore');
+
+-- Il blocco, nei due versi, e' indistinguibile dall''inesistenza: che il blocco esista e' privato.
+set local request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
+select t.eq((public.get_public_profile('zed'))->>'found', 'false',
+            'd mi ha bloccato: per me non esiste');
+set local request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000004';
+select t.eq((public.get_public_profile('anna_r'))->>'found', 'false',
+            'e chi ho bloccato non esiste per me');
+
+-- La superficie resta public_profiles: privato o senza username = inesistente.
+reset role;
+update public.profiles set is_profile_public = false
+ where id = 'aaaaaaaa-0000-0000-0000-000000000002';
+set local role authenticated;
+set local request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
+select t.eq((public.get_public_profile('anna_rossi2'))->>'found', 'false',
+            'un profilo privato non si interroga');
+
+reset role;
+
+select t.eq((select count(*)::integer from pg_proc p
+              where p.proname = 'get_public_profile'
+                and array_to_string(p.proacl, ',') like '%anon=X%'), 0,
+            'get_public_profile non e'' chiamabile da anon');
+select t.is_true((select array_to_string(p.proacl, ',') like '%authenticated=X%'
+                    from pg_proc p where p.proname = 'get_public_profile'),
+            'ma lo e'' da authenticated');
+
 -- Chi puo' chiamare cosa.
 select t.eq((select count(*)::integer from pg_proc p
               where p.proname = 'search_users'
