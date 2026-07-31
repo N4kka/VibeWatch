@@ -8,10 +8,13 @@ import SwiftUI
 /// si sa cosa guardare, il Tracking quando lo si sa già: la seconda è molto più frequente.
 ///
 /// Il pulsante resta visibile su tutti i tab, quindi l'AI non è più lontana — è solo altrove.
+///
+/// **Nessuna animazione, di proposito.** La prima versione aveva un "respiro" (`scaleEffect`
+/// ripetuto all'infinito): dentro lo stack della tab bar quell'animazione veniva raccolta dal
+/// layout e il pulsante derivava in diagonale a ogni cambio di tab. Un elemento sempre a schermo
+/// che si muove non è vivo, è rotto: deve stare fermo dov'è.
 struct AIFloatingButton: View {
     let action: () -> Void
-
-    @State private var pulsing = false
 
     var body: some View {
         Button(action: action) {
@@ -31,13 +34,8 @@ struct AIFloatingButton: View {
                     .font(.system(size: 22, weight: .semibold))
                     .foregroundColor(.white)
             }
-            // Il respiro è lento e minimo di proposito: un elemento sempre a schermo che si
-            // muove troppo diventa qualcosa da cui distogliere lo sguardo, non da premere.
-            .scaleEffect(pulsing ? 1.04 : 1.0)
-            .animation(.easeInOut(duration: 2.2).repeatForever(autoreverses: true), value: pulsing)
         }
         .buttonStyle(PlainButtonStyle())
         .accessibilityLabel(Text("tab.ai".localized))
-        .onAppear { pulsing = true }
     }
 }

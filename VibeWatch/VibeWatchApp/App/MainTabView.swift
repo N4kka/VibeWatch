@@ -231,8 +231,22 @@ struct MainTabView: View {
             withAnimation { selectedTab = 2 }
             Logger.debug("[MainTabView] Navigated to Tracking tab")
         }
-        .fullScreenCover(isPresented: $showAI) {
-            AIRecommendationsView(viewModel: aiViewModel)
+        // `sheet` e non `fullScreenCover`: il primo si chiude con lo swipe verso il basso, il
+        // secondo non si chiude affatto se dentro non c'e' un pulsante — ed e' com'era, un
+        // pannello senza uscita. Il pulsante c'e' lo stesso, perche' lo swipe non si vede.
+        .sheet(isPresented: $showAI) {
+            NavigationStack {
+                AIRecommendationsView(viewModel: aiViewModel)
+                    .toolbar {
+                        ToolbarItem(placement: .topBarLeading) {
+                            Button { showAI = false } label: {
+                                Image(systemName: "chevron.down")
+                                    .font(.system(size: 15, weight: .semibold))
+                            }
+                            .accessibilityLabel(Text("common.close".localized))
+                        }
+                    }
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .presentProPaywall)) { notification in
             let source = (notification.userInfo?["source"] as? String) ?? "unknown"

@@ -693,3 +693,5 @@
 "tracking.error.noNextEpisode" = "This series has no next episode.";
 
 "tab.tracking" = "Tracking";
+
+"common.close" = "Close";

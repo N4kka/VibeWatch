@@ -690,3 +690,5 @@
 "tracking.error.noNextEpisode" = "Questa serie non ha un prossimo episodio.";
 
 "tab.tracking" = "Tracking";
+
+"common.close" = "Chiudi";

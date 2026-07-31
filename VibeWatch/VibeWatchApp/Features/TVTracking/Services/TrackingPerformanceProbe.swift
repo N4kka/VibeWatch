@@ -50,7 +50,7 @@ enum TrackingPerformanceProbe {
         dataReadyAt = CFAbsoluteTimeGetCurrent()
         os_signpost(.event, log: log, name: intervalName, signpostID: id,
                     "dati pronti: %d righe", rows)
-        printer.info("§13.6 dati pronti in \(Self.ms(from: start), privacy: .public) ms (\(rows) righe)")
+        printer.info("§13.6 dati pronti in \(Self.ms(from: start), format: .fixed(precision: 1), privacy: .public) ms (\(rows) righe)")
     }
 
     /// Il primo fotogramma con contenuto è a schermo.
@@ -72,11 +72,11 @@ enum TrackingPerformanceProbe {
         let verdetto = total <= 300 ? "OK" : "OLTRE IL BUDGET"
         if let render {
             printer.info("""
-            §13.6 \(verdetto, privacy: .public): totale \(total, privacy: .public) ms \
-            (dati + disegno \(render, privacy: .public) ms) — budget 300 ms
+            §13.6 \(verdetto, privacy: .public): totale \(total, format: .fixed(precision: 1), privacy: .public) ms \
+            (dati + disegno \(render, format: .fixed(precision: 1), privacy: .public) ms) — budget 300 ms
             """)
         } else {
-            printer.info("§13.6 \(verdetto, privacy: .public): totale \(total, privacy: .public) ms — budget 300 ms")
+            printer.info("§13.6 \(verdetto, privacy: .public): totale \(total, format: .fixed(precision: 1), privacy: .public) ms — budget 300 ms")
         }
     }
 
