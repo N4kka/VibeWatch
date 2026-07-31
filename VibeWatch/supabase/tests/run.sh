@@ -48,9 +48,13 @@ for pass in 1 2; do
 echo "→ migration (passata $pass)"
 for file in "$MIGRATIONS"/*.sql; do
   # Le migration precedenti a SPEC v3 presuppongono lo schema di produzione, che qui non c'e':
-  # l'harness ricrea solo cio' che serve ai test del tracking.
+  # l'harness ricrea solo cio' che serve ai test del tracking e dell'import. Si elencano per nome
+  # invece di allargare il glob: `20260731010000_apply_mutations_tracking` riscrive una funzione
+  # che tocca meta' dello schema di produzione e qui non avrebbe le tabelle su cui appoggiarsi.
   case "$(basename "$file")" in
     202607300*) ;;
+    20260731120000_create_import_jobs.sql) ;;
+    20260731140000_import_report.sql) ;;
     *) continue ;;
   esac
   [ "$pass" = 1 ] && echo "   $(basename "$file")"

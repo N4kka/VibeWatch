@@ -310,6 +310,73 @@ select t.eq(public.user_today('33333333-3333-3333-3333-333333333333'),
             (now() at time zone 'UTC')::date,
             'un utente senza preferenze usa UTC');
 
+\echo ''
+\echo '=== §7.4 il report di fine import'
+
+-- Un job finto con la forma vera dello staging: due episodi scritti, uno non riconosciuto,
+-- due voti (uno indecodificabile). Serve a verificare che il report NON abbellisca.
+insert into public.import_jobs (id, user_id, source, status, phase, totals)
+values ('aaaaaaaa-0000-4000-8000-000000000001',
+        '11111111-1111-1111-1111-111111111111', 'tvtime', 'running', 'recomputing',
+        '{"written": 2}'::jsonb);
+
+insert into public.import_staging (job_id, row_index, raw, resolved, status, error) values
+  ('aaaaaaaa-0000-4000-8000-000000000001', 0,
+   '{"row_kind":"event","series_name":"Test Show","tvdb_series_id":"900","watched_at":"2019-07-02 05:58:55"}'::jsonb,
+   '{"tmdb_show_id":100,"season_number":1,"episode_number":1}'::jsonb, 'written', null),
+  ('aaaaaaaa-0000-4000-8000-000000000001', 1,
+   '{"row_kind":"event","series_name":"Test Show","tvdb_series_id":"900","watched_at":"2021-03-04 10:00:00"}'::jsonb,
+   '{"tmdb_show_id":100,"season_number":1,"episode_number":2}'::jsonb, 'written', null),
+  ('aaaaaaaa-0000-4000-8000-000000000001', 2,
+   '{"row_kind":"event","series_name":"Serie Sconosciuta","tvdb_series_id":"901","watched_at":"2020-01-01 00:00:00"}'::jsonb,
+   null, 'unresolved', 'catalogo: not_found'),
+  ('aaaaaaaa-0000-4000-8000-000000000001', 3,
+   '{"row_kind":"rating","kind":"star"}'::jsonb, null, 'skipped', 'voti rinviati'),
+  ('aaaaaaaa-0000-4000-8000-000000000001', 4,
+   '{"row_kind":"rating","kind":"undecodable"}'::jsonb, null, 'skipped', 'voti rinviati');
+
+select t.eq((public.import_report('aaaaaaaa-0000-4000-8000-000000000001')->>'episodi_importati')::int,
+            2, 'il report conta gli episodi davvero scritti');
+select t.eq((public.import_report('aaaaaaaa-0000-4000-8000-000000000001')->>'serie_importate')::int,
+            1, 'e le serie distinte');
+select t.eq(public.import_report('aaaaaaaa-0000-4000-8000-000000000001')->>'dal',
+            '2019-07-02 05:58:55', 'intervallo di date: dal');
+select t.eq(public.import_report('aaaaaaaa-0000-4000-8000-000000000001')->>'al',
+            '2021-03-04 10:00:00', 'intervallo di date: al');
+
+-- Il cuore di §7.4: i non riconosciuti non sono un numero, sono un elenco di titoli.
+select t.eq((public.import_report('aaaaaaaa-0000-4000-8000-000000000001')->>'non_riconosciuti_episodi')::int,
+            1, 'un episodio non riconosciuto viene dichiarato');
+select t.eq(public.import_report('aaaaaaaa-0000-4000-8000-000000000001')
+              ->'non_riconosciuti_elenco'->0->>'titolo',
+            'Serie Sconosciuta', 'il report nomina il titolo, non solo il conteggio');
+select t.eq(public.import_report('aaaaaaaa-0000-4000-8000-000000000001')
+              ->'non_riconosciuti_elenco'->0->>'motivo',
+            'catalogo: not_found', 'e dice perche'', cosi'' si puo'' risolvere a mano');
+
+select t.eq((public.import_report('aaaaaaaa-0000-4000-8000-000000000001')->>'voti_indecodificabili')::int,
+            1, 'i voti indecodificabili si dichiarano (§7.5)');
+select t.eq(public.import_report('aaaaaaaa-0000-4000-8000-000000000001')->>'voti_importati',
+            'false', 'e si dice che i voti NON sono stati importati: user_ratings arriva col blocco 9');
+select t.eq(public.import_report('aaaaaaaa-0000-4000-8000-000000000001')->>'film_supportati',
+            'false', 'zero film non deve sembrare "non ne avevi": i film non si importano ancora');
+
+
+-- La fase 5 deve vedere TUTTE le serie toccate, a blocchi, senza saltarne.
+select t.eq((select count(*) from public.import_touched_shows(
+              'aaaaaaaa-0000-4000-8000-000000000001', 0, 200)),
+            1::bigint, 'le serie toccate dal job sono quelle scritte, distinte');
+select t.eq((select count(*) from public.import_touched_shows(
+              'aaaaaaaa-0000-4000-8000-000000000001', 100, 200)),
+            0::bigint, 'il checkpoint per id di serie non rilegge cio'' che ha gia'' fatto');
+
+-- Un import che perde tutto non deve poter sembrare riuscito.
+insert into public.import_jobs (id, user_id, source, status, phase)
+values ('aaaaaaaa-0000-4000-8000-000000000002',
+        '11111111-1111-1111-1111-111111111111', 'tvtime', 'running', 'recomputing');
+select t.eq((public.import_report('aaaaaaaa-0000-4000-8000-000000000002')->>'episodi_importati')::int,
+            0, 'un job senza righe dichiara zero episodi');
+
 rollback;
 
 \echo ''

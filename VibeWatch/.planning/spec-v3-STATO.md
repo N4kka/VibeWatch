@@ -15,14 +15,15 @@ credevo.
 
 ## Da fare per prima cosa
 
-**Blocco 6, fasi 5-6 dell'import** (§7.2). Le fasi 1-4 sono fatte, deployate e collaudate
-end-to-end sull'export vero; restano:
+**Blocco 6: resta il collaudo delle fasi 5-6 e la decisione sul budget TMDB.** Le fasi 1-4 sono
+fatte, deployate e collaudate end-to-end sull'export vero. Le fasi 5-6 sono scritte e collaudate
+in SQL, ma `import-finalize` **non è ancora deployata**.
 
 | Fase | Cosa manca | Note per chi la scrive |
 |---|---|---|
 | 4. `writing` | **fatta, deployata e collaudata** (`supabase/functions/import-write/`, 11 test Deno + collaudo end-to-end) | Legge da `import_staging` le righe `status='resolved'`. **Il record DEVE contenere `user_id`**, altrimenti `apply_mutations` scrive `user_id_mismatch` in `sync_rejected_mutations` e prosegue in silenzio. `dedup_key` è già nello staging e rende l'operazione idempotente (criterio 2 di §13). **`is_special` va derivato dalla stagione RISOLTA da TMDB** (`resolved->>'season_number'`), non dal record grezzo: dopo il `resolving` la stagione autorevole è quella di TMDB, ed è quella che `recompute_tv_show_state` filtra con `is_special_episode`. Il flag originale di TV Time sta in `tvtime_is_special_raw` e va in `external_ref`. Una riga con `numbering_known = false` rimasta irrisolta **non è scrivibile** (il CHECK `watch_events_shape` vuole stagione ed episodio non nulli): va nel report, mai scritta con un numero inventato. |
-| 5. `recomputing` | ricalcolo `tv_show_state` per le serie toccate | **Domanda risolta: non serve per la correttezza, conviene come assicurazione.** Il trigger `watch_events_recompute_insert` è statement-level e ricalcola ogni `(user, show)` distinto di ogni INSERT; `apply_mutations` inserisce un elemento per volta, quindi lo stato è già giusto a fine fase 4. Misurato in produzione (utente usa-e-getta, transazione fatta fallire): **100 insert con trigger = 250 ms**, un ricalcolo singolo = **2,6 ms**, stima sull'export vero **~53 s** di lavoro DB contro ~1 s che costerebbe un giro finale su ~430 serie. Lo spreco è reale ma assoluto piccolo; la fase 5 vale come garanzia che un job interrotto fra due lotti finisca comunque consistente. |
-| 6. `done` | il report di §7.4 | **Obbligatorio, non decorativo.** Deve dire: N episodi/serie/film, intervallo di date, **N non riconosciuti con l'elenco dei titoli**, N voti indecodificabili. I dati ci sono già: `import_jobs.totals` e le righe `status='unresolved'` con la loro `error`. |
+| 5. `recomputing` | **scritta** (`import-finalize`), da deployare | **Domanda risolta: non serve per la correttezza, conviene come assicurazione.** Il trigger `watch_events_recompute_insert` è statement-level e ricalcola ogni `(user, show)` distinto di ogni INSERT; `apply_mutations` inserisce un elemento per volta, quindi lo stato è già giusto a fine fase 4. Misurato in produzione (utente usa-e-getta, transazione fatta fallire): **100 insert con trigger = 250 ms**, un ricalcolo singolo = **2,6 ms**, stima sull'export vero **~53 s** di lavoro DB contro ~1 s che costerebbe un giro finale su ~430 serie. Lo spreco è reale ma assoluto piccolo; la fase 5 vale come garanzia che un job interrotto fra due lotti finisca comunque consistente. |
+| 6. `done` | **scritta**: `public.import_report(job_id)` + `import-finalize`, 13 asserzioni SQL | **Obbligatorio, non decorativo.** Dice: N episodi/serie/film, intervallo di date, **N non riconosciuti con l'elenco dei titoli**, N voti indecodificabili. I dati ci sono già: `import_jobs.totals` e le righe `status='unresolved'` con la loro `error`. |
 
 Il modello da seguire per le nuove Edge Function è `import-resolve/index.ts`, che è la più recente
 e incorpora tutte le lezioni: lettura del job col JWT del chiamante, lavoro limitato per
@@ -39,7 +40,7 @@ invocazione, `status='failed'` scritto sul job in caso di eccezione.
 | — | `apply_mutations` (§4, §7.2) | **fatto e in produzione**, collaudato su utente usa-e-getta |
 | 4 | Paginazione del pull | **fatto e verificato**. `SyncPagination`, 8 test verdi + pull reale sul dispositivo, nessun `Failed to pull` |
 | 5 | Integrazione client | **fatto per la lettura**. SQLite + whitelist + pull + conflitti verificati su dati veri; il percorso di scrittura è cablato ma senza chiamanti (arrivano col blocco 7) |
-| 6 | Pipeline import + report | **fasi 1-4 fatte, deployate e collaudate end-to-end sull'export vero** ← ripartire dalla fase 5 |
+| 6 | Pipeline import + report | **fasi 1-4 in produzione e collaudate end-to-end**; fasi 5-6 scritte e verdi in SQL, `import-finalize` da deployare |
 | 7+ | UI, sociale, stats | da fare |
 
 ## Cosa gira in produzione adesso
@@ -233,9 +234,15 @@ esattamente ciò che §7.4 vieta.
   che finisce con `raise exception 'REPORT %', rep`. Il messaggio dell'errore torna indietro come
   output, e il rollback porta via utente di prova e righe. Niente da ricordarsi di cancellare.
 
-- **I revoke sulle funzioni vanno fatti a `PUBLIC`**, non ad `anon`/`authenticated`: Postgres
-  concede EXECUTE a PUBLIC di default e i due ruoli lo ereditano. Un revoke mirato non toglie
-  niente, e `has_function_privilege` continua a rispondere `true`.
+- **I revoke sulle funzioni vanno fatti a `PUBLIC` *e* ad `anon`/`authenticated`.** La prima
+  metà era già scritta qui e da sola porta fuori strada: Postgres concede EXECUTE a PUBLIC di
+  default, ma su Supabase c'è **anche** un `ALTER DEFAULT PRIVILEGES` che lo concede in modo
+  **esplicito** ai due ruoli client. Revocare solo a PUBLIC non toglie i grant espliciti e
+  `has_function_privilege` continua a rispondere `true` — verificato il 2026-07-31 su
+  `import_touched_shows`, che è `security definer` e prende un `job_id` arbitrario: sarebbe
+  bastato per farsi dire quali serie ha importato un altro utente. **Il controllo che vale è
+  `proacl`**, non il revoke che si è scritto: se ci si legge `anon=X/postgres`, il revoke non ha
+  fatto niente.
 - **Postgres rifiuta una transition table insieme a una lista di colonne**: `after update of
   deleted_at ... referencing old table` non si può scrivere. Il filtro sulla colonna va dentro la
   funzione del trigger.
