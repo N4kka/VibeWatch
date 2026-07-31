@@ -18,8 +18,16 @@ const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
 
 /** §7.2: l'import risolve in batch da 50 — è anche il massimo che `catalog-resolve` accetta. */
 const BATCH = 50
-/** Righe di staging annotate per invocazione. */
-const ROWS_PER_INVOCATION = 4_000
+/**
+ * Righe di staging lette per invocazione.
+ *
+ * **1000 e non di più, perché PostgREST tronca lì.** Il limite non è sul ruolo — `pgrst.db_max_rows`
+ * è nullo, ed è guardare quello che aveva portato a concludere che il tetto non esistesse — ma
+ * nella configurazione PostgREST del progetto. Con `.limit(4000)` questa funzione ne riceveva 1000
+ * e credeva di averne viste 4000: sull'export vero le prime 4.000 righe contengono 3.994 episodi
+ * distinti e ne vedeva 994. Non perdeva dati, perché il ciclo continua, ma la costante mentiva.
+ */
+const ROWS_PER_INVOCATION = 1_000
 
 /**
  * Legge il job **come il chiamante**: è la policy `import_jobs_select_own` a decidere se esiste.
@@ -127,6 +135,9 @@ serve(async (req: Request) => {
         },
         body: JSON.stringify({
           entities: lotto.map((id) => ({ tvdb_id: id, entity_type: 'episode' })),
+          // Sblocca il budget da import: `catalog-resolve` verifica da sé che il job sia di chi
+          // chiama e in fase `resolving`, quindi passarlo non è una dichiarazione ma una prova.
+          job_id: jobId,
         }),
       })
 
@@ -136,25 +147,51 @@ serve(async (req: Request) => {
       }
 
       const esito = await risposta.json()
+      const budgetEsaurito = esito?.budget_exhausted ?? false
+
       // Non si annota nulla in questo giro per gli id appena chiesti: si torna, si rilegge la
       // mappa e li si trova. Un giro in più costa una query, dedurre l'esito dalla risposta
       // costerebbe una seconda interpretazione delle stesse regole.
-      return jsonResponse({
-        done: false,
-        phase: 'resolving',
-        richiesti,
-        ancora_da_risolvere: Math.max(0, mancanti.length - richiesti),
-        budget_exhausted: esito?.budget_exhausted ?? false,
-      }, 200)
+      //
+      // **Tranne a budget esaurito.** Prima si tornava sempre qui, quindi finché *un* id del
+      // blocco mancava non veniva annotata *nessuna* riga: con 994 mancanti e il vecchio tetto
+      // orario passavano due ore prima che una sola riga avanzasse, e nel frattempo ogni
+      // invocazione rispondeva `done: false` senza aver fatto progressi. Se non si può più
+      // chiedere, si annota almeno ciò che è già risolvibile — altrimenti il job si impianta.
+      if (!budgetEsaurito) {
+        return jsonResponse({
+          done: false,
+          phase: 'resolving',
+          richiesti,
+          ancora_da_risolvere: Math.max(0, mancanti.length - richiesti),
+          budget_exhausted: false,
+        }, 200)
+      }
+
+      if (noti.size === 0) {
+        // Nulla di annotabile e budget finito: dirlo, invece di girare a vuoto.
+        return jsonResponse({
+          done: false,
+          phase: 'resolving',
+          richiesti,
+          ancora_da_risolvere: mancanti.length,
+          budget_exhausted: true,
+          annotate: 0,
+        }, 200)
+      }
     }
 
-    // Tutti gli id di questo blocco sono nella mappa: si annotano le righe.
+    // Si annota ciò che la mappa sa: tutto il blocco nel caso normale, la sola parte già
+    // risolvibile quando si arriva qui col budget esaurito.
     let risolte = 0
     let irrisolte = 0
 
     for (const riga of pending) {
       const raw = riga.raw as Record<string, unknown>
       const mappa = noti.get(Number(raw.tvdb_episode_id))
+      // Con il budget esaurito si arriva qui con parte del blocco ancora fuori mappa: quelle
+      // righe restano `pending` e le riprende il giro dopo, invece di essere marcate irrisolte.
+      if (!mappa) continue
       const trovato = mappa?.resolution === 'found' && mappa.tmdb_show_id !== null
 
       const { error } = await admin.from('import_staging').update({
@@ -186,7 +223,14 @@ serve(async (req: Request) => {
       .update({ totals }).eq('id', jobId)
     if (updateError) throw new Error(`totali non salvati: ${updateError.message}`)
 
-    return jsonResponse({ done: false, phase: 'resolving', risolte, irrisolte, totals }, 200)
+    return jsonResponse({
+      done: false,
+      phase: 'resolving',
+      risolte,
+      irrisolte,
+      budget_exhausted: mancanti.length > 0,
+      totals,
+    }, 200)
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     await admin.from('import_jobs')

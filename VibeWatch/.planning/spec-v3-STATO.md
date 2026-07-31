@@ -58,7 +58,7 @@ invocazione, `status='failed'` scritto sul job in caso di eccezione.
   (§4 `serverWins`); una DELETE fa soft-delete e il ricalcolo riporta `next` a S1E2. Zero righe in
   `sync_rejected_mutations` in tutti e quattro i passaggi.
 - Job `pg_cron` `refresh-backlog` alle 05:00 UTC.
-- Edge Function `catalog-resolve` versione 3, `verify_jwt` attivo.
+- Edge Function `catalog-resolve`, `verify_jwt` attivo. Job `pg_cron` `catalog-prewarm` alle 03:30 UTC.
 - **Import**: tabelle `import_jobs` e `import_staging` (RLS con sole policy di lettura: le fasi le
   muove il server), bucket privato `imports` con policy che confinano ogni utente alla propria
   cartella, Edge Function `import-parse` (fase 2, **versione 3**), `import-resolve` (fase 3) e
@@ -124,24 +124,54 @@ progresso dell'oracolo**.
 
 **Tre problemi trovati, di cui uno grosso.**
 
-1. **Un import reale richiede ~35 ore.** `catalog-resolve` fa **una chiamata `/find` per
-   episodio** e `CALLER_CALLS_PER_HOUR` è 600: 21.189 episodi distinti = 35,3 ore. Il budget
-   globale (50.000/giorno) non è il vincolo, lo è il tetto orario per utente. Misurato: 12
-   invocazioni hanno risolto 600 episodi e poi il tetto ha chiuso, esattamente come previsto.
-   È il momento di acquisizione (§10) e la spec promette "una push a fine import": va deciso se
-   alzare il tetto per i job di import, se raggruppare le `/find`, o se cambiare la promessa.
-2. **`import-resolve` si impianta a budget esaurito.** Non annota **nessuna** riga finché
-   *tutti* gli id del blocco sono in mappa: con 994 mancanti in un blocco e 600/ora, passano due
-   ore prima che una sola riga venga annotata, e nel frattempo ogni invocazione torna
-   `done: false` senza aver fatto progressi. Andrebbe annotato ciò che è già risolvibile.
-3. **`ROWS_PER_INVOCATION = 4000` in `import-resolve` è una costante che mente**, per il tetto
-   PostgREST qui sopra. Non è perdita di dati — il ciclo continua — ma la fase costa quattro
-   volte le invocazioni previste.
+1. ~~Un import reale richiede ~35 ore~~ — **risolto**, vedi la sezione qui sotto.
+2. ~~`import-resolve` si impianta a budget esaurito~~ — **risolto**: quando non può più chiedere,
+   annota comunque le righe già risolvibili invece di girare a vuoto.
+3. ~~`ROWS_PER_INVOCATION = 4000` è una costante che mente~~ — **risolto**: portata a 1000, che è
+   quanto PostgREST restituisce davvero, con il perché scritto accanto.
 
 **Un difetto mio, corretto subito:** `totals.written` contava le mutazioni *costruite*, non le
 righe nate. Dopo il rigioco dichiarava 1116 episodi importati con 558 in tabella. Ora conta gli
 inserimenti veri e tiene `already_present` separato — un report che gonfia i numeri è
 esattamente ciò che §7.4 vieta.
+
+
+## Le 35 ore dell'import, e come sono diventate minuti
+
+Il problema non era uno ma due, indipendenti, e **nessuno dei due era TMDB**: misurato, TMDB non
+restituisce header di rate limit e accetta 30 chiamate in parallelo senza un solo 429.
+
+| Causa | Prima | Dopo |
+|---|---|---|
+| `CALLER_CALLS_PER_HOUR = 600` — un tetto nostro | 35 ore | tetto da import dedicato |
+| ciclo `/find` **sequenziale** (258 ms l'una, misurati) | 1,5 ore anche senza budget | ~9 min |
+
+Quattro interventi, tutti in repo:
+
+1. **`FIND_CONCURRENCY = 10` in `catalog-resolve`.** Il ciclo era `for … await`, quindi 50 entità
+   per richiesta erano ~13 s — quasi tutta la deadline da 20 s — per una funzione che in locale non
+   fa nulla. È il fattore 10, e non tocca nessuna policy. Deliberatamente modesto: la ragione per
+   stare bassi non è il limite di TMDB ma che una chiave condivisa bannata perché sembra uno
+   scraper costerebbe molto più dei minuti risparmiati.
+2. **Uno scope di budget per l'import.** `CALLER_CALLS_PER_HOUR` resta 600 per l'uso normale;
+   `IMPORT_CALLS_PER_HOUR = 30.000` si sblocca **solo presentando un `import_jobs` proprio e in
+   fase `resolving`**. Il permesso non è un flag nella richiesta: è l'esistenza di un import vero,
+   che nessuno può fabbricare perché su `import_jobs` non c'è policy di scrittura. Gli scope sono
+   separati (`user:` / `import:` / `prewarm`) apposta: con un contatore solo, l'import affamerebbe
+   l'app proprio mentre l'utente guarda la barra.
+3. **`GLOBAL_CALLS_PER_DAY` da 50.000 a 500.000.** A 50.000 l'intera base utenti poteva fare 2,3
+   import al giorno — il vincolo vero per una funzione di acquisizione (§10). 500.000 sono ~23
+   primi import al giorno e, mediati sulle 24 ore, 5,8 richieste al secondo verso TMDB.
+4. **`catalog-prewarm` + cron alle 03:30 UTC.** Prende la coda che gli import hanno lasciato
+   indietro e la risolve di notte, con un tetto (`PREWARM_CALLS_PER_HOUR = 10.000`) **sotto**
+   quello da import: se il budget globale è conteso deve perdere il lavoro che nessuno sta
+   aspettando. È il fix di prodotto vero — la mappa è globale (§1.5), quindi il secondo utente che
+   importa una serie popolare non paga niente.
+
+**Cosa NON è stato fatto, di proposito:** agganciare gli episodi per `(stagione, episodio)` invece
+che per `tvdb_episode_id`. Risparmierebbe circa il 57% delle chiamate ed è l'unica scorciatoia che
+§6 vieta esplicitamente — Digimon ha 253 id distinti su 107 coppie, quindi il match per numero
+assegnerebbe l'episodio sbagliato **in silenzio**.
 
 ## Due cose da sapere prima del blocco 7
 
