@@ -695,7 +695,13 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             // ma restano fuori finché i blocchi 8 e 9 non le creano lato server: una tabella
             // inesistente qui è un PGRST205 a ogni sync, non una riga in meno.
             "watch_events",
-            "tv_show_state"
+            "tv_show_state",
+            // §9.2: le due viste che la schermata Tracking legge. Sono viste e non tabelle, ma
+            // dal lato del pull non cambia niente — sono user-scoped e PostgREST le espone
+            // uguale. Ritirarle e' cio' che permette a §13.6 di reggere: la schermata si disegna
+            // da qui, senza rete.
+            "v_tv_tracking",
+            "v_tv_timeline"
         ]
 
         for table in userTables {
@@ -770,7 +776,8 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
                 totalConflictsResolved += resolved.conflictsResolved
 
                 if !resolved.rows.isEmpty {
-                    try await self.sqliteService.upsert(table: name, rows: resolved.rows)
+                    try await self.sqliteService.upsert(
+                        table: SyncEngine.localTable(for: name), rows: resolved.rows)
                 }
             }
         )
@@ -828,13 +835,28 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
     /// Fetches a local record by ID for conflict resolution.
     private func fetchLocalRecord(table: String, id: String) async -> [String: Any]? {
         let idColumn = getPrimaryKeyColumn(for: table)
-        let sql = "SELECT * FROM \(table) WHERE \(idColumn) = ? LIMIT 1"
+        let local = SyncEngine.localTable(for: table)
+        let sql = "SELECT * FROM \(local) WHERE \(idColumn) = ? LIMIT 1"
 
         do {
             let rows = try await sqliteService.queryRaw(sql, parameters: [id])
             return rows.first
         } catch {
             return nil
+        }
+    }
+
+    /// In quale tabella locale atterra una sorgente remota.
+    ///
+    /// Serve perché due sorgenti del pull sono **viste** (§9.2): il nome remoto porta il prefisso
+    /// `v_`, ma in SQLite quella roba è una tabella e chiamarla `v_tv_tracking` direbbe una cosa
+    /// falsa a chiunque la legga. La mappatura sta in un posto solo, così il giorno che se ne
+    /// aggiunge una terza non ci sono tre punti da ricordare.
+    nonisolated static func localTable(for remote: String) -> String {
+        switch remote {
+        case "v_tv_tracking": return "tv_tracking"
+        case "v_tv_timeline": return "tv_timeline"
+        default: return remote
         }
     }
 
@@ -847,6 +869,14 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             return "device_id"
         case "global_discovery_filters":
             return "user_id"
+        case "v_tv_tracking":
+            // Come tv_show_state: la chiave e' composta, ma dentro il sottoinsieme di un utente
+            // tmdb_show_id e' unico, che basta per identificare la riga e per ordinare le pagine.
+            return "tmdb_show_id"
+        case "v_tv_timeline":
+            // La vista si porta un id sintetico apposta: senza una colonna unica, due pagine
+            // sulla stessa tabella riescono a sovrapporsi e a saltare righe insieme (§5).
+            return "id"
         case "tv_show_state":
             // Chiave composta (user_id, tmdb_show_id): dato che il pull filtra già per user_id,
             // dentro quel sottoinsieme tmdb_show_id è unico, che è quanto serve sia per

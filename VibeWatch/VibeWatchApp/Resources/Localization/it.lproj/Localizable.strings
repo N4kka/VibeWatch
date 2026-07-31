@@ -664,3 +664,27 @@
 "tvTracking.lastSeen" = "ULTIMO VISTO %@";
 "tvTracking.soon" = "soon";
 "tvTracking.watchNow" = "Guarda ora";
+
+/* SPEC v3 §9.2 — schermata Tracking */
+"tracking.title" = "Tracking";
+"tracking.bucket.upNext" = "Da guardare";
+"tracking.bucket.stale" = "Non visti da tempo";
+"tracking.bucket.forLater" = "Da vedere più avanti";
+"tracking.bucket.upToDate" = "In pari";
+"tracking.bucket.notStarted" = "Da iniziare";
+"tracking.bucket.dropped" = "Abbandonate";
+"tracking.bucket.archived" = "Archiviate";
+"tracking.timeline.today" = "Esce oggi";
+"tracking.timeline.tomorrow" = "Domani";
+"tracking.timeline.thisWeek" = "Questa settimana";
+"tracking.timeline.thisMonth" = "Questo mese";
+"tracking.action.watched" = "Visto";
+"tracking.action.later" = "Più avanti";
+"tracking.caughtUp" = "In pari";
+"tracking.unknownShow" = "Serie sconosciuta";
+"tracking.special" = "SPECIALE";
+"tracking.empty.title" = "Non c'è ancora niente da guardare";
+"tracking.empty.subtitle" = "Segui una serie, o importa la tua cronologia di TV Time, e comparirà qui.";
+"tracking.error.title" = "Qualcosa è andato storto";
+"tracking.error.notAuthenticated" = "Devi aver effettuato l'accesso.";
+"tracking.error.noNextEpisode" = "Questa serie non ha un prossimo episodio.";

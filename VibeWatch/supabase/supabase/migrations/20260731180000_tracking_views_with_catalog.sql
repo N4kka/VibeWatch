@@ -67,6 +67,10 @@ comment on view public.v_tv_tracking is
 -- decidesse il client, il giorno che cambia idea servirebbe una nuova app su tutti i telefoni.
 create or replace view public.v_tv_timeline with (security_invoker = on) as
 select
+  -- Chiave stabile per il mirror locale e per la paginazione del pull: la timeline non ha una
+  -- colonna unica sua, e paginare senza un ordinamento unico fa saltare e ripetere righe
+  -- contemporaneamente (la lezione di §5, gia' pagata una volta).
+  e.tmdb_show_id || ':' || e.season_number || ':' || e.episode_number as id,
   s.user_id,
   e.tmdb_show_id,
   sh.name        as show_name,

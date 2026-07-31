@@ -82,6 +82,12 @@ enum SQLiteTable: String, CaseIterable {
     case watchEvents = "watch_events"
     case tvShowState = "tv_show_state"
 
+    // Specchi locali delle viste della schermata Tracking (§9.2). Sono cache di righe gia'
+    // pronte per la UI, non tabelle di dominio: si popolano dal pull e non hanno un percorso di
+    // scrittura, perche' cio' che l'utente cambia sta in `tv_show_state` e `watch_events`.
+    case tvTracking = "tv_tracking"
+    case tvTimeline = "tv_timeline"
+
     /// All valid table names as a Set for O(1) lookup
     static let validTableNames: Set<String> = Set(SQLiteTable.allCases.map(\.rawValue))
 

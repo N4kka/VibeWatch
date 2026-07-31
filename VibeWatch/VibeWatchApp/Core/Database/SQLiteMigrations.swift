@@ -8,7 +8,7 @@ extension SQLiteService {
     /// Run personalization migrations (Phase 1)
     func runPersonalizationMigrations() {
         let currentVersion = getPersonalizationMigrationVersion()
-        let latestVersion = 8
+        let latestVersion = 9
 
         guard currentVersion < latestVersion else {
             Logger.info("[SQLite] Personalization migrations already applied (version \(currentVersion))")
@@ -47,6 +47,9 @@ extension SQLiteService {
             }
             if currentVersion < 8 {
                 migration8_AddTrackingTables()
+            }
+            if currentVersion < 9 {
+                migration9_AddTrackingViewMirrors()
             }
 
             // Update migration version
@@ -213,7 +216,80 @@ extension SQLiteService {
         Logger.info("[SQLite] Migration 8 complete")
     }
 
+    /// SPEC v3 §9.2 / §13.6 — lo specchio locale delle due viste della schermata Tracking.
+    ///
+    /// Non sono tabelle di dominio ma **cache di righe già pronte per la UI**: le calcola il
+    /// server (`v_tv_tracking`, `v_tv_timeline`), il client le ritira e le legge. Nessuna delle
+    /// due passa dall'outbox — non c'è niente da rimandare indietro, perché ciò che l'utente può
+    /// cambiare (`user_status`, gli eventi di visione) ha già le sue tabelle.
+    ///
+    /// Il motivo per cui esistono è §13.6: la schermata deve disegnarsi da qui, senza rete, sotto
+    /// i 300 ms. Se per mostrare la lista servisse una chiamata, il lavoro sarebbe sbagliato.
+    private func migration9_AddTrackingViewMirrors() {
+        Logger.info("[SQLite] Migration 9: Adding tv_tracking and tv_timeline mirrors")
+
+        executeScript(createTVTrackingMirrorTable())
+        executeScript(createTVTimelineMirrorTable())
+
+        Logger.info("[SQLite] Migration 9 complete")
+    }
+
     // MARK: - Table Creation Methods
+
+    private func createTVTrackingMirrorTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS tv_tracking (
+            user_id TEXT NOT NULL,
+            tmdb_show_id INTEGER NOT NULL,
+            user_status TEXT NOT NULL DEFAULT 'active',
+            watched_count INTEGER NOT NULL DEFAULT 0,
+            aired_count INTEGER NOT NULL DEFAULT 0,
+            total_count INTEGER NOT NULL DEFAULT 0,
+            last_watched_at TEXT,
+            next_season INTEGER,
+            next_episode INTEGER,
+            next_air_date TEXT,
+            backlog_since TEXT,
+            first_watched_at TEXT,
+            completed_at TEXT,
+            updated_at TEXT,
+            synced_at TEXT,
+            bucket TEXT,
+            is_next_available INTEGER,
+            show_name TEXT,
+            show_poster_path TEXT,
+            show_status TEXT,
+            next_episode_name TEXT,
+            next_still_path TEXT,
+            next_runtime_minutes INTEGER,
+            PRIMARY KEY (user_id, tmdb_show_id)
+        );
+        -- L'ordinamento della schermata: bucket, poi arretrato piu' recente in cima (§3.3).
+        CREATE INDEX IF NOT EXISTS idx_tv_tracking_bucket
+            ON tv_tracking(user_id, bucket, backlog_since DESC);
+        """
+    }
+
+    private func createTVTimelineMirrorTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS tv_timeline (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            tmdb_show_id INTEGER NOT NULL,
+            show_name TEXT,
+            show_poster_path TEXT,
+            season_number INTEGER NOT NULL,
+            episode_number INTEGER NOT NULL,
+            episode_name TEXT,
+            air_date TEXT,
+            still_path TEXT,
+            is_special INTEGER NOT NULL DEFAULT 0
+        );
+        -- La timeline si legge in ordine di uscita e basta.
+        CREATE INDEX IF NOT EXISTS idx_tv_timeline_air_date
+            ON tv_timeline(user_id, air_date);
+        """
+    }
 
     private func createWatchEventsTable() -> String {
         """
