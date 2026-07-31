@@ -21,6 +21,10 @@ alter default privileges in schema public
   grant select, insert, update, delete on tables to authenticated;
 alter default privileges in schema public grant select on tables to anon;
 
+-- Lo schema in cui Supabase installa le estensioni. Qui non esiste di default.
+create schema if not exists extensions;
+grant usage on schema extensions to anon, authenticated;
+
 -- Schema auth: solo cio' che le migration referenziano (FK su auth.users, auth.uid()).
 create schema if not exists auth;
 
@@ -103,3 +107,29 @@ exception
   when raise_exception then raise;
   when others then raise notice 'ok    %  (% )', label, sqlstate;
 end $$;
+
+-- `profiles` come in produzione, con le sole colonne che il blocco 8 tocca. Ricreata qui perche'
+-- la sua migration precede questo repo (per anni supabase/ e' stato gitignorato). Le colonne di
+-- billing ci sono apposta: sono cio' che `public_profiles` non deve esporre, e un test che le
+-- cerca deve poterle trovare nella tabella per dimostrare che nella vista non ci sono.
+create table if not exists public.profiles (
+  id           uuid primary key references auth.users on delete cascade,
+  email        text not null,
+  display_name text,
+  avatar_url   text,
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now(),
+  deleted_at   timestamptz,
+  synced_at    timestamptz,
+  fcm_token    text,
+  is_on_trial  boolean default false
+);
+
+alter table public.profiles enable row level security;
+
+drop policy if exists profiles_select_own on public.profiles;
+create policy profiles_select_own on public.profiles
+  for select using ((select auth.uid()) = id);
+drop policy if exists profiles_update_own on public.profiles;
+create policy profiles_update_own on public.profiles
+  for update using ((select auth.uid()) = id) with check ((select auth.uid()) = id);
