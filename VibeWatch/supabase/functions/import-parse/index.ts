@@ -14,85 +14,19 @@
 // scrive in upsert. Riprendere dal punto sbagliato duplica nulla, al massimo rifà lavoro.
 
 import { serve } from 'https://deno.land/std@0.131.0/http/server.ts'
-import { parse as parseCsv } from 'https://deno.land/std@0.224.0/csv/parse.ts'
-import { BlobReader, TextWriter, ZipReader } from 'https://deno.land/x/zipjs@v2.7.45/index.js'
 import { adminClient, jsonResponse } from '../_shared/proxy.ts'
-import {
-  assignRewatchIndex,
-  dedupV1IntoV2,
-  parseRatings,
-  parseV1Events,
-  parseV2Events,
-  type ParsedRating,
-  type Row,
-  type WatchEvent,
-} from './parsing.ts'
+import { buildRows, FILE_V1, FILE_V2, RATING_FILES, readCsvEntries } from './archive.ts'
 
 /** Righe di staging scritte per invocazione. */
 const ROWS_PER_INVOCATION = 4_000
 /** Righe per singola INSERT: oltre questa soglia il payload inizia a pesare più del round-trip. */
 const ROWS_PER_INSERT = 500
 
-// §7.1 — gli unici file che si guardano. Tutto il resto dell'export si ignora.
-const FILE_V2 = 'tracking-prod-records-v2.csv'
-const FILE_V1 = 'tracking-prod-records.csv'
-const RATING_FILES = [
-  'ratings-3-prod-episode_votes.csv',
-  'ratings-v2-prod-votes.csv',
-  'ratings-prod-episode_votes.csv',
-  'ratings-live-votes.csv',
-]
-
 interface StagingRow {
   job_id: string
   row_index: number
   raw: Record<string, unknown>
   status: string
-}
-
-/** Legge i CSV che ci interessano da uno ZIP, ignorando percorsi e maiuscole. */
-async function readCsvEntries(zip: Blob, wanted: string[]): Promise<Map<string, Row[]>> {
-  const reader = new ZipReader(new BlobReader(zip))
-  const out = new Map<string, Row[]>()
-
-  try {
-    for (const entry of await reader.getEntries()) {
-      if (entry.directory) continue
-      const base = entry.filename.split('/').pop()?.toLowerCase() ?? ''
-      const match = wanted.find((w) => w.toLowerCase() === base)
-      if (!match || !entry.getData) continue
-
-      const text = await entry.getData(new TextWriter())
-      // `skipFirstRow` usa la prima riga come intestazione: è il formato di questi export.
-      out.set(match, parseCsv(text, { skipFirstRow: true }) as Row[])
-    }
-  } finally {
-    await reader.close()
-  }
-
-  return out
-}
-
-/** Tutto il parsing puro, in un posto solo, così la parte di I/O resta leggibile. */
-function buildRows(files: Map<string, Row[]>): {
-  events: WatchEvent[]
-  ratings: ParsedRating[]
-  unusableV1: number
-  droppedV1: number
-} {
-  const v2 = parseV2Events(files.get(FILE_V2) ?? [])
-  const { events: v1All, unusable: unusableV1 } = parseV1Events(files.get(FILE_V1) ?? [])
-  const { kept: v1, dropped: droppedV1 } = dedupV1IntoV2(v2, v1All)
-
-  const events = assignRewatchIndex([...v2, ...v1])
-
-  const ratings: ParsedRating[] = []
-  for (const name of RATING_FILES) {
-    const rows = files.get(name)
-    if (rows) ratings.push(...parseRatings(rows, name))
-  }
-
-  return { events, ratings, unusableV1, droppedV1 }
 }
 
 serve(async (req: Request) => {
