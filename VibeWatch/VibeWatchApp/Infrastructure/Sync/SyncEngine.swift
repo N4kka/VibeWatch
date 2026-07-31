@@ -744,7 +744,16 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
                     .execute()
                     .data
 
-                return (try? JSONSerialization.jsonObject(with: data)) as? [[String: Any]] ?? []
+                // Parsed strictly on purpose. PostgREST answers a rejected request with a JSON
+                // *object* describing the error, and treating anything that is not an array of
+                // rows as "no rows" would turn a 400 into a silent "pulled 0 rows" — the table
+                // would look empty and healthy while nothing was ever fetched.
+                let parsed = try JSONSerialization.jsonObject(with: data)
+                guard let rows = parsed as? [[String: Any]] else {
+                    let body = String(data: data.prefix(500), encoding: .utf8) ?? "<non-utf8>"
+                    throw SyncEngineError.operationFailed("\(name): unexpected pull response: \(body)")
+                }
+                return rows
             },
             handlePage: { remoteRows in
                 let resolved = await self.resolvePage(remoteRows, table: name)
