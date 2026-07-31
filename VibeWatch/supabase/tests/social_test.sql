@@ -33,11 +33,28 @@ select t.eq(public.username_seed('Anna-Rossi'), 'anna_rossi', 'idem il trattino'
 select t.eq(public.username_seed('Ànna Rossi!'), 'nna_rossi',
             'cio'' che non e'' ammesso si toglie, non si traslittera a caso');
 select t.eq(public.username_seed('MARIO'), 'mario', 'minuscole');
-select t.eq(public.username_seed('a_very_long_display_name_indeed'), 'a_very_long_display_',
+select t.eq(public.username_seed('abcdefghijklmnopqrstuvwxyz'), 'abcdefghijklmnopqrst',
             'tagliato a 20, che e'' il massimo del vincolo');
-select t.eq(length(public.username_seed('a_very_long_display_name_indeed')), 20, 'esattamente 20');
+select t.eq(length(public.username_seed('abcdefghijklmnopqrstuvwxyz')), 20, 'esattamente 20');
+select t.eq(public.username_seed('a_very_long_display_name_indeed'), 'a_very_long_display',
+            'e se il taglio cade su un separatore, quello non resta appeso');
 select t.eq(public.username_seed('!!!'), null, 'niente di utilizzabile -> null, non stringa vuota');
 select t.eq(public.username_seed(null), null, 'null -> null');
+-- Trovati sui nomi veri in produzione, non immaginati: `"carebare "` con lo spazio in fondo
+-- esiste, ed e' esattamente il genere di cosa che si vede solo guardando i dati.
+select t.eq(public.username_seed('carebare '), 'carebare',
+            'lo spazio in fondo non diventa un underscore appeso');
+select t.eq(public.username_seed('  Anna   Rossi  '), 'anna_rossi',
+            'ne'' gli spazi davanti, ne'' quelli doppi in mezzo');
+select t.eq(public.username_seed('Anna - Rossi'), 'anna_rossi',
+            'separatori consecutivi si collassano in uno');
+select t.eq(public.username_seed('___'), null, 'solo separatori -> null, non una stringa di underscore');
+select t.eq(public.username_seed('微光 渺渺'), null,
+            'un nome non latino non e'' riducibile a [a-z0-9_]: si dichiara, non si storpia');
+select t.is_true(length(public.username_seed('anna_rossi_e_un_nome_lunghissimo')) <= 20,
+            'il taglio a 20 vale anche dopo la potatura');
+select t.is_true(public.username_seed('anna_rossi_e_un_nome_lunghissimo') !~ '_$',
+            'e il taglio non lascia un underscore in fondo');
 
 \echo ''
 \echo '=== §3.7 username_available'
@@ -72,14 +89,16 @@ select t.eq(public.suggest_username('Anna Rossi'), 'anna_rossi3', 'e il suffisso
 select t.eq(public.suggest_username('admin'), 'admin2',
             'un nome riservato non blocca la registrazione, ne'' propone uno libero');
 
--- Il suffisso non deve sfondare i 20 caratteri: si accorcia la base.
-update public.profiles set username = 'a_very_long_display_'
+-- Il suffisso non deve sfondare i 20 caratteri: si accorcia la base. Il nome di prova occupa
+-- tutti e 20 i caratteri **senza** finire su un separatore, altrimenti la potatura lascerebbe
+-- spazio libero e il caso limite non verrebbe provato.
+update public.profiles set username = 'abcdefghijklmnopqrst'
  where id = 'aaaaaaaa-0000-0000-0000-000000000003';
-select t.eq(public.suggest_username('a_very_long_display_name_indeed'), 'a_very_long_display2',
+select t.eq(public.suggest_username('abcdefghijklmnopqrstuvwxyz'), 'abcdefghijklmnopqrs2',
             'il suffisso entra dentro i 20, accorciando la base');
-select t.is_true(length(public.suggest_username('a_very_long_display_name_indeed')) <= 20,
+select t.is_true(length(public.suggest_username('abcdefghijklmnopqrstuvwxyz')) <= 20,
             'e il risultato rispetta sempre il vincolo');
-select t.eq(public.username_available(public.suggest_username('a_very_long_display_name_indeed')),
+select t.eq(public.username_available(public.suggest_username('abcdefghijklmnopqrstuvwxyz')),
             true, 'e cio'' che propone e'' davvero libero');
 
 -- Un nome inutilizzabile non diventa uno username inventato addosso all'utente.
@@ -90,7 +109,13 @@ select t.eq(public.username_available(public.suggest_username('a_very_long_displ
 select t.eq(public.suggest_username('Jo'), 'user2', 'troppo corto -> ripiego numerato');
 select t.eq(public.suggest_username(null), 'user2', 'nessun nome -> idem');
 select t.eq(public.suggest_username('!!!', 'mario_b'), 'mario_b',
-            'ma un ripiego esplicito migliore vince: chi chiama passa la parte locale dell''email');
+            'ma un ripiego esplicito migliore vince');
+-- Il ripiego NON deve essere l'email. Sui dati veri: 9 profili su 314 hanno un indirizzo
+-- @privaterelay.appleid.com, e la parte locale e' il token di relay di Apple — `@8xp9vsbgxm`
+-- ricostruisce un indirizzo contattabile. Altri 3 hanno un locale che e' un numero di telefono.
+-- Il test non puo' impedire a un chiamante di passarla, ma fissa il caso che ci si aspetta.
+select t.eq(public.suggest_username('bz', '8xp9vsbgxm'), '8xp9vsbgxm',
+            'la funzione usa il ripiego che le si da'': la scelta di NON dargli l''email sta in chi chiama');
 select t.eq(public.suggest_username('Jo', '!!!'), 'user2',
             'e un ripiego inutilizzabile ricade sul generico invece di esplodere');
 

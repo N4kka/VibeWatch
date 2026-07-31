@@ -79,13 +79,24 @@ immutable
 set search_path = public
 as $$
   select nullif(
-    substring(
-      -- Gli spazi diventano underscore invece di sparire: "Anna Rossi" -> "anna_rossi", non
-      -- "annarossi". Il resto di cio' che non e' ammesso si toglie.
-      regexp_replace(
-        regexp_replace(lower(coalesce(p_name, '')), '[\s.\-]+', '_', 'g'),
-        '[^a-z0-9_]', '', 'g')
-      from 1 for 20),
+    -- Il taglio a 20 va **dopo** la ripulitura e prima dell'ultima potatura, altrimenti un nome
+    -- lungo puo' finire con un underscore appeso: `substring` non sa dove sta un separatore.
+    btrim(
+      substring(
+        btrim(
+          -- Spazi, punti e trattini diventano underscore invece di sparire: "Anna Rossi" ->
+          -- "anna_rossi", non "annarossi". Poi si toglie tutto cio' che non e' ammesso, e si
+          -- collassano gli underscore consecutivi che ne risultano.
+          regexp_replace(
+            regexp_replace(
+              regexp_replace(lower(coalesce(p_name, '')), '[\s.\-]+', '_', 'g'),
+              '[^a-z0-9_]', '', 'g'),
+            '_+', '_', 'g'),
+          -- Un nome scritto con uno spazio in fondo — succede, `"carebare "` sta in produzione —
+          -- darebbe `carebare_`. Un underscore agli estremi non lo ha voluto nessuno.
+          '_')
+        from 1 for 20),
+      '_'),
     '');
 $$;
 
@@ -136,8 +147,18 @@ begin
   -- Il ripiego generico e' `user`, che sta di proposito **anche fra i riservati**: cosi' nessuno
   -- si ritrova `@user` nudo, e chi ci finisce prende `user2`, `user3`... Non e' un bel nome ed e'
   -- giusto che non lo sia — §3.7 vuole la conferma al primo accesso, e uno username brutto e' cio'
-  -- che fa venire voglia di cambiarlo. Chi chiama dovrebbe comunque passare un `p_fallback`
-  -- migliore (la parte locale dell'email, per esempio).
+  -- che fa venire voglia di cambiarlo.
+  --
+  -- **`p_fallback` non deve mai essere l'email, nemmeno la sola parte locale.** Sembrava la scelta
+  -- ovvia e sui dati veri e' una fuga: dei 18 profili che ci sarebbero ricaduti, 9 hanno un
+  -- indirizzo `@privaterelay.appleid.com` — la parte locale e' il token di relay di Apple, e
+  -- pubblicarlo come `@8xp9vsbgxm` ricostruisce un indirizzo contattabile — e 3 hanno un locale
+  -- che e' un numero di telefono (`@qq.com`, `@139.com`). Tutta §3.7 esiste per tenere l'email
+  -- fuori dalla superficie pubblica; farcela rientrare dalla porta di servizio del ripiego sarebbe
+  -- stato il modo piu' silenzioso di annullarla.
+  -- Il ripiego si prova quando lo scheletro e' **inutilizzabile**, non solo quando e' nullo:
+  -- `"bz"` produce `bz`, che non e' null ma nemmeno valido, e senza questa distinzione un
+  -- `coalesce` si fermerebbe li' senza mai guardare il ripiego. Sono 13 profili su 314.
   if v_base is null or length(v_base) < 3 then
     v_base := public.username_seed(p_fallback);
     if v_base is null or length(v_base) < 3 then v_base := 'user'; end if;
