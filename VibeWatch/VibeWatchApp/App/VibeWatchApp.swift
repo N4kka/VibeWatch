@@ -177,6 +177,12 @@ class AppState: ObservableObject {
         // Process any pending outbox operations
         await SyncEngine.shared.pushPendingChanges()
 
+        // SPEC v3 blocco 7: lo storico di chi usava VibeWatch prima del tracking nuovo vive in
+        // UserDefaults e nelle liste, e `watch_events` per lui e' vuota — cioe' la schermata
+        // Tracking e' vuota. Va dopo il sync delle liste, che e' una delle sorgenti che legge.
+        // Una tantum, con flag in app_metadata: dopo la prima volta costa una SELECT.
+        await LegacyTrackingMigration.shared.runIfNeeded(userId: userId)
+
         Logger.info("[AppState] Full sync completed on app launch")
     }
 

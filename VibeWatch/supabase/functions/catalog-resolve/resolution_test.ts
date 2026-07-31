@@ -14,6 +14,7 @@ import {
 import {
   episodeRowsFromSeasons,
   initialSeasonChunk,
+  normalizeShowIds,
   NOT_FOUND_RETRY_DAYS,
   REFRESH_DAYS_ENDED,
   REFRESH_DAYS_RUNNING,
@@ -261,4 +262,37 @@ Deno.test('a short show needs no extra call', () => {
     .slice(SEASONS_PER_APPEND))
 
   assertEquals(chunks, [])
+})
+
+// ------------------------------------------------------------------- normalizeShowIds
+//
+// L'ingresso per id TMDB serve alla migrazione dello storico (blocco 7), dove le serie sono gia'
+// identificate per TMDB e `/find` non c'entra. Un id sporco che passasse di qui diventerebbe una
+// chiamata a TMDB su un URL senza senso, o peggio una riga di catalogo sotto l'id sbagliato.
+
+Deno.test('gli id di serie assenti valgono "nessuno", non un errore', () => {
+  assertEquals(normalizeShowIds(undefined, 50), [])
+  assertEquals(normalizeShowIds(null, 50), [])
+  assertEquals(normalizeShowIds([], 50), [])
+})
+
+Deno.test('gli id duplicati si fondono: la stessa serie non si riscalda due volte', () => {
+  assertEquals(normalizeShowIds([1399, 1399, 66732], 50), [1399, 66732])
+})
+
+Deno.test('un id non intero o non positivo fa rifiutare tutta la richiesta', () => {
+  // Rifiutare il lotto invece di scartare la riga: se il client manda spazzatura, e' un difetto
+  // suo, e una risposta 200 su meta' lavoro lo nasconderebbe.
+  assertEquals(normalizeShowIds([1399, 0], 50), null)
+  assertEquals(normalizeShowIds([1399, -3], 50), null)
+  assertEquals(normalizeShowIds([1399, 1.5], 50), null)
+  assertEquals(normalizeShowIds(['1399'], 50), [1399])   // una stringa numerica e' accettabile
+  assertEquals(normalizeShowIds(['boh'], 50), null)
+  assertEquals(normalizeShowIds('1399', 50), null)       // ma non un valore che non e' una lista
+})
+
+Deno.test('il tetto per richiesta e lo stesso delle entita TVDB', () => {
+  const many = Array.from({ length: 51 }, (_, i) => i + 1)
+  assertEquals(normalizeShowIds(many, 50), null)
+  assertEquals(normalizeShowIds(many.slice(0, 50), 50)?.length, 50)
 })

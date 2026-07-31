@@ -295,6 +295,35 @@ export function seasonAppendChunks(seasonNumbers: number[]): string[][] {
   return chunks
 }
 
+/**
+ * Gli id TMDB di serie da riscaldare direttamente, ripuliti.
+ *
+ * **Perche' esiste un ingresso che non passa da TVDB.** Tutta la funzione e' costruita attorno a
+ * §1.5, cioe' "gli id dell'export TV Time sono di TheTVDB e vanno risolti". Chi usa VibeWatch da
+ * prima non ha mai visto un id TVDB: le sue serie sono gia' identificate per `tmdb_show_id`, e per
+ * loro il passaggio da `/find` non e' solo inutile, e' impossibile. Senza questo ingresso la
+ * migrazione dello storico (blocco 7) produrrebbe card senza nome e senza prossimo episodio,
+ * perche' `tmdb_shows`/`tmdb_episodes` per quelle serie non li popola nessuno.
+ *
+ * Stesso tetto di `entities`: il lavoro per id e' lo stesso — una `/tv/{id}` con le stagioni in
+ * append — e un tetto diverso sarebbe solo una seconda cosa da ricordarsi.
+ */
+export function normalizeShowIds(raw: unknown, max: number): number[] | null {
+  if (raw === undefined || raw === null) return []
+  if (!Array.isArray(raw) || raw.length > max) return null
+
+  const ids: number[] = []
+  const seen = new Set<number>()
+  for (const item of raw) {
+    const id = Number(item)
+    if (!Number.isSafeInteger(id) || id <= 0) return null
+    if (seen.has(id)) continue
+    seen.add(id)
+    ids.push(id)
+  }
+  return ids
+}
+
 /** TMDB sends "" for a missing date; a `date` column will not take that. */
 function emptyToNull(value: string | null | undefined): string | null {
   const trimmed = (value ?? '').trim()

@@ -489,6 +489,124 @@ select t.is_true(
 delete from public.tv_show_state
  where user_id = '11111111-1111-1111-1111-111111111111' and tmdb_show_id = 999999;
 
+\echo ''
+\echo '=== blocco 7: espansione di "serie vista per intero"'
+
+-- Stato tutto proprio, utente e serie nuovi: i test sopra hanno mutato user_status, nomi di
+-- episodi e catalogo piu' volte, ed ereditarli e' gia' costato due asserzioni sbagliate qui.
+reset role;
+insert into auth.users (id, email) values
+  ('33333333-3333-3333-3333-333333333333', 'c@test');
+
+-- 5 episodi usciti, 1 futuro, 1 speciale gia' uscito.
+insert into public.tmdb_shows (tmdb_show_id, name, status)
+values (700, 'Serie Vista Per Intero', 'Ended');
+insert into public.tmdb_episodes (tmdb_show_id, season_number, episode_number, air_date, runtime_minutes)
+select 700, 1, n, current_date - 100, 42 from generate_series(1, 5) n;
+insert into public.tmdb_episodes (tmdb_show_id, season_number, episode_number, air_date, runtime_minutes)
+values (700, 1, 6, current_date + 10, 42),
+       (700, 0, 1, current_date - 200, 12);
+
+set local role authenticated;
+set local request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+
+select t.eq(
+  (public.expand_seen_shows_to_watch_events(
+     jsonb_build_array(jsonb_build_object('tmdb_show_id', 700,
+                                          'watched_at', (now() - interval '90 days')::text))
+   )->>'events_written')::integer,
+  5, 'espande ai soli episodi usciti e non speciali (5 su 7)');
+
+select t.eq((select count(*)::integer from public.watch_events
+              where user_id = '33333333-3333-3333-3333-333333333333' and season_number = 0), 0,
+            'lo speciale non entra nel progresso (§1.3)');
+select t.eq((select count(*)::integer from public.watch_events
+              where user_id = '33333333-3333-3333-3333-333333333333' and episode_number = 6), 0,
+            'l''episodio non ancora uscito non si marca visto: "l''ho visto tutto" non e'' una previsione');
+
+-- §3.2: la data di visione vera non esiste in UserDefaults. Marcarla `exact` significherebbe
+-- inventarla, ed e' proprio la distinzione per cui la colonna esiste.
+select t.eq((select count(*)::integer from public.watch_events
+              where user_id = '33333333-3333-3333-3333-333333333333'
+                and watched_at_precision <> 'inferred'), 0,
+            'ogni riga e'' inferred, mai exact');
+select t.is_true((select bool_and(dedup_key like 'legacy:700:%')
+                    from public.watch_events
+                   where user_id = '33333333-3333-3333-3333-333333333333'),
+            'dedup_key nella forma legacy:{show}:{stagione}:{episodio}');
+select t.eq((select count(distinct runtime_seconds)::integer from public.watch_events
+              where user_id = '33333333-3333-3333-3333-333333333333'), 1,
+            'il runtime arriva dal catalogo, in secondi');
+select t.eq((select max(runtime_seconds) from public.watch_events
+              where user_id = '33333333-3333-3333-3333-333333333333'), 42 * 60,
+            'e vale 42 minuti');
+
+-- Il trigger ha fatto il suo mestiere: la serie risulta in pari, non "da iniziare".
+select t.eq((select watched_count from public.tv_show_state
+              where user_id = '33333333-3333-3333-3333-333333333333' and tmdb_show_id = 700), 5,
+            'watched_count = 5');
+select t.eq((select bucket from public.v_tv_tracking
+              where user_id = '33333333-3333-3333-3333-333333333333' and tmdb_show_id = 700),
+            'up_to_date',
+            'bucket up_to_date — e'' tutto il punto: senza espansione sarebbe not_started');
+
+-- Criterio 2 di §13, sulla forma che questa migrazione puo' assumere: l'utente reinstalla, il
+-- flag locale si perde, la migrazione riparte.
+select t.eq(
+  (public.expand_seen_shows_to_watch_events(
+     jsonb_build_array(jsonb_build_object('tmdb_show_id', 700))
+   )->>'events_written')::integer,
+  0, 'rigiocarla non scrive niente');
+select t.eq((select count(*)::integer from public.watch_events
+              where user_id = '33333333-3333-3333-3333-333333333333'), 5,
+            'e non duplica');
+
+-- Una serie che il catalogo non conosce si dichiara, non si finge migrata: scrivere zero episodi
+-- visti sarebbe indistinguibile da "non l'ho mai iniziata".
+select t.eq(
+  public.expand_seen_shows_to_watch_events(
+    jsonb_build_array(jsonb_build_object('tmdb_show_id', 999001))
+  ),
+  jsonb_build_object('events_written', 0, 'shows_without_catalog', jsonb_build_array(999001)),
+  'una serie senza catalogo torna indietro nell''elenco, con zero eventi');
+
+-- L'identita' non e' un parametro: la funzione e' definer, quindi la sola cosa che la tiene
+-- ancorata al chiamante e' `auth.uid()`. Senza claim non deve scrivere niente a nome di nessuno.
+-- Non si usa `t.rejects`: quel helper rilancia gli errori della classe `raise_exception`, che e'
+-- esattamente quella di un `raise exception 'unauthenticated'`. Qui il blocco e' esplicito.
+set local request.jwt.claim.sub = '';
+do $$
+begin
+  perform public.expand_seen_shows_to_watch_events(
+    jsonb_build_array(jsonb_build_object('tmdb_show_id', 700)));
+  raise exception 'FAIL  senza utente autenticato la funzione ha scritto lo stesso';
+exception when raise_exception then
+  if sqlerrm <> 'unauthenticated' then raise; end if;
+  raise notice 'ok    senza utente autenticato la funzione rifiuta';
+end $$;
+set local request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+
+-- I permessi si leggono su `proacl`, non sul revoke che si e' scritto: Supabase concede EXECUTE
+-- ad anon/authenticated con un `alter default privileges` esplicito, e revocare al solo PUBLIC
+-- lascia i grant espliciti al loro posto. E' il difetto gia' trovato su `import_touched_shows`.
+select t.eq(
+  (select count(*)::integer from pg_proc p
+     where p.proname = 'expand_seen_shows_to_watch_events'
+       and array_to_string(p.proacl, ',') like '%anon=X%'),
+  0, 'anon non puo'' eseguire l''espansione (letto da proacl, non dal revoke)');
+select t.is_true(
+  (select array_to_string(p.proacl, ',') like '%authenticated=X%' from pg_proc p
+    where p.proname = 'expand_seen_shows_to_watch_events'),
+  'authenticated invece si: la chiama il client durante la migrazione');
+
+-- E l'utente dell'altro blocco non ha ereditato niente.
+select t.eq((select count(*)::integer from public.watch_events
+              where user_id = '11111111-1111-1111-1111-111111111111'
+                and tmdb_show_id = 700), 0,
+            'l''espansione ha scritto solo per chi l''ha chiesta');
+
+reset role;
+
 rollback;
 
 \echo ''

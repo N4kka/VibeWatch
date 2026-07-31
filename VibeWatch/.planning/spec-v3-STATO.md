@@ -15,46 +15,101 @@ credevo.
 
 ## Da fare per prima cosa
 
-**Migrare lo storico degli utenti esistenti in `watch_events`.** È il buco che rende la schermata
-Tracking inutilizzabile per chi usa già VibeWatch, ed è un pezzo che il blocco 6 non prevedeva:
-l'import è stato progettato per chi arriva da TV Time, non per chi ha già dati qui dentro.
+**Provare l'app sul dispositivo con un utente vero.** Il lato server è deployato e collaudato (vedi
+sotto); il lato client è compilato, verde e mai eseguito contro dati reali. È il pezzo che manca, e
+va fatto **prima** di §13.6, perché la misura su schermata vuota non vale niente — è già successo.
 
-**Come si è visto** (sessione del 2026-07-31, sul dispositivo dell'autore): schermata Tracking
-vuota. I log dicono che non è un guasto — il pull funziona, 19 tabelle su 19 — ma che il server
-non ha niente per quell'utente:
+Cosa guardare nei log (DEBUG: in Release `Logger` non stampa una riga):
 
 ```
-Pulled 0 rows from watch_events
-Pulled 0 rows from tv_show_state
-Pulled 0 rows from v_tv_tracking
-Loaded 6 lists with 429 items from SQLite    ← i dati ci sono, ma nel vecchio sistema
+[LegacyMigration] N episodi, M serie viste per intero, K serie da riscaldare — tentativo 1
+[LegacyMigration] N episodi + E da espansione, completata=true
 ```
 
-**Nessun dato è andato perso.** Lo storico vive dove è sempre vissuto: `EpisodeSeenManager`
-(UserDefaults) e le liste. La schermata nuova legge `watch_events`, che per quell'utente non è mai
-stata riempita.
+`completata=false` con un elenco di `serie senza catalogo` è un esito **previsto**, non un guasto:
+il riscaldamento può essere stato tagliato dal budget o dalla deadline di `catalog-resolve`, e il
+prossimo avvio riprova. Dopo 3 tentativi si chiude comunque.
 
-### Cosa deve fare la migrazione
+### Il collaudo in produzione, 2026-07-31 — fatto
+
+**Prima parte, in SQL, dentro un `do $$ … $$` chiuso da `raise exception 'REPORT %'`**: catalogo
+finto, utente usa-e-getta, tutto portato via dal rollback (residui verificati a zero). Esito: 5
+eventi sui 7 episodi (fuori il futuro e lo speciale), rigioco **0**, `watched_at_precision`
+`inferred` su tutte le righe, runtime 2520 s = 42 minuti dal catalogo, `tv_show_state` 5/5/6 con
+`backlog_since` nullo e **`bucket = up_to_date`**, `show_name` presente nella vista, e `anon`
+respinto con `42501`.
+
+**Seconda parte, via HTTP** (serve un JWT vero, quindi niente rollback: utente cancellato a mano
+alla fine, residui verificati a zero). Su **Breaking Bad**, che prima del collaudo non era in
+catalogo:
+
+| Passo | Esito |
+|---|---|
+| `catalog-resolve` con `{"show_ids":[1399]}` — serie già fresca | 0 chiamate a TMDB, 0 popolate: il TTL regge |
+| `catalog-resolve` con `{"show_ids":[1396]}` — serie assente | **71 episodi scritti** |
+| `{}` e `{"show_ids":[0]}` | 400 con messaggio, non 500 |
+| `entities` da solo, e `entities` + `show_ids` insieme | invariati: la strada TVDB dell'import non si è mossa |
+| `apply_mutations` con 2 eventi legacy | 2 righe, zero rifiuti |
+| espansione sopra quei 2 eventi | **60** nuove righe, non 62 |
+| rigioco dell'espansione | 0 |
+| `v_tv_tracking` letta col JWT dell'utente | `Breaking Bad`, `up_to_date`, **62/62/62** |
+
+**Quel 60 è la cosa da non perdere di vista.** Le due sorgenti — episodi singoli dal client ed
+espansione dal catalogo — hanno scritto 62 righe in totale, non 64: convergono sulla stessa
+`dedup_key`. È la verifica pratica che la sovrapposizione voluta nel piano non costa niente.
+
+Il catalogo di Breaking Bad **è rimasto**, di proposito: è §1.5, è condiviso, e il prossimo utente
+che ce l'ha in lista lo trova già pronto.
+
+### Com'è fatta la migrazione
+
+Il difetto era visibile solo eseguendo: pull a posto, 19 tabelle su 19, e schermata vuota, perché
+per quell'utente il server non aveva niente. `Loaded 6 lists with 429 items from SQLite` — i dati
+c'erano, nel vecchio sistema.
 
 | | |
 |---|---|
-| **Sorgente** | `EpisodeSeenManager.seenKeys` — chiavi `"{showId}_{season}_{episode}"` in UserDefaults — più `seenShowIds` (serie marcate viste per intero) e le serie nella lista di tipo `seen` |
-| **Destinazione** | un `watch_events` per episodio |
-| **`watched_at_precision`** | **`inferred`**, mai `exact`: la data di visione vera non esiste in UserDefaults, e marcarla esatta significherebbe inventarla. §3.2 esiste proprio per questa distinzione |
-| **`watched_at`** | non c'è una risposta giusta. Valutare la data di aggiunta alla lista, se recuperabile, altrimenti `now()` — e dichiararlo, perché finisce nel diario |
-| **`dedup_key`** | `'legacy:' \|\| showId \|\| ':' \|\| season \|\| ':' \|\| episode`, così la migrazione si può rigiocare senza duplicare |
-| **`user_id`** | **obbligatorio nel record.** Senza, `apply_mutations` scrive `user_id_mismatch` in `sync_rejected_mutations` e prosegue in silenzio |
-| **`is_special`** | dalla stagione (`season == 0`), mai da un flag: §1.3 |
-| **Una tantum** | flag in `app_metadata`, come le altre migration |
+| **Sorgente** | `EpisodeSeenManager.seenKeys` (`"{showId}_{season}_{episode}"`), `seenShowIds`, e le serie nella lista `seen` — le ultime due **unite**, non scelte: `markShowSeen` scrive in UserDefaults, e un'installazione nuova ha la lista ma non il flag |
+| **Destinazione** | un `watch_events` per episodio, via `apply_mutations` in lotti da 200 |
+| **`watched_at_precision`** | **`inferred`** sempre. C'è un test che rompe se diventa `exact` |
+| **`watched_at`** | la **data di aggiunta alla lista** quando c'è (`MIN(list_items.added_at)`), `now()` altrimenti. Non è estetica: con `now()` su tutto, `backlog_since = greatest(next.air_date, last_watched_at)` metterebbe ogni serie arretrata in cima nello stesso istante e "Non visti da tempo" resterebbe vuota per sempre |
+| **`dedup_key`** | `legacy:{show}:{season}:{episode}`, identica nelle due strade |
+| **`user_id`** | nel record, sempre. `LegacyTrackingPlan.record` è l'unico posto che lo scrive |
+| **`is_special`** | dalla stagione, mai da un flag (§1.3) |
+| **Una tantum** | `legacy_tracking_migration_version` in `app_metadata`, più un contatore di tentativi con tetto a 3 |
 
-**`seenShowIds` è il caso difficile**: "serie vista per intero" non dice *quali* episodi, e per
-scriverli servirebbe il catalogo — che per quella serie potrebbe non essere ancora risolto. Due
-strade: scrivere solo `tv_show_state.user_status` e lasciare `watched_count` al ricalcolo (perde il
-dettaglio ma non inventa nulla), oppure espandere dagli episodi di `tmdb_episodes` quando ci sono.
-La prima è più onesta.
+**`seenShowIds` non si risolve lato client, e la strada "onesta" del piano precedente era
+sbagliata.** Scrivere il solo `user_status` lascia `watched_count = 0`, e
+`tv_tracking_bucket(...)` con `watched_count = 0` risponde **`not_started`**: una serie finita
+finirebbe fra le "Da iniziare". Quindi l'espansione si fa dove c'è il catalogo, cioè in Postgres:
+`expand_seen_shows_to_watch_events(p_shows jsonb)` scrive un evento per ogni episodio **già
+uscito** e non speciale che `tmdb_episodes` conosce, e restituisce le serie che il catalogo non
+conosce ancora perché il chiamante riprovi. Verificato: la serie finisce in `up_to_date`.
 
-**Da provare su una copia del database prima che su quello di un utente vero.** È l'unico pezzo di
-questo lavoro che tocca dati personali già esistenti, e non è rigiocabile all'indietro.
+**Gli episodi singoli di una serie vista per intero restano nel piano**, anche se l'espansione li
+riscriverebbe: l'espansione conosce solo ciò che sta nel catalogo, e l'oracolo documenta 41 serie
+su 430 in cui la numerazione dell'utente e quella di TMDB non coincidono. La `dedup_key` fa sì che
+la sovrapposizione non costi niente.
+
+**Serviva anche un modo di popolare il catalogo per `tmdb_show_id`,** e non esisteva: tutto
+`catalog-resolve` era costruito attorno agli id TVDB dell'export. Chi usa VibeWatch da prima non ha
+mai visto un id TVDB. Senza, la migrazione avrebbe prodotto card senza nome, senza poster e senza
+prossimo episodio — la vista è `LEFT JOIN`, quindi le serie compaiono comunque, vuote. Ora
+`catalog-resolve` accetta anche `{"show_ids": [...]}`, fino a 50, e il client lo chiama prima di
+scrivere.
+
+**Perché non passa dall'outbox.** `SyncEngine.queueOperation` fa **una chiamata HTTP per
+operazione** e ne processa 50 per sync: qualche centinaio di episodi vorrebbe dire altrettanti
+round-trip spalmati su decine di avvii. `apply_mutations` accetta un lotto — è così che lo usa
+l'import — e la durabilità che l'outbox darebbe la dà la `dedup_key`. Per la stessa ragione il
+ripiego per riga di `applyMutations` è **spento** su questo percorso (`allowClientSideFallback:
+false`): risolve i conflitti su `id`, non su `dedup_key`, quindi su un rigioco andrebbe a sbattere
+sull'indice unico una riga alla volta.
+
+**Cosa succede se qualcosa fallisce:** non si segna niente come fatto. Il prossimo avvio rigioca, e
+la `dedup_key` impedisce i duplicati. Dopo 3 tentativi si chiude comunque, perché una serie che
+TMDB non conosce più non si risolverà mai e un ciclo a ogni avvio è la forma di guasto che nessuno
+nota.
 
 ### Il resto del blocco 7
 
@@ -79,7 +134,7 @@ questo lavoro che tocca dati personali già esistenti, e non è rigiocabile all'
 | 4 | Paginazione del pull | **fatto e verificato**. `SyncPagination`, 8 test verdi + pull reale sul dispositivo, nessun `Failed to pull` |
 | 5 | Integrazione client | **fatto per la lettura**. SQLite + whitelist + pull + conflitti verificati su dati veri; il percorso di scrittura è cablato ma senza chiamanti (arrivano col blocco 7) |
 | 6 | Pipeline import + report | **fasi 1-4 in produzione e collaudate end-to-end**; fasi 5-6 scritte e verdi in SQL, `import-finalize` da deployare |
-| 7 | UI Tracking | **schermata e tab bar fatte e compilate**. Manca la **migrazione dello storico esistente** (vedi in cima: senza, la schermata è vuota per gli utenti attuali), la misura di §13.6 con dati veri, e 18 lingue |
+| 7 | UI Tracking | **schermata, tab bar e migrazione dello storico scritte e verdi** (19 test iOS, 16 asserzioni SQL, 4 test Deno). La migrazione **non è deployata**: vedi in cima. Restano la misura di §13.6 con dati veri e 18 lingue |
 | 8+ | Sociale, stats | da fare |
 
 ## Cosa gira in produzione adesso
@@ -98,14 +153,20 @@ questo lavoro che tocca dati personali già esistenti, e non è rigiocabile all'
   `sync_rejected_mutations` in tutti e quattro i passaggi.
 - Job `pg_cron` `refresh-backlog` alle 05:00 UTC.
 - Edge Function `catalog-resolve`, `verify_jwt` attivo. Job `pg_cron` `catalog-prewarm` alle 03:30 UTC.
+  Dal 2026-07-31 accetta anche `{"show_ids": [...]}` (max 50): riscalda il catalogo per serie già
+  identificate su TMDB, senza passare da `/find`. È la strada del client, che id TVDB non ne ha mai
+  visti.
+- `expand_seen_shows_to_watch_events(jsonb)`, `security definer`, `proacl` verificato:
+  `postgres=X, service_role=X, authenticated=X` — **niente `anon`**.
 - **Import**: tabelle `import_jobs` e `import_staging` (RLS con sole policy di lettura: le fasi le
   muove il server), bucket privato `imports` con policy che confinano ogni utente alla propria
   cartella, Edge Function `import-parse` (fase 2, **versione 3**), `import-resolve` (fase 3) e
   `import-write` (fase 4). Nessun `import_jobs` residuo: lo staging dei collaudi è stato cancellato.
 - Droppati: `tv_tracking`, `tv_episode_progress`, `v_tv_tracking_buckets`,
   `get_tv_tracking_buckets()` (erano a 0 righe, verificato subito prima).
-- Catalogo: **1.912 episodi e 592 voci di `tvdb_tmdb_map`**, residuo *voluto* del collaudo — è
-  §1.5, il primo che importa paga e tutti gli altri trovano la serie già risolta.
+- Catalogo: **46 serie e 4.155 episodi** al 2026-07-31 (erano 1.912 episodi dopo il collaudo
+  dell'import; il resto lo ha aggiunto `catalog-prewarm` di notte, che è il suo mestiere). Residuo
+  *voluto*: è §1.5, il primo che importa paga e tutti gli altri trovano la serie già risolta.
 
 ## La finestra a 12 mesi, verificata
 
@@ -268,8 +329,33 @@ le altre 18 lingue ricadono sull'inglese.
 - **Il totale di tempo di visione (§13.7) non può più essere sommato dal client**, perché in cache
   c'è solo un anno di eventi. Deve arrivare dal server come aggregato — coerente con §1.1, e serve
   comunque alle stats del blocco 9.
+- **`applyMutations` ha un ripiego che risolve i conflitti sulla chiave sbagliata.** Se l'RPC
+  risponde 404 *oppure* il corpo dell'errore contiene la stringa `apply_mutations`, il client
+  ripiega su una upsert REST per riga con `on_conflict=id`. Per una tabella con una chiave di
+  idempotenza diversa da `id` — `watch_events` e la sua `dedup_key` — quel ripiego non deduplica.
+  Ora è disattivabile (`allowClientSideFallback: false`) e la migrazione lo disattiva; **ogni
+  percorso di scrittura in blocco che nasce da qui deve fare lo stesso.**
 
 ## Cose imparate che risparmiano tempo
+
+- **"Non inventare nulla" e "non mentire" non sono la stessa regola, e la prima da sola sbaglia.**
+  Per le serie marcate viste per intero, la strada che sembrava più onesta era scrivere il solo
+  `user_status` e lasciare i contatori al ricalcolo: non inventa episodi. Ma
+  `tv_tracking_bucket(...)` con `watched_count = 0` risponde `not_started`, quindi una serie finita
+  sarebbe finita fra le "Da iniziare" — un'affermazione falsa prodotta dal rifiuto di affermare
+  qualcosa. La scelta giusta era spostare il lavoro dove c'è il dato (il catalogo, cioè Postgres) e
+  dichiarare esplicitamente ciò che resta ignoto (`shows_without_catalog` torna al chiamante).
+- **`security invoker` non è sempre la scelta più stretta.** Il primo tentativo di
+  `expand_seen_shows_to_watch_events` era invoker, per farsi garantire l'isolamento dalla RLS invece
+  che da un `where` scritto a mano. Non funziona: la funzione legge `user_counts_specials`, che al
+  client **non è chiamabile apposta** — è una delle cose che il test di §1.1 verifica. Definer,
+  allora, ma il punto che conta non è l'etichetta: è che **non esiste un parametro con l'identità**.
+  L'IDOR di `import-parse` aveva la forma opposta, un id preso dalla richiesta e mai confrontato.
+- **Una nuova strada in una funzione vecchia richiede un ingresso nuovo, non un adattatore.**
+  `catalog-resolve` era interamente costruita attorno agli id TVDB dell'export. Il client ha id
+  TMDB da sempre, e per lui `/find` non è inutile: è impossibile. Costruire un id TVDB finto per
+  poterci passare sarebbe stato il modo sbagliato; `show_ids` è quindici righe e riusa
+  `populateShow` e `filterShowsNeedingRefresh` così com'erano.
 
 - **Un oracolo che combacia troppo sta misurando la cosa sbagliata.** Le 4 divergenze "da
   risolvere" erano in realtà 2 difetti del parser, presenti sia in `build_oracle.py` sia in
@@ -377,9 +463,9 @@ le altre 18 lingue ricadono sull'inglese.
 ## Come si collauda
 
 ```bash
-supabase/tests/run.sh                      # Postgres usa-e-getta, migration x2, 64 asserzioni
+supabase/tests/run.sh                      # Postgres usa-e-getta, migration x2, 80 asserzioni
 python3 test_oracle.py                     # oracolo, 31 test
-cd supabase/functions/catalog-resolve && deno test            # logica pura, 24 test
+cd supabase/functions/catalog-resolve && deno test            # logica pura, 28 test
 cd supabase/functions/import-parse   && deno test --allow-read  # parser, 14 test
 
 # Il 15° test del parser (l'apertura dell'archivio) gira solo se gli si dà l'export vero,
@@ -432,9 +518,13 @@ Due modi, entrambi già usati:
    punto di chiamata.
 2. **`import-parse` risponde 500 senza JWT valido** (`Expected 3 parts in JWT`). Fallisce chiuso,
    quindi non è un buco, ma un 401 sarebbe più onesto e non farebbe scattare i retry del client.
-3. **Rifiuti veri in `sync_rejected_mutations`**: `lists` con `constraint_23505` su
-   `idx_lists_one_active_default_per_user_type`, 6 occorrenze fra il 27 e il 29 luglio. Il client
-   prova a ricreare una lista di default che esiste già.
+3. **Rifiuti veri in `sync_rejected_mutations`**, ancora aperti al 2026-07-31: `lists` con
+   `constraint_23505` su `idx_lists_one_active_default_per_user_type` (4 occorrenze oggi, 6 fra il
+   27 e il 29 luglio) — il client prova a ricreare una lista di default che esiste già — e
+   **`list_items` con `list_not_owned`** (1 occorrenza), che è il ramo aggiunto da
+   `apply_mutations_list_ownership` e che nessuno ha ancora guardato. Nessuno dei due riguarda il
+   tracking: dopo il collaudo della migrazione, `watch_events` e `tv_show_state` non compaiono in
+   quella tabella.
 4. **`delete-user` cancella 5 tabelle su ~30** (audit §3b) e `profiles.id` non ha
    `ON DELETE CASCADE`: cancellare un utente fallisce se non si toglie prima il profilo. È materia
    GDPR.

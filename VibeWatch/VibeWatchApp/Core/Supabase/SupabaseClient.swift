@@ -263,7 +263,16 @@ class SupabaseService: ObservableObject {
 
     /// Applies a batch of mutations atomically using the `apply_mutations` RPC on Supabase.
     /// Each mutation should include: op ('INSERT'|'UPDATE'|'DELETE'), table, id, record (JSON object).
-    func applyMutations(_ batch: [[String: Any]]) async throws {
+    /// - Parameter allowClientSideFallback: quando l'RPC risponde male si ripiega su una upsert
+    ///   REST per riga. Per le scritture normali e' la rete di sicurezza giusta; per un lotto va
+    ///   spento. Il ripiego fa una chiamata per record e, soprattutto, risolve i conflitti su `id`
+    ///   invece che su `dedup_key`: un rigioco della migrazione dello storico genererebbe id nuovi
+    ///   e andrebbe a sbattere sull'indice unico di `watch_events` una riga alla volta, invece di
+    ///   essere il caso normale che `apply_mutations` gestisce saltando cio' che c'e' gia'.
+    func applyMutations(
+        _ batch: [[String: Any]],
+        allowClientSideFallback: Bool = true
+    ) async throws {
         guard client != nil else {
             throw SupabaseError.notConfigured
         }
@@ -306,7 +315,8 @@ class SupabaseService: ObservableObject {
         let bodyString = String(data: data, encoding: .utf8) ?? ""
 
         // If the RPC isn't deployed yet, fall back to client-side REST operations.
-        if http.statusCode == 404 || bodyString.lowercased().contains("apply_mutations") {
+        if allowClientSideFallback,
+           http.statusCode == 404 || bodyString.lowercased().contains("apply_mutations") {
             try await applyMutationsClientSide(batch)
             return
         }
@@ -324,6 +334,55 @@ class SupabaseService: ObservableObject {
 
         let data = try await callRPC(function: "merge_user_preferences", payload: payload)
         return (try? JSONSerialization.jsonObject(with: data) as? [String: Any]) ?? [:]
+    }
+
+    // MARK: - Migrazione dello storico (SPEC v3 blocco 7)
+
+    /// Espande le serie marcate "viste per intero" negli episodi che il catalogo conosce.
+    ///
+    /// L'espansione sta server-side perche' li' c'e' il catalogo (§1.4): il client sa *che* la
+    /// serie e' vista tutta, non *quali* episodi la compongono. Ritorna quante righe sono nate e
+    /// quali serie non erano espandibili perche' il catalogo non le ha ancora.
+    func expandSeenShowsToWatchEvents(
+        _ shows: [[String: Any]]
+    ) async throws -> LegacyExpansionOutcome {
+        let data = try await callRPC(
+            function: "expand_seen_shows_to_watch_events", payload: ["p_shows": shows])
+        let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        return LegacyExpansionOutcome(
+            eventsWritten: json?["events_written"] as? Int ?? 0,
+            showsWithoutCatalog: json?["shows_without_catalog"] as? [Int] ?? []
+        )
+    }
+
+    /// Popola `tmdb_shows`/`tmdb_episodes` per serie gia' identificate su TMDB.
+    ///
+    /// Passa da `catalog-resolve` e non da TMDB diretto: la chiave sta server-side, il budget e'
+    /// li', e il catalogo e' condiviso fra tutti gli utenti (§1.5) — la serie riscaldata da uno la
+    /// trovano pronta gli altri. Serve un JWT utente, non la chiave anonima.
+    func warmCatalog(showIds: [Int]) async throws {
+        guard !showIds.isEmpty else { return }
+        guard let url = URL(string: Config.supabaseURL.replacingOccurrences(
+            of: ".supabase.co", with: ".functions.supabase.co") + "/catalog-resolve")
+        else { throw SupabaseError.notConfigured }
+
+        guard let client, let session = try? await client.auth.session else {
+            throw SupabaseError.notAuthenticated
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
+        request.httpBody = try JSONSerialization.data(withJSONObject: ["show_ids": showIds])
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw SupabaseError.networkError }
+        guard (200...299).contains(http.statusCode) else {
+            throw SupabaseError.httpError(
+                statusCode: http.statusCode, body: String(data: data, encoding: .utf8) ?? "")
+        }
     }
 
     private func callRPC(function: String, payload: [String: Any]) async throws -> Data {

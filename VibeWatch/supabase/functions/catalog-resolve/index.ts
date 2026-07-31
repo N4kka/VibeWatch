@@ -33,6 +33,7 @@ import {
   FindResponse,
   initialSeasonChunk,
   MapRow,
+  normalizeShowIds,
   resolveFromFind,
   SEASONS_PER_APPEND,
   seasonAppendChunks,
@@ -117,6 +118,12 @@ interface RequestedEntity {
 
 interface Body {
   entities?: RequestedEntity[]
+  /**
+   * Id TMDB di serie da riscaldare direttamente, senza passare da `/find`. E' la strada di chi ha
+   * gia' l'id giusto — il client, che identifica le serie per TMDB da sempre — e serve alla
+   * migrazione dello storico del blocco 7. Puo' essere l'unico campo della richiesta.
+   */
+  show_ids?: number[]
   /** Set false to resolve ids without pulling the episode catalog (cheaper, for a first pass). */
   populate_episodes?: boolean
   /** Un `import_jobs` proprio e in fase `resolving`: sblocca il budget da import. */
@@ -165,9 +172,20 @@ serve(async (req: Request) => {
     return jsonResponse({ error: 'invalid_json' }, 400)
   }
 
-  const entities = normalizeEntities(body.entities)
+  const requestedShowIds = normalizeShowIds(body.show_ids, MAX_ENTITIES_PER_REQUEST)
+  if (requestedShowIds === null) {
+    return jsonResponse({ error: 'show_ids must be positive tmdb show ids, at most 50' }, 400)
+  }
+
+  // `entities` resta obbligatorio quando e' l'unica cosa chiesta, ma una richiesta di solo
+  // riscaldamento per id TMDB e' legittima e non deve inventarsi una lista TVDB vuota.
+  const hasEntities = Array.isArray(body.entities) && body.entities.length > 0
+  const entities = hasEntities ? normalizeEntities(body.entities) : []
   if (entities === null) {
     return jsonResponse({ error: 'entities must be [{tvdb_id, entity_type}], 1-50 items' }, 400)
+  }
+  if (entities.length === 0 && requestedShowIds.length === 0) {
+    return jsonResponse({ error: 'entities or show_ids required' }, 400)
   }
 
   const populateEpisodes = body.populate_episodes !== false
@@ -199,6 +217,7 @@ serve(async (req: Request) => {
 
   const stats = {
     requested: entities.length,
+    shows_requested: requestedShowIds.length,
     cache_hits: resolved.length,
     resolved_now: 0,
     not_found: 0,
@@ -305,11 +324,18 @@ serve(async (req: Request) => {
 
   // 3. §6, "Ottimizzazione": having resolved a show, pull its episodes in one go. This is what
   //    removes the N+2 TMDB calls per tracking tab and makes the up-next list work offline.
-  if (populateEpisodes) {
-    const showIds = [...new Set(
-      resolved.filter((r) => r.resolution === 'found' && r.tmdb_show_id !== null)
-        .map((r) => r.tmdb_show_id as number),
-    )]
+  //
+  //    `requestedShowIds` entra qui senza passare dal `populate_episodes`: chi chiede un id TMDB
+  //    sta chiedendo esattamente il catalogo di quella serie, e non c'e' un altro risultato che
+  //    quella richiesta potrebbe volere.
+  if (populateEpisodes || requestedShowIds.length > 0) {
+    const showIds = [...new Set([
+      ...(populateEpisodes
+        ? resolved.filter((r) => r.resolution === 'found' && r.tmdb_show_id !== null)
+          .map((r) => r.tmdb_show_id as number)
+        : []),
+      ...requestedShowIds,
+    ])]
 
     for (const showId of await filterShowsNeedingRefresh(supabase, showIds, now)) {
       if (Date.now() > deadline || budgetExhausted) break
