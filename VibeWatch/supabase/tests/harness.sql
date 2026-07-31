@@ -40,6 +40,12 @@ language sql stable as $$
   select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid;
 $$;
 
+-- In produzione Supabase concede USAGE su `auth` ai ruoli client, ed e' cio' che permette a una
+-- funzione `security invoker` chiamata dal client (get_my_stats) di leggere auth.uid(). Le
+-- policy RLS non lo richiedono (girano col proprietario della tabella), quindi la mancanza si
+-- vede solo alla prima funzione invoker che tocca auth — meglio qui che in un FAIL criptico.
+grant usage on schema auth to anon, authenticated;
+
 -- Preferenze: la colonna count_specials_in_progress la aggiunge la migration di §1.3.
 create table if not exists public.unified_user_preferences (
   user_id    uuid primary key references auth.users on delete cascade,

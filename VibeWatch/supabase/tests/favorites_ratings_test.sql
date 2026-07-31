@@ -182,6 +182,85 @@ select t.is_true(has_table_privilege('authenticated', 'public.user_ratings', 'se
              and has_table_privilege('authenticated', 'public.user_ratings', 'update'),
             'e i propri voti');
 
+\echo ''
+\echo '=== §9.3/§13.7 get_my_stats: runtime reali, mai stime'
+
+-- Catalogo minimo: un episodio con runtime per il ripiego quando lo snapshot manca.
+insert into public.tmdb_shows (tmdb_show_id, name) values (900, 'Stats Show');
+insert into public.tmdb_episodes (tmdb_show_id, season_number, episode_number, tmdb_episode_id, runtime_minutes)
+values (900, 1, 3, 9003, 40);
+
+insert into public.watch_events (user_id, media_type, tmdb_show_id, season_number, episode_number,
+                                 watched_at, runtime_seconds, rewatch_index, deleted_at)
+values
+  -- due episodi con lo snapshot
+  ('bbbbbbbb-0000-0000-0000-000000000001', 'tv', 900, 1, 1, now(), 1500, 0, null),
+  ('bbbbbbbb-0000-0000-0000-000000000001', 'tv', 900, 1, 2, now(), 1500, 0, null),
+  -- snapshot mancante: il runtime arriva dal catalogo (40 min = 2400 s)
+  ('bbbbbbbb-0000-0000-0000-000000000001', 'tv', 900, 1, 3, now(), null, 0, null),
+  -- un rewatch: tempo vero in piu', ma NON un episodio in piu'
+  ('bbbbbbbb-0000-0000-0000-000000000001', 'tv', 900, 1, 1, now(), 1500, 1, null),
+  -- un evento cancellato non conta niente
+  ('bbbbbbbb-0000-0000-0000-000000000001', 'tv', 900, 1, 4, now(), 9999, 0, now());
+insert into public.watch_events (user_id, media_type, tmdb_movie_id, watched_at, runtime_seconds)
+values ('bbbbbbbb-0000-0000-0000-000000000001', 'movie', 603, now(), 7200);
+
+set local role authenticated;
+set local request.jwt.claim.sub = 'bbbbbbbb-0000-0000-0000-000000000001';
+
+select t.eq(((public.get_my_stats())->>'watch_time_seconds')::bigint, 14100::bigint,
+            '1500+1500+2400(catalogo)+1500(rewatch)+7200(film), il cancellato fuori');
+select t.eq(((public.get_my_stats())->>'episodes_watched')::integer, 3,
+            'il rewatch non e'' un episodio in piu''');
+select t.eq(((public.get_my_stats())->>'shows_watched')::integer, 1, 'una serie');
+select t.eq(((public.get_my_stats())->>'movies_watched')::integer, 1, 'un film');
+select t.eq(((public.get_my_stats())->>'ratings_given')::integer, 4,
+            'i voti vivi di prima, la lapide esclusa');
+
+set local request.jwt.claim.sub = 'bbbbbbbb-0000-0000-0000-000000000002';
+select t.eq(((public.get_my_stats())->>'watch_time_seconds')::bigint, 0::bigint,
+            'le stats sono del chiamante: b non eredita niente da a');
+select t.eq(((public.get_my_stats())->>'episodes_watched')::integer, 0, 'zeri, non errori');
+
+reset role;
+
+\echo ''
+\echo '=== §9.3 i favorites nel profilo pubblico'
+
+insert into public.profiles (id, email, display_name, username, is_profile_public)
+values ('bbbbbbbb-0000-0000-0000-000000000001', 'fa@test', 'Fav User', 'fav_user', true);
+
+set local role authenticated;
+set local request.jwt.claim.sub = 'bbbbbbbb-0000-0000-0000-000000000002';
+
+-- Lo stato dei favorites film di a, costruito nelle sezioni sopra: slot 1 svuotato e
+-- ririempito con 42, gli altri come alla nascita.
+select t.eq(jsonb_array_length((public.get_public_profile('fav_user'))->'favorites'->'movie'), 4,
+            'quattro slot film vivi');
+select t.eq(((public.get_public_profile('fav_user'))->'favorites'->'movie'->0->>'tmdb_id')::integer, 42,
+            'lo slot 1 mostra il film ririempito, non la lapide');
+select t.eq(jsonb_array_length((public.get_public_profile('fav_user'))->'favorites'->'tv'), 4,
+            'e quattro slot serie');
+
+-- Uno slot svuotato sparisce dal profilo pubblico.
+reset role;
+update public.user_favorites set deleted_at = now()
+ where user_id = 'bbbbbbbb-0000-0000-0000-000000000001' and media_type = 'movie' and slot = 2;
+set local role authenticated;
+set local request.jwt.claim.sub = 'bbbbbbbb-0000-0000-0000-000000000002';
+select t.eq(jsonb_array_length((public.get_public_profile('fav_user'))->'favorites'->'movie'), 3,
+            'lo slot svuotato non si mostra');
+
+reset role;
+
+select t.eq((select count(*)::integer from pg_proc p
+              where p.proname = 'get_my_stats'
+                and array_to_string(p.proacl, ',') like '%anon=X%'), 0,
+            'get_my_stats non e'' chiamabile da anon');
+select t.is_true((select array_to_string(p.proacl, ',') like '%authenticated=X%'
+                    from pg_proc p where p.proname = 'get_my_stats'),
+            'ma lo e'' da authenticated');
+
 rollback;
 
 \echo ''
