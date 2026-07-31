@@ -119,6 +119,12 @@ public enum TableConflictMapping {
         case "user_follows":
             return .union
 
+        // SPEC v3 §4 (blocco 9): l'ultimo intento dell'utente, confrontato su updated_at — che
+        // entrambe le tabelle hanno. Esplicite e non nel `default`, che dice lo stesso valore:
+        // il default e' una decisione non presa, ed e' gia' costato le due viste di §9.2.
+        case "user_favorites", "user_ratings":
+            return .lastWriteWins
+
         // Default fallback for unknown tables
         default:
             return .lastWriteWins

@@ -13,12 +13,16 @@ final class TrackingSyncTests: XCTestCase {
         XCTAssertTrue(SQLiteTable.isValid("tv_show_state"))
     }
 
-    /// Le tabelle che §4 elenca ma che nascono col blocco 9 devono restare fuori: una tabella
-    /// inesistente nella pull-list è un PGRST205 a ogni sync. `user_follows` non è più fra
-    /// queste — esiste in produzione dal 2026-07-31 (blocco 8) ed è entrata nella whitelist.
-    func testLeTabelleNonAncoraEsistentiRestanoFuori() {
-        XCTAssertFalse(SQLiteTable.isValid("user_ratings"))
-        XCTAssertFalse(SQLiteTable.isValid("user_favorites"))
+    /// Fino al blocco 9 questo test verificava il contrario — che `user_ratings` e
+    /// `user_favorites` restassero FUORI dalla whitelist, perché una tabella inesistente nella
+    /// pull-list è un PGRST205 a ogni sync. Dal 2026-07-31 esistono in produzione (RLS, rami in
+    /// apply_mutations), quindi ora si fissa il positivo: dentro, e `lastWriteWins` esplicita
+    /// (§4) — mai nel `default`, che è una decisione non presa.
+    func testFavoritesEVotiSonoInWhitelistEInLastWriteWins() {
+        XCTAssertTrue(SQLiteTable.isValid("user_ratings"))
+        XCTAssertTrue(SQLiteTable.isValid("user_favorites"))
+        XCTAssertEqual(TableConflictMapping.strategy(for: "user_ratings"), .lastWriteWins)
+        XCTAssertEqual(TableConflictMapping.strategy(for: "user_favorites"), .lastWriteWins)
     }
 
     /// §3.6: la coppia (follower, followee) si sincronizza come `union` — un follow non si perde.

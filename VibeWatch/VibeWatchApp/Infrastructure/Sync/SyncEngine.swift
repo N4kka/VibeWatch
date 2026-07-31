@@ -47,6 +47,9 @@ public protocol SyncEngineProtocol: AnyObject {
 
     /// Ritira lo stato del tracking e nient'altro, dopo un'azione sulla schermata (§9.2).
     func pullTrackingState() async
+
+    /// Ritira favorites e voti e nient'altro, dopo una scrittura (§3.6, blocco 9).
+    func pullProfileContent() async
 }
 
 // MARK: - SyncEngine Implementation
@@ -688,6 +691,28 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
         }
     }
 
+    /// Le due tabelle del blocco 9 che le azioni riscaricano dopo una scrittura.
+    nonisolated static let profileContentTables = ["user_favorites", "user_ratings"]
+
+    /// Ritira **solo** favorites e voti, dopo un'azione di scrittura su uno dei due.
+    ///
+    /// Stessa ragione di `pullTrackingState`: la scrittura passa dall'outbox e lo specchio
+    /// locale e' ottimistico, ma se il server la respinge (un rifiuto registrato, non un
+    /// errore) solo un pull riallinea lo schermo. Un `pullFromRemote()` qui sarebbe venti
+    /// tabelle per un tocco su una stella.
+    public func pullProfileContent() async {
+        guard networkMonitor.isConnected else { return }
+        guard let userId = AuthService.shared.currentUser?.id else { return }
+
+        for table in Self.profileContentTables {
+            do {
+                try await pullTableWithConflictResolution(name: table, userId: userId)
+            } catch {
+                Logger.warning("[SyncEngine] Profile content pull failed on \(table): \(error.localizedDescription)")
+            }
+        }
+    }
+
     @discardableResult
     private func pullFromRemoteInternal() async -> SyncOutcome {
         var outcome = SyncOutcome()
@@ -726,9 +751,11 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             "ai_conversation_history",
             "global_discovery_filters",
             "device_info",
-            // SPEC v3 §4. `user_ratings` e `user_favorites` sono nell'elenco di §4 ma restano
-            // fuori finché il blocco 9 non le crea lato server: una tabella inesistente qui è un
-            // PGRST205 a ogni sync, non una riga in meno.
+            // SPEC v3 §3.6/§4 (blocco 9): in produzione dal 2026-07-31. Entrambe lastWriteWins;
+            // le chiavi sono composite (getKeyColumns) e l'ordinamento di pagina usa tutte le
+            // colonne della chiave — nessuna da sola e' unica nel sottoinsieme dell'utente.
+            "user_favorites",
+            "user_ratings",
             "watch_events",
             "tv_show_state",
             // §9.2: le due viste che la schermata Tracking legge. Sono viste e non tabelle, ma
@@ -795,11 +822,12 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
                 // two windows over the same table can overlap and miss rows at the same time. The
                 // primary key is unique within the filtered set, which is what a stable sort needs.
                 var ordered = query.order(keyColumn, ascending: true)
-                if name == "user_follows" {
-                    // La chiave e' la coppia: follower_id da solo non e' unico nel sottoinsieme
-                    // dell'utente (seguo in molti, mi seguono in molti), e un ordinamento non
-                    // totale fa sovrapporre le pagine (§5). Il secondo order chiude la coppia.
-                    ordered = ordered.order("followee_id", ascending: true)
+                // Le chiavi composite ordinano su TUTTE le loro colonne: la prima da sola non e'
+                // unica nel sottoinsieme dell'utente, e un ordinamento non totale fa sovrapporre
+                // le pagine (§5). L'elenco viene da getKeyColumns, cosi' chi aggiunge una tabella
+                // a chiave composta eredita l'ordinamento giusto senza un altro if da ricordare.
+                for extra in self.getKeyColumns(for: name).dropFirst() {
+                    ordered = ordered.order(extra, ascending: true)
                 }
                 let data = try await ordered
                     .range(from: offset, to: offset + limit - 1)
@@ -895,10 +923,22 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
         }
     }
 
-    /// Le colonne che identificano una riga. Una sola per quasi tutte; la coppia per i follow.
+    /// Le colonne che identificano una riga. Una sola per quasi tutte; composite per i follow,
+    /// i favorites e i voti. `user_id` non compare mai: il pull filtra gia' per utente, e lo
+    /// specchio locale e' di un utente solo (precedente: tv_show_state).
+    ///
+    /// La PRIMA colonna deve coincidere con getPrimaryKeyColumn: il pull ordina le pagine su
+    /// quella e poi su tutte le successive di questo elenco.
     private func getKeyColumns(for table: String) -> [String] {
-        if table == "user_follows" { return ["follower_id", "followee_id"] }
-        return [getPrimaryKeyColumn(for: table)]
+        switch table {
+        case "user_follows": return ["follower_id", "followee_id"]
+        case "user_favorites": return ["media_type", "slot"]
+        case "user_ratings":
+            // season/episode sono nella chiave col sentinello -1 (vedi normalizeRow): senza,
+            // il voto a un film e quello alla serie con lo stesso tmdb_id collasserebbero.
+            return ["media_type", "tmdb_id", "season_number", "episode_number"]
+        default: return [getPrimaryKeyColumn(for: table)]
+        }
     }
 
     /// In quale tabella locale atterra una sorgente remota.
@@ -942,6 +982,10 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             // pagine (il pull aggiunge followee_id) e non basta da sola a identificare una riga —
             // per quello c'è getKeyColumns.
             return "follower_id"
+        case "user_favorites", "user_ratings":
+            // Come per i follow: prima colonna d'ordinamento, non la chiave intera. Il resto
+            // dell'ordine (slot; tmdb_id/stagione/episodio) lo aggiunge il pull da getKeyColumns.
+            return "media_type"
         default:
             return "id"
         }
@@ -985,6 +1029,19 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
                 if let data = try? JSONSerialization.data(withJSONObject: arr),
                    let str = String(data: data, encoding: .utf8) {
                     normalized[field] = str
+                }
+            }
+        }
+
+        // §3.6 (blocco 9): sul server un voto a un film ha season/episode NULL; nello specchio
+        // locale sono NOT NULL DEFAULT -1, lo stesso sentinello del coalesce(-1) nell'indice
+        // unico remoto. Senza questa conversione fetchLocalRecord non ritroverebbe la riga
+        // (NSNull non combacia con -1) e ogni pull tratterebbe il voto come una riga nuova,
+        // saltando la risoluzione dei conflitti.
+        if table == "user_ratings" {
+            for field in ["season_number", "episode_number"] {
+                if normalized[field] == nil || normalized[field] is NSNull {
+                    normalized[field] = -1
                 }
             }
         }

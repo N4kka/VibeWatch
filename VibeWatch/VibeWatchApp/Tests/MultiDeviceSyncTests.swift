@@ -353,11 +353,13 @@ final class MockSyncEngine: SyncEngineProtocol, @unchecked Sendable {
         queued.append(QueuedOp(table: table, operationType: operationType, recordId: recordId, payload: payload))
     }
     private(set) var trackingPulls = 0
+    private(set) var profileContentPulls = 0
 
     func performFullSync(trigger: SyncTrigger) async {}
     func pushPendingChanges() async {}
     func pullFromRemote() async {}
     func pullTrackingState() async { trackingPulls += 1 }
+    func pullProfileContent() async { profileContentPulls += 1 }
 }
 
 final class SyncEnginePayloadNormalizationTests: XCTestCase {

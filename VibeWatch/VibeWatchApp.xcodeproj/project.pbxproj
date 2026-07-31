@@ -25,6 +25,7 @@
 		A1B2C3D4000AE5F600000001 /* LocalizationCoverageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000AE5F600000002 /* LocalizationCoverageTests.swift */; };
 		A1B2C3D4000BE5F600000001 /* UsernameSetupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000BE5F600000002 /* UsernameSetupTests.swift */; };
 		A1B2C3D4000BE5F600000003 /* SocialProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000BE5F600000004 /* SocialProfileTests.swift */; };
+		A1B2C3D4000BE5F600000005 /* FavoritesRatingsActionsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000BE5F600000006 /* FavoritesRatingsActionsTests.swift */; };
 		A1B2C3D4E5F6A1B2 /* KeychainStorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A1B3 /* KeychainStorageTests.swift */; };
 		A1B2C3D4E5F6A1B4 /* AuthMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A1B5 /* AuthMigrationTests.swift */; };
 		B276FBD367C144A78E0A9217 /* SyncStateMachineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C39F30EEBCD42B48EC2203D /* SyncStateMachineTests.swift */; };
@@ -79,6 +80,7 @@
 		A1B2C3D4000AE5F600000002 /* LocalizationCoverageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationCoverageTests.swift; sourceTree = "<group>"; };
 		A1B2C3D4000BE5F600000002 /* UsernameSetupTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsernameSetupTests.swift; sourceTree = "<group>"; };
 		A1B2C3D4000BE5F600000004 /* SocialProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialProfileTests.swift; sourceTree = "<group>"; };
+		A1B2C3D4000BE5F600000006 /* FavoritesRatingsActionsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesRatingsActionsTests.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F6A1B3 /* KeychainStorageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStorageTests.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F6A1B5 /* AuthMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthMigrationTests.swift; sourceTree = "<group>"; };
 		B318DC8A2EC6920500DB1A9A /* VibeWatchApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VibeWatchApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -157,6 +159,7 @@
 				A1B2C3D40005E5F600000002 /* SyncPaginationTests.swift */,
 				A1B2C3D4000BE5F600000002 /* UsernameSetupTests.swift */,
 				A1B2C3D4000BE5F600000004 /* SocialProfileTests.swift */,
+				A1B2C3D4000BE5F600000006 /* FavoritesRatingsActionsTests.swift */,
 				A1B2C3D4000AE5F600000002 /* LocalizationCoverageTests.swift */,
 				A1B2C3D40009E5F600000002 /* LegacyTrackingMigrationTests.swift */,
 				7C39F30EEBCD42B48EC2203D /* SyncStateMachineTests.swift */,
@@ -389,6 +392,7 @@
 				A1B2C3D40005E5F600000001 /* SyncPaginationTests.swift in Sources */,
 				A1B2C3D4000BE5F600000001 /* UsernameSetupTests.swift in Sources */,
 				A1B2C3D4000BE5F600000003 /* SocialProfileTests.swift in Sources */,
+				A1B2C3D4000BE5F600000005 /* FavoritesRatingsActionsTests.swift in Sources */,
 				A1B2C3D4000AE5F600000001 /* LocalizationCoverageTests.swift in Sources */,
 				A1B2C3D40009E5F600000001 /* LegacyTrackingMigrationTests.swift in Sources */,
 				B276FBD367C144A78E0A9217 /* SyncStateMachineTests.swift in Sources */,

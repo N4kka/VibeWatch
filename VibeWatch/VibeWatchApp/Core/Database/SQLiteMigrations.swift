@@ -8,7 +8,7 @@ extension SQLiteService {
     /// Run personalization migrations (Phase 1)
     func runPersonalizationMigrations() {
         let currentVersion = getPersonalizationMigrationVersion()
-        let latestVersion = 10
+        let latestVersion = 11
 
         guard currentVersion < latestVersion else {
             Logger.info("[SQLite] Personalization migrations already applied (version \(currentVersion))")
@@ -53,6 +53,9 @@ extension SQLiteService {
             }
             if currentVersion < 10 {
                 migration10_AddUserFollows()
+            }
+            if currentVersion < 11 {
+                migration11_AddFavoritesAndRatings()
             }
 
             // Update migration version
@@ -251,7 +254,61 @@ extension SQLiteService {
         Logger.info("[SQLite] Migration 10 complete")
     }
 
+    /// SPEC v3 §3.6 (blocco 9) — lo specchio locale di `user_favorites` e `user_ratings`.
+    ///
+    /// Entrambe `lastWriteWins` (§4): l'ultimo intento dell'utente. Il soft delete viaggia come
+    /// contenuto della riga (uno slot svuotato, un voto tolto), quindi il pull lo porta anche
+    /// agli altri dispositivi.
+    ///
+    /// `user_ratings` sul server ha `season_number`/`episode_number` NULL per film e serie. Qui
+    /// sono `NOT NULL DEFAULT -1`: una PK SQLite con una colonna NULL considera ogni NULL diverso
+    /// dagli altri, quindi lo stesso voto arriverebbe due volte come due righe. Il -1 e' lo stesso
+    /// sentinello del `coalesce(season_number,-1)` nell'indice unico del server — la chiave
+    /// locale e quella remota coincidono per costruzione. La conversione NULL → -1 la fa
+    /// `normalizeRow` nel pull; il percorso di scrittura (le azioni) parla al server con i NULL.
+    private func migration11_AddFavoritesAndRatings() {
+        Logger.info("[SQLite] Migration 11: Adding user_favorites and user_ratings")
+
+        executeScript(createUserFavoritesTable())
+        executeScript(createUserRatingsTable())
+
+        Logger.info("[SQLite] Migration 11 complete")
+    }
+
     // MARK: - Table Creation Methods
+
+    private func createUserFavoritesTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS user_favorites (
+            user_id TEXT NOT NULL,
+            media_type TEXT NOT NULL,
+            slot INTEGER NOT NULL,
+            tmdb_id INTEGER NOT NULL,
+            updated_at TEXT,
+            deleted_at TEXT,
+            synced_at TEXT,
+            PRIMARY KEY (user_id, media_type, slot)
+        );
+        """
+    }
+
+    private func createUserRatingsTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS user_ratings (
+            user_id TEXT NOT NULL,
+            media_type TEXT NOT NULL,
+            tmdb_id INTEGER NOT NULL,
+            season_number INTEGER NOT NULL DEFAULT -1,
+            episode_number INTEGER NOT NULL DEFAULT -1,
+            rating INTEGER NOT NULL,
+            created_at TEXT,
+            updated_at TEXT,
+            deleted_at TEXT,
+            synced_at TEXT,
+            PRIMARY KEY (user_id, media_type, tmdb_id, season_number, episode_number)
+        );
+        """
+    }
 
     private func createUserFollowsTable() -> String {
         """

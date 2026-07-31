@@ -76,11 +76,16 @@ enum SQLiteTable: String, CaseIterable {
     // LocalWatchProvidersRepository threw invalidTableName and died under a `try?`).
     case watchProviders = "watch_providers"
 
-    // Tracking episodi (SPEC v3 §4). `user_ratings` e `user_favorites` sono nell'elenco di §4 ma
-    // NON qui: non esistono ancora lato server (arrivano col blocco 9), e metterle ora
-    // significherebbe un PGRST205 a ogni sync.
+    // Tracking episodi (SPEC v3 §4).
     case watchEvents = "watch_events"
     case tvShowState = "tv_show_state"
+
+    // Blocco 9 (SPEC v3 §3.6): in produzione dal 2026-07-31, con RLS e rami in apply_mutations.
+    // `user_ratings` non ha id sintetico nemmeno qui: la chiave e' quella naturale, con
+    // season/episode a -1 quando non e' un episodio — lo stesso sentinello del
+    // `coalesce(season_number,-1)` dell'indice unico sul server.
+    case userFavorites = "user_favorites"
+    case userRatings = "user_ratings"
 
     // Social (SPEC v3 §3.6, blocco 8). Chiave composta (follower_id, followee_id), come sul
     // server: un follow e' la coppia, non una riga con un id suo.
