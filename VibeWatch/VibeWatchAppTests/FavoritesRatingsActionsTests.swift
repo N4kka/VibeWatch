@@ -232,12 +232,14 @@ final class FavoritesRatingsActionsTests: XCTestCase {
 
     /// Vuoto, righe e lettura fallita sono tre stati, mai schiacciati.
     func testIlDiarioVuotoNonEUnErrore() async {
-        let vuoto = DiaryViewModel(fetchPage: { _, _ in [] }, resolveMovieTitle: { _ in nil })
+        let vuoto = DiaryViewModel(fetchPage: { _, _ in [] }, resolveMovieTitle: { _ in nil },
+                                   resolveShowTitle: { _ in nil })
         await vuoto.load()
         XCTAssertEqual(vuoto.phase, .empty)
 
         struct Rotto: Error {}
-        let rotto = DiaryViewModel(fetchPage: { _, _ in throw Rotto() }, resolveMovieTitle: { _ in nil })
+        let rotto = DiaryViewModel(fetchPage: { _, _ in throw Rotto() }, resolveMovieTitle: { _ in nil },
+                                   resolveShowTitle: { _ in nil })
         await rotto.load()
         XCTAssertEqual(rotto.phase, .failed, "una lettura fallita non e' 'non hai visto niente'")
     }
@@ -247,7 +249,7 @@ final class FavoritesRatingsActionsTests: XCTestCase {
         let seconda = [diaryEntry(id: "extra1"), diaryEntry(id: "extra2")]
         let vm = DiaryViewModel(
             fetchPage: { _, offset in offset == 0 ? prima : seconda },
-            resolveMovieTitle: { _ in nil })
+            resolveMovieTitle: { _ in nil }, resolveShowTitle: { _ in nil })
         await vm.load()
         await vm.loadMoreIfNeeded(current: prima.last!)
 
@@ -261,10 +263,23 @@ final class FavoritesRatingsActionsTests: XCTestCase {
     func testIlTitoloDeiFilmSiRisolveDalClient() async {
         let vm = DiaryViewModel(
             fetchPage: { _, _ in [self.diaryEntry(id: "m1", mediaType: "movie")] },
-            resolveMovieTitle: { id in id == 900 ? "Heat" : nil })
+            resolveMovieTitle: { id in id == 900 ? "Heat" : nil },
+            resolveShowTitle: { _ in nil })
         await vm.load()
         XCTAssertEqual(vm.movieTitles[900], "Heat",
                        "il catalogo film locale non esiste: il nome arriva dal client")
+    }
+
+    /// Il nome nello specchio e' quello del catalogo condiviso (§1.5), una lingua sola: il
+    /// titolo nella lingua dell'app si risolve dal client, e il nome inglese resta il ripiego
+    /// per l'offline — un titolo vero in una lingua sbagliata batte un buco.
+    func testIlTitoloDelleSerieSiRisolveNellaLinguaDellApp() async {
+        let vm = DiaryViewModel(
+            fetchPage: { _, _ in [self.diaryEntry(id: "e1")] },
+            resolveMovieTitle: { _ in nil },
+            resolveShowTitle: { id in id == 900 ? "La Serie" : nil })
+        await vm.load()
+        XCTAssertEqual(vm.showTitles[900], "La Serie")
     }
 
     /// La forma della riga: la data dedotta si dichiara, l'episodio porta la sua etichetta.

@@ -17,19 +17,24 @@ final class DiaryViewModel: ObservableObject {
 
     @Published private(set) var phase: Phase = .loading
     @Published private(set) var movieTitles: [Int: String] = [:]
+    @Published private(set) var showTitles: [Int: String] = [:]
 
     static let pageSize = 100
 
     private let fetchPage: (Int, Int) async throws -> [DiaryEntry]
     private let resolveMovieTitle: (Int) async -> String?
+    private let resolveShowTitle: (Int) async -> String?
     private var isLoadingMore = false
 
     init(fetchPage: @escaping (Int, Int) async throws -> [DiaryEntry] =
             { try await LocalDiaryRepository.shared.page(limit: $0, offset: $1) },
          resolveMovieTitle: @escaping (Int) async -> String? =
-            { try? await TMDBService.shared.getMovieDetails(id: $0).title }) {
+            { try? await TMDBService.shared.getMovieDetails(id: $0).title },
+         resolveShowTitle: @escaping (Int) async -> String? =
+            { try? await TMDBService.shared.getTVShowDetails(id: $0).name }) {
         self.fetchPage = fetchPage
         self.resolveMovieTitle = resolveMovieTitle
+        self.resolveShowTitle = resolveShowTitle
     }
 
     func load() async {
@@ -62,12 +67,24 @@ final class DiaryViewModel: ObservableObject {
 
     /// I film non hanno un nome nello specchio locale (un catalogo film non esiste, §9.3): si
     /// risolve dal client, una volta per id, meglio tardi che sbagliato.
+    ///
+    /// Anche le serie passano di qui, per un motivo diverso: lo specchio ha un nome, ma è quello
+    /// del **catalogo condiviso** (§1.5), che parla una lingua sola — in pratica l'inglese di
+    /// TMDB. TMDBService invece chiede nella lingua dell'app. Il nome dello specchio resta il
+    /// ripiego: offline si vede il titolo inglese, che è vero, non un buco.
     private func resolveMissingTitles(in entries: [DiaryEntry]) async {
-        let ids = Set(entries.filter { $0.mediaType == "movie" }.map(\.tmdbId))
+        let movieIds = Set(entries.filter { $0.mediaType == "movie" }.map(\.tmdbId))
             .subtracting(movieTitles.keys)
-        for id in ids {
+        for id in movieIds {
             if let title = await resolveMovieTitle(id) {
                 movieTitles[id] = title
+            }
+        }
+        let showIds = Set(entries.filter { $0.mediaType == "tv" }.map(\.tmdbId))
+            .subtracting(showTitles.keys)
+        for id in showIds {
+            if let title = await resolveShowTitle(id) {
+                showTitles[id] = title
             }
         }
     }
@@ -75,6 +92,7 @@ final class DiaryViewModel: ObservableObject {
 
 struct DiaryView: View {
     @StateObject private var viewModel: DiaryViewModel
+    @Environment(\.dismiss) private var dismiss
 
     init() {
         _viewModel = StateObject(wrappedValue: DiaryViewModel())
@@ -98,6 +116,14 @@ struct DiaryView: View {
         }
         .navigationTitle("diary.title".localized)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            // Lo sheet si chiude anche con lo swipe, ma una stanza merita una porta visibile
+            // (lezione del pannello AI del blocco 7). Stesso pattern di UserSearchView.
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("profile.done".localized) { dismiss() }
+                    .foregroundColor(.theme.textPrimary)
+            }
+        }
         .task { await viewModel.load() }
     }
 
@@ -169,7 +195,9 @@ struct DiaryView: View {
         if entry.mediaType == "movie" {
             return viewModel.movieTitles[entry.tmdbId] ?? "···"
         }
-        return entry.title ?? "···"
+        // Prima il titolo nella lingua dell'app; il nome del catalogo (inglese) fa da ripiego
+        // per l'offline. Un titolo vero in una lingua sbagliata batte un buco.
+        return viewModel.showTitles[entry.tmdbId] ?? entry.title ?? "···"
     }
 
     private func poster(_ entry: DiaryEntry) -> some View {
