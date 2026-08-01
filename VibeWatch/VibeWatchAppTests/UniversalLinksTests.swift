@@ -41,6 +41,19 @@ final class UniversalLinksTests: XCTestCase {
         XCTAssertEqual(route, .profile(username: "nakka"))
     }
 
+    func testProfiloConWww() {
+        // Gli entitlement dichiarano anche www: un link con www può aprire l'app, quindi il
+        // parser deve riconoscerlo — aprirsi e lasciar cadere il link sarebbe un guasto muto.
+        let route = UniversalLinks.route(for: url("https://www.\(UniversalLinks.host)/@nakka"))
+        XCTAssertEqual(route, .profile(username: "nakka"))
+    }
+
+    func testSottodominioQualunqueCade() {
+        // Solo apex e www: gli altri sottodomini non stanno negli entitlement, e il parser non
+        // deve essere più largo di ciò che gli entitlement promettono.
+        XCTAssertNil(UniversalLinks.route(for: url("https://app.\(UniversalLinks.host)/@nakka")))
+    }
+
     func testProfiloConTrailingSlash() {
         let route = UniversalLinks.route(for: url("https://\(UniversalLinks.host)/@nakka/"))
         XCTAssertEqual(route, .profile(username: "nakka"))
@@ -147,9 +160,14 @@ final class UniversalLinksTests: XCTestCase {
                      "VibeWatchApp/VibeWatchAppRelease.entitlements"] {
             let content = try String(contentsOf: repoRoot.appendingPathComponent(name),
                                      encoding: .utf8)
-            XCTAssertTrue(content.contains("<string>applinks:\(UniversalLinks.host)</string>"),
-                          "\(name) non contiene applinks:\(UniversalLinks.host) — " +
-                          "UniversalLinks.host e gli entitlement devono cambiare insieme")
+            // Apex E www, perché il parser accetta entrambi: se un entitlement ne perde uno,
+            // metà dei link smette di aprire l'app e nessuno se ne accorge da un log.
+            for entry in ["applinks:\(UniversalLinks.host)",
+                          "applinks:www.\(UniversalLinks.host)"] {
+                XCTAssertTrue(content.contains("<string>\(entry)</string>"),
+                              "\(name) non contiene \(entry) — " +
+                              "UniversalLinks.host e gli entitlement devono cambiare insieme")
+            }
         }
     }
 

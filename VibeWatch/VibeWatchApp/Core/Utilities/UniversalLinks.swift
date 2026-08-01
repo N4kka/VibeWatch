@@ -4,22 +4,20 @@ import Foundation
 
 /// Le due rotte web che l'app sa aprire: `/@{username}` e `/film/{id}`.
 ///
-/// Il dominio non è ancora deciso (il sito "arriva subito dopo", §9.4): `host` qui sotto è un
-/// segnaposto, e deve restare **l'unico posto nel codice** dove il dominio compare. Gli altri due
+/// `host` deve restare **l'unico posto nel codice** dove il dominio compare. Gli altri due
 /// posti stanno fuori dal codice e un test li tiene allineati a questo valore
 /// (`UniversalLinksTests.testEntitlementsCombacianoConHost`):
 ///
 ///   1. `VibeWatchApp/VibeWatchApp.entitlements` e `VibeWatchAppRelease.entitlements`
-///      (`com.apple.developer.associated-domains`, voce `applinks:`);
+///      (`com.apple.developer.associated-domains`, voci `applinks:` — apex E www);
 ///   2. il file `apple-app-site-association` in `docs/universal-links/`, che però è
 ///      indipendente dal dominio per costruzione: elenca percorsi, non host.
 ///
-/// Quando il dominio vero esisterà: cambiare `host`, far girare i test (falliranno finché gli
-/// entitlement non seguono), servire l'AASA come descritto in `docs/universal-links/README.md`.
+/// Il deploy dell'AASA sul dominio è descritto in `docs/universal-links/README.md`.
 enum UniversalLinks {
 
-    /// SEGNAPOSTO — il dominio vero non è ancora deciso. Vedi il commento in testa.
-    static let host = "vibewatch.app"
+    /// Il dominio, deciso il 2026-08-01.
+    static let host = "vibewatchapp.com"
 
     /// Una destinazione riconosciuta in un universal link.
     enum Route: Equatable {
@@ -34,7 +32,10 @@ enum UniversalLinks {
         // Gli universal link sono sempre https; lo scheme OAuth passa di qui prima di essere
         // riconosciuto altrove, e non deve mai somigliare a una rotta web.
         guard url.scheme?.lowercased() == "https" else { return nil }
-        guard let urlHost = url.host?.lowercased(), urlHost == host else { return nil }
+        // Anche `www.`: gli entitlement lo dichiarano, quindi un link con www può aprire l'app —
+        // e un link che apre l'app e poi cade nel vuoto è un fallimento senza errore.
+        guard let urlHost = url.host?.lowercased(),
+              urlHost == host || urlHost == "www.\(host)" else { return nil }
 
         // `URL.path` è già percent-decoded. Il trailing slash non è una rotta diversa.
         var path = url.path

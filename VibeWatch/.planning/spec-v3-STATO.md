@@ -33,34 +33,40 @@ chiusi — vedi *La prova su dispositivo* più sotto. **Coda aperta, da rivedere
   (`selectTopProviderWithTier`; l'API vecchia delega, comportamento identico).
 
 **Il blocco 10 (§9.4) ha la parte client FATTA** (quinta sessione, 2026-08-01): tutto ciò che
-non richiede il dominio è scritto, verde, e provato rompendo. Il dominio è stato chiesto
-all'utente: **"non ancora deciso"** — quindi ovunque compare è un segnaposto (`vibewatch.app`).
-Com'è fatto:
+non richiede il sito è scritto, verde, e provato rompendo. Il dominio è **deciso nella stessa
+sessione: `vibewatchapp.com`** — già dentro `UniversalLinks.host` e nei due entitlement, apex
+**e** www (gli `applinks:` distinguono i sottodomini; il parser accetta entrambi, perché un
+link che apre l'app e poi cade nel vuoto è il fallimento muto di sempre). Com'è fatto:
 
 - **`UniversalLinks`** (`Core/Utilities/UniversalLinks.swift`): l'host in **un punto solo** e il
   parser puro delle due rotte di §9.4 — `/@{username}` (forma di `UsernameRules`, maiuscole
-  abbassate perché `username` è citext) e `/film/{id}`. Tutto il resto **cade**: nessuna
-  destinazione di ripiego, un link sbagliato non deve sembrare funzionante.
+  abbassate perché `username` è citext) e `/film/{id}`. Host ammessi: apex e `www.`; tutto il
+  resto **cade** — nessuna destinazione di ripiego, un link sbagliato non deve sembrare
+  funzionante.
 - **`AppNavigationManager.handle(universalLink:)`**: profilo → `profileLinkTarget` (sheet in
   `MainTabView` con porta esplicita, riusa `PublicProfileView(username:)`), film →
   `deepLinkTarget` (la stessa strada delle notifiche push). Risponde `false` **senza effetti**
   per gli URL non nostri: l'`onOpenURL` di `VibeWatchApp.swift` prova prima questa strada, e il
   ramo OAuth vede esattamente ciò che vedeva prima.
-- **Entitlement** `applinks:` in entrambi i file (dev e Release) e **AASA pronto** in
-  `docs/universal-links/` (appID prod e beta del team `3V97GU3CCY`, percorsi `/@*` e `/film/*`
-  — elenca percorsi, non host, quindi non dipende dal dominio). Il README accanto è la
-  checklist per quando il dominio esisterà.
-- **16 test in `UniversalLinksTests`** (pbxproj, i soliti 4 punti; `SwiftCompile` dei file nuovi
+- **Entitlement** `applinks:vibewatchapp.com` + `applinks:www.vibewatchapp.com` in entrambi i
+  file (dev e Release) e **AASA pronto** in `docs/universal-links/` (appID prod e beta del team
+  `3V97GU3CCY`, percorsi `/@*` e `/film/*` — elenca percorsi, non host, quindi non dipende dal
+  dominio). Il README accanto dice cosa resta e come si collauda.
+- **18 test in `UniversalLinksTests`** (pbxproj, i soliti 4 punti; `SwiftCompile` dei file nuovi
   verificata nel log — il bundle non era stantio). Il test di coerenza entitlement↔host è la
-  cosa che rende sicuro il "si cambia in un punto solo", ed è **provato rompendo**: dominio
-  sbagliato nell'entitlement Release → fallisce esattamente lì.
+  cosa che rende sicuro il "si cambia in un punto solo", ed è **provato rompendo due volte**:
+  dominio sbagliato nell'entitlement Release, e poi voce www manomessa dopo il cambio di
+  dominio — fallisce esattamente lì in entrambi i casi. Il cambio segnaposto → dominio vero è
+  stata la prova d'uso del meccanismo: due file, il test a fare da guida.
 
-**Cosa resta del blocco 10, e nessun pezzo si può fare senza il dominio:** deciderlo; cambiare
-`UniversalLinks.host` e i due entitlement (il test guida); servire l'AASA su
-`/.well-known/apple-app-site-association` (requisiti nel README); e la prova sul dispositivo —
-il criterio pratico resta un link `/@{username}` toccato in Note/Messaggi che apre il profilo
-giusto nell'app. Senza AASA servita il tap su un link **non può** aprire l'app, quindi non c'è
-niente da provare a mano oggi: non è un guasto, è l'ordine delle cose.
+**Cosa resta del blocco 10, e dipende tutto dal sito, non dall'app:** servire l'AASA su
+`https://vibewatchapp.com/.well-known/apple-app-site-association` (e su www — un redirect
+www → apex per l'AASA non vale, requisiti nel README); le pagine vere sulle due rotte; e la
+prova sul dispositivo — il criterio pratico resta un link `/@{username}` toccato in
+Note/Messaggi che apre il profilo giusto nell'app. Senza AASA servita il tap su un link **non
+può** aprire l'app, quindi non c'è niente da provare a mano oggi: non è un guasto, è l'ordine
+delle cose. Nota per il primo giro sul dispositivo: la CDN di Apple scarica l'AASA
+all'installazione, per iterare c'è `?mode=developer` (README).
 
 ## Il blocco 9, com'è finito (per riferimento)
 
@@ -596,7 +602,7 @@ nota.
 | 7 | UI Tracking | **chiuso.** Schermata, tab bar e migrazione dello storico in produzione; 971 episodi migrati sul dispositivo dell'autore al primo tentativo; §13.6 misurato a **208,9 ms** su 300; 20 lingue allineate |
 | 8 | Username, `public_profiles`, ricerca, follow | **chiuso, tutto in produzione e provato sul dispositivo**: schema, backfill, schermata di scelta, `user_follows`, `search_users`, `get_public_profile`, ramo in `apply_mutations`, sync client, UI social e login con username via Edge Function |
 | 9 | Favorites, rating, stats, diario | **chiuso**: tutto in produzione, 20 lingue, provato sul dispositivo il 2026-08-01 (voto, favorite, diario, stats). Unica coda: i titoli localizzati del Tracking non ancora rivisti sul dispositivo |
-| 10 | Universal links | **parte client fatta** (2026-08-01): parser, routing, sheet profilo, entitlement, AASA in `docs/universal-links/`, 16 test. Il resto aspetta il **dominio** (chiesto: non ancora deciso) — checklist nel README |
+| 10 | Universal links | **parte app fatta** (2026-08-01): parser, routing, sheet profilo, entitlement con `vibewatchapp.com` (apex+www), AASA in `docs/universal-links/`, 18 test. Il resto aspetta il **sito** che serva l'AASA — requisiti nel README |
 
 ## Cosa gira in produzione adesso
 
