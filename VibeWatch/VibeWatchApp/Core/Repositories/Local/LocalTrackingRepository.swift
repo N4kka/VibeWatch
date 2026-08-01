@@ -23,13 +23,16 @@ final class LocalTrackingRepository: TrackingRepositoryProtocol {
 
     private let sqlite: SQLiteService
     private let currentUserId: @MainActor () -> String?
+    private let language: @MainActor () -> String
 
     init(
         sqlite: SQLiteService = .shared,
-        currentUserId: @escaping @MainActor () -> String? = { SupabaseService.shared.currentUser?.id }
+        currentUserId: @escaping @MainActor () -> String? = { SupabaseService.shared.currentUser?.id },
+        language: @escaping @MainActor () -> String = { LocalizationManager.shared.currentLanguage.id }
     ) {
         self.sqlite = sqlite
         self.currentUserId = currentUserId
+        self.language = language
     }
 
     func fetchSections() async throws -> TrackingSections {
@@ -53,28 +56,40 @@ final class LocalTrackingRepository: TrackingRepositoryProtocol {
         //
         // `backlog_since DESC`: più recente in cima (§3.3). I NULL vanno in fondo — sono le serie
         // in pari, che nella loro sezione non hanno un arretrato da confrontare.
+        // La JOIN su `localized_titles` resta dentro §13.6: è una lettura locale come il resto.
+        // Il titolo del catalogo (una lingua sola, §1.5) fa da ripiego finché la cache non ha
+        // quello nella lingua dell'app — la riempie il ViewModel, in background, dopo il disegno.
         let sql = """
-        SELECT tmdb_show_id, user_status, bucket, watched_count, aired_count, total_count,
-               next_season, next_episode, next_episode_name, next_air_date, is_next_available,
-               backlog_since, last_watched_at, show_name, show_poster_path, next_still_path
-          FROM tv_tracking
-         WHERE user_id = ?
-         ORDER BY (backlog_since IS NULL), backlog_since DESC, show_name COLLATE NOCASE ASC
+        SELECT t.tmdb_show_id, t.user_status, t.bucket, t.watched_count, t.aired_count,
+               t.total_count, t.next_season, t.next_episode, t.next_episode_name,
+               t.next_air_date, t.is_next_available, t.backlog_since, t.last_watched_at,
+               COALESCE(lt.title, t.show_name) AS show_name,
+               t.show_poster_path, t.next_still_path
+          FROM tv_tracking t
+          LEFT JOIN localized_titles lt
+            ON lt.media_type = 'tv' AND lt.tmdb_id = t.tmdb_show_id AND lt.language = ?
+         WHERE t.user_id = ?
+         ORDER BY (t.backlog_since IS NULL), t.backlog_since DESC, show_name COLLATE NOCASE ASC
         """
 
-        return try await sqlite.queryRaw(sql, parameters: [userId]).compactMap(Self.row(from:))
+        return try await sqlite.queryRaw(sql, parameters: [language(), userId])
+            .compactMap(Self.row(from:))
     }
 
     private func fetchTimeline(userId: String) async throws -> [TimelineEntry] {
         let sql = """
-        SELECT id, tmdb_show_id, show_name, show_poster_path, season_number, episode_number,
-               episode_name, air_date, still_path, is_special
-          FROM tv_timeline
-         WHERE user_id = ?
-         ORDER BY air_date ASC, show_name COLLATE NOCASE ASC
+        SELECT t.id, t.tmdb_show_id, COALESCE(lt.title, t.show_name) AS show_name,
+               t.show_poster_path, t.season_number, t.episode_number,
+               t.episode_name, t.air_date, t.still_path, t.is_special
+          FROM tv_timeline t
+          LEFT JOIN localized_titles lt
+            ON lt.media_type = 'tv' AND lt.tmdb_id = t.tmdb_show_id AND lt.language = ?
+         WHERE t.user_id = ?
+         ORDER BY t.air_date ASC, show_name COLLATE NOCASE ASC
         """
 
-        return try await sqlite.queryRaw(sql, parameters: [userId]).compactMap(Self.entry(from:))
+        return try await sqlite.queryRaw(sql, parameters: [language(), userId])
+            .compactMap(Self.entry(from:))
     }
 
     // MARK: - Raggruppamento

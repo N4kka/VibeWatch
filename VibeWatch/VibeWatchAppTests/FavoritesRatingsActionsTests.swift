@@ -365,6 +365,53 @@ final class FavoritesRatingsActionsTests: XCTestCase {
         XCTAssertEqual(engine.queued.last?.operationType, "DELETE")
     }
 
+    // MARK: - La cache dei titoli localizzati (§1.5 vs §13.6)
+
+    /// Il giro completo: buco -> fetch -> scritto -> il secondo giro legge la cache e non
+    /// chiama piu' la rete. E' la proprieta' che tiene il Tracking dentro §13.6.
+    func testUnTitoloSiRisolveUnaVoltaSola() async {
+        var fetches = 0
+        let store = LocalizedTitleStore(
+            sqlite: .shared,
+            language: { "it" },
+            fetchRemote: { _, id in fetches += 1; return id == 424242 ? "Il Trono" : nil })
+
+        let wrote = await store.refreshMissing(mediaType: "tv", ids: [424242])
+        XCTAssertTrue(wrote, "il primo giro scrive")
+        XCTAssertEqual(fetches, 1)
+
+        let again = await store.refreshMissing(mediaType: "tv", ids: [424242])
+        XCTAssertFalse(again, "il secondo giro non ha buchi: niente rete, niente rilancio")
+        XCTAssertEqual(fetches, 1, "la cache risponde lei")
+
+        let cached = await store.cachedTitles(mediaType: "tv", ids: [424242])
+        XCTAssertEqual(cached[424242], "Il Trono")
+    }
+
+    /// Un fetch fallito non scrive e risponde false: chi ascolta non ricarica e non si
+    /// rincorre. Il titolo del catalogo resta a schermo, che e' il ripiego onesto.
+    func testUnFetchFallitoNonRilancia() async {
+        let store = LocalizedTitleStore(
+            sqlite: .shared, language: { "it" },
+            fetchRemote: { _, _ in nil })
+        let wrote = await store.refreshMissing(mediaType: "tv", ids: [434343])
+        XCTAssertFalse(wrote)
+        let cached = await store.cachedTitles(mediaType: "tv", ids: [434343])
+        XCTAssertNil(cached[434343])
+    }
+
+    /// La lingua fa parte della chiave: cambiare lingua non trova i titoli vecchi e rifetcha.
+    func testLaLinguaFaParteDellaChiave() async {
+        let it = LocalizedTitleStore(sqlite: .shared, language: { "it" },
+                                     fetchRemote: { _, _ in "Il Trono" })
+        await it.refreshMissing(mediaType: "tv", ids: [454545])
+
+        let de = LocalizedTitleStore(sqlite: .shared, language: { "de" },
+                                     fetchRemote: { _, _ in "Der Thron" })
+        let cachedDe = await de.cachedTitles(mediaType: "tv", ids: [454545])
+        XCTAssertNil(cachedDe[454545], "il titolo italiano non risponde per il tedesco")
+    }
+
     // MARK: - Helper
 
     private func XCTAssertThrowsInvalidShape(_ body: @escaping () async throws -> Void,

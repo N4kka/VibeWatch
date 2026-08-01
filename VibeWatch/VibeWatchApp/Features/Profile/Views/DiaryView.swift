@@ -26,12 +26,15 @@ final class DiaryViewModel: ObservableObject {
     private let resolveShowTitle: (Int) async -> String?
     private var isLoadingMore = false
 
+    // I resolver passano da LocalizedTitleStore, non da TMDB diretto: la cache e' persistente
+    // (tabella localized_titles) e condivisa con la schermata Tracking, quindi un titolo
+    // risolto una volta resta anche offline e non si ripaga a ogni apertura.
     init(fetchPage: @escaping (Int, Int) async throws -> [DiaryEntry] =
             { try await LocalDiaryRepository.shared.page(limit: $0, offset: $1) },
          resolveMovieTitle: @escaping (Int) async -> String? =
-            { try? await TMDBService.shared.getMovieDetails(id: $0).title },
+            { await LocalizedTitleStore.shared.title(mediaType: "movie", tmdbId: $0) },
          resolveShowTitle: @escaping (Int) async -> String? =
-            { try? await TMDBService.shared.getTVShowDetails(id: $0).name }) {
+            { await LocalizedTitleStore.shared.title(mediaType: "tv", tmdbId: $0) }) {
         self.fetchPage = fetchPage
         self.resolveMovieTitle = resolveMovieTitle
         self.resolveShowTitle = resolveShowTitle

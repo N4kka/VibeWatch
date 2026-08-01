@@ -13,14 +13,19 @@ final class TVShowsTrackingViewModel: ObservableObject {
     )
 
     private let repository: any TrackingRepositoryProtocol
+    private let refreshTitles: (Set<Int>) async -> Bool
     private var cancellables = Set<AnyCancellable>()
 
     convenience init() {
         self.init(repository: LocalTrackingRepository.shared)
     }
 
-    init(repository: any TrackingRepositoryProtocol) {
+    init(repository: any TrackingRepositoryProtocol,
+         refreshTitles: @escaping (Set<Int>) async -> Bool = {
+             await LocalizedTitleStore.shared.refreshMissing(mediaType: "tv", ids: $0)
+         }) {
         self.repository = repository
+        self.refreshTitles = refreshTitles
 
         // Si ricarica quando il sync ha portato righe nuove, non quando cambia una lista locale.
         // È la differenza con la versione precedente, che si agganciava a `ListManager` e a
@@ -47,6 +52,19 @@ final class TVShowsTrackingViewModel: ObservableObject {
                     rows: sections.sections.reduce(0) { $0 + $1.rows.count })
             }
             lastError = nil
+
+            // Il primo fotogramma è già a schermo, coi titoli del catalogo come ripiego: ora,
+            // fuori dal budget di §13.6, si riempie la cache dei titoli nella lingua dell'app.
+            // `refreshMissing` scrive solo i buchi e risponde false quando non c'è niente di
+            // nuovo, quindi il giro converge da solo: al secondo passaggio non rilancia.
+            let ids = Set(sections.sections.flatMap { $0.rows.map(\.showId) }
+                        + sections.timeline.flatMap { $0.entries.map(\.showId) })
+            if !ids.isEmpty {
+                Task { [weak self] in
+                    guard let self else { return }
+                    if await self.refreshTitles(ids) { await self.load() }
+                }
+            }
         } catch {
             // Si dichiara e si logga. Un `try?` qui produrrebbe una schermata vuota
             // indistinguibile da "non segui niente" — ed è lo stesso fallimento silenzioso che in

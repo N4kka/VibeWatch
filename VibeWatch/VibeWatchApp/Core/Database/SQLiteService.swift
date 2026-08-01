@@ -97,6 +97,10 @@ enum SQLiteTable: String, CaseIterable {
     case tvTracking = "tv_tracking"
     case tvTimeline = "tv_timeline"
 
+    // Cache dei titoli nella lingua dell'app (migration 12): il catalogo condiviso (§1.5) parla
+    // una lingua sola, e §13.6 vieta la rete al primo fotogramma. Locale e basta, niente sync.
+    case localizedTitles = "localized_titles"
+
     /// All valid table names as a Set for O(1) lookup
     static let validTableNames: Set<String> = Set(SQLiteTable.allCases.map(\.rawValue))
 

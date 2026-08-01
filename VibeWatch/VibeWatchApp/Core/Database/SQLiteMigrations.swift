@@ -8,7 +8,7 @@ extension SQLiteService {
     /// Run personalization migrations (Phase 1)
     func runPersonalizationMigrations() {
         let currentVersion = getPersonalizationMigrationVersion()
-        let latestVersion = 11
+        let latestVersion = 12
 
         guard currentVersion < latestVersion else {
             Logger.info("[SQLite] Personalization migrations already applied (version \(currentVersion))")
@@ -56,6 +56,9 @@ extension SQLiteService {
             }
             if currentVersion < 11 {
                 migration11_AddFavoritesAndRatings()
+            }
+            if currentVersion < 12 {
+                migration12_AddLocalizedTitles()
             }
 
             // Update migration version
@@ -275,7 +278,36 @@ extension SQLiteService {
         Logger.info("[SQLite] Migration 11 complete")
     }
 
+    /// La cache dei titoli nella lingua dell'app.
+    ///
+    /// Il catalogo condiviso (§1.5) parla una lingua sola — l'inglese di TMDB — e lo specchio
+    /// `tv_tracking` la eredita. La schermata Tracking però ha il budget di §13.6: zero rete per
+    /// disegnarsi. Quindi i titoli localizzati vivono qui, persistenti: il primo fotogramma fa
+    /// una JOIN locale (titolo localizzato se c'è, quello del catalogo altrimenti), e un task in
+    /// background riempie i buchi via TMDB nella lingua dell'app. Cache locale e basta: niente
+    /// sync, niente pull-list — ogni dispositivo se la riempie da sé nella propria lingua.
+    private func migration12_AddLocalizedTitles() {
+        Logger.info("[SQLite] Migration 12: Adding localized_titles")
+
+        executeScript(createLocalizedTitlesTable())
+
+        Logger.info("[SQLite] Migration 12 complete")
+    }
+
     // MARK: - Table Creation Methods
+
+    private func createLocalizedTitlesTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS localized_titles (
+            media_type TEXT NOT NULL,
+            tmdb_id INTEGER NOT NULL,
+            language TEXT NOT NULL,
+            title TEXT NOT NULL,
+            updated_at TEXT,
+            PRIMARY KEY (media_type, tmdb_id, language)
+        );
+        """
+    }
 
     private func createUserFavoritesTable() -> String {
         """
