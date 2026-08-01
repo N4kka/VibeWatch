@@ -19,10 +19,18 @@ fallisca — fatto anche in questa sessione sul `security definer` di `search_us
 diario, stats nella dashboard) e **provato sul dispositivo il 2026-08-01**: voto a 5 stelle e
 favorite su un film vero, diario popolato dalla migrazione, stats a schermo. I tre difetti
 trovati provando (titoli in inglese, sheet senza porta, stats doppie con numeri diversi) sono
-chiusi — vedi *La prova su dispositivo* più sotto. **Unica coda aperta**: i titoli localizzati
-del Tracking (`localized_titles`, migration SQLite 12) sono scritti e verdi nei test ma non
-ancora rivisti sul dispositivo — alla prima apertura della tab i nomi si aggiornano nella
-lingua dell'app dopo un giro in background; se non succede, guardare `LocalizedTitleStore`.
+chiusi — vedi *La prova su dispositivo* più sotto. **Coda aperta, da rivedere sul dispositivo**
+(scritto nella notte fra l'1 e il 2, verde nei test ma non ancora provato a mano):
+
+- **titoli E nomi episodio localizzati** nel Tracking (`localized_titles`, migration SQLite 13:
+  gli episodi si riempiono *per stagione* — una chiamata, tutta la stagione). Alla prima
+  apertura della tab i nomi si aggiornano nella lingua dell'app dopo un giro in background; se
+  non succede, guardare `LocalizedTitleStore`;
+- **la pillola "dove lo guardo" sulla card del Tracking** (`WatchProviderPill`): streaming >
+  noleggio > acquisto > "Avvisami", con l'etichetta dello scaffale ("Guarda/Noleggia/Acquista
+  su X") e il deep link di `PlatformDeepLinkHelper` — l'erede della pillola di ListsView,
+  stesse chiavi per l'Avvisami. `ProviderSelection` ora restituisce anche lo scaffale
+  (`selectTopProviderWithTier`; l'API vecchia delega, comportamento identico).
 
 **Il prossimo è il blocco 10** (§9.4, `DA VERIFICARE` nella spec): universal links e rotte
 profilo. Cosa serve sapere prima di cominciare:
@@ -76,7 +84,12 @@ dati* più sotto. Il resto, in ordine di arrivo:
    disegno. Il contratto anti-rincorsa: un fetch fallito non scrive e risponde `false`, quindi
    il ViewModel non ricarica a vuoto. Il titolo del catalogo resta il ripiego: un titolo vero
    in una lingua sbagliata batte un buco. Il diario usa lo stesso store, quindi ora i suoi
-   titoli persistono anche offline.
+   titoli persistono anche offline. **Secondo giro della stessa segnalazione**: i titoli delle
+   serie erano tradotti ma i *nomi degli episodi* no — stessa causa, stessa cura (migration 13:
+   la chiave della cache cresce di stagione/episodio, riempimento per stagione, contratto
+   anti-rincorsa anche quando TMDB non ha l'episodio cercato, §6). Ne è uscita anche una
+   flakiness latente: il DB del simulatore persiste fra i run, e i test che scrivono nella
+   cache ora puliscono le proprie righe.
 2. **Lo sheet del diario non aveva una porta**: solo swipe. Pulsante "Fine", pattern di
    UserSearchView (lezione del pannello AI del blocco 7).
 3. **Le stats erano in due posti con due numeri diversi.** La dashboard di Impostazioni sommava
