@@ -15,13 +15,27 @@ struct DeepLinkTarget: Identifiable, Equatable {
     }
 }
 
+// MARK: - ProfileLinkTarget
+
+/// SPEC v3 §9.4 — la destinazione di un link `/@{username}`.
+/// `id` è lo username: due link allo stesso profilo sono la stessa destinazione,
+/// e `sheet(item:)` non ripresenta niente.
+struct ProfileLinkTarget: Identifiable, Equatable {
+    let username: String
+    var id: String { username }
+}
+
 // MARK: - AppNavigationManager
 
 /// Manages deep link navigation state across the app.
 /// SwiftUI views can observe this manager to react to deep link requests.
 class AppNavigationManager: ObservableObject {
     @MainActor static let shared = AppNavigationManager() // Singleton instance
-    
+
+    /// SPEC v3 §9.4: il profilo da presentare per un universal link `/@{username}`.
+    /// Lo osserva `MainTabView`, che lo presenta come sheet.
+    @Published var profileLinkTarget: ProfileLinkTarget? = nil
+
     @Published var deepLinkTarget: DeepLinkTarget? = nil {
         didSet {
             if deepLinkTarget != nil {
@@ -75,6 +89,32 @@ class AppNavigationManager: ObservableObject {
             Logger.error("[AppNavigationManager] Invalid media_type value in deep link: \(mediaType)")
             NotificationCenter.default.post(name: .navigateToDiscoveryTab, object: nil)
         }
+    }
+
+    /// SPEC v3 §9.4 — prova a instradare un universal link (`/@{username}` o `/film/{id}`).
+    ///
+    /// Restituisce `false` per un URL che non è una rotta nostra, **senza toccare niente**: chi
+    /// chiama (l'`onOpenURL` dell'app) deve poter passare lo stesso URL al ramo OAuth. Un link
+    /// non riconosciuto che navigasse "da qualche parte" sarebbe un fallimento travestito da
+    /// risposta, la famiglia di difetti in testa a spec-v3-STATO.md.
+    @discardableResult
+    func handle(universalLink url: URL) -> Bool {
+        guard let route = UniversalLinks.route(for: url) else { return false }
+        switch route {
+        case .profile(let username):
+            Logger.info("[AppNavigationManager] Universal link → profilo @\(username)")
+            profileLinkTarget = ProfileLinkTarget(username: username)
+        case .film(let id):
+            // Stessa strada delle notifiche push: `MainTabView` sa già aprire un film da qui.
+            Logger.info("[AppNavigationManager] Universal link → film \(id)")
+            deepLinkTarget = DeepLinkTarget(mediaId: id, mediaType: "movie")
+        }
+        return true
+    }
+
+    /// Clears the profile link target after the sheet has been dismissed.
+    func clearProfileLinkTarget() {
+        self.profileLinkTarget = nil
     }
 
     /// Handles tap on notifications that have no associated media (e.g. streak reminders).

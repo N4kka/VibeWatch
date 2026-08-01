@@ -26,8 +26,12 @@ VibeWatchApp/Config/Secrets.xcconfig
 # cancellino dal disco rompendo FirebaseApp.configure(). Restringere comunque la API key
 # al bundle id iOS + App Check in Google Cloud Console (repo pubblico).
 
-# Local-only docs and scripts
-docs/
+# Local-only docs and scripts. `docs/*` and not `docs/`: git does not descend into an
+# excluded directory, so a negation for a subdir would be dead letter — same trap as the
+# supabase/ NOTE below. universal-links/ is a deliverable (AASA + checklist) that must
+# evolve with the client, not a local note.
+docs/*
+!docs/universal-links/
 # NOTE: `/supabase/` used to live here. The leading slash kept it from matching source dirs
 # like VibeWatchApp/Core/Supabase/ on a case-insensitive filesystem, but it also ignored the
 # whole supabase/ tree — so every new Edge Function and migration was invisible to git and had

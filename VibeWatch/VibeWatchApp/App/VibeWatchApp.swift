@@ -50,8 +50,12 @@ struct VibeWatchApp: App {
                     Logger.info("[App] SyncEngine initialized")
                 }
                 .onOpenURL { url in
-                    // Handle deep links from URL schemes (e.g., OAuth)
                     Logger.info("[App] Deep link received via URL (SwiftUI): \(url.absoluteString)")
+                    // SPEC v3 §9.4: gli universal link (https, host nostro) prima dello scheme
+                    // OAuth. `handle` risponde false senza effetti se l'URL non è una rotta
+                    // nostra, quindi il ramo OAuth vede esattamente ciò che vedeva prima.
+                    if appNavigationManager.handle(universalLink: url) { return }
+                    // Handle deep links from URL schemes (e.g., OAuth)
                     Task {
                         do {
                             try await AuthService.shared.handleAuthCallback(url: url)

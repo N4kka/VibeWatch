@@ -1,6 +1,6 @@
 # SPEC v3 — stato del lavoro e ripresa
 
-> Aggiornato: 2026-08-01, notte (quattro sessioni). Branch: `refactoring/spec-v3-prereqs-oracle`.
+> Aggiornato: 2026-08-01, notte (cinque sessioni). Branch: `refactoring/spec-v3-prereqs-oracle`.
 > Progetto Supabase: `rqhxhkijzhqivljivirq` (VibeWatch, eu-west-1, Postgres 17.6).
 > Repo: `/Users/nicola/Documents/StartingVibe/VibeWatch` (git root un livello sopra).
 
@@ -13,7 +13,7 @@ passa al primo colpo, vale la pena rompere apposta ciò che dovrebbe coprire e c
 fallisca — fatto anche in questa sessione sul `security definer` di `search_users`: rimesso
 `invoker`, la suite fallisce esattamente dove deve.
 
-## Da fare per prima cosa: il blocco 10
+## Da fare per prima cosa: la coda su dispositivo, e il dominio che chiude il blocco 10
 
 **Il blocco 9 è CHIUSO** — dati, stats server, UI intera (stelle, favorites con scelta slot,
 diario, stats nella dashboard) e **provato sul dispositivo il 2026-08-01**: voto a 5 stelle e
@@ -32,21 +32,35 @@ chiusi — vedi *La prova su dispositivo* più sotto. **Coda aperta, da rivedere
   stesse chiavi per l'Avvisami. `ProviderSelection` ora restituisce anche lo scaffale
   (`selectTopProviderWithTier`; l'API vecchia delega, comportamento identico).
 
-**Il prossimo è il blocco 10** (§9.4, `DA VERIFICARE` nella spec): universal links e rotte
-profilo. Cosa serve sapere prima di cominciare:
+**Il blocco 10 (§9.4) ha la parte client FATTA** (quinta sessione, 2026-08-01): tutto ciò che
+non richiede il dominio è scritto, verde, e provato rompendo. Il dominio è stato chiesto
+all'utente: **"non ancora deciso"** — quindi ovunque compare è un segnaposto (`vibewatch.app`).
+Com'è fatto:
 
-- Oggi **non esiste nessun universal link**, solo lo scheme OAuth. Il lavoro è: `applinks:`
-  negli entitlement, il file `apple-app-site-association` servito dal dominio, e le rotte
-  `/@{username}` e `/film/{id}` gestite da `AppNavigationManager` (esiste già:
-  `VibeWatchApp/Core/Navigation/`, ha i suoi test `AppNavigationManagerTests`).
-- **La AASA richiede un dominio che serva il file**: il sito "arriva subito dopo" (§9.4), quindi
-  la parte client si può predisporre e collaudare con gli entitlement, ma la verifica vera
-  end-to-end dipende da dove verrà ospitato il sito. Chiedere all'utente il dominio prima di
-  inventarne uno.
-- La destinazione `/@{username}` esiste già come schermata (`PublicProfileView(username:)`),
-  quindi il grosso è il routing, non la UI.
-- §13 non ha criteri di accettazione espliciti per il blocco 10: il criterio pratico è che un
-  link `/@{username}` apra il profilo giusto sul dispositivo.
+- **`UniversalLinks`** (`Core/Utilities/UniversalLinks.swift`): l'host in **un punto solo** e il
+  parser puro delle due rotte di §9.4 — `/@{username}` (forma di `UsernameRules`, maiuscole
+  abbassate perché `username` è citext) e `/film/{id}`. Tutto il resto **cade**: nessuna
+  destinazione di ripiego, un link sbagliato non deve sembrare funzionante.
+- **`AppNavigationManager.handle(universalLink:)`**: profilo → `profileLinkTarget` (sheet in
+  `MainTabView` con porta esplicita, riusa `PublicProfileView(username:)`), film →
+  `deepLinkTarget` (la stessa strada delle notifiche push). Risponde `false` **senza effetti**
+  per gli URL non nostri: l'`onOpenURL` di `VibeWatchApp.swift` prova prima questa strada, e il
+  ramo OAuth vede esattamente ciò che vedeva prima.
+- **Entitlement** `applinks:` in entrambi i file (dev e Release) e **AASA pronto** in
+  `docs/universal-links/` (appID prod e beta del team `3V97GU3CCY`, percorsi `/@*` e `/film/*`
+  — elenca percorsi, non host, quindi non dipende dal dominio). Il README accanto è la
+  checklist per quando il dominio esisterà.
+- **16 test in `UniversalLinksTests`** (pbxproj, i soliti 4 punti; `SwiftCompile` dei file nuovi
+  verificata nel log — il bundle non era stantio). Il test di coerenza entitlement↔host è la
+  cosa che rende sicuro il "si cambia in un punto solo", ed è **provato rompendo**: dominio
+  sbagliato nell'entitlement Release → fallisce esattamente lì.
+
+**Cosa resta del blocco 10, e nessun pezzo si può fare senza il dominio:** deciderlo; cambiare
+`UniversalLinks.host` e i due entitlement (il test guida); servire l'AASA su
+`/.well-known/apple-app-site-association` (requisiti nel README); e la prova sul dispositivo —
+il criterio pratico resta un link `/@{username}` toccato in Note/Messaggi che apre il profilo
+giusto nell'app. Senza AASA servita il tap su un link **non può** aprire l'app, quindi non c'è
+niente da provare a mano oggi: non è un guasto, è l'ordine delle cose.
 
 ## Il blocco 9, com'è finito (per riferimento)
 
@@ -582,7 +596,7 @@ nota.
 | 7 | UI Tracking | **chiuso.** Schermata, tab bar e migrazione dello storico in produzione; 971 episodi migrati sul dispositivo dell'autore al primo tentativo; §13.6 misurato a **208,9 ms** su 300; 20 lingue allineate |
 | 8 | Username, `public_profiles`, ricerca, follow | **chiuso, tutto in produzione e provato sul dispositivo**: schema, backfill, schermata di scelta, `user_follows`, `search_users`, `get_public_profile`, ramo in `apply_mutations`, sync client, UI social e login con username via Edge Function |
 | 9 | Favorites, rating, stats, diario | **chiuso**: tutto in produzione, 20 lingue, provato sul dispositivo il 2026-08-01 (voto, favorite, diario, stats). Unica coda: i titoli localizzati del Tracking non ancora rivisti sul dispositivo |
-| 10 | Universal links | da fare |
+| 10 | Universal links | **parte client fatta** (2026-08-01): parser, routing, sheet profilo, entitlement, AASA in `docs/universal-links/`, 16 test. Il resto aspetta il **dominio** (chiesto: non ancora deciso) — checklist nel README |
 
 ## Cosa gira in produzione adesso
 

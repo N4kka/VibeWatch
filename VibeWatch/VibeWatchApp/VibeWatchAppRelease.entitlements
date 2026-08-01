@@ -4,5 +4,11 @@
 <dict>
 	<key>aps-environment</key>
 	<string>production</string>
+	<!-- SPEC v3 §9.4. Il dominio è un SEGNAPOSTO (non ancora deciso) e deve combaciare con
+	     UniversalLinks.host — c'è un test che lo verifica (UniversalLinksTests). -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:vibewatch.app</string>
+	</array>
 </dict>
 </plist>

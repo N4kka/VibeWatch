@@ -248,6 +248,23 @@ struct MainTabView: View {
                     }
             }
         }
+        // SPEC v3 §9.4: `/@{username}` presenta il profilo come sheet, da qualunque tab. La
+        // destinazione è la stessa schermata della ricerca; qui serve il suo NavigationStack
+        // (per il titolo) e una porta esplicita — lo swipe non si vede (lezione del diario).
+        .sheet(item: $navigationManager.profileLinkTarget) { target in
+            NavigationStack {
+                PublicProfileView(username: target.username)
+                    .toolbar {
+                        ToolbarItem(placement: .topBarLeading) {
+                            Button { navigationManager.clearProfileLinkTarget() } label: {
+                                Image(systemName: "chevron.down")
+                                    .font(.system(size: 15, weight: .semibold))
+                            }
+                            .accessibilityLabel(Text("common.close".localized))
+                        }
+                    }
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .presentProPaywall)) { notification in
             let source = (notification.userInfo?["source"] as? String) ?? "unknown"
             proPaywallSource = source
