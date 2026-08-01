@@ -14,6 +14,7 @@ final class TVShowsTrackingViewModel: ObservableObject {
 
     private let repository: any TrackingRepositoryProtocol
     private let refreshTitles: (Set<Int>) async -> Bool
+    private let refreshEpisodeNames: ([Int: Set<LocalizedTitleStore.EpisodeRef>]) async -> Bool
     private var cancellables = Set<AnyCancellable>()
 
     convenience init() {
@@ -23,9 +24,19 @@ final class TVShowsTrackingViewModel: ObservableObject {
     init(repository: any TrackingRepositoryProtocol,
          refreshTitles: @escaping (Set<Int>) async -> Bool = {
              await LocalizedTitleStore.shared.refreshMissing(mediaType: "tv", ids: $0)
+         },
+         refreshEpisodeNames: @escaping ([Int: Set<LocalizedTitleStore.EpisodeRef>]) async -> Bool = { byShow in
+             var wrote = false
+             for (showId, refs) in byShow {
+                 if await LocalizedTitleStore.shared.refreshMissingEpisodeNames(showId: showId, refs: refs) {
+                     wrote = true
+                 }
+             }
+             return wrote
          }) {
         self.repository = repository
         self.refreshTitles = refreshTitles
+        self.refreshEpisodeNames = refreshEpisodeNames
 
         // Si ricarica quando il sync ha portato righe nuove, non quando cambia una lista locale.
         // È la differenza con la versione precedente, che si agganciava a `ListManager` e a
@@ -54,15 +65,28 @@ final class TVShowsTrackingViewModel: ObservableObject {
             lastError = nil
 
             // Il primo fotogramma è già a schermo, coi titoli del catalogo come ripiego: ora,
-            // fuori dal budget di §13.6, si riempie la cache dei titoli nella lingua dell'app.
-            // `refreshMissing` scrive solo i buchi e risponde false quando non c'è niente di
-            // nuovo, quindi il giro converge da solo: al secondo passaggio non rilancia.
+            // fuori dal budget di §13.6, si riempie la cache dei titoli nella lingua dell'app —
+            // serie E nomi degli episodi (una chiamata per stagione, non per riga). Entrambi i
+            // refresh scrivono solo i buchi e rispondono false quando non c'è niente di nuovo,
+            // quindi il giro converge da solo: al secondo passaggio non rilancia.
             let ids = Set(sections.sections.flatMap { $0.rows.map(\.showId) }
                         + sections.timeline.flatMap { $0.entries.map(\.showId) })
-            if !ids.isEmpty {
+            var episodeRefs: [Int: Set<LocalizedTitleStore.EpisodeRef>] = [:]
+            for row in sections.sections.flatMap(\.rows) {
+                if let s = row.nextSeason, let e = row.nextEpisode {
+                    episodeRefs[row.showId, default: []].insert(.init(season: s, episode: e))
+                }
+            }
+            for entry in sections.timeline.flatMap(\.entries) {
+                episodeRefs[entry.showId, default: []]
+                    .insert(.init(season: entry.seasonNumber, episode: entry.episodeNumber))
+            }
+            if !ids.isEmpty || !episodeRefs.isEmpty {
                 Task { [weak self] in
                     guard let self else { return }
-                    if await self.refreshTitles(ids) { await self.load() }
+                    var wrote = await self.refreshTitles(ids)
+                    if await self.refreshEpisodeNames(episodeRefs) { wrote = true }
+                    if wrote { await self.load() }
                 }
             }
         } catch {

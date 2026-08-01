@@ -13,10 +13,27 @@ import Foundation
 /// set `providerLink = countryProviders.link` before validating.
 enum ProviderSelection {
 
+    /// Da quale scaffale viene il provider scelto. Serve alla pillola del Tracking, che etichetta
+    /// l'azione ("Guarda su" / "Noleggia su" / "Acquista su") invece di mostrare solo il logo:
+    /// noleggio e acquisto costano, e un'etichetta che non lo dice invita a un tap che delude.
+    enum Tier {
+        case flatrate
+        case rent
+        case buy
+    }
+
     /// - Returns: the country page `link` and the chosen `top` provider (if any).
     ///   `top` is `nil` when no tier yields a valid provider — callers should preserve
     ///   any previously-shown provider in that case (matching the original behavior).
     static func selectTopProvider(from countryProviders: CountryProviders) -> (link: String?, top: Provider?) {
+        let result = selectTopProviderWithTier(from: countryProviders)
+        return (result.link, result.top)
+    }
+
+    /// Come sopra, ma dice anche da quale scaffale: Flatrate > Rent > Buy, il primo valido.
+    static func selectTopProviderWithTier(
+        from countryProviders: CountryProviders
+    ) -> (link: String?, top: Provider?, tier: Tier?) {
         let link = countryProviders.link
 
         func isValid(_ provider: Provider) -> Bool {
@@ -25,10 +42,15 @@ enum ProviderSelection {
             return PlatformDeepLinkHelper.hasPlatformHomepage(for: provider)
         }
 
-        let top = countryProviders.flatrate?.first(where: isValid)
-            ?? countryProviders.rent?.first(where: isValid)
-            ?? countryProviders.buy?.first(where: isValid)
-
-        return (link, top)
+        if let top = countryProviders.flatrate?.first(where: isValid) {
+            return (link, top, .flatrate)
+        }
+        if let top = countryProviders.rent?.first(where: isValid) {
+            return (link, top, .rent)
+        }
+        if let top = countryProviders.buy?.first(where: isValid) {
+            return (link, top, .buy)
+        }
+        return (link, nil, nil)
     }
 }

@@ -754,3 +754,8 @@
 "favorites.remove" = "Verwijderen uit favorieten";
 "favorites.slot" = "Plek %d";
 "favorites.saveFailed" = "Favorieten konden niet worden bijgewerkt. Probeer opnieuw.";
+
+// La pillola del Tracking: dove lo guardo (streaming > noleggio > acquisto)
+"tracking.watchOn" = "Kijk op %@";
+"tracking.rentOn" = "Huur op %@";
+"tracking.buyOn" = "Koop op %@";

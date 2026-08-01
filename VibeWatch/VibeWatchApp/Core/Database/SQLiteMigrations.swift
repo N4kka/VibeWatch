@@ -8,7 +8,7 @@ extension SQLiteService {
     /// Run personalization migrations (Phase 1)
     func runPersonalizationMigrations() {
         let currentVersion = getPersonalizationMigrationVersion()
-        let latestVersion = 12
+        let latestVersion = 13
 
         guard currentVersion < latestVersion else {
             Logger.info("[SQLite] Personalization migrations already applied (version \(currentVersion))")
@@ -59,6 +59,9 @@ extension SQLiteService {
             }
             if currentVersion < 12 {
                 migration12_AddLocalizedTitles()
+            }
+            if currentVersion < 13 {
+                migration13_LocalizedTitlesLearnEpisodes()
             }
 
             // Update migration version
@@ -294,6 +297,22 @@ extension SQLiteService {
         Logger.info("[SQLite] Migration 12 complete")
     }
 
+    /// La cache impara gli episodi (trovato sul dispositivo il 2026-08-01: i titoli delle serie
+    /// erano tradotti, i nomi degli episodi no — vengono dallo stesso catalogo a lingua unica).
+    ///
+    /// La chiave cresce di due colonne (stagione, episodio, sentinello -1 per film e serie —
+    /// come nello specchio di user_ratings) e SQLite non sa allargare una PK: si butta e si
+    /// ricrea. È una cache pura, rigenerabile per costruzione: perderla costa un giro di
+    /// riempimento, non un dato.
+    private func migration13_LocalizedTitlesLearnEpisodes() {
+        Logger.info("[SQLite] Migration 13: localized_titles learns episodes")
+
+        executeScript("DROP TABLE IF EXISTS localized_titles;")
+        executeScript(createLocalizedTitlesTable())
+
+        Logger.info("[SQLite] Migration 13 complete")
+    }
+
     // MARK: - Table Creation Methods
 
     private func createLocalizedTitlesTable() -> String {
@@ -301,10 +320,12 @@ extension SQLiteService {
         CREATE TABLE IF NOT EXISTS localized_titles (
             media_type TEXT NOT NULL,
             tmdb_id INTEGER NOT NULL,
+            season_number INTEGER NOT NULL DEFAULT -1,
+            episode_number INTEGER NOT NULL DEFAULT -1,
             language TEXT NOT NULL,
             title TEXT NOT NULL,
             updated_at TEXT,
-            PRIMARY KEY (media_type, tmdb_id, language)
+            PRIMARY KEY (media_type, tmdb_id, season_number, episode_number, language)
         );
         """
     }

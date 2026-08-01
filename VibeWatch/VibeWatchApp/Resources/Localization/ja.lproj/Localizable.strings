@@ -754,3 +754,8 @@
 "favorites.remove" = "お気に入りから削除";
 "favorites.slot" = "スロット%d";
 "favorites.saveFailed" = "お気に入りを更新できませんでした。もう一度お試しください。";
+
+// La pillola del Tracking: dove lo guardo (streaming > noleggio > acquisto)
+"tracking.watchOn" = "%@で視聴";
+"tracking.rentOn" = "%@でレンタル";
+"tracking.buyOn" = "%@で購入";

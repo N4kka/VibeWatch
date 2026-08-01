@@ -754,3 +754,8 @@
 "favorites.remove" = "Αφαίρεση από τα αγαπημένα";
 "favorites.slot" = "Θέση %d";
 "favorites.saveFailed" = "Δεν ήταν δυνατή η ενημέρωση των αγαπημένων. Δοκίμασε ξανά.";
+
+// La pillola del Tracking: dove lo guardo (streaming > noleggio > acquisto)
+"tracking.watchOn" = "Δες στο %@";
+"tracking.rentOn" = "Ενοικίαση στο %@";
+"tracking.buyOn" = "Αγορά στο %@";

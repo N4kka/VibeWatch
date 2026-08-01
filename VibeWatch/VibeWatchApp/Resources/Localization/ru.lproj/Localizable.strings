@@ -742,3 +742,8 @@
 "favorites.remove" = "Убрать из избранного";
 "favorites.slot" = "Слот %d";
 "favorites.saveFailed" = "Не удалось обновить избранное. Попробуйте ещё раз.";
+
+// La pillola del Tracking: dove lo guardo (streaming > noleggio > acquisto)
+"tracking.watchOn" = "Смотреть на %@";
+"tracking.rentOn" = "Аренда на %@";
+"tracking.buyOn" = "Купить на %@";

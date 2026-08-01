@@ -61,18 +61,23 @@ final class LocalTrackingRepository: TrackingRepositoryProtocol {
         // quello nella lingua dell'app — la riempie il ViewModel, in background, dopo il disegno.
         let sql = """
         SELECT t.tmdb_show_id, t.user_status, t.bucket, t.watched_count, t.aired_count,
-               t.total_count, t.next_season, t.next_episode, t.next_episode_name,
+               t.total_count, t.next_season, t.next_episode,
+               COALESCE(ln.title, t.next_episode_name) AS next_episode_name,
                t.next_air_date, t.is_next_available, t.backlog_since, t.last_watched_at,
                COALESCE(lt.title, t.show_name) AS show_name,
                t.show_poster_path, t.next_still_path
           FROM tv_tracking t
           LEFT JOIN localized_titles lt
             ON lt.media_type = 'tv' AND lt.tmdb_id = t.tmdb_show_id AND lt.language = ?
+          LEFT JOIN localized_titles ln
+            ON ln.media_type = 'episode' AND ln.tmdb_id = t.tmdb_show_id
+           AND ln.season_number = t.next_season AND ln.episode_number = t.next_episode
+           AND ln.language = ?
          WHERE t.user_id = ?
          ORDER BY (t.backlog_since IS NULL), t.backlog_since DESC, show_name COLLATE NOCASE ASC
         """
 
-        return try await sqlite.queryRaw(sql, parameters: [language(), userId])
+        return try await sqlite.queryRaw(sql, parameters: [language(), language(), userId])
             .compactMap(Self.row(from:))
     }
 
@@ -80,15 +85,20 @@ final class LocalTrackingRepository: TrackingRepositoryProtocol {
         let sql = """
         SELECT t.id, t.tmdb_show_id, COALESCE(lt.title, t.show_name) AS show_name,
                t.show_poster_path, t.season_number, t.episode_number,
-               t.episode_name, t.air_date, t.still_path, t.is_special
+               COALESCE(le.title, t.episode_name) AS episode_name,
+               t.air_date, t.still_path, t.is_special
           FROM tv_timeline t
           LEFT JOIN localized_titles lt
             ON lt.media_type = 'tv' AND lt.tmdb_id = t.tmdb_show_id AND lt.language = ?
+          LEFT JOIN localized_titles le
+            ON le.media_type = 'episode' AND le.tmdb_id = t.tmdb_show_id
+           AND le.season_number = t.season_number AND le.episode_number = t.episode_number
+           AND le.language = ?
          WHERE t.user_id = ?
          ORDER BY t.air_date ASC, show_name COLLATE NOCASE ASC
         """
 
-        return try await sqlite.queryRaw(sql, parameters: [language(), userId])
+        return try await sqlite.queryRaw(sql, parameters: [language(), language(), userId])
             .compactMap(Self.entry(from:))
     }
 

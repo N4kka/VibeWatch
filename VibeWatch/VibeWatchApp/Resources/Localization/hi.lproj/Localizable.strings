@@ -754,3 +754,8 @@
 "favorites.remove" = "पसंदीदा से हटाएँ";
 "favorites.slot" = "स्लॉट %d";
 "favorites.saveFailed" = "पसंदीदा अपडेट नहीं हो सके। फिर से कोशिश करें।";
+
+// La pillola del Tracking: dove lo guardo (streaming > noleggio > acquisto)
+"tracking.watchOn" = "%@ पर देखें";
+"tracking.rentOn" = "%@ पर किराये पर लें";
+"tracking.buyOn" = "%@ पर खरीदें";

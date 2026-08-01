@@ -754,3 +754,8 @@
 "favorites.remove" = "Fjern fra favoritter";
 "favorites.slot" = "Plass %d";
 "favorites.saveFailed" = "Kunne ikke oppdatere favorittene. Prøv igjen.";
+
+// La pillola del Tracking: dove lo guardo (streaming > noleggio > acquisto)
+"tracking.watchOn" = "Se på %@";
+"tracking.rentOn" = "Lei på %@";
+"tracking.buyOn" = "Kjøp på %@";

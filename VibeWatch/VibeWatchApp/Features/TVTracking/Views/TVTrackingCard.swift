@@ -33,10 +33,12 @@ struct TVTrackingCard: View {
                         .foregroundColor(.theme.textSecondary)
                         .lineLimit(1)
                 }
+                // "Dove lo guardo": streaming > noleggio > acquisto > avvisami. NON è il
+                // duplicato del segno di spunta che questa card ha già tolto una volta — quello
+                // scriveva, questa apre la piattaforma (o promette l'avviso).
+                WatchProviderPill(mediaId: row.showId, mediaType: .tv,
+                                  title: row.showName ?? "")
                 Spacer(minLength: 4)
-                // Un solo modo di segnare visto, quello in alto a destra. La pillola qui sotto
-                // faceva la stessa cosa e occupava il posto peggiore: due comandi identici sulla
-                // stessa card obbligano a chiedersi in cosa differiscono.
                 progressBar
             }
             .padding(.vertical, 2)

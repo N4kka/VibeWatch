@@ -754,3 +754,8 @@
 "favorites.remove" = "즐겨찾기에서 제거";
 "favorites.slot" = "슬롯 %d";
 "favorites.saveFailed" = "즐겨찾기를 업데이트하지 못했습니다. 다시 시도해 주세요.";
+
+// La pillola del Tracking: dove lo guardo (streaming > noleggio > acquisto)
+"tracking.watchOn" = "%@에서 시청";
+"tracking.rentOn" = "%@에서 대여";
+"tracking.buyOn" = "%@에서 구매";

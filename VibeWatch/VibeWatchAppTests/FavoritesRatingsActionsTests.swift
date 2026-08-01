@@ -367,9 +367,17 @@ final class FavoritesRatingsActionsTests: XCTestCase {
 
     // MARK: - La cache dei titoli localizzati (§1.5 vs §13.6)
 
+    /// Il DB del simulatore PERSISTE fra i run: senza pulizia, un test che scrive in
+    /// localized_titles passa al primo giro e fallisce al secondo, quando la riga c'e' gia'.
+    private func purgeLocalizedTitles(id: Int) async {
+        try? await SQLiteService.shared.executeWrite(
+            "DELETE FROM localized_titles WHERE tmdb_id = ?", parameters: [id])
+    }
+
     /// Il giro completo: buco -> fetch -> scritto -> il secondo giro legge la cache e non
     /// chiama piu' la rete. E' la proprieta' che tiene il Tracking dentro §13.6.
     func testUnTitoloSiRisolveUnaVoltaSola() async {
+        await purgeLocalizedTitles(id: 424242)
         var fetches = 0
         let store = LocalizedTitleStore(
             sqlite: .shared,
@@ -402,6 +410,7 @@ final class FavoritesRatingsActionsTests: XCTestCase {
 
     /// La lingua fa parte della chiave: cambiare lingua non trova i titoli vecchi e rifetcha.
     func testLaLinguaFaParteDellaChiave() async {
+        await purgeLocalizedTitles(id: 454545)
         let it = LocalizedTitleStore(sqlite: .shared, language: { "it" },
                                      fetchRemote: { _, _ in "Il Trono" })
         await it.refreshMissing(mediaType: "tv", ids: [454545])
@@ -410,6 +419,92 @@ final class FavoritesRatingsActionsTests: XCTestCase {
                                      fetchRemote: { _, _ in "Der Thron" })
         let cachedDe = await de.cachedTitles(mediaType: "tv", ids: [454545])
         XCTAssertNil(cachedDe[454545], "il titolo italiano non risponde per il tedesco")
+    }
+
+    /// Gli episodi si riempiono per STAGIONE: una chiamata porta tutta la stagione, e il
+    /// secondo giro non ha buchi ne' rete. Trovato sul dispositivo il 2026-08-01: i titoli
+    /// delle serie erano tradotti, i nomi degli episodi no.
+    func testINomiDegliEpisodiSiRiempionoPerStagione() async {
+        await purgeLocalizedTitles(id: 515151)
+        var seasonFetches = 0
+        let store = LocalizedTitleStore(
+            sqlite: .shared, language: { "it" },
+            fetchRemote: { _, _ in nil },
+            fetchSeason: { _, season in
+                seasonFetches += 1
+                return season == 4 ? [1: "Episodio Uno", 2: "Episodio Due"] : nil
+            })
+        let refs: Set<LocalizedTitleStore.EpisodeRef> = [.init(season: 4, episode: 1),
+                                                         .init(season: 4, episode: 2)]
+
+        let wrote = await store.refreshMissingEpisodeNames(showId: 515151, refs: refs)
+        XCTAssertTrue(wrote)
+        XCTAssertEqual(seasonFetches, 1, "una chiamata per stagione, non per episodio")
+
+        let cached = await store.cachedEpisodeNames(showId: 515151, refs: Array(refs))
+        XCTAssertEqual(cached[.init(season: 4, episode: 1)], "Episodio Uno")
+
+        let again = await store.refreshMissingEpisodeNames(showId: 515151, refs: refs)
+        XCTAssertFalse(again, "il secondo giro non ha buchi: niente rete, niente rilancio")
+        XCTAssertEqual(seasonFetches, 1)
+    }
+
+    /// Una stagione che TMDB restituisce SENZA l'episodio cercato (numerazioni divergenti, §6)
+    /// non deve far ricaricare nessuno: wrote = false, il nome del catalogo resta a schermo.
+    func testUnaStagioneSenzaLEpisodioCercatoNonRilancia() async {
+        await purgeLocalizedTitles(id: 525252)
+        let store = LocalizedTitleStore(
+            sqlite: .shared, language: { "it" },
+            fetchRemote: { _, _ in nil },
+            fetchSeason: { _, _ in [1: "Episodio Uno"] })
+        let wrote = await store.refreshMissingEpisodeNames(
+            showId: 525252, refs: [.init(season: 1, episode: 99)])
+        XCTAssertFalse(wrote)
+    }
+
+    // MARK: - La pillola del provider (streaming > noleggio > acquisto > avvisami)
+
+    private func provider(_ name: String, logo: String = "/logo.png") -> Provider {
+        Provider(providerId: abs(name.hashValue % 100_000), providerName: name,
+                 logoPath: logo, displayPriority: 1)
+    }
+
+    func testLoStreamingVinceSuNoleggioEAcquisto() {
+        let result = ProviderSelection.selectTopProviderWithTier(from: CountryProviders(
+            flatrate: [provider("Netflix")], rent: [provider("Apple TV")],
+            buy: [provider("Amazon")], link: "https://justwatch.example"))
+        XCTAssertEqual(result.top?.providerName, "Netflix")
+        XCTAssertEqual(result.tier, .flatrate)
+    }
+
+    func testSenzaStreamingIlNoleggioPrecedeLAcquisto() {
+        let result = ProviderSelection.selectTopProviderWithTier(from: CountryProviders(
+            flatrate: nil, rent: [provider("Apple TV")], buy: [provider("Amazon")],
+            link: "https://justwatch.example"))
+        XCTAssertEqual(result.top?.providerName, "Apple TV")
+        XCTAssertEqual(result.tier, .rent)
+
+        let soloAcquisto = ProviderSelection.selectTopProviderWithTier(from: CountryProviders(
+            flatrate: nil, rent: nil, buy: [provider("Amazon")],
+            link: "https://justwatch.example"))
+        XCTAssertEqual(soloAcquisto.tier, .buy)
+    }
+
+    /// Un provider senza logo usabile non vince lo scaffale: si scende a quello dopo,
+    /// identico al comportamento storico di ListsView.
+    func testUnProviderSenzaLogoNonVinceLoScaffale() {
+        let result = ProviderSelection.selectTopProviderWithTier(from: CountryProviders(
+            flatrate: [provider("Rotto", logo: "/logo-white.svg")],
+            rent: [provider("Apple TV")], buy: nil, link: "https://justwatch.example"))
+        XCTAssertEqual(result.top?.providerName, "Apple TV")
+        XCTAssertEqual(result.tier, .rent)
+    }
+
+    func testNessunoScaffaleEAvvisami() {
+        let result = ProviderSelection.selectTopProviderWithTier(from: CountryProviders(
+            flatrate: nil, rent: nil, buy: nil, link: nil))
+        XCTAssertNil(result.top)
+        XCTAssertNil(result.tier, "nessuno scaffale: la pillola diventa Avvisami")
     }
 
     // MARK: - Helper

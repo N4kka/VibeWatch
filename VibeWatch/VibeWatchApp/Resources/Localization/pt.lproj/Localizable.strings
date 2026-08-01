@@ -742,3 +742,8 @@
 "favorites.remove" = "Remover dos favoritos";
 "favorites.slot" = "Posição %d";
 "favorites.saveFailed" = "Não foi possível atualizar os favoritos. Tenta novamente.";
+
+// La pillola del Tracking: dove lo guardo (streaming > noleggio > acquisto)
+"tracking.watchOn" = "Ver em %@";
+"tracking.rentOn" = "Alugar em %@";
+"tracking.buyOn" = "Comprar em %@";

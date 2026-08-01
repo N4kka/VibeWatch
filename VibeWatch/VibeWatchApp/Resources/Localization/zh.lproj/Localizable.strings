@@ -739,3 +739,8 @@
 "favorites.remove" = "从收藏中移除";
 "favorites.slot" = "位置%d";
 "favorites.saveFailed" = "无法更新收藏,请重试。";
+
+// La pillola del Tracking: dove lo guardo (streaming > noleggio > acquisto)
+"tracking.watchOn" = "在%@观看";
+"tracking.rentOn" = "在%@租借";
+"tracking.buyOn" = "在%@购买";

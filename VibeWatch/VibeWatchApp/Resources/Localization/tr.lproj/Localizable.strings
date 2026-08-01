@@ -742,3 +742,8 @@
 "favorites.remove" = "Favorilerden kaldır";
 "favorites.slot" = "Slot %d";
 "favorites.saveFailed" = "Favoriler güncellenemedi. Tekrar dene.";
+
+// La pillola del Tracking: dove lo guardo (streaming > noleggio > acquisto)
+"tracking.watchOn" = "İzle: %@";
+"tracking.rentOn" = "Kirala: %@";
+"tracking.buyOn" = "Satın al: %@";

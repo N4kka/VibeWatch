@@ -754,3 +754,8 @@
 "favorites.remove" = "Poista suosikeista";
 "favorites.slot" = "Paikka %d";
 "favorites.saveFailed" = "Suosikkien päivitys epäonnistui. Yritä uudelleen.";
+
+// La pillola del Tracking: dove lo guardo (streaming > noleggio > acquisto)
+"tracking.watchOn" = "Katso: %@";
+"tracking.rentOn" = "Vuokraa: %@";
+"tracking.buyOn" = "Osta: %@";
