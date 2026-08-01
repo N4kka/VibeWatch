@@ -38,12 +38,26 @@ fallisca — fatto anche in questa sessione sul `security definer` di `search_us
    coi 4 slot, gli occupati segnati **prima** del tap). Altre 7 chiavi nelle 20 lingue, 23 test
    nel file `FavoritesRatingsActionsTests`.
 
-**Resta del blocco 9, ed è una cosa sola:**
+**La prova su dispositivo è iniziata (2026-08-01) e ha trovato tre cose, tutte chiuse:**
 
-1. **Prova su dispositivo** di tutto il giro — voto → server → pull → schermo, slot dei
-   favorites fra due account, diario dopo la migrazione, stats sul profilo — come per i follow.
-   Serve la clone coi segreti veri (`/Users/nicola/Documents/VibeWatch/VibeWatch/`).
-2. Poi il **blocco 10**: universal links, rotte profilo.
+1. **I titoli delle serie nel diario erano in inglese** con l'app in italiano: il nome nello
+   specchio è quello del **catalogo condiviso** (§1.5), che parla una lingua sola. Ora il diario
+   risolve i titoli via TMDBService (lingua dell'app), col nome del catalogo come ripiego
+   offline. **Nota per il futuro**: lo stesso vale per la schermata Tracking, che legge lo
+   stesso specchio — se dà fastidio lì, la strada è la stessa.
+2. **Lo sheet del diario non aveva una porta**: solo swipe. Pulsante "Fine", pattern di
+   UserSearchView (lezione del pannello AI del blocco 7).
+3. **Le stats erano in due posti con due numeri diversi.** La dashboard di Impostazioni sommava
+   dal client: film dalla lista "visti", episodi da UserDefaults **legacy** × 30 minuti
+   **stimati** — vietato da §13.7, e destinato a restare indietro perché il tracking nuovo non
+   scrive più lì. Deciso con l'utente: **un posto solo, la dashboard**, coi totali del server
+   (`get_my_stats`) in una griglia FUORI dal selettore di periodo — sono numeri di tutti i
+   tempi, e fingere che seguano "questa settimana" sarebbe una bugia di layout. La barra sul
+   profilo è stata tolta; "Library" resta locale (metrica di backlog, non di tempo).
+
+**Resta:** completare la prova su dispositivo (voto → server → pull → schermo verificato; slot
+dei favorites fra due account e rilettura del diario dopo i fix ancora da vedere), poi il
+**blocco 10**: universal links, rotte profilo.
 
 **La checklist per ogni tabella nuova, distillata dal blocco 8** (l'ordine è quello giusto):
 
