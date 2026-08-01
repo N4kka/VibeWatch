@@ -1,6 +1,6 @@
 # SPEC v3 — stato del lavoro e ripresa
 
-> Aggiornato: 2026-07-31, fine giornata (tre sessioni). Branch: `refactoring/spec-v3-prereqs-oracle`.
+> Aggiornato: 2026-08-01, notte (quattro sessioni). Branch: `refactoring/spec-v3-prereqs-oracle`.
 > Progetto Supabase: `rqhxhkijzhqivljivirq` (VibeWatch, eu-west-1, Postgres 17.6).
 > Repo: `/Users/nicola/Documents/StartingVibe/VibeWatch` (git root un livello sopra).
 
@@ -13,12 +13,39 @@ passa al primo colpo, vale la pena rompere apposta ciò che dovrebbe coprire e c
 fallisca — fatto anche in questa sessione sul `security definer` di `search_users`: rimesso
 `invoker`, la suite fallisce esattamente dove deve.
 
-## Da fare per prima cosa: il blocco 9, la metà che resta
+## Da fare per prima cosa: il blocco 10
 
-**Del blocco 9 è fatta la metà dati** (2026-07-31, terza sessione): `user_favorites` e
-`user_ratings` sono in produzione con RLS e rami in `apply_mutations`, e il client le sincronizza
-(specchi SQLite, pull, conflitti, `RatingActions`/`FavoritesActions`). Vedi la sezione *Il blocco
-9, il pezzo dati* qui sotto per le decisioni. **Resta:**
+**Il blocco 9 è CHIUSO** — dati, stats server, UI intera (stelle, favorites con scelta slot,
+diario, stats nella dashboard) e **provato sul dispositivo il 2026-08-01**: voto a 5 stelle e
+favorite su un film vero, diario popolato dalla migrazione, stats a schermo. I tre difetti
+trovati provando (titoli in inglese, sheet senza porta, stats doppie con numeri diversi) sono
+chiusi — vedi *La prova su dispositivo* più sotto. **Unica coda aperta**: i titoli localizzati
+del Tracking (`localized_titles`, migration SQLite 12) sono scritti e verdi nei test ma non
+ancora rivisti sul dispositivo — alla prima apertura della tab i nomi si aggiornano nella
+lingua dell'app dopo un giro in background; se non succede, guardare `LocalizedTitleStore`.
+
+**Il prossimo è il blocco 10** (§9.4, `DA VERIFICARE` nella spec): universal links e rotte
+profilo. Cosa serve sapere prima di cominciare:
+
+- Oggi **non esiste nessun universal link**, solo lo scheme OAuth. Il lavoro è: `applinks:`
+  negli entitlement, il file `apple-app-site-association` servito dal dominio, e le rotte
+  `/@{username}` e `/film/{id}` gestite da `AppNavigationManager` (esiste già:
+  `VibeWatchApp/Core/Navigation/`, ha i suoi test `AppNavigationManagerTests`).
+- **La AASA richiede un dominio che serva il file**: il sito "arriva subito dopo" (§9.4), quindi
+  la parte client si può predisporre e collaudare con gli entitlement, ma la verifica vera
+  end-to-end dipende da dove verrà ospitato il sito. Chiedere all'utente il dominio prima di
+  inventarne uno.
+- La destinazione `/@{username}` esiste già come schermata (`PublicProfileView(username:)`),
+  quindi il grosso è il routing, non la UI.
+- §13 non ha criteri di accettazione espliciti per il blocco 10: il criterio pratico è che un
+  link `/@{username}` apra il profilo giusto sul dispositivo.
+
+## Il blocco 9, com'è finito (per riferimento)
+
+La metà dati (2026-07-31, terza sessione): `user_favorites` e `user_ratings` in produzione con
+RLS e rami in `apply_mutations`, e il client che le sincronizza (specchi SQLite, pull,
+conflitti, `RatingActions`/`FavoritesActions`) — le decisioni stanno in *Il blocco 9, il pezzo
+dati* più sotto. Il resto, in ordine di arrivo:
 
 ~~1. **Stats §9.3 lato server**~~ — **fatto** (migration `20260801190000`): `get_my_stats()`
    (invoker, runtime reali con ripiego sul catalogo, rewatch nel tempo ma non negli episodi
@@ -38,13 +65,18 @@ fallisca — fatto anche in questa sessione sul `security definer` di `search_us
    coi 4 slot, gli occupati segnati **prima** del tap). Altre 7 chiavi nelle 20 lingue, 23 test
    nel file `FavoritesRatingsActionsTests`.
 
-**La prova su dispositivo è iniziata (2026-08-01) e ha trovato tre cose, tutte chiuse:**
+### La prova su dispositivo (2026-08-01): quattro trovati, tutti chiusi
 
-1. **I titoli delle serie nel diario erano in inglese** con l'app in italiano: il nome nello
-   specchio è quello del **catalogo condiviso** (§1.5), che parla una lingua sola. Ora il diario
-   risolve i titoli via TMDBService (lingua dell'app), col nome del catalogo come ripiego
-   offline. **Nota per il futuro**: lo stesso vale per la schermata Tracking, che legge lo
-   stesso specchio — se dà fastidio lì, la strada è la stessa.
+1. **I titoli delle serie erano in inglese** con l'app in italiano — nel diario e poi, per la
+   stessa ragione, nella schermata Tracking: il nome nello specchio è quello del **catalogo
+   condiviso** (§1.5), che parla una lingua sola. La soluzione ha due pezzi, perché il Tracking
+   ha il vincolo di §13.6 (zero rete al primo fotogramma): la tabella locale `localized_titles`
+   (migration SQLite 12, **non** sincronizzata: ogni dispositivo nella propria lingua) letta in
+   JOIN dal repository, e `LocalizedTitleStore` che riempie i buchi via TMDB **dopo** il
+   disegno. Il contratto anti-rincorsa: un fetch fallito non scrive e risponde `false`, quindi
+   il ViewModel non ricarica a vuoto. Il titolo del catalogo resta il ripiego: un titolo vero
+   in una lingua sbagliata batte un buco. Il diario usa lo stesso store, quindi ora i suoi
+   titoli persistono anche offline.
 2. **Lo sheet del diario non aveva una porta**: solo swipe. Pulsante "Fine", pattern di
    UserSearchView (lezione del pannello AI del blocco 7).
 3. **Le stats erano in due posti con due numeri diversi.** La dashboard di Impostazioni sommava
@@ -55,9 +87,11 @@ fallisca — fatto anche in questa sessione sul `security definer` di `search_us
    tempi, e fingere che seguano "questa settimana" sarebbe una bugia di layout. La barra sul
    profilo è stata tolta; "Library" resta locale (metrica di backlog, non di tempo).
 
-**Resta:** completare la prova su dispositivo (voto → server → pull → schermo verificato; slot
-dei favorites fra due account e rilettura del diario dopo i fix ancora da vedere), poi il
-**blocco 10**: universal links, rotte profilo.
+4. **Le stats erano anche sotto la mail del profilo**, oltre che in Impostazioni — vedi il
+   punto 3: ora c'è un posto solo.
+
+**Confermato dall'utente il 2026-08-01: "funziona tutto"** — voto a 5 stelle, favorite,
+diario e stats visti sul dispositivo. Il giro voto → server → pull → schermo è verificato.
 
 **La checklist per ogni tabella nuova, distillata dal blocco 8** (l'ordine è quello giusto):
 
@@ -534,7 +568,7 @@ nota.
 | 6 | Pipeline import + report | **fasi 1-4 in produzione e collaudate end-to-end**; fasi 5-6 scritte e verdi in SQL, `import-finalize` da deployare |
 | 7 | UI Tracking | **chiuso.** Schermata, tab bar e migrazione dello storico in produzione; 971 episodi migrati sul dispositivo dell'autore al primo tentativo; §13.6 misurato a **208,9 ms** su 300; 20 lingue allineate |
 | 8 | Username, `public_profiles`, ricerca, follow | **chiuso, tutto in produzione e provato sul dispositivo**: schema, backfill, schermata di scelta, `user_follows`, `search_users`, `get_public_profile`, ramo in `apply_mutations`, sync client, UI social e login con username via Edge Function |
-| 9 | Favorites, rating, stats, diario | **codice completo**: dati, stats server e UI intera (stelle, favorites con scelta slot, stats, diario) in repo e in produzione, 20 lingue; **manca solo la prova su dispositivo** |
+| 9 | Favorites, rating, stats, diario | **chiuso**: tutto in produzione, 20 lingue, provato sul dispositivo il 2026-08-01 (voto, favorite, diario, stats). Unica coda: i titoli localizzati del Tracking non ancora rivisti sul dispositivo |
 | 10 | Universal links | da fare |
 
 ## Cosa gira in produzione adesso
@@ -892,6 +926,14 @@ con due codici e si somigliano al 73% per costruzione. Provato rimettendo la cop
   va aggiunto a mano al `project.pbxproj` in quattro punti (`PBXBuildFile`, `PBXFileReference`,
   figli del gruppo, fase `Sources`), altrimenti `xcodebuild test -only-testing:` risponde
   **"Executed 0 tests"** e conclude **TEST SUCCEEDED**. Un test che non esiste non fallisce mai.
+- **"Compilato da solo" non vuol dire "compilato adesso"** (2026-08-01): dopo aver creato
+  `LocalizedTitleStore.swift` nel target app, `xcodebuild test` ha dichiarato TEST SUCCEEDED
+  **tre volte di fila su un bundle stantio** — il build system considerava il target app
+  aggiornato, non ricompilava niente, e i test giravano sulla versione precedente: 25 eseguiti
+  su 28, e "Executed 0 tests" sul singolo test nuovo, sempre con SUCCEEDED. La prova che vale
+  non è l'esito del run: è che **il log di build contenga la `SwiftCompile` del file nuovo**.
+  Se non c'è, `touch` dei file toccati e si ricompila. Il sintomo che ha svelato tutto: il
+  conteggio dei test eseguiti non tornava col `grep -c "func test"` sul sorgente.
 
 - **L'ordine dei file di migration non è l'ordine con cui sono stati applicati.** `movie_reactions`
   e `unified_user_preferences` erano stati aggiunti ad `apply_mutations` per *splice* sul `prosrc`
