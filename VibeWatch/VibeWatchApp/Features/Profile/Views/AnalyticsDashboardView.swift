@@ -6,6 +6,11 @@ struct AnalyticsDashboardView: View {
     @StateObject private var analyticsService = AnalyticsInsightsService.shared
     @StateObject private var gamificationService = GamificationService.shared
     @StateObject private var authService = AuthService.shared
+    // §13.7: i totali di visione li fa il server (get_my_stats), da runtime reali. La vecchia
+    // griglia sommava dal client: film dalla lista "visti" ed episodi da UserDefaults legacy a
+    // 30 minuti STIMATI l'uno — un numero sia stimato sia destinato a restare indietro, perche'
+    // il tracking nuovo non scrive piu' li'. Deciso il 2026-08-01: un posto solo, questo.
+    @StateObject private var serverStats = ProfileStatsViewModel()
     @State private var selectedTimeframe: Timeframe = .allTime
     @State private var isRefreshing = false
     @State private var isPro = false
@@ -300,6 +305,16 @@ struct AnalyticsDashboardView: View {
 
     private var statsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
+            // I totali stanno FUORI dal selettore di periodo: sono numeri del server, tutti i
+            // tempi, e fingere che seguano "questa settimana" sarebbe una bugia di layout.
+            Text("profile.stats.title".localized)
+                .font(.system(size: 14, weight: .bold))
+                .foregroundColor(.white.opacity(0.6))
+                .textCase(.uppercase)
+                .tracking(0.5)
+
+            serverTotalsGrid
+
             // Header with timeframe picker
             HStack {
                 Text("Your Activity")
@@ -339,8 +354,6 @@ struct AnalyticsDashboardView: View {
             if analyticsService.isLoading {
                 loadingView
             } else if let stats = analyticsService.userStats {
-                statsGrid(stats: stats.watchStats)
-
                 GenreDistributionCard(distribution: stats.genreDistribution)
 
                 if let mood = stats.moodAnalysis {
@@ -360,17 +373,53 @@ struct AnalyticsDashboardView: View {
         }
     }
 
-    private func statsGrid(stats: WatchStats) -> some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-            StatItem(title: "Movies", value: "\(stats.totalMovies)", icon: "film", color: .blue)
-            StatItem(title: "Episodes", value: "\(stats.totalEpisodes)", icon: "tv", color: .purple)
-            StatItem(title: "Watch Time", value: "\(stats.totalWatchTimeHours)h", icon: "clock.fill", color: .orange)
-            // "Library" = share of your tracked titles (seen + watchlist) you've marked seen.
-            // Relabelled from "Completion" (ARCH-001): it's a backlog metric, not a per-title
-            // viewing-completion rate, which the app has no data for.
-            StatItem(title: "Library", value: "\(Int(stats.completionRate * 100))%", icon: "checkmark.circle.fill", color: .green)
+    /// I totali di visione, dal server (§13.7). La quarta tessera ("Library") resta un dato di
+    /// liste locale: e' una metrica di backlog, non di tempo, e il server non la conosce.
+    @ViewBuilder
+    private var serverTotalsGrid: some View {
+        switch serverStats.phase {
+        case .loading:
+            HStack { Spacer(); ProgressView().tint(.theme.accentOrange); Spacer() }
+                .padding(.vertical, 16)
+        case .failed:
+            // Un errore di rete dichiarato, mai una griglia di zeri con la faccia di un dato.
+            VStack(spacing: 8) {
+                Text("profile.stats.loadFailed".localized)
+                    .font(.system(size: 13))
+                    .foregroundColor(.white.opacity(0.5))
+                Button("common.retry".localized) {
+                    Task { await serverStats.load() }
+                }
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(.theme.accentOrange)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+        case .loaded(let stats):
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                StatItem(title: "profile.stats.movies".localized,
+                         value: "\(stats.moviesWatched)", icon: "film", color: .blue)
+                StatItem(title: "profile.stats.episodes".localized,
+                         value: "\(stats.episodesWatched)", icon: "tv", color: .purple)
+                StatItem(title: "profile.stats.watchTime".localized,
+                         value: Self.watchTimeFormatter.string(from: TimeInterval(stats.watchTimeSeconds)) ?? "0",
+                         icon: "clock.fill", color: .orange)
+                if let local = analyticsService.userStats?.watchStats {
+                    // "Library" = share of your tracked titles (seen + watchlist) you've marked
+                    // seen. A backlog metric (ARCH-001), local by nature.
+                    StatItem(title: "Library", value: "\(Int(local.completionRate * 100))%",
+                             icon: "checkmark.circle.fill", color: .green)
+                }
+            }
         }
     }
+
+    private static let watchTimeFormatter: DateComponentsFormatter = {
+        let f = DateComponentsFormatter()
+        f.allowedUnits = [.hour, .minute]
+        f.unitsStyle = .abbreviated
+        return f
+    }()
 
     // MARK: - Loading/Error/Empty Views
 
@@ -429,8 +478,9 @@ struct AnalyticsDashboardView: View {
 
         async let gamificationLoad: () = gamificationService.loadUserState(userId: userId)
         async let statsLoad: () = loadStats()
+        async let serverLoad: () = serverStats.load()
 
-        _ = await (gamificationLoad, statsLoad)
+        _ = await (gamificationLoad, statsLoad, serverLoad)
     }
 
     private func loadStats() async {

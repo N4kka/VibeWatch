@@ -179,6 +179,25 @@ final class FavoritesRatingsActionsTests: XCTestCase {
         XCTAssertNil(UserStats(json: ["episodes_watched": 3]))
     }
 
+    /// La griglia dei totali nella dashboard: un fetch fallito e' `.failed` dichiarato, mai una
+    /// griglia di zeri con la faccia di un dato.
+    func testLeStatsFalliteSiDichiarano() async {
+        struct Rotto: Error {}
+        let rotto = ProfileStatsViewModel(fetch: { throw Rotto() })
+        await rotto.load()
+        XCTAssertEqual(rotto.phase, .failed)
+
+        let ok = ProfileStatsViewModel(fetch: {
+            UserStats(watchTimeSeconds: 0, episodesWatched: 0, showsWatched: 0,
+                      moviesWatched: 0, ratingsGiven: 0)
+        })
+        await ok.load()
+        XCTAssertEqual(ok.phase, .loaded(UserStats(watchTimeSeconds: 0, episodesWatched: 0,
+                                                   showsWatched: 0, moviesWatched: 0,
+                                                   ratingsGiven: 0)),
+                       "gli zeri veri sono un dato, non un errore")
+    }
+
     // MARK: - Le stelle (§3.6)
 
     func testLaStellaScriveELoStatoResta() async {
