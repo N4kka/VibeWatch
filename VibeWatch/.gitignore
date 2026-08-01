@@ -44,6 +44,7 @@ VibeWatchApp/Scripts/
 VibeWatchApp/Config/
 *.md
 !.planning/**
+!docs/universal-links/**
 .mcp.json
 
 # macOS Finder metadata — after the !.planning/** un-ignore so it wins there too.
