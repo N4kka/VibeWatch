@@ -430,3 +430,52 @@ Deno.test('oracolo: gli stati sul fixture reale sono 57 archived, 28 for_later, 
   assertEquals(perStato('active'), 19)
   assertEquals(out.length, 104)
 })
+
+// --------------------------------------------------------------------------- favorites (§7.1)
+
+import { parseFavorites } from './parsing.ts'
+
+Deno.test('favorites: la slice Go si decodifica in id + data, in ordine di preferenza', () => {
+  const { series, movies_unsupported } = parseFavorites([{
+    s_key: 'favorite-series',
+    objects: '[map[created_at:1.578991325e+09 id:362696 type:series] ' +
+             'map[created_at:1.57515197e+09 id:300472 type:series] ' +
+             'map[created_at:1.6e+09 id:99 type:movie]]',
+  }])
+
+  assertEquals(series.length, 2)
+  assertEquals(series[0].tvdb_series_id, '300472', 'il piu vecchio viene prima')
+  assertEquals(series[0].position, 0)
+  assertEquals(series[1].tvdb_series_id, '362696')
+  assertEquals(series[0].favorited_at?.startsWith('2019-11-30'), true,
+    'epoch Go in secondi, non millisecondi')
+  assertEquals(movies_unsupported, 1, 'un film fra le serie si conta, non si importa')
+})
+
+Deno.test('favorites: favorite-movies si dichiara non supportato, mai indovinato', () => {
+  const { series, movies_unsupported } = parseFavorites([{
+    s_key: 'favorite-movies',
+    objects: '[map[created_at:1.6e+09 id:12345 type:movie] map[created_at:1.7e+09 id:678 type:movie]]',
+  }])
+  assertEquals(series.length, 0)
+  assertEquals(movies_unsupported, 2)
+})
+
+Deno.test('favorites: un blocco senza id o fuori forma si scarta invece di inventare', () => {
+  const { series } = parseFavorites([{
+    s_key: 'favorite-series',
+    objects: '[map[created_at:1.6e+09 type:series] map[created_at:x id:0 type:series] ' +
+             'map[created_at:1.6e+09 id:70327 type:series]]',
+  }])
+  assertEquals(series.length, 1)
+  assertEquals(series[0].tvdb_series_id, '70327')
+})
+
+Deno.test('favorites: altre righe del CSV (collection, liste custom) si ignorano', () => {
+  const { series, movies_unsupported } = parseFavorites([
+    { s_key: 'una-lista-custom', objects: '[map[created_at:1.6e+09 id:1 type:series]]' },
+    { lists: '...', s_key: '' },
+  ])
+  assertEquals(series.length, 0)
+  assertEquals(movies_unsupported, 0)
+})

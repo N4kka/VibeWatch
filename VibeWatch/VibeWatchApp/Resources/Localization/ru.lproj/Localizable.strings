@@ -377,6 +377,8 @@
 "import.report.ratingsDeferred" = "Найдено оценок: %d — пока не импортированы.";
 "import.report.ratingsApplied" = "Импортировано оценок: %d (в виде звёзд).";
 "import.report.ratingsUnresolved" = "Не удалось сопоставить оценок: %d.";
+"import.report.favoritesApplied" = "Импортировано избранного: %d (в свободные слоты).";
+"import.report.favoriteMoviesUnsupported" = "Избранные фильмы (%d) нельзя импортировать из TV Time.";
 "import.report.statusesApplied" = "%d статусов сериалов восстановлено (список и архив).";
 "import.report.statusesUnresolved" = "%d статусов сериалов не удалось применить.";
 "import.report.unresolvedTitle" = "Не удалось сопоставить серий: %d";

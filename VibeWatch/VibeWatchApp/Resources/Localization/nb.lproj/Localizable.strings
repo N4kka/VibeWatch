@@ -332,6 +332,8 @@
 "import.report.ratingsDeferred" = "%d vurderinger funnet – ikke importert ennå.";
 "import.report.ratingsApplied" = "%d vurderinger importert som stjerner.";
 "import.report.ratingsUnresolved" = "%d vurderinger kunne ikke matches.";
+"import.report.favoritesApplied" = "%d favoritter importert til ledige plasser.";
+"import.report.favoriteMoviesUnsupported" = "%d filmfavoritter kan ikke importeres fra TV Time.";
 "import.report.statusesApplied" = "%d seriestatuser gjenopprettet (huskeliste og arkiv).";
 "import.report.statusesUnresolved" = "%d seriestatuser kunne ikke brukes.";
 "import.report.unresolvedTitle" = "%d episoder kunne ikke matches";

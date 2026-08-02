@@ -377,6 +377,8 @@
 "import.report.ratingsDeferred" = "%d betyg hittades – inte importerade än.";
 "import.report.ratingsApplied" = "%d betyg importerade som stjärnor.";
 "import.report.ratingsUnresolved" = "%d betyg kunde inte matchas.";
+"import.report.favoritesApplied" = "%d favoriter importerade till lediga platser.";
+"import.report.favoriteMoviesUnsupported" = "%d filmfavoriter kan inte importeras från TV Time.";
 "import.report.statusesApplied" = "%d seriestatusar återställda (bevakningslista och arkiv).";
 "import.report.statusesUnresolved" = "%d seriestatusar kunde inte tillämpas.";
 "import.report.unresolvedTitle" = "%d avsnitt kunde inte matchas";

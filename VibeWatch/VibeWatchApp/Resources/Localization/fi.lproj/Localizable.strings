@@ -410,6 +410,8 @@
 "import.report.ratingsDeferred" = "%d arvostelua löytyi – ei vielä tuotu.";
 "import.report.ratingsApplied" = "%d arvostelua tuotu tähtinä.";
 "import.report.ratingsUnresolved" = "%d arvostelua ei voitu yhdistää.";
+"import.report.favoritesApplied" = "%d suosikkia tuotu vapaisiin paikkoihin.";
+"import.report.favoriteMoviesUnsupported" = "%d elokuvasuosikkia ei voi tuoda TV Timesta.";
 "import.report.statusesApplied" = "%d sarjatilaa palautettu (katselulista ja arkisto).";
 "import.report.statusesUnresolved" = "%d sarjan tilaa ei voitu ottaa käyttöön.";
 "import.report.unresolvedTitle" = "%d jaksoa jäi tunnistamatta";

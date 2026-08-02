@@ -410,6 +410,8 @@
 "import.report.ratingsDeferred" = "평가 %d개를 찾았습니다. 아직 가져오지 않았습니다.";
 "import.report.ratingsApplied" = "평가 %d개를 별점으로 가져왔습니다.";
 "import.report.ratingsUnresolved" = "평가 %d개를 일치시킬 수 없습니다.";
+"import.report.favoritesApplied" = "즐겨찾기 %d개를 빈 슬롯으로 가져왔습니다.";
+"import.report.favoriteMoviesUnsupported" = "영화 즐겨찾기 %d개는 TV Time에서 가져올 수 없습니다.";
 "import.report.statusesApplied" = "%d개의 시리즈 상태를 복원했습니다(찜 목록 및 보관).";
 "import.report.statusesUnresolved" = "%d개의 시리즈 상태를 적용하지 못했습니다.";
 "import.report.unresolvedTitle" = "에피소드 %d개를 맞추지 못했습니다";

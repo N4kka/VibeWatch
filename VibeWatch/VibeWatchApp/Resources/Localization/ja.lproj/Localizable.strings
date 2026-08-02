@@ -410,6 +410,8 @@
 "import.report.ratingsDeferred" = "%d件の評価が見つかりました。まだインポートされていません。";
 "import.report.ratingsApplied" = "%d件の評価を星としてインポートしました。";
 "import.report.ratingsUnresolved" = "%d件の評価は照合できませんでした。";
+"import.report.favoritesApplied" = "%d件のお気に入りを空きスロットにインポートしました。";
+"import.report.favoriteMoviesUnsupported" = "%d件の映画のお気に入りはTV Timeからインポートできません。";
 "import.report.statusesApplied" = "%d件のシリーズ状態を復元しました（ウォッチリストとアーカイブ）。";
 "import.report.statusesUnresolved" = "%d件のシリーズ状態を適用できませんでした。";
 "import.report.unresolvedTitle" = "%d件のエピソードを照合できませんでした";

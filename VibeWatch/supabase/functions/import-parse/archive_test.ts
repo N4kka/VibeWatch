@@ -2,6 +2,7 @@ import { assertEquals } from 'jsr:@std/assert@1'
 import {
   buildRows,
   FILE_FOLLOWED,
+  FILE_LISTS,
   FILE_SPECIAL_STATUS,
   FILE_V1,
   FILE_V2,
@@ -34,18 +35,22 @@ Deno.test({
       ...RATING_FILES,
       FILE_SPECIAL_STATUS,
       FILE_FOLLOWED,
+      FILE_LISTS,
     ])
 
     // 1. I file di §7.1 esistono e si chiamano davvero così.
     assertEquals(files.has(FILE_V2), true, `manca ${FILE_V2}`)
 
-    const { events, ratings, statuses, unusableV1, droppedV1 } = buildRows(files)
+    const { events, ratings, statuses, favorites, favoriteMoviesUnsupported, unusableV1,
+      droppedV1 } = buildRows(files)
 
     console.log(JSON.stringify({
       file_trovati: [...files.keys()],
       eventi: events.length,
       voti: ratings.length,
       stati_serie: statuses.length,
+      favorites: favorites.length,
+      favorite_film_non_supportati: favoriteMoviesUnsupported,
       v1_inutilizzabili: unusableV1,
       v1_scartati_come_duplicati: droppedV1,
     }, null, 2))
@@ -56,6 +61,14 @@ Deno.test({
     // 2b. Gli stati per-serie di §7.1, stessi numeri del test sull'oracle_fixture: 57 archiviate,
     //     28 "da vedere più avanti", 19 seguite mai iniziate.
     assertEquals(statuses.length, 104, 'stati serie diversi da quelli dell oracolo')
+
+    // 2c. I favorites di §7.1: sull'export vero la lista favorite-series ha 87 serie, tutte
+    //     con id TVDB numerico e data; l'ordine è per data di preferenza (i più vecchi prima).
+    assertEquals(favorites.length, 87, 'favorites diversi da quelli contati sull export vero')
+    assertEquals(favorites.filter((f) => !f.favorited_at).length, 0, 'favorite senza data')
+    const ordinati = [...favorites].every((f, i, a) =>
+      i === 0 || (a[i - 1].favorited_at! <= f.favorited_at!))
+    assertEquals(ordinati, true, 'i favorites non sono in ordine di data')
 
     // 3. Ogni evento ha una chiave di dedup: senza, il reimport duplica (criterio 2 di §13).
     const senzaChiave = events.filter((e) => !e.dedup_key).length

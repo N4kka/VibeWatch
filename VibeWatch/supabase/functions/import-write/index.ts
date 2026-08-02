@@ -19,6 +19,7 @@ import { adminClient, jsonResponse } from '../_shared/proxy.ts'
 import { isServiceCaller } from '../_shared/cronAuth.ts'
 import {
   buildBatch,
+  buildFavoriteBatch,
   buildRatingBatch,
   buildStatusBatch,
   type EpisodeMapEntry,
@@ -101,6 +102,11 @@ serve(async (req: Request) => {
       const esitoVoti = await scriviVoti(admin, caller, daServizio, jobId, job.user_id,
         job.totals as Record<string, unknown> ?? {})
       if (esitoVoti) return esitoVoti
+
+      // Infine i favorites (§7.1): riempiono solo gli slot liberi, in ordine di preferenza.
+      const esitoFavorites = await scriviFavorites(admin, caller, daServizio, jobId,
+        job.user_id, job.totals as Record<string, unknown> ?? {})
+      if (esitoFavorites) return esitoFavorites
 
       const { error } = await admin.from('import_jobs')
         .update({ phase: 'recomputing', checkpoint: {} }).eq('id', jobId)
@@ -490,6 +496,114 @@ async function scriviVoti(
     gia_in_app: giaInApp,
     reactions_conservate: reactions,
     skipped: skipped.length - giaInApp - reactions,
+    totals,
+  }, 200)
+}
+
+/**
+ * La coda dei favorites (§7.1): le righe `row_kind = 'favorite'` risolte riempiono gli slot
+ * LIBERI di `user_favorites` (media_type tv), in ordine di `row_index` — che la fase 2 ha
+ * fissato sull'ordine di preferenza di TV Time, i più vecchi prima. Deciso dall'utente il
+ * 2026-08-02: mai sovrascrivere uno slot che ha una riga, viva o lapide — una lapide è uno
+ * slot svuotato apposta in app, e riempirlo disfarebbe quella scelta (regola dei voti).
+ *
+ * Il ramo `user_favorites` di `apply_mutations` è un upsert lastWriteWins sulla PK: è la
+ * lettura degli slot qui sotto a garantire che l'import non sovrascriva mai — per questo si
+ * scrive SOLO su slot senza riga.
+ */
+async function scriviFavorites(
+  admin: ReturnType<typeof adminClient>,
+  caller: ReturnType<typeof callerClient>,
+  daServizio: boolean,
+  jobId: string,
+  userId: string,
+  totaliCorrenti: Record<string, unknown>,
+): Promise<Response | null> {
+  const { data: pending, error: readError } = await admin
+    .from('import_staging')
+    .select('row_index, raw, resolved, status')
+    .eq('job_id', jobId)
+    .eq('status', 'resolved')
+    .eq('raw->>row_kind', 'favorite')
+    .order('row_index', { ascending: true })
+    .limit(ROWS_PER_INVOCATION)
+
+  if (readError) throw new Error(`lettura favorites fallita: ${readError.message}`)
+  if (!pending || pending.length === 0) return null
+
+  // Gli slot TV di oggi, lapidi COMPRESE: uno slot con una riga non e' libero.
+  const { data: slotRows, error: slotsError } = await admin
+    .from('user_favorites')
+    .select('slot, tmdb_id, deleted_at')
+    .eq('user_id', userId)
+    .eq('media_type', 'tv')
+  if (slotsError) throw new Error(`lettura slot favorites fallita: ${slotsError.message}`)
+
+  const occupati = new Set((slotRows ?? []).map((r) => r.slot as number))
+  const slotLiberi = [1, 2, 3, 4].filter((s) => !occupati.has(s))
+  const giaFavoriti = new Set(
+    (slotRows ?? [])
+      .filter((r) => r.deleted_at === null)
+      .map((r) => r.tmdb_id as number),
+  )
+
+  const { mutations, written, skipped } = buildFavoriteBatch(
+    pending as StagingRow[], userId, slotLiberi, giaFavoriti)
+
+  // Stessa sorveglianza delle altre code: i rifiuti si contano prima e dopo.
+  const rifiutiPrima = await countRejected(admin, userId)
+
+  for (let i = 0; i < mutations.length; i += MUTATIONS_PER_CALL) {
+    const lotto = mutations.slice(i, i + MUTATIONS_PER_CALL)
+    const { error } = daServizio
+      ? await admin.rpc('import_apply_mutations', { p_user: userId, batch: lotto })
+      : await caller.rpc('apply_mutations', { batch: lotto })
+    if (error) throw new Error(`apply_mutations ha rifiutato i favorites a ${i}: ${error.message}`)
+  }
+
+  const nuoviRifiuti = (await countRejected(admin, userId)) - rifiutiPrima
+  if (nuoviRifiuti > 0) {
+    throw new Error(
+      `${nuoviRifiuti} favorites rifiutati da apply_mutations: guardare sync_rejected_mutations`,
+    )
+  }
+
+  if (written.length > 0) {
+    const { error } = await admin.from('import_staging')
+      .update({ status: 'written', error: null })
+      .eq('job_id', jobId)
+      .in('row_index', written)
+    if (error) throw new Error(`marcatura favorites scritti fallita: ${error.message}`)
+  }
+
+  for (const { row_index, reason } of skipped) {
+    const { error } = await admin.from('import_staging')
+      .update({ status: 'skipped', error: `favorites: ${reason}` })
+      .eq('job_id', jobId).eq('row_index', row_index)
+    if (error) throw new Error(`marcatura favorite ${row_index} fallita: ${error.message}`)
+  }
+
+  const prima = totaliCorrenti as Record<string, number>
+  const slotPieni = skipped.filter((s) => s.reason === 'slot_pieni').length
+  const giaInApp = skipped.filter((s) => s.reason === 'gia_favorito').length
+  const totals = {
+    ...totaliCorrenti,
+    favorites_applied: (prima.favorites_applied ?? 0) + written.length,
+    favorites_slots_full: (prima.favorites_slots_full ?? 0) + slotPieni,
+    favorites_already_in_app: (prima.favorites_already_in_app ?? 0) + giaInApp,
+  }
+
+  const { error: updateError } = await admin.from('import_jobs')
+    .update({ totals }).eq('id', jobId)
+  if (updateError) throw new Error(`totali non salvati: ${updateError.message}`)
+
+  return jsonResponse({
+    done: false,
+    phase: 'writing',
+    favorites: true,
+    applicati: written.length,
+    slot_pieni: slotPieni,
+    gia_in_app: giaInApp,
     totals,
   }, 200)
 }

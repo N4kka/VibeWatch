@@ -17,7 +17,7 @@ export interface StagingRow {
 /** L'involucro che `apply_mutations(batch jsonb)` si aspetta. */
 export interface Mutation {
   op: 'INSERT'
-  table: 'watch_events' | 'tv_show_state' | 'user_ratings'
+  table: 'watch_events' | 'tv_show_state' | 'user_ratings' | 'user_favorites'
   record: Record<string, unknown>
 }
 
@@ -32,6 +32,8 @@ export type SkipReason =
   | 'voto_gia_in_app'
   | 'voto_fuori_scala'
   | 'senza_episodio'
+  | 'gia_favorito'
+  | 'slot_pieni'
 
 export interface BuildOutcome {
   mutation: Mutation | null
@@ -373,6 +375,63 @@ export function buildBatch(rows: StagingRow[], userId: string): BuiltBatch {
     } else {
       out.skipped.push({ row_index: row.row_index, reason: skip! })
     }
+  }
+
+  return out
+}
+
+/**
+ * §7.1: da riga di staging `row_kind = 'favorite'` alle mutazioni `user_favorites` — i
+ * candidati riempiono SOLO gli slot liberi (deciso dall'utente, 2026-08-02), in ordine di
+ * `position` (= data di preferenza su TV Time, i più vecchi prima). Le regole:
+ *
+ *   - **uno slot con una riga — viva O lapide — non è libero**: una lapide è uno slot che
+ *     l'utente ha svuotato apposta, e l'import che lo riempie disfa quella scelta (stessa
+ *     regola dei voti). `slotLiberi` arriva già filtrato dal chiamante.
+ *   - **una serie già favorita non si duplica** su un secondo slot (`showGiaFavoriti`).
+ *   - finiti gli slot, il resto è `slot_pieni`: dichiarato nel report, non è una perdita —
+ *     4 slot sono il prodotto, non un limite dell'import.
+ */
+export function buildFavoriteBatch(
+  rows: StagingRow[],
+  userId: string,
+  slotLiberi: number[],
+  showGiaFavoriti: Set<number>,
+): BuiltBatch {
+  const out: BuiltBatch = { mutations: [], written: [], skipped: [] }
+  const slots = [...slotLiberi].sort((a, b) => a - b)
+  const presi = new Set<number>(showGiaFavoriti)
+
+  for (const row of rows) {
+    const resolved = row.resolved
+    const showId = resolved ? asInt(resolved.tmdb_show_id) : null
+    if (showId === null) {
+      out.skipped.push({ row_index: row.row_index, reason: 'non_risolto' })
+      continue
+    }
+    if (presi.has(showId)) {
+      out.skipped.push({ row_index: row.row_index, reason: 'gia_favorito' })
+      continue
+    }
+    const slot = slots.shift()
+    if (slot === undefined) {
+      out.skipped.push({ row_index: row.row_index, reason: 'slot_pieni' })
+      continue
+    }
+    presi.add(showId)
+    out.mutations.push({
+      op: 'INSERT',
+      table: 'user_favorites',
+      record: {
+        // Stesso obbligo delle altre tabelle: senza `user_id` combaciante, `apply_mutations`
+        // scarta in silenzio verso `sync_rejected_mutations`.
+        user_id: userId,
+        media_type: 'tv',
+        slot,
+        tmdb_id: showId,
+      },
+    })
+    out.written.push(row.row_index)
   }
 
   return out

@@ -64,9 +64,11 @@ strutturale: gli aperti, TUTTI, sono questi, in ordine sensato di priorità:
    false, zeri veri nei campi nuovi, storici identici), più `voti_stelle_importati` /
    `gia_in_app` / `non_risolti`. Client: 3 campi + 2 righe in ImportView, 2 chiavi × 20
    lingue, 22 test simulatore verdi (16 ImportViewModel + 6 LocalizationCoverage). Suite
-   SQL 332 asserzioni. **NON collaudato end-to-end con un giro vero della pipeline: il
-   primo re-import dello ZIP dall'app è quel collaudo** (come fu per gli stati), e il
-   report dirà se le ~295 stelle sono arrivate. Le **reaction** restano fuori da
+   SQL 332 asserzioni. **COLLAUDATO end-to-end lo stesso giorno**: l'utente ha rifatto
+   l'import dall'app dopo il deploy (terzo job, 12:56 UTC, done in 2'42" guidato dal cron)
+   — 224 stelle scritte in `user_ratings` (scala 2-10, 71 serie), 34 `voto_gia_in_app`
+   (doppioni fra i 4 file ratings), 37 non risolte (gli episodi non riconosciuti di
+   sempre), stati di nuovo 103 = idempotente. Le **reaction** restano fuori da
    `watch_events.external_ref` (§7.5.1): conservate in export e staging, contate nel
    report — il pezzetto mancante è dichiarato qui.
 4. ~~**Liste pubbliche nel profilo altrui** (§9.3, ultimo bullet)~~ — **FATTO e deployato**
@@ -83,8 +85,21 @@ strutturale: gli aperti, TUTTI, sono questi, in ordine sensato di priorità:
    `social_test.sql` (harness esteso: lists con name/is_public, list_follows, list_reports).
    Verificato in produzione: firma unica, grant identici, feed invariato, il profilo di
    `nakka` risponde 1 lista. Resta la prova a occhio sul dispositivo.
-5. **Favorites da `lists-prod-lists.csv`** (§7.1) e **film dell'export** (destinazione da
-   decidere prima che da fare); **`user.csv`** (language/timezone) mai letto.
+5. **Favorites da `lists-prod-lists.csv`** (§7.1): la parte SERIE è **FATTA e deployata**
+   (2026-08-02, ottava sessione — import-parse v6, import-resolve v9, import-write v6,
+   report `20260802190000`): `parseFavorites` decodifica la slice Go di `objects`
+   (87 serie sull'export vero, ordinate per data di preferenza), risoluzione nella coda
+   serie della fase 3, scrittura SOLO negli slot LIBERI di `user_favorites` (deciso
+   dall'utente: una riga esistente — viva o lapide — non si tocca; una serie già favorita
+   non si duplica; il resto è `slot_pieni`, dichiarato). Report + client (2 chiavi × 20
+   lingue) + 9 test Deno nuovi + 7 asserzioni SQL. **Collaudo end-to-end = il prossimo
+   re-import dello ZIP.** I **favorite-movies** si dichiarano non supportati (contati nel
+   report): i film di TV Time non hanno id TVDB — solo uuid interni e NOMI (anche
+   giapponesi). I **film dell'export** (5 visti + 3 watchlist sull'export vero, righe v1
+   `entity_type=movie`) hanno la destinazione DECISA dall'utente (2026-08-02:
+   `watch_events` media_type movie con le date + lista legacy "visti") ma la risoluzione
+   è per titolo — regole strette exact-match+anno o niente, design da fare a parte;
+   **`user.csv`** (language/timezone) mai letto.
 6. **Risoluzione a mano dei non riconosciuti** (§7.4): oggi si elencano e basta.
 7. **Consumatori legacy di `list_items` per le TV** (aperto della fusione): stats locali
    (`AnalyticsInsightsService`) e personalizzazione Discovery leggono ancora le liste legacy.

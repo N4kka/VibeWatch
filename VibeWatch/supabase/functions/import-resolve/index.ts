@@ -316,7 +316,9 @@ serve(async (req: Request) => {
 })
 
 /**
- * La coda della fase 3: le righe `row_kind = 'status'` (§7.1), risolte per serie.
+ * La coda della fase 3: le righe per-SERIE — stati (§7.1) e candidati favorites (§7.1),
+ * risolte insieme: stessa entità, stessa mappa, stesso giro. I contatori nei totals restano
+ * separati per kind, così il report non somma pere con mele.
  *
  * Stessa architettura del giro sugli eventi — mappa prima, `catalog-resolve` solo per ciò che
  * manca, annotazione in blocco, contatore di errori CONSECUTIVI nel checkpoint — perché sono gli
@@ -335,7 +337,7 @@ async function risolviStati(
     .select('row_index, raw')
     .eq('job_id', jobId)
     .eq('status', 'pending')
-    .eq('raw->>row_kind', 'status')
+    .in('raw->>row_kind', ['status', 'favorite'])
     .order('row_index', { ascending: true })
     .limit(ROWS_PER_INVOCATION)
 
@@ -437,9 +439,12 @@ async function risolviStati(
 
   let risolte = 0
   let irrisolte = 0
+  let favRisolte = 0
+  let favIrrisolte = 0
   const daScrivere = []
   for (const riga of pending) {
     const raw = riga.raw as Record<string, unknown>
+    const daFavorite = raw.row_kind === 'favorite'
     const id = Number(raw.tvdb_series_id)
 
     // Un id non numerico non arriverà mai in mappa: si dichiara irrisolto SUBITO, altrimenti la
@@ -453,7 +458,7 @@ async function risolviStati(
         status: 'unresolved',
         error: 'id serie mancante nell\'export',
       })
-      irrisolte++
+      daFavorite ? favIrrisolte++ : irrisolte++
       continue
     }
 
@@ -469,7 +474,8 @@ async function risolviStati(
       status: trovato ? 'resolved' : 'unresolved',
       error: trovato ? null : `catalogo: ${mappa.resolution ?? 'assente'}`,
     })
-    trovato ? risolte++ : irrisolte++
+    if (daFavorite) { trovato ? favRisolte++ : favIrrisolte++ }
+    else { trovato ? risolte++ : irrisolte++ }
   }
 
   for (let i = 0; i < daScrivere.length; i += ROWS_PER_UPSERT) {
@@ -484,6 +490,10 @@ async function risolviStati(
     statuses_resolved: ((job.totals as Record<string, number>)?.statuses_resolved ?? 0) + risolte,
     statuses_unresolved:
       ((job.totals as Record<string, number>)?.statuses_unresolved ?? 0) + irrisolte,
+    favorites_resolved:
+      ((job.totals as Record<string, number>)?.favorites_resolved ?? 0) + favRisolte,
+    favorites_unresolved:
+      ((job.totals as Record<string, number>)?.favorites_unresolved ?? 0) + favIrrisolte,
   }
 
   const { error: updateError } = await admin.from('import_jobs')

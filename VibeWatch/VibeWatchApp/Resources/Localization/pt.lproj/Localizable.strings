@@ -377,6 +377,8 @@
 "import.report.ratingsDeferred" = "%d avaliações encontradas — ainda não importadas.";
 "import.report.ratingsApplied" = "%d avaliações importadas como estrelas.";
 "import.report.ratingsUnresolved" = "%d avaliações não puderam ser associadas.";
+"import.report.favoritesApplied" = "%d favoritos importados para espaços livres.";
+"import.report.favoriteMoviesUnsupported" = "%d filmes favoritos não podem ser importados do TV Time.";
 "import.report.statusesApplied" = "%d estados de séries restaurados (lista e arquivo).";
 "import.report.statusesUnresolved" = "%d estados de séries não puderam ser aplicados.";
 "import.report.unresolvedTitle" = "%d episódios não reconhecidos";

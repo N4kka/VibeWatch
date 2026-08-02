@@ -16,10 +16,12 @@ import {
 import {
   assignRewatchIndex,
   dedupV1IntoV2,
+  parseFavorites,
   parseRatings,
   parseSeriesStatuses,
   parseV1Events,
   parseV2Events,
+  type ParsedFavorite,
   type ParsedRating,
   type Row,
   type SeriesStatus,
@@ -38,6 +40,8 @@ export const RATING_FILES = [
 // §7.1: gli stati per-serie — "watch later" e archivio — oltre ai flag di `user-series` in v2.
 export const FILE_SPECIAL_STATUS = 'user_show_special_status.csv'
 export const FILE_FOLLOWED = 'followed_tv_show.csv'
+// §7.1: favorite-series/favorite-movies → candidati per i Favorites.
+export const FILE_LISTS = 'lists-prod-lists.csv'
 
 // zip.js decomprime su un pool di web worker. Comodo in un browser, sbagliato qui: il rilevatore
 // di leak dei test lo ha colto subito ("a timer was started but never completed"), e in una Edge
@@ -75,6 +79,8 @@ export interface BuiltRows {
   events: WatchEvent[]
   ratings: ParsedRating[]
   statuses: SeriesStatus[]
+  favorites: ParsedFavorite[]
+  favoriteMoviesUnsupported: number
   unusableV1: number
   droppedV1: number
 }
@@ -106,5 +112,8 @@ export function buildRows(files: Map<string, Row[]>): BuiltRows {
     eventSeriesIds,
   )
 
-  return { events, ratings, statuses, unusableV1, droppedV1 }
+  const { series: favorites, movies_unsupported: favoriteMoviesUnsupported } =
+    parseFavorites(files.get(FILE_LISTS) ?? [])
+
+  return { events, ratings, statuses, favorites, favoriteMoviesUnsupported, unusableV1, droppedV1 }
 }

@@ -377,6 +377,8 @@
 "import.report.ratingsDeferred" = "%d puan bulundu — henüz içe aktarılmadı.";
 "import.report.ratingsApplied" = "%d puan yıldız olarak içe aktarıldı.";
 "import.report.ratingsUnresolved" = "%d puan eşleştirilemedi.";
+"import.report.favoritesApplied" = "%d favori boş yuvalara aktarıldı.";
+"import.report.favoriteMoviesUnsupported" = "%d film favorisi TV Time üzerinden aktarılamıyor.";
 "import.report.statusesApplied" = "%d dizi durumu geri yüklendi (izleme listesi ve arşiv).";
 "import.report.statusesUnresolved" = "%d dizi durumu uygulanamadı.";
 "import.report.unresolvedTitle" = "%d bölüm eşleştirilemedi";

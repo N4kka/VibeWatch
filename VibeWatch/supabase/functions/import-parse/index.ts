@@ -20,6 +20,7 @@ import { isServiceCaller } from '../_shared/cronAuth.ts'
 import {
   buildRows,
   FILE_FOLLOWED,
+  FILE_LISTS,
   FILE_SPECIAL_STATUS,
   FILE_V1,
   FILE_V2,
@@ -111,6 +112,7 @@ serve(async (req: Request) => {
       ...RATING_FILES,
       FILE_SPECIAL_STATUS,
       FILE_FOLLOWED,
+      FILE_LISTS,
     ])
     if (!files.has(FILE_V2) && !files.has(FILE_V1)) {
       // Nessuno dei due file di tracking: non è un export TV Time, e dirlo subito è meglio che
@@ -118,7 +120,8 @@ serve(async (req: Request) => {
       throw new Error('lo ZIP non contiene né tracking-prod-records-v2.csv né tracking-prod-records.csv')
     }
 
-    const { events, ratings, statuses, unusableV1, droppedV1 } = buildRows(files)
+    const { events, ratings, statuses, favorites, favoriteMoviesUnsupported, unusableV1,
+      droppedV1 } = buildRows(files)
 
     // Un solo elenco ordinato: gli eventi e poi i voti. `row_index` è la posizione qui dentro, ed è
     // ciò che rende la ripresa un numero invece che una ricerca.
@@ -147,6 +150,14 @@ serve(async (req: Request) => {
         raw: { row_kind: 'status', ...s } as Record<string, unknown>,
         status: 'pending',
       })),
+      // §7.1: i candidati Favorites (solo serie: i film di TV Time non hanno id risolvibili,
+      // si contano in `favorite_movies_unsupported`). In coda per la stessa ragione degli stati.
+      ...favorites.map((f, i) => ({
+        job_id: jobId,
+        row_index: events.length + ratings.length + statuses.length + i,
+        raw: { row_kind: 'favorite', ...f } as Record<string, unknown>,
+        status: 'pending',
+      })),
     ]
 
     const checkpoint = (job.checkpoint ?? {}) as { row_index?: number }
@@ -170,6 +181,8 @@ serve(async (req: Request) => {
       events: events.length,
       ratings: ratings.length,
       series_statuses: statuses.length,
+      favorites: favorites.length,
+      favorite_movies_unsupported: favoriteMoviesUnsupported,
       staged_rows: staged.length,
       v1_unusable: unusableV1,
       v1_dropped_as_duplicate: droppedV1,

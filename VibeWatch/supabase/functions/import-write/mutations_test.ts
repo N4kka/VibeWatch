@@ -2,6 +2,7 @@ import { assertEquals } from 'jsr:@std/assert@1'
 import {
   buildBatch,
   buildEventMutation,
+  buildFavoriteBatch,
   buildRatingBatch,
   buildRatingMutation,
   type EpisodeMapEntry,
@@ -395,4 +396,65 @@ Deno.test('voti: lo stesso episodio votato due volte nel lotto passa una volta s
     { row_index: 2, reason: 'reaction_conservata' },
   ])
   assertEquals(written.length + skipped.length, rows.length)
+})
+
+// --------------------------------------------------------------------------- favorites (§7.1)
+
+function rigaFavorite(
+  showId: number | null,
+  rowIndex = 0,
+): StagingRow {
+  return {
+    row_index: rowIndex,
+    raw: { row_kind: 'favorite', tvdb_series_id: '300472', position: rowIndex },
+    resolved: showId === null ? null : { tmdb_show_id: showId },
+    status: showId === null ? 'unresolved' : 'resolved',
+  }
+}
+
+Deno.test('favorites: riempiono gli slot liberi in ordine, e si fermano quando finiscono', () => {
+  const rows = [rigaFavorite(100, 0), rigaFavorite(200, 1), rigaFavorite(300, 2)]
+  const { mutations, written, skipped } = buildFavoriteBatch(rows, UTENTE, [2, 4], new Set())
+
+  assertEquals(mutations.length, 2)
+  assertEquals(mutations[0].table, 'user_favorites')
+  assertEquals(mutations[0].record.user_id, UTENTE, 'senza user_id apply_mutations scarta in silenzio')
+  assertEquals(mutations[0].record.media_type, 'tv')
+  assertEquals(mutations[0].record.slot, 2, 'il primo slot libero, in ordine')
+  assertEquals(mutations[0].record.tmdb_id, 100)
+  assertEquals(mutations[1].record.slot, 4)
+  assertEquals(written, [0, 1])
+  assertEquals(skipped, [{ row_index: 2, reason: 'slot_pieni' }],
+    '4 slot sono il prodotto, non un limite dell import: il resto si dichiara')
+})
+
+Deno.test('favorites: una serie gia favorita in app non si duplica su un altro slot', () => {
+  const rows = [rigaFavorite(100, 0), rigaFavorite(200, 1)]
+  const { mutations, written, skipped } = buildFavoriteBatch(rows, UTENTE, [1, 2], new Set([100]))
+
+  assertEquals(mutations.length, 1)
+  assertEquals(mutations[0].record.tmdb_id, 200)
+  assertEquals(written, [1])
+  assertEquals(skipped, [{ row_index: 0, reason: 'gia_favorito' }])
+})
+
+Deno.test('favorites: lo stesso show due volte nell export passa una volta sola', () => {
+  const rows = [rigaFavorite(100, 0), rigaFavorite(100, 1)]
+  const { mutations, skipped } = buildFavoriteBatch(rows, UTENTE, [1, 2], new Set())
+  assertEquals(mutations.length, 1)
+  assertEquals(skipped, [{ row_index: 1, reason: 'gia_favorito' }])
+})
+
+Deno.test('favorites: non risolto non consuma uno slot e si dichiara', () => {
+  const rows = [rigaFavorite(null, 0), rigaFavorite(200, 1)]
+  const { mutations, skipped } = buildFavoriteBatch(rows, UTENTE, [3], new Set())
+  assertEquals(mutations.length, 1)
+  assertEquals(mutations[0].record.slot, 3, 'lo slot va al primo RISOLTO, non al primo in lista')
+  assertEquals(skipped, [{ row_index: 0, reason: 'non_risolto' }])
+})
+
+Deno.test('favorites: senza slot liberi nessuna mutazione, tutto dichiarato', () => {
+  const { mutations, skipped } = buildFavoriteBatch([rigaFavorite(100, 0)], UTENTE, [], new Set())
+  assertEquals(mutations.length, 0)
+  assertEquals(skipped, [{ row_index: 0, reason: 'slot_pieni' }])
 })

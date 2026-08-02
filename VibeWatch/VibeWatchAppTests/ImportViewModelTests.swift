@@ -328,4 +328,25 @@ final class ImportViewModelTests: XCTestCase {
         XCTAssertEqual(vecchio?.votiImportati, false)
         XCTAssertEqual(vecchio?.votiStelleImportati, 0)
     }
+
+    func testIFavoritesSiDecodificanoEUnReportVecchioNonLiFinge() {
+        // §7.1, import-write v6: i favorites riempiono solo gli slot liberi; slot pieni e già
+        // favoriti non sono perdite, i film si dichiarano non supportati.
+        let nuovo = ImportReport(json: [
+            "episodi_importati": 5,
+            "favorites_supportati": true,
+            "favorites_importati": 3,
+            "favorites_non_risolti": 1,
+            "favorite_film_non_supportati": 2,
+        ])
+        XCTAssertEqual(nuovo?.favoritesSupportati, true)
+        XCTAssertEqual(nuovo?.favoritesImportati, 3)
+        XCTAssertEqual(nuovo?.favoritesNonRisolti, 1)
+        XCTAssertEqual(nuovo?.favoriteFilmNonSupportati, 2)
+
+        // Un report vecchio non ha i campi: `favoritesSupportati` false tiene la riga fuori
+        // dalla UI — l'assenza non è uno zero.
+        let vecchio = ImportReport(json: ["episodi_importati": 5])
+        XCTAssertEqual(vecchio?.favoritesSupportati, false)
+    }
 }

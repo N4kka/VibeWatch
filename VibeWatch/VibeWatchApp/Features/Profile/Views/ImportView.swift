@@ -192,6 +192,22 @@ struct ImportView: View {
                         .foregroundColor(.theme.textSecondary)
                         .frame(maxWidth: .infinity, alignment: .center)
                 }
+                // §7.1: i Favorites — solo per i job che li supportano, e solo se c'è qualcosa
+                // da dire. Slot pieni e già favoriti non sono perdite: non allarmano.
+                if report.favoritesSupportati && report.favoritesImportati > 0 {
+                    Text(String(format: "import.report.favoritesApplied".localized,
+                                report.favoritesImportati))
+                        .font(.system(size: 13))
+                        .foregroundColor(.theme.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
+                if report.favoritesSupportati && report.favoriteFilmNonSupportati > 0 {
+                    Text(String(format: "import.report.favoriteMoviesUnsupported".localized,
+                                report.favoriteFilmNonSupportati))
+                        .font(.system(size: 13))
+                        .foregroundColor(.theme.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
                 if report.votiStelle + report.votiReaction > 0 && !report.votiImportati {
                     Text(String(format: "import.report.ratingsDeferred".localized,
                                 report.votiStelle + report.votiReaction))

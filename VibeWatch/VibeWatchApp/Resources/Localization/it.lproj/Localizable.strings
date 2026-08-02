@@ -411,6 +411,8 @@
 "import.report.ratingsDeferred" = "%d voti trovati — non ancora importati.";
 "import.report.ratingsApplied" = "%d voti importati come stelle.";
 "import.report.ratingsUnresolved" = "%d voti non si sono potuti abbinare.";
+"import.report.favoritesApplied" = "%d preferiti importati negli slot liberi.";
+"import.report.favoriteMoviesUnsupported" = "%d film preferiti non si possono importare da TV Time.";
 "import.report.statusesApplied" = "%d stati serie ripristinati (watchlist e archivio).";
 "import.report.statusesUnresolved" = "%d stati serie non applicati.";
 "import.report.unresolvedTitle" = "%d episodi non riconosciuti";

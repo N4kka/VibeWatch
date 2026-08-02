@@ -68,6 +68,12 @@ struct ImportReport: Equatable {
     let statiSupportati: Bool
     let statiSerieImportati: Int
     let statiSerieNonRisolti: Int
+    /// §7.1: i Favorites — riempiono solo gli slot liberi (slot pieni e già favoriti non sono
+    /// perdite e non allarmano); i favorite film si dichiarano non supportati.
+    let favoritesSupportati: Bool
+    let favoritesImportati: Int
+    let favoritesNonRisolti: Int
+    let favoriteFilmNonSupportati: Int
 
     init?(json: [String: Any]) {
         // Un report senza il conteggio principale non è un report: meglio un errore visibile
@@ -95,6 +101,10 @@ struct ImportReport: Equatable {
         statiSupportati = json["stati_supportati"] as? Bool ?? false
         statiSerieImportati = json["stati_serie_importati"] as? Int ?? 0
         statiSerieNonRisolti = json["stati_serie_non_risolti"] as? Int ?? 0
+        favoritesSupportati = json["favorites_supportati"] as? Bool ?? false
+        favoritesImportati = json["favorites_importati"] as? Int ?? 0
+        favoritesNonRisolti = json["favorites_non_risolti"] as? Int ?? 0
+        favoriteFilmNonSupportati = json["favorite_film_non_supportati"] as? Int ?? 0
     }
 
     init(episodiImportati: Int, serieImportate: Int, dal: String?, al: String?,
@@ -102,7 +112,9 @@ struct ImportReport: Equatable {
          nonRiconosciutiElenco: [Unresolved], votiStelle: Int, votiReaction: Int,
          votiImportati: Bool, votiStelleImportati: Int = 0, votiStelleGiaInApp: Int = 0,
          votiStelleNonRisolti: Int = 0, statiSupportati: Bool = false,
-         statiSerieImportati: Int = 0, statiSerieNonRisolti: Int = 0) {
+         statiSerieImportati: Int = 0, statiSerieNonRisolti: Int = 0,
+         favoritesSupportati: Bool = false, favoritesImportati: Int = 0,
+         favoritesNonRisolti: Int = 0, favoriteFilmNonSupportati: Int = 0) {
         self.episodiImportati = episodiImportati
         self.serieImportate = serieImportate
         self.dal = dal
@@ -119,6 +131,10 @@ struct ImportReport: Equatable {
         self.statiSupportati = statiSupportati
         self.statiSerieImportati = statiSerieImportati
         self.statiSerieNonRisolti = statiSerieNonRisolti
+        self.favoritesSupportati = favoritesSupportati
+        self.favoritesImportati = favoritesImportati
+        self.favoritesNonRisolti = favoritesNonRisolti
+        self.favoriteFilmNonSupportati = favoriteFilmNonSupportati
     }
 }
 

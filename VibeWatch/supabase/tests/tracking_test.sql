@@ -397,6 +397,40 @@ select t.eq((public.import_report('aaaaaaaa-0000-4000-8000-000000000003')->>'vot
 select t.eq((public.import_report('aaaaaaaa-0000-4000-8000-000000000003')->>'voti_reaction')::int,
             1, 'le reaction restano contate: conservate, mai convertite (la lookup e'' spenta)');
 
+-- §7.1: i Favorites nel report (import-write v6). Quattro esiti: scritto, slot pieni,
+-- gia' favorito in app, non risolto — piu' i film dichiarati dai totals della fase 2.
+update public.import_jobs
+   set totals = '{"favorite_movies_unsupported": 2}'::jsonb
+ where id = 'aaaaaaaa-0000-4000-8000-000000000003';
+insert into public.import_staging (job_id, row_index, raw, resolved, status, error) values
+  ('aaaaaaaa-0000-4000-8000-000000000003', 10,
+   '{"row_kind":"favorite","tvdb_series_id":"300472","position":0}'::jsonb,
+   '{"tmdb_show_id":100}'::jsonb, 'written', null),
+  ('aaaaaaaa-0000-4000-8000-000000000003', 11,
+   '{"row_kind":"favorite","tvdb_series_id":"300473","position":1}'::jsonb,
+   '{"tmdb_show_id":101}'::jsonb, 'skipped', 'favorites: slot_pieni'),
+  ('aaaaaaaa-0000-4000-8000-000000000003', 12,
+   '{"row_kind":"favorite","tvdb_series_id":"300474","position":2}'::jsonb,
+   '{"tmdb_show_id":102}'::jsonb, 'skipped', 'favorites: gia_favorito'),
+  ('aaaaaaaa-0000-4000-8000-000000000003', 13,
+   '{"row_kind":"favorite","tvdb_series_id":"300475","position":3}'::jsonb,
+   null, 'unresolved', 'catalogo: not_found');
+
+select t.eq(public.import_report('aaaaaaaa-0000-4000-8000-000000000003')->>'favorites_supportati',
+            'true', 'un job nuovo dichiara che i favorites si importano');
+select t.eq((public.import_report('aaaaaaaa-0000-4000-8000-000000000003')->>'favorites_importati')::int,
+            1, 'i favorites scritti si contano');
+select t.eq((public.import_report('aaaaaaaa-0000-4000-8000-000000000003')->>'favorites_slot_pieni')::int,
+            1, 'slot pieni: 4 slot sono il prodotto, non una perdita — ma si dichiara');
+select t.eq((public.import_report('aaaaaaaa-0000-4000-8000-000000000003')->>'favorites_gia_in_app')::int,
+            1, 'una serie gia'' favorita in app non si duplica, e si dichiara');
+select t.eq((public.import_report('aaaaaaaa-0000-4000-8000-000000000003')->>'favorites_non_risolti')::int,
+            1, 'un favorite non risolto si dichiara');
+select t.eq((public.import_report('aaaaaaaa-0000-4000-8000-000000000003')->>'favorite_film_non_supportati')::int,
+            2, 'i favorite film si dichiarano non supportati, mai indovinati');
+select t.eq((public.import_report('aaaaaaaa-0000-4000-8000-000000000003')->>'episodi_importati')::int,
+            0, 'i favorites non si contano fra gli episodi');
+
 -- §7.1: gli stati per-serie nel report. Quattro righe con i quattro esiti possibili:
 -- applicato, lasciato com'era in app (non e' una perdita), non risolto, saltato in scrittura.
 insert into public.import_staging (job_id, row_index, raw, resolved, status, error) values

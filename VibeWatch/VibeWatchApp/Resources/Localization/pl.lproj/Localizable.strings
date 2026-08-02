@@ -398,6 +398,8 @@
 "import.report.ratingsDeferred" = "Znaleziono %d ocen — jeszcze niezaimportowane.";
 "import.report.ratingsApplied" = "Zaimportowano %d ocen jako gwiazdki.";
 "import.report.ratingsUnresolved" = "Nie udało się dopasować %d ocen.";
+"import.report.favoritesApplied" = "Zaimportowano %d ulubionych do wolnych miejsc.";
+"import.report.favoriteMoviesUnsupported" = "Nie można zaimportować %d ulubionych filmów z TV Time.";
 "import.report.statusesApplied" = "%d statusów seriali przywrócono (lista i archiwum).";
 "import.report.statusesUnresolved" = "%d statusów seriali nie udało się zastosować.";
 "import.report.unresolvedTitle" = "Nie udało się dopasować %d odcinków";

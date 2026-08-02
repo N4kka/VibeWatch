@@ -410,6 +410,8 @@
 "import.report.ratingsDeferred" = "Βρέθηκαν %d βαθμολογίες — δεν έχουν εισαχθεί ακόμη.";
 "import.report.ratingsApplied" = "%d βαθμολογίες εισήχθησαν ως αστέρια.";
 "import.report.ratingsUnresolved" = "%d βαθμολογίες δεν μπόρεσαν να αντιστοιχιστούν.";
+"import.report.favoritesApplied" = "%d αγαπημένα εισήχθησαν σε ελεύθερες θέσεις.";
+"import.report.favoriteMoviesUnsupported" = "%d αγαπημένες ταινίες δεν μπορούν να εισαχθούν από το TV Time.";
 "import.report.statusesApplied" = "%d καταστάσεις σειρών επαναφέρθηκαν (λίστα και αρχείο).";
 "import.report.statusesUnresolved" = "%d καταστάσεις σειρών δεν εφαρμόστηκαν.";
 "import.report.unresolvedTitle" = "%d επεισόδια δεν αντιστοιχίστηκαν";
