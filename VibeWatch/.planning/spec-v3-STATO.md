@@ -1,7 +1,11 @@
 # SPEC v3 — stato del lavoro e ripresa
 
-> Aggiornato: 2026-08-02 sera (sette sessioni). Branch: `refactoring/spec-v3-prereqs-oracle`,
-> pushato su GitHub (due commit del 2026-08-02: stati import `5316497`, fusione `c2ea002`).
+> Aggiornato: 2026-08-02 sera (decima sessione, Claude: DEPLOY del batch Codex + E2E). Branch:
+> `refactoring/spec-v3-prereqs-oracle`, HEAD locale `76b4c2e`, origin `c2ea002`; il worktree
+> contiene un batch ampio **non ancora committato** ma ora **DEPLOYATO e collaudato E2E in
+> produzione** (vedi *Deploy della decima sessione*). Verificato in locale nella nona sessione:
+> Deno 120/120, SQL 385, iOS completa 524/524. Restano: stats avanzate UI (punto 3), commit/push
+> (punto 4), test unico su dispositivo (punto 5).
 > Progetto Supabase: `rqhxhkijzhqivljivirq` (VibeWatch, eu-west-1, Postgres 17.6).
 > Repo: `/Users/nicola/Documents/StartingVibe/VibeWatch` (git root un livello sopra).
 
@@ -15,6 +19,148 @@ fallisca — fatto anche in questa sessione sul `security definer` di `search_us
 `invoker`, la suite fallisce esattamente dove deve.
 
 ## Dove siamo, e cosa resta — la lista unica per riprendere
+
+### Checkpoint della ripresa Codex — 2026-08-02
+
+Il batch lasciato aperto da Claude è stato mappato interamente alla SPEC prima di modificarlo. La
+baseline locale è verde: suite SQL completa con migration applicate due volte; parser import 35/35
+(1 test archivio privato ignorato); catalog-resolve 33/33; import-write 32/32; 134 test iOS mirati
+su import, liste/SQLite, analytics, social, Config, localizzazioni, conflitti e state machine.
+
+Prima tranche di correzioni completata con regressione:
+
+- `ListManager.reconcileCoreListIdentities` non può più perdere gli item unici quando un item della
+  lista locale collide con quello della lista canonica: deduplica, spostamento e cancellazione sono
+  ora un'unica transazione; test reale su SQLite aggiunto.
+- rimosso il byte NUL reale da `import-parse/parsing.ts` (Git lo trattava come binario), mantenendo
+  lo stesso separatore runtime tramite `\u0000`; tutti i 33 test del parser restano verdi.
+- `AnalyticsInsightsService` non esclude più le TV legacy prima di sapere che `tv_tracking` è
+  leggibile: in caso di errore logga e ripiega sui dati legacy, invece di mostrare zeri falsi; test
+  con mirror volutamente rimosso aggiunto.
+
+Seconda tranche completata e verificata localmente:
+
+- `UserPreferenceManager` ora fonde TV derivate e dati legacy distinguendo successo, vuoto ed
+  errore del mirror, limita dopo l'ordinamento globale per recenza e non lascia entrare liste
+  custom/seen nella watchlist; `Continue Journey` instrada separatamente film e serie. Quattro
+  regressioni dedicate verdi.
+- il timezone di `user.csv` viene scritto solo nello slot ancora nullo/assente, con esito fedele
+  anche sotto insert/update concorrenti; quattro test Deno verdi. La lingua resta validata e
+  dichiarata, ma non ha ancora una destinazione di prodotto.
+- i problemi di configurazione al lancio vengono segnalati in release come un unico non-fatal
+  tipizzato, oltre al fault locale; due test dedicati verdi.
+- `delete-user` inventaria gli oggetti Storage di qualunque bucket e il path `imports`, li elimina
+  via Storage API in batch da 100, pulisce le tabelle senza FK e i budget e non elimina l'utente
+  Auth se il cleanup è incompleto. Migration, 6 asserzioni SQL, 2 test Deno e type-check verdi;
+  restano deploy ed E2E HTTP.
+- il 401 anticipato di `import-parse` senza Bearer JWT è ora una regola pura coperta da test;
+  l'intera suite del parser è 35/35 (più 1 test archivio privato ignorato) e il type-check è verde.
+
+Verifica finale della ripresa: 52 test iOS selezionati sulle aree modificate, zero failure; 119
+test Deno complessivi, zero failure e 1 fixture privata ignorata; type-check delle tre Edge
+Function verdi; suite SQL completa verde con migration applicate due volte, comprese le prove del
+resolver manuale atomico e della mappa catalogo immutabile; `git diff --check` pulito.
+
+**Resolver manuale chiuso localmente e non ancora deployato:** dopo la scelta della sola serie,
+ogni episodio viene riconfermato con lookup esatto `tvdb_episode_id → tmdb_episode_id`, filtrato
+per la serie TMDB scelta; stagione e numero arrivano soltanto dalla risposta TMDB. La riapertura
+del job/staging è una singola transazione, i rating già mappati a un'altra serie non vengono
+riaperti e una mappa episodio `found` resta immutabile anche sotto resolver concorrenti. UI e copy
+nelle 20 lingue dichiarano che ciò che non è confermato resta nel report. Test Deno/SQL/iOS e
+type-check sono verdi; prima del deploy servono le migration `20260802240000` e `20260802250000`,
+poi le Edge Function e un E2E HTTP.
+
+### Verifica della ripresa Codex (Claude, 2026-08-02 sera) — TUTTO verde, più la verità di produzione
+
+Il batch di Codex è stato riverificato eseguendo, non rileggendo: **Deno 120/120** su tutte e 7
+le funzioni (import-parse 36/36 con lo ZIP vero), **SQL 385 asserzioni** su 8 suite con migration
+applicate due volte (comprese riapertura atomica, mappa immutabile, inventario Storage), **suite
+iOS COMPLETA 524/524** (compilazione reale verificata nel log, 96 SwiftCompile — non i 134 mirati:
+tutta), type-check 7/7, e l'audit di §6: zero riferimenti alla numerazione dell'export in tutto
+`import-manual-resolve`. Riletti i pezzi portanti (RPC atomica coi tre errcode VW, la corsa
+sull'indice one-open-job → `another_job_open`, `catalog_store_tvdb_map` che restituisce la riga
+VINCENTE, `validateManualEpisodeContext`, ripresa client da `resolving`): conformi al design.
+
+**Tre note dello checkpoint Codex erano stantie — la produzione è più avanti di quanto il
+worktree sapesse** (lavoro della sessione Claude, fatto PRIMA della ripresa Codex):
+
+- la migration del rifiuto liste (`20260802200000`, splice su prosrc md5 `54c9a842…`) è **GIÀ
+  applicata in produzione e collaudata** con transazione a rollback: ensure idempotente
+  (watchlist resta 1, rigioco 1, custom passa, zero rifiuti). Nessun dry-run da fare;
+- il `delete-user` **v1 (pre-Codex) è GIÀ deployato e collaudato E2E via HTTP** su utente
+  usa-e-getta: login vero, ZIP in `imports/{uid}/`, chiamata, residui ZERO su auth/profiles/
+  prefs/budget/storage. La versione RIVISTA da Codex (storage.ts, bucket-agnostici, niente
+  delete auth se cleanup incompleto) è migliore e NON deployata: va deployata sopra;
+- il **backfill dei generi è FATTO in produzione**: `tmdb_shows.genres` 471/471 (una sola
+  legittimamente vuota da TMDB), migration `20260802230000` (get_my_stats v2) applicata,
+  `catalog-resolve` deployato (versione pre-Codex) con `showRow` che li scrive.
+
+In produzione sono applicate anche `20260802210000` (report film) e `20260802220000`
+(`user_storage_objects`, proacl solo service — verificato). ~~NON applicate: `20260802240000` e
+`20260802250000`~~ — **APPLICATE nella decima sessione**, e le 7 Edge Function ora deployate
+sono le versioni del worktree (vedi *Deploy della decima sessione*).
+
+**Il test di resolve dal dispositivo (una serie) è girato contro la funzione VECCHIA deployata**,
+e l'impronta è misurata: l'utente ha scelto **X Factor → TMDB 16322, che È X Factor Italia**
+(origin IT, 19 stagioni, 2008 — scelta giusta); la vecchia funzione ha scritto **243 mappe
+episodio `method='manual'` dalla numerazione dell'export** e il job riaperto è tornato `done`
+(17:36 UTC) scrivendo gli eventi. Verifica empirica con `/find` esatto su TUTTI i 243 id TVDB:
+**TMDB non ne conosce nessuno** (risposta vuota). Quindi: (a) il resolver nuovo su questa serie
+avrebbe confermato ZERO episodi — è il costo dichiarato del design; (b) le 243 mappe sono sulla
+serie giusta e con stagioni plausibili (fino alla 19ª, che l'Italia ha), ma non verificabili per
+id. **DECISIONE PRESA (2026-08-02, decima sessione): si TENGONO** — unico modo di avere X Factor
+nel tracking; verificato dopo il deploy che le 243 mappe sono intatte.
+
+### Deploy della decima sessione (Claude, 2026-08-02 sera) — punti 1-2 della checklist CHIUSI
+
+- **Migration `20260802240000` e `20260802250000` APPLICATE in produzione** (via MCP,
+  `apply_migration`): le due RPC esistono, `proacl` esatto (`postgres` + `service_role` soltanto,
+  entrambe `security definer`), verificato su `pg_proc` prima e dopo.
+- **Le 7 Edge Function del worktree DEPLOYATE** (via MCP `deploy_edge_function`, `verify_jwt`
+  invariato a true per tutte): catalog-resolve v12, import-resolve v12, import-manual-resolve v2,
+  import-parse v9, import-write v9 (hash eszip IDENTICO alla v8: il worktree coincideva col
+  deployato), import-finalize v6, delete-user v33 (la revisione Codex). Nota: la CLI supabase era
+  bloccata dai permessi della sessione; la strada MCP ha funzionato passando i file coi loro
+  percorsi relativi (`supabase/functions/...`) così gli import `../_shared/` risolvono.
+- **Collaudo SQL in produzione con rollback** (`raise exception` finale, residui verificati zero):
+  `import_reopen_manual_resolution` — invalid_plan, riapertura riuscita (job→resolving/running,
+  staging→pending, mappa serie found manual), job_not_done, series_already_mapped con mappa
+  INTATTA, staging_changed con subtransazione che ripristina il job a done;
+  `catalog_store_tvdb_map` — un found NON si sovrascrive e la risposta riporta la riga vincente.
+- **E2E HTTP del resolver nuovo, in produzione**: utente usa-e-getta (signup + conferma via SQL +
+  password grant), job sintetico done con 3 righe `catalogo: not_found/ambiguous` sulla serie
+  tvdb 70327 (già `found`→TMDB 95 in mappa, quindi zero chiamate TMDB): `import-manual-resolve`
+  → `{ok: true, eventi_da_ritentare: 3, phase: resolving}`; `import-resolve` col contesto manuale
+  nel checkpoint → `{risolte: 3, irrisolte: 0}` e le righe annotate coi numeri DALLA MAPPA TMDB
+  (s1e1-e3). Smoke test di boot su tutte e 6 le funzioni import (400/404 sulle strade di guardia).
+- **`delete-user` rivista collaudata E2E due volte** sugli usa-e-getta: 200 `{status: deleted}`,
+  residui ZERO su auth/profiles/storage/api_proxy_budget, job+staging sintetici cascati.
+- La mappa condivisa non è stata toccata dai collaudi: 243 mappe X Factor e le 3 righe di 70327
+  identiche a prima.
+
+**Checklist per la prossima sessione, in ordine:**
+
+1. ~~decisione X Factor~~ — **PRESA: si tengono** (sopra);
+2. ~~apply migration + deploy 7 funzioni + E2E HTTP del resolver nuovo~~ — **FATTO e collaudato**
+   (vedi *Deploy della decima sessione*);
+3. ~~task 9 stats avanzate lato client~~ — **FATTO** (decima sessione): `TMDBGenres` esteso con
+   gli 8 generi TV (10759-10768), sezione `advancedStatsSection` in `AnalyticsDashboardView`
+   sotto la griglia dei totali (fuori dal selettore di periodo, stessi numeri server §13.7) —
+   Pro vede le tre ripartizioni a barre (genere/decade/voti, ordinamento del server,
+   `showsSenzaGenere` dichiarato), free vede la card col lucchetto che dichiara il gate (§10,
+   `isPro` già in view via `ClipQuotaService.checkIsProUser`); presentazione pura in
+   `AdvancedStatsPresentation` (nome genere con ripiego "#id", decade "1990s", stelle a mezzi
+   passi, "<1 h" mai "0 h" su un dato vero); 6 chiavi × 20 lingue; 4 test nuovi in
+   `FavoritesRatingsActionsTests` (file già nel pbxproj — niente registrazione). Verifica:
+   44/44 su simulatore (38 FavoritesRatingsActions + 6 LocalizationCoverage). NOTA flakiness:
+   al primo run a freddo su DerivedData nuovo `testUnTitoloSiRisolveUnaVoltaSola` è fallito per
+   l'init dell'app host interlacciato col test (visibile nel log); isolato e a caldo passa —
+   non è una rottura, è la corsa del primo avvio;
+4. commit/push del batch (~3.500 righe, 59 file + i nuovi);
+5. il **test unico su dispositivo**: universal link tap→app (build Xcode del branch,
+   `?mode=developer` se serve); liste pubbliche nel profilo altrui a occhio; re-import dello ZIP
+   (favorites negli slot liberi + film visti/watchlist + timezone quiet hours nel report);
+   risoluzione a mano col resolver NUOVO su una serie che TMDB conosce; stats avanzate Pro.
 
 **I blocchi 0–9 di §12 sono chiusi e collaudati**, import TV Time compreso (18.577 episodi
 dall'export vero, re-import idempotente con 103/104 stati per-serie applicati) e **fusione
@@ -97,17 +243,34 @@ strutturale: gli aperti, TUTTI, sono questi, in ordine sensato di priorità:
    report): i film di TV Time non hanno id TVDB — solo uuid interni e NOMI (anche
    giapponesi). I **film dell'export** (5 visti + 3 watchlist sull'export vero, righe v1
    `entity_type=movie`) hanno la destinazione DECISA dall'utente (2026-08-02:
-   `watch_events` media_type movie con le date + lista legacy "visti") ma la risoluzione
-   è per titolo — regole strette exact-match+anno o niente, design da fare a parte;
-   **`user.csv`** (language/timezone) mai letto.
-6. **Risoluzione a mano dei non riconosciuti** (§7.4): oggi si elencano e basta.
-7. **Consumatori legacy di `list_items` per le TV** (aperto della fusione): stats locali
-   (`AnalyticsInsightsService`) e personalizzazione Discovery leggono ancora le liste legacy.
-8. **Stats avanzate** genere/decade/distribuzione voti (§9.3): Pro (§10), aspettano il dato sui
-   generi che il catalogo non ha; il **Year in Review** di §10 non esiste (non era un blocco).
-9. I **debiti pre-esistenti** in fondo al documento ("Cose che restano aperte"): Config muto in
-   Release, `import-parse` 500 senza JWT, rifiuti su `lists`/`list_not_owned`, `delete-user`
-   incompleto (GDPR), e i 10 test iOS rotti da prima di queste sessioni.
+   `watch_events` media_type movie con le date + lista legacy "visti"). **IMPLEMENTAZIONE LOCALE
+   IN CORSO, NON DEPLOYATA:** parser, risoluzione exact titolo+anno, scrittura, report e UI esistono
+   nel worktree e i test puri/SQL passano; manca collaudo integrato/deploy. `user.csv` ora viene
+   letto e validato: il timezone viene applicato con update/insert condizionale solo se la
+   preferenza è ancora nulla o assente, senza sovrascrivere una scelta concorrente (4 test Deno);
+   la lingua è per ora soltanto dichiarata nei totals e non ha ancora una destinazione di prodotto.
+6. ~~**Risoluzione a mano dei non riconosciuti** (§7.4)~~ — **DEPLOYATA E COLLAUDATA E2E in
+   produzione** (decima sessione, vedi *Deploy della decima sessione*). La scelta della serie
+   vincola lookup esatti per `tvdb_episode_id`; i numeri dell'export non partecipano alla
+   corrispondenza. Riapertura atomica, mappe `found` immutabili, conflitti e parziali conservati
+   nel report. Resta la prova dal dispositivo con la UI su una serie che TMDB conosce (punto 5).
+7. ~~**Consumatori legacy di `list_items` per le TV**~~ — **CHIUSO LOCALMENTE E TESTATO**:
+   `AnalyticsInsightsService` e `UserPreferenceManager` distinguono successo/vuoto/errore del
+   mirror e conservano il fallback legacy; watchlist e Continue Journey sono coperti anche per
+   tipo media, tipo lista e ordinamento globale. Restano naturalmente nel batch non deployato.
+8. ~~**Stats avanzate** genere/decade/distribuzione voti (§9.3)~~ — **FATTE anche lato client**
+   (decima sessione, punto 3 della checklist): UI dashboard con gate Pro, generi TV in
+   `TMDBGenres`, chiavi ×20, test verdi. Resta la decisione sull'inclusione dei film (nessun
+   catalogo film server-side; il server oggi ripartisce solo TV e la UI mostra ciò che arriva).
+   Il **Year in Review** di §10 non esiste (non era un blocco). Resta la prova a occhio su
+   dispositivo (punto 5).
+9. Dei **debiti pre-esistenti** in fondo al documento, Config e il 401 di `import-parse` sono
+   chiusi e coperti. `delete-user`: la revisione Codex (v33) è **DEPLOYATA e collaudata E2E due
+   volte** nella decima sessione (residui zero, Storage e budget compresi). La correzione server
+   del rifiuto liste (`20260802200000`) è GIÀ applicata e collaudata in produzione con rollback —
+   nessun dry-run da fare (vedi *Verifica della ripresa Codex*). I vecchi test
+   ConflictResolver/SyncStateMachine sono verdi nella suite completa (524/524). Il batch resta
+   non committato; le Edge Function deployate sono ORA le versioni del worktree.
 
 ## L'import in app (blocco 6 chiuso) — 2026-08-02, in produzione e collaudato ad app chiusa
 
@@ -178,10 +341,10 @@ cron con l'app chiusa. Dichiarati nel report: 2.767 episodi su 92 serie non rico
 (X Factor IT, MasterChef Italia, i `not_found`/`ambiguous` che l'oracolo aveva previsto),
 15.906 duplicati v1 scartati (identico all'oracolo), 380 voti rinviati. Push accodata.
 
-**Aperto dell'import**: i **voti** restano rinviati (`voti_importati: false` nel report)
-anche ora che `user_ratings` esiste — collegarli è un lavoro suo; la risoluzione a mano dei
-non riconosciuti (§7.4 la chiede, oggi si elencano e basta); la push per un utente senza
-device registrati muore in `no-live-token` (giusto così).
+**Aperto dell'import**: sull'import già eseguito i **voti** restano rinviati
+(`voti_importati: false` nel report). Il collegamento rating e la risoluzione manuale §7.4 con
+identità TVDB esatta sono **deployati e collaudati E2E** dalla decima sessione; la push per un
+utente senza device registrati muore in `no-live-token` (giusto così).
 
 **Tre buchi trovati il 2026-08-02 partendo da una segnalazione dell'utente** ("post import mi
 aspettavo le liste aggiornate"). Le liste legacy di ListsView restano intatte **di proposito**
@@ -1289,7 +1452,7 @@ supabase/tests/run.sh                      # Postgres usa-e-getta, migration x2
 python3 test_oracle.py                     # oracolo, 31 test
 cd supabase/functions/catalog-resolve && deno test            # logica pura, 28 test
 cd supabase/functions/login-with-username && deno test        # login con username, 6 test
-cd supabase/functions/import-parse   && deno test --allow-read  # parser, 14 test
+cd supabase/functions/import-parse   && deno test --allow-env   # parser, 33 test + archivio privato ignorato
 
 # Il 15° test del parser (l'apertura dell'archivio) gira solo se gli si dà l'export vero,
 # che non è in repo — senza `--allow-env` la suite fallisce sul permesso, non sul codice:
@@ -1298,15 +1461,16 @@ TVTIME_ZIP=~/Downloads/gdpr-data.zip deno test --allow-read --allow-env
 # iOS: se la config è incompleta, l'app si ferma all'avvio in DEBUG con l'elenco
 # delle chiavi mancanti (Config.validateAtLaunch). Non è un bug: sono i segreti.
 xcodebuild test -project VibeWatchApp.xcodeproj -scheme VibeWatchApp \
-  -destination 'id=601C4430-6213-49E3-8A4D-3564B2B57E2A'   # ~425 test, 3 fallimenti PREESISTENTI
+  -destination 'id=601C4430-6213-49E3-8A4D-3564B2B57E2A'   # suite completa; la ripresa ne ha eseguiti 134 mirati
 
 # Deploy di una Edge Function: dalla radice del repo, non da supabase/
 supabase functions deploy import-parse --project-ref rqhxhkijzhqivljivirq
 ```
 
-I 3 test iOS che falliscono (`ConflictResolverTests` x2, `SyncStateMachineTests.testIdleToIdle`)
-fallivano già prima di questo lavoro e sono fuori scope. Il conteggio "9 fallimenti" che compare
-nel riepilogo non sono nove test: sono gli stessi 3 ripetuti su più configurazioni del piano.
+I 3 test iOS storicamente rotti (`ConflictResolverTests` x2,
+`SyncStateMachineTests.testIdleToIdle`) sono verdi nel worktree della ripresa; fanno parte dei 134
+test mirati passati. La suite iOS completa va comunque rilanciata prima di separare/committare il
+batch, quindi non usare questo dato per dichiarare verde tutto il target.
 
 **Un file nuovo sotto `VibeWatchAppTests/` non viene compilato da solo**: va aggiunto al
 `project.pbxproj` in quattro punti (`PBXBuildFile`, `PBXFileReference`, figli del gruppo, fase
@@ -1341,7 +1505,11 @@ Due modi, entrambi già usati:
 - `build_oracle.py` — **la specifica eseguibile del parsing**. Le regole dell'import stanno lì
   prima che nella spec: se una regola sembra arbitraria, è perché un export reale l'ha resa tale.
 
-## Cose che restano aperte, in ordine di costo
+## Registro storico degli aperti — non usare per la prossima ripresa
+
+> Questa sezione conserva l'audit precedente e contiene voci successivamente chiuse o avviate.
+> Lo stato operativo autorevole è la **lista unica per riprendere** in testa al documento, aggiornata
+> nel checkpoint Codex del 2026-08-02.
 
 0. ~~**L'import di TV Time non ha nessun ingresso in app**~~ — **CHIUSO il 2026-08-02** (vedi
    *L'import in app* in testa). Restano due code sue: i **voti** dell'import ancora rinviati

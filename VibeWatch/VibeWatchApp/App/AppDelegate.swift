@@ -24,6 +24,11 @@ class AppDelegate: NSObject, UIApplicationDelegate, @MainActor UNUserNotificatio
             installId: InstallIDService.getOrCreateInstallId()
         )
 
+        // Il secondo tempo di `Config.validateAtLaunch()` (che gira nell'init dell'app, quando
+        // Crashlytics ancora non esiste): se il bundle è partito senza chiavi, in produzione se
+        // ne accorge la dashboard invece di nessuno.
+        Config.reportLaunchProblemsIfAny()
+
         // Initialize Google Mobile Ads SDK
         MobileAds.shared.start(completionHandler: nil)
 

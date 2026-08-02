@@ -89,6 +89,31 @@ final class ConfigValidationTests: XCTestCase {
             .description.contains("SUPABASE_URL"))
     }
 
+    // MARK: - Reporting Release
+
+    func testProblemiDiLaunchDiventanoUnSoloNonFatalTipizzato() {
+        var records: [(Error, String)] = []
+        let didReport = Config.reportLaunchProblems(
+            [.missing(key: "TMDB_API_KEY"), .malformedURL(key: "SUPABASE_URL", value: "https:")],
+            using: { records.append(($0, $1)) }
+        )
+
+        XCTAssertTrue(didReport)
+        XCTAssertEqual(records.count, 1)
+        XCTAssertTrue(records[0].0 is Config.LaunchConfigurationError)
+        XCTAssertEqual(records[0].1, "Config.validateAtLaunch")
+        XCTAssertTrue(records[0].0.localizedDescription.contains("TMDB_API_KEY"))
+        XCTAssertTrue(records[0].0.localizedDescription.contains("SUPABASE_URL"))
+    }
+
+    func testNessunProblemaDiLaunchNonInviaUnNonFatal() {
+        var recordCount = 0
+        let didReport = Config.reportLaunchProblems([], using: { _, _ in recordCount += 1 })
+
+        XCTAssertFalse(didReport)
+        XCTAssertEqual(recordCount, 0)
+    }
+
     // MARK: - Il bundle reale
 
     /// Non asserisce che la configurazione sia completa — su una macchina senza segreti fallirebbe

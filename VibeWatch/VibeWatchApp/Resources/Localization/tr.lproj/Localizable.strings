@@ -379,6 +379,16 @@
 "import.report.ratingsUnresolved" = "%d puan eşleştirilemedi.";
 "import.report.favoritesApplied" = "%d favori boş yuvalara aktarıldı.";
 "import.report.favoriteMoviesUnsupported" = "%d film favorisi TV Time üzerinden aktarılamıyor.";
+"import.report.moviesApplied" = "%d film izleme tarihleriyle içe aktarıldı.";
+"import.report.moviesWatchlistApplied" = "%d film izleme listenize eklendi.";
+"import.report.moviesUnresolved" = "%d film tanınamadı (başlık ve yıl TMDB ile eşleşmiyor).";
+"import.resolve.button" = "Çöz";
+"import.resolve.title" = "“%@” hangi dizi?";
+"import.resolve.hint" = "Bölümler tam TVDB kimlikleriyle yeniden kontrol edilir. TMDB'nin doğrulayamadığı her şey raporda kalır.";
+"import.resolve.searchPlaceholder" = "Diziyi TMDB’de ara";
+"import.resolve.empty" = "Sonuç yok.";
+"import.resolve.failed" = "Çözülemedi:";
+"import.resolve.searchFailed" = "Arama başarısız oldu.";
 "import.report.statusesApplied" = "%d dizi durumu geri yüklendi (izleme listesi ve arşiv).";
 "import.report.statusesUnresolved" = "%d dizi durumu uygulanamadı.";
 "import.report.unresolvedTitle" = "%d bölüm eşleştirilemedi";
@@ -770,6 +780,12 @@
 "profile.stats.shows" = "Diziler";
 "profile.stats.episodes" = "Bölümler";
 "profile.stats.loadFailed" = "İstatistikler yüklenemedi.";
+"profile.stats.advanced.title" = "Gelişmiş istatistikler";
+"profile.stats.advanced.byGenre" = "Türe göre";
+"profile.stats.advanced.byDecade" = "On yıla göre";
+"profile.stats.advanced.ratings" = "Puanların";
+"profile.stats.advanced.noGenre" = "Tür bilgisi olmayan %d dizi";
+"profile.stats.advanced.proLocked" = "Gelişmiş istatistikler Pro'nun bir parçasıdır.";
 
 // Blocco 9, seconda meta' (§9.3): diario e modifica dei favorites
 "diary.title" = "Günlük";

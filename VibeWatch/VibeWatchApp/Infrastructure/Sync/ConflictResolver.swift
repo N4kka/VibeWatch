@@ -174,8 +174,18 @@ public final class ConflictResolver: ConflictResolverProtocol {
             )
         }
 
-        // Both deleted or both not deleted - use last write wins
-        return resolveWithLastWriteWins(local: local, remote: remote)
+        // Both deleted or both not deleted - the content is decided by recency, but the
+        // strategy APPLIED is still `union`: this is union's own tie-break, not a change of
+        // strategy. Relabeling matters because `strategyUsed` is the contract the tests (and
+        // the sync log) check against `TableConflictMapping.strategy(for:)` — reporting
+        // `.lastWriteWins` here made the mapping look violated on every non-tombstone merge.
+        let fallback = resolveWithLastWriteWins(local: local, remote: remote)
+        return ResolvedRecord(
+            record: fallback.record,
+            strategyUsed: .union,
+            wasModified: fallback.wasModified,
+            source: fallback.source
+        )
     }
 
     /// Max wins strategy: Take maximum values for numeric fields.

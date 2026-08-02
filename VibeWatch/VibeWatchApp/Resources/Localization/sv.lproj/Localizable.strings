@@ -379,6 +379,16 @@
 "import.report.ratingsUnresolved" = "%d betyg kunde inte matchas.";
 "import.report.favoritesApplied" = "%d favoriter importerade till lediga platser.";
 "import.report.favoriteMoviesUnsupported" = "%d filmfavoriter kan inte importeras från TV Time.";
+"import.report.moviesApplied" = "%d filmer importerade med sina visningsdatum.";
+"import.report.moviesWatchlistApplied" = "%d filmer tillagda i bevakningslistan.";
+"import.report.moviesUnresolved" = "%d filmer kändes inte igen (titel och år stämmer inte på TMDB).";
+"import.resolve.button" = "Lös";
+"import.resolve.title" = "Vilken serie är ”%@”?";
+"import.resolve.hint" = "Avsnitten kontrolleras igen med sina exakta TVDB-ID:n. Allt som TMDB inte kan bekräfta finns kvar i rapporten.";
+"import.resolve.searchPlaceholder" = "Sök serien på TMDB";
+"import.resolve.empty" = "Inga resultat.";
+"import.resolve.failed" = "Kunde inte lösas:";
+"import.resolve.searchFailed" = "Sökningen misslyckades.";
 "import.report.statusesApplied" = "%d seriestatusar återställda (bevakningslista och arkiv).";
 "import.report.statusesUnresolved" = "%d seriestatusar kunde inte tillämpas.";
 "import.report.unresolvedTitle" = "%d avsnitt kunde inte matchas";
@@ -770,6 +780,12 @@
 "profile.stats.shows" = "Serier";
 "profile.stats.episodes" = "Avsnitt";
 "profile.stats.loadFailed" = "Statistiken kunde inte läsas in.";
+"profile.stats.advanced.title" = "Avancerad statistik";
+"profile.stats.advanced.byGenre" = "Efter genre";
+"profile.stats.advanced.byDecade" = "Efter årtionde";
+"profile.stats.advanced.ratings" = "Dina betyg";
+"profile.stats.advanced.noGenre" = "%d serier utan genreinfo";
+"profile.stats.advanced.proLocked" = "Avancerad statistik ingår i Pro.";
 
 // Blocco 9, seconda meta' (§9.3): diario e modifica dei favorites
 "diary.title" = "Dagbok";

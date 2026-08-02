@@ -565,6 +565,40 @@ class SupabaseService: ObservableObject {
         return rows.first
     }
 
+    /// §7.4: la risoluzione A MANO di una serie non riconosciuta. Il server (Edge Function
+    /// `import-manual-resolve`) salva la mappa di serie e riapre il job in `resolving`, dove
+    /// ogni episodio viene riconfermato tramite il suo ID TVDB esatto. Un errore HTTP
+    /// arriva intero al chiamante — il corpo è la diagnosi (`series_already_mapped`,
+    /// `nothing_to_resolve`, `another_job_open`, `staging_changed`…), e nasconderlo lascerebbe
+    /// l'utente davanti a un pulsante che "non fa niente".
+    func manualResolveImport(jobId: String, tvdbSeriesId: String, tmdbShowId: Int) async throws {
+        guard let url = URL(string: Config.supabaseURL.replacingOccurrences(
+            of: ".supabase.co", with: ".functions.supabase.co") + "/import-manual-resolve")
+        else { throw SupabaseError.notConfigured }
+
+        guard let client, let session = try? await client.auth.session else {
+            throw SupabaseError.notAuthenticated
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
+        request.httpBody = try JSONSerialization.data(withJSONObject: [
+            "job_id": jobId,
+            "tvdb_series_id": tvdbSeriesId,
+            "tmdb_show_id": tmdbShowId,
+        ])
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw SupabaseError.networkError }
+        guard (200...299).contains(http.statusCode) else {
+            throw SupabaseError.httpError(
+                statusCode: http.statusCode, body: String(data: data, encoding: .utf8) ?? "")
+        }
+    }
+
     /// Il report di §7.4, calcolato dal server (`import_report`, security invoker: decide la
     /// RLS). Una risposta illeggibile è un errore, mai un report di zeri.
     func importReport(jobId: String) async throws -> ImportReport {

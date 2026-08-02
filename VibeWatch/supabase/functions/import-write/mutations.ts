@@ -17,7 +17,7 @@ export interface StagingRow {
 /** L'involucro che `apply_mutations(batch jsonb)` si aspetta. */
 export interface Mutation {
   op: 'INSERT'
-  table: 'watch_events' | 'tv_show_state' | 'user_ratings' | 'user_favorites'
+  table: 'watch_events' | 'tv_show_state' | 'user_ratings' | 'user_favorites' | 'list_items'
   record: Record<string, unknown>
 }
 
@@ -34,6 +34,9 @@ export type SkipReason =
   | 'senza_episodio'
   | 'gia_favorito'
   | 'slot_pieni'
+  | 'gia_in_lista'
+  | 'senza_data'
+  | 'lista_mancante'
 
 export interface BuildOutcome {
   mutation: Mutation | null
@@ -435,4 +438,153 @@ export function buildFavoriteBatch(
   }
 
   return out
+}
+
+/**
+ * §7.1: da riga di staging `row_kind = 'movie'` alle mutazioni della fase 4. Destinazione decisa
+ * dall'utente il 2026-08-02:
+ *
+ *   - un film VISTO → `watch_events` (media_type movie, la data vera della riga watch,
+ *     `dedup_key = tvtime-movie:{uuid}:{rewatch_index}` → il re-import non duplica) **più** una
+ *     riga nella lista legacy "visti" — è lì che i film vivono in ListsView (la fusione ha
+ *     spostato solo le TV);
+ *   - un film in WATCHLIST → solo la riga nella lista legacy watchlist.
+ *
+ * La regola delle liste è quella dei voti e dei favorites: **una riga già esistente — viva o
+ * lapide — non si tocca** (`esistentiVisti`/`esistentiWatchlist` arrivano dal chiamante, lapidi
+ * comprese). Un film tolto in app non risorge al re-import. L'evento invece si scrive comunque:
+ * la dedup la fa `apply_mutations` sulla `dedup_key`, e un evento di visione non è una scelta
+ * di lista.
+ */
+export interface MovieWriteTargets {
+  /** L'id della lista legacy "visti"; null quando non esiste e non si è potuta creare. */
+  seenListId: string | null
+  watchlistListId: string | null
+  /** `media_id` già presenti in ciascuna lista, VIVI O LAPIDE. */
+  esistentiVisti: Set<number>
+  esistentiWatchlist: Set<number>
+}
+
+export interface MovieBatchOutcome extends BuiltBatch {
+  /** Le dedup_key degli eventi costruiti: servono al conteggio `already_present`. */
+  eventKeys: string[]
+  /** Righe viste il cui evento si scrive ma la riga di lista era già in app (contate a parte). */
+  listaGiaInApp: number
+}
+
+export function buildMovieBatch(
+  rows: StagingRow[],
+  userId: string,
+  targets: MovieWriteTargets,
+  newId: () => string = () => crypto.randomUUID(),
+): MovieBatchOutcome {
+  const out: MovieBatchOutcome = {
+    mutations: [], written: [], skipped: [], eventKeys: [], listaGiaInApp: 0,
+  }
+  // Copie locali: due righe dello stesso lotto sullo stesso film non devono produrre due
+  // righe di lista.
+  const visti = new Set(targets.esistentiVisti)
+  const daVedere = new Set(targets.esistentiWatchlist)
+
+  for (const row of rows) {
+    const raw = row.raw ?? {}
+    const resolved = row.resolved
+    const movieId = resolved ? asInt(resolved.tmdb_movie_id) : null
+    if (movieId === null) {
+      out.skipped.push({ row_index: row.row_index, reason: 'non_risolto' })
+      continue
+    }
+
+    const uuid = String(raw.tvtime_movie_uuid ?? '')
+    const kind = String(raw.movie_kind ?? '')
+    const title = String(resolved!.matched_title ?? raw.title ?? '')
+    const poster = typeof resolved!.poster_path === 'string' ? resolved!.poster_path : null
+    const quando = toUtcIso(String(raw.happened_at ?? ''))
+    if (quando === null) {
+      // Senza data non c'è né un evento onesto né un ordine in lista: si dichiara, non si
+      // inventa un `now()` che direbbe "visto oggi" su un film del 2019.
+      out.skipped.push({ row_index: row.row_index, reason: 'senza_data' })
+      continue
+    }
+
+    if (kind === 'seen') {
+      const rewatch = asInt(raw.rewatch_index) ?? 0
+      const dedupKey = `tvtime-movie:${uuid}:${rewatch}`
+      out.mutations.push({
+        op: 'INSERT',
+        table: 'watch_events',
+        record: {
+          user_id: userId,
+          media_type: 'movie',
+          tmdb_movie_id: movieId,
+          watched_at: quando,
+          // La riga watch di v1 ha il timestamp vero del tap su TV Time: è esatto, non dedotto.
+          watched_at_precision: 'exact',
+          runtime_seconds: runtimeOrNull(raw.runtime_seconds),
+          is_special: false,
+          rewatch_index: rewatch,
+          source: 'import_tvtime',
+          external_ref: { tvtime_movie_uuid: uuid },
+          dedup_key: dedupKey,
+        },
+      })
+      out.eventKeys.push(dedupKey)
+
+      if (targets.seenListId !== null && !visti.has(movieId)) {
+        visti.add(movieId)
+        out.mutations.push(listItemMutation(
+          newId(), targets.seenListId, userId, movieId, title, poster, quando))
+      } else if (targets.seenListId !== null) {
+        out.listaGiaInApp++
+      }
+      out.written.push(row.row_index)
+      continue
+    }
+
+    if (kind === 'watchlist') {
+      if (targets.watchlistListId === null) {
+        out.skipped.push({ row_index: row.row_index, reason: 'lista_mancante' })
+        continue
+      }
+      if (daVedere.has(movieId)) {
+        out.skipped.push({ row_index: row.row_index, reason: 'gia_in_lista' })
+        continue
+      }
+      daVedere.add(movieId)
+      out.mutations.push(listItemMutation(
+        newId(), targets.watchlistListId, userId, movieId, title, poster, quando))
+      out.written.push(row.row_index)
+      continue
+    }
+
+    out.skipped.push({ row_index: row.row_index, reason: 'non_risolto' })
+  }
+
+  return out
+}
+
+function listItemMutation(
+  id: string,
+  listId: string,
+  userId: string,
+  movieId: number,
+  title: string,
+  poster: string | null,
+  addedAt: string,
+): Mutation {
+  return {
+    op: 'INSERT',
+    table: 'list_items',
+    record: {
+      id,
+      list_id: listId,
+      user_id: userId,
+      media_id: movieId,
+      media_type: 'movie',
+      title,
+      poster_path: poster,
+      added_at: addedAt,
+      created_at: addedAt,
+    },
+  }
 }

@@ -431,58 +431,31 @@ class ListManager: ObservableObject {
         return result
     }
 
-    /// Gli item sintetizzati dallo specchio `tv_tracking`, con lo stesso JOIN sui titoli
-    /// localizzati del repository del Tracking (il nome del catalogo parla una lingua sola, §1.5).
+    /// Gli item sintetizzati dallo specchio `tv_tracking`. La query e le regole della fusione
+    /// stanno in `LocalTrackingRepository.fusedListRows` — UN punto solo, condiviso con le stats
+    /// locali e la personalizzazione Discovery: prima ognuno leggeva la propria copia e le stats
+    /// vedevano meno serie di quelle che ListsView mostra.
     private func trackingDerivedItems(
         userId: String
     ) async -> (watchlist: [MediaListItem], seen: [MediaListItem]) {
-        let sql = """
-            SELECT t.tmdb_show_id, t.bucket,
-                   COALESCE(lt.title, t.show_name) AS title,
-                   t.show_poster_path, t.updated_at, t.completed_at, t.last_watched_at
-              FROM tv_tracking t
-              LEFT JOIN localized_titles lt
-                ON lt.media_type = 'tv' AND lt.tmdb_id = t.tmdb_show_id AND lt.language = ?
-             WHERE t.user_id = ? AND t.bucket IN ('not_started', 'for_later', 'up_to_date')
-        """
-
         do {
-            let language = LocalizationManager.shared.currentLanguage.id
-            let rows = try await db.queryRaw(sql, parameters: [language, userId])
+            // Il repository si costruisce sul `db` iniettato di QUESTO manager: i test della
+            // fusione girano su un SQLite loro, e la shared instance li ignorerebbe.
+            let rows = try await LocalTrackingRepository(sqlite: db).fusedListRows(userId: userId)
 
             var watchlistItems: [MediaListItem] = []
             var seenItems: [MediaListItem] = []
-
             for row in rows {
-                guard let showId = row["tmdb_show_id"] as? Int,
-                      let bucket = row["bucket"] as? String else { continue }
-                // Senza nome non c'è niente da mostrare: capita solo se il catalogo non ha
-                // ancora la serie, e in quel caso è la card del Tracking il posto dove appare.
-                guard let title = row["title"] as? String, !title.isEmpty else { continue }
-
-                let addedAt: Date
-                if bucket == "up_to_date" {
-                    // Per una "vista" la data sensata è quando l'hai finita, con ripieghi onesti.
-                    addedAt = Self.parseTrackingDate(row["completed_at"] as? String)
-                        ?? Self.parseTrackingDate(row["last_watched_at"] as? String)
-                        ?? Self.parseTrackingDate(row["updated_at"] as? String)
-                        ?? Date()
-                } else {
-                    addedAt = Self.parseTrackingDate(row["updated_at"] as? String) ?? Date()
-                }
-
                 let item = MediaListItem(
-                    id: Self.trackingItemPrefix + String(showId),
-                    mediaId: showId,
+                    id: Self.trackingItemPrefix + String(row.showId),
+                    mediaId: row.showId,
                     mediaType: .tv,
-                    title: title,
-                    posterPath: row["show_poster_path"] as? String,
-                    addedAt: addedAt
+                    title: row.title,
+                    posterPath: row.posterPath,
+                    addedAt: row.addedAt
                 )
-
-                if bucket == "up_to_date" { seenItems.append(item) } else { watchlistItems.append(item) }
+                if row.isSeen { seenItems.append(item) } else { watchlistItems.append(item) }
             }
-
             return (watchlistItems, seenItems)
         } catch {
             // Un errore qui non deve buttare giù le liste dei film: si logga e le sezioni TV
@@ -505,6 +478,40 @@ class ListManager: ObservableObject {
     static func parseTrackingDate(_ value: String?) -> Date? {
         guard let value, !value.isEmpty else { return nil }
         return isoWithFractions.date(from: value) ?? isoPlain.date(from: value)
+    }
+
+    /// Atomically folds a never-synced local list into the canonical list.
+    ///
+    /// A plain `UPDATE list_items SET list_id = ...` aborts as soon as the canonical list already
+    /// contains one of the same `(media_id, media_type)` keys. Deleting the transient list after
+    /// that failed UPDATE then cascades through *all* of its items, including the unique ones. Drop
+    /// only the redundant rows first, move the remaining conflict-free rows, and remove the list in
+    /// one transaction so either the whole convergence succeeds or nothing changes.
+    static func mergeUnsyncedLocalList(from transientId: String, into canonicalId: String, db: SQLiteService) throws {
+        try db.transaction { txn in
+            try txn.execute(
+                """
+                DELETE FROM list_items
+                WHERE list_id = ?
+                  AND EXISTS (
+                    SELECT 1
+                    FROM list_items AS canonical
+                    WHERE canonical.list_id = ?
+                      AND canonical.media_id = list_items.media_id
+                      AND canonical.media_type = list_items.media_type
+                  )
+                """,
+                parameters: [transientId, canonicalId]
+            )
+            try txn.execute(
+                "UPDATE list_items SET list_id = ?, updated_at = datetime('now') WHERE list_id = ?",
+                parameters: [canonicalId, transientId]
+            )
+            try txn.execute(
+                "DELETE FROM lists WHERE id = ? AND synced_at IS NULL",
+                parameters: [transientId]
+            )
+        }
     }
 
     /// Riallinea ogni lista core in memoria (watchlist/seen/liked/disliked) all'id CANONICO
@@ -534,6 +541,23 @@ class ListManager: ObservableObject {
             }
 
             guard canonId != current.id else { continue }
+
+            // Se l'id perdente è una riga SOLO locale (mai sincronizzata: l'id sintetico di
+            // `defaultList(for:)`), le sue righe `list_items` vanno spostate sull'id canonico e
+            // la riga fantasma tolta — altrimenti gli item scritti prima del primo pull restano
+            // agganciati a una lista che sul server non esisterà mai (`list_not_owned`). Una
+            // riga già sincronizzata invece NON si tocca: è del pull, e spostarle gli item
+            // significherebbe litigare con il prossimo pull che li riporta.
+            let losingRows = (try? await db.queryRaw(
+                "SELECT synced_at FROM lists WHERE id = ?", parameters: [current.id]
+            )) ?? []
+            if let losing = losingRows.first, (losing["synced_at"] as? String) == nil {
+                do {
+                    try Self.mergeUnsyncedLocalList(from: current.id, into: canonId, db: db)
+                } catch {
+                    Logger.error("[ListManager] Fusione lista locale \(current.id) → \(canonId) fallita: \(error)")
+                }
+            }
 
             var seenKeys = Set<String>()
             let mergedItems = current.items.filter {
@@ -579,7 +603,7 @@ class ListManager: ObservableObject {
 
         for list in lists {
             // Salta le liste già riconciliate col remoto: niente più burst a ogni avvio.
-            guard await listNeedsRemoteEnsure(list.id) else { continue }
+            guard await listNeedsRemoteEnsure(list) else { continue }
 
             if list.type == .custom {
                 // Custom: createList diretto insert-or-fail (no resurrection, vedi doc sopra).
@@ -615,10 +639,23 @@ class ListManager: ObservableObject {
 
     /// True se la lista locale non risulta ancora riconciliata col remoto (`synced_at IS NULL`),
     /// quindi va garantita lato server. Il pull remoto popola `synced_at` (vedi SQLiteService.upsert).
-    private func listNeedsRemoteEnsure(_ id: String) async -> Bool {
+    private func listNeedsRemoteEnsure(_ list: MediaList) async -> Bool {
+        // Per le core il vincolo remoto è su (user_id, type), non sull'id: l'indice parziale
+        // `idx_lists_one_active_default_per_user_type` ammette UNA default attiva per tipo.
+        // Se una core di quel tipo è già arrivata dal pull (synced_at valorizzato) con
+        // QUALUNQUE id, il server la possiede già: accodare un INSERT con l'id sintetizzato
+        // da `defaultList(for:)` era la fabbrica dei `constraint_23505` in
+        // `sync_rejected_mutations`. Il controllo per id, da solo, non poteva vederlo.
+        if list.type != .custom {
+            let typeRows = (try? await db.queryRaw(
+                "SELECT 1 FROM lists WHERE user_id = ? AND type = ? AND deleted_at IS NULL AND synced_at IS NOT NULL LIMIT 1",
+                parameters: [userId, list.type.rawValue]
+            )) ?? []
+            if !typeRows.isEmpty { return false }
+        }
         let rows = (try? await db.queryRaw(
             "SELECT synced_at FROM lists WHERE id = ?",
-            parameters: [id]
+            parameters: [list.id]
         )) ?? []
         guard let row = rows.first else { return true }
         return (row["synced_at"] as? String) == nil

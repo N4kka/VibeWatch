@@ -46,6 +46,9 @@ struct ImportReport: Equatable {
         let titolo: String
         let episodi: Int
         let motivo: String
+        /// L'id TVDB della serie nell'export: è la maniglia della risoluzione a mano (§7.4).
+        /// Nullo per le righe che non ce l'hanno — lì il pulsante "Risolvi" non esiste.
+        let tvdbSeriesId: String?
     }
 
     let episodiImportati: Int
@@ -74,6 +77,12 @@ struct ImportReport: Equatable {
     let favoritesImportati: Int
     let favoritesNonRisolti: Int
     let favoriteFilmNonSupportati: Int
+    /// §7.1: i film di v1 (visti → watch_events + lista "visti"; watchlist → lista watchlist).
+    /// `filmSupportati` distingue un report di un job vecchio (campi assenti) da zeri veri.
+    let filmSupportati: Bool
+    let filmImportati: Int
+    let filmWatchlistImportati: Int
+    let filmNonRisolti: Int
 
     init?(json: [String: Any]) {
         // Un report senza il conteggio principale non è un report: meglio un errore visibile
@@ -90,7 +99,8 @@ struct ImportReport: Equatable {
                 guard let titolo = row["titolo"] as? String else { return nil }
                 return Unresolved(titolo: titolo,
                                   episodi: row["episodi"] as? Int ?? 0,
-                                  motivo: row["motivo"] as? String ?? "")
+                                  motivo: row["motivo"] as? String ?? "",
+                                  tvdbSeriesId: row["tvdb_series_id"] as? String)
             }
         votiStelle = json["voti_stelle"] as? Int ?? 0
         votiReaction = json["voti_reaction"] as? Int ?? 0
@@ -105,6 +115,12 @@ struct ImportReport: Equatable {
         favoritesImportati = json["favorites_importati"] as? Int ?? 0
         favoritesNonRisolti = json["favorites_non_risolti"] as? Int ?? 0
         favoriteFilmNonSupportati = json["favorite_film_non_supportati"] as? Int ?? 0
+        // `film_supportati` era `false` hardcoded nei report vecchi: il ?? false li lascia
+        // senza riga film, che è la verità di quando sono girati.
+        filmSupportati = json["film_supportati"] as? Bool ?? false
+        filmImportati = json["film_importati"] as? Int ?? 0
+        filmWatchlistImportati = json["film_watchlist_importati"] as? Int ?? 0
+        filmNonRisolti = json["film_non_risolti"] as? Int ?? 0
     }
 
     init(episodiImportati: Int, serieImportate: Int, dal: String?, al: String?,
@@ -114,7 +130,9 @@ struct ImportReport: Equatable {
          votiStelleNonRisolti: Int = 0, statiSupportati: Bool = false,
          statiSerieImportati: Int = 0, statiSerieNonRisolti: Int = 0,
          favoritesSupportati: Bool = false, favoritesImportati: Int = 0,
-         favoritesNonRisolti: Int = 0, favoriteFilmNonSupportati: Int = 0) {
+         favoritesNonRisolti: Int = 0, favoriteFilmNonSupportati: Int = 0,
+         filmSupportati: Bool = false, filmImportati: Int = 0,
+         filmWatchlistImportati: Int = 0, filmNonRisolti: Int = 0) {
         self.episodiImportati = episodiImportati
         self.serieImportate = serieImportate
         self.dal = dal
@@ -135,6 +153,10 @@ struct ImportReport: Equatable {
         self.favoritesImportati = favoritesImportati
         self.favoritesNonRisolti = favoritesNonRisolti
         self.favoriteFilmNonSupportati = favoriteFilmNonSupportati
+        self.filmSupportati = filmSupportati
+        self.filmImportati = filmImportati
+        self.filmWatchlistImportati = filmWatchlistImportati
+        self.filmNonRisolti = filmNonRisolti
     }
 }
 
@@ -148,6 +170,8 @@ protocol ImportBackend {
     func latestJob() async throws -> ImportJobSnapshot?
     func job(id: String) async throws -> ImportJobSnapshot?
     func report(jobId: String) async throws -> ImportReport
+    /// §7.4: "questa serie dell'export È questa serie TMDB". Riapre la risoluzione lato server.
+    func manualResolve(jobId: String, tvdbSeriesId: String, tmdbShowId: Int) async throws
 }
 
 @MainActor
@@ -169,6 +193,10 @@ struct SupabaseImportBackend: ImportBackend {
     }
     func report(jobId: String) async throws -> ImportReport {
         try await SupabaseService.shared.importReport(jobId: jobId)
+    }
+    func manualResolve(jobId: String, tvdbSeriesId: String, tmdbShowId: Int) async throws {
+        try await SupabaseService.shared.manualResolveImport(
+            jobId: jobId, tvdbSeriesId: tvdbSeriesId, tmdbShowId: tmdbShowId)
     }
 }
 
@@ -375,11 +403,41 @@ final class ImportViewModel: ObservableObject {
     private func showReport(jobId: String) async {
         do {
             state = .done(try await backend.report(jobId: jobId))
+            doneJobId = jobId
         } catch {
             // Il lavoro è fatto ma il report non si legge: dirlo, con la ripresa che
             // ricarica il report e non certo l'import.
             state = .failed(messageKey: "import.error.reportFailed",
                             detail: error.localizedDescription, retryJobId: jobId)
+        }
+    }
+
+    // MARK: - Risoluzione a mano (§7.4)
+
+    /// Il job del report a schermo: serve alla risoluzione a mano, che riapre QUEL job.
+    /// Lo stato `.done` porta solo il report — aggiungerci l'id avrebbe toccato ogni test
+    /// dell'oblò per un dato che usa una feature sola.
+    private(set) var doneJobId: String?
+
+    /// L'errore dell'ultima risoluzione a mano, per lo sheet. Distinto dallo stato del
+    /// flusso: un riaggancio fallito non deve buttare via il report che l'utente sta
+    /// guardando.
+    @Published var manualResolveError: String?
+
+    /// "Questa serie dell'export È questa serie TMDB": il server ritenta gli episodi per il
+    /// loro ID TVDB esatto e riapre il job; qui si torna a guardarlo. `false` = niente
+    /// da riprendere o errore, con la ragione in `manualResolveError`.
+    func resolveManually(tvdbSeriesId: String, tmdbShowId: Int) async -> Bool {
+        guard case .done = state, let jobId = doneJobId else { return false }
+        manualResolveError = nil
+        do {
+            try await backend.manualResolve(
+                jobId: jobId, tvdbSeriesId: tvdbSeriesId, tmdbShowId: tmdbShowId)
+            startPolling(jobId: jobId, phase: "resolving")
+            return true
+        } catch {
+            manualResolveError = error.localizedDescription
+            return false
         }
     }
 }

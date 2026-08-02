@@ -12,6 +12,8 @@ struct ImportView: View {
     @StateObject private var viewModel: ImportViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var showPicker = false
+    /// La riga del report che l'utente sta risolvendo a mano (§7.4). Guida lo sheet.
+    @State private var daRisolvere: ImportReport.Unresolved?
 
     init(viewModel: ImportViewModel? = nil) {
         // Il default sta QUI e non nella firma: un default argument è nonisolated, e il
@@ -44,6 +46,9 @@ struct ImportView: View {
                     Task { await viewModel.importFile(at: url) }
                 }
                 // Il picker annullato non è un errore: si resta sulle sorgenti.
+            }
+            .sheet(item: $daRisolvere) { item in
+                ImportManualResolveSheet(item: item, viewModel: viewModel)
             }
         }
     }
@@ -215,6 +220,30 @@ struct ImportView: View {
                         .foregroundColor(.theme.textSecondary)
                         .frame(maxWidth: .infinity, alignment: .center)
                 }
+                // §7.1: i film di v1 — visti e watchlist su righe separate (destinazioni
+                // diverse); i già in lista non allarmano, i non risolti finiscono già
+                // nell'elenco dei non riconosciuti del server via `film_non_risolti`.
+                if report.filmSupportati && report.filmImportati > 0 {
+                    Text(String(format: "import.report.moviesApplied".localized,
+                                report.filmImportati))
+                        .font(.system(size: 13))
+                        .foregroundColor(.theme.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
+                if report.filmSupportati && report.filmWatchlistImportati > 0 {
+                    Text(String(format: "import.report.moviesWatchlistApplied".localized,
+                                report.filmWatchlistImportati))
+                        .font(.system(size: 13))
+                        .foregroundColor(.theme.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
+                if report.filmSupportati && report.filmNonRisolti > 0 {
+                    Text(String(format: "import.report.moviesUnresolved".localized,
+                                report.filmNonRisolti))
+                        .font(.system(size: 13))
+                        .foregroundColor(.theme.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
 
                 // §7.4: "N elementi non riconosciuti, con l'elenco dei titoli". Senza abbellire.
                 if report.nonRiconosciutiEpisodi > 0 {
@@ -224,14 +253,26 @@ struct ImportView: View {
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundColor(.theme.textPrimary)
                         ForEach(report.nonRiconosciutiElenco, id: \.titolo) { item in
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(item.titolo)
-                                    .font(.system(size: 14))
-                                    .foregroundColor(.theme.textPrimary)
-                                Text(String(format: "import.report.unresolvedRow".localized,
-                                            item.episodi) + " · " + item.motivo)
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.theme.textSecondary)
+                            HStack(alignment: .center, spacing: 8) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(item.titolo)
+                                        .font(.system(size: 14))
+                                        .foregroundColor(.theme.textPrimary)
+                                    Text(String(format: "import.report.unresolvedRow".localized,
+                                                item.episodi) + " · " + item.motivo)
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.theme.textSecondary)
+                                }
+                                Spacer(minLength: 0)
+                                // §7.4: "con la possibilità di risolverli a mano". Solo dove
+                                // c'è la maniglia (l'id TVDB della serie nell'export).
+                                if item.tvdbSeriesId != nil {
+                                    Button("import.resolve.button".localized) {
+                                        daRisolvere = item
+                                    }
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(.theme.accentOrange)
+                                }
                             }
                             .padding(.vertical, 2)
                         }
@@ -302,5 +343,149 @@ struct ImportView: View {
             .padding(.top, 4)
         }
         .padding()
+    }
+}
+
+// MARK: - Risoluzione a mano (§7.4)
+
+extension ImportReport.Unresolved: Identifiable {
+    /// Per lo sheet(item:). L'id TVDB è unico dentro l'elenco; il titolo copre le righe
+    /// senza id (che comunque non aprono lo sheet: il pulsante non esiste).
+    public var id: String { tvdbSeriesId ?? titolo }
+}
+
+/// "A quale serie corrisponde X?" — la ricerca TMDB per la risoluzione a mano. Alla scelta,
+/// il server ritenta gli episodi tramite i loro ID TVDB esatti e il job riparte: questo
+/// sheet si chiude e l'oblò di ImportView torna a mostrare il progresso.
+@MainActor
+struct ImportManualResolveSheet: View {
+    let item: ImportReport.Unresolved
+    @ObservedObject var viewModel: ImportViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var query: String = ""
+    @State private var results: [TVShow] = []
+    @State private var searching = false
+    @State private var searchFailed = false
+    @State private var resolvingShowId: Int?
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.theme.background.ignoresSafeArea()
+                VStack(spacing: 12) {
+                    Text(String(format: "import.resolve.title".localized, item.titolo))
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(.theme.textPrimary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+
+                    // La regola detta chiaro cosa succederà e cosa resterà nel report se
+                    // TMDB non riesce a confermare un episodio.
+                    Text("import.resolve.hint".localized)
+                        .font(.system(size: 12))
+                        .foregroundColor(.theme.textSecondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+
+                    TextField("import.resolve.searchPlaceholder".localized, text: $query)
+                        .textFieldStyle(.roundedBorder)
+                        .autocorrectionDisabled()
+                        .padding(.horizontal)
+                        .onSubmit { Task { await search() } }
+
+                    if let errore = viewModel.manualResolveError {
+                        Text("import.resolve.failed".localized + " " + errore)
+                            .font(.system(size: 12, design: .monospaced))
+                            .foregroundColor(.theme.textSecondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+                    }
+
+                    if searching {
+                        ProgressView().frame(maxHeight: .infinity)
+                    } else if searchFailed {
+                        // Ricerca fallita ≠ nessun risultato: la lezione di UserSearchView.
+                        VStack(spacing: 8) {
+                            Text("import.resolve.searchFailed".localized)
+                                .font(.system(size: 13))
+                                .foregroundColor(.theme.textSecondary)
+                            Button("common.retry".localized) { Task { await search() } }
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(.theme.accentOrange)
+                        }
+                        .frame(maxHeight: .infinity)
+                    } else if results.isEmpty {
+                        Text("import.resolve.empty".localized)
+                            .font(.system(size: 13))
+                            .foregroundColor(.theme.textSecondary)
+                            .frame(maxHeight: .infinity)
+                    } else {
+                        List(results) { show in
+                            Button {
+                                Task { await resolve(show: show) }
+                            } label: {
+                                HStack(spacing: 10) {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(show.name)
+                                            .font(.system(size: 15))
+                                            .foregroundColor(.theme.textPrimary)
+                                        if let anno = show.firstAirDate?.prefix(4), !anno.isEmpty {
+                                            Text(String(anno))
+                                                .font(.system(size: 12))
+                                                .foregroundColor(.theme.textSecondary)
+                                        }
+                                    }
+                                    Spacer()
+                                    if resolvingShowId == show.id {
+                                        ProgressView()
+                                    }
+                                }
+                            }
+                            .disabled(resolvingShowId != nil)
+                            .listRowBackground(Color.white.opacity(0.05))
+                        }
+                        .listStyle(.plain)
+                        .scrollContentBackground(.hidden)
+                    }
+                }
+                .padding(.top, 12)
+            }
+            .navigationTitle("import.resolve.button".localized)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("common.cancel".localized) { dismiss() }
+                }
+            }
+            .task {
+                // Il titolo dell'export è il miglior primo tentativo: la ricerca parte da sola.
+                query = item.titolo
+                await search()
+            }
+        }
+    }
+
+    private func search() async {
+        let testo = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !testo.isEmpty else { return }
+        searching = true
+        searchFailed = false
+        do {
+            results = try await TMDBService.shared.searchTVShows(query: testo, page: 1).results
+        } catch {
+            results = []
+            searchFailed = true
+        }
+        searching = false
+    }
+
+    private func resolve(show: TVShow) async {
+        guard let tvdbId = item.tvdbSeriesId else { return }
+        resolvingShowId = show.id
+        let ok = await viewModel.resolveManually(tvdbSeriesId: tvdbId, tmdbShowId: show.id)
+        resolvingShowId = nil
+        // Riuscito: il job è ripartito e ImportView mostra il progresso — qui non resta niente.
+        if ok { dismiss() }
     }
 }

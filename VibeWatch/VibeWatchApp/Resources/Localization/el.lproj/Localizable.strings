@@ -412,6 +412,16 @@
 "import.report.ratingsUnresolved" = "%d βαθμολογίες δεν μπόρεσαν να αντιστοιχιστούν.";
 "import.report.favoritesApplied" = "%d αγαπημένα εισήχθησαν σε ελεύθερες θέσεις.";
 "import.report.favoriteMoviesUnsupported" = "%d αγαπημένες ταινίες δεν μπορούν να εισαχθούν από το TV Time.";
+"import.report.moviesApplied" = "%d ταινίες εισήχθησαν με τις ημερομηνίες προβολής τους.";
+"import.report.moviesWatchlistApplied" = "%d ταινίες προστέθηκαν στο Watchlist.";
+"import.report.moviesUnresolved" = "%d ταινίες δεν αναγνωρίστηκαν (τίτλος και έτος δεν ταιριάζουν στο TMDB).";
+"import.resolve.button" = "Επίλυση";
+"import.resolve.title" = "Ποια σειρά είναι το «%@»;";
+"import.resolve.hint" = "Τα επεισόδια ελέγχονται ξανά με τα ακριβή TVDB ID τους. Ό,τι δεν μπορεί να επιβεβαιώσει το TMDB θα παραμείνει στην αναφορά.";
+"import.resolve.searchPlaceholder" = "Αναζήτηση της σειράς στο TMDB";
+"import.resolve.empty" = "Κανένα αποτέλεσμα.";
+"import.resolve.failed" = "Η επίλυση απέτυχε:";
+"import.resolve.searchFailed" = "Η αναζήτηση απέτυχε.";
 "import.report.statusesApplied" = "%d καταστάσεις σειρών επαναφέρθηκαν (λίστα και αρχείο).";
 "import.report.statusesUnresolved" = "%d καταστάσεις σειρών δεν εφαρμόστηκαν.";
 "import.report.unresolvedTitle" = "%d επεισόδια δεν αντιστοιχίστηκαν";
@@ -782,6 +792,12 @@
 "profile.stats.shows" = "Σειρές";
 "profile.stats.episodes" = "Επεισόδια";
 "profile.stats.loadFailed" = "Δεν ήταν δυνατή η φόρτωση των στατιστικών.";
+"profile.stats.advanced.title" = "Προηγμένα στατιστικά";
+"profile.stats.advanced.byGenre" = "Ανά είδος";
+"profile.stats.advanced.byDecade" = "Ανά δεκαετία";
+"profile.stats.advanced.ratings" = "Οι βαθμολογίες σου";
+"profile.stats.advanced.noGenre" = "%d σειρές χωρίς πληροφορίες είδους";
+"profile.stats.advanced.proLocked" = "Τα προηγμένα στατιστικά είναι μέρος του Pro.";
 
 // Blocco 9, seconda meta' (§9.3): diario e modifica dei favorites
 "diary.title" = "Ημερολόγιο";

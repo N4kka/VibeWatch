@@ -13,6 +13,11 @@ import { serve } from 'https://deno.land/std@0.131.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { adminClient, jsonResponse } from '../_shared/proxy.ts'
 import { isServiceCaller } from '../_shared/cronAuth.ts'
+import {
+  manualContextFromCheckpoint,
+  manualEpisodeDisposition,
+  planEpisodeResolutionBatch,
+} from './manual.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
@@ -137,14 +142,22 @@ serve(async (req: Request) => {
       for (const row of (data ?? []) as MapRow[]) noti.set(row.tvdb_id, row)
     }
 
-    const mancanti = episodeIds.filter((id) => !noti.has(id))
+    const manualContext = manualContextFromCheckpoint(job.checkpoint, jobId)
+    const piano = planEpisodeResolutionBatch(pending, noti, manualContext, BATCH)
+    const mancanti = manualContext
+      ? [...piano.requestedEpisodeIds, ...piano.deferredEpisodeIds]
+      : episodeIds.filter((id) => !noti.has(id))
+    const lotto = piano.requestedEpisodeIds
+    const manualiRichiesti = new Set<number>()
+    const manualiCompletati = new Set<number>()
+    let budgetEsaurito = false
 
     // Un batch per invocazione: `catalog-resolve` ha il suo budget e la sua scadenza interna, e
     // sfondarli da qui significherebbe farsi rifiutare il resto del lavoro.
     let richiesti = 0
-    if (mancanti.length > 0) {
-      const lotto = mancanti.slice(0, BATCH)
+    if (lotto.length > 0) {
       richiesti = lotto.length
+      if (manualContext) for (const id of lotto) manualiRichiesti.add(id)
 
       const risposta = await fetch(`${SUPABASE_URL}/functions/v1/catalog-resolve`, {
         method: 'POST',
@@ -171,6 +184,12 @@ serve(async (req: Request) => {
           // Sblocca il budget da import: `catalog-resolve` verifica da sé che il job sia di chi
           // chiama e in fase `resolving`, quindi passarlo non è una dichiarazione ma una prova.
           job_id: jobId,
+          ...(manualContext
+            ? {
+              show_ids: [manualContext.tmdb_show_id],
+              manual_episode_context: manualContext,
+            }
+            : {}),
         }),
       })
 
@@ -189,8 +208,12 @@ serve(async (req: Request) => {
           throw new Error(
             `catalog-resolve ha risposto ${risposta.status} per ${errori} giri di fila: ${detail}`)
         }
+        const checkpoint = job.checkpoint && typeof job.checkpoint === 'object'
+          && !Array.isArray(job.checkpoint)
+          ? { ...(job.checkpoint as Record<string, unknown>), resolve_errors: errori }
+          : { resolve_errors: errori }
         const { error } = await admin.from('import_jobs')
-          .update({ checkpoint: { resolve_errors: errori } }).eq('id', jobId)
+          .update({ checkpoint }).eq('id', jobId)
         if (error) throw new Error(`contatore errori non salvato: ${error.message}`)
         // `retry: true` dice al driver di lasciar respirare QUESTO job fino al prossimo tick,
         // invece di martellare un servizio che sta già rispondendo male.
@@ -202,11 +225,32 @@ serve(async (req: Request) => {
 
       // Giro buono: un eventuale contatore di errori si azzera — conta la consecutività.
       if ((job.checkpoint as { resolve_errors?: number } | null)?.resolve_errors) {
-        await admin.from('import_jobs').update({ checkpoint: {} }).eq('id', jobId)
+        const checkpoint = { ...(job.checkpoint as Record<string, unknown>) }
+        delete checkpoint.resolve_errors
+        await admin.from('import_jobs').update({ checkpoint }).eq('id', jobId)
       }
 
       const esito = await risposta.json()
-      const budgetEsaurito = esito?.budget_exhausted ?? false
+      budgetEsaurito = esito?.budget_exhausted ?? false
+
+      if (manualContext) {
+        const rimasti = new Set<number>(
+          ((esito?.remaining ?? []) as { tvdb_id?: unknown }[])
+            .map((entity) => Number(entity.tvdb_id))
+            .filter((id) => Number.isSafeInteger(id) && id > 0),
+        )
+        for (const id of lotto) if (!rimasti.has(id)) manualiCompletati.add(id)
+
+        // Nel percorso manuale le mappe non finali esistevano gia': si rilegge subito il lotto,
+        // altrimenti il giro successivo le forzerebbe di nuovo senza mai annotare lo staging.
+        const { data, error } = await admin
+          .from('tvdb_tmdb_map')
+          .select('tvdb_id, entity_type, tmdb_show_id, tmdb_movie_id, season_number, episode_number, resolution')
+          .eq('entity_type', 'episode')
+          .in('tvdb_id', lotto)
+        if (error) throw new Error(`rilettura mappa manuale fallita: ${error.message}`)
+        for (const row of (data ?? []) as MapRow[]) noti.set(row.tvdb_id, row)
+      }
 
       // Non si annota nulla in questo giro per gli id appena chiesti: si torna, si rilegge la
       // mappa e li si trova. Un giro in più costa una query, dedurre l'esito dalla risposta
@@ -217,7 +261,7 @@ serve(async (req: Request) => {
       // orario passavano due ore prima che una sola riga avanzasse, e nel frattempo ogni
       // invocazione rispondeva `done: false` senza aver fatto progressi. Se non si può più
       // chiedere, si annota almeno ciò che è già risolvibile — altrimenti il job si impianta.
-      if (!budgetEsaurito) {
+      if (!manualContext && !budgetEsaurito) {
         return jsonResponse({
           done: false,
           phase: 'resolving',
@@ -227,7 +271,7 @@ serve(async (req: Request) => {
         }, 200)
       }
 
-      if (noti.size === 0) {
+      if (!manualContext && noti.size === 0) {
         // Nulla di annotabile e budget finito: dirlo, invece di girare a vuoto.
         return jsonResponse({
           done: false,
@@ -256,11 +300,30 @@ serve(async (req: Request) => {
     const daScrivere = []
     for (const riga of pending) {
       const raw = riga.raw as Record<string, unknown>
-      const mappa = noti.get(Number(raw.tvdb_episode_id))
+      const episodeId = Number(raw.tvdb_episode_id)
+      if (manualContext && Number(raw.tvdb_series_id) !== manualContext.tvdb_series_id) {
+        continue
+      }
+      const mappa = noti.get(episodeId)
       // Con il budget esaurito si arriva qui con parte del blocco ancora fuori mappa: quelle
       // righe restano `pending` e le riprende il giro dopo, invece di essere marcate irrisolte.
       if (!mappa) continue
-      const trovato = mappa.resolution === 'found' && mappa.tmdb_show_id !== null
+
+      const disposizioneManuale = manualContext
+        ? manualEpisodeDisposition(
+          mappa,
+          manualContext.tmdb_show_id,
+          manualiRichiesti.has(episodeId) && manualiCompletati.has(episodeId),
+        )
+        : null
+      // Le mappe non finali delle tranche successive devono restare pending: annotarle ora
+      // riuserebbe la vecchia risposta `not_found/ambiguous` e non verrebbero più ritentate.
+      if (disposizioneManuale === 'pending') continue
+
+      const conflittoSerie = disposizioneManuale === 'conflict'
+      const trovato = manualContext
+        ? disposizioneManuale === 'resolved'
+        : mappa.resolution === 'found' && mappa.tmdb_show_id !== null
 
       daScrivere.push({
         job_id: jobId,
@@ -275,7 +338,9 @@ serve(async (req: Request) => {
           }
           : null,
         status: trovato ? 'resolved' : 'unresolved',
-        error: trovato ? null : `catalogo: ${mappa.resolution ?? 'assente'}`,
+        error: trovato
+          ? null
+          : (conflittoSerie ? 'catalogo: conflitto_serie' : `catalogo: ${mappa.resolution ?? 'assente'}`),
       })
       trovato ? risolte++ : irrisolte++
     }
@@ -304,7 +369,8 @@ serve(async (req: Request) => {
       phase: 'resolving',
       risolte,
       irrisolte,
-      budget_exhausted: mancanti.length > 0,
+      ancora_da_risolvere: piano.deferredEpisodeIds.length,
+      budget_exhausted: budgetEsaurito,
       totals,
     }, 200)
   } catch (err) {
@@ -344,10 +410,9 @@ async function risolviStati(
   if (pendingError) throw new Error(`lettura stati fallita: ${pendingError.message}`)
 
   if (!pending || pending.length === 0) {
-    const { error } = await admin.from('import_jobs')
-      .update({ phase: 'writing', checkpoint: {} }).eq('id', jobId)
-    if (error) throw new Error(`avanzamento non salvato: ${error.message}`)
-    return jsonResponse({ done: true, phase: 'writing', annotated: 0 }, 200)
+    // Stati e favorites finiti: restano i film (§7.1), che non passano dalla mappa TVDB —
+    // non hanno NESSUN id esterno, si risolvono per titolo (exact-match+anno o niente).
+    return await risolviFilm(req, admin, job, jobId, daServizio)
   }
 
   const seriesIds = [
@@ -507,6 +572,187 @@ async function risolviStati(
     risolte,
     irrisolte,
     budget_exhausted: mancanti.length > 0,
+    totals,
+  }, 200)
+}
+
+/**
+ * La terza coda della fase 3: i FILM di v1 (§7.1). Nessuna mappa TVDB di mezzo — un film
+ * dell'export non ha id esterni, solo l'uuid interno di TV Time e un nome — quindi si chiede a
+ * `catalog-resolve` la risoluzione per titolo (`movie_titles`, exact-match+anno o niente) e si
+ * annota direttamente dalla risposta: non c'è una cache condivisa da rileggere al giro dopo, e
+ * un re-import ripaga le sue ~8 chiamate di ricerca invece di guadagnarsi una tabella nuova.
+ *
+ * Le righe dello stesso film (le rivisioni) condividono l'uuid e quindi l'esito: si chiede una
+ * volta per uuid, si annota ogni riga. `movie_remaining` (budget/upstream) resta `pending` e
+ * riprende al giro dopo — stesso contratto delle altre code.
+ */
+async function risolviFilm(
+  req: Request,
+  admin: ReturnType<typeof adminClient>,
+  job: { checkpoint: unknown; totals: unknown },
+  jobId: string,
+  daServizio: boolean,
+): Promise<Response> {
+  const { data: pending, error: pendingError } = await admin
+    .from('import_staging')
+    .select('row_index, raw')
+    .eq('job_id', jobId)
+    .eq('status', 'pending')
+    .eq('raw->>row_kind', 'movie')
+    .order('row_index', { ascending: true })
+    .limit(ROWS_PER_INVOCATION)
+
+  if (pendingError) throw new Error(`lettura film fallita: ${pendingError.message}`)
+
+  if (!pending || pending.length === 0) {
+    const { error } = await admin.from('import_jobs')
+      .update({ phase: 'writing', checkpoint: {} }).eq('id', jobId)
+    if (error) throw new Error(`avanzamento non salvato: ${error.message}`)
+    return jsonResponse({ done: true, phase: 'writing', annotated: 0 }, 200)
+  }
+
+  // Una richiesta per uuid, non per riga: le rivisioni condividono il film.
+  const richieste = new Map<string, { title: string; year: number | null }>()
+  for (const riga of pending) {
+    const raw = riga.raw as Record<string, unknown>
+    const uuid = String(raw.tvtime_movie_uuid ?? '')
+    const title = String(raw.title ?? '')
+    if (uuid === '' || title === '') continue
+    if (!richieste.has(uuid)) {
+      const year = Number(raw.release_year)
+      richieste.set(uuid, {
+        title,
+        year: Number.isSafeInteger(year) && year > 0 ? year : null,
+      })
+    }
+  }
+
+  const esiti = new Map<string, {
+    outcome: string
+    tmdb_movie_id: number | null
+    matched_title?: string | null
+    poster_path?: string | null
+  }>()
+  if (richieste.size > 0) {
+    const lotto = [...richieste.entries()].slice(0, BATCH)
+
+    const risposta = await fetch(`${SUPABASE_URL}/functions/v1/catalog-resolve`, {
+      method: 'POST',
+      // Stesse coppie di header delle altre code, stessa ragione (401 "Conflicting API keys").
+      headers: daServizio
+        ? {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${SERVICE_KEY}`,
+            'apikey': SERVICE_KEY,
+          }
+        : {
+            'Content-Type': 'application/json',
+            'Authorization': req.headers.get('Authorization') ?? '',
+            'apikey': SUPABASE_ANON_KEY,
+          },
+      body: JSON.stringify({
+        movie_titles: lotto.map(([key, r]) => ({ key, title: r.title, year: r.year })),
+        job_id: jobId,
+      }),
+    })
+
+    if (!risposta.ok) {
+      // Stesso contratto delle altre code: un transitorio del fornitore non è un verdetto.
+      const detail = (await risposta.text()).slice(0, 300)
+      const errori = ((job.checkpoint as { resolve_errors?: number } | null)
+        ?.resolve_errors ?? 0) + 1
+      if (errori >= MAX_ERRORI_CONSECUTIVI) {
+        throw new Error(
+          `catalog-resolve (film) ha risposto ${risposta.status} per ${errori} giri di fila: ${detail}`)
+      }
+      const { error } = await admin.from('import_jobs')
+        .update({ checkpoint: { resolve_errors: errori } }).eq('id', jobId)
+      if (error) throw new Error(`contatore errori non salvato: ${error.message}`)
+      return jsonResponse({
+        done: false, phase: 'resolving', retry: true,
+        errori_consecutivi: errori, detail,
+      }, 200)
+    }
+
+    if ((job.checkpoint as { resolve_errors?: number } | null)?.resolve_errors) {
+      await admin.from('import_jobs').update({ checkpoint: {} }).eq('id', jobId)
+    }
+
+    const corpo = await risposta.json()
+    for (const match of (corpo?.movie_matches ?? []) as
+      { key: string; outcome: string; tmdb_movie_id: number | null;
+        matched_title?: string | null; poster_path?: string | null }[]) {
+      esiti.set(match.key, match)
+    }
+  }
+
+  let risolte = 0
+  let irrisolte = 0
+  const daScrivere = []
+  for (const riga of pending) {
+    const raw = riga.raw as Record<string, unknown>
+    const uuid = String(raw.tvtime_movie_uuid ?? '')
+    const title = String(raw.title ?? '')
+
+    // Senza uuid o titolo non c'è niente da chiedere: si dichiara subito, o la riga resterebbe
+    // `pending` per sempre e la fase non avanzerebbe più.
+    if (uuid === '' || title === '') {
+      daScrivere.push({
+        job_id: jobId, row_index: riga.row_index, raw,
+        resolved: null, status: 'unresolved', error: 'film: titolo o uuid mancante nell\'export',
+      })
+      irrisolte++
+      continue
+    }
+
+    const esito = esiti.get(uuid)
+    if (!esito) continue // movie_remaining (budget/upstream): riprende il giro dopo
+
+    const trovato = esito.outcome === 'found' && esito.tmdb_movie_id !== null
+    daScrivere.push({
+      job_id: jobId,
+      row_index: riga.row_index,
+      raw,
+      // titolo e poster di TMDB viaggiano con l'id: la fase 4 scrive la riga di lista legacy
+      // e senza il poster la card resterebbe un rettangolo grigio.
+      resolved: trovato
+        ? {
+            tmdb_movie_id: esito.tmdb_movie_id,
+            matched_title: esito.matched_title ?? null,
+            poster_path: esito.poster_path ?? null,
+          }
+        : null,
+      status: trovato ? 'resolved' : 'unresolved',
+      error: trovato ? null : `film: ${esito.outcome === 'no_year' ? 'anno mancante' : esito.outcome}`,
+    })
+    trovato ? risolte++ : irrisolte++
+  }
+
+  for (let i = 0; i < daScrivere.length; i += ROWS_PER_UPSERT) {
+    const { error } = await admin
+      .from('import_staging')
+      .upsert(daScrivere.slice(i, i + ROWS_PER_UPSERT), { onConflict: 'job_id,row_index' })
+    if (error) throw new Error(`annotazione film fallita dal blocco ${i}: ${error.message}`)
+  }
+
+  const totals = {
+    ...(job.totals as Record<string, unknown> ?? {}),
+    movies_resolved: ((job.totals as Record<string, number>)?.movies_resolved ?? 0) + risolte,
+    movies_unresolved:
+      ((job.totals as Record<string, number>)?.movies_unresolved ?? 0) + irrisolte,
+  }
+
+  const { error: updateError } = await admin.from('import_jobs')
+    .update({ totals }).eq('id', jobId)
+  if (updateError) throw new Error(`totali non salvati: ${updateError.message}`)
+
+  return jsonResponse({
+    done: false,
+    phase: 'resolving',
+    film: true,
+    risolte,
+    irrisolte,
     totals,
   }, 200)
 }

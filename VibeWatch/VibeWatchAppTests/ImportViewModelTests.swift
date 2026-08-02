@@ -63,12 +63,24 @@ final class ImportViewModelTests: XCTestCase {
             guard let report else { throw Rotto() }
             return report
         }
+
+        var manualResolveFails = false
+        private(set) var manualResolves: [(jobId: String, tvdbSeriesId: String, tmdbShowId: Int)] = []
+
+        func manualResolve(jobId: String, tvdbSeriesId: String, tmdbShowId: Int) async throws {
+            if manualResolveFails { throw Rotto() }
+            manualResolves.append((jobId, tvdbSeriesId, tmdbShowId))
+            // Il server riapre il job in `resolving`: gli episodi vanno riconfermati per ID TVDB.
+            currentJob = ImportJobSnapshot(id: jobId, phase: "resolving", status: "running",
+                                           error: nil)
+        }
     }
 
     private static let unReport = ImportReport(
         episodiImportati: 42, serieImportate: 3, dal: "2020-01-01", al: "2024-06-01",
         nonRiconosciutiEpisodi: 5, nonRiconosciutiSerie: 1,
-        nonRiconosciutiElenco: [.init(titolo: "Sconosciuta", episodi: 5, motivo: "no match")],
+        nonRiconosciutiElenco: [.init(titolo: "Sconosciuta", episodi: 5, motivo: "no match",
+                                      tvdbSeriesId: "901")],
         votiStelle: 7, votiReaction: 2, votiImportati: false)
 
     /// Intervallo lungo apposta: il giro di polling lo guidano i test con `pollOnce`,
@@ -348,5 +360,93 @@ final class ImportViewModelTests: XCTestCase {
         // dalla UI — l'assenza non è uno zero.
         let vecchio = ImportReport(json: ["episodi_importati": 5])
         XCTAssertEqual(vecchio?.favoritesSupportati, false)
+    }
+
+    func testIFilmSiDecodificanoEUnReportVecchioNonLiFinge() {
+        // §7.1, import-write v7: i film di v1 — visti in watch_events + lista "visti",
+        // watchlist nella lista watchlist; exact-match+anno o niente.
+        let nuovo = ImportReport(json: [
+            "episodi_importati": 5,
+            "film_supportati": true,
+            "film_importati": 4,
+            "film_watchlist_importati": 3,
+            "film_non_risolti": 1,
+        ])
+        XCTAssertEqual(nuovo?.filmSupportati, true)
+        XCTAssertEqual(nuovo?.filmImportati, 4)
+        XCTAssertEqual(nuovo?.filmWatchlistImportati, 3)
+        XCTAssertEqual(nuovo?.filmNonRisolti, 1)
+
+        // Nei report VECCHI `film_supportati` era `false` hardcoded (0 film si dichiarava
+        // "non supportato", non "non ne avevi"): la riga resta fuori, com'era allora.
+        let vecchio = ImportReport(json: ["episodi_importati": 5, "film_supportati": false])
+        XCTAssertEqual(vecchio?.filmSupportati, false)
+        XCTAssertEqual(vecchio?.filmImportati, 0)
+    }
+
+    // MARK: - Risoluzione a mano (§7.4)
+
+    func testLaRisoluzioneAManoRiapreIlJobETornaAGuardarlo() async {
+        // Report a schermo per il job j9: la risoluzione deve riaprire QUEL job.
+        let fake = Fake()
+        fake.currentJob = ImportJobSnapshot(id: "j9", phase: "done", status: "done", error: nil)
+        fake.report = Self.unReport
+        let vm = ImportViewModel(backend: fake, pollInterval: .seconds(60))
+        await vm.pollOnce(jobId: "j9")
+        guard case .done = vm.state else { return XCTFail("atteso .done, era \(vm.state)") }
+
+        let ok = await vm.resolveManually(tvdbSeriesId: "901", tmdbShowId: 12345)
+        XCTAssertTrue(ok)
+        XCTAssertEqual(fake.manualResolves.count, 1)
+        XCTAssertEqual(fake.manualResolves.first?.jobId, "j9")
+        XCTAssertEqual(fake.manualResolves.first?.tvdbSeriesId, "901")
+        XCTAssertEqual(fake.manualResolves.first?.tmdbShowId, 12345)
+        // Il job è ripartito: l'oblò torna a guardarlo, non resta sul report vecchio.
+        guard case .running(let jobId, let phase) = vm.state else {
+            return XCTFail("atteso .running, era \(vm.state)")
+        }
+        XCTAssertEqual(jobId, "j9")
+        XCTAssertEqual(phase, "resolving",
+                       "la scelta della serie deve rifare la risoluzione per ID TVDB esatto")
+        vm.stopPolling()
+    }
+
+    func testUnaRisoluzioneFallitaNonButtaViaIlReport() async {
+        let fake = Fake()
+        fake.currentJob = ImportJobSnapshot(id: "j9", phase: "done", status: "done", error: nil)
+        fake.report = Self.unReport
+        let vm = ImportViewModel(backend: fake, pollInterval: .seconds(60))
+        await vm.pollOnce(jobId: "j9")
+
+        fake.manualResolveFails = true
+        let ok = await vm.resolveManually(tvdbSeriesId: "901", tmdbShowId: 12345)
+        XCTAssertFalse(ok)
+        // L'errore è visibile nello sheet, e il report resta a schermo: un riaggancio
+        // fallito non deve distruggere ciò che l'utente sta guardando.
+        XCTAssertNotNil(vm.manualResolveError)
+        guard case .done = vm.state else { return XCTFail("atteso .done, era \(vm.state)") }
+    }
+
+    func testSenzaUnReportAVideoLaRisoluzioneNonParte() async {
+        let fake = Fake()
+        let vm = ImportViewModel(backend: fake, pollInterval: .seconds(60))
+        let ok = await vm.resolveManually(tvdbSeriesId: "901", tmdbShowId: 12345)
+        XCTAssertFalse(ok)
+        XCTAssertEqual(fake.manualResolves.count, 0)
+    }
+
+    func testLUnresolvedPortaLaManigliaTvdbDalJson() {
+        let report = ImportReport(json: [
+            "episodi_importati": 1,
+            "non_riconosciuti_episodi": 2,
+            "non_riconosciuti_elenco": [
+                ["titolo": "X Factor IT", "episodi": 2, "motivo": "catalogo: not_found",
+                 "tvdb_series_id": "75530"],
+                ["titolo": "Senza id", "episodi": 1, "motivo": "id serie mancante"],
+            ],
+        ])
+        XCTAssertEqual(report?.nonRiconosciutiElenco.first?.tvdbSeriesId, "75530")
+        // Senza id la maniglia non c'è: il pulsante Risolvi non esiste per quella riga.
+        XCTAssertNil(report?.nonRiconosciutiElenco.last?.tvdbSeriesId)
     }
 }

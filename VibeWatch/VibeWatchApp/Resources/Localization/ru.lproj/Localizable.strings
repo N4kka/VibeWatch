@@ -379,6 +379,16 @@
 "import.report.ratingsUnresolved" = "Не удалось сопоставить оценок: %d.";
 "import.report.favoritesApplied" = "Импортировано избранного: %d (в свободные слоты).";
 "import.report.favoriteMoviesUnsupported" = "Избранные фильмы (%d) нельзя импортировать из TV Time.";
+"import.report.moviesApplied" = "%d фильмов импортировано с датами просмотра.";
+"import.report.moviesWatchlistApplied" = "%d фильмов добавлено в список «К просмотру».";
+"import.report.moviesUnresolved" = "%d фильмов не распознано (название и год не совпадают на TMDB).";
+"import.resolve.button" = "Сопоставить";
+"import.resolve.title" = "Какой это сериал: «%@»?";
+"import.resolve.hint" = "Эпизоды будут повторно проверены по точным идентификаторам TVDB. Всё, что TMDB не сможет подтвердить, останется в отчёте.";
+"import.resolve.searchPlaceholder" = "Найти сериал на TMDB";
+"import.resolve.empty" = "Ничего не найдено.";
+"import.resolve.failed" = "Не удалось сопоставить:";
+"import.resolve.searchFailed" = "Поиск не удался.";
 "import.report.statusesApplied" = "%d статусов сериалов восстановлено (список и архив).";
 "import.report.statusesUnresolved" = "%d статусов сериалов не удалось применить.";
 "import.report.unresolvedTitle" = "Не удалось сопоставить серий: %d";
@@ -770,6 +780,12 @@
 "profile.stats.shows" = "Сериалы";
 "profile.stats.episodes" = "Эпизоды";
 "profile.stats.loadFailed" = "Не удалось загрузить статистику.";
+"profile.stats.advanced.title" = "Расширенная статистика";
+"profile.stats.advanced.byGenre" = "По жанрам";
+"profile.stats.advanced.byDecade" = "По десятилетиям";
+"profile.stats.advanced.ratings" = "Ваши оценки";
+"profile.stats.advanced.noGenre" = "%d сериалов без данных о жанре";
+"profile.stats.advanced.proLocked" = "Расширенная статистика входит в Pro.";
 
 // Blocco 9, seconda meta' (§9.3): diario e modifica dei favorites
 "diary.title" = "Дневник";

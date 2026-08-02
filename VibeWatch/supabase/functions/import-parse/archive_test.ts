@@ -4,6 +4,7 @@ import {
   FILE_FOLLOWED,
   FILE_LISTS,
   FILE_SPECIAL_STATUS,
+  FILE_USER,
   FILE_V1,
   FILE_V2,
   RATING_FILES,
@@ -36,13 +37,14 @@ Deno.test({
       FILE_SPECIAL_STATUS,
       FILE_FOLLOWED,
       FILE_LISTS,
+      FILE_USER,
     ])
 
     // 1. I file di §7.1 esistono e si chiamano davvero così.
     assertEquals(files.has(FILE_V2), true, `manca ${FILE_V2}`)
 
-    const { events, ratings, statuses, favorites, favoriteMoviesUnsupported, unusableV1,
-      droppedV1 } = buildRows(files)
+    const { events, ratings, statuses, favorites, favoriteMoviesUnsupported, movies, unusableV1,
+      droppedV1, userProfile } = buildRows(files)
 
     console.log(JSON.stringify({
       file_trovati: [...files.keys()],
@@ -69,6 +71,17 @@ Deno.test({
     const ordinati = [...favorites].every((f, i, a) =>
       i === 0 || (a[i - 1].favorited_at! <= f.favorited_at!))
     assertEquals(ordinati, true, 'i favorites non sono in ordine di data')
+
+    // 2d. user.csv (§7.1): sull'export vero language='en' e timezone='Europe/Rome'. Se una
+    //     colonna slittasse, la validazione stretta li farebbe diventare null — e si vedrebbe qui.
+    assertEquals(userProfile, { language: 'en', timezone: 'Europe/Rome' })
+
+    // 2e. I film di v1 (§7.1): 5 visti e 3 in watchlist sull'export vero, tutti con titolo;
+    //     El Camino recupera l'anno dalla riga follow (la watch l'ha perso: 0001-01-01).
+    assertEquals(movies.filter((m) => m.movie_kind === 'seen').length, 5)
+    assertEquals(movies.filter((m) => m.movie_kind === 'watchlist').length, 3)
+    const elCamino = movies.find((m) => m.title === 'El Camino: A Breaking Bad Movie')
+    assertEquals(elCamino?.release_year, 2019)
 
     // 3. Ogni evento ha una chiave di dedup: senza, il reimport duplica (criterio 2 di §13).
     const senzaChiave = events.filter((e) => !e.dedup_key).length

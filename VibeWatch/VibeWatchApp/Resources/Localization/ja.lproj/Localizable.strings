@@ -412,6 +412,16 @@
 "import.report.ratingsUnresolved" = "%d件の評価は照合できませんでした。";
 "import.report.favoritesApplied" = "%d件のお気に入りを空きスロットにインポートしました。";
 "import.report.favoriteMoviesUnsupported" = "%d件の映画のお気に入りはTV Timeからインポートできません。";
+"import.report.moviesApplied" = "%d本の映画を視聴日付きでインポートしました。";
+"import.report.moviesWatchlistApplied" = "%d本の映画をウォッチリストに追加しました。";
+"import.report.moviesUnresolved" = "%d本の映画を認識できませんでした（タイトルと年がTMDBと一致しません）。";
+"import.resolve.button" = "解決";
+"import.resolve.title" = "「%@」はどのシリーズですか？";
+"import.resolve.hint" = "エピソードは正確なTVDB IDで再確認されます。TMDBで確認できないものはレポートに残ります。";
+"import.resolve.searchPlaceholder" = "TMDBでシリーズを検索";
+"import.resolve.empty" = "結果がありません。";
+"import.resolve.failed" = "解決できませんでした：";
+"import.resolve.searchFailed" = "検索に失敗しました。";
 "import.report.statusesApplied" = "%d件のシリーズ状態を復元しました（ウォッチリストとアーカイブ）。";
 "import.report.statusesUnresolved" = "%d件のシリーズ状態を適用できませんでした。";
 "import.report.unresolvedTitle" = "%d件のエピソードを照合できませんでした";
@@ -782,6 +792,12 @@
 "profile.stats.shows" = "番組";
 "profile.stats.episodes" = "エピソード";
 "profile.stats.loadFailed" = "統計を読み込めませんでした。";
+"profile.stats.advanced.title" = "詳細な統計";
+"profile.stats.advanced.byGenre" = "ジャンル別";
+"profile.stats.advanced.byDecade" = "年代別";
+"profile.stats.advanced.ratings" = "あなたの評価";
+"profile.stats.advanced.noGenre" = "ジャンル情報のないシリーズ: %d件";
+"profile.stats.advanced.proLocked" = "詳細な統計はProの機能です。";
 
 // Blocco 9, seconda meta' (§9.3): diario e modifica dei favorites
 "diary.title" = "日記";

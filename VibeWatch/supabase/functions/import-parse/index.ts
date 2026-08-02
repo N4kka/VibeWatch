@@ -17,11 +17,13 @@ import { serve } from 'https://deno.land/std@0.131.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { adminClient, jsonResponse } from '../_shared/proxy.ts'
 import { isServiceCaller } from '../_shared/cronAuth.ts'
+import { hasBearerJWTShape } from './auth.ts'
 import {
   buildRows,
   FILE_FOLLOWED,
   FILE_LISTS,
   FILE_SPECIAL_STATUS,
+  FILE_USER,
   FILE_V1,
   FILE_V2,
   RATING_FILES,
@@ -79,7 +81,18 @@ serve(async (req: Request) => {
   // decide, è la chiusura dell'IDOR), il driver del cron (§7.2, app chiusa) presenta il
   // service key — che nessun client possiede — e legge da admin. Nessun `if` sull'identità:
   // per l'utente decide sempre la policy.
-  const lookup = isServiceCaller(req) ? admin : callerClient(req)
+  const daServizio = isServiceCaller(req)
+
+  // Senza credenziali il lookup sotto RLS fallirebbe con "Expected 3 parts in JWT" — che qui
+  // diventava un 500 `job_lookup_failed`, facendo scattare i retry del client su una richiesta
+  // che non può mai riuscire. Non è una verifica del token (quella resta a GoTrue/RLS): è solo
+  // il rifiuto onesto di una richiesta anonima. Le sorelle (resolve/write/finalize) rispondono
+  // già 401 sul lookup; qui si aggiunge anche la diagnosi giusta per il caso "nessun token".
+  if (!daServizio && !hasBearerJWTShape(req.headers.get('Authorization'))) {
+    return jsonResponse({ error: 'unauthorized' }, 401)
+  }
+
+  const lookup = daServizio ? admin : callerClient(req)
 
   const { data: job, error: jobError } = await lookup
     .from('import_jobs')
@@ -87,7 +100,7 @@ serve(async (req: Request) => {
     .eq('id', jobId)
     .maybeSingle()
 
-  if (jobError) return jsonResponse({ error: 'job_lookup_failed', detail: jobError.message }, 500)
+  if (jobError) return jsonResponse({ error: 'job_lookup_failed', detail: jobError.message }, 401)
   if (!job) return jsonResponse({ error: 'job_not_found' }, 404)
   if (!job.storage_path) return jsonResponse({ error: 'job_has_no_upload' }, 409)
 
@@ -113,6 +126,7 @@ serve(async (req: Request) => {
       FILE_SPECIAL_STATUS,
       FILE_FOLLOWED,
       FILE_LISTS,
+      FILE_USER,
     ])
     if (!files.has(FILE_V2) && !files.has(FILE_V1)) {
       // Nessuno dei due file di tracking: non è un export TV Time, e dirlo subito è meglio che
@@ -120,8 +134,8 @@ serve(async (req: Request) => {
       throw new Error('lo ZIP non contiene né tracking-prod-records-v2.csv né tracking-prod-records.csv')
     }
 
-    const { events, ratings, statuses, favorites, favoriteMoviesUnsupported, unusableV1,
-      droppedV1 } = buildRows(files)
+    const { events, ratings, statuses, favorites, favoriteMoviesUnsupported, movies, unusableV1,
+      droppedV1, userProfile } = buildRows(files)
 
     // Un solo elenco ordinato: gli eventi e poi i voti. `row_index` è la posizione qui dentro, ed è
     // ciò che rende la ripresa un numero invece che una ricerca.
@@ -158,6 +172,14 @@ serve(async (req: Request) => {
         raw: { row_kind: 'favorite', ...f } as Record<string, unknown>,
         status: 'pending',
       })),
+      // §7.1: i film di v1 (visti + watchlist), risoluzione per titolo exact-match+anno nella
+      // fase 3. In coda dopo tutto il resto, stessa ragione: gli indici esistenti non si muovono.
+      ...movies.map((m, i) => ({
+        job_id: jobId,
+        row_index: events.length + ratings.length + statuses.length + favorites.length + i,
+        raw: { row_kind: 'movie', ...m } as Record<string, unknown>,
+        status: 'pending',
+      })),
     ]
 
     const checkpoint = (job.checkpoint ?? {}) as { row_index?: number }
@@ -183,9 +205,15 @@ serve(async (req: Request) => {
       series_statuses: statuses.length,
       favorites: favorites.length,
       favorite_movies_unsupported: favoriteMoviesUnsupported,
+      movies_seen: movies.filter((m) => m.movie_kind === 'seen').length,
+      movies_watchlist: movies.filter((m) => m.movie_kind === 'watchlist').length,
       staged_rows: staged.length,
       v1_unusable: unusableV1,
       v1_dropped_as_duplicate: droppedV1,
+      // §7.1: user.csv. Null = assente o fuori forma, e si dichiara invece di sparire; il
+      // timezone lo applica la finalize alle quiet hours, MAI sopra un valore già scelto in app.
+      user_language: userProfile.language,
+      user_timezone: userProfile.timezone,
     }
 
     const { error: updateError } = await admin

@@ -376,6 +376,16 @@
 "import.report.ratingsUnresolved" = "%d 条评分无法匹配。";
 "import.report.favoritesApplied" = "已将 %d 个收藏导入空余槽位。";
 "import.report.favoriteMoviesUnsupported" = "%d 个电影收藏无法从 TV Time 导入。";
+"import.report.moviesApplied" = "已导入 %d 部电影（含观看日期）。";
+"import.report.moviesWatchlistApplied" = "已将 %d 部电影加入稍后观看。";
+"import.report.moviesUnresolved" = "%d 部电影未能识别（标题和年份与 TMDB 不匹配）。";
+"import.resolve.button" = "匹配";
+"import.resolve.title" = "“%@”是哪部剧集？";
+"import.resolve.hint" = "剧集将使用其准确的 TVDB ID 重新检查。TMDB 无法确认的内容会保留在报告中。";
+"import.resolve.searchPlaceholder" = "在 TMDB 上搜索剧集";
+"import.resolve.empty" = "没有结果。";
+"import.resolve.failed" = "匹配失败：";
+"import.resolve.searchFailed" = "搜索失败。";
 "import.report.statusesApplied" = "已恢复 %d 个剧集状态（想看清单与归档）。";
 "import.report.statusesUnresolved" = "%d 个剧集状态未能应用。";
 "import.report.unresolvedTitle" = "%d 个单集无法匹配";
@@ -767,6 +777,12 @@
 "profile.stats.shows" = "剧集";
 "profile.stats.episodes" = "集数";
 "profile.stats.loadFailed" = "无法加载统计数据。";
+"profile.stats.advanced.title" = "高级统计";
+"profile.stats.advanced.byGenre" = "按类型";
+"profile.stats.advanced.byDecade" = "按年代";
+"profile.stats.advanced.ratings" = "你的评分";
+"profile.stats.advanced.noGenre" = "%d 部剧集缺少类型信息";
+"profile.stats.advanced.proLocked" = "高级统计是 Pro 的一部分。";
 
 // Blocco 9, seconda meta' (§9.3): diario e modifica dei favorites
 "diary.title" = "日记";

@@ -412,6 +412,16 @@
 "import.report.ratingsUnresolved" = "%d रेटिंग का मिलान नहीं हो सका।";
 "import.report.favoritesApplied" = "%d पसंदीदा खाली स्लॉट में आयात हुए।";
 "import.report.favoriteMoviesUnsupported" = "%d पसंदीदा फ़िल्में TV Time से आयात नहीं हो सकतीं।";
+"import.report.moviesApplied" = "%d फ़िल्में उनकी देखने की तारीख़ों के साथ इंपोर्ट की गईं।";
+"import.report.moviesWatchlistApplied" = "%d फ़िल्में आपकी वॉचलिस्ट में जोड़ी गईं।";
+"import.report.moviesUnresolved" = "%d फ़िल्में पहचानी नहीं गईं (शीर्षक और वर्ष TMDB पर मेल नहीं खाते)।";
+"import.resolve.button" = "हल करें";
+"import.resolve.title" = "“%@” कौन-सी सीरीज़ है?";
+"import.resolve.hint" = "एपिसोड को उनके सटीक TVDB ID से फिर जाँचा जाएगा। TMDB जिनकी पुष्टि नहीं कर पाएगा, वे रिपोर्ट में बने रहेंगे।";
+"import.resolve.searchPlaceholder" = "TMDB पर सीरीज़ खोजें";
+"import.resolve.empty" = "कोई परिणाम नहीं।";
+"import.resolve.failed" = "हल नहीं हो सका:";
+"import.resolve.searchFailed" = "खोज विफल रही।";
 "import.report.statusesApplied" = "%d सीरीज़ स्थितियाँ बहाल की गईं (वॉचलिस्ट और संग्रह)।";
 "import.report.statusesUnresolved" = "%d सीरीज़ स्थितियाँ लागू नहीं हो सकीं।";
 "import.report.unresolvedTitle" = "%d एपिसोड पहचाने नहीं जा सके";
@@ -782,6 +792,12 @@
 "profile.stats.shows" = "शो";
 "profile.stats.episodes" = "एपिसोड";
 "profile.stats.loadFailed" = "आँकड़े लोड नहीं हो सके।";
+"profile.stats.advanced.title" = "उन्नत आँकड़े";
+"profile.stats.advanced.byGenre" = "शैली के अनुसार";
+"profile.stats.advanced.byDecade" = "दशक के अनुसार";
+"profile.stats.advanced.ratings" = "आपकी रेटिंग";
+"profile.stats.advanced.noGenre" = "%d सीरीज़ बिना शैली की जानकारी के";
+"profile.stats.advanced.proLocked" = "उन्नत आँकड़े Pro का हिस्सा हैं।";
 
 // Blocco 9, seconda meta' (§9.3): diario e modifica dei favorites
 "diary.title" = "डायरी";

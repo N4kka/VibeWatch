@@ -10,6 +10,34 @@
 export type EntityType = 'series' | 'episode' | 'movie'
 export type Resolution = 'found' | 'not_found' | 'ambiguous'
 
+export interface ManualEpisodeContext {
+  job_id: string
+  tvdb_series_id: number
+  tmdb_show_id: number
+}
+
+/**
+ * Validates the extra evidence required to let a human series choice disambiguate episode finds.
+ * `undefined` means the normal resolver path; `null` means a malformed manual request.
+ */
+export function normalizeManualEpisodeContext(
+  raw: unknown,
+  entities: { entity_type: EntityType; tvdb_id?: number }[],
+): ManualEpisodeContext | null | undefined {
+  if (raw === undefined || raw === null) return undefined
+  if (typeof raw !== 'object' || Array.isArray(raw) || entities.length === 0) return null
+  if (entities.some((entity) => entity.entity_type !== 'episode')) return null
+
+  const value = raw as Record<string, unknown>
+  const jobId = String(value.job_id ?? '').trim()
+  const tvdbSeriesId = Number(value.tvdb_series_id)
+  const tmdbShowId = Number(value.tmdb_show_id)
+  if (jobId === '') return null
+  if (!Number.isSafeInteger(tvdbSeriesId) || tvdbSeriesId <= 0) return null
+  if (!Number.isSafeInteger(tmdbShowId) || tmdbShowId <= 0) return null
+  return { job_id: jobId, tvdb_series_id: tvdbSeriesId, tmdb_show_id: tmdbShowId }
+}
+
 /** A row of `tvdb_tmdb_map`. */
 export interface MapRow {
   tvdb_id: number
@@ -104,6 +132,8 @@ export interface ShowPayload {
   poster_path?: string | null
   origin_country?: string[] | null
   episode_run_time?: number[] | null
+  /** §9.3 stats avanzate: `/tv/{id}` li porta di serie, come `[{id, name}]`. */
+  genres?: { id?: number | null }[] | null
 }
 
 export interface SeasonPayload {
@@ -208,9 +238,57 @@ export function resolveFromFind(
   }
 }
 
+/**
+ * Resolves an episode after a human has selected the series it belongs to.
+ *
+ * The selection is only a filter over TMDB's exact `/find/{tvdb_episode_id}` answer. It never
+ * turns the season/episode numbers from an export into identity: the coordinates below still
+ * come exclusively from the one TMDB result belonging to `expectedShowId`.
+ */
+export function resolveEpisodeForExpectedShow(
+  tvdbId: number,
+  expectedShowId: number,
+  find: FindResponse,
+  now: Date,
+): MapRow {
+  const base = {
+    tvdb_id: tvdbId,
+    entity_type: 'episode' as const,
+    tmdb_show_id: null,
+    tmdb_movie_id: null,
+    season_number: null,
+    episode_number: null,
+    resolved_at: now.toISOString(),
+    method: 'tmdb_find_manual',
+  }
+  const episodes = find.tv_episode_results ?? []
+  const matching = episodes.filter((episode) => episode.show_id === expectedShowId)
+
+  if (matching.length === 1) {
+    const episode = matching[0]
+    return {
+      ...base,
+      resolution: 'found',
+      tmdb_show_id: expectedShowId,
+      season_number: episode.season_number,
+      episode_number: episode.episode_number,
+    }
+  }
+
+  const noResults = episodes.length === 0
+    && (find.tv_results ?? []).length === 0
+    && (find.movie_results ?? []).length === 0
+  return { ...base, resolution: noResults ? 'not_found' : 'ambiguous' }
+}
+
 /** True when a stored row is worth asking TMDB about again. */
-export function shouldRetry(row: Pick<MapRow, 'resolution' | 'resolved_at'>, now: Date): boolean {
+export function shouldRetry(
+  row: Pick<MapRow, 'resolution' | 'resolved_at'>,
+  now: Date,
+  manualRetry = false,
+): boolean {
   if (row.resolution === 'found') return false
+  if (manualRetry) return true
   if (row.resolution === 'ambiguous') return false   // needs a human, not another identical call
   const age = now.getTime() - new Date(row.resolved_at).getTime()
   return age >= NOT_FOUND_RETRY_DAYS * 24 * 60 * 60 * 1000
@@ -238,6 +316,13 @@ export function showRow(show: ShowPayload, now: Date) {
     poster_path: show.poster_path ?? null,
     origin_country: show.origin_country ?? null,
     episode_run_time: show.episode_run_time ?? null,
+    // §9.3: gli id genere, per le stats avanzate. Null (mai []) quando il payload non li
+    // porta: "non so" e "nessun genere" sono risposte diverse, e `shows_senza_genere` conta
+    // la prima.
+    genres: Array.isArray(show.genres)
+      ? show.genres.map((g) => g?.id).filter((id): id is number =>
+          Number.isSafeInteger(id) && (id as number) > 0)
+      : null,
     refreshed_at: now.toISOString(),
     next_refresh_at: nextRefreshAt(show, now).toISOString(),
   }
@@ -347,4 +432,113 @@ export function normalizeShowIds(raw: unknown, max: number): number[] | null {
 function emptyToNull(value: string | null | undefined): string | null {
   const trimmed = (value ?? '').trim()
   return trimmed.length > 0 ? trimmed : null
+}
+
+// ---------------------------------------------------------------------------- film (§7.1)
+
+export interface MovieSearchCandidate {
+  id?: number | null
+  title?: string | null
+  original_title?: string | null
+  release_date?: string | null
+  poster_path?: string | null
+}
+
+export interface MovieMatch {
+  outcome: 'found' | 'not_found' | 'ambiguous'
+  tmdb_movie_id: number | null
+  matched_title: string | null
+  /** Il poster del candidato scelto: serve alla riga di lista legacy che la fase 4 scrive. */
+  poster_path: string | null
+  /** Quanti candidati DISTINTI avevano il titolo esatto: la diagnosi di un `ambiguous`. */
+  candidates: number
+}
+
+/**
+ * §7.1 film: exact-match+anno o niente — deciso dall'utente il 2026-08-02.
+ *
+ * L'anno lo filtra la query (`primary_release_year`); qui si esige il TITOLO esatto, su `title`
+ * (localizzato) O `original_title` (l'export ha nomi giapponesi). "Esatto" dopo NFC + casefold +
+ * trim: le differenze di normalizzazione Unicode non sono differenze di titolo, tutto il resto
+ * si': un match "quasi giusto" scritto in `watch_events` sarebbe il film SBAGLIATO in silenzio,
+ * che e' peggio di un non-risolto dichiarato nel report.
+ *
+ * Piu' candidati distinti con lo stesso titolo esatto e stesso anno (i remake omonimi) sono
+ * `ambiguous`: scegliere "il piu' popolare" sarebbe indovinare.
+ */
+export function matchMovieByTitle(title: string, results: MovieSearchCandidate[]): MovieMatch {
+  const wanted = normalizeTitle(title)
+  if (wanted === '') {
+    return {
+      outcome: 'not_found', tmdb_movie_id: null, matched_title: null,
+      poster_path: null, candidates: 0,
+    }
+  }
+
+  const matched = new Map<number, { title: string; poster: string | null }>()
+  for (const candidate of results) {
+    const id = Number(candidate?.id)
+    if (!Number.isSafeInteger(id) || id <= 0) continue
+    const localized = normalizeTitle(candidate.title ?? '')
+    const original = normalizeTitle(candidate.original_title ?? '')
+    if (localized === wanted || original === wanted) {
+      if (!matched.has(id)) {
+        matched.set(id, {
+          title: (candidate.title ?? candidate.original_title ?? '').trim(),
+          poster: typeof candidate.poster_path === 'string' && candidate.poster_path !== ''
+            ? candidate.poster_path
+            : null,
+        })
+      }
+    }
+  }
+
+  if (matched.size === 1) {
+    const [id, info] = [...matched.entries()][0]
+    return {
+      outcome: 'found', tmdb_movie_id: id, matched_title: info.title,
+      poster_path: info.poster, candidates: 1,
+    }
+  }
+  return {
+    outcome: matched.size === 0 ? 'not_found' : 'ambiguous',
+    tmdb_movie_id: null,
+    matched_title: null,
+    poster_path: null,
+    candidates: matched.size,
+  }
+}
+
+function normalizeTitle(value: string): string {
+  return value.normalize('NFC').trim().toLowerCase()
+}
+
+export interface RequestedMovieTitle {
+  key: string
+  title: string
+  year: number | null
+}
+
+/**
+ * L'input `movie_titles`, ripulito. `key` e' l'identita' che il chiamante usa per riagganciare
+ * la risposta alle proprie righe (l'uuid TV Time): non si inventa qui, si esige.
+ */
+export function normalizeMovieTitles(raw: unknown, max: number): RequestedMovieTitle[] | null {
+  if (raw === undefined || raw === null) return []
+  if (!Array.isArray(raw) || raw.length > max) return null
+
+  const seen = new Set<string>()
+  const titles: RequestedMovieTitle[] = []
+  for (const item of raw) {
+    const key = typeof item?.key === 'string' ? item.key.trim() : ''
+    const title = typeof item?.title === 'string' ? item.title.trim() : ''
+    if (key === '' || key.length > 200 || title === '' || title.length > 300) return null
+    const yearRaw = item?.year
+    const year = yearRaw === null || yearRaw === undefined ? null : Number(yearRaw)
+    if (year !== null && (!Number.isSafeInteger(year) || year < 1888 || year > 2100)) return null
+    if (seen.has(key)) continue
+    seen.add(key)
+    titles.push({ key, title, year })
+  }
+  return titles
 }

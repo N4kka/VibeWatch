@@ -17,6 +17,7 @@ import { serve } from 'https://deno.land/std@0.131.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { adminClient, jsonResponse } from '../_shared/proxy.ts'
 import { isServiceCaller } from '../_shared/cronAuth.ts'
+import { applyImportedTimezone, type TimezonePreferenceStore } from './profile.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
@@ -97,6 +98,58 @@ serve(async (req: Request) => {
       }, 200)
     }
 
+    // §7.1: il timezone di user.csv → quiet hours. PRIMA del report, così l'esito finisce nei
+    // totals che il report archivia. Tre regole: mai sopra un valore già scelto (in app o da un
+    // import precedente — il guard `is('timezone', null)` chiude anche la corsa); un profilo
+    // senza riga si crea con il solo timezone (il resto sono i default); un errore qui si
+    // dichiara nei totals e NON fa fallire il job — il fuso è un contorno, l'import no.
+    const timezoneStore: TimezonePreferenceStore = {
+      async read(userId) {
+        const { data: pref, error: readError } = await admin
+          .from('user_notification_preferences')
+          .select('timezone')
+          .eq('user_id', userId)
+          .maybeSingle()
+        if (readError) throw new Error(readError.message)
+        return { exists: pref !== null, timezone: pref?.timezone ?? null }
+      },
+
+      async insertIfAbsent(userId, timezone) {
+        const { data, error } = await admin
+          .from('user_notification_preferences')
+          .upsert(
+            { user_id: userId, timezone },
+            { onConflict: 'user_id', ignoreDuplicates: true },
+          )
+          .select('user_id')
+          .maybeSingle()
+        if (error) throw new Error(error.message)
+        return data !== null
+      },
+
+      async updateIfUnset(userId, timezone) {
+        const { data, error } = await admin
+          .from('user_notification_preferences')
+          .update({ timezone })
+          .eq('user_id', userId)
+          .is('timezone', null)
+          .select('user_id')
+          .maybeSingle()
+        if (error) throw new Error(error.message)
+        return data !== null
+      },
+    }
+    const tzEsito = await applyImportedTimezone(
+      (job.totals as Record<string, unknown> | null)?.['user_timezone'],
+      job.user_id,
+      timezoneStore,
+    )
+
+    const { error: tzTotalsError } = await admin.from('import_jobs')
+      .update({ totals: { ...(job.totals as Record<string, unknown> ?? {}), timezone_quiet_hours: tzEsito } })
+      .eq('id', jobId)
+    if (tzTotalsError) throw new Error(`esito timezone non salvato: ${tzTotalsError.message}`)
+
     // Fase 6. Il report si costruisce PRIMA di dichiarare il job finito: se fallisce, il job resta
     // in `recomputing` e ci si riprova, invece di restare `done` senza saper dire cosa è successo.
     const { data: report, error: reportError } = await admin
@@ -108,7 +161,13 @@ serve(async (req: Request) => {
     // esplicito, invece di rigenerare il report dopo la chiusura: rigenerarlo vorrebbe dire un
     // secondo giro che, fallendo, lascerebbe un job `done` con un report che si contraddice.
     const reportFinale = { ...(report as Record<string, unknown>), phase: 'done', status: 'done' }
-    const totals = { ...(job.totals as Record<string, unknown> ?? {}), report: reportFinale }
+    // `timezone_quiet_hours` va ripetuto qui: `job.totals` è la riga letta a inizio invocazione,
+    // PRIMA dell'update qui sopra — spreadarla da sola cancellerebbe l'esito appena scritto.
+    const totals = {
+      ...(job.totals as Record<string, unknown> ?? {}),
+      timezone_quiet_hours: tzEsito,
+      report: reportFinale,
+    }
 
     const { error: closeError } = await admin.from('import_jobs')
       .update({ phase: 'done', status: 'done', checkpoint: {}, totals, error: null })

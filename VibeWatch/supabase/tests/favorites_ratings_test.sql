@@ -217,6 +217,33 @@ select t.eq(((public.get_my_stats())->>'movies_watched')::integer, 1, 'un film')
 select t.eq(((public.get_my_stats())->>'ratings_given')::integer, 4,
             'i voti vivi di prima, la lapide esclusa');
 
+-- §9.3/§10: le ripartizioni avanzate. La serie 900 non ha ancora generi ne' data: prima si
+-- verifica che il buco sia DICHIARATO, non nascosto.
+select t.eq(((public.get_my_stats())->>'shows_senza_genere')::integer, 1,
+            'una serie senza generi in catalogo si dichiara');
+select t.eq(jsonb_array_length((public.get_my_stats())->'per_genere'), 0,
+            'niente generi inventati per chi non li ha');
+
+reset role;
+update public.tmdb_shows
+   set genres = array[18, 10765], first_air_date = '2011-04-17'
+ where tmdb_show_id = 900;
+set local role authenticated;
+set local request.jwt.claim.sub = 'bbbbbbbb-0000-0000-0000-000000000001';
+
+-- 6.900 s di TV (14.100 - 7.200 del film) su UNA serie con due generi: ogni genere pesa
+-- l'intera serie — e' una ripartizione, non una spartizione.
+select t.eq(((public.get_my_stats())->'per_genere'->0->>'seconds')::bigint, 6900::bigint,
+            'i secondi del genere sono quelli VERI della serie');
+select t.eq(jsonb_array_length((public.get_my_stats())->'per_genere'), 2,
+            'due generi, due voci');
+select t.eq(((public.get_my_stats())->'per_decade'->0->>'decade')::integer, 2010,
+            'il decennio viene dalla first_air_date del catalogo');
+select t.eq(((public.get_my_stats())->>'shows_senza_genere')::integer, 0,
+            'col catalogo pieno il buco dichiarato torna a zero');
+select t.eq(jsonb_array_length((public.get_my_stats())->'voti_distribuzione'), 4,
+            'la distribuzione dei voti raggruppa i valori vivi (6,7,9,10 dai voti di sopra)');
+
 set local request.jwt.claim.sub = 'bbbbbbbb-0000-0000-0000-000000000002';
 select t.eq(((public.get_my_stats())->>'watch_time_seconds')::bigint, 0::bigint,
             'le stats sono del chiamante: b non eredita niente da a');

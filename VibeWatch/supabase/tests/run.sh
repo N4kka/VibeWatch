@@ -71,6 +71,11 @@ for file in "$MIGRATIONS"/*.sql; do
     20260802170000_import_report_ratings.sql) ;;
     20260802180000_public_lists_owner_filter.sql) ;;
     20260802190000_import_report_favorites.sql) ;;
+    20260802210000_import_report_movies.sql) ;;
+    20260802220000_delete_user_storage_inventory.sql) ;;
+    20260802230000_advanced_stats_genres.sql) ;;
+    20260802240000_import_manual_resolve_atomic.sql) ;;
+    20260802250000_catalog_map_found_immutable.sql) ;;
     *) continue ;;
   esac
   [ "$pass" = 1 ] && echo "   $(basename "$file")"
@@ -92,3 +97,12 @@ run -f "$HERE/import_start_test.sql"
 
 echo "→ test: TTL del bucket imports"
 run -f "$HERE/imports_ttl_test.sql"
+
+echo "→ test: inventario Storage per delete-user"
+run -f "$HERE/delete_user_test.sql"
+
+echo "→ test: riapertura atomica della risoluzione manuale"
+run -f "$HERE/import_manual_resolve_test.sql"
+
+echo "→ test: immutabilita' della mappa catalogo"
+run -f "$HERE/catalog_map_test.sql"

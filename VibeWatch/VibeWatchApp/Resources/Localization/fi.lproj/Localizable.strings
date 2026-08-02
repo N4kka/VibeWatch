@@ -412,6 +412,16 @@
 "import.report.ratingsUnresolved" = "%d arvostelua ei voitu yhdistää.";
 "import.report.favoritesApplied" = "%d suosikkia tuotu vapaisiin paikkoihin.";
 "import.report.favoriteMoviesUnsupported" = "%d elokuvasuosikkia ei voi tuoda TV Timesta.";
+"import.report.moviesApplied" = "%d elokuvaa tuotu katselupäivineen.";
+"import.report.moviesWatchlistApplied" = "%d elokuvaa lisätty katselulistalle.";
+"import.report.moviesUnresolved" = "%d elokuvaa jäi tunnistamatta (nimi ja vuosi eivät täsmää TMDB:ssä).";
+"import.resolve.button" = "Ratkaise";
+"import.resolve.title" = "Mikä sarja on ”%@”?";
+"import.resolve.hint" = "Jaksot tarkistetaan uudelleen niiden tarkkojen TVDB-tunnusten avulla. Kaikki, mitä TMDB ei voi vahvistaa, jää raporttiin.";
+"import.resolve.searchPlaceholder" = "Hae sarjaa TMDB:stä";
+"import.resolve.empty" = "Ei tuloksia.";
+"import.resolve.failed" = "Ratkaisu epäonnistui:";
+"import.resolve.searchFailed" = "Haku epäonnistui.";
 "import.report.statusesApplied" = "%d sarjatilaa palautettu (katselulista ja arkisto).";
 "import.report.statusesUnresolved" = "%d sarjan tilaa ei voitu ottaa käyttöön.";
 "import.report.unresolvedTitle" = "%d jaksoa jäi tunnistamatta";
@@ -782,6 +792,12 @@
 "profile.stats.shows" = "Sarjat";
 "profile.stats.episodes" = "Jaksot";
 "profile.stats.loadFailed" = "Tilastojen lataus epäonnistui.";
+"profile.stats.advanced.title" = "Laajennetut tilastot";
+"profile.stats.advanced.byGenre" = "Genren mukaan";
+"profile.stats.advanced.byDecade" = "Vuosikymmenen mukaan";
+"profile.stats.advanced.ratings" = "Omat arviosi";
+"profile.stats.advanced.noGenre" = "%d sarjaa ilman genretietoja";
+"profile.stats.advanced.proLocked" = "Laajennetut tilastot kuuluvat Pro-tilaukseen.";
 
 // Blocco 9, seconda meta' (§9.3): diario e modifica dei favorites
 "diary.title" = "Päiväkirja";

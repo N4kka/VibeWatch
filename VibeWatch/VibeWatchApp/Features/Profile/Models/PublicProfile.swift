@@ -98,11 +98,36 @@ struct PublicProfileDetail: Equatable {
 /// in cache c'è solo un anno di eventi, e una somma dal client direbbe un numero sbagliato con
 /// la faccia di uno giusto.
 struct UserStats: Equatable {
+    /// §9.3/§10: una fetta delle ripartizioni avanzate (Pro). L'ordinamento è del server e
+    /// non si riordina qui: il client mostra.
+    struct GenreSlice: Equatable {
+        let genreId: Int
+        let shows: Int
+        let seconds: Int
+    }
+
+    struct DecadeSlice: Equatable {
+        let decade: Int
+        let shows: Int
+        let seconds: Int
+    }
+
+    struct RatingBucket: Equatable {
+        let rating: Int
+        let count: Int
+    }
+
     let watchTimeSeconds: Int
     let episodesWatched: Int
     let showsWatched: Int
     let moviesWatched: Int
     let ratingsGiven: Int
+    /// §9.3/§10 (Pro): ripartizioni su base catalogo, pesate in secondi VERI (§13.7).
+    let perGenere: [GenreSlice]
+    let perDecade: [DecadeSlice]
+    let votiDistribuzione: [RatingBucket]
+    /// Le serie viste il cui catalogo non ha (ancora) i generi: dichiarate, non sparite.
+    let showsSenzaGenere: Int
 
     init?(json: [String: Any]) {
         // Senza il tempo la risposta non è una risposta: meglio un nil che il chiamante tratta
@@ -113,14 +138,36 @@ struct UserStats: Equatable {
         self.showsWatched = json["shows_watched"] as? Int ?? 0
         self.moviesWatched = json["movies_watched"] as? Int ?? 0
         self.ratingsGiven = json["ratings_given"] as? Int ?? 0
+        self.perGenere = (json["per_genere"] as? [[String: Any]] ?? []).compactMap { row in
+            guard let id = row["genre_id"] as? Int else { return nil }
+            return GenreSlice(genreId: id, shows: row["shows"] as? Int ?? 0,
+                              seconds: row["seconds"] as? Int ?? 0)
+        }
+        self.perDecade = (json["per_decade"] as? [[String: Any]] ?? []).compactMap { row in
+            guard let decade = row["decade"] as? Int else { return nil }
+            return DecadeSlice(decade: decade, shows: row["shows"] as? Int ?? 0,
+                               seconds: row["seconds"] as? Int ?? 0)
+        }
+        self.votiDistribuzione = (json["voti_distribuzione"] as? [[String: Any]] ?? [])
+            .compactMap { row in
+                guard let rating = row["rating"] as? Int else { return nil }
+                return RatingBucket(rating: rating, count: row["count"] as? Int ?? 0)
+            }
+        self.showsSenzaGenere = json["shows_senza_genere"] as? Int ?? 0
     }
 
     init(watchTimeSeconds: Int, episodesWatched: Int, showsWatched: Int,
-         moviesWatched: Int, ratingsGiven: Int) {
+         moviesWatched: Int, ratingsGiven: Int,
+         perGenere: [GenreSlice] = [], perDecade: [DecadeSlice] = [],
+         votiDistribuzione: [RatingBucket] = [], showsSenzaGenere: Int = 0) {
         self.watchTimeSeconds = watchTimeSeconds
         self.episodesWatched = episodesWatched
         self.showsWatched = showsWatched
         self.moviesWatched = moviesWatched
         self.ratingsGiven = ratingsGiven
+        self.perGenere = perGenere
+        self.perDecade = perDecade
+        self.votiDistribuzione = votiDistribuzione
+        self.showsSenzaGenere = showsSenzaGenere
     }
 }

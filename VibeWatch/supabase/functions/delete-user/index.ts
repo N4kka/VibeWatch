@@ -1,6 +1,6 @@
-// @ts-nocheck
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8'
+import { storageRemovalBatches, type UserStorageObject } from './storage.ts'
 
 serve(async (req) => {
   if (req.method !== 'POST' && req.method !== 'DELETE') {
@@ -38,7 +38,9 @@ serve(async (req) => {
   const userId = userResult.user.id
 
   // Most user-owned tables carry an ON DELETE CASCADE foreign key to auth.users, so
-  // auth.admin.deleteUser below clears them. These do not: user_daily_quota, user_clip_history
+  // auth.admin.deleteUser below clears them — inventario riverificato su pg_constraint il
+  // 2026-08-02: OGNI tabella pubblica con una colonna utente cascata da auth.users o da
+  // profiles, tranne quelle qui sotto. These do not: user_daily_quota, user_clip_history
   // and user_preferences have no foreign key at all, and profiles references auth.users with
   // NO ACTION — which also means it has to go before the auth user, or that delete is rejected.
   // (user_ai_token_usage and user_clip_signals cascade from profiles.)
@@ -50,6 +52,47 @@ serve(async (req) => {
     if (error) {
       console.log(`Cleanup error for ${table}:`, error.message)
       failures.push(`${table}: ${error.message}`)
+    }
+  }
+
+  // `api_proxy_budget` non ha una colonna utente: l'id sta DENTRO lo scope testuale
+  // (`user:{id}`, `import:{id}`). Sono contatori, ma portano un identificatore: via anche loro.
+  {
+    const { error } = await adminClient
+      .from('api_proxy_budget')
+      .delete()
+      .in('scope', [`user:${userId}`, `import:${userId}`])
+    if (error) {
+      console.log('Cleanup error for api_proxy_budget:', error.message)
+      failures.push(`api_proxy_budget: ${error.message}`)
+    }
+  }
+
+  // Storage (GDPR, audit §3b): gli ZIP dell'import in `imports/{userId}/…` — export GDPR che
+  // contengono dati personali — e gli avatar, riconoscibili solo dall'`owner` (il nome del
+  // file usa uuid di device). L'inventario lo fa `user_storage_objects` (service-only); la
+  // cancellazione passa dalla Storage API — mai DELETE su storage.objects: lascerebbe i byte
+  // orfani nel bucket sottostante (lezione di imports-cleanup).
+  {
+    const { data: objects, error } = await adminClient.rpc('user_storage_objects', {
+      p_user: userId,
+    })
+    if (error) {
+      console.log('user_storage_objects error:', error.message)
+      failures.push(`storage inventory: ${error.message}`)
+    } else {
+      const failedBuckets = new Set<string>()
+      for (const batch of storageRemovalBatches((objects ?? []) as UserStorageObject[])) {
+        if (failedBuckets.has(batch.bucket)) continue
+        const { error: removeError } = await adminClient.storage
+          .from(batch.bucket)
+          .remove(batch.names)
+        if (removeError) {
+          console.log(`Storage cleanup error for ${batch.bucket}:`, removeError.message)
+          failures.push(`storage ${batch.bucket}: ${removeError.message}`)
+          failedBuckets.add(batch.bucket)
+        }
+      }
     }
   }
 

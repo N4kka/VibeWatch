@@ -32,8 +32,15 @@ import {
   findDiagnostics,
   FindResponse,
   initialSeasonChunk,
+  ManualEpisodeContext,
   MapRow,
+  matchMovieByTitle,
+  MovieSearchCandidate,
+  normalizeManualEpisodeContext,
+  normalizeMovieTitles,
   normalizeShowIds,
+  RequestedMovieTitle,
+  resolveEpisodeForExpectedShow,
   resolveFromFind,
   sanitizeFind,
   SEASONS_PER_APPEND,
@@ -129,6 +136,23 @@ interface Body {
   populate_episodes?: boolean
   /** Un `import_jobs` proprio e in fase `resolving`: sblocca il budget da import. */
   job_id?: string
+  /**
+   * §7.1 film: titoli da risolvere per exact-match+anno (una `/search/movie` l'uno). E' la strada
+   * dei film dell'export TV Time, che non hanno NESSUN id esterno — solo uuid interni e nomi.
+   * Puo' essere l'unico campo della richiesta. Un titolo senza anno risponde `no_year` senza
+   * spendere: senza l'anno l'exact-match non e' "stretto", e' una scommessa.
+   */
+  movie_titles?: { key: string; title: string; year: number | null }[]
+  /**
+   * §7.4: una serie scelta dall'utente puo' soltanto filtrare i risultati esatti di `/find`
+   * degli episodi. Il contesto viene verificato contro job, mappa serie e staging prima di
+   * abilitare il retry di righe `not_found`/`ambiguous`.
+   */
+  manual_episode_context?: {
+    job_id: string
+    tvdb_series_id: number
+    tmdb_show_id: number
+  }
 }
 
 const ENTITY_TYPES: EntityType[] = ['series', 'episode', 'movie']
@@ -198,13 +222,30 @@ async function handle(req: Request): Promise<Response> {
   if (entities === null) {
     return jsonResponse({ error: 'entities must be [{tvdb_id, entity_type}], 1-50 items' }, 400)
   }
-  if (entities.length === 0 && requestedShowIds.length === 0) {
-    return jsonResponse({ error: 'entities or show_ids required' }, 400)
+  const manualContext = normalizeManualEpisodeContext(body.manual_episode_context, entities)
+  if (manualContext === null || (manualContext && body.job_id && body.job_id !== manualContext.job_id)) {
+    return jsonResponse({ error: 'invalid_manual_episode_context' }, 400)
+  }
+  const movieTitles = normalizeMovieTitles(body.movie_titles, MAX_ENTITIES_PER_REQUEST)
+  if (movieTitles === null) {
+    return jsonResponse(
+      { error: 'movie_titles must be [{key, title, year}], at most 50, year 1888-2100 or null' },
+      400,
+    )
+  }
+  if (entities.length === 0 && requestedShowIds.length === 0 && movieTitles.length === 0) {
+    return jsonResponse({ error: 'entities, show_ids or movie_titles required' }, 400)
   }
 
   const populateEpisodes = body.populate_episodes !== false
   const now = new Date()
   const deadline = Date.now() + DEADLINE_MS
+
+  if (manualContext && !await validateManualEpisodeContext(
+    supabase, manualContext, entities, userId, daServizio,
+  )) {
+    return jsonResponse({ error: 'invalid_manual_context' }, 403)
+  }
 
   // Il tetto da import si sblocca in due modi, con la stessa prova: un job vero in `resolving`.
   // Per un utente la verifica passa dal suo JWT (la policy decide, come dopo l'IDOR di
@@ -214,11 +255,12 @@ async function handle(req: Request): Promise<Response> {
   // e finirebbero fusi proprio nei giri notturni in cui contano.
   let perImport = false
   let importOwner: string | null = null
+  const effectiveJobId = manualContext?.job_id ?? body.job_id
   if (daServizio) {
-    importOwner = await importJobOwner(supabase, body.job_id)
+    importOwner = await importJobOwner(supabase, effectiveJobId)
     perImport = importOwner !== null
   } else {
-    perImport = await isImportInCorso(authHeader, body.job_id)
+    perImport = await isImportInCorso(authHeader, effectiveJobId)
   }
   const callerScope = perImport
     ? `import:${daServizio ? importOwner : userId}`
@@ -234,7 +276,7 @@ async function handle(req: Request): Promise<Response> {
 
   for (const entity of entities) {
     const row = stored.get(mapKey(entity.tvdb_id, entity.entity_type))
-    if (row && !shouldRetry(row, now)) {
+    if (row && !shouldRetry(row, now, manualContext !== undefined)) {
       resolved.push(row)
     } else {
       pending.push(entity)
@@ -251,6 +293,8 @@ async function handle(req: Request): Promise<Response> {
     upstream_calls: 0,
     shows_populated: 0,
     episodes_written: 0,
+    movie_titles_requested: 0,
+    movies_resolved_now: 0,
   }
 
   const remaining: RequestedEntity[] = []
@@ -296,7 +340,14 @@ async function handle(req: Request): Promise<Response> {
           + `?api_key=${TMDB_API_KEY}&external_source=tvdb_id`,
       ) ?? {})
       stats.upstream_calls++
-      esiti[index] = { row: resolveFromFind(entity.tvdb_id, entity.entity_type, find, now), find }
+      esiti[index] = {
+        row: manualContext
+          ? resolveEpisodeForExpectedShow(
+            entity.tvdb_id, manualContext.tmdb_show_id, find, now,
+          )
+          : resolveFromFind(entity.tvdb_id, entity.entity_type, find, now),
+        find,
+      }
     } catch (e) {
       // An unreachable or broken TMDB is not this caller's fault: give the budget back and let
       // the job retry the entity later rather than writing a `not_found` we would then cache.
@@ -341,13 +392,36 @@ async function handle(req: Request): Promise<Response> {
   }
 
   if (freshRows.length > 0) {
-    const { error } = await supabase
-      .from('tvdb_tmdb_map')
-      .upsert(freshRows, { onConflict: 'tvdb_id,entity_type' })
+    const { data, error } = await supabase.rpc('catalog_store_tvdb_map', {
+      p_rows: freshRows,
+    })
     if (error) {
-      console.error(`[catalog-resolve] map upsert failed: ${error.message}`)
+      console.error(`[catalog-resolve] race-safe map upsert failed: ${error.message}`)
       return jsonResponse({ error: 'write_failed', detail: error.message }, 500)
     }
+
+    const persistedRows = Array.isArray(data) ? data as MapRow[] : []
+    const persisted = new Map(
+      persistedRows.map((row) => [mapKey(row.tvdb_id, row.entity_type), row]),
+    )
+    const freshKeys = new Set(freshRows.map((row) => mapKey(row.tvdb_id, row.entity_type)))
+    if (persisted.size !== freshKeys.size || [...freshKeys].some((key) => !persisted.has(key))) {
+      return jsonResponse({ error: 'write_failed', detail: 'catalog map RPC returned incomplete rows' }, 500)
+    }
+
+    // La RPC puo' restituire un `found` scritto da un concorrente fra cache read e upsert. La
+    // risposta deve mostrare quella verita', non l'esito ormai obsoleto della nostra `/find`.
+    for (let i = 0; i < resolved.length; i++) {
+      const key = mapKey(resolved[i].tvdb_id, resolved[i].entity_type)
+      if (freshKeys.has(key)) resolved[i] = persisted.get(key)!
+    }
+    for (let i = diagnostics.length - 1; i >= 0; i--) {
+      const row = persisted.get(mapKey(diagnostics[i].tvdb_id, diagnostics[i].entity_type))
+      if (row?.resolution === 'found') diagnostics.splice(i, 1)
+    }
+    stats.resolved_now = persistedRows.filter((row) => row.resolution === 'found').length
+    stats.not_found = persistedRows.filter((row) => row.resolution === 'not_found').length
+    stats.ambiguous = persistedRows.filter((row) => row.resolution === 'ambiguous').length
   }
 
   // 3. §6, "Ottimizzazione": having resolved a show, pull its episodes in one go. This is what
@@ -363,6 +437,7 @@ async function handle(req: Request): Promise<Response> {
           .map((r) => r.tmdb_show_id as number)
         : []),
       ...requestedShowIds,
+      ...(manualContext ? [manualContext.tmdb_show_id] : []),
     ])]
 
     for (const showId of await filterShowsNeedingRefresh(supabase, showIds, now)) {
@@ -379,10 +454,86 @@ async function handle(req: Request): Promise<Response> {
     }
   }
 
+  // 4. §7.1 film: una `/search/movie` per titolo, exact-match+anno o niente. Stessa disciplina
+  //    delle `/find`: pool a cursore, budget, deadline; un errore upstream rimborsa e lascia il
+  //    titolo in `movie_remaining` perche' il chiamante (import-resolve) riprovi al giro dopo.
+  //    Un titolo senza anno risponde `no_year` senza spendere una chiamata.
+  interface MovieOutcome {
+    key: string
+    outcome: 'found' | 'not_found' | 'ambiguous' | 'no_year'
+    tmdb_movie_id: number | null
+    matched_title: string | null
+    candidates: number
+  }
+  const movieMatches: MovieOutcome[] = []
+  const movieRemaining: string[] = []
+
+  if (movieTitles.length > 0) {
+    const esitiFilm = new Array<MovieOutcome | undefined>(movieTitles.length)
+    let cursoreFilm = 0
+
+    async function risolviUnFilm(index: number): Promise<void> {
+      const richiesta = movieTitles![index]
+
+      if (richiesta.year === null) {
+        esitiFilm[index] = {
+          key: richiesta.key, outcome: 'no_year',
+          tmdb_movie_id: null, matched_title: null, candidates: 0,
+        }
+        return
+      }
+      if (upstreamRotto || budgetExhausted || Date.now() > deadline) return
+
+      const spend = await spendOne(supabase, callerScope, now, callerLimit)
+      if (!spend.allowed) {
+        budgetExhausted = true
+        return
+      }
+
+      try {
+        const search = await fetchJson<{ results?: MovieSearchCandidate[] }>(
+          `${TMDB_API_URL}/search/movie?api_key=${TMDB_API_KEY}`
+            + `&query=${encodeURIComponent(richiesta.title)}`
+            + `&primary_release_year=${richiesta.year}&include_adult=false`,
+        )
+        stats.upstream_calls++
+        const match = matchMovieByTitle(richiesta.title, search?.results ?? [])
+        esitiFilm[index] = { key: richiesta.key, ...match }
+      } catch (e) {
+        console.error(`[catalog-resolve] search/movie("${richiesta.title}") failed: ${e}`)
+        await refund(supabase, PROVIDER, spend.scopes)
+        upstreamRotto = true
+      }
+    }
+
+    await Promise.all(
+      Array.from({ length: Math.min(FIND_CONCURRENCY, movieTitles.length) }, async () => {
+        while (true) {
+          const index = cursoreFilm++
+          if (index >= movieTitles.length) return
+          await risolviUnFilm(index)
+        }
+      }),
+    )
+
+    for (const [index, richiesta] of movieTitles.entries()) {
+      const esito = esitiFilm[index]
+      if (!esito) {
+        movieRemaining.push(richiesta.key)
+        continue
+      }
+      movieMatches.push(esito)
+      if (esito.outcome === 'found') stats.movies_resolved_now++
+    }
+    stats.movie_titles_requested = movieTitles.length
+  }
+
   return jsonResponse({
     resolved,
     remaining,
     diagnostics,
+    movie_matches: movieMatches,
+    movie_remaining: movieRemaining,
     budget_exhausted: budgetExhausted,
     stats,
   }, 200)
@@ -414,6 +565,63 @@ function normalizeEntities(raw: RequestedEntity[] | undefined): RequestedEntity[
 const mapKey = (tvdbId: number, entityType: EntityType) => `${tvdbId}:${entityType}`
 
 // ------------------------------------------------------------------------- database
+
+/**
+ * A manual hint is allowed to affect the shared map only when it is anchored to the caller's
+ * real import and to pending rows of the selected TVDB series. Without these checks any signed-in
+ * account could submit an arbitrary show id and poison a global ambiguous episode mapping.
+ */
+async function validateManualEpisodeContext(
+  admin: ReturnType<typeof adminClient>,
+  context: ManualEpisodeContext,
+  entities: RequestedEntity[],
+  userId: string,
+  serviceCaller: boolean,
+): Promise<boolean> {
+  const { data: job, error: jobError } = await admin
+    .from('import_jobs')
+    .select('user_id, phase, status')
+    .eq('id', context.job_id)
+    .maybeSingle()
+  if (jobError || !job || job.phase !== 'resolving' || job.status !== 'running') {
+    console.warn(`[catalog-resolve] manual context job rejected: ${jobError?.message ?? 'state'}`)
+    return false
+  }
+  if (!serviceCaller && job.user_id !== userId) return false
+
+  const { data: seriesMap, error: seriesError } = await admin
+    .from('tvdb_tmdb_map')
+    .select('tvdb_id')
+    .eq('tvdb_id', context.tvdb_series_id)
+    .eq('entity_type', 'series')
+    .eq('resolution', 'found')
+    .eq('tmdb_show_id', context.tmdb_show_id)
+    .maybeSingle()
+  if (seriesError || !seriesMap) {
+    console.warn(`[catalog-resolve] manual context series rejected: ${seriesError?.message ?? 'map'}`)
+    return false
+  }
+
+  const wanted = new Set(entities.map((entity) => entity.tvdb_id))
+  const { data: staging, error: stagingError } = await admin
+    .from('import_staging')
+    .select('raw')
+    .eq('job_id', context.job_id)
+    .eq('status', 'pending')
+    .eq('raw->>row_kind', 'event')
+    .eq('raw->>tvdb_series_id', String(context.tvdb_series_id))
+    .in('raw->>tvdb_episode_id', [...wanted].map(String))
+    .limit(5_000)
+  if (stagingError) {
+    console.warn(`[catalog-resolve] manual context staging rejected: ${stagingError.message}`)
+    return false
+  }
+
+  const present = new Set(
+    (staging ?? []).map((row) => Number((row.raw as Record<string, unknown>).tvdb_episode_id)),
+  )
+  return [...wanted].every((id) => present.has(id))
+}
 
 async function readStoredRows(
   supabase: ReturnType<typeof adminClient>,

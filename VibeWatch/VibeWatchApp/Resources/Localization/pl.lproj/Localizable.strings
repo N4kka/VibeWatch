@@ -400,6 +400,16 @@
 "import.report.ratingsUnresolved" = "Nie udało się dopasować %d ocen.";
 "import.report.favoritesApplied" = "Zaimportowano %d ulubionych do wolnych miejsc.";
 "import.report.favoriteMoviesUnsupported" = "Nie można zaimportować %d ulubionych filmów z TV Time.";
+"import.report.moviesApplied" = "%d filmów zaimportowano z datami obejrzenia.";
+"import.report.moviesWatchlistApplied" = "%d filmów dodano do listy „Do obejrzenia”.";
+"import.report.moviesUnresolved" = "%d filmów nie rozpoznano (tytuł i rok nie zgadzają się w TMDB).";
+"import.resolve.button" = "Rozwiąż";
+"import.resolve.title" = "Który serial to „%@”?";
+"import.resolve.hint" = "Odcinki zostaną ponownie sprawdzone przy użyciu ich dokładnych identyfikatorów TVDB. Wszystko, czego TMDB nie potwierdzi, pozostanie w raporcie.";
+"import.resolve.searchPlaceholder" = "Szukaj serialu w TMDB";
+"import.resolve.empty" = "Brak wyników.";
+"import.resolve.failed" = "Nie udało się rozwiązać:";
+"import.resolve.searchFailed" = "Wyszukiwanie nie powiodło się.";
 "import.report.statusesApplied" = "%d statusów seriali przywrócono (lista i archiwum).";
 "import.report.statusesUnresolved" = "%d statusów seriali nie udało się zastosować.";
 "import.report.unresolvedTitle" = "Nie udało się dopasować %d odcinków";
@@ -782,6 +792,12 @@
 "profile.stats.shows" = "Seriale";
 "profile.stats.episodes" = "Odcinki";
 "profile.stats.loadFailed" = "Nie udało się wczytać statystyk.";
+"profile.stats.advanced.title" = "Zaawansowane statystyki";
+"profile.stats.advanced.byGenre" = "Według gatunku";
+"profile.stats.advanced.byDecade" = "Według dekady";
+"profile.stats.advanced.ratings" = "Twoje oceny";
+"profile.stats.advanced.noGenre" = "%d seriali bez informacji o gatunku";
+"profile.stats.advanced.proLocked" = "Zaawansowane statystyki są częścią Pro.";
 
 // Blocco 9, seconda meta' (§9.3): diario e modifica dei favorites
 "diary.title" = "Dziennik";

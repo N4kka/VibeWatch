@@ -179,6 +179,55 @@ final class FavoritesRatingsActionsTests: XCTestCase {
         XCTAssertNil(UserStats(json: ["episodes_watched": 3]))
     }
 
+    // MARK: - Stats avanzate (§9.3/§10)
+
+    /// Le ripartizioni avanzate si decodificano e mantengono l'ordinamento del server.
+    func testLeRipartizioniAvanzateSiLeggonoNellOrdineDelServer() {
+        let stats = UserStats(json: [
+            "watch_time_seconds": 3600,
+            "per_genere": [["genre_id": 10765, "shows": 4, "seconds": 7200],
+                           ["genre_id": 18, "shows": 9, "seconds": 3600]],
+            "per_decade": [["decade": 2010, "shows": 12, "seconds": 9000]],
+            "voti_distribuzione": [["rating": 7, "count": 3]],
+            "shows_senza_genere": 1,
+        ])
+        XCTAssertEqual(stats?.perGenere, [
+            UserStats.GenreSlice(genreId: 10765, shows: 4, seconds: 7200),
+            UserStats.GenreSlice(genreId: 18, shows: 9, seconds: 3600),
+        ], "l'ordinamento e' del server e non si riordina qui")
+        XCTAssertEqual(stats?.perDecade, [UserStats.DecadeSlice(decade: 2010, shows: 12, seconds: 9000)])
+        XCTAssertEqual(stats?.votiDistribuzione, [UserStats.RatingBucket(rating: 7, count: 3)])
+        XCTAssertEqual(stats?.showsSenzaGenere, 1)
+        XCTAssertEqual(stats?.hasAdvancedBreakdowns, true)
+    }
+
+    /// Un utente senza niente da ripartire non ha la sezione: vuoto non e' un errore.
+    func testSenzaRipartizioniLaSezioneNonEsiste() {
+        let stats = UserStats(json: ["watch_time_seconds": 0])
+        XCTAssertEqual(stats?.hasAdvancedBreakdowns, false)
+    }
+
+    /// I generi TV di TMDB (10759-10768) hanno un nome; un id sconosciuto si dichiara come
+    /// "#id" invece di sparire o di rompere la lista.
+    func testIGeneriTVHannoUnNomeEQuelliIgnotiSiDichiarano() {
+        XCTAssertEqual(AdvancedStatsPresentation.genreLabel(10765), "Sci-Fi & Fantasy")
+        XCTAssertEqual(AdvancedStatsPresentation.genreLabel(10759), "Action & Adventure")
+        XCTAssertEqual(AdvancedStatsPresentation.genreLabel(18), "Drama")
+        XCTAssertEqual(AdvancedStatsPresentation.genreLabel(424242), "#424242")
+    }
+
+    /// Le etichette derivate: decade neutra, stelle a mezzi passi, ore da secondi VERI —
+    /// sotto l'ora si dichiara "<1 h", mai uno "0 h" su un dato reale.
+    func testLeEtichetteDelleRipartizioni() {
+        XCTAssertEqual(AdvancedStatsPresentation.decadeLabel(1990), "1990s")
+        XCTAssertEqual(AdvancedStatsPresentation.starsLabel(7), "3.5")
+        XCTAssertEqual(AdvancedStatsPresentation.starsLabel(10), "5")
+        XCTAssertEqual(AdvancedStatsPresentation.starsLabel(1), "0.5")
+        XCTAssertEqual(AdvancedStatsPresentation.hoursLabel(0), "0 h")
+        XCTAssertEqual(AdvancedStatsPresentation.hoursLabel(1800), "<1 h")
+        XCTAssertEqual(AdvancedStatsPresentation.hoursLabel(7200), "2 h")
+    }
+
     /// La griglia dei totali nella dashboard: un fetch fallito e' `.failed` dichiarato, mai una
     /// griglia di zeri con la faccia di un dato.
     func testLeStatsFalliteSiDichiarano() async {

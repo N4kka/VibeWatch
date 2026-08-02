@@ -412,6 +412,16 @@
 "import.report.ratingsUnresolved" = "%d ratings could not be matched.";
 "import.report.favoritesApplied" = "%d favorites imported into free slots.";
 "import.report.favoriteMoviesUnsupported" = "%d movie favorites can't be imported from TV Time.";
+"import.report.moviesApplied" = "%d movies imported with their watch dates.";
+"import.report.moviesWatchlistApplied" = "%d movies added to your watchlist.";
+"import.report.moviesUnresolved" = "%d movies not recognized (title and year don't match on TMDB).";
+"import.resolve.button" = "Resolve";
+"import.resolve.title" = "Which series is “%@”?";
+"import.resolve.hint" = "Episodes are checked again using their exact TVDB IDs. Anything TMDB cannot confirm will stay in the report.";
+"import.resolve.searchPlaceholder" = "Search the series on TMDB";
+"import.resolve.empty" = "No results.";
+"import.resolve.failed" = "Could not resolve:";
+"import.resolve.searchFailed" = "Search failed.";
 "import.report.statusesApplied" = "%d series statuses restored (watchlist and archive).";
 "import.report.statusesUnresolved" = "%d series statuses could not be applied.";
 "import.report.unresolvedTitle" = "%d episodes could not be matched";
@@ -783,6 +793,12 @@
 "profile.stats.shows" = "Shows";
 "profile.stats.episodes" = "Episodes";
 "profile.stats.loadFailed" = "Couldn't load stats.";
+"profile.stats.advanced.title" = "Advanced stats";
+"profile.stats.advanced.byGenre" = "By genre";
+"profile.stats.advanced.byDecade" = "By decade";
+"profile.stats.advanced.ratings" = "Your ratings";
+"profile.stats.advanced.noGenre" = "%d shows without genre info";
+"profile.stats.advanced.proLocked" = "Advanced stats are part of Pro.";
 
 // Blocco 9, seconda meta' (§9.3): diario e modifica dei favorites
 "diary.title" = "Diary";

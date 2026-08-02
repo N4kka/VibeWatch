@@ -20,6 +20,7 @@ import { isServiceCaller } from '../_shared/cronAuth.ts'
 import {
   buildBatch,
   buildFavoriteBatch,
+  buildMovieBatch,
   buildRatingBatch,
   buildStatusBatch,
   type EpisodeMapEntry,
@@ -107,6 +108,11 @@ serve(async (req: Request) => {
       const esitoFavorites = await scriviFavorites(admin, caller, daServizio, jobId,
         job.user_id, job.totals as Record<string, unknown> ?? {})
       if (esitoFavorites) return esitoFavorites
+
+      // E i film (§7.1): watch_events + liste legacy, vedi `scriviFilm`.
+      const esitoFilm = await scriviFilm(admin, caller, daServizio, jobId,
+        job.user_id, job.totals as Record<string, unknown> ?? {})
+      if (esitoFilm) return esitoFilm
 
       const { error } = await admin.from('import_jobs')
         .update({ phase: 'recomputing', checkpoint: {} }).eq('id', jobId)
@@ -604,6 +610,177 @@ async function scriviFavorites(
     applicati: written.length,
     slot_pieni: slotPieni,
     gia_in_app: giaInApp,
+    totals,
+  }, 200)
+}
+
+/**
+ * L'id della lista legacy canonica di un tipo core, creandola se non esiste.
+ *
+ * La canonica è la più vecchia attiva — stessa regola di `reconcileCoreListIdentities` nel
+ * client. La creazione è protetta dall'indice `idx_lists_one_active_default_per_user_type`:
+ * se una corsa (o un replay dopo un crash) la crea due volte, la seconda INSERT esplode 23505
+ * e si rilegge — non si finisce mai con due liste, né con un id che non esiste.
+ */
+async function ensureLegacyList(
+  admin: ReturnType<typeof adminClient>,
+  userId: string,
+  type: 'seen' | 'watchlist',
+  name: string,
+): Promise<string | null> {
+  const leggi = async (): Promise<string | null> => {
+    const { data, error } = await admin
+      .from('lists')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('type', type)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: true })
+      .order('id', { ascending: true })
+      .limit(1)
+    if (error) throw new Error(`lettura lista ${type} fallita: ${error.message}`)
+    return (data?.[0]?.id as string | undefined) ?? null
+  }
+
+  const esistente = await leggi()
+  if (esistente !== null) return esistente
+
+  const { error } = await admin.from('lists').insert({
+    id: crypto.randomUUID(),
+    user_id: userId,
+    name,
+    type,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    synced_at: new Date().toISOString(),
+  })
+  if (error) {
+    // 23505 = qualcun altro l'ha appena creata: bene, si rilegge. Tutto il resto è un errore.
+    if (!error.message.includes('idx_lists_one_active_default_per_user_type')) {
+      throw new Error(`creazione lista ${type} fallita: ${error.message}`)
+    }
+  }
+  return await leggi()
+}
+
+/**
+ * La coda dei film (§7.1): le righe `row_kind = 'movie'` risolte diventano `watch_events`
+ * (i visti, con le date vere) e righe nelle liste legacy — "visti" per i visti, watchlist per
+ * i da-vedere. Destinazione decisa dall'utente il 2026-08-02; le regole di non-sovrascrittura
+ * (una riga di lista esistente, viva o lapide, non si tocca) stanno in `buildMovieBatch`.
+ */
+async function scriviFilm(
+  admin: ReturnType<typeof adminClient>,
+  caller: ReturnType<typeof callerClient>,
+  daServizio: boolean,
+  jobId: string,
+  userId: string,
+  totaliCorrenti: Record<string, unknown>,
+): Promise<Response | null> {
+  const { data: pending, error: readError } = await admin
+    .from('import_staging')
+    .select('row_index, raw, resolved, status')
+    .eq('job_id', jobId)
+    .eq('status', 'resolved')
+    .eq('raw->>row_kind', 'movie')
+    .order('row_index', { ascending: true })
+    .limit(ROWS_PER_INVOCATION)
+
+  if (readError) throw new Error(`lettura film fallita: ${readError.message}`)
+  if (!pending || pending.length === 0) return null
+
+  const righe = pending as StagingRow[]
+  const servonoVisti = righe.some((r) => (r.raw as Record<string, unknown>).movie_kind === 'seen')
+  const serveWatchlist = righe.some(
+    (r) => (r.raw as Record<string, unknown>).movie_kind === 'watchlist')
+
+  // I nomi sono quelli delle default del client (`defaultList(for:)`): se la lista non esiste
+  // ancora da nessuna parte, quella creata qui è la stessa che l'app avrebbe creato.
+  const seenListId = servonoVisti ? await ensureLegacyList(admin, userId, 'seen', 'Seen') : null
+  const watchlistListId = serveWatchlist
+    ? await ensureLegacyList(admin, userId, 'watchlist', 'Watchlist')
+    : null
+
+  // Cosa c'è già in ciascuna lista, LAPIDI COMPRESE: un film tolto in app non risorge.
+  const esistenti = async (listId: string | null): Promise<Set<number>> => {
+    if (listId === null) return new Set()
+    const { data, error } = await admin
+      .from('list_items')
+      .select('media_id')
+      .eq('list_id', listId)
+      .eq('media_type', 'movie')
+    if (error) throw new Error(`lettura item di lista fallita: ${error.message}`)
+    return new Set((data ?? []).map((r) => r.media_id as number))
+  }
+
+  const outcome = buildMovieBatch(righe, userId, {
+    seenListId,
+    watchlistListId,
+    esistentiVisti: await esistenti(seenListId),
+    esistentiWatchlist: await esistenti(watchlistListId),
+  })
+
+  // Quanti eventi ci sono già (re-import): la stessa onestà dei conteggi degli episodi.
+  const giaPresenti = await countExisting(admin, userId, outcome.eventKeys)
+  const rifiutiPrima = await countRejected(admin, userId)
+
+  for (let i = 0; i < outcome.mutations.length; i += MUTATIONS_PER_CALL) {
+    const lotto = outcome.mutations.slice(i, i + MUTATIONS_PER_CALL)
+    const { error } = daServizio
+      ? await admin.rpc('import_apply_mutations', { p_user: userId, batch: lotto })
+      : await caller.rpc('apply_mutations', { batch: lotto })
+    if (error) throw new Error(`apply_mutations ha rifiutato i film a ${i}: ${error.message}`)
+  }
+
+  const nuoviRifiuti = (await countRejected(admin, userId)) - rifiutiPrima
+  if (nuoviRifiuti > 0) {
+    throw new Error(
+      `${nuoviRifiuti} film rifiutati da apply_mutations: guardare sync_rejected_mutations`,
+    )
+  }
+
+  if (outcome.written.length > 0) {
+    const { error } = await admin.from('import_staging')
+      .update({ status: 'written', error: null })
+      .eq('job_id', jobId)
+      .in('row_index', outcome.written)
+    if (error) throw new Error(`marcatura film scritti fallita: ${error.message}`)
+  }
+
+  for (const { row_index, reason } of outcome.skipped) {
+    const { error } = await admin.from('import_staging')
+      .update({ status: 'skipped', error: `film: ${reason}` })
+      .eq('job_id', jobId).eq('row_index', row_index)
+    if (error) throw new Error(`marcatura film ${row_index} fallita: ${error.message}`)
+  }
+
+  const prima = totaliCorrenti as Record<string, number>
+  const visti = outcome.written.filter((i) =>
+    (righe.find((r) => r.row_index === i)?.raw as Record<string, unknown>)?.movie_kind === 'seen')
+  const totals = {
+    ...totaliCorrenti,
+    movies_events_written: (prima.movies_events_written ?? 0) + visti.length - giaPresenti,
+    movies_events_already_present: (prima.movies_events_already_present ?? 0) + giaPresenti,
+    movies_watchlist_written:
+      (prima.movies_watchlist_written ?? 0) + (outcome.written.length - visti.length),
+    movies_list_already_in_app:
+      (prima.movies_list_already_in_app ?? 0) + outcome.listaGiaInApp
+      + outcome.skipped.filter((s) => s.reason === 'gia_in_lista').length,
+    movies_not_written: (prima.movies_not_written ?? 0)
+      + outcome.skipped.filter((s) => s.reason !== 'gia_in_lista').length,
+  }
+
+  const { error: updateError } = await admin.from('import_jobs')
+    .update({ totals }).eq('id', jobId)
+  if (updateError) throw new Error(`totali non salvati: ${updateError.message}`)
+
+  return jsonResponse({
+    done: false,
+    phase: 'writing',
+    film: true,
+    scritti: outcome.written.length,
+    gia_presenti: giaPresenti,
+    saltati: outcome.skipped.length,
     totals,
   }, 200)
 }

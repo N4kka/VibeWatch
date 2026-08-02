@@ -102,6 +102,67 @@ final class LocalTrackingRepository: TrackingRepositoryProtocol {
             .compactMap(Self.entry(from:))
     }
 
+    // MARK: - Derivazione per la fusione ListsView↔Tracking
+
+    /// Una riga TV già classificata secondo le regole della fusione (2026-08-02, decise
+    /// dall'utente): watchlist TV = bucket `not_started` ∪ `for_later`, seen TV = `up_to_date`;
+    /// archiviate e droppate non compaiono, una serie a metà è "in corso" e non è ancora "vista".
+    struct FusedListRow {
+        let showId: Int
+        let title: String
+        let posterPath: String?
+        /// Per una "vista" è quando l'hai finita (con ripieghi onesti), per le altre
+        /// l'ultimo aggiornamento dello stato.
+        let addedAt: Date
+        let isSeen: Bool
+    }
+
+    /// Le righe TV che ListsView, le stats locali e la personalizzazione Discovery derivano
+    /// dallo specchio `tv_tracking` invece che da `list_items`.
+    ///
+    /// UN punto solo apposta: dopo la fusione, `AnalyticsInsightsService` e
+    /// `UserPreferenceManager` leggevano ancora le liste legacy e vedevano meno serie di quelle
+    /// che ListsView mostra — la copia che diverge, di nuovo. Chiunque abbia bisogno delle "TV
+    /// in watchlist/viste" passa da qui; `ListManager` ci mappa sopra i suoi `MediaListItem`.
+    func fusedListRows(userId: String) async throws -> [FusedListRow] {
+        let sql = """
+            SELECT t.tmdb_show_id, t.bucket,
+                   COALESCE(lt.title, t.show_name) AS title,
+                   t.show_poster_path, t.updated_at, t.completed_at, t.last_watched_at
+              FROM tv_tracking t
+              LEFT JOIN localized_titles lt
+                ON lt.media_type = 'tv' AND lt.tmdb_id = t.tmdb_show_id AND lt.language = ?
+             WHERE t.user_id = ? AND t.bucket IN ('not_started', 'for_later', 'up_to_date')
+        """
+
+        return try await sqlite.queryRaw(sql, parameters: [language(), userId]).compactMap { row in
+            guard let showId = Self.int(row["tmdb_show_id"]),
+                  let bucket = row["bucket"] as? String,
+                  // Senza nome non c'è niente da mostrare: capita solo se il catalogo non ha
+                  // ancora la serie, e in quel caso è la card del Tracking il posto dove appare.
+                  let title = row["title"] as? String, !title.isEmpty else { return nil }
+
+            let isSeen = bucket == "up_to_date"
+            let addedAt: Date
+            if isSeen {
+                addedAt = Self.date(row["completed_at"])
+                    ?? Self.date(row["last_watched_at"])
+                    ?? Self.date(row["updated_at"])
+                    ?? Date()
+            } else {
+                addedAt = Self.date(row["updated_at"]) ?? Date()
+            }
+
+            return FusedListRow(
+                showId: showId,
+                title: title,
+                posterPath: row["show_poster_path"] as? String,
+                addedAt: addedAt,
+                isSeen: isSeen
+            )
+        }
+    }
+
     // MARK: - Raggruppamento
 
     private func group(rows: [TrackingRow]) -> [(bucket: TrackingBucket, rows: [TrackingRow])] {

@@ -137,6 +137,70 @@ final class SQLiteWritePathTests: XCTestCase {
         }
     }
 
+    /// When a transient local core-list id is reconciled with the canonical id, a duplicate
+    /// natural key must not make the UPDATE fail and the subsequent list DELETE cascade away
+    /// the other, unique items from the transient list.
+    func testCoreListIdentityMergePreservesUniqueItemsWhenOneItemCollides() async throws {
+        let userId = "list-merge-user-\(UUID().uuidString)"
+        let canonicalId = "canonical-\(UUID().uuidString)"
+        let transientId = "transient-\(UUID().uuidString)"
+
+        try await service.upsert(table: "profiles", rows: [["id": userId]])
+        try await service.upsert(table: "lists", rows: [[
+            "id": canonicalId, "user_id": userId, "name": "Watchlist", "type": "watchlist"
+        ]])
+        // `upsert` marks pulled rows as synced by design; this fixture specifically represents a
+        // local-only list, so insert it through the raw write path and leave synced_at NULL.
+        try await service.executeWrite(
+            "INSERT INTO lists (id, user_id, name, type) VALUES (?, ?, ?, ?)",
+            parameters: [transientId, userId, "Local", "custom"]
+        )
+        try await service.upsert(table: "list_items", rows: [
+            [
+                "id": "canonical-duplicate-\(UUID().uuidString)",
+                "list_id": canonicalId,
+                "user_id": userId,
+                "media_id": 101,
+                "media_type": "movie",
+                "title": "Already canonical"
+            ],
+            [
+                "id": "transient-duplicate-\(UUID().uuidString)",
+                "list_id": transientId,
+                "user_id": userId,
+                "media_id": 101,
+                "media_type": "movie",
+                "title": "Same natural key"
+            ],
+            [
+                "id": "transient-unique-\(UUID().uuidString)",
+                "list_id": transientId,
+                "user_id": userId,
+                "media_id": 202,
+                "media_type": "movie",
+                "title": "Must survive"
+            ]
+        ])
+
+        try ListManager.mergeUnsyncedLocalList(
+            from: transientId,
+            into: canonicalId,
+            db: service
+        )
+
+        let canonicalItems = try await service.queryRaw(
+            "SELECT media_id FROM list_items WHERE list_id = ? ORDER BY media_id",
+            parameters: [canonicalId]
+        )
+        let transientLists = try await service.queryRaw(
+            "SELECT id FROM lists WHERE id = ?",
+            parameters: [transientId]
+        )
+
+        XCTAssertEqual(canonicalItems.compactMap { $0["media_id"] as? Int }, [101, 202])
+        XCTAssertTrue(transientLists.isEmpty, "the transient local list should be removed only after its items converge")
+    }
+
     // MARK: - STAB-002: transaction atomicity
 
     /// A transaction that throws part-way must leave NO rows behind. The old async transaction()

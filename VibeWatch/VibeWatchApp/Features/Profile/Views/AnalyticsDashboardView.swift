@@ -315,6 +315,8 @@ struct AnalyticsDashboardView: View {
 
             serverTotalsGrid
 
+            advancedStatsSection
+
             // Header with timeframe picker
             HStack {
                 Text("Your Activity")
@@ -420,6 +422,22 @@ struct AnalyticsDashboardView: View {
         f.unitsStyle = .abbreviated
         return f
     }()
+
+    /// §9.3/§10: le ripartizioni avanzate (genere/decade/distribuzione voti) sono Pro. Sono
+    /// numeri del server come i totali qui sopra (§13.7), quindi anche loro stanno FUORI dal
+    /// selettore di periodo. Vuoto = niente sezione (come le liste pubbliche nel profilo
+    /// altrui): l'errore l'ha già dichiarato la griglia dei totali, e un pannello vuoto
+    /// venduto come dato sarebbe la bugia opposta.
+    @ViewBuilder
+    private var advancedStatsSection: some View {
+        if case .loaded(let stats) = serverStats.phase, stats.hasAdvancedBreakdowns {
+            if isPro {
+                AdvancedStatsCard(stats: stats)
+            } else {
+                AdvancedStatsLockedCard()
+            }
+        }
+    }
 
     // MARK: - Loading/Error/Empty Views
 
@@ -794,6 +812,176 @@ struct MoodAnalysisCard: View {
                     }
                 }
             }
+        }
+        .padding(16)
+        .background(RoundedRectangle(cornerRadius: 16).fill(Color.white.opacity(0.05)))
+    }
+}
+
+// MARK: - Advanced Stats (§9.3/§10, Pro)
+
+extension UserStats {
+    /// C'è almeno una ripartizione da mostrare? Un utente appena arrivato non ha niente da
+    /// ripartire, e per lui la sezione non esiste — vuoto non è un errore.
+    var hasAdvancedBreakdowns: Bool {
+        !perGenere.isEmpty || !perDecade.isEmpty || !votiDistribuzione.isEmpty
+    }
+}
+
+/// La presentazione pura delle ripartizioni: etichette e ripieghi derivati dal modello senza
+/// montare la view, così i test la coprono con un XCTAssertEqual.
+enum AdvancedStatsPresentation {
+    /// Nome del genere, o l'id come ripiego dichiarato: un genere nuovo di TMDB non deve
+    /// rompere la lista né sparire in silenzio.
+    static func genreLabel(_ id: Int) -> String {
+        TMDBGenres.name(for: id) ?? "#\(id)"
+    }
+
+    /// "1990s": etichetta neutra, identica in tutte le lingue.
+    static func decadeLabel(_ decade: Int) -> String { "\(decade)s" }
+
+    /// Da 1-10 (mezzi passi di `user_ratings`) alle stelle mostrate: 7 → "3.5", 10 → "5".
+    static func starsLabel(_ rating: Int) -> String {
+        rating.isMultiple(of: 2) ? "\(rating / 2)" : "\(rating / 2).5"
+    }
+
+    /// Ore intere dai secondi VERI (§13.7). Sotto l'ora si dichiara "<1 h": un "0 h" su un
+    /// dato reale direbbe "niente" dove c'è qualcosa.
+    static func hoursLabel(_ seconds: Int) -> String {
+        if seconds > 0 && seconds < 3600 { return "<1 h" }
+        return "\(seconds / 3600) h"
+    }
+}
+
+/// Le tre ripartizioni Pro, coi numeri del server: barre proporzionali ai secondi (genere e
+/// decade) e alla frequenza (voti). L'ordinamento è quello della risposta e non si riordina.
+struct AdvancedStatsCard: View {
+    let stats: UserStats
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Image(systemName: "chart.bar.fill")
+                    .foregroundColor(.theme.accentOrange)
+                Text("profile.stats.advanced.title".localized)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.white)
+                Spacer()
+            }
+
+            if !stats.perGenere.isEmpty {
+                breakdown(
+                    title: "profile.stats.advanced.byGenre".localized,
+                    rows: stats.perGenere.map { slice in
+                        BreakdownRow(
+                            id: "genre-\(slice.genreId)",
+                            label: AdvancedStatsPresentation.genreLabel(slice.genreId),
+                            weight: slice.seconds,
+                            value: AdvancedStatsPresentation.hoursLabel(slice.seconds)
+                        )
+                    }
+                )
+            }
+
+            if !stats.perDecade.isEmpty {
+                breakdown(
+                    title: "profile.stats.advanced.byDecade".localized,
+                    rows: stats.perDecade.map { slice in
+                        BreakdownRow(
+                            id: "decade-\(slice.decade)",
+                            label: AdvancedStatsPresentation.decadeLabel(slice.decade),
+                            weight: slice.seconds,
+                            value: AdvancedStatsPresentation.hoursLabel(slice.seconds)
+                        )
+                    }
+                )
+            }
+
+            if !stats.votiDistribuzione.isEmpty {
+                breakdown(
+                    title: "profile.stats.advanced.ratings".localized,
+                    rows: stats.votiDistribuzione.map { bucket in
+                        BreakdownRow(
+                            id: "rating-\(bucket.rating)",
+                            label: "★ " + AdvancedStatsPresentation.starsLabel(bucket.rating),
+                            weight: bucket.count,
+                            value: "\(bucket.count)"
+                        )
+                    }
+                )
+            }
+
+            if stats.showsSenzaGenere > 0 {
+                // Le serie il cui catalogo non ha (ancora) i generi: dichiarate, non sparite.
+                Text(String(format: "profile.stats.advanced.noGenre".localized,
+                            stats.showsSenzaGenere))
+                    .font(.system(size: 11))
+                    .foregroundColor(.white.opacity(0.4))
+            }
+        }
+        .padding(16)
+        .background(RoundedRectangle(cornerRadius: 16).fill(Color.white.opacity(0.05)))
+    }
+
+    private struct BreakdownRow: Identifiable {
+        let id: String
+        let label: String
+        let weight: Int
+        let value: String
+    }
+
+    private func breakdown(title: String, rows: [BreakdownRow]) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(.white.opacity(0.5))
+                .textCase(.uppercase)
+            let massimo = max(rows.map(\.weight).max() ?? 1, 1)
+            ForEach(rows) { row in
+                HStack(spacing: 8) {
+                    Text(row.label)
+                        .font(.system(size: 12))
+                        .foregroundColor(.white.opacity(0.8))
+                        .frame(width: 110, alignment: .leading)
+                        .lineLimit(1)
+                    GeometryReader { geometry in
+                        ZStack(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: 3)
+                                .fill(Color.white.opacity(0.08))
+                            RoundedRectangle(cornerRadius: 3)
+                                .fill(Color.theme.accentOrange.opacity(0.8))
+                                .frame(width: geometry.size.width
+                                    * CGFloat(row.weight) / CGFloat(massimo))
+                        }
+                    }
+                    .frame(height: 6)
+                    Text(row.value)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.white.opacity(0.5))
+                        .frame(width: 48, alignment: .trailing)
+                }
+            }
+        }
+    }
+}
+
+/// Il cancello di §10: la sezione esiste anche per chi non è Pro, ma dichiara cosa manca
+/// invece di mostrare un buco — un utente free deve poter sapere che il dato c'è.
+struct AdvancedStatsLockedCard: View {
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "lock.fill")
+                .font(.system(size: 18))
+                .foregroundColor(.theme.accentOrange)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("profile.stats.advanced.title".localized)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white)
+                Text("profile.stats.advanced.proLocked".localized)
+                    .font(.system(size: 12))
+                    .foregroundColor(.white.opacity(0.5))
+            }
+            Spacer()
         }
         .padding(16)
         .background(RoundedRectangle(cornerRadius: 16).fill(Color.white.opacity(0.05)))

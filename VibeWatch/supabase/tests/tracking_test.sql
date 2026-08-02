@@ -359,8 +359,41 @@ select t.eq((public.import_report('aaaaaaaa-0000-4000-8000-000000000001')->>'vot
 select t.eq(public.import_report('aaaaaaaa-0000-4000-8000-000000000001')->>'voti_importati',
             'false', 'un job VECCHIO (stelle rinviate al blocco 9) resta false da solo: il suo report '
             'dice la verita'' di quando e'' girato');
+-- §7.1 film (2026-08-02, import-write v7): la pipeline li importa. Il job 001 non ha righe
+-- film: zeri VERI, con `film_supportati` a true — "non ne avevi", non "non supportato".
 select t.eq(public.import_report('aaaaaaaa-0000-4000-8000-000000000001')->>'film_supportati',
-            'false', 'zero film non deve sembrare "non ne avevi": i film non si importano ancora');
+            'true', 'i film ora si importano: supportati anche quando non ce ne sono');
+select t.eq((public.import_report('aaaaaaaa-0000-4000-8000-000000000001')->>'film_importati')::int,
+            0, 'zero film visti importati per un job senza righe film: zero vero');
+
+-- I quattro esiti della coda film su righe sintetiche: visto scritto, watchlist scritta,
+-- gia' in lista (non e' una perdita: sta FUORI dall'elenco), non risolto (nell'elenco, col
+-- titolo e il motivo — exact-match+anno o niente).
+insert into public.import_staging (job_id, row_index, raw, resolved, status, error) values
+  ('aaaaaaaa-0000-4000-8000-000000000001', 90,
+   '{"row_kind":"movie","movie_kind":"seen","title":"El Camino: A Breaking Bad Movie","tvtime_movie_uuid":"u-ec","happened_at":"2019-10-25 05:58:42"}'::jsonb,
+   '{"tmdb_movie_id":559969}'::jsonb, 'written', null),
+  ('aaaaaaaa-0000-4000-8000-000000000001', 91,
+   '{"row_kind":"movie","movie_kind":"watchlist","title":"Haikyuu!! The Movie","tvtime_movie_uuid":"u-hk","happened_at":"2024-09-14 19:17:59"}'::jsonb,
+   '{"tmdb_movie_id":1}'::jsonb, 'written', null),
+  ('aaaaaaaa-0000-4000-8000-000000000001', 92,
+   '{"row_kind":"movie","movie_kind":"watchlist","title":"The Invention of Lying","tvtime_movie_uuid":"u-il","happened_at":"2022-01-15 12:57:31"}'::jsonb,
+   '{"tmdb_movie_id":2}'::jsonb, 'skipped', 'film: gia_in_lista'),
+  ('aaaaaaaa-0000-4000-8000-000000000001', 93,
+   '{"row_kind":"movie","movie_kind":"seen","title":"メイドインアビス 旅立ちの夜明け","tvtime_movie_uuid":"u-ma","happened_at":"2020-06-21 15:06:56"}'::jsonb,
+   null, 'unresolved', 'film: not_found');
+
+select t.eq((public.import_report('aaaaaaaa-0000-4000-8000-000000000001')->>'film_importati')::int,
+            1, 'il report conta i film visti davvero scritti');
+select t.eq((public.import_report('aaaaaaaa-0000-4000-8000-000000000001')->>'film_watchlist_importati')::int,
+            1, 'e la watchlist film, separata');
+select t.eq((public.import_report('aaaaaaaa-0000-4000-8000-000000000001')->>'film_gia_in_app')::int,
+            1, 'un film gia'' in lista (o lapide) e'' una scelta, non una perdita');
+select t.eq((public.import_report('aaaaaaaa-0000-4000-8000-000000000001')->>'film_non_risolti')::int,
+            1, 'un film non risolto si dichiara');
+select t.eq(public.import_report('aaaaaaaa-0000-4000-8000-000000000001')
+              ->'film_non_risolti_elenco'->0->>'motivo',
+            'film: not_found', 'con titolo e motivo, come per le serie');
 
 -- §7.5: i voti scritti davvero (import-write v5). Un secondo job coi quattro esiti della
 -- pipeline nuova: stella scritta, gia' in app (non e' una perdita), non risolta, reaction

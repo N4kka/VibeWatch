@@ -17,14 +17,18 @@ import {
   assignRewatchIndex,
   dedupV1IntoV2,
   parseFavorites,
+  parseMovies,
   parseRatings,
   parseSeriesStatuses,
+  parseUserProfile,
   parseV1Events,
   parseV2Events,
   type ParsedFavorite,
+  type ParsedMovie,
   type ParsedRating,
   type Row,
   type SeriesStatus,
+  type UserProfile,
   type WatchEvent,
 } from './parsing.ts'
 
@@ -42,6 +46,9 @@ export const FILE_SPECIAL_STATUS = 'user_show_special_status.csv'
 export const FILE_FOLLOWED = 'followed_tv_show.csv'
 // §7.1: favorite-series/favorite-movies → candidati per i Favorites.
 export const FILE_LISTS = 'lists-prod-lists.csv'
+// §7.1: language e timezone. Il file contiene anche hash password e token OAuth:
+// `parseUserProfile` è l'unico lettore ammesso, e restituisce SOLO quei due campi.
+export const FILE_USER = 'user.csv'
 
 // zip.js decomprime su un pool di web worker. Comodo in un browser, sbagliato qui: il rilevatore
 // di leak dei test lo ha colto subito ("a timer was started but never completed"), e in una Edge
@@ -81,8 +88,10 @@ export interface BuiltRows {
   statuses: SeriesStatus[]
   favorites: ParsedFavorite[]
   favoriteMoviesUnsupported: number
+  movies: ParsedMovie[]
   unusableV1: number
   droppedV1: number
+  userProfile: UserProfile
 }
 
 /** Tutto il parsing puro, in un posto solo, così la parte di I/O resta leggibile. */
@@ -115,5 +124,14 @@ export function buildRows(files: Map<string, Row[]>): BuiltRows {
   const { series: favorites, movies_unsupported: favoriteMoviesUnsupported } =
     parseFavorites(files.get(FILE_LISTS) ?? [])
 
-  return { events, ratings, statuses, favorites, favoriteMoviesUnsupported, unusableV1, droppedV1 }
+  // §7.1: i film stanno SOLO in v1 (`entity_type='movie'`), e si leggono dalle righe grezze —
+  // parseV1Events li salta di proposito (fa episodi).
+  const movies = parseMovies(files.get(FILE_V1) ?? [])
+
+  const userProfile = parseUserProfile(files.get(FILE_USER) ?? [])
+
+  return {
+    events, ratings, statuses, favorites, favoriteMoviesUnsupported, movies, unusableV1,
+    droppedV1, userProfile,
+  }
 }

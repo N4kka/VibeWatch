@@ -479,3 +479,91 @@ Deno.test('favorites: altre righe del CSV (collection, liste custom) si ignorano
   assertEquals(series.length, 0)
   assertEquals(movies_unsupported, 0)
 })
+
+// --------------------------------------------------------------------------- user.csv
+
+import { parseUserProfile } from './parsing.ts'
+
+Deno.test('user.csv §7.1: si leggono SOLO language e timezone, validati stretti', () => {
+  const profile = parseUserProfile([{
+    language: 'en', timezone: 'Europe/Rome',
+    // Le altre colonne del file vero (hash, token, email) non devono influire né uscire.
+    password: '$2y$11$xxx', mail: 'a@b.c', fb_access_token: 'CAAB…',
+  }])
+  assertEquals(profile, { language: 'en', timezone: 'Europe/Rome' })
+})
+
+Deno.test('user.csv: file assente o vuoto → null dichiarati, non stringhe vuote', () => {
+  assertEquals(parseUserProfile([]), { language: null, timezone: null })
+})
+
+Deno.test('user.csv: valori fuori forma diventano null invece di fluire alle quiet hours', () => {
+  const garbage = parseUserProfile([{ language: 'english!', timezone: 'GMT+2' }])
+  assertEquals(garbage, { language: null, timezone: null })
+  // Un timezone senza / non è una zona IANA; "UTC" da solo si scarta, non si indovina.
+  assertEquals(parseUserProfile([{ timezone: 'UTC' }]).timezone, null)
+  // La forma a più segmenti invece passa (America/Argentina/Buenos_Aires).
+  assertEquals(
+    parseUserProfile([{ timezone: 'America/Argentina/Buenos_Aires' }]).timezone,
+    'America/Argentina/Buenos_Aires',
+  )
+})
+
+Deno.test('user.csv: maiuscole nel language si abbassano, la prima riga decide', () => {
+  const profile = parseUserProfile([
+    { language: 'IT', timezone: 'Europe/Rome' },
+    { language: 'en', timezone: 'America/New_York' },
+  ])
+  assertEquals(profile, { language: 'it', timezone: 'Europe/Rome' })
+})
+
+// --------------------------------------------------------------------------- film (§7.1)
+
+import { parseMovies } from './parsing.ts'
+
+Deno.test('film: watch = visto con data vera; le righe dello stesso uuid si uniscono', () => {
+  const movies = parseMovies([
+    // la riga watch ha perso la release_date (0001-01-01)...
+    { uuid: 'u1', type: 'watch', entity_type: 'movie', created_at: '2019-10-25 05:58:42', release_date: '0001-01-01 00:00:00', movie_name: 'El Camino: A Breaking Bad Movie' },
+    // ...ma la follow dello stesso film ce l'ha: l'anno serve alla risoluzione, si unisce.
+    { uuid: 'u1', type: 'follow', entity_type: 'movie', created_at: '2019-10-25 05:58:38', release_date: '2019-10-11 00:00:00', movie_name: 'El Camino: A Breaking Bad Movie', runtime: '7320' },
+  ])
+  assertEquals(movies.length, 1)
+  assertEquals(movies[0].movie_kind, 'seen')
+  assertEquals(movies[0].release_year, 2019)
+  assertEquals(movies[0].happened_at, '2019-10-25 05:58:42')
+  assertEquals(movies[0].runtime_seconds, 7320)
+})
+
+Deno.test('film: towatch senza watch = watchlist; con watch NON torna in watchlist', () => {
+  const movies = parseMovies([
+    { uuid: 'w1', type: 'towatch', entity_type: 'movie', created_at: '2024-09-14 19:17:59', release_date: '2015-07-03 00:00:00', movie_name: 'Haikyuu!! The Movie' },
+    { uuid: 'v1', type: 'towatch', entity_type: 'movie', created_at: '2024-01-01 00:00:00', release_date: '2024-06-06 00:00:00', movie_name: 'Baki' },
+    { uuid: 'v1', type: 'watch', entity_type: 'movie', created_at: '2025-01-29 06:01:14', release_date: '2024-06-06 00:00:00', movie_name: 'Baki' },
+  ])
+  assertEquals(movies.map((m) => [m.movie_kind, m.title]), [
+    ['watchlist', 'Haikyuu!! The Movie'],
+    ['seen', 'Baki'],
+  ])
+})
+
+Deno.test('film: due watch dello stesso film = rewatch_index 0 e 1, in ordine cronologico', () => {
+  const movies = parseMovies([
+    { uuid: 'r1', type: 'watch', entity_type: 'movie', created_at: '2024-02-01 10:00:00', release_date: '2020-01-01 00:00:00', movie_name: 'R' },
+    { uuid: 'r1', type: 'watch', entity_type: 'movie', created_at: '2023-01-01 10:00:00', release_date: '2020-01-01 00:00:00', movie_name: 'R' },
+  ])
+  assertEquals(movies.map((m) => [m.happened_at, m.rewatch_index]), [
+    ['2023-01-01 10:00:00', 0],
+    ['2024-02-01 10:00:00', 1],
+  ])
+})
+
+Deno.test('film: senza titolo si scarta; solo follow/rewatch_count non produce niente', () => {
+  const movies = parseMovies([
+    { uuid: 's1', type: 'watch', entity_type: 'movie', created_at: '2020-01-01 00:00:00', release_date: '2019-01-01 00:00:00', movie_name: '' },
+    { uuid: 'f1', type: 'follow', entity_type: 'movie', created_at: '2020-01-01 00:00:00', release_date: '2019-01-01 00:00:00', movie_name: 'Solo seguito' },
+    { uuid: 'c1', type: 'rewatch_count', entity_type: 'movie', movie_name: 'Contatore', rewatch_count: '0' },
+    { uuid: 'e1', type: 'watch', entity_type: 'episode', created_at: '2020-01-01 00:00:00', movie_name: 'Non un film' },
+  ])
+  assertEquals(movies.length, 0)
+})

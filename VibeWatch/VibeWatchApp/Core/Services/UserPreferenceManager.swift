@@ -17,6 +17,7 @@ class UserPreferenceManager: ObservableObject {
 
     private let sqliteService: SQLiteService
     private let supabaseClient: SupabaseService
+    private let authService: AuthStatusProviding
     private var syncEngine: SyncEngineProtocol?
 
     // MARK: - Constants
@@ -31,12 +32,14 @@ class UserPreferenceManager: ObservableObject {
 
     // MARK: - Initialization
 
-    private init(
+    init(
         sqliteService: SQLiteService = .shared,
-        supabaseClient: SupabaseService = .shared
+        supabaseClient: SupabaseService = .shared,
+        authService: AuthStatusProviding = AuthService.shared
     ) {
         self.sqliteService = sqliteService
         self.supabaseClient = supabaseClient
+        self.authService = authService
 
         // Get or create device ID
         self.deviceId = DeviceIdentity.installation
@@ -56,7 +59,7 @@ class UserPreferenceManager: ObservableObject {
         isLoading = true
         defer { isLoading = false }
 
-        guard let userId = AuthService.shared.currentUser?.id else {
+        guard let userId = authService.currentUser?.id else {
             Logger.warning("[UserPreferenceManager] No authenticated user, returning empty profile")
             return UserProfile.empty
         }
@@ -136,7 +139,7 @@ class UserPreferenceManager: ObservableObject {
                 // unified_user_preferences stopped syncing. Now we push the *persisted local row*
                 // (real columns, real uuid, absolute accumulated scores), which the new
                 // apply_mutations branch upserts on the natural key.
-                if let userId = AuthService.shared.currentUser?.id {
+                if let userId = authService.currentUser?.id {
                     for signal in signals {
                         await queueUnifiedPreferenceSync(userId: userId, category: signal.category, id: signal.id)
                     }
@@ -155,7 +158,7 @@ class UserPreferenceManager: ObservableObject {
     ) async {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        guard let userId = AuthService.shared.currentUser?.id else { return }
+        guard let userId = authService.currentUser?.id else { return }
 
         let recordId = UUID().uuidString.lowercased()
         let now = ISO8601DateFormatter().string(from: Date())
@@ -200,7 +203,7 @@ class UserPreferenceManager: ObservableObject {
     ) async {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        guard let userId = AuthService.shared.currentUser?.id else { return }
+        guard let userId = authService.currentUser?.id else { return }
 
         let recordId = UUID().uuidString.lowercased()
         let now = ISO8601DateFormatter().string(from: Date())
@@ -256,7 +259,7 @@ class UserPreferenceManager: ObservableObject {
 
     /// Apply preference decay (run weekly via background task)
     func applyPreferenceDecay() async {
-        guard let userId = AuthService.shared.currentUser?.id else {
+        guard let userId = authService.currentUser?.id else {
             return
         }
 
@@ -383,23 +386,70 @@ class UserPreferenceManager: ObservableObject {
             activity.lastSearchQuery = query
         }
 
-        // Fetch watchlist
-        let watchlistSql = """
-            SELECT media_id, title, media_type FROM list_items
-            WHERE user_id = ? AND deleted_at IS NULL
-            LIMIT 10
+        // Fetch watchlist — dopo la fusione ListsView↔Tracking (punto 7 degli aperti) le serie
+        // TV di watchlist/seen vivono in `tv_tracking`: la personalizzazione le legge dalla
+        // STESSA derivazione di ListsView (`fusedListRows`), e da `list_items` prende il resto
+        // della watchlist (i film). L'`ORDER BY` prima non c'era: i 10 erano arbitrari.
+        let isAuthenticated = authService.currentUser != nil
+        var candidates: [(summary: MediaSummary, addedAt: TimeInterval)] = []
+        var derivedRows: [LocalTrackingRepository.FusedListRow]?
+
+        if isAuthenticated {
+            do {
+                derivedRows = try await LocalTrackingRepository(sqlite: sqliteService)
+                    .fusedListRows(userId: userId)
+            } catch {
+                Logger.error(
+                    "[UserPreferenceManager] Tracking mirror unavailable; using legacy TV watchlist",
+                    error: error
+                )
+            }
+        }
+
+        if let derived = derivedRows {
+            candidates = derived
+                .filter { !$0.isSeen }
+                .sorted { $0.addedAt > $1.addedAt }
+                .prefix(10)
+                .map {
+                    (
+                        MediaSummary(id: $0.showId, title: $0.title, mediaType: .tv),
+                        $0.addedAt.timeIntervalSince1970
+                    )
+                }
+        }
+
+        var watchlistSql = """
+            SELECT li.media_id, li.title, li.media_type,
+                   CAST(strftime('%s', li.added_at) AS INTEGER) AS added_at_epoch
+            FROM list_items li
+            JOIN lists l ON l.id = li.list_id
+            WHERE l.user_id = ?
+              AND l.type = 'watchlist'
+              AND l.deleted_at IS NULL
+              AND li.deleted_at IS NULL
         """
+        if isAuthenticated, derivedRows != nil {
+            // Le righe TV legacy sono quelle che ListsView nasconde: qui rientrerebbero doppie.
+            watchlistSql += " AND li.media_type != 'tv'"
+        }
+        watchlistSql += " ORDER BY li.added_at DESC LIMIT 10"
 
         if let watchlistRows = try? await sqliteService.queryRaw(watchlistSql, parameters: [userId]) {
-            activity.watchlist = watchlistRows.compactMap { row in
+            candidates += watchlistRows.compactMap { row in
                 guard let id = row["media_id"] as? Int,
                       let title = row["title"] as? String else {
                     return nil
                 }
                 let mediaType = MediaType(rawValue: row["media_type"] as? String ?? "movie") ?? .movie
-                return MediaSummary(id: id, title: title, mediaType: mediaType)
+                let addedAt = TimeInterval(row["added_at_epoch"] as? Int ?? 0)
+                return (MediaSummary(id: id, title: title, mediaType: mediaType), addedAt)
             }
         }
+        activity.watchlist = candidates
+            .sorted { $0.addedAt > $1.addedAt }
+            .prefix(10)
+            .map(\.summary)
 
         return activity
     }
@@ -483,7 +533,7 @@ class UserPreferenceManager: ObservableObject {
 
     /// Record a watch event with time-of-day tracking
     func recordWatchEvent(clipId: String, hour: Int, engagementScore: Double) async {
-        guard let userId = AuthService.shared.currentUser?.id else { return }
+        guard let userId = authService.currentUser?.id else { return }
 
         let timeOfDay: TimeOfDay
         switch hour {
@@ -635,7 +685,7 @@ class UserPreferenceManager: ObservableObject {
         scoreIncrement: Double,
         source: InteractionSource
     ) async throws {
-        guard let userId = AuthService.shared.currentUser?.id else {
+        guard let userId = authService.currentUser?.id else {
             throw PreferenceError.notAuthenticated
         }
 

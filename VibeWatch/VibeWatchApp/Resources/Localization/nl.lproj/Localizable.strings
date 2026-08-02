@@ -400,6 +400,16 @@
 "import.report.ratingsUnresolved" = "%d beoordelingen konden niet worden gekoppeld.";
 "import.report.favoritesApplied" = "%d favorieten geïmporteerd in vrije plekken.";
 "import.report.favoriteMoviesUnsupported" = "%d filmfavorieten kunnen niet uit TV Time worden geïmporteerd.";
+"import.report.moviesApplied" = "%d films geïmporteerd met hun kijkdata.";
+"import.report.moviesWatchlistApplied" = "%d films toegevoegd aan je watchlist.";
+"import.report.moviesUnresolved" = "%d films niet herkend (titel en jaar komen niet overeen op TMDB).";
+"import.resolve.button" = "Oplossen";
+"import.resolve.title" = "Welke serie is “%@”?";
+"import.resolve.hint" = "De afleveringen worden opnieuw gecontroleerd met hun exacte TVDB-ID's. Alles wat TMDB niet kan bevestigen, blijft in het rapport staan.";
+"import.resolve.searchPlaceholder" = "Zoek de serie op TMDB";
+"import.resolve.empty" = "Geen resultaten.";
+"import.resolve.failed" = "Oplossen mislukt:";
+"import.resolve.searchFailed" = "Zoeken mislukt.";
 "import.report.statusesApplied" = "%d seriestatussen hersteld (kijklijst en archief).";
 "import.report.statusesUnresolved" = "%d seriestatussen konden niet worden toegepast.";
 "import.report.unresolvedTitle" = "%d afleveringen konden niet worden gekoppeld";
@@ -782,6 +792,12 @@
 "profile.stats.shows" = "Series";
 "profile.stats.episodes" = "Afleveringen";
 "profile.stats.loadFailed" = "Statistieken konden niet worden geladen.";
+"profile.stats.advanced.title" = "Geavanceerde statistieken";
+"profile.stats.advanced.byGenre" = "Per genre";
+"profile.stats.advanced.byDecade" = "Per decennium";
+"profile.stats.advanced.ratings" = "Jouw beoordelingen";
+"profile.stats.advanced.noGenre" = "%d series zonder genre-informatie";
+"profile.stats.advanced.proLocked" = "Geavanceerde statistieken zijn onderdeel van Pro.";
 
 // Blocco 9, seconda meta' (§9.3): diario e modifica dei favorites
 "diary.title" = "Dagboek";

@@ -458,3 +458,102 @@ Deno.test('favorites: senza slot liberi nessuna mutazione, tutto dichiarato', ()
   assertEquals(mutations.length, 0)
   assertEquals(skipped, [{ row_index: 0, reason: 'slot_pieni' }])
 })
+
+// --------------------------------------------------------------------------- film (§7.1)
+
+import { buildMovieBatch, type MovieWriteTargets } from './mutations.ts'
+
+const UTENTE_FILM = '00000000-0000-0000-0000-000000000001'
+
+function rigaFilm(
+  index: number,
+  kind: 'seen' | 'watchlist',
+  uuid: string,
+  extra: Record<string, unknown> = {},
+  resolved: Record<string, unknown> | null = { tmdb_movie_id: 42, matched_title: 'X', poster_path: '/p.jpg' },
+) {
+  return {
+    row_index: index,
+    raw: {
+      row_kind: 'movie', movie_kind: kind, tvtime_movie_uuid: uuid, title: 'X',
+      happened_at: '2022-01-15 12:57:34', rewatch_index: 0, ...extra,
+    },
+    resolved,
+    status: 'resolved',
+  }
+}
+
+function targets(over: Partial<MovieWriteTargets> = {}): MovieWriteTargets {
+  return {
+    seenListId: 'seen-list', watchlistListId: 'watch-list',
+    esistentiVisti: new Set(), esistentiWatchlist: new Set(), ...over,
+  }
+}
+
+Deno.test('film: un visto produce evento (data vera, dedup stabile) + riga nella lista visti', () => {
+  const out = buildMovieBatch([rigaFilm(0, 'seen', 'abc')], UTENTE_FILM, targets(), () => 'fixed-id')
+  assertEquals(out.written, [0])
+  assertEquals(out.mutations.length, 2)
+
+  const evento = out.mutations[0]
+  assertEquals(evento.table, 'watch_events')
+  assertEquals(evento.record.media_type, 'movie')
+  assertEquals(evento.record.tmdb_movie_id, 42)
+  assertEquals(evento.record.watched_at, '2022-01-15T12:57:34Z')
+  assertEquals(evento.record.watched_at_precision, 'exact')
+  assertEquals(evento.record.dedup_key, 'tvtime-movie:abc:0')
+  assertEquals(out.eventKeys, ['tvtime-movie:abc:0'])
+
+  const item = out.mutations[1]
+  assertEquals(item.table, 'list_items')
+  assertEquals(item.record.list_id, 'seen-list')
+  assertEquals(item.record.media_id, 42)
+  assertEquals(item.record.media_type, 'movie')
+  assertEquals(item.record.title, 'X')
+  assertEquals(item.record.added_at, '2022-01-15T12:57:34Z')
+})
+
+Deno.test('film: riga di lista già in app (viva o lapide) NON si tocca, ma l evento si scrive', () => {
+  const out = buildMovieBatch([rigaFilm(0, 'seen', 'abc')], UTENTE_FILM,
+    targets({ esistentiVisti: new Set([42]) }))
+  assertEquals(out.written, [0])
+  assertEquals(out.mutations.length, 1)          // solo l'evento
+  assertEquals(out.mutations[0].table, 'watch_events')
+  assertEquals(out.listaGiaInApp, 1)
+})
+
+Deno.test('film watchlist: solo riga di lista; già presente = skip dichiarato', () => {
+  const out = buildMovieBatch([
+    rigaFilm(0, 'watchlist', 'aaa', {}, { tmdb_movie_id: 7 }),
+    rigaFilm(1, 'watchlist', 'bbb', {}, { tmdb_movie_id: 8 }),
+  ], UTENTE_FILM, targets({ esistentiWatchlist: new Set([8]) }))
+  assertEquals(out.written, [0])
+  assertEquals(out.mutations.length, 1)
+  assertEquals(out.mutations[0].record.media_id, 7)
+  assertEquals(out.skipped, [{ row_index: 1, reason: 'gia_in_lista' }])
+})
+
+Deno.test('film: due rivisioni stesso film = due eventi, UNA riga di lista', () => {
+  const out = buildMovieBatch([
+    rigaFilm(0, 'seen', 'abc', { rewatch_index: 0 }),
+    rigaFilm(1, 'seen', 'abc', { rewatch_index: 1, happened_at: '2023-02-01 10:00:00' }),
+  ], UTENTE_FILM, targets())
+  assertEquals(out.written, [0, 1])
+  const eventi = out.mutations.filter((m) => m.table === 'watch_events')
+  const items = out.mutations.filter((m) => m.table === 'list_items')
+  assertEquals(eventi.length, 2)
+  assertEquals(items.length, 1)
+  assertEquals(eventi[1].record.dedup_key, 'tvtime-movie:abc:1')
+})
+
+Deno.test('film: non risolto e senza data si dichiarano, non si inventano', () => {
+  const out = buildMovieBatch([
+    rigaFilm(0, 'seen', 'abc', {}, null),
+    rigaFilm(1, 'seen', 'def', { happened_at: '' }),
+  ], UTENTE_FILM, targets())
+  assertEquals(out.written, [])
+  assertEquals(out.skipped, [
+    { row_index: 0, reason: 'non_risolto' },
+    { row_index: 1, reason: 'senza_data' },
+  ])
+})

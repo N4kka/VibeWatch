@@ -379,6 +379,16 @@
 "import.report.ratingsUnresolved" = "%d avaliações não puderam ser associadas.";
 "import.report.favoritesApplied" = "%d favoritos importados para espaços livres.";
 "import.report.favoriteMoviesUnsupported" = "%d filmes favoritos não podem ser importados do TV Time.";
+"import.report.moviesApplied" = "%d filmes importados com as datas de visualização.";
+"import.report.moviesWatchlistApplied" = "%d filmes adicionados a \"Para assistir\".";
+"import.report.moviesUnresolved" = "%d filmes não reconhecidos (título e ano não coincidem no TMDB).";
+"import.resolve.button" = "Resolver";
+"import.resolve.title" = "Qual série é “%@”?";
+"import.resolve.hint" = "Os episódios serão verificados novamente pelos seus IDs exatos do TVDB. Tudo o que o TMDB não conseguir confirmar permanecerá no relatório.";
+"import.resolve.searchPlaceholder" = "Pesquisar a série no TMDB";
+"import.resolve.empty" = "Sem resultados.";
+"import.resolve.failed" = "Não foi possível resolver:";
+"import.resolve.searchFailed" = "A pesquisa falhou.";
 "import.report.statusesApplied" = "%d estados de séries restaurados (lista e arquivo).";
 "import.report.statusesUnresolved" = "%d estados de séries não puderam ser aplicados.";
 "import.report.unresolvedTitle" = "%d episódios não reconhecidos";
@@ -770,6 +780,12 @@
 "profile.stats.shows" = "Séries";
 "profile.stats.episodes" = "Episódios";
 "profile.stats.loadFailed" = "Não foi possível carregar as estatísticas.";
+"profile.stats.advanced.title" = "Estatísticas avançadas";
+"profile.stats.advanced.byGenre" = "Por género";
+"profile.stats.advanced.byDecade" = "Por década";
+"profile.stats.advanced.ratings" = "As tuas avaliações";
+"profile.stats.advanced.noGenre" = "%d séries sem informação de género";
+"profile.stats.advanced.proLocked" = "As estatísticas avançadas fazem parte do Pro.";
 
 // Blocco 9, seconda meta' (§9.3): diario e modifica dei favorites
 "diary.title" = "Diário";
