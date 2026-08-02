@@ -1,6 +1,7 @@
 # SPEC v3 — stato del lavoro e ripresa
 
-> Aggiornato: 2026-08-02 (sei sessioni). Branch: `refactoring/spec-v3-prereqs-oracle`.
+> Aggiornato: 2026-08-02 sera (sette sessioni). Branch: `refactoring/spec-v3-prereqs-oracle`,
+> pushato su GitHub (due commit del 2026-08-02: stati import `5316497`, fusione `c2ea002`).
 > Progetto Supabase: `rqhxhkijzhqivljivirq` (VibeWatch, eu-west-1, Postgres 17.6).
 > Repo: `/Users/nicola/Documents/StartingVibe/VibeWatch` (git root un livello sopra).
 
@@ -13,20 +14,49 @@ passa al primo colpo, vale la pena rompere apposta ciò che dovrebbe coprire e c
 fallisca — fatto anche in questa sessione sul `security definer` di `search_users`: rimesso
 `invoker`, la suite fallisce esattamente dove deve.
 
-## Da fare per prima cosa
+## Dove siamo, e cosa resta — la lista unica per riprendere
 
-Due prove su dispositivo (dell'utente) e un sito:
+**I blocchi 0–9 di §12 sono chiusi e collaudati**, import TV Time compreso (18.577 episodi
+dall'export vero, re-import idempotente con 103/104 stati per-serie applicati) e **fusione
+ListsView↔Tracking compresa** (decisione di prodotto del 2026-08-02 che supera §11 — confermata
+funzionante dall'utente sul dispositivo). Del blocco 10 la parte app è fatta; manca solo il
+sito. L'audit di fine lavori (2026-08-02 sera, SPEC alla mano) non ha trovato nulla di
+strutturale: gli aperti, TUTTI, sono questi, in ordine sensato di priorità:
 
-1. ~~**rifare l'import dello stesso ZIP dall'app**~~ — **FATTO il 2026-08-02: 103/104 stati
-   applicati** (l'unico perso: Digimon Adventure tri., `ambiguous`), 18.577 episodi tutti in
-   `already_present`, 2 minuti. Sul server: 57 archiviate, 28 for_later, 365 attive;
-1b. **provare la fusione ListsView↔Tracking sul dispositivo** (vedi la sezione dedicata):
-   ListsView → watchlist con le serie "Da iniziare"/"Più avanti" e i film legacy insieme; Seen
-   con le serie in pari; aggiungere/togliere una serie da lì e vederla muoversi nel Tracking;
-2. il **sito** su `vibewatchapp.com` che serva l'AASA — chiude il blocco 10
-   (`docs/universal-links/README.md`);
-3. quando il sito c'è: flag `ProfileView.shareProfileEnabled = true` per riaccendere la riga
-   "Condividi profilo" (oggi spenta con "Coming soon", guideline 2.1).
+1. **Il sito su `vibewatchapp.com` è IN PRODUZIONE** (2026-08-02, ottava sessione) — repo git
+   a sé in `/Users/nicola/Documents/StartingVibe/vibewatch-site`, Cloudflare Pages progetto
+   `vibewatch-site`, account `37b4d5564d5ba203750a3f0bb80b00ad`. AASA statica servita con
+   `Content-Type: application/json` su apex E www (domini custom entrambi attivi, mai
+   redirect), **verificata identica al file del repo e già sulla CDN di Apple**
+   (`app-site-association.cdn-apple.com/a/v1/vibewatchapp.com`). Rotte verificate in
+   produzione: `/@nakka` 200 (da `public_profiles`, chiave publishable `default`),
+   `/film/550` "Fight Club (1999)", profilo inesistente 404, it/en, 404≠503, Smart App
+   Banner (`id6755368352`). Secret `TMDB_API_KEY` impostato; deploy: `npx wrangler pages
+   deploy` dal repo del sito (checklist nel suo README). `ProfileView.shareProfileEnabled =
+   true` acceso lo stesso giorno, build verde. **Provato dall'utente sul dispositivo il
+   2026-08-02: il tap sul link apre la pagina web e la CTA porta allo store** — cioè il
+   percorso di chi NON ha l'app. **Resta la prova dell'altro percorso, tap → profilo
+   NELL'app, e con la build dello store non può riuscire**: la versione pubblicata precede
+   gli entitlement `applinks:`, e il dominio lo reclama il binario, non l'AASA da sola.
+   Si prova con una build del branch installata da Xcode sul telefono (l'AASA è già sulla
+   CDN; se non aggancia, `?mode=developer` — `docs/universal-links/README.md`). Fino ad
+   allora il blocco 10 NON si dichiara chiuso.
+2. **Pulizia del bucket `imports`**: §7.2 dichiara un TTL di 7 giorni che NON esiste — gli ZIP
+   (export GDPR di terzi) restano in Storage per sempre. Dovuta, non estetica.
+3. **I voti dell'import** (§7.5): 295 stelle decodificate in staging, mai scritte in
+   `user_ratings` che ora esiste. Il report lo dichiara (`voti_importati: false`).
+4. **Liste pubbliche nel profilo altrui** (§9.3, ultimo bullet): `get_public_lists` e
+   `PublicListsView` esistono, manca la sezione in `PublicProfileView`.
+5. **Favorites da `lists-prod-lists.csv`** (§7.1) e **film dell'export** (destinazione da
+   decidere prima che da fare); **`user.csv`** (language/timezone) mai letto.
+6. **Risoluzione a mano dei non riconosciuti** (§7.4): oggi si elencano e basta.
+7. **Consumatori legacy di `list_items` per le TV** (aperto della fusione): stats locali
+   (`AnalyticsInsightsService`) e personalizzazione Discovery leggono ancora le liste legacy.
+8. **Stats avanzate** genere/decade/distribuzione voti (§9.3): Pro (§10), aspettano il dato sui
+   generi che il catalogo non ha; il **Year in Review** di §10 non esiste (non era un blocco).
+9. I **debiti pre-esistenti** in fondo al documento ("Cose che restano aperte"): Config muto in
+   Release, `import-parse` 500 senza JWT, rifiuti su `lists`/`list_not_owned`, `delete-user`
+   incompleto (GDPR), e i 10 test iOS rotti da prima di queste sessioni.
 
 ## L'import in app (blocco 6 chiuso) — 2026-08-02, in produzione e collaudato ad app chiusa
 
@@ -1282,3 +1312,13 @@ Due modi, entrambi già usati:
 4. **`delete-user` cancella 5 tabelle su ~30** (audit §3b) e `profiles.id` non ha
    `ON DELETE CASCADE`: cancellare un utente fallisce se non si toglie prima il profilo. È materia
    GDPR.
+5. **Trovati dall'audit di fine lavori (2026-08-02), mai registrati prima:**
+   - §7.2 dice "bucket privato `imports`, TTL 7 giorni" ma **nessuno cancella gli ZIP**: né una
+     policy di storage né un cron. Oggi nel bucket restano gli archivi già importati — sono
+     dati personali (export GDPR di terzi) e la pulizia è dovuta, non estetica;
+   - §7.1 elenca **`user.csv` (language, timezone)** fra i file da leggere: l'import non lo
+     apre affatto. Costo piccolo, valore piccolo (il fuso serve alle quiet hours, che oggi
+     leggono `user_notification_preferences`);
+   - §9.3 chiude il profilo con "**Liste pubbliche dell'utente**": `PublicProfileView` mostra
+     header, favorites e contatori ma **non le liste pubbliche** (esistono `get_public_lists`
+     e `PublicListsView`, manca solo la sezione nel profilo altrui).

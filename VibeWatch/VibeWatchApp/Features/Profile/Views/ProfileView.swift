@@ -143,11 +143,11 @@ struct ProfileView: View {
 
     // MARK: - Condividi profilo (§9.4)
 
-    /// Finché il sito che serve l'AASA non esiste, il link condiviso aprirebbe una pagina vuota
-    /// nel browser: una feature che porta nel vuoto è una bocciatura in review (guideline 2.1).
-    /// Riga visibile ma spenta, con "Coming soon" — la roadmap si dichiara, non si finge.
-    /// Per riattivare: mettere `true`; gli stati qui sotto sono già pronti e testati.
-    private static let shareProfileEnabled = false
+    /// Acceso dal 2026-08-02: vibewatchapp.com serve l'AASA (apex e www) e risponde alle due
+    /// rotte con pagine vere, quindi il link condiviso ha una destinazione anche senza app.
+    /// Il ramo "Coming soon" resta come interruttore di emergenza: se il sito cadesse a lungo,
+    /// rimettere `false` spegne la riga senza toccare gli stati.
+    private static let shareProfileEnabled = true
 
     /// La riga e il suo Divider insieme: nel caso `noUsername` spariscono entrambi, e la lista
     /// resta ben formata.
