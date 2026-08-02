@@ -305,4 +305,27 @@ final class ImportViewModelTests: XCTestCase {
         let vecchio = ImportReport(json: ["episodi_importati": 5])
         XCTAssertEqual(vecchio?.statiSupportati, false)
     }
+
+    func testIVotiSiDecodificanoEUnReportVecchioRestaNonImportato() {
+        // §7.5, import-write v5: le stelle scritte in `user_ratings` si contano, comprese
+        // quelle lasciate al voto già dato in app e quelle non risolte.
+        let nuovo = ImportReport(json: [
+            "episodi_importati": 5,
+            "voti_stelle": 295,
+            "voti_importati": true,
+            "voti_stelle_importati": 290,
+            "voti_stelle_gia_in_app": 3,
+            "voti_stelle_non_risolti": 2,
+        ])
+        XCTAssertEqual(nuovo?.votiImportati, true)
+        XCTAssertEqual(nuovo?.votiStelleImportati, 290)
+        XCTAssertEqual(nuovo?.votiStelleGiaInApp, 3)
+        XCTAssertEqual(nuovo?.votiStelleNonRisolti, 2)
+
+        // Un report di un job vecchio non ha i campi nuovi: `votiImportati` false è ciò che
+        // tiene in piedi la riga "non ancora importati" — la verità di quando è girato.
+        let vecchio = ImportReport(json: ["episodi_importati": 5, "voti_stelle": 380])
+        XCTAssertEqual(vecchio?.votiImportati, false)
+        XCTAssertEqual(vecchio?.votiStelleImportati, 0)
+    }
 }

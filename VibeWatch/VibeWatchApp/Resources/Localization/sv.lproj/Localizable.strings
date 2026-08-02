@@ -375,6 +375,8 @@
 "import.report.shows" = "Serier";
 "import.report.period" = "Från %@ till %@";
 "import.report.ratingsDeferred" = "%d betyg hittades – inte importerade än.";
+"import.report.ratingsApplied" = "%d betyg importerade som stjärnor.";
+"import.report.ratingsUnresolved" = "%d betyg kunde inte matchas.";
 "import.report.statusesApplied" = "%d seriestatusar återställda (bevakningslista och arkiv).";
 "import.report.statusesUnresolved" = "%d seriestatusar kunde inte tillämpas.";
 "import.report.unresolvedTitle" = "%d avsnitt kunde inte matchas";

@@ -2,6 +2,9 @@ import { assertEquals } from 'jsr:@std/assert@1'
 import {
   buildBatch,
   buildEventMutation,
+  buildRatingBatch,
+  buildRatingMutation,
+  type EpisodeMapEntry,
   isSpecialEpisode,
   runtimeOrNull,
   type StagingRow,
@@ -296,6 +299,100 @@ Deno.test('stati: il lotto separa scritti e saltati come per gli eventi', () => 
   assertEquals(skipped, [
     { row_index: 1, reason: 'stato_gia_in_app' },
     { row_index: 2, reason: 'non_risolto' },
+  ])
+  assertEquals(written.length + skipped.length, rows.length)
+})
+
+// --------------------------------------------------------------------------- voti (§7.5)
+
+function rigaVoto(
+  raw: Record<string, unknown>,
+  rowIndex = 0,
+): StagingRow {
+  return {
+    row_index: rowIndex,
+    raw: { row_kind: 'rating', ...raw },
+    resolved: null,
+    status: 'pending',
+  }
+}
+
+const MAPPA_VOTI = new Map<number, EpisodeMapEntry>([
+  [4517291, { resolution: 'found', tmdb_show_id: 100, season_number: 2, episode_number: 5 }],
+  [4517292, { resolution: 'not_found', tmdb_show_id: null, season_number: null, episode_number: null }],
+  [4517293, { resolution: 'found', tmdb_show_id: 100, season_number: null, episode_number: null }],
+])
+
+Deno.test('voti: una stella risolta diventa una mutazione user_ratings con i numeri di TMDB', () => {
+  const { mutation, skip } = buildRatingMutation(
+    rigaVoto({ kind: 'star', tvdb_episode_id: '4517291', star_rating: 6 }),
+    UTENTE, MAPPA_VOTI, new Set())
+
+  assertEquals(skip, null)
+  assertEquals(mutation?.table, 'user_ratings')
+  assertEquals(mutation?.record.user_id, UTENTE, 'senza user_id apply_mutations scarta in silenzio')
+  assertEquals(mutation?.record.media_type, 'episode')
+  assertEquals(mutation?.record.tmdb_id, 100)
+  assertEquals(mutation?.record.season_number, 2, 'la stagione viene da TMDB (§6)')
+  assertEquals(mutation?.record.episode_number, 5)
+  assertEquals(mutation?.record.rating, 6)
+})
+
+Deno.test('voti: una reaction non è un voto — si conserva, non si converte', () => {
+  const { mutation, skip } = buildRatingMutation(
+    rigaVoto({ kind: 'reaction', tvdb_episode_id: '4517291', reaction_id: 27 }),
+    UTENTE, MAPPA_VOTI, new Set())
+  assertEquals(mutation, null)
+  assertEquals(skip, 'reaction_conservata')
+})
+
+Deno.test('voti: fuori mappa, not_found o senza numerazione non si scrive approssimato', () => {
+  assertEquals(buildRatingMutation(
+    rigaVoto({ kind: 'star', tvdb_episode_id: '999999', star_rating: 6 }),
+    UTENTE, MAPPA_VOTI, new Set()).skip, 'non_risolto', 'fuori mappa')
+  assertEquals(buildRatingMutation(
+    rigaVoto({ kind: 'star', tvdb_episode_id: '4517292', star_rating: 6 }),
+    UTENTE, MAPPA_VOTI, new Set()).skip, 'non_risolto', 'not_found in mappa')
+  assertEquals(buildRatingMutation(
+    rigaVoto({ kind: 'star', tvdb_episode_id: '4517293', star_rating: 6 }),
+    UTENTE, MAPPA_VOTI, new Set()).skip, 'numerazione_mancante',
+    'serie risolta ma senza numeri: il CHECK di forma rifiuterebbe comunque')
+  assertEquals(buildRatingMutation(
+    rigaVoto({ kind: 'star', tvdb_episode_id: null, star_rating: 6 }),
+    UTENTE, MAPPA_VOTI, new Set()).skip, 'senza_episodio')
+})
+
+Deno.test('voti: un voto già in app non si sovrascrive — vale anche per le lapidi', () => {
+  const { mutation, skip } = buildRatingMutation(
+    rigaVoto({ kind: 'star', tvdb_episode_id: '4517291', star_rating: 6 }),
+    UTENTE, MAPPA_VOTI, new Set(['100:2:5']))
+  assertEquals(mutation, null)
+  assertEquals(skip, 'voto_gia_in_app')
+})
+
+Deno.test('voti: lo 0 di TV Time è fuori dalla scala 1-10 e si dichiara', () => {
+  assertEquals(buildRatingMutation(
+    rigaVoto({ kind: 'star', tvdb_episode_id: '4517291', star_rating: 0 }),
+    UTENTE, MAPPA_VOTI, new Set()).skip, 'voto_fuori_scala')
+  assertEquals(buildRatingMutation(
+    rigaVoto({ kind: 'star', tvdb_episode_id: '4517291', star_rating: null }),
+    UTENTE, MAPPA_VOTI, new Set()).skip, 'voto_fuori_scala')
+})
+
+Deno.test('voti: lo stesso episodio votato due volte nel lotto passa una volta sola', () => {
+  const rows = [
+    rigaVoto({ kind: 'star', tvdb_episode_id: '4517291', star_rating: 6 }, 0),
+    rigaVoto({ kind: 'star', tvdb_episode_id: '4517291', star_rating: 8 }, 1),
+    rigaVoto({ kind: 'reaction', tvdb_episode_id: '4517291', reaction_id: 27 }, 2),
+  ]
+  const { mutations, written, skipped } = buildRatingBatch(rows, UTENTE, MAPPA_VOTI, new Set())
+
+  assertEquals(mutations.length, 1)
+  assertEquals(mutations[0].record.rating, 6, 'vince il primo, deterministico per row_index')
+  assertEquals(written, [0])
+  assertEquals(skipped, [
+    { row_index: 1, reason: 'voto_gia_in_app' },
+    { row_index: 2, reason: 'reaction_conservata' },
   ])
   assertEquals(written.length + skipped.length, rows.length)
 })

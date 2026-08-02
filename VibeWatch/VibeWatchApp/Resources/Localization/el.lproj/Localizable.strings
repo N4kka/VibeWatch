@@ -408,6 +408,8 @@
 "import.report.shows" = "Σειρές";
 "import.report.period" = "Από %@ έως %@";
 "import.report.ratingsDeferred" = "Βρέθηκαν %d βαθμολογίες — δεν έχουν εισαχθεί ακόμη.";
+"import.report.ratingsApplied" = "%d βαθμολογίες εισήχθησαν ως αστέρια.";
+"import.report.ratingsUnresolved" = "%d βαθμολογίες δεν μπόρεσαν να αντιστοιχιστούν.";
 "import.report.statusesApplied" = "%d καταστάσεις σειρών επαναφέρθηκαν (λίστα και αρχείο).";
 "import.report.statusesUnresolved" = "%d καταστάσεις σειρών δεν εφαρμόστηκαν.";
 "import.report.unresolvedTitle" = "%d επεισόδια δεν αντιστοιχίστηκαν";

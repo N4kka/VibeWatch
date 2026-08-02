@@ -408,6 +408,8 @@
 "import.report.shows" = "Sarjat";
 "import.report.period" = "%@ – %@";
 "import.report.ratingsDeferred" = "%d arvostelua löytyi – ei vielä tuotu.";
+"import.report.ratingsApplied" = "%d arvostelua tuotu tähtinä.";
+"import.report.ratingsUnresolved" = "%d arvostelua ei voitu yhdistää.";
 "import.report.statusesApplied" = "%d sarjatilaa palautettu (katselulista ja arkisto).";
 "import.report.statusesUnresolved" = "%d sarjan tilaa ei voitu ottaa käyttöön.";
 "import.report.unresolvedTitle" = "%d jaksoa jäi tunnistamatta";

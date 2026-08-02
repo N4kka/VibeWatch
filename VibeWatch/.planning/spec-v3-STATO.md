@@ -49,8 +49,26 @@ strutturale: gli aperti, TUTTI, sono questi, in ordine sensato di priorità:
    `deleted: 1` via `net.http_post` (la strada del cron), ZIP veri intatti, publishable key
    respinta con 401, `proacl` solo service. 9 asserzioni in `imports_ttl_test.sql` (harness
    esteso con `created_at`), provate rompendo la guardia sui job aperti: fallisce dove deve.
-3. **I voti dell'import** (§7.5): 295 stelle decodificate in staging, mai scritte in
-   `user_ratings` che ora esiste. Il report lo dichiara (`voti_importati: false`).
+3. ~~**I voti dell'import** (§7.5)~~ — **FATTO e deployato** (2026-08-02, ottava sessione):
+   la coda dei voti nella fase 4 (`import-write` v5, `scriviVoti` dopo `scriviStati`) scrive
+   le stelle in `user_ratings` via `apply_mutations` (ramo del blocco 9, `media_type:
+   'episode'`, numeri da TMDB via `tvdb_tmdb_map` — i voti NON passano dalla fase 3, si
+   agganciano per `tvdb_episode_id` alla mappa che gli eventi hanno riempito: zero chiamate
+   TMDB). Regole con test (22 Deno): **un voto già in app non si sovrascrive, lapidi
+   comprese** (un voto cancellato in app non risorge al re-import — stessa regola
+   dell'`active` degli stati, ed è ciò che rende il re-import idempotente); reaction
+   conservate mai convertite (lookup TV Time spenta); lo 0 di TV Time è fuori scala 1-10 e
+   si dichiara; doppioni nel lotto → passa il primo. Report (`import_report`, migration
+   `20260802170000`): `voti_importati` ora STRUTTURALE (ogni stella processata → true; un
+   job vecchio resta false da solo — verificato in produzione sul job vero: 295 stelle,
+   false, zeri veri nei campi nuovi, storici identici), più `voti_stelle_importati` /
+   `gia_in_app` / `non_risolti`. Client: 3 campi + 2 righe in ImportView, 2 chiavi × 20
+   lingue, 22 test simulatore verdi (16 ImportViewModel + 6 LocalizationCoverage). Suite
+   SQL 332 asserzioni. **NON collaudato end-to-end con un giro vero della pipeline: il
+   primo re-import dello ZIP dall'app è quel collaudo** (come fu per gli stati), e il
+   report dirà se le ~295 stelle sono arrivate. Le **reaction** restano fuori da
+   `watch_events.external_ref` (§7.5.1): conservate in export e staging, contate nel
+   report — il pezzetto mancante è dichiarato qui.
 4. **Liste pubbliche nel profilo altrui** (§9.3, ultimo bullet): `get_public_lists` e
    `PublicListsView` esistono, manca la sezione in `PublicProfileView`.
 5. **Favorites da `lists-prod-lists.csv`** (§7.1) e **film dell'export** (destinazione da

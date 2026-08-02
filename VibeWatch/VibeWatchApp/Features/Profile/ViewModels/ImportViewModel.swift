@@ -57,7 +57,12 @@ struct ImportReport: Equatable {
     let nonRiconosciutiElenco: [Unresolved]
     let votiStelle: Int
     let votiReaction: Int
+    /// §7.5: `true` quando ogni stella è passata dalla pipeline nuova (import-write v5).
+    /// Un job vecchio resta `false` e mostra la riga "non ancora importati" di sempre.
     let votiImportati: Bool
+    let votiStelleImportati: Int
+    let votiStelleGiaInApp: Int
+    let votiStelleNonRisolti: Int
     /// §7.1: gli stati per-serie (watchlist e archivio). `statiSupportati` distingue un report
     /// di un job vecchio (campi assenti: la riga non si mostra) da zeri veri.
     let statiSupportati: Bool
@@ -84,6 +89,9 @@ struct ImportReport: Equatable {
         votiStelle = json["voti_stelle"] as? Int ?? 0
         votiReaction = json["voti_reaction"] as? Int ?? 0
         votiImportati = json["voti_importati"] as? Bool ?? false
+        votiStelleImportati = json["voti_stelle_importati"] as? Int ?? 0
+        votiStelleGiaInApp = json["voti_stelle_gia_in_app"] as? Int ?? 0
+        votiStelleNonRisolti = json["voti_stelle_non_risolti"] as? Int ?? 0
         statiSupportati = json["stati_supportati"] as? Bool ?? false
         statiSerieImportati = json["stati_serie_importati"] as? Int ?? 0
         statiSerieNonRisolti = json["stati_serie_non_risolti"] as? Int ?? 0
@@ -92,7 +100,8 @@ struct ImportReport: Equatable {
     init(episodiImportati: Int, serieImportate: Int, dal: String?, al: String?,
          nonRiconosciutiEpisodi: Int, nonRiconosciutiSerie: Int,
          nonRiconosciutiElenco: [Unresolved], votiStelle: Int, votiReaction: Int,
-         votiImportati: Bool, statiSupportati: Bool = false,
+         votiImportati: Bool, votiStelleImportati: Int = 0, votiStelleGiaInApp: Int = 0,
+         votiStelleNonRisolti: Int = 0, statiSupportati: Bool = false,
          statiSerieImportati: Int = 0, statiSerieNonRisolti: Int = 0) {
         self.episodiImportati = episodiImportati
         self.serieImportate = serieImportate
@@ -104,6 +113,9 @@ struct ImportReport: Equatable {
         self.votiStelle = votiStelle
         self.votiReaction = votiReaction
         self.votiImportati = votiImportati
+        self.votiStelleImportati = votiStelleImportati
+        self.votiStelleGiaInApp = votiStelleGiaInApp
+        self.votiStelleNonRisolti = votiStelleNonRisolti
         self.statiSupportati = statiSupportati
         self.statiSerieImportati = statiSerieImportati
         self.statiSerieNonRisolti = statiSerieNonRisolti

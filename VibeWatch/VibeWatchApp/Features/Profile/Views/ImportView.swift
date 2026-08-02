@@ -174,8 +174,24 @@ struct ImportView: View {
                         .frame(maxWidth: .infinity, alignment: .center)
                 }
 
-                // §7.5: i voti si contano e si dichiara che NON sono ancora importati —
-                // uno zero muto sarebbe indistinguibile da "non ne avevi".
+                // §7.5: i voti. Su un job nuovo le stelle sono in `user_ratings` e si contano
+                // (comprese quelle lasciate al voto già dato in app: non è una perdita); su un
+                // job vecchio resta la riga "non ancora importati" — uno zero muto sarebbe
+                // indistinguibile da "non ne avevi".
+                if report.votiImportati && report.votiStelleImportati > 0 {
+                    Text(String(format: "import.report.ratingsApplied".localized,
+                                report.votiStelleImportati))
+                        .font(.system(size: 13))
+                        .foregroundColor(.theme.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
+                if report.votiImportati && report.votiStelleNonRisolti > 0 {
+                    Text(String(format: "import.report.ratingsUnresolved".localized,
+                                report.votiStelleNonRisolti))
+                        .font(.system(size: 13))
+                        .foregroundColor(.theme.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
                 if report.votiStelle + report.votiReaction > 0 && !report.votiImportati {
                     Text(String(format: "import.report.ratingsDeferred".localized,
                                 report.votiStelle + report.votiReaction))

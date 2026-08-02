@@ -372,6 +372,8 @@
 "import.report.shows" = "剧集";
 "import.report.period" = "从 %@ 到 %@";
 "import.report.ratingsDeferred" = "找到 %d 条评分——尚未导入。";
+"import.report.ratingsApplied" = "已将 %d 条评分导入为星级。";
+"import.report.ratingsUnresolved" = "%d 条评分无法匹配。";
 "import.report.statusesApplied" = "已恢复 %d 个剧集状态（想看清单与归档）。";
 "import.report.statusesUnresolved" = "%d 个剧集状态未能应用。";
 "import.report.unresolvedTitle" = "%d 个单集无法匹配";

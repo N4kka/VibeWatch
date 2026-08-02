@@ -409,6 +409,8 @@
 "import.report.shows" = "Series";
 "import.report.period" = "Del %@ al %@";
 "import.report.ratingsDeferred" = "%d valoraciones encontradas — aún no importadas.";
+"import.report.ratingsApplied" = "%d valoraciones importadas como estrellas.";
+"import.report.ratingsUnresolved" = "%d valoraciones no se pudieron asociar.";
 "import.report.statusesApplied" = "%d estados de series restaurados (lista de seguimiento y archivo).";
 "import.report.statusesUnresolved" = "%d estados de series no se pudieron aplicar.";
 "import.report.unresolvedTitle" = "%d episodios sin identificar";

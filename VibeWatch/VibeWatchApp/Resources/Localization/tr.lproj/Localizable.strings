@@ -375,6 +375,8 @@
 "import.report.shows" = "Diziler";
 "import.report.period" = "%@ – %@ arası";
 "import.report.ratingsDeferred" = "%d puan bulundu — henüz içe aktarılmadı.";
+"import.report.ratingsApplied" = "%d puan yıldız olarak içe aktarıldı.";
+"import.report.ratingsUnresolved" = "%d puan eşleştirilemedi.";
 "import.report.statusesApplied" = "%d dizi durumu geri yüklendi (izleme listesi ve arşiv).";
 "import.report.statusesUnresolved" = "%d dizi durumu uygulanamadı.";
 "import.report.unresolvedTitle" = "%d bölüm eşleştirilemedi";

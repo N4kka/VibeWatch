@@ -17,7 +17,13 @@ import { serve } from 'https://deno.land/std@0.131.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { adminClient, jsonResponse } from '../_shared/proxy.ts'
 import { isServiceCaller } from '../_shared/cronAuth.ts'
-import { buildBatch, buildStatusBatch, type StagingRow } from './mutations.ts'
+import {
+  buildBatch,
+  buildRatingBatch,
+  buildStatusBatch,
+  type EpisodeMapEntry,
+  type StagingRow,
+} from './mutations.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
@@ -91,19 +97,16 @@ serve(async (req: Request) => {
         job.totals as Record<string, unknown> ?? {})
       if (esitoStati) return esitoStati
 
-      // Poi si chiudono i voti e si passa alla fase successiva.
-      const rimandati = await deferRatings(admin, jobId)
-
-      const totals = {
-        ...(job.totals as Record<string, unknown> ?? {}),
-        ratings_deferred: rimandati,
-      }
+      // Poi i voti (§7.5), stessa strada; solo quando anche loro sono finiti si avanza.
+      const esitoVoti = await scriviVoti(admin, caller, daServizio, jobId, job.user_id,
+        job.totals as Record<string, unknown> ?? {})
+      if (esitoVoti) return esitoVoti
 
       const { error } = await admin.from('import_jobs')
-        .update({ phase: 'recomputing', checkpoint: {}, totals }).eq('id', jobId)
+        .update({ phase: 'recomputing', checkpoint: {} }).eq('id', jobId)
       if (error) throw new Error(`avanzamento non salvato: ${error.message}`)
 
-      return jsonResponse({ done: true, phase: 'recomputing', written: 0, totals }, 200)
+      return jsonResponse({ done: true, phase: 'recomputing', written: 0 }, 200)
     }
 
     const { mutations, written, skipped } = buildBatch(pending as StagingRow[], job.user_id)
@@ -349,24 +352,144 @@ async function scriviStati(
 }
 
 /**
- * I voti restano fuori da questa release, e lo dicono.
+ * La coda dei voti (§7.5): le righe `row_kind = 'rating'` diventano upsert di `user_ratings`
+ * via `apply_mutations` (ramo del blocco 9: update-or-insert sulla chiave naturale, quindi
+ * idempotente di suo).
  *
- * `user_ratings` (§3.6) arriva col blocco 9: oggi la tabella non esiste e `apply_mutations` non
- * ha un ramo per lei. Lasciare le righe `pending` le renderebbe indistinguibili da lavoro ancora
- * da fare; marcarle `skipped` con la ragione le rende ritrovabili quando la tabella ci sarà, e
- * soprattutto le fa comparire nel report invece di sparire.
+ * I voti NON passano dalla fase 3 (il commento in `import-resolve` lo dichiara): si agganciano
+ * qui per `tvdb_episode_id` alla mappa globale, che gli eventi hanno già riempito — un voto
+ * sta quasi sempre su un episodio visto, quindi zero chiamate TMDB. Ciò che la mappa non sa
+ * è `non_risolto`, dichiarato nel report come per gli episodi.
+ *
+ * Risponde `null` quando non c'è più niente da fare; altrimenti `done: false` e il giro dopo
+ * riprende da qui (le righe processate escono da `pending`, il progresso è nello staging).
  */
-async function deferRatings(
+async function scriviVoti(
   admin: ReturnType<typeof adminClient>,
+  caller: ReturnType<typeof callerClient>,
+  daServizio: boolean,
   jobId: string,
-): Promise<number> {
-  const { data, error } = await admin.from('import_staging')
-    .update({ status: 'skipped', error: 'voti: user_ratings arriva col blocco 9 (§3.6)' })
+  userId: string,
+  totaliCorrenti: Record<string, unknown>,
+): Promise<Response | null> {
+  const { data: pending, error: readError } = await admin
+    .from('import_staging')
+    .select('row_index, raw, resolved, status')
     .eq('job_id', jobId)
     .eq('status', 'pending')
     .eq('raw->>row_kind', 'rating')
-    .select('row_index')
+    .order('row_index', { ascending: true })
+    .limit(ROWS_PER_INVOCATION)
 
-  if (error) throw new Error(`rinvio dei voti fallito: ${error.message}`)
-  return data?.length ?? 0
+  if (readError) throw new Error(`lettura voti fallita: ${readError.message}`)
+  if (!pending || pending.length === 0) return null
+
+  // La mappa globale per gli episodi votati, a blocchi (stesso limite di URL di countExisting).
+  const episodeIds = [
+    ...new Set(
+      (pending as StagingRow[])
+        .filter((r) => (r.raw as Record<string, unknown>)?.kind === 'star')
+        .map((r) => Number((r.raw as Record<string, unknown>).tvdb_episode_id))
+        .filter((n) => Number.isFinite(n) && n > 0),
+    ),
+  ]
+  const mappa = new Map<number, EpisodeMapEntry>()
+  for (let i = 0; i < episodeIds.length; i += 500) {
+    const { data, error } = await admin
+      .from('tvdb_tmdb_map')
+      .select('tvdb_id, tmdb_show_id, season_number, episode_number, resolution')
+      .eq('entity_type', 'episode')
+      .in('tvdb_id', episodeIds.slice(i, i + 500))
+    if (error) throw new Error(`lettura mappa per i voti fallita: ${error.message}`)
+    for (const row of data ?? []) {
+      mappa.set(row.tvdb_id as number, row as unknown as EpisodeMapEntry)
+    }
+  }
+
+  // I voti già in app, LAPIDI COMPRESE: un voto cancellato in app dopo l'export non deve
+  // risorgere al re-import — è la regola "un voto già presente non si sovrascrive" di
+  // buildRatingMutation, e le lapidi ne fanno parte.
+  const showIds = [
+    ...new Set(
+      [...mappa.values()]
+        .filter((v) => v.resolution === 'found' && v.tmdb_show_id !== null)
+        .map((v) => v.tmdb_show_id as number),
+    ),
+  ]
+  const esistenti = new Set<string>()
+  for (let i = 0; i < showIds.length; i += 100) {
+    const { data, error } = await admin
+      .from('user_ratings')
+      .select('tmdb_id, season_number, episode_number')
+      .eq('user_id', userId)
+      .eq('media_type', 'episode')
+      .in('tmdb_id', showIds.slice(i, i + 100))
+    if (error) throw new Error(`lettura voti esistenti fallita: ${error.message}`)
+    for (const r of data ?? []) {
+      esistenti.add(`${r.tmdb_id}:${r.season_number}:${r.episode_number}`)
+    }
+  }
+
+  const { mutations, written, skipped } = buildRatingBatch(
+    pending as StagingRow[], userId, mappa, esistenti)
+
+  // Stessa sorveglianza di eventi e stati: i rifiuti si contano prima e dopo.
+  const rifiutiPrima = await countRejected(admin, userId)
+
+  for (let i = 0; i < mutations.length; i += MUTATIONS_PER_CALL) {
+    const lotto = mutations.slice(i, i + MUTATIONS_PER_CALL)
+    const { error } = daServizio
+      ? await admin.rpc('import_apply_mutations', { p_user: userId, batch: lotto })
+      : await caller.rpc('apply_mutations', { batch: lotto })
+    if (error) throw new Error(`apply_mutations ha rifiutato i voti a ${i}: ${error.message}`)
+  }
+
+  const nuoviRifiuti = (await countRejected(admin, userId)) - rifiutiPrima
+  if (nuoviRifiuti > 0) {
+    throw new Error(
+      `${nuoviRifiuti} voti rifiutati da apply_mutations: guardare sync_rejected_mutations`,
+    )
+  }
+
+  if (written.length > 0) {
+    const { error } = await admin.from('import_staging')
+      .update({ status: 'written', error: null })
+      .eq('job_id', jobId)
+      .in('row_index', written)
+    if (error) throw new Error(`marcatura voti scritti fallita: ${error.message}`)
+  }
+
+  for (const { row_index, reason } of skipped) {
+    const { error } = await admin.from('import_staging')
+      .update({ status: 'skipped', error: `voti: ${reason}` })
+      .eq('job_id', jobId).eq('row_index', row_index)
+    if (error) throw new Error(`marcatura voto ${row_index} fallita: ${error.message}`)
+  }
+
+  const prima = totaliCorrenti as Record<string, number>
+  const giaInApp = skipped.filter((s) => s.reason === 'voto_gia_in_app').length
+  const reactions = skipped.filter((s) => s.reason === 'reaction_conservata').length
+  const totals = {
+    ...totaliCorrenti,
+    ratings_applied: (prima.ratings_applied ?? 0) + written.length,
+    ratings_kept_in_app: (prima.ratings_kept_in_app ?? 0) + giaInApp,
+    ratings_reactions_kept: (prima.ratings_reactions_kept ?? 0) + reactions,
+    ratings_not_written:
+      (prima.ratings_not_written ?? 0) + (skipped.length - giaInApp - reactions),
+  }
+
+  const { error: updateError } = await admin.from('import_jobs')
+    .update({ totals }).eq('id', jobId)
+  if (updateError) throw new Error(`totali non salvati: ${updateError.message}`)
+
+  return jsonResponse({
+    done: false,
+    phase: 'writing',
+    voti: true,
+    applicati: written.length,
+    gia_in_app: giaInApp,
+    reactions_conservate: reactions,
+    skipped: skipped.length - giaInApp - reactions,
+    totals,
+  }, 200)
 }

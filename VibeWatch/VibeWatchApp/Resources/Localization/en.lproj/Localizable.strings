@@ -408,6 +408,8 @@
 "import.report.shows" = "Shows";
 "import.report.period" = "From %@ to %@";
 "import.report.ratingsDeferred" = "%d ratings found — not imported yet.";
+"import.report.ratingsApplied" = "%d ratings imported as stars.";
+"import.report.ratingsUnresolved" = "%d ratings could not be matched.";
 "import.report.statusesApplied" = "%d series statuses restored (watchlist and archive).";
 "import.report.statusesUnresolved" = "%d series statuses could not be applied.";
 "import.report.unresolvedTitle" = "%d episodes could not be matched";

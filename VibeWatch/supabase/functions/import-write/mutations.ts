@@ -17,7 +17,7 @@ export interface StagingRow {
 /** L'involucro che `apply_mutations(batch jsonb)` si aspetta. */
 export interface Mutation {
   op: 'INSERT'
-  table: 'watch_events' | 'tv_show_state'
+  table: 'watch_events' | 'tv_show_state' | 'user_ratings'
   record: Record<string, unknown>
 }
 
@@ -28,6 +28,10 @@ export type SkipReason =
   | 'senza_dedup_key'
   | 'stato_non_valido'
   | 'stato_gia_in_app'
+  | 'reaction_conservata'
+  | 'voto_gia_in_app'
+  | 'voto_fuori_scala'
+  | 'senza_episodio'
 
 export interface BuildOutcome {
   mutation: Mutation | null
@@ -223,6 +227,117 @@ export interface BuiltBatch {
   mutations: Mutation[]
   written: number[]
   skipped: { row_index: number; reason: SkipReason }[]
+}
+
+/** La riga di `tvdb_tmdb_map` per un episodio, ridotta a ciò che serve ai voti. */
+export interface EpisodeMapEntry {
+  resolution: string
+  tmdb_show_id: number | null
+  season_number: number | null
+  episode_number: number | null
+}
+
+/**
+ * §7.5: da riga di staging `row_kind = 'rating'` alla mutazione `user_ratings`, o al motivo
+ * per cui non se ne fa una. Le regole, nell'ordine in cui tagliano:
+ *
+ *   - **una reaction non è un voto** (`kind = 'reaction'`): la tabella di lookup era
+ *     server-side ed è spenta con TV Time — si conserva grezza nell'export e nello staging,
+ *     e il report la conta. Nessuna conversione inventata.
+ *   - **l'episodio si risolve per `tvdb_episode_id` dalla mappa globale** (§6), la stessa già
+ *     riempita dagli eventi della fase 3: un voto sta quasi sempre su un episodio visto,
+ *     quindi la mappa lo sa già e non si spende nessuna chiamata TMDB. Fuori mappa o
+ *     `not_found` → `non_risolto`, dichiarato.
+ *   - **un voto già presente in app NON si sovrascrive** (`esistenti`, lapidi comprese):
+ *     l'export è per definizione più vecchio di qualunque voto dato in app dopo, e un voto
+ *     cancellato in app che l'import risuscitasse sarebbe l'import che disfa una scelta —
+ *     stessa regola dell'`active` degli stati. È anche ciò che rende il re-import idempotente.
+ *   - il `rating` deve stare in 1..10 (il CHECK della tabella): TV Time ammetteva lo 0, che
+ *     nella scala a mezze stelle non esiste — fuori scala, dichiarato.
+ */
+export function buildRatingMutation(
+  row: StagingRow,
+  userId: string,
+  mappa: Map<number, EpisodeMapEntry>,
+  esistenti: Set<string>,
+): BuildOutcome {
+  const raw = row.raw ?? {}
+
+  if (raw.kind !== 'star') return { mutation: null, skip: 'reaction_conservata' }
+
+  const episodeId = Number(raw.tvdb_episode_id)
+  if (!Number.isFinite(episodeId) || episodeId <= 0) {
+    return { mutation: null, skip: 'senza_episodio' }
+  }
+
+  const rating = asInt(raw.star_rating)
+  if (rating === null || rating < 1 || rating > 10) {
+    return { mutation: null, skip: 'voto_fuori_scala' }
+  }
+
+  const voce = mappa.get(episodeId)
+  if (!voce || voce.resolution !== 'found' || voce.tmdb_show_id === null) {
+    return { mutation: null, skip: 'non_risolto' }
+  }
+  // I numeri vengono da TMDB, mai dall'export (§6): senza numerazione il CHECK di forma di
+  // `user_ratings` (un voto a episodio senza numeri) rifiuterebbe comunque, e giustamente.
+  const season = asInt(voce.season_number)
+  const episode = asInt(voce.episode_number)
+  if (season === null || episode === null) {
+    return { mutation: null, skip: 'numerazione_mancante' }
+  }
+
+  if (esistenti.has(`${voce.tmdb_show_id}:${season}:${episode}`)) {
+    return { mutation: null, skip: 'voto_gia_in_app' }
+  }
+
+  return {
+    skip: null,
+    mutation: {
+      op: 'INSERT',
+      table: 'user_ratings',
+      record: {
+        // Stesso obbligo delle altre tabelle: senza `user_id` combaciante, `apply_mutations`
+        // scarta in silenzio verso `sync_rejected_mutations`.
+        user_id: userId,
+        media_type: 'episode',
+        tmdb_id: voce.tmdb_show_id,
+        season_number: season,
+        episode_number: episode,
+        rating,
+      },
+    },
+  }
+}
+
+/**
+ * Come `buildStatusBatch`, per i voti. Un doppione nello stesso lotto (lo stesso episodio
+ * votato in due file dell'export) passa una volta sola: il secondo è `voto_gia_in_app` —
+ * dopo il primo lo sarà alla lettera, e distinguere "già in app" da "già in questo lotto"
+ * non cambierebbe nessuna decisione.
+ */
+export function buildRatingBatch(
+  rows: StagingRow[],
+  userId: string,
+  mappa: Map<number, EpisodeMapEntry>,
+  esistenti: Set<string>,
+): BuiltBatch {
+  const out: BuiltBatch = { mutations: [], written: [], skipped: [] }
+  const emessi = new Set<string>(esistenti)
+
+  for (const row of rows) {
+    const { mutation, skip } = buildRatingMutation(row, userId, mappa, emessi)
+    if (mutation) {
+      const r = mutation.record
+      emessi.add(`${r.tmdb_id}:${r.season_number}:${r.episode_number}`)
+      out.mutations.push(mutation)
+      out.written.push(row.row_index)
+    } else {
+      out.skipped.push({ row_index: row.row_index, reason: skip! })
+    }
+  }
+
+  return out
 }
 
 /** Come `buildBatch`, per le righe di stato. `esistenti` = serie che hanno già una riga. */

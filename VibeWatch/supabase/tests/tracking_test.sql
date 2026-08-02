@@ -357,9 +357,45 @@ select t.eq(public.import_report('aaaaaaaa-0000-4000-8000-000000000001')
 select t.eq((public.import_report('aaaaaaaa-0000-4000-8000-000000000001')->>'voti_indecodificabili')::int,
             1, 'i voti indecodificabili si dichiarano (§7.5)');
 select t.eq(public.import_report('aaaaaaaa-0000-4000-8000-000000000001')->>'voti_importati',
-            'false', 'e si dice che i voti NON sono stati importati: user_ratings arriva col blocco 9');
+            'false', 'un job VECCHIO (stelle rinviate al blocco 9) resta false da solo: il suo report '
+            'dice la verita'' di quando e'' girato');
 select t.eq(public.import_report('aaaaaaaa-0000-4000-8000-000000000001')->>'film_supportati',
             'false', 'zero film non deve sembrare "non ne avevi": i film non si importano ancora');
+
+-- §7.5: i voti scritti davvero (import-write v5). Un secondo job coi quattro esiti della
+-- pipeline nuova: stella scritta, gia' in app (non e' una perdita), non risolta, reaction
+-- conservata. `voti_importati` qui e' STRUTTURALE: ogni stella processata → true.
+-- `done` e non `running`: l'indice `import_jobs_one_open_per_user` ammette UN solo job
+-- aperto per utente, e il job 001 qui sopra e' ancora running — l'indice fa il suo lavoro
+-- anche nei test, ed e' una conferma gratis.
+insert into public.import_jobs (id, user_id, source, status, phase)
+values ('aaaaaaaa-0000-4000-8000-000000000003',
+        '11111111-1111-1111-1111-111111111111', 'tvtime', 'done', 'done');
+
+insert into public.import_staging (job_id, row_index, raw, resolved, status, error) values
+  ('aaaaaaaa-0000-4000-8000-000000000003', 0,
+   '{"row_kind":"rating","kind":"star","tvdb_episode_id":"5001","star_rating":6}'::jsonb,
+   null, 'written', null),
+  ('aaaaaaaa-0000-4000-8000-000000000003', 1,
+   '{"row_kind":"rating","kind":"star","tvdb_episode_id":"5002","star_rating":8}'::jsonb,
+   null, 'skipped', 'voti: voto_gia_in_app'),
+  ('aaaaaaaa-0000-4000-8000-000000000003', 2,
+   '{"row_kind":"rating","kind":"star","tvdb_episode_id":"5003","star_rating":10}'::jsonb,
+   null, 'skipped', 'voti: non_risolto'),
+  ('aaaaaaaa-0000-4000-8000-000000000003', 3,
+   '{"row_kind":"rating","kind":"reaction","tvdb_episode_id":"5001","reaction_id":27}'::jsonb,
+   null, 'skipped', 'voti: reaction_conservata');
+
+select t.eq(public.import_report('aaaaaaaa-0000-4000-8000-000000000003')->>'voti_importati',
+            'true', 'ogni stella processata dalla pipeline nuova: voti_importati e'' true');
+select t.eq((public.import_report('aaaaaaaa-0000-4000-8000-000000000003')->>'voti_stelle_importati')::int,
+            1, 'le stelle scritte si contano');
+select t.eq((public.import_report('aaaaaaaa-0000-4000-8000-000000000003')->>'voti_stelle_gia_in_app')::int,
+            1, 'un voto gia'' in app non e'' una perdita e conta a parte');
+select t.eq((public.import_report('aaaaaaaa-0000-4000-8000-000000000003')->>'voti_stelle_non_risolti')::int,
+            1, 'una stella non risolta si dichiara');
+select t.eq((public.import_report('aaaaaaaa-0000-4000-8000-000000000003')->>'voti_reaction')::int,
+            1, 'le reaction restano contate: conservate, mai convertite (la lookup e'' spenta)');
 
 -- §7.1: gli stati per-serie nel report. Quattro righe con i quattro esiti possibili:
 -- applicato, lasciato com'era in app (non e' una perdita), non risolto, saltato in scrittura.
