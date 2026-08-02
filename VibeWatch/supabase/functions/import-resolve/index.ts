@@ -17,6 +17,14 @@ import { isServiceCaller } from '../_shared/cronAuth.ts'
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
 
+/** La chiave con cui il driver del cron viene riconosciuto e con cui, quando è lui a guidare,
+ *  si parla a `catalog-resolve`. Stessa risoluzione di `proxy.ts`. */
+const SERVICE_KEY = (() => {
+  const s = Deno.env.get('SUPABASE_SECRET_KEYS')
+  if (s) { try { const k = JSON.parse(s)?.default; if (k) return k as string } catch { /* fall back */ } }
+  return Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+})()
+
 /** §7.2: l'import risolve in batch da 50 — è anche il massimo che `catalog-resolve` accetta. */
 const BATCH = 50
 /**
@@ -68,7 +76,8 @@ serve(async (req: Request) => {
 
   // Utente → RLS decide (chiusura dell'IDOR); driver del cron → service key, che nessun
   // client possiede. Stessa coppia di strade di `import-parse`.
-  const lookup = isServiceCaller(req) ? admin : callerClient(req)
+  const daServizio = isServiceCaller(req)
+  const lookup = daServizio ? admin : callerClient(req)
 
   const { data: job, error: jobError } = await lookup
     .from('import_jobs')
@@ -133,13 +142,24 @@ serve(async (req: Request) => {
 
       const risposta = await fetch(`${SUPABASE_URL}/functions/v1/catalog-resolve`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // Si inoltra il JWT dell'utente: `catalog-resolve` vuole un token vero, non la chiave
-          // di servizio, ed è giusto che il budget sia attribuito a chi sta importando.
-          'Authorization': req.headers.get('Authorization') ?? '',
-          'apikey': SUPABASE_ANON_KEY,
-        },
+        // Due chiamanti, due coppie di header — e le coppie NON si mescolano. Per un utente si
+        // inoltra il suo JWT con l'apikey pubblica: il budget è suo. Per il driver del cron la
+        // chiave service va su ENTRAMBI gli header: inoltrarla come Authorization accanto
+        // all'apikey anon fa rispondere al gateway 401 "Conflicting API keys" — trovato dal
+        // primo import vero, perché nel collaudo gli episodi erano già tutti in mappa e questa
+        // chiamata non partiva mai. `catalog-resolve` col service key + job_id intesta comunque
+        // il budget al proprietario del job (`importJobOwner`).
+        headers: daServizio
+          ? {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${SERVICE_KEY}`,
+              'apikey': SERVICE_KEY,
+            }
+          : {
+              'Content-Type': 'application/json',
+              'Authorization': req.headers.get('Authorization') ?? '',
+              'apikey': SUPABASE_ANON_KEY,
+            },
         body: JSON.stringify({
           entities: lotto.map((id) => ({ tvdb_id: id, entity_type: 'episode' })),
           // Sblocca il budget da import: `catalog-resolve` verifica da sé che il job sia di chi

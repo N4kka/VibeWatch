@@ -66,9 +66,20 @@ Com'è fatto, in breve (il perché sta nei commenti di migration e funzioni):
   il job. 26 chiavi nelle 20 lingue. CHECK di `notifications` allargato a `import_done`
   (stessa forma di `api_proxy_budget`: ogni tipo nuovo è una migration).
 
-**Aperto dell'import**: i **voti** restano rinviati (`voti_importati: false` nel report)
-anche ora che `user_ratings` esiste — collegarli è un lavoro suo; la push per un utente
-senza device registrati muore in `no-live-token` (giusto così).
+**Il primo import vero ha trovato il buco che il collaudo non poteva vedere** (2026-08-02,
+mattina): con gli episodi sintetici già tutti in mappa, `import-resolve` non chiamava mai
+`catalog-resolve` — e proprio lì, guidata dal driver, inoltrava la chiave service come
+`Authorization` accanto all'`apikey` anon: il gateway risponde 401 "Conflicting API keys".
+Corretto (ramo service: stessa chiave su entrambi gli header, come già fa il driver con le
+fasi) e deployato. Le fasi 1–2 ad app chiusa avevano funzionato: 21.724 righe in staging.
+L'utente ha poi chiesto di **fermare e svuotare** quell'import (era sul profilo principale):
+job + staging + zip rimossi, zero eventi erano stati scritti (la fase 4 non era mai partita),
+liste intatte — l'import non le tocca in nessuna fase.
+
+**Aperto dell'import**: la **prova su dispositivo completa** (da rifare da un account scelto
+dall'utente, col fix deployato); i **voti** restano rinviati (`voti_importati: false` nel
+report) anche ora che `user_ratings` esiste — collegarli è un lavoro suo; la push per un
+utente senza device registrati muore in `no-live-token` (giusto così).
 
 ## Il blocco 10 (universal links) — resta il sito
 
