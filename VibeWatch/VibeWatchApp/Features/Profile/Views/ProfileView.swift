@@ -79,6 +79,7 @@ struct ProfileView: View {
     @State private var showSettings = false
     @State private var showUserSearch = false
     @State private var showDiary = false
+    @State private var showImport = false
     /// SPEC v3 §9.4: il link pubblico del proprio profilo. Lo username sta sul server (lo
     /// specchio locale di `profiles` non lo ha), quindi la riga ha stati distinti: un errore
     /// di rete non deve presentarsi come "la riga non c'è".
@@ -341,6 +342,9 @@ struct ProfileView: View {
         }
         .sheet(isPresented: $showDiary) {
             NavigationView { DiaryView() }
+        }
+        .sheet(isPresented: $showImport) {
+            ImportView()
         }
         .fullScreenCover(isPresented: $showUpgradePaywall) {
             ProPaywallView(isPresented: $showUpgradePaywall, source: "profile_banner")
@@ -725,10 +729,23 @@ struct ProfileView: View {
                         }
                     }
                 )
-                
+
                 Divider()
                     .background(Color.white.opacity(0.1))
-                
+
+                // SPEC v3 §7: l'import dello storico. La schermata è una lista di sorgenti
+                // (oggi solo TV Time) apposta: gli import futuri sono righe, non schermate.
+                SettingsRow(
+                    icon: "square.and.arrow.down",
+                    title: "profile.importFrom".localized,
+                    action: {
+                        showImport = true
+                    }
+                )
+
+                Divider()
+                    .background(Color.white.opacity(0.1))
+
                 SettingsRow(
                     icon: "envelope",
                     title: "profile.sendFeedback".localized,

@@ -1,6 +1,6 @@
 # SPEC v3 — stato del lavoro e ripresa
 
-> Aggiornato: 2026-08-01, notte (cinque sessioni). Branch: `refactoring/spec-v3-prereqs-oracle`.
+> Aggiornato: 2026-08-02 (sei sessioni). Branch: `refactoring/spec-v3-prereqs-oracle`.
 > Progetto Supabase: `rqhxhkijzhqivljivirq` (VibeWatch, eu-west-1, Postgres 17.6).
 > Repo: `/Users/nicola/Documents/StartingVibe/VibeWatch` (git root un livello sopra).
 
@@ -13,7 +13,64 @@ passa al primo colpo, vale la pena rompere apposta ciò che dovrebbe coprire e c
 fallisca — fatto anche in questa sessione sul `security definer` di `search_users`: rimesso
 `invoker`, la suite fallisce esattamente dove deve.
 
-## Da fare per prima cosa: la coda su dispositivo, e il dominio che chiude il blocco 10
+## Da fare per prima cosa
+
+Due prove su dispositivo (dell'utente) e un sito:
+
+1. **provare l'import dall'app**: Profilo → "Importa da" → TV Time (.zip) con l'export vero.
+   Il server è collaudato end-to-end in produzione (vedi *L'import in app* più sotto); ciò che
+   manca è solo il giro fatto coi propri pollici — upload, "puoi chiudere l'app", push
+   all'arrivo, report;
+2. il **sito** su `vibewatchapp.com` che serva l'AASA — chiude il blocco 10
+   (`docs/universal-links/README.md`);
+3. quando il sito c'è: flag `ProfileView.shareProfileEnabled = true` per riaccendere la riga
+   "Condividi profilo" (oggi spenta con "Coming soon", guideline 2.1).
+
+## L'import in app (blocco 6 chiuso) — 2026-08-02, in produzione e collaudato ad app chiusa
+
+**Il flusso intero funziona senza client**: ZIP su Storage → `create_import_job` → il cron
+(ogni minuto) invoca `import-driver` che fa avanzare le fasi 2-6 → report in `totals` →
+push `import_done` in coda. Collaudato in produzione con utente usa-e-getta e ZIP sintetico
+(3 episodi di The Walking Dead, tvdb id già in mappa → zero chiamate TMDB): dopo la creazione
+del job **nessun client ha più toccato niente** — il job è arrivato a `done` da solo, report
+3/1/0 non riconosciuti, `tv_show_state` 3/177, push accodata. Residui zero (catalogo TWD
+rimasto: è §1.5). Gli esiti negativi provati via REST: `bad_path` (cartella altrui),
+`upload_not_found`, `already_running`.
+
+Com'è fatto, in breve (il perché sta nei commenti di migration e funzioni):
+
+- **`create_import_job(p_storage_path)`** (definer, solo authenticated): unica scrittura
+  client su `import_jobs` — un solo .zip nella PROPRIA cartella, file esistente e proprio
+  (`storage.objects.owner`), un solo job aperto per utente (indice unico parziale, la corsa
+  la chiude l'indice come in `set_username`). **`retry_import_job`**: failed → running,
+  fase e checkpoint intatti.
+- **`import-driver`** (Edge Function, solo service via `cronAuth`; cron ogni minuto con
+  guardia `where exists(... running)` — a riposo zero HTTP): claim con lease
+  (`locked_until`), loop di chiamate di fase a budget (100 s), verità riletta dalla riga,
+  push in `notifications` quando finalize dice done. **Se il claim va in errore procede
+  senza lease, dicendolo**: checkpoint + `dedup_key` rendono i replay sicuri (criterio 2
+  di §13), il lease è un'ottimizzazione — la lezione della replica stantia, sotto.
+- **`import_apply_mutations(p_user, batch)`** (definer, SOLO `service_role`, proacl
+  verificato): la fase 4 ad app chiusa. `apply_mutations` esige `auth.uid()`; il wrapper
+  imposta l'identità del proprietario del job (dalla riga, mai dalla richiesta) per la
+  durata della transazione e delega — ogni guardia resta al suo posto.
+- Le 4 funzioni di fase accettano il **service caller** (`isServiceCaller` → lookup da
+  admin); per gli utenti decide la RLS come prima. `catalog-resolve` col service key +
+  `job_id` valido intesta il budget `import:{proprietario}` (i contatori separati esistono
+  perché import e prewarm non si affamino a vicenda).
+- **Client iOS**: riga "Importa da" in ProfileView → `ImportView` (sorgenti: solo TV Time
+  .zip, il resto è una riga futura) → fileImporter → upload → RPC → **polling** (il client
+  è un oblò: le fasi sono del server) → report §7.4 con l'elenco dei non riconosciuti →
+  retry. `ImportViewModel` con backend a protocollo, 14 test; stati tutti distinti, la
+  soglia dei 5 errori di polling consecutivi rende visibile la linea persa senza fermare
+  il job. 26 chiavi nelle 20 lingue. CHECK di `notifications` allargato a `import_done`
+  (stessa forma di `api_proxy_budget`: ogni tipo nuovo è una migration).
+
+**Aperto dell'import**: i **voti** restano rinviati (`voti_importati: false` nel report)
+anche ora che `user_ratings` esiste — collegarli è un lavoro suo; la push per un utente
+senza device registrati muore in `no-live-token` (giusto così).
+
+## Il blocco 10 (universal links) — resta il sito
 
 **Il blocco 9 è CHIUSO, coda compresa** — dati, stats server, UI intera (stelle, favorites con
 scelta slot, diario, stats nella dashboard), **provato sul dispositivo il 2026-08-01** (voto,
@@ -598,7 +655,7 @@ nota.
 | — | `apply_mutations` (§4, §7.2) | **fatto e in produzione**, collaudato su utente usa-e-getta |
 | 4 | Paginazione del pull | **fatto e verificato**. `SyncPagination`, 8 test verdi + pull reale sul dispositivo, nessun `Failed to pull` |
 | 5 | Integrazione client | **fatto per la lettura**. SQLite + whitelist + pull + conflitti verificati su dati veri; il percorso di scrittura è cablato ma senza chiamanti (arrivano col blocco 7) |
-| 6 | Pipeline import + report | **fasi 1-4 in produzione e collaudate end-to-end**; fasi 5-6 scritte e verdi in SQL, `import-finalize` da deployare |
+| 6 | Pipeline import + report | **chiuso** (2026-08-02): tutte le fasi + `import-driver` + UI in app deployate e collaudate end-to-end in produzione **ad app chiusa** (cron→driver→fasi→report→push). Manca solo la prova su dispositivo con l'export vero |
 | 7 | UI Tracking | **chiuso.** Schermata, tab bar e migrazione dello storico in produzione; 971 episodi migrati sul dispositivo dell'autore al primo tentativo; §13.6 misurato a **208,9 ms** su 300; 20 lingue allineate |
 | 8 | Username, `public_profiles`, ricerca, follow | **chiuso, tutto in produzione e provato sul dispositivo**: schema, backfill, schermata di scelta, `user_follows`, `search_users`, `get_public_profile`, ramo in `apply_mutations`, sync client, UI social e login con username via Edge Function |
 | 9 | Favorites, rating, stats, diario | **chiuso**: tutto in produzione, 20 lingue, provato sul dispositivo il 2026-08-01 (voto, favorite, diario, stats). Unica coda: i titoli localizzati del Tracking non ancora rivisti sul dispositivo |
@@ -856,6 +913,23 @@ con due codici e si somigliano al 73% per costruzione. Provato rimettendo la cop
 
 ## Cose imparate che risparmiano tempo
 
+- **Una colonna nuova non esiste finché OGNI replica di PostgREST non ricarica la schema cache**
+  (2026-08-02). Dopo l'`alter table` di `locked_until`, il claim del driver rispondeva 42703 "la
+  colonna non esiste" — su una colonna che `information_schema` mostrava — mentre la stessa
+  identica richiesta da fuori passava: repliche diverse, cache diverse, e `notify pgrst` non ha
+  raggiunto quella stantia per **quasi mezz'ora**. Due trappole dentro la trappola: la prima
+  diagnosi (le virgolette nell'`or=`) era una coincidenza confermata dalla lotteria delle
+  repliche — stessa richiesta, 400 e poi 204 a secondi di distanza; e l'esito del driver
+  schiacciava "claim in errore" e "lease occupato" in un messaggio solo, nascondendo il 42703.
+  La difesa che è rimasta nel codice: il driver **procede senza lease dicendolo** — può farlo
+  solo perché checkpoint e `dedup_key` rendono i replay sicuri per costruzione. Se un giorno
+  serve forzare il reload: `notify pgrst, 'reload schema'` e, se non basta, riavviare PostgREST
+  dal dashboard.
+- **I test iOS di questa clone sparano HTTP veri verso produzione.** La raffica di
+  `apply_mutations` 401 e di POST su tabelle finte (`table_a`, `tbl_x`) nei log api delle 03:19
+  era la suite del simulatore: i segreti segnaposto la fanno respingere (401), ma il rumore nei
+  log di produzione c'è. Prima di indagare un attacco, controllare l'orario dei propri test.
+
 - **"Non inventare nulla" e "non mentire" non sono la stessa regola, e la prima da sola sbaglia.**
   Per le serie marcate viste per intero, la strada che sembrava più onesta era scrivere il solo
   `user_status` e lasciare i contatori al ricalcolo: non inventa episodi. Ma
@@ -1068,15 +1142,10 @@ Due modi, entrambi già usati:
 
 ## Cose che restano aperte, in ordine di costo
 
-0. **L'import di TV Time non ha nessun ingresso in app** (constatato il 2026-08-02: nessun file
-   Swift tocca `import_jobs` o le funzioni di import). La pipeline server c'è — fasi 1–4 in
-   produzione, `import-finalize` (fasi 5–6) scritto e **da deployare** — ma `import_jobs` ha
-   **sole policy di lettura**: nei collaudi la riga del job l'ha creata la chiave di servizio.
-   Per un utente reale mancano: la creazione del job (RPC o Edge Function, con la stessa cura
-   anti-IDOR di `import-parse`), l'upload dello ZIP nel bucket `imports` (cartella propria,
-   policy già in produzione), chi muove le fasi da 2 a 6, la push a fine import (§7.2) e la
-   schermata report di §7.4 — **obbligatoria**, con l'elenco dei non riconosciuti. È il pezzo
-   più grosso rimasto, ed è il blocco naturale dopo il sito.
+0. ~~**L'import di TV Time non ha nessun ingresso in app**~~ — **CHIUSO il 2026-08-02** (vedi
+   *L'import in app* in testa). Restano due code sue: i **voti** dell'import ancora rinviati
+   (`ratings_deferred`) ora che `user_ratings` esiste, e la **prova su dispositivo** con
+   l'export vero.
 1. **`Config.string(for:)` restituisce `""` in silenzio** per una chiave mancante. Ora c'è
    `validateAtLaunch` che elenca le chiavi vuote o malformate, ma **in Release non lascia traccia**
    perché `Logger` è tutto dentro `#if DEBUG`. Il posto dove agganciare Crashlytics è segnato nel

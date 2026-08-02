@@ -391,6 +391,32 @@
 "profile.sendFeedback" = "फीडबैक भेजें";
 "profile.share" = "प्रोफ़ाइल साझा करें";
 "profile.share.comingSoon" = "जल्द आ रहा है";
+"profile.importFrom" = "यहाँ से आयात करें";
+"import.title" = "आयात";
+"import.source.tvtime" = "TV Time (.zip)";
+"import.source.tvtime.subtitle" = "TV Time से आपका डेटा एक्सपोर्ट";
+"import.source.footer" = "TV Time से अपना डेटा एक्सपोर्ट (GDPR) माँगें, फिर यहाँ .zip फ़ाइल चुनें। समान फ़ॉर्मैट एक्सपोर्ट करने वाले ऐप भी चलेंगे।";
+"import.state.uploading" = "अपलोड हो रहा है…";
+"import.state.uploadingHint" = "फ़ाइल अपलोड होने तक ऐप खुला रखें।";
+"import.canClose" = "आपका इतिहास आयात हो रहा है। आप ऐप बंद कर सकते हैं — पूरा होने पर हम आपको सूचना भेजेंगे।";
+"import.phase.queued" = "कतार में, बस शुरू होने वाला है…";
+"import.phase.parsing" = "आपका इतिहास पढ़ा जा रहा है…";
+"import.phase.resolving" = "सीरीज़ और एपिसोड मिलाए जा रहे हैं…";
+"import.phase.writing" = "आपके एपिसोड सहेजे जा रहे हैं…";
+"import.phase.finishing" = "पूरा किया जा रहा है…";
+"import.report.episodes" = "आयात किए गए एपिसोड";
+"import.report.shows" = "सीरीज़";
+"import.report.period" = "%@ से %@ तक";
+"import.report.ratingsDeferred" = "%d रेटिंग मिलीं — अभी आयात नहीं हुईं।";
+"import.report.unresolvedTitle" = "%d एपिसोड पहचाने नहीं जा सके";
+"import.report.unresolvedRow" = "%d एपिसोड";
+"import.report.allResolved" = "सब कुछ पहचाना गया।";
+"import.error.failed" = "आयात एक त्रुटि के साथ रुक गया।";
+"import.error.network" = "अभी आयात की स्थिति जाँची नहीं जा सकती।";
+"import.error.uploadFailed" = "अपलोड पूरा नहीं हुआ।";
+"import.error.startFailed" = "आयात शुरू नहीं हो सका।";
+"import.error.fileRead" = "वह फ़ाइल पढ़ी नहीं जा सकी।";
+"import.error.reportFailed" = "आयात पूरा हुआ, पर रिपोर्ट लोड नहीं हो सकी।";
 
 // Profile - Support & Feedback
 "profile.feedback.suggestFeature" = "नया फीचर सुझाएँ";

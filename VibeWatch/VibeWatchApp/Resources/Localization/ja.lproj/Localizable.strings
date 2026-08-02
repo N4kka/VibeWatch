@@ -391,6 +391,32 @@
 "profile.sendFeedback" = "フィードバックを送信";
 "profile.share" = "プロフィールを共有";
 "profile.share.comingSoon" = "近日公開";
+"profile.importFrom" = "インポート元";
+"import.title" = "インポート";
+"import.source.tvtime" = "TV Time (.zip)";
+"import.source.tvtime.subtitle" = "TV Timeのデータエクスポート";
+"import.source.footer" = "TV Timeにデータエクスポート（GDPR）を申請し、ここで.zipファイルを選択してください。同じ形式でエクスポートするアプリにも対応しています。";
+"import.state.uploading" = "アップロード中…";
+"import.state.uploadingHint" = "ファイルのアップロード中はアプリを開いたままにしてください。";
+"import.canClose" = "視聴履歴をインポートしています。アプリを閉じても大丈夫です。完了したら通知でお知らせします。";
+"import.phase.queued" = "開始を待っています…";
+"import.phase.parsing" = "履歴を読み込んでいます…";
+"import.phase.resolving" = "番組とエピソードを照合しています…";
+"import.phase.writing" = "エピソードを保存しています…";
+"import.phase.finishing" = "仕上げ中…";
+"import.report.episodes" = "インポートしたエピソード";
+"import.report.shows" = "番組";
+"import.report.period" = "%@から%@まで";
+"import.report.ratingsDeferred" = "%d件の評価が見つかりました。まだインポートされていません。";
+"import.report.unresolvedTitle" = "%d件のエピソードを照合できませんでした";
+"import.report.unresolvedRow" = "%d話";
+"import.report.allResolved" = "すべて照合できました。";
+"import.error.failed" = "インポートがエラーで停止しました。";
+"import.error.network" = "現在インポートの状態を確認できません。";
+"import.error.uploadFailed" = "アップロードが完了しませんでした。";
+"import.error.startFailed" = "インポートを開始できませんでした。";
+"import.error.fileRead" = "そのファイルを読み込めませんでした。";
+"import.error.reportFailed" = "インポートは完了しましたが、レポートを読み込めませんでした。";
 
 // Profile - Support & Feedback
 "profile.feedback.suggestFeature" = "機能を提案";

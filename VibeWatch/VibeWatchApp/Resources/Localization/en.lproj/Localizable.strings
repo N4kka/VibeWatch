@@ -391,6 +391,32 @@
 "profile.sendFeedback" = "Send Feedback";
 "profile.share" = "Share profile";
 "profile.share.comingSoon" = "Coming soon";
+"profile.importFrom" = "Import from";
+"import.title" = "Import";
+"import.source.tvtime" = "TV Time (.zip)";
+"import.source.tvtime.subtitle" = "Your TV Time data export";
+"import.source.footer" = "Request your data export from TV Time (GDPR), then pick the .zip here. Apps that export the same format work too.";
+"import.state.uploading" = "Uploading…";
+"import.state.uploadingHint" = "Keep the app open while the file uploads.";
+"import.canClose" = "Your history is being imported. You can close the app — we'll send you a notification when it's done.";
+"import.phase.queued" = "Waiting to start…";
+"import.phase.parsing" = "Reading your history…";
+"import.phase.resolving" = "Matching shows and episodes…";
+"import.phase.writing" = "Saving your episodes…";
+"import.phase.finishing" = "Finishing up…";
+"import.report.episodes" = "Episodes imported";
+"import.report.shows" = "Shows";
+"import.report.period" = "From %@ to %@";
+"import.report.ratingsDeferred" = "%d ratings found — not imported yet.";
+"import.report.unresolvedTitle" = "%d episodes could not be matched";
+"import.report.unresolvedRow" = "%d episodes";
+"import.report.allResolved" = "Everything was matched.";
+"import.error.failed" = "The import stopped with an error.";
+"import.error.network" = "Can't check on the import right now.";
+"import.error.uploadFailed" = "The upload didn't complete.";
+"import.error.startFailed" = "The import couldn't start.";
+"import.error.fileRead" = "That file couldn't be read.";
+"import.error.reportFailed" = "The import finished, but the report couldn't be loaded.";
 
 // Profile - Support & Feedback
 "profile.feedback.suggestFeature" = "Suggest new feature";

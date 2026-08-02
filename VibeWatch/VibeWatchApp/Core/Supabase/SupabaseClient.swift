@@ -484,6 +484,89 @@ class SupabaseService: ObservableObject {
         return stats
     }
 
+    // MARK: - Import TV Time (SPEC v3 §7)
+
+    /// Carica lo ZIP nella PROPRIA cartella del bucket `imports` e restituisce il path.
+    /// Il nome è un UUID: due import successivi non si sovrascrivono, e il TTL del bucket
+    /// (7 giorni, §7.2) porta via i vecchi.
+    func uploadImportZip(_ data: Data) async throws -> String {
+        guard let client, let userId = currentUser?.id else {
+            throw SupabaseError.notAuthenticated
+        }
+        let path = "\(userId)/\(UUID().uuidString.lowercased()).zip"
+        _ = try await client.storage
+            .from("imports")
+            .upload(path, data: data, options: .init(contentType: "application/zip"))
+        return path
+    }
+
+    /// Crea il job sul proprio ZIP già caricato. Gli esiti prevedibili (`already_running`,
+    /// `upload_not_found`…) tornano come risposta, non come eccezione: in questa schermata
+    /// sono cose che succedono, non guasti.
+    func createImportJob(storagePath: String) async throws -> ImportStartOutcome {
+        let data = try await callRPC(
+            function: "create_import_job", payload: ["p_storage_path": storagePath])
+        guard let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+              let outcome = ImportStartOutcome(json: json) else {
+            throw SupabaseError.unexpectedResponse(
+                body: String(data: data.prefix(300), encoding: .utf8) ?? "<non-UTF8>")
+        }
+        return outcome
+    }
+
+    /// Riporta a `running` un proprio job `failed`. Checkpoint e `dedup_key` rendono la
+    /// ripresa sicura lato server; qui c'è solo la chiamata.
+    func retryImportJob(id: String) async throws -> ImportStartOutcome {
+        let data = try await callRPC(function: "retry_import_job", payload: ["p_job_id": id])
+        guard let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+              let outcome = ImportStartOutcome(json: json) else {
+            throw SupabaseError.unexpectedResponse(
+                body: String(data: data.prefix(300), encoding: .utf8) ?? "<non-UTF8>")
+        }
+        return outcome
+    }
+
+    /// L'ultimo job del chiamante, il più recente prima. La RLS mostra solo i propri;
+    /// `nil` = mai fatto un import. Serve alla ripresa: la schermata riaperta deve ritrovare
+    /// l'import in corso (o l'ultimo report), perché lo stato vive sul server (§7.2).
+    func latestImportJob() async throws -> ImportJobSnapshot? {
+        guard let client else { throw SupabaseError.notAuthenticated }
+        let rows: [ImportJobSnapshot] = try await client
+            .from("import_jobs")
+            .select("id, phase, status, error, created_at")
+            .order("created_at", ascending: false)
+            .limit(1)
+            .execute()
+            .value
+        return rows.first
+    }
+
+    /// Lo stato corrente di un job: è ciò che il polling legge. Il client non muove niente —
+    /// le fasi sono del server — quindi qui c'è solo una SELECT sotto RLS.
+    func importJob(id: String) async throws -> ImportJobSnapshot? {
+        guard let client else { throw SupabaseError.notAuthenticated }
+        let rows: [ImportJobSnapshot] = try await client
+            .from("import_jobs")
+            .select("id, phase, status, error, created_at")
+            .eq("id", value: id)
+            .limit(1)
+            .execute()
+            .value
+        return rows.first
+    }
+
+    /// Il report di §7.4, calcolato dal server (`import_report`, security invoker: decide la
+    /// RLS). Una risposta illeggibile è un errore, mai un report di zeri.
+    func importReport(jobId: String) async throws -> ImportReport {
+        let data = try await callRPC(function: "import_report", payload: ["p_job_id": jobId])
+        guard let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+              let report = ImportReport(json: json) else {
+            throw SupabaseError.unexpectedResponse(
+                body: String(data: data.prefix(300), encoding: .utf8) ?? "<non-UTF8>")
+        }
+        return report
+    }
+
     private func callRPC(function: String, payload: [String: Any]) async throws -> Data {
         guard let baseURL = URL(string: Config.supabaseURL) else {
             throw SupabaseError.notConfigured

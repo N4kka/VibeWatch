@@ -16,6 +16,7 @@
 import { serve } from 'https://deno.land/std@0.131.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { adminClient, jsonResponse } from '../_shared/proxy.ts'
+import { isServiceCaller } from '../_shared/cronAuth.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
@@ -42,9 +43,11 @@ serve(async (req: Request) => {
   }
 
   const admin = adminClient()
-  const caller = callerClient(req)
+  // Utente → RLS decide (chiusura dell'IDOR); driver del cron (§7.2, app chiusa) → service
+  // key, che nessun client possiede. Stessa coppia di strade delle altre fasi.
+  const lookup = isServiceCaller(req) ? admin : callerClient(req)
 
-  const { data: job, error: jobError } = await caller
+  const { data: job, error: jobError } = await lookup
     .from('import_jobs')
     .select('id, user_id, phase, status, checkpoint, totals')
     .eq('id', jobId)

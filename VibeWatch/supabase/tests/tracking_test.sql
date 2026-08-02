@@ -370,10 +370,12 @@ select t.eq((select count(*) from public.import_touched_shows(
               'aaaaaaaa-0000-4000-8000-000000000001', 100, 200)),
             0::bigint, 'il checkpoint per id di serie non rilegge cio'' che ha gia'' fatto');
 
--- Un import che perde tutto non deve poter sembrare riuscito.
+-- Un import che perde tutto non deve poter sembrare riuscito. Il job vuoto e' dell'utente 2:
+-- l'utente 1 ha gia' un job aperto, e dal 20260802 l'indice `import_jobs_one_open_per_user`
+-- vieta il secondo — questo test fissava una premessa che quella migration ha reso falsa.
 insert into public.import_jobs (id, user_id, source, status, phase)
 values ('aaaaaaaa-0000-4000-8000-000000000002',
-        '11111111-1111-1111-1111-111111111111', 'tvtime', 'running', 'recomputing');
+        '22222222-2222-2222-2222-222222222222', 'tvtime', 'running', 'recomputing');
 select t.eq((public.import_report('aaaaaaaa-0000-4000-8000-000000000002')->>'episodi_importati')::int,
             0, 'un job senza righe dichiara zero episodi');
 

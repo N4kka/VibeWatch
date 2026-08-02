@@ -16,6 +16,7 @@
 import { serve } from 'https://deno.land/std@0.131.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { adminClient, jsonResponse } from '../_shared/proxy.ts'
+import { isServiceCaller } from '../_shared/cronAuth.ts'
 import { buildBatch, type StagingRow } from './mutations.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
@@ -56,9 +57,13 @@ serve(async (req: Request) => {
   }
 
   const admin = adminClient()
+  // Utente → RLS decide (chiusura dell'IDOR); driver del cron (§7.2, app chiusa) → service
+  // key, che nessun client possiede. La differenza ritorna più sotto, dove si scrive.
+  const daServizio = isServiceCaller(req)
   const caller = callerClient(req)
+  const lookup = daServizio ? admin : caller
 
-  const { data: job, error: jobError } = await caller
+  const { data: job, error: jobError } = await lookup
     .from('import_jobs')
     .select('id, user_id, phase, status, totals')
     .eq('id', jobId)
@@ -112,7 +117,13 @@ serve(async (req: Request) => {
 
     for (let i = 0; i < mutations.length; i += MUTATIONS_PER_CALL) {
       const lotto = mutations.slice(i, i + MUTATIONS_PER_CALL)
-      const { error } = await caller.rpc('apply_mutations', { batch: lotto })
+      // `apply_mutations` si àncora ad `auth.uid()`, e col service key non c'è: ad app chiusa
+      // (driver del cron) si passa da `import_apply_mutations`, che imposta l'identità del
+      // PROPRIETARIO del job — preso dalla riga, mai dalla richiesta — e delega. Solo
+      // `service_role` può eseguirla: per un utente resta l'unica strada di sempre, il suo JWT.
+      const { error } = daServizio
+        ? await admin.rpc('import_apply_mutations', { p_user: job.user_id, batch: lotto })
+        : await caller.rpc('apply_mutations', { batch: lotto })
       if (error) throw new Error(`apply_mutations ha rifiutato il lotto a ${i}: ${error.message}`)
     }
 

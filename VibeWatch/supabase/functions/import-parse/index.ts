@@ -16,6 +16,7 @@
 import { serve } from 'https://deno.land/std@0.131.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { adminClient, jsonResponse } from '../_shared/proxy.ts'
+import { isServiceCaller } from '../_shared/cronAuth.ts'
 import { buildRows, FILE_V1, FILE_V2, RATING_FILES, readCsvEntries } from './archive.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
@@ -65,7 +66,13 @@ serve(async (req: Request) => {
 
   const admin = adminClient()
 
-  const { data: job, error: jobError } = await callerClient(req)
+  // Due chiamanti legittimi, due strade: un utente passa dalla RLS (`import_jobs_select_own`
+  // decide, è la chiusura dell'IDOR), il driver del cron (§7.2, app chiusa) presenta il
+  // service key — che nessun client possiede — e legge da admin. Nessun `if` sull'identità:
+  // per l'utente decide sempre la policy.
+  const lookup = isServiceCaller(req) ? admin : callerClient(req)
+
+  const { data: job, error: jobError } = await lookup
     .from('import_jobs')
     .select('id, user_id, phase, status, storage_path, checkpoint, totals')
     .eq('id', jobId)

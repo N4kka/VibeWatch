@@ -192,14 +192,26 @@ serve(async (req: Request) => {
   const now = new Date()
   const deadline = Date.now() + DEADLINE_MS
 
-  // Il tetto da import si sblocca solo se il job esiste, e' di chi chiama ed e' nella fase che
-  // consuma catalogo. La verifica passa dal JWT del chiamante e non da un confronto scritto a
-  // mano: e' la policy `import_jobs_select_own` a decidere, come dopo l'IDOR di `import-parse`.
-  const perImport = daServizio ? false : await isImportInCorso(authHeader, body.job_id)
-  const callerScope = daServizio ? 'prewarm' : (perImport ? `import:${userId}` : `user:${userId}`)
-  const callerLimit = daServizio
-    ? PREWARM_CALLS_PER_HOUR
-    : (perImport ? IMPORT_CALLS_PER_HOUR : CALLER_CALLS_PER_HOUR)
+  // Il tetto da import si sblocca in due modi, con la stessa prova: un job vero in `resolving`.
+  // Per un utente la verifica passa dal suo JWT (la policy decide, come dopo l'IDOR di
+  // `import-parse`); per il driver del cron (§7.2, l'import ad app chiusa) un JWT utente non
+  // esiste — il job si legge da admin e lo scope si intesta al PROPRIETARIO del job, non al
+  // servizio: i contatori separati esistono perche' l'import non affami il prewarm e viceversa,
+  // e finirebbero fusi proprio nei giri notturni in cui contano.
+  let perImport = false
+  let importOwner: string | null = null
+  if (daServizio) {
+    importOwner = await importJobOwner(supabase, body.job_id)
+    perImport = importOwner !== null
+  } else {
+    perImport = await isImportInCorso(authHeader, body.job_id)
+  }
+  const callerScope = perImport
+    ? `import:${daServizio ? importOwner : userId}`
+    : (daServizio ? 'prewarm' : `user:${userId}`)
+  const callerLimit = perImport
+    ? IMPORT_CALLS_PER_HOUR
+    : (daServizio ? PREWARM_CALLS_PER_HOUR : CALLER_CALLS_PER_HOUR)
 
   // 1. Cache first. A hit costs nothing: that is the whole point of a shared map.
   const stored = await readStoredRows(supabase, entities)
@@ -537,6 +549,34 @@ async function fetchShowChunk(
  * Un `false` non e' un errore: significa solo "niente budget da import", e la richiesta prosegue
  * col tetto normale. Fallire chiuso, cioe' al tetto piu' basso, e' il verso giusto.
  */
+/**
+ * La variante per il driver del cron: stesso controllo (job vero, `resolving`, `running`) ma
+ * letto da admin, perche' il servizio non ha una RLS che decida per lui. Restituisce il
+ * proprietario, che e' l'unica cosa che serve: lo scope del budget si intesta a lui.
+ * `null` non e' un errore — significa "niente budget da import", fallire chiuso al tetto
+ * piu' basso e' il verso giusto, come per `isImportInCorso`.
+ */
+async function importJobOwner(
+  admin: ReturnType<typeof adminClient>,
+  jobId: string | undefined,
+): Promise<string | null> {
+  if (!jobId) return null
+
+  const { data, error } = await admin
+    .from('import_jobs')
+    .select('user_id')
+    .eq('id', jobId)
+    .eq('phase', 'resolving')
+    .eq('status', 'running')
+    .maybeSingle()
+
+  if (error) {
+    console.warn(`[catalog-resolve] verifica del job (driver) fallita, tetto prewarm: ${error.message}`)
+    return null
+  }
+  return data?.user_id ?? null
+}
+
 async function isImportInCorso(authHeader: string, jobId: string | undefined): Promise<boolean> {
   if (!jobId) return false
 

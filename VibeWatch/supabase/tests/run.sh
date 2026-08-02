@@ -64,6 +64,7 @@ for file in "$MIGRATIONS"/*.sql; do
     20260801150000_get_public_profile.sql) ;;
     20260801170000_user_favorites_and_ratings.sql) ;;
     20260801190000_user_stats_and_profile_favorites.sql) ;;
+    20260802100000_import_start.sql) ;;
     *) continue ;;
   esac
   [ "$pass" = 1 ] && echo "   $(basename "$file")"
@@ -79,3 +80,6 @@ run -f "$HERE/social_test.sql"
 
 echo "→ test: favorites e rating"
 run -f "$HERE/favorites_ratings_test.sql"
+
+echo "→ test: ingresso dell'import"
+run -f "$HERE/import_start_test.sql"

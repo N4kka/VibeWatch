@@ -5,7 +5,9 @@
 -- in .gitignore). Non e' uno stub "per far passare i test": e' la parte di produzione che i test
 -- devono poter presupporre.
 
--- Ruoli di Supabase. Servono ai grant per colonna e alle prove di RLS.
+-- Ruoli di Supabase. Servono ai grant per colonna e alle prove di RLS. `service_role` e'
+-- arrivato con l'import (blocco §7.2): `import_apply_mutations` e' eseguibile solo da lui,
+-- e i test devono poterlo impersonare per provarlo.
 do $$
 begin
   if not exists (select 1 from pg_roles where rolname = 'anon') then
@@ -14,15 +16,30 @@ begin
   if not exists (select 1 from pg_roles where rolname = 'authenticated') then
     create role authenticated nologin;
   end if;
+  if not exists (select 1 from pg_roles where rolname = 'service_role') then
+    create role service_role nologin;
+  end if;
 end $$;
 
-grant usage on schema public to anon, authenticated;
+grant usage on schema public to anon, authenticated, service_role;
 alter default privileges in schema public
   grant select, insert, update, delete on tables to authenticated;
 alter default privileges in schema public grant select on tables to anon;
 
 -- Lo schema in cui Supabase installa le estensioni. Qui non esiste di default.
 create schema if not exists extensions;
+
+-- `storage.objects`, ridotto alle sole colonne che `create_import_job` consulta: il controllo
+-- "il file esiste ed e' del chiamante" deve potersi provare qui. In produzione lo schema e' di
+-- Supabase Storage; qui basta la forma. `owner` (uuid, deprecato) e `owner_id` (text) esistono
+-- entrambi in produzione, e la funzione li accetta entrambi — il test li prova uno per volta.
+create schema if not exists storage;
+create table if not exists storage.objects (
+  bucket_id text not null,
+  name      text not null,
+  owner     uuid,
+  owner_id  text
+);
 grant usage on schema extensions to anon, authenticated;
 
 -- Schema auth: solo cio' che le migration referenziano (FK su auth.users, auth.uid()).
@@ -44,7 +61,7 @@ $$;
 -- funzione `security invoker` chiamata dal client (get_my_stats) di leggere auth.uid(). Le
 -- policy RLS non lo richiedono (girano col proprietario della tabella), quindi la mancanza si
 -- vede solo alla prima funzione invoker che tocca auth — meglio qui che in un FAIL criptico.
-grant usage on schema auth to anon, authenticated;
+grant usage on schema auth to anon, authenticated, service_role;
 
 -- Preferenze: la colonna count_specials_in_progress la aggiunge la migration di §1.3.
 create table if not exists public.unified_user_preferences (
@@ -82,8 +99,8 @@ language sql stable security definer as $$ select * from public.v_tv_tracking_bu
 -- Asserzioni. Una fallita alza un'eccezione: con ON_ERROR_STOP il runner esce diverso da zero.
 -- Accessibili anche da `authenticated`, perche' una parte dei test gira impersonando il client.
 create schema if not exists t;
-grant usage on schema t to anon, authenticated;
-alter default privileges in schema t grant execute on functions to anon, authenticated;
+grant usage on schema t to anon, authenticated, service_role;
+alter default privileges in schema t grant execute on functions to anon, authenticated, service_role;
 
 create or replace function t.eq(actual anyelement, expected anyelement, label text)
 returns void language plpgsql as $$

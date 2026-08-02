@@ -392,6 +392,32 @@
 "profile.sendFeedback" = "Feedback senden";
 "profile.share" = "Profil teilen";
 "profile.share.comingSoon" = "Bald verfügbar";
+"profile.importFrom" = "Importieren aus";
+"import.title" = "Importieren";
+"import.source.tvtime" = "TV Time (.zip)";
+"import.source.tvtime.subtitle" = "Dein TV-Time-Datenexport";
+"import.source.footer" = "Fordere deinen Datenexport bei TV Time an (DSGVO) und wähle hier die .zip-Datei. Apps mit demselben Exportformat funktionieren ebenfalls.";
+"import.state.uploading" = "Wird hochgeladen …";
+"import.state.uploadingHint" = "Lass die App geöffnet, bis die Datei hochgeladen ist.";
+"import.canClose" = "Dein Verlauf wird importiert. Du kannst die App schließen – wir benachrichtigen dich, sobald es fertig ist.";
+"import.phase.queued" = "In der Warteschlange, startet gleich …";
+"import.phase.parsing" = "Dein Verlauf wird gelesen …";
+"import.phase.resolving" = "Serien und Episoden werden zugeordnet …";
+"import.phase.writing" = "Deine Episoden werden gespeichert …";
+"import.phase.finishing" = "Wird abgeschlossen …";
+"import.report.episodes" = "Importierte Episoden";
+"import.report.shows" = "Serien";
+"import.report.period" = "Von %@ bis %@";
+"import.report.ratingsDeferred" = "%d Bewertungen gefunden – noch nicht importiert.";
+"import.report.unresolvedTitle" = "%d Episoden konnten nicht zugeordnet werden";
+"import.report.unresolvedRow" = "%d Episoden";
+"import.report.allResolved" = "Alles wurde zugeordnet.";
+"import.error.failed" = "Der Import wurde mit einem Fehler abgebrochen.";
+"import.error.network" = "Der Import lässt sich gerade nicht überprüfen.";
+"import.error.uploadFailed" = "Der Upload wurde nicht abgeschlossen.";
+"import.error.startFailed" = "Der Import konnte nicht gestartet werden.";
+"import.error.fileRead" = "Die Datei konnte nicht gelesen werden.";
+"import.error.reportFailed" = "Der Import ist fertig, aber der Bericht konnte nicht geladen werden.";
 
 // Profile - Support & Feedback
 "profile.feedback.suggestFeature" = "Neue Funktion vorschlagen";

@@ -391,6 +391,32 @@
 "profile.sendFeedback" = "Lähetä palautetta";
 "profile.share" = "Jaa profiili";
 "profile.share.comingSoon" = "Tulossa pian";
+"profile.importFrom" = "Tuo palvelusta";
+"import.title" = "Tuonti";
+"import.source.tvtime" = "TV Time (.zip)";
+"import.source.tvtime.subtitle" = "TV Time -tietojesi vienti";
+"import.source.footer" = "Pyydä tietojesi vienti TV Timesta (GDPR) ja valitse .zip-tiedosto tästä. Myös samaa muotoa käyttävät sovellukset toimivat.";
+"import.state.uploading" = "Ladataan…";
+"import.state.uploadingHint" = "Pidä sovellus auki, kunnes tiedosto on ladattu.";
+"import.canClose" = "Historiaasi tuodaan. Voit sulkea sovelluksen – saat ilmoituksen, kun tuonti on valmis.";
+"import.phase.queued" = "Jonossa, alkaa pian…";
+"import.phase.parsing" = "Luetaan historiaasi…";
+"import.phase.resolving" = "Tunnistetaan sarjoja ja jaksoja…";
+"import.phase.writing" = "Tallennetaan jaksojasi…";
+"import.phase.finishing" = "Viimeistellään…";
+"import.report.episodes" = "Tuodut jaksot";
+"import.report.shows" = "Sarjat";
+"import.report.period" = "%@ – %@";
+"import.report.ratingsDeferred" = "%d arvostelua löytyi – ei vielä tuotu.";
+"import.report.unresolvedTitle" = "%d jaksoa jäi tunnistamatta";
+"import.report.unresolvedRow" = "%d jaksoa";
+"import.report.allResolved" = "Kaikki tunnistettiin.";
+"import.error.failed" = "Tuonti pysähtyi virheeseen.";
+"import.error.network" = "Tuontia ei voi tarkistaa juuri nyt.";
+"import.error.uploadFailed" = "Lataus ei valmistunut.";
+"import.error.startFailed" = "Tuontia ei voitu aloittaa.";
+"import.error.fileRead" = "Tiedostoa ei voitu lukea.";
+"import.error.reportFailed" = "Tuonti valmistui, mutta raporttia ei voitu ladata.";
 
 // Profile - Support & Feedback
 "profile.feedback.suggestFeature" = "Ehdota uutta ominaisuutta";

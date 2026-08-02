@@ -391,6 +391,32 @@
 "profile.sendFeedback" = "피드백 보내기";
 "profile.share" = "프로필 공유";
 "profile.share.comingSoon" = "곧 제공 예정";
+"profile.importFrom" = "가져오기";
+"import.title" = "가져오기";
+"import.source.tvtime" = "TV Time (.zip)";
+"import.source.tvtime.subtitle" = "TV Time 데이터 내보내기";
+"import.source.footer" = "TV Time에서 데이터 내보내기(GDPR)를 요청한 뒤 여기에서 .zip 파일을 선택하세요. 같은 형식으로 내보내는 앱도 사용할 수 있습니다.";
+"import.state.uploading" = "업로드 중…";
+"import.state.uploadingHint" = "파일이 업로드되는 동안 앱을 열어 두세요.";
+"import.canClose" = "시청 기록을 가져오는 중입니다. 앱을 닫아도 됩니다. 완료되면 알림으로 알려 드릴게요.";
+"import.phase.queued" = "대기 중, 곧 시작됩니다…";
+"import.phase.parsing" = "기록을 읽는 중…";
+"import.phase.resolving" = "프로그램과 에피소드를 맞추는 중…";
+"import.phase.writing" = "에피소드를 저장하는 중…";
+"import.phase.finishing" = "마무리 중…";
+"import.report.episodes" = "가져온 에피소드";
+"import.report.shows" = "프로그램";
+"import.report.period" = "%@부터 %@까지";
+"import.report.ratingsDeferred" = "평가 %d개를 찾았습니다. 아직 가져오지 않았습니다.";
+"import.report.unresolvedTitle" = "에피소드 %d개를 맞추지 못했습니다";
+"import.report.unresolvedRow" = "%d개 에피소드";
+"import.report.allResolved" = "모두 맞췄습니다.";
+"import.error.failed" = "가져오기가 오류로 중단되었습니다.";
+"import.error.network" = "지금은 가져오기 상태를 확인할 수 없습니다.";
+"import.error.uploadFailed" = "업로드가 완료되지 않았습니다.";
+"import.error.startFailed" = "가져오기를 시작할 수 없습니다.";
+"import.error.fileRead" = "해당 파일을 읽을 수 없습니다.";
+"import.error.reportFailed" = "가져오기는 끝났지만 보고서를 불러오지 못했습니다.";
 
 // Profile - Support & Feedback
 "profile.feedback.suggestFeature" = "기능 제안";

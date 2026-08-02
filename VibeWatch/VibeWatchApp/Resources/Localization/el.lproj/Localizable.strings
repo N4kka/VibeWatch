@@ -391,6 +391,32 @@
 "profile.sendFeedback" = "Αποστολή σχολίων";
 "profile.share" = "Κοινοποίηση προφίλ";
 "profile.share.comingSoon" = "Έρχεται σύντομα";
+"profile.importFrom" = "Εισαγωγή από";
+"import.title" = "Εισαγωγή";
+"import.source.tvtime" = "TV Time (.zip)";
+"import.source.tvtime.subtitle" = "Η εξαγωγή δεδομένων σου από το TV Time";
+"import.source.footer" = "Ζήτησε την εξαγωγή των δεδομένων σου από το TV Time (GDPR) και διάλεξε εδώ το αρχείο .zip. Λειτουργούν και εφαρμογές που εξάγουν την ίδια μορφή.";
+"import.state.uploading" = "Μεταφόρτωση…";
+"import.state.uploadingHint" = "Κράτησε την εφαρμογή ανοιχτή όσο ανεβαίνει το αρχείο.";
+"import.canClose" = "Το ιστορικό σου εισάγεται. Μπορείς να κλείσεις την εφαρμογή — θα σε ειδοποιήσουμε όταν ολοκληρωθεί.";
+"import.phase.queued" = "Σε αναμονή, ξεκινά σε λίγο…";
+"import.phase.parsing" = "Ανάγνωση του ιστορικού σου…";
+"import.phase.resolving" = "Αντιστοίχιση σειρών και επεισοδίων…";
+"import.phase.writing" = "Αποθήκευση των επεισοδίων σου…";
+"import.phase.finishing" = "Ολοκλήρωση…";
+"import.report.episodes" = "Επεισόδια που εισήχθησαν";
+"import.report.shows" = "Σειρές";
+"import.report.period" = "Από %@ έως %@";
+"import.report.ratingsDeferred" = "Βρέθηκαν %d βαθμολογίες — δεν έχουν εισαχθεί ακόμη.";
+"import.report.unresolvedTitle" = "%d επεισόδια δεν αντιστοιχίστηκαν";
+"import.report.unresolvedRow" = "%d επεισόδια";
+"import.report.allResolved" = "Όλα αντιστοιχίστηκαν.";
+"import.error.failed" = "Η εισαγωγή σταμάτησε με σφάλμα.";
+"import.error.network" = "Δεν είναι δυνατός ο έλεγχος της εισαγωγής αυτήν τη στιγμή.";
+"import.error.uploadFailed" = "Η μεταφόρτωση δεν ολοκληρώθηκε.";
+"import.error.startFailed" = "Η εισαγωγή δεν μπόρεσε να ξεκινήσει.";
+"import.error.fileRead" = "Το αρχείο δεν ήταν δυνατό να διαβαστεί.";
+"import.error.reportFailed" = "Η εισαγωγή ολοκληρώθηκε, αλλά η αναφορά δεν φορτώθηκε.";
 
 // Profile - Support & Feedback
 "profile.feedback.suggestFeature" = "Πρότεινε νέα λειτουργία";

@@ -391,6 +391,32 @@
 "profile.sendFeedback" = "Send feedback";
 "profile.share" = "Del profil";
 "profile.share.comingSoon" = "Kommer snart";
+"profile.importFrom" = "Importér fra";
+"import.title" = "Importér";
+"import.source.tvtime" = "TV Time (.zip)";
+"import.source.tvtime.subtitle" = "Din dataeksport fra TV Time";
+"import.source.footer" = "Anmod om din dataeksport fra TV Time (GDPR), og vælg .zip-filen her. Apps, der eksporterer samme format, virker også.";
+"import.state.uploading" = "Uploader…";
+"import.state.uploadingHint" = "Hold appen åben, mens filen uploades.";
+"import.canClose" = "Din historik importeres. Du kan lukke appen – vi giver dig besked, når den er færdig.";
+"import.phase.queued" = "I kø, starter om lidt…";
+"import.phase.parsing" = "Læser din historik…";
+"import.phase.resolving" = "Matcher serier og episoder…";
+"import.phase.writing" = "Gemmer dine episoder…";
+"import.phase.finishing" = "Afslutter…";
+"import.report.episodes" = "Importerede episoder";
+"import.report.shows" = "Serier";
+"import.report.period" = "Fra %@ til %@";
+"import.report.ratingsDeferred" = "%d bedømmelser fundet – ikke importeret endnu.";
+"import.report.unresolvedTitle" = "%d episoder kunne ikke matches";
+"import.report.unresolvedRow" = "%d episoder";
+"import.report.allResolved" = "Alt blev matchet.";
+"import.error.failed" = "Importen stoppede med en fejl.";
+"import.error.network" = "Kan ikke tjekke importen lige nu.";
+"import.error.uploadFailed" = "Uploaden blev ikke fuldført.";
+"import.error.startFailed" = "Importen kunne ikke starte.";
+"import.error.fileRead" = "Filen kunne ikke læses.";
+"import.error.reportFailed" = "Importen er færdig, men rapporten kunne ikke indlæses.";
 
 // Profile - Support & Feedback
 "profile.feedback.suggestFeature" = "Foreslå en ny funktion";
