@@ -67,6 +67,7 @@ for file in "$MIGRATIONS"/*.sql; do
     20260802100000_import_start.sql) ;;
     20260802110000_import_report_series_statuses.sql) ;;
     20260802130000_lists_tracking_fusion.sql) ;;
+    20260802150000_imports_ttl.sql) ;;
     *) continue ;;
   esac
   [ "$pass" = 1 ] && echo "   $(basename "$file")"
@@ -85,3 +86,6 @@ run -f "$HERE/favorites_ratings_test.sql"
 
 echo "→ test: ingresso dell'import"
 run -f "$HERE/import_start_test.sql"
+
+echo "→ test: TTL del bucket imports"
+run -f "$HERE/imports_ttl_test.sql"

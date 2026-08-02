@@ -41,8 +41,14 @@ strutturale: gli aperti, TUTTI, sono questi, in ordine sensato di priorità:
    Si prova con una build del branch installata da Xcode sul telefono (l'AASA è già sulla
    CDN; se non aggancia, `?mode=developer` — `docs/universal-links/README.md`). Fino ad
    allora il blocco 10 NON si dichiara chiuso.
-2. **Pulizia del bucket `imports`**: §7.2 dichiara un TTL di 7 giorni che NON esiste — gli ZIP
-   (export GDPR di terzi) restano in Storage per sempre. Dovuta, non estetica.
+2. ~~**Pulizia del bucket `imports`**~~ — **FATTA e collaudata in produzione** (2026-08-02,
+   ottava sessione): `imports_stale_uploads` (SQL service-only, migration `20260802150000`,
+   esclude i file di job running/paused) + Edge Function `imports-cleanup` (cronAuth,
+   cancella via Storage API — mai DELETE su `storage.objects`: lascerebbe i byte orfani) +
+   cron giornaliero 04:40 UTC (`20260802160000`). Collaudo: oggetto sintetico di 8 giorni →
+   `deleted: 1` via `net.http_post` (la strada del cron), ZIP veri intatti, publishable key
+   respinta con 401, `proacl` solo service. 9 asserzioni in `imports_ttl_test.sql` (harness
+   esteso con `created_at`), provate rompendo la guardia sui job aperti: fallisce dove deve.
 3. **I voti dell'import** (§7.5): 295 stelle decodificate in staging, mai scritte in
    `user_ratings` che ora esiste. Il report lo dichiara (`voti_importati: false`).
 4. **Liste pubbliche nel profilo altrui** (§9.3, ultimo bullet): `get_public_lists` e

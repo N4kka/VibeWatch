@@ -29,16 +29,18 @@ alter default privileges in schema public grant select on tables to anon;
 -- Lo schema in cui Supabase installa le estensioni. Qui non esiste di default.
 create schema if not exists extensions;
 
--- `storage.objects`, ridotto alle sole colonne che `create_import_job` consulta: il controllo
--- "il file esiste ed e' del chiamante" deve potersi provare qui. In produzione lo schema e' di
--- Supabase Storage; qui basta la forma. `owner` (uuid, deprecato) e `owner_id` (text) esistono
--- entrambi in produzione, e la funzione li accetta entrambi — il test li prova uno per volta.
+-- `storage.objects`, ridotto alle sole colonne che `create_import_job` e
+-- `imports_stale_uploads` consultano: esistenza/owner per la prima, `created_at` per il TTL
+-- della seconda. In produzione lo schema e' di Supabase Storage; qui basta la forma. `owner`
+-- (uuid, deprecato) e `owner_id` (text) esistono entrambi in produzione, e la funzione li
+-- accetta entrambi — il test li prova uno per volta.
 create schema if not exists storage;
 create table if not exists storage.objects (
-  bucket_id text not null,
-  name      text not null,
-  owner     uuid,
-  owner_id  text
+  bucket_id  text not null,
+  name       text not null,
+  owner      uuid,
+  owner_id   text,
+  created_at timestamptz not null default now()
 );
 grant usage on schema extensions to anon, authenticated;
 
