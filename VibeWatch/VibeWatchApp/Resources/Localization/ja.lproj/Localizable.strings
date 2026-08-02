@@ -207,7 +207,6 @@
 // Platforms
 "platform.title" = "配信プラットフォーム";
 "platform.selectionCount" = "%d / %d 選択済み";
-"platforms.title" = "プラットフォーム";
 "platforms.streaming" = "配信";
 "platforms.rent" = "レンタル";
 "platforms.buy" = "購入";
@@ -243,6 +242,7 @@
 "auth.error.invalidResponse" = "サーバーからの応答が無効です。";
 "auth.error.userNotFound" = "ユーザーが見つかりません。";
 "auth.error.invalidCredentials" = "メールまたはパスワードが正しくありません。";
+"auth.error.tooManyAttempts" = "試行回数が多すぎます。しばらくしてからお試しください。";
 "auth.error.networkError" = "ネットワークエラー。接続を確認してください。";
 "auth.error.databaseError" = "プロフィール保存中にデータベースエラーが発生しました。もう一度お試しください。";
 "auth.error.signUpFailed" = "登録に失敗しました。もう一度お試しください。";
@@ -389,6 +389,50 @@
 "profile.termsOfUse" = "利用規約";
 "profile.terms" = "規約";
 "profile.sendFeedback" = "フィードバックを送信";
+"profile.share" = "プロフィールを共有";
+"profile.share.comingSoon" = "近日公開";
+"profile.importFrom" = "インポート元";
+"import.title" = "インポート";
+"import.source.tvtime" = "TV Time (.zip)";
+"import.source.tvtime.subtitle" = "TV Timeのデータエクスポート";
+"import.source.footer" = "TV Timeにデータエクスポート（GDPR）を申請し、ここで.zipファイルを選択してください。同じ形式でエクスポートするアプリにも対応しています。";
+"import.state.uploading" = "アップロード中…";
+"import.state.uploadingHint" = "ファイルのアップロード中はアプリを開いたままにしてください。";
+"import.canClose" = "視聴履歴をインポートしています。アプリを閉じても大丈夫です。完了したら通知でお知らせします。";
+"import.phase.queued" = "開始を待っています…";
+"import.phase.parsing" = "履歴を読み込んでいます…";
+"import.phase.resolving" = "番組とエピソードを照合しています…";
+"import.phase.writing" = "エピソードを保存しています…";
+"import.phase.finishing" = "仕上げ中…";
+"import.report.episodes" = "インポートしたエピソード";
+"import.report.shows" = "番組";
+"import.report.period" = "%@から%@まで";
+"import.report.ratingsDeferred" = "%d件の評価が見つかりました。まだインポートされていません。";
+"import.report.ratingsApplied" = "%d件の評価を星としてインポートしました。";
+"import.report.ratingsUnresolved" = "%d件の評価は照合できませんでした。";
+"import.report.favoritesApplied" = "%d件のお気に入りを空きスロットにインポートしました。";
+"import.report.favoriteMoviesUnsupported" = "%d件の映画のお気に入りはTV Timeからインポートできません。";
+"import.report.moviesApplied" = "%d本の映画を視聴日付きでインポートしました。";
+"import.report.moviesWatchlistApplied" = "%d本の映画をウォッチリストに追加しました。";
+"import.report.moviesUnresolved" = "%d本の映画を認識できませんでした（タイトルと年がTMDBと一致しません）。";
+"import.resolve.button" = "解決";
+"import.resolve.title" = "「%@」はどのシリーズですか？";
+"import.resolve.hint" = "エピソードは正確なTVDB IDで再確認されます。TMDBで確認できないものはレポートに残ります。";
+"import.resolve.searchPlaceholder" = "TMDBでシリーズを検索";
+"import.resolve.empty" = "結果がありません。";
+"import.resolve.failed" = "解決できませんでした：";
+"import.resolve.searchFailed" = "検索に失敗しました。";
+"import.report.statusesApplied" = "%d件のシリーズ状態を復元しました（ウォッチリストとアーカイブ）。";
+"import.report.statusesUnresolved" = "%d件のシリーズ状態を適用できませんでした。";
+"import.report.unresolvedTitle" = "%d件のエピソードを照合できませんでした";
+"import.report.unresolvedRow" = "%d話";
+"import.report.allResolved" = "すべて照合できました。";
+"import.error.failed" = "インポートがエラーで停止しました。";
+"import.error.network" = "現在インポートの状態を確認できません。";
+"import.error.uploadFailed" = "アップロードが完了しませんでした。";
+"import.error.startFailed" = "インポートを開始できませんでした。";
+"import.error.fileRead" = "そのファイルを読み込めませんでした。";
+"import.error.reportFailed" = "インポートは完了しましたが、レポートを読み込めませんでした。";
 
 // Profile - Support & Feedback
 "profile.feedback.suggestFeature" = "機能を提案";
@@ -666,3 +710,105 @@
 "tvTracking.lastSeen" = "LAST SEEN %@";
 "tvTracking.soon" = "soon";
 "tvTracking.watchNow" = "Watch now";
+
+/* SPEC v3 §9.2 — schermata Tracking */
+"tracking.title" = "トラッキング";
+"tracking.bucket.upNext" = "次に観る";
+"tracking.bucket.stale" = "しばらく観ていない";
+"tracking.bucket.forLater" = "あとで観る";
+"tracking.bucket.upToDate" = "最新まで視聴済み";
+"tracking.bucket.notStarted" = "未視聴";
+"tracking.bucket.dropped" = "視聴中止";
+"tracking.bucket.archived" = "アーカイブ済み";
+"tracking.timeline.today" = "本日配信";
+"tracking.timeline.tomorrow" = "明日";
+"tracking.timeline.thisWeek" = "今週";
+"tracking.timeline.thisMonth" = "今月";
+"tracking.action.watched" = "視聴済み";
+"tracking.action.later" = "あとで";
+"tracking.caughtUp" = "最新まで視聴済み";
+"tracking.unknownShow" = "不明なシリーズ";
+"tracking.special" = "スペシャル";
+"tracking.empty.title" = "まだ観るものがありません";
+"tracking.empty.subtitle" = "シリーズをフォローするか、TV Time の履歴をインポートすると、ここに表示されます。";
+"tracking.error.title" = "問題が発生しました";
+"tracking.error.notAuthenticated" = "サインインが必要です。";
+"tracking.error.showNotInCatalog" = "このシリーズはまだカタログにありません。しばらくしてからもう一度お試しください。";
+"tracking.error.noNextEpisode" = "このシリーズに次のエピソードはありません。";
+
+"tab.tracking" = "トラッキング";
+
+"common.close" = "閉じる";
+
+/* Chiavi chiamate dal codice e mai tradotte */
+"auth.error.invalidLink" = "このリンクは無効か、有効期限が切れています。";
+"clips.noListsYet" = "リストがまだありません";
+
+/* SPEC v3 §3.7 — scelta dello username */
+"username.confirm.title" = "ユーザー名を確認";
+"username.confirm.subtitle" = "お名前から候補を作りました。ほかの人はこの名前であなたを見つけます。このまま使うか、変更してください。";
+"username.confirm.action" = "確認";
+"username.choose.title" = "ユーザー名を選ぶ";
+"username.choose.subtitle" = "VibeWatch に表示されるために必要です。ほかの人はこの名前であなたのプロフィールとリストを見つけます。";
+"username.choose.action" = "続ける";
+"username.placeholder" = "ユーザー名";
+"username.hint" = "半角小文字・数字・_ の 3〜20 文字。";
+"username.checking" = "確認中…";
+"username.available" = "使えます";
+"username.later" = "あとで";
+"username.error.empty" = "ユーザー名を入力してください。";
+"username.error.tooShort" = "3 文字以上にしてください。";
+"username.error.tooLong" = "20 文字以内にしてください。";
+"username.error.invalidCharacters" = "半角小文字・数字・_ のみ使えます。";
+"username.error.taken" = "すでに使われています。";
+"username.error.checkFailed" = "確認できませんでした。もう一度お試しください。";
+"username.error.reserved" = "この名前は使用できません。";
+
+// Social (SPEC v3 blocco 8)
+"social.search.title" = "友達を探す";
+"social.search.placeholder" = "ユーザー名または名前";
+"social.search.prompt" = "ユーザー名または名前で検索して、プロフィールを見られます。";
+"social.search.noResults" = "見つかりませんでした。";
+"social.search.failed" = "検索に失敗しました。接続を確認してください。";
+"social.profile.followers" = "フォロワー";
+"social.profile.following" = "フォロー中";
+"social.follow" = "フォロー";
+"social.unfollow" = "フォロー解除";
+"social.followsYou" = "フォローされています";
+"social.profile.notFound" = "このプロフィールは存在しません。";
+"social.profile.you" = "自分のプロフィールです。";
+"social.profile.loadFailed" = "プロフィールを読み込めませんでした。";
+
+// Blocco 9 (SPEC v3 §3.6/§9.3): voti in stelle, favorites, stats
+"rating.title" = "あなたの評価";
+"rating.saveFailed" = "評価を保存できませんでした。もう一度お試しください。";
+"profile.favorites.movies" = "お気に入りの映画";
+"profile.favorites.shows" = "お気に入りの番組";
+"profile.lists.title" = "公開リスト";
+"profile.lists.loadFailed" = "公開リストを読み込めませんでした。";
+"profile.stats.title" = "あなたの統計";
+"profile.stats.watchTime" = "視聴時間";
+"profile.stats.movies" = "映画";
+"profile.stats.shows" = "番組";
+"profile.stats.episodes" = "エピソード";
+"profile.stats.loadFailed" = "統計を読み込めませんでした。";
+"profile.stats.advanced.title" = "詳細な統計";
+"profile.stats.advanced.byGenre" = "ジャンル別";
+"profile.stats.advanced.byDecade" = "年代別";
+"profile.stats.advanced.ratings" = "あなたの評価";
+"profile.stats.advanced.noGenre" = "ジャンル情報のないシリーズ: %d件";
+"profile.stats.advanced.proLocked" = "詳細な統計はProの機能です。";
+
+// Blocco 9, seconda meta' (§9.3): diario e modifica dei favorites
+"diary.title" = "日記";
+"diary.empty" = "まだ何もありません。視聴した作品がここに表示されます。";
+"diary.loadFailed" = "日記を読み込めませんでした。";
+"favorites.add" = "お気に入りに追加";
+"favorites.remove" = "お気に入りから削除";
+"favorites.slot" = "スロット%d";
+"favorites.saveFailed" = "お気に入りを更新できませんでした。もう一度お試しください。";
+
+// La pillola del Tracking: dove lo guardo (streaming > noleggio > acquisto)
+"tracking.watchOn" = "%@で視聴";
+"tracking.rentOn" = "%@でレンタル";
+"tracking.buyOn" = "%@で購入";

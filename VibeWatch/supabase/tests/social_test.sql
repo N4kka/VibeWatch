@@ -1,0 +1,634 @@
+-- Blocco 8 di §12 — username, `public_profiles`, e i criteri 8 e 9 di §13.
+--
+-- Si esegue con supabase/tests/run.sh. Una asserzione fallita interrompe tutto.
+
+\set ON_ERROR_STOP on
+\set QUIET 1
+\pset pager off
+\pset tuples_only on
+\pset footer off
+
+begin;
+set local timezone = 'UTC';
+
+insert into auth.users (id, email) values
+  ('aaaaaaaa-0000-0000-0000-000000000001', 'a@test'),
+  ('aaaaaaaa-0000-0000-0000-000000000002', 'b@test'),
+  ('aaaaaaaa-0000-0000-0000-000000000003', 'c@test'),
+  ('aaaaaaaa-0000-0000-0000-000000000004', 'd@test');
+
+insert into public.profiles (id, email, display_name, fcm_token, is_on_trial) values
+  ('aaaaaaaa-0000-0000-0000-000000000001', 'a@test', 'Anna Rossi',  'token-a', true),
+  ('aaaaaaaa-0000-0000-0000-000000000002', 'b@test', 'anna rossi',  'token-b', false),
+  ('aaaaaaaa-0000-0000-0000-000000000003', 'c@test', 'Jo',          'token-c', false),
+  ('aaaaaaaa-0000-0000-0000-000000000004', 'd@test', 'Zed',         'token-d', false);
+
+\echo ''
+\echo '=== §3.6 username_seed: una regola sola, tre chiamanti'
+
+select t.eq(public.username_seed('Anna Rossi'), 'anna_rossi',
+            'lo spazio diventa underscore, non sparisce');
+select t.eq(public.username_seed('Anna.Rossi'), 'anna_rossi', 'idem il punto');
+select t.eq(public.username_seed('Anna-Rossi'), 'anna_rossi', 'idem il trattino');
+select t.eq(public.username_seed('Ànna Rossi!'), 'nna_rossi',
+            'cio'' che non e'' ammesso si toglie, non si traslittera a caso');
+select t.eq(public.username_seed('MARIO'), 'mario', 'minuscole');
+select t.eq(public.username_seed('abcdefghijklmnopqrstuvwxyz'), 'abcdefghijklmnopqrst',
+            'tagliato a 20, che e'' il massimo del vincolo');
+select t.eq(length(public.username_seed('abcdefghijklmnopqrstuvwxyz')), 20, 'esattamente 20');
+select t.eq(public.username_seed('a_very_long_display_name_indeed'), 'a_very_long_display',
+            'e se il taglio cade su un separatore, quello non resta appeso');
+select t.eq(public.username_seed('!!!'), null, 'niente di utilizzabile -> null, non stringa vuota');
+select t.eq(public.username_seed(null), null, 'null -> null');
+-- Trovati sui nomi veri in produzione, non immaginati: `"carebare "` con lo spazio in fondo
+-- esiste, ed e' esattamente il genere di cosa che si vede solo guardando i dati.
+select t.eq(public.username_seed('carebare '), 'carebare',
+            'lo spazio in fondo non diventa un underscore appeso');
+select t.eq(public.username_seed('  Anna   Rossi  '), 'anna_rossi',
+            'ne'' gli spazi davanti, ne'' quelli doppi in mezzo');
+select t.eq(public.username_seed('Anna - Rossi'), 'anna_rossi',
+            'separatori consecutivi si collassano in uno');
+select t.eq(public.username_seed('___'), null, 'solo separatori -> null, non una stringa di underscore');
+select t.eq(public.username_seed('微光 渺渺'), null,
+            'un nome non latino non e'' riducibile a [a-z0-9_]: si dichiara, non si storpia');
+select t.is_true(length(public.username_seed('anna_rossi_e_un_nome_lunghissimo')) <= 20,
+            'il taglio a 20 vale anche dopo la potatura');
+select t.is_true(public.username_seed('anna_rossi_e_un_nome_lunghissimo') !~ '_$',
+            'e il taglio non lascia un underscore in fondo');
+
+\echo ''
+\echo '=== §3.7 username_available'
+
+select t.eq(public.username_available('anna_rossi'), true, 'libero');
+select t.eq(public.username_available('admin'), false, 'riservato');
+select t.eq(public.username_available('VibeWatch'), false,
+            'i riservati sono citext: non basta cambiare le maiuscole');
+select t.eq(public.username_available('ab'), false, 'troppo corto');
+select t.eq(public.username_available('a_very_long_display_name'), false, 'troppo lungo');
+select t.eq(public.username_available('Anna'), false, 'le maiuscole non sono ammesse dal formato');
+select t.eq(public.username_available('anna rossi'), false, 'ne'' gli spazi');
+select t.eq(public.username_available(null), false, 'null non e'' disponibile, e non esplode');
+
+update public.profiles set username = 'anna_rossi'
+ where id = 'aaaaaaaa-0000-0000-0000-000000000001';
+
+select t.eq(public.username_available('anna_rossi'), false, 'ora e'' preso');
+select t.eq(public.username_available('ANNA_ROSSI'), false,
+            'e lo e'' anche cambiando le maiuscole (citext): altrimenti impersonare e'' banale');
+
+\echo ''
+\echo '=== §3.7 suggest_username: suffisso numerico in caso di collisione'
+
+select t.eq(public.suggest_username('Zed Zulu'), 'zed_zulu', 'nessuna collisione: il nome cosi'' com''e''');
+select t.eq(public.suggest_username('Anna Rossi'), 'anna_rossi2', 'collisione -> suffisso');
+
+update public.profiles set username = 'anna_rossi2'
+ where id = 'aaaaaaaa-0000-0000-0000-000000000002';
+select t.eq(public.suggest_username('Anna Rossi'), 'anna_rossi3', 'e il suffisso avanza');
+
+select t.eq(public.suggest_username('admin'), 'admin2',
+            'un nome riservato non blocca la registrazione, ne'' propone uno libero');
+
+-- Il suffisso non deve sfondare i 20 caratteri: si accorcia la base. Il nome di prova occupa
+-- tutti e 20 i caratteri **senza** finire su un separatore, altrimenti la potatura lascerebbe
+-- spazio libero e il caso limite non verrebbe provato.
+update public.profiles set username = 'abcdefghijklmnopqrst'
+ where id = 'aaaaaaaa-0000-0000-0000-000000000003';
+select t.eq(public.suggest_username('abcdefghijklmnopqrstuvwxyz'), 'abcdefghijklmnopqrs2',
+            'il suffisso entra dentro i 20, accorciando la base');
+select t.is_true(length(public.suggest_username('abcdefghijklmnopqrstuvwxyz')) <= 20,
+            'e il risultato rispetta sempre il vincolo');
+select t.eq(public.username_available(public.suggest_username('abcdefghijklmnopqrstuvwxyz')),
+            true, 'e cio'' che propone e'' davvero libero');
+
+-- Un nome inutilizzabile non diventa uno username inventato addosso all'utente.
+--
+-- `user2` e non `user`: il ripiego generico sta di proposito anche fra i riservati, cosi' nessuno
+-- si ritrova `@user` nudo. Il nome brutto e' voluto — §3.7 chiede la conferma al primo accesso, e
+-- uno username brutto e' cio' che fa venire voglia di cambiarlo.
+select t.eq(public.suggest_username('Jo'), 'user2', 'troppo corto -> ripiego numerato');
+select t.eq(public.suggest_username(null), 'user2', 'nessun nome -> idem');
+select t.eq(public.suggest_username('!!!', 'mario_b'), 'mario_b',
+            'ma un ripiego esplicito migliore vince');
+-- Il ripiego NON deve essere l'email. Sui dati veri: 9 profili su 314 hanno un indirizzo
+-- @privaterelay.appleid.com, e la parte locale e' il token di relay di Apple — `@8xp9vsbgxm`
+-- ricostruisce un indirizzo contattabile. Altri 3 hanno un locale che e' un numero di telefono.
+-- Il test non puo' impedire a un chiamante di passarla, ma fissa il caso che ci si aspetta.
+select t.eq(public.suggest_username('bz', '8xp9vsbgxm'), '8xp9vsbgxm',
+            'la funzione usa il ripiego che le si da'': la scelta di NON dargli l''email sta in chi chiama');
+select t.eq(public.suggest_username('Jo', '!!!'), 'user2',
+            'e un ripiego inutilizzabile ricade sul generico invece di esplodere');
+
+\echo ''
+\echo '=== §3.7 public_profiles espone il minimo'
+
+update public.profiles set username = 'zed_zulu', bio = 'ciao'
+ where id = 'aaaaaaaa-0000-0000-0000-000000000004';
+
+-- L'elenco delle colonne e' il test vero: e' l'unica cosa che impedisce a un `select *` distratto
+-- di pubblicare l'email e lo stato di fatturazione di 314 persone.
+select t.eq(
+  (select array_agg(column_name::text order by ordinal_position)
+     from information_schema.columns
+    where table_schema = 'public' and table_name = 'public_profiles'),
+  array['id','username','display_name','avatar_url','bio','created_at'],
+  'la vista espone esattamente sei colonne, quelle di §3.7');
+
+select t.eq((select count(*)::integer from information_schema.columns
+              where table_schema = 'public' and table_name = 'public_profiles'
+                and column_name in ('email','fcm_token','is_on_trial','deleted_at')), 0,
+            'niente email, niente token push, niente stato di fatturazione');
+
+-- Chi ci finisce dentro, e chi no.
+select t.eq((select count(*)::integer from public.public_profiles), 4,
+            'i quattro profili con username ci sono');
+
+update public.profiles set is_profile_public = false
+ where id = 'aaaaaaaa-0000-0000-0000-000000000004';
+select t.eq((select count(*)::integer from public.public_profiles
+              where id = 'aaaaaaaa-0000-0000-0000-000000000004'), 0,
+            'un profilo privato sparisce');
+
+update public.profiles set is_profile_public = true, deleted_at = now()
+ where id = 'aaaaaaaa-0000-0000-0000-000000000004';
+select t.eq((select count(*)::integer from public.public_profiles
+              where id = 'aaaaaaaa-0000-0000-0000-000000000004'), 0,
+            'e un profilo cancellato pure');
+
+-- Uno username liberato da una cancellazione torna disponibile: l'indice e' parziale apposta.
+select t.eq(public.username_available('zed_zulu'), true,
+            'lo username di un profilo cancellato non resta occupato per sempre');
+
+update public.profiles set deleted_at = null where id = 'aaaaaaaa-0000-0000-0000-000000000004';
+
+\echo ''
+\echo '=== §13 criterio 8: due utenti non possono avere lo stesso username'
+
+select t.rejects($$
+  update public.profiles set username = 'anna_rossi'
+   where id = 'aaaaaaaa-0000-0000-0000-000000000004'
+$$, 'lo stesso username, alla lettera');
+
+-- Attenzione a cosa prova davvero: `ANNA_ROSSI` viene fermato dal **formato** (23514), non
+-- dall'unicita', perche' le maiuscole non sono ammesse a monte. La difesa contro
+-- l'impersonificazione per maiuscole sta un passo prima, in `username_available`, ed e' provata li'.
+select t.rejects($$
+  update public.profiles set username = 'ANNA_ROSSI'
+   where id = 'aaaaaaaa-0000-0000-0000-000000000004'
+$$, 'le maiuscole non arrivano nemmeno all''indice unico');
+
+select t.rejects($$
+  update public.profiles set username = 'Non Valido'
+   where id = 'aaaaaaaa-0000-0000-0000-000000000004'
+$$, 'il formato e'' un vincolo, non un suggerimento');
+
+select t.rejects($$
+  update public.profiles set bio = repeat('x', 201)
+   where id = 'aaaaaaaa-0000-0000-0000-000000000004'
+$$, 'la bio sta sotto i 200 caratteri (§3.6)');
+
+\echo ''
+\echo '=== il cambio di username lo data il server'
+
+update public.profiles set username = 'zed_zulu_2'
+ where id = 'aaaaaaaa-0000-0000-0000-000000000004';
+select t.is_true((select username_changed_at is not null from public.profiles
+                   where id = 'aaaaaaaa-0000-0000-0000-000000000004'),
+            'cambiare username scrive username_changed_at');
+
+-- Un client che prova a datarla nel passato — per aggirare un limite di frequenza — non ci riesce.
+update public.profiles
+   set username = 'zed_zulu_3', username_changed_at = '2000-01-01'
+ where id = 'aaaaaaaa-0000-0000-0000-000000000004';
+select t.is_true((select username_changed_at > now() - interval '1 minute' from public.profiles
+                   where id = 'aaaaaaaa-0000-0000-0000-000000000004'),
+            'e il valore mandato dal client viene ignorato: lo decide il trigger');
+
+-- Cambiare altro non deve toccare la data. Si confronta col valore di prima e non con `now()`:
+-- dentro una transazione `now()` e' l'istante di inizio, quindi "minore di now()" sarebbe falso
+-- anche col trigger corretto. E' lo stesso genere di test che passa o fallisce per la ragione
+-- sbagliata.
+create temporary table prima as
+  select username_changed_at from public.profiles
+   where id = 'aaaaaaaa-0000-0000-0000-000000000004';
+
+-- Il ramo "username invariato" **riscrive il vecchio valore**, quindi una UPDATE che prova a
+-- rimettere `username_changed_at` a null non aggiorna niente e non lo dice. E' il motivo per cui
+-- il backfill spegne il trigger invece di ripulire dopo: senza questa prova, quella UPDATE
+-- sembrerebbe funzionare.
+update public.profiles set username_changed_at = null
+ where id = 'aaaaaaaa-0000-0000-0000-000000000004';
+select t.is_true((select username_changed_at is not null from public.profiles
+                   where id = 'aaaaaaaa-0000-0000-0000-000000000004'),
+            'rimettere la data a null senza cambiare username non funziona: il trigger la ripristina');
+
+update public.profiles set display_name = 'Zed Zed'
+ where id = 'aaaaaaaa-0000-0000-0000-000000000004';
+
+select t.eq((select username_changed_at from public.profiles
+              where id = 'aaaaaaaa-0000-0000-0000-000000000004'),
+            (select username_changed_at from prima),
+            'ma cambiare altro non tocca la data');
+
+\echo ''
+\echo '=== §13 criterio 9: anon legge public_profiles e non legge profiles'
+
+-- Il conteggio atteso si calcola **prima** di cambiare ruolo: da `anon` la RLS di `profiles`
+-- restituisce zero, quindi confrontare le due query li' dentro darebbe 0 = 0 e passerebbe sempre.
+-- Un numero scritto a mano invece misurerebbe la storia di questo file, che sopra ha cambiato
+-- piu' volte chi e' pubblico.
+create temporary table attesi as
+  select count(*) as n from public.profiles
+   where deleted_at is null and is_profile_public and username is not null;
+grant select on attesi to anon, authenticated;
+
+set local role anon;
+
+select t.eq((select count(*) from public.public_profiles), (select n from attesi),
+            'un anonimo vede tutti e soli i profili pubblici con username');
+select t.is_true((select count(*) > 0 from public.public_profiles),
+            'e sono davvero piu'' di zero, altrimenti l''asserzione sopra e'' vuota');
+select t.eq((select count(*)::integer from public.profiles), 0,
+            'e non vede una riga di profiles: li'' ci sono le email');
+
+-- Le funzioni: un anonimo non deve poter enumerare gli username altrui ne'' i riservati.
+select t.eq(has_function_privilege('public.username_available(text)', 'execute'), false,
+            'anon non puo'' nemmeno sondare la disponibilita'': e'' un oracolo su chi esiste');
+select t.eq(has_function_privilege('public.suggest_username(text, text)', 'execute'), false,
+            'ne'' farsi proporre uno username');
+select t.eq(has_function_privilege('public.username_seed(text)', 'execute'), false,
+            'ne'' chiamare la funzione di normalizzazione');
+
+set local role authenticated;
+set local request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
+
+select t.eq(has_function_privilege('public.username_available(text)', 'execute'), true,
+            'un utente autenticato si: la schermata di scelta deve poter dire libero');
+select t.eq(has_function_privilege('public.suggest_username(text, text)', 'execute'), false,
+            'ma non farsi proporre nomi: e'' il backfill a usarla, non il client');
+select t.eq((select count(*)::integer from public.profiles), 1,
+            'e continua a vedere solo la propria riga di profiles');
+
+reset role;
+
+-- I revoke si leggono su `proacl`, non sul comando che si e' scritto: su Supabase un
+-- `alter default privileges` concede EXECUTE ai due ruoli client in modo esplicito, e revocare
+-- al solo PUBLIC li lascia al loro posto. E'' il difetto gia'' trovato su `import_touched_shows`.
+select t.eq((select count(*)::integer from pg_proc p
+              where p.proname in ('username_seed','suggest_username')
+                and array_to_string(p.proacl, ',') like '%anon=X%'), 0,
+            'nessuna delle due e'' eseguibile da anon (letto da proacl)');
+select t.is_true((select array_to_string(p.proacl, ',') like '%authenticated=X%'
+                    from pg_proc p where p.proname = 'username_available'),
+            'username_available lo e'' da authenticated');
+
+\echo ''
+\echo '=== §3.7 set_username: scegliere e confermare'
+
+-- Si riparte dallo stato che lascia il backfill: username assegnato, mai cambiato dall'utente,
+-- mai confermato. I test sopra hanno scritto `username_changed_at` con UPDATE dirette, e
+-- ereditarle qui misurerebbe la storia del file invece del comportamento di `set_username`.
+-- Il trigger si spegne per la stessa ragione per cui lo spegne il backfill: sul ramo "username
+-- invariato" riscriverebbe il vecchio valore sopra il null.
+alter table public.profiles disable trigger profiles_username_changed;
+update public.profiles set username = 'anna_rossi', username_changed_at = null,
+                           username_confirmed_at = null
+ where id = 'aaaaaaaa-0000-0000-0000-000000000001';
+alter table public.profiles enable trigger profiles_username_changed;
+
+set local role authenticated;
+set local request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
+
+-- Il caso dei 295 del backfill: confermare il nome che si ha gia'.
+select t.eq(public.set_username('anna_rossi')->>'ok', 'true', 'confermare il proprio nome riesce');
+select t.eq(public.set_username('anna_rossi')->>'changed', 'false',
+            'e non conta come cambio: non e'' un nome nuovo');
+select t.is_true((select username_confirmed_at is not null from public.profiles
+                   where id = 'aaaaaaaa-0000-0000-0000-000000000001'),
+            'ma segna la conferma, che e'' cio'' che fa sparire la schermata');
+select t.is_true((select username_changed_at is null from public.profiles
+                   where id = 'aaaaaaaa-0000-0000-0000-000000000001'),
+            'e non tocca username_changed_at: un futuro limite di frequenza non deve scattare qui');
+
+-- Gli esiti, che sono risposte e non errori.
+select t.eq(public.set_username('anna_rossi2')->>'reason', 'taken', 'un nome occupato');
+select t.eq(public.set_username('admin')->>'reason', 'reserved',
+            'un nome riservato si distingue da uno occupato: il client non puo'' saperlo da solo');
+select t.eq(public.set_username('ab')->>'reason', 'invalid_format', 'troppo corto');
+select t.eq(public.set_username('Anna')->>'reason', 'invalid_format', 'maiuscole');
+select t.eq(public.set_username(null)->>'reason', 'invalid_format', 'null non esplode');
+
+-- Il cambio vero.
+select t.eq(public.set_username('anna_r')->>'ok', 'true', 'cambiare in un nome libero riesce');
+select t.eq((select username::text from public.profiles
+              where id = 'aaaaaaaa-0000-0000-0000-000000000001'), 'anna_r', 'e la riga cambia');
+select t.is_true((select username_changed_at is not null from public.profiles
+                   where id = 'aaaaaaaa-0000-0000-0000-000000000001'),
+            'questo si'' che e'' un cambio, e la data lo dice');
+select t.eq(public.username_available('anna_rossi'), true, 'e il nome lasciato torna libero');
+
+\echo ''
+\echo '=== il buco che il backfill aveva lasciato: i riservati valgono anche su un PATCH diretto'
+
+-- `username_reserved` la consultavano solo le funzioni che *propongono*. Un client che scrive
+-- direttamente su profiles passava il formato, passava l'indice unico, e si prendeva @admin.
+select t.rejects($$
+  update public.profiles set username = 'admin'
+   where id = 'aaaaaaaa-0000-0000-0000-000000000001'
+$$, 'un PATCH diretto su un nome riservato viene rifiutato dal trigger');
+
+select t.rejects($$
+  update public.profiles set username = 'VibeWatch'
+   where id = 'aaaaaaaa-0000-0000-0000-000000000001'
+$$, 'e nemmeno cambiando le maiuscole (il formato lo ferma comunque)');
+
+select t.eq((select username::text from public.profiles
+              where id = 'aaaaaaaa-0000-0000-0000-000000000001'), 'anna_r',
+            'e il nome non e'' cambiato');
+
+reset role;
+
+-- Chi puo' chiamarla.
+select t.eq((select count(*)::integer from pg_proc p
+              where p.proname = 'set_username'
+                and array_to_string(p.proacl, ',') like '%anon=X%'), 0,
+            'set_username non e'' chiamabile da anon');
+select t.is_true((select array_to_string(p.proacl, ',') like '%authenticated=X%'
+                    from pg_proc p where p.proname = 'set_username'),
+            'ma lo e'' da authenticated');
+
+-- =====================================================================================
+-- §3.6 user_follows + §3.7 search_users
+--
+-- Stato azzerato di proposito: le sezioni sopra mutano username e cancellano profili, e questi
+-- test non devono misurare la storia del file. a/b si somigliano per costruzione (la ricerca
+-- deve trovarli entrambi), c resta senza username (senza, non si esiste socialmente), d e' il
+-- terzo incomodo che blocchera' a.
+-- =====================================================================================
+
+reset role;
+update public.profiles set deleted_at = null, is_profile_public = true
+ where id::text like 'aaaaaaaa-%';
+update public.profiles set username = 'anna_r'
+ where id = 'aaaaaaaa-0000-0000-0000-000000000001';   -- display: Anna Rossi
+update public.profiles set username = 'anna_rossi2'
+ where id = 'aaaaaaaa-0000-0000-0000-000000000002';   -- display: anna rossi
+update public.profiles set username = null
+ where id = 'aaaaaaaa-0000-0000-0000-000000000003';   -- display: Jo
+update public.profiles set username = 'zed'
+ where id = 'aaaaaaaa-0000-0000-0000-000000000004';   -- display: Zed
+delete from public.user_blocks;
+delete from public.user_follows;
+
+\echo ''
+\echo '=== §3.6 user_follows: la forma e la RLS'
+
+select t.rejects($$
+  insert into public.user_follows (follower_id, followee_id) values
+    ('aaaaaaaa-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000001')
+$$, 'seguire se'' stessi lo vieta il CHECK, prima ancora della RLS');
+
+set local role authenticated;
+set local request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
+
+insert into public.user_follows (follower_id, followee_id) values
+  ('aaaaaaaa-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000002');
+select t.eq((select count(*)::integer from public.user_follows
+              where follower_id = 'aaaaaaaa-0000-0000-0000-000000000001'), 1,
+            'a segue b, e vede il proprio follow');
+
+select t.rejects($$
+  insert into public.user_follows (follower_id, followee_id) values
+    ('aaaaaaaa-0000-0000-0000-000000000002', 'aaaaaaaa-0000-0000-0000-000000000004')
+$$, 'ma non puo'' firmare un follow a nome di b');
+
+select t.rejects($$
+  insert into public.user_follows (follower_id, followee_id) values
+    ('aaaaaaaa-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000002')
+$$, 'due volte la stessa coppia la ferma la PK: un follow e'' la coppia, non una riga nuova');
+
+-- Unfollow e re-follow riusano la riga: soft delete, come user_blocks.
+update public.user_follows set deleted_at = now()
+ where follower_id = 'aaaaaaaa-0000-0000-0000-000000000001'
+   and followee_id = 'aaaaaaaa-0000-0000-0000-000000000002';
+update public.user_follows set deleted_at = null
+ where follower_id = 'aaaaaaaa-0000-0000-0000-000000000001'
+   and followee_id = 'aaaaaaaa-0000-0000-0000-000000000002';
+select t.eq((select count(*)::integer from public.user_follows where deleted_at is null), 1,
+            'unfollow e re-follow: stessa riga, nessun duplicato');
+
+-- Il followee vede chi lo segue, ma non tocca la riga: seguire e' un atto del follower.
+set local request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000002';
+select t.eq((select count(*)::integer from public.user_follows
+              where followee_id = 'aaaaaaaa-0000-0000-0000-000000000002'), 1,
+            'b vede il proprio follower');
+with upd as (
+  update public.user_follows set deleted_at = now()
+   where follower_id = 'aaaaaaaa-0000-0000-0000-000000000001'
+  returning 1)
+select t.eq((select count(*)::integer from upd), 0,
+            'ma non puo'' cancellare il follow di a: la RLS filtra, zero righe toccate');
+
+set local role anon;
+select t.rejects($$ select count(*) from public.user_follows $$,
+            'anon non legge i follow di nessuno');
+
+\echo ''
+\echo '=== il blocco vale anche in scrittura, non solo nella ricerca'
+
+-- La lezione di username_reserved: un''esclusione applicata solo dove si propone (la ricerca)
+-- e non dove si scrive (l''INSERT) e' una decorazione.
+reset role;
+insert into public.user_blocks (user_id, blocked_user_id) values
+  ('aaaaaaaa-0000-0000-0000-000000000004', 'aaaaaaaa-0000-0000-0000-000000000001');
+
+set local role authenticated;
+set local request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
+select t.rejects($$
+  insert into public.user_follows (follower_id, followee_id) values
+    ('aaaaaaaa-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000004')
+$$, 'a non segue chi l''ha bloccato — e la RLS da sola non potrebbe dirlo, il verso e'' invisibile');
+
+set local request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000004';
+select t.rejects($$
+  insert into public.user_follows (follower_id, followee_id) values
+    ('aaaaaaaa-0000-0000-0000-000000000004', 'aaaaaaaa-0000-0000-0000-000000000001')
+$$, 'e il bloccante non segue il bloccato: vale nei due versi');
+
+\echo ''
+\echo '=== §3.7 search_users'
+
+set local request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
+
+select t.eq((select username::text from public.search_users('anna', 10) limit 1), 'anna_r',
+            'il piu'' simile per primo — e se stessi si compare: "come appaio?" merita risposta');
+select t.eq((select count(*)::integer from public.search_users('anna', 10)), 2,
+            'trova per username entrambe le anna');
+select t.eq((select count(*)::integer from public.search_users('rossi', 10)), 2,
+            'e per display_name, che uno username non lo contiene');
+select t.eq((select count(*)::integer from public.search_users('jo', 10)), 0,
+            'c non ha username: senza, non si esiste socialmente (e'' fuori da public_profiles)');
+select t.eq((select count(*)::integer from public.search_users('zed', 10)), 0,
+            'd mi ha bloccato: non lo vedo, anche se il blocco per me e'' invisibile');
+
+set local request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000004';
+select t.eq((select count(*)::integer from public.search_users('anna_r', 10)
+              where id = 'aaaaaaaa-0000-0000-0000-000000000001'), 0,
+            'e d non vede chi ha bloccato');
+select t.eq((select count(*)::integer from public.search_users('anna_rossi2', 10)), 1,
+            'ma il blocco esclude la coppia, non il resto del mondo');
+
+-- I jolly di LIKE nella query sono caratteri da cercare, non pattern: senza escape una query
+-- di soli underscore o un percento combacerebbero con chiunque.
+set local request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000002';
+select t.eq((select count(*)::integer from public.search_users('%', 10)), 0,
+            'il percento non e'' un jolly');
+select t.eq((select count(*)::integer from public.search_users('__', 10)), 0,
+            'e nemmeno l''underscore doppio (quello singolo dentro anna_r si trova eccome)');
+select t.eq((select count(*)::integer from public.search_users('a_r', 10)), 2,
+            'a_r si cerca come sottostringa letterale: anna_r e anna_rossi2, non "a<qualunque>r"');
+
+select t.eq((select count(*)::integer from public.search_users('anna', 1)), 1,
+            'il limite si rispetta');
+select t.eq((select count(*)::integer from public.search_users('', 10)), 0,
+            'query vuota: niente risultati, niente esplosione');
+select t.eq((select count(*)::integer from public.search_users(null, 10)), 0, 'idem null');
+
+-- Un profilo privato sparisce anche dalla ricerca: search_users legge da public_profiles,
+-- non da profiles, e questo test inchioda la scelta.
+reset role;
+update public.profiles set is_profile_public = false
+ where id = 'aaaaaaaa-0000-0000-0000-000000000002';
+set local role authenticated;
+set local request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
+select t.eq((select count(*)::integer from public.search_users('anna_rossi2', 10)), 0,
+            'un profilo privato non si trova');
+
+reset role;
+
+\echo ''
+\echo '=== §9.3 get_public_profile: contatori dal server, blocchi indistinguibili dal nulla'
+
+-- Lo stato ereditato dalla sezione sopra: a segue b (follow attivo), d blocca a, b e' privato.
+-- b torna pubblico; il resto si riusa.
+update public.profiles set is_profile_public = true
+ where id = 'aaaaaaaa-0000-0000-0000-000000000002';
+
+set local role authenticated;
+set local request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
+
+select t.eq((public.get_public_profile('anna_rossi2'))->>'found', 'true', 'b si trova');
+select t.eq((public.get_public_profile('anna_rossi2'))->>'followers', '1',
+            'e ha un follower: il conteggio arriva dal definer, la RLS al chiamante lo negherebbe');
+select t.eq((public.get_public_profile('anna_rossi2'))->>'is_following', 'true',
+            'a sa di seguirlo');
+select t.eq((public.get_public_profile('anna_rossi2'))->>'follows_me', 'false',
+            'b non ricambia');
+select t.eq((public.get_public_profile('ANNA_ROSSI2'))->>'found', 'true',
+            'lo username e'' citext anche qui: le maiuscole non nascondono nessuno');
+
+set local request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000002';
+select t.eq((public.get_public_profile('anna_r'))->>'following', '1',
+            'dal lato di b: a segue una persona');
+select t.eq((public.get_public_profile('anna_r'))->>'followers', '0', 'e nessuno segue a');
+select t.eq((public.get_public_profile('anna_r'))->>'follows_me', 'true', 'a segue b, e b lo sa');
+
+select t.eq((public.get_public_profile('nessuno'))->>'found', 'false',
+            'un profilo inesistente risponde found:false, non un errore');
+
+-- Il blocco, nei due versi, e' indistinguibile dall''inesistenza: che il blocco esista e' privato.
+set local request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
+select t.eq((public.get_public_profile('zed'))->>'found', 'false',
+            'd mi ha bloccato: per me non esiste');
+set local request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000004';
+select t.eq((public.get_public_profile('anna_r'))->>'found', 'false',
+            'e chi ho bloccato non esiste per me');
+
+-- La superficie resta public_profiles: privato o senza username = inesistente.
+reset role;
+update public.profiles set is_profile_public = false
+ where id = 'aaaaaaaa-0000-0000-0000-000000000002';
+set local role authenticated;
+set local request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
+select t.eq((public.get_public_profile('anna_rossi2'))->>'found', 'false',
+            'un profilo privato non si interroga');
+
+reset role;
+
+select t.eq((select count(*)::integer from pg_proc p
+              where p.proname = 'get_public_profile'
+                and array_to_string(p.proacl, ',') like '%anon=X%'), 0,
+            'get_public_profile non e'' chiamabile da anon');
+select t.is_true((select array_to_string(p.proacl, ',') like '%authenticated=X%'
+                    from pg_proc p where p.proname = 'get_public_profile'),
+            'ma lo e'' da authenticated');
+
+-- Chi puo' chiamare cosa.
+select t.eq((select count(*)::integer from pg_proc p
+              where p.proname = 'search_users'
+                and array_to_string(p.proacl, ',') like '%anon=X%'), 0,
+            'search_users non e'' chiamabile da anon');
+select t.is_true((select array_to_string(p.proacl, ',') like '%authenticated=X%'
+                    from pg_proc p where p.proname = 'search_users'),
+            'ma lo e'' da authenticated');
+select t.eq(has_table_privilege('anon', 'public.user_follows', 'select'), false,
+            'e user_follows non ha grant per anon, prima ancora della RLS');
+
+\echo ''
+\echo '=== §9.3 get_public_lists: il filtro per autore e i blocchi nei due versi'
+
+reset role;
+
+-- Le liste di B viste da A: una pubblica, una privata, una pubblica cancellata. Solo la
+-- prima deve esistere per il mondo. Più una pubblica di C (per il feed) e una di D (che
+-- ha bloccato A: il verso che prima non si escludeva).
+insert into public.lists (id, user_id, name, type, is_public, deleted_at) values
+  ('bbbbbbbb-0000-4000-8000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000002',
+   'Serie top di B', 'custom', true,  null),
+  ('bbbbbbbb-0000-4000-8000-000000000002', 'aaaaaaaa-0000-0000-0000-000000000002',
+   'Privata di B',   'custom', false, null),
+  ('bbbbbbbb-0000-4000-8000-000000000003', 'aaaaaaaa-0000-0000-0000-000000000002',
+   'Cancellata di B','custom', true,  now()),
+  ('bbbbbbbb-0000-4000-8000-000000000004', 'aaaaaaaa-0000-0000-0000-000000000003',
+   'Pubblica di C',  'custom', true,  null),
+  ('bbbbbbbb-0000-4000-8000-000000000005', 'aaaaaaaa-0000-0000-0000-000000000004',
+   'Pubblica di D',  'custom', true,  null);
+
+-- D blocca A. Nessun blocco nell'altro verso: e' esattamente il caso che prima sfuggiva.
+insert into public.user_blocks (user_id, blocked_user_id) values
+  ('aaaaaaaa-0000-0000-0000-000000000004', 'aaaaaaaa-0000-0000-0000-000000000001');
+
+set local role authenticated;
+set local request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
+
+select t.eq((select count(*)::integer from public.get_public_lists(
+              p_owner => 'aaaaaaaa-0000-0000-0000-000000000002')),
+            1, 'di B si vede SOLO la lista pubblica viva: ne'' la privata ne'' la cancellata');
+select t.eq((select name from public.get_public_lists(
+              p_owner => 'aaaaaaaa-0000-0000-0000-000000000002')),
+            'Serie top di B', 'ed e'' quella giusta');
+
+select t.eq((select count(*)::integer from public.get_public_lists(
+              p_owner => 'aaaaaaaa-0000-0000-0000-000000000004')),
+            0, 'il profilo di chi MI ha bloccato non mostra liste: il verso che l''invoker non vede');
+select t.is_true(not exists (
+              select 1 from public.get_public_lists() g where g.name = 'Pubblica di D'),
+            'e la sua lista sparisce anche dal feed, non solo dal profilo');
+
+select t.is_true(exists (
+              select 1 from public.get_public_lists() g where g.name = 'Pubblica di C'),
+            'il feed senza p_owner resta il feed: le liste degli altri ci sono ancora');
+
+-- A blocca C: il verso di sempre continua a valere.
+insert into public.user_blocks (user_id, blocked_user_id) values
+  ('aaaaaaaa-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000003');
+select t.is_true(not exists (
+              select 1 from public.get_public_lists() g where g.name = 'Pubblica di C'),
+            'chi ho bloccato io resta escluso come prima');
+
+reset role;
+
+rollback;
+
+\echo ''
+\echo 'TUTTI I TEST PASSATI'

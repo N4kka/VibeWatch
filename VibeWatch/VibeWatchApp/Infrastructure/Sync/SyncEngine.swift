@@ -44,6 +44,12 @@ public protocol SyncEngineProtocol: AnyObject {
     /// Pull only changes from the remote server.
     /// Typically used for pull-to-refresh.
     func pullFromRemote() async
+
+    /// Ritira lo stato del tracking e nient'altro, dopo un'azione sulla schermata (§9.2).
+    func pullTrackingState() async
+
+    /// Ritira favorites e voti e nient'altro, dopo una scrittura (§3.6, blocco 9).
+    func pullProfileContent() async
 }
 
 // MARK: - SyncEngine Implementation
@@ -656,6 +662,57 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
         }
     }
 
+    /// Le sole tabelle che servono a ridisegnare la schermata Tracking (§9.2).
+    ///
+    /// `tv_show_state` prima delle due viste: sono derivate da lui, e ritirarle nell'ordine
+    /// inverso non cambia il risultato ma rende illeggibile un log letto in fretta.
+    nonisolated static let trackingTables = ["tv_show_state", "v_tv_tracking", "v_tv_timeline"]
+
+    /// Ritira **solo** lo stato del tracking, dopo un "visto" o un "più avanti".
+    ///
+    /// **Perché serve una cosa a parte invece di un `pullFromRemote()`.** Marcare un episodio
+    /// accoda una mutazione e la spinge; il progresso però lo ricalcola il server (§1.1), e la
+    /// schermata legge lo specchio locale `tv_tracking`, che **solo un pull aggiorna**. Senza
+    /// questo, premere "visto" scriveva l'evento in produzione e non cambiava niente sullo
+    /// schermo: la forma di guasto peggiore, perché sembra che il tap non sia arrivato e invita a
+    /// premere di nuovo. Un pull completo qui sarebbe 19 tabelle per un tocco.
+    public func pullTrackingState() async {
+        guard networkMonitor.isConnected else { return }
+        guard let userId = AuthService.shared.currentUser?.id else { return }
+
+        for table in Self.trackingTables {
+            do {
+                try await pullTableWithConflictResolution(name: table, userId: userId)
+            } catch {
+                // Si dichiara. La schermata resterà indietro di un'azione fino al sync successivo,
+                // ed è meglio saperlo dal log che dedurlo da una card che non avanza.
+                Logger.warning("[SyncEngine] Tracking pull failed on \(table): \(error.localizedDescription)")
+            }
+        }
+    }
+
+    /// Le due tabelle del blocco 9 che le azioni riscaricano dopo una scrittura.
+    nonisolated static let profileContentTables = ["user_favorites", "user_ratings"]
+
+    /// Ritira **solo** favorites e voti, dopo un'azione di scrittura su uno dei due.
+    ///
+    /// Stessa ragione di `pullTrackingState`: la scrittura passa dall'outbox e lo specchio
+    /// locale e' ottimistico, ma se il server la respinge (un rifiuto registrato, non un
+    /// errore) solo un pull riallinea lo schermo. Un `pullFromRemote()` qui sarebbe venti
+    /// tabelle per un tocco su una stella.
+    public func pullProfileContent() async {
+        guard networkMonitor.isConnected else { return }
+        guard let userId = AuthService.shared.currentUser?.id else { return }
+
+        for table in Self.profileContentTables {
+            do {
+                try await pullTableWithConflictResolution(name: table, userId: userId)
+            } catch {
+                Logger.warning("[SyncEngine] Profile content pull failed on \(table): \(error.localizedDescription)")
+            }
+        }
+    }
+
     @discardableResult
     private func pullFromRemoteInternal() async -> SyncOutcome {
         var outcome = SyncOutcome()
@@ -682,6 +739,9 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             // back. Its aggregate companion, movie_reaction_counts, is deliberately NOT pulled:
             // it is global rather than user-scoped, and a trigger maintains it server-side.
             "movie_reactions",
+            // SPEC v3 §3.6 (blocco 8). Non ha user_id: il filtro e l'ordinamento hanno i loro
+            // casi speciali qui sotto, perche' l'identita' e' la coppia (follower, followee).
+            "user_follows",
             "user_gamification",
             "user_badges",
             "user_daily_challenges",
@@ -690,7 +750,20 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             "user_clip_signals",
             "ai_conversation_history",
             "global_discovery_filters",
-            "device_info"
+            "device_info",
+            // SPEC v3 §3.6/§4 (blocco 9): in produzione dal 2026-07-31. Entrambe lastWriteWins;
+            // le chiavi sono composite (getKeyColumns) e l'ordinamento di pagina usa tutte le
+            // colonne della chiave — nessuna da sola e' unica nel sottoinsieme dell'utente.
+            "user_favorites",
+            "user_ratings",
+            "watch_events",
+            "tv_show_state",
+            // §9.2: le due viste che la schermata Tracking legge. Sono viste e non tabelle, ma
+            // dal lato del pull non cambia niente — sono user-scoped e PostgREST le espone
+            // uguale. Ritirarle e' cio' che permette a §13.6 di reggere: la schermata si disegna
+            // da qui, senza rete.
+            "v_tv_tracking",
+            "v_tv_timeline"
         ]
 
         for table in userTables {
@@ -712,25 +785,90 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
     ///
     /// For each remote record, checks if a local record exists and uses
     /// the appropriate conflict resolution strategy to merge them.
+    ///
+    /// The fetch is paginated (see `SyncPagination`): an unbounded `select("*")` over a table the
+    /// size of an imported TV Time history either times out against the 8s `statement_timeout` or,
+    /// on a project with `db-max-rows` set, comes back truncated without saying so.
     private func pullTableWithConflictResolution(name: String, userId: String) async throws {
         guard let client = SupabaseService.shared.client else {
             throw SyncEngineError.notAuthenticated
         }
 
-        // Fetch remote records
-        var query = client.from(name).select("*")
-        if name == "profiles" {
-            query = query.eq("id", value: userId)
-        } else {
-            query = query.eq("user_id", value: userId)
+        let keyColumn = getPrimaryKeyColumn(for: name)
+        var totalConflictsResolved = 0
+
+        let rowsPulled = try await SyncPagination.walk(
+            table: name,
+            fetchPage: { offset, limit in
+                var query = client.from(name).select("*")
+                if name == "profiles" {
+                    query = query.eq("id", value: userId)
+                } else if name == "user_follows" {
+                    // Niente user_id: si è uno dei due capi. La RLS filtra comunque le righe
+                    // altrui; il filtro esplicito qui tiene la richiesta uguale ovunque e le
+                    // pagine deterministiche.
+                    query = query.or("follower_id.eq.\(userId),followee_id.eq.\(userId)")
+                } else {
+                    query = query.eq("user_id", value: userId)
+                }
+
+                if let window = SyncEngine.pullWindow(for: name),
+                   let cutoff = Calendar.current.date(byAdding: .month, value: -window.months, to: Date()) {
+                    query = query.gte(window.column, value: ISO8601DateFormatter().string(from: cutoff))
+                }
+
+                // Ordering is what makes paging correct, not just deterministic output. Without an
+                // ORDER BY, Postgres may return rows in a different order for each request, so
+                // two windows over the same table can overlap and miss rows at the same time. The
+                // primary key is unique within the filtered set, which is what a stable sort needs.
+                var ordered = query.order(keyColumn, ascending: true)
+                // Le chiavi composite ordinano su TUTTE le loro colonne: la prima da sola non e'
+                // unica nel sottoinsieme dell'utente, e un ordinamento non totale fa sovrapporre
+                // le pagine (§5). L'elenco viene da getKeyColumns, cosi' chi aggiunge una tabella
+                // a chiave composta eredita l'ordinamento giusto senza un altro if da ricordare.
+                for extra in self.getKeyColumns(for: name).dropFirst() {
+                    ordered = ordered.order(extra, ascending: true)
+                }
+                let data = try await ordered
+                    .range(from: offset, to: offset + limit - 1)
+                    .execute()
+                    .data
+
+                // Parsed strictly on purpose. PostgREST answers a rejected request with a JSON
+                // *object* describing the error, and treating anything that is not an array of
+                // rows as "no rows" would turn a 400 into a silent "pulled 0 rows" — the table
+                // would look empty and healthy while nothing was ever fetched.
+                let parsed = try JSONSerialization.jsonObject(with: data)
+                guard let rows = parsed as? [[String: Any]] else {
+                    let body = String(data: data.prefix(500), encoding: .utf8) ?? "<non-utf8>"
+                    throw SyncEngineError.operationFailed("\(name): unexpected pull response: \(body)")
+                }
+                return rows
+            },
+            handlePage: { remoteRows in
+                let resolved = await self.resolvePage(remoteRows, table: name)
+                totalConflictsResolved += resolved.conflictsResolved
+
+                if !resolved.rows.isEmpty {
+                    try await self.sqliteService.upsert(
+                        table: SyncEngine.localTable(for: name), rows: resolved.rows)
+                }
+            }
+        )
+
+        if totalConflictsResolved > 0 {
+            let strategy = TableConflictMapping.strategy(for: name)
+            Logger.info("[SyncEngine] Resolved \(totalConflictsResolved) conflicts in \(name) using \(strategy.rawValue) strategy")
         }
 
-        let data = try await query.execute().data
-        guard let remoteRows = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
-            return
-        }
+        Logger.debug("[SyncEngine] Pulled \(rowsPulled) rows from \(name)")
+    }
 
-        let strategy = TableConflictMapping.strategy(for: name)
+    /// Applies conflict resolution to one page of remote rows.
+    private func resolvePage(
+        _ remoteRows: [[String: Any]],
+        table name: String
+    ) async -> (rows: [[String: Any]], conflictsResolved: Int) {
         var resolvedRows: [[String: Any]] = []
         var conflictsResolved = 0
 
@@ -738,14 +876,8 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             // Normalize remote row
             let normalizedRemote = normalizeRow(remoteRow, for: name)
 
-            // Get the record ID
-            guard let recordId = getRecordId(from: normalizedRemote, table: name) else {
-                resolvedRows.append(normalizedRemote)
-                continue
-            }
-
-            // Check for local record
-            if let localRow = await fetchLocalRecord(table: name, id: recordId) {
+            // Check for local record (keyed by the table's key columns, composite included)
+            if let localRow = await fetchLocalRecord(table: name, row: normalizedRemote) {
                 // Conflict exists - resolve it
                 let resolved = conflictResolver.resolve(
                     table: name,
@@ -765,26 +897,61 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             }
         }
 
-        // Upsert resolved records to local database
-        if !resolvedRows.isEmpty {
-            try await sqliteService.upsert(table: name, rows: resolvedRows)
-        }
-
-        if conflictsResolved > 0 {
-            Logger.info("[SyncEngine] Resolved \(conflictsResolved) conflicts in \(name) using \(strategy.rawValue) strategy")
-        }
+        return (resolvedRows, conflictsResolved)
     }
 
-    /// Fetches a local record by ID for conflict resolution.
-    private func fetchLocalRecord(table: String, id: String) async -> [String: Any]? {
-        let idColumn = getPrimaryKeyColumn(for: table)
-        let sql = "SELECT * FROM \(table) WHERE \(idColumn) = ? LIMIT 1"
+    /// Fetches the local counterpart of a remote row for conflict resolution.
+    ///
+    /// Prende la riga e non un id: per `user_follows` la chiave è la coppia
+    /// (follower_id, followee_id) e non esiste una colonna sola che identifichi la riga.
+    /// Cercare per il solo `follower_id` confronterebbe righe sbagliate — l'union "risolverebbe"
+    /// un conflitto fra due follow diversi.
+    private func fetchLocalRecord(table: String, row: [String: Any]) async -> [String: Any]? {
+        let keyColumns = getKeyColumns(for: table)
+        let values = keyColumns.compactMap { row[$0].map { String(describing: $0) } }
+        guard values.count == keyColumns.count else { return nil }
+
+        let local = SyncEngine.localTable(for: table)
+        let whereClause = keyColumns.map { "\($0) = ?" }.joined(separator: " AND ")
+        let sql = "SELECT * FROM \(local) WHERE \(whereClause) LIMIT 1"
 
         do {
-            let rows = try await sqliteService.queryRaw(sql, parameters: [id])
+            let rows = try await sqliteService.queryRaw(sql, parameters: values)
             return rows.first
         } catch {
             return nil
+        }
+    }
+
+    /// Le colonne che identificano una riga. Una sola per quasi tutte; composite per i follow,
+    /// i favorites e i voti. `user_id` non compare mai: il pull filtra gia' per utente, e lo
+    /// specchio locale e' di un utente solo (precedente: tv_show_state).
+    ///
+    /// La PRIMA colonna deve coincidere con getPrimaryKeyColumn: il pull ordina le pagine su
+    /// quella e poi su tutte le successive di questo elenco.
+    private func getKeyColumns(for table: String) -> [String] {
+        switch table {
+        case "user_follows": return ["follower_id", "followee_id"]
+        case "user_favorites": return ["media_type", "slot"]
+        case "user_ratings":
+            // season/episode sono nella chiave col sentinello -1 (vedi normalizeRow): senza,
+            // il voto a un film e quello alla serie con lo stesso tmdb_id collasserebbero.
+            return ["media_type", "tmdb_id", "season_number", "episode_number"]
+        default: return [getPrimaryKeyColumn(for: table)]
+        }
+    }
+
+    /// In quale tabella locale atterra una sorgente remota.
+    ///
+    /// Serve perché due sorgenti del pull sono **viste** (§9.2): il nome remoto porta il prefisso
+    /// `v_`, ma in SQLite quella roba è una tabella e chiamarla `v_tv_tracking` direbbe una cosa
+    /// falsa a chiunque la legga. La mappatura sta in un posto solo, così il giorno che se ne
+    /// aggiunge una terza non ci sono tre punti da ricordare.
+    nonisolated static func localTable(for remote: String) -> String {
+        switch remote {
+        case "v_tv_tracking": return "tv_tracking"
+        case "v_tv_timeline": return "tv_timeline"
+        default: return remote
         }
     }
 
@@ -797,18 +964,51 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             return "device_id"
         case "global_discovery_filters":
             return "user_id"
+        case "v_tv_tracking":
+            // Come tv_show_state: la chiave e' composta, ma dentro il sottoinsieme di un utente
+            // tmdb_show_id e' unico, che basta per identificare la riga e per ordinare le pagine.
+            return "tmdb_show_id"
+        case "v_tv_timeline":
+            // La vista si porta un id sintetico apposta: senza una colonna unica, due pagine
+            // sulla stessa tabella riescono a sovrapporsi e a saltare righe insieme (§5).
+            return "id"
+        case "tv_show_state":
+            // Chiave composta (user_id, tmdb_show_id): dato che il pull filtra già per user_id,
+            // dentro quel sottoinsieme tmdb_show_id è unico, che è quanto serve sia per
+            // identificare la riga sia per ordinare le pagine in modo stabile.
+            return "tmdb_show_id"
+        case "user_follows":
+            // La chiave vera è la coppia: questa è solo la PRIMA colonna d'ordinamento delle
+            // pagine (il pull aggiunge followee_id) e non basta da sola a identificare una riga —
+            // per quello c'è getKeyColumns.
+            return "follower_id"
+        case "user_favorites", "user_ratings":
+            // Come per i follow: prima colonna d'ordinamento, non la chiave intera. Il resto
+            // dell'ordine (slot; tmdb_id/stagione/episodio) lo aggiunge il pull da getKeyColumns.
+            return "media_type"
         default:
             return "id"
         }
     }
 
-    /// Gets the record ID from a row based on table type.
-    private func getRecordId(from row: [String: Any], table: String) -> String? {
-        let keyColumn = getPrimaryKeyColumn(for: table)
-        if let id = row[keyColumn] {
-            return String(describing: id)
+    /// Quanta storia ritira il pull per una tabella.
+    ///
+    /// Il fixture reale di un import TV Time contiene 21.344 eventi su 432 serie: il **94,5% ha
+    /// più di 12 mesi**, e il solo 2015 ne conta 7.801. Ritirarli tutti costa ~12 MB e 25 richieste
+    /// a ogni sync completo per righe che nessuna schermata legge — §10 mette il diario oltre i 12
+    /// mesi dietro il paywall, quindi per un utente free quelle righe non sono nemmeno mostrabili.
+    /// Con la finestra: 1.605 righe, ~0,8 MB, 5 richieste.
+    ///
+    /// Conseguenza da non dimenticare: il totale di tempo di visione (§13.7) **non** può più essere
+    /// sommato dal client, perché in cache c'è solo un anno. Deve arrivare dal server come
+    /// aggregato — che è comunque ciò che §1.1 prescrive e che serve alle stats del blocco 9.
+    nonisolated static func pullWindow(for table: String) -> (column: String, months: Int)? {
+        switch table {
+        case "watch_events":
+            return ("watched_at", 12)
+        default:
+            return nil
         }
-        return nil
     }
 
     /// Normalizes a row for storage (handles media_type, JSON arrays, etc.).
@@ -829,6 +1029,19 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
                 if let data = try? JSONSerialization.data(withJSONObject: arr),
                    let str = String(data: data, encoding: .utf8) {
                     normalized[field] = str
+                }
+            }
+        }
+
+        // §3.6 (blocco 9): sul server un voto a un film ha season/episode NULL; nello specchio
+        // locale sono NOT NULL DEFAULT -1, lo stesso sentinello del coalesce(-1) nell'indice
+        // unico remoto. Senza questa conversione fetchLocalRecord non ritroverebbe la riga
+        // (NSNull non combacia con -1) e ogni pull tratterebbe il voto come una riga nuova,
+        // saltando la risoluzione dei conflitti.
+        if table == "user_ratings" {
+            for field in ["season_number", "episode_number"] {
+                if normalized[field] == nil || normalized[field] is NSNull {
+                    normalized[field] = -1
                 }
             }
         }

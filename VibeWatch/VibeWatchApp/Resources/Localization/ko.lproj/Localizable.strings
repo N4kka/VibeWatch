@@ -207,7 +207,6 @@
 // Platforms
 "platform.title" = "스트리밍 플랫폼";
 "platform.selectionCount" = "%d/%d 선택됨";
-"platforms.title" = "플랫폼";
 "platforms.streaming" = "스트리밍";
 "platforms.rent" = "대여";
 "platforms.buy" = "구매";
@@ -243,6 +242,7 @@
 "auth.error.invalidResponse" = "서버 응답이 올바르지 않습니다.";
 "auth.error.userNotFound" = "사용자를 찾을 수 없습니다.";
 "auth.error.invalidCredentials" = "이메일 또는 비밀번호가 올바르지 않습니다.";
+"auth.error.tooManyAttempts" = "시도 횟수가 너무 많습니다. 나중에 다시 시도해 주세요.";
 "auth.error.networkError" = "네트워크 오류입니다. 연결을 확인해 주세요.";
 "auth.error.databaseError" = "프로필 저장 중 데이터베이스 오류가 발생했습니다. 다시 시도해 주세요.";
 "auth.error.signUpFailed" = "가입에 실패했습니다. 다시 시도해 주세요.";
@@ -389,6 +389,50 @@
 "profile.termsOfUse" = "이용 약관";
 "profile.terms" = "약관";
 "profile.sendFeedback" = "피드백 보내기";
+"profile.share" = "프로필 공유";
+"profile.share.comingSoon" = "곧 제공 예정";
+"profile.importFrom" = "가져오기";
+"import.title" = "가져오기";
+"import.source.tvtime" = "TV Time (.zip)";
+"import.source.tvtime.subtitle" = "TV Time 데이터 내보내기";
+"import.source.footer" = "TV Time에서 데이터 내보내기(GDPR)를 요청한 뒤 여기에서 .zip 파일을 선택하세요. 같은 형식으로 내보내는 앱도 사용할 수 있습니다.";
+"import.state.uploading" = "업로드 중…";
+"import.state.uploadingHint" = "파일이 업로드되는 동안 앱을 열어 두세요.";
+"import.canClose" = "시청 기록을 가져오는 중입니다. 앱을 닫아도 됩니다. 완료되면 알림으로 알려 드릴게요.";
+"import.phase.queued" = "대기 중, 곧 시작됩니다…";
+"import.phase.parsing" = "기록을 읽는 중…";
+"import.phase.resolving" = "프로그램과 에피소드를 맞추는 중…";
+"import.phase.writing" = "에피소드를 저장하는 중…";
+"import.phase.finishing" = "마무리 중…";
+"import.report.episodes" = "가져온 에피소드";
+"import.report.shows" = "프로그램";
+"import.report.period" = "%@부터 %@까지";
+"import.report.ratingsDeferred" = "평가 %d개를 찾았습니다. 아직 가져오지 않았습니다.";
+"import.report.ratingsApplied" = "평가 %d개를 별점으로 가져왔습니다.";
+"import.report.ratingsUnresolved" = "평가 %d개를 일치시킬 수 없습니다.";
+"import.report.favoritesApplied" = "즐겨찾기 %d개를 빈 슬롯으로 가져왔습니다.";
+"import.report.favoriteMoviesUnsupported" = "영화 즐겨찾기 %d개는 TV Time에서 가져올 수 없습니다.";
+"import.report.moviesApplied" = "영화 %d편을 시청 날짜와 함께 가져왔습니다.";
+"import.report.moviesWatchlistApplied" = "영화 %d편을 시청 예정 목록에 추가했습니다.";
+"import.report.moviesUnresolved" = "영화 %d편을 인식하지 못했습니다(제목과 연도가 TMDB와 일치하지 않음).";
+"import.resolve.button" = "해결";
+"import.resolve.title" = "“%@”는 어떤 시리즈인가요?";
+"import.resolve.hint" = "에피소드는 정확한 TVDB ID로 다시 확인됩니다. TMDB에서 확인할 수 없는 항목은 보고서에 남습니다.";
+"import.resolve.searchPlaceholder" = "TMDB에서 시리즈 검색";
+"import.resolve.empty" = "결과가 없습니다.";
+"import.resolve.failed" = "해결하지 못했습니다:";
+"import.resolve.searchFailed" = "검색에 실패했습니다.";
+"import.report.statusesApplied" = "%d개의 시리즈 상태를 복원했습니다(찜 목록 및 보관).";
+"import.report.statusesUnresolved" = "%d개의 시리즈 상태를 적용하지 못했습니다.";
+"import.report.unresolvedTitle" = "에피소드 %d개를 맞추지 못했습니다";
+"import.report.unresolvedRow" = "%d개 에피소드";
+"import.report.allResolved" = "모두 맞췄습니다.";
+"import.error.failed" = "가져오기가 오류로 중단되었습니다.";
+"import.error.network" = "지금은 가져오기 상태를 확인할 수 없습니다.";
+"import.error.uploadFailed" = "업로드가 완료되지 않았습니다.";
+"import.error.startFailed" = "가져오기를 시작할 수 없습니다.";
+"import.error.fileRead" = "해당 파일을 읽을 수 없습니다.";
+"import.error.reportFailed" = "가져오기는 끝났지만 보고서를 불러오지 못했습니다.";
 
 // Profile - Support & Feedback
 "profile.feedback.suggestFeature" = "기능 제안";
@@ -666,3 +710,105 @@
 "tvTracking.lastSeen" = "LAST SEEN %@";
 "tvTracking.soon" = "soon";
 "tvTracking.watchNow" = "Watch now";
+
+/* SPEC v3 §9.2 — schermata Tracking */
+"tracking.title" = "트래킹";
+"tracking.bucket.upNext" = "볼 차례";
+"tracking.bucket.stale" = "오랫동안 안 본 작품";
+"tracking.bucket.forLater" = "나중에 보기";
+"tracking.bucket.upToDate" = "최신까지 시청";
+"tracking.bucket.notStarted" = "시작 안 함";
+"tracking.bucket.dropped" = "중단함";
+"tracking.bucket.archived" = "보관함";
+"tracking.timeline.today" = "오늘 공개";
+"tracking.timeline.tomorrow" = "내일";
+"tracking.timeline.thisWeek" = "이번 주";
+"tracking.timeline.thisMonth" = "이번 달";
+"tracking.action.watched" = "시청함";
+"tracking.action.later" = "나중에";
+"tracking.caughtUp" = "최신까지 시청";
+"tracking.unknownShow" = "알 수 없는 시리즈";
+"tracking.special" = "스페셜";
+"tracking.empty.title" = "아직 볼 것이 없습니다";
+"tracking.empty.subtitle" = "시리즈를 팔로우하거나 TV Time 기록을 가져오면 여기에 표시됩니다.";
+"tracking.error.title" = "문제가 발생했습니다";
+"tracking.error.notAuthenticated" = "로그인이 필요합니다.";
+"tracking.error.showNotInCatalog" = "이 시리즈는 아직 카탈로그에 없습니다. 잠시 후 다시 시도해 주세요.";
+"tracking.error.noNextEpisode" = "이 시리즈에는 다음 에피소드가 없습니다.";
+
+"tab.tracking" = "트래킹";
+
+"common.close" = "닫기";
+
+/* Chiavi chiamate dal codice e mai tradotte */
+"auth.error.invalidLink" = "이 링크는 유효하지 않거나 만료되었습니다.";
+"clips.noListsYet" = "아직 리스트가 없습니다";
+
+/* SPEC v3 §3.7 — scelta dello username */
+"username.confirm.title" = "사용자 이름 확인";
+"username.confirm.subtitle" = "이름에서 만들어 봤습니다. 다른 사람이 이 이름으로 회원님을 찾습니다. 그대로 쓰거나 바꿔 주세요.";
+"username.confirm.action" = "확인";
+"username.choose.title" = "사용자 이름 선택";
+"username.choose.subtitle" = "VibeWatch에 표시되려면 필요합니다. 다른 사람이 이 이름으로 프로필과 리스트를 찾습니다.";
+"username.choose.action" = "계속";
+"username.placeholder" = "사용자 이름";
+"username.hint" = "소문자, 숫자, _ — 3~20자.";
+"username.checking" = "확인 중…";
+"username.available" = "사용 가능";
+"username.later" = "나중에";
+"username.error.empty" = "사용자 이름을 입력하세요.";
+"username.error.tooShort" = "3자 이상이어야 합니다.";
+"username.error.tooLong" = "20자를 넘을 수 없습니다.";
+"username.error.invalidCharacters" = "소문자, 숫자, _만 쓸 수 있습니다.";
+"username.error.taken" = "이미 사용 중입니다.";
+"username.error.checkFailed" = "확인하지 못했습니다. 다시 시도해 주세요.";
+"username.error.reserved" = "사용할 수 없는 이름입니다.";
+
+// Social (SPEC v3 blocco 8)
+"social.search.title" = "친구 찾기";
+"social.search.placeholder" = "사용자 이름 또는 이름";
+"social.search.prompt" = "사용자 이름이나 이름으로 검색해 프로필을 볼 수 있습니다.";
+"social.search.noResults" = "아무도 찾지 못했습니다.";
+"social.search.failed" = "검색에 실패했습니다. 연결을 확인해 주세요.";
+"social.profile.followers" = "팔로워";
+"social.profile.following" = "팔로잉";
+"social.follow" = "팔로우";
+"social.unfollow" = "팔로우 취소";
+"social.followsYou" = "회원님을 팔로우합니다";
+"social.profile.notFound" = "이 프로필은 존재하지 않습니다.";
+"social.profile.you" = "내 프로필입니다.";
+"social.profile.loadFailed" = "프로필을 불러오지 못했습니다.";
+
+// Blocco 9 (SPEC v3 §3.6/§9.3): voti in stelle, favorites, stats
+"rating.title" = "내 평점";
+"rating.saveFailed" = "평점을 저장하지 못했습니다. 다시 시도해 주세요.";
+"profile.favorites.movies" = "좋아하는 영화";
+"profile.favorites.shows" = "좋아하는 시리즈";
+"profile.lists.title" = "공개 리스트";
+"profile.lists.loadFailed" = "공개 리스트를 불러올 수 없습니다.";
+"profile.stats.title" = "내 통계";
+"profile.stats.watchTime" = "시청 시간";
+"profile.stats.movies" = "영화";
+"profile.stats.shows" = "시리즈";
+"profile.stats.episodes" = "에피소드";
+"profile.stats.loadFailed" = "통계를 불러오지 못했습니다.";
+"profile.stats.advanced.title" = "고급 통계";
+"profile.stats.advanced.byGenre" = "장르별";
+"profile.stats.advanced.byDecade" = "연대별";
+"profile.stats.advanced.ratings" = "내 평점";
+"profile.stats.advanced.noGenre" = "장르 정보가 없는 시리즈 %d개";
+"profile.stats.advanced.proLocked" = "고급 통계는 Pro에 포함되어 있습니다.";
+
+// Blocco 9, seconda meta' (§9.3): diario e modifica dei favorites
+"diary.title" = "다이어리";
+"diary.empty" = "아직 아무것도 없습니다. 시청한 작품이 여기에 표시됩니다.";
+"diary.loadFailed" = "다이어리를 불러오지 못했습니다.";
+"favorites.add" = "즐겨찾기에 추가";
+"favorites.remove" = "즐겨찾기에서 제거";
+"favorites.slot" = "슬롯 %d";
+"favorites.saveFailed" = "즐겨찾기를 업데이트하지 못했습니다. 다시 시도해 주세요.";
+
+// La pillola del Tracking: dove lo guardo (streaming > noleggio > acquisto)
+"tracking.watchOn" = "%@에서 시청";
+"tracking.rentOn" = "%@에서 대여";
+"tracking.buyOn" = "%@에서 구매";

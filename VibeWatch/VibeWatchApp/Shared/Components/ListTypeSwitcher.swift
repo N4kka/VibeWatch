@@ -31,9 +31,11 @@ struct ListTypeSwitcher: View {
     }
 }
 
+/// §9.1: `tvTracking` non c'e' piu'. Il Tracking ha un tab suo e "smette di essere una sezione
+/// dentro Liste" — tenerlo in due posti significherebbe due schermate da mantenere allineate, e
+/// una delle due sarebbe sempre quella vecchia.
 enum LibrarySection: String, CaseIterable {
     case myLists = "lists.section.myLists"
-    case tvTracking = "lists.section.tvTracking"
     case publicLists = "lists.section.publicLists"
 
     var displayName: String {

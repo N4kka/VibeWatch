@@ -72,6 +72,35 @@ enum SQLiteTable: String, CaseIterable {
     case userNotificationPreferences = "user_notification_preferences"
     case notificationSubscriptions = "notification_subscriptions"
 
+    // Watch providers (created by migration 5, never whitelisted: every insert/update from
+    // LocalWatchProvidersRepository threw invalidTableName and died under a `try?`).
+    case watchProviders = "watch_providers"
+
+    // Tracking episodi (SPEC v3 §4).
+    case watchEvents = "watch_events"
+    case tvShowState = "tv_show_state"
+
+    // Blocco 9 (SPEC v3 §3.6): in produzione dal 2026-07-31, con RLS e rami in apply_mutations.
+    // `user_ratings` non ha id sintetico nemmeno qui: la chiave e' quella naturale, con
+    // season/episode a -1 quando non e' un episodio — lo stesso sentinello del
+    // `coalesce(season_number,-1)` dell'indice unico sul server.
+    case userFavorites = "user_favorites"
+    case userRatings = "user_ratings"
+
+    // Social (SPEC v3 §3.6, blocco 8). Chiave composta (follower_id, followee_id), come sul
+    // server: un follow e' la coppia, non una riga con un id suo.
+    case userFollows = "user_follows"
+
+    // Specchi locali delle viste della schermata Tracking (§9.2). Sono cache di righe gia'
+    // pronte per la UI, non tabelle di dominio: si popolano dal pull e non hanno un percorso di
+    // scrittura, perche' cio' che l'utente cambia sta in `tv_show_state` e `watch_events`.
+    case tvTracking = "tv_tracking"
+    case tvTimeline = "tv_timeline"
+
+    // Cache dei titoli nella lingua dell'app (migration 12): il catalogo condiviso (§1.5) parla
+    // una lingua sola, e §13.6 vieta la rete al primo fotogramma. Locale e basta, niente sync.
+    case localizedTitles = "localized_titles"
+
     /// All valid table names as a Set for O(1) lookup
     static let validTableNames: Set<String> = Set(SQLiteTable.allCases.map(\.rawValue))
 
@@ -114,10 +143,24 @@ final class SQLiteService: ObservableObject {
     private struct SQLSendableValue: @unchecked Sendable { let raw: Any }
     private struct SQLSendableRecord: @unchecked Sendable { var raw: [String: Any] }
 
-    /// Validate table name to prevent SQL injection (Phase 5 Security)
+    /// Set to false only by the test that asserts the throw itself. See `validateTableName`.
+    static var trapsOnUnknownTable = true
+
+    /// Validate table name to prevent SQL injection (Phase 5 Security).
+    ///
+    /// P1: an unknown table is almost never an injection attempt — it is a table that exists in
+    /// SQLite but was never added to the whitelist, and the resulting throw kept dying under a
+    /// `try?` at the call site (`watch_providers` did exactly that: created by migration 5, absent
+    /// from the enum, every write lost with no log anyone read). Debug builds now trap, so a
+    /// missing whitelist entry surfaces on the first write during development instead of in
+    /// production as missing data.
     private func validateTableName(_ table: String) throws {
         guard SQLiteTable.isValid(table) else {
-            Logger.error("[SQLite] SQL injection attempt blocked: invalid table '\(table)'")
+            Logger.error("[SQLite] Rejected statement on non-whitelisted table '\(table)'. "
+                         + "If the table is legitimate, add it to SQLiteTable.")
+            if Self.trapsOnUnknownTable {
+                assertionFailure("[SQLite] non-whitelisted table '\(table)' — add it to SQLiteTable")
+            }
             throw SQLiteError.invalidTableName(table)
         }
     }

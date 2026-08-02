@@ -11,6 +11,8 @@ struct AnalyticsHealthDebugView: View {
         List {
             Section("PostHog") {
                 if let diagnostics {
+                    row(label: "Configured", value: diagnostics.isConfigured ? "yes" : "NO — events dropped")
+                    row(label: "Dropped (unconfigured)", value: "\(diagnostics.droppedUnconfiguredCount)")
                     row(label: "Queue count", value: "\(diagnostics.queueCount)")
                     row(label: "Flushing", value: diagnostics.isFlushing ? "yes" : "no")
                     row(label: "Flush attempts", value: "\(diagnostics.flushAttemptCount)")

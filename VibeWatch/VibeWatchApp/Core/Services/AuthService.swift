@@ -436,22 +436,21 @@ class AuthService: AuthServiceProtocol {
         // Clear reset expectation since this is an explicit action
         userDefaults.set(false, forKey: expectingPasswordResetKey)
 
-        // Check if input is email or username
-        let email: String
+        // Email diretta a GoTrue; username alla Edge Function, che fa risoluzione e
+        // autenticazione in un colpo solo: l'email non lascia mai il server senza la password
+        // giusta. La strada vecchia (leggere profiles.email dal client, per giunta con un ilike
+        // su display_name) era un endpoint di raccolta indirizzi, e la RLS la bloccava comunque.
+        let userId: String
         if emailOrUsername.contains("@") {
-            email = emailOrUsername
+            let response = try await client.auth.signIn(
+                email: emailOrUsername,
+                password: password
+            )
+            userId = response.user.id.uuidString
         } else {
-            // Fetch email from username
-            email = try await getEmailFromUsername(emailOrUsername)
+            let session = try await signInWithUsername(emailOrUsername, password: password)
+            userId = session.user.id.uuidString
         }
-
-        // Sign in with email and password
-        let response = try await client.auth.signIn(
-            email: email,
-            password: password
-        )
-
-        let userId = response.user.id.uuidString
 
         // Fetch user profile
         await fetchUserProfile(userId: userId)
@@ -760,45 +759,58 @@ class AuthService: AuthServiceProtocol {
         }
     }
 
-    private func getEmailFromUsername(_ username: String) async throws -> String {
-        guard let client = client else {
+    /// SPEC v3 §3.7 — il login con username, tutto server-side.
+    ///
+    /// La Edge Function risolve username → email e chiama GoTrue **nella stessa richiesta**:
+    /// l'email non passa mai dal client prima dell'autenticazione. Ogni fallimento di
+    /// credenziali risponde `invalid_credentials`, identico per username inesistente e password
+    /// sbagliata — distinguerli sarebbe un oracolo sugli username, quindi anche qui non si
+    /// distingue. Il 429 invece si dice: "riprova più tardi" non rivela niente.
+    private func signInWithUsername(_ username: String, password: String) async throws -> Session {
+        guard let client = client, let baseURL = URL(string: Config.supabaseURL) else {
             throw AppAuthError.notConfigured
         }
 
-        struct EmailRow: Decodable { let email: String }
+        let url = baseURL
+            .appendingPathComponent("functions")
+            .appendingPathComponent("v1")
+            .appendingPathComponent("login-with-username")
 
-        func fetchEmail(filter: (PostgrestFilterBuilder) -> PostgrestFilterBuilder) async throws -> String? {
-            let rows: [EmailRow] = try await filter(
-                client
-                    .from("profiles")
-                    .select("email")
-            )
-            .limit(1)
-            .execute()
-            .value
-            return rows.first?.email
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
+        if Config.supabaseAnonKey.hasPrefix("eyJ") {
+            // Come in callRPC: la legacy anon key è un JWT e vale come Bearer; le publishable
+            // (sb_publishable_...) no, e il gateway le rifiuterebbe.
+            request.setValue("Bearer \(Config.supabaseAnonKey)", forHTTPHeaderField: "Authorization")
+        }
+        request.httpBody = try JSONSerialization.data(
+            withJSONObject: ["username": username, "password": password])
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            throw AppAuthError.networkError
+        }
+        guard http.statusCode != 429 else {
+            throw AppAuthError.custom("auth.error.tooManyAttempts".localized)
+        }
+        guard http.statusCode == 200 else {
+            throw AppAuthError.invalidCredentials
         }
 
-        let normalized = username.trimmingCharacters(in: .whitespacesAndNewlines)
-        Logger.debug("[Auth] Looking up email for username: [REDACTED]")
-
-        // Try filters in order: exact, case-insensitive, fuzzy
-        let likePattern = "%\(normalized)%"
-        let filters: [(PostgrestFilterBuilder) -> PostgrestFilterBuilder] = [
-            { $0.eq("display_name", value: normalized) },
-            { $0.ilike("display_name", pattern: normalized) },
-            { $0.ilike("display_name", pattern: likePattern) }
-        ]
-
-        for filter in filters {
-            if let emailFound = try? await fetchEmail(filter: filter) {
-                Logger.info("[Auth] Found email for username")
-                return emailFound
-            }
+        guard let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+              let accessToken = json["access_token"] as? String,
+              let refreshToken = json["refresh_token"] as? String else {
+            // Un 200 illeggibile è un errore, non delle credenziali sbagliate (la lezione di
+            // username_available).
+            throw AppAuthError.invalidResponse
         }
 
-        Logger.error("[Auth] Username lookup failed: userNotFound")
-        throw AppAuthError.userNotFound
+        // La sessione diventa quella del client Supabase: da qui in poi il percorso è identico
+        // al login con email.
+        return try await client.auth.setSession(
+            accessToken: accessToken, refreshToken: refreshToken)
     }
 
     func updateUserProfile(displayName: String?, avatarURL: String?) async throws {

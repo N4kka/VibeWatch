@@ -77,6 +77,22 @@ struct ProfileView: View {
     @State private var showLogoutConfirmation = false
     @State private var showPlatformSelector = false
     @State private var showSettings = false
+    @State private var showUserSearch = false
+    @State private var showDiary = false
+    @State private var showImport = false
+    /// SPEC v3 §9.4: il link pubblico del proprio profilo. Lo username sta sul server (lo
+    /// specchio locale di `profiles` non lo ha), quindi la riga ha stati distinti: un errore
+    /// di rete non deve presentarsi come "la riga non c'è".
+    @State private var shareProfile: ShareProfileState = .loading
+
+    enum ShareProfileState {
+        case loading
+        case ready(URL)
+        /// I profili del backfill rimasti senza username (§3.7): niente pagina pubblica,
+        /// niente link da condividere. Vuoto vero, non errore.
+        case noUsername
+        case failed
+    }
     @State private var showChangePassword = false
     @State private var showHelpSupport = false
     @State private var showFeedback = false
@@ -124,7 +140,113 @@ struct ProfileView: View {
             selectedPlatformsData = encoded
         }
     }
-    
+
+    // MARK: - Condividi profilo (§9.4)
+
+    /// Acceso dal 2026-08-02: vibewatchapp.com serve l'AASA (apex e www) e risponde alle due
+    /// rotte con pagine vere, quindi il link condiviso ha una destinazione anche senza app.
+    /// Il ramo "Coming soon" resta come interruttore di emergenza: se il sito cadesse a lungo,
+    /// rimettere `false` spegne la riga senza toccare gli stati.
+    private static let shareProfileEnabled = true
+
+    /// La riga e il suo Divider insieme: nel caso `noUsername` spariscono entrambi, e la lista
+    /// resta ben formata.
+    @ViewBuilder
+    private var shareProfileRow: some View {
+        if !Self.shareProfileEnabled {
+            // Non è un Button: un tap che non fa niente su una riga che sembra attiva è
+            // l'invito a ripremere (la famiglia di difetti del pulsante Segui su se stessi).
+            shareProfileLabel {
+                Text("profile.share.comingSoon".localized)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.theme.textSecondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Capsule().fill(Color.white.opacity(0.08)))
+            }
+            .opacity(0.55)
+            Divider()
+                .background(Color.white.opacity(0.1))
+        } else {
+            enabledShareProfileRow
+        }
+    }
+
+    @ViewBuilder
+    private var enabledShareProfileRow: some View {
+        switch shareProfile {
+        case .ready(let url):
+            ShareLink(item: url) {
+                shareProfileLabel { EmptyView() }
+            }
+            Divider()
+                .background(Color.white.opacity(0.1))
+        case .loading:
+            shareProfileLabel {
+                ProgressView().controlSize(.small)
+            }
+            .opacity(0.5)
+            Divider()
+                .background(Color.white.opacity(0.1))
+        case .failed:
+            // Il tap riprova: la freccia dice che qualcosa non è andato, senza rubare
+            // alla riga il suo mestiere.
+            Button {
+                Task { await loadShareUsername() }
+            } label: {
+                shareProfileLabel {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 14))
+                        .foregroundColor(.theme.textSecondary)
+                }
+            }
+            Divider()
+                .background(Color.white.opacity(0.1))
+        case .noUsername:
+            EmptyView()
+        }
+    }
+
+    /// La stessa forma di `SettingsRow`, che però è un Button chiuso: qui il contenitore
+    /// cambia per stato (ShareLink, Button, niente).
+    private func shareProfileLabel<Trailing: View>(
+        @ViewBuilder trailing: () -> Trailing
+    ) -> some View {
+        HStack(spacing: 16) {
+            Image(systemName: "square.and.arrow.up")
+                .font(.system(size: 20))
+                .foregroundColor(.theme.accentOrange)
+                .frame(width: 30)
+
+            Text("profile.share".localized)
+                .font(.system(size: 16))
+                .foregroundColor(.theme.textPrimary)
+
+            Spacer()
+
+            trailing()
+        }
+        .padding()
+    }
+
+    @MainActor
+    private func loadShareUsername() async {
+        if case .ready = shareProfile { return }
+        shareProfile = .loading
+        do {
+            let state = try await SupabaseService.shared.usernameState()
+            if let username = state?.username, !username.isEmpty {
+                shareProfile = .ready(UniversalLinks.profileURL(username: username))
+            } else {
+                shareProfile = .noUsername
+            }
+        } catch {
+            // Un errore non è "non hai uno username" (§3.7 ha lasciato 19 profili senza):
+            // i due casi hanno due rese diverse apposta.
+            shareProfile = .failed
+        }
+    }
+
     var body: some View {
         NavigationView {
             ZStack {
@@ -147,6 +269,12 @@ struct ProfileView: View {
                         dismiss()
                     }
                     .foregroundColor(.theme.textPrimary)
+                }
+            }
+            .task {
+                // Con la riga spenta il giro di rete sarebbe lavoro per nessuno.
+                if Self.shareProfileEnabled && appState.isAuthenticated {
+                    await loadShareUsername()
                 }
             }
             .overlay {
@@ -208,6 +336,15 @@ struct ProfileView: View {
             SettingsView()
                 .environmentObject(appState)
                 .environmentObject(authService)
+        }
+        .sheet(isPresented: $showUserSearch) {
+            UserSearchView()
+        }
+        .sheet(isPresented: $showDiary) {
+            NavigationView { DiaryView() }
+        }
+        .sheet(isPresented: $showImport) {
+            ImportView()
         }
         .fullScreenCover(isPresented: $showUpgradePaywall) {
             ProPaywallView(isPresented: $showUpgradePaywall, source: "profile_banner")
@@ -359,7 +496,7 @@ struct ProfileView: View {
         ScrollView {
             VStack(spacing: 12) {
                 profileHeader
-                
+
                 settingsSection
                 
                 Button {
@@ -559,6 +696,31 @@ struct ProfileView: View {
                     .background(Color.white.opacity(0.1))
                 
                 SettingsRow(
+                    icon: "person.2",
+                    title: "social.search.title".localized,
+                    action: {
+                        showUserSearch = true
+                    }
+                )
+
+                Divider()
+                    .background(Color.white.opacity(0.1))
+
+                shareProfileRow
+
+                // §9.3: il diario. Si legge dalla cache locale (12 mesi, §5), zero rete.
+                SettingsRow(
+                    icon: "book",
+                    title: "diary.title".localized,
+                    action: {
+                        showDiary = true
+                    }
+                )
+
+                Divider()
+                    .background(Color.white.opacity(0.1))
+
+                SettingsRow(
                     icon: "play.tv",
                     title: "profile.streamingServices".localized,
                     action: {
@@ -567,10 +729,23 @@ struct ProfileView: View {
                         }
                     }
                 )
-                
+
                 Divider()
                     .background(Color.white.opacity(0.1))
-                
+
+                // SPEC v3 §7: l'import dello storico. La schermata è una lista di sorgenti
+                // (oggi solo TV Time) apposta: gli import futuri sono righe, non schermate.
+                SettingsRow(
+                    icon: "square.and.arrow.down",
+                    title: "profile.importFrom".localized,
+                    action: {
+                        showImport = true
+                    }
+                )
+
+                Divider()
+                    .background(Color.white.opacity(0.1))
+
                 SettingsRow(
                     icon: "envelope",
                     title: "profile.sendFeedback".localized,

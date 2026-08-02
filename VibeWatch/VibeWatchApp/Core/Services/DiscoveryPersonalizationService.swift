@@ -492,7 +492,19 @@ class DiscoveryPersonalizationService: ObservableObject {
         // Convert to Movie objects (fetch from cache or TMDB)
         var movies: [Movie] = []
         for item in filteredWatchlist.prefix(maxItemsPerCarousel) {
-            if let movie = try? await tmdbService.getMovieDetails(id: item.id) {
+            let resolved = await Self.resolveJourneyItem(
+                item,
+                movieLookup: { [tmdbService] id in
+                    try? await tmdbService.getMovieDetails(id: id)
+                },
+                tvLookup: { [tmdbService] id in
+                    guard let show = try? await tmdbService.getTVShowDetails(id: id) else {
+                        return nil
+                    }
+                    return self.mapTVShowToMovie(show)
+                }
+            )
+            if let movie = resolved {
                 movies.append(movie)
             }
         }
@@ -504,6 +516,21 @@ class DiscoveryPersonalizationService: ObservableObject {
             descriptions: [:],
             reason: "From your watchlist"
         )
+    }
+
+    /// Resolve a watchlist summary through the endpoint matching its media namespace. TMDB movie
+    /// and TV ids overlap, so treating every numeric id as a movie is not a safe fallback.
+    static func resolveJourneyItem(
+        _ item: MediaSummary,
+        movieLookup: (Int) async -> Movie?,
+        tvLookup: (Int) async -> Movie?
+    ) async -> Movie? {
+        switch item.mediaType {
+        case .tv:
+            return await tvLookup(item.id)
+        case .movie:
+            return await movieLookup(item.id)
+        }
     }
 
     private func generateFromSearches(userProfile: UserProfile, excluding: Set<Int> = []) async throws -> PersonalizedCarousel {

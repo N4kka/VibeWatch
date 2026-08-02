@@ -239,6 +239,7 @@
 "auth.error.invalidResponse" = "服务器返回无效响应。";
 "auth.error.userNotFound" = "未找到用户。";
 "auth.error.invalidCredentials" = "电子邮件或密码无效。";
+"auth.error.tooManyAttempts" = "尝试次数过多。请稍后重试。";
 "auth.error.networkError" = "网络错误。请检查你的连接。";
 "auth.error.databaseError" = "保存用户资料时数据库出错。请重试。";
 "auth.error.signUpFailed" = "注册失败。请重试。";
@@ -352,6 +353,50 @@
 
 // Profile - Support & Feedback
 "profile.sendFeedback" = "发送反馈";
+"profile.share" = "分享个人资料";
+"profile.share.comingSoon" = "即将推出";
+"profile.importFrom" = "从…导入";
+"import.title" = "导入";
+"import.source.tvtime" = "TV Time (.zip)";
+"import.source.tvtime.subtitle" = "你的 TV Time 数据导出";
+"import.source.footer" = "向 TV Time 申请数据导出（GDPR），然后在此选择 .zip 文件。导出相同格式的其他应用也可以。";
+"import.state.uploading" = "上传中…";
+"import.state.uploadingHint" = "文件上传期间请保持应用打开。";
+"import.canClose" = "正在导入你的观看历史。可以关闭应用——完成后我们会发送通知。";
+"import.phase.queued" = "排队中，马上开始…";
+"import.phase.parsing" = "正在读取你的历史…";
+"import.phase.resolving" = "正在匹配剧集和单集…";
+"import.phase.writing" = "正在保存你的单集…";
+"import.phase.finishing" = "即将完成…";
+"import.report.episodes" = "已导入单集";
+"import.report.shows" = "剧集";
+"import.report.period" = "从 %@ 到 %@";
+"import.report.ratingsDeferred" = "找到 %d 条评分——尚未导入。";
+"import.report.ratingsApplied" = "已将 %d 条评分导入为星级。";
+"import.report.ratingsUnresolved" = "%d 条评分无法匹配。";
+"import.report.favoritesApplied" = "已将 %d 个收藏导入空余槽位。";
+"import.report.favoriteMoviesUnsupported" = "%d 个电影收藏无法从 TV Time 导入。";
+"import.report.moviesApplied" = "已导入 %d 部电影（含观看日期）。";
+"import.report.moviesWatchlistApplied" = "已将 %d 部电影加入稍后观看。";
+"import.report.moviesUnresolved" = "%d 部电影未能识别（标题和年份与 TMDB 不匹配）。";
+"import.resolve.button" = "匹配";
+"import.resolve.title" = "“%@”是哪部剧集？";
+"import.resolve.hint" = "剧集将使用其准确的 TVDB ID 重新检查。TMDB 无法确认的内容会保留在报告中。";
+"import.resolve.searchPlaceholder" = "在 TMDB 上搜索剧集";
+"import.resolve.empty" = "没有结果。";
+"import.resolve.failed" = "匹配失败：";
+"import.resolve.searchFailed" = "搜索失败。";
+"import.report.statusesApplied" = "已恢复 %d 个剧集状态（想看清单与归档）。";
+"import.report.statusesUnresolved" = "%d 个剧集状态未能应用。";
+"import.report.unresolvedTitle" = "%d 个单集无法匹配";
+"import.report.unresolvedRow" = "%d 集";
+"import.report.allResolved" = "全部匹配成功。";
+"import.error.failed" = "导入因错误而停止。";
+"import.error.network" = "目前无法查看导入状态。";
+"import.error.uploadFailed" = "上传未完成。";
+"import.error.startFailed" = "导入无法开始。";
+"import.error.fileRead" = "无法读取该文件。";
+"import.error.reportFailed" = "导入已完成，但报告无法加载。";
 "profile.aboutUs" = "关于我们";
 "profile.aboutUsDetail" = "了解更多关于 VibeWatch 团队的信息，以及我们如何改善你的串流发现体验。";
 "profile.tmdbAttribution" = "本产品使用 TMDb API，但未获得 TMDb 的认可或认证。";
@@ -650,3 +695,105 @@
 "tvTracking.lastSeen" = "LAST SEEN %@";
 "tvTracking.soon" = "soon";
 "tvTracking.watchNow" = "Watch now";
+
+/* SPEC v3 §9.2 — schermata Tracking */
+"tracking.title" = "追剧";
+"tracking.bucket.upNext" = "待观看";
+"tracking.bucket.stale" = "很久没看";
+"tracking.bucket.forLater" = "稍后再看";
+"tracking.bucket.upToDate" = "已追完";
+"tracking.bucket.notStarted" = "未开始";
+"tracking.bucket.dropped" = "已弃剧";
+"tracking.bucket.archived" = "已归档";
+"tracking.timeline.today" = "今天更新";
+"tracking.timeline.tomorrow" = "明天";
+"tracking.timeline.thisWeek" = "本周";
+"tracking.timeline.thisMonth" = "本月";
+"tracking.action.watched" = "已观看";
+"tracking.action.later" = "稍后";
+"tracking.caughtUp" = "已追完";
+"tracking.unknownShow" = "未知剧集";
+"tracking.special" = "特别篇";
+"tracking.empty.title" = "暂时没有可看的内容";
+"tracking.empty.subtitle" = "关注一部剧集，或导入你的 TV Time 记录，它就会出现在这里。";
+"tracking.error.title" = "出了点问题";
+"tracking.error.notAuthenticated" = "需要先登录。";
+"tracking.error.showNotInCatalog" = "该剧集尚未进入目录，请稍后重试。";
+"tracking.error.noNextEpisode" = "这部剧集没有下一集。";
+
+"tab.tracking" = "追剧";
+
+"common.close" = "关闭";
+
+/* Chiavi chiamate dal codice e mai tradotte */
+"auth.error.invalidLink" = "此链接无效或已过期。";
+"clips.noListsYet" = "还没有列表";
+
+/* SPEC v3 §3.7 — scelta dello username */
+"username.confirm.title" = "确认你的用户名";
+"username.confirm.subtitle" = "这是根据你的名字生成的。别人会用它找到你——保留它，或者换一个。";
+"username.confirm.action" = "确认";
+"username.choose.title" = "选择你的用户名";
+"username.choose.subtitle" = "你需要一个才能出现在 VibeWatch 上：别人用它找到你的主页和列表。";
+"username.choose.action" = "继续";
+"username.placeholder" = "用户名";
+"username.hint" = "小写字母、数字和 _ —— 3 到 20 个字符。";
+"username.checking" = "检查中…";
+"username.available" = "可以使用";
+"username.later" = "以后再说";
+"username.error.empty" = "请选择一个用户名。";
+"username.error.tooShort" = "至少 3 个字符。";
+"username.error.tooLong" = "最多 20 个字符。";
+"username.error.invalidCharacters" = "只能用小写字母、数字和 _。";
+"username.error.taken" = "已被占用。";
+"username.error.checkFailed" = "无法检查。请重试。";
+"username.error.reserved" = "该名称已被保留。";
+
+// Social (SPEC v3 blocco 8)
+"social.search.title" = "查找好友";
+"social.search.placeholder" = "用户名或姓名";
+"social.search.prompt" = "按用户名或姓名搜索，即可查看对方主页。";
+"social.search.noResults" = "没有找到任何人。";
+"social.search.failed" = "搜索失败。请检查网络连接。";
+"social.profile.followers" = "粉丝";
+"social.profile.following" = "关注";
+"social.follow" = "关注";
+"social.unfollow" = "取消关注";
+"social.followsYou" = "关注了你";
+"social.profile.notFound" = "该主页不存在。";
+"social.profile.you" = "这是你的主页。";
+"social.profile.loadFailed" = "无法加载该主页。";
+
+// Blocco 9 (SPEC v3 §3.6/§9.3): voti in stelle, favorites, stats
+"rating.title" = "我的评分";
+"rating.saveFailed" = "无法保存评分,请重试。";
+"profile.favorites.movies" = "最爱的电影";
+"profile.favorites.shows" = "最爱的剧集";
+"profile.lists.title" = "公开片单";
+"profile.lists.loadFailed" = "无法加载公开片单。";
+"profile.stats.title" = "我的统计";
+"profile.stats.watchTime" = "观看时长";
+"profile.stats.movies" = "电影";
+"profile.stats.shows" = "剧集";
+"profile.stats.episodes" = "集数";
+"profile.stats.loadFailed" = "无法加载统计数据。";
+"profile.stats.advanced.title" = "高级统计";
+"profile.stats.advanced.byGenre" = "按类型";
+"profile.stats.advanced.byDecade" = "按年代";
+"profile.stats.advanced.ratings" = "你的评分";
+"profile.stats.advanced.noGenre" = "%d 部剧集缺少类型信息";
+"profile.stats.advanced.proLocked" = "高级统计是 Pro 的一部分。";
+
+// Blocco 9, seconda meta' (§9.3): diario e modifica dei favorites
+"diary.title" = "日记";
+"diary.empty" = "这里还没有内容——你看过的内容会显示在这里。";
+"diary.loadFailed" = "无法读取日记。";
+"favorites.add" = "添加到收藏";
+"favorites.remove" = "从收藏中移除";
+"favorites.slot" = "位置%d";
+"favorites.saveFailed" = "无法更新收藏,请重试。";
+
+// La pillola del Tracking: dove lo guardo (streaming > noleggio > acquisto)
+"tracking.watchOn" = "在%@观看";
+"tracking.rentOn" = "在%@租借";
+"tracking.buyOn" = "在%@购买";

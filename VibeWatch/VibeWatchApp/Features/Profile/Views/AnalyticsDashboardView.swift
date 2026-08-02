@@ -6,6 +6,11 @@ struct AnalyticsDashboardView: View {
     @StateObject private var analyticsService = AnalyticsInsightsService.shared
     @StateObject private var gamificationService = GamificationService.shared
     @StateObject private var authService = AuthService.shared
+    // §13.7: i totali di visione li fa il server (get_my_stats), da runtime reali. La vecchia
+    // griglia sommava dal client: film dalla lista "visti" ed episodi da UserDefaults legacy a
+    // 30 minuti STIMATI l'uno — un numero sia stimato sia destinato a restare indietro, perche'
+    // il tracking nuovo non scrive piu' li'. Deciso il 2026-08-01: un posto solo, questo.
+    @StateObject private var serverStats = ProfileStatsViewModel()
     @State private var selectedTimeframe: Timeframe = .allTime
     @State private var isRefreshing = false
     @State private var isPro = false
@@ -300,6 +305,18 @@ struct AnalyticsDashboardView: View {
 
     private var statsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
+            // I totali stanno FUORI dal selettore di periodo: sono numeri del server, tutti i
+            // tempi, e fingere che seguano "questa settimana" sarebbe una bugia di layout.
+            Text("profile.stats.title".localized)
+                .font(.system(size: 14, weight: .bold))
+                .foregroundColor(.white.opacity(0.6))
+                .textCase(.uppercase)
+                .tracking(0.5)
+
+            serverTotalsGrid
+
+            advancedStatsSection
+
             // Header with timeframe picker
             HStack {
                 Text("Your Activity")
@@ -339,8 +356,6 @@ struct AnalyticsDashboardView: View {
             if analyticsService.isLoading {
                 loadingView
             } else if let stats = analyticsService.userStats {
-                statsGrid(stats: stats.watchStats)
-
                 GenreDistributionCard(distribution: stats.genreDistribution)
 
                 if let mood = stats.moodAnalysis {
@@ -360,15 +375,67 @@ struct AnalyticsDashboardView: View {
         }
     }
 
-    private func statsGrid(stats: WatchStats) -> some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-            StatItem(title: "Movies", value: "\(stats.totalMovies)", icon: "film", color: .blue)
-            StatItem(title: "Episodes", value: "\(stats.totalEpisodes)", icon: "tv", color: .purple)
-            StatItem(title: "Watch Time", value: "\(stats.totalWatchTimeHours)h", icon: "clock.fill", color: .orange)
-            // "Library" = share of your tracked titles (seen + watchlist) you've marked seen.
-            // Relabelled from "Completion" (ARCH-001): it's a backlog metric, not a per-title
-            // viewing-completion rate, which the app has no data for.
-            StatItem(title: "Library", value: "\(Int(stats.completionRate * 100))%", icon: "checkmark.circle.fill", color: .green)
+    /// I totali di visione, dal server (§13.7). La quarta tessera ("Library") resta un dato di
+    /// liste locale: e' una metrica di backlog, non di tempo, e il server non la conosce.
+    @ViewBuilder
+    private var serverTotalsGrid: some View {
+        switch serverStats.phase {
+        case .loading:
+            HStack { Spacer(); ProgressView().tint(.theme.accentOrange); Spacer() }
+                .padding(.vertical, 16)
+        case .failed:
+            // Un errore di rete dichiarato, mai una griglia di zeri con la faccia di un dato.
+            VStack(spacing: 8) {
+                Text("profile.stats.loadFailed".localized)
+                    .font(.system(size: 13))
+                    .foregroundColor(.white.opacity(0.5))
+                Button("common.retry".localized) {
+                    Task { await serverStats.load() }
+                }
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(.theme.accentOrange)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+        case .loaded(let stats):
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                StatItem(title: "profile.stats.movies".localized,
+                         value: "\(stats.moviesWatched)", icon: "film", color: .blue)
+                StatItem(title: "profile.stats.episodes".localized,
+                         value: "\(stats.episodesWatched)", icon: "tv", color: .purple)
+                StatItem(title: "profile.stats.watchTime".localized,
+                         value: Self.watchTimeFormatter.string(from: TimeInterval(stats.watchTimeSeconds)) ?? "0",
+                         icon: "clock.fill", color: .orange)
+                if let local = analyticsService.userStats?.watchStats {
+                    // "Library" = share of your tracked titles (seen + watchlist) you've marked
+                    // seen. A backlog metric (ARCH-001), local by nature.
+                    StatItem(title: "Library", value: "\(Int(local.completionRate * 100))%",
+                             icon: "checkmark.circle.fill", color: .green)
+                }
+            }
+        }
+    }
+
+    private static let watchTimeFormatter: DateComponentsFormatter = {
+        let f = DateComponentsFormatter()
+        f.allowedUnits = [.hour, .minute]
+        f.unitsStyle = .abbreviated
+        return f
+    }()
+
+    /// §9.3/§10: le ripartizioni avanzate (genere/decade/distribuzione voti) sono Pro. Sono
+    /// numeri del server come i totali qui sopra (§13.7), quindi anche loro stanno FUORI dal
+    /// selettore di periodo. Vuoto = niente sezione (come le liste pubbliche nel profilo
+    /// altrui): l'errore l'ha già dichiarato la griglia dei totali, e un pannello vuoto
+    /// venduto come dato sarebbe la bugia opposta.
+    @ViewBuilder
+    private var advancedStatsSection: some View {
+        if case .loaded(let stats) = serverStats.phase, stats.hasAdvancedBreakdowns {
+            if isPro {
+                AdvancedStatsCard(stats: stats)
+            } else {
+                AdvancedStatsLockedCard()
+            }
         }
     }
 
@@ -429,8 +496,9 @@ struct AnalyticsDashboardView: View {
 
         async let gamificationLoad: () = gamificationService.loadUserState(userId: userId)
         async let statsLoad: () = loadStats()
+        async let serverLoad: () = serverStats.load()
 
-        _ = await (gamificationLoad, statsLoad)
+        _ = await (gamificationLoad, statsLoad, serverLoad)
     }
 
     private func loadStats() async {
@@ -744,6 +812,176 @@ struct MoodAnalysisCard: View {
                     }
                 }
             }
+        }
+        .padding(16)
+        .background(RoundedRectangle(cornerRadius: 16).fill(Color.white.opacity(0.05)))
+    }
+}
+
+// MARK: - Advanced Stats (§9.3/§10, Pro)
+
+extension UserStats {
+    /// C'è almeno una ripartizione da mostrare? Un utente appena arrivato non ha niente da
+    /// ripartire, e per lui la sezione non esiste — vuoto non è un errore.
+    var hasAdvancedBreakdowns: Bool {
+        !perGenere.isEmpty || !perDecade.isEmpty || !votiDistribuzione.isEmpty
+    }
+}
+
+/// La presentazione pura delle ripartizioni: etichette e ripieghi derivati dal modello senza
+/// montare la view, così i test la coprono con un XCTAssertEqual.
+enum AdvancedStatsPresentation {
+    /// Nome del genere, o l'id come ripiego dichiarato: un genere nuovo di TMDB non deve
+    /// rompere la lista né sparire in silenzio.
+    static func genreLabel(_ id: Int) -> String {
+        TMDBGenres.name(for: id) ?? "#\(id)"
+    }
+
+    /// "1990s": etichetta neutra, identica in tutte le lingue.
+    static func decadeLabel(_ decade: Int) -> String { "\(decade)s" }
+
+    /// Da 1-10 (mezzi passi di `user_ratings`) alle stelle mostrate: 7 → "3.5", 10 → "5".
+    static func starsLabel(_ rating: Int) -> String {
+        rating.isMultiple(of: 2) ? "\(rating / 2)" : "\(rating / 2).5"
+    }
+
+    /// Ore intere dai secondi VERI (§13.7). Sotto l'ora si dichiara "<1 h": un "0 h" su un
+    /// dato reale direbbe "niente" dove c'è qualcosa.
+    static func hoursLabel(_ seconds: Int) -> String {
+        if seconds > 0 && seconds < 3600 { return "<1 h" }
+        return "\(seconds / 3600) h"
+    }
+}
+
+/// Le tre ripartizioni Pro, coi numeri del server: barre proporzionali ai secondi (genere e
+/// decade) e alla frequenza (voti). L'ordinamento è quello della risposta e non si riordina.
+struct AdvancedStatsCard: View {
+    let stats: UserStats
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Image(systemName: "chart.bar.fill")
+                    .foregroundColor(.theme.accentOrange)
+                Text("profile.stats.advanced.title".localized)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.white)
+                Spacer()
+            }
+
+            if !stats.perGenere.isEmpty {
+                breakdown(
+                    title: "profile.stats.advanced.byGenre".localized,
+                    rows: stats.perGenere.map { slice in
+                        BreakdownRow(
+                            id: "genre-\(slice.genreId)",
+                            label: AdvancedStatsPresentation.genreLabel(slice.genreId),
+                            weight: slice.seconds,
+                            value: AdvancedStatsPresentation.hoursLabel(slice.seconds)
+                        )
+                    }
+                )
+            }
+
+            if !stats.perDecade.isEmpty {
+                breakdown(
+                    title: "profile.stats.advanced.byDecade".localized,
+                    rows: stats.perDecade.map { slice in
+                        BreakdownRow(
+                            id: "decade-\(slice.decade)",
+                            label: AdvancedStatsPresentation.decadeLabel(slice.decade),
+                            weight: slice.seconds,
+                            value: AdvancedStatsPresentation.hoursLabel(slice.seconds)
+                        )
+                    }
+                )
+            }
+
+            if !stats.votiDistribuzione.isEmpty {
+                breakdown(
+                    title: "profile.stats.advanced.ratings".localized,
+                    rows: stats.votiDistribuzione.map { bucket in
+                        BreakdownRow(
+                            id: "rating-\(bucket.rating)",
+                            label: "★ " + AdvancedStatsPresentation.starsLabel(bucket.rating),
+                            weight: bucket.count,
+                            value: "\(bucket.count)"
+                        )
+                    }
+                )
+            }
+
+            if stats.showsSenzaGenere > 0 {
+                // Le serie il cui catalogo non ha (ancora) i generi: dichiarate, non sparite.
+                Text(String(format: "profile.stats.advanced.noGenre".localized,
+                            stats.showsSenzaGenere))
+                    .font(.system(size: 11))
+                    .foregroundColor(.white.opacity(0.4))
+            }
+        }
+        .padding(16)
+        .background(RoundedRectangle(cornerRadius: 16).fill(Color.white.opacity(0.05)))
+    }
+
+    private struct BreakdownRow: Identifiable {
+        let id: String
+        let label: String
+        let weight: Int
+        let value: String
+    }
+
+    private func breakdown(title: String, rows: [BreakdownRow]) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(.white.opacity(0.5))
+                .textCase(.uppercase)
+            let massimo = max(rows.map(\.weight).max() ?? 1, 1)
+            ForEach(rows) { row in
+                HStack(spacing: 8) {
+                    Text(row.label)
+                        .font(.system(size: 12))
+                        .foregroundColor(.white.opacity(0.8))
+                        .frame(width: 110, alignment: .leading)
+                        .lineLimit(1)
+                    GeometryReader { geometry in
+                        ZStack(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: 3)
+                                .fill(Color.white.opacity(0.08))
+                            RoundedRectangle(cornerRadius: 3)
+                                .fill(Color.theme.accentOrange.opacity(0.8))
+                                .frame(width: geometry.size.width
+                                    * CGFloat(row.weight) / CGFloat(massimo))
+                        }
+                    }
+                    .frame(height: 6)
+                    Text(row.value)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.white.opacity(0.5))
+                        .frame(width: 48, alignment: .trailing)
+                }
+            }
+        }
+    }
+}
+
+/// Il cancello di §10: la sezione esiste anche per chi non è Pro, ma dichiara cosa manca
+/// invece di mostrare un buco — un utente free deve poter sapere che il dato c'è.
+struct AdvancedStatsLockedCard: View {
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "lock.fill")
+                .font(.system(size: 18))
+                .foregroundColor(.theme.accentOrange)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("profile.stats.advanced.title".localized)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white)
+                Text("profile.stats.advanced.proLocked".localized)
+                    .font(.system(size: 12))
+                    .foregroundColor(.white.opacity(0.5))
+            }
+            Spacer()
         }
         .padding(16)
         .background(RoundedRectangle(cornerRadius: 16).fill(Color.white.opacity(0.05)))

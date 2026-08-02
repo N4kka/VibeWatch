@@ -13,12 +13,17 @@ class AnalyticsInsightsService: ObservableObject {
 
     // MARK: - Dependencies
 
-    private let sqliteService = SQLiteService.shared
-    private let authService = AuthService.shared
+    private let sqliteService: SQLiteService
+    private let authService: AuthStatusProviding
 
     // MARK: - Initialization
 
-    private init() {
+    init(
+        sqliteService: SQLiteService = .shared,
+        authService: AuthStatusProviding = AuthService.shared
+    ) {
+        self.sqliteService = sqliteService
+        self.authService = authService
         Logger.info("[AnalyticsInsightsService] Initialized")
     }
 
@@ -76,8 +81,36 @@ class AnalyticsInsightsService: ObservableObject {
     // decision: Content Performance removed entirely; the viewing heatmap redefined on `added_at`
     // (when you add to lists = activity) and relabelled in the UI, since no watch timestamp exists.
 
+    /// Dopo la fusione ListsView↔Tracking (2026-08-02) le serie TV di watchlist/seen vivono in
+    /// `tv_tracking`, non in `list_items`: leggere solo le liste legacy faceva vedere alle stats
+    /// meno serie di quelle che ListsView mostra (punto 7 degli aperti). La derivazione è la
+    /// STESSA di ListsView (`LocalTrackingRepository.fusedListRows`), mai una copia.
+    ///
+    /// Per un anonimo lo specchio è vuoto e le sue TV stanno ancora in `list_items`: si resta
+    /// sul percorso legacy, come fa `fuseTrackingItems`.
+    private var isAuthenticated: Bool { authService.currentUser != nil }
+
+    /// `nil` means the mirror could not be read and callers must keep the legacy TV rows as a
+    /// safety net. An empty array is different: the read succeeded and there really are no derived
+    /// TV rows, so legacy authenticated TV rows remain excluded to avoid double counting.
+    private func fusedTrackingRows(userId: String) async -> [LocalTrackingRepository.FusedListRow]? {
+        guard isAuthenticated else { return nil }
+        do {
+            return try await LocalTrackingRepository(sqlite: sqliteService)
+                .fusedListRows(userId: userId)
+        } catch {
+            Logger.error("[AnalyticsInsightsService] Tracking mirror unavailable; using legacy TV rows: \(error)")
+            return nil
+        }
+    }
+
     /// Rows from the user's "seen" list: what they've actually marked watched.
+    /// Le TV derivate dal tracking arrivano senza runtime e senza generi (il catalogo condiviso
+    /// non li ha, §1.5): contano nei totali, non nel tempo di visione né nei generi.
     private func fetchSeenItems(userId: String, since: Date? = nil) async -> [[String: Any]] {
+        let derivedRows = await fusedTrackingRows(userId: userId)
+        let usingTrackingMirror = isAuthenticated && derivedRows != nil
+
         var sql = """
             SELECT li.media_id, li.media_type, li.title, li.poster_path, li.runtime, li.genres, li.added_at
             FROM list_items li
@@ -86,24 +119,57 @@ class AnalyticsInsightsService: ObservableObject {
               AND l.deleted_at IS NULL AND li.deleted_at IS NULL
         """
         var params: [Any] = [userId]
+        if usingTrackingMirror {
+            // Le righe TV legacy sono le stesse che ListsView nasconde: contarle qui e ANCHE
+            // dal tracking significherebbe contarle due volte.
+            sql += " AND li.media_type != 'tv'"
+        }
         if let since {
             sql += " AND li.added_at >= ?"
             params.append(since.ISO8601Format())
         }
-        return (try? await sqliteService.queryRaw(sql, parameters: params)) ?? []
+        var rows = (try? await sqliteService.queryRaw(sql, parameters: params)) ?? []
+
+        let derivedSeen = (derivedRows ?? []).filter(\.isSeen)
+        for row in derivedSeen {
+            if let since, row.addedAt < since { continue }
+            rows.append([
+                "media_id": row.showId,
+                "media_type": "tv",
+                "title": row.title,
+                "poster_path": row.posterPath as Any,
+                "added_at": row.addedAt.ISO8601Format(),
+            ])
+        }
+        return rows
     }
 
     /// Count of live items in a given core list ("seen", "watchlist", ...).
+    /// Per watchlist e seen il conteggio TV arriva dal tracking, come in ListsView.
     private func listItemCount(userId: String, type: String) async -> Int {
-        let sql = """
+        let fusedType = type == "seen" || type == "watchlist"
+        let derivedRows = fusedType && isAuthenticated
+            ? await fusedTrackingRows(userId: userId)
+            : nil
+        let usingTrackingMirror = fusedType && isAuthenticated && derivedRows != nil
+
+        var sql = """
             SELECT COUNT(*) AS c
             FROM list_items li
             JOIN lists l ON l.id = li.list_id
             WHERE l.user_id = ? AND l.type = ?
               AND l.deleted_at IS NULL AND li.deleted_at IS NULL
         """
+        if usingTrackingMirror {
+            sql += " AND li.media_type != 'tv'"
+        }
         let rows = (try? await sqliteService.queryRaw(sql, parameters: [userId, type])) ?? []
-        return rows.first?["c"] as? Int ?? 0
+        var count = rows.first?["c"] as? Int ?? 0
+
+        if usingTrackingMirror {
+            count += (derivedRows ?? []).filter { $0.isSeen == (type == "seen") }.count
+        }
+        return count
     }
 
     private func parseGenreIds(_ raw: Any?) -> [Int] {
@@ -224,6 +290,10 @@ class AnalyticsInsightsService: ObservableObject {
     /// A 7×24 heatmap of when the user is *active* — i.e. when they add titles to their lists
     /// (`added_at`). Renamed from "viewing" in the UI: the app stores no watch timestamp, so this
     /// honestly measures activity, not viewing hours.
+    ///
+    /// Resta DELIBERATAMENTE su `list_items` anche dopo la fusione col tracking: `updated_at`
+    /// dello specchio `tv_tracking` cambia a ogni ricalcolo server, quindi usarlo come "attività"
+    /// fabbricherebbe presenze. Meglio un heatmap con meno righe che uno con righe inventate.
     func calculateViewingPatterns(userId: String) async -> ViewingPatterns {
         var heatmap = Array(repeating: Array(repeating: 0, count: 24), count: 7)
 

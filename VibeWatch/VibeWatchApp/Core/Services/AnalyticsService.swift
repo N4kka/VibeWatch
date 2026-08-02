@@ -50,6 +50,9 @@ class AnalyticsService {
         Analytics.setUserID(userId)
         #endif
 
+        // Same identity on the crash reports, so a crash can be traced to an account.
+        CrashReportingService.setUserId(userId)
+
         if let userId, userId != previousUserId {
             let lastIdentified = UserDefaults.standard.string(forKey: DefaultsKeys.lastIdentifiedUserId)
             if lastIdentified != userId {
@@ -91,7 +94,10 @@ class AnalyticsService {
         #if canImport(FirebaseAnalytics)
         Analytics.setAnalyticsCollectionEnabled(enabled)
         #endif
-        
+
+        // Crash reporting follows the same opt-out.
+        CrashReportingService.setCollectionEnabled(enabled)
+
         Logger.debug("[Analytics] \(enabled ? "Enabled" : "Disabled")")
     }
 
@@ -469,6 +475,9 @@ class AnalyticsService {
             "error_message": error.localizedDescription,
             "context": context
         ])
+
+        // Also a non-fatal in Crashlytics: an error that never crashes still needs a rate.
+        CrashReportingService.record(error, context: context)
     }
     
     // MARK: - Screen Tracking

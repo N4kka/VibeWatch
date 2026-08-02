@@ -207,7 +207,6 @@
 // Platforms
 "platform.title" = "Suoratoistoalustat";
 "platform.selectionCount" = "%d of %d selected";
-"platforms.title" = "Alustat";
 "platforms.streaming" = "Suoratoisto";
 "platforms.rent" = "Vuokraa";
 "platforms.buy" = "Osta";
@@ -243,6 +242,7 @@
 "auth.error.invalidResponse" = "Virheellinen vastaus palvelimelta.";
 "auth.error.userNotFound" = "Käyttäjää ei löytynyt.";
 "auth.error.invalidCredentials" = "Virheellinen sähköposti tai salasana.";
+"auth.error.tooManyAttempts" = "Liikaa yrityksiä. Yritä myöhemmin uudelleen.";
 "auth.error.networkError" = "Verkkovirhe. Tarkista yhteytesi.";
 "auth.error.databaseError" = "Tietokantavirhe käyttäjäprofiilin tallennuksessa. Yritä uudelleen.";
 "auth.error.signUpFailed" = "Rekisteröityminen epäonnistui. Yritä uudelleen.";
@@ -389,6 +389,50 @@
 "profile.termsOfUse" = "Käyttöehdot";
 "profile.terms" = "Ehdot";
 "profile.sendFeedback" = "Lähetä palautetta";
+"profile.share" = "Jaa profiili";
+"profile.share.comingSoon" = "Tulossa pian";
+"profile.importFrom" = "Tuo palvelusta";
+"import.title" = "Tuonti";
+"import.source.tvtime" = "TV Time (.zip)";
+"import.source.tvtime.subtitle" = "TV Time -tietojesi vienti";
+"import.source.footer" = "Pyydä tietojesi vienti TV Timesta (GDPR) ja valitse .zip-tiedosto tästä. Myös samaa muotoa käyttävät sovellukset toimivat.";
+"import.state.uploading" = "Ladataan…";
+"import.state.uploadingHint" = "Pidä sovellus auki, kunnes tiedosto on ladattu.";
+"import.canClose" = "Historiaasi tuodaan. Voit sulkea sovelluksen – saat ilmoituksen, kun tuonti on valmis.";
+"import.phase.queued" = "Jonossa, alkaa pian…";
+"import.phase.parsing" = "Luetaan historiaasi…";
+"import.phase.resolving" = "Tunnistetaan sarjoja ja jaksoja…";
+"import.phase.writing" = "Tallennetaan jaksojasi…";
+"import.phase.finishing" = "Viimeistellään…";
+"import.report.episodes" = "Tuodut jaksot";
+"import.report.shows" = "Sarjat";
+"import.report.period" = "%@ – %@";
+"import.report.ratingsDeferred" = "%d arvostelua löytyi – ei vielä tuotu.";
+"import.report.ratingsApplied" = "%d arvostelua tuotu tähtinä.";
+"import.report.ratingsUnresolved" = "%d arvostelua ei voitu yhdistää.";
+"import.report.favoritesApplied" = "%d suosikkia tuotu vapaisiin paikkoihin.";
+"import.report.favoriteMoviesUnsupported" = "%d elokuvasuosikkia ei voi tuoda TV Timesta.";
+"import.report.moviesApplied" = "%d elokuvaa tuotu katselupäivineen.";
+"import.report.moviesWatchlistApplied" = "%d elokuvaa lisätty katselulistalle.";
+"import.report.moviesUnresolved" = "%d elokuvaa jäi tunnistamatta (nimi ja vuosi eivät täsmää TMDB:ssä).";
+"import.resolve.button" = "Ratkaise";
+"import.resolve.title" = "Mikä sarja on ”%@”?";
+"import.resolve.hint" = "Jaksot tarkistetaan uudelleen niiden tarkkojen TVDB-tunnusten avulla. Kaikki, mitä TMDB ei voi vahvistaa, jää raporttiin.";
+"import.resolve.searchPlaceholder" = "Hae sarjaa TMDB:stä";
+"import.resolve.empty" = "Ei tuloksia.";
+"import.resolve.failed" = "Ratkaisu epäonnistui:";
+"import.resolve.searchFailed" = "Haku epäonnistui.";
+"import.report.statusesApplied" = "%d sarjatilaa palautettu (katselulista ja arkisto).";
+"import.report.statusesUnresolved" = "%d sarjan tilaa ei voitu ottaa käyttöön.";
+"import.report.unresolvedTitle" = "%d jaksoa jäi tunnistamatta";
+"import.report.unresolvedRow" = "%d jaksoa";
+"import.report.allResolved" = "Kaikki tunnistettiin.";
+"import.error.failed" = "Tuonti pysähtyi virheeseen.";
+"import.error.network" = "Tuontia ei voi tarkistaa juuri nyt.";
+"import.error.uploadFailed" = "Lataus ei valmistunut.";
+"import.error.startFailed" = "Tuontia ei voitu aloittaa.";
+"import.error.fileRead" = "Tiedostoa ei voitu lukea.";
+"import.error.reportFailed" = "Tuonti valmistui, mutta raporttia ei voitu ladata.";
 
 // Profile - Support & Feedback
 "profile.feedback.suggestFeature" = "Ehdota uutta ominaisuutta";
@@ -666,3 +710,105 @@
 "tvTracking.lastSeen" = "LAST SEEN %@";
 "tvTracking.soon" = "soon";
 "tvTracking.watchNow" = "Watch now";
+
+/* SPEC v3 §9.2 — schermata Tracking */
+"tracking.title" = "Seuranta";
+"tracking.bucket.upNext" = "Katsottavat";
+"tracking.bucket.stale" = "Ei katsottu vähään aikaan";
+"tracking.bucket.forLater" = "Myöhemmäksi";
+"tracking.bucket.upToDate" = "Ajan tasalla";
+"tracking.bucket.notStarted" = "Aloittamatta";
+"tracking.bucket.dropped" = "Lopetetut";
+"tracking.bucket.archived" = "Arkistoidut";
+"tracking.timeline.today" = "Julkaistaan tänään";
+"tracking.timeline.tomorrow" = "Huomenna";
+"tracking.timeline.thisWeek" = "Tällä viikolla";
+"tracking.timeline.thisMonth" = "Tässä kuussa";
+"tracking.action.watched" = "Katsottu";
+"tracking.action.later" = "Myöhemmin";
+"tracking.caughtUp" = "Ajan tasalla";
+"tracking.unknownShow" = "Tuntematon sarja";
+"tracking.special" = "ERIKOISJAKSO";
+"tracking.empty.title" = "Ei vielä mitään katsottavaa";
+"tracking.empty.subtitle" = "Seuraa sarjaa tai tuo TV Time -historiasi, niin se näkyy täällä.";
+"tracking.error.title" = "Jokin meni pieleen";
+"tracking.error.notAuthenticated" = "Sinun täytyy olla kirjautuneena.";
+"tracking.error.showNotInCatalog" = "Sarja ei ole vielä luettelossa — yritä hetken kuluttua uudelleen.";
+"tracking.error.noNextEpisode" = "Tällä sarjalla ei ole seuraavaa jaksoa.";
+
+"tab.tracking" = "Seuranta";
+
+"common.close" = "Sulje";
+
+/* Chiavi chiamate dal codice e mai tradotte */
+"auth.error.invalidLink" = "Tämä linkki on virheellinen tai vanhentunut.";
+"clips.noListsYet" = "Ei vielä listoja";
+
+/* SPEC v3 §3.7 — scelta dello username */
+"username.confirm.title" = "Vahvista käyttäjänimesi";
+"username.confirm.subtitle" = "Valitsimme sen nimesi perusteella. Näin muut löytävät sinut — pidä se tai valitse toinen.";
+"username.confirm.action" = "Vahvista";
+"username.choose.title" = "Valitse käyttäjänimi";
+"username.choose.subtitle" = "Tarvitset sen näkyäksesi VibeWatchissa: näin muut löytävät profiilisi ja listasi.";
+"username.choose.action" = "Jatka";
+"username.placeholder" = "käyttäjänimi";
+"username.hint" = "Pieniä kirjaimia, numeroita ja _ — 3–20 merkkiä.";
+"username.checking" = "Tarkistetaan…";
+"username.available" = "Vapaa";
+"username.later" = "Ei nyt";
+"username.error.empty" = "Valitse käyttäjänimi.";
+"username.error.tooShort" = "Vähintään 3 merkkiä.";
+"username.error.tooLong" = "Enintään 20 merkkiä.";
+"username.error.invalidCharacters" = "Vain pieniä kirjaimia, numeroita ja _.";
+"username.error.taken" = "Jo varattu.";
+"username.error.checkFailed" = "Tarkistus epäonnistui. Yritä uudelleen.";
+"username.error.reserved" = "Tämä on varattu käyttöön.";
+
+// Social (SPEC v3 blocco 8)
+"social.search.title" = "Löydä ystäviä";
+"social.search.placeholder" = "Käyttäjänimi tai nimi";
+"social.search.prompt" = "Etsi ihmisiä käyttäjänimellä tai nimellä nähdäksesi heidän profiilinsa.";
+"social.search.noResults" = "Ketään ei löytynyt.";
+"social.search.failed" = "Haku epäonnistui. Tarkista yhteytesi.";
+"social.profile.followers" = "Seuraajat";
+"social.profile.following" = "Seuratut";
+"social.follow" = "Seuraa";
+"social.unfollow" = "Lopeta seuraaminen";
+"social.followsYou" = "Seuraa sinua";
+"social.profile.notFound" = "Tätä profiilia ei ole.";
+"social.profile.you" = "Tämä olet sinä.";
+"social.profile.loadFailed" = "Profiilia ei voitu ladata.";
+
+// Blocco 9 (SPEC v3 §3.6/§9.3): voti in stelle, favorites, stats
+"rating.title" = "Arviosi";
+"rating.saveFailed" = "Arvion tallennus epäonnistui. Yritä uudelleen.";
+"profile.favorites.movies" = "Lempielokuvat";
+"profile.favorites.shows" = "Lempisarjat";
+"profile.lists.title" = "Julkiset listat";
+"profile.lists.loadFailed" = "Julkisia listoja ei voitu ladata.";
+"profile.stats.title" = "Tilastosi";
+"profile.stats.watchTime" = "Katseluaika";
+"profile.stats.movies" = "Elokuvat";
+"profile.stats.shows" = "Sarjat";
+"profile.stats.episodes" = "Jaksot";
+"profile.stats.loadFailed" = "Tilastojen lataus epäonnistui.";
+"profile.stats.advanced.title" = "Laajennetut tilastot";
+"profile.stats.advanced.byGenre" = "Genren mukaan";
+"profile.stats.advanced.byDecade" = "Vuosikymmenen mukaan";
+"profile.stats.advanced.ratings" = "Omat arviosi";
+"profile.stats.advanced.noGenre" = "%d sarjaa ilman genretietoja";
+"profile.stats.advanced.proLocked" = "Laajennetut tilastot kuuluvat Pro-tilaukseen.";
+
+// Blocco 9, seconda meta' (§9.3): diario e modifica dei favorites
+"diary.title" = "Päiväkirja";
+"diary.empty" = "Ei vielä mitään — katsomasi sisältö näkyy täällä.";
+"diary.loadFailed" = "Päiväkirjaa ei voitu lukea.";
+"favorites.add" = "Lisää suosikkeihin";
+"favorites.remove" = "Poista suosikeista";
+"favorites.slot" = "Paikka %d";
+"favorites.saveFailed" = "Suosikkien päivitys epäonnistui. Yritä uudelleen.";
+
+// La pillola del Tracking: dove lo guardo (streaming > noleggio > acquisto)
+"tracking.watchOn" = "Katso: %@";
+"tracking.rentOn" = "Vuokraa: %@";
+"tracking.buyOn" = "Osta: %@";

@@ -1,0 +1,16 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": [
+          "3V97GU3CCY.com.vibewatch.VibeWatchApp",
+          "3V97GU3CCY.com.vibewatch.VibeWatchApp.beta"
+        ],
+        "components": [
+          { "/": "/@*", "comment": "SPEC v3 §9.4 - profilo utente, /@{username}" },
+          { "/": "/film/*", "comment": "SPEC v3 §9.4 - dettaglio film, /film/{id}" }
+        ]
+      }
+    ]
+  }
+}

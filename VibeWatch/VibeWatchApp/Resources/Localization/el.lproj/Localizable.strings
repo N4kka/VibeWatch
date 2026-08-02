@@ -207,7 +207,6 @@
 // Platforms
 "platform.title" = "Πλατφόρμες streaming";
 "platform.selectionCount" = "%d από %d επιλεγμένα";
-"platforms.title" = "Πλατφόρμες";
 "platforms.streaming" = "Streaming";
 "platforms.rent" = "Ενοικίαση";
 "platforms.buy" = "Αγορά";
@@ -243,6 +242,7 @@
 "auth.error.invalidResponse" = "Μη έγκυρη απάντηση από τον server.";
 "auth.error.userNotFound" = "Ο χρήστης δεν βρέθηκε.";
 "auth.error.invalidCredentials" = "Λάθος email ή κωδικός.";
+"auth.error.tooManyAttempts" = "Πολλές προσπάθειες. Δοκίμασε ξανά αργότερα.";
 "auth.error.networkError" = "Σφάλμα δικτύου. Έλεγξε τη σύνδεσή σου.";
 "auth.error.databaseError" = "Σφάλμα βάσης δεδομένων κατά την αποθήκευση προφίλ. Δοκίμασε ξανά.";
 "auth.error.signUpFailed" = "Η εγγραφή απέτυχε. Δοκίμασε ξανά.";
@@ -389,6 +389,50 @@
 "profile.termsOfUse" = "Όροι Χρήσης";
 "profile.terms" = "Όροι";
 "profile.sendFeedback" = "Αποστολή σχολίων";
+"profile.share" = "Κοινοποίηση προφίλ";
+"profile.share.comingSoon" = "Έρχεται σύντομα";
+"profile.importFrom" = "Εισαγωγή από";
+"import.title" = "Εισαγωγή";
+"import.source.tvtime" = "TV Time (.zip)";
+"import.source.tvtime.subtitle" = "Η εξαγωγή δεδομένων σου από το TV Time";
+"import.source.footer" = "Ζήτησε την εξαγωγή των δεδομένων σου από το TV Time (GDPR) και διάλεξε εδώ το αρχείο .zip. Λειτουργούν και εφαρμογές που εξάγουν την ίδια μορφή.";
+"import.state.uploading" = "Μεταφόρτωση…";
+"import.state.uploadingHint" = "Κράτησε την εφαρμογή ανοιχτή όσο ανεβαίνει το αρχείο.";
+"import.canClose" = "Το ιστορικό σου εισάγεται. Μπορείς να κλείσεις την εφαρμογή — θα σε ειδοποιήσουμε όταν ολοκληρωθεί.";
+"import.phase.queued" = "Σε αναμονή, ξεκινά σε λίγο…";
+"import.phase.parsing" = "Ανάγνωση του ιστορικού σου…";
+"import.phase.resolving" = "Αντιστοίχιση σειρών και επεισοδίων…";
+"import.phase.writing" = "Αποθήκευση των επεισοδίων σου…";
+"import.phase.finishing" = "Ολοκλήρωση…";
+"import.report.episodes" = "Επεισόδια που εισήχθησαν";
+"import.report.shows" = "Σειρές";
+"import.report.period" = "Από %@ έως %@";
+"import.report.ratingsDeferred" = "Βρέθηκαν %d βαθμολογίες — δεν έχουν εισαχθεί ακόμη.";
+"import.report.ratingsApplied" = "%d βαθμολογίες εισήχθησαν ως αστέρια.";
+"import.report.ratingsUnresolved" = "%d βαθμολογίες δεν μπόρεσαν να αντιστοιχιστούν.";
+"import.report.favoritesApplied" = "%d αγαπημένα εισήχθησαν σε ελεύθερες θέσεις.";
+"import.report.favoriteMoviesUnsupported" = "%d αγαπημένες ταινίες δεν μπορούν να εισαχθούν από το TV Time.";
+"import.report.moviesApplied" = "%d ταινίες εισήχθησαν με τις ημερομηνίες προβολής τους.";
+"import.report.moviesWatchlistApplied" = "%d ταινίες προστέθηκαν στο Watchlist.";
+"import.report.moviesUnresolved" = "%d ταινίες δεν αναγνωρίστηκαν (τίτλος και έτος δεν ταιριάζουν στο TMDB).";
+"import.resolve.button" = "Επίλυση";
+"import.resolve.title" = "Ποια σειρά είναι το «%@»;";
+"import.resolve.hint" = "Τα επεισόδια ελέγχονται ξανά με τα ακριβή TVDB ID τους. Ό,τι δεν μπορεί να επιβεβαιώσει το TMDB θα παραμείνει στην αναφορά.";
+"import.resolve.searchPlaceholder" = "Αναζήτηση της σειράς στο TMDB";
+"import.resolve.empty" = "Κανένα αποτέλεσμα.";
+"import.resolve.failed" = "Η επίλυση απέτυχε:";
+"import.resolve.searchFailed" = "Η αναζήτηση απέτυχε.";
+"import.report.statusesApplied" = "%d καταστάσεις σειρών επαναφέρθηκαν (λίστα και αρχείο).";
+"import.report.statusesUnresolved" = "%d καταστάσεις σειρών δεν εφαρμόστηκαν.";
+"import.report.unresolvedTitle" = "%d επεισόδια δεν αντιστοιχίστηκαν";
+"import.report.unresolvedRow" = "%d επεισόδια";
+"import.report.allResolved" = "Όλα αντιστοιχίστηκαν.";
+"import.error.failed" = "Η εισαγωγή σταμάτησε με σφάλμα.";
+"import.error.network" = "Δεν είναι δυνατός ο έλεγχος της εισαγωγής αυτήν τη στιγμή.";
+"import.error.uploadFailed" = "Η μεταφόρτωση δεν ολοκληρώθηκε.";
+"import.error.startFailed" = "Η εισαγωγή δεν μπόρεσε να ξεκινήσει.";
+"import.error.fileRead" = "Το αρχείο δεν ήταν δυνατό να διαβαστεί.";
+"import.error.reportFailed" = "Η εισαγωγή ολοκληρώθηκε, αλλά η αναφορά δεν φορτώθηκε.";
 
 // Profile - Support & Feedback
 "profile.feedback.suggestFeature" = "Πρότεινε νέα λειτουργία";
@@ -666,3 +710,105 @@
 "tvTracking.lastSeen" = "LAST SEEN %@";
 "tvTracking.soon" = "soon";
 "tvTracking.watchNow" = "Watch now";
+
+/* SPEC v3 §9.2 — schermata Tracking */
+"tracking.title" = "Παρακολούθηση";
+"tracking.bucket.upNext" = "Για να δεις";
+"tracking.bucket.stale" = "Δεν τα είδες για καιρό";
+"tracking.bucket.forLater" = "Για αργότερα";
+"tracking.bucket.upToDate" = "Ενημερωμένα";
+"tracking.bucket.notStarted" = "Δεν ξεκίνησαν";
+"tracking.bucket.dropped" = "Εγκαταλείφθηκαν";
+"tracking.bucket.archived" = "Αρχειοθετημένα";
+"tracking.timeline.today" = "Βγαίνει σήμερα";
+"tracking.timeline.tomorrow" = "Αύριο";
+"tracking.timeline.thisWeek" = "Αυτή την εβδομάδα";
+"tracking.timeline.thisMonth" = "Αυτόν τον μήνα";
+"tracking.action.watched" = "Το είδα";
+"tracking.action.later" = "Αργότερα";
+"tracking.caughtUp" = "Ενημερωμένα";
+"tracking.unknownShow" = "Άγνωστη σειρά";
+"tracking.special" = "ΕΙΔΙΚΟ";
+"tracking.empty.title" = "Δεν υπάρχει τίποτα για να δεις ακόμα";
+"tracking.empty.subtitle" = "Ακολούθησε μια σειρά ή εισήγαγε το ιστορικό σου από το TV Time και θα εμφανιστεί εδώ.";
+"tracking.error.title" = "Κάτι πήγε στραβά";
+"tracking.error.notAuthenticated" = "Πρέπει να έχεις συνδεθεί.";
+"tracking.error.showNotInCatalog" = "Αυτή η σειρά δεν είναι ακόμη στον κατάλογο — δοκιμάστε ξανά σε λίγο.";
+"tracking.error.noNextEpisode" = "Αυτή η σειρά δεν έχει επόμενο επεισόδιο.";
+
+"tab.tracking" = "Παρακολούθηση";
+
+"common.close" = "Κλείσιμο";
+
+/* Chiavi chiamate dal codice e mai tradotte */
+"auth.error.invalidLink" = "Αυτός ο σύνδεσμος δεν είναι έγκυρος ή έχει λήξει.";
+"clips.noListsYet" = "Καμία λίστα ακόμα";
+
+/* SPEC v3 §3.7 — scelta dello username */
+"username.confirm.title" = "Επιβεβαίωσε το όνομα χρήστη";
+"username.confirm.subtitle" = "Το επιλέξαμε από το όνομά σου. Έτσι θα σε βρίσκουν οι άλλοι — κράτησέ το ή διάλεξε άλλο.";
+"username.confirm.action" = "Επιβεβαίωση";
+"username.choose.title" = "Διάλεξε όνομα χρήστη";
+"username.choose.subtitle" = "Το χρειάζεσαι για να εμφανίζεσαι στο VibeWatch: έτσι βρίσκουν οι άλλοι το προφίλ και τις λίστες σου.";
+"username.choose.action" = "Συνέχεια";
+"username.placeholder" = "όνομα χρήστη";
+"username.hint" = "Πεζά, αριθμοί και _ — από 3 έως 20 χαρακτήρες.";
+"username.checking" = "Έλεγχος…";
+"username.available" = "Διαθέσιμο";
+"username.later" = "Όχι τώρα";
+"username.error.empty" = "Διάλεξε ένα όνομα χρήστη.";
+"username.error.tooShort" = "Τουλάχιστον 3 χαρακτήρες.";
+"username.error.tooLong" = "Το πολύ 20 χαρακτήρες.";
+"username.error.invalidCharacters" = "Μόνο πεζά, αριθμοί και _.";
+"username.error.taken" = "Χρησιμοποιείται ήδη.";
+"username.error.checkFailed" = "Ο έλεγχος απέτυχε. Δοκίμασε ξανά.";
+"username.error.reserved" = "Αυτό είναι δεσμευμένο.";
+
+// Social (SPEC v3 blocco 8)
+"social.search.title" = "Βρες φίλους";
+"social.search.placeholder" = "Όνομα χρήστη ή όνομα";
+"social.search.prompt" = "Αναζήτησε άτομα με όνομα χρήστη ή όνομα για να δεις το προφίλ τους.";
+"social.search.noResults" = "Δεν βρέθηκε κανείς.";
+"social.search.failed" = "Η αναζήτηση απέτυχε. Έλεγξε τη σύνδεσή σου.";
+"social.profile.followers" = "Ακόλουθοι";
+"social.profile.following" = "Ακολουθείς";
+"social.follow" = "Ακολούθησε";
+"social.unfollow" = "Κατάργηση ακολούθησης";
+"social.followsYou" = "Σε ακολουθεί";
+"social.profile.notFound" = "Αυτό το προφίλ δεν υπάρχει.";
+"social.profile.you" = "Είσαι εσύ.";
+"social.profile.loadFailed" = "Δεν ήταν δυνατή η φόρτωση του προφίλ.";
+
+// Blocco 9 (SPEC v3 §3.6/§9.3): voti in stelle, favorites, stats
+"rating.title" = "Η βαθμολογία σου";
+"rating.saveFailed" = "Δεν ήταν δυνατή η αποθήκευση της βαθμολογίας. Δοκίμασε ξανά.";
+"profile.favorites.movies" = "Αγαπημένες ταινίες";
+"profile.favorites.shows" = "Αγαπημένες σειρές";
+"profile.lists.title" = "Δημόσιες λίστες";
+"profile.lists.loadFailed" = "Δεν ήταν δυνατή η φόρτωση των δημόσιων λιστών.";
+"profile.stats.title" = "Τα στατιστικά σου";
+"profile.stats.watchTime" = "Χρόνος προβολής";
+"profile.stats.movies" = "Ταινίες";
+"profile.stats.shows" = "Σειρές";
+"profile.stats.episodes" = "Επεισόδια";
+"profile.stats.loadFailed" = "Δεν ήταν δυνατή η φόρτωση των στατιστικών.";
+"profile.stats.advanced.title" = "Προηγμένα στατιστικά";
+"profile.stats.advanced.byGenre" = "Ανά είδος";
+"profile.stats.advanced.byDecade" = "Ανά δεκαετία";
+"profile.stats.advanced.ratings" = "Οι βαθμολογίες σου";
+"profile.stats.advanced.noGenre" = "%d σειρές χωρίς πληροφορίες είδους";
+"profile.stats.advanced.proLocked" = "Τα προηγμένα στατιστικά είναι μέρος του Pro.";
+
+// Blocco 9, seconda meta' (§9.3): diario e modifica dei favorites
+"diary.title" = "Ημερολόγιο";
+"diary.empty" = "Τίποτα ακόμη — ό,τι βλέπεις θα εμφανίζεται εδώ.";
+"diary.loadFailed" = "Δεν ήταν δυνατή η ανάγνωση του ημερολογίου.";
+"favorites.add" = "Προσθήκη στα αγαπημένα";
+"favorites.remove" = "Αφαίρεση από τα αγαπημένα";
+"favorites.slot" = "Θέση %d";
+"favorites.saveFailed" = "Δεν ήταν δυνατή η ενημέρωση των αγαπημένων. Δοκίμασε ξανά.";
+
+// La pillola del Tracking: dove lo guardo (streaming > noleggio > acquisto)
+"tracking.watchOn" = "Δες στο %@";
+"tracking.rentOn" = "Ενοικίαση στο %@";
+"tracking.buyOn" = "Αγορά στο %@";

@@ -67,3 +67,6 @@ open_xcode.sh
 # Local tooling/projects
 .claude/
 ElevateYourMood/
+
+# Il sito (repo git a sé, deploy su Cloudflare Pages — non fa parte dell'app)
+vibewatch-site/

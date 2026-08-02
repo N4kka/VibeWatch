@@ -1,0 +1,99 @@
+import { assertEquals } from 'jsr:@std/assert@1'
+import {
+  buildRows,
+  FILE_FOLLOWED,
+  FILE_LISTS,
+  FILE_SPECIAL_STATUS,
+  FILE_USER,
+  FILE_V1,
+  FILE_V2,
+  RATING_FILES,
+  readCsvEntries,
+} from './archive.ts'
+
+/**
+ * Collaudo contro l'export TV Time vero.
+ *
+ * Non è nel repo e non deve esserci: è l'archivio GDPR di una persona reale. Il percorso arriva da
+ * `TVTIME_ZIP`, e senza quella variabile il test si salta invece di fallire.
+ *
+ *   TVTIME_ZIP=/percorso/gdpr-data.zip deno test --allow-read --allow-env
+ *
+ * Copre esattamente ciò che i test di `parsing.ts` non possono coprire: che lo ZIP si apra, che i
+ * file si chiamino come §7.1 dice, e che il CSV non abbia sorprese di quoting. I numeri attesi
+ * vengono dall'oracolo, che ha letto lo stesso archivio con `build_oracle.py`.
+ */
+const zipPath = Deno.env.get('TVTIME_ZIP')
+
+Deno.test({
+  name: 'archivio reale: lo ZIP si apre e produce gli stessi numeri dell oracolo',
+  ignore: !zipPath,
+  fn: async () => {
+    const bytes = await Deno.readFile(zipPath!)
+    const files = await readCsvEntries(new Blob([bytes]), [
+      FILE_V2,
+      FILE_V1,
+      ...RATING_FILES,
+      FILE_SPECIAL_STATUS,
+      FILE_FOLLOWED,
+      FILE_LISTS,
+      FILE_USER,
+    ])
+
+    // 1. I file di §7.1 esistono e si chiamano davvero così.
+    assertEquals(files.has(FILE_V2), true, `manca ${FILE_V2}`)
+
+    const { events, ratings, statuses, favorites, favoriteMoviesUnsupported, movies, unusableV1,
+      droppedV1, userProfile } = buildRows(files)
+
+    console.log(JSON.stringify({
+      file_trovati: [...files.keys()],
+      eventi: events.length,
+      voti: ratings.length,
+      stati_serie: statuses.length,
+      favorites: favorites.length,
+      favorite_film_non_supportati: favoriteMoviesUnsupported,
+      v1_inutilizzabili: unusableV1,
+      v1_scartati_come_duplicati: droppedV1,
+    }, null, 2))
+
+    // 2. Il conteggio dell'oracolo, sullo stesso archivio.
+    assertEquals(events.length, 21_344, 'eventi diversi da quelli che l oracolo ha contato')
+
+    // 2b. Gli stati per-serie di §7.1, stessi numeri del test sull'oracle_fixture: 57 archiviate,
+    //     28 "da vedere più avanti", 19 seguite mai iniziate.
+    assertEquals(statuses.length, 104, 'stati serie diversi da quelli dell oracolo')
+
+    // 2c. I favorites di §7.1: sull'export vero la lista favorite-series ha 87 serie, tutte
+    //     con id TVDB numerico e data; l'ordine è per data di preferenza (i più vecchi prima).
+    assertEquals(favorites.length, 87, 'favorites diversi da quelli contati sull export vero')
+    assertEquals(favorites.filter((f) => !f.favorited_at).length, 0, 'favorite senza data')
+    const ordinati = [...favorites].every((f, i, a) =>
+      i === 0 || (a[i - 1].favorited_at! <= f.favorited_at!))
+    assertEquals(ordinati, true, 'i favorites non sono in ordine di data')
+
+    // 2d. user.csv (§7.1): sull'export vero language='en' e timezone='Europe/Rome'. Se una
+    //     colonna slittasse, la validazione stretta li farebbe diventare null — e si vedrebbe qui.
+    assertEquals(userProfile, { language: 'en', timezone: 'Europe/Rome' })
+
+    // 2e. I film di v1 (§7.1): 5 visti e 3 in watchlist sull'export vero, tutti con titolo;
+    //     El Camino recupera l'anno dalla riga follow (la watch l'ha perso: 0001-01-01).
+    assertEquals(movies.filter((m) => m.movie_kind === 'seen').length, 5)
+    assertEquals(movies.filter((m) => m.movie_kind === 'watchlist').length, 3)
+    const elCamino = movies.find((m) => m.title === 'El Camino: A Breaking Bad Movie')
+    assertEquals(elCamino?.release_year, 2019)
+
+    // 3. Ogni evento ha una chiave di dedup: senza, il reimport duplica (criterio 2 di §13).
+    const senzaChiave = events.filter((e) => !e.dedup_key).length
+    assertEquals(senzaChiave, 0, 'eventi senza dedup_key')
+
+    // 4. Le chiavi sono uniche. È l'invariante che rende l'import idempotente, e l'unico modo per
+    //    accorgersi che l'ordinamento è instabile su dati veri.
+    assertEquals(new Set(events.map((e) => e.dedup_key)).size, events.length, 'dedup_key duplicate')
+
+    // 5. Il quoting del CSV: se fosse rotto, i campi slitterebbero di colonna e le date sarebbero
+    //    vuote o assurde. Qui si guarda che siano tutte date plausibili.
+    const dateStrane = events.filter((e) => !/^\d{4}-\d{2}-\d{2}/.test(e.watched_at)).length
+    assertEquals(dateStrane, 0, 'date non riconoscibili: probabile disallineamento di colonne')
+  },
+})

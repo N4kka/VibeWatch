@@ -240,6 +240,7 @@
 "auth.error.invalidResponse" = "Ogiltigt svar från servern.";
 "auth.error.userNotFound" = "Användare hittades inte.";
 "auth.error.invalidCredentials" = "Ogiltig e-post eller lösenord.";
+"auth.error.tooManyAttempts" = "För många försök. Försök igen senare.";
 "auth.error.networkError" = "Nätverksfel. Kontrollera din anslutning.";
 "auth.error.databaseError" = "Databasfel när användarprofilen sparades. Försök igen.";
 "auth.error.signUpFailed" = "Registrering misslyckades. Försök igen.";
@@ -355,6 +356,50 @@
 
 // Profile - Support & Feedback
 "profile.sendFeedback" = "Skicka feedback";
+"profile.share" = "Dela profil";
+"profile.share.comingSoon" = "Kommer snart";
+"profile.importFrom" = "Importera från";
+"import.title" = "Importera";
+"import.source.tvtime" = "TV Time (.zip)";
+"import.source.tvtime.subtitle" = "Din dataexport från TV Time";
+"import.source.footer" = "Begär din dataexport från TV Time (GDPR) och välj .zip-filen här. Appar som exporterar samma format fungerar också.";
+"import.state.uploading" = "Laddar upp…";
+"import.state.uploadingHint" = "Håll appen öppen medan filen laddas upp.";
+"import.canClose" = "Din historik importeras. Du kan stänga appen – vi meddelar dig när den är klar.";
+"import.phase.queued" = "I kö, startar strax…";
+"import.phase.parsing" = "Läser din historik…";
+"import.phase.resolving" = "Matchar serier och avsnitt…";
+"import.phase.writing" = "Sparar dina avsnitt…";
+"import.phase.finishing" = "Avslutar…";
+"import.report.episodes" = "Importerade avsnitt";
+"import.report.shows" = "Serier";
+"import.report.period" = "Från %@ till %@";
+"import.report.ratingsDeferred" = "%d betyg hittades – inte importerade än.";
+"import.report.ratingsApplied" = "%d betyg importerade som stjärnor.";
+"import.report.ratingsUnresolved" = "%d betyg kunde inte matchas.";
+"import.report.favoritesApplied" = "%d favoriter importerade till lediga platser.";
+"import.report.favoriteMoviesUnsupported" = "%d filmfavoriter kan inte importeras från TV Time.";
+"import.report.moviesApplied" = "%d filmer importerade med sina visningsdatum.";
+"import.report.moviesWatchlistApplied" = "%d filmer tillagda i bevakningslistan.";
+"import.report.moviesUnresolved" = "%d filmer kändes inte igen (titel och år stämmer inte på TMDB).";
+"import.resolve.button" = "Lös";
+"import.resolve.title" = "Vilken serie är ”%@”?";
+"import.resolve.hint" = "Avsnitten kontrolleras igen med sina exakta TVDB-ID:n. Allt som TMDB inte kan bekräfta finns kvar i rapporten.";
+"import.resolve.searchPlaceholder" = "Sök serien på TMDB";
+"import.resolve.empty" = "Inga resultat.";
+"import.resolve.failed" = "Kunde inte lösas:";
+"import.resolve.searchFailed" = "Sökningen misslyckades.";
+"import.report.statusesApplied" = "%d seriestatusar återställda (bevakningslista och arkiv).";
+"import.report.statusesUnresolved" = "%d seriestatusar kunde inte tillämpas.";
+"import.report.unresolvedTitle" = "%d avsnitt kunde inte matchas";
+"import.report.unresolvedRow" = "%d avsnitt";
+"import.report.allResolved" = "Allt matchades.";
+"import.error.failed" = "Importen stoppades med ett fel.";
+"import.error.network" = "Det går inte att kolla importen just nu.";
+"import.error.uploadFailed" = "Uppladdningen slutfördes inte.";
+"import.error.startFailed" = "Importen kunde inte starta.";
+"import.error.fileRead" = "Filen kunde inte läsas.";
+"import.error.reportFailed" = "Importen är klar, men rapporten kunde inte läsas in.";
 "profile.aboutUs" = "Om oss";
 "profile.aboutUsDetail" = "Lär dig mer om VibeWatch-teamet och vårt uppdrag att förbättra hur du upptäcker streaminginnehåll.";
 "profile.tmdbAttribution" = "Denna produkt använder TMDb-API:t men är inte godkänd eller certifierad av TMDb.";
@@ -653,3 +698,105 @@
 "tvTracking.lastSeen" = "LAST SEEN %@";
 "tvTracking.soon" = "soon";
 "tvTracking.watchNow" = "Watch now";
+
+/* SPEC v3 §9.2 — schermata Tracking */
+"tracking.title" = "Bevakning";
+"tracking.bucket.upNext" = "Att se";
+"tracking.bucket.stale" = "Inte sett på länge";
+"tracking.bucket.forLater" = "Till senare";
+"tracking.bucket.upToDate" = "Ikapp";
+"tracking.bucket.notStarted" = "Inte påbörjade";
+"tracking.bucket.dropped" = "Avbrutna";
+"tracking.bucket.archived" = "Arkiverade";
+"tracking.timeline.today" = "Släpps i dag";
+"tracking.timeline.tomorrow" = "I morgon";
+"tracking.timeline.thisWeek" = "Denna vecka";
+"tracking.timeline.thisMonth" = "Denna månad";
+"tracking.action.watched" = "Sedd";
+"tracking.action.later" = "Senare";
+"tracking.caughtUp" = "Ikapp";
+"tracking.unknownShow" = "Okänd serie";
+"tracking.special" = "SPECIAL";
+"tracking.empty.title" = "Inget att se ännu";
+"tracking.empty.subtitle" = "Följ en serie, eller importera din TV Time-historik, så dyker den upp här.";
+"tracking.error.title" = "Något gick fel";
+"tracking.error.notAuthenticated" = "Du måste vara inloggad.";
+"tracking.error.showNotInCatalog" = "Serien finns inte i katalogen ännu — försök igen om en stund.";
+"tracking.error.noNextEpisode" = "Den här serien har inget nästa avsnitt.";
+
+"tab.tracking" = "Bevakning";
+
+"common.close" = "Stäng";
+
+/* Chiavi chiamate dal codice e mai tradotte */
+"auth.error.invalidLink" = "Den här länken är ogiltig eller har gått ut.";
+"clips.noListsYet" = "Inga listor ännu";
+
+/* SPEC v3 §3.7 — scelta dello username */
+"username.confirm.title" = "Bekräfta ditt användarnamn";
+"username.confirm.subtitle" = "Vi tog det från ditt namn. Så hittar andra dig — behåll det eller välj ett annat.";
+"username.confirm.action" = "Bekräfta";
+"username.choose.title" = "Välj ditt användarnamn";
+"username.choose.subtitle" = "Du behöver ett för att synas på VibeWatch: så hittar andra din profil och dina listor.";
+"username.choose.action" = "Fortsätt";
+"username.placeholder" = "användarnamn";
+"username.hint" = "Små bokstäver, siffror och _ — 3 till 20 tecken.";
+"username.checking" = "Kontrollerar…";
+"username.available" = "Ledigt";
+"username.later" = "Inte nu";
+"username.error.empty" = "Välj ett användarnamn.";
+"username.error.tooShort" = "Minst 3 tecken.";
+"username.error.tooLong" = "Högst 20 tecken.";
+"username.error.invalidCharacters" = "Bara små bokstäver, siffror och _.";
+"username.error.taken" = "Redan taget.";
+"username.error.checkFailed" = "Kunde inte kontrollera. Försök igen.";
+"username.error.reserved" = "Det här är reserverat.";
+
+// Social (SPEC v3 blocco 8)
+"social.search.title" = "Hitta vänner";
+"social.search.placeholder" = "Användarnamn eller namn";
+"social.search.prompt" = "Sök personer på användarnamn eller namn för att se deras profil.";
+"social.search.noResults" = "Ingen hittades.";
+"social.search.failed" = "Sökningen misslyckades. Kontrollera din anslutning.";
+"social.profile.followers" = "Följare";
+"social.profile.following" = "Följer";
+"social.follow" = "Följ";
+"social.unfollow" = "Sluta följa";
+"social.followsYou" = "Följer dig";
+"social.profile.notFound" = "Den här profilen finns inte.";
+"social.profile.you" = "Det här är du.";
+"social.profile.loadFailed" = "Profilen kunde inte läsas in.";
+
+// Blocco 9 (SPEC v3 §3.6/§9.3): voti in stelle, favorites, stats
+"rating.title" = "Ditt betyg";
+"rating.saveFailed" = "Betyget kunde inte sparas. Försök igen.";
+"profile.favorites.movies" = "Favoritfilmer";
+"profile.favorites.shows" = "Favoritserier";
+"profile.lists.title" = "Offentliga listor";
+"profile.lists.loadFailed" = "Offentliga listor kunde inte laddas.";
+"profile.stats.title" = "Din statistik";
+"profile.stats.watchTime" = "Tittartid";
+"profile.stats.movies" = "Filmer";
+"profile.stats.shows" = "Serier";
+"profile.stats.episodes" = "Avsnitt";
+"profile.stats.loadFailed" = "Statistiken kunde inte läsas in.";
+"profile.stats.advanced.title" = "Avancerad statistik";
+"profile.stats.advanced.byGenre" = "Efter genre";
+"profile.stats.advanced.byDecade" = "Efter årtionde";
+"profile.stats.advanced.ratings" = "Dina betyg";
+"profile.stats.advanced.noGenre" = "%d serier utan genreinfo";
+"profile.stats.advanced.proLocked" = "Avancerad statistik ingår i Pro.";
+
+// Blocco 9, seconda meta' (§9.3): diario e modifica dei favorites
+"diary.title" = "Dagbok";
+"diary.empty" = "Inget här ännu — det du tittar på visas här.";
+"diary.loadFailed" = "Dagboken kunde inte läsas.";
+"favorites.add" = "Lägg till i favoriter";
+"favorites.remove" = "Ta bort från favoriter";
+"favorites.slot" = "Plats %d";
+"favorites.saveFailed" = "Favoriterna kunde inte uppdateras. Försök igen.";
+
+// La pillola del Tracking: dove lo guardo (streaming > noleggio > acquisto)
+"tracking.watchOn" = "Se på %@";
+"tracking.rentOn" = "Hyr på %@";
+"tracking.buyOn" = "Köp på %@";

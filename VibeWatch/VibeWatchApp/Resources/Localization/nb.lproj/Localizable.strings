@@ -212,6 +212,7 @@
 "auth.error.invalidResponse" = "Ugyldig svar fra serveren.";
 "auth.error.userNotFound" = "Bruker ikke funnet.";
 "auth.error.invalidCredentials" = "Ugyldig e-post eller passord.";
+"auth.error.tooManyAttempts" = "For mange forsøk. Prøv igjen senere.";
 "auth.error.networkError" = "Nettverksfeil. Vennligst sjekk tilkoblingen din.";
 "auth.error.databaseError" = "Databasefeil ved lagring av brukerprofil. Vennligst prøv igjen.";
 "auth.error.signUpFailed" = "Registreringen mislyktes. Vennligst prøv igjen.";
@@ -310,6 +311,50 @@
 "auth.confirmChangePasswordTitle" = "Endre passord";
 "auth.confirmChangePasswordMessage" = "Vil du oppdatere passordet ditt nå?";
 "profile.sendFeedback" = "Send tilbakemelding";
+"profile.share" = "Del profil";
+"profile.share.comingSoon" = "Kommer snart";
+"profile.importFrom" = "Importer fra";
+"import.title" = "Importer";
+"import.source.tvtime" = "TV Time (.zip)";
+"import.source.tvtime.subtitle" = "Dataeksporten din fra TV Time";
+"import.source.footer" = "Be om dataeksporten din fra TV Time (GDPR), og velg .zip-filen her. Apper som eksporterer samme format, fungerer også.";
+"import.state.uploading" = "Laster opp…";
+"import.state.uploadingHint" = "Hold appen åpen mens filen lastes opp.";
+"import.canClose" = "Historikken din importeres. Du kan lukke appen – vi varsler deg når den er ferdig.";
+"import.phase.queued" = "I kø, starter snart…";
+"import.phase.parsing" = "Leser historikken din…";
+"import.phase.resolving" = "Matcher serier og episoder…";
+"import.phase.writing" = "Lagrer episodene dine…";
+"import.phase.finishing" = "Fullfører…";
+"import.report.episodes" = "Importerte episoder";
+"import.report.shows" = "Serier";
+"import.report.period" = "Fra %@ til %@";
+"import.report.ratingsDeferred" = "%d vurderinger funnet – ikke importert ennå.";
+"import.report.ratingsApplied" = "%d vurderinger importert som stjerner.";
+"import.report.ratingsUnresolved" = "%d vurderinger kunne ikke matches.";
+"import.report.favoritesApplied" = "%d favoritter importert til ledige plasser.";
+"import.report.favoriteMoviesUnsupported" = "%d filmfavoritter kan ikke importeres fra TV Time.";
+"import.report.moviesApplied" = "%d filmer importert med visningsdatoene sine.";
+"import.report.moviesWatchlistApplied" = "%d filmer lagt til i overvåkningslisten.";
+"import.report.moviesUnresolved" = "%d filmer ble ikke gjenkjent (tittel og år stemmer ikke på TMDB).";
+"import.resolve.button" = "Løs";
+"import.resolve.title" = "Hvilken serie er «%@»?";
+"import.resolve.hint" = "Episodene kontrolleres på nytt med de nøyaktige TVDB-ID-ene. Alt TMDB ikke kan bekrefte, blir stående i rapporten.";
+"import.resolve.searchPlaceholder" = "Søk etter serien på TMDB";
+"import.resolve.empty" = "Ingen resultater.";
+"import.resolve.failed" = "Kunne ikke løses:";
+"import.resolve.searchFailed" = "Søket mislyktes.";
+"import.report.statusesApplied" = "%d seriestatuser gjenopprettet (huskeliste og arkiv).";
+"import.report.statusesUnresolved" = "%d seriestatuser kunne ikke brukes.";
+"import.report.unresolvedTitle" = "%d episoder kunne ikke matches";
+"import.report.unresolvedRow" = "%d episoder";
+"import.report.allResolved" = "Alt ble matchet.";
+"import.error.failed" = "Importen stoppet med en feil.";
+"import.error.network" = "Kan ikke sjekke importen akkurat nå.";
+"import.error.uploadFailed" = "Opplastingen ble ikke fullført.";
+"import.error.startFailed" = "Importen kunne ikke starte.";
+"import.error.fileRead" = "Filen kunne ikke leses.";
+"import.error.reportFailed" = "Importen er ferdig, men rapporten kunne ikke lastes.";
 "profile.aboutUs" = "Om oss";
 "profile.aboutUsDetail" = "Finn ut mer om VibeWatch-teamet og vårt mål om å forbedre opplevelsen din av strømming.";
 "profile.tmdbAttribution" = "Dette produktet bruker TMDb API, men er ikke godkjent eller sertifisert av TMDb.";
@@ -591,3 +636,105 @@
 "tvTracking.lastSeen" = "LAST SEEN %@";
 "tvTracking.soon" = "soon";
 "tvTracking.watchNow" = "Watch now";
+
+/* SPEC v3 §9.2 — schermata Tracking */
+"tracking.title" = "Tracking";
+"tracking.bucket.upNext" = "Skal ses";
+"tracking.bucket.stale" = "Ikke sett på lenge";
+"tracking.bucket.forLater" = "Til senere";
+"tracking.bucket.upToDate" = "Ajour";
+"tracking.bucket.notStarted" = "Ikke startet";
+"tracking.bucket.dropped" = "Droppet";
+"tracking.bucket.archived" = "Arkivert";
+"tracking.timeline.today" = "Kommer i dag";
+"tracking.timeline.tomorrow" = "I morgen";
+"tracking.timeline.thisWeek" = "Denne uken";
+"tracking.timeline.thisMonth" = "Denne måneden";
+"tracking.action.watched" = "Sett";
+"tracking.action.later" = "Senere";
+"tracking.caughtUp" = "Ajour";
+"tracking.unknownShow" = "Ukjent serie";
+"tracking.special" = "SPESIAL";
+"tracking.empty.title" = "Ingenting å se ennå";
+"tracking.empty.subtitle" = "Følg en serie, eller importer TV Time-historikken din, så dukker den opp her.";
+"tracking.error.title" = "Noe gikk galt";
+"tracking.error.notAuthenticated" = "Du må være logget inn.";
+"tracking.error.showNotInCatalog" = "Serien er ikke i katalogen ennå — prøv igjen om litt.";
+"tracking.error.noNextEpisode" = "Denne serien har ingen neste episode.";
+
+"tab.tracking" = "Tracking";
+
+"common.close" = "Lukk";
+
+/* Chiavi chiamate dal codice e mai tradotte */
+"auth.error.invalidLink" = "Denne lenken er ugyldig eller utløpt.";
+"clips.noListsYet" = "Ingen lister ennå";
+
+/* SPEC v3 §3.7 — scelta dello username */
+"username.confirm.title" = "Bekreft brukernavnet ditt";
+"username.confirm.subtitle" = "Vi laget det ut fra navnet ditt. Slik finner andre deg — behold det, eller velg et annet.";
+"username.confirm.action" = "Bekreft";
+"username.choose.title" = "Velg brukernavn";
+"username.choose.subtitle" = "Du trenger et for å vises på VibeWatch: slik finner andre profilen og listene dine.";
+"username.choose.action" = "Fortsett";
+"username.placeholder" = "brukernavn";
+"username.hint" = "Små bokstaver, tall og _ — 3 til 20 tegn.";
+"username.checking" = "Sjekker…";
+"username.available" = "Ledig";
+"username.later" = "Ikke nå";
+"username.error.empty" = "Velg et brukernavn.";
+"username.error.tooShort" = "Minst 3 tegn.";
+"username.error.tooLong" = "Maks 20 tegn.";
+"username.error.invalidCharacters" = "Bare små bokstaver, tall og _.";
+"username.error.taken" = "Allerede tatt.";
+"username.error.checkFailed" = "Kunne ikke sjekke. Prøv på nytt.";
+"username.error.reserved" = "Dette er reservert.";
+
+// Social (SPEC v3 blocco 8)
+"social.search.title" = "Finn venner";
+"social.search.placeholder" = "Brukernavn eller navn";
+"social.search.prompt" = "Søk etter folk på brukernavn eller navn for å se profilen deres.";
+"social.search.noResults" = "Fant ingen.";
+"social.search.failed" = "Søket mislyktes. Sjekk tilkoblingen din.";
+"social.profile.followers" = "Følgere";
+"social.profile.following" = "Følger";
+"social.follow" = "Følg";
+"social.unfollow" = "Slutt å følge";
+"social.followsYou" = "Følger deg";
+"social.profile.notFound" = "Denne profilen finnes ikke.";
+"social.profile.you" = "Dette er deg.";
+"social.profile.loadFailed" = "Kunne ikke laste profilen.";
+
+// Blocco 9 (SPEC v3 §3.6/§9.3): voti in stelle, favorites, stats
+"rating.title" = "Din vurdering";
+"rating.saveFailed" = "Kunne ikke lagre vurderingen. Prøv igjen.";
+"profile.favorites.movies" = "Favorittfilmer";
+"profile.favorites.shows" = "Favorittserier";
+"profile.lists.title" = "Offentlige lister";
+"profile.lists.loadFailed" = "Kunne ikke laste offentlige lister.";
+"profile.stats.title" = "Din statistikk";
+"profile.stats.watchTime" = "Visningstid";
+"profile.stats.movies" = "Filmer";
+"profile.stats.shows" = "Serier";
+"profile.stats.episodes" = "Episoder";
+"profile.stats.loadFailed" = "Kunne ikke laste statistikken.";
+"profile.stats.advanced.title" = "Avansert statistikk";
+"profile.stats.advanced.byGenre" = "Etter sjanger";
+"profile.stats.advanced.byDecade" = "Etter tiår";
+"profile.stats.advanced.ratings" = "Dine vurderinger";
+"profile.stats.advanced.noGenre" = "%d serier uten sjangerinfo";
+"profile.stats.advanced.proLocked" = "Avansert statistikk er en del av Pro.";
+
+// Blocco 9, seconda meta' (§9.3): diario e modifica dei favorites
+"diary.title" = "Dagbok";
+"diary.empty" = "Ingenting her ennå — det du ser på vises her.";
+"diary.loadFailed" = "Kunne ikke lese dagboken.";
+"favorites.add" = "Legg til i favoritter";
+"favorites.remove" = "Fjern fra favoritter";
+"favorites.slot" = "Plass %d";
+"favorites.saveFailed" = "Kunne ikke oppdatere favorittene. Prøv igjen.";
+
+// La pillola del Tracking: dove lo guardo (streaming > noleggio > acquisto)
+"tracking.watchOn" = "Se på %@";
+"tracking.rentOn" = "Lei på %@";
+"tracking.buyOn" = "Kjøp på %@";

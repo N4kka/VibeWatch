@@ -4,5 +4,13 @@
 <dict>
 	<key>aps-environment</key>
 	<string>production</string>
+	<!-- SPEC v3 §9.4. Il dominio deve combaciare con UniversalLinks.host — c'è un test che lo
+	     verifica (UniversalLinksTests). Gli applinks distinguono i sottodomini, quindi apex e www
+	     vanno dichiarati entrambi. -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:vibewatchapp.com</string>
+		<string>applinks:www.vibewatchapp.com</string>
+	</array>
 </dict>
 </plist>

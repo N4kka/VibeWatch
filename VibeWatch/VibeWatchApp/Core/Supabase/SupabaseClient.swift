@@ -263,7 +263,16 @@ class SupabaseService: ObservableObject {
 
     /// Applies a batch of mutations atomically using the `apply_mutations` RPC on Supabase.
     /// Each mutation should include: op ('INSERT'|'UPDATE'|'DELETE'), table, id, record (JSON object).
-    func applyMutations(_ batch: [[String: Any]]) async throws {
+    /// - Parameter allowClientSideFallback: quando l'RPC risponde male si ripiega su una upsert
+    ///   REST per riga. Per le scritture normali e' la rete di sicurezza giusta; per un lotto va
+    ///   spento. Il ripiego fa una chiamata per record e, soprattutto, risolve i conflitti su `id`
+    ///   invece che su `dedup_key`: un rigioco della migrazione dello storico genererebbe id nuovi
+    ///   e andrebbe a sbattere sull'indice unico di `watch_events` una riga alla volta, invece di
+    ///   essere il caso normale che `apply_mutations` gestisce saltando cio' che c'e' gia'.
+    func applyMutations(
+        _ batch: [[String: Any]],
+        allowClientSideFallback: Bool = true
+    ) async throws {
         guard client != nil else {
             throw SupabaseError.notConfigured
         }
@@ -306,7 +315,8 @@ class SupabaseService: ObservableObject {
         let bodyString = String(data: data, encoding: .utf8) ?? ""
 
         // If the RPC isn't deployed yet, fall back to client-side REST operations.
-        if http.statusCode == 404 || bodyString.lowercased().contains("apply_mutations") {
+        if allowClientSideFallback,
+           http.statusCode == 404 || bodyString.lowercased().contains("apply_mutations") {
             try await applyMutationsClientSide(batch)
             return
         }
@@ -324,6 +334,281 @@ class SupabaseService: ObservableObject {
 
         let data = try await callRPC(function: "merge_user_preferences", payload: payload)
         return (try? JSONSerialization.jsonObject(with: data) as? [String: Any]) ?? [:]
+    }
+
+    // MARK: - Migrazione dello storico (SPEC v3 blocco 7)
+
+    /// Espande le serie marcate "viste per intero" negli episodi che il catalogo conosce.
+    ///
+    /// L'espansione sta server-side perche' li' c'e' il catalogo (§1.4): il client sa *che* la
+    /// serie e' vista tutta, non *quali* episodi la compongono. Ritorna quante righe sono nate e
+    /// quali serie non erano espandibili perche' il catalogo non le ha ancora.
+    func expandSeenShowsToWatchEvents(
+        _ shows: [[String: Any]]
+    ) async throws -> LegacyExpansionOutcome {
+        let data = try await callRPC(
+            function: "expand_seen_shows_to_watch_events", payload: ["p_shows": shows])
+        let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        return LegacyExpansionOutcome(
+            eventsWritten: json?["events_written"] as? Int ?? 0,
+            showsWithoutCatalog: json?["shows_without_catalog"] as? [Int] ?? []
+        )
+    }
+
+    /// Fusione ListsView-Tracking: toglie una serie dalla lista Seen — lapide su tutti i suoi
+    /// eventi + `dropped`, in un'unica RPC server (`unsee_tv_show`). Ritorna quanti eventi hanno
+    /// preso la lapide: zero e' un esito legittimo (rigiocata), non un errore.
+    func unseeTVShow(showId: Int) async throws -> Int {
+        let data = try await callRPC(
+            function: "unsee_tv_show", payload: ["p_tmdb_show_id": showId])
+        let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        return json?["events_removed"] as? Int ?? 0
+    }
+
+    /// Popola `tmdb_shows`/`tmdb_episodes` per serie gia' identificate su TMDB.
+    ///
+    /// Passa da `catalog-resolve` e non da TMDB diretto: la chiave sta server-side, il budget e'
+    /// li', e il catalogo e' condiviso fra tutti gli utenti (§1.5) — la serie riscaldata da uno la
+    /// trovano pronta gli altri. Serve un JWT utente, non la chiave anonima.
+    func warmCatalog(showIds: [Int]) async throws {
+        guard !showIds.isEmpty else { return }
+        guard let url = URL(string: Config.supabaseURL.replacingOccurrences(
+            of: ".supabase.co", with: ".functions.supabase.co") + "/catalog-resolve")
+        else { throw SupabaseError.notConfigured }
+
+        guard let client, let session = try? await client.auth.session else {
+            throw SupabaseError.notAuthenticated
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
+        request.httpBody = try JSONSerialization.data(withJSONObject: ["show_ids": showIds])
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw SupabaseError.networkError }
+        guard (200...299).contains(http.statusCode) else {
+            throw SupabaseError.httpError(
+                statusCode: http.statusCode, body: String(data: data, encoding: .utf8) ?? "")
+        }
+    }
+
+    // MARK: - Username (SPEC v3 §3.7)
+
+    /// Lo stato dello username del proprietario: qual è, e se l'ha mai confermato.
+    ///
+    /// `username_confirmed_at` nullo significa "assegnato dal backfill e mai visto da chi lo
+    /// porta": è il segnale che fa comparire la schermata di scelta. Un `username` nullo significa
+    /// che il nome non era derivabile — sono 19 profili — e per quelli la schermata non è una
+    /// conferma ma l'unico modo di comparire in `public_profiles`.
+    func usernameState() async throws -> (username: String?, confirmed: Bool)? {
+        guard let client, let userId = currentUser?.id else { throw SupabaseError.notAuthenticated }
+
+        struct Row: Decodable {
+            let username: String?
+            let usernameConfirmedAt: Date?
+            enum CodingKeys: String, CodingKey {
+                case username
+                case usernameConfirmedAt = "username_confirmed_at"
+            }
+        }
+
+        let rows: [Row] = try await client
+            .from("profiles")
+            .select("username,username_confirmed_at")
+            .eq("id", value: userId)
+            .limit(1)
+            .execute()
+            .value
+
+        guard let row = rows.first else { return nil }
+        return (row.username, row.usernameConfirmedAt != nil)
+    }
+
+    /// Libero? Il server decide: qui non si può sapere se un nome è riservato.
+    func usernameAvailable(_ username: String) async throws -> Bool {
+        let data = try await callRPC(
+            function: "username_available", payload: ["p_username": username])
+        return try Self.parseBooleanRPCResponse(data)
+    }
+
+    /// Una funzione SQL che restituisce `boolean` arriva da PostgREST come `true`/`false` nudo:
+    /// un frammento JSON di primo livello, che `jsonObject` senza `.fragmentsAllowed` rifiuta.
+    /// Una risposta che non si capisce è un errore, non un "no": tradurla in `false` faceva
+    /// rispondere "già preso" a ogni nome, compresi i liberi.
+    static func parseBooleanRPCResponse(_ data: Data) throws -> Bool {
+        guard let value = (try? JSONSerialization.jsonObject(
+            with: data, options: [.fragmentsAllowed])) as? Bool else {
+            throw SupabaseError.unexpectedResponse(
+                body: String(data: data, encoding: .utf8) ?? "<non-UTF8>")
+        }
+        return value
+    }
+
+    /// Sceglie o conferma. Gli esiti "occupato" e "riservato" tornano come risposta, non come
+    /// eccezione: in questa schermata sono la cosa più probabile che succeda.
+    func setUsername(_ username: String) async throws -> SetUsernameOutcome {
+        let data = try await callRPC(function: "set_username", payload: ["p_username": username])
+        let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
+        return SetUsernameOutcome(json: json)
+    }
+
+    // MARK: - Social (SPEC v3 §3.7 / §9.3)
+
+    /// Ricerca utenti. Il server decide tutto: superficie pubblica, blocchi nei due versi, ordine.
+    func searchUsers(_ query: String, limit: Int = 20) async throws -> [PublicProfile] {
+        let data = try await callRPC(
+            function: "search_users", payload: ["p_query": query, "p_limit": limit])
+        guard let rows = (try? JSONSerialization.jsonObject(with: data)) as? [[String: Any]] else {
+            throw SupabaseError.unexpectedResponse(
+                body: String(data: data.prefix(300), encoding: .utf8) ?? "<non-UTF8>")
+        }
+        return rows.compactMap(PublicProfile.init(json:))
+    }
+
+    /// Il profilo pubblico di §9.3, coi contatori e la relazione col chiamante.
+    ///
+    /// `nil` significa "non esiste" — che per scelta del server copre anche privato, cancellato,
+    /// senza username e bloccato in uno dei due versi: che un blocco esista è privato.
+    func publicProfile(username: String) async throws -> PublicProfileDetail? {
+        let data = try await callRPC(
+            function: "get_public_profile", payload: ["p_username": username])
+        guard let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else {
+            throw SupabaseError.unexpectedResponse(
+                body: String(data: data.prefix(300), encoding: .utf8) ?? "<non-UTF8>")
+        }
+        return PublicProfileDetail(json: json)
+    }
+
+    /// Le stats di base di §9.3, calcolate dal server (§13.7): il client non somma niente.
+    /// Una risposta illeggibile è un errore, mai un pannello di zeri.
+    func myStats() async throws -> UserStats {
+        let data = try await callRPC(function: "get_my_stats", payload: [:])
+        guard let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+              let stats = UserStats(json: json) else {
+            throw SupabaseError.unexpectedResponse(
+                body: String(data: data.prefix(300), encoding: .utf8) ?? "<non-UTF8>")
+        }
+        return stats
+    }
+
+    // MARK: - Import TV Time (SPEC v3 §7)
+
+    /// Carica lo ZIP nella PROPRIA cartella del bucket `imports` e restituisce il path.
+    /// Il nome è un UUID: due import successivi non si sovrascrivono, e il TTL del bucket
+    /// (7 giorni, §7.2) porta via i vecchi.
+    func uploadImportZip(_ data: Data) async throws -> String {
+        guard let client, let userId = currentUser?.id else {
+            throw SupabaseError.notAuthenticated
+        }
+        let path = "\(userId)/\(UUID().uuidString.lowercased()).zip"
+        _ = try await client.storage
+            .from("imports")
+            .upload(path, data: data, options: .init(contentType: "application/zip"))
+        return path
+    }
+
+    /// Crea il job sul proprio ZIP già caricato. Gli esiti prevedibili (`already_running`,
+    /// `upload_not_found`…) tornano come risposta, non come eccezione: in questa schermata
+    /// sono cose che succedono, non guasti.
+    func createImportJob(storagePath: String) async throws -> ImportStartOutcome {
+        let data = try await callRPC(
+            function: "create_import_job", payload: ["p_storage_path": storagePath])
+        guard let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+              let outcome = ImportStartOutcome(json: json) else {
+            throw SupabaseError.unexpectedResponse(
+                body: String(data: data.prefix(300), encoding: .utf8) ?? "<non-UTF8>")
+        }
+        return outcome
+    }
+
+    /// Riporta a `running` un proprio job `failed`. Checkpoint e `dedup_key` rendono la
+    /// ripresa sicura lato server; qui c'è solo la chiamata.
+    func retryImportJob(id: String) async throws -> ImportStartOutcome {
+        let data = try await callRPC(function: "retry_import_job", payload: ["p_job_id": id])
+        guard let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+              let outcome = ImportStartOutcome(json: json) else {
+            throw SupabaseError.unexpectedResponse(
+                body: String(data: data.prefix(300), encoding: .utf8) ?? "<non-UTF8>")
+        }
+        return outcome
+    }
+
+    /// L'ultimo job del chiamante, il più recente prima. La RLS mostra solo i propri;
+    /// `nil` = mai fatto un import. Serve alla ripresa: la schermata riaperta deve ritrovare
+    /// l'import in corso (o l'ultimo report), perché lo stato vive sul server (§7.2).
+    func latestImportJob() async throws -> ImportJobSnapshot? {
+        guard let client else { throw SupabaseError.notAuthenticated }
+        let rows: [ImportJobSnapshot] = try await client
+            .from("import_jobs")
+            .select("id, phase, status, error, created_at")
+            .order("created_at", ascending: false)
+            .limit(1)
+            .execute()
+            .value
+        return rows.first
+    }
+
+    /// Lo stato corrente di un job: è ciò che il polling legge. Il client non muove niente —
+    /// le fasi sono del server — quindi qui c'è solo una SELECT sotto RLS.
+    func importJob(id: String) async throws -> ImportJobSnapshot? {
+        guard let client else { throw SupabaseError.notAuthenticated }
+        let rows: [ImportJobSnapshot] = try await client
+            .from("import_jobs")
+            .select("id, phase, status, error, created_at")
+            .eq("id", value: id)
+            .limit(1)
+            .execute()
+            .value
+        return rows.first
+    }
+
+    /// §7.4: la risoluzione A MANO di una serie non riconosciuta. Il server (Edge Function
+    /// `import-manual-resolve`) salva la mappa di serie e riapre il job in `resolving`, dove
+    /// ogni episodio viene riconfermato tramite il suo ID TVDB esatto. Un errore HTTP
+    /// arriva intero al chiamante — il corpo è la diagnosi (`series_already_mapped`,
+    /// `nothing_to_resolve`, `another_job_open`, `staging_changed`…), e nasconderlo lascerebbe
+    /// l'utente davanti a un pulsante che "non fa niente".
+    func manualResolveImport(jobId: String, tvdbSeriesId: String, tmdbShowId: Int) async throws {
+        guard let url = URL(string: Config.supabaseURL.replacingOccurrences(
+            of: ".supabase.co", with: ".functions.supabase.co") + "/import-manual-resolve")
+        else { throw SupabaseError.notConfigured }
+
+        guard let client, let session = try? await client.auth.session else {
+            throw SupabaseError.notAuthenticated
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
+        request.httpBody = try JSONSerialization.data(withJSONObject: [
+            "job_id": jobId,
+            "tvdb_series_id": tvdbSeriesId,
+            "tmdb_show_id": tmdbShowId,
+        ])
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw SupabaseError.networkError }
+        guard (200...299).contains(http.statusCode) else {
+            throw SupabaseError.httpError(
+                statusCode: http.statusCode, body: String(data: data, encoding: .utf8) ?? "")
+        }
+    }
+
+    /// Il report di §7.4, calcolato dal server (`import_report`, security invoker: decide la
+    /// RLS). Una risposta illeggibile è un errore, mai un report di zeri.
+    func importReport(jobId: String) async throws -> ImportReport {
+        let data = try await callRPC(function: "import_report", payload: ["p_job_id": jobId])
+        guard let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+              let report = ImportReport(json: json) else {
+            throw SupabaseError.unexpectedResponse(
+                body: String(data: data.prefix(300), encoding: .utf8) ?? "<non-UTF8>")
+        }
+        return report
     }
 
     private func callRPC(function: String, payload: [String: Any]) async throws -> Data {
@@ -886,58 +1171,12 @@ class SupabaseService: ObservableObject {
     }
 
     // MARK: - User Profile
-
-    /// Update user profile fields in Supabase
-    func updateUserProfile(_ fields: [String: Any]) async throws {
-        guard let client = client, let userId = currentUser?.id else {
-            throw SupabaseError.notConfigured
-        }
-
-        var updateFields = fields
-        updateFields["updated_at"] = ISO8601DateFormatter().string(from: Date())
-
-        // Build the update payload as Encodable
-        struct ProfileUpdate: Encodable {
-            let onboarding_completed: Bool?
-            let onboarding_completed_at: String?
-            let updated_at: String
-
-            init(from fields: [String: Any]) {
-                self.onboarding_completed = fields["onboarding_completed"] as? Bool
-                self.onboarding_completed_at = fields["onboarding_completed_at"] as? String
-                self.updated_at = fields["updated_at"] as? String ?? ISO8601DateFormatter().string(from: Date())
-            }
-        }
-
-        let update = ProfileUpdate(from: updateFields)
-
-        try await client.from("profiles")
-            .update(update)
-            .eq("id", value: userId)
-            .execute()
-
-        Logger.info("[Supabase] Updated user profile")
-    }
-
-    /// Fetch user profile from Supabase
-    func fetchUserProfile() async throws -> [String: Any]? {
-        guard let client = client, let userId = currentUser?.id else {
-            return nil
-        }
-
-        let response = try await client.from("profiles")
-            .select()
-            .eq("id", value: userId)
-            .limit(1)
-            .execute()
-
-        guard let rows = try? JSONSerialization.jsonObject(with: response.data) as? [[String: Any]],
-              let profile = rows.first else {
-            return nil
-        }
-
-        return profile
-    }
+    //
+    // P5 (SPEC v3): `updateUserProfile(_:)` and `fetchUserProfile()` lived here and existed only
+    // to serve AppState.checkOnboardingFromProfile(). The update encoded a fixed payload of
+    // `onboarding_completed` / `onboarding_completed_at`, two columns `profiles` does not have,
+    // so every call was a guaranteed round-trip to a 42703. Both callers are gone; profile reads
+    // for auth go through AuthService.fetchUserProfile(userId:), which reads columns that exist.
 
 }
 
@@ -945,8 +1184,11 @@ class SupabaseService: ObservableObject {
 
 extension SupabaseService {
     /// Feed liste pubbliche via RPC `get_public_lists` (ricerca parziale + scope explore/followed).
-    /// La RPC applica già block, auto-hide oltre soglia report e l'esclusione di sé/non-pubbliche.
-    func fetchPublicLists(search: String?, scope: PublicListsScope, limit: Int, offset: Int) async throws -> [PublicList] {
+    /// La RPC applica già block (nei due versi), auto-hide oltre soglia report e l'esclusione
+    /// delle non-pubbliche. Con `ownerId` restituisce le liste pubbliche di QUEL profilo (§9.3):
+    /// stessa funzione, stesse difese, il feed resta il caso `nil`.
+    func fetchPublicLists(search: String?, scope: PublicListsScope, limit: Int, offset: Int,
+                          ownerId: String? = nil) async throws -> [PublicList] {
         guard let client = client else { throw SupabaseError.notConfigured }
         let trimmed = search?.trimmingCharacters(in: .whitespacesAndNewlines)
         let rows: [PublicListRow] = try await client
@@ -954,7 +1196,8 @@ extension SupabaseService {
                 p_search: (trimmed?.isEmpty == false) ? trimmed : nil,
                 p_scope: scope.rawValue,
                 p_limit: limit,
-                p_offset: offset
+                p_offset: offset,
+                p_owner: ownerId
             ))
             .execute()
             .value
@@ -985,6 +1228,7 @@ private struct PublicListsParams: Encodable {
     let p_scope: String
     let p_limit: Int
     let p_offset: Int
+    let p_owner: String?
 }
 
 private struct PublicListRow: Decodable {
@@ -1089,6 +1333,7 @@ enum SupabaseError: LocalizedError {
     case authenticationFailed
     case networkError
     case httpError(statusCode: Int, body: String)
+    case unexpectedResponse(body: String)
     
     var errorDescription: String? {
         switch self {
@@ -1104,6 +1349,10 @@ enum SupabaseError: LocalizedError {
             let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
             let short = trimmed.count > 300 ? String(trimmed.prefix(300)) + "…" : trimmed
             return "Supabase HTTP \(statusCode): \(short.isEmpty ? "No response body" : short)"
+        case .unexpectedResponse(let body):
+            let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
+            let short = trimmed.count > 300 ? String(trimmed.prefix(300)) + "…" : trimmed
+            return "Unexpected Supabase response: \(short.isEmpty ? "empty body" : short)"
         }
     }
 }

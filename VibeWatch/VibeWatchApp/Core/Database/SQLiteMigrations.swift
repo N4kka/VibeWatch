@@ -8,7 +8,7 @@ extension SQLiteService {
     /// Run personalization migrations (Phase 1)
     func runPersonalizationMigrations() {
         let currentVersion = getPersonalizationMigrationVersion()
-        let latestVersion = 7
+        let latestVersion = 13
 
         guard currentVersion < latestVersion else {
             Logger.info("[SQLite] Personalization migrations already applied (version \(currentVersion))")
@@ -44,6 +44,24 @@ extension SQLiteService {
             }
             if currentVersion < 7 {
                 migration7_BackfillMissingIndexes()
+            }
+            if currentVersion < 8 {
+                migration8_AddTrackingTables()
+            }
+            if currentVersion < 9 {
+                migration9_AddTrackingViewMirrors()
+            }
+            if currentVersion < 10 {
+                migration10_AddUserFollows()
+            }
+            if currentVersion < 11 {
+                migration11_AddFavoritesAndRatings()
+            }
+            if currentVersion < 12 {
+                migration12_AddLocalizedTitles()
+            }
+            if currentVersion < 13 {
+                migration13_LocalizedTitlesLearnEpisodes()
             }
 
             // Update migration version
@@ -196,7 +214,288 @@ extension SQLiteService {
         Logger.info("[SQLite] Migration 7 complete - indexes backfilled")
     }
 
+    /// SPEC v3 §4 — lo specchio locale del tracking episodi.
+    ///
+    /// `watch_events` è append-only e la strategia di conflitto è `union`: non si perde mai una
+    /// visione. `tv_show_state` è derivato e il server è autorevole (§1.1), quindi in locale è solo
+    /// una cache di lettura — ciò che il client può cambiare è `user_status`, e passa dall'outbox.
+    private func migration8_AddTrackingTables() {
+        Logger.info("[SQLite] Migration 8: Adding watch_events and tv_show_state")
+
+        executeScript(createWatchEventsTable())
+        executeScript(createTVShowStateTable())
+
+        Logger.info("[SQLite] Migration 8 complete")
+    }
+
+    /// SPEC v3 §9.2 / §13.6 — lo specchio locale delle due viste della schermata Tracking.
+    ///
+    /// Non sono tabelle di dominio ma **cache di righe già pronte per la UI**: le calcola il
+    /// server (`v_tv_tracking`, `v_tv_timeline`), il client le ritira e le legge. Nessuna delle
+    /// due passa dall'outbox — non c'è niente da rimandare indietro, perché ciò che l'utente può
+    /// cambiare (`user_status`, gli eventi di visione) ha già le sue tabelle.
+    ///
+    /// Il motivo per cui esistono è §13.6: la schermata deve disegnarsi da qui, senza rete, sotto
+    /// i 300 ms. Se per mostrare la lista servisse una chiamata, il lavoro sarebbe sbagliato.
+    private func migration9_AddTrackingViewMirrors() {
+        Logger.info("[SQLite] Migration 9: Adding tv_tracking and tv_timeline mirrors")
+
+        executeScript(createTVTrackingMirrorTable())
+        executeScript(createTVTimelineMirrorTable())
+
+        Logger.info("[SQLite] Migration 9 complete")
+    }
+
+    /// SPEC v3 §3.6 — lo specchio locale di `user_follows`.
+    ///
+    /// Strategia `union` (§4): un follow non si perde mai. La chiave e' la coppia, identica al
+    /// server — niente id sintetico. La scrittura passa dall'outbox (`apply_mutations` ha il suo
+    /// ramo dal 2026-07-31); il pull riporta indietro anche le righe in cui si e' il followee,
+    /// che servono a "chi mi segue".
+    private func migration10_AddUserFollows() {
+        Logger.info("[SQLite] Migration 10: Adding user_follows")
+
+        executeScript(createUserFollowsTable())
+
+        Logger.info("[SQLite] Migration 10 complete")
+    }
+
+    /// SPEC v3 §3.6 (blocco 9) — lo specchio locale di `user_favorites` e `user_ratings`.
+    ///
+    /// Entrambe `lastWriteWins` (§4): l'ultimo intento dell'utente. Il soft delete viaggia come
+    /// contenuto della riga (uno slot svuotato, un voto tolto), quindi il pull lo porta anche
+    /// agli altri dispositivi.
+    ///
+    /// `user_ratings` sul server ha `season_number`/`episode_number` NULL per film e serie. Qui
+    /// sono `NOT NULL DEFAULT -1`: una PK SQLite con una colonna NULL considera ogni NULL diverso
+    /// dagli altri, quindi lo stesso voto arriverebbe due volte come due righe. Il -1 e' lo stesso
+    /// sentinello del `coalesce(season_number,-1)` nell'indice unico del server — la chiave
+    /// locale e quella remota coincidono per costruzione. La conversione NULL → -1 la fa
+    /// `normalizeRow` nel pull; il percorso di scrittura (le azioni) parla al server con i NULL.
+    private func migration11_AddFavoritesAndRatings() {
+        Logger.info("[SQLite] Migration 11: Adding user_favorites and user_ratings")
+
+        executeScript(createUserFavoritesTable())
+        executeScript(createUserRatingsTable())
+
+        Logger.info("[SQLite] Migration 11 complete")
+    }
+
+    /// La cache dei titoli nella lingua dell'app.
+    ///
+    /// Il catalogo condiviso (§1.5) parla una lingua sola — l'inglese di TMDB — e lo specchio
+    /// `tv_tracking` la eredita. La schermata Tracking però ha il budget di §13.6: zero rete per
+    /// disegnarsi. Quindi i titoli localizzati vivono qui, persistenti: il primo fotogramma fa
+    /// una JOIN locale (titolo localizzato se c'è, quello del catalogo altrimenti), e un task in
+    /// background riempie i buchi via TMDB nella lingua dell'app. Cache locale e basta: niente
+    /// sync, niente pull-list — ogni dispositivo se la riempie da sé nella propria lingua.
+    private func migration12_AddLocalizedTitles() {
+        Logger.info("[SQLite] Migration 12: Adding localized_titles")
+
+        executeScript(createLocalizedTitlesTable())
+
+        Logger.info("[SQLite] Migration 12 complete")
+    }
+
+    /// La cache impara gli episodi (trovato sul dispositivo il 2026-08-01: i titoli delle serie
+    /// erano tradotti, i nomi degli episodi no — vengono dallo stesso catalogo a lingua unica).
+    ///
+    /// La chiave cresce di due colonne (stagione, episodio, sentinello -1 per film e serie —
+    /// come nello specchio di user_ratings) e SQLite non sa allargare una PK: si butta e si
+    /// ricrea. È una cache pura, rigenerabile per costruzione: perderla costa un giro di
+    /// riempimento, non un dato.
+    private func migration13_LocalizedTitlesLearnEpisodes() {
+        Logger.info("[SQLite] Migration 13: localized_titles learns episodes")
+
+        executeScript("DROP TABLE IF EXISTS localized_titles;")
+        executeScript(createLocalizedTitlesTable())
+
+        Logger.info("[SQLite] Migration 13 complete")
+    }
+
     // MARK: - Table Creation Methods
+
+    private func createLocalizedTitlesTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS localized_titles (
+            media_type TEXT NOT NULL,
+            tmdb_id INTEGER NOT NULL,
+            season_number INTEGER NOT NULL DEFAULT -1,
+            episode_number INTEGER NOT NULL DEFAULT -1,
+            language TEXT NOT NULL,
+            title TEXT NOT NULL,
+            updated_at TEXT,
+            PRIMARY KEY (media_type, tmdb_id, season_number, episode_number, language)
+        );
+        """
+    }
+
+    private func createUserFavoritesTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS user_favorites (
+            user_id TEXT NOT NULL,
+            media_type TEXT NOT NULL,
+            slot INTEGER NOT NULL,
+            tmdb_id INTEGER NOT NULL,
+            updated_at TEXT,
+            deleted_at TEXT,
+            synced_at TEXT,
+            PRIMARY KEY (user_id, media_type, slot)
+        );
+        """
+    }
+
+    private func createUserRatingsTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS user_ratings (
+            user_id TEXT NOT NULL,
+            media_type TEXT NOT NULL,
+            tmdb_id INTEGER NOT NULL,
+            season_number INTEGER NOT NULL DEFAULT -1,
+            episode_number INTEGER NOT NULL DEFAULT -1,
+            rating INTEGER NOT NULL,
+            created_at TEXT,
+            updated_at TEXT,
+            deleted_at TEXT,
+            synced_at TEXT,
+            PRIMARY KEY (user_id, media_type, tmdb_id, season_number, episode_number)
+        );
+        """
+    }
+
+    private func createUserFollowsTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS user_follows (
+            follower_id TEXT NOT NULL,
+            followee_id TEXT NOT NULL,
+            created_at TEXT,
+            deleted_at TEXT,
+            synced_at TEXT,
+            PRIMARY KEY (follower_id, followee_id)
+        );
+        -- La PK copre "chi seguo"; questo copre "chi mi segue".
+        CREATE INDEX IF NOT EXISTS idx_user_follows_followee
+            ON user_follows(followee_id);
+        """
+    }
+
+    private func createTVTrackingMirrorTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS tv_tracking (
+            user_id TEXT NOT NULL,
+            tmdb_show_id INTEGER NOT NULL,
+            user_status TEXT NOT NULL DEFAULT 'active',
+            watched_count INTEGER NOT NULL DEFAULT 0,
+            aired_count INTEGER NOT NULL DEFAULT 0,
+            total_count INTEGER NOT NULL DEFAULT 0,
+            last_watched_at TEXT,
+            next_season INTEGER,
+            next_episode INTEGER,
+            next_air_date TEXT,
+            backlog_since TEXT,
+            first_watched_at TEXT,
+            completed_at TEXT,
+            updated_at TEXT,
+            synced_at TEXT,
+            bucket TEXT,
+            is_next_available INTEGER,
+            show_name TEXT,
+            show_poster_path TEXT,
+            show_status TEXT,
+            next_episode_name TEXT,
+            next_still_path TEXT,
+            next_runtime_minutes INTEGER,
+            PRIMARY KEY (user_id, tmdb_show_id)
+        );
+        -- L'ordinamento della schermata: bucket, poi arretrato piu' recente in cima (§3.3).
+        CREATE INDEX IF NOT EXISTS idx_tv_tracking_bucket
+            ON tv_tracking(user_id, bucket, backlog_since DESC);
+        """
+    }
+
+    private func createTVTimelineMirrorTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS tv_timeline (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            tmdb_show_id INTEGER NOT NULL,
+            show_name TEXT,
+            show_poster_path TEXT,
+            season_number INTEGER NOT NULL,
+            episode_number INTEGER NOT NULL,
+            episode_name TEXT,
+            air_date TEXT,
+            still_path TEXT,
+            is_special INTEGER NOT NULL DEFAULT 0
+        );
+        -- La timeline si legge in ordine di uscita e basta.
+        CREATE INDEX IF NOT EXISTS idx_tv_timeline_air_date
+            ON tv_timeline(user_id, air_date);
+        """
+    }
+
+    private func createWatchEventsTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS watch_events (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            media_type TEXT NOT NULL,
+            tmdb_movie_id INTEGER,
+            tmdb_show_id INTEGER,
+            season_number INTEGER,
+            episode_number INTEGER,
+            watched_at TEXT NOT NULL,
+            logged_at TEXT,
+            watched_at_precision TEXT NOT NULL DEFAULT 'exact',
+            runtime_seconds INTEGER,
+            is_special INTEGER NOT NULL DEFAULT 0,
+            rewatch_index INTEGER NOT NULL DEFAULT 0,
+            source TEXT NOT NULL DEFAULT 'manual',
+            external_ref TEXT,
+            dedup_key TEXT,
+            device_id TEXT,
+            deleted_at TEXT,
+            synced_at TEXT
+        );
+        -- Il diario: eventi di un utente in ordine cronologico inverso. È l'unica lettura calda
+        -- di questa tabella sul client, ed è quella che deve stare sotto i 300 ms (§13.6).
+        CREATE INDEX IF NOT EXISTS idx_watch_events_user_watched
+            ON watch_events(user_id, watched_at DESC);
+        -- Il progresso di una singola serie, per la schermata di dettaglio.
+        CREATE INDEX IF NOT EXISTS idx_watch_events_user_show
+            ON watch_events(user_id, tmdb_show_id, season_number, episode_number);
+        -- La dedup locale prima di accodare un evento all'outbox: stessa chiave del server, così
+        -- un re-import non genera 20.000 mutazioni destinate a essere scartate a destinazione.
+        CREATE INDEX IF NOT EXISTS idx_watch_events_dedup
+            ON watch_events(user_id, dedup_key);
+        """
+    }
+
+    private func createTVShowStateTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS tv_show_state (
+            user_id TEXT NOT NULL,
+            tmdb_show_id INTEGER NOT NULL,
+            user_status TEXT NOT NULL DEFAULT 'active',
+            watched_count INTEGER NOT NULL DEFAULT 0,
+            aired_count INTEGER NOT NULL DEFAULT 0,
+            total_count INTEGER NOT NULL DEFAULT 0,
+            last_watched_at TEXT,
+            next_season INTEGER,
+            next_episode INTEGER,
+            next_air_date TEXT,
+            backlog_since TEXT,
+            first_watched_at TEXT,
+            completed_at TEXT,
+            updated_at TEXT,
+            synced_at TEXT,
+            PRIMARY KEY (user_id, tmdb_show_id)
+        );
+        -- L'ordinamento della schermata Tracking: prima chi ha un arretrato più vecchio.
+        CREATE INDEX IF NOT EXISTS idx_tv_show_state_user_backlog
+            ON tv_show_state(user_id, user_status, backlog_since);
+        """
+    }
 
     private func createCerebrasJobQueueTable() -> String {
         """

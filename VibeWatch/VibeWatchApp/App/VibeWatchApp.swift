@@ -13,6 +13,16 @@ struct VibeWatchApp: App {
     @StateObject private var quotaManager = DailyQuotaManager.shared
     
     init() {
+        // Per prima cosa, prima di qualunque consumatore: una chiave mancante non si presenta come
+        // errore di configurazione ma come sintomo lontano — TMDB 401 e Scopri bianca, oppure
+        // RevenueCat "Invalid API Key" due righe piu' sotto. Elencarle qui e' la differenza fra
+        // cinque secondi e un pomeriggio.
+        //
+        // In Release questo non lascia traccia visibile: `Logger` e' interamente dentro
+        // `#if DEBUG`. Se un giorno serve accorgersene anche in produzione, il posto giusto e'
+        // qui, mandando `problems` a Crashlytics come non-fatal.
+        Config.validateAtLaunch()
+
         // Configure RevenueCat with appropriate log level
         RevenueCatService.shared.applyCurrentLogLevel()
         Purchases.configure(withAPIKey: Config.revenueCatAPIKey)
@@ -40,8 +50,12 @@ struct VibeWatchApp: App {
                     Logger.info("[App] SyncEngine initialized")
                 }
                 .onOpenURL { url in
-                    // Handle deep links from URL schemes (e.g., OAuth)
                     Logger.info("[App] Deep link received via URL (SwiftUI): \(url.absoluteString)")
+                    // SPEC v3 §9.4: gli universal link (https, host nostro) prima dello scheme
+                    // OAuth. `handle` risponde false senza effetti se l'URL non è una rotta
+                    // nostra, quindi il ramo OAuth vede esattamente ciò che vedeva prima.
+                    if appNavigationManager.handle(universalLink: url) { return }
+                    // Handle deep links from URL schemes (e.g., OAuth)
                     Task {
                         do {
                             try await AuthService.shared.handleAuthCallback(url: url)
@@ -54,6 +68,13 @@ struct VibeWatchApp: App {
                 }
                 .fullScreenCover(item: $appState.updateRequirement) { requirement in
                     UpdateRequiredView(requirement: requirement)
+                }
+                // §3.7: "richiesta di conferma al primo accesso". Uno `sheet` e non un
+                // `fullScreenCover`: chi rimanda deve poterla chiudere, e la ritrova al prossimo
+                // avvio. Una schermata da cui non si esce e' una trappola, e questa app ne ha gia'
+                // avuta una.
+                .sheet(isPresented: $appState.showUsernameSetup) {
+                    UsernameSetupView { appState.showUsernameSetup = false }
                 }
         }
     }
@@ -71,6 +92,9 @@ class AppState: ObservableObject {
     @Published var isPreloading = true // Track splash state
     @Published var shouldShowSignIn = false // Trigger for redirecting to sign in flow
     @Published var updateRequirement: UpdateRequirement?
+    /// §3.7. Vero quando l'utente non ha uno username, oppure ne ha uno che gli abbiamo assegnato
+    /// noi col backfill e che non ha mai confermato.
+    @Published var showUsernameSetup = false
     
     private let authService: AuthService
     private let dataCoordinator = DataCoordinator.shared
@@ -155,9 +179,6 @@ class AppState: ObservableObject {
 
         Logger.info("[AppState] Performing full sync on app launch...")
 
-        // Check onboarding state from profile first
-        await checkOnboardingFromProfile()
-
         // Sync gamification state first (XP, level, streak, badges)
         await GamificationService.shared.loadUserState(userId: userId)
 
@@ -169,6 +190,17 @@ class AppState: ObservableObject {
 
         // Process any pending outbox operations
         await SyncEngine.shared.pushPendingChanges()
+
+        // SPEC v3 blocco 7: lo storico di chi usava VibeWatch prima del tracking nuovo vive in
+        // UserDefaults e nelle liste, e `watch_events` per lui e' vuota — cioe' la schermata
+        // Tracking e' vuota. Va dopo il sync delle liste, che e' una delle sorgenti che legge.
+        // Una tantum, con flag in app_metadata: dopo la prima volta costa una SELECT.
+        await LegacyTrackingMigration.shared.runIfNeeded(userId: userId)
+
+        // SPEC v3 §3.7. La domanda la fa il server: `username_confirmed_at` nullo significa
+        // "assegnato dal backfill e mai visto da chi lo porta". Un flag locale si perderebbe alla
+        // reinstallazione e la schermata ricomparirebbe a chi aveva gia' scelto.
+        showUsernameSetup = await UsernameSetupViewModel.isNeeded()
 
         Logger.info("[AppState] Full sync completed on app launch")
     }
@@ -204,38 +236,12 @@ class AppState: ObservableObject {
         Logger.info("[AppState] Foreground sync completed")
     }
 
-    /// Check if user completed onboarding on another device
-    private func checkOnboardingFromProfile() async {
-        guard isAuthenticated else { return }
-
-        // If already completed locally, sync to profile if needed
-        if UserDefaults.standard.bool(forKey: "hasCompletedOnboarding") {
-            // Ensure it's synced to profile
-            Task {
-                do {
-                    try await SupabaseService.shared.updateUserProfile([
-                        "onboarding_completed": true,
-                        "onboarding_completed_at": ISO8601DateFormatter().string(from: Date())
-                    ])
-                } catch {
-                    Logger.warning("[AppState] Failed to sync onboarding state: \(error)")
-                }
-            }
-            return
-        }
-
-        // Check if completed on another device
-        do {
-            if let profile = try await SupabaseService.shared.fetchUserProfile(),
-               let completed = profile["onboarding_completed"] as? Bool,
-               completed {
-                UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
-                Logger.info("[AppState] Onboarding already completed on another device")
-            }
-        } catch {
-            Logger.warning("[AppState] Failed to check onboarding from profile: \(error)")
-        }
-    }
+    // P5 (SPEC v3): `checkOnboardingFromProfile()` lived here and pretended to sync the onboarding
+    // flag across devices. `profiles` has neither `onboarding_completed` nor
+    // `onboarding_completed_at`, so the write always failed into a Logger.warning and the read
+    // always returned nil. The real flag is UserDefaults["hasCompletedOnboarding"], per-device.
+    // Removed rather than fixed: cross-device onboarding is not a goal, and `profiles` gets
+    // reworked in this same spec (§3.6).
 
     private func checkForRequiredUpdate() async {
         updateRequirement = await UpdateCheckService.shared.checkForRequiredUpdate()

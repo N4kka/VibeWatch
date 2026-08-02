@@ -243,6 +243,7 @@
 "auth.error.invalidResponse" = "Risposta non valida dal server.";
 "auth.error.userNotFound" = "Utente non trovato.";
 "auth.error.invalidCredentials" = "Email o password non validi.";
+"auth.error.tooManyAttempts" = "Troppi tentativi. Riprova più tardi.";
 "auth.error.networkError" = "Errore di rete. Controlla la tua connessione.";
 "auth.error.databaseError" = "Errore del database durante il salvataggio del profilo. Riprova.";
 "auth.error.signUpFailed" = "Registrazione fallita. Riprova.";
@@ -389,6 +390,50 @@
 "profile.termsOfUse" = "Termini e Condizioni";
 "profile.terms" = "Termini";
 "profile.sendFeedback" = "Invia Feedback";
+"profile.share" = "Condividi profilo";
+"profile.share.comingSoon" = "In arrivo";
+"profile.importFrom" = "Importa da";
+"import.title" = "Importa";
+"import.source.tvtime" = "TV Time (.zip)";
+"import.source.tvtime.subtitle" = "L'export dei tuoi dati da TV Time";
+"import.source.footer" = "Richiedi l'export dei tuoi dati a TV Time (GDPR), poi scegli qui il file .zip. Vanno bene anche le app che esportano lo stesso formato.";
+"import.state.uploading" = "Caricamento…";
+"import.state.uploadingHint" = "Tieni l'app aperta finché il file non è caricato.";
+"import.canClose" = "Il tuo storico si sta importando. Puoi chiudere l'app: ti avvisiamo con una notifica quando è pronto.";
+"import.phase.queued" = "In coda, parte a momenti…";
+"import.phase.parsing" = "Lettura del tuo storico…";
+"import.phase.resolving" = "Riconoscimento di serie ed episodi…";
+"import.phase.writing" = "Salvataggio degli episodi…";
+"import.phase.finishing" = "Ultimi ritocchi…";
+"import.report.episodes" = "Episodi importati";
+"import.report.shows" = "Serie";
+"import.report.period" = "Dal %@ al %@";
+"import.report.ratingsDeferred" = "%d voti trovati — non ancora importati.";
+"import.report.ratingsApplied" = "%d voti importati come stelle.";
+"import.report.ratingsUnresolved" = "%d voti non si sono potuti abbinare.";
+"import.report.favoritesApplied" = "%d preferiti importati negli slot liberi.";
+"import.report.favoriteMoviesUnsupported" = "%d film preferiti non si possono importare da TV Time.";
+"import.report.moviesApplied" = "%d film importati con le date di visione.";
+"import.report.moviesWatchlistApplied" = "%d film aggiunti alla watchlist.";
+"import.report.moviesUnresolved" = "%d film non riconosciuti (titolo e anno non combaciano su TMDB).";
+"import.resolve.button" = "Risolvi";
+"import.resolve.title" = "A quale serie corrisponde “%@”?";
+"import.resolve.hint" = "Gli episodi verranno verificati di nuovo tramite i loro ID TVDB esatti. Ciò che TMDB non conferma resterà nel report.";
+"import.resolve.searchPlaceholder" = "Cerca la serie su TMDB";
+"import.resolve.empty" = "Nessun risultato.";
+"import.resolve.failed" = "Riaggancio non riuscito:";
+"import.resolve.searchFailed" = "Ricerca non riuscita.";
+"import.report.statusesApplied" = "%d stati serie ripristinati (watchlist e archivio).";
+"import.report.statusesUnresolved" = "%d stati serie non applicati.";
+"import.report.unresolvedTitle" = "%d episodi non riconosciuti";
+"import.report.unresolvedRow" = "%d episodi";
+"import.report.allResolved" = "Tutto riconosciuto.";
+"import.error.failed" = "L'import si è fermato con un errore.";
+"import.error.network" = "Ora non si riesce a controllare l'import.";
+"import.error.uploadFailed" = "Il caricamento non è andato a buon fine.";
+"import.error.startFailed" = "L'import non è potuto partire.";
+"import.error.fileRead" = "Quel file non si è potuto leggere.";
+"import.error.reportFailed" = "L'import è finito, ma il report non si è caricato.";
 
 // Profile - Support & Feedback
 "profile.feedback.suggestFeature" = "Suggerisci una nuova funzionalità";
@@ -664,3 +709,105 @@
 "tvTracking.lastSeen" = "ULTIMO VISTO %@";
 "tvTracking.soon" = "soon";
 "tvTracking.watchNow" = "Guarda ora";
+
+/* SPEC v3 §9.2 — schermata Tracking */
+"tracking.title" = "Tracking";
+"tracking.bucket.upNext" = "Da guardare";
+"tracking.bucket.stale" = "Non visti da tempo";
+"tracking.bucket.forLater" = "Da vedere più avanti";
+"tracking.bucket.upToDate" = "In pari";
+"tracking.bucket.notStarted" = "Da iniziare";
+"tracking.bucket.dropped" = "Abbandonate";
+"tracking.bucket.archived" = "Archiviate";
+"tracking.timeline.today" = "Esce oggi";
+"tracking.timeline.tomorrow" = "Domani";
+"tracking.timeline.thisWeek" = "Questa settimana";
+"tracking.timeline.thisMonth" = "Questo mese";
+"tracking.action.watched" = "Visto";
+"tracking.action.later" = "Più avanti";
+"tracking.caughtUp" = "In pari";
+"tracking.unknownShow" = "Serie sconosciuta";
+"tracking.special" = "SPECIALE";
+"tracking.empty.title" = "Non c'è ancora niente da guardare";
+"tracking.empty.subtitle" = "Segui una serie, o importa la tua cronologia di TV Time, e comparirà qui.";
+"tracking.error.title" = "Qualcosa è andato storto";
+"tracking.error.notAuthenticated" = "Devi aver effettuato l'accesso.";
+"tracking.error.showNotInCatalog" = "Questa serie non è ancora nel catalogo — riprova tra un momento.";
+"tracking.error.noNextEpisode" = "Questa serie non ha un prossimo episodio.";
+
+"tab.tracking" = "Tracking";
+
+"common.close" = "Chiudi";
+
+/* Chiavi chiamate dal codice e mai tradotte */
+"auth.error.invalidLink" = "Questo link non è valido o è scaduto.";
+"clips.noListsYet" = "Nessuna lista";
+
+/* SPEC v3 §3.7 — scelta dello username */
+"username.confirm.title" = "Conferma il tuo username";
+"username.confirm.subtitle" = "Questo l'abbiamo scelto dal tuo nome. È come ti troveranno gli altri: tienilo o cambialo.";
+"username.confirm.action" = "Conferma";
+"username.choose.title" = "Scegli il tuo username";
+"username.choose.subtitle" = "Ti serve per comparire su VibeWatch: è come gli altri trovano il tuo profilo e le tue liste.";
+"username.choose.action" = "Continua";
+"username.placeholder" = "username";
+"username.hint" = "Minuscole, cifre e _ — da 3 a 20 caratteri.";
+"username.checking" = "Controllo…";
+"username.available" = "Disponibile";
+"username.later" = "Non ora";
+"username.error.empty" = "Scegli uno username.";
+"username.error.tooShort" = "Almeno 3 caratteri.";
+"username.error.tooLong" = "Al massimo 20 caratteri.";
+"username.error.invalidCharacters" = "Solo minuscole, cifre e _.";
+"username.error.taken" = "Già preso.";
+"username.error.checkFailed" = "Verifica non riuscita. Riprova.";
+"username.error.reserved" = "Questo è riservato.";
+
+// Social (SPEC v3 blocco 8)
+"social.search.title" = "Trova amici";
+"social.search.placeholder" = "Username o nome";
+"social.search.prompt" = "Cerca le persone per username o nome per vedere il loro profilo.";
+"social.search.noResults" = "Nessuno trovato.";
+"social.search.failed" = "Ricerca non riuscita. Controlla la connessione.";
+"social.profile.followers" = "Follower";
+"social.profile.following" = "Seguiti";
+"social.follow" = "Segui";
+"social.unfollow" = "Non seguire più";
+"social.followsYou" = "Ti segue";
+"social.profile.notFound" = "Questo profilo non esiste.";
+"social.profile.you" = "Sei tu.";
+"social.profile.loadFailed" = "Impossibile caricare questo profilo.";
+
+// Blocco 9 (SPEC v3 §3.6/§9.3): voti in stelle, favorites, stats
+"rating.title" = "Il tuo voto";
+"rating.saveFailed" = "Impossibile salvare il voto. Riprova.";
+"profile.favorites.movies" = "Film preferiti";
+"profile.favorites.shows" = "Serie preferite";
+"profile.lists.title" = "Liste pubbliche";
+"profile.lists.loadFailed" = "Le liste pubbliche non si sono caricate.";
+"profile.stats.title" = "Le tue statistiche";
+"profile.stats.watchTime" = "Tempo di visione";
+"profile.stats.movies" = "Film";
+"profile.stats.shows" = "Serie";
+"profile.stats.episodes" = "Episodi";
+"profile.stats.loadFailed" = "Impossibile caricare le statistiche.";
+"profile.stats.advanced.title" = "Statistiche avanzate";
+"profile.stats.advanced.byGenre" = "Per genere";
+"profile.stats.advanced.byDecade" = "Per decennio";
+"profile.stats.advanced.ratings" = "I tuoi voti";
+"profile.stats.advanced.noGenre" = "%d serie senza informazioni sul genere";
+"profile.stats.advanced.proLocked" = "Le statistiche avanzate fanno parte di Pro.";
+
+// Blocco 9, seconda meta' (§9.3): diario e modifica dei favorites
+"diary.title" = "Diario";
+"diary.empty" = "Ancora niente qui — quello che guardi comparirà qui.";
+"diary.loadFailed" = "Impossibile leggere il diario.";
+"favorites.add" = "Aggiungi ai preferiti";
+"favorites.remove" = "Rimuovi dai preferiti";
+"favorites.slot" = "Slot %d";
+"favorites.saveFailed" = "Impossibile aggiornare i preferiti. Riprova.";
+
+// La pillola del Tracking: dove lo guardo (streaming > noleggio > acquisto)
+"tracking.watchOn" = "Guarda su %@";
+"tracking.rentOn" = "Noleggia su %@";
+"tracking.buyOn" = "Acquista su %@";
