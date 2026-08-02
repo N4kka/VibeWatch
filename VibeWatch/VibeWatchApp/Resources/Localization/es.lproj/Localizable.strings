@@ -390,6 +390,7 @@
 "profile.termsOfUse" = "Términos de uso";
 "profile.terms" = "Términos";
 "profile.sendFeedback" = "Enviar comentarios";
+"profile.share" = "Compartir perfil";
 
 // Profile - Support & Feedback
 "profile.feedback.suggestFeature" = "Sugerir nueva función";

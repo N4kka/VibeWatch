@@ -389,6 +389,7 @@
 "profile.termsOfUse" = "Όροι Χρήσης";
 "profile.terms" = "Όροι";
 "profile.sendFeedback" = "Αποστολή σχολίων";
+"profile.share" = "Κοινοποίηση προφίλ";
 
 // Profile - Support & Feedback
 "profile.feedback.suggestFeature" = "Πρότεινε νέα λειτουργία";

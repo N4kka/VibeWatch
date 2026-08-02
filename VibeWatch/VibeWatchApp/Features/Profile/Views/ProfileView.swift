@@ -79,6 +79,19 @@ struct ProfileView: View {
     @State private var showSettings = false
     @State private var showUserSearch = false
     @State private var showDiary = false
+    /// SPEC v3 §9.4: il link pubblico del proprio profilo. Lo username sta sul server (lo
+    /// specchio locale di `profiles` non lo ha), quindi la riga ha stati distinti: un errore
+    /// di rete non deve presentarsi come "la riga non c'è".
+    @State private var shareProfile: ShareProfileState = .loading
+
+    enum ShareProfileState {
+        case loading
+        case ready(URL)
+        /// I profili del backfill rimasti senza username (§3.7): niente pagina pubblica,
+        /// niente link da condividere. Vuoto vero, non errore.
+        case noUsername
+        case failed
+    }
     @State private var showChangePassword = false
     @State private var showHelpSupport = false
     @State private var showFeedback = false
@@ -126,7 +139,86 @@ struct ProfileView: View {
             selectedPlatformsData = encoded
         }
     }
-    
+
+    // MARK: - Condividi profilo (§9.4)
+
+    /// La riga e il suo Divider insieme: nel caso `noUsername` spariscono entrambi, e la lista
+    /// resta ben formata.
+    @ViewBuilder
+    private var shareProfileRow: some View {
+        switch shareProfile {
+        case .ready(let url):
+            ShareLink(item: url) {
+                shareProfileLabel { EmptyView() }
+            }
+            Divider()
+                .background(Color.white.opacity(0.1))
+        case .loading:
+            shareProfileLabel {
+                ProgressView().controlSize(.small)
+            }
+            .opacity(0.5)
+            Divider()
+                .background(Color.white.opacity(0.1))
+        case .failed:
+            // Il tap riprova: la freccia dice che qualcosa non è andato, senza rubare
+            // alla riga il suo mestiere.
+            Button {
+                Task { await loadShareUsername() }
+            } label: {
+                shareProfileLabel {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 14))
+                        .foregroundColor(.theme.textSecondary)
+                }
+            }
+            Divider()
+                .background(Color.white.opacity(0.1))
+        case .noUsername:
+            EmptyView()
+        }
+    }
+
+    /// La stessa forma di `SettingsRow`, che però è un Button chiuso: qui il contenitore
+    /// cambia per stato (ShareLink, Button, niente).
+    private func shareProfileLabel<Trailing: View>(
+        @ViewBuilder trailing: () -> Trailing
+    ) -> some View {
+        HStack(spacing: 16) {
+            Image(systemName: "square.and.arrow.up")
+                .font(.system(size: 20))
+                .foregroundColor(.theme.accentOrange)
+                .frame(width: 30)
+
+            Text("profile.share".localized)
+                .font(.system(size: 16))
+                .foregroundColor(.theme.textPrimary)
+
+            Spacer()
+
+            trailing()
+        }
+        .padding()
+    }
+
+    @MainActor
+    private func loadShareUsername() async {
+        if case .ready = shareProfile { return }
+        shareProfile = .loading
+        do {
+            let state = try await SupabaseService.shared.usernameState()
+            if let username = state?.username, !username.isEmpty {
+                shareProfile = .ready(UniversalLinks.profileURL(username: username))
+            } else {
+                shareProfile = .noUsername
+            }
+        } catch {
+            // Un errore non è "non hai uno username" (§3.7 ha lasciato 19 profili senza):
+            // i due casi hanno due rese diverse apposta.
+            shareProfile = .failed
+        }
+    }
+
     var body: some View {
         NavigationView {
             ZStack {
@@ -149,6 +241,11 @@ struct ProfileView: View {
                         dismiss()
                     }
                     .foregroundColor(.theme.textPrimary)
+                }
+            }
+            .task {
+                if appState.isAuthenticated {
+                    await loadShareUsername()
                 }
             }
             .overlay {
@@ -576,6 +673,8 @@ struct ProfileView: View {
 
                 Divider()
                     .background(Color.white.opacity(0.1))
+
+                shareProfileRow
 
                 // §9.3: il diario. Si legge dalla cache locale (12 mesi, §5), zero rete.
                 SettingsRow(

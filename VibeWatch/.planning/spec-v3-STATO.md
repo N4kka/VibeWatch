@@ -15,22 +15,11 @@ fallisca — fatto anche in questa sessione sul `security definer` di `search_us
 
 ## Da fare per prima cosa: la coda su dispositivo, e il dominio che chiude il blocco 10
 
-**Il blocco 9 è CHIUSO** — dati, stats server, UI intera (stelle, favorites con scelta slot,
-diario, stats nella dashboard) e **provato sul dispositivo il 2026-08-01**: voto a 5 stelle e
-favorite su un film vero, diario popolato dalla migrazione, stats a schermo. I tre difetti
-trovati provando (titoli in inglese, sheet senza porta, stats doppie con numeri diversi) sono
-chiusi — vedi *La prova su dispositivo* più sotto. **Coda aperta, da rivedere sul dispositivo**
-(scritto nella notte fra l'1 e il 2, verde nei test ma non ancora provato a mano):
-
-- **titoli E nomi episodio localizzati** nel Tracking (`localized_titles`, migration SQLite 13:
-  gli episodi si riempiono *per stagione* — una chiamata, tutta la stagione). Alla prima
-  apertura della tab i nomi si aggiornano nella lingua dell'app dopo un giro in background; se
-  non succede, guardare `LocalizedTitleStore`;
-- **la pillola "dove lo guardo" sulla card del Tracking** (`WatchProviderPill`): streaming >
-  noleggio > acquisto > "Avvisami", con l'etichetta dello scaffale ("Guarda/Noleggia/Acquista
-  su X") e il deep link di `PlatformDeepLinkHelper` — l'erede della pillola di ListsView,
-  stesse chiavi per l'Avvisami. `ProviderSelection` ora restituisce anche lo scaffale
-  (`selectTopProviderWithTier`; l'API vecchia delega, comportamento identico).
+**Il blocco 9 è CHIUSO, coda compresa** — dati, stats server, UI intera (stelle, favorites con
+scelta slot, diario, stats nella dashboard), **provato sul dispositivo il 2026-08-01** (voto,
+favorite, diario, stats) e la coda dell'ultima notte — nomi episodio localizzati nel Tracking
+(`localized_titles`, migration SQLite 13) e pillola "dove lo guardo" sulla card
+(`WatchProviderPill`) — **confermata ok dall'utente sul dispositivo il 2026-08-02**.
 
 **Il blocco 10 (§9.4) ha la parte client FATTA** (quinta sessione, 2026-08-01): tutto ciò che
 non richiede il sito è scritto, verde, e provato rompendo. Il dominio è **deciso nella stessa
@@ -52,7 +41,14 @@ link che apre l'app e poi cade nel vuoto è il fallimento muto di sempre). Com'�
   file (dev e Release) e **AASA pronto** in `docs/universal-links/` (appID prod e beta del team
   `3V97GU3CCY`, percorsi `/@*` e `/film/*` — elenca percorsi, non host, quindi non dipende dal
   dominio). Il README accanto dice cosa resta e come si collauda.
-- **18 test in `UniversalLinksTests`** (pbxproj, i soliti 4 punti; `SwiftCompile` dei file nuovi
+- **Il lato che i link li produce** (2026-08-02): riga "Condividi profilo" in `ProfileView`,
+  `ShareLink` su `UniversalLinks.profileURL(username:)` — l'inverso dichiarato di `route(for:)`,
+  con un test round-trip che li tiene inversi. Lo username sta solo sul server (lo specchio
+  locale di `profiles` non ce l'ha), quindi la riga ha **quattro stati distinti**: pronto /
+  in caricamento / fallito con riprova visibile / senza username (i 19 del backfill: vuoto
+  vero, la riga non esiste — un errore di rete invece la lascia lì con la freccia di riprova).
+  Chiave `profile.share` nelle 20 lingue.
+- **19 test in `UniversalLinksTests`** (pbxproj, i soliti 4 punti; `SwiftCompile` dei file nuovi
   verificata nel log — il bundle non era stantio). Il test di coerenza entitlement↔host è la
   cosa che rende sicuro il "si cambia in un punto solo", ed è **provato rompendo due volte**:
   dominio sbagliato nell'entitlement Release, e poi voce www manomessa dopo il cambio di
@@ -602,7 +598,7 @@ nota.
 | 7 | UI Tracking | **chiuso.** Schermata, tab bar e migrazione dello storico in produzione; 971 episodi migrati sul dispositivo dell'autore al primo tentativo; §13.6 misurato a **208,9 ms** su 300; 20 lingue allineate |
 | 8 | Username, `public_profiles`, ricerca, follow | **chiuso, tutto in produzione e provato sul dispositivo**: schema, backfill, schermata di scelta, `user_follows`, `search_users`, `get_public_profile`, ramo in `apply_mutations`, sync client, UI social e login con username via Edge Function |
 | 9 | Favorites, rating, stats, diario | **chiuso**: tutto in produzione, 20 lingue, provato sul dispositivo il 2026-08-01 (voto, favorite, diario, stats). Unica coda: i titoli localizzati del Tracking non ancora rivisti sul dispositivo |
-| 10 | Universal links | **parte app fatta** (2026-08-01): parser, routing, sheet profilo, entitlement con `vibewatchapp.com` (apex+www), AASA in `docs/universal-links/`, 18 test. Il resto aspetta il **sito** che serva l'AASA — requisiti nel README |
+| 10 | Universal links | **parte app fatta** (2026-08-02): parser, routing, sheet profilo, "Condividi profilo" in ProfileView, entitlement con `vibewatchapp.com` (apex+www), AASA in `docs/universal-links/`, 19 test. Il resto aspetta il **sito** che serva l'AASA — requisiti nel README |
 
 ## Cosa gira in produzione adesso
 
@@ -1068,6 +1064,15 @@ Due modi, entrambi già usati:
 
 ## Cose che restano aperte, in ordine di costo
 
+0. **L'import di TV Time non ha nessun ingresso in app** (constatato il 2026-08-02: nessun file
+   Swift tocca `import_jobs` o le funzioni di import). La pipeline server c'è — fasi 1–4 in
+   produzione, `import-finalize` (fasi 5–6) scritto e **da deployare** — ma `import_jobs` ha
+   **sole policy di lettura**: nei collaudi la riga del job l'ha creata la chiave di servizio.
+   Per un utente reale mancano: la creazione del job (RPC o Edge Function, con la stessa cura
+   anti-IDOR di `import-parse`), l'upload dello ZIP nel bucket `imports` (cartella propria,
+   policy già in produzione), chi muove le fasi da 2 a 6, la push a fine import (§7.2) e la
+   schermata report di §7.4 — **obbligatoria**, con l'elenco dei non riconosciuti. È il pezzo
+   più grosso rimasto, ed è il blocco naturale dopo il sito.
 1. **`Config.string(for:)` restituisce `""` in silenzio** per una chiave mancante. Ora c'è
    `validateAtLaunch` che elenca le chiavi vuote o malformate, ma **in Release non lascia traccia**
    perché `Logger` è tutto dentro `#if DEBUG`. Il posto dove agganciare Crashlytics è segnato nel

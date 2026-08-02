@@ -64,6 +64,13 @@ final class UniversalLinksTests: XCTestCase {
         XCTAssertEqual(route, .film(id: 27205))
     }
 
+    func testProfileURLTornaAllaStessaRotta() {
+        // `profileURL` è dichiarato inverso di `route(for:)` — il pulsante Condividi profilo
+        // costruisce lì il suo link. Se uno dei due cambia forma, questo test lo dice.
+        let url = UniversalLinks.profileURL(username: "nakka")
+        XCTAssertEqual(UniversalLinks.route(for: url), .profile(username: "nakka"))
+    }
+
     // MARK: - Parser: ciò che deve cadere
 
     func testHostSbagliatoCade() {

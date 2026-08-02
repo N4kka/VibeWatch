@@ -389,6 +389,7 @@
 "profile.termsOfUse" = "उपयोग की शर्तें";
 "profile.terms" = "शर्तें";
 "profile.sendFeedback" = "फीडबैक भेजें";
+"profile.share" = "प्रोफ़ाइल साझा करें";
 
 // Profile - Support & Feedback
 "profile.feedback.suggestFeature" = "नया फीचर सुझाएँ";

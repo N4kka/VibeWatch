@@ -25,6 +25,13 @@ enum UniversalLinks {
         case film(id: Int)
     }
 
+    /// L'URL pubblico di un profilo — l'inverso di `route(for:)`, e un test lo tiene tale.
+    /// Il chiamante passa uno username vero (dal server): con la forma di `UsernameRules`
+    /// l'URL è sempre costruibile.
+    static func profileURL(username: String) -> URL {
+        URL(string: "https://\(host)/@\(username)")!
+    }
+
     /// Riconosce le rotte di §9.4 in un URL. Restituisce `nil` per tutto il resto: un `nil` qui
     /// significa "non è roba nostra" e chi chiama deve lasciar cadere il link, non inventarsi una
     /// destinazione di ripiego — un link sbagliato che apre la home sembrerebbe funzionare.

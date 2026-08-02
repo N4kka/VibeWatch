@@ -389,6 +389,7 @@
 "profile.termsOfUse" = "利用規約";
 "profile.terms" = "規約";
 "profile.sendFeedback" = "フィードバックを送信";
+"profile.share" = "プロフィールを共有";
 
 // Profile - Support & Feedback
 "profile.feedback.suggestFeature" = "機能を提案";

@@ -311,6 +311,7 @@
 "auth.confirmChangePasswordTitle" = "Endre passord";
 "auth.confirmChangePasswordMessage" = "Vil du oppdatere passordet ditt nå?";
 "profile.sendFeedback" = "Send tilbakemelding";
+"profile.share" = "Del profil";
 "profile.aboutUs" = "Om oss";
 "profile.aboutUsDetail" = "Finn ut mer om VibeWatch-teamet og vårt mål om å forbedre opplevelsen din av strømming.";
 "profile.tmdbAttribution" = "Dette produktet bruker TMDb API, men er ikke godkjent eller sertifisert av TMDb.";
