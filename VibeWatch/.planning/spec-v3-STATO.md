@@ -1,11 +1,10 @@
 # SPEC v3 — stato del lavoro e ripresa
 
-> Aggiornato: 2026-08-02 sera (decima sessione, Claude: DEPLOY del batch Codex + E2E). Branch:
-> `refactoring/spec-v3-prereqs-oracle`, HEAD locale `76b4c2e`, origin `c2ea002`; il worktree
-> contiene un batch ampio **non ancora committato** ma ora **DEPLOYATO e collaudato E2E in
-> produzione** (vedi *Deploy della decima sessione*). Verificato in locale nella nona sessione:
-> Deno 120/120, SQL 385, iOS completa 524/524. Restano: stats avanzate UI (punto 3), commit/push
-> (punto 4), test unico su dispositivo (punto 5).
+> Aggiornato: 2026-08-02 sera (decima sessione, Claude: deploy batch Codex + E2E + stats
+> avanzate client + commit/push). Branch: `refactoring/spec-v3-prereqs-oracle`, HEAD locale E
+> origin `acf9acb` (il batch è COMMITTATO e PUSHATO). Server deployato e collaudato E2E in
+> produzione (vedi *Deploy della decima sessione*). Punti 1-4 della checklist CHIUSI: resta
+> solo il **test unico su dispositivo (punto 5)**, che fa l'utente dall'altra clone.
 > Progetto Supabase: `rqhxhkijzhqivljivirq` (VibeWatch, eu-west-1, Postgres 17.6).
 > Repo: `/Users/nicola/Documents/StartingVibe/VibeWatch` (git root un livello sopra).
 
@@ -156,7 +155,8 @@ nel tracking; verificato dopo il deploy che le 243 mappe sono intatte.
    al primo run a freddo su DerivedData nuovo `testUnTitoloSiRisolveUnaVoltaSola` è fallito per
    l'init dell'app host interlacciato col test (visibile nel log); isolato e a caldo passa —
    non è una rottura, è la corsa del primo avvio;
-4. commit/push del batch (~3.500 righe, 59 file + i nuovi);
+4. ~~commit/push del batch~~ — **FATTO**: commit `acf9acb` (79 file, +5.271/-164), pushato su
+   origin;
 5. il **test unico su dispositivo**: universal link tap→app (build Xcode del branch,
    `?mode=developer` se serve); liste pubbliche nel profilo altrui a occhio; re-import dello ZIP
    (favorites negli slot liberi + film visti/watchlist + timezone quiet hours nel report);
