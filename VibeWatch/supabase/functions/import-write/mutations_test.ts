@@ -219,3 +219,83 @@ Deno.test("l'involucro è quello che apply_mutations sa leggere", () => {
   assertEquals(mutations[0].table, 'watch_events')
   assertEquals(mutations[0].record.media_type, 'tv')
 })
+
+// ---------------------------------------------------------------------- stati serie
+
+import { buildStatusBatch, buildStatusMutation } from './mutations.ts'
+
+const rigaStato = (
+  status: string,
+  resolved: Record<string, unknown> | null,
+  rowIndex = 0,
+): StagingRow => ({
+  row_index: rowIndex,
+  raw: { row_kind: 'status', tvdb_series_id: '73739', user_status: status },
+  resolved,
+  status: 'resolved',
+})
+
+Deno.test('stati: la mutazione è un upsert di tv_show_state con la sola scelta dell utente', () => {
+  const { mutation, skip } = buildStatusMutation(
+    rigaStato('for_later', { tmdb_show_id: 1399 }), UTENTE, new Set(),
+  )
+  assertEquals(skip, null)
+  assertEquals(mutation?.table, 'tv_show_state')
+  assertEquals(mutation?.record, {
+    user_id: UTENTE,
+    tmdb_show_id: 1399,
+    user_status: 'for_later',
+  })
+})
+
+Deno.test('stati: for_later e archived sovrascrivono, è lo stato che si sta importando', () => {
+  const esistenti = new Set([1399])
+  for (const stato of ['for_later', 'archived']) {
+    const { mutation, skip } = buildStatusMutation(
+      rigaStato(stato, { tmdb_show_id: 1399 }), UTENTE, esistenti,
+    )
+    assertEquals(skip, null, stato)
+    assertEquals(mutation?.record.user_status, stato)
+  }
+})
+
+Deno.test('stati: un active non sovrascrive una riga che esiste già', () => {
+  // `active` significa solo "seguita mai iniziata, falla esistere": se la riga c'è, l'utente
+  // può averle già dato uno stato in app, e riportarla ad active disferebbe quella scelta.
+  const { mutation, skip } = buildStatusMutation(
+    rigaStato('active', { tmdb_show_id: 1399 }), UTENTE, new Set([1399]),
+  )
+  assertEquals(mutation, null)
+  assertEquals(skip, 'stato_gia_in_app')
+
+  const via = buildStatusMutation(rigaStato('active', { tmdb_show_id: 1399 }), UTENTE, new Set())
+  assertEquals(via.mutation?.record.user_status, 'active')
+})
+
+Deno.test('stati: non risolto, senza show o con uno stato ignoto non si scrive approssimato', () => {
+  assertEquals(buildStatusMutation(rigaStato('for_later', null), UTENTE, new Set()).skip,
+    'non_risolto')
+  assertEquals(buildStatusMutation(rigaStato('for_later', {}), UTENTE, new Set()).skip,
+    'show_mancante')
+  // `dropped` è legittimo nella CHECK ma l'import non lo emette: se compare è un difetto del
+  // parser, e va dichiarato invece di scritto.
+  assertEquals(buildStatusMutation(rigaStato('dropped', { tmdb_show_id: 1 }), UTENTE, new Set()).skip,
+    'stato_non_valido')
+})
+
+Deno.test('stati: il lotto separa scritti e saltati come per gli eventi', () => {
+  const rows = [
+    rigaStato('for_later', { tmdb_show_id: 10 }, 0),
+    rigaStato('active', { tmdb_show_id: 20 }, 1),
+    rigaStato('archived', null, 2),
+  ]
+  const { mutations, written, skipped } = buildStatusBatch(rows, UTENTE, new Set([20]))
+
+  assertEquals(mutations.length, 1)
+  assertEquals(written, [0])
+  assertEquals(skipped, [
+    { row_index: 1, reason: 'stato_gia_in_app' },
+    { row_index: 2, reason: 'non_risolto' },
+  ])
+  assertEquals(written.length + skipped.length, rows.length)
+})

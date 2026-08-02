@@ -17,7 +17,7 @@ import { serve } from 'https://deno.land/std@0.131.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { adminClient, jsonResponse } from '../_shared/proxy.ts'
 import { isServiceCaller } from '../_shared/cronAuth.ts'
-import { buildBatch, type StagingRow } from './mutations.ts'
+import { buildBatch, buildStatusBatch, type StagingRow } from './mutations.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
@@ -86,7 +86,12 @@ serve(async (req: Request) => {
     if (readError) throw new Error(`lettura staging fallita: ${readError.message}`)
 
     if (!pending || pending.length === 0) {
-      // Niente più eventi da scrivere: si chiudono i voti e si passa alla fase successiva.
+      // Eventi finiti: prima gli stati per-serie (§7.1), che viaggiano sulle stesse mutazioni.
+      const esitoStati = await scriviStati(admin, caller, daServizio, jobId, job.user_id,
+        job.totals as Record<string, unknown> ?? {})
+      if (esitoStati) return esitoStati
+
+      // Poi si chiudono i voti e si passa alla fase successiva.
       const rimandati = await deferRatings(admin, jobId)
 
       const totals = {
@@ -230,6 +235,117 @@ async function countExisting(
   }
 
   return presenti
+}
+
+/**
+ * La coda della fase 4: le righe `row_kind = 'status'` (§7.1) diventano upsert di
+ * `tv_show_state` — è la strada già collaudata del ramo `tv_show_state` di `apply_mutations`
+ * (upsert su (user_id, tmdb_show_id) + ricalcolo), quindi idempotente senza dedup_key.
+ *
+ * Risponde `null` quando non c'è più niente da fare, e il chiamante prosegue con i voti;
+ * altrimenti una Response `done: false` e il giro dopo riprende da qui.
+ */
+async function scriviStati(
+  admin: ReturnType<typeof adminClient>,
+  caller: ReturnType<typeof callerClient>,
+  daServizio: boolean,
+  jobId: string,
+  userId: string,
+  totaliCorrenti: Record<string, unknown>,
+): Promise<Response | null> {
+  const { data: pending, error: readError } = await admin
+    .from('import_staging')
+    .select('row_index, raw, resolved, status')
+    .eq('job_id', jobId)
+    .eq('status', 'resolved')
+    .eq('raw->>row_kind', 'status')
+    .order('row_index', { ascending: true })
+    .limit(ROWS_PER_INVOCATION)
+
+  if (readError) throw new Error(`lettura stati fallita: ${readError.message}`)
+  if (!pending || pending.length === 0) return null
+
+  // Le serie che una riga di stato ce l'hanno già: servono alla regola "un `active` non
+  // sovrascrive" di `buildStatusMutation`. Si chiede a blocchi per lo stesso limite di URL di
+  // `countExisting`.
+  const attiviIds = [
+    ...new Set(
+      (pending as StagingRow[])
+        .filter((r) => (r.raw as Record<string, unknown>)?.user_status === 'active')
+        .map((r) => Number((r.resolved as Record<string, unknown>)?.tmdb_show_id))
+        .filter((n) => Number.isFinite(n) && n > 0),
+    ),
+  ]
+  const esistenti = new Set<number>()
+  for (let i = 0; i < attiviIds.length; i += 100) {
+    const { data, error } = await admin
+      .from('tv_show_state')
+      .select('tmdb_show_id')
+      .eq('user_id', userId)
+      .in('tmdb_show_id', attiviIds.slice(i, i + 100))
+    if (error) throw new Error(`lettura stati esistenti fallita: ${error.message}`)
+    for (const r of data ?? []) esistenti.add(r.tmdb_show_id as number)
+  }
+
+  const { mutations, written, skipped } = buildStatusBatch(pending as StagingRow[], userId, esistenti)
+
+  // Stessa sorveglianza degli eventi: `apply_mutations` non torna esiti per elemento, quindi i
+  // rifiuti si contano prima e dopo — uno stato perso in silenzio è una serie che sparisce
+  // dalla watchlist senza che nessuno lo dichiari.
+  const rifiutiPrima = await countRejected(admin, userId)
+
+  for (let i = 0; i < mutations.length; i += MUTATIONS_PER_CALL) {
+    const lotto = mutations.slice(i, i + MUTATIONS_PER_CALL)
+    const { error } = daServizio
+      ? await admin.rpc('import_apply_mutations', { p_user: userId, batch: lotto })
+      : await caller.rpc('apply_mutations', { batch: lotto })
+    if (error) throw new Error(`apply_mutations ha rifiutato gli stati a ${i}: ${error.message}`)
+  }
+
+  const nuoviRifiuti = (await countRejected(admin, userId)) - rifiutiPrima
+  if (nuoviRifiuti > 0) {
+    throw new Error(
+      `${nuoviRifiuti} stati rifiutati da apply_mutations: guardare sync_rejected_mutations`,
+    )
+  }
+
+  if (written.length > 0) {
+    const { error } = await admin.from('import_staging')
+      .update({ status: 'written', error: null })
+      .eq('job_id', jobId)
+      .in('row_index', written)
+    if (error) throw new Error(`marcatura stati scritti fallita: ${error.message}`)
+  }
+
+  for (const { row_index, reason } of skipped) {
+    const { error } = await admin.from('import_staging')
+      .update({ status: 'skipped', error: `stati: ${reason}` })
+      .eq('job_id', jobId).eq('row_index', row_index)
+    if (error) throw new Error(`marcatura stato ${row_index} fallita: ${error.message}`)
+  }
+
+  const prima = totaliCorrenti as Record<string, number>
+  const giaInApp = skipped.filter((s) => s.reason === 'stato_gia_in_app').length
+  const totals = {
+    ...totaliCorrenti,
+    statuses_applied: (prima.statuses_applied ?? 0) + written.length,
+    statuses_kept_in_app: (prima.statuses_kept_in_app ?? 0) + giaInApp,
+    statuses_not_written: (prima.statuses_not_written ?? 0) + (skipped.length - giaInApp),
+  }
+
+  const { error: updateError } = await admin.from('import_jobs')
+    .update({ totals }).eq('id', jobId)
+  if (updateError) throw new Error(`totali non salvati: ${updateError.message}`)
+
+  return jsonResponse({
+    done: false,
+    phase: 'writing',
+    stati: true,
+    applicati: written.length,
+    lasciati_in_app: giaInApp,
+    skipped: skipped.length - giaInApp,
+    totals,
+  }, 200)
 }
 
 /**

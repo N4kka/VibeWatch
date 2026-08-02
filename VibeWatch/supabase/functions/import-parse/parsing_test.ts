@@ -302,3 +302,131 @@ Deno.test('oracolo: gli indici di rewatch coincidono sui dati reali', async () =
 
   assertEquals(confrontati, attesi.length)
 })
+
+// ---------------------------------------------------------------------- stati serie
+
+import { parseSeriesStatuses } from './parsing.ts'
+
+Deno.test('stati §7.1: le tre sorgenti si uniscono, non si sceglie', () => {
+  // `user-series` sa dell'archivio di A; il CSV `followed` sa di quello di B: sull'export vero
+  // nessuna delle due liste contiene l'altra (57 vs 51), quindi si sommano.
+  const v2: Row[] = [
+    { key: 'user-series-a', s_id: '1', series_name: 'A', is_archived: 'true', is_followed: 'true' },
+    { key: 'user-series-b', s_id: '2', series_name: 'B', is_followed: 'true' },
+    { key: 'watch-episode-x-1', s_id: '3', ep_id: '30' }, // non è uno stato: si ignora
+  ]
+  const followed: Row[] = [{ tv_show_id: '2', tv_show_name: 'B', archived: '1', active: '0' }]
+  const special: Row[] = [{ tv_show_id: '9', tv_show_name: 'C', status: 'for_later' }]
+
+  const out = parseSeriesStatuses(v2, special, followed, new Set(['1', '2']))
+
+  assertEquals(out.map((s) => `${s.tvdb_series_id}:${s.user_status}`), [
+    '1:archived',
+    '2:archived',
+    '9:for_later',
+  ])
+})
+
+Deno.test('stati: archived vince su for_later — archiviare dice "non ripresentarmela"', () => {
+  const v2: Row[] = [
+    { key: 'user-series-a', s_id: '1', is_for_later: 'true', is_archived: 'true' },
+  ]
+  const out = parseSeriesStatuses(v2, [], [], new Set())
+  assertEquals(out.map((s) => s.user_status), ['archived'])
+})
+
+Deno.test('stati: active solo per le serie seguite SENZA eventi', () => {
+  const v2: Row[] = [
+    // Seguita e mai iniziata: senza questa emissione sparirebbe (nessun ricalcolo la creerà).
+    { key: 'user-series-a', s_id: '1', series_name: 'Mai iniziata', is_followed: 'true' },
+    // Seguita con eventi: la riga nasce dal ricalcolo, riscriverla `active` da qui
+    // sovrascriverebbe uno stato che l'utente può aver già cambiato in app.
+    { key: 'user-series-b', s_id: '2', series_name: 'Già vista', is_followed: 'true' },
+    // Non seguita, senza flag, senza eventi: non c'è stato da importare.
+    { key: 'user-series-c', s_id: '3', series_name: 'Niente', is_followed: 'false' },
+  ]
+  const out = parseSeriesStatuses(v2, [], [], new Set(['2']))
+  assertEquals(out.map((s) => `${s.tvdb_series_id}:${s.user_status}`), ['1:active'])
+  assertEquals(out[0].has_events, false)
+})
+
+Deno.test('stati: for_later resta anche con eventi — è una scelta, non un derivato', () => {
+  const v2: Row[] = [
+    { key: 'user-series-a', s_id: '1', is_for_later: 'true', is_followed: 'true' },
+  ]
+  const out = parseSeriesStatuses(v2, [], [], new Set(['1']))
+  assertEquals(out.map((s) => s.user_status), ['for_later'])
+  assertEquals(out[0].has_events, true)
+})
+
+Deno.test('stati: nel CSV followed una riga archiviata non conta come seguita', () => {
+  const followed: Row[] = [
+    { tv_show_id: '1', archived: '1', active: '1' },
+    { tv_show_id: '2', archived: '0', active: '1' },
+  ]
+  const out = parseSeriesStatuses([], [], followed, new Set())
+  assertEquals(out.map((s) => `${s.tvdb_series_id}:${s.user_status}`), ['1:archived', '2:active'])
+})
+
+Deno.test('stati: ordine per id numerico, riproducibile fra invocazioni', () => {
+  const v2: Row[] = [
+    { key: 'user-series-a', s_id: '100', is_archived: 'true' },
+    { key: 'user-series-b', s_id: '20', is_archived: 'true' },
+    { key: 'user-series-c', s_id: '3', is_archived: 'true' },
+  ]
+  const out = parseSeriesStatuses(v2, [], [], new Set())
+  assertEquals(out.map((s) => s.tvdb_series_id), ['3', '20', '100'])
+})
+
+Deno.test('oracolo: gli stati sul fixture reale sono 57 archived, 28 for_later, 19 active', async () => {
+  const percorso = new URL('../../../oracle_fixture.json', import.meta.url)
+  let fixture: {
+    watch_events: Array<{ tvdb_series_id: string }>
+    tvtime_series_state: Record<string, {
+      series_name: string | null
+      is_for_later: boolean
+      is_archived: boolean
+      is_followed: boolean
+    }>
+    special_status: Array<{ tvdb_series_id: string; status: string; series_name: string | null }>
+    followed_shows: Array<{ tvdb_series_id: string; archived: boolean; active: boolean }>
+  }
+  try {
+    fixture = JSON.parse(await Deno.readTextFile(percorso))
+  } catch {
+    console.warn('oracle_fixture.json non disponibile: confronto saltato')
+    return
+  }
+
+  // Il fixture porta i dati già decodificati (booleani, non stringhe CSV): si ricostruiscono le
+  // righe come le leggerebbe `readCsvEntries`, così il confronto attraversa la stessa strada.
+  const v2: Row[] = Object.entries(fixture.tvtime_series_state).map(([sid, s]) => ({
+    key: `user-series-${sid}`,
+    s_id: sid,
+    series_name: s.series_name ?? undefined,
+    is_for_later: String(s.is_for_later),
+    is_archived: String(s.is_archived),
+    is_followed: String(s.is_followed),
+  }))
+  const special: Row[] = fixture.special_status.map((r) => ({
+    tv_show_id: r.tvdb_series_id,
+    status: r.status,
+    tv_show_name: r.series_name ?? undefined,
+  }))
+  const followed: Row[] = fixture.followed_shows.map((r) => ({
+    tv_show_id: r.tvdb_series_id,
+    archived: r.archived ? '1' : '0',
+    active: r.active ? '1' : '0',
+  }))
+  const conEventi = new Set(fixture.watch_events.map((e) => e.tvdb_series_id))
+
+  const out = parseSeriesStatuses(v2, special, followed, conEventi)
+
+  const perStato = (st: string) => out.filter((s) => s.user_status === st).length
+  assertEquals(perStato('archived'), 57)
+  assertEquals(perStato('for_later'), 28)
+  // Le 19 "seguite mai iniziate" sono la watchlist vera di chi arriva da TV Time — Prison
+  // Break, The Orville — quelle che senza questa strada sparivano in silenzio.
+  assertEquals(perStato('active'), 19)
+  assertEquals(out.length, 104)
+})

@@ -408,6 +408,8 @@
 "import.report.shows" = "Séries";
 "import.report.period" = "Du %@ au %@";
 "import.report.ratingsDeferred" = "%d notes trouvées — pas encore importées.";
+"import.report.statusesApplied" = "%d statuts de séries restaurés (watchlist et archive).";
+"import.report.statusesUnresolved" = "%d statuts de séries n'ont pas pu être appliqués.";
 "import.report.unresolvedTitle" = "%d épisodes non reconnus";
 "import.report.unresolvedRow" = "%d épisodes";
 "import.report.allResolved" = "Tout a été reconnu.";

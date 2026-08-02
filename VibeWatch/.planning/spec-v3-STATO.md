@@ -17,10 +17,10 @@ fallisca — fatto anche in questa sessione sul `security definer` di `search_us
 
 Due prove su dispositivo (dell'utente) e un sito:
 
-1. **provare l'import dall'app**: Profilo → "Importa da" → TV Time (.zip) con l'export vero.
-   Il server è collaudato end-to-end in produzione (vedi *L'import in app* più sotto); ciò che
-   manca è solo il giro fatto coi propri pollici — upload, "puoi chiudere l'app", push
-   all'arrivo, report;
+1. **rifare l'import dello stesso ZIP dall'app** (il primo è arrivato in fondo il 2026-08-02,
+   vedi sotto): il re-import è idempotente e stavolta porta dentro anche **watchlist e archivio**
+   (stati per-serie, feature del 2026-08-02 sera) — è anche il collaudo end-to-end di quella
+   strada. Attesi nel report: ~100 stati applicati, episodi in `already_present`;
 2. il **sito** su `vibewatchapp.com` che serva l'AASA — chiude il blocco 10
    (`docs/universal-links/README.md`);
 3. quando il sito c'è: flag `ProfileView.shareProfileEnabled = true` per riaccendere la riga
@@ -99,6 +99,41 @@ cron con l'app chiusa. Dichiarati nel report: 2.767 episodi su 92 serie non rico
 anche ora che `user_ratings` esiste — collegarli è un lavoro suo; la risoluzione a mano dei
 non riconosciuti (§7.4 la chiede, oggi si elencano e basta); la push per un utente senza
 device registrati muore in `no-live-token` (giusto così).
+
+**Tre buchi trovati il 2026-08-02 partendo da una segnalazione dell'utente** ("post import mi
+aspettavo le liste aggiornate"). Le liste legacy di ListsView restano intatte **di proposito**
+(§11 esclude il rifacimento di ListsView; la migrazione legacy è andata nella direzione opposta,
+liste → `watch_events`, e una doppia scrittura ricreerebbe il "due posti, due numeri" delle
+stats). Ma la segnalazione ha scoperto che tre pezzi di §7.1 non erano implementati:
+
+1. ~~**`user_show_special_status.csv` → `for_later` e `followed_tv_show.csv` → `archived`**~~ —
+   **FATTO nella stessa sessione, deployato in produzione** (import-parse v5, import-resolve v8,
+   import-write v4, migration `20260802110000`). Il parser leggeva solo
+   `watch-episode`/`rewatch-episode` e i voti; ora `parseSeriesStatuses` unisce le TRE sorgenti
+   (flag di `user-series` in v2 ∪ i due CSV — nessuna contiene l'altra: 57 vs 51 archived) e
+   emette righe `row_kind='status'` in staging. Regole con test: **archived vince su for_later**;
+   **`active` si emette solo per le serie seguite senza eventi** (le "mai iniziate", la watchlist
+   vera: 19 sull'export dell'utente — Prison Break, The Orville…) e **non sovrascrive** una riga
+   già esistente, mentre for_later/archived sì — è lo stato che si sta importando. Risoluzione
+   per `tvdb_id` di serie (`catalog-resolve` con `entity_type: 'series'`, coda della fase 3),
+   scrittura come upsert `tv_show_state` via `apply_mutations` (coda della fase 4, stessi
+   controlli sui rifiuti). Sull'export vero la regola emette **104 stati: 57 archived, 28
+   for_later, 19 active** — fissato in un test contro `oracle_fixture.json` e nel test
+   sull'archivio reale (`TVTIME_ZIP`). Report esteso (stati applicati / lasciati in app / non
+   risolti con elenco, `stati_supportati` per i job vecchi) + riga nel client (2 chiavi × 20
+   lingue). Verde: 21 test import-parse, 16 import-write, suite SQL intera, 15 ImportViewModelTests
+   + 6 LocalizationCoverageTests su simulatore. Verificato in produzione che il report del job
+   vecchio resta identico nei campi storici e dichiara zeri veri nei nuovi.
+   **Per portare dentro la watchlist dell'account già importato: rifare l'import dello stesso
+   ZIP dall'app.** È idempotente per costruzione (criterio 2 di §13): gli episodi finiscono in
+   `already_present`, gli stati si applicano. NON collaudato end-to-end con un giro vero della
+   pipeline: il primo re-import è quel collaudo, e il report dirà se gli stati sono arrivati.
+2. **`lists-prod-lists.csv`** (favorite-series/movies → candidati Favorites, §7.1): mai parsato,
+   e ora `user_favorites` esiste. Da fare.
+3. **I film**: la pipeline è solo episodi. Il report almeno lo dichiara
+   (`film_importati: 0, film_supportati: false`), quindi non è una perdita muta — ma i film
+   dell'export non hanno una destinazione (il tracking v3 è solo TV; sarebbero l'unico caso in
+   cui le liste legacy sono la casa naturale). Da decidere prima che da fare.
 
 ## Il blocco 10 (universal links) — resta il sito
 

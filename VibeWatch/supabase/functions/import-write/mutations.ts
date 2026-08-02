@@ -17,7 +17,7 @@ export interface StagingRow {
 /** L'involucro che `apply_mutations(batch jsonb)` si aspetta. */
 export interface Mutation {
   op: 'INSERT'
-  table: 'watch_events'
+  table: 'watch_events' | 'tv_show_state'
   record: Record<string, unknown>
 }
 
@@ -26,6 +26,8 @@ export type SkipReason =
   | 'numerazione_mancante'
   | 'show_mancante'
   | 'senza_dedup_key'
+  | 'stato_non_valido'
+  | 'stato_gia_in_app'
 
 export interface BuildOutcome {
   mutation: Mutation | null
@@ -165,10 +167,83 @@ export function buildEventMutation(row: StagingRow, userId: string): BuildOutcom
   }
 }
 
+/** Gli unici valori che la CHECK di `tv_show_state.user_status` accetta e che l'import emette. */
+const STATI_AMMESSI = new Set(['active', 'for_later', 'archived'])
+
+/**
+ * Da riga di staging `row_kind = 'status'` (§7.1) alla mutazione `tv_show_state`.
+ *
+ * Il ramo di `apply_mutations` fa upsert su (user_id, tmdb_show_id) e poi ricalcola, quindi la
+ * mutazione è idempotente di suo — niente dedup_key. Le due regole in più:
+ *
+ *   - **`for_later`/`archived` sovrascrivono uno stato già presente in app**: è lo stato che
+ *     l'utente aveva scelto su TV Time, importarlo è esattamente il lavoro richiesto.
+ *   - **`active` invece NO** (`esistenti` sono le serie che una riga ce l'hanno già): `active`
+ *     qui significa solo "seguita mai iniziata, falla esistere". Se la riga esiste, l'utente può
+ *     averle già dato uno stato in app, e riportarla ad `active` sarebbe l'import che disfa una
+ *     scelta fatta dopo l'export.
+ */
+export function buildStatusMutation(
+  row: StagingRow,
+  userId: string,
+  esistenti: Set<number>,
+): BuildOutcome {
+  const raw = row.raw ?? {}
+  const resolved = row.resolved
+
+  if (!resolved) return { mutation: null, skip: 'non_risolto' }
+
+  const showId = asInt(resolved.tmdb_show_id)
+  if (showId === null) return { mutation: null, skip: 'show_mancante' }
+
+  const stato = typeof raw.user_status === 'string' ? raw.user_status : ''
+  if (!STATI_AMMESSI.has(stato)) return { mutation: null, skip: 'stato_non_valido' }
+
+  if (stato === 'active' && esistenti.has(showId)) {
+    return { mutation: null, skip: 'stato_gia_in_app' }
+  }
+
+  return {
+    skip: null,
+    mutation: {
+      op: 'INSERT',
+      table: 'tv_show_state',
+      record: {
+        // Stesso obbligo degli eventi: senza `user_id` combaciante, `apply_mutations` scarta in
+        // silenzio verso `sync_rejected_mutations`.
+        user_id: userId,
+        tmdb_show_id: showId,
+        user_status: stato,
+      },
+    },
+  }
+}
+
 export interface BuiltBatch {
   mutations: Mutation[]
   written: number[]
   skipped: { row_index: number; reason: SkipReason }[]
+}
+
+/** Come `buildBatch`, per le righe di stato. `esistenti` = serie che hanno già una riga. */
+export function buildStatusBatch(
+  rows: StagingRow[],
+  userId: string,
+  esistenti: Set<number>,
+): BuiltBatch {
+  const out: BuiltBatch = { mutations: [], written: [], skipped: [] }
+
+  for (const row of rows) {
+    const { mutation, skip } = buildStatusMutation(row, userId, esistenti)
+    if (mutation) {
+      out.mutations.push(mutation)
+      out.written.push(row.row_index)
+    } else {
+      out.skipped.push({ row_index: row.row_index, reason: skip! })
+    }
+  }
+
+  return out
 }
 
 /** Costruisce il lotto e tiene separati gli indici scritti da quelli saltati, con la ragione. */

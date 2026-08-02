@@ -361,6 +361,43 @@ select t.eq(public.import_report('aaaaaaaa-0000-4000-8000-000000000001')->>'voti
 select t.eq(public.import_report('aaaaaaaa-0000-4000-8000-000000000001')->>'film_supportati',
             'false', 'zero film non deve sembrare "non ne avevi": i film non si importano ancora');
 
+-- §7.1: gli stati per-serie nel report. Quattro righe con i quattro esiti possibili:
+-- applicato, lasciato com'era in app (non e' una perdita), non risolto, saltato in scrittura.
+insert into public.import_staging (job_id, row_index, raw, resolved, status, error) values
+  ('aaaaaaaa-0000-4000-8000-000000000001', 5,
+   '{"row_kind":"status","series_name":"Watchlist Applicata","tvdb_series_id":"910","user_status":"for_later"}'::jsonb,
+   '{"tmdb_show_id":100}'::jsonb, 'written', null),
+  ('aaaaaaaa-0000-4000-8000-000000000001', 6,
+   '{"row_kind":"status","series_name":"Gia'' In App","tvdb_series_id":"911","user_status":"active"}'::jsonb,
+   '{"tmdb_show_id":101}'::jsonb, 'skipped', 'stati: stato_gia_in_app'),
+  ('aaaaaaaa-0000-4000-8000-000000000001', 7,
+   '{"row_kind":"status","series_name":"Watchlist Sparita","tvdb_series_id":"912","user_status":"for_later"}'::jsonb,
+   null, 'unresolved', 'catalogo: not_found'),
+  ('aaaaaaaa-0000-4000-8000-000000000001', 8,
+   '{"row_kind":"status","series_name":"Senza Show","tvdb_series_id":"913","user_status":"archived"}'::jsonb,
+   null, 'skipped', 'stati: show_mancante');
+
+select t.eq(public.import_report('aaaaaaaa-0000-4000-8000-000000000001')->>'stati_supportati',
+            'true', 'un job nuovo dichiara che gli stati si importano');
+select t.eq((public.import_report('aaaaaaaa-0000-4000-8000-000000000001')->>'stati_serie_importati')::int,
+            1, 'gli stati applicati si contano');
+select t.eq((public.import_report('aaaaaaaa-0000-4000-8000-000000000001')->>'stati_serie_lasciati_in_app')::int,
+            1, 'un active non sovrascritto non e'' una perdita, e si dichiara a parte');
+select t.eq((public.import_report('aaaaaaaa-0000-4000-8000-000000000001')->>'stati_serie_non_risolti')::int,
+            2, 'non risolti E saltati in scrittura: tutto cio'' che non e'' arrivato');
+select t.eq(public.import_report('aaaaaaaa-0000-4000-8000-000000000001')
+              ->'stati_non_risolti_elenco'->0->>'titolo',
+            'Senza Show', 'anche per gli stati l''elenco nomina i titoli (ordine alfabetico)');
+select t.eq(public.import_report('aaaaaaaa-0000-4000-8000-000000000001')
+              ->'stati_non_risolti_elenco'->1->>'stato',
+            'for_later', 'e dice quale stato si e'' perso');
+
+-- Le righe di stato NON devono inquinare i conteggi degli episodi: stessi numeri di prima.
+select t.eq((public.import_report('aaaaaaaa-0000-4000-8000-000000000001')->>'episodi_importati')::int,
+            2, 'gli stati non si contano fra gli episodi');
+select t.eq((public.import_report('aaaaaaaa-0000-4000-8000-000000000001')->>'non_riconosciuti_episodi')::int,
+            1, 'ne'' fra i non riconosciuti degli episodi');
+
 
 -- La fase 5 deve vedere TUTTE le serie toccate, a blocchi, senza saltarne.
 select t.eq((select count(*) from public.import_touched_shows(

@@ -58,6 +58,11 @@ struct ImportReport: Equatable {
     let votiStelle: Int
     let votiReaction: Int
     let votiImportati: Bool
+    /// §7.1: gli stati per-serie (watchlist e archivio). `statiSupportati` distingue un report
+    /// di un job vecchio (campi assenti: la riga non si mostra) da zeri veri.
+    let statiSupportati: Bool
+    let statiSerieImportati: Int
+    let statiSerieNonRisolti: Int
 
     init?(json: [String: Any]) {
         // Un report senza il conteggio principale non è un report: meglio un errore visibile
@@ -79,12 +84,16 @@ struct ImportReport: Equatable {
         votiStelle = json["voti_stelle"] as? Int ?? 0
         votiReaction = json["voti_reaction"] as? Int ?? 0
         votiImportati = json["voti_importati"] as? Bool ?? false
+        statiSupportati = json["stati_supportati"] as? Bool ?? false
+        statiSerieImportati = json["stati_serie_importati"] as? Int ?? 0
+        statiSerieNonRisolti = json["stati_serie_non_risolti"] as? Int ?? 0
     }
 
     init(episodiImportati: Int, serieImportate: Int, dal: String?, al: String?,
          nonRiconosciutiEpisodi: Int, nonRiconosciutiSerie: Int,
          nonRiconosciutiElenco: [Unresolved], votiStelle: Int, votiReaction: Int,
-         votiImportati: Bool) {
+         votiImportati: Bool, statiSupportati: Bool = false,
+         statiSerieImportati: Int = 0, statiSerieNonRisolti: Int = 0) {
         self.episodiImportati = episodiImportati
         self.serieImportate = serieImportate
         self.dal = dal
@@ -95,6 +104,9 @@ struct ImportReport: Equatable {
         self.votiStelle = votiStelle
         self.votiReaction = votiReaction
         self.votiImportati = votiImportati
+        self.statiSupportati = statiSupportati
+        self.statiSerieImportati = statiSerieImportati
+        self.statiSerieNonRisolti = statiSerieNonRisolti
     }
 }
 

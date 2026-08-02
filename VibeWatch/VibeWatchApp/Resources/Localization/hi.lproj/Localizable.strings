@@ -408,6 +408,8 @@
 "import.report.shows" = "सीरीज़";
 "import.report.period" = "%@ से %@ तक";
 "import.report.ratingsDeferred" = "%d रेटिंग मिलीं — अभी आयात नहीं हुईं।";
+"import.report.statusesApplied" = "%d सीरीज़ स्थितियाँ बहाल की गईं (वॉचलिस्ट और संग्रह)।";
+"import.report.statusesUnresolved" = "%d सीरीज़ स्थितियाँ लागू नहीं हो सकीं।";
 "import.report.unresolvedTitle" = "%d एपिसोड पहचाने नहीं जा सके";
 "import.report.unresolvedRow" = "%d एपिसोड";
 "import.report.allResolved" = "सब कुछ पहचाना गया।";

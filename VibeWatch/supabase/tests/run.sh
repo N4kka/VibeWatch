@@ -65,6 +65,7 @@ for file in "$MIGRATIONS"/*.sql; do
     20260801170000_user_favorites_and_ratings.sql) ;;
     20260801190000_user_stats_and_profile_favorites.sql) ;;
     20260802100000_import_start.sql) ;;
+    20260802110000_import_report_series_statuses.sql) ;;
     *) continue ;;
   esac
   [ "$pass" = 1 ] && echo "   $(basename "$file")"

@@ -375,6 +375,8 @@
 "import.report.shows" = "Сериалы";
 "import.report.period" = "С %@ по %@";
 "import.report.ratingsDeferred" = "Найдено оценок: %d — пока не импортированы.";
+"import.report.statusesApplied" = "%d статусов сериалов восстановлено (список и архив).";
+"import.report.statusesUnresolved" = "%d статусов сериалов не удалось применить.";
 "import.report.unresolvedTitle" = "Не удалось сопоставить серий: %d";
 "import.report.unresolvedRow" = "%d серий";
 "import.report.allResolved" = "Всё сопоставлено.";

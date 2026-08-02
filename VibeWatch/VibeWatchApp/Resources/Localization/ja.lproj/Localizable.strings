@@ -408,6 +408,8 @@
 "import.report.shows" = "番組";
 "import.report.period" = "%@から%@まで";
 "import.report.ratingsDeferred" = "%d件の評価が見つかりました。まだインポートされていません。";
+"import.report.statusesApplied" = "%d件のシリーズ状態を復元しました（ウォッチリストとアーカイブ）。";
+"import.report.statusesUnresolved" = "%d件のシリーズ状態を適用できませんでした。";
 "import.report.unresolvedTitle" = "%d件のエピソードを照合できませんでした";
 "import.report.unresolvedRow" = "%d話";
 "import.report.allResolved" = "すべて照合できました。";

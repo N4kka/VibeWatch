@@ -1,5 +1,13 @@
 import { assertEquals } from 'jsr:@std/assert@1'
-import { buildRows, FILE_V1, FILE_V2, RATING_FILES, readCsvEntries } from './archive.ts'
+import {
+  buildRows,
+  FILE_FOLLOWED,
+  FILE_SPECIAL_STATUS,
+  FILE_V1,
+  FILE_V2,
+  RATING_FILES,
+  readCsvEntries,
+} from './archive.ts'
 
 /**
  * Collaudo contro l'export TV Time vero.
@@ -20,23 +28,34 @@ Deno.test({
   ignore: !zipPath,
   fn: async () => {
     const bytes = await Deno.readFile(zipPath!)
-    const files = await readCsvEntries(new Blob([bytes]), [FILE_V2, FILE_V1, ...RATING_FILES])
+    const files = await readCsvEntries(new Blob([bytes]), [
+      FILE_V2,
+      FILE_V1,
+      ...RATING_FILES,
+      FILE_SPECIAL_STATUS,
+      FILE_FOLLOWED,
+    ])
 
     // 1. I file di §7.1 esistono e si chiamano davvero così.
     assertEquals(files.has(FILE_V2), true, `manca ${FILE_V2}`)
 
-    const { events, ratings, unusableV1, droppedV1 } = buildRows(files)
+    const { events, ratings, statuses, unusableV1, droppedV1 } = buildRows(files)
 
     console.log(JSON.stringify({
       file_trovati: [...files.keys()],
       eventi: events.length,
       voti: ratings.length,
+      stati_serie: statuses.length,
       v1_inutilizzabili: unusableV1,
       v1_scartati_come_duplicati: droppedV1,
     }, null, 2))
 
     // 2. Il conteggio dell'oracolo, sullo stesso archivio.
     assertEquals(events.length, 21_344, 'eventi diversi da quelli che l oracolo ha contato')
+
+    // 2b. Gli stati per-serie di §7.1, stessi numeri del test sull'oracle_fixture: 57 archiviate,
+    //     28 "da vedere più avanti", 19 seguite mai iniziate.
+    assertEquals(statuses.length, 104, 'stati serie diversi da quelli dell oracolo')
 
     // 3. Ogni evento ha una chiave di dedup: senza, il reimport duplica (criterio 2 di §13).
     const senzaChiave = events.filter((e) => !e.dedup_key).length

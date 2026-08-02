@@ -396,6 +396,8 @@
 "import.report.shows" = "Series";
 "import.report.period" = "Van %@ tot %@";
 "import.report.ratingsDeferred" = "%d beoordelingen gevonden – nog niet geïmporteerd.";
+"import.report.statusesApplied" = "%d seriestatussen hersteld (kijklijst en archief).";
+"import.report.statusesUnresolved" = "%d seriestatussen konden niet worden toegepast.";
 "import.report.unresolvedTitle" = "%d afleveringen konden niet worden gekoppeld";
 "import.report.unresolvedRow" = "%d afleveringen";
 "import.report.allResolved" = "Alles is gekoppeld.";

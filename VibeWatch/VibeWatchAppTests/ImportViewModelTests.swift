@@ -288,4 +288,21 @@ final class ImportViewModelTests: XCTestCase {
                      "senza episodi_importati non è un report: errore, non zeri")
         XCTAssertNotNil(ImportReport(json: ["episodi_importati": 0]))
     }
+
+    func testGliStatiSerieSiDecodificanoEUnReportVecchioNonLiFingeAZero() {
+        let nuovo = ImportReport(json: [
+            "episodi_importati": 5,
+            "stati_supportati": true,
+            "stati_serie_importati": 104,
+            "stati_serie_non_risolti": 3,
+        ])
+        XCTAssertEqual(nuovo?.statiSupportati, true)
+        XCTAssertEqual(nuovo?.statiSerieImportati, 104)
+        XCTAssertEqual(nuovo?.statiSerieNonRisolti, 3)
+
+        // Un report generato prima di questa feature non ha i campi: `statiSupportati` false
+        // è ciò che tiene la riga fuori dalla UI — l'assenza non è uno zero.
+        let vecchio = ImportReport(json: ["episodi_importati": 5])
+        XCTAssertEqual(vecchio?.statiSupportati, false)
+    }
 }

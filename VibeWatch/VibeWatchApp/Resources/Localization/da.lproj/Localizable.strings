@@ -408,6 +408,8 @@
 "import.report.shows" = "Serier";
 "import.report.period" = "Fra %@ til %@";
 "import.report.ratingsDeferred" = "%d bedømmelser fundet – ikke importeret endnu.";
+"import.report.statusesApplied" = "%d seriestatusser gendannet (huskeliste og arkiv).";
+"import.report.statusesUnresolved" = "%d seriestatusser kunne ikke anvendes.";
 "import.report.unresolvedTitle" = "%d episoder kunne ikke matches";
 "import.report.unresolvedRow" = "%d episoder";
 "import.report.allResolved" = "Alt blev matchet.";

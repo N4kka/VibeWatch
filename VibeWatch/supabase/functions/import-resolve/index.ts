@@ -94,8 +94,8 @@ serve(async (req: Request) => {
   if (job.phase !== 'resolving') return jsonResponse({ error: 'wrong_phase', phase: job.phase }, 409)
 
   try {
-    // Solo gli eventi hanno bisogno del catalogo. I voti si agganciano per tvdb_episode_id nella
-    // fase di scrittura, quindi restano `pending` fin lì.
+    // Gli eventi prima, poi gli stati per-serie (§7.1) — vedi `risolviStati`. I voti invece si
+    // agganciano per tvdb_episode_id nella fase di scrittura, quindi restano `pending` fin lì.
     const { data: pending, error: pendingError } = await admin
       .from('import_staging')
       .select('row_index, raw')
@@ -108,10 +108,12 @@ serve(async (req: Request) => {
     if (pendingError) throw new Error(`lettura staging fallita: ${pendingError.message}`)
 
     if (!pending || pending.length === 0) {
-      const { error } = await admin.from('import_jobs')
-        .update({ phase: 'writing', checkpoint: {} }).eq('id', jobId)
-      if (error) throw new Error(`avanzamento non salvato: ${error.message}`)
-      return jsonResponse({ done: true, phase: 'writing', annotated: 0 }, 200)
+      // Eventi finiti: restano gli stati per-serie, che del catalogo hanno bisogno anche loro —
+      // la riga di `tv_show_state` si scrive per `tmdb_show_id`, e una serie della watchlist può
+      // non avere NESSUN episodio risolto da cui copiarlo (è il caso che dà valore alla strada:
+      // le "seguite mai iniziate"). Si risolve per `tvdb_id` di serie, stesse regole degli
+      // episodi: mai dedurre dai numeri, l'esito viene dalla mappa globale.
+      return await risolviStati(req, admin, job, jobId, daServizio)
     }
 
     const episodeIds = [
@@ -312,3 +314,189 @@ serve(async (req: Request) => {
     return jsonResponse({ error: 'resolve_failed', detail: message }, 500)
   }
 })
+
+/**
+ * La coda della fase 3: le righe `row_kind = 'status'` (§7.1), risolte per serie.
+ *
+ * Stessa architettura del giro sugli eventi — mappa prima, `catalog-resolve` solo per ciò che
+ * manca, annotazione in blocco, contatore di errori CONSECUTIVI nel checkpoint — perché sono gli
+ * stessi rischi: budget, transitori del fornitore, PostgREST che tronca. Un errore qui propaga al
+ * `catch` del chiamante, che marca il job come farebbe per gli eventi.
+ */
+async function risolviStati(
+  req: Request,
+  admin: ReturnType<typeof adminClient>,
+  job: { checkpoint: unknown; totals: unknown },
+  jobId: string,
+  daServizio: boolean,
+): Promise<Response> {
+  const { data: pending, error: pendingError } = await admin
+    .from('import_staging')
+    .select('row_index, raw')
+    .eq('job_id', jobId)
+    .eq('status', 'pending')
+    .eq('raw->>row_kind', 'status')
+    .order('row_index', { ascending: true })
+    .limit(ROWS_PER_INVOCATION)
+
+  if (pendingError) throw new Error(`lettura stati fallita: ${pendingError.message}`)
+
+  if (!pending || pending.length === 0) {
+    const { error } = await admin.from('import_jobs')
+      .update({ phase: 'writing', checkpoint: {} }).eq('id', jobId)
+    if (error) throw new Error(`avanzamento non salvato: ${error.message}`)
+    return jsonResponse({ done: true, phase: 'writing', annotated: 0 }, 200)
+  }
+
+  const seriesIds = [
+    ...new Set(
+      pending
+        .map((r) => Number((r.raw as Record<string, unknown>).tvdb_series_id))
+        .filter((n) => Number.isFinite(n) && n > 0),
+    ),
+  ]
+
+  const noti = new Map<number, MapRow>()
+  for (let i = 0; i < seriesIds.length; i += 500) {
+    const { data, error } = await admin
+      .from('tvdb_tmdb_map')
+      .select('tvdb_id, entity_type, tmdb_show_id, tmdb_movie_id, season_number, episode_number, resolution')
+      .eq('entity_type', 'series')
+      .in('tvdb_id', seriesIds.slice(i, i + 500))
+    if (error) throw new Error(`lettura mappa fallita: ${error.message}`)
+    for (const row of (data ?? []) as MapRow[]) noti.set(row.tvdb_id, row)
+  }
+
+  const mancanti = seriesIds.filter((id) => !noti.has(id))
+
+  let richiesti = 0
+  let budgetEsaurito = false
+  if (mancanti.length > 0) {
+    const lotto = mancanti.slice(0, BATCH)
+    richiesti = lotto.length
+
+    const risposta = await fetch(`${SUPABASE_URL}/functions/v1/catalog-resolve`, {
+      method: 'POST',
+      // Stesse coppie di header del giro sugli eventi, e per la stessa ragione: mescolarle è il
+      // 401 "Conflicting API keys" trovato dal primo import vero.
+      headers: daServizio
+        ? {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${SERVICE_KEY}`,
+            'apikey': SERVICE_KEY,
+          }
+        : {
+            'Content-Type': 'application/json',
+            'Authorization': req.headers.get('Authorization') ?? '',
+            'apikey': SUPABASE_ANON_KEY,
+          },
+      body: JSON.stringify({
+        entities: lotto.map((id) => ({ tvdb_id: id, entity_type: 'series' })),
+        job_id: jobId,
+      }),
+    })
+
+    if (!risposta.ok) {
+      // Stesso contratto degli eventi: un transitorio del fornitore non è un verdetto sul job.
+      const detail = (await risposta.text()).slice(0, 300)
+      const errori = ((job.checkpoint as { resolve_errors?: number } | null)
+        ?.resolve_errors ?? 0) + 1
+      if (errori >= MAX_ERRORI_CONSECUTIVI) {
+        throw new Error(
+          `catalog-resolve (serie) ha risposto ${risposta.status} per ${errori} giri di fila: ${detail}`)
+      }
+      const { error } = await admin.from('import_jobs')
+        .update({ checkpoint: { resolve_errors: errori } }).eq('id', jobId)
+      if (error) throw new Error(`contatore errori non salvato: ${error.message}`)
+      return jsonResponse({
+        done: false, phase: 'resolving', retry: true,
+        errori_consecutivi: errori, detail,
+      }, 200)
+    }
+
+    if ((job.checkpoint as { resolve_errors?: number } | null)?.resolve_errors) {
+      await admin.from('import_jobs').update({ checkpoint: {} }).eq('id', jobId)
+    }
+
+    const esito = await risposta.json()
+    budgetEsaurito = esito?.budget_exhausted ?? false
+
+    // Come per gli eventi: gli id appena chiesti si annotano al giro dopo rileggendo la mappa,
+    // tranne a budget esaurito, dove si annota almeno ciò che è già risolvibile.
+    if (!budgetEsaurito) {
+      return jsonResponse({
+        done: false,
+        phase: 'resolving',
+        stati: true,
+        richiesti,
+        ancora_da_risolvere: Math.max(0, mancanti.length - richiesti),
+        budget_exhausted: false,
+      }, 200)
+    }
+  }
+
+  let risolte = 0
+  let irrisolte = 0
+  const daScrivere = []
+  for (const riga of pending) {
+    const raw = riga.raw as Record<string, unknown>
+    const id = Number(raw.tvdb_series_id)
+
+    // Un id non numerico non arriverà mai in mappa: si dichiara irrisolto SUBITO, altrimenti la
+    // riga resterebbe `pending` per sempre e la fase non avanzerebbe più.
+    if (!Number.isFinite(id) || id <= 0) {
+      daScrivere.push({
+        job_id: jobId,
+        row_index: riga.row_index,
+        raw,
+        resolved: null,
+        status: 'unresolved',
+        error: 'id serie mancante nell\'export',
+      })
+      irrisolte++
+      continue
+    }
+
+    const mappa = noti.get(id)
+    if (!mappa) continue // fuori mappa (budget esaurito): riprende il giro dopo
+    const trovato = mappa.resolution === 'found' && mappa.tmdb_show_id !== null
+
+    daScrivere.push({
+      job_id: jobId,
+      row_index: riga.row_index,
+      raw,
+      resolved: trovato ? { tmdb_show_id: mappa.tmdb_show_id } : null,
+      status: trovato ? 'resolved' : 'unresolved',
+      error: trovato ? null : `catalogo: ${mappa.resolution ?? 'assente'}`,
+    })
+    trovato ? risolte++ : irrisolte++
+  }
+
+  for (let i = 0; i < daScrivere.length; i += ROWS_PER_UPSERT) {
+    const { error } = await admin
+      .from('import_staging')
+      .upsert(daScrivere.slice(i, i + ROWS_PER_UPSERT), { onConflict: 'job_id,row_index' })
+    if (error) throw new Error(`annotazione stati fallita dal blocco ${i}: ${error.message}`)
+  }
+
+  const totals = {
+    ...(job.totals as Record<string, unknown> ?? {}),
+    statuses_resolved: ((job.totals as Record<string, number>)?.statuses_resolved ?? 0) + risolte,
+    statuses_unresolved:
+      ((job.totals as Record<string, number>)?.statuses_unresolved ?? 0) + irrisolte,
+  }
+
+  const { error: updateError } = await admin.from('import_jobs')
+    .update({ totals }).eq('id', jobId)
+  if (updateError) throw new Error(`totali non salvati: ${updateError.message}`)
+
+  return jsonResponse({
+    done: false,
+    phase: 'resolving',
+    stati: true,
+    risolte,
+    irrisolte,
+    budget_exhausted: mancanti.length > 0,
+    totals,
+  }, 200)
+}

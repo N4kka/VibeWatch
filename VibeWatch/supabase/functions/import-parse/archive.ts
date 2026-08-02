@@ -17,10 +17,12 @@ import {
   assignRewatchIndex,
   dedupV1IntoV2,
   parseRatings,
+  parseSeriesStatuses,
   parseV1Events,
   parseV2Events,
   type ParsedRating,
   type Row,
+  type SeriesStatus,
   type WatchEvent,
 } from './parsing.ts'
 
@@ -33,6 +35,9 @@ export const RATING_FILES = [
   'ratings-prod-episode_votes.csv',
   'ratings-live-votes.csv',
 ]
+// §7.1: gli stati per-serie — "watch later" e archivio — oltre ai flag di `user-series` in v2.
+export const FILE_SPECIAL_STATUS = 'user_show_special_status.csv'
+export const FILE_FOLLOWED = 'followed_tv_show.csv'
 
 // zip.js decomprime su un pool di web worker. Comodo in un browser, sbagliato qui: il rilevatore
 // di leak dei test lo ha colto subito ("a timer was started but never completed"), e in una Edge
@@ -69,13 +74,15 @@ export async function readCsvEntries(zip: Blob, wanted: string[]): Promise<Map<s
 export interface BuiltRows {
   events: WatchEvent[]
   ratings: ParsedRating[]
+  statuses: SeriesStatus[]
   unusableV1: number
   droppedV1: number
 }
 
 /** Tutto il parsing puro, in un posto solo, così la parte di I/O resta leggibile. */
 export function buildRows(files: Map<string, Row[]>): BuiltRows {
-  const v2 = parseV2Events(files.get(FILE_V2) ?? [])
+  const v2Rows = files.get(FILE_V2) ?? []
+  const v2 = parseV2Events(v2Rows)
   const { events: v1All, unusable: unusableV1 } = parseV1Events(files.get(FILE_V1) ?? [])
   const { kept: v1, dropped: droppedV1 } = dedupV1IntoV2(v2, v1All)
 
@@ -87,5 +94,17 @@ export function buildRows(files: Map<string, Row[]>): BuiltRows {
     if (rows) ratings.push(...parseRatings(rows, name))
   }
 
-  return { events, ratings, unusableV1, droppedV1 }
+  // "Ha eventi" si decide sugli eventi TENUTI dopo il dedup, che sono quelli che diventeranno
+  // `watch_events`: è rispetto a quelli che l'emissione di `active` deve non fare doppioni.
+  const eventSeriesIds = new Set(
+    events.map((e) => e.tvdb_series_id).filter((id) => id !== ''),
+  )
+  const statuses = parseSeriesStatuses(
+    v2Rows,
+    files.get(FILE_SPECIAL_STATUS) ?? [],
+    files.get(FILE_FOLLOWED) ?? [],
+    eventSeriesIds,
+  )
+
+  return { events, ratings, statuses, unusableV1, droppedV1 }
 }

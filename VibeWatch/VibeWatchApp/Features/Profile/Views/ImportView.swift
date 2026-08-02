@@ -157,6 +157,23 @@ struct ImportView: View {
                         .frame(maxWidth: .infinity, alignment: .center)
                 }
 
+                // §7.1: gli stati per-serie ripristinati (watchlist e archivio). Solo per i job
+                // che li supportano: su un report vecchio l'assenza non è uno zero.
+                if report.statiSupportati && report.statiSerieImportati > 0 {
+                    Text(String(format: "import.report.statusesApplied".localized,
+                                report.statiSerieImportati))
+                        .font(.system(size: 13))
+                        .foregroundColor(.theme.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
+                if report.statiSupportati && report.statiSerieNonRisolti > 0 {
+                    Text(String(format: "import.report.statusesUnresolved".localized,
+                                report.statiSerieNonRisolti))
+                        .font(.system(size: 13))
+                        .foregroundColor(.theme.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
+
                 // §7.5: i voti si contano e si dichiara che NON sono ancora importati —
                 // uno zero muto sarebbe indistinguibile da "non ne avevi".
                 if report.votiStelle + report.votiReaction > 0 && !report.votiImportati {

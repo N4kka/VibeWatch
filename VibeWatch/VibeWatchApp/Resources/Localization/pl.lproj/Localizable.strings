@@ -396,6 +396,8 @@
 "import.report.shows" = "Seriale";
 "import.report.period" = "Od %@ do %@";
 "import.report.ratingsDeferred" = "Znaleziono %d ocen — jeszcze niezaimportowane.";
+"import.report.statusesApplied" = "%d statusów seriali przywrócono (lista i archiwum).";
+"import.report.statusesUnresolved" = "%d statusów seriali nie udało się zastosować.";
 "import.report.unresolvedTitle" = "Nie udało się dopasować %d odcinków";
 "import.report.unresolvedRow" = "%d odcinków";
 "import.report.allResolved" = "Wszystko dopasowane.";

@@ -17,7 +17,15 @@ import { serve } from 'https://deno.land/std@0.131.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { adminClient, jsonResponse } from '../_shared/proxy.ts'
 import { isServiceCaller } from '../_shared/cronAuth.ts'
-import { buildRows, FILE_V1, FILE_V2, RATING_FILES, readCsvEntries } from './archive.ts'
+import {
+  buildRows,
+  FILE_FOLLOWED,
+  FILE_SPECIAL_STATUS,
+  FILE_V1,
+  FILE_V2,
+  RATING_FILES,
+  readCsvEntries,
+} from './archive.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
@@ -97,14 +105,20 @@ serve(async (req: Request) => {
       throw new Error(`download fallito: ${downloadError?.message ?? 'nessun contenuto'}`)
     }
 
-    const files = await readCsvEntries(blob, [FILE_V2, FILE_V1, ...RATING_FILES])
+    const files = await readCsvEntries(blob, [
+      FILE_V2,
+      FILE_V1,
+      ...RATING_FILES,
+      FILE_SPECIAL_STATUS,
+      FILE_FOLLOWED,
+    ])
     if (!files.has(FILE_V2) && !files.has(FILE_V1)) {
       // Nessuno dei due file di tracking: non è un export TV Time, e dirlo subito è meglio che
       // importare zero eventi e dichiarare "fatto" (§7.4).
       throw new Error('lo ZIP non contiene né tracking-prod-records-v2.csv né tracking-prod-records.csv')
     }
 
-    const { events, ratings, unusableV1, droppedV1 } = buildRows(files)
+    const { events, ratings, statuses, unusableV1, droppedV1 } = buildRows(files)
 
     // Un solo elenco ordinato: gli eventi e poi i voti. `row_index` è la posizione qui dentro, ed è
     // ciò che rende la ripresa un numero invece che una ricerca.
@@ -123,6 +137,14 @@ serve(async (req: Request) => {
         job_id: jobId,
         row_index: events.length + i,
         raw: { row_kind: 'rating', ...r } as Record<string, unknown>,
+        status: 'pending',
+      })),
+      // §7.1: gli stati per-serie (for_later / archived / seguite mai iniziate). In coda, così
+      // gli indici di eventi e voti restano quelli di sempre anche riprendendo un job vecchio.
+      ...statuses.map((s, i) => ({
+        job_id: jobId,
+        row_index: events.length + ratings.length + i,
+        raw: { row_kind: 'status', ...s } as Record<string, unknown>,
         status: 'pending',
       })),
     ]
@@ -147,6 +169,7 @@ serve(async (req: Request) => {
       ...(job.totals as Record<string, unknown> ?? {}),
       events: events.length,
       ratings: ratings.length,
+      series_statuses: statuses.length,
       staged_rows: staged.length,
       v1_unusable: unusableV1,
       v1_dropped_as_duplicate: droppedV1,
