@@ -1,10 +1,12 @@
 # SPEC v3 — stato del lavoro e ripresa
 
-> Aggiornato: 2026-08-02 sera (decima sessione, Claude: deploy batch Codex + E2E + stats
-> avanzate client + commit/push). Branch: `refactoring/spec-v3-prereqs-oracle`, HEAD locale E
-> origin `acf9acb` (il batch è COMMITTATO e PUSHATO). Server deployato e collaudato E2E in
-> produzione (vedi *Deploy della decima sessione*). Punti 1-4 della checklist CHIUSI: resta
-> solo il **test unico su dispositivo (punto 5)**, che fa l'utente dall'altra clone.
+> Aggiornato: 2026-08-02 notte (decima sessione). **LA CHECKLIST È COMPLETA: punti 1-5 tutti
+> chiusi.** Il batch è committato e pushato (`acf9acb`..), il server deployato e collaudato E2E
+> (vedi *Deploy della decima sessione*), e **il test unico su dispositivo è passato per intero**
+> (confermato dall'utente il 2026-08-02): universal link tap→app, liste pubbliche nel profilo
+> altrui, re-import dello ZIP, risoluzione a mano con la UI, stats avanzate Pro. **Il blocco 10
+> si dichiara CHIUSO.** Restano solo le decisioni di prodotto dichiarate in fondo alla lista
+> aperti (film nelle stats, reaction, lingua di user.csv, Year in Review).
 > Progetto Supabase: `rqhxhkijzhqivljivirq` (VibeWatch, eu-west-1, Postgres 17.6).
 > Repo: `/Users/nicola/Documents/StartingVibe/VibeWatch` (git root un livello sopra).
 
@@ -157,8 +159,8 @@ nel tracking; verificato dopo il deploy che le 243 mappe sono intatte.
    non è una rottura, è la corsa del primo avvio;
 4. ~~commit/push del batch~~ — **FATTO**: commit `acf9acb` (79 file, +5.271/-164), pushato su
    origin;
-5. il **test unico su dispositivo**: universal link tap→app (build Xcode del branch,
-   `?mode=developer` se serve); liste pubbliche nel profilo altrui a occhio; re-import dello ZIP
+5. ~~il **test unico su dispositivo**~~ — **PASSATO PER INTERO, confermato dall'utente il
+   2026-08-02**: universal link tap→app; liste pubbliche nel profilo altrui; re-import dello ZIP
    (favorites negli slot liberi + film visti/watchlist + timezone quiet hours nel report);
    risoluzione a mano col resolver NUOVO su una serie che TMDB conosce; stats avanzate Pro.
 
@@ -181,12 +183,12 @@ strutturale: gli aperti, TUTTI, sono questi, in ordine sensato di priorità:
    deploy` dal repo del sito (checklist nel suo README). `ProfileView.shareProfileEnabled =
    true` acceso lo stesso giorno, build verde. **Provato dall'utente sul dispositivo il
    2026-08-02: il tap sul link apre la pagina web e la CTA porta allo store** — cioè il
-   percorso di chi NON ha l'app. **Resta la prova dell'altro percorso, tap → profilo
-   NELL'app, e con la build dello store non può riuscire**: la versione pubblicata precede
-   gli entitlement `applinks:`, e il dominio lo reclama il binario, non l'AASA da sola.
-   Si prova con una build del branch installata da Xcode sul telefono (l'AASA è già sulla
-   CDN; se non aggancia, `?mode=developer` — `docs/universal-links/README.md`). Fino ad
-   allora il blocco 10 NON si dichiara chiuso.
+   percorso di chi NON ha l'app. L'altro percorso — tap → profilo NELL'app — con la build
+   dello store non poteva riuscire (la versione pubblicata precede gli entitlement
+   `applinks:`, e il dominio lo reclama il binario, non l'AASA da sola): **provato il
+   2026-08-02 con la build del branch da Xcode, il tap apre il profilo NELL'app — confermato
+   dall'utente. Il blocco 10 è CHIUSO.** Per gli utenti dello store il percorso in-app arriva
+   col prossimo rilascio; la pagina web + CTA funziona già per tutti.
 2. ~~**Pulizia del bucket `imports`**~~ — **FATTA e collaudata in produzione** (2026-08-02,
    ottava sessione): `imports_stale_uploads` (SQL service-only, migration `20260802150000`,
    esclude i file di job running/paused) + Edge Function `imports-cleanup` (cronAuth,
@@ -230,7 +232,7 @@ strutturale: gli aperti, TUTTI, sono questi, in ordine sensato di priorità:
    2 chiavi × 20 lingue, 4 test nuovi in `SocialProfileTests`, 6 asserzioni SQL in
    `social_test.sql` (harness esteso: lists con name/is_public, list_follows, list_reports).
    Verificato in produzione: firma unica, grant identici, feed invariato, il profilo di
-   `nakka` risponde 1 lista. Resta la prova a occhio sul dispositivo.
+   `nakka` risponde 1 lista. Prova a occhio sul dispositivo: **fatta, ok** (2026-08-02).
 5. **Favorites da `lists-prod-lists.csv`** (§7.1): la parte SERIE è **FATTA e deployata**
    (2026-08-02, ottava sessione — import-parse v6, import-resolve v9, import-write v6,
    report `20260802190000`): `parseFavorites` decodifica la slice Go di `objects`
@@ -238,8 +240,8 @@ strutturale: gli aperti, TUTTI, sono questi, in ordine sensato di priorità:
    serie della fase 3, scrittura SOLO negli slot LIBERI di `user_favorites` (deciso
    dall'utente: una riga esistente — viva o lapide — non si tocca; una serie già favorita
    non si duplica; il resto è `slot_pieni`, dichiarato). Report + client (2 chiavi × 20
-   lingue) + 9 test Deno nuovi + 7 asserzioni SQL. **Collaudo end-to-end = il prossimo
-   re-import dello ZIP.** I **favorite-movies** si dichiarano non supportati (contati nel
+   lingue) + 9 test Deno nuovi + 7 asserzioni SQL. **Collaudo end-to-end: FATTO col re-import
+   dello ZIP del 2026-08-02 (punto 5), ok.** I **favorite-movies** si dichiarano non supportati (contati nel
    report): i film di TV Time non hanno id TVDB — solo uuid interni e NOMI (anche
    giapponesi). I **film dell'export** (5 visti + 3 watchlist sull'export vero, righe v1
    `entity_type=movie`) hanno la destinazione DECISA dall'utente (2026-08-02:
@@ -253,7 +255,8 @@ strutturale: gli aperti, TUTTI, sono questi, in ordine sensato di priorità:
    produzione** (decima sessione, vedi *Deploy della decima sessione*). La scelta della serie
    vincola lookup esatti per `tvdb_episode_id`; i numeri dell'export non partecipano alla
    corrispondenza. Riapertura atomica, mappe `found` immutabili, conflitti e parziali conservati
-   nel report. Resta la prova dal dispositivo con la UI su una serie che TMDB conosce (punto 5).
+   nel report. Prova dal dispositivo con la UI su una serie che TMDB conosce: **fatta, ok**
+   (2026-08-02, punto 5).
 7. ~~**Consumatori legacy di `list_items` per le TV**~~ — **CHIUSO LOCALMENTE E TESTATO**:
    `AnalyticsInsightsService` e `UserPreferenceManager` distinguono successo/vuoto/errore del
    mirror e conservano il fallback legacy; watchlist e Continue Journey sono coperti anche per
@@ -262,8 +265,8 @@ strutturale: gli aperti, TUTTI, sono questi, in ordine sensato di priorità:
    (decima sessione, punto 3 della checklist): UI dashboard con gate Pro, generi TV in
    `TMDBGenres`, chiavi ×20, test verdi. Resta la decisione sull'inclusione dei film (nessun
    catalogo film server-side; il server oggi ripartisce solo TV e la UI mostra ciò che arriva).
-   Il **Year in Review** di §10 non esiste (non era un blocco). Resta la prova a occhio su
-   dispositivo (punto 5).
+   Il **Year in Review** di §10 non esiste (non era un blocco). Prova a occhio su dispositivo:
+   **fatta, ok** (2026-08-02, punto 5).
 9. Dei **debiti pre-esistenti** in fondo al documento, Config e il 401 di `import-parse` sono
    chiusi e coperti. `delete-user`: la revisione Codex (v33) è **DEPLOYATA e collaudata E2E due
    volte** nella decima sessione (residui zero, Storage e budget compresi). La correzione server
