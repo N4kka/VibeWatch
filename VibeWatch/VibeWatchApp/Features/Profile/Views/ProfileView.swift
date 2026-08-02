@@ -142,10 +142,37 @@ struct ProfileView: View {
 
     // MARK: - Condividi profilo (§9.4)
 
+    /// Finché il sito che serve l'AASA non esiste, il link condiviso aprirebbe una pagina vuota
+    /// nel browser: una feature che porta nel vuoto è una bocciatura in review (guideline 2.1).
+    /// Riga visibile ma spenta, con "Coming soon" — la roadmap si dichiara, non si finge.
+    /// Per riattivare: mettere `true`; gli stati qui sotto sono già pronti e testati.
+    private static let shareProfileEnabled = false
+
     /// La riga e il suo Divider insieme: nel caso `noUsername` spariscono entrambi, e la lista
     /// resta ben formata.
     @ViewBuilder
     private var shareProfileRow: some View {
+        if !Self.shareProfileEnabled {
+            // Non è un Button: un tap che non fa niente su una riga che sembra attiva è
+            // l'invito a ripremere (la famiglia di difetti del pulsante Segui su se stessi).
+            shareProfileLabel {
+                Text("profile.share.comingSoon".localized)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.theme.textSecondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Capsule().fill(Color.white.opacity(0.08)))
+            }
+            .opacity(0.55)
+            Divider()
+                .background(Color.white.opacity(0.1))
+        } else {
+            enabledShareProfileRow
+        }
+    }
+
+    @ViewBuilder
+    private var enabledShareProfileRow: some View {
         switch shareProfile {
         case .ready(let url):
             ShareLink(item: url) {
@@ -244,7 +271,8 @@ struct ProfileView: View {
                 }
             }
             .task {
-                if appState.isAuthenticated {
+                // Con la riga spenta il giro di rete sarebbe lavoro per nessuno.
+                if Self.shareProfileEnabled && appState.isAuthenticated {
                     await loadShareUsername()
                 }
             }

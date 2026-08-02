@@ -390,6 +390,7 @@
 "profile.terms" = "Terms";
 "profile.sendFeedback" = "Send Feedback";
 "profile.share" = "Share profile";
+"profile.share.comingSoon" = "Coming soon";
 
 // Profile - Support & Feedback
 "profile.feedback.suggestFeature" = "Suggest new feature";

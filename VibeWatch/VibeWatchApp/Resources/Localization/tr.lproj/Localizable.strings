@@ -357,6 +357,7 @@
 // Profile - Support & Feedback
 "profile.sendFeedback" = "Geri Bildirim Gönder";
 "profile.share" = "Profili paylaş";
+"profile.share.comingSoon" = "Çok yakında";
 "profile.aboutUs" = "Hakkımızda";
 "profile.aboutUsDetail" = "VibeWatch ekibi ve yayın keşif deneyiminizi iyileştirme misyonumuz hakkında daha fazla bilgi edinin.";
 "profile.tmdbAttribution" = "Bu ürün TMDb API'sini kullanır ancak TMDb tarafından onaylanmamış veya sertifikalandırılmamıştır.";

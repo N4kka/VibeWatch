@@ -390,6 +390,7 @@
 "profile.terms" = "Ehdot";
 "profile.sendFeedback" = "Lähetä palautetta";
 "profile.share" = "Jaa profiili";
+"profile.share.comingSoon" = "Tulossa pian";
 
 // Profile - Support & Feedback
 "profile.feedback.suggestFeature" = "Ehdota uutta ominaisuutta";

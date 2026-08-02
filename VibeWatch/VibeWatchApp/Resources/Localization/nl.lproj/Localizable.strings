@@ -378,6 +378,7 @@
 // Help & Support - About Us
 "profile.sendFeedback" = "Feedback sturen";
 "profile.share" = "Profiel delen";
+"profile.share.comingSoon" = "Binnenkort beschikbaar";
 "profile.aboutUs" = "Over ons";
 "profile.aboutUsDetail" = "Lees meer over het VibeWatch-team en onze missie om je streamingontdekkingen beter te maken.";
 "profile.tmdbAttribution" = "Dit product gebruikt de TMDb-API, maar is niet goedgekeurd of gecertificeerd door TMDb.";

@@ -357,6 +357,7 @@
 // Profile - Support & Feedback
 "profile.sendFeedback" = "Enviar feedback";
 "profile.share" = "Compartilhar perfil";
+"profile.share.comingSoon" = "Em breve";
 "profile.aboutUs" = "Sobre nós";
 "profile.aboutUsDetail" = "Saiba mais sobre a equipe VibeWatch e nossa missão de melhorar sua experiência de streaming.";
 "profile.tmdbAttribution" = "Este produto usa a API TMDb, mas não é endossado ou certificado pelo TMDb.";

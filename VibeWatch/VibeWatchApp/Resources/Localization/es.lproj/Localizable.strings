@@ -391,6 +391,7 @@
 "profile.terms" = "Términos";
 "profile.sendFeedback" = "Enviar comentarios";
 "profile.share" = "Compartir perfil";
+"profile.share.comingSoon" = "Próximamente";
 
 // Profile - Support & Feedback
 "profile.feedback.suggestFeature" = "Sugerir nueva función";

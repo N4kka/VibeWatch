@@ -378,6 +378,7 @@
 // Help & Support - About Us
 "profile.sendFeedback" = "Wyślij opinię";
 "profile.share" = "Udostępnij profil";
+"profile.share.comingSoon" = "Wkrótce";
 "profile.aboutUs" = "O nas";
 "profile.aboutUsDetail" = "Dowiedz się więcej o zespole VibeWatch i naszej misji ulepszania odkrywania streamingu.";
 "profile.tmdbAttribution" = "Ten produkt korzysta z API TMDb, ale nie jest zatwierdzony ani certyfikowany przez TMDb.";

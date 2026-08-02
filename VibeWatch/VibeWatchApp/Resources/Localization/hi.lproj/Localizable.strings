@@ -390,6 +390,7 @@
 "profile.terms" = "शर्तें";
 "profile.sendFeedback" = "फीडबैक भेजें";
 "profile.share" = "प्रोफ़ाइल साझा करें";
+"profile.share.comingSoon" = "जल्द आ रहा है";
 
 // Profile - Support & Feedback
 "profile.feedback.suggestFeature" = "नया फीचर सुझाएँ";

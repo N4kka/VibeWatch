@@ -390,6 +390,7 @@
 "profile.terms" = "規約";
 "profile.sendFeedback" = "フィードバックを送信";
 "profile.share" = "プロフィールを共有";
+"profile.share.comingSoon" = "近日公開";
 
 // Profile - Support & Feedback
 "profile.feedback.suggestFeature" = "機能を提案";

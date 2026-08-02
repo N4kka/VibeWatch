@@ -390,6 +390,7 @@
 "profile.terms" = "Όροι";
 "profile.sendFeedback" = "Αποστολή σχολίων";
 "profile.share" = "Κοινοποίηση προφίλ";
+"profile.share.comingSoon" = "Έρχεται σύντομα";
 
 // Profile - Support & Feedback
 "profile.feedback.suggestFeature" = "Πρότεινε νέα λειτουργία";

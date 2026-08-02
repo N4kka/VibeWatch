@@ -47,7 +47,11 @@ link che apre l'app e poi cade nel vuoto è il fallimento muto di sempre). Com'�
   locale di `profiles` non ce l'ha), quindi la riga ha **quattro stati distinti**: pronto /
   in caricamento / fallito con riprova visibile / senza username (i 19 del backfill: vuoto
   vero, la riga non esiste — un errore di rete invece la lascia lì con la freccia di riprova).
-  Chiave `profile.share` nelle 20 lingue.
+  Chiave `profile.share` nelle 20 lingue. **Dal 2026-08-02 la riga è SPENTA dietro
+  `ProfileView.shareProfileEnabled = false`** (badge "Coming soon", nessun tap, nessun giro di
+  rete): senza il sito il link aprirebbe una pagina vuota, e in review una feature che porta nel
+  vuoto è una bocciatura (guideline 2.1). Deciso dall'utente. Per riattivare: flag a `true` —
+  gli stati sono già pronti e coperti; la chiave `profile.share.comingSoon` (20 lingue) resta.
 - **19 test in `UniversalLinksTests`** (pbxproj, i soliti 4 punti; `SwiftCompile` dei file nuovi
   verificata nel log — il bundle non era stantio). Il test di coerenza entitlement↔host è la
   cosa che rende sicuro il "si cambia in un punto solo", ed è **provato rompendo due volte**:

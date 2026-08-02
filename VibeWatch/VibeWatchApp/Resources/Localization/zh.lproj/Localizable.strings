@@ -354,6 +354,7 @@
 // Profile - Support & Feedback
 "profile.sendFeedback" = "发送反馈";
 "profile.share" = "分享个人资料";
+"profile.share.comingSoon" = "即将推出";
 "profile.aboutUs" = "关于我们";
 "profile.aboutUsDetail" = "了解更多关于 VibeWatch 团队的信息，以及我们如何改善你的串流发现体验。";
 "profile.tmdbAttribution" = "本产品使用 TMDb API，但未获得 TMDb 的认可或认证。";

@@ -390,6 +390,7 @@
 "profile.terms" = "약관";
 "profile.sendFeedback" = "피드백 보내기";
 "profile.share" = "프로필 공유";
+"profile.share.comingSoon" = "곧 제공 예정";
 
 // Profile - Support & Feedback
 "profile.feedback.suggestFeature" = "기능 제안";

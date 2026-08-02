@@ -357,6 +357,7 @@
 // Profile - Support & Feedback
 "profile.sendFeedback" = "Отправить отзыв";
 "profile.share" = "Поделиться профилем";
+"profile.share.comingSoon" = "Скоро";
 "profile.aboutUs" = "О нас";
 "profile.aboutUsDetail" = "Узнайте больше о команде VibeWatch и нашей миссии улучшить ваш опыт поиска контента.";
 "profile.tmdbAttribution" = "Этот продукт использует API TMDb, но не одобрен и не сертифицирован TMDb.";

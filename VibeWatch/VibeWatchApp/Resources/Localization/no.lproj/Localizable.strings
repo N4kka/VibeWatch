@@ -390,6 +390,7 @@
 "profile.terms" = "Vilkår";
 "profile.sendFeedback" = "Send tilbakemelding";
 "profile.share" = "Del profil";
+"profile.share.comingSoon" = "Kommer snart";
 
 // Profile - Support & Feedback
 "profile.feedback.suggestFeature" = "Foreslå ny funksjon";
