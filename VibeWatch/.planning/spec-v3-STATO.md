@@ -66,15 +66,28 @@ Com'è fatto, in breve (il perché sta nei commenti di migration e funzioni):
   il job. 26 chiavi nelle 20 lingue. CHECK di `notifications` allargato a `import_done`
   (stessa forma di `api_proxy_budget`: ogni tipo nuovo è una migration).
 
-**Il primo import vero ha trovato il buco che il collaudo non poteva vedere** (2026-08-02,
-mattina): con gli episodi sintetici già tutti in mappa, `import-resolve` non chiamava mai
-`catalog-resolve` — e proprio lì, guidata dal driver, inoltrava la chiave service come
-`Authorization` accanto all'`apikey` anon: il gateway risponde 401 "Conflicting API keys".
-Corretto (ramo service: stessa chiave su entrambi gli header, come già fa il driver con le
-fasi) e deployato. Le fasi 1–2 ad app chiusa avevano funzionato: 21.724 righe in staging.
-L'utente ha poi chiesto di **fermare e svuotare** quell'import (era sul profilo principale):
-job + staging + zip rimossi, zero eventi erano stati scritti (la fase 4 non era mai partita),
-liste intatte — l'import non le tocca in nessuna fase.
+**Il primo import vero ha trovato TRE buchi che il collaudo non poteva vedere** (2026-08-02,
+mattina) — tutti sulla strada di `catalog-resolve`, che col sintetico già in mappa non veniva
+mai percorsa:
+
+1. **Chiavi in conflitto**: `import-resolve` guidata dal driver inoltrava la chiave service
+   come `Authorization` accanto all'`apikey` anon → 401 del gateway. Corretto: ramo service
+   con la stessa chiave su entrambi gli header.
+2. **Fragilità al transitorio**: dopo ~400 chiamate buone, UN 500 marcava `failed` un import
+   da 21.000 righe e chiedeva un dito umano — il contrario di §7.2. Ora `import-resolve`
+   conta gli errori CONSECUTIVI nel checkpoint (azzerati al primo giro buono), risponde
+   `retry: true` e il driver fa backoff al tick dopo; solo 30 giri di fila (≈30 min di guasto
+   vero) diventano `failed`.
+3. **La valanga senza lease**: col claim rotto dalla replica PostgREST stantia, due giri di
+   cron sovrapposti hanno tenuto ~20 chiamate TMDB simultanee per 9 minuti — e TMDB ha
+   risposto con ~30 minuti di 500: il "ban da scraper" contro cui metteva in guardia il
+   commento di `FIND_CONCURRENCY`. Cura strutturale: `RUN_BUDGET_MS = 40 s` — un giro del
+   driver finisce prima del tick successivo, quindi UN flusso solo anche senza lease.
+
+Nel mezzo, l'utente ha chiesto di **fermare e svuotare** il primo tentativo (era sul profilo
+principale): job + staging + zip rimossi, zero eventi scritti (la fase 4 non era mai partita),
+liste intatte — l'import non le tocca in nessuna fase. Il secondo tentativo (altro account)
+è ripartito dal checkpoint coi fix deployati.
 
 **Aperto dell'import**: la **prova su dispositivo completa** (da rifare da un account scelto
 dall'utente, col fix deployato); i **voti** restano rinviati (`voti_importati: false` nel

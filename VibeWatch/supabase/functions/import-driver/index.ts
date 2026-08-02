@@ -43,9 +43,14 @@ const PHASE_FN: Record<string, string> = {
   recomputing: 'import-finalize',
 }
 
-/** Budget dell'invocazione. Il limite di piattaforma è ~150 s: si smette di INIZIARE chiamate
- *  di fase oltre questo punto, così quella in corso ha spazio per finire. */
-const RUN_BUDGET_MS = 100_000
+/** Budget dell'invocazione. NON è il limite di piattaforma (~150 s) a deciderlo: è il cron.
+ *  Un giro che finisce prima del tick successivo (60 s) significa UN flusso solo anche quando
+ *  il lease non è reclamabile (replica PostgREST con cache stantia, visto in produzione): il
+ *  primo import vero, con due giri sovrapposti senza lease, ha tenuto ~20 chiamate TMDB
+ *  simultanee per 9 minuti e si è preso ~30 minuti di 500 — il ban da scraper contro cui
+ *  mette in guardia il commento di FIND_CONCURRENCY. 40 s + la chiamata di fase più lunga
+ *  osservata resta sotto il minuto. */
+const RUN_BUDGET_MS = 40_000
 /** Il lease: rinnovato prima di ogni chiamata di fase, deve coprire la più lenta (~90 s). */
 const LEASE_MS = 180_000
 /** Job per giro. Più utenti importano insieme, più giri servono: il cron è ogni minuto. */
@@ -162,6 +167,13 @@ serve(async (req: Request) => {
           thread_id: 'import',
         })
         if (pushError) console.error(`[import-driver] push non accodata per ${corrente.id}: ${pushError.message}`)
+        break
+      }
+
+      if (corpo.retry === true) {
+        // La fase ha incontrato un errore transitorio a valle (es. catalog-resolve 500) e ha
+        // scelto di riprovare: il job resta `running`, ma martellarlo ADESSO colpirebbe un
+        // servizio che sta già rispondendo male. Si passa oltre; il prossimo tick riprova.
         break
       }
 

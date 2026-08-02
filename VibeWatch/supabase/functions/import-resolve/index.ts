@@ -39,6 +39,10 @@ const BATCH = 50
 const ROWS_PER_INVOCATION = 1_000
 /** Righe per singola scrittura: oltre, il payload inizia a pesare piu' del round-trip. */
 const ROWS_PER_UPSERT = 500
+/** Giri CONSECUTIVI con `catalog-resolve` in errore prima di dichiarare il job `failed`.
+ *  Col backoff del driver è UNA sonda al minuto: 30 coprono un throttle di TMDB, che al primo
+ *  import vero è durato ~30 minuti — 5 lo dichiaravano guasto a un sesto della sua durata. */
+const MAX_ERRORI_CONSECUTIVI = 30
 
 /**
  * Legge il job **come il chiamante**: è la policy `import_jobs_select_own` a decidere se esiste.
@@ -81,7 +85,7 @@ serve(async (req: Request) => {
 
   const { data: job, error: jobError } = await lookup
     .from('import_jobs')
-    .select('id, phase, status, totals')
+    .select('id, phase, status, totals, checkpoint')
     .eq('id', jobId)
     .maybeSingle()
 
@@ -169,8 +173,34 @@ serve(async (req: Request) => {
       })
 
       if (!risposta.ok) {
+        // Un errore del fornitore a valle non è un verdetto sul job. Il primo import vero lo
+        // ha dimostrato: dopo ~400 chiamate buone, UN 500 transitorio marcava `failed` un
+        // import da 21.000 righe e chiedeva un dito umano su Riprova — il contrario di §7.2.
+        // Il job resta `running` e il prossimo giro del driver riprova dallo stesso punto
+        // (l'annotazione è idempotente); il contatore dei fallimenti CONSECUTIVI vive nel
+        // checkpoint e si azzera al primo giro buono. Solo un guasto persistente diventa
+        // `failed`, con l'ultimo errore in chiaro.
         const detail = (await risposta.text()).slice(0, 300)
-        throw new Error(`catalog-resolve ha risposto ${risposta.status}: ${detail}`)
+        const errori = ((job.checkpoint as { resolve_errors?: number } | null)
+          ?.resolve_errors ?? 0) + 1
+        if (errori >= MAX_ERRORI_CONSECUTIVI) {
+          throw new Error(
+            `catalog-resolve ha risposto ${risposta.status} per ${errori} giri di fila: ${detail}`)
+        }
+        const { error } = await admin.from('import_jobs')
+          .update({ checkpoint: { resolve_errors: errori } }).eq('id', jobId)
+        if (error) throw new Error(`contatore errori non salvato: ${error.message}`)
+        // `retry: true` dice al driver di lasciar respirare QUESTO job fino al prossimo tick,
+        // invece di martellare un servizio che sta già rispondendo male.
+        return jsonResponse({
+          done: false, phase: 'resolving', retry: true,
+          errori_consecutivi: errori, detail,
+        }, 200)
+      }
+
+      // Giro buono: un eventuale contatore di errori si azzera — conta la consecutività.
+      if ((job.checkpoint as { resolve_errors?: number } | null)?.resolve_errors) {
+        await admin.from('import_jobs').update({ checkpoint: {} }).eq('id', jobId)
       }
 
       const esito = await risposta.json()
