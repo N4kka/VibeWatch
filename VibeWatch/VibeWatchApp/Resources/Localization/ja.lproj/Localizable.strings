@@ -719,6 +719,7 @@
 "tracking.empty.subtitle" = "シリーズをフォローするか、TV Time の履歴をインポートすると、ここに表示されます。";
 "tracking.error.title" = "問題が発生しました";
 "tracking.error.notAuthenticated" = "サインインが必要です。";
+"tracking.error.showNotInCatalog" = "このシリーズはまだカタログにありません。しばらくしてからもう一度お試しください。";
 "tracking.error.noNextEpisode" = "このシリーズに次のエピソードはありません。";
 
 "tab.tracking" = "トラッキング";

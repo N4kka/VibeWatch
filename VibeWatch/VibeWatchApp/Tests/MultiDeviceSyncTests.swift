@@ -2532,3 +2532,224 @@ final class ProfanityFilterTests: XCTestCase {
         XCTAssertFalse(ProfanityFilter.containsProfanity("classic assortment"))
     }
 }
+
+// MARK: - Fusione ListsView-Tracking (2026-08-02)
+
+/// Backend "vista tutta" finto: registra le chiamate, nessuna rete.
+final class MockSeenBackend: TrackingSeenBackend, @unchecked Sendable {
+    private(set) var warmed: [[Int]] = []
+    private(set) var expanded: [[[String: Any]]] = []
+    private(set) var unseen: [Int] = []
+    var showsWithoutCatalog: [Int] = []
+
+    func warmCatalog(showIds: [Int]) async throws { warmed.append(showIds) }
+    func expandSeenShowsToWatchEvents(
+        _ shows: [[String: Any]]
+    ) async throws -> LegacyExpansionOutcome {
+        expanded.append(shows)
+        return LegacyExpansionOutcome(eventsWritten: shows.count,
+                                      showsWithoutCatalog: showsWithoutCatalog)
+    }
+    func unseeTVShow(showId: Int) async throws -> Int {
+        unseen.append(showId)
+        return 1
+    }
+}
+
+/// La fusione ListsView-Tracking: le sezioni TV di watchlist/seen DERIVANO dallo specchio
+/// `tv_tracking` (leggere, non duplicare), e le scritture TV vanno al tracking.
+@MainActor
+final class ListsTrackingFusionTests: XCTestCase {
+
+    private var db: SQLiteService!
+    private var dbPath: String!
+    private var sync: MockSyncEngine!
+    private var remote: MockListsRemote!
+    private var auth: MockAuth!
+    private var seenBackend: MockSeenBackend!
+    private var manager: ListManager!
+    private let userId = "user-1"
+
+    override func setUp() async throws {
+        try await super.setUp()
+        dbPath = (NSTemporaryDirectory() as NSString)
+            .appendingPathComponent("vw_fusion_\(UUID().uuidString).sqlite")
+        db = SQLiteService(dbPath: dbPath)
+        _ = db.execute("PRAGMA foreign_keys = OFF")
+        sync = MockSyncEngine()
+        remote = MockListsRemote(user: User(id: userId, email: "u@test"))
+        auth = MockAuth(user: User(id: userId, email: "u@test"))
+        seenBackend = MockSeenBackend()
+        let actions = TrackingActions(
+            syncEngine: sync,
+            currentUserId: { [userId] in userId },
+            seenBackend: seenBackend
+        )
+        manager = ListManager(db: db, sync: sync, supabase: remote, authService: auth,
+                              trackingActions: actions, autoStart: false)
+    }
+
+    override func tearDown() async throws {
+        manager = nil; db = nil; sync = nil; remote = nil; auth = nil; seenBackend = nil
+        if let dbPath { try? FileManager.default.removeItem(atPath: dbPath) }
+        try await super.tearDown()
+    }
+
+    private func seedTracking(_ showId: Int, bucket: String, name: String,
+                              completedAt: String? = nil) {
+        _ = db.execute("""
+            INSERT INTO tv_tracking (user_id, tmdb_show_id, user_status, bucket, show_name,
+                                     updated_at, completed_at)
+            VALUES (?, ?, 'active', ?, ?, '2026-08-01T10:00:00Z', ?)
+        """, parameters: [userId, showId, bucket, name, completedAt ?? ""])
+    }
+
+    private func seedLegacyWatchlist(withTV tvId: Int, movie movieId: Int) {
+        _ = db.execute("""
+            INSERT INTO lists (id, user_id, name, type, created_at, updated_at)
+            VALUES ('wl-1', ?, 'watchlist', 'watchlist', datetime('now'), datetime('now'))
+        """, parameters: [userId])
+        _ = db.execute("""
+            INSERT INTO list_items (id, list_id, user_id, media_id, media_type, title, added_at, updated_at)
+            VALUES ('it-tv', 'wl-1', ?, ?, 'tv', 'Serie Legacy', datetime('now'), datetime('now'))
+        """, parameters: [userId, tvId])
+        _ = db.execute("""
+            INSERT INTO list_items (id, list_id, user_id, media_id, media_type, title, added_at, updated_at)
+            VALUES ('it-mv', 'wl-1', ?, ?, 'movie', 'Film Legacy', datetime('now'), datetime('now'))
+        """, parameters: [userId, movieId])
+    }
+
+    private func tvShow(_ id: Int, _ title: String) -> Movie {
+        Movie(id: id, title: title, overview: "", posterPath: nil, backdropPath: nil,
+              releaseDate: nil, voteAverage: 0, voteCount: 0, genreIds: nil, genres: nil,
+              adult: false, originalLanguage: "en", popularity: 0, runtime: nil, status: nil,
+              tagline: nil, productionCountries: nil, imdbId: nil)
+    }
+
+    // MARK: Lettura derivata
+
+    func test_watchlistESeen_derivanoDalTracking_nonDaListItems() async throws {
+        seedLegacyWatchlist(withTV: 900, movie: 500)
+        seedTracking(800, bucket: "not_started", name: "Da Iniziare")
+        seedTracking(801, bucket: "for_later", name: "Piu Avanti")
+        seedTracking(802, bucket: "up_to_date", name: "In Pari",
+                     completedAt: "2026-07-30T20:00:00Z")
+        seedTracking(803, bucket: "archived", name: "Archiviata")
+        seedTracking(804, bucket: "up_next", name: "In Corso")
+
+        await manager.loadListsFromSQLite()
+
+        let watchlistIds = Set(manager.watchlist.items.map(\.mediaId))
+        // Il film legacy resta; le serie arrivano dal tracking (not_started ∪ for_later).
+        XCTAssertEqual(watchlistIds, [500, 800, 801])
+        // La serie TV legacy in list_items NON si mostra più: sarebbe il doppio binario.
+        XCTAssertFalse(watchlistIds.contains(900),
+                       "una serie TV legacy in watchlist non deve comparire: deriva dal tracking")
+
+        // Seen: solo chi è in pari. Archiviate e in-corso non stanno in NESSUNA lista.
+        XCTAssertEqual(manager.seenList.items.map(\.mediaId), [802])
+        let everywhere = Set(manager.lists.flatMap { $0.items.map(\.mediaId) })
+        XCTAssertFalse(everywhere.contains(803), "le archiviate vivono solo nel Tracking")
+        XCTAssertFalse(everywhere.contains(804), "una serie a metà è in corso, non è 'vista'")
+
+        // Gli id derivati portano il prefisso: nessuna strada legacy può scambiarli per righe.
+        XCTAssertTrue(manager.seenList.items.allSatisfy {
+            $0.id.hasPrefix(ListManager.trackingItemPrefix)
+        })
+    }
+
+    func test_anonimo_tieneLeListeLegacyIntatte() async throws {
+        auth.currentUser = nil
+        seedLegacyWatchlist(withTV: 900, movie: 500)
+
+        await manager.loadListsFromSQLite()
+
+        // Per un anonimo lo specchio tracking è vuoto per costruzione: filtrare le sue righe TV
+        // legacy significherebbe nascondergli dati. (Il load anonimo usa il deviceId, quindi qui
+        // le liste seminate sotto user-1 non compaiono comunque: il punto è che non crasha e non
+        // deriva niente — la watchlist di default resta senza filtri.)
+        XCTAssertFalse(manager.watchlist.items.contains {
+            $0.id.hasPrefix(ListManager.trackingItemPrefix)
+        })
+    }
+
+    // MARK: Scrittura instradata
+
+    func test_aggiungereSerieAWatchlist_scriveTvShowState_nonListItems() async throws {
+        await manager.loadListsFromSQLite()
+
+        try await manager.addToList(listId: manager.watchlist.id,
+                                    movie: tvShow(1399, "Game of Thrones"), mediaType: .tv)
+
+        let stateOps = sync.queued.filter { $0.table == "tv_show_state" }
+        XCTAssertEqual(stateOps.count, 1)
+        XCTAssertEqual(stateOps.first?.payload["user_status"] as? String, "active",
+                       "watchlist = 'Da iniziare' (decisione 2026-08-02), non for_later")
+        XCTAssertEqual(stateOps.first?.payload["tmdb_show_id"] as? Int, 1399)
+        XCTAssertTrue(sync.queued.filter { $0.table == "list_items" }.isEmpty,
+                      "nessuna riga legacy: sarebbe il doppio binario appena eliminato")
+        XCTAssertGreaterThan(sync.trackingPulls, 0, "senza pull l'esito resta invisibile")
+    }
+
+    func test_aggiungereFilmAWatchlist_restaSulPercorsoLegacy() async throws {
+        await manager.loadListsFromSQLite()
+
+        try await manager.addToList(listId: manager.watchlist.id,
+                                    movie: tvShow(603, "Matrix"), mediaType: .movie)
+
+        XCTAssertTrue(sync.queued.filter { $0.table == "tv_show_state" }.isEmpty)
+        XCTAssertEqual(sync.queued.filter { $0.table == "list_items" }.count, 1,
+                       "i film restano su list_items: il tracking è solo TV")
+    }
+
+    func test_segnareSerieVista_passaDaCatalogoEdEspansione() async throws {
+        await manager.loadListsFromSQLite()
+
+        try await manager.addToList(listId: manager.seenList.id,
+                                    movie: tvShow(1396, "Breaking Bad"), mediaType: .tv)
+
+        XCTAssertEqual(seenBackend.warmed, [[1396]], "prima il catalogo: senza, zero episodi")
+        XCTAssertEqual(seenBackend.expanded.count, 1)
+        XCTAssertEqual(seenBackend.expanded.first?.first?["tmdb_show_id"] as? Int, 1396)
+        XCTAssertTrue(sync.queued.filter { $0.table == "list_items" }.isEmpty)
+    }
+
+    func test_serieFuoriCatalogo_erroreVisibile_nonSuccessoVuoto() async throws {
+        await manager.loadListsFromSQLite()
+        seenBackend.showsWithoutCatalog = [42]
+
+        do {
+            try await manager.addToList(listId: manager.seenList.id,
+                                        movie: tvShow(42, "Sconosciuta"), mediaType: .tv)
+            XCTFail("zero episodi scritti per mancanza di catalogo non è un successo")
+        } catch let error as TrackingActions.ActionError {
+            XCTAssertEqual(error, .showNotInCatalog)
+        }
+    }
+
+    func test_rimuovereSerieDaSeen_chiamaUnsee() async throws {
+        seedTracking(802, bucket: "up_to_date", name: "In Pari",
+                     completedAt: "2026-07-30T20:00:00Z")
+        await manager.loadListsFromSQLite()
+
+        try await manager.removeFromList(
+            listId: manager.seenList.id,
+            itemId: ListManager.trackingItemPrefix + "802")
+
+        XCTAssertEqual(seenBackend.unseen, [802],
+                       "togliere dalla Seen = lapide su tutti gli eventi, in un'unica RPC")
+    }
+
+    func test_rimuovereSerieDaWatchlist_diventaDropped() async throws {
+        seedTracking(800, bucket: "not_started", name: "Da Iniziare")
+        await manager.loadListsFromSQLite()
+
+        try await manager.removeFromList(
+            listId: manager.watchlist.id,
+            itemId: ListManager.trackingItemPrefix + "800")
+
+        let stateOps = sync.queued.filter { $0.table == "tv_show_state" }
+        XCTAssertEqual(stateOps.first?.payload["user_status"] as? String, "dropped",
+                       "rimuovere non è cancellare la riga: è dropped, che la fa sparire ovunque")
+    }
+}

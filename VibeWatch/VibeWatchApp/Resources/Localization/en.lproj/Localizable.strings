@@ -720,6 +720,7 @@
 "tracking.empty.subtitle" = "Follow a series, or import your TV Time history, and it will show up here.";
 "tracking.error.title" = "Something went wrong";
 "tracking.error.notAuthenticated" = "You need to be signed in.";
+"tracking.error.showNotInCatalog" = "This series isn't in the catalog yet — try again in a moment.";
 "tracking.error.noNextEpisode" = "This series has no next episode.";
 
 "tab.tracking" = "Tracking";

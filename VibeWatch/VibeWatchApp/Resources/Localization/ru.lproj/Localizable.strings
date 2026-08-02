@@ -707,6 +707,7 @@
 "tracking.empty.subtitle" = "Подпишитесь на сериал или импортируйте историю из TV Time — и он появится здесь.";
 "tracking.error.title" = "Что-то пошло не так";
 "tracking.error.notAuthenticated" = "Нужно войти в аккаунт.";
+"tracking.error.showNotInCatalog" = "Этого сериала ещё нет в каталоге — попробуйте ещё раз через минуту.";
 "tracking.error.noNextEpisode" = "У этого сериала нет следующей серии.";
 
 "tab.tracking" = "Трекинг";

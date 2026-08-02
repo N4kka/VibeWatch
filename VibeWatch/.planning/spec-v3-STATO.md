@@ -17,10 +17,12 @@ fallisca — fatto anche in questa sessione sul `security definer` di `search_us
 
 Due prove su dispositivo (dell'utente) e un sito:
 
-1. **rifare l'import dello stesso ZIP dall'app** (il primo è arrivato in fondo il 2026-08-02,
-   vedi sotto): il re-import è idempotente e stavolta porta dentro anche **watchlist e archivio**
-   (stati per-serie, feature del 2026-08-02 sera) — è anche il collaudo end-to-end di quella
-   strada. Attesi nel report: ~100 stati applicati, episodi in `already_present`;
+1. ~~**rifare l'import dello stesso ZIP dall'app**~~ — **FATTO il 2026-08-02: 103/104 stati
+   applicati** (l'unico perso: Digimon Adventure tri., `ambiguous`), 18.577 episodi tutti in
+   `already_present`, 2 minuti. Sul server: 57 archiviate, 28 for_later, 365 attive;
+1b. **provare la fusione ListsView↔Tracking sul dispositivo** (vedi la sezione dedicata):
+   ListsView → watchlist con le serie "Da iniziare"/"Più avanti" e i film legacy insieme; Seen
+   con le serie in pari; aggiungere/togliere una serie da lì e vederla muoversi nel Tracking;
 2. il **sito** su `vibewatchapp.com` che serva l'AASA — chiude il blocco 10
    (`docs/universal-links/README.md`);
 3. quando il sito c'è: flag `ProfileView.shareProfileEnabled = true` per riaccendere la riga
@@ -134,6 +136,59 @@ stats). Ma la segnalazione ha scoperto che tre pezzi di §7.1 non erano implemen
    (`film_importati: 0, film_supportati: false`), quindi non è una perdita muta — ma i film
    dell'export non hanno una destinazione (il tracking v3 è solo TV; sarebbero l'unico caso in
    cui le liste legacy sono la casa naturale). Da decidere prima che da fare.
+
+## La fusione ListsView ↔ Tracking — 2026-08-02, decisione di prodotto
+
+**L'utente ha deciso di superare il confine di §11** ("niente rifacimento di ListsView"):
+ListsView è l'archivio di TUTTO ciò che si aggiunge via VibeWatch, e per le serie TV non deve
+duplicare il tracking — deve **leggerlo**, e le sue scritture TV devono **andarci**. Two-way,
+un solo sistema. Le tre scelte semantiche, decise dall'utente:
+
+| | |
+|---|---|
+| Seen TV | serie **in pari o completata** (bucket `up_to_date`) — una serie a metà è "in corso", vive nel Tracking |
+| Aggiunta a watchlist | stato `active`, cioè **"Da iniziare"** (stessa semantica dell'import per le seguite mai iniziate) |
+| Archiviate | **solo nel Tracking**, ListsView non le mostra |
+
+Com'è fatta (tutta la logica in `ListManager`, i chiamanti non cambiano):
+
+- **Lettura derivata**: `fuseTrackingItems` in `loadListsFromSQLite` — le sezioni TV di
+  watchlist (`not_started` ∪ `for_later`) e seen (`up_to_date`) si sintetizzano dallo specchio
+  locale `tv_tracking` (stessa fonte della tab Tracking, zero rete, JOIN sui titoli
+  localizzati); i film restano su `list_items`, che possiede anche liked/disliked/custom. Gli
+  item derivati hanno id `tracking:{showId}`. Le righe TV legacy di watchlist/seen **non si
+  mostrano più** (restano in tabella, nessuna cancellazione). Se una lista core manca in SQLite
+  ma il tracking ha materiale, si crea dal default. ListManager rideriva a ogni
+  `syncEngineCompleted`. Solo per autenticati: un anonimo non ha tracking server e resta sul
+  percorso legacy.
+- **Scrittura instradata**: in `addToList`/`removeFromList`, per media TV su watchlist/seen →
+  `TrackingActions`: aggiungi = upsert `tv_show_state` `active`; rimuovi da watchlist =
+  `dropped` (mai cancellare una riga derivata); "vista tutta" = `warmCatalog` +
+  `expand_seen_shows_to_watch_events` (la macchina della migrazione legacy — zero episodi per
+  catalogo assente è un ERRORE visibile, `tracking.error.showNotInCatalog`, 20 lingue); togli
+  da seen = RPC **`unsee_tv_show`** (migration `20260802130000`): lapide su tutti gli eventi
+  della serie + `dropped` in un colpo solo — senza il dropped il ricalcolo la farebbe
+  ricomparire come "Da iniziare", e centinaia di DELETE via outbox non erano una strada.
+- **Backfill** (stessa migration): `backfill_watchlist_tracking()` — le serie TV nelle
+  watchlist legacy → `tv_show_state` `active`, `on conflict do nothing` (uno stato già scelto,
+  in app o dall'import, non si tocca). **Girato in produzione: 19 righe nuove (474 → 493),
+  secondo giro 0 (idempotente), grant solo service.** Il verso "seen legacy → eventi" resta al
+  client (`LegacyTrackingMigration`, già in produzione).
+
+Test: sezione "fusione" in `tracking_test.sql` (unsee: lapidi/dropped/no-op/guardia
+unauthenticated/proacl; backfill: 4 esiti + idempotenza) e `ListsTrackingFusionTests` (8 test:
+derivazione, anonimo, instradamento add/remove, film sul percorso legacy, errore catalogo).
+La suite iOS COMPLETA è stata girata come regressione: 505 test, 10 fail — **tutti
+pre-esistenti, verificato rieseguendoli su un worktree di HEAD pulito: identici**. Sono
+`ConflictResolverTests` (livelli XP e badge, roba di gamification), `DatabaseMigrationTests`
+(artifact sullo schema reale) e `SyncStateMachineTests.testIdleToIdle` — un debito che precede
+queste sessioni, registrato qui perché nessuno lo scambi per una rottura nuova.
+
+**Aperto della fusione**: i consumatori legacy che leggono ancora `list_items` per le TV
+(`AnalyticsInsightsService`, `UserPreferenceManager`/Discovery personalization) ora vedono meno
+serie di quelle in ListsView — da migrare alla stessa derivazione; il tasto Seen/watchlist nei
+dettagli serie passa già da `ListManager` (instradato), ma `EpisodeSeenManager` (flag locali
+legacy) resta in piedi per gli anonimi; la prova su dispositivo.
 
 ## Il blocco 10 (universal links) — resta il sito
 

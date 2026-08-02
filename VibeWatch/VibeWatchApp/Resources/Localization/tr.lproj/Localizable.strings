@@ -707,6 +707,7 @@
 "tracking.empty.subtitle" = "Bir diziyi takip et ya da TV Time geçmişini içe aktar; burada görünecek.";
 "tracking.error.title" = "Bir şeyler ters gitti";
 "tracking.error.notAuthenticated" = "Giriş yapmış olman gerekiyor.";
+"tracking.error.showNotInCatalog" = "Bu dizi henüz katalogda yok — birazdan tekrar deneyin.";
 "tracking.error.noNextEpisode" = "Bu dizinin sonraki bölümü yok.";
 
 "tab.tracking" = "Takip";

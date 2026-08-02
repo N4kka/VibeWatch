@@ -720,6 +720,7 @@
 "tracking.empty.subtitle" = "Folge einer Serie oder importiere deinen TV-Time-Verlauf, dann taucht sie hier auf.";
 "tracking.error.title" = "Etwas ist schiefgelaufen";
 "tracking.error.notAuthenticated" = "Du musst angemeldet sein.";
+"tracking.error.showNotInCatalog" = "Diese Serie ist noch nicht im Katalog — versuche es gleich noch einmal.";
 "tracking.error.noNextEpisode" = "Diese Serie hat keine nächste Folge.";
 
 "tab.tracking" = "Tracking";

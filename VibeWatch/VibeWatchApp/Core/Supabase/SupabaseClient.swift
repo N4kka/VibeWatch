@@ -355,6 +355,16 @@ class SupabaseService: ObservableObject {
         )
     }
 
+    /// Fusione ListsView-Tracking: toglie una serie dalla lista Seen — lapide su tutti i suoi
+    /// eventi + `dropped`, in un'unica RPC server (`unsee_tv_show`). Ritorna quanti eventi hanno
+    /// preso la lapide: zero e' un esito legittimo (rigiocata), non un errore.
+    func unseeTVShow(showId: Int) async throws -> Int {
+        let data = try await callRPC(
+            function: "unsee_tv_show", payload: ["p_tmdb_show_id": showId])
+        let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        return json?["events_removed"] as? Int ?? 0
+    }
+
     /// Popola `tmdb_shows`/`tmdb_episodes` per serie gia' identificate su TMDB.
     ///
     /// Passa da `catalog-resolve` e non da TMDB diretto: la chiave sta server-side, il budget e'

@@ -704,6 +704,7 @@
 "tracking.empty.subtitle" = "关注一部剧集，或导入你的 TV Time 记录，它就会出现在这里。";
 "tracking.error.title" = "出了点问题";
 "tracking.error.notAuthenticated" = "需要先登录。";
+"tracking.error.showNotInCatalog" = "该剧集尚未进入目录，请稍后重试。";
 "tracking.error.noNextEpisode" = "这部剧集没有下一集。";
 
 "tab.tracking" = "追剧";

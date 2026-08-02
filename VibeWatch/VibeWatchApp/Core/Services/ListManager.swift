@@ -52,6 +52,12 @@ class ListManager: ObservableObject {
     private let sync: SyncEngineProtocol
     private let supabase: ListsRemoteDataSource
     private let authService: AuthStatusProviding
+    /// Fusione ListsView-Tracking: le azioni TV su watchlist/seen passano da qui. Override per i
+    /// test; in produzione il singleton, risolto pigramente (TrackingActions dipende da
+    /// SyncEngine.shared, e crearlo dentro l'init del singleton ListManager è un ordine di
+    /// inizializzazione che non va forzato).
+    private let trackingActionsOverride: TrackingActions?
+    private var trackingActions: TrackingActions { trackingActionsOverride ?? .shared }
     private var cancellables = Set<AnyCancellable>()
     private var userId: String {
         authService.currentUser?.id ?? DeviceIdentity.installation
@@ -70,12 +76,14 @@ class ListManager: ObservableObject {
         sync: SyncEngineProtocol = SyncEngine.shared,
         supabase: ListsRemoteDataSource = SupabaseService.shared,
         authService: AuthStatusProviding = AuthService.shared,
+        trackingActions: TrackingActions? = nil,
         autoStart: Bool = true
     ) {
         self.db = db
         self.sync = sync
         self.supabase = supabase
         self.authService = authService
+        self.trackingActionsOverride = trackingActions
 
         // Initialize default lists with stable type-keyed names
         self.watchlist = MediaList(name: ListType.watchlist.rawValue, type: .watchlist)
@@ -107,6 +115,17 @@ class ListManager: ObservableObject {
         LocalizationManager.shared.$localeDidChange
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
+
+        // Fusione ListsView-Tracking: le sezioni TV di watchlist/seen derivano dallo specchio
+        // `tv_tracking`, che solo un pull aggiorna — quindi a ogni sync completato le liste vanno
+        // riderivate, o un import/un'azione tracking resterebbero invisibili qui fino al riavvio.
+        NotificationCenter.default.publisher(for: .syncEngineCompleted)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                guard let self, self.authService.currentUser != nil else { return }
+                Task { await self.loadListsFromSQLite() }
+            }
             .store(in: &cancellables)
     }
     
@@ -287,8 +306,11 @@ class ListManager: ObservableObject {
             let listRows = try await db.queryRaw(listsQuery, parameters: [currentUserId])
 
             guard !listRows.isEmpty else {
-                // No lists in SQLite - initialize with defaults
-                self.lists = [watchlist, seenList, likedList, dislikedList]
+                // No lists in SQLite - initialize with defaults (fusi col tracking: un utente
+                // possono non avere liste legacy ma avere serie nel tracking, es. post-import).
+                self.lists = await fuseTrackingItems(
+                    into: [watchlist, seenList, likedList, dislikedList], userId: currentUserId)
+                updateDefaultReferences(from: self.lists)
                 Logger.info("[ListManager] No lists in SQLite. Initialized defaults.")
                 return
             }
@@ -341,7 +363,8 @@ class ListManager: ObservableObject {
                 loadedLists.append(list)
             }
 
-            applyLists(loadedLists)
+            let fusedLists = await fuseTrackingItems(into: loadedLists, userId: currentUserId)
+            applyLists(fusedLists)
             await reconcileCoreListIdentities()
             Logger.info("[ListManager] Loaded \(loadedLists.count) lists with \(itemRows.count) items from SQLite")
         } catch {
@@ -351,6 +374,139 @@ class ListManager: ObservableObject {
         }
     }
     
+    // MARK: - Fusione ListsView-Tracking (2026-08-02, decisione di prodotto)
+
+    /// Il prefisso degli id sintetici degli item derivati dal tracking. Non esistono in
+    /// `list_items`: qualunque strada di scrittura legacy che li incontrasse deve poterli
+    /// riconoscere invece di fare un UPDATE su una riga che non c'è.
+    static let trackingItemPrefix = "tracking:"
+
+    /// Le sezioni TV di watchlist e seen non si leggono più da `list_items`: si DERIVANO dallo
+    /// specchio `tv_tracking` — la stessa fonte della tab Tracking, zero rete (§13.6). I film
+    /// restano su `list_items`, che continua a possedere anche liked/disliked/custom.
+    ///
+    /// Le regole, decise dall'utente il 2026-08-02:
+    ///   - watchlist TV = bucket `not_started` ("Da iniziare") ∪ `for_later`;
+    ///   - seen TV      = bucket `up_to_date` (hai visto tutto ciò che è uscito);
+    ///   - le archiviate e le droppate NON compaiono (vivono solo nel Tracking);
+    ///   - le serie a metà sono "in corso": stanno nel Tracking, non sono ancora "viste".
+    ///
+    /// Solo per utenti autenticati: il tracking è server-authoritative e per un anonimo lo
+    /// specchio è vuoto — filtrare le sue righe TV legacy significherebbe nascondergli dati.
+    private func fuseTrackingItems(into lists: [MediaList], userId: String) async -> [MediaList] {
+        guard authService.currentUser != nil else { return lists }
+
+        let derived = await trackingDerivedItems(userId: userId)
+
+        var seenTypes = Set<ListType>()
+        var result = lists.map { list -> MediaList in
+            guard list.type == .watchlist || list.type == .seen else { return list }
+            var fused = list
+            // Le righe TV legacy si filtrano via da TUTTE le watchlist/seen (dopo la migrazione
+            // 6 la core è una, ma un duplicato non deve far ricomparire dati vecchi due volte);
+            // gli item derivati entrano solo nella prima, quella canonica.
+            let movieItems = list.items.filter { $0.mediaType != .tv }
+            let isFirstOfType = seenTypes.insert(list.type).inserted
+            let trackingItems = isFirstOfType
+                ? (list.type == .watchlist ? derived.watchlist : derived.seen)
+                : []
+            fused.items = (movieItems + trackingItems).sorted { $0.addedAt > $1.addedAt }
+            return fused
+        }
+
+        // Un utente può non avere MAI avuto una di queste liste in SQLite (es. importato da TV
+        // Time senza aver mai salvato niente): il tracking ha materiale ma la lista non esiste —
+        // si crea dal default, o le serie derivate non avrebbero dove comparire.
+        if !derived.watchlist.isEmpty, !seenTypes.contains(.watchlist) {
+            var l = watchlist
+            l.items = derived.watchlist.sorted { $0.addedAt > $1.addedAt }
+            result.append(l)
+        }
+        if !derived.seen.isEmpty, !seenTypes.contains(.seen) {
+            var l = seenList
+            l.items = derived.seen.sorted { $0.addedAt > $1.addedAt }
+            result.append(l)
+        }
+
+        return result
+    }
+
+    /// Gli item sintetizzati dallo specchio `tv_tracking`, con lo stesso JOIN sui titoli
+    /// localizzati del repository del Tracking (il nome del catalogo parla una lingua sola, §1.5).
+    private func trackingDerivedItems(
+        userId: String
+    ) async -> (watchlist: [MediaListItem], seen: [MediaListItem]) {
+        let sql = """
+            SELECT t.tmdb_show_id, t.bucket,
+                   COALESCE(lt.title, t.show_name) AS title,
+                   t.show_poster_path, t.updated_at, t.completed_at, t.last_watched_at
+              FROM tv_tracking t
+              LEFT JOIN localized_titles lt
+                ON lt.media_type = 'tv' AND lt.tmdb_id = t.tmdb_show_id AND lt.language = ?
+             WHERE t.user_id = ? AND t.bucket IN ('not_started', 'for_later', 'up_to_date')
+        """
+
+        do {
+            let language = LocalizationManager.shared.currentLanguage.id
+            let rows = try await db.queryRaw(sql, parameters: [language, userId])
+
+            var watchlistItems: [MediaListItem] = []
+            var seenItems: [MediaListItem] = []
+
+            for row in rows {
+                guard let showId = row["tmdb_show_id"] as? Int,
+                      let bucket = row["bucket"] as? String else { continue }
+                // Senza nome non c'è niente da mostrare: capita solo se il catalogo non ha
+                // ancora la serie, e in quel caso è la card del Tracking il posto dove appare.
+                guard let title = row["title"] as? String, !title.isEmpty else { continue }
+
+                let addedAt: Date
+                if bucket == "up_to_date" {
+                    // Per una "vista" la data sensata è quando l'hai finita, con ripieghi onesti.
+                    addedAt = Self.parseTrackingDate(row["completed_at"] as? String)
+                        ?? Self.parseTrackingDate(row["last_watched_at"] as? String)
+                        ?? Self.parseTrackingDate(row["updated_at"] as? String)
+                        ?? Date()
+                } else {
+                    addedAt = Self.parseTrackingDate(row["updated_at"] as? String) ?? Date()
+                }
+
+                let item = MediaListItem(
+                    id: Self.trackingItemPrefix + String(showId),
+                    mediaId: showId,
+                    mediaType: .tv,
+                    title: title,
+                    posterPath: row["show_poster_path"] as? String,
+                    addedAt: addedAt
+                )
+
+                if bucket == "up_to_date" { seenItems.append(item) } else { watchlistItems.append(item) }
+            }
+
+            return (watchlistItems, seenItems)
+        } catch {
+            // Un errore qui non deve buttare giù le liste dei film: si logga e le sezioni TV
+            // restano vuote per questo giro — il prossimo sync le rideriva.
+            Logger.error("[ListManager] Derivazione dal tracking fallita: \(error)")
+            return ([], [])
+        }
+    }
+
+    /// Le date dello specchio arrivano dal server in ISO8601, con o senza frazioni di secondo:
+    /// `ISO8601DateFormatter` di default rifiuta le frazioni, e il fallback muto su `Date()`
+    /// metterebbe ogni serie "aggiunta adesso".
+    private static let isoWithFractions: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
+    private static let isoPlain = ISO8601DateFormatter()
+
+    static func parseTrackingDate(_ value: String?) -> Date? {
+        guard let value, !value.isEmpty else { return nil }
+        return isoWithFractions.date(from: value) ?? isoPlain.date(from: value)
+    }
+
     /// Riallinea ogni lista core in memoria (watchlist/seen/liked/disliked) all'id CANONICO
     /// presente in SQLite, così le scritture (addItemToSQLite) puntano sempre a una riga che
     /// esiste davvero.
@@ -766,6 +922,35 @@ class ListManager: ObservableObject {
             throw ListError.itemAlreadyInList
         }
 
+        // Fusione ListsView-Tracking: per una serie TV, watchlist e seen NON sono più righe di
+        // `list_items` — sono stato del tracking, e ci si arriva dalla stessa strada delle azioni
+        // della tab Tracking. Vale per gli autenticati; un anonimo non ha tracking server e resta
+        // sul percorso legacy locale.
+        if mediaType == .tv, authService.currentUser != nil,
+           lists[index].type == .watchlist || lists[index].type == .seen {
+            let targetType = lists[index].type
+            if targetType == .watchlist {
+                try await trackingActions.addToWatchlist(showId: movie.id)
+            } else {
+                // "Vista tutta": catalogo + espansione server. Può fallire (rete, catalogo):
+                // l'errore risale al chiamante, che già mostra gli errori di addToList.
+                try await trackingActions.markSeen(showId: movie.id)
+            }
+
+            // Le azioni hanno già fatto il pull mirato: riderivare da SQLite è ciò che rende
+            // l'esito visibile — la card compare perché lo specchio è cambiato, non per fede.
+            await loadListsFromSQLite()
+
+            AnalyticsService.shared.logItemAddedToList(
+                listType: targetType.rawValue,
+                mediaType: mediaType.rawValue,
+                context: analyticsContext
+            )
+            PaywallTriggerService.shared.recordSavedToList()
+            ReviewPromptManager.shared.recordPositiveAction()
+            return
+        }
+
         if lists[index].type == .custom && lists[index].items.count >= Self.maxItemsPerList {
             throw ListError.maxItemsReached(limit: Self.maxItemsPerList)
         }
@@ -874,9 +1059,26 @@ class ListManager: ObservableObject {
             throw ListError.listNotFound
         }
 
-        // Cattura prima della rimozione: se sto togliendo una serie dalla lista "seen",
-        // la riporto a "non vista" anche nel tracking episodi (contraltare del markShowSeen).
         let removedItem = lists[listIndex].items.first { $0.id == itemId }
+
+        // Fusione ListsView-Tracking: per una serie TV in watchlist/seen la rimozione è
+        // un'operazione di tracking, non una riga di `list_items` (che per questi item nemmeno
+        // esiste: gli id derivati portano `trackingItemPrefix`).
+        if let removedItem, removedItem.mediaType == .tv, authService.currentUser != nil,
+           lists[listIndex].type == .watchlist || lists[listIndex].type == .seen {
+            if lists[listIndex].type == .watchlist {
+                try await trackingActions.removeFromWatchlist(showId: removedItem.mediaId)
+            } else {
+                // Lapide su tutti gli eventi della serie + dropped, in un'unica RPC: senza il
+                // dropped il ricalcolo la farebbe ricomparire come "Da iniziare".
+                try await trackingActions.unsee(showId: removedItem.mediaId)
+            }
+            await loadListsFromSQLite()
+            return
+        }
+
+        // Percorso legacy (film, anonimi, liste custom). Se sto togliendo una serie dalla lista
+        // "seen", la riporto a "non vista" anche nel flag locale (contraltare del markShowSeen).
         if lists[listIndex].type == .seen,
            let removedItem, removedItem.mediaType == .tv {
             EpisodeSeenManager.shared.unmarkShowSeen(showId: removedItem.mediaId)

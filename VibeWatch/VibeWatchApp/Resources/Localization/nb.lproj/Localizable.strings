@@ -645,6 +645,7 @@
 "tracking.empty.subtitle" = "Følg en serie, eller importer TV Time-historikken din, så dukker den opp her.";
 "tracking.error.title" = "Noe gikk galt";
 "tracking.error.notAuthenticated" = "Du må være logget inn.";
+"tracking.error.showNotInCatalog" = "Serien er ikke i katalogen ennå — prøv igjen om litt.";
 "tracking.error.noNextEpisode" = "Denne serien har ingen neste episode.";
 
 "tab.tracking" = "Tracking";

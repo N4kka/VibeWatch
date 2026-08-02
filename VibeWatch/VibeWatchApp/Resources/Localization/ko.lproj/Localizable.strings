@@ -719,6 +719,7 @@
 "tracking.empty.subtitle" = "시리즈를 팔로우하거나 TV Time 기록을 가져오면 여기에 표시됩니다.";
 "tracking.error.title" = "문제가 발생했습니다";
 "tracking.error.notAuthenticated" = "로그인이 필요합니다.";
+"tracking.error.showNotInCatalog" = "이 시리즈는 아직 카탈로그에 없습니다. 잠시 후 다시 시도해 주세요.";
 "tracking.error.noNextEpisode" = "이 시리즈에는 다음 에피소드가 없습니다.";
 
 "tab.tracking" = "트래킹";

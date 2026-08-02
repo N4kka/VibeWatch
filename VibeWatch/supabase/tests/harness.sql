@@ -75,6 +75,24 @@ create table if not exists public.user_notification_preferences (
   timezone text
 );
 
+-- Le liste legacy, in forma minima: solo le colonne che `backfill_watchlist_tracking` legge
+-- (migration della fusione ListsView-Tracking). Tipi verificati sulla produzione.
+create table if not exists public.lists (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null references auth.users on delete cascade,
+  type       text not null,
+  deleted_at timestamptz
+);
+create table if not exists public.list_items (
+  id         uuid primary key default gen_random_uuid(),
+  list_id    uuid not null references public.lists on delete cascade,
+  user_id    uuid not null,
+  media_id   integer,
+  media_type text,
+  added_at   timestamptz not null default now(),
+  deleted_at timestamptz
+);
+
 -- Lo schema morto che la migration 20260730030000 deve rimuovere: senza queste, il drop
 -- passerebbe per il solo fatto che non c'e' niente da droppare.
 create table if not exists public.tv_tracking (

@@ -718,6 +718,7 @@
 "tracking.empty.subtitle" = "Segui una serie, o importa la tua cronologia di TV Time, e comparirà qui.";
 "tracking.error.title" = "Qualcosa è andato storto";
 "tracking.error.notAuthenticated" = "Devi aver effettuato l'accesso.";
+"tracking.error.showNotInCatalog" = "Questa serie non è ancora nel catalogo — riprova tra un momento.";
 "tracking.error.noNextEpisode" = "Questa serie non ha un prossimo episodio.";
 
 "tab.tracking" = "Tracking";

@@ -719,6 +719,7 @@
 "tracking.empty.subtitle" = "Zacznij śledzić serial albo zaimportuj historię z TV Time, a pojawi się tutaj.";
 "tracking.error.title" = "Coś poszło nie tak";
 "tracking.error.notAuthenticated" = "Musisz być zalogowany(-a).";
+"tracking.error.showNotInCatalog" = "Tego serialu nie ma jeszcze w katalogu — spróbuj ponownie za chwilę.";
 "tracking.error.noNextEpisode" = "Ten serial nie ma kolejnego odcinka.";
 
 "tab.tracking" = "Śledzenie";

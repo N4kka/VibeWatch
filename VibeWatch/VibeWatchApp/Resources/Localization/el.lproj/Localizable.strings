@@ -719,6 +719,7 @@
 "tracking.empty.subtitle" = "Ακολούθησε μια σειρά ή εισήγαγε το ιστορικό σου από το TV Time και θα εμφανιστεί εδώ.";
 "tracking.error.title" = "Κάτι πήγε στραβά";
 "tracking.error.notAuthenticated" = "Πρέπει να έχεις συνδεθεί.";
+"tracking.error.showNotInCatalog" = "Αυτή η σειρά δεν είναι ακόμη στον κατάλογο — δοκιμάστε ξανά σε λίγο.";
 "tracking.error.noNextEpisode" = "Αυτή η σειρά δεν έχει επόμενο επεισόδιο.";
 
 "tab.tracking" = "Παρακολούθηση";

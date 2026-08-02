@@ -719,6 +719,7 @@
 "tracking.empty.subtitle" = "Seuraa sarjaa tai tuo TV Time -historiasi, niin se näkyy täällä.";
 "tracking.error.title" = "Jokin meni pieleen";
 "tracking.error.notAuthenticated" = "Sinun täytyy olla kirjautuneena.";
+"tracking.error.showNotInCatalog" = "Sarja ei ole vielä luettelossa — yritä hetken kuluttua uudelleen.";
 "tracking.error.noNextEpisode" = "Tällä sarjalla ei ole seuraavaa jaksoa.";
 
 "tab.tracking" = "Seuranta";

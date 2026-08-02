@@ -719,6 +719,7 @@
 "tracking.empty.subtitle" = "Volg een serie of importeer je TV Time-geschiedenis, dan verschijnt hij hier.";
 "tracking.error.title" = "Er ging iets mis";
 "tracking.error.notAuthenticated" = "Je moet ingelogd zijn.";
+"tracking.error.showNotInCatalog" = "Deze serie staat nog niet in de catalogus — probeer het zo opnieuw.";
 "tracking.error.noNextEpisode" = "Deze serie heeft geen volgende aflevering.";
 
 "tab.tracking" = "Tracking";

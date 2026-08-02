@@ -719,6 +719,7 @@
 "tracking.empty.subtitle" = "कोई सीरीज़ फ़ॉलो करें या अपनी TV Time हिस्ट्री इम्पोर्ट करें, वह यहाँ दिखेगी।";
 "tracking.error.title" = "कुछ ग़लत हो गया";
 "tracking.error.notAuthenticated" = "आपको साइन इन करना होगा।";
+"tracking.error.showNotInCatalog" = "यह सीरीज़ अभी कैटलॉग में नहीं है — कुछ देर बाद फिर से आज़माएँ।";
 "tracking.error.noNextEpisode" = "इस सीरीज़ का कोई अगला एपिसोड नहीं है।";
 
 "tab.tracking" = "ट्रैकिंग";

@@ -644,6 +644,90 @@ select t.eq((select count(*)::integer from public.watch_events
                 and tmdb_show_id = 700), 0,
             'l''espansione ha scritto solo per chi l''ha chiesta');
 
+\echo ''
+\echo '=== fusione ListsView-Tracking: unsee_tv_show'
+
+-- Il contraltare di "vista tutta": l'utente 3333 ha appena 5 eventi vivi sulla serie 700.
+select t.eq((public.unsee_tv_show(700)->>'events_removed')::integer, 5,
+            'unsee mette la lapide su TUTTI gli eventi vivi della serie');
+select t.eq((select count(*)::integer from public.watch_events
+              where user_id = '33333333-3333-3333-3333-333333333333'
+                and tmdb_show_id = 700 and deleted_at is null), 0,
+            'nessun evento vivo dopo unsee');
+select t.eq((select user_status from public.tv_show_state
+              where user_id = '33333333-3333-3333-3333-333333333333'
+                and tmdb_show_id = 700),
+            'dropped',
+            'la serie e'' dropped: senza, il ricalcolo la farebbe ricomparire come not_started');
+select t.eq((select watched_count from public.tv_show_state
+              where user_id = '33333333-3333-3333-3333-333333333333'
+                and tmdb_show_id = 700),
+            0, 'i contatori sono ricalcolati sugli eventi con lapide');
+select t.eq((public.unsee_tv_show(700)->>'events_removed')::integer, 0,
+            'rigiocare unsee e'' un no-op dichiarato, non un errore');
+
+-- Stessa guardia dell'espansione: definer ancorata ad auth.uid(), senza claim rifiuta.
+set local request.jwt.claim.sub = '';
+do $$
+begin
+  perform public.unsee_tv_show(700);
+  raise exception 'FAIL  senza utente autenticato unsee ha scritto lo stesso';
+exception when sqlstate '28000' then
+  raise notice 'ok    senza utente autenticato unsee rifiuta';
+end $$;
+set local request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+
+select t.eq(
+  (select count(*)::integer from pg_proc p
+     where p.proname = 'unsee_tv_show'
+       and array_to_string(p.proacl, ',') like '%anon=X%'),
+  0, 'anon non puo'' eseguire unsee (letto da proacl)');
+select t.is_true(
+  (select array_to_string(p.proacl, ',') like '%authenticated=X%' from pg_proc p
+    where p.proname = 'unsee_tv_show'),
+  'authenticated si'': e'' l''azione "togli dalla lista Seen" del client');
+
+\echo ''
+\echo '=== fusione ListsView-Tracking: backfill watchlist legacy'
+
+-- Come owner: il backfill e' negato ai ruoli client DI PROPOSITO (e' il lavoro della migration),
+-- e la riga di proacl piu' sotto e' il test che resti cosi'.
+reset role;
+
+-- Watchlist legacy dell'utente 1111: una serie TV nuova (800), una che ha GIA' uno stato scelto
+-- (100, for_later dal blocco sopra), un film (che non c'entra), una riga cancellata (801).
+insert into public.lists (id, user_id, type) values
+  ('bbbbbbbb-0000-4000-8000-000000000001', '11111111-1111-1111-1111-111111111111', 'watchlist');
+insert into public.list_items (list_id, user_id, media_id, media_type, deleted_at) values
+  ('bbbbbbbb-0000-4000-8000-000000000001', '11111111-1111-1111-1111-111111111111', 800, 'tv', null),
+  ('bbbbbbbb-0000-4000-8000-000000000001', '11111111-1111-1111-1111-111111111111', 100, 'tv', null),
+  ('bbbbbbbb-0000-4000-8000-000000000001', '11111111-1111-1111-1111-111111111111', 500, 'movie', null),
+  ('bbbbbbbb-0000-4000-8000-000000000001', '11111111-1111-1111-1111-111111111111', 801, 'tv', now());
+
+select t.eq((public.backfill_watchlist_tracking()->>'inserted')::integer, 1,
+            'nasce solo la riga che manca: la serie nuova');
+select t.eq((select user_status from public.tv_show_state
+              where user_id = '11111111-1111-1111-1111-111111111111' and tmdb_show_id = 800),
+            'active', 'la serie in watchlist diventa "Da iniziare"');
+-- La 100 arriva qui 'dropped' (il test della timeline sopra l'ha abbandonata): proprio il caso
+-- che il backfill non deve toccare — rimetterla 'active' farebbe ricomparire una serie
+-- abbandonata solo perche' un tempo stava in watchlist.
+select t.eq((select user_status from public.tv_show_state
+              where user_id = '11111111-1111-1111-1111-111111111111' and tmdb_show_id = 100),
+            'dropped', 'uno stato gia'' scelto NON si sovrascrive');
+select t.eq((select count(*)::integer from public.tv_show_state
+              where tmdb_show_id in (500, 801)), 0,
+            'film e righe cancellate non producono stato tracking');
+select t.eq((public.backfill_watchlist_tracking()->>'inserted')::integer, 0,
+            'rigiocare il backfill non fa niente: idempotente');
+
+select t.eq(
+  (select count(*)::integer from pg_proc p
+     where p.proname = 'backfill_watchlist_tracking'
+       and (array_to_string(p.proacl, ',') like '%anon=X%'
+         or array_to_string(p.proacl, ',') like '%authenticated=X%')),
+  0, 'il backfill e'' solo service: nessun ruolo client su proacl');
+
 reset role;
 
 rollback;
