@@ -89,10 +89,16 @@ principale): job + staging + zip rimossi, zero eventi scritti (la fase 4 non era
 liste intatte — l'import non le tocca in nessuna fase. Il secondo tentativo (altro account)
 è ripartito dal checkpoint coi fix deployati.
 
-**Aperto dell'import**: la **prova su dispositivo completa** (da rifare da un account scelto
-dall'utente, col fix deployato); i **voti** restano rinviati (`voti_importati: false` nel
-report) anche ora che `user_ratings` esiste — collegarli è un lavoro suo; la push per un
-utente senza device registrati muore in `no-live-token` (giusto così).
+**L'export vero è arrivato in fondo** (2026-08-02, ore 05:26 UTC, dopo il quarto fix —
+`sanitizeFind`): **18.577 episodi da 409 serie**, storico 2015→2026, in 69 minuti guidati dal
+cron con l'app chiusa. Dichiarati nel report: 2.767 episodi su 92 serie non riconosciuti
+(X Factor IT, MasterChef Italia, i `not_found`/`ambiguous` che l'oracolo aveva previsto),
+15.906 duplicati v1 scartati (identico all'oracolo), 380 voti rinviati. Push accodata.
+
+**Aperto dell'import**: i **voti** restano rinviati (`voti_importati: false` nel report)
+anche ora che `user_ratings` esiste — collegarli è un lavoro suo; la risoluzione a mano dei
+non riconosciuti (§7.4 la chiede, oggi si elencano e basta); la push per un utente senza
+device registrati muore in `no-live-token` (giusto così).
 
 ## Il blocco 10 (universal links) — resta il sito
 
