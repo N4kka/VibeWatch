@@ -19,6 +19,7 @@ import {
   REFRESH_DAYS_ENDED,
   REFRESH_DAYS_RUNNING,
   resolveFromFind,
+  sanitizeFind,
   SEASONS_PER_APPEND,
   seasonAppendChunks,
   seasonRange,
@@ -295,4 +296,27 @@ Deno.test('il tetto per richiesta e lo stesso delle entita TVDB', () => {
   const many = Array.from({ length: 51 }, (_, i) => i + 1)
   assertEquals(normalizeShowIds(many, 50), null)
   assertEquals(normalizeShowIds(many.slice(0, 50), 50)?.length, 50)
+})
+
+Deno.test('un elemento null dentro /find non deve far crollare la risoluzione', () => {
+  // Visto in produzione (2026-08-02, primo import vero): per certe entita' TMDB restituisce
+  // array con dentro null, e `findDiagnostics` moriva su `.id` A OGNI retry — deterministico,
+  // perche' il lotto dei mancanti riproponeva sempre la stessa entita'. La sanificazione sta
+  // al confine, una volta: da li' in poi i tipi dicono la verita'.
+  const sporco = {
+    tv_results: [null, { id: 1 }],
+    tv_episode_results: [{ id: 10, show_id: 1, season_number: 1, episode_number: 2 }, null],
+    movie_results: [undefined, { id: 7 }],
+    // deno-lint-ignore no-explicit-any
+  } as any
+  const pulito = sanitizeFind(sporco)
+  assertEquals(pulito.tv_results, [{ id: 1 }])
+  assertEquals(pulito.tv_episode_results?.length, 1)
+  assertEquals(pulito.movie_results, [{ id: 7 }])
+  assertEquals(pulito.tv_season_results, [])
+
+  // La coppia che in produzione andava in crash: dopo la sanificazione non deve piu' poterlo.
+  const row = resolveFromFind(42, 'episode', pulito, new Date('2026-08-02T00:00:00Z'))
+  assertEquals(row.resolution, 'found')
+  assertEquals(row.tmdb_show_id, 1)
 })

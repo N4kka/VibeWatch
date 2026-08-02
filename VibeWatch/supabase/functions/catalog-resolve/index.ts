@@ -35,6 +35,7 @@ import {
   MapRow,
   normalizeShowIds,
   resolveFromFind,
+  sanitizeFind,
   SEASONS_PER_APPEND,
   seasonAppendChunks,
   SeasonPayload,
@@ -133,6 +134,19 @@ interface Body {
 const ENTITY_TYPES: EntityType[] = ['series', 'episode', 'movie']
 
 serve(async (req: Request) => {
+  // Il cinto di sicurezza attorno a tutto: un'eccezione non gestita usciva come "Internal
+  // Server Error" nudo, e chi sta a monte (import-resolve, e in ultima analisi il report di
+  // §7.4) non aveva NIENTE da mostrare. La ragione, qualunque sia, deve viaggiare nel corpo.
+  try {
+    return await handle(req)
+  } catch (err) {
+    const message = err instanceof Error ? (err.stack ?? err.message) : String(err)
+    console.error(`[catalog-resolve] eccezione non gestita: ${message}`)
+    return jsonResponse({ error: 'internal', detail: message.slice(0, 400) }, 500)
+  }
+})
+
+async function handle(req: Request): Promise<Response> {
   if (req.method !== 'POST') {
     return jsonResponse({ error: 'Method not allowed' }, 405)
   }
@@ -275,10 +289,12 @@ serve(async (req: Request) => {
     }
 
     try {
-      const find = await fetchJson<FindResponse>(
+      // `sanitizeFind` al confine: /find può contenere elementi null negli array (visto in
+      // produzione), e da qui in poi tutti — resolver e diagnostics — si fidano dei tipi.
+      const find = sanitizeFind(await fetchJson<FindResponse>(
         `${TMDB_API_URL}/find/${entity.tvdb_id}`
           + `?api_key=${TMDB_API_KEY}&external_source=tvdb_id`,
-      ) ?? {}
+      ) ?? {})
       stats.upstream_calls++
       esiti[index] = { row: resolveFromFind(entity.tvdb_id, entity.entity_type, find, now), find }
     } catch (e) {
@@ -370,7 +386,7 @@ serve(async (req: Request) => {
     budget_exhausted: budgetExhausted,
     stats,
   }, 200)
-})
+}
 
 // ---------------------------------------------------------------------------- input
 

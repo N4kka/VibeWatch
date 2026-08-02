@@ -33,6 +33,25 @@ export interface FindResponse {
 }
 
 /**
+ * TMDB's `/find` can contain **null elements inside the result arrays** — seen in production on
+ * a real import (2026-08-02): one poisoned entity crashed `findDiagnostics` with "Cannot read
+ * properties of null" on every retry, deterministically, because the missing-batch always
+ * re-included it. Sanitizing once at the boundary keeps every consumer (resolvers and
+ * diagnostics alike) honestly typed instead of defensively sprinkled.
+ */
+export function sanitizeFind(find: FindResponse): FindResponse {
+  const keep = <T extends { id: number }>(rows?: (T | null | undefined)[]) =>
+    (rows ?? []).filter((r): r is T => r != null && typeof r.id === 'number')
+  return {
+    tv_results: keep(find.tv_results),
+    tv_episode_results: keep(find.tv_episode_results),
+    movie_results: keep(find.movie_results),
+    tv_season_results: keep(find.tv_season_results),
+    person_results: keep(find.person_results),
+  }
+}
+
+/**
  * What TMDB actually returned, per bucket, plus the ids of the matching one.
  *
  * Returned to the caller for anything that did not resolve. §6 says an `ambiguous` row is
