@@ -770,6 +770,8 @@
 "rating.saveFailed" = "No se pudo guardar la puntuación. Inténtalo de nuevo.";
 "profile.favorites.movies" = "Películas favoritas";
 "profile.favorites.shows" = "Series favoritas";
+"profile.lists.title" = "Listas públicas";
+"profile.lists.loadFailed" = "No se pudieron cargar las listas públicas.";
 "profile.stats.title" = "Tus estadísticas";
 "profile.stats.watchTime" = "Tiempo de visionado";
 "profile.stats.movies" = "Películas";

@@ -772,6 +772,8 @@
 "rating.saveFailed" = "Nie udało się zapisać oceny. Spróbuj ponownie.";
 "profile.favorites.movies" = "Ulubione filmy";
 "profile.favorites.shows" = "Ulubione seriale";
+"profile.lists.title" = "Listy publiczne";
+"profile.lists.loadFailed" = "Nie udało się wczytać list publicznych.";
 "profile.stats.title" = "Twoje statystyki";
 "profile.stats.watchTime" = "Czas oglądania";
 "profile.stats.movies" = "Filmy";

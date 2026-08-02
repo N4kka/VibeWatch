@@ -773,6 +773,8 @@
 "rating.saveFailed" = "Couldn't save your rating. Try again.";
 "profile.favorites.movies" = "Favorite movies";
 "profile.favorites.shows" = "Favorite shows";
+"profile.lists.title" = "Public lists";
+"profile.lists.loadFailed" = "Public lists couldn't load.";
 "profile.stats.title" = "Your stats";
 "profile.stats.watchTime" = "Watch time";
 "profile.stats.movies" = "Movies";

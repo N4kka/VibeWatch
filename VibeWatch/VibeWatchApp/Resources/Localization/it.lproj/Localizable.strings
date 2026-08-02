@@ -771,6 +771,8 @@
 "rating.saveFailed" = "Impossibile salvare il voto. Riprova.";
 "profile.favorites.movies" = "Film preferiti";
 "profile.favorites.shows" = "Serie preferite";
+"profile.lists.title" = "Liste pubbliche";
+"profile.lists.loadFailed" = "Le liste pubbliche non si sono caricate.";
 "profile.stats.title" = "Le tue statistiche";
 "profile.stats.watchTime" = "Tempo di visione";
 "profile.stats.movies" = "Film";

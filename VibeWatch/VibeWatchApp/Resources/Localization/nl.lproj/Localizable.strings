@@ -772,6 +772,8 @@
 "rating.saveFailed" = "Beoordeling kon niet worden opgeslagen. Probeer opnieuw.";
 "profile.favorites.movies" = "Favoriete films";
 "profile.favorites.shows" = "Favoriete series";
+"profile.lists.title" = "Openbare lijsten";
+"profile.lists.loadFailed" = "Openbare lijsten konden niet worden geladen.";
 "profile.stats.title" = "Jouw statistieken";
 "profile.stats.watchTime" = "Kijktijd";
 "profile.stats.movies" = "Films";

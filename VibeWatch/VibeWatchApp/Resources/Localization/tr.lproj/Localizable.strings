@@ -760,6 +760,8 @@
 "rating.saveFailed" = "Puan kaydedilemedi. Tekrar dene.";
 "profile.favorites.movies" = "Favori filmler";
 "profile.favorites.shows" = "Favori diziler";
+"profile.lists.title" = "Herkese açık listeler";
+"profile.lists.loadFailed" = "Herkese açık listeler yüklenemedi.";
 "profile.stats.title" = "İstatistiklerin";
 "profile.stats.watchTime" = "İzleme süresi";
 "profile.stats.movies" = "Filmler";

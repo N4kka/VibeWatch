@@ -772,6 +772,8 @@
 "rating.saveFailed" = "आपकी रेटिंग सहेजी नहीं जा सकी। फिर से कोशिश करें।";
 "profile.favorites.movies" = "पसंदीदा फ़िल्में";
 "profile.favorites.shows" = "पसंदीदा शो";
+"profile.lists.title" = "सार्वजनिक सूचियाँ";
+"profile.lists.loadFailed" = "सार्वजनिक सूचियाँ लोड नहीं हो सकीं।";
 "profile.stats.title" = "आपके आँकड़े";
 "profile.stats.watchTime" = "देखने का समय";
 "profile.stats.movies" = "फ़िल्में";

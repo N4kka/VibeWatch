@@ -69,8 +69,20 @@ strutturale: gli aperti, TUTTI, sono questi, in ordine sensato di priorità:
    report dirà se le ~295 stelle sono arrivate. Le **reaction** restano fuori da
    `watch_events.external_ref` (§7.5.1): conservate in export e staging, contate nel
    report — il pezzetto mancante è dichiarato qui.
-4. **Liste pubbliche nel profilo altrui** (§9.3, ultimo bullet): `get_public_lists` e
-   `PublicListsView` esistono, manca la sezione in `PublicProfileView`.
+4. ~~**Liste pubbliche nel profilo altrui** (§9.3, ultimo bullet)~~ — **FATTO e deployato**
+   (2026-08-02, ottava sessione): `get_public_lists` ha il parametro `p_owner` (migration
+   `20260802180000`, drop+create nella stessa transazione — un replace avrebbe creato un
+   overload ambiguo per PostgREST; `NOTIFY pgrst` esplicito dopo il cambio di firma) e i
+   **blocchi ora escludono NEI DUE VERSI** — prima le liste di chi ti aveva bloccato
+   comparivano nel feed; la funzione era già definer, mancava la clausola (lezione di
+   `search_users`, provata rompendo: la suite fallisce esattamente lì). Client: sezione in
+   `PublicProfileView` con fase separata dal profilo (errore ≠ "nessuna lista", riprova
+   visibile; vuoto = niente sezione), card e dettaglio riusati dal feed
+   (`PublicListCard`/`PublicListDetailView`), follow di lista ottimistico con rollback.
+   2 chiavi × 20 lingue, 4 test nuovi in `SocialProfileTests`, 6 asserzioni SQL in
+   `social_test.sql` (harness esteso: lists con name/is_public, list_follows, list_reports).
+   Verificato in produzione: firma unica, grant identici, feed invariato, il profilo di
+   `nakka` risponde 1 lista. Resta la prova a occhio sul dispositivo.
 5. **Favorites da `lists-prod-lists.csv`** (§7.1) e **film dell'export** (destinazione da
    decidere prima che da fare); **`user.csv`** (language/timezone) mai letto.
 6. **Risoluzione a mano dei non riconosciuti** (§7.4): oggi si elencano e basta.

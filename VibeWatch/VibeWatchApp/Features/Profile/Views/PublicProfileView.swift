@@ -70,8 +70,51 @@ struct PublicProfileView: View {
                         favoritesRow(titleKey: "profile.favorites.shows",
                                      slots: detail.favoriteShows, mediaType: "tv")
                     }
+                    publicListsSection
                 }
                 .padding(.vertical, 24)
+            }
+        }
+    }
+
+    /// §9.3, ultimo bullet: le liste pubbliche dell'utente. Tre stati e nessuna finzione:
+    /// vuoto = niente sezione (un profilo senza liste non è rotto), errore = riga con
+    /// riprova (mai travestito da vuoto), carico = le card del feed, stessa strada
+    /// (`PublicListDetailView`), col follow che funziona davvero.
+    @ViewBuilder
+    private var publicListsSection: some View {
+        switch viewModel.listsPhase {
+        case .loading:
+            EmptyView()
+        case .failed:
+            VStack(spacing: 6) {
+                Text("profile.lists.loadFailed".localized)
+                    .font(.system(size: 13))
+                    .foregroundColor(.theme.textSecondary)
+                Button("common.retry".localized) {
+                    Task { await viewModel.retryLists() }
+                }
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(.theme.accentOrange)
+            }
+            .padding(.horizontal, 24)
+        case .loaded(let lists):
+            if !lists.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("profile.lists.title".localized)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.theme.textSecondary)
+                    ForEach(lists) { list in
+                        NavigationLink(destination: PublicListDetailView(list: list)) {
+                            PublicListCard(list: list, onToggleFollow: {
+                                Task { await viewModel.toggleListFollow(list) }
+                            })
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 24)
             }
         }
     }

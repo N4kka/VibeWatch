@@ -772,6 +772,8 @@
 "rating.saveFailed" = "評価を保存できませんでした。もう一度お試しください。";
 "profile.favorites.movies" = "お気に入りの映画";
 "profile.favorites.shows" = "お気に入りの番組";
+"profile.lists.title" = "公開リスト";
+"profile.lists.loadFailed" = "公開リストを読み込めませんでした。";
 "profile.stats.title" = "あなたの統計";
 "profile.stats.watchTime" = "視聴時間";
 "profile.stats.movies" = "映画";

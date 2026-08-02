@@ -772,6 +772,8 @@
 "rating.saveFailed" = "Arvion tallennus epäonnistui. Yritä uudelleen.";
 "profile.favorites.movies" = "Lempielokuvat";
 "profile.favorites.shows" = "Lempisarjat";
+"profile.lists.title" = "Julkiset listat";
+"profile.lists.loadFailed" = "Julkisia listoja ei voitu ladata.";
 "profile.stats.title" = "Tilastosi";
 "profile.stats.watchTime" = "Katseluaika";
 "profile.stats.movies" = "Elokuvat";

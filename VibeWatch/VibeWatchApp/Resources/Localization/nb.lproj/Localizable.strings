@@ -698,6 +698,8 @@
 "rating.saveFailed" = "Kunne ikke lagre vurderingen. Prøv igjen.";
 "profile.favorites.movies" = "Favorittfilmer";
 "profile.favorites.shows" = "Favorittserier";
+"profile.lists.title" = "Offentlige lister";
+"profile.lists.loadFailed" = "Kunne ikke laste offentlige lister.";
 "profile.stats.title" = "Din statistikk";
 "profile.stats.watchTime" = "Visningstid";
 "profile.stats.movies" = "Filmer";

@@ -760,6 +760,8 @@
 "rating.saveFailed" = "Não foi possível guardar a avaliação. Tenta novamente.";
 "profile.favorites.movies" = "Filmes favoritos";
 "profile.favorites.shows" = "Séries favoritas";
+"profile.lists.title" = "Listas públicas";
+"profile.lists.loadFailed" = "Não foi possível carregar as listas públicas.";
 "profile.stats.title" = "As tuas estatísticas";
 "profile.stats.watchTime" = "Tempo de visualização";
 "profile.stats.movies" = "Filmes";

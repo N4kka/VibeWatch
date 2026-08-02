@@ -77,22 +77,42 @@ create table if not exists public.user_notification_preferences (
   timezone text
 );
 
--- Le liste legacy, in forma minima: solo le colonne che `backfill_watchlist_tracking` legge
--- (migration della fusione ListsView-Tracking). Tipi verificati sulla produzione.
+-- Le liste legacy, in forma minima: le colonne che leggono `backfill_watchlist_tracking`
+-- (fusione ListsView-Tracking) e `get_public_lists` (feed + profilo, §9.3). Tipi verificati
+-- sulla produzione; i default su name/is_public esistono solo qui, per non costringere i
+-- test più vecchi — che inserivano senza queste colonne — a conoscerle.
 create table if not exists public.lists (
-  id         uuid primary key default gen_random_uuid(),
-  user_id    uuid not null references auth.users on delete cascade,
-  type       text not null,
-  deleted_at timestamptz
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null references auth.users on delete cascade,
+  name        text not null default '',
+  description text,
+  type        text not null,
+  is_public   boolean not null default false,
+  updated_at  timestamptz default now(),
+  deleted_at  timestamptz
 );
 create table if not exists public.list_items (
+  id          uuid primary key default gen_random_uuid(),
+  list_id     uuid not null references public.lists on delete cascade,
+  user_id     uuid not null,
+  media_id    integer,
+  media_type  text,
+  poster_path text,
+  added_at    timestamptz not null default now(),
+  deleted_at  timestamptz
+);
+-- Follow e report delle liste pubbliche: solo ciò che `get_public_lists` consulta.
+create table if not exists public.list_follows (
   id         uuid primary key default gen_random_uuid(),
-  list_id    uuid not null references public.lists on delete cascade,
   user_id    uuid not null,
-  media_id   integer,
-  media_type text,
-  added_at   timestamptz not null default now(),
+  list_id    uuid not null references public.lists on delete cascade,
   deleted_at timestamptz
+);
+create table if not exists public.list_reports (
+  id      uuid primary key default gen_random_uuid(),
+  user_id uuid not null,
+  list_id uuid not null references public.lists on delete cascade,
+  reason  text
 );
 
 -- Lo schema morto che la migration 20260730030000 deve rimuovere: senza queste, il drop

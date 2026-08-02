@@ -80,6 +80,12 @@ final class SocialProfileTests: XCTestCase {
             followers: followers, following: 1, isFollowing: isFollowing, followsMe: true)
     }
 
+    private func lista(id: String = "l1", isFollowing: Bool = false) -> PublicList {
+        PublicList(id: id, name: "Serie top", description: nil, type: .custom,
+                   itemCount: 3, coverPosterPaths: [], followerCount: 2,
+                   updatedAt: nil, isFollowing: isFollowing)
+    }
+
     func testIlProfiloSiCarica() async {
         let vm = PublicProfileViewModel(
             username: "zed", load: { _ in self.dettaglio() },
@@ -181,5 +187,67 @@ final class SocialProfileTests: XCTestCase {
         XCTAssertEqual(vm.phase, .loaded(dettaglio(isFollowing: false)),
                        "il pulsante non resta su 'seguito' se il server non ha mai saputo niente")
         XCTAssertFalse(vm.isTogglingFollow)
+    }
+
+    // MARK: - Liste pubbliche nel profilo (§9.3, ultimo bullet)
+
+    func testLeListePubblicheSiCaricanoColProfilo() async {
+        var ownerRichiesto: String?
+        let vm = PublicProfileViewModel(
+            username: "zed", load: { _ in self.dettaglio() },
+            follow: { _ in }, unfollow: { _ in },
+            loadLists: { owner in ownerRichiesto = owner; return [self.lista()] })
+        await vm.loadProfile()
+
+        XCTAssertEqual(vm.listsPhase, .loaded([lista()]))
+        XCTAssertEqual(ownerRichiesto, "u2",
+                       "le liste si chiedono per l'id del profilo caricato, non per lo username")
+    }
+
+    func testListeInErroreNonSonoUnProfiloSenzaListe() async {
+        struct Rotto: Error {}
+        var giri = 0
+        let vm = PublicProfileViewModel(
+            username: "zed", load: { _ in self.dettaglio() },
+            follow: { _ in }, unfollow: { _ in },
+            loadLists: { _ in
+                giri += 1
+                if giri == 1 { throw Rotto() }
+                return [self.lista()]
+            })
+        await vm.loadProfile()
+        XCTAssertEqual(vm.listsPhase, .failed,
+                       "un errore di rete non e' 'nessuna lista': la sezione deve poter riprovare")
+
+        await vm.retryLists()
+        XCTAssertEqual(vm.listsPhase, .loaded([lista()]), "la riprova riparte davvero")
+    }
+
+    func testSeguireUnaListaEOttimisticoERollbackaSeFallisce() async {
+        struct Rotto: Error {}
+        let vm = PublicProfileViewModel(
+            username: "zed", load: { _ in self.dettaglio() },
+            follow: { _ in }, unfollow: { _ in },
+            loadLists: { _ in [self.lista()] },
+            followList: { _ in throw Rotto() })
+        await vm.loadProfile()
+
+        await vm.toggleListFollow(lista())
+        XCTAssertEqual(vm.listsPhase, .loaded([lista(isFollowing: false)]),
+                       "il follow fallito torna com'era: lo stato a schermo non mente")
+    }
+
+    func testSeguireUnaListaCheRiesceRestaSeguita() async {
+        var seguite: [String] = []
+        let vm = PublicProfileViewModel(
+            username: "zed", load: { _ in self.dettaglio() },
+            follow: { _ in }, unfollow: { _ in },
+            loadLists: { _ in [self.lista()] },
+            followList: { seguite.append($0) })
+        await vm.loadProfile()
+
+        await vm.toggleListFollow(lista())
+        XCTAssertEqual(seguite, ["l1"])
+        XCTAssertEqual(vm.listsPhase, .loaded([lista(isFollowing: true)]))
     }
 }

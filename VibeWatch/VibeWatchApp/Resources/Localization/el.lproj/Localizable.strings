@@ -772,6 +772,8 @@
 "rating.saveFailed" = "Δεν ήταν δυνατή η αποθήκευση της βαθμολογίας. Δοκίμασε ξανά.";
 "profile.favorites.movies" = "Αγαπημένες ταινίες";
 "profile.favorites.shows" = "Αγαπημένες σειρές";
+"profile.lists.title" = "Δημόσιες λίστες";
+"profile.lists.loadFailed" = "Δεν ήταν δυνατή η φόρτωση των δημόσιων λιστών.";
 "profile.stats.title" = "Τα στατιστικά σου";
 "profile.stats.watchTime" = "Χρόνος προβολής";
 "profile.stats.movies" = "Ταινίες";

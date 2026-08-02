@@ -774,6 +774,8 @@
 "rating.saveFailed" = "Vurderingen kunne ikke gemmes. Prøv igen.";
 "profile.favorites.movies" = "Yndlingsfilm";
 "profile.favorites.shows" = "Yndlingsserier";
+"profile.lists.title" = "Offentlige lister";
+"profile.lists.loadFailed" = "Offentlige lister kunne ikke indlæses.";
 "profile.stats.title" = "Din statistik";
 "profile.stats.watchTime" = "Seertid";
 "profile.stats.movies" = "Film";

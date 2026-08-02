@@ -760,6 +760,8 @@
 "rating.saveFailed" = "Не удалось сохранить оценку. Попробуйте ещё раз.";
 "profile.favorites.movies" = "Любимые фильмы";
 "profile.favorites.shows" = "Любимые сериалы";
+"profile.lists.title" = "Публичные списки";
+"profile.lists.loadFailed" = "Не удалось загрузить публичные списки.";
 "profile.stats.title" = "Ваша статистика";
 "profile.stats.watchTime" = "Время просмотра";
 "profile.stats.movies" = "Фильмы";

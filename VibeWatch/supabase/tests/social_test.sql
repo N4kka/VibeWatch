@@ -574,6 +574,60 @@ select t.is_true((select array_to_string(p.proacl, ',') like '%authenticated=X%'
 select t.eq(has_table_privilege('anon', 'public.user_follows', 'select'), false,
             'e user_follows non ha grant per anon, prima ancora della RLS');
 
+\echo ''
+\echo '=== §9.3 get_public_lists: il filtro per autore e i blocchi nei due versi'
+
+reset role;
+
+-- Le liste di B viste da A: una pubblica, una privata, una pubblica cancellata. Solo la
+-- prima deve esistere per il mondo. Più una pubblica di C (per il feed) e una di D (che
+-- ha bloccato A: il verso che prima non si escludeva).
+insert into public.lists (id, user_id, name, type, is_public, deleted_at) values
+  ('bbbbbbbb-0000-4000-8000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000002',
+   'Serie top di B', 'custom', true,  null),
+  ('bbbbbbbb-0000-4000-8000-000000000002', 'aaaaaaaa-0000-0000-0000-000000000002',
+   'Privata di B',   'custom', false, null),
+  ('bbbbbbbb-0000-4000-8000-000000000003', 'aaaaaaaa-0000-0000-0000-000000000002',
+   'Cancellata di B','custom', true,  now()),
+  ('bbbbbbbb-0000-4000-8000-000000000004', 'aaaaaaaa-0000-0000-0000-000000000003',
+   'Pubblica di C',  'custom', true,  null),
+  ('bbbbbbbb-0000-4000-8000-000000000005', 'aaaaaaaa-0000-0000-0000-000000000004',
+   'Pubblica di D',  'custom', true,  null);
+
+-- D blocca A. Nessun blocco nell'altro verso: e' esattamente il caso che prima sfuggiva.
+insert into public.user_blocks (user_id, blocked_user_id) values
+  ('aaaaaaaa-0000-0000-0000-000000000004', 'aaaaaaaa-0000-0000-0000-000000000001');
+
+set local role authenticated;
+set local request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
+
+select t.eq((select count(*)::integer from public.get_public_lists(
+              p_owner => 'aaaaaaaa-0000-0000-0000-000000000002')),
+            1, 'di B si vede SOLO la lista pubblica viva: ne'' la privata ne'' la cancellata');
+select t.eq((select name from public.get_public_lists(
+              p_owner => 'aaaaaaaa-0000-0000-0000-000000000002')),
+            'Serie top di B', 'ed e'' quella giusta');
+
+select t.eq((select count(*)::integer from public.get_public_lists(
+              p_owner => 'aaaaaaaa-0000-0000-0000-000000000004')),
+            0, 'il profilo di chi MI ha bloccato non mostra liste: il verso che l''invoker non vede');
+select t.is_true(not exists (
+              select 1 from public.get_public_lists() g where g.name = 'Pubblica di D'),
+            'e la sua lista sparisce anche dal feed, non solo dal profilo');
+
+select t.is_true(exists (
+              select 1 from public.get_public_lists() g where g.name = 'Pubblica di C'),
+            'il feed senza p_owner resta il feed: le liste degli altri ci sono ancora');
+
+-- A blocca C: il verso di sempre continua a valere.
+insert into public.user_blocks (user_id, blocked_user_id) values
+  ('aaaaaaaa-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000003');
+select t.is_true(not exists (
+              select 1 from public.get_public_lists() g where g.name = 'Pubblica di C'),
+            'chi ho bloccato io resta escluso come prima');
+
+reset role;
+
 rollback;
 
 \echo ''

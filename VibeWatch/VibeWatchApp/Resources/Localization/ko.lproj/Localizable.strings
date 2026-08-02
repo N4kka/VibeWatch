@@ -772,6 +772,8 @@
 "rating.saveFailed" = "평점을 저장하지 못했습니다. 다시 시도해 주세요.";
 "profile.favorites.movies" = "좋아하는 영화";
 "profile.favorites.shows" = "좋아하는 시리즈";
+"profile.lists.title" = "공개 리스트";
+"profile.lists.loadFailed" = "공개 리스트를 불러올 수 없습니다.";
 "profile.stats.title" = "내 통계";
 "profile.stats.watchTime" = "시청 시간";
 "profile.stats.movies" = "영화";

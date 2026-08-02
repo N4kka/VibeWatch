@@ -773,6 +773,8 @@
 "rating.saveFailed" = "Bewertung konnte nicht gespeichert werden. Versuch es erneut.";
 "profile.favorites.movies" = "Lieblingsfilme";
 "profile.favorites.shows" = "Lieblingsserien";
+"profile.lists.title" = "Öffentliche Listen";
+"profile.lists.loadFailed" = "Öffentliche Listen konnten nicht geladen werden.";
 "profile.stats.title" = "Deine Statistiken";
 "profile.stats.watchTime" = "Sehzeit";
 "profile.stats.movies" = "Filme";

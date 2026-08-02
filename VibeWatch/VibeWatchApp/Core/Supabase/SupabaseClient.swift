@@ -1150,8 +1150,11 @@ class SupabaseService: ObservableObject {
 
 extension SupabaseService {
     /// Feed liste pubbliche via RPC `get_public_lists` (ricerca parziale + scope explore/followed).
-    /// La RPC applica già block, auto-hide oltre soglia report e l'esclusione di sé/non-pubbliche.
-    func fetchPublicLists(search: String?, scope: PublicListsScope, limit: Int, offset: Int) async throws -> [PublicList] {
+    /// La RPC applica già block (nei due versi), auto-hide oltre soglia report e l'esclusione
+    /// delle non-pubbliche. Con `ownerId` restituisce le liste pubbliche di QUEL profilo (§9.3):
+    /// stessa funzione, stesse difese, il feed resta il caso `nil`.
+    func fetchPublicLists(search: String?, scope: PublicListsScope, limit: Int, offset: Int,
+                          ownerId: String? = nil) async throws -> [PublicList] {
         guard let client = client else { throw SupabaseError.notConfigured }
         let trimmed = search?.trimmingCharacters(in: .whitespacesAndNewlines)
         let rows: [PublicListRow] = try await client
@@ -1159,7 +1162,8 @@ extension SupabaseService {
                 p_search: (trimmed?.isEmpty == false) ? trimmed : nil,
                 p_scope: scope.rawValue,
                 p_limit: limit,
-                p_offset: offset
+                p_offset: offset,
+                p_owner: ownerId
             ))
             .execute()
             .value
@@ -1190,6 +1194,7 @@ private struct PublicListsParams: Encodable {
     let p_scope: String
     let p_limit: Int
     let p_offset: Int
+    let p_owner: String?
 }
 
 private struct PublicListRow: Decodable {

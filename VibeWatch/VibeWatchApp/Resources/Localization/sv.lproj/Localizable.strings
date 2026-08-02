@@ -760,6 +760,8 @@
 "rating.saveFailed" = "Betyget kunde inte sparas. Försök igen.";
 "profile.favorites.movies" = "Favoritfilmer";
 "profile.favorites.shows" = "Favoritserier";
+"profile.lists.title" = "Offentliga listor";
+"profile.lists.loadFailed" = "Offentliga listor kunde inte laddas.";
 "profile.stats.title" = "Din statistik";
 "profile.stats.watchTime" = "Tittartid";
 "profile.stats.movies" = "Filmer";

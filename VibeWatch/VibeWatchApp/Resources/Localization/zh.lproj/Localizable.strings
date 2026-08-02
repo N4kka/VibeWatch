@@ -757,6 +757,8 @@
 "rating.saveFailed" = "无法保存评分,请重试。";
 "profile.favorites.movies" = "最爱的电影";
 "profile.favorites.shows" = "最爱的剧集";
+"profile.lists.title" = "公开片单";
+"profile.lists.loadFailed" = "无法加载公开片单。";
 "profile.stats.title" = "我的统计";
 "profile.stats.watchTime" = "观看时长";
 "profile.stats.movies" = "电影";
