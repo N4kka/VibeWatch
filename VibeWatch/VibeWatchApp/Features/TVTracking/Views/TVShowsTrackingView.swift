@@ -2,10 +2,11 @@ import SwiftUI
 
 /// SPEC v3 §9.2 — la schermata che l'utente TV Time apre ogni giorno.
 ///
-/// L'ordine delle sezioni è quello della spec e non una scelta estetica: "Da guardare" in cima
-/// perché è il motivo per cui la schermata esiste, la timeline subito sotto perché risponde alla
-/// seconda domanda ("cosa esce"), il resto chiuso di default perché sono elenchi lunghi che non
-/// servono ogni giorno.
+/// "Da guardare" in cima perché è il motivo per cui la schermata esiste; il resto chiuso di
+/// default perché sono elenchi lunghi che non servono ogni giorno. La timeline delle uscite
+/// che §9.2 metteva qui sotto NON c'è più (Redesign 2.0, deciso dall'utente il 2026-08-03):
+/// a "cosa esce" risponde il calendario — l'icona qui in alto e la strip in Scopri — che
+/// legge le stesse righe di `tv_timeline`.
 ///
 /// La versione precedente era un selettore a tre segmenti su liste ricavate dal client. Non è
 /// stata adattata ma sostituita: i bucket ora sono sette e li decide il server (§3.4), e un
@@ -79,7 +80,9 @@ struct TVShowsTrackingView: View {
 
     @ViewBuilder
     private var content: some View {
-        if viewModel.sections.isEmpty && !viewModel.isLoading {
+        // Senza la timeline a schermo, "vuoto" significa "nessun bucket": una cache che
+        // avesse solo righe di timeline non è più contenuto di QUESTA schermata.
+        if viewModel.sections.sections.isEmpty && !viewModel.isLoading {
             emptyState
         } else {
             List {
@@ -92,7 +95,7 @@ struct TVShowsTrackingView: View {
                 // questa riga appare e chiudeva il cronometro. Cioe' si misurava il tempo di
                 // disegnare una lista vuota, e il numero sarebbe stato lusinghiero e falso anche
                 // con dati veri — non solo sull'account senza storico a cui era stato attribuito.
-                if !viewModel.sections.isEmpty {
+                if !viewModel.sections.sections.isEmpty {
                     Color.clear.frame(height: 0)
                         .onAppear {
                             DispatchQueue.main.async { TrackingPerformanceProbe.firstFrameRendered() }
@@ -102,14 +105,11 @@ struct TVShowsTrackingView: View {
                         .listRowSeparator(.hidden)
                 }
 
-                ForEach(viewModel.sections.timeline, id: \.group) { group, entries in
-                    Section(header: Text(group.titleKey.localized)) {
-                        ForEach(entries) { entry in
-                            TimelineRowView(entry: entry)
-                        }
-                    }
-                }
-
+                // Redesign 2.0 (deciso dall'utente, 2026-08-03): le sezioni timeline
+                // (Oggi/Domani/Questa settimana/Questo mese) NON si disegnano più qui — a
+                // "cosa esce" risponde il calendario (icona in alto e strip in Scopri), che
+                // legge le stesse righe di `tv_timeline`. Supera l'ordine di §9.2: due elenchi
+                // delle stesse uscite in due forme erano il "due posti, due numeri" della UI.
                 ForEach(viewModel.sections.sections, id: \.bucket) { bucket, rows in
                     Section(header: sectionHeader(bucket: bucket, count: rows.count)) {
                         if viewModel.isExpanded(bucket) {
@@ -197,50 +197,5 @@ struct TVShowsTrackingView: View {
     }
 }
 
-/// Una riga della timeline: cosa esce, quando.
-private struct TimelineRowView: View {
-    let entry: TimelineEntry
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Text(entry.label)
-                .font(.system(size: 13, weight: .bold))
-                .foregroundColor(.theme.textPrimary)
-                .frame(width: 58, alignment: .leading)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(entry.showName ?? "tracking.unknownShow".localized)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(.theme.textPrimary)
-                    .lineLimit(1)
-                if let name = entry.episodeName, !name.isEmpty {
-                    Text(name)
-                        .font(.system(size: 12))
-                        .foregroundColor(.theme.textSecondary)
-                        .lineLimit(1)
-                }
-            }
-
-            Spacer()
-
-            // §1.3: gli speciali si marcano, non si filtrano. Qui il marchio è letterale.
-            if entry.isSpecial {
-                Text("tracking.special".localized)
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(.theme.textSecondary)
-                    .padding(.horizontal, 6).padding(.vertical, 2)
-                    .background(Color.white.opacity(0.12))
-                    .clipShape(Capsule())
-            }
-
-            // §3.3, limite noto: TMDB dà il giorno, non l'ora. Si mostra il giorno e basta —
-            // inventare "02:00" perché TV Time lo mostrava significherebbe inventare un dato che
-            // non abbiamo, ed è l'imprecisione che l'utente nota subito.
-            Text(entry.airDate, format: .dateTime.day().month(.abbreviated))
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(.theme.textSecondary)
-        }
-        .listRowBackground(Color.clear)
-        .listRowSeparator(.hidden)
-    }
-}
+// `TimelineRowView` non esiste più: le uscite si guardano nel calendario
+// (`ReleaseCalendarView`), che ha la sua riga con poster, chip SxE e badge SPECIAL.

@@ -19,12 +19,24 @@ struct DiscoverModeSwitcher: View {
             segment(.clips, title: "tab.clips".localized)
         }
         .padding(3)
-        // La stessa ricetta liquid glass della bottom bar (materiale + gradiente di
-        // profondità + bordo highlight), non una tinta piatta: il prototipo dà allo switcher
-        // il `backdrop blur` proprio perché i poster gli scorrono sotto. Il raggio supera la
-        // mezza altezza, quindi il RoundedRectangle interno del modifier È la capsula.
-        .liquidGlass(cornerRadius: 22, opacity: 0.9)
-        .clipShape(Capsule())
+        // Il glass segue lo stesso doppio binario della bottom bar: su iOS 26+ il materiale
+        // è quello NATIVO del sistema (`glassEffect`), sotto resta la ricetta custom
+        // (materiale + gradiente di profondità + bordo highlight). Non è solo estetica:
+        // il glass nativo rifrange e si adatta al contenuto che scorre sotto, cose che
+        // l'imitazione non fa.
+        .modifier(SwitcherGlass())
+    }
+
+    private struct SwitcherGlass: ViewModifier {
+        func body(content: Content) -> some View {
+            if #available(iOS 26.0, *) {
+                content.glassEffect(.regular, in: Capsule())
+            } else {
+                content
+                    .liquidGlass(cornerRadius: 22, opacity: 0.9)
+                    .clipShape(Capsule())
+            }
+        }
     }
 
     private func segment(_ target: DiscoverMode, title: String) -> some View {
