@@ -834,3 +834,17 @@
 "gamification.levels.title" = "Poziomy";
 "gamification.challenge.none" = "Dziś brak misji";
 "common.seeAll" = "Zobacz wszystko";
+"profile.stats.subtitle" = "Gatunki, nastrój, czas oglądania";
+"diary.subtitle" = "Historia obejrzanych odcinków i filmów";
+"profile.badgesLevels.subtitle" = "Poziom %d · %d/%d odznak";
+"notifications.row.subtitle" = "Premiery, nowe odcinki, godziny ciszy";
+"platforms.row.subtitle" = "Streaming, wypożyczenie i zakup";
+"platforms.footnote" = "Wybrane platformy filtrują, gdzie oglądać, w całej aplikacji.";
+"profile.languageCountry" = "Język i kraj";
+"profile.imageCache" = "Pamięć podręczna obrazów";
+"profile.imageCache.subtitle" = "Wstępne pobieranie tylko przez WiFi";
+"common.on" = "Wł.";
+"common.off" = "Wył.";
+"profile.privacyTerms" = "Prywatność i warunki";
+"profile.footer.tmdb" = "Ten produkt korzysta z API TMDb, ale nie jest zatwierdzony ani certyfikowany przez TMDb.";
+"settings.cacheManagement.inUse" = "%d MB w użyciu";

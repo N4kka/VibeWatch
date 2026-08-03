@@ -75,6 +75,19 @@ struct ProfileView: View {
     @StateObject private var serverStats = ProfileStatsViewModel()
     @State private var showAnalyticsDashboard = false
     @State private var showBadges = false
+    /// Redesign 2.0: la tile "Library" è una metrica di backlog, locale per natura (ARCH-001).
+    /// Si mostra solo se le statistiche locali sono già state generate: qui non si lancia il
+    /// ricalcolo intero della dashboard per una tile.
+    @StateObject private var analyticsService = AnalyticsInsightsService.shared
+    /// @username e follower/seguiti nell'header (prototipo 2.0). Lo username sta sul server;
+    /// i conteggi arrivano da `get_public_profile` sul proprio profilo. Assenti finché non
+    /// caricati: niente zeri con la faccia di un dato.
+    @State private var ownUsername: String?
+    @State private var socialCounts: (followers: Int, following: Int)?
+    @State private var showNotificationPrefs = false
+    @State private var showLanguageSelector = false
+    @State private var showCacheSettings = false
+    @State private var showPrivacyTerms = false
     @State private var showSignUp = false
     @State private var showSignIn = false
     @State private var showImagePicker = false
@@ -244,6 +257,7 @@ struct ProfileView: View {
         do {
             let state = try await SupabaseService.shared.usernameState()
             if let username = state?.username, !username.isEmpty {
+                ownUsername = username
                 shareProfile = .ready(UniversalLinks.profileURL(username: username))
             } else {
                 shareProfile = .noUsername
@@ -252,6 +266,16 @@ struct ProfileView: View {
             // Un errore non è "non hai uno username" (§3.7 ha lasciato 19 profili senza):
             // i due casi hanno due rese diverse apposta.
             shareProfile = .failed
+        }
+    }
+
+    /// I conteggi sono informazione secondaria dell'header: se la lettura fallisce la riga
+    /// semplicemente non compare — un "0 Follower" inventato sarebbe peggio dell'assenza.
+    @MainActor
+    private func loadSocialCounts() async {
+        guard let username = ownUsername else { return }
+        if let detail = try? await SupabaseService.shared.publicProfile(username: username) {
+            socialCounts = (detail.followers, detail.following)
         }
     }
 
@@ -289,6 +313,7 @@ struct ProfileView: View {
                         await gamificationService.loadUserState(userId: userId)
                     }
                     await serverStats.load()
+                    await loadSocialCounts()
                 }
             }
             .overlay {
@@ -491,9 +516,18 @@ struct ProfileView: View {
                                     }
                                 }
                                 .padding(.horizontal, 20)
-                                .padding(.bottom, 16)
                             }
                         }
+
+                        // La frase del prototipo: dice COSA fa la selezione, che prima era
+                        // implicito — le piattaforme filtrano "dove guardare" in tutta l'app.
+                        Text("platforms.footnote".localized)
+                            .font(.system(size: 11))
+                            .foregroundColor(Color(hex: "6c6d73"))
+                            .padding(.horizontal, 20)
+                            .padding(.top, 12)
+                            .padding(.bottom, 16)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
                 .frame(maxHeight: UIScreen.main.bounds.height * 0.6)
@@ -528,6 +562,20 @@ struct ProfileView: View {
             // Redesign 2.0: la card livello e la riga "Badge e livelli" aprono la casa unica
             // della gamification; la galleria completa sta un livello dentro.
             GamificationProgressView(gamificationService: gamificationService)
+        }
+        .sheet(isPresented: $showNotificationPrefs) {
+            NavigationView {
+                NotificationPreferencesView(userId: appState.currentUser?.id ?? "")
+            }
+        }
+        .sheet(isPresented: $showLanguageSelector) {
+            LanguageSelectorView()
+        }
+        .sheet(isPresented: $showCacheSettings) {
+            ImageCacheSettingsView()
+        }
+        .sheet(isPresented: $showPrivacyTerms) {
+            PrivacyTermsView()
         }
     }
 
@@ -624,7 +672,14 @@ struct ProfileView: View {
                 statTile(value: "\(stats.episodesWatched)", label: "profile.stats.episodes".localized)
                 statTile(value: Self.watchTimeText(stats.watchTimeSeconds),
                          label: "profile.stats.watchTime".localized, highlight: true)
-                statTile(value: "\(stats.showsWatched)", label: "profile.stats.shows".localized)
+                // "Library" = quota del tracciato già vista: metrica di backlog, locale per
+                // natura (stessa tile della dashboard). Se le stats locali non sono ancora
+                // state generate, al suo posto c'è un numero del server — mai una % inventata.
+                if let local = analyticsService.userStats?.watchStats {
+                    statTile(value: "\(Int(local.completionRate * 100))%", label: "Library")
+                } else {
+                    statTile(value: "\(stats.showsWatched)", label: "profile.stats.shows".localized)
+                }
             }
             .padding(.horizontal, 20)
         }
@@ -747,10 +802,38 @@ struct ProfileView: View {
                 .font(.system(size: 24, weight: .bold))
                 .foregroundColor(.theme.textPrimary)
 
-            if shouldShowEmailSubtitle {
+            // @username sotto il nome (prototipo 2.0): se manca — i 19 del backfill — la riga
+            // non c'è, come per il link di condivisione.
+            if let username = ownUsername {
+                Text("@\(username)")
+                    .font(.system(size: 13))
+                    .foregroundColor(.theme.textSecondary)
+            } else if shouldShowEmailSubtitle {
                 Text(appState.currentUser?.email ?? "")
                     .font(.system(size: 14))
                     .foregroundColor(.theme.textSecondary)
+            }
+
+            if let counts = socialCounts {
+                HStack(spacing: 18) {
+                    HStack(spacing: 5) {
+                        Text("\(counts.followers)")
+                            .font(.system(size: 14, weight: .heavy))
+                            .foregroundColor(.theme.textPrimary)
+                        Text("social.profile.followers".localized)
+                            .font(.system(size: 12.5))
+                            .foregroundColor(.theme.textSecondary)
+                    }
+                    HStack(spacing: 5) {
+                        Text("\(counts.following)")
+                            .font(.system(size: 14, weight: .heavy))
+                            .foregroundColor(.theme.textPrimary)
+                        Text("social.profile.following".localized)
+                            .font(.system(size: 12.5))
+                            .foregroundColor(.theme.textSecondary)
+                    }
+                }
+                .padding(.top, 4)
             }
             
             if isUploadingAvatar {
@@ -777,55 +860,63 @@ struct ProfileView: View {
         }
     }
     
+    /// "Netflix +4": la prima piattaforma scelta e quante altre. Vuoto = niente valore.
+    private var platformsValue: String? {
+        let names = selectedPlatforms.map(\.rawValue).sorted()
+        guard let first = names.first else { return nil }
+        return names.count > 1 ? "\(first) +\(names.count - 1)" : first
+    }
+
+    private var languageValue: String {
+        "\(localizationManager.currentLanguage.nativeName) · \(localizationManager.currentCountry.id)"
+    }
+
+    private var cacheSizeValue: String {
+        switch ImageCacheService.shared.getCurrentCacheSizePreference() {
+        case .small: return "200 MB"
+        case .medium: return "500 MB"
+        case .large: return "1 GB"
+        }
+    }
+
+    private var badgesSubtitle: String? {
+        guard gamificationService.isLoaded else { return nil }
+        let all = gamificationService.getAllBadgesWithProgress()
+        return String(
+            format: "profile.badgesLevels.subtitle".localized,
+            gamificationService.userState.currentLevel,
+            all.filter(\.isUnlocked).count,
+            all.count
+        )
+    }
+
     private var settingsSection: some View {
         VStack(spacing: 12) {
-            // Only show upgrade banner if user is not Pro
-            if !dailyQuotaManager.isProUser {
-                Button {
-                    showUpgradePaywall = true
-                } label: {
-                    ZStack(alignment: .leading) {
-                        Image("pro_banner")
-                            .resizable()
-                            .scaledToFill()
-                            .frame(maxWidth: .infinity, minHeight: 110, maxHeight: 110)
-                            .clipped()
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("profile.upgradePro.title".localized)
-                                .font(.system(size: 18, weight: .bold))
-                                .foregroundColor(.white)
-                            Text("profile.upgradePro.subtitle".localized)
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(.white.opacity(0.85))
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 14)
-                    }
-                }
-                .padding(.horizontal, 20)
-            }
-
             // Redesign 2.0: le righe si raggruppano per ruolo, come nel prototipo. La ricerca
             // utenti non è più qui: è la porta del tab Social, e una seconda porta nel profilo
             // sarebbe la copia che diverge.
             groupLabel("profile.group.activity".localized)
             groupCard {
-                SettingsRow(icon: "chart.bar", title: "profile.stats.title".localized) {
+                SettingsRow(icon: "chart.bar",
+                            title: "profile.stats.title".localized,
+                            subtitle: "profile.stats.subtitle".localized) {
                     showAnalyticsDashboard = true
                 }
 
                 rowDivider
 
                 // §9.3: il diario. Si legge dalla cache locale (12 mesi, §5), zero rete.
-                SettingsRow(icon: "book", title: "diary.title".localized) {
+                SettingsRow(icon: "book",
+                            title: "diary.title".localized,
+                            subtitle: "diary.subtitle".localized) {
                     showDiary = true
                 }
 
                 rowDivider
 
-                SettingsRow(icon: "trophy", title: "profile.badgesLevels".localized) {
+                SettingsRow(icon: "trophy",
+                            title: "profile.badgesLevels".localized,
+                            subtitle: badgesSubtitle) {
                     showBadges = true
                 }
 
@@ -836,37 +927,42 @@ struct ProfileView: View {
 
             groupLabel("profile.group.preferences".localized)
             groupCard {
-                HStack {
-                    Image(systemName: "bell")
-                        .font(.system(size: 20))
-                        .foregroundColor(.theme.accentOrange)
-                        .frame(width: 30)
-
-                    Text("profile.notifications".localized)
-                        .font(.system(size: 16))
-                        .foregroundColor(.theme.textPrimary)
-
-                    Spacer()
-
-                    // Use default iOS toggle (iOS 26+ has new design automatically)
-                    Toggle("", isOn: $notificationService.notificationsEnabled)
-                        .labelsHidden()
-                        .tint(.theme.accentOrange)
+                // La riga apre le preferenze complete (tipi + ore silenziose): il toggle
+                // secco che stava qui non diceva COSA si stava accendendo.
+                SettingsRow(icon: "bell",
+                            title: "profile.notifications".localized,
+                            subtitle: "notifications.row.subtitle".localized,
+                            value: (notificationService.notificationsEnabled
+                                    ? "common.on" : "common.off").localized) {
+                    showNotificationPrefs = true
                 }
-                .onChange(of: notificationService.notificationsEnabled) {_, newValue in
-                    if !pendingNotificationToggle {
-                        pendingNotificationToggle = true
-                        handleNotificationToggle()
-                    }
-                }
-                .padding()
 
                 rowDivider
 
-                SettingsRow(icon: "play.tv", title: "profile.streamingServices".localized) {
+                SettingsRow(icon: "play.tv",
+                            title: "profile.streamingServices".localized,
+                            subtitle: "platforms.row.subtitle".localized,
+                            value: platformsValue) {
                     withAnimation {
                         showPlatformSelector = true
                     }
+                }
+
+                rowDivider
+
+                SettingsRow(icon: "globe",
+                            title: "profile.languageCountry".localized,
+                            value: languageValue) {
+                    showLanguageSelector = true
+                }
+
+                rowDivider
+
+                SettingsRow(icon: "folder",
+                            title: "profile.imageCache".localized,
+                            subtitle: "profile.imageCache.subtitle".localized,
+                            value: cacheSizeValue) {
+                    showCacheSettings = true
                 }
 
                 rowDivider
@@ -886,6 +982,19 @@ struct ProfileView: View {
 
             groupLabel("profile.group.account".localized)
             groupCard {
+                // Passa a Pro come riga arancione (prototipo) — il banner immagine è rimasto
+                // solo dentro il paywall. Chi è già Pro non vede la riga.
+                if !dailyQuotaManager.isProUser {
+                    SettingsRow(icon: "crown",
+                                title: "profile.upgradePro.title".localized,
+                                subtitle: "profile.upgradePro.subtitle".localized,
+                                textColor: .theme.accentOrange) {
+                        showUpgradePaywall = true
+                    }
+
+                    rowDivider
+                }
+
                 SettingsRow(icon: "key.fill", title: "profile.changePassword".localized) {
                     showChangePassword = true
                 }
@@ -904,12 +1013,27 @@ struct ProfileView: View {
 
                 rowDivider
 
+                SettingsRow(icon: "shield", title: "profile.privacyTerms".localized) {
+                    showPrivacyTerms = true
+                }
+
+                rowDivider
+
                 SettingsRow(icon: "rectangle.portrait.and.arrow.right",
                             title: "profile.logout".localized,
                             iconColor: .red, textColor: .red) {
                     showLogoutConfirmation = true
                 }
             }
+
+            // L'attribuzione TMDb in fondo, come nel prototipo (ed è una condizione d'uso
+            // dell'API, non un vezzo).
+            Text("VibeWatch 2.0 · \("profile.footer.tmdb".localized)")
+                .font(.system(size: 11))
+                .foregroundColor(Color(hex: "55565c"))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
+                .padding(.top, 8)
         }
         .alert("notifications.permissionRequired".localized, isPresented: $showNotificationAlert) {
             Button("notifications.openSettings".localized) {
@@ -1015,32 +1139,55 @@ struct ProfileView: View {
     }
 }
 
+/// Redesign 2.0 — la riga del profilo come nel prototipo: icona in un cerchio tinto,
+/// titolo con sottotitolo opzionale, valore a destra (es. "On", "Netflix +4"), chevron.
 struct SettingsRow: View {
     let icon: String
     let title: String
+    var subtitle: String? = nil
+    var value: String? = nil
     var iconColor: Color = .theme.accentOrange
     var textColor: Color = .theme.textPrimary
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 16) {
-                Image(systemName: icon)
-                    .font(.system(size: 20))
-                    .foregroundColor(iconColor)
-                    .frame(width: 30)
-                
-                Text(title)
-                    .font(.system(size: 16))
-                    .foregroundColor(textColor)
-                
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(iconColor.opacity(0.12))
+                        .frame(width: 34, height: 34)
+                    Image(systemName: icon)
+                        .font(.system(size: 15))
+                        .foregroundColor(iconColor)
+                }
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(title)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(textColor)
+                    if let subtitle, !subtitle.isEmpty {
+                        Text(subtitle)
+                            .font(.system(size: 11.5))
+                            .foregroundColor(Color(hex: "8a8b90"))
+                            .lineLimit(1)
+                    }
+                }
+
                 Spacer()
-                
+
+                if let value, !value.isEmpty {
+                    Text(value)
+                        .font(.system(size: 13))
+                        .foregroundColor(.theme.textSecondary)
+                }
+
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 14))
-                    .foregroundColor(.theme.textSecondary)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(Color(hex: "6c6d73"))
             }
-            .padding()
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
         }
     }
 }

@@ -835,3 +835,17 @@
 "gamification.levels.title" = "Level";
 "gamification.challenge.none" = "Heute keine Mission";
 "common.seeAll" = "Alle ansehen";
+"profile.stats.subtitle" = "Genres, Mood, Sehzeit";
+"diary.subtitle" = "Verlauf gesehener Episoden und Filme";
+"profile.badgesLevels.subtitle" = "Level %d · %d/%d Abzeichen";
+"notifications.row.subtitle" = "Neuheiten, neue Episoden, Ruhezeiten";
+"platforms.row.subtitle" = "Streaming, Leihen und Kaufen";
+"platforms.footnote" = "Die gewählten Plattformen filtern in der ganzen App, wo du schauen kannst.";
+"profile.languageCountry" = "Sprache und Land";
+"profile.imageCache" = "Bild-Cache";
+"profile.imageCache.subtitle" = "Vorladen nur über WLAN";
+"common.on" = "An";
+"common.off" = "Aus";
+"profile.privacyTerms" = "Datenschutz und Bedingungen";
+"profile.footer.tmdb" = "Dieses Produkt nutzt die TMDb-API, ist aber nicht von TMDb geprüft oder zertifiziert.";
+"settings.cacheManagement.inUse" = "%d MB belegt";

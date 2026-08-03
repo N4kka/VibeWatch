@@ -834,3 +834,17 @@
 "gamification.levels.title" = "Tasot";
 "gamification.challenge.none" = "Ei tehtävää tänään";
 "common.seeAll" = "Näytä kaikki";
+"profile.stats.subtitle" = "Lajityypit, mood, katseluaika";
+"diary.subtitle" = "Katsottujen jaksojen ja elokuvien historia";
+"profile.badgesLevels.subtitle" = "Taso %d · %d/%d merkkiä";
+"notifications.row.subtitle" = "Julkaisut, uudet jaksot, hiljaiset tunnit";
+"platforms.row.subtitle" = "Suoratoisto, vuokraus ja osto";
+"platforms.footnote" = "Valitut alustat suodattavat katselupaikat koko sovelluksessa.";
+"profile.languageCountry" = "Kieli ja maa";
+"profile.imageCache" = "Kuvavälimuisti";
+"profile.imageCache.subtitle" = "Esilataus vain WiFi-yhteydellä";
+"common.on" = "Päällä";
+"common.off" = "Pois";
+"profile.privacyTerms" = "Tietosuoja ja ehdot";
+"profile.footer.tmdb" = "Tämä tuote käyttää TMDb-rajapintaa, mutta TMDb ei ole hyväksynyt tai sertifioinut sitä.";
+"settings.cacheManagement.inUse" = "%d Mt käytössä";

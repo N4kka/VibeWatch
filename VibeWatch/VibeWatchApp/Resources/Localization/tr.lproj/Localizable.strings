@@ -822,3 +822,17 @@
 "gamification.levels.title" = "Seviyeler";
 "gamification.challenge.none" = "Bugün görev yok";
 "common.seeAll" = "Tümünü gör";
+"profile.stats.subtitle" = "Türler, ruh hali, izleme süresi";
+"diary.subtitle" = "İzlenen bölüm ve film geçmişi";
+"profile.badgesLevels.subtitle" = "Seviye %d · %d/%d rozet";
+"notifications.row.subtitle" = "Yayınlar, yeni bölümler, sessiz saatler";
+"platforms.row.subtitle" = "Yayın, kiralama ve satın alma";
+"platforms.footnote" = "Seçilen platformlar tüm uygulamada nereden izleneceğini filtreler.";
+"profile.languageCountry" = "Dil ve ülke";
+"profile.imageCache" = "Görsel önbelleği";
+"profile.imageCache.subtitle" = "Yalnızca WiFi'da ön yükleme";
+"common.on" = "Açık";
+"common.off" = "Kapalı";
+"profile.privacyTerms" = "Gizlilik ve koşullar";
+"profile.footer.tmdb" = "Bu ürün TMDb API'sini kullanır ancak TMDb tarafından onaylanmamıştır.";
+"settings.cacheManagement.inUse" = "%d MB kullanımda";

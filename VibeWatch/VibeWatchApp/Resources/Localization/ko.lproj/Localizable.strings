@@ -834,3 +834,17 @@
 "gamification.levels.title" = "레벨";
 "gamification.challenge.none" = "오늘은 미션이 없습니다";
 "common.seeAll" = "모두 보기";
+"profile.stats.subtitle" = "장르, 무드, 시청 시간";
+"diary.subtitle" = "시청한 에피소드와 영화 기록";
+"profile.badgesLevels.subtitle" = "레벨 %d · 배지 %d/%d";
+"notifications.row.subtitle" = "공개, 새 에피소드, 방해 금지 시간";
+"platforms.row.subtitle" = "스트리밍, 대여, 구매";
+"platforms.footnote" = "선택한 플랫폼은 앱 전체의 시청처 표시에 적용됩니다.";
+"profile.languageCountry" = "언어 및 국가";
+"profile.imageCache" = "이미지 캐시";
+"profile.imageCache.subtitle" = "WiFi에서만 미리 불러오기";
+"common.on" = "켬";
+"common.off" = "끔";
+"profile.privacyTerms" = "개인정보 및 약관";
+"profile.footer.tmdb" = "이 제품은 TMDb API를 사용하지만 TMDb의 승인이나 인증을 받지 않았습니다.";
+"settings.cacheManagement.inUse" = "%d MB 사용 중";

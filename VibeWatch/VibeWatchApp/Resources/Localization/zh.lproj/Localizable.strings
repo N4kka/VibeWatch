@@ -819,3 +819,17 @@
 "gamification.levels.title" = "等级";
 "gamification.challenge.none" = "今天没有任务";
 "common.seeAll" = "查看全部";
+"profile.stats.subtitle" = "类型、心情、观看时长";
+"diary.subtitle" = "已看剧集和电影的历史";
+"profile.badgesLevels.subtitle" = "等级 %d · 徽章 %d/%d";
+"notifications.row.subtitle" = "上线、新剧集、免打扰时段";
+"platforms.row.subtitle" = "流媒体、租赁与购买";
+"platforms.footnote" = "所选平台会在整个应用中筛选观看渠道。";
+"profile.languageCountry" = "语言与国家/地区";
+"profile.imageCache" = "图片缓存";
+"profile.imageCache.subtitle" = "仅在 WiFi 下预加载";
+"common.on" = "开";
+"common.off" = "关";
+"profile.privacyTerms" = "隐私与条款";
+"profile.footer.tmdb" = "本产品使用 TMDb API，但未获得 TMDb 的认可或认证。";
+"settings.cacheManagement.inUse" = "已用 %d MB";

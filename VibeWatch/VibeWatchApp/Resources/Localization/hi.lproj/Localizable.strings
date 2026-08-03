@@ -834,3 +834,17 @@
 "gamification.levels.title" = "लेवल";
 "gamification.challenge.none" = "आज कोई मिशन नहीं";
 "common.seeAll" = "सभी देखें";
+"profile.stats.subtitle" = "शैलियाँ, मूड, देखने का समय";
+"diary.subtitle" = "देखे गए एपिसोड और फ़िल्मों का इतिहास";
+"profile.badgesLevels.subtitle" = "लेवल %d · %d/%d बैज";
+"notifications.row.subtitle" = "रिलीज़, नए एपिसोड, शांत घंटे";
+"platforms.row.subtitle" = "स्ट्रीमिंग, किराया और ख़रीद";
+"platforms.footnote" = "चुने गए प्लेटफ़ॉर्म पूरे ऐप में देखने की जगह तय करते हैं।";
+"profile.languageCountry" = "भाषा और देश";
+"profile.imageCache" = "इमेज कैश";
+"profile.imageCache.subtitle" = "केवल WiFi पर प्रीलोड";
+"common.on" = "चालू";
+"common.off" = "बंद";
+"profile.privacyTerms" = "गोपनीयता और शर्तें";
+"profile.footer.tmdb" = "यह उत्पाद TMDb API का उपयोग करता है, पर TMDb द्वारा प्रमाणित नहीं है।";
+"settings.cacheManagement.inUse" = "%d MB उपयोग में";

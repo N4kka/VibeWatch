@@ -834,3 +834,17 @@
 "gamification.levels.title" = "Niveaus";
 "gamification.challenge.none" = "Vandaag geen missie";
 "common.seeAll" = "Alles bekijken";
+"profile.stats.subtitle" = "Genres, mood, kijktijd";
+"diary.subtitle" = "Geschiedenis van bekeken afleveringen en films";
+"profile.badgesLevels.subtitle" = "Niveau %d · %d/%d badges";
+"notifications.row.subtitle" = "Releases, nieuwe afleveringen, stille uren";
+"platforms.row.subtitle" = "Streaming, huren en kopen";
+"platforms.footnote" = "Geselecteerde platforms filteren waar je kunt kijken in de hele app.";
+"profile.languageCountry" = "Taal en land";
+"profile.imageCache" = "Afbeeldingscache";
+"profile.imageCache.subtitle" = "Vooraf laden alleen via wifi";
+"common.on" = "Aan";
+"common.off" = "Uit";
+"profile.privacyTerms" = "Privacy en voorwaarden";
+"profile.footer.tmdb" = "Dit product gebruikt de TMDb-API maar is niet goedgekeurd of gecertificeerd door TMDb.";
+"settings.cacheManagement.inUse" = "%d MB in gebruik";

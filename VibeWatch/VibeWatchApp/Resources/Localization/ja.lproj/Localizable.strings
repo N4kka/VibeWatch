@@ -834,3 +834,17 @@
 "gamification.levels.title" = "レベル";
 "gamification.challenge.none" = "今日のミッションはありません";
 "common.seeAll" = "すべて見る";
+"profile.stats.subtitle" = "ジャンル・ムード・視聴時間";
+"diary.subtitle" = "視聴したエピソードと映画の履歴";
+"profile.badgesLevels.subtitle" = "レベル%d · バッジ%d/%d";
+"notifications.row.subtitle" = "配信・新エピソード・通知オフ時間";
+"platforms.row.subtitle" = "配信・レンタル・購入";
+"platforms.footnote" = "選択したプラットフォームはアプリ全体の視聴先に反映されます。";
+"profile.languageCountry" = "言語と国";
+"profile.imageCache" = "画像キャッシュ";
+"profile.imageCache.subtitle" = "プリロードはWiFiのみ";
+"common.on" = "オン";
+"common.off" = "オフ";
+"profile.privacyTerms" = "プライバシーと利用規約";
+"profile.footer.tmdb" = "本製品はTMDb APIを使用していますが、TMDbの承認・認定を受けていません。";
+"settings.cacheManagement.inUse" = "%d MB使用中";

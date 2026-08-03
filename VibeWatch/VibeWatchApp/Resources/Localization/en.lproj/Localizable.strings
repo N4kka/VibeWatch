@@ -835,3 +835,17 @@
 "gamification.levels.title" = "Levels";
 "gamification.challenge.none" = "No mission today";
 "common.seeAll" = "See all";
+"profile.stats.subtitle" = "Genres, mood, watch time";
+"diary.subtitle" = "History of watched episodes and movies";
+"profile.badgesLevels.subtitle" = "Level %d · %d/%d badges";
+"notifications.row.subtitle" = "Releases, new episodes, quiet hours";
+"platforms.row.subtitle" = "Streaming, rent and buy";
+"platforms.footnote" = "Selected platforms filter where to watch across the whole app.";
+"profile.languageCountry" = "Language & country";
+"profile.imageCache" = "Image cache";
+"profile.imageCache.subtitle" = "Prefetch on WiFi only";
+"common.on" = "On";
+"common.off" = "Off";
+"profile.privacyTerms" = "Privacy & terms";
+"profile.footer.tmdb" = "This product uses the TMDb API but is not endorsed or certified by TMDb.";
+"settings.cacheManagement.inUse" = "%d MB in use";

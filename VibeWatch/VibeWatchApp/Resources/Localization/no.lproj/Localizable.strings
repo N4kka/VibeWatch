@@ -834,3 +834,17 @@
 "gamification.levels.title" = "Nivåer";
 "gamification.challenge.none" = "Ikke noe oppdrag i dag";
 "common.seeAll" = "Vis alle";
+"profile.stats.subtitle" = "Sjangre, stemning, sett tid";
+"diary.subtitle" = "Logg over sette episoder og filmer";
+"profile.badgesLevels.subtitle" = "Nivå %d · %d/%d merker";
+"notifications.row.subtitle" = "Utgivelser, nye episoder, stilletid";
+"platforms.row.subtitle" = "Strømming, leie og kjøp";
+"platforms.footnote" = "De valgte plattformene filtrerer hvor du ser i hele appen.";
+"profile.languageCountry" = "Språk og land";
+"profile.imageCache" = "Bildehurtiglager";
+"profile.imageCache.subtitle" = "Forhåndshenting bare på WiFi";
+"common.on" = "På";
+"common.off" = "Av";
+"profile.privacyTerms" = "Personvern og vilkår";
+"profile.footer.tmdb" = "Produktet bruker TMDb sitt API, men er verken godkjent eller sertifisert av TMDb.";
+"settings.cacheManagement.inUse" = "%d MB brukt";

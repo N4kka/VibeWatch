@@ -822,3 +822,17 @@
 "gamification.levels.title" = "Nivåer";
 "gamification.challenge.none" = "Inget uppdrag idag";
 "common.seeAll" = "Visa alla";
+"profile.stats.subtitle" = "Genrer, mood, tittartid";
+"diary.subtitle" = "Historik över sedda avsnitt och filmer";
+"profile.badgesLevels.subtitle" = "Nivå %d · %d/%d märken";
+"notifications.row.subtitle" = "Premiärer, nya avsnitt, tysta timmar";
+"platforms.row.subtitle" = "Streaming, hyra och köp";
+"platforms.footnote" = "Valda plattformar filtrerar var du kan titta i hela appen.";
+"profile.languageCountry" = "Språk och land";
+"profile.imageCache" = "Bildcache";
+"profile.imageCache.subtitle" = "Förladdning endast via WiFi";
+"common.on" = "På";
+"common.off" = "Av";
+"profile.privacyTerms" = "Integritet och villkor";
+"profile.footer.tmdb" = "Produkten använder TMDb:s API men är inte godkänd eller certifierad av TMDb.";
+"settings.cacheManagement.inUse" = "%d MB används";

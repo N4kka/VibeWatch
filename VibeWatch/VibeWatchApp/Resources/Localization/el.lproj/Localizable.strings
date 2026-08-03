@@ -834,3 +834,17 @@
 "gamification.levels.title" = "Επίπεδα";
 "gamification.challenge.none" = "Καμία αποστολή σήμερα";
 "common.seeAll" = "Δες όλα";
+"profile.stats.subtitle" = "Είδη, mood, ώρες προβολής";
+"diary.subtitle" = "Ιστορικό επεισοδίων και ταινιών";
+"profile.badgesLevels.subtitle" = "Επίπεδο %d · %d/%d παράσημα";
+"notifications.row.subtitle" = "Κυκλοφορίες, νέα επεισόδια, ώρες ησυχίας";
+"platforms.row.subtitle" = "Streaming, ενοικίαση και αγορά";
+"platforms.footnote" = "Οι επιλεγμένες πλατφόρμες φιλτράρουν πού βλέπεις σε όλη την εφαρμογή.";
+"profile.languageCountry" = "Γλώσσα και χώρα";
+"profile.imageCache" = "Cache εικόνων";
+"profile.imageCache.subtitle" = "Προφόρτωση μόνο μέσω WiFi";
+"common.on" = "Ναι";
+"common.off" = "Όχι";
+"profile.privacyTerms" = "Απόρρητο και όροι";
+"profile.footer.tmdb" = "Αυτό το προϊόν χρησιμοποιεί το TMDb API αλλά δεν είναι εγκεκριμένο από το TMDb.";
+"settings.cacheManagement.inUse" = "%d MB σε χρήση";

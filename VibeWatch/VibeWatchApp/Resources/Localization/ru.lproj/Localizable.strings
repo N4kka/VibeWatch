@@ -822,3 +822,17 @@
 "gamification.levels.title" = "Уровни";
 "gamification.challenge.none" = "Сегодня миссий нет";
 "common.seeAll" = "Смотреть все";
+"profile.stats.subtitle" = "Жанры, настроение, время просмотра";
+"diary.subtitle" = "История просмотренных серий и фильмов";
+"profile.badgesLevels.subtitle" = "Уровень %d · %d/%d значков";
+"notifications.row.subtitle" = "Премьеры, новые серии, тихие часы";
+"platforms.row.subtitle" = "Стриминг, аренда и покупка";
+"platforms.footnote" = "Выбранные платформы фильтруют «где смотреть» во всём приложении.";
+"profile.languageCountry" = "Язык и страна";
+"profile.imageCache" = "Кэш изображений";
+"profile.imageCache.subtitle" = "Предзагрузка только по WiFi";
+"common.on" = "Вкл";
+"common.off" = "Выкл";
+"profile.privacyTerms" = "Конфиденциальность и условия";
+"profile.footer.tmdb" = "Продукт использует API TMDb, но не одобрен и не сертифицирован TMDb.";
+"settings.cacheManagement.inUse" = "Занято %d МБ";
