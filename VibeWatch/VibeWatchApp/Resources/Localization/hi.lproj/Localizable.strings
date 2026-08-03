@@ -828,3 +828,9 @@
 "profile.group.preferences" = "प्राथमिकताएँ";
 "profile.group.account" = "खाता";
 "profile.badgesLevels" = "बैज और लेवल";
+"gamification.progress.title" = "आपकी प्रगति";
+"gamification.dayStreak" = "लगातार दिन";
+"gamification.badges.title" = "बैज";
+"gamification.levels.title" = "लेवल";
+"gamification.challenge.none" = "आज कोई मिशन नहीं";
+"common.seeAll" = "सभी देखें";

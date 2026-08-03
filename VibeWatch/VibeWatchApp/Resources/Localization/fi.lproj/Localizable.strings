@@ -828,3 +828,9 @@
 "profile.group.preferences" = "Asetukset";
 "profile.group.account" = "Tili";
 "profile.badgesLevels" = "Merkit ja tasot";
+"gamification.progress.title" = "Edistymisesi";
+"gamification.dayStreak" = "Päiväputki";
+"gamification.badges.title" = "Merkit";
+"gamification.levels.title" = "Tasot";
+"gamification.challenge.none" = "Ei tehtävää tänään";
+"common.seeAll" = "Näytä kaikki";

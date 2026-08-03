@@ -828,3 +828,9 @@
 "profile.group.preferences" = "Voorkeuren";
 "profile.group.account" = "Account";
 "profile.badgesLevels" = "Badges en niveaus";
+"gamification.progress.title" = "Je voortgang";
+"gamification.dayStreak" = "Dagen op rij";
+"gamification.badges.title" = "Badges";
+"gamification.levels.title" = "Niveaus";
+"gamification.challenge.none" = "Vandaag geen missie";
+"common.seeAll" = "Alles bekijken";

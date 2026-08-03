@@ -828,3 +828,9 @@
 "profile.group.preferences" = "設定";
 "profile.group.account" = "アカウント";
 "profile.badgesLevels" = "バッジとレベル";
+"gamification.progress.title" = "あなたの進捗";
+"gamification.dayStreak" = "連続日数";
+"gamification.badges.title" = "バッジ";
+"gamification.levels.title" = "レベル";
+"gamification.challenge.none" = "今日のミッションはありません";
+"common.seeAll" = "すべて見る";

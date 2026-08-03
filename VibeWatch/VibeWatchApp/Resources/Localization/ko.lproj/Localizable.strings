@@ -828,3 +828,9 @@
 "profile.group.preferences" = "환경설정";
 "profile.group.account" = "계정";
 "profile.badgesLevels" = "배지와 레벨";
+"gamification.progress.title" = "나의 진행 상황";
+"gamification.dayStreak" = "연속 일수";
+"gamification.badges.title" = "배지";
+"gamification.levels.title" = "레벨";
+"gamification.challenge.none" = "오늘은 미션이 없습니다";
+"common.seeAll" = "모두 보기";

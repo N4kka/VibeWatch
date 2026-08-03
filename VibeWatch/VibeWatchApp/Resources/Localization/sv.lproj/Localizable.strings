@@ -816,3 +816,9 @@
 "profile.group.preferences" = "Inställningar";
 "profile.group.account" = "Konto";
 "profile.badgesLevels" = "Märken och nivåer";
+"gamification.progress.title" = "Dina framsteg";
+"gamification.dayStreak" = "Dagar i rad";
+"gamification.badges.title" = "Märken";
+"gamification.levels.title" = "Nivåer";
+"gamification.challenge.none" = "Inget uppdrag idag";
+"common.seeAll" = "Visa alla";

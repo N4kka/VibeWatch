@@ -813,3 +813,9 @@
 "profile.group.preferences" = "偏好设置";
 "profile.group.account" = "账户";
 "profile.badgesLevels" = "徽章与等级";
+"gamification.progress.title" = "你的进度";
+"gamification.dayStreak" = "连续天数";
+"gamification.badges.title" = "徽章";
+"gamification.levels.title" = "等级";
+"gamification.challenge.none" = "今天没有任务";
+"common.seeAll" = "查看全部";

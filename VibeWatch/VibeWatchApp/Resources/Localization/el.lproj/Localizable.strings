@@ -828,3 +828,9 @@
 "profile.group.preferences" = "Προτιμήσεις";
 "profile.group.account" = "Λογαριασμός";
 "profile.badgesLevels" = "Παράσημα και επίπεδα";
+"gamification.progress.title" = "Η πρόοδός σου";
+"gamification.dayStreak" = "Σερί ημερών";
+"gamification.badges.title" = "Παράσημα";
+"gamification.levels.title" = "Επίπεδα";
+"gamification.challenge.none" = "Καμία αποστολή σήμερα";
+"common.seeAll" = "Δες όλα";

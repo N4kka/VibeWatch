@@ -816,3 +816,9 @@
 "profile.group.preferences" = "Настройки";
 "profile.group.account" = "Аккаунт";
 "profile.badgesLevels" = "Значки и уровни";
+"gamification.progress.title" = "Ваш прогресс";
+"gamification.dayStreak" = "Дней подряд";
+"gamification.badges.title" = "Значки";
+"gamification.levels.title" = "Уровни";
+"gamification.challenge.none" = "Сегодня миссий нет";
+"common.seeAll" = "Смотреть все";

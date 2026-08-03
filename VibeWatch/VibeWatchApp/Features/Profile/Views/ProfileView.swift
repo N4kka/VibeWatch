@@ -525,7 +525,9 @@ struct ProfileView: View {
             NavigationView { AnalyticsDashboardView() }
         }
         .sheet(isPresented: $showBadges) {
-            NavigationView { BadgeGalleryView(gamificationService: gamificationService) }
+            // Redesign 2.0: la card livello e la riga "Badge e livelli" aprono la casa unica
+            // della gamification; la galleria completa sta un livello dentro.
+            GamificationProgressView(gamificationService: gamificationService)
         }
     }
 

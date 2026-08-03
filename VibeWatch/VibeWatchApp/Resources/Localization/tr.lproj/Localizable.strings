@@ -816,3 +816,9 @@
 "profile.group.preferences" = "Tercihler";
 "profile.group.account" = "Hesap";
 "profile.badgesLevels" = "Rozetler ve seviyeler";
+"gamification.progress.title" = "İlerlemen";
+"gamification.dayStreak" = "Gün serisi";
+"gamification.badges.title" = "Rozetler";
+"gamification.levels.title" = "Seviyeler";
+"gamification.challenge.none" = "Bugün görev yok";
+"common.seeAll" = "Tümünü gör";

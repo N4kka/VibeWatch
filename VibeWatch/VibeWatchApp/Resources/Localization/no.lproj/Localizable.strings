@@ -828,3 +828,9 @@
 "profile.group.preferences" = "Preferanser";
 "profile.group.account" = "Konto";
 "profile.badgesLevels" = "Merker og nivåer";
+"gamification.progress.title" = "Din fremgang";
+"gamification.dayStreak" = "Dager på rappen";
+"gamification.badges.title" = "Merker";
+"gamification.levels.title" = "Nivåer";
+"gamification.challenge.none" = "Ikke noe oppdrag i dag";
+"common.seeAll" = "Vis alle";

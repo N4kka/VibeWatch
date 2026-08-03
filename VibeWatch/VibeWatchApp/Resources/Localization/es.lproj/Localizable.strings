@@ -826,3 +826,9 @@
 "profile.group.preferences" = "Preferencias";
 "profile.group.account" = "Cuenta";
 "profile.badgesLevels" = "Insignias y niveles";
+"gamification.progress.title" = "Tu progreso";
+"gamification.dayStreak" = "Días seguidos";
+"gamification.badges.title" = "Insignias";
+"gamification.levels.title" = "Niveles";
+"gamification.challenge.none" = "Hoy no hay misión";
+"common.seeAll" = "Ver todo";
