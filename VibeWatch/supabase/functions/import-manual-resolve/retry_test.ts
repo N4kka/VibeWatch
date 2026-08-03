@@ -1,5 +1,5 @@
 import { assertEquals } from 'https://deno.land/std@0.224.0/assert/mod.ts'
-import { buildManualRetryPlan } from './retry.ts'
+import { buildManualRetryPlan, normalizeManualResolutions } from './retry.ts'
 
 const event = (rowIndex: number, episodeId: unknown, error = 'catalogo: ambiguous') => ({
   row_index: rowIndex,
@@ -85,4 +85,22 @@ Deno.test('manual retry total adjustments never go below zero', () => {
 
   assertEquals(plan.adjustedTotals.unresolved, 0)
   assertEquals(plan.adjustedTotals.statuses_unresolved, 0)
+})
+
+Deno.test('manual resolutions normalize one non-empty batch with unique series', () => {
+  assertEquals(normalizeManualResolutions([
+    { tvdb_series_id: '79824', tmdb_show_id: 1399 },
+    { tvdb_series_id: 121361, tmdb_show_id: '1402' },
+  ]), [
+    { tvdbSeriesId: 79824, tmdbShowId: 1399 },
+    { tvdbSeriesId: 121361, tmdbShowId: 1402 },
+  ])
+  assertEquals(normalizeManualResolutions([]), null)
+  assertEquals(normalizeManualResolutions([
+    { tvdb_series_id: 79824, tmdb_show_id: 1399 },
+    { tvdb_series_id: 79824, tmdb_show_id: 1402 },
+  ]), null)
+  assertEquals(normalizeManualResolutions([
+    { tvdb_series_id: 79824, tmdb_show_id: 0 },
+  ]), null)
 })

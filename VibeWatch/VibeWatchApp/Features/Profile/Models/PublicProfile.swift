@@ -1,5 +1,24 @@
 import Foundation
 
+/// I campi privati che il proprietario può modificare dalla schermata profilo.
+/// Non passa dalla view `public_profiles`: deve restare disponibile anche quando il profilo
+/// pubblico è disattivato.
+struct OwnProfileDetails: Decodable {
+    let username: String?
+    let displayName: String?
+    let avatarURL: String?
+    let bio: String?
+    let isProfilePublic: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case username
+        case displayName = "display_name"
+        case avatarURL = "avatar_url"
+        case bio
+        case isProfilePublic = "is_profile_public"
+    }
+}
+
 /// Una riga di `search_users`: le sei colonne di `public_profiles`, niente di più.
 /// L'email e i campi di billing non arrivano qui per costruzione (§3.7), non per disciplina.
 struct PublicProfile: Identifiable, Equatable {

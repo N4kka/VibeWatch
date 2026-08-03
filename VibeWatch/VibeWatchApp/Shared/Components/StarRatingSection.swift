@@ -97,17 +97,17 @@ struct StarRatingSection: View {
     }
 
     var body: some View {
-        VStack(spacing: 8) {
-            Text("rating.title".localized)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(.theme.textSecondary)
-
-            HStack(spacing: 6) {
-                ForEach(1...5, id: \.self) { star in
-                    starView(star)
+        VStack(alignment: .leading, spacing: 7) {
+            HStack {
+                Text("rating.title".localized)
+                    .font(.system(size: 15.5, weight: .heavy))
+                    .foregroundColor(.theme.textPrimary)
+                Spacer()
+                HStack(spacing: 7) {
+                    ForEach(1...5, id: \.self) { star in starView(star) }
                 }
+                .opacity(viewModel.isSaving ? 0.5 : 1)
             }
-            .opacity(viewModel.isSaving ? 0.5 : 1)
 
             if viewModel.saveFailed {
                 Text("rating.saveFailed".localized)
@@ -115,7 +115,11 @@ struct StarRatingSection: View {
                     .foregroundColor(.red)
             }
         }
+        .padding(.horizontal, 17)
         .frame(maxWidth: .infinity)
+        .frame(minHeight: 66)
+        .background(Color.white.opacity(0.065))
+        .clipShape(RoundedRectangle(cornerRadius: 17))
         .task { await viewModel.load() }
     }
 
@@ -131,7 +135,7 @@ struct StarRatingSection: View {
         }
 
         return Image(systemName: symbol)
-            .font(.system(size: 26))
+            .font(.system(size: 23))
             .foregroundColor(.theme.accentOrange)
             .overlay(
                 // Due zone di tocco invisibili: sinistra = mezza (2i-1), destra = piena (2i).

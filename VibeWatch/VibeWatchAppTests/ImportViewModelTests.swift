@@ -16,6 +16,7 @@ final class ImportViewModelTests: XCTestCase {
         var currentJob: ImportJobSnapshot?
         var report: ImportReport?
         var uploadFails = false
+        var uploadSessionExpired = false
         var jobReadFails = false
         var reportFails = false
         var createOutcome: ImportStartOutcome?
@@ -27,6 +28,7 @@ final class ImportViewModelTests: XCTestCase {
 
         func uploadZip(_ data: Data) async throws -> String {
             uploads += 1
+            if uploadSessionExpired { throw SupabaseError.sessionExpired }
             if uploadFails { throw Rotto() }
             return "utente/file.zip"
         }
@@ -65,12 +67,13 @@ final class ImportViewModelTests: XCTestCase {
         }
 
         var manualResolveFails = false
-        private(set) var manualResolves: [(jobId: String, tvdbSeriesId: String, tmdbShowId: Int)] = []
+        private(set) var manualResolves: [(jobId: String, resolutions: [ImportManualResolution])] = []
 
-        func manualResolve(jobId: String, tvdbSeriesId: String, tmdbShowId: Int) async throws {
+        func manualResolve(jobId: String, resolutions: [ImportManualResolution]) async throws {
             if manualResolveFails { throw Rotto() }
-            manualResolves.append((jobId, tvdbSeriesId, tmdbShowId))
-            // Il server riapre il job in `resolving`: gli episodi vanno riconfermati per ID TVDB.
+            manualResolves.append((jobId, resolutions))
+            // Il server riapre il job una volta sola: tutte le serie vengono riconfermate nello
+            // stesso passaggio tramite gli ID TVDB esatti dei rispettivi episodi.
             currentJob = ImportJobSnapshot(id: jobId, phase: "resolving", status: "running",
                                            error: nil)
         }
@@ -130,6 +133,24 @@ final class ImportViewModelTests: XCTestCase {
         }
         XCTAssertEqual(key, "import.error.uploadFailed")
         XCTAssertNil(retryId, "nessun job è nato: il retry riparte dalla scelta del file")
+        XCTAssertEqual(fake.creates, 0, "senza upload non si crea nessun job")
+    }
+
+    /// La sessione GoTrue morta sotto una cache che dice "loggato" (il caso TestFlight):
+    /// il messaggio è "accedi di nuovo", non la verità tecnica della RLS, e senza detail —
+    /// qui la frase localizzata basta da sola.
+    func testSessioneScadutaHaLaFraseGiusta() async {
+        let fake = Fake()
+        fake.uploadSessionExpired = true
+        let vm = makeVM(fake)
+
+        await vm.start(zipData: Data("zip".utf8))
+        guard case .failed(let key, let detail, let retryId) = vm.state else {
+            return XCTFail("sessione scaduta = stato failed, era \(vm.state)")
+        }
+        XCTAssertEqual(key, "import.error.sessionExpired")
+        XCTAssertNil(detail, "niente dettaglio tecnico: la frase localizzata basta")
+        XCTAssertNil(retryId, "nessun job è nato: dopo il re-login si riparte dal file")
         XCTAssertEqual(fake.creates, 0, "senza upload non si crea nessun job")
     }
 
@@ -386,8 +407,9 @@ final class ImportViewModelTests: XCTestCase {
 
     // MARK: - Risoluzione a mano (§7.4)
 
-    func testLaRisoluzioneAManoRiapreIlJobETornaAGuardarlo() async {
-        // Report a schermo per il job j9: la risoluzione deve riaprire QUEL job.
+    func testLaRisoluzioneBatchRiapreIlJobUnaSolaVoltaETornaAGuardarlo() async {
+        // Report a schermo per il job j9: tutte le associazioni devono riaprire QUEL job con
+        // una sola chiamata, anche quando le serie da risolvere sono più di una.
         let fake = Fake()
         fake.currentJob = ImportJobSnapshot(id: "j9", phase: "done", status: "done", error: nil)
         fake.report = Self.unReport
@@ -395,12 +417,15 @@ final class ImportViewModelTests: XCTestCase {
         await vm.pollOnce(jobId: "j9")
         guard case .done = vm.state else { return XCTFail("atteso .done, era \(vm.state)") }
 
-        let ok = await vm.resolveManually(tvdbSeriesId: "901", tmdbShowId: 12345)
+        let resolutions = [
+            ImportManualResolution(tvdbSeriesId: "901", tmdbShowId: 12345),
+            ImportManualResolution(tvdbSeriesId: "902", tmdbShowId: 67890),
+        ]
+        let ok = await vm.resolveManually(resolutions)
         XCTAssertTrue(ok)
         XCTAssertEqual(fake.manualResolves.count, 1)
         XCTAssertEqual(fake.manualResolves.first?.jobId, "j9")
-        XCTAssertEqual(fake.manualResolves.first?.tvdbSeriesId, "901")
-        XCTAssertEqual(fake.manualResolves.first?.tmdbShowId, 12345)
+        XCTAssertEqual(fake.manualResolves.first?.resolutions, resolutions)
         // Il job è ripartito: l'oblò torna a guardarlo, non resta sul report vecchio.
         guard case .running(let jobId, let phase) = vm.state else {
             return XCTFail("atteso .running, era \(vm.state)")
@@ -419,7 +444,10 @@ final class ImportViewModelTests: XCTestCase {
         await vm.pollOnce(jobId: "j9")
 
         fake.manualResolveFails = true
-        let ok = await vm.resolveManually(tvdbSeriesId: "901", tmdbShowId: 12345)
+        let ok = await vm.resolveManually([
+            ImportManualResolution(tvdbSeriesId: "901", tmdbShowId: 12345),
+            ImportManualResolution(tvdbSeriesId: "902", tmdbShowId: 67890),
+        ])
         XCTAssertFalse(ok)
         // L'errore è visibile nello sheet, e il report resta a schermo: un riaggancio
         // fallito non deve distruggere ciò che l'utente sta guardando.
@@ -430,8 +458,27 @@ final class ImportViewModelTests: XCTestCase {
     func testSenzaUnReportAVideoLaRisoluzioneNonParte() async {
         let fake = Fake()
         let vm = ImportViewModel(backend: fake, pollInterval: .seconds(60))
-        let ok = await vm.resolveManually(tvdbSeriesId: "901", tmdbShowId: 12345)
+        let ok = await vm.resolveManually([
+            ImportManualResolution(tvdbSeriesId: "901", tmdbShowId: 12345),
+        ])
         XCTAssertFalse(ok)
+        XCTAssertEqual(fake.manualResolves.count, 0)
+    }
+
+    func testUnBatchVuotoODuplicatoNonAvviaLaRisoluzione() async {
+        let fake = Fake()
+        fake.currentJob = ImportJobSnapshot(id: "j9", phase: "done", status: "done", error: nil)
+        fake.report = Self.unReport
+        let vm = ImportViewModel(backend: fake, pollInterval: .seconds(60))
+        await vm.pollOnce(jobId: "j9")
+
+        let emptyAccepted = await vm.resolveManually([])
+        let duplicateAccepted = await vm.resolveManually([
+            ImportManualResolution(tvdbSeriesId: "901", tmdbShowId: 1),
+            ImportManualResolution(tvdbSeriesId: "901", tmdbShowId: 2),
+        ])
+        XCTAssertFalse(emptyAccepted)
+        XCTAssertFalse(duplicateAccepted)
         XCTAssertEqual(fake.manualResolves.count, 0)
     }
 

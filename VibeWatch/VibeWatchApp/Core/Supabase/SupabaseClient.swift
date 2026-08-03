@@ -427,6 +427,56 @@ class SupabaseService: ObservableObject {
         return (row.username, row.usernameConfirmedAt != nil)
     }
 
+    /// I dati modificabili del proprio profilo. La lettura diretta della riga è intenzionale:
+    /// `public_profiles` nasconde correttamente un profilo privato anche al suo proprietario.
+    func ownProfileDetails() async throws -> OwnProfileDetails? {
+        guard let client, let userId = currentUser?.id else { throw SupabaseError.notAuthenticated }
+
+        let rows: [OwnProfileDetails] = try await client
+            .from("profiles")
+            .select("username,display_name,avatar_url,bio,is_profile_public")
+            .eq("id", value: userId)
+            .limit(1)
+            .execute()
+            .value
+
+        return rows.first
+    }
+
+    /// Salva i campi che non richiedono la procedura atomica di `set_username`.
+    /// La bio ha anche un CHECK a 200 caratteri sul database; il limite UI non è l'unica difesa.
+    func updateOwnProfileDetails(bio: String?, isProfilePublic: Bool) async throws {
+        guard let client, let userId = currentUser?.id else { throw SupabaseError.notAuthenticated }
+
+        struct Update: Encodable {
+            let bio: String?
+            let isProfilePublic: Bool
+
+            enum CodingKeys: String, CodingKey {
+                case bio
+                case isProfilePublic = "is_profile_public"
+            }
+
+            func encode(to encoder: Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                if let bio {
+                    try container.encode(bio, forKey: .bio)
+                } else {
+                    // `encodeIfPresent` ometterebbe la colonna e renderebbe impossibile
+                    // cancellare una bio già salvata. Qui serve un NULL esplicito.
+                    try container.encodeNil(forKey: .bio)
+                }
+                try container.encode(isProfilePublic, forKey: .isProfilePublic)
+            }
+        }
+
+        try await client
+            .from("profiles")
+            .update(Update(bio: bio, isProfilePublic: isProfilePublic))
+            .eq("id", value: userId)
+            .execute()
+    }
+
     /// Libero? Il server decide: qui non si può sapere se un nome è riservato.
     func usernameAvailable(_ username: String) async throws -> Bool {
         let data = try await callRPC(
@@ -503,7 +553,21 @@ class SupabaseService: ObservableObject {
         guard let client, let userId = currentUser?.id else {
             throw SupabaseError.notAuthenticated
         }
-        let path = "\(userId)/\(UUID().uuidString.lowercased()).zip"
+        // La cache Keychain può dire "loggato" mentre la sessione GoTrue è morta da mesi:
+        // meglio scoprirlo QUI, con un errore chiaro e lo stato auth riallineato, che
+        // lasciare che la RLS respinga l'upload con "new row violates row-level security
+        // policy". `client.auth.session` forza il refresh; se fallisce, checkAuthState
+        // (che ora distingue rete da rifiuto) decide se è offline o sign-in da rifare.
+        do {
+            _ = try await client.auth.session
+        } catch {
+            await AuthService.shared.checkAuthState()
+            throw SupabaseError.sessionExpired
+        }
+        // Minuscolo obbligatorio: la policy del bucket confronta la cartella con
+        // auth.uid()::text (minuscolo), e un id cacheato può venire da `uuidString`
+        // (MAIUSCOLO).
+        let path = "\(userId.lowercased())/\(UUID().uuidString.lowercased()).zip"
         _ = try await client.storage
             .from("imports")
             .upload(path, data: data, options: .init(contentType: "application/zip"))
@@ -565,13 +629,14 @@ class SupabaseService: ObservableObject {
         return rows.first
     }
 
-    /// §7.4: la risoluzione A MANO di una serie non riconosciuta. Il server (Edge Function
-    /// `import-manual-resolve`) salva la mappa di serie e riapre il job in `resolving`, dove
-    /// ogni episodio viene riconfermato tramite il suo ID TVDB esatto. Un errore HTTP
+    /// §7.4: la risoluzione A MANO delle serie non riconosciute. Il server (Edge Function
+    /// `import-manual-resolve`) salva tutte le mappe e riapre una sola volta il job in
+    /// `resolving`, dove ogni episodio viene riconfermato tramite il suo ID TVDB esatto. Un errore HTTP
     /// arriva intero al chiamante — il corpo è la diagnosi (`series_already_mapped`,
     /// `nothing_to_resolve`, `another_job_open`, `staging_changed`…), e nasconderlo lascerebbe
     /// l'utente davanti a un pulsante che "non fa niente".
-    func manualResolveImport(jobId: String, tvdbSeriesId: String, tmdbShowId: Int) async throws {
+    func manualResolveImport(jobId: String,
+                             resolutions: [ImportManualResolution]) async throws {
         guard let url = URL(string: Config.supabaseURL.replacingOccurrences(
             of: ".supabase.co", with: ".functions.supabase.co") + "/import-manual-resolve")
         else { throw SupabaseError.notConfigured }
@@ -587,8 +652,9 @@ class SupabaseService: ObservableObject {
         request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
         request.httpBody = try JSONSerialization.data(withJSONObject: [
             "job_id": jobId,
-            "tvdb_series_id": tvdbSeriesId,
-            "tmdb_show_id": tmdbShowId,
+            "resolutions": resolutions.map {
+                ["tvdb_series_id": $0.tvdbSeriesId, "tmdb_show_id": $0.tmdbShowId] as [String: Any]
+            },
         ])
 
         let (data, response) = try await URLSession.shared.data(for: request)
@@ -1330,6 +1396,10 @@ extension Notification.Name {
 enum SupabaseError: LocalizedError {
     case notConfigured
     case notAuthenticated
+    /// La sessione GoTrue non è recuperabile (refresh rifiutato o assente): serve un
+    /// nuovo sign-in. Distinto da `notAuthenticated` perché l'app CREDEVA di essere
+    /// loggata — chi lo riceve deve dirlo all'utente, non trattarlo come un guasto.
+    case sessionExpired
     case authenticationFailed
     case networkError
     case httpError(statusCode: Int, body: String)
@@ -1341,6 +1411,8 @@ enum SupabaseError: LocalizedError {
             return "Supabase is not configured. Please add your credentials to Config.swift"
         case .notAuthenticated:
             return "You must be signed in to perform this action"
+        case .sessionExpired:
+            return "Your session has expired. Please sign in again"
         case .authenticationFailed:
             return "Authentication failed. Please check your credentials"
         case .networkError:

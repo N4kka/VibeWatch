@@ -397,12 +397,18 @@ class AIContextBuilder {
         prompt += """
 
         INSTRUCTIONS:
-        - Write 2 sentences max.
-        - Use a non-technical, friendly explanation focusing on the movie/show's strengths.
-        - Connect specific movie elements (actor, director, genre, trope) to the user's preferences without mentioning "preferences" or "genres."
-        - Example: "This shines for its tense pacing and sharp performances, with a mystery hook that rewards your taste for clever twists."
-        - Be persuasive but honest.
-        - Do NOT use reasoning tags.
+        - Produce three different, useful explanations: one for mood, one for genres/story elements, and one for cast.
+        - Personalize each section with the user's profile whenever matching data is available.
+        - If user-profile data is insufficient for a section, still write a sensible explanation based on the movie/show metadata. Never copy another section and never leave a section empty.
+        - Each value must be one concise sentence in non-technical, friendly language.
+        - The mood value should describe tone, atmosphere, pacing, or emotional fit.
+        - The genres value should explain the appeal of the genres, themes, or story elements.
+        - The cast value should mention relevant cast members or, when cast metadata is unavailable, the characters or ensemble appeal.
+        - Be persuasive but honest. Do not claim that the user knows or likes an actor unless the profile supports it.
+        - Do NOT use reasoning tags or markdown.
+
+        OUTPUT JSON:
+        {"mood":"...","genres":"...","cast":"..."}
         """
         
         return prompt
@@ -482,6 +488,20 @@ class AIContextBuilder {
                 .map { "\($0.genreName) (score: \(String(format: "%.1f", $0.totalScore)))" }
                 .joined(separator: ", ")
             section += "\n- Top Genres: \(genres)"
+        }
+
+        if !profile.topActors.isEmpty {
+            let actors = profile.topActors.prefix(5)
+                .map { "\($0.name) (score: \(String(format: "%.1f", $0.score)))" }
+                .joined(separator: ", ")
+            section += "\n- Top Actors: \(actors)"
+        }
+
+        if !profile.preferredMoods.isEmpty {
+            let moods = profile.preferredMoods.prefix(5)
+                .map(\.rawValue)
+                .joined(separator: ", ")
+            section += "\n- Preferred Moods: \(moods)"
         }
 
         if !profile.recentActivity.watchedMedia.isEmpty {
@@ -612,5 +632,19 @@ struct MovieDetails: Codable {
         let id: Int
         let name: String
         let job: String
+    }
+}
+
+/// Structured AI output for the three independent cards shown in "Why for me".
+struct WhyForMeAnalysis: Codable, Equatable, Sendable {
+    let mood: String
+    let genres: String
+    let cast: String
+
+    var isCompleteAndDistinct: Bool {
+        let sections = [mood, genres, cast]
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        return sections.allSatisfy { $0.count >= 10 }
+            && Set(sections.map { $0.lowercased() }).count == sections.count
     }
 }

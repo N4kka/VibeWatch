@@ -1,18 +1,20 @@
 import SwiftUI
 
-/// Global filter view that applies to ALL Discovery carousels
-/// Differentiates between Free and Pro features
+/// Bottom sheet used by the whole Discovery surface. The compact controls mirror the
+/// discovery redesign while the data still maps to `GlobalDiscoveryFilters`.
 struct GlobalFilterView: View {
     @Binding var filters: GlobalDiscoveryFilters
     @Binding var isPresented: Bool
-    @EnvironmentObject var quotaManager: DailyQuotaManager
-    @ObservedObject var localizationManager = LocalizationManager.shared
+    @EnvironmentObject private var quotaManager: DailyQuotaManager
+    @ObservedObject private var localizationManager = LocalizationManager.shared
+    @AppStorage("selectedPlatforms") private var selectedPlatformsData: Data = Data()
 
     let onApply: (GlobalDiscoveryFilters) -> Void
 
     @State private var tempFilters: GlobalDiscoveryFilters
     @State private var showProUpgrade = false
-    @State private var countrySearchQuery: String = ""
+    @State private var countryExpanded = false
+    @State private var usesMyPlatforms: Bool
 
     init(
         filters: Binding<GlobalDiscoveryFilters>,
@@ -22,683 +24,446 @@ struct GlobalFilterView: View {
         self._filters = filters
         self._isPresented = isPresented
         self.onApply = onApply
-        self._tempFilters = State(initialValue: filters.wrappedValue)
+        let current = filters.wrappedValue
+        self._tempFilters = State(initialValue: current)
+        self._usesMyPlatforms = State(initialValue: !current.streamingPlatforms.isEmpty)
     }
 
     var body: some View {
-        ZStack {
-            // Backdrop
-            Color.black.opacity(0.5)
+        ZStack(alignment: .bottom) {
+            Color.black.opacity(0.58)
                 .ignoresSafeArea()
-                .onTapGesture {
-                    isPresented = false
-                }
+                .onTapGesture { isPresented = false }
 
-            // Filter panel
-            VStack(spacing: 0) {
-                Spacer()
-
-                VStack(spacing: 0) {
-                    // Grabber
-                    Capsule()
-                        .fill(Color.white.opacity(0.18))
-                        .frame(width: 40, height: 5)
-                        .padding(.top, 10)
-                        .padding(.bottom, 4)
-
-                    // Header
-                    HStack {
-                        Text("filters.title".localized)
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(.theme.textPrimary)
-
-                        Spacer()
-
-                        Button(action: resetFilters) {
-                            Text("filters.reset".localized)
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(.theme.accentOrange)
-                        }
-
-                        Button(action: { isPresented = false }) {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(.theme.textSecondary)
-                                .frame(width: 32, height: 32)
-                                .background(Color.white.opacity(0.1))
-                                .clipShape(Circle())
-                        }
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 16)
-                    .background(Color.theme.cardBackground)
-
-                    ScrollView(showsIndicators: false) {
-                        VStack(spacing: 12) {
-                            // Media Type Filter (FREE)
-                            GlobalFilterSection(title: "filters.mediaType".localized, isPro: false) {
-                                mediaTypeFilter
-                            }
-
-                            // Runtime Filter (FREE presets, PRO custom)
-                            GlobalFilterSection(title: "filters.runtime".localized, isPro: false) {
-                                runtimeFilter
-                            }
-
-                            // Rating Filter (FREE presets, PRO custom)
-                            GlobalFilterSection(title: "filters.rating".localized, isPro: false) {
-                                ratingFilter
-                            }
-
-                            // Release Period Filter (FREE presets, PRO custom)
-                            GlobalFilterSection(title: "filters.releasePeriod".localized, isPro: false) {
-                                releasePeriodFilter
-                            }
-
-                            // Country (Free: top 10, PRO all)
-                            GlobalFilterSection(title: "filters.country".localized, isPro: false) {
-                                countryFilter
-                            }
-                            
-                            // Streaming Platforms (Available to all)
-                            GlobalFilterSection(title: "platforms.title".localized, isPro: false) {
-                                platformFilter
-                            }
-
-                            // Sort By (FREE basic, PRO advanced)
-                            GlobalFilterSection(title: "filters.sortBy".localized, isPro: false) {
-                                sortByFilter
-                            }
-
-                            // Pro Only Filters
-                            if quotaManager.isProUser {
-                                GlobalFilterSection(title: "filters.proFilters".localized, isPro: true) {
-                                    proOnlyFilters
-                                }
-                            } else {
-                                // Pro Upgrade Card
-                                proUpgradeCard
-                            }
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 20)
-                    }
-                    .frame(maxHeight: UIScreen.main.bounds.height * 0.7)
-
-                    // Apply Button
-                    Button(action: applyFilters) {
-                        Text("filters.apply".localized)
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 50)
-                            .background(Color.theme.accentOrange)
-                            .cornerRadius(12)
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 16)
-                }
-                .background(Color.theme.cardBackground)
-                .cornerRadius(20, corners: [.topLeft, .topRight])
-            }
-            .transition(.move(edge: .bottom))
+            sheet
+                .transition(.move(edge: .bottom).combined(with: .opacity))
         }
         .sheet(isPresented: $showProUpgrade) {
             ProPaywallView(isPresented: $showProUpgrade, source: "filters")
         }
     }
 
-    // MARK: - Media Type Filter
+    private var sheet: some View {
+        VStack(spacing: 0) {
+            Capsule()
+                .fill(Color.white.opacity(0.18))
+                .frame(width: 42, height: 5)
+                .padding(.top, 10)
 
-    private var mediaTypeFilter: some View {
-        FlowLayout(spacing: 8) {
-            ForEach(MediaTypeFilter.allCases) { type in
-                FilterChip(title: type.displayName, isSelected: tempFilters.mediaType == type) {
-                    tempFilters.mediaType = type
-                }
-            }
-        }
-    }
+            header
 
-    // MARK: - Runtime Filter
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 25) {
+                    mediaTypeSection
+                    sortSection
+                    platformsSection
+                    releasePeriodSection
+                    runtimeSection
+                    ratingSection
+                    countrySection
 
-    private var runtimeFilter: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Free presets
-            FlowLayout(spacing: 8) {
-                ForEach(RuntimePreset.allCases) { preset in
-                    FilterChip(title: preset.displayName, isSelected: tempFilters.runtimePreset == preset) {
-                        tempFilters.runtimePreset = preset
-                        if !quotaManager.isProUser {
-                            tempFilters.customRuntimeMin = nil
-                            tempFilters.customRuntimeMax = nil
-                        }
+                    if quotaManager.isProUser {
+                        advancedSection
+                    } else {
+                        proUpgradeCard
                     }
                 }
-            }
-
-            // Pro custom range
-            if quotaManager.isProUser {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("filters.customRange".localized)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.theme.textSecondary)
-
-                    HStack(spacing: 12) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("filters.min".localized)
-                                .font(.system(size: 10))
-                                .foregroundColor(.theme.textSecondary)
-                            TextField("0", value: $tempFilters.customRuntimeMin, format: .number)
-                                .textFieldStyle(FilterTextFieldStyle())
-                                .onChange(of: tempFilters.customRuntimeMin) { _, _ in
-                                    tempFilters.runtimePreset = .custom
-                                }
-                        }
-
-                        Text("-")
-                            .foregroundColor(.theme.textSecondary)
-
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("filters.max".localized)
-                                .font(.system(size: 10))
-                                .foregroundColor(.theme.textSecondary)
-                            TextField("300", value: $tempFilters.customRuntimeMax, format: .number)
-                                .textFieldStyle(FilterTextFieldStyle())
-                                .onChange(of: tempFilters.customRuntimeMax) { _, _ in
-                                    tempFilters.runtimePreset = .custom
-                                }
-                        }
-                    }
-                }
+                .padding(.horizontal, 24)
                 .padding(.top, 8)
+                .padding(.bottom, 24)
+            }
+
+            applyButton
+        }
+        .frame(maxHeight: UIScreen.main.bounds.height * 0.92)
+        .background(Color(hex: "15161b"))
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+    }
+
+    private var header: some View {
+        HStack {
+            Text("filters.title".localized)
+                .font(.system(size: 22, weight: .heavy))
+                .foregroundColor(.theme.textPrimary)
+            Spacer()
+            Button("filters.reset".localized, action: resetFilters)
+                .font(.system(size: 14, weight: .bold))
+                .foregroundColor(.theme.accentOrange)
+            Button { isPresented = false } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.theme.textSecondary)
+                    .frame(width: 34, height: 34)
+                    .background(Color.white.opacity(0.08))
+                    .clipShape(Circle())
+            }
+        }
+        .padding(.horizontal, 24)
+        .padding(.vertical, 17)
+    }
+
+    // MARK: Main controls
+
+    private var mediaTypeSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionTitle("filters.mediaType".localized)
+            HStack(spacing: 0) {
+                ForEach(MediaTypeFilter.allCases) { type in
+                    Button { tempFilters.mediaType = type } label: {
+                        Text(type.displayName)
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(tempFilters.mediaType == type ? .white : .theme.textSecondary)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 42)
+                            .background(tempFilters.mediaType == type ? Color.theme.accentOrange : .clear)
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(3)
+            .background(Color.white.opacity(0.07))
+            .clipShape(Capsule())
+        }
+    }
+
+    private var sortSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionTitle("filters.sortBy".localized)
+            FlowLayout(spacing: 8) {
+                ForEach(quotaManager.isProUser ? DiscoverySortOption.allCases : DiscoverySortOption.freeCases) { option in
+                    FilterChip(title: option.displayName, isSelected: tempFilters.sortBy == option) {
+                        tempFilters.sortBy = option
+                    }
+                }
             }
         }
     }
 
-    // MARK: - Rating Filter
-
-    private var ratingFilter: some View {
+    private var platformsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Free presets
-            FlowLayout(spacing: 8) {
-                ForEach(RatingPreset.allCases) { preset in
-                    FilterChip(title: preset.displayName, isSelected: tempFilters.ratingPreset == preset) {
-                        tempFilters.ratingPreset = preset
-                        if !quotaManager.isProUser {
-                            tempFilters.customRatingMin = nil
-                            tempFilters.customRatingMax = nil
-                        }
-                    }
+            sectionTitle("platforms.title".localized)
+            HStack(spacing: 8) {
+                scopeButton(title: "filters.myPlatforms".localized, selected: usesMyPlatforms) {
+                    usesMyPlatforms = true
+                    tempFilters.streamingPlatforms = Set(
+                        PlatformSelectionCodec.decode(selectedPlatformsData).map(\.rawValue)
+                    )
+                }
+                scopeButton(title: "filters.platformScopeAll".localized, selected: !usesMyPlatforms) {
+                    usesMyPlatforms = false
+                    tempFilters.streamingPlatforms.removeAll()
                 }
             }
-
-            // Pro custom range
-            if quotaManager.isProUser {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("filters.customRange".localized)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.theme.textSecondary)
-
-                    HStack(spacing: 12) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("filters.min".localized)
-                                .font(.system(size: 10))
-                                .foregroundColor(.theme.textSecondary)
-                            TextField("0.0", value: $tempFilters.customRatingMin, format: .number)
-                                .textFieldStyle(FilterTextFieldStyle())
-                                .onChange(of: tempFilters.customRatingMin) { _, _ in
-                                    tempFilters.ratingPreset = .custom
-                                }
-                        }
-
-                        Text("-")
-                            .foregroundColor(.theme.textSecondary)
-
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("filters.max".localized)
-                                .font(.system(size: 10))
-                                .foregroundColor(.theme.textSecondary)
-                            TextField("10.0", value: $tempFilters.customRatingMax, format: .number)
-                                .textFieldStyle(FilterTextFieldStyle())
-                                .onChange(of: tempFilters.customRatingMax) { _, _ in
-                                    tempFilters.ratingPreset = .custom
-                                }
-                        }
-                    }
-                }
-                .padding(.top, 8)
-            }
+            Text("platforms.footnote".localized)
+                .font(.system(size: 11.5))
+                .foregroundColor(Color(hex: "797a80"))
         }
     }
 
-    // MARK: - Release Period Filter
-
-    private var releasePeriodFilter: some View {
+    private var releasePeriodSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Free presets
+            sectionTitle("filters.releasePeriod".localized)
             FlowLayout(spacing: 8) {
-                ForEach(ReleasePeriodPreset.allCases.prefix(3)) { preset in
+                ForEach(availableReleasePresets) { preset in
                     FilterChip(title: preset.displayName, isSelected: tempFilters.releasePeriodPreset == preset) {
                         tempFilters.releasePeriodPreset = preset
-                        if !quotaManager.isProUser {
-                            tempFilters.customYearStart = nil
-                            tempFilters.customYearEnd = nil
-                        }
                     }
                 }
             }
+        }
+    }
 
-            // Pro custom year range
-            if quotaManager.isProUser {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("filters.customYearRange".localized)
-                        .font(.system(size: 12, weight: .medium))
+    private var runtimeSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionTitle("filters.runtime".localized)
+            FlowLayout(spacing: 8) {
+                ForEach(availableRuntimePresets) { preset in
+                    FilterChip(title: preset.displayName, isSelected: tempFilters.runtimePreset == preset) {
+                        tempFilters.runtimePreset = preset
+                    }
+                }
+            }
+        }
+    }
+
+    private var ratingSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionTitle("filters.minimumRating".localized)
+            FlowLayout(spacing: 8) {
+                ForEach(availableRatingPresets) { preset in
+                    FilterChip(title: preset.displayName, isSelected: tempFilters.ratingPreset == preset) {
+                        tempFilters.ratingPreset = preset
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: Country accordion
+
+    private var countrySection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Button {
+                withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
+                    countryExpanded.toggle()
+                }
+            } label: {
+                HStack {
+                    sectionTitle("filters.country".localized)
+                    Spacer()
+                    Text(countrySummary)
+                        .font(.system(size: 13, weight: .bold))
                         .foregroundColor(.theme.textSecondary)
+                    Image(systemName: countryExpanded ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.theme.textSecondary)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
 
-                    HStack(spacing: 12) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("filters.from".localized)
-                                .font(.system(size: 10))
-                                .foregroundColor(.theme.textSecondary)
-                            TextField("1900", value: $tempFilters.customYearStart, format: .number)
-                                .textFieldStyle(FilterTextFieldStyle())
-                                .onChange(of: tempFilters.customYearStart) { _, _ in
-                                    tempFilters.releasePeriodPreset = .custom
-                                }
-                        }
-
-                        Text("-")
-                            .foregroundColor(.theme.textSecondary)
-
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("filters.to".localized)
-                                .font(.system(size: 10))
-                                .foregroundColor(.theme.textSecondary)
-                            TextField("2024", value: $tempFilters.customYearEnd, format: .number)
-                                .textFieldStyle(FilterTextFieldStyle())
-                                .onChange(of: tempFilters.customYearEnd) { _, _ in
-                                    tempFilters.releasePeriodPreset = .custom
-                                }
+            if countryExpanded {
+                FlowLayout(spacing: 8) {
+                    FilterChip(title: "filters.ratingAny".localized, isSelected: tempFilters.countries.isEmpty) {
+                        tempFilters.countries.removeAll()
+                    }
+                    ForEach(Country.all) { country in
+                        FilterChip(
+                            title: countryDisplayName(country),
+                            isSelected: tempFilters.countries.contains(country.id)
+                        ) {
+                            toggleCountry(country.id)
                         }
                     }
                 }
-                .padding(.top, 8)
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
     }
 
-    // MARK: - Country Filter
+    // MARK: Pro
 
-    private var countryFilter: some View {
-        Group {
-            if quotaManager.isProUser {
-                VStack(spacing: 12) {
-                    HStack(spacing: 10) {
-                        Image(systemName: "magnifyingglass")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.theme.textSecondary)
-
-                        TextField("filters.searchCountry".localized, text: $countrySearchQuery)
-                            .font(.system(size: 14))
-                            .foregroundColor(.theme.textPrimary)
+    private var advancedSection: some View {
+        VStack(alignment: .leading, spacing: 15) {
+            HStack(spacing: 7) {
+                sectionTitle("filters.proFilters".localized)
+                Image(systemName: "crown.fill")
+                    .font(.system(size: 10))
+                    .foregroundColor(.theme.accentOrange)
+            }
+            if tempFilters.runtimePreset == .custom {
+                customIntRange(
+                    title: "filters.runtime".localized,
+                    from: $tempFilters.customRuntimeMin,
+                    to: $tempFilters.customRuntimeMax
+                )
+            }
+            if tempFilters.releasePeriodPreset == .custom {
+                customIntRange(
+                    title: "filters.customYearRange".localized,
+                    from: $tempFilters.customYearStart,
+                    to: $tempFilters.customYearEnd
+                )
+            }
+            if tempFilters.ratingPreset == .custom {
+                VStack(alignment: .leading, spacing: 7) {
+                    Text("filters.rating".localized)
+                        .font(.system(size: 11.5, weight: .bold))
+                        .foregroundColor(.theme.textSecondary)
+                    HStack(spacing: 9) {
+                        numberField("filters.min".localized, value: $tempFilters.customRatingMin)
+                        numberField("filters.max".localized, value: $tempFilters.customRatingMax)
                     }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 12)
-                    .background(Color.white.opacity(0.1))
-                    .cornerRadius(10)
-
-                    let filtered = CountryFilter.allCountries.filter { country in
-                        if countrySearchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                            return true
-                        }
-                        let q = countrySearchQuery.lowercased()
-                        return country.name.lowercased().contains(q) || country.code.lowercased().contains(q)
-                    }
-
-                    ScrollView {
-                        VStack(spacing: 8) {
-                            ForEach(filtered, id: \.code) { country in
-                                Button {
-                                    if tempFilters.countries.contains(country.code) {
-                                        tempFilters.countries.removeAll { $0 == country.code }
-                                    } else {
-                                        tempFilters.countries.append(country.code)
-                                    }
-                                } label: {
-                                    HStack(spacing: 12) {
-                                        Text(country.flag)
-                                        Text(country.name)
-                                            .font(.system(size: 14, weight: .medium))
-                                            .foregroundColor(.theme.textPrimary)
-
-                                        Spacer()
-
-                                        if tempFilters.countries.contains(country.code) {
-                                            Image(systemName: "checkmark.circle.fill")
-                                                .foregroundColor(.theme.accentOrange)
-                                        } else {
-                                            Image(systemName: "circle")
-                                                .foregroundColor(.theme.textSecondary)
-                                        }
-                                    }
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 10)
-                                    .background(Color.white.opacity(0.06))
-                                    .cornerRadius(10)
-                                }
-                            }
-
-                            if !tempFilters.countries.isEmpty {
-                                Button {
-                                    tempFilters.countries = []
-                                } label: {
-                                    Text("filters.allCountries".localized)
-                                        .font(.system(size: 14, weight: .semibold))
-                                        .foregroundColor(.theme.accentOrange)
-                                        .frame(maxWidth: .infinity)
-                                        .padding(.vertical, 10)
-                                        .background(Color.theme.accentOrange.opacity(0.08))
-                                        .cornerRadius(10)
-                                }
-                                .padding(.top, 6)
-                            }
-                        }
-                    }
-                    .frame(height: 220)
-                }
-            } else {
-                Menu {
-                    ForEach(CountryFilter.topCountries, id: \.code) { country in
-                        Button {
-                            tempFilters.countries = [country.code]
-                        } label: {
-                            HStack {
-                                Text(country.flag + " " + country.name)
-                                if tempFilters.countries.first == country.code {
-                                    Image(systemName: "checkmark")
-                                }
-                            }
-                        }
-                    }
-
-                    if !tempFilters.countries.isEmpty {
-                        Divider()
-                        Button {
-                            tempFilters.countries = []
-                        } label: {
-                            Text("filters.allCountries".localized)
-                        }
-                    }
-                } label: {
-                    HStack {
-                        if let first = tempFilters.countries.first,
-                           let country = CountryFilter.find(by: first) {
-                            Text(country.flag + " " + country.name)
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(.theme.textPrimary)
-                        } else {
-                            Text("filters.allCountries".localized)
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(.theme.textSecondary)
-                        }
-
-                        Spacer()
-
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(.theme.textSecondary)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(Color.white.opacity(0.1))
-                    .cornerRadius(10)
                 }
             }
+            Toggle("filters.hideWatched".localized, isOn: $tempFilters.hideWatched)
+            Toggle("filters.hideDisliked".localized, isOn: $tempFilters.hideDisliked)
         }
+        .font(.system(size: 14, weight: .semibold))
+        .foregroundColor(.theme.textPrimary)
+        .tint(.theme.accentOrange)
+        .padding(16)
+        .background(Color.white.opacity(0.045))
+        .clipShape(RoundedRectangle(cornerRadius: 17))
     }
-
-    // MARK: - Platform Filter
-    
-    private var platformFilter: some View {
-        VStack(spacing: 12) {
-            // No nested scroll: the grid flows in the sheet's single scroll so no row is clipped.
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 96), spacing: 10)], spacing: 10) {
-                ForEach(StreamingPlatform.allCases) { platform in
-                    let isSelected = tempFilters.streamingPlatforms.contains(platform.rawValue)
-                    Button {
-                        if isSelected {
-                            tempFilters.streamingPlatforms.remove(platform.rawValue)
-                        } else {
-                            tempFilters.streamingPlatforms.insert(platform.rawValue)
-                        }
-                    } label: {
-                        VStack(spacing: 8) {
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color.white.opacity(0.08))
-                                    .frame(height: 50)
-
-                                if let logo = platform.logoAssetName {
-                                    Image(logo)
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fit)
-                                        .frame(height: 30)
-                                        .cornerRadius(6)
-                                } else {
-                                    Image(systemName: platform.icon)
-                                        .font(.system(size: 24))
-                                        .foregroundColor(platform.color)
-                                }
-
-                                if isSelected {
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Color.theme.accentOrange, lineWidth: 2)
-                                }
-                            }
-
-                            Text(platform.rawValue)
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundColor(isSelected ? .theme.accentOrange : .theme.textSecondary)
-                                .lineLimit(1)
-                        }
-                    }
-                }
-            }
-
-            if !tempFilters.streamingPlatforms.isEmpty {
-                Button {
-                    tempFilters.streamingPlatforms.removeAll()
-                } label: {
-                    Text("filters.allPlatforms".localized)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.theme.accentOrange)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(Color.theme.accentOrange.opacity(0.08))
-                        .cornerRadius(10)
-                }
-            }
-        }
-    }
-
-    // MARK: - Sort By Filter
-
-    private var sortByFilter: some View {
-        VStack(spacing: 8) {
-            ForEach(quotaManager.isProUser ? DiscoverySortOption.allCases : DiscoverySortOption.freeCases) { option in
-                Button {
-                    tempFilters.sortBy = option
-                } label: {
-                    HStack {
-                        Text(option.displayName)
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.theme.textPrimary)
-
-                        Spacer()
-
-                        if tempFilters.sortBy == option {
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(.theme.accentOrange)
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(
-                        tempFilters.sortBy == option ?
-                        Color.theme.accentOrange.opacity(0.2) :
-                        Color.white.opacity(0.07)
-                    )
-                    .cornerRadius(10)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(tempFilters.sortBy == option ? Color.theme.accentOrange.opacity(0.5) : .clear, lineWidth: 1)
-                    )
-                }
-            }
-        }
-    }
-
-    // MARK: - Pro Only Filters
-
-    private var proOnlyFilters: some View {
-        VStack(spacing: 16) {
-            // Hide Watched
-            Toggle(isOn: $tempFilters.hideWatched) {
-                HStack(spacing: 8) {
-                    Image(systemName: "eye.slash.fill")
-                        .foregroundColor(.theme.accentOrange)
-                    Text("filters.hideWatched".localized)
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.theme.textPrimary)
-                }
-            }
-            .tint(.theme.accentOrange)
-
-            // Hide Disliked
-            Toggle(isOn: $tempFilters.hideDisliked) {
-                HStack(spacing: 8) {
-                    Image(systemName: "hand.thumbsdown.fill")
-                        .foregroundColor(.theme.accentOrange)
-                    Text("filters.hideDisliked".localized)
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.theme.textPrimary)
-                }
-            }
-            .tint(.theme.accentOrange)
-        }
-    }
-
-    // MARK: - Pro Upgrade Card
 
     private var proUpgradeCard: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "crown.fill")
-                .font(.system(size: 32))
-                .foregroundColor(.theme.accentOrange)
-
-            Text("filters.proTitle".localized)
-                .font(.system(size: 16, weight: .bold))
-                .foregroundColor(.theme.textPrimary)
-
-            Text("filters.proDescription".localized)
-                .font(.system(size: 13))
-                .foregroundColor(.theme.textSecondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 20)
-
-            Button {
-                showProUpgrade = true
-            } label: {
-                Text("filters.upgradeToPro".localized)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(
-                        LinearGradient(
-                            colors: [Color.theme.accentOrange, Color.orange],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .cornerRadius(10)
+        Button { showProUpgrade = true } label: {
+            HStack(spacing: 14) {
+                Image(systemName: "crown.fill")
+                    .font(.system(size: 18))
+                    .foregroundColor(.theme.accentOrange)
+                    .frame(width: 42, height: 42)
+                    .background(Color.theme.accentOrange.opacity(0.14))
+                    .clipShape(Circle())
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("filters.proTitle".localized)
+                        .font(.system(size: 14.5, weight: .heavy))
+                        .foregroundColor(.theme.textPrimary)
+                    Text("filters.proDescription".localized)
+                        .font(.system(size: 11.5))
+                        .foregroundColor(.theme.textSecondary)
+                        .multilineTextAlignment(.leading)
+                }
+                Spacer(minLength: 4)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(.theme.accentOrange)
             }
-        }
-        .padding(20)
-        .background(
-            LinearGradient(
-                colors: [Color.theme.accentOrange.opacity(0.1), Color.orange.opacity(0.05)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
+            .padding(15)
+            .background(Color.theme.accentOrange.opacity(0.08))
+            .overlay(
+                RoundedRectangle(cornerRadius: 17)
+                    .stroke(Color.theme.accentOrange.opacity(0.28), lineWidth: 1)
             )
-        )
-        .cornerRadius(16)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.theme.accentOrange.opacity(0.3), lineWidth: 1)
-        )
+            .clipShape(RoundedRectangle(cornerRadius: 17))
+        }
+        .buttonStyle(.plain)
     }
 
-    // MARK: - Actions
+    // MARK: Helpers
+
+    private var applyButton: some View {
+        Button(action: applyFilters) {
+            Text("filters.apply".localized)
+                .font(.system(size: 16, weight: .heavy))
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 52)
+                .background(Color.theme.accentOrange)
+                .clipShape(Capsule())
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, 12)
+        .padding(.bottom, 28)
+        .background(Color(hex: "15161b"))
+    }
+
+    private func sectionTitle(_ title: String) -> some View {
+        Text(title.uppercased())
+            .font(.system(size: 11, weight: .heavy))
+            .kerning(1.15)
+            .foregroundColor(Color(hex: "818289"))
+    }
+
+    private func customIntRange(
+        title: String,
+        from: Binding<Int?>,
+        to: Binding<Int?>
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 7) {
+            Text(title)
+                .font(.system(size: 11.5, weight: .bold))
+                .foregroundColor(.theme.textSecondary)
+            HStack(spacing: 9) {
+                numberField("filters.from".localized, value: from)
+                numberField("filters.to".localized, value: to)
+            }
+        }
+    }
+
+    private func numberField(
+        _ title: String,
+        value: Binding<Int?>
+    ) -> some View {
+        TextField(title, value: value, format: .number)
+            .keyboardType(.numberPad)
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundColor(.theme.textPrimary)
+            .padding(.horizontal, 12)
+            .frame(height: 40)
+            .background(Color.white.opacity(0.065))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    private func numberField(
+        _ title: String,
+        value: Binding<Double?>
+    ) -> some View {
+        TextField(title, value: value, format: .number)
+            .keyboardType(.decimalPad)
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundColor(.theme.textPrimary)
+            .padding(.horizontal, 12)
+            .frame(height: 40)
+            .background(Color.white.opacity(0.065))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    private func scopeButton(title: String, selected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 14, weight: .bold))
+                .foregroundColor(selected ? .theme.accentOrange : .theme.textSecondary)
+                .frame(maxWidth: .infinity)
+                .frame(height: 44)
+                .background(selected ? Color.theme.accentOrange.opacity(0.11) : Color.white.opacity(0.06))
+                .overlay(Capsule().stroke(selected ? Color.theme.accentOrange : Color.white.opacity(0.1)))
+                .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var availableRuntimePresets: [RuntimePreset] {
+        RuntimePreset.allCases.filter { quotaManager.isProUser || $0 != .custom }
+    }
+
+    private var availableRatingPresets: [RatingPreset] {
+        RatingPreset.allCases.filter { quotaManager.isProUser || $0 != .custom }
+    }
+
+    private var availableReleasePresets: [ReleasePeriodPreset] {
+        ReleasePeriodPreset.allCases.filter { quotaManager.isProUser || $0 != .custom }
+    }
+
+    private var countrySummary: String {
+        guard !tempFilters.countries.isEmpty else { return "filters.ratingAny".localized }
+        if tempFilters.countries.count == 1,
+           let country = Country.findByCode(tempFilters.countries[0]) {
+            return countryDisplayName(country)
+        }
+        return "\(tempFilters.countries.count)"
+    }
+
+    private func countryDisplayName(_ country: Country) -> String {
+        Locale(identifier: localizationManager.currentLanguage.id)
+            .localizedString(forRegionCode: country.id) ?? country.name
+    }
+
+    private func toggleCountry(_ code: String) {
+        if tempFilters.countries.contains(code) {
+            tempFilters.countries.removeAll { $0 == code }
+        } else if quotaManager.isProUser {
+            tempFilters.countries.append(code)
+        } else {
+            tempFilters.countries = [code]
+        }
+    }
 
     private func resetFilters() {
         tempFilters = GlobalDiscoveryFilters()
+        usesMyPlatforms = false
     }
 
     private func applyFilters() {
+        if !quotaManager.isProUser {
+            tempFilters.customRuntimeMin = nil
+            tempFilters.customRuntimeMax = nil
+            tempFilters.customRatingMin = nil
+            tempFilters.customRatingMax = nil
+            tempFilters.customYearStart = nil
+            tempFilters.customYearEnd = nil
+            tempFilters.hideWatched = false
+            tempFilters.hideDisliked = false
+        }
         filters = tempFilters
         onApply(tempFilters)
         isPresented = false
     }
 }
 
-// MARK: - Filter Section Component
-
-struct GlobalFilterSection<Content: View>: View {
-    let title: String
-    let isPro: Bool
-    let content: Content
-
-    init(title: String, isPro: Bool, @ViewBuilder content: () -> Content) {
-        self.title = title
-        self.isPro = isPro
-        self.content = content()
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 6) {
-                Text(title.uppercased())
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(.theme.textSecondary)
-                    .tracking(0.6)
-
-                if isPro {
-                    Image(systemName: "crown.fill")
-                        .font(.system(size: 10))
-                        .foregroundColor(.theme.accentOrange)
-                }
-            }
-
-            content
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(Color.white.opacity(0.04))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.white.opacity(0.06), lineWidth: 1)
-        )
-    }
-}
-
-// MARK: - Filter Chip
-
-/// A single selectable pill. `fixedSize` guarantees the label never wraps or truncates —
-/// the FlowLayout below wraps whole chips onto the next line instead.
+/// A chip owns its intrinsic width; `FlowLayout` moves the entire chip to the next line.
 struct FilterChip: View {
     let title: String
     let isSelected: Bool
@@ -707,30 +472,21 @@ struct FilterChip: View {
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(isSelected ? .white : .theme.textSecondary)
+                .font(.system(size: 14, weight: .bold))
+                .foregroundColor(isSelected ? .theme.accentOrange : .theme.textSecondary)
                 .lineLimit(1)
                 .fixedSize()
-                .padding(.horizontal, 16)
-                .padding(.vertical, 9)
-                .background(isSelected ? Color.theme.accentOrange : Color.white.opacity(0.08))
+                .padding(.horizontal, 15)
+                .frame(height: 42)
+                .background(isSelected ? Color.theme.accentOrange.opacity(0.11) : Color.white.opacity(0.065))
+                .overlay(
+                    Capsule().stroke(
+                        isSelected ? Color.theme.accentOrange : Color.white.opacity(0.1),
+                        lineWidth: isSelected ? 1.2 : 1
+                    )
+                )
                 .clipShape(Capsule())
         }
         .buttonStyle(.plain)
-    }
-}
-
-// MARK: - Custom TextField Style
-
-struct FilterTextFieldStyle: TextFieldStyle {
-    func _body(configuration: TextField<Self._Label>) -> some View {
-        configuration
-            .font(.system(size: 14, weight: .medium))
-            .foregroundColor(.theme.textPrimary)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(Color.white.opacity(0.1))
-            .cornerRadius(8)
-            .keyboardType(.numberPad)
     }
 }

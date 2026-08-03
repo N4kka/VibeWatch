@@ -162,6 +162,13 @@ struct ImportReport: Equatable {
 
 // MARK: - La dipendenza, isolata (modello UsernameBackend)
 
+/// Una delle associazioni raccolte prima di riaprire l'import. Il batch intero viene inviato
+/// insieme: scegliere un risultato TMDB nella UI non deve mai avviare lavoro sul server.
+struct ImportManualResolution: Equatable {
+    let tvdbSeriesId: String
+    let tmdbShowId: Int
+}
+
 @MainActor
 protocol ImportBackend {
     func uploadZip(_ data: Data) async throws -> String
@@ -170,8 +177,8 @@ protocol ImportBackend {
     func latestJob() async throws -> ImportJobSnapshot?
     func job(id: String) async throws -> ImportJobSnapshot?
     func report(jobId: String) async throws -> ImportReport
-    /// §7.4: "questa serie dell'export È questa serie TMDB". Riapre la risoluzione lato server.
-    func manualResolve(jobId: String, tvdbSeriesId: String, tmdbShowId: Int) async throws
+    /// §7.4: tutte le identità dichiarate dall'utente riaprono UN solo giro di risoluzione.
+    func manualResolve(jobId: String, resolutions: [ImportManualResolution]) async throws
 }
 
 @MainActor
@@ -194,9 +201,8 @@ struct SupabaseImportBackend: ImportBackend {
     func report(jobId: String) async throws -> ImportReport {
         try await SupabaseService.shared.importReport(jobId: jobId)
     }
-    func manualResolve(jobId: String, tvdbSeriesId: String, tmdbShowId: Int) async throws {
-        try await SupabaseService.shared.manualResolveImport(
-            jobId: jobId, tvdbSeriesId: tvdbSeriesId, tmdbShowId: tmdbShowId)
+    func manualResolve(jobId: String, resolutions: [ImportManualResolution]) async throws {
+        try await SupabaseService.shared.manualResolveImport(jobId: jobId, resolutions: resolutions)
     }
 }
 
@@ -296,6 +302,11 @@ final class ImportViewModel: ObservableObject {
                 state = .failed(messageKey: "import.error.startFailed",
                                 detail: outcome.reason, retryJobId: nil)
             }
+        } catch SupabaseError.sessionExpired {
+            // La sessione è morta sotto una cache che diceva "loggato": all'utente serve
+            // la frase giusta ("accedi di nuovo"), non la verità tecnica della RLS.
+            state = .failed(messageKey: "import.error.sessionExpired",
+                            detail: nil, retryJobId: nil)
         } catch {
             state = .failed(messageKey: "import.error.uploadFailed",
                             detail: error.localizedDescription, retryJobId: nil)
@@ -404,6 +415,12 @@ final class ImportViewModel: ObservableObject {
         do {
             state = .done(try await backend.report(jobId: jobId))
             doneJobId = jobId
+            // Il job è 'done': tutto ciò che l'import ha scritto sta già su Supabase, ma lo
+            // specchio locale no. Chi osserva (AppState) fa partire il pull ADESSO — senza,
+            // gli item comparivano solo al prossimo evento di rete, minuti dopo, con la
+            // faccia di un import fallito. Notifica e non chiamata diretta: il ViewModel
+            // resta testabile senza trascinarsi dietro il SyncEngine.
+            NotificationCenter.default.post(name: .importJobCompleted, object: nil)
         } catch {
             // Il lavoro è fatto ma il report non si legge: dirlo, con la ripresa che
             // ricarica il report e non certo l'import.
@@ -424,15 +441,21 @@ final class ImportViewModel: ObservableObject {
     /// guardando.
     @Published var manualResolveError: String?
 
-    /// "Questa serie dell'export È questa serie TMDB": il server ritenta gli episodi per il
-    /// loro ID TVDB esatto e riapre il job; qui si torna a guardarlo. `false` = niente
-    /// da riprendere o errore, con la ragione in `manualResolveError`.
-    func resolveManually(tvdbSeriesId: String, tmdbShowId: Int) async -> Bool {
+    /// Tutte le associazioni vengono convalidate e inviate insieme. Il server ritenta gli
+    /// episodi per i loro ID TVDB esatti e riapre il job una volta sola; qui si torna a
+    /// guardarlo. `false` = input incompleto, niente da riprendere o errore.
+    func resolveManually(_ resolutions: [ImportManualResolution]) async -> Bool {
         guard case .done = state, let jobId = doneJobId else { return false }
+        guard !resolutions.isEmpty else { return false }
+        var seriesIds = Set<Int>()
+        for resolution in resolutions {
+            guard let tvdbId = Int(resolution.tvdbSeriesId), tvdbId > 0,
+                  resolution.tmdbShowId > 0,
+                  seriesIds.insert(tvdbId).inserted else { return false }
+        }
         manualResolveError = nil
         do {
-            try await backend.manualResolve(
-                jobId: jobId, tvdbSeriesId: tvdbSeriesId, tmdbShowId: tmdbShowId)
+            try await backend.manualResolve(jobId: jobId, resolutions: resolutions)
             startPolling(jobId: jobId, phase: "resolving")
             return true
         } catch {
@@ -440,4 +463,9 @@ final class ImportViewModel: ObservableObject {
             return false
         }
     }
+}
+
+extension Notification.Name {
+    /// L'import è arrivato al report: i dati stanno sul server, lo specchio locale ancora no.
+    static let importJobCompleted = Notification.Name("ImportViewModel.importJobCompleted")
 }

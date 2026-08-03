@@ -1,67 +1,6 @@
 import SwiftUI
 
-struct LanguageSelector: View {
-    @StateObject private var localizationManager = LocalizationManager.shared
-    
-    // Map language codes to flag emojis
-    private func flagForLanguage(_ languageCode: String) -> String {
-        switch languageCode {
-            case "en": return "🇺🇸 ".localized
-            case "it": return "🇮🇹 ".localized
-            case "es": return "🇪🇸 ".localized
-            case "fr": return "🇫🇷 ".localized
-            case "de": return "🇩🇪 ".localized
-            case "ja": return "🇯🇵 ".localized
-            case "ko": return "🇰🇷 ".localized
-            case "zh": return "🇨🇳 ".localized
-            case "pt": return "🇵🇹 ".localized
-            case "hi": return "🇮🇳 ".localized
-            case "ru": return "🇷🇺 ".localized
-            case "nl": return "🇳🇱 ".localized
-            case "sv": return "🇸🇪 ".localized
-            case "no": return "🇳🇴 ".localized
-            case "da": return "🇩🇰 ".localized
-            case "fi": return "🇫🇮 ".localized
-            case "pl": return "🇵🇱 ".localized
-            case "tr": return "🇹🇷 ".localized
-            case "el": return "🇬🇷 ".localized
-            default: return "🌐 ".localized
-        }
-    }
-    
-    var body: some View {
-        Menu {
-            ForEach(Language.all, id: \.id) { language in
-                Button(action: {
-                    localizationManager.setLanguage(language)
-                }) {
-                    HStack {
-                        Text(flagForLanguage(language.id) + language.nativeName)
-                        
-                        Spacer()
-                        
-                        if localizationManager.currentLanguage.id == language.id {
-                            Image(systemName: "checkmark")
-                                .foregroundColor(.theme.accentOrange)
-                        }
-                    }
-                }
-            }
-        } label: {
-            ZStack {
-                Circle()
-                    .fill(Color.theme.accentOrange.opacity(0.2))
-                    .frame(width: 32, height: 32)
-                
-                Text(flagForLanguage(localizationManager.currentLanguage.id))
-                    .font(.system(size: 16))
-            }
-        }
-    }
-}
-
 struct ProfileView: View {
-    @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var authService: AuthService
     @StateObject private var notificationService = NotificationService.shared
@@ -83,21 +22,20 @@ struct ProfileView: View {
     /// i conteggi arrivano da `get_public_profile` sul proprio profilo. Assenti finché non
     /// caricati: niente zeri con la faccia di un dato.
     @State private var ownUsername: String?
+    @State private var profileBio: String?
+    @State private var isProfilePublic = true
     @State private var socialCounts: (followers: Int, following: Int)?
+    @State private var showEditProfile = false
     @State private var showNotificationPrefs = false
     @State private var showLanguageSelector = false
     @State private var showCacheSettings = false
     @State private var showPrivacyTerms = false
     @State private var showSignUp = false
     @State private var showSignIn = false
-    @State private var showImagePicker = false
-    @State private var selectedImage: UIImage?
-    @State private var isUploadingAvatar = false
     @State private var showNotificationAlert = false
     @State private var showDisableConfirmation = false
     @State private var showLogoutConfirmation = false
     @State private var showPlatformSelector = false
-    @State private var showSettings = false
     @State private var showUserSearch = false
     @State private var showDiary = false
     @State private var showImport = false
@@ -123,12 +61,7 @@ struct ProfileView: View {
     @AppStorage("selectedPlatforms") private var selectedPlatformsData: Data = Data()
     
     private var selectedPlatforms: Set<StreamingPlatform> {
-        get {
-            if let decoded = try? JSONDecoder().decode(Set<String>.self, from: selectedPlatformsData) {
-                return Set(decoded.compactMap { StreamingPlatform(rawValue: $0) })
-            }
-            return []
-        }
+        PlatformSelectionCodec.decode(selectedPlatformsData)
     }
 
     private var displayNameOrEmail: String {
@@ -150,18 +83,6 @@ struct ProfileView: View {
         return user.displayName != nil && !(user.displayName?.isEmpty ?? true)
     }
     
-    private func togglePlatform(_ platform: StreamingPlatform) {
-        var platforms = selectedPlatforms
-        if platforms.contains(platform) {
-            platforms.remove(platform)
-        } else {
-            platforms.insert(platform)
-        }
-        if let encoded = try? JSONEncoder().encode(platforms.map { $0.rawValue }) {
-            selectedPlatformsData = encoded
-        }
-    }
-
     // MARK: - Condividi profilo (§9.4)
 
     /// Acceso dal 2026-08-02: vibewatchapp.com serve l'AASA (apex e www) e risponde alle due
@@ -250,7 +171,6 @@ struct ProfileView: View {
         .padding()
     }
 
-    @MainActor
     private func loadShareUsername() async {
         if case .ready = shareProfile { return }
         shareProfile = .loading
@@ -266,6 +186,27 @@ struct ProfileView: View {
             // Un errore non è "non hai uno username" (§3.7 ha lasciato 19 profili senza):
             // i due casi hanno due rese diverse apposta.
             shareProfile = .failed
+        }
+    }
+
+    /// Carica i dati del proprietario dalla tabella privata: la bio deve vedersi anche quando il
+    /// profilo pubblico è spento, mentre la view pubblica correttamente non restituisce nulla.
+    @MainActor
+    private func loadOwnProfileDetails() async {
+        do {
+            guard let details = try await SupabaseService.shared.ownProfileDetails() else { return }
+            ownUsername = details.username
+            profileBio = details.bio
+            isProfilePublic = details.isProfilePublic
+
+            guard Self.shareProfileEnabled else { return }
+            if let username = details.username, !username.isEmpty {
+                shareProfile = .ready(UniversalLinks.profileURL(username: username))
+            } else {
+                shareProfile = .noUsername
+            }
+        } catch {
+            if Self.shareProfileEnabled { shareProfile = .failed }
         }
     }
 
@@ -292,34 +233,25 @@ struct ProfileView: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    LanguageSelector()
-                }
-                
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("profile.done".localized) {
-                        dismiss()
+                    if appState.isAuthenticated {
+                        Button("common.edit".localized) { showEditProfile = true }
+                            .fontWeight(.semibold)
+                            .foregroundColor(.theme.accentOrange)
                     }
-                    .foregroundColor(.theme.textPrimary)
                 }
             }
             .task {
-                // Con la riga spenta il giro di rete sarebbe lavoro per nessuno.
-                if Self.shareProfileEnabled && appState.isAuthenticated {
-                    await loadShareUsername()
+                guard appState.isAuthenticated else { return }
+                // Identità privata e statistiche partono insieme. I contatori social aspettano
+                // soltanto lo username, che è il loro input effettivo.
+                async let profile: Void = loadOwnProfileDetails()
+                async let stats: Void = serverStats.load()
+                if let userId = appState.currentUser?.id {
+                    await gamificationService.loadUserState(userId: userId)
                 }
-                if appState.isAuthenticated {
-                    if let userId = appState.currentUser?.id {
-                        await gamificationService.loadUserState(userId: userId)
-                    }
-                    await serverStats.load()
-                    await loadSocialCounts()
-                }
-            }
-            .overlay {
-                if showPlatformSelector {
-                    platformSelectorPanel
-                }
+                _ = await (profile, stats)
+                await loadSocialCounts()
             }
             .overlay {
                 if showLogoutConfirmation {
@@ -371,10 +303,25 @@ struct ProfileView: View {
                 .environmentObject(appState)
                 .environmentObject(authService)
         }
-        .sheet(isPresented: $showSettings) {
-            SettingsView()
+        .fullScreenCover(isPresented: $showPlatformSelector) {
+            PlatformSelectionView()
+        }
+        .sheet(isPresented: $showEditProfile) {
+            if let user = appState.currentUser {
+                EditProfileView(
+                    user: user,
+                    username: ownUsername,
+                    bio: profileBio,
+                    isProfilePublic: isProfilePublic
+                ) { username, bio, isPublic in
+                    ownUsername = username
+                    profileBio = bio
+                    isProfilePublic = isPublic
+                    Task { await loadSocialCounts() }
+                }
                 .environmentObject(appState)
                 .environmentObject(authService)
+            }
         }
         .sheet(isPresented: $showUserSearch) {
             UserSearchView()
@@ -403,141 +350,6 @@ struct ProfileView: View {
                 showFeedback = true
             }
         }
-    }
-    
-    private var platformSelectorPanel: some View {
-        ZStack {
-            Color.black.opacity(0.4)
-                .ignoresSafeArea()
-                .onTapGesture {
-                    withAnimation {
-                        showPlatformSelector = false
-                    }
-                }
-            
-            VStack(spacing: 0) {
-                Spacer()
-                
-                VStack(spacing: 0) {
-                    // Header
-                    HStack {
-                        Text("platforms.title".localized)
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(.theme.textPrimary)
-                        
-                        Spacer()
-                        
-                        Button {
-                            withAnimation {
-                                showPlatformSelector = false
-                            }
-                        } label: {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(.theme.textSecondary)
-                        }
-                    }
-                    .padding(20)
-                    
-                    Divider()
-                        .background(Color.white.opacity(0.1))
-                    
-                    // Content
-                    VStack(spacing: 0) {
-                        // Streaming Section
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("platforms.streaming".localized)
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(.theme.textPrimary)
-                                .padding(.horizontal, 20)
-                                .padding(.top, 16)
-                            
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 12) {
-                                    ForEach([StreamingPlatform.netflix, .disney, .prime, .hbo, .apple, .paramount, .hulu, .peacock, .max]) { platform in
-                                        PlatformChip(
-                                            platform: platform,
-                                            isSelected: selectedPlatforms.contains(platform)
-                                        ) {
-                                            togglePlatform(platform)
-                                        }
-                                    }
-                                }
-                                .padding(.horizontal, 20)
-                            }
-                        }
-                        
-                        Divider()
-                            .background(Color.white.opacity(0.1))
-                            .padding(.vertical, 16)
-                        
-                        // Rent Section
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("platforms.rent".localized)
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(.theme.textPrimary)
-                                .padding(.horizontal, 20)
-                            
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 12) {
-                                    ForEach([StreamingPlatform.prime, .apple, .youtube, .plex]) { platform in
-                                        PlatformChip(
-                                            platform: platform,
-                                            isSelected: selectedPlatforms.contains(platform)
-                                        ) {
-                                            togglePlatform(platform)
-                                        }
-                                    }
-                                }
-                                .padding(.horizontal, 20)
-                            }
-                        }
-                        
-                        Divider()
-                            .background(Color.white.opacity(0.1))
-                            .padding(.vertical, 16)
-                        
-                        // Buy Section
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("platforms.buy".localized)
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(.theme.textPrimary)
-                                .padding(.horizontal, 20)
-                            
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 12) {
-                                    ForEach([StreamingPlatform.prime, .apple, .youtube]) { platform in
-                                        PlatformChip(
-                                            platform: platform,
-                                            isSelected: selectedPlatforms.contains(platform)
-                                        ) {
-                                            togglePlatform(platform)
-                                        }
-                                    }
-                                }
-                                .padding(.horizontal, 20)
-                            }
-                        }
-
-                        // La frase del prototipo: dice COSA fa la selezione, che prima era
-                        // implicito — le piattaforme filtrano "dove guardare" in tutta l'app.
-                        Text("platforms.footnote".localized)
-                            .font(.system(size: 11))
-                            .foregroundColor(Color(hex: "6c6d73"))
-                            .padding(.horizontal, 20)
-                            .padding(.top, 12)
-                            .padding(.bottom, 16)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                }
-                .frame(maxHeight: UIScreen.main.bounds.height * 0.6)
-                .background(Color.theme.backgroundDark.opacity(0.98))
-                .clipShape(RoundedRectangle(cornerRadius: 20))
-                .padding(.bottom, 0)
-            }
-            .ignoresSafeArea(edges: .bottom)
-        }
-        .transition(.move(edge: .bottom).combined(with: .opacity))
     }
     
     private var authenticatedView: some View {
@@ -758,44 +570,22 @@ struct ProfileView: View {
     
     private var profileHeader: some View {
         VStack(spacing: 12) {
-            ZStack(alignment: .bottomTrailing) {
-                if let avatarURL = appState.currentUser?.avatarURL,
-                   let url = URL(string: avatarURL) {
-                    CachedAsyncImage(url: url, maxPixelSize: 240) { image in
-                        image
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 80, height: 80)
-                            .clipShape(Circle())
-                    } placeholder: {
-                        ProgressView()
-                            .frame(width: 80, height: 80)
-                    }
-                } else if let selectedImage = selectedImage {
-                    Image(uiImage: selectedImage)
+            if let avatarURL = appState.currentUser?.avatarURL,
+               let url = URL(string: avatarURL) {
+                CachedAsyncImage(url: url, maxPixelSize: 240) { image in
+                    image
                         .resizable()
                         .scaledToFill()
                         .frame(width: 80, height: 80)
                         .clipShape(Circle())
-                } else {
-                    Image(systemName: "person.circle.fill")
-                        .font(.system(size: 80))
-                        .foregroundColor(.theme.textSecondary)
+                } placeholder: {
+                    ProgressView()
+                        .frame(width: 80, height: 80)
                 }
-                
-                Button {
-                    showImagePicker = true
-                } label: {
-                    Image(systemName: "camera.circle.fill")
-                        .font(.system(size: 24))
-                        .foregroundColor(.theme.accentOrange)
-                        .background(
-                            Circle()
-                                .fill(Color.theme.background)
-                                .frame(width: 26, height: 26)
-                        )
-                }
-                .disabled(isUploadingAvatar)
+            } else {
+                Image(systemName: "person.circle.fill")
+                    .font(.system(size: 80))
+                    .foregroundColor(.theme.textSecondary)
             }
             
             Text(displayNameOrEmail)
@@ -812,6 +602,16 @@ struct ProfileView: View {
                 Text(appState.currentUser?.email ?? "")
                     .font(.system(size: 14))
                     .foregroundColor(.theme.textSecondary)
+            }
+
+            if let profileBio,
+               !profileBio.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Text(profileBio)
+                    .font(.subheadline)
+                    .foregroundColor(.theme.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 24)
             }
 
             if let counts = socialCounts {
@@ -835,29 +635,8 @@ struct ProfileView: View {
                 }
                 .padding(.top, 4)
             }
-            
-            if isUploadingAvatar {
-                HStack(spacing: 8) {
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: .theme.accentOrange))
-                        .scaleEffect(0.7)
-                    Text("common.uploading".localized)
-                        .font(.system(size: 12))
-                        .foregroundColor(.theme.textSecondary)
-                }
-            }
         }
         .padding()
-        .sheet(isPresented: $showImagePicker) {
-            ImagePicker(selectedImage: $selectedImage)
-        }
-        .onChange(of: selectedImage) {_, newImage in
-            if let image = newImage {
-                Task {
-                    await uploadAvatar(image)
-                }
-            }
-        }
     }
     
     /// "Netflix +4": la prima piattaforma scelta e quante altre. Vuoto = niente valore.
@@ -973,11 +752,6 @@ struct ProfileView: View {
                     showImport = true
                 }
 
-                rowDivider
-
-                SettingsRow(icon: "gear", title: "profile.settings".localized) {
-                    showSettings = true
-                }
             }
 
             groupLabel("profile.group.account".localized)
@@ -1115,28 +889,6 @@ struct ProfileView: View {
         }
     }
     
-    private func uploadAvatar(_ image: UIImage) async {
-        isUploadingAvatar = true
-        defer { isUploadingAvatar = false }
-        
-        do {
-            // Compress image to JPEG data
-            guard let imageData = image.jpegData(compressionQuality: 0.7) else {
-                Logger.error("[ProfileView] Failed to convert image to data")
-                return
-            }
-            
-            // Upload to Supabase Storage
-            let avatarURL = try await authService.uploadAvatar(imageData: imageData)
-            
-            // Update app state
-            appState.currentUser?.avatarURL = avatarURL
-            
-            Logger.info("[ProfileView] Avatar uploaded and profile updated")
-        } catch {
-            Logger.error("[ProfileView] Error uploading avatar: \(error.localizedDescription)")
-        }
-    }
 }
 
 /// Redesign 2.0 — la riga del profilo come nel prototipo: icona in un cerchio tinto,
@@ -1193,35 +945,36 @@ struct SettingsRow: View {
 }
 
 struct HelpSupportSheet: View {
+    @Environment(\.dismiss) private var dismiss
     private let privacyURL = URL(string: "https://vibewatch.vercel.app/privacy")!
     private let termsOfUseURL = URL(string: "https://vibewatch.vercel.app/terms")!
 
-    private var faqItems: [FAQItem] {
+    private var faqItems: [HelpFAQItem] {
         [
-            FAQItem(
-                question: "profile.faq.question1".localized,
-                answer: "profile.faq.answer1".localized
+            HelpFAQItem(
+                questionKey: "profile.faq.question1",
+                answerKey: "profile.faq.answer1"
             ),
-            FAQItem(
-                question: "profile.faq.question2".localized,
-                answer: "profile.faq.answer2".localized
+            HelpFAQItem(
+                questionKey: "profile.faq.question2",
+                answerKey: "profile.faq.answer2"
             ),
-            FAQItem(
-                question: "profile.faq.question3".localized,
-                answer: "profile.faq.answer3".localized
+            HelpFAQItem(
+                questionKey: "profile.faq.question3",
+                answerKey: "profile.faq.answer3"
             ),
-            FAQItem(
-                question: "profile.faq.question4".localized,
-                answer: "profile.faq.answer4".localized
+            HelpFAQItem(
+                questionKey: "profile.faq.question4",
+                answerKey: "profile.faq.answer4"
             ),
-            FAQItem(
-                question: "profile.faq.question5".localized,
-                answer: "profile.faq.answer5".localized
+            HelpFAQItem(
+                questionKey: "profile.faq.question5",
+                answerKey: "profile.faq.answer5"
             )
         ]
     }
 
-    @State private var expandedFAQ: UUID?
+    @State private var expandedFAQ: String?
 
     var body: some View {
         NavigationView {
@@ -1304,19 +1057,27 @@ struct HelpSupportSheet: View {
             .background(Color.theme.background)
             .navigationTitle("profile.helpSupport".localized)
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    BackCircleButton { dismiss() }
+                }
+            }
         }
         .preferredColorScheme(.dark)
     }
 }
 
-private struct FAQItem: Identifiable {
-    let id = UUID()
-    let question: String
-    let answer: String
+struct HelpFAQItem: Identifiable {
+    let questionKey: String
+    let answerKey: String
+
+    var id: String { questionKey }
+    var question: String { questionKey.localized }
+    var answer: String { answerKey.localized }
 }
 
 private struct FAQChip: View {
-    let item: FAQItem
+    let item: HelpFAQItem
     let isExpanded: Bool
     let onToggle: () -> Void
     
@@ -1416,6 +1177,11 @@ struct FeedbackSheet: View {
             .background(Color.theme.background)
             .navigationTitle("profile.sendFeedback".localized)
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    BackCircleButton { dismiss() }
+                }
+            }
         }
         .preferredColorScheme(.dark)
         .presentationDetents([.fraction(0.5), .large])

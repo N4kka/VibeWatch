@@ -4,6 +4,10 @@
 <dict>
 	<key>aps-environment</key>
 	<string>development</string>
+	<key>com.apple.developer.applesignin</key>
+	<array>
+		<string>Default</string>
+	</array>
 	<!-- SPEC v3 §9.4. Il dominio deve combaciare con UniversalLinks.host — c'è un test che lo
 	     verifica (UniversalLinksTests). Gli applinks distinguono i sottodomini, quindi apex e www
 	     vanno dichiarati entrambi. Il "?mode=developer" qui non serve: si aggiunge solo per

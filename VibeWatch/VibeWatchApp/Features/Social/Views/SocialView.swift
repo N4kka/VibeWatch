@@ -10,7 +10,6 @@ struct SocialView: View {
     @State private var showUserSearch = false
     /// Redesign 2.0: l'header globale è persistente su ogni tab (prototipo).
     @EnvironmentObject var appState: AppState
-    @EnvironmentObject var quotaManager: DailyQuotaManager
     @StateObject private var searchViewModel = SearchViewModel()
     @State private var showSearch = false
     @State private var showProfile = false
@@ -22,8 +21,7 @@ struct SocialView: View {
             AppHeaderView(
                 onSearchTap: { showSearch = true },
                 onProfileTap: { showProfile = true },
-                avatarURL: appState.currentUser?.avatarURL,
-                isProUser: quotaManager.isProUser
+                avatarURL: appState.currentUser?.avatarURL
             )
 
             ScreenTitleHeader(

@@ -14,7 +14,6 @@ struct DiscoverHubView: View {
     /// azioni (ricerca globale e profilo) perché ClipsView non le possiede — la sua ricerca è
     /// quella dei clip, un'altra cosa.
     @EnvironmentObject var appState: AppState
-    @EnvironmentObject var quotaManager: DailyQuotaManager
     @StateObject private var searchViewModel = SearchViewModel()
     @State private var showSearch = false
     @State private var showProfile = false
@@ -46,8 +45,7 @@ struct DiscoverHubView: View {
             AppHeaderView(
                 onSearchTap: { showSearch = true },
                 onProfileTap: { showProfile = true },
-                avatarURL: appState.currentUser?.avatarURL,
-                isProUser: quotaManager.isProUser
+                avatarURL: appState.currentUser?.avatarURL
             )
 
             // Niente background opaco incollato alla pill: ora lo switcher È liquid glass
@@ -61,8 +59,12 @@ struct DiscoverHubView: View {
             ClipsView()
         }
         .background(Color.black.ignoresSafeArea())
+        // Sui clip la lente cerca clip: il dock di ricerca dentro il feed non esiste più
+        // (redesign 2.0), quindi l'unica porta verso ClipsSearchView è questa.
         .fullScreenCover(isPresented: $showSearch) {
-            SearchView(viewModel: searchViewModel)
+            NavigationStack {
+                ClipsSearchView(initialQuery: nil)
+            }
         }
         .sheet(isPresented: $showProfile) {
             ProfileView()

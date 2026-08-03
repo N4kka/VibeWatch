@@ -128,6 +128,8 @@
 "clips.noClipsAvailable" = "Δεν υπάρχουν διαθέσιμα κλιπς";
 "clips.noClipsDescription" = "Έλα ξανά αργότερα για συναρπαστικές σκηνές από τις αγαπημένες σου ταινίες και σειρές";
 "clips.addToList" = "Προσθήκη στη λίστα";
+"clips.card.addToWatchlist" = "+ Watchlist";
+"clips.card.goToDetail" = "Προβολή λεπτομερειών";
 "clips.createFirstList" = "Δημιούργησε την πρώτη σου watchlist για να αποθηκεύεις επιλογές";
 "clips.createNewList" = "Δημιουργία νέας λίστας";
 "clips.feed.craftingTitle" = "Φτιάχνουμε το τέλειο feed σου";
@@ -374,6 +376,8 @@
 "settings.redeemCode" = "Εξαργύρωση κωδικού";
 "settings.redeemCode.description" = "Εισάγετε έναν promo ή offer κωδικό";
 "paywall.haveCode" = "Έχεις promo κωδικό;";
+"paywall.price.perYear" = "%@/έτος";
+"paywall.cancelAnytime" = "Ακύρωση όποτε θέλεις";
 
 // Help & Support - About Us
 "profile.aboutUs" = "Σχετικά με εμάς";
@@ -416,6 +420,10 @@
 "import.report.moviesWatchlistApplied" = "%d ταινίες προστέθηκαν στο Watchlist.";
 "import.report.moviesUnresolved" = "%d ταινίες δεν αναγνωρίστηκαν (τίτλος και έτος δεν ταιριάζουν στο TMDB).";
 "import.resolve.button" = "Επίλυση";
+"import.resolve.batchButton" = "Αντιστοίχιση %d τίτλων";
+"import.resolve.batchHint" = "Βρείτε την αντίστοιχη σειρά TMDB για κάθε τίτλο. Δεν θα εισαχθεί τίποτα μέχρι να επιλεγούν όλες οι αντιστοιχίσεις· έπειτα μία εισαγωγή θα τις επιλύσει μαζί.";
+"import.resolve.batchProgress" = "%d από %d τίτλους αντιστοιχίστηκαν";
+"import.resolve.startBatch" = "Έναρξη μίας εισαγωγής";
 "import.resolve.title" = "Ποια σειρά είναι το «%@»;";
 "import.resolve.hint" = "Τα επεισόδια ελέγχονται ξανά με τα ακριβή TVDB ID τους. Ό,τι δεν μπορεί να επιβεβαιώσει το TMDB θα παραμείνει στην αναφορά.";
 "import.resolve.searchPlaceholder" = "Αναζήτηση της σειράς στο TMDB";
@@ -434,6 +442,7 @@
 "import.error.fileRead" = "Το αρχείο δεν ήταν δυνατό να διαβαστεί.";
 "import.error.reportFailed" = "Η εισαγωγή ολοκληρώθηκε, αλλά η αναφορά δεν φορτώθηκε.";
 
+"import.error.sessionExpired" = "Η συνεδρία σου έληξε. Συνδέσου ξανά και δοκίμασε πάλι την εισαγωγή.";
 // Profile - Support & Feedback
 "profile.feedback.suggestFeature" = "Πρότεινε νέα λειτουργία";
 "profile.feedback.suggestFeatureDescription" = "Πες μας τι θα έκανε το VibeWatch καλύτερο για εσένα.";
@@ -555,8 +564,8 @@
 "settings.notifications.description" = "Εξατομικευμένες ειδοποιήσεις για νέο περιεχόμενο";
 
 // Onboarding Revamp
-"onboarding.welcome.title" = "Ανακάλυψε το vibe σου";
-"onboarding.welcome.subtitle" = "AI προτάσεις φτιαγμένες για εσένα.";
+"onboarding.welcome.title" = "Καλώς ήρθες στο VibeWatch";
+"onboarding.welcome.subtitle" = "Ανακάλυψε, παρακολούθησε και μη χάσεις καμία κυκλοφορία. Ταινίες και σειρές, όλα σε ένα μέρος.";
 "onboarding.clips.title" = "Δες, μην διαβάζεις";
 "onboarding.clips.subtitle" = "Ζήσε τις ταινίες μέσα από σύντομα, συναρπαστικά κλιπς.";
 "onboarding.lists.title" = "Η watchlist σου, παντού";
@@ -841,6 +850,15 @@
 "platforms.row.subtitle" = "Streaming, ενοικίαση και αγορά";
 "platforms.footnote" = "Οι επιλεγμένες πλατφόρμες φιλτράρουν πού βλέπεις σε όλη την εφαρμογή.";
 "profile.languageCountry" = "Γλώσσα και χώρα";
+"profile.edit.title" = "Επεξεργασία προφίλ";
+"profile.edit.information" = "Πληροφορίες";
+"profile.edit.name" = "Όνομα";
+"profile.edit.bio" = "Βιογραφικό";
+"profile.edit.bioPlaceholder" = "Πες λίγα λόγια για εσένα (προαιρετικό)";
+"profile.edit.changePhoto" = "Αλλαγή φωτογραφίας";
+"profile.edit.publicProfile" = "Δημόσιο προφίλ";
+"profile.edit.publicProfileSubtitle" = "Οι χρήστες μπορούν να σε βρίσκουν και να ακολουθούν τις δημόσιες λίστες σου";
+"profile.edit.saveError" = "Δεν ήταν δυνατή η αποθήκευση του προφίλ. Δοκίμασε ξανά.";
 "profile.imageCache" = "Cache εικόνων";
 "profile.imageCache.subtitle" = "Προφόρτωση μόνο μέσω WiFi";
 "common.on" = "Ναι";
@@ -848,3 +866,69 @@
 "profile.privacyTerms" = "Απόρρητο και όροι";
 "profile.footer.tmdb" = "Αυτό το προϊόν χρησιμοποιεί το TMDb API αλλά δεν είναι εγκεκριμένο από το TMDb.";
 "settings.cacheManagement.inUse" = "%d MB σε χρήση";
+
+// MARK: - Onboarding 2.0
+"common.continue" = "Συνέχεια";
+"auth.fullNamePlaceholder" = "Ονοματεπώνυμο";
+"onboarding.welcome.cta" = "Ξεκίνα";
+"onboarding.import.title" = "Πάρε μαζί το ιστορικό σου";
+"onboarding.import.subtitle" = "Κάνε εισαγωγή σειρών, επεισοδίων που έχεις δει και watchlist. Μόλις ολοκληρωθεί, η εφαρμογή είναι έτοιμη.";
+"onboarding.import.tvtime" = "Εισαγωγή από το TV Time";
+"onboarding.import.tvtime.subtitle" = "Σειρές, επεισόδια, watchlist και βαθμολογίες";
+"onboarding.import.other" = "Άλλες εφαρμογές";
+"onboarding.import.other.subtitle" = "Trakt, Letterboxd — έρχονται σύντομα";
+"onboarding.import.skip" = "Παράλειψη, ξεκινώ από το μηδέν";
+"onboarding.import.completed" = "Η εισαγωγή ολοκληρώθηκε";
+"onboarding.import.stat.shows" = "Σειρές";
+"onboarding.import.stat.episodes" = "Επεισόδια";
+"onboarding.import.stat.movies" = "Ταινίες";
+"onboarding.import.stat.watchlist" = "Στη watchlist";
+"onboarding.notifications.title" = "Μη χάσεις τίποτα";
+"onboarding.notifications.subtitle" = "Σε ειδοποιούμε μόνο για ό,τι παρακολουθείς — νέα επεισόδια, κυκλοφορίες από τη watchlist και διαθεσιμότητα σε streaming.";
+"onboarding.notifications.row1" = "Νέα επεισόδια των σειρών που παρακολουθείς";
+"onboarding.notifications.row2" = "Κυκλοφορίες τίτλων από τη watchlist σου";
+"onboarding.notifications.row3" = "Όταν ένας τίτλος φτάνει σε streaming";
+"onboarding.notifications.enable" = "Ενεργοποίηση ειδοποιήσεων";
+"onboarding.notifications.later" = "Ίσως αργότερα";
+"onboarding.ready.title" = "Όλα έτοιμα";
+"onboarding.ready.subtitle" = "Η βιβλιοθήκη σου είναι έτοιμη και δεν θα χάσεις καμία κυκλοφορία. Η \"Συνέχεια παρακολούθησης\" σε περιμένει στην κορυφή.";
+"onboarding.ready.chip.shows" = "%d σειρές";
+"onboarding.ready.chip.episodes" = "%d επεισόδια";
+"onboarding.ready.chip.notifications" = "Ειδοποιήσεις ενεργές";
+"onboarding.ready.cta" = "Ξεκίνα να βλέπεις";
+
+"filters.myPlatforms" = "Mine";
+"filters.platformScopeAll" = "All";
+"mediaDetail.forYou" = "for you";
+"mediaDetail.watchOn" = "Watch on";
+"mediaDetail.notifyMe" = "Notify me";
+"mediaDetail.notifyMeEnabling" = "Activating notification…";
+"mediaDetail.notifyMeEnabled" = "Notification active";
+"mediaDetail.action.watchlist" = "Watchlist";
+"mediaDetail.action.like" = "Like";
+"mediaDetail.action.list" = "To list";
+"mediaDetail.toast.watchlistAdded" = "Added to your watchlist";
+"mediaDetail.toast.watchlistRemoved" = "Removed from your watchlist";
+"mediaDetail.toast.markedSeen" = "Marked as seen";
+"mediaDetail.toast.markedUnseen" = "Removed from seen";
+"mediaDetail.toast.liked" = "Added to your likes";
+"mediaDetail.toast.likeRemoved" = "Removed from your likes";
+"mediaDetail.why.cardTitle" = "Why is it right for you?";
+"mediaDetail.why.title" = "Why for you";
+"mediaDetail.why.affinity" = "Affinity with your tastes";
+"mediaDetail.why.reason.mood" = "In line with your mood";
+"mediaDetail.why.reason.genres" = "Genres you love";
+"mediaDetail.why.reason.cast" = "Cast you know";
+"mediaDetail.why.helpful" = "Was this helpful?";
+"mediaDetail.why.regenerate" = "Regenerate";
+"mediaDetail.why.quota" = "Generated by Vibe AI from ratings, mood and history. %d/%d requests today.";
+"settings.cacheManagement.clearCacheAction" = "Clear cache";
+"gamification.missionsToday" = "Today's missions";
+"gamification.xpToNext" = "%d XP to the next level";
+"gamification.mission.openApp" = "Open the app";
+"gamification.mission.keepStreak" = "Keep your daily streak";
+"gamification.challenge.watch_3" = "Watch 3 clips";
+"gamification.challenge.like_5" = "Like 5 clips";
+"gamification.challenge.list_2" = "Add 2 titles to a list";
+"gamification.challenge.watch_new_genre" = "Watch a clip from a new genre";
+"gamification.challenge.complete_5" = "Complete 5 clips (>70%)";

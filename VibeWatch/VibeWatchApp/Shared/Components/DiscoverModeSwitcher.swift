@@ -5,7 +5,7 @@ import SwiftUI
 /// La decisione sta nel prototipo Claude Design ("Decisioni chiave"): fondere le due superfici
 /// libera uno slot nella barra, che resta a 4 tab con Social come quinta area. Lo switcher è
 /// l'unico posto da cui si cambia modalità: un segmented control locale, non un tab nascosto.
-enum DiscoverMode: String {
+enum DiscoverMode: String, Hashable {
     case discover
     case clips
 }
@@ -14,54 +14,21 @@ struct DiscoverModeSwitcher: View {
     @Binding var mode: DiscoverMode
 
     var body: some View {
-        HStack(spacing: 0) {
-            segment(.discover, title: "tab.discovery".localized)
-            segment(.clips, title: "tab.clips".localized)
-        }
-        .padding(3)
-        // Il glass segue lo stesso doppio binario della bottom bar: su iOS 26+ il materiale
-        // è quello NATIVO del sistema (`glassEffect`), sotto resta la ricetta custom
-        // (materiale + gradiente di profondità + bordo highlight). Non è solo estetica:
-        // il glass nativo rifrange e si adatta al contenuto che scorre sotto, cose che
-        // l'imitazione non fa.
-        .modifier(SwitcherGlass())
-    }
+        Picker(selection: $mode) {
+            Text("tab.discovery".localized)
+                .tag(DiscoverMode.discover)
 
-    private struct SwitcherGlass: ViewModifier {
-        func body(content: Content) -> some View {
-            if #available(iOS 26.0, *) {
-                content.glassEffect(.regular, in: Capsule())
-            } else {
-                content
-                    .liquidGlass(cornerRadius: 22, opacity: 0.9)
-                    .clipShape(Capsule())
-            }
-        }
-    }
-
-    private func segment(_ target: DiscoverMode, title: String) -> some View {
-        Button {
-            withAnimation(.easeInOut(duration: 0.2)) { mode = target }
+            Text("tab.clips".localized)
+                .tag(DiscoverMode.clips)
         } label: {
-            Text(title)
-                .font(.system(size: 13, weight: .bold))
-                // Il testo selezionato è scuro su arancio: è la stessa inversione del FAB e dei
-                // bottoni primari — l'arancio è luce funzionale, non decorazione.
-                .foregroundColor(mode == target ? Color.theme.background : .theme.textSecondary)
-                .padding(.horizontal, 26)
-                .padding(.vertical, 8)
-                .background {
-                    if mode == target {
-                        Capsule().fill(
-                            LinearGradient(
-                                colors: [Color.theme.accentOrange, Color(hex: "e56a20")],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                    }
-                }
+            EmptyView()
         }
-        .buttonStyle(PlainButtonStyle())
+        // Come la TabView su iOS 26, il Picker segmentato riceve dal sistema il Liquid Glass,
+        // inclusi selezione, animazione e feedback. Il tint colora solo il contenuto attivo,
+        // senza reintrodurre fill o glassEffect custom.
+        .pickerStyle(.segmented)
+        .tint(.theme.accentOrange)
+        .labelsHidden()
+        .frame(width: 190)
     }
 }

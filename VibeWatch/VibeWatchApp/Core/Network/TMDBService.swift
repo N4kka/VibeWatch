@@ -64,7 +64,11 @@ actor TMDBService: TMDBServiceProtocol {
     // Rate limiting actor to serialize requests
     private actor RequestSerializer {
         private var lastRequestTime: Date = .distantPast
-        private let interval: TimeInterval = 0.25 // 4 requests per second
+        // 10 richieste/secondo. Il vecchio 0.25 (4/s) veniva dal limite storico TMDB
+        // (40 req/10s), ritirato nel 2019: oggi TMDB tollera ~50/s. A 4/s la rigenerazione
+        // dei caroselli (~100 richieste) costava ~25s di solo throttle; a 10/s scende a ~10s
+        // restando ampiamente sotto ogni soglia.
+        private let interval: TimeInterval = 0.1
         
         func proceed() async {
             let now = Date()
@@ -97,32 +101,38 @@ actor TMDBService: TMDBServiceProtocol {
     }
     
     private func request<T: Codable>(_ endpoint: String, queryItems: [URLQueryItem] = []) async throws -> T {
-        await rateLimit()
-        
         guard var components = URLComponents(string: "\(baseURL)\(endpoint)") else {
             throw AppError.network(TMDBError.invalidURL)
         }
-        
+
         var items = queryItems
         items.append(URLQueryItem(name: "api_key", value: apiKey))
-        
+
         // Add language and region from LocalizationManager
         let (language, region) = await MainActor.run {
             LocalizationManager.shared.currentLanguageAndRegion()
         }
-        
+
         // Combine language and region in TMDb format (e.g., "it-IT", "en-US")
         let languageParam = "\(language)-\(region)"
-        
+
         items.append(URLQueryItem(name: "language", value: languageParam))
         items.append(URLQueryItem(name: "region", value: region))
-        
+
         components.queryItems = items
-        
+
         guard let url = components.url else {
             throw AppError.network(TMDBError.invalidURL)
         }
-        
+
+        // Il throttle vale per la RETE, non per la cache: prima stava in testa alla funzione
+        // e una risposta già in URLCache pagava comunque il suo slot — pagine viste ieri
+        // costavano come pagine nuove. Se la cache ha una risposta si procede subito (al
+        // peggio parte una revalidation non throttlata, rara e leggera).
+        if cache.cachedResponse(for: URLRequest(url: url)) == nil {
+            await rateLimit()
+        }
+
         do {
             let (data, response) = try await session.data(from: url)
             

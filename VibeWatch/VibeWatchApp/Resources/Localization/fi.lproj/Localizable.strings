@@ -128,6 +128,8 @@
 "clips.noClipsAvailable" = "Klippejä ei saatavilla";
 "clips.noClipsDescription" = "Palaa myöhemmin nähdäksesi kohtauksia suosikkielokuvistasi ja -sarjoistasi";
 "clips.addToList" = "Lisää listaan";
+"clips.card.addToWatchlist" = "+ Watchlist";
+"clips.card.goToDetail" = "Näytä tiedot";
 "clips.createFirstList" = "Luo ensimmäinen katselulistasi tallentaaksesi valintoja";
 "clips.createNewList" = "Luo uusi lista";
 "clips.feed.craftingTitle" = "Rakennamme sinulle täydellisen feedeen";
@@ -374,6 +376,8 @@
 "settings.redeemCode" = "Lunasta koodi";
 "settings.redeemCode.description" = "Syötä promo- tai tarjoustunnus";
 "paywall.haveCode" = "Onko sinulla promokoodi?";
+"paywall.price.perYear" = "%@/vuosi";
+"paywall.cancelAnytime" = "Peruuta milloin tahansa";
 
 // Help & Support - About Us
 "profile.aboutUs" = "Tietoa meistä";
@@ -416,6 +420,10 @@
 "import.report.moviesWatchlistApplied" = "%d elokuvaa lisätty katselulistalle.";
 "import.report.moviesUnresolved" = "%d elokuvaa jäi tunnistamatta (nimi ja vuosi eivät täsmää TMDB:ssä).";
 "import.resolve.button" = "Ratkaise";
+"import.resolve.batchButton" = "Ratkaise %d nimikettä";
+"import.resolve.batchHint" = "Etsi jokaiselle nimikkeelle vastaava TMDB-sarja. Mitään ei tuoda ennen kuin kaikki vastineet on valittu; sen jälkeen yksi tuonti ratkaisee ne yhdessä.";
+"import.resolve.batchProgress" = "%d/%d nimikettä yhdistetty";
+"import.resolve.startBatch" = "Käynnistä yksi tuonti";
 "import.resolve.title" = "Mikä sarja on ”%@”?";
 "import.resolve.hint" = "Jaksot tarkistetaan uudelleen niiden tarkkojen TVDB-tunnusten avulla. Kaikki, mitä TMDB ei voi vahvistaa, jää raporttiin.";
 "import.resolve.searchPlaceholder" = "Hae sarjaa TMDB:stä";
@@ -434,6 +442,7 @@
 "import.error.fileRead" = "Tiedostoa ei voitu lukea.";
 "import.error.reportFailed" = "Tuonti valmistui, mutta raporttia ei voitu ladata.";
 
+"import.error.sessionExpired" = "Istuntosi on vanhentunut. Kirjaudu sisään uudelleen ja yritä tuontia uudestaan.";
 // Profile - Support & Feedback
 "profile.feedback.suggestFeature" = "Ehdota uutta ominaisuutta";
 "profile.feedback.suggestFeatureDescription" = "Kerro, mikä tekisi VibeWatchista paremman sinulle.";
@@ -555,8 +564,8 @@
 "settings.notifications.description" = "Personoidut ilmoitukset uudesta sisällöstä";
 
 // Onboarding Revamp
-"onboarding.welcome.title" = "Löydä fiiliksesi";
-"onboarding.welcome.subtitle" = "AI-suositukset, räätälöity juuri sinulle.";
+"onboarding.welcome.title" = "Tervetuloa VibeWatchiin";
+"onboarding.welcome.subtitle" = "Löydä, seuraa äläkä missaa yhtäkään ensi-iltaa. Elokuvat ja sarjat yhdessä paikassa.";
 "onboarding.clips.title" = "Katso, älä lue";
 "onboarding.clips.subtitle" = "Koe elokuvat lyhyiden, mukaansatempaavien klippien kautta.";
 "onboarding.lists.title" = "Katselulistasi, kaikkialla";
@@ -841,6 +850,15 @@
 "platforms.row.subtitle" = "Suoratoisto, vuokraus ja osto";
 "platforms.footnote" = "Valitut alustat suodattavat katselupaikat koko sovelluksessa.";
 "profile.languageCountry" = "Kieli ja maa";
+"profile.edit.title" = "Muokkaa profiilia";
+"profile.edit.information" = "Tiedot";
+"profile.edit.name" = "Nimi";
+"profile.edit.bio" = "Esittely";
+"profile.edit.bioPlaceholder" = "Kerro jotain itsestäsi (valinnainen)";
+"profile.edit.changePhoto" = "Vaihda kuva";
+"profile.edit.publicProfile" = "Julkinen profiili";
+"profile.edit.publicProfileSubtitle" = "Muut voivat löytää sinut ja seurata julkisia listojasi";
+"profile.edit.saveError" = "Profiilia ei voitu tallentaa. Yritä uudelleen.";
 "profile.imageCache" = "Kuvavälimuisti";
 "profile.imageCache.subtitle" = "Esilataus vain WiFi-yhteydellä";
 "common.on" = "Päällä";
@@ -848,3 +866,69 @@
 "profile.privacyTerms" = "Tietosuoja ja ehdot";
 "profile.footer.tmdb" = "Tämä tuote käyttää TMDb-rajapintaa, mutta TMDb ei ole hyväksynyt tai sertifioinut sitä.";
 "settings.cacheManagement.inUse" = "%d Mt käytössä";
+
+// MARK: - Onboarding 2.0
+"common.continue" = "Jatka";
+"auth.fullNamePlaceholder" = "Koko nimi";
+"onboarding.welcome.cta" = "Aloita";
+"onboarding.import.title" = "Tuo historiasi mukanasi";
+"onboarding.import.subtitle" = "Tuo sarjat, katsotut jaksot ja katselulista. Kun tuonti on valmis, sovellus on heti käyttövalmis.";
+"onboarding.import.tvtime" = "Tuo TV Timesta";
+"onboarding.import.tvtime.subtitle" = "Sarjat, katsotut jaksot, katselulista ja arviot";
+"onboarding.import.other" = "Muut sovellukset";
+"onboarding.import.other.subtitle" = "Trakt, Letterboxd — tulossa";
+"onboarding.import.skip" = "Ohita, aloitan alusta";
+"onboarding.import.completed" = "Tuonti valmis";
+"onboarding.import.stat.shows" = "Sarjat";
+"onboarding.import.stat.episodes" = "Katsotut jaksot";
+"onboarding.import.stat.movies" = "Elokuvat";
+"onboarding.import.stat.watchlist" = "Katselulistalla";
+"onboarding.notifications.title" = "Älä missaa mitään";
+"onboarding.notifications.subtitle" = "Ilmoitamme vain siitä, mitä seuraat — uudet jaksot, katselulistan ensi-illat ja saatavuus suoratoistossa.";
+"onboarding.notifications.row1" = "Uudet jaksot seuraamistasi sarjoista";
+"onboarding.notifications.row2" = "Katselulistasi nimikkeiden ensi-illat";
+"onboarding.notifications.row3" = "Kun nimike saapuu suoratoistoon";
+"onboarding.notifications.enable" = "Ota ilmoitukset käyttöön";
+"onboarding.notifications.later" = "Ehkä myöhemmin";
+"onboarding.ready.title" = "Kaikki valmista";
+"onboarding.ready.subtitle" = "Kirjastosi on valmis, etkä missaa yhtään ensi-iltaa. \"Jatka katselua\" odottaa sinua ylhäällä.";
+"onboarding.ready.chip.shows" = "%d sarjaa";
+"onboarding.ready.chip.episodes" = "%d jaksoa";
+"onboarding.ready.chip.notifications" = "Ilmoitukset käytössä";
+"onboarding.ready.cta" = "Aloita katselu";
+
+"filters.myPlatforms" = "Mine";
+"filters.platformScopeAll" = "All";
+"mediaDetail.forYou" = "for you";
+"mediaDetail.watchOn" = "Watch on";
+"mediaDetail.notifyMe" = "Notify me";
+"mediaDetail.notifyMeEnabling" = "Activating notification…";
+"mediaDetail.notifyMeEnabled" = "Notification active";
+"mediaDetail.action.watchlist" = "Watchlist";
+"mediaDetail.action.like" = "Like";
+"mediaDetail.action.list" = "To list";
+"mediaDetail.toast.watchlistAdded" = "Added to your watchlist";
+"mediaDetail.toast.watchlistRemoved" = "Removed from your watchlist";
+"mediaDetail.toast.markedSeen" = "Marked as seen";
+"mediaDetail.toast.markedUnseen" = "Removed from seen";
+"mediaDetail.toast.liked" = "Added to your likes";
+"mediaDetail.toast.likeRemoved" = "Removed from your likes";
+"mediaDetail.why.cardTitle" = "Why is it right for you?";
+"mediaDetail.why.title" = "Why for you";
+"mediaDetail.why.affinity" = "Affinity with your tastes";
+"mediaDetail.why.reason.mood" = "In line with your mood";
+"mediaDetail.why.reason.genres" = "Genres you love";
+"mediaDetail.why.reason.cast" = "Cast you know";
+"mediaDetail.why.helpful" = "Was this helpful?";
+"mediaDetail.why.regenerate" = "Regenerate";
+"mediaDetail.why.quota" = "Generated by Vibe AI from ratings, mood and history. %d/%d requests today.";
+"settings.cacheManagement.clearCacheAction" = "Clear cache";
+"gamification.missionsToday" = "Today's missions";
+"gamification.xpToNext" = "%d XP to the next level";
+"gamification.mission.openApp" = "Open the app";
+"gamification.mission.keepStreak" = "Keep your daily streak";
+"gamification.challenge.watch_3" = "Watch 3 clips";
+"gamification.challenge.like_5" = "Like 5 clips";
+"gamification.challenge.list_2" = "Add 2 titles to a list";
+"gamification.challenge.watch_new_genre" = "Watch a clip from a new genre";
+"gamification.challenge.complete_5" = "Complete 5 clips (>70%)";

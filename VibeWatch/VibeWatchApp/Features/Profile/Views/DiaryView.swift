@@ -121,10 +121,9 @@ struct DiaryView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             // Lo sheet si chiude anche con lo swipe, ma una stanza merita una porta visibile
-            // (lezione del pannello AI del blocco 7). Stesso pattern di UserSearchView.
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button("profile.done".localized) { dismiss() }
-                    .foregroundColor(.theme.textPrimary)
+            // (lezione del pannello AI del blocco 7). Porta standard del redesign.
+            ToolbarItem(placement: .navigationBarLeading) {
+                BackCircleButton { dismiss() }
             }
         }
         .task { await viewModel.load() }

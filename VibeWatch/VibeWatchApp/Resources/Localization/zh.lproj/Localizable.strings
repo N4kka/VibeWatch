@@ -124,6 +124,8 @@
 // Clips
 "clips.title" = "剪辑";
 "clips.addToList" = "添加到列表";
+"clips.card.addToWatchlist" = "+ Watchlist";
+"clips.card.goToDetail" = "查看详情";
 "clips.beFirstToComment" = "抢先发表评论";
 "clips.comment" = "评论";
 "clips.comments" = "评论";
@@ -380,6 +382,10 @@
 "import.report.moviesWatchlistApplied" = "已将 %d 部电影加入稍后观看。";
 "import.report.moviesUnresolved" = "%d 部电影未能识别（标题和年份与 TMDB 不匹配）。";
 "import.resolve.button" = "匹配";
+"import.resolve.batchButton" = "匹配%d个标题";
+"import.resolve.batchHint" = "请为每个标题查找对应的TMDB剧集。选择全部匹配项之前不会导入任何内容；之后只需一次导入即可统一解决。";
+"import.resolve.batchProgress" = "已匹配%d/%d个标题";
+"import.resolve.startBatch" = "开始一次导入";
 "import.resolve.title" = "“%@”是哪部剧集？";
 "import.resolve.hint" = "剧集将使用其准确的 TVDB ID 重新检查。TMDB 无法确认的内容会保留在报告中。";
 "import.resolve.searchPlaceholder" = "在 TMDB 上搜索剧集";
@@ -397,6 +403,7 @@
 "import.error.startFailed" = "导入无法开始。";
 "import.error.fileRead" = "无法读取该文件。";
 "import.error.reportFailed" = "导入已完成，但报告无法加载。";
+"import.error.sessionExpired" = "登录已过期。请重新登录后再试一次导入。";
 "profile.aboutUs" = "关于我们";
 "profile.aboutUsDetail" = "了解更多关于 VibeWatch 团队的信息，以及我们如何改善你的串流发现体验。";
 "profile.tmdbAttribution" = "本产品使用 TMDb API，但未获得 TMDb 的认可或认证。";
@@ -466,6 +473,8 @@
 "settings.redeemCode" = "兑换代码";
 "settings.redeemCode.description" = "输入优惠码或促销码";
 "paywall.haveCode" = "有优惠码吗？";
+"paywall.price.perYear" = "%@/年";
+"paywall.cancelAnytime" = "随时取消";
 
 // Help & Support - About Us
 "profile.aboutUsDescription" = "我们是两个朋友，正在打造一种全新的电影/剧集伴侣。VibeWatch 源于对笨重追踪器的挫败：我们专注于现代的剪辑优先发现、快速的串流链接，以及帮助影迷和普通观众在不无限滚动的情况下找到完美选择的工具。";
@@ -536,8 +545,8 @@
 "settings.notifications.title" = "通知";
 "settings.notifications.manage" = "管理通知";
 "settings.notifications.description" = "新内容的个性化提醒";
-"onboarding.welcome.title" = "发现你的气质";
-"onboarding.welcome.subtitle" = "专为您量身定制的人工智能推荐。";
+"onboarding.welcome.title" = "欢迎来到 VibeWatch";
+"onboarding.welcome.subtitle" = "发现、记录，不错过任何上映。电影和剧集，尽在一处。";
 "onboarding.clips.title" = "观看，不要阅读";
 "onboarding.clips.subtitle" = "通过引人入胜的短片体验电影。";
 "onboarding.lists.title" = "您的观察清单，无处不在";
@@ -826,6 +835,15 @@
 "platforms.row.subtitle" = "流媒体、租赁与购买";
 "platforms.footnote" = "所选平台会在整个应用中筛选观看渠道。";
 "profile.languageCountry" = "语言与国家/地区";
+"profile.edit.title" = "编辑个人资料";
+"profile.edit.information" = "信息";
+"profile.edit.name" = "姓名";
+"profile.edit.bio" = "个人简介";
+"profile.edit.bioPlaceholder" = "介绍一下自己（可选）";
+"profile.edit.changePhoto" = "更换照片";
+"profile.edit.publicProfile" = "公开个人资料";
+"profile.edit.publicProfileSubtitle" = "其他人可以找到你并关注你的公开列表";
+"profile.edit.saveError" = "无法保存个人资料，请重试。";
 "profile.imageCache" = "图片缓存";
 "profile.imageCache.subtitle" = "仅在 WiFi 下预加载";
 "common.on" = "开";
@@ -833,3 +851,69 @@
 "profile.privacyTerms" = "隐私与条款";
 "profile.footer.tmdb" = "本产品使用 TMDb API，但未获得 TMDb 的认可或认证。";
 "settings.cacheManagement.inUse" = "已用 %d MB";
+
+// MARK: - Onboarding 2.0
+"common.continue" = "继续";
+"auth.fullNamePlaceholder" = "全名";
+"onboarding.welcome.cta" = "开始使用";
+"onboarding.import.title" = "带上你的观看记录";
+"onboarding.import.subtitle" = "导入剧集、已看集数和待看清单。导入完成后，应用即刻可用。";
+"onboarding.import.tvtime" = "从 TV Time 导入";
+"onboarding.import.tvtime.subtitle" = "剧集、已看集数、待看清单和评分";
+"onboarding.import.other" = "其他应用";
+"onboarding.import.other.subtitle" = "Trakt、Letterboxd — 即将支持";
+"onboarding.import.skip" = "跳过，从零开始";
+"onboarding.import.completed" = "导入完成";
+"onboarding.import.stat.shows" = "剧集";
+"onboarding.import.stat.episodes" = "已看集数";
+"onboarding.import.stat.movies" = "电影";
+"onboarding.import.stat.watchlist" = "待看清单";
+"onboarding.notifications.title" = "不错过任何更新";
+"onboarding.notifications.subtitle" = "我们只提醒你关注的内容 — 新剧集、待看清单的上映和上线流媒体的消息。";
+"onboarding.notifications.row1" = "你追的剧集更新新集数";
+"onboarding.notifications.row2" = "待看清单中作品的上映";
+"onboarding.notifications.row3" = "作品上线流媒体时";
+"onboarding.notifications.enable" = "开启通知";
+"onboarding.notifications.later" = "以后再说";
+"onboarding.ready.title" = "一切就绪";
+"onboarding.ready.subtitle" = "你的片库已就绪，不会再错过任何上映。顶部的「继续观看」在等你。";
+"onboarding.ready.chip.shows" = "%d 部剧集";
+"onboarding.ready.chip.episodes" = "%d 集";
+"onboarding.ready.chip.notifications" = "通知已开启";
+"onboarding.ready.cta" = "开始观看";
+
+"filters.myPlatforms" = "Mine";
+"filters.platformScopeAll" = "All";
+"mediaDetail.forYou" = "for you";
+"mediaDetail.watchOn" = "Watch on";
+"mediaDetail.notifyMe" = "Notify me";
+"mediaDetail.notifyMeEnabling" = "Activating notification…";
+"mediaDetail.notifyMeEnabled" = "Notification active";
+"mediaDetail.action.watchlist" = "Watchlist";
+"mediaDetail.action.like" = "Like";
+"mediaDetail.action.list" = "To list";
+"mediaDetail.toast.watchlistAdded" = "Added to your watchlist";
+"mediaDetail.toast.watchlistRemoved" = "Removed from your watchlist";
+"mediaDetail.toast.markedSeen" = "Marked as seen";
+"mediaDetail.toast.markedUnseen" = "Removed from seen";
+"mediaDetail.toast.liked" = "Added to your likes";
+"mediaDetail.toast.likeRemoved" = "Removed from your likes";
+"mediaDetail.why.cardTitle" = "Why is it right for you?";
+"mediaDetail.why.title" = "Why for you";
+"mediaDetail.why.affinity" = "Affinity with your tastes";
+"mediaDetail.why.reason.mood" = "In line with your mood";
+"mediaDetail.why.reason.genres" = "Genres you love";
+"mediaDetail.why.reason.cast" = "Cast you know";
+"mediaDetail.why.helpful" = "Was this helpful?";
+"mediaDetail.why.regenerate" = "Regenerate";
+"mediaDetail.why.quota" = "Generated by Vibe AI from ratings, mood and history. %d/%d requests today.";
+"settings.cacheManagement.clearCacheAction" = "Clear cache";
+"gamification.missionsToday" = "Today's missions";
+"gamification.xpToNext" = "%d XP to the next level";
+"gamification.mission.openApp" = "Open the app";
+"gamification.mission.keepStreak" = "Keep your daily streak";
+"gamification.challenge.watch_3" = "Watch 3 clips";
+"gamification.challenge.like_5" = "Like 5 clips";
+"gamification.challenge.list_2" = "Add 2 titles to a list";
+"gamification.challenge.watch_new_genre" = "Watch a clip from a new genre";
+"gamification.challenge.complete_5" = "Complete 5 clips (>70%)";

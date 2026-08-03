@@ -26,7 +26,7 @@ struct DiscoveryView: View {
     @State private var filterSessionId = UUID().uuidString
 
     var body: some View {
-        ZStack {
+        Group {
             if viewModel.isLoading && viewModel.hasNoContent {
                 DiscoverySkeletonView()
             } else if let error = viewModel.error, viewModel.hasNoContent {
@@ -34,16 +34,14 @@ struct DiscoveryView: View {
             } else {
                 discoveryMainView
             }
-
-            // Floating XP Badge (gamification)
-            if gamificationService.isLoaded {
-                FloatingXPBadgeView(gamificationService: gamificationService)
-            }
         }
         .background(Color.theme.background.ignoresSafeArea())
         .task {
+            // Lo stream dei caroselli può durare decine di secondi (rigenerazione TMDB):
+            // parte subito ma NON blocca il resto del task — prima la strip del tracking e
+            // la gamification aspettavano la fine dell'intero stream.
+            async let content: Void = viewModel.loadContentIfNeeded()
             await trackingHighlights.load()
-            await viewModel.loadContentIfNeeded()
 
             // Load gamification state
             if let userId = appState.currentUser?.id {
@@ -68,6 +66,8 @@ struct DiscoveryView: View {
 
             // Debug: Print reaction counts
             await SQLiteService.shared.debugPrintReactionCounts()
+
+            _ = await content
         }
         .onChange(of: localizationManager.localeDidChange) {_, _ in
             // Clears personalized_discovery cache and re-fetches from TMDB in the new locale
@@ -83,28 +83,26 @@ struct DiscoveryView: View {
         .fullScreenCover(isPresented: $showSearch) {
             SearchView(viewModel: searchViewModel)
         }
-        .overlay {
-            if showFilters {
-                GlobalFilterView(
-                    filters: $viewModel.globalFilters,
-                    isPresented: $showFilters
-                ) { filters in
-                    viewModel.applyFilters(filters)
-                    AnalyticsService.shared.logFilterApplied(
-                        filterType: "global",
-                        value: filters.isActive ? "active" : "cleared",
-                        context: AnalyticsContext(
-                            source: "discovery_filters",
-                            sessionId: filterSessionId
-                        ),
-                        extra: [
-                            "filter_active": filters.isActive,
-                            "active_filter_count": filters.activeFilterCount
-                        ]
-                    )
-                }
-                .transition(.opacity)
+        .fullScreenCover(isPresented: $showFilters) {
+            GlobalFilterView(
+                filters: $viewModel.globalFilters,
+                isPresented: $showFilters
+            ) { filters in
+                viewModel.applyFilters(filters)
+                AnalyticsService.shared.logFilterApplied(
+                    filterType: "global",
+                    value: filters.isActive ? "active" : "cleared",
+                    context: AnalyticsContext(
+                        source: "discovery_filters",
+                        sessionId: filterSessionId
+                    ),
+                    extra: [
+                        "filter_active": filters.isActive,
+                        "active_filter_count": filters.activeFilterCount
+                    ]
+                )
             }
+            .presentationBackground(.clear)
         }
         .toast(isShowing: $appState.showSuccessToast, message: appState.toastMessage, type: .success)
         .toast(isShowing: $appState.showErrorToast, message: appState.toastMessage, type: .error)
@@ -159,22 +157,29 @@ struct DiscoveryView: View {
             // sempre visibile su ogni tab, e il contenuto scorre sotto di lui.
             AppHeaderView(
                 onSearchTap: { showSearch = true },
-                onFilterTap: {
-                    filterSessionId = UUID().uuidString
-                    showFilters = true
-                },
                 onProfileTap: { showProfile = true },
-                avatarURL: appState.currentUser?.avatarURL,
-                isProUser: quotaManager.isProUser,
-                activeFilterCount: viewModel.globalFilters.activeFilterCount
+                avatarURL: appState.currentUser?.avatarURL
             )
 
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(spacing: 32) {
-                        DiscoverModeSwitcher(mode: $discoverMode)
-                            .frame(maxWidth: .infinity)
-                            .padding(.top, 8)
+                        ZStack {
+                            DiscoverModeSwitcher(mode: $discoverMode)
+
+                            HStack {
+                                Spacer()
+                                DiscoveryFilterButton(
+                                    activeFilterCount: viewModel.globalFilters.activeFilterCount
+                                ) {
+                                    filterSessionId = UUID().uuidString
+                                    showFilters = true
+                                }
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 8)
 
                         // Le due sezioni "di casa" (prototipo 2.0): cosa esce e cosa stavi
                         // guardando, PRIMA delle raccomandazioni. Compaiono solo se lo specchio
@@ -201,8 +206,10 @@ struct DiscoveryView: View {
                                 ) { movie in
                                     scrollPosition = carousel.type.rawValue
                                     viewModel.recordCarouselClick(movie: movie, carouselType: carousel.type, mediaType: .movie)
-                                    selectedMovie = movie
+                                    var target = movie
+                                    target.navigationMediaType = .movie
                                     selectedMediaType = .movie
+                                    selectedMovie = target
                                 }
                                 .id(carousel.type.rawValue)
                             } else {
@@ -217,8 +224,10 @@ struct DiscoveryView: View {
                                     lastTappedMovieId = movie.id
                                     let mediaType = mediaType(for: carousel.type)
                                     viewModel.recordCarouselClick(movie: movie, carouselType: carousel.type, mediaType: mediaType)
-                                    selectedMovie = movie
+                                    var target = movie
+                                    target.navigationMediaType = mediaType
                                     selectedMediaType = mediaType
+                                    selectedMovie = target
                                 }
                                 .id(carousel.type.rawValue)
                             }
@@ -286,12 +295,15 @@ struct DiscoveryView: View {
     /// Apre il dettaglio di una serie dalle sezioni tracking. Il placeholder con il solo id è lo
     /// stesso contratto dei deep link: `navigationDestination` usa solo `movie.id`.
     private func openShow(_ showId: Int) {
-        let placeholder = Movie(
+        var placeholder = Movie(
             id: showId, title: "", overview: "", posterPath: nil, backdropPath: nil,
             releaseDate: nil, voteAverage: 0, voteCount: 0, genreIds: nil, genres: nil,
             adult: false, originalLanguage: "", popularity: 0, runtime: nil, status: nil,
             tagline: nil, productionCountries: nil, imdbId: nil
         )
+        // Il tipo sta nell'item (vedi Movie.navigationMediaType): con il solo stato parallelo
+        // la destination poteva leggere `.movie` stantio e aprire il film omonimo per id.
+        placeholder.navigationMediaType = .tv
         selectedMediaType = .tv
         selectedMovie = placeholder
     }

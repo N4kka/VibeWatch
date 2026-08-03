@@ -1,5 +1,21 @@
 import SwiftUI
 
+enum GamificationProgressPresentation {
+    static func previewLevels(currentLevel: Int) -> [Int] {
+        let currentLevel = min(max(currentLevel, 1), 50)
+        let nextRankLevel = UserRank.all.first { $0.minLevel > currentLevel }?.minLevel
+        let candidates = [currentLevel, currentLevel + 1, currentLevel + 2, nextRankLevel]
+            .compactMap { $0 }
+            .filter { $0 <= 50 }
+
+        return candidates.reduce(into: []) { levels, level in
+            if !levels.contains(level) {
+                levels.append(level)
+            }
+        }
+    }
+}
+
 /// Redesign 2.0 — "I tuoi progressi": la casa unica della gamification.
 ///
 /// Prima livello, streak, missione, badge e livelli vivevano sparsi (badge flottante, dashboard
@@ -14,45 +30,70 @@ struct GamificationProgressView: View {
     @State private var showLevels = false
 
     var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
-                    levelHero
-                    streakAndChallenge
-                    sectionHeader("gamification.badges.title".localized, trailing: "common.seeAll".localized) {
-                        showAllBadges = true
-                    }
-                    badgesRow
-                    sectionHeader("gamification.levels.title".localized, trailing: "common.seeAll".localized) {
-                        showLevels = true
-                    }
-                    levelsTeaser
-                }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 16)
-            }
-            .background(Color.theme.background.ignoresSafeArea())
-            .navigationTitle("gamification.progress.title".localized)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+        ZStack {
+            Color.theme.background.ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                HStack(alignment: .center) {
+                    Text("gamification.progress.title".localized)
+                        .font(.system(size: 22, weight: .heavy))
+                        .foregroundColor(.theme.textPrimary)
+
+                    Spacer()
+
                     Button { dismiss() } label: {
                         Image(systemName: "xmark")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(width: 32, height: 32)
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(.theme.textPrimary)
+                            .frame(width: 36, height: 36)
                             .background(Color.white.opacity(0.1))
                             .clipShape(Circle())
                     }
                     .accessibilityLabel(Text("common.close".localized))
                 }
+                .padding(.horizontal, 28)
+                .padding(.top, 18)
+                .padding(.bottom, 16)
+
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 0) {
+                        levelHero
+
+                        Spacer().frame(height: 12)
+                        streakAndChallenge
+
+                        sectionHeader("gamification.missionsToday".localized)
+                            .padding(.top, 22)
+                            .padding(.bottom, 10)
+                        dailyMissionsCard
+
+                        sectionHeader(
+                            "gamification.badges.title".localized,
+                            trailing: "common.seeAll".localized
+                        ) {
+                            showAllBadges = true
+                        }
+                        .padding(.top, 22)
+                        .padding(.bottom, 10)
+                        badgesRow
+
+                        sectionHeader("gamification.levels.title".localized)
+                            .padding(.top, 22)
+                            .padding(.bottom, 10)
+                        levelsCard
+                    }
+                    .padding(.horizontal, 28)
+                    .padding(.bottom, 32)
+                }
+                .scrollIndicators(.hidden)
             }
-            .sheet(isPresented: $showAllBadges) {
-                NavigationView { BadgeGalleryView(gamificationService: gamificationService) }
-            }
-            .sheet(isPresented: $showLevels) {
-                LevelProgressView(gamificationService: gamificationService)
-            }
+        }
+        .preferredColorScheme(.dark)
+        .sheet(isPresented: $showAllBadges) {
+            NavigationView { BadgeGalleryView(gamificationService: gamificationService) }
+        }
+        .sheet(isPresented: $showLevels) {
+            LevelProgressView(gamificationService: gamificationService)
         }
     }
 
@@ -62,14 +103,9 @@ struct GamificationProgressView: View {
         HStack(spacing: 14) {
             ZStack {
                 Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [gamificationService.userState.rank.color,
-                                     gamificationService.userState.rank.color.opacity(0.5)],
-                            startPoint: .topLeading, endPoint: .bottomTrailing
-                        )
-                    )
+                    .fill(Color(hex: "373941"))
                     .frame(width: 56, height: 56)
+
                 Text("\(gamificationService.userState.currentLevel)")
                     .font(.system(size: 23, weight: .heavy))
                     .foregroundColor(.white)
@@ -80,8 +116,9 @@ struct GamificationProgressView: View {
                     Text("\("gamification.level".localized) \(gamificationService.userState.currentLevel)")
                         .font(.system(size: 18, weight: .heavy))
                         .foregroundColor(.theme.textPrimary)
+
                     Text(gamificationService.userState.rank.name)
-                        .font(.system(size: 12.5, weight: .bold))
+                        .font(.system(size: 13, weight: .bold))
                         .foregroundColor(.theme.textSecondary)
                 }
 
@@ -95,19 +132,41 @@ struct GamificationProgressView: View {
                                     startPoint: .leading, endPoint: .trailing
                                 )
                             )
-                            .frame(width: max(0, geo.size.width * gamificationService.userState.levelProgress))
+                            .frame(
+                                width: geo.size.width
+                                    * min(max(gamificationService.userState.levelProgress, 0), 1)
+                            )
                     }
                 }
                 .frame(height: 7)
 
-                Text("\(gamificationService.userState.xpProgressInLevel) / \(gamificationService.userState.xpNeededForNextLevel) XP")
-                    .font(.system(size: 12, weight: .heavy))
-                    .foregroundColor(.theme.textPrimary)
+                HStack(alignment: .firstTextBaseline) {
+                    Text("\(gamificationService.userState.xpProgressInLevel) / \(gamificationService.userState.xpNeededForNextLevel) XP")
+                        .font(.system(size: 12, weight: .heavy))
+                        .foregroundColor(.theme.textPrimary)
+
+                    Spacer(minLength: 8)
+
+                    Text(
+                        String(
+                            format: "gamification.xpToNext".localized,
+                            max(
+                                0,
+                                gamificationService.userState.xpNeededForNextLevel
+                                    - gamificationService.userState.xpProgressInLevel
+                            )
+                        )
+                    )
+                    .font(.system(size: 11.5, weight: .medium))
+                    .foregroundColor(.theme.textSecondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                }
             }
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white.opacity(0.05))
+        .background(Color.theme.cardBackground.opacity(0.82))
         .clipShape(RoundedRectangle(cornerRadius: 18))
     }
 
@@ -115,21 +174,24 @@ struct GamificationProgressView: View {
 
     private var streakAndChallenge: some View {
         HStack(spacing: 0) {
-            HStack(spacing: 10) {
+            HStack(spacing: 11) {
                 Image(systemName: "flame.fill")
-                    .font(.system(size: 22))
+                    .font(.system(size: 19))
                     .foregroundColor(.theme.accentOrange)
+
                 VStack(alignment: .leading, spacing: 2) {
                     Text("\(gamificationService.userState.currentStreak)")
                         .font(.system(size: 17, weight: .heavy))
                         .foregroundColor(.theme.textPrimary)
+
                     Text("gamification.dayStreak".localized)
-                        .font(.system(size: 11))
+                        .font(.system(size: 11.5))
                         .foregroundColor(.theme.textSecondary)
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(14)
+            .frame(width: 132, alignment: .leading)
+            .padding(.leading, 14)
+            .padding(.vertical, 16)
 
             Rectangle()
                 .fill(Color.white.opacity(0.1))
@@ -140,7 +202,7 @@ struct GamificationProgressView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(14)
         }
-        .background(Color.white.opacity(0.05))
+        .background(Color.theme.cardBackground.opacity(0.82))
         .clipShape(RoundedRectangle(cornerRadius: 18))
     }
 
@@ -149,12 +211,13 @@ struct GamificationProgressView: View {
         if let challenge = gamificationService.currentChallenge {
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
-                    Text(challenge.type.description)
+                    Text(localizedChallengeTitle(challenge.type))
                         .font(.system(size: 12, weight: .bold))
                         .foregroundColor(.theme.textPrimary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
                     Spacer(minLength: 4)
+
                     Text("+\(challenge.type.xpReward) XP")
                         .font(.system(size: 11, weight: .heavy))
                         .foregroundColor(.theme.accentOrange)
@@ -182,92 +245,290 @@ struct GamificationProgressView: View {
         }
     }
 
-    // MARK: - Badge
+    // MARK: - Missioni di oggi
 
-    private var badgesRow: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 10) {
-                ForEach(gamificationService.getAllBadgesWithProgress(), id: \.definition.id) { item in
-                    ZStack {
-                        Circle()
-                            .fill(item.isUnlocked ? item.definition.color.opacity(0.2) : Color.white.opacity(0.05))
-                            .frame(width: 48, height: 48)
-                        Circle()
-                            .stroke(
-                                item.isUnlocked ? item.definition.color.opacity(0.5) : Color.white.opacity(0.07),
-                                lineWidth: 1
-                            )
-                            .frame(width: 48, height: 48)
-                        Image(systemName: item.isUnlocked ? item.definition.icon : "lock")
-                            .font(.system(size: 17))
-                            .foregroundColor(item.isUnlocked ? item.definition.color : .theme.textSecondary)
-                    }
+    private var dailyMissionsCard: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(dailyMissions.enumerated()), id: \.element.id) { index, mission in
+                dailyMissionRow(mission)
+
+                if index < dailyMissions.count - 1 {
+                    Rectangle()
+                        .fill(Color.theme.separator)
+                        .frame(height: 1)
                 }
             }
         }
+        .background(Color.theme.cardBackground.opacity(0.82))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 
-    // MARK: - Livelli (teaser: la lista completa sta in LevelProgressView)
+    private var dailyMissions: [DailyMissionPresentation] {
+        var missions = [
+            DailyMissionPresentation(
+                id: "open-app",
+                title: "gamification.mission.openApp".localized,
+                reward: XPActionType.dailyOpen.baseXP,
+                isCompleted: true
+            ),
+            DailyMissionPresentation(
+                id: "keep-streak",
+                title: "gamification.mission.keepStreak".localized,
+                reward: XPActionType.streakDay.baseXP,
+                isCompleted: gamificationService.userState.currentStreak > 0
+            )
+        ]
 
-    private var levelsTeaser: some View {
-        Button { showLevels = true } label: {
-            HStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(Color.theme.accentOrange.opacity(0.15))
-                        .frame(width: 30, height: 30)
-                    Image(systemName: "arrow.right")
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundColor(.theme.accentOrange)
-                }
+        if let challenge = gamificationService.currentChallenge {
+            missions.append(
+                DailyMissionPresentation(
+                    id: challenge.type.id,
+                    title: localizedChallengeTitle(challenge.type),
+                    reward: challenge.type.xpReward,
+                    isCompleted: challenge.completed
+                )
+            )
+        } else {
+            missions.append(
+                DailyMissionPresentation(
+                    id: "no-challenge",
+                    title: "gamification.challenge.none".localized,
+                    reward: nil,
+                    isCompleted: false
+                )
+            )
+        }
 
-                VStack(alignment: .leading, spacing: 5) {
-                    HStack(spacing: 7) {
-                        Text("\("gamification.level".localized) \(gamificationService.userState.currentLevel)")
-                            .font(.system(size: 14, weight: .heavy))
-                            .foregroundColor(.theme.textPrimary)
-                        Text(gamificationService.userState.rank.name)
-                            .font(.system(size: 11.5))
-                            .foregroundColor(.theme.textSecondary)
-                    }
-                    GeometryReader { geo in
-                        ZStack(alignment: .leading) {
-                            Capsule().fill(Color.white.opacity(0.1))
-                            Capsule()
-                                .fill(Color.theme.accentOrange)
-                                .frame(width: max(0, geo.size.width * gamificationService.userState.levelProgress))
-                        }
-                    }
-                    .frame(height: 4)
-                    .frame(maxWidth: 130)
-                }
+        return missions
+    }
 
-                Spacer()
+    private func dailyMissionRow(_ mission: DailyMissionPresentation) -> some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(
+                        mission.isCompleted
+                            ? Color.green.opacity(0.22)
+                            : Color.white.opacity(0.07)
+                    )
+                    .frame(width: 28, height: 28)
 
-                Text("\(Int(gamificationService.userState.levelProgress * 100))%")
-                    .font(.system(size: 12.5, weight: .heavy))
-                    .foregroundColor(.theme.accentOrange)
+                Image(systemName: "checkmark")
+                    .font(.system(size: 11, weight: .heavy))
+                    .foregroundColor(
+                        mission.isCompleted
+                            ? Color.green
+                            : Color.theme.textSecondary.opacity(0.45)
+                    )
             }
-            .padding(14)
-            .background(Color.theme.accentOrange.opacity(0.08))
+
+            Text(mission.title)
+                .font(.system(size: 14, weight: .bold))
+                .foregroundColor(
+                    mission.isCompleted
+                        ? Color.theme.textSecondary.opacity(0.78)
+                        : Color.theme.textPrimary
+                )
+                .lineLimit(1)
+                .minimumScaleFactor(0.82)
+
+            Spacer(minLength: 8)
+
+            if let reward = mission.reward {
+                Text("+\(reward) XP")
+                    .font(.system(size: 12, weight: .heavy))
+                    .foregroundColor(.theme.accentOrange)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Color.theme.accentOrange.opacity(0.16))
+                    .clipShape(Capsule())
+            }
+        }
+        .padding(.horizontal, 14)
+        .frame(minHeight: 52)
+    }
+
+    // MARK: - Badge
+
+    private var badgesRow: some View {
+        GeometryReader { geometry in
+            let badgeSize = min(48, max(40, (geometry.size.width - 50) / 6))
+
+            HStack(spacing: 10) {
+                ForEach(Array(visibleBadges), id: \.definition.id) { item in
+                    ZStack {
+                        Circle()
+                            .fill(
+                                item.isUnlocked
+                                    ? item.definition.color.opacity(0.2)
+                                    : Color.theme.cardBackground.opacity(0.82)
+                            )
+
+                        Circle()
+                            .stroke(
+                                item.isUnlocked
+                                    ? item.definition.color.opacity(0.72)
+                                    : Color.white.opacity(0.09),
+                                lineWidth: 1
+                            )
+
+                        Image(systemName: item.isUnlocked ? item.definition.icon : "lock")
+                            .font(.system(size: badgeSize / 3, weight: .medium))
+                            .foregroundColor(
+                            item.isUnlocked
+                                ? item.definition.color
+                                : Color.theme.textSecondary.opacity(0.62)
+                            )
+                    }
+                    .frame(width: badgeSize, height: badgeSize)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(height: 48)
+    }
+
+    private var visibleBadges: ArraySlice<(definition: BadgeDefinition, progress: Int, isUnlocked: Bool)> {
+        gamificationService
+            .getAllBadgesWithProgress()
+            .sorted { first, second in
+                if first.isUnlocked != second.isUnlocked {
+                    return first.isUnlocked && !second.isUnlocked
+                }
+                return first.definition.id < second.definition.id
+            }
+            .prefix(6)
+    }
+
+    // MARK: - Livelli
+
+    private var levelsCard: some View {
+        Button { showLevels = true } label: {
+            VStack(spacing: 0) {
+                let levels = GamificationProgressPresentation.previewLevels(
+                    currentLevel: gamificationService.userState.currentLevel
+                )
+
+                ForEach(Array(levels.enumerated()), id: \.element) { index, level in
+                    compactLevelRow(level)
+
+                    if index < levels.count - 1 {
+                        Rectangle()
+                            .fill(Color.theme.separator)
+                            .frame(height: 1)
+                    }
+                }
+            }
+            .background(Color.theme.cardBackground.opacity(0.82))
             .clipShape(RoundedRectangle(cornerRadius: 16))
         }
         .buttonStyle(PlainButtonStyle())
     }
 
-    private func sectionHeader(_ title: String, trailing: String, action: @escaping () -> Void) -> some View {
+    private func compactLevelRow(_ level: Int) -> some View {
+        let isCurrent = level == gamificationService.userState.currentLevel
+        let levelInfo = LevelCalculator.getLevelInfo(level: level)
+        let progress = isCurrent
+            ? min(max(gamificationService.userState.levelProgress, 0), 1)
+            : 0
+
+        return HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(
+                        isCurrent
+                            ? Color.theme.accentOrange.opacity(0.18)
+                            : Color.white.opacity(0.06)
+                    )
+                    .frame(width: 30, height: 30)
+
+                Image(systemName: isCurrent ? "arrow.right" : "lock")
+                    .font(.system(size: isCurrent ? 12 : 10, weight: .bold))
+                    .foregroundColor(
+                        isCurrent
+                            ? Color.theme.accentOrange
+                            : Color.theme.textSecondary.opacity(0.55)
+                    )
+            }
+
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(spacing: 7) {
+                    Text("\("gamification.level".localized) \(level)")
+                        .font(.system(size: 15, weight: .heavy))
+                        .foregroundColor(
+                            isCurrent
+                                ? Color.theme.textPrimary
+                                : Color.theme.textSecondary.opacity(0.72)
+                        )
+
+                    Text(levelInfo.rank.name)
+                        .font(.system(size: 12.5, weight: .medium))
+                        .foregroundColor(.theme.textSecondary.opacity(isCurrent ? 0.82 : 0.58))
+                }
+
+                GeometryReader { geometry in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(Color.white.opacity(0.1))
+                        Capsule()
+                            .fill(Color.theme.accentOrange)
+                            .frame(width: geometry.size.width * progress)
+                    }
+                }
+                .frame(width: 130, height: 4)
+            }
+
+            Spacer()
+
+            Text("\(Int(progress * 100))%")
+                .font(.system(size: 14, weight: .heavy))
+                .foregroundColor(
+                    isCurrent
+                        ? Color.theme.accentOrange
+                        : Color.theme.textSecondary.opacity(0.5)
+                )
+        }
+        .padding(.horizontal, 14)
+        .frame(minHeight: 55)
+        .background(isCurrent ? Color.theme.accentOrange.opacity(0.1) : Color.clear)
+    }
+
+    private func localizedChallengeTitle(_ challenge: DailyChallengeType) -> String {
+        let key = "gamification.challenge.\(challenge.id)"
+        let localizedTitle = key.localized
+        return localizedTitle == key ? challenge.description : localizedTitle
+    }
+
+    private func sectionHeader(
+        _ title: String,
+        trailing: String? = nil,
+        action: (() -> Void)? = nil
+    ) -> some View {
         HStack(alignment: .lastTextBaseline) {
             Text(title.uppercased())
                 .font(.system(size: 11, weight: .heavy))
                 .kerning(1.2)
                 .foregroundColor(Color.white.opacity(0.4))
+
             Spacer()
-            Button(action: action) {
+
+            if let trailing, let action {
+                Button(action: action) {
+                    Text(trailing)
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.theme.accentOrange)
+                }
+            } else if let trailing {
                 Text(trailing)
                     .font(.system(size: 12, weight: .bold))
                     .foregroundColor(.theme.accentOrange)
             }
         }
-        .padding(.top, 10)
     }
+}
+
+private struct DailyMissionPresentation: Identifiable {
+    let id: String
+    let title: String
+    let reward: Int?
+    let isCompleted: Bool
 }

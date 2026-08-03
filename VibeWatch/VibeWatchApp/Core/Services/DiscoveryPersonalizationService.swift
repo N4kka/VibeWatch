@@ -191,6 +191,30 @@ class DiscoveryPersonalizationService: ObservableObject {
         Logger.info("[DiscoveryPersonalizationService] Memory cache cleared")
     }
 
+    /// Butta la cache dei caroselli (memoria + DB): la prossima apertura di Scopri rigenera.
+    /// Serve quando il profilo su cui i caroselli erano stati costruiti è cambiato davvero —
+    /// oggi, dopo un import — non per un refresh qualsiasi: la rigenerazione costa ~100
+    /// richieste TMDB e la scadenza normale resta la mezzanotte.
+    func invalidateCache(userId: String?) async {
+        memoryCache = nil
+        do {
+            if let userId, !userId.isEmpty {
+                try await sqliteService.executeWrite(
+                    "DELETE FROM personalized_discovery WHERE user_id = ?",
+                    parameters: [userId]
+                )
+            }
+            let deviceId = await sqliteService.getOrCreateDeviceId()
+            try await sqliteService.executeWrite(
+                "DELETE FROM personalized_discovery WHERE device_id = ?",
+                parameters: [deviceId]
+            )
+            Logger.info("[DiscoveryPersonalizationService] Carousel cache invalidated")
+        } catch {
+            Logger.warning("[DiscoveryPersonalizationService] Cache invalidation failed: \(error.localizedDescription)")
+        }
+    }
+
     /// Warm the in-memory cache from the DB cache when available.
     func loadCachedCarouselsIfAvailable(userId: String?) async -> [PersonalizedCarousel]? {
         do {

@@ -32,7 +32,7 @@ class MovieDetailViewModel: ObservableObject {
     @Published var imdbId: String?
     @Published var isLoading = false
     @Published var error: AppError?
-    @Published var whyForMeMessage: String?
+    @Published var whyForMeAnalysis: WhyForMeAnalysis?
     @Published var isWhyForMeLoading = false
     @Published var whyForMeError: String?
     
@@ -123,12 +123,7 @@ class MovieDetailViewModel: ObservableObject {
                 languageName: language.nativeName,
                 languageCode: language.id
             )
-            if isInvalidWhyForMe(response) {
-                whyForMeMessage = nil
-                whyForMeError = "common.error".localized
-            } else {
-                whyForMeMessage = response
-            }
+            whyForMeAnalysis = response
             aiTokenManager.recordUsage()
         } catch {
             whyForMeError = error.localizedDescription
@@ -168,18 +163,6 @@ class MovieDetailViewModel: ObservableObject {
         )
     }
 
-    private func isInvalidWhyForMe(_ text: String) -> Bool {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.isEmpty { return true }
-        if trimmed == "..." || trimmed == "…" { return true }
-        if trimmed.count < 10 { return true }
-        let lower = trimmed.lowercased()
-        if lower.contains("analysis") || lower.contains("analyze") { return true }
-        if lower.contains("top genres") || lower.contains("genres:") { return true }
-        if lower.contains("cast:") || lower.contains("overview") { return true }
-        if trimmed.contains("**") { return true }
-        return false
-    }
 }
 
 @MainActor
@@ -193,7 +176,7 @@ class TVShowDetailViewModel: ObservableObject {
     @Published var imdbId: String?
     @Published var isLoading = false
     @Published var error: AppError?
-    @Published var whyForMeMessage: String?
+    @Published var whyForMeAnalysis: WhyForMeAnalysis?
     @Published var isWhyForMeLoading = false
     @Published var whyForMeError: String?
     
@@ -288,12 +271,7 @@ class TVShowDetailViewModel: ObservableObject {
                 languageName: language.nativeName,
                 languageCode: language.id
             )
-            if isInvalidWhyForMe(response) {
-                whyForMeMessage = nil
-                whyForMeError = "common.error".localized
-            } else {
-                whyForMeMessage = response
-            }
+            whyForMeAnalysis = response
             aiTokenManager.recordUsage()
         } catch {
             whyForMeError = error.localizedDescription
@@ -333,11 +311,4 @@ class TVShowDetailViewModel: ObservableObject {
         )
     }
 
-    private func isInvalidWhyForMe(_ text: String) -> Bool {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.isEmpty { return true }
-        if trimmed == "..." || trimmed == "…" { return true }
-        if trimmed.count < 10 { return true }
-        return false
-    }
 }

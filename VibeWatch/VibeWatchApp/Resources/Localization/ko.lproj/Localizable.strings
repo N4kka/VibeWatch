@@ -128,6 +128,8 @@
 "clips.noClipsAvailable" = "클립이 없어요";
 "clips.noClipsDescription" = "좋아하는 영화와 시리즈의 멋진 장면은 나중에 다시 확인해 주세요";
 "clips.addToList" = "리스트에 추가";
+"clips.card.addToWatchlist" = "+ Watchlist";
+"clips.card.goToDetail" = "상세 보기";
 "clips.createFirstList" = "픽을 저장하려면 첫 번째 시청 목록을 만들어 보세요";
 "clips.createNewList" = "새 리스트 만들기";
 "clips.feed.craftingTitle" = "완벽한 피드를 만들고 있어요";
@@ -374,6 +376,8 @@
 "settings.redeemCode" = "코드 사용";
 "settings.redeemCode.description" = "프로모/오퍼 코드를 입력하세요";
 "paywall.haveCode" = "프로모 코드가 있나요?";
+"paywall.price.perYear" = "%@/년";
+"paywall.cancelAnytime" = "언제든지 해지 가능";
 
 // Help & Support - About Us
 "profile.aboutUs" = "회사 소개";
@@ -416,6 +420,10 @@
 "import.report.moviesWatchlistApplied" = "영화 %d편을 시청 예정 목록에 추가했습니다.";
 "import.report.moviesUnresolved" = "영화 %d편을 인식하지 못했습니다(제목과 연도가 TMDB와 일치하지 않음).";
 "import.resolve.button" = "해결";
+"import.resolve.batchButton" = "제목 %d개 해결";
+"import.resolve.batchHint" = "각 제목에 해당하는 TMDB 시리즈를 찾으세요. 모든 항목을 선택하기 전에는 아무것도 가져오지 않으며, 이후 한 번의 가져오기로 함께 해결합니다.";
+"import.resolve.batchProgress" = "제목 %d/%d개 선택됨";
+"import.resolve.startBatch" = "한 번의 가져오기 시작";
 "import.resolve.title" = "“%@”는 어떤 시리즈인가요?";
 "import.resolve.hint" = "에피소드는 정확한 TVDB ID로 다시 확인됩니다. TMDB에서 확인할 수 없는 항목은 보고서에 남습니다.";
 "import.resolve.searchPlaceholder" = "TMDB에서 시리즈 검색";
@@ -434,6 +442,7 @@
 "import.error.fileRead" = "해당 파일을 읽을 수 없습니다.";
 "import.error.reportFailed" = "가져오기는 끝났지만 보고서를 불러오지 못했습니다.";
 
+"import.error.sessionExpired" = "세션이 만료되었습니다. 다시 로그인한 뒤 가져오기를 다시 시도하세요.";
 // Profile - Support & Feedback
 "profile.feedback.suggestFeature" = "기능 제안";
 "profile.feedback.suggestFeatureDescription" = "VibeWatch가 더 좋아지려면 무엇이 필요할지 알려주세요.";
@@ -555,8 +564,8 @@
 "settings.notifications.description" = "새 콘텐츠에 대한 맞춤 알림";
 
 // Onboarding Revamp
-"onboarding.welcome.title" = "당신의 vibe를 찾아보세요";
-"onboarding.welcome.subtitle" = "AI가 당신만을 위한 추천을 제공합니다.";
+"onboarding.welcome.title" = "VibeWatch에 오신 걸 환영해요";
+"onboarding.welcome.subtitle" = "발견하고, 기록하고, 공개를 놓치지 마세요. 영화와 시리즈를 한곳에서.";
 "onboarding.clips.title" = "읽지 말고 보세요";
 "onboarding.clips.subtitle" = "짧고 몰입감 있는 클립으로 영화를 경험하세요.";
 "onboarding.lists.title" = "시청 목록, 어디서나";
@@ -841,6 +850,15 @@
 "platforms.row.subtitle" = "스트리밍, 대여, 구매";
 "platforms.footnote" = "선택한 플랫폼은 앱 전체의 시청처 표시에 적용됩니다.";
 "profile.languageCountry" = "언어 및 국가";
+"profile.edit.title" = "프로필 편집";
+"profile.edit.information" = "정보";
+"profile.edit.name" = "이름";
+"profile.edit.bio" = "소개";
+"profile.edit.bioPlaceholder" = "자신에 대해 알려주세요 (선택 사항)";
+"profile.edit.changePhoto" = "사진 변경";
+"profile.edit.publicProfile" = "공개 프로필";
+"profile.edit.publicProfileSubtitle" = "다른 사용자가 나를 찾고 공개 목록을 팔로우할 수 있습니다";
+"profile.edit.saveError" = "프로필을 저장할 수 없습니다. 다시 시도해 주세요.";
 "profile.imageCache" = "이미지 캐시";
 "profile.imageCache.subtitle" = "WiFi에서만 미리 불러오기";
 "common.on" = "켬";
@@ -848,3 +866,69 @@
 "profile.privacyTerms" = "개인정보 및 약관";
 "profile.footer.tmdb" = "이 제품은 TMDb API를 사용하지만 TMDb의 승인이나 인증을 받지 않았습니다.";
 "settings.cacheManagement.inUse" = "%d MB 사용 중";
+
+// MARK: - Onboarding 2.0
+"common.continue" = "계속";
+"auth.fullNamePlaceholder" = "성명";
+"onboarding.welcome.cta" = "시작하기";
+"onboarding.import.title" = "시청 기록을 가져오세요";
+"onboarding.import.subtitle" = "시리즈, 시청한 에피소드, 시청 예정 목록을 가져옵니다. 가져오기가 끝나면 앱은 바로 준비 완료.";
+"onboarding.import.tvtime" = "TV Time에서 가져오기";
+"onboarding.import.tvtime.subtitle" = "시리즈, 시청한 에피소드, 시청 예정 목록, 평점";
+"onboarding.import.other" = "다른 앱";
+"onboarding.import.other.subtitle" = "Trakt, Letterboxd — 곧 지원 예정";
+"onboarding.import.skip" = "건너뛰고 처음부터 시작";
+"onboarding.import.completed" = "가져오기 완료";
+"onboarding.import.stat.shows" = "시리즈";
+"onboarding.import.stat.episodes" = "시청한 에피소드";
+"onboarding.import.stat.movies" = "영화";
+"onboarding.import.stat.watchlist" = "시청 예정";
+"onboarding.notifications.title" = "아무것도 놓치지 마세요";
+"onboarding.notifications.subtitle" = "팔로우하는 것만 알려드려요 — 새 에피소드, 시청 예정작 공개, 스트리밍 공개 소식.";
+"onboarding.notifications.row1" = "팔로우 중인 시리즈의 새 에피소드";
+"onboarding.notifications.row2" = "시청 예정 목록 작품의 공개";
+"onboarding.notifications.row3" = "작품이 스트리밍에 올라올 때";
+"onboarding.notifications.enable" = "알림 켜기";
+"onboarding.notifications.later" = "나중에";
+"onboarding.ready.title" = "준비 완료";
+"onboarding.ready.subtitle" = "라이브러리가 준비되었고 공개를 놓치지 않아요. 상단의 \"계속 보기\"가 기다리고 있어요.";
+"onboarding.ready.chip.shows" = "시리즈 %d개";
+"onboarding.ready.chip.episodes" = "에피소드 %d개";
+"onboarding.ready.chip.notifications" = "알림 켜짐";
+"onboarding.ready.cta" = "시청 시작하기";
+
+"filters.myPlatforms" = "Mine";
+"filters.platformScopeAll" = "All";
+"mediaDetail.forYou" = "for you";
+"mediaDetail.watchOn" = "Watch on";
+"mediaDetail.notifyMe" = "Notify me";
+"mediaDetail.notifyMeEnabling" = "Activating notification…";
+"mediaDetail.notifyMeEnabled" = "Notification active";
+"mediaDetail.action.watchlist" = "Watchlist";
+"mediaDetail.action.like" = "Like";
+"mediaDetail.action.list" = "To list";
+"mediaDetail.toast.watchlistAdded" = "Added to your watchlist";
+"mediaDetail.toast.watchlistRemoved" = "Removed from your watchlist";
+"mediaDetail.toast.markedSeen" = "Marked as seen";
+"mediaDetail.toast.markedUnseen" = "Removed from seen";
+"mediaDetail.toast.liked" = "Added to your likes";
+"mediaDetail.toast.likeRemoved" = "Removed from your likes";
+"mediaDetail.why.cardTitle" = "Why is it right for you?";
+"mediaDetail.why.title" = "Why for you";
+"mediaDetail.why.affinity" = "Affinity with your tastes";
+"mediaDetail.why.reason.mood" = "In line with your mood";
+"mediaDetail.why.reason.genres" = "Genres you love";
+"mediaDetail.why.reason.cast" = "Cast you know";
+"mediaDetail.why.helpful" = "Was this helpful?";
+"mediaDetail.why.regenerate" = "Regenerate";
+"mediaDetail.why.quota" = "Generated by Vibe AI from ratings, mood and history. %d/%d requests today.";
+"settings.cacheManagement.clearCacheAction" = "Clear cache";
+"gamification.missionsToday" = "Today's missions";
+"gamification.xpToNext" = "%d XP to the next level";
+"gamification.mission.openApp" = "Open the app";
+"gamification.mission.keepStreak" = "Keep your daily streak";
+"gamification.challenge.watch_3" = "Watch 3 clips";
+"gamification.challenge.like_5" = "Like 5 clips";
+"gamification.challenge.list_2" = "Add 2 titles to a list";
+"gamification.challenge.watch_new_genre" = "Watch a clip from a new genre";
+"gamification.challenge.complete_5" = "Complete 5 clips (>70%)";

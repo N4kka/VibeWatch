@@ -66,13 +66,12 @@ struct ListsView: View {
             VStack(spacing: 0) {
                 OfflineBanner()
 
-                // No filter button here: the Lists tab has its own inline "Filtri" control,
-                // so the header keeps just search + avatar (one door to the filter sheet).
+                // Il filtro di Liste resta inline: l'header globale mantiene ricerca,
+                // gamification e profilo senza una seconda porta verso lo stesso sheet.
                 AppHeaderView(
                     onSearchTap: { showSearch = true },
                     onProfileTap: { showProfile = true },
-                    avatarURL: appState.currentUser?.avatarURL,
-                    isProUser: quotaManager.isProUser
+                    avatarURL: appState.currentUser?.avatarURL
                 )
 
                 // Redesign 2.0: Liste è SOLO l'archivio personale — le liste pubbliche vivono

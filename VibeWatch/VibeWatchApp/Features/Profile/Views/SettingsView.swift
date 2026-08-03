@@ -40,29 +40,20 @@ struct SettingsView: View {
                 VStack(spacing: 0) {
                     // Header
                     HStack {
-                        Button {
-                            dismiss()
-                        } label: {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 18, weight: .semibold))
-                                .foregroundColor(.theme.textPrimary)
-                        }
-                    
+                        BackCircleButton { dismiss() }
+
                     Spacer()
-                    
+
                     Text("settings.title".localized)
                         .font(.system(size: 20, weight: .bold))
                         .foregroundColor(.theme.textPrimary)
-                    
+
                     Spacer()
-                    
-                    // Invisible button for balance
-                    Button {} label: {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(.clear)
-                    }
-                    .disabled(true)
+
+                    // Gemello invisibile per tenere il titolo centrato
+                    BackCircleButton {}
+                        .opacity(0)
+                        .disabled(true)
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 16)
@@ -1000,9 +991,28 @@ struct CountrySelectorView: View {
 struct LanguageSelectorView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var localizationManager = LocalizationManager.shared
-    
-    private var availableLanguages: [Language] {
-        Language.availableFor(country: localizationManager.currentCountry)
+    @State private var searchText = ""
+
+    private var filteredCountries: [Country] {
+        guard !searchText.isEmpty else { return Country.all }
+        return Country.all.filter { country in
+            let language = Language.findByCode(country.nativeLanguageCode)
+            return countryDisplayName(country).localizedCaseInsensitiveContains(searchText)
+                || country.name.localizedCaseInsensitiveContains(searchText)
+                || language?.nativeName.localizedCaseInsensitiveContains(searchText) == true
+                || language?.name.localizedCaseInsensitiveContains(searchText) == true
+        }
+    }
+
+    private func countryDisplayName(_ country: Country) -> String {
+        Locale(identifier: localizationManager.currentLanguage.id)
+            .localizedString(forRegionCode: country.id) ?? country.name
+    }
+
+    private func rowTitle(for country: Country) -> String {
+        let languageName = Language.findByCode(country.nativeLanguageCode)?.nativeName
+            ?? country.nativeLanguageCode.uppercased()
+        return "\(country.flag) \(languageName) (\(countryDisplayName(country)))"
     }
     
     var body: some View {
@@ -1012,47 +1022,55 @@ struct LanguageSelectorView: View {
             VStack(spacing: 0) {
                 // Header
                 HStack {
-                    Text("settings.selectLanguage".localized)
+                    BackCircleButton { dismiss() }
+
+                    Spacer()
+
+                    Text("profile.languageCountry".localized)
                         .font(.system(size: 20, weight: .bold))
                         .foregroundColor(.theme.textPrimary)
-                    
+
                     Spacer()
-                    
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.theme.textSecondary)
-                    }
+
+                    // Gemello invisibile per tenere il titolo centrato
+                    BackCircleButton {}
+                        .opacity(0)
+                        .disabled(true)
                 }
                 .padding(20)
                 
                 Divider()
                     .background(Color.white.opacity(0.1))
-                
-                // Languages List
+
+                HStack(spacing: 10) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundColor(.theme.textSecondary)
+                    TextField("common.search".localized, text: $searchText)
+                        .foregroundColor(.theme.textPrimary)
+                }
+                .padding(12)
+                .background(Color.white.opacity(0.05))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .padding(.horizontal, 20)
+                .padding(.vertical, 14)
+
+                // Un'unica scelta imposta sia il paese sia la sua lingua principale.
                 ScrollView {
-                    VStack(spacing: 0) {
-                        ForEach(availableLanguages) { language in
+                    LazyVStack(spacing: 0) {
+                        ForEach(filteredCountries) { country in
                             Button {
-                                localizationManager.setLanguage(language)
+                                localizationManager.setCountry(country)
                                 dismiss()
                             } label: {
                                 HStack(spacing: 12) {
-                                    Text(language.nativeName)
+                                    Text(rowTitle(for: country))
                                         .font(.system(size: 16))
                                         .foregroundColor(.theme.textPrimary)
-                                    
-                                    if language.id != localizationManager.currentCountry.nativeLanguageCode {
-                                        Text("(\(language.name))")
-                                            .font(.system(size: 14))
-                                            .foregroundColor(.theme.textSecondary)
-                                    }
-                                    
+                                        .multilineTextAlignment(.leading)
+
                                     Spacer()
-                                    
-                                    if language.id == localizationManager.currentLanguage.id {
+
+                                    if country.id == localizationManager.currentCountry.id {
                                         Image(systemName: "checkmark")
                                             .font(.system(size: 16, weight: .semibold))
                                             .foregroundColor(.theme.accentOrange)
@@ -1061,8 +1079,8 @@ struct LanguageSelectorView: View {
                                 .padding(.horizontal, 20)
                                 .padding(.vertical, 16)
                             }
-                            
-                            if language.id != availableLanguages.last?.id {
+
+                            if country.id != filteredCountries.last?.id {
                                 Divider()
                                     .background(Color.white.opacity(0.1))
                                     .padding(.horizontal, 20)

@@ -32,7 +32,6 @@ struct TVShowsTrackingView: View {
     /// locale (l'avatar arriva dalla cache immagini, differito): il budget §13.6 del primo
     /// frame non lo paga — la misura del probe resta dentro `content`.
     @EnvironmentObject var appState: AppState
-    @EnvironmentObject var quotaManager: DailyQuotaManager
     @StateObject private var searchViewModel = SearchViewModel()
     @State private var showSearch = false
     @State private var showProfile = false
@@ -42,8 +41,7 @@ struct TVShowsTrackingView: View {
             AppHeaderView(
                 onSearchTap: { showSearch = true },
                 onProfileTap: { showProfile = true },
-                avatarURL: appState.currentUser?.avatarURL,
-                isProUser: quotaManager.isProUser
+                avatarURL: appState.currentUser?.avatarURL
             )
             ScreenTitleHeader(
                 title: "tab.tracking".localized,
@@ -86,32 +84,24 @@ struct TVShowsTrackingView: View {
             emptyState
         } else {
             List {
-                // Il capolinea della misura: il primo fotogramma **con contenuto**. Si chiude un
-                // turno di runloop dopo la comparsa, cioe' a layout calcolato e commit inviato.
-                //
-                // `if !isEmpty` non e' una precauzione, e' la misura stessa. La riga stava fuori
-                // dalla condizione, e la sequenza era: `begin()`, `isLoading = true`, SwiftUI
-                // ridisegna, la List compare **vuota** (i dati sono ancora dentro l'`await`),
-                // questa riga appare e chiudeva il cronometro. Cioe' si misurava il tempo di
-                // disegnare una lista vuota, e il numero sarebbe stato lusinghiero e falso anche
-                // con dati veri — non solo sull'account senza storico a cui era stato attribuito.
-                if !viewModel.sections.sections.isEmpty {
-                    Color.clear.frame(height: 0)
-                        .onAppear {
-                            DispatchQueue.main.async { TrackingPerformanceProbe.firstFrameRendered() }
-                        }
-                        .listRowInsets(EdgeInsets())
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                }
-
                 // Redesign 2.0 (deciso dall'utente, 2026-08-03): le sezioni timeline
                 // (Oggi/Domani/Questa settimana/Questo mese) NON si disegnano più qui — a
                 // "cosa esce" risponde il calendario (icona in alto e strip in Scopri), che
                 // legge le stesse righe di `tv_timeline`. Supera l'ordine di §9.2: due elenchi
                 // delle stesse uscite in due forme erano il "due posti, due numeri" della UI.
                 ForEach(viewModel.sections.sections, id: \.bucket) { bucket, rows in
-                    Section(header: sectionHeader(bucket: bucket, count: rows.count)) {
+                    Section(
+                        header: sectionHeader(bucket: bucket, count: rows.count)
+                            .onAppear {
+                                // Misuriamo il primo frame sul primo contenuto reale. La vecchia
+                                // riga trasparente, pur avendo `height: 0`, ereditava l'altezza
+                                // minima di `List` e lasciava uno spazio vuoto sopra la sezione.
+                                guard bucket == viewModel.sections.sections.first?.bucket else { return }
+                                DispatchQueue.main.async {
+                                    TrackingPerformanceProbe.firstFrameRendered()
+                                }
+                            }
+                    ) {
                         if viewModel.isExpanded(bucket) {
                             ForEach(rows) { row in
                                 TVTrackingCard(

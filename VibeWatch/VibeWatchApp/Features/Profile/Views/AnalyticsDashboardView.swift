@@ -3,6 +3,7 @@ import Charts
 
 /// Main analytics dashboard showing user statistics and gamification insights
 struct AnalyticsDashboardView: View {
+    @Environment(\.dismiss) private var dismiss
     @StateObject private var analyticsService = AnalyticsInsightsService.shared
     @StateObject private var gamificationService = GamificationService.shared
     @StateObject private var authService = AuthService.shared
@@ -43,6 +44,15 @@ struct AnalyticsDashboardView: View {
         .background(Color.theme.background.ignoresSafeArea())
         .navigationTitle("Your Stats")
         .navigationBarTitleDisplayMode(.large)
+        // La pagina arriva sia come sheet (dal profilo) sia pushata (da Impostazioni, dove la
+        // barra di sistema è spenta): la porta se la porta dietro da sola.
+        .navigationBarHidden(false)
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                BackCircleButton { dismiss() }
+            }
+        }
         .sheet(isPresented: $showLevelProgress) {
             LevelProgressView(gamificationService: gamificationService)
         }

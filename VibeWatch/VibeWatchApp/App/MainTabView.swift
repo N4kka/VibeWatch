@@ -85,7 +85,10 @@ struct MainTabView: View {
             .background(Color.theme.background.ignoresSafeArea())
             .navigationBarHidden(true)
             .navigationDestination(item: $selectedMovie) { movie in
-                if selectedMediaType == .movie {
+                // Il tipo lo porta l'item: la closure cattura una copia della view, e uno
+                // selectedMediaType letto qui poteva essere stantio — con l'id di una serie
+                // si apriva il film che per caso ha lo stesso id TMDB.
+                if (movie.navigationMediaType ?? selectedMediaType) == .movie {
                     MovieDetailView(movieId: movie.id)
                 } else {
                     TVShowDetailView(tvShowId: movie.id)
@@ -132,7 +135,10 @@ struct MainTabView: View {
             .background(Color.theme.background.ignoresSafeArea())
             .navigationBarHidden(true)
             .navigationDestination(item: $selectedMovie) { movie in
-                if selectedMediaType == .movie {
+                // Il tipo lo porta l'item: la closure cattura una copia della view, e uno
+                // selectedMediaType letto qui poteva essere stantio — con l'id di una serie
+                // si apriva il film che per caso ha lo stesso id TMDB.
+                if (movie.navigationMediaType ?? selectedMediaType) == .movie {
                     MovieDetailView(movieId: movie.id)
                 } else {
                     TVShowDetailView(tvShowId: movie.id)
@@ -347,7 +353,7 @@ struct MainTabView: View {
 
         // Build a minimal Movie placeholder — navigationDestination(item: $selectedMovie) only
         // uses movie.id to route to MovieDetailView(movieId:) or TVShowDetailView(tvShowId:)
-        let placeholder = Movie(
+        var placeholder = Movie(
             id: target.mediaId,
             title: "",
             overview: "",
@@ -369,6 +375,7 @@ struct MainTabView: View {
         )
 
         selectedMediaType = target.mediaType == "tv" ? .tv : .movie
+        placeholder.navigationMediaType = selectedMediaType
         selectedMovie = placeholder
         navigationManager.clearDeepLinkTarget()
     }

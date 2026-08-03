@@ -471,7 +471,7 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
         }
 
         if trigger.shouldPullChanges {
-            outcome.merge(await pullFromRemoteInternal())
+            outcome.merge(await pullFromRemoteInternal(trigger: trigger))
         }
 
         guard !outcome.hasFailures else {
@@ -658,6 +658,10 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
                 )
             } else {
                 stateMachine.completeSync(reason: "Pull completed")
+                // Un pull "nudo" aggiornava SQLite senza dirlo a nessuno: le view che leggono
+                // lo specchio locale (Tracking, strip di Scopri, liste) restavano indietro
+                // fino a un evento qualsiasi. Il pull è un sync completato a tutti gli effetti.
+                postNotification(SyncEngine.syncCompletedNotification, trigger: .manualRefresh)
             }
         }
     }
@@ -714,7 +718,7 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
     }
 
     @discardableResult
-    private func pullFromRemoteInternal() async -> SyncOutcome {
+    private func pullFromRemoteInternal(trigger: SyncTrigger = .manualRefresh) async -> SyncOutcome {
         var outcome = SyncOutcome()
 
         guard let userId = AuthService.shared.currentUser?.id else {
@@ -724,8 +728,22 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
 
         Logger.info("[SyncEngine] Pulling remote changes for user \(userId)")
 
-        // Tables to sync (user-scoped)
+        // Tables to sync (user-scoped).
+        //
+        // L'ordine non è estetico: lo specchio del Tracking (tv_show_state + le due viste §9.2)
+        // sta IN TESTA perché è ciò che l'utente guarda subito dopo un import o un login — con
+        // le viste in coda a 21 tabelle sequenziali, la schermata Tracking restava vuota per
+        // tutta la durata del pull, con la faccia di un import fallito. Appena il blocco
+        // tracking è dentro, `syncCompletedNotification` parte una prima volta (vedi sotto) e
+        // le view che leggono lo specchio si ridisegnano mentre il resto continua.
         let userTables = [
+            "tv_show_state",
+            // §9.2: le due viste che la schermata Tracking legge. Sono viste e non tabelle, ma
+            // dal lato del pull non cambia niente — sono user-scoped e PostgREST le espone
+            // uguale. Ritirarle e' cio' che permette a §13.6 di reggere: la schermata si disegna
+            // da qui, senza rete.
+            "v_tv_tracking",
+            "v_tv_timeline",
             "profiles",
             "lists",
             "list_items",
@@ -756,17 +774,11 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             // colonne della chiave — nessuna da sola e' unica nel sottoinsieme dell'utente.
             "user_favorites",
             "user_ratings",
-            "watch_events",
-            "tv_show_state",
-            // §9.2: le due viste che la schermata Tracking legge. Sono viste e non tabelle, ma
-            // dal lato del pull non cambia niente — sono user-scoped e PostgREST le espone
-            // uguale. Ritirarle e' cio' che permette a §13.6 di reggere: la schermata si disegna
-            // da qui, senza rete.
-            "v_tv_tracking",
-            "v_tv_timeline"
+            "watch_events"
         ]
 
-        for table in userTables {
+        let trackingPrefixCount = Self.trackingTables.count
+        for (index, table) in userTables.enumerated() {
             do {
                 try await pullTableWithConflictResolution(name: table, userId: userId)
                 outcome.recordSuccess()
@@ -774,6 +786,12 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             } catch {
                 outcome.recordFailure()
                 Logger.warning("[SyncEngine] Failed to pull \(table): \(error.localizedDescription)")
+            }
+
+            if index == trackingPrefixCount - 1 {
+                // Primo paint: lo specchio del tracking è scritto, Tracking e le strip di
+                // Scopri possono ridisegnarsi adesso invece che a fine pull.
+                postNotification(SyncEngine.syncCompletedNotification, trigger: trigger)
             }
         }
 

@@ -4,7 +4,7 @@ struct SignUpView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var authService: AuthService
-    @State private var username = ""
+    @State private var fullName = ""
     @State private var email = ""
     @State private var password = ""
     @State private var confirmPassword = ""
@@ -101,12 +101,13 @@ struct SignUpView: View {
     
     private var inputFields: some View {
         VStack(spacing: 16) {
-            // Username
+            // Nome completo: lo username viene assegnato automaticamente e si cambia
+            // dalla ProfileView — qui si chiede solo come chiamarti.
             VStack(alignment: .leading, spacing: 4) {
-                TextField("auth.usernamePlaceholder".localized, text: $username)
+                TextField("auth.fullNamePlaceholder".localized, text: $fullName)
                     .textFieldStyle(CustomTextFieldStyle())
-                    .autocapitalization(.none)
-                    .textContentType(.username)
+                    .autocapitalization(.words)
+                    .textContentType(.name)
             }
             
             // Email with validation
@@ -271,7 +272,7 @@ struct SignUpView: View {
     }
     
     private var isFormValid: Bool {
-        !username.isEmpty &&
+        !fullName.trimmingCharacters(in: .whitespaces).isEmpty &&
         !email.isEmpty &&
         isEmailValid &&
         !password.isEmpty &&
@@ -285,7 +286,7 @@ struct SignUpView: View {
         
         do {
             let user = try await authService.signUp(
-                username: username,
+                username: fullName.trimmingCharacters(in: .whitespaces),
                 email: email,
                 password: password
             )
@@ -293,6 +294,7 @@ struct SignUpView: View {
             if authService.isAuthenticated {
                 appState.currentUser = user
                 appState.isAuthenticated = true
+                appState.syncAfterSignIn()
                 appState.showSuccessToast = true
                 appState.toastMessage = "Account created successfully!"
                 dismiss()
@@ -317,7 +319,10 @@ struct SignUpView: View {
             let user = try await authService.signInWithApple()
             appState.currentUser = user
             appState.isAuthenticated = true
+            appState.syncAfterSignIn()
             dismiss()
+        } catch is CancellationError {
+            // Annullato dall'utente: niente errore a schermo
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -333,7 +338,10 @@ struct SignUpView: View {
             let user = try await authService.signInWithGoogle()
             appState.currentUser = user
             appState.isAuthenticated = true
+            appState.syncAfterSignIn()
             dismiss()
+        } catch is CancellationError {
+            // Annullato dall'utente: niente errore a schermo
         } catch {
             errorMessage = error.localizedDescription
         }

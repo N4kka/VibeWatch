@@ -49,7 +49,18 @@ struct SeasonDetailView: View {
 
     private var isSeasonSeen: Bool {
         guard let episodes = viewModel.season?.episodes else { return false }
-        return episodeSeenManager.isSeasonFullySeen(showId: showId, seasonNumber: seasonNumber, episodes: episodes)
+        return episodes.allSatisfy { isEpisodeSeen($0) }
+    }
+
+    /// Visto = tap locale (EpisodeSeenManager) OPPURE watch_event nello specchio locale
+    /// (tap dal Tracking, import TV Time, altri device). Le due sorgenti restano separate
+    /// perché hanno vite diverse; la lista le somma.
+    private func isEpisodeSeen(_ episode: Episode) -> Bool {
+        episodeSeenManager.isEpisodeSeen(
+            showId: showId,
+            seasonNumber: episode.seasonNumber,
+            episodeNumber: episode.episodeNumber
+        ) || viewModel.watchedEpisodeNumbers.contains(episode.episodeNumber)
     }
 
     private func showMovie() -> Movie {
@@ -113,6 +124,11 @@ struct SeasonDetailView: View {
         .navigationBarHidden(true)
         .swipeBackGesture { dismiss() }
         .task { await viewModel.loadSeasonDetails() }
+        // Un "visto" tappato sulle card del Tracking arriva nello specchio locale via pull:
+        // quando il sync lo annuncia, la lista episodi si riallinea da sola.
+        .onReceive(NotificationCenter.default.publisher(for: .syncEngineCompleted)) { _ in
+            Task { await viewModel.refreshWatchedEvents() }
+        }
         .sheet(isPresented: $showSavePanel) {
             SaveToListPanel(movie: showMovie(), mediaType: .tv)
                 .presentationDetents([.medium])
@@ -267,11 +283,7 @@ struct SeasonDetailView: View {
                 ForEach(episodes) { episode in
                     EpisodeRow(
                         episode: episode,
-                        isSeen: episodeSeenManager.isEpisodeSeen(
-                            showId: showId,
-                            seasonNumber: episode.seasonNumber,
-                            episodeNumber: episode.episodeNumber
-                        ),
+                        isSeen: isEpisodeSeen(episode),
                         onToggleSeen: {
                             episodeSeenManager.toggleEpisode(
                                 showId: showId,

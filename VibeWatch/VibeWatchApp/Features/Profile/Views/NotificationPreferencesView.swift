@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct NotificationPreferencesView: View {
+    @Environment(\.dismiss) private var dismiss
     @StateObject private var notificationService = NotificationService.shared
     @State private var preferences: NotificationPreferences = Self.loadFromDefaults()
     @State private var isSyncing = false
@@ -22,6 +23,15 @@ struct NotificationPreferencesView: View {
         }
         .navigationTitle("notifications.title".localized)
         .navigationBarTitleDisplayMode(.inline)
+        // Come AnalyticsDashboardView: sheet dal profilo, push da Impostazioni — la porta
+        // dev'esserci in entrambi i casi.
+        .navigationBarHidden(false)
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                BackCircleButton { dismiss() }
+            }
+        }
         .task {
             await notificationService.refreshAuthorizationStatus()
         }

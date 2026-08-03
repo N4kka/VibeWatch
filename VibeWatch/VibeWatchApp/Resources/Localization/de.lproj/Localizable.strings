@@ -128,6 +128,8 @@
 "clips.noClipsAvailable" = "Keine Clips verfügbar";
 "clips.noClipsDescription" = "Schau später wieder vorbei für spannende Szenen aus deinen Lieblingsfilmen und -serien";
 "clips.addToList" = "Zur Liste hinzufügen";
+"clips.card.addToWatchlist" = "+ Watchlist";
+"clips.card.goToDetail" = "Zur Detailseite";
 "clips.createFirstList" = "Erstelle deine erste Watchlist, um Favoriten zu speichern";
 "clips.createNewList" = "Neue Liste erstellen";
 "clips.feed.craftingTitle" = "Wir erstellen deinen perfekten Feed";
@@ -375,6 +377,8 @@
 "settings.redeemCode" = "Code einlösen";
 "settings.redeemCode.description" = "Gib einen Promo- oder Angebotscode ein";
 "paywall.haveCode" = "Hast du einen Promo-Code?";
+"paywall.price.perYear" = "%@/Jahr";
+"paywall.cancelAnytime" = "Jederzeit kündbar";
 
 // Help & Support - About Us
 "profile.aboutUs" = "Über uns";
@@ -417,6 +421,10 @@
 "import.report.moviesWatchlistApplied" = "%d Filme zur Watchlist hinzugefügt.";
 "import.report.moviesUnresolved" = "%d Filme nicht erkannt (Titel und Jahr stimmen auf TMDB nicht überein).";
 "import.resolve.button" = "Zuordnen";
+"import.resolve.batchButton" = "%d Titel zuordnen";
+"import.resolve.batchHint" = "Finde für jeden Titel die passende TMDB-Serie. Es wird nichts importiert, bis alle Treffer ausgewählt sind; danach löst ein einziger Import sie gemeinsam auf.";
+"import.resolve.batchProgress" = "%d von %d Titeln zugeordnet";
+"import.resolve.startBatch" = "Einen Import starten";
 "import.resolve.title" = "Welche Serie ist „%@“?";
 "import.resolve.hint" = "Die Episoden werden erneut anhand ihrer exakten TVDB-IDs geprüft. Alles, was TMDB nicht bestätigen kann, bleibt im Bericht.";
 "import.resolve.searchPlaceholder" = "Serie auf TMDB suchen";
@@ -435,6 +443,7 @@
 "import.error.fileRead" = "Die Datei konnte nicht gelesen werden.";
 "import.error.reportFailed" = "Der Import ist fertig, aber der Bericht konnte nicht geladen werden.";
 
+"import.error.sessionExpired" = "Deine Sitzung ist abgelaufen. Melde dich erneut an und versuche den Import noch einmal.";
 // Profile - Support & Feedback
 "profile.feedback.suggestFeature" = "Neue Funktion vorschlagen";
 "profile.feedback.suggestFeatureDescription" = "Sag uns, was VibeWatch für dich besser machen würde.";
@@ -554,8 +563,8 @@
 "settings.notifications.description" = "Personalisierte Hinweise zu neuen Inhalten";
 
 // Onboarding Revamp
-"onboarding.welcome.title" = "Entdecke deinen Vibe";
-"onboarding.welcome.subtitle" = "KI-gestützte Empfehlungen, genau auf dich zugeschnitten.";
+"onboarding.welcome.title" = "Willkommen bei VibeWatch";
+"onboarding.welcome.subtitle" = "Entdecke, tracke und verpasse keinen Start mehr. Filme und Serien — alles an einem Ort.";
 "onboarding.clips.title" = "Schauen, nicht lesen";
 "onboarding.clips.subtitle" = "Erlebe Filme durch kurze, fesselnde Clips.";
 "onboarding.lists.title" = "Deine Watchlist, überall";
@@ -842,6 +851,15 @@
 "platforms.row.subtitle" = "Streaming, Leihen und Kaufen";
 "platforms.footnote" = "Die gewählten Plattformen filtern in der ganzen App, wo du schauen kannst.";
 "profile.languageCountry" = "Sprache und Land";
+"profile.edit.title" = "Profil bearbeiten";
+"profile.edit.information" = "Informationen";
+"profile.edit.name" = "Name";
+"profile.edit.bio" = "Bio";
+"profile.edit.bioPlaceholder" = "Erzähl etwas über dich (optional)";
+"profile.edit.changePhoto" = "Foto ändern";
+"profile.edit.publicProfile" = "Öffentliches Profil";
+"profile.edit.publicProfileSubtitle" = "Andere können dich finden und deinen öffentlichen Listen folgen";
+"profile.edit.saveError" = "Dein Profil konnte nicht gespeichert werden. Versuche es erneut.";
 "profile.imageCache" = "Bild-Cache";
 "profile.imageCache.subtitle" = "Vorladen nur über WLAN";
 "common.on" = "An";
@@ -849,3 +867,69 @@
 "profile.privacyTerms" = "Datenschutz und Bedingungen";
 "profile.footer.tmdb" = "Dieses Produkt nutzt die TMDb-API, ist aber nicht von TMDb geprüft oder zertifiziert.";
 "settings.cacheManagement.inUse" = "%d MB belegt";
+
+// MARK: - Onboarding 2.0
+"common.continue" = "Weiter";
+"auth.fullNamePlaceholder" = "Vollständiger Name";
+"onboarding.welcome.cta" = "Los geht's";
+"onboarding.import.title" = "Nimm deine Historie mit";
+"onboarding.import.subtitle" = "Importiere Serien, gesehene Folgen und Watchlist. Nach dem Import ist die App startklar.";
+"onboarding.import.tvtime" = "Aus TV Time importieren";
+"onboarding.import.tvtime.subtitle" = "Serien, gesehene Folgen, Watchlist und Bewertungen";
+"onboarding.import.other" = "Andere Apps";
+"onboarding.import.other.subtitle" = "Trakt, Letterboxd — bald verfügbar";
+"onboarding.import.skip" = "Überspringen, ich fange neu an";
+"onboarding.import.completed" = "Import abgeschlossen";
+"onboarding.import.stat.shows" = "Serien";
+"onboarding.import.stat.episodes" = "Gesehene Folgen";
+"onboarding.import.stat.movies" = "Filme";
+"onboarding.import.stat.watchlist" = "Auf der Watchlist";
+"onboarding.notifications.title" = "Verpasse nichts mehr";
+"onboarding.notifications.subtitle" = "Wir melden uns nur zu dem, was du verfolgst — neue Folgen, Starts aus deiner Watchlist und Streaming-Verfügbarkeit.";
+"onboarding.notifications.row1" = "Neue Folgen deiner Serien";
+"onboarding.notifications.row2" = "Starts von Titeln auf deiner Watchlist";
+"onboarding.notifications.row3" = "Wenn ein Titel im Streaming erscheint";
+"onboarding.notifications.enable" = "Mitteilungen aktivieren";
+"onboarding.notifications.later" = "Später";
+"onboarding.ready.title" = "Alles bereit";
+"onboarding.ready.subtitle" = "Deine Bibliothek ist bereit und du verpasst keinen Start. \"Weiterschauen\" wartet oben auf dich.";
+"onboarding.ready.chip.shows" = "%d Serien";
+"onboarding.ready.chip.episodes" = "%d Folgen";
+"onboarding.ready.chip.notifications" = "Mitteilungen aktiv";
+"onboarding.ready.cta" = "Jetzt schauen";
+
+"filters.myPlatforms" = "Mine";
+"filters.platformScopeAll" = "All";
+"mediaDetail.forYou" = "for you";
+"mediaDetail.watchOn" = "Watch on";
+"mediaDetail.notifyMe" = "Notify me";
+"mediaDetail.notifyMeEnabling" = "Activating notification…";
+"mediaDetail.notifyMeEnabled" = "Notification active";
+"mediaDetail.action.watchlist" = "Watchlist";
+"mediaDetail.action.like" = "Like";
+"mediaDetail.action.list" = "To list";
+"mediaDetail.toast.watchlistAdded" = "Added to your watchlist";
+"mediaDetail.toast.watchlistRemoved" = "Removed from your watchlist";
+"mediaDetail.toast.markedSeen" = "Marked as seen";
+"mediaDetail.toast.markedUnseen" = "Removed from seen";
+"mediaDetail.toast.liked" = "Added to your likes";
+"mediaDetail.toast.likeRemoved" = "Removed from your likes";
+"mediaDetail.why.cardTitle" = "Why is it right for you?";
+"mediaDetail.why.title" = "Why for you";
+"mediaDetail.why.affinity" = "Affinity with your tastes";
+"mediaDetail.why.reason.mood" = "In line with your mood";
+"mediaDetail.why.reason.genres" = "Genres you love";
+"mediaDetail.why.reason.cast" = "Cast you know";
+"mediaDetail.why.helpful" = "Was this helpful?";
+"mediaDetail.why.regenerate" = "Regenerate";
+"mediaDetail.why.quota" = "Generated by Vibe AI from ratings, mood and history. %d/%d requests today.";
+"settings.cacheManagement.clearCacheAction" = "Clear cache";
+"gamification.missionsToday" = "Today's missions";
+"gamification.xpToNext" = "%d XP to the next level";
+"gamification.mission.openApp" = "Open the app";
+"gamification.mission.keepStreak" = "Keep your daily streak";
+"gamification.challenge.watch_3" = "Watch 3 clips";
+"gamification.challenge.like_5" = "Like 5 clips";
+"gamification.challenge.list_2" = "Add 2 titles to a list";
+"gamification.challenge.watch_new_genre" = "Watch a clip from a new genre";
+"gamification.challenge.complete_5" = "Complete 5 clips (>70%)";

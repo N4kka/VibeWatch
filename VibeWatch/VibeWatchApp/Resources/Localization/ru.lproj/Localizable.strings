@@ -125,6 +125,8 @@
 // Clips
 "clips.title" = "Клипы";
 "clips.addToList" = "Добавить в список";
+"clips.card.addToWatchlist" = "+ Watchlist";
+"clips.card.goToDetail" = "Открыть карточку";
 "clips.beFirstToComment" = "Станьте первым, кто оставит комментарий";
 "clips.comment" = "Комментарий";
 "clips.comments" = "Комментарии";
@@ -383,6 +385,10 @@
 "import.report.moviesWatchlistApplied" = "%d фильмов добавлено в список «К просмотру».";
 "import.report.moviesUnresolved" = "%d фильмов не распознано (название и год не совпадают на TMDB).";
 "import.resolve.button" = "Сопоставить";
+"import.resolve.batchButton" = "Сопоставить названия: %d";
+"import.resolve.batchHint" = "Найдите соответствующий сериал TMDB для каждого названия. До выбора всех совпадений ничего не импортируется; затем один импорт обработает их вместе.";
+"import.resolve.batchProgress" = "Сопоставлено названий: %d из %d";
+"import.resolve.startBatch" = "Запустить один импорт";
 "import.resolve.title" = "Какой это сериал: «%@»?";
 "import.resolve.hint" = "Эпизоды будут повторно проверены по точным идентификаторам TVDB. Всё, что TMDB не сможет подтвердить, останется в отчёте.";
 "import.resolve.searchPlaceholder" = "Найти сериал на TMDB";
@@ -400,6 +406,7 @@
 "import.error.startFailed" = "Импорт не удалось запустить.";
 "import.error.fileRead" = "Не удалось прочитать этот файл.";
 "import.error.reportFailed" = "Импорт завершён, но отчёт не удалось загрузить.";
+"import.error.sessionExpired" = "Ваша сессия истекла. Войдите снова и повторите импорт.";
 "profile.aboutUs" = "О нас";
 "profile.aboutUsDetail" = "Узнайте больше о команде VibeWatch и нашей миссии улучшить ваш опыт поиска контента.";
 "profile.tmdbAttribution" = "Этот продукт использует API TMDb, но не одобрен и не сертифицирован TMDb.";
@@ -470,6 +477,8 @@
 "settings.redeemCode" = "Активировать код";
 "settings.redeemCode.description" = "Введите промокод или код предложения";
 "paywall.haveCode" = "Есть промокод?";
+"paywall.price.perYear" = "%@/год";
+"paywall.cancelAnytime" = "Отмена в любой момент";
 
 // Help & Support - About Us
 "profile.aboutUsDescription" = "Мы — двое друзей, создающих новый вид кино/ТВ-компаньона. VibeWatch родился из-за разочарования в громоздких трекерах: мы делаем упор на современное открытие контента через клипы, быстрые ссылки на стриминг и инструменты, которые помогают и киноманам, и обычным зрителям найти идеальный выбор без бесконечного скроллинга.";
@@ -539,8 +548,8 @@
 "settings.notifications.title" = "Уведомления";
 "settings.notifications.manage" = "Управление уведомлениями";
 "settings.notifications.description" = "Персональные оповещения о новых материалах";
-"onboarding.welcome.title" = "Откройте для себя свои вибрации";
-"onboarding.welcome.subtitle" = "Рекомендации на основе искусственного интеллекта, созданные специально для вас.";
+"onboarding.welcome.title" = "Добро пожаловать в VibeWatch";
+"onboarding.welcome.subtitle" = "Открывайте, отслеживайте и не пропускайте премьеры. Фильмы и сериалы — в одном месте.";
 "onboarding.clips.title" = "Смотреть, не читать";
 "onboarding.clips.subtitle" = "Познакомьтесь с фильмами через короткие, увлекательные ролики.";
 "onboarding.lists.title" = "Ваш список наблюдения, везде";
@@ -829,6 +838,15 @@
 "platforms.row.subtitle" = "Стриминг, аренда и покупка";
 "platforms.footnote" = "Выбранные платформы фильтруют «где смотреть» во всём приложении.";
 "profile.languageCountry" = "Язык и страна";
+"profile.edit.title" = "Редактировать профиль";
+"profile.edit.information" = "Информация";
+"profile.edit.name" = "Имя";
+"profile.edit.bio" = "О себе";
+"profile.edit.bioPlaceholder" = "Расскажите немного о себе (необязательно)";
+"profile.edit.changePhoto" = "Изменить фото";
+"profile.edit.publicProfile" = "Публичный профиль";
+"profile.edit.publicProfileSubtitle" = "Другие могут найти вас и подписаться на ваши публичные списки";
+"profile.edit.saveError" = "Не удалось сохранить профиль. Попробуйте еще раз.";
 "profile.imageCache" = "Кэш изображений";
 "profile.imageCache.subtitle" = "Предзагрузка только по WiFi";
 "common.on" = "Вкл";
@@ -836,3 +854,69 @@
 "profile.privacyTerms" = "Конфиденциальность и условия";
 "profile.footer.tmdb" = "Продукт использует API TMDb, но не одобрен и не сертифицирован TMDb.";
 "settings.cacheManagement.inUse" = "Занято %d МБ";
+
+// MARK: - Onboarding 2.0
+"common.continue" = "Продолжить";
+"auth.fullNamePlaceholder" = "Полное имя";
+"onboarding.welcome.cta" = "Начать";
+"onboarding.import.title" = "Возьмите свою историю с собой";
+"onboarding.import.subtitle" = "Импортируйте сериалы, просмотренные эпизоды и список «К просмотру». Когда импорт завершится, приложение готово.";
+"onboarding.import.tvtime" = "Импорт из TV Time";
+"onboarding.import.tvtime.subtitle" = "Сериалы, просмотренные эпизоды, список и оценки";
+"onboarding.import.other" = "Другие приложения";
+"onboarding.import.other.subtitle" = "Trakt, Letterboxd — скоро";
+"onboarding.import.skip" = "Пропустить, начну с нуля";
+"onboarding.import.completed" = "Импорт завершён";
+"onboarding.import.stat.shows" = "Сериалы";
+"onboarding.import.stat.episodes" = "Просмотрено эпизодов";
+"onboarding.import.stat.movies" = "Фильмы";
+"onboarding.import.stat.watchlist" = "В списке";
+"onboarding.notifications.title" = "Ничего не пропустите";
+"onboarding.notifications.subtitle" = "Уведомляем только о том, что вы отслеживаете — новые эпизоды, премьеры из списка и появление в стриминге.";
+"onboarding.notifications.row1" = "Новые эпизоды сериалов, которые вы смотрите";
+"onboarding.notifications.row2" = "Премьеры тайтлов из вашего списка";
+"onboarding.notifications.row3" = "Когда тайтл появляется в стриминге";
+"onboarding.notifications.enable" = "Включить уведомления";
+"onboarding.notifications.later" = "Позже";
+"onboarding.ready.title" = "Всё готово";
+"onboarding.ready.subtitle" = "Ваша библиотека готова, и вы не пропустите премьеру. «Продолжить просмотр» ждёт вас сверху.";
+"onboarding.ready.chip.shows" = "Сериалов: %d";
+"onboarding.ready.chip.episodes" = "Эпизодов: %d";
+"onboarding.ready.chip.notifications" = "Уведомления включены";
+"onboarding.ready.cta" = "Начать просмотр";
+
+"filters.myPlatforms" = "Mine";
+"filters.platformScopeAll" = "All";
+"mediaDetail.forYou" = "for you";
+"mediaDetail.watchOn" = "Watch on";
+"mediaDetail.notifyMe" = "Notify me";
+"mediaDetail.notifyMeEnabling" = "Activating notification…";
+"mediaDetail.notifyMeEnabled" = "Notification active";
+"mediaDetail.action.watchlist" = "Watchlist";
+"mediaDetail.action.like" = "Like";
+"mediaDetail.action.list" = "To list";
+"mediaDetail.toast.watchlistAdded" = "Added to your watchlist";
+"mediaDetail.toast.watchlistRemoved" = "Removed from your watchlist";
+"mediaDetail.toast.markedSeen" = "Marked as seen";
+"mediaDetail.toast.markedUnseen" = "Removed from seen";
+"mediaDetail.toast.liked" = "Added to your likes";
+"mediaDetail.toast.likeRemoved" = "Removed from your likes";
+"mediaDetail.why.cardTitle" = "Why is it right for you?";
+"mediaDetail.why.title" = "Why for you";
+"mediaDetail.why.affinity" = "Affinity with your tastes";
+"mediaDetail.why.reason.mood" = "In line with your mood";
+"mediaDetail.why.reason.genres" = "Genres you love";
+"mediaDetail.why.reason.cast" = "Cast you know";
+"mediaDetail.why.helpful" = "Was this helpful?";
+"mediaDetail.why.regenerate" = "Regenerate";
+"mediaDetail.why.quota" = "Generated by Vibe AI from ratings, mood and history. %d/%d requests today.";
+"settings.cacheManagement.clearCacheAction" = "Clear cache";
+"gamification.missionsToday" = "Today's missions";
+"gamification.xpToNext" = "%d XP to the next level";
+"gamification.mission.openApp" = "Open the app";
+"gamification.mission.keepStreak" = "Keep your daily streak";
+"gamification.challenge.watch_3" = "Watch 3 clips";
+"gamification.challenge.like_5" = "Like 5 clips";
+"gamification.challenge.list_2" = "Add 2 titles to a list";
+"gamification.challenge.watch_new_genre" = "Watch a clip from a new genre";
+"gamification.challenge.complete_5" = "Complete 5 clips (>70%)";

@@ -404,7 +404,7 @@ class CerebrasService {
         userProfile: UserProfile,
         languageName: String? = nil,
         languageCode: String? = nil
-    ) async throws -> String {
+    ) async throws -> WhyForMeAnalysis {
         var prompt = AIContextBuilder.shared.buildWhyForMePrompt(movie: movie, userProfile: userProfile)
         if let languageName, !languageName.isEmpty {
             prompt += "\n\nLANGUAGE: Respond only in \(languageName). Do not include any English."
@@ -415,7 +415,7 @@ class CerebrasService {
         prompt += """
 
         OUTPUT FORMAT:
-        {"response":"..."}
+        {"mood":"...","genres":"...","cast":"..."}
         Only return valid JSON.
         """
         let systemPrompt: String?
@@ -424,15 +424,14 @@ class CerebrasService {
         } else {
             systemPrompt = nil
         }
-        let raw = try await generateText(prompt: prompt, systemPrompt: systemPrompt, maxTokens: 120, temperature: 0.7)
+        let raw = try await generateText(prompt: prompt, systemPrompt: systemPrompt, maxTokens: 260, temperature: 0.7)
         if let jsonString = extractJsonObject(from: raw),
            let data = jsonString.data(using: .utf8),
-           let json = try? JSONDecoder().decode([String: String].self, from: data),
-           let response = json["response"], !response.isEmpty {
-            let trimmed = response.trimmingCharacters(in: .whitespacesAndNewlines)
-            return sanitizeWhyForMeFallback(trimmed)
+           let response = try? JSONDecoder().decode(WhyForMeAnalysis.self, from: data),
+           response.isCompleteAndDistinct {
+            return response
         }
-        return sanitizeWhyForMeFallback(raw)
+        throw CerebrasError.decodingError
     }
 
     /// Generate Smart Nudge notification text

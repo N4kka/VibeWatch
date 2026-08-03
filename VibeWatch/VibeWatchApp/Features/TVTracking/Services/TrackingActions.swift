@@ -87,6 +87,13 @@ final class TrackingActions {
             dependsOn: nil
         )
 
+        // Il ponte verso la lista episodi: SeasonDetailView legge EpisodeSeenManager per i
+        // tap fatti lì dentro, e senza questa riga un "visto" dalle card non vi compariva
+        // finché il pull non riportava l'evento nello specchio. `markEpisodeSeen` esisteva
+        // per questo (dice il suo commento) ma nessuno lo chiamava.
+        EpisodeSeenManager.shared.markEpisodeSeen(
+            showId: row.showId, seasonNumber: season, episodeNumber: episode)
+
         // Senza questo il tap non produce **niente di visibile**: l'evento parte, il trigger
         // ricalcola `tv_show_state` sul server, e la schermata continua a leggere lo specchio
         // locale `tv_tracking`, che solo un pull aggiorna. Il progresso lo decide il server
