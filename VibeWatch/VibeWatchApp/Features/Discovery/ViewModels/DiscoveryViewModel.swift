@@ -141,13 +141,27 @@ class DiscoveryViewModel: ObservableObject {
             // First paint (empty → cache) stays instant so cached items appear immediately.
             let animate = !hasNoContent
             withAnimation(animate ? .easeInOut(duration: 0.35) : nil) {
-                self.personalizedCarousels = applyGlobalFilters(to: carousels)
+                // MERGE, non sostituzione: la rigenerazione emette parziali (prima il solo
+                // Daily Mix, poi batch da 5) e rimpiazzare l'intera lista faceva collassare
+                // i caroselli in cache a UNO per poi rifarli comparire a ondate. Le parziali
+                // aggiornano/aggiungono; la potatura la fa l'emissione finale, sotto.
+                self.personalizedCarousels = Self.merging(
+                    applyGlobalFilters(to: carousels),
+                    into: self.personalizedCarousels
+                )
             }
             hasLoadedOnce = true
             isLoading = false
             isRefreshing = false
             hasMoreCarousels = personalizedCarousels.count > visibleCarouselCount
             Logger.debug("[DiscoveryViewModel] Loaded \(carousels.count) carousels, visible: \(visibleCarouselCount), hasMore: \(hasMoreCarousels)")
+        }
+
+        // Fine dello stream: l'ultima emissione è la verità (stale-while-revalidate). Il merge
+        // qui sopra serviva solo a non far ballare la lista a metà rigenerazione; ora si potano
+        // i caroselli che la generazione finale ha lasciato cadere.
+        if !generatedCarousels.isEmpty {
+            personalizedCarousels = applyGlobalFilters(to: generatedCarousels)
         }
 
         markReloadedForToday()
@@ -227,6 +241,32 @@ class DiscoveryViewModel: ObservableObject {
         return "\(date)-\(lang)"
     }
     
+    // MARK: - Merging
+
+    /// Aggiorna/aggiunge i caroselli in arrivo senza rimuovere quelli già a schermo.
+    /// La chiave è tipo+titolo: `type` da solo non basta, due `trendingGenre` di generi
+    /// diversi sono caroselli diversi.
+    private static func merging(
+        _ incoming: [PersonalizedCarousel],
+        into current: [PersonalizedCarousel]
+    ) -> [PersonalizedCarousel] {
+        guard !current.isEmpty else { return incoming }
+        var result = current
+        for carousel in incoming {
+            let key = mergeKey(carousel)
+            if let index = result.firstIndex(where: { mergeKey($0) == key }) {
+                result[index] = carousel
+            } else {
+                result.append(carousel)
+            }
+        }
+        return result
+    }
+
+    private static func mergeKey(_ carousel: PersonalizedCarousel) -> String {
+        carousel.type.rawValue + "|" + carousel.title
+    }
+
     // MARK: - Filtering
 
     private func applyGlobalFilters(to carousels: [PersonalizedCarousel]) -> [PersonalizedCarousel] {

@@ -14,7 +14,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { adminClient, jsonResponse } from '../_shared/proxy.ts'
 import { isServiceCaller } from '../_shared/cronAuth.ts'
 import {
-  manualContextFromCheckpoint,
+  manualContextForPending,
+  manualContextsFromCheckpoint,
   manualEpisodeDisposition,
   planEpisodeResolutionBatch,
 } from './manual.ts'
@@ -142,7 +143,10 @@ serve(async (req: Request) => {
       for (const row of (data ?? []) as MapRow[]) noti.set(row.tvdb_id, row)
     }
 
-    const manualContext = manualContextFromCheckpoint(job.checkpoint, jobId)
+    // Un solo job può portare più scelte manuali. Ogni giro prende il contesto della prima
+    // serie ancora presente nello staging; finita quella, lo stesso import prosegue sulla successiva.
+    const manualContexts = manualContextsFromCheckpoint(job.checkpoint, jobId)
+    const manualContext = manualContextForPending(manualContexts, pending)
     const piano = planEpisodeResolutionBatch(pending, noti, manualContext, BATCH)
     const mancanti = manualContext
       ? [...piano.requestedEpisodeIds, ...piano.deferredEpisodeIds]

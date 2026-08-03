@@ -2,13 +2,11 @@ import SwiftUI
 
 struct AppHeaderView: View {
     let onSearchTap: () -> Void
-    /// Optional: when nil, the filter button is hidden entirely (e.g. the Lists tab, which has
-    /// its own inline Filtri control and shouldn't show a second door to the same sheet).
-    var onFilterTap: (() -> Void)? = nil
     let onProfileTap: () -> Void
     let avatarURL: String?
-    let isProUser: Bool
-    var activeFilterCount: Int = 0
+
+    @ObservedObject private var gamificationService = GamificationService.shared
+    @State private var showGamificationProgress = false
 
     var body: some View {
         HStack(spacing: 16) {
@@ -36,29 +34,34 @@ struct AppHeaderView: View {
                         .clipShape(Circle())
                 }
 
-                if let onFilterTap {
-                    Button(action: onFilterTap) {
-                        Image(systemName: "line.3.horizontal.decrease.circle")
-                            .font(.system(size: 18, weight: .medium))
-                            .foregroundColor(.theme.textPrimary)
-                            .frame(width: 40, height: 40)
-                            .background(Color.white.opacity(0.1))
-                            .clipShape(Circle())
-                            .overlay(alignment: .topTrailing) {
-                                if activeFilterCount > 0 {
-                                    Text("\(activeFilterCount)")
-                                        .font(.system(size: 11, weight: .bold))
-                                        .foregroundColor(.white)
-                                        .frame(width: 18, height: 18)
-                                        .background(Color.theme.accentOrange)
-                                        .clipShape(Circle())
-                                        .offset(x: 4, y: -4)
-                                }
-                            }
+                Button { showGamificationProgress = true } label: {
+                    HStack(spacing: 5) {
+                        Text("Lv.\(gamificationService.userState.currentLevel)")
+                            .foregroundColor(.theme.accentOrange)
+
+                        Text("·")
+                            .foregroundColor(.theme.textSecondary)
+
+                        Text("\(gamificationService.userState.currentStreak)")
+                            .foregroundColor(.theme.textSecondary)
+                    }
+                    .font(.system(size: 13, weight: .bold))
+                    .padding(.horizontal, 12)
+                    .frame(height: 40)
+                    .background(Color.theme.accentOrange.opacity(0.1))
+                    .clipShape(Capsule())
+                    .overlay {
+                        Capsule()
+                            .stroke(Color.theme.accentOrange.opacity(0.55), lineWidth: 1)
                     }
                 }
-
-                ProUpgradeIconButton(isProUser: isProUser, source: "app_header")
+                .buttonStyle(.plain)
+                .accessibilityLabel(
+                    Text(
+                        "\("gamification.level".localized) \(gamificationService.userState.currentLevel), "
+                        + "\(gamificationService.userState.currentStreak) \("gamification.dayStreak".localized)"
+                    )
+                )
 
                 Button(action: onProfileTap) {
                     if let avatarURL = avatarURL, let url = URL(string: avatarURL) {
@@ -88,5 +91,43 @@ struct AppHeaderView: View {
                 .ignoresSafeArea()
                 .shadow(color: .black.opacity(0.1), radius: 10, y: 5)
         }
+        .sheet(isPresented: $showGamificationProgress) {
+            GamificationProgressView(gamificationService: gamificationService)
+        }
+    }
+}
+
+/// Il filtro appartiene alla modalità Scopri, non all'header globale. Vive accanto allo
+/// switcher come nel design Claude e conserva il conteggio dei filtri attivi.
+struct DiscoveryFilterButton: View {
+    let activeFilterCount: Int
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "line.3.horizontal.decrease")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundColor(.theme.textPrimary)
+                .frame(width: 40, height: 40)
+                .background(Color.white.opacity(0.1))
+                .clipShape(Circle())
+                .overlay {
+                    Circle()
+                        .stroke(Color.white.opacity(0.14), lineWidth: 1)
+                }
+                .overlay(alignment: .topTrailing) {
+                    if activeFilterCount > 0 {
+                        Text("\(activeFilterCount)")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(.white)
+                            .frame(width: 18, height: 18)
+                            .background(Color.theme.accentOrange)
+                            .clipShape(Circle())
+                            .offset(x: 4, y: -4)
+                    }
+                }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text("filters.title".localized))
     }
 }

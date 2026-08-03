@@ -4,6 +4,10 @@ struct DiscoveryView: View {
     @StateObject private var viewModel = DiscoveryViewModel()
     @StateObject private var searchViewModel = SearchViewModel()
     @StateObject private var gamificationService = GamificationService.shared
+    /// Redesign 2.0: strip "In uscita" e "Continua a guardare" leggono lo specchio del Tracking.
+    @StateObject private var trackingHighlights = DiscoveryTrackingHighlightsViewModel()
+    @State private var showReleaseCalendar = false
+    @State private var releaseCalendarDay: Date? = nil
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var quotaManager: DailyQuotaManager
     @ObservedObject var localizationManager = LocalizationManager.shared
@@ -12,6 +16,9 @@ struct DiscoveryView: View {
     @State private var showFilters = false
     @Binding var selectedMovie: Movie?
     @Binding var selectedMediaType: MediaType
+    /// Redesign 2.0: Scopri e Clip sono due modalità dello stesso tab. Il binding arriva da
+    /// `DiscoverHubView`; qui serve solo per disegnare lo switcher sotto l'header.
+    @Binding var discoverMode: DiscoverMode
     @State private var scrollPosition: String? = nil
     @State private var moodCarouselIndex = 0
     @State private var lastTappedMovieId: Int? = nil
@@ -19,7 +26,7 @@ struct DiscoveryView: View {
     @State private var filterSessionId = UUID().uuidString
 
     var body: some View {
-        ZStack {
+        Group {
             if viewModel.isLoading && viewModel.hasNoContent {
                 DiscoverySkeletonView()
             } else if let error = viewModel.error, viewModel.hasNoContent {
@@ -27,15 +34,14 @@ struct DiscoveryView: View {
             } else {
                 discoveryMainView
             }
-
-            // Floating XP Badge (gamification)
-            if gamificationService.isLoaded {
-                FloatingXPBadgeView(gamificationService: gamificationService)
-            }
         }
         .background(Color.theme.background.ignoresSafeArea())
         .task {
-            await viewModel.loadContentIfNeeded()
+            // Lo stream dei caroselli può durare decine di secondi (rigenerazione TMDB):
+            // parte subito ma NON blocca il resto del task — prima la strip del tracking e
+            // la gamification aspettavano la fine dell'intero stream.
+            async let content: Void = viewModel.loadContentIfNeeded()
+            await trackingHighlights.load()
 
             // Load gamification state
             if let userId = appState.currentUser?.id {
@@ -60,6 +66,8 @@ struct DiscoveryView: View {
 
             // Debug: Print reaction counts
             await SQLiteService.shared.debugPrintReactionCounts()
+
+            _ = await content
         }
         .onChange(of: localizationManager.localeDidChange) {_, _ in
             // Clears personalized_discovery cache and re-fetches from TMDB in the new locale
@@ -69,31 +77,32 @@ struct DiscoveryView: View {
         .sheet(isPresented: $showProfile) {
             ProfileView()
         }
+        .sheet(isPresented: $showReleaseCalendar) {
+            ReleaseCalendarView(viewModel: trackingHighlights, initialDay: releaseCalendarDay)
+        }
         .fullScreenCover(isPresented: $showSearch) {
             SearchView(viewModel: searchViewModel)
         }
-        .overlay {
-            if showFilters {
-                GlobalFilterView(
-                    filters: $viewModel.globalFilters,
-                    isPresented: $showFilters
-                ) { filters in
-                    viewModel.applyFilters(filters)
-                    AnalyticsService.shared.logFilterApplied(
-                        filterType: "global",
-                        value: filters.isActive ? "active" : "cleared",
-                        context: AnalyticsContext(
-                            source: "discovery_filters",
-                            sessionId: filterSessionId
-                        ),
-                        extra: [
-                            "filter_active": filters.isActive,
-                            "active_filter_count": filters.activeFilterCount
-                        ]
-                    )
-                }
-                .transition(.opacity)
+        .fullScreenCover(isPresented: $showFilters) {
+            GlobalFilterView(
+                filters: $viewModel.globalFilters,
+                isPresented: $showFilters
+            ) { filters in
+                viewModel.applyFilters(filters)
+                AnalyticsService.shared.logFilterApplied(
+                    filterType: "global",
+                    value: filters.isActive ? "active" : "cleared",
+                    context: AnalyticsContext(
+                        source: "discovery_filters",
+                        sessionId: filterSessionId
+                    ),
+                    extra: [
+                        "filter_active": filters.isActive,
+                        "active_filter_count": filters.activeFilterCount
+                    ]
+                )
             }
+            .presentationBackground(.clear)
         }
         .toast(isShowing: $appState.showSuccessToast, message: appState.toastMessage, type: .success)
         .toast(isShowing: $appState.showErrorToast, message: appState.toastMessage, type: .error)
@@ -143,24 +152,51 @@ struct DiscoveryView: View {
     private var discoveryMainView: some View {
         VStack(spacing: 0) {
             OfflineBanner()
-            
+
+            // Redesign 2.0: l'header globale è FISSO, fuori dallo scroll — nel prototipo è
+            // sempre visibile su ogni tab, e il contenuto scorre sotto di lui.
+            AppHeaderView(
+                onSearchTap: { showSearch = true },
+                onProfileTap: { showProfile = true },
+                avatarURL: appState.currentUser?.avatarURL
+            )
+
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(spacing: 32) {
-                        AppHeaderView(
-                            onSearchTap: { showSearch = true },
-                            onFilterTap: {
-                                filterSessionId = UUID().uuidString
-                                showFilters = true
-                            },
-                            onProfileTap: { showProfile = true },
-                            avatarURL: appState.currentUser?.avatarURL,
-                            isProUser: quotaManager.isProUser,
-                            activeFilterCount: viewModel.globalFilters.activeFilterCount
-                        )
-                        .padding(.top, 4)
-                        .id("header")
-                    
+                        ZStack {
+                            DiscoverModeSwitcher(mode: $discoverMode)
+
+                            HStack {
+                                Spacer()
+                                DiscoveryFilterButton(
+                                    activeFilterCount: viewModel.globalFilters.activeFilterCount
+                                ) {
+                                    filterSessionId = UUID().uuidString
+                                    showFilters = true
+                                }
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 8)
+
+                        // Le due sezioni "di casa" (prototipo 2.0): cosa esce e cosa stavi
+                        // guardando, PRIMA delle raccomandazioni. Compaiono solo se lo specchio
+                        // locale del tracking ha materiale: per un anonimo non esistono.
+                        if !trackingHighlights.upcoming.isEmpty {
+                            ReleaseStripSection(viewModel: trackingHighlights) { day in
+                                releaseCalendarDay = day
+                                showReleaseCalendar = true
+                            }
+                        }
+
+                        if !trackingHighlights.continueWatching.isEmpty {
+                            ContinueWatchingSection(viewModel: trackingHighlights) { showId in
+                                openShow(showId)
+                            }
+                        }
+
                         ForEach(viewModel.visibleCarousels, id: \.type.rawValue) { carousel in
                             if carousel.type == .dailyMix {
                                 MoodCarouselSection(
@@ -170,8 +206,10 @@ struct DiscoveryView: View {
                                 ) { movie in
                                     scrollPosition = carousel.type.rawValue
                                     viewModel.recordCarouselClick(movie: movie, carouselType: carousel.type, mediaType: .movie)
-                                    selectedMovie = movie
+                                    var target = movie
+                                    target.navigationMediaType = .movie
                                     selectedMediaType = .movie
+                                    selectedMovie = target
                                 }
                                 .id(carousel.type.rawValue)
                             } else {
@@ -186,8 +224,10 @@ struct DiscoveryView: View {
                                     lastTappedMovieId = movie.id
                                     let mediaType = mediaType(for: carousel.type)
                                     viewModel.recordCarouselClick(movie: movie, carouselType: carousel.type, mediaType: mediaType)
-                                    selectedMovie = movie
+                                    var target = movie
+                                    target.navigationMediaType = mediaType
                                     selectedMediaType = mediaType
+                                    selectedMovie = target
                                 }
                                 .id(carousel.type.rawValue)
                             }
@@ -250,6 +290,22 @@ struct DiscoveryView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
             hasRestoredScroll = true
         }
+    }
+
+    /// Apre il dettaglio di una serie dalle sezioni tracking. Il placeholder con il solo id è lo
+    /// stesso contratto dei deep link: `navigationDestination` usa solo `movie.id`.
+    private func openShow(_ showId: Int) {
+        var placeholder = Movie(
+            id: showId, title: "", overview: "", posterPath: nil, backdropPath: nil,
+            releaseDate: nil, voteAverage: 0, voteCount: 0, genreIds: nil, genres: nil,
+            adult: false, originalLanguage: "", popularity: 0, runtime: nil, status: nil,
+            tagline: nil, productionCountries: nil, imdbId: nil
+        )
+        // Il tipo sta nell'item (vedi Movie.navigationMediaType): con il solo stato parallelo
+        // la destination poteva leggere `.movie` stantio e aprire il film omonimo per id.
+        placeholder.navigationMediaType = .tv
+        selectedMediaType = .tv
+        selectedMovie = placeholder
     }
 
     private func mediaType(for carouselType: CarouselType) -> MediaType {

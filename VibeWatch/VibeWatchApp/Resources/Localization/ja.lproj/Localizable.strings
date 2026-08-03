@@ -128,6 +128,8 @@
 "clips.noClipsAvailable" = "クリップがありません";
 "clips.noClipsDescription" = "お気に入りの映画やドラマの名シーンは後でもう一度チェックしてください";
 "clips.addToList" = "リストに追加";
+"clips.card.addToWatchlist" = "+ Watchlist";
+"clips.card.goToDetail" = "詳細を見る";
 "clips.createFirstList" = "お気に入りを保存するために最初のウォッチリストを作成しましょう";
 "clips.createNewList" = "新しいリストを作成";
 "clips.feed.craftingTitle" = "あなたにぴったりのフィードを作成中";
@@ -374,6 +376,8 @@
 "settings.redeemCode" = "コードを利用";
 "settings.redeemCode.description" = "プロモ／オファーコードを入力";
 "paywall.haveCode" = "プロモコードをお持ちですか？";
+"paywall.price.perYear" = "%@/年";
+"paywall.cancelAnytime" = "いつでも解約可能";
 
 // Help & Support - About Us
 "profile.aboutUs" = "私たちについて";
@@ -416,6 +420,10 @@
 "import.report.moviesWatchlistApplied" = "%d本の映画をウォッチリストに追加しました。";
 "import.report.moviesUnresolved" = "%d本の映画を認識できませんでした（タイトルと年がTMDBと一致しません）。";
 "import.resolve.button" = "解決";
+"import.resolve.batchButton" = "%d件のタイトルを解決";
+"import.resolve.batchHint" = "各タイトルに対応するTMDBシリーズを検索してください。すべての候補を選ぶまでは何もインポートされず、その後1回のインポートでまとめて解決します。";
+"import.resolve.batchProgress" = "%d/%d件のタイトルを選択済み";
+"import.resolve.startBatch" = "1回のインポートを開始";
 "import.resolve.title" = "「%@」はどのシリーズですか？";
 "import.resolve.hint" = "エピソードは正確なTVDB IDで再確認されます。TMDBで確認できないものはレポートに残ります。";
 "import.resolve.searchPlaceholder" = "TMDBでシリーズを検索";
@@ -434,6 +442,7 @@
 "import.error.fileRead" = "そのファイルを読み込めませんでした。";
 "import.error.reportFailed" = "インポートは完了しましたが、レポートを読み込めませんでした。";
 
+"import.error.sessionExpired" = "セッションの有効期限が切れました。もう一度ログインして、インポートをやり直してください。";
 // Profile - Support & Feedback
 "profile.feedback.suggestFeature" = "機能を提案";
 "profile.feedback.suggestFeatureDescription" = "VibeWatchがもっと良くなるアイデアを教えてください。";
@@ -555,8 +564,8 @@
 "settings.notifications.description" = "新着コンテンツのパーソナル通知";
 
 // Onboarding Revamp
-"onboarding.welcome.title" = "あなたのvibeを発見";
-"onboarding.welcome.subtitle" = "AIがおすすめをあなた向けに最適化します。";
+"onboarding.welcome.title" = "VibeWatchへようこそ";
+"onboarding.welcome.subtitle" = "発見して、記録して、公開を見逃さない。映画もドラマも、これひとつで。";
 "onboarding.clips.title" = "読むより観る";
 "onboarding.clips.subtitle" = "短くて魅力的なクリップで映画体験。";
 "onboarding.lists.title" = "ウォッチリストはどこでも";
@@ -812,3 +821,114 @@
 "tracking.watchOn" = "%@で視聴";
 "tracking.rentOn" = "%@でレンタル";
 "tracking.buyOn" = "%@で購入";
+
+// MARK: - Redesign 2.0 (tab Social, strip uscite, calendario, sottotitoli)
+"tab.social" = "ソーシャル";
+"social.subtitle" = "友達とフォロー中のリスト";
+"discovery.continueWatching" = "続きを見る";
+"discovery.strip.today" = "今日";
+"discovery.releases.title" = "配信予定";
+"discovery.releases.none" = "この日の配信はありません。";
+"discovery.releases.countOne" = "1件の配信";
+"discovery.releases.countMany" = "%d件の配信";
+"tracking.subtitle" = "今見ている作品";
+"lists.subtitle" = "アーカイブとコレクション";
+"profile.group.activity" = "アクティビティ";
+"profile.group.preferences" = "設定";
+"profile.group.account" = "アカウント";
+"profile.badgesLevels" = "バッジとレベル";
+"gamification.progress.title" = "あなたの進捗";
+"gamification.dayStreak" = "連続日数";
+"gamification.badges.title" = "バッジ";
+"gamification.levels.title" = "レベル";
+"gamification.challenge.none" = "今日のミッションはありません";
+"common.seeAll" = "すべて見る";
+"profile.stats.subtitle" = "ジャンル・ムード・視聴時間";
+"diary.subtitle" = "視聴したエピソードと映画の履歴";
+"profile.badgesLevels.subtitle" = "レベル%d · バッジ%d/%d";
+"notifications.row.subtitle" = "配信・新エピソード・通知オフ時間";
+"platforms.row.subtitle" = "配信・レンタル・購入";
+"platforms.footnote" = "選択したプラットフォームはアプリ全体の視聴先に反映されます。";
+"profile.languageCountry" = "言語と国";
+"profile.edit.title" = "プロフィールを編集";
+"profile.edit.information" = "情報";
+"profile.edit.name" = "名前";
+"profile.edit.bio" = "自己紹介";
+"profile.edit.bioPlaceholder" = "自己紹介を入力（任意）";
+"profile.edit.changePhoto" = "写真を変更";
+"profile.edit.publicProfile" = "公開プロフィール";
+"profile.edit.publicProfileSubtitle" = "ほかのユーザーがあなたを見つけ、公開リストをフォローできます";
+"profile.edit.saveError" = "プロフィールを保存できませんでした。もう一度お試しください。";
+"profile.imageCache" = "画像キャッシュ";
+"profile.imageCache.subtitle" = "プリロードはWiFiのみ";
+"common.on" = "オン";
+"common.off" = "オフ";
+"profile.privacyTerms" = "プライバシーと利用規約";
+"profile.footer.tmdb" = "本製品はTMDb APIを使用していますが、TMDbの承認・認定を受けていません。";
+"settings.cacheManagement.inUse" = "%d MB使用中";
+
+// MARK: - Onboarding 2.0
+"common.continue" = "続ける";
+"auth.fullNamePlaceholder" = "氏名";
+"onboarding.welcome.cta" = "はじめる";
+"onboarding.import.title" = "これまでの記録を持ってこよう";
+"onboarding.import.subtitle" = "シリーズ、視聴済みエピソード、ウォッチリストをインポート。完了すれば、アプリはすぐ使えます。";
+"onboarding.import.tvtime" = "TV Timeからインポート";
+"onboarding.import.tvtime.subtitle" = "シリーズ、視聴済みエピソード、ウォッチリスト、評価";
+"onboarding.import.other" = "他のアプリ";
+"onboarding.import.other.subtitle" = "Trakt、Letterboxd — 近日対応";
+"onboarding.import.skip" = "スキップしてゼロから始める";
+"onboarding.import.completed" = "インポート完了";
+"onboarding.import.stat.shows" = "シリーズ";
+"onboarding.import.stat.episodes" = "視聴エピソード";
+"onboarding.import.stat.movies" = "映画";
+"onboarding.import.stat.watchlist" = "ウォッチリスト";
+"onboarding.notifications.title" = "見逃しゼロへ";
+"onboarding.notifications.subtitle" = "通知はフォロー中の作品だけ — 新エピソード、ウォッチリスト作品の公開、配信開始のお知らせ。";
+"onboarding.notifications.row1" = "フォロー中のシリーズの新エピソード";
+"onboarding.notifications.row2" = "ウォッチリスト作品の公開";
+"onboarding.notifications.row3" = "作品が配信に登場したとき";
+"onboarding.notifications.enable" = "通知を有効にする";
+"onboarding.notifications.later" = "あとで";
+"onboarding.ready.title" = "準備完了";
+"onboarding.ready.subtitle" = "ライブラリの準備ができました。もう公開を見逃しません。上部の「視聴を続ける」からどうぞ。";
+"onboarding.ready.chip.shows" = "%dシリーズ";
+"onboarding.ready.chip.episodes" = "%dエピソード";
+"onboarding.ready.chip.notifications" = "通知オン";
+"onboarding.ready.cta" = "視聴をはじめる";
+
+"filters.myPlatforms" = "Mine";
+"filters.platformScopeAll" = "All";
+"mediaDetail.forYou" = "for you";
+"mediaDetail.watchOn" = "Watch on";
+"mediaDetail.notifyMe" = "Notify me";
+"mediaDetail.notifyMeEnabling" = "Activating notification…";
+"mediaDetail.notifyMeEnabled" = "Notification active";
+"mediaDetail.action.watchlist" = "Watchlist";
+"mediaDetail.action.like" = "Like";
+"mediaDetail.action.list" = "To list";
+"mediaDetail.toast.watchlistAdded" = "Added to your watchlist";
+"mediaDetail.toast.watchlistRemoved" = "Removed from your watchlist";
+"mediaDetail.toast.markedSeen" = "Marked as seen";
+"mediaDetail.toast.markedUnseen" = "Removed from seen";
+"mediaDetail.toast.liked" = "Added to your likes";
+"mediaDetail.toast.likeRemoved" = "Removed from your likes";
+"mediaDetail.why.cardTitle" = "Why is it right for you?";
+"mediaDetail.why.title" = "Why for you";
+"mediaDetail.why.affinity" = "Affinity with your tastes";
+"mediaDetail.why.reason.mood" = "In line with your mood";
+"mediaDetail.why.reason.genres" = "Genres you love";
+"mediaDetail.why.reason.cast" = "Cast you know";
+"mediaDetail.why.helpful" = "Was this helpful?";
+"mediaDetail.why.regenerate" = "Regenerate";
+"mediaDetail.why.quota" = "Generated by Vibe AI from ratings, mood and history. %d/%d requests today.";
+"settings.cacheManagement.clearCacheAction" = "Clear cache";
+"gamification.missionsToday" = "Today's missions";
+"gamification.xpToNext" = "%d XP to the next level";
+"gamification.mission.openApp" = "Open the app";
+"gamification.mission.keepStreak" = "Keep your daily streak";
+"gamification.challenge.watch_3" = "Watch 3 clips";
+"gamification.challenge.like_5" = "Like 5 clips";
+"gamification.challenge.list_2" = "Add 2 titles to a list";
+"gamification.challenge.watch_new_genre" = "Watch a clip from a new genre";
+"gamification.challenge.complete_5" = "Complete 5 clips (>70%)";

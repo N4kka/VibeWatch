@@ -128,6 +128,8 @@
 "clips.noClipsAvailable" = "कोई क्लिप उपलब्ध नहीं";
 "clips.noClipsDescription" = "अपनी पसंदीदा फ़िल्मों और शो के रोमांचक दृश्यों के लिए बाद में वापस आएँ";
 "clips.addToList" = "सूची में जोड़ें";
+"clips.card.addToWatchlist" = "+ Watchlist";
+"clips.card.goToDetail" = "विवरण देखें";
 "clips.createFirstList" = "पिक्स सेव करने के लिए अपनी पहली वॉचलिस्ट बनाएं";
 "clips.createNewList" = "नई सूची बनाएँ";
 "clips.feed.craftingTitle" = "आपके लिए परफेक्ट फ़ीड तैयार हो रहा है";
@@ -374,6 +376,8 @@
 "settings.redeemCode" = "कोड रिडीम करें";
 "settings.redeemCode.description" = "प्रोमो या ऑफ़र कोड दर्ज करें";
 "paywall.haveCode" = "क्या आपके पास प्रोमो कोड है?";
+"paywall.price.perYear" = "%@/वर्ष";
+"paywall.cancelAnytime" = "कभी भी रद्द करें";
 
 // Help & Support - About Us
 "profile.aboutUs" = "हमारे बारे में";
@@ -416,6 +420,10 @@
 "import.report.moviesWatchlistApplied" = "%d फ़िल्में आपकी वॉचलिस्ट में जोड़ी गईं।";
 "import.report.moviesUnresolved" = "%d फ़िल्में पहचानी नहीं गईं (शीर्षक और वर्ष TMDB पर मेल नहीं खाते)।";
 "import.resolve.button" = "हल करें";
+"import.resolve.batchButton" = "%d शीर्षक हल करें";
+"import.resolve.batchHint" = "हर शीर्षक के लिए संबंधित TMDB सीरीज़ खोजें। सभी मिलान चुने जाने तक कुछ भी आयात नहीं होगा; फिर एक ही आयात उन्हें साथ में हल करेगा।";
+"import.resolve.batchProgress" = "%d में से %d शीर्षक मिले";
+"import.resolve.startBatch" = "एक आयात शुरू करें";
 "import.resolve.title" = "“%@” कौन-सी सीरीज़ है?";
 "import.resolve.hint" = "एपिसोड को उनके सटीक TVDB ID से फिर जाँचा जाएगा। TMDB जिनकी पुष्टि नहीं कर पाएगा, वे रिपोर्ट में बने रहेंगे।";
 "import.resolve.searchPlaceholder" = "TMDB पर सीरीज़ खोजें";
@@ -434,6 +442,7 @@
 "import.error.fileRead" = "वह फ़ाइल पढ़ी नहीं जा सकी।";
 "import.error.reportFailed" = "आयात पूरा हुआ, पर रिपोर्ट लोड नहीं हो सकी।";
 
+"import.error.sessionExpired" = "आपका सेशन समाप्त हो गया है। दोबारा साइन इन करें और इंपोर्ट फिर से आज़माएँ।";
 // Profile - Support & Feedback
 "profile.feedback.suggestFeature" = "नया फीचर सुझाएँ";
 "profile.feedback.suggestFeatureDescription" = "बताएँ कि VibeWatch को आपके लिए और बेहतर क्या बना सकता है।";
@@ -555,8 +564,8 @@
 "settings.notifications.description" = "नई सामग्री के लिए व्यक्तिगत अलर्ट";
 
 // Onboarding Revamp
-"onboarding.welcome.title" = "अपना vibe खोजें";
-"onboarding.welcome.subtitle" = "AI-संचालित अनुशंसाएँ, सिर्फ आपके लिए।";
+"onboarding.welcome.title" = "VibeWatch में आपका स्वागत है";
+"onboarding.welcome.subtitle" = "खोजें, ट्रैक करें और कोई भी रिलीज़ न छोड़ें। फ़िल्में और सीरीज़, एक ही जगह।";
 "onboarding.clips.title" = "देखें, पढ़ें नहीं";
 "onboarding.clips.subtitle" = "छोटे, आकर्षक क्लिप्स के ज़रिए फ़िल्मों का अनुभव लें।";
 "onboarding.lists.title" = "आपकी watchlist, हर जगह";
@@ -812,3 +821,114 @@
 "tracking.watchOn" = "%@ पर देखें";
 "tracking.rentOn" = "%@ पर किराये पर लें";
 "tracking.buyOn" = "%@ पर खरीदें";
+
+// MARK: - Redesign 2.0 (tab Social, strip uscite, calendario, sottotitoli)
+"tab.social" = "सोशल";
+"social.subtitle" = "दोस्त और आपकी फ़ॉलो की गई सूचियाँ";
+"discovery.continueWatching" = "देखना जारी रखें";
+"discovery.strip.today" = "आज";
+"discovery.releases.title" = "रिलीज़";
+"discovery.releases.none" = "इस दिन कोई रिलीज़ नहीं।";
+"discovery.releases.countOne" = "1 रिलीज़";
+"discovery.releases.countMany" = "%d रिलीज़";
+"tracking.subtitle" = "अभी आप क्या देख रहे हैं";
+"lists.subtitle" = "आपका संग्रह और कलेक्शन";
+"profile.group.activity" = "गतिविधि";
+"profile.group.preferences" = "प्राथमिकताएँ";
+"profile.group.account" = "खाता";
+"profile.badgesLevels" = "बैज और लेवल";
+"gamification.progress.title" = "आपकी प्रगति";
+"gamification.dayStreak" = "लगातार दिन";
+"gamification.badges.title" = "बैज";
+"gamification.levels.title" = "लेवल";
+"gamification.challenge.none" = "आज कोई मिशन नहीं";
+"common.seeAll" = "सभी देखें";
+"profile.stats.subtitle" = "शैलियाँ, मूड, देखने का समय";
+"diary.subtitle" = "देखे गए एपिसोड और फ़िल्मों का इतिहास";
+"profile.badgesLevels.subtitle" = "लेवल %d · %d/%d बैज";
+"notifications.row.subtitle" = "रिलीज़, नए एपिसोड, शांत घंटे";
+"platforms.row.subtitle" = "स्ट्रीमिंग, किराया और ख़रीद";
+"platforms.footnote" = "चुने गए प्लेटफ़ॉर्म पूरे ऐप में देखने की जगह तय करते हैं।";
+"profile.languageCountry" = "भाषा और देश";
+"profile.edit.title" = "प्रोफ़ाइल संपादित करें";
+"profile.edit.information" = "जानकारी";
+"profile.edit.name" = "नाम";
+"profile.edit.bio" = "परिचय";
+"profile.edit.bioPlaceholder" = "अपने बारे में कुछ बताएं (वैकल्पिक)";
+"profile.edit.changePhoto" = "फ़ोटो बदलें";
+"profile.edit.publicProfile" = "सार्वजनिक प्रोफ़ाइल";
+"profile.edit.publicProfileSubtitle" = "लोग आपको ढूंढ सकते हैं और आपकी सार्वजनिक सूचियां फ़ॉलो कर सकते हैं";
+"profile.edit.saveError" = "प्रोफ़ाइल सेव नहीं हो सकी। फिर से कोशिश करें।";
+"profile.imageCache" = "इमेज कैश";
+"profile.imageCache.subtitle" = "केवल WiFi पर प्रीलोड";
+"common.on" = "चालू";
+"common.off" = "बंद";
+"profile.privacyTerms" = "गोपनीयता और शर्तें";
+"profile.footer.tmdb" = "यह उत्पाद TMDb API का उपयोग करता है, पर TMDb द्वारा प्रमाणित नहीं है।";
+"settings.cacheManagement.inUse" = "%d MB उपयोग में";
+
+// MARK: - Onboarding 2.0
+"common.continue" = "जारी रखें";
+"auth.fullNamePlaceholder" = "पूरा नाम";
+"onboarding.welcome.cta" = "शुरू करें";
+"onboarding.import.title" = "अपनी हिस्ट्री साथ लाएँ";
+"onboarding.import.subtitle" = "सीरीज़, देखे गए एपिसोड और वॉचलिस्ट इंपोर्ट करें। इंपोर्ट पूरा होते ही ऐप तैयार है।";
+"onboarding.import.tvtime" = "TV Time से इंपोर्ट करें";
+"onboarding.import.tvtime.subtitle" = "सीरीज़, देखे गए एपिसोड, वॉचलिस्ट और रेटिंग";
+"onboarding.import.other" = "अन्य ऐप्स";
+"onboarding.import.other.subtitle" = "Trakt, Letterboxd — जल्द आ रहे हैं";
+"onboarding.import.skip" = "छोड़ें, मैं शुरुआत से शुरू करूँगा";
+"onboarding.import.completed" = "इंपोर्ट पूरा हुआ";
+"onboarding.import.stat.shows" = "सीरीज़";
+"onboarding.import.stat.episodes" = "देखे गए एपिसोड";
+"onboarding.import.stat.movies" = "फ़िल्में";
+"onboarding.import.stat.watchlist" = "वॉचलिस्ट में";
+"onboarding.notifications.title" = "कुछ भी न छूटे";
+"onboarding.notifications.subtitle" = "हम केवल उसी की सूचना देते हैं जो आप फ़ॉलो करते हैं — नए एपिसोड, वॉचलिस्ट की रिलीज़ और स्ट्रीमिंग उपलब्धता।";
+"onboarding.notifications.row1" = "आपकी फ़ॉलो की गई सीरीज़ के नए एपिसोड";
+"onboarding.notifications.row2" = "आपकी वॉचलिस्ट के टाइटल की रिलीज़";
+"onboarding.notifications.row3" = "जब कोई टाइटल स्ट्रीमिंग पर आए";
+"onboarding.notifications.enable" = "नोटिफ़िकेशन चालू करें";
+"onboarding.notifications.later" = "बाद में";
+"onboarding.ready.title" = "सब तैयार है";
+"onboarding.ready.subtitle" = "आपकी लाइब्रेरी तैयार है और कोई रिलीज़ नहीं छूटेगी। \"देखना जारी रखें\" ऊपर आपका इंतज़ार कर रहा है।";
+"onboarding.ready.chip.shows" = "%d सीरीज़";
+"onboarding.ready.chip.episodes" = "%d एपिसोड";
+"onboarding.ready.chip.notifications" = "नोटिफ़िकेशन चालू";
+"onboarding.ready.cta" = "देखना शुरू करें";
+
+"filters.myPlatforms" = "Mine";
+"filters.platformScopeAll" = "All";
+"mediaDetail.forYou" = "for you";
+"mediaDetail.watchOn" = "Watch on";
+"mediaDetail.notifyMe" = "Notify me";
+"mediaDetail.notifyMeEnabling" = "Activating notification…";
+"mediaDetail.notifyMeEnabled" = "Notification active";
+"mediaDetail.action.watchlist" = "Watchlist";
+"mediaDetail.action.like" = "Like";
+"mediaDetail.action.list" = "To list";
+"mediaDetail.toast.watchlistAdded" = "Added to your watchlist";
+"mediaDetail.toast.watchlistRemoved" = "Removed from your watchlist";
+"mediaDetail.toast.markedSeen" = "Marked as seen";
+"mediaDetail.toast.markedUnseen" = "Removed from seen";
+"mediaDetail.toast.liked" = "Added to your likes";
+"mediaDetail.toast.likeRemoved" = "Removed from your likes";
+"mediaDetail.why.cardTitle" = "Why is it right for you?";
+"mediaDetail.why.title" = "Why for you";
+"mediaDetail.why.affinity" = "Affinity with your tastes";
+"mediaDetail.why.reason.mood" = "In line with your mood";
+"mediaDetail.why.reason.genres" = "Genres you love";
+"mediaDetail.why.reason.cast" = "Cast you know";
+"mediaDetail.why.helpful" = "Was this helpful?";
+"mediaDetail.why.regenerate" = "Regenerate";
+"mediaDetail.why.quota" = "Generated by Vibe AI from ratings, mood and history. %d/%d requests today.";
+"settings.cacheManagement.clearCacheAction" = "Clear cache";
+"gamification.missionsToday" = "Today's missions";
+"gamification.xpToNext" = "%d XP to the next level";
+"gamification.mission.openApp" = "Open the app";
+"gamification.mission.keepStreak" = "Keep your daily streak";
+"gamification.challenge.watch_3" = "Watch 3 clips";
+"gamification.challenge.like_5" = "Like 5 clips";
+"gamification.challenge.list_2" = "Add 2 titles to a list";
+"gamification.challenge.watch_new_genre" = "Watch a clip from a new genre";
+"gamification.challenge.complete_5" = "Complete 5 clips (>70%)";

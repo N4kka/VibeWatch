@@ -19,7 +19,15 @@ struct Movie: Codable, Identifiable, Hashable, Sendable {
     let tagline: String?
     let productionCountries: [ProductionCountry]?
     let imdbId: String?
-    
+
+    /// Il tipo con cui navigare quando questo Movie fa da item di `navigationDestination`
+    /// (il modello fa da contenitore anche per le serie, con il solo id valorizzato).
+    /// Sta QUI e non in uno stato parallelo perché la closure della destination cattura una
+    /// copia della view: uno `selectedMediaType` separato poteva arrivare stantio e aprire
+    /// il FILM che per caso ha lo stesso id TMDB della serie. Fuori da CodingKeys: è un
+    /// dettaglio di navigazione, non un dato TMDB.
+    var navigationMediaType: MediaType? = nil
+
     enum CodingKeys: String, CodingKey {
         case id, title, overview, adult, popularity, runtime, status, tagline, genres
         case posterPath = "poster_path"

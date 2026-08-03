@@ -328,10 +328,14 @@ class GamificationService: ObservableObject {
     func loadUserState(userId: String) async {
         Logger.info("[GamificationService] Loading state for user: \(userId)")
 
-        // Load local state first
+        // Local-first: l'ultimo stato noto sta già in SQLite (user_gamification, riscritto a
+        // ogni load remoto). Si mostra subito e il remoto aggiorna in place — il gate isLoaded
+        // non deve aspettare due round-trip di rete per numeri che abbiamo già su disco.
         let localState = await loadLocalState(userId: userId)
         if let localState {
             userState = localState
+            await loadBadges(userId: userId)
+            isLoaded = true
         }
 
         // Fetch remote state; Supabase is authoritative for XP, level, and streak.
@@ -341,14 +345,14 @@ class GamificationService: ObservableObject {
             userState = remote
             await localRepository.saveState(remote, userId: userId)
             Logger.info("[GamificationService] Loaded server state - XP: \(userState.totalXP), Level: \(userState.currentLevel)")
-        } else if let local = localState {
-            userState = local
-        } else {
+        } else if localState == nil {
             await initializeUserState(userId: userId)
         }
 
         // Load and merge badges from remote
-        await loadBadges(userId: userId)
+        if localState == nil {
+            await loadBadges(userId: userId)
+        }
         await mergeBadgesFromRemote(userId: userId)
 
         // Load daily challenge

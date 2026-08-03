@@ -18,18 +18,26 @@ final class ProfileStatsViewModel: ObservableObject {
         case failed
     }
 
-    @Published private(set) var phase: Phase = .loading
+    @Published private(set) var phase: Phase
+
+    /// L'ultimo valore noto della sessione. Il ViewModel nasce e muore con lo sheet del
+    /// profilo; la cache no — le riaperture mostrano subito i numeri e la fetch li aggiorna
+    /// in place invece di ripartire dallo spinner.
+    private static var lastKnown: UserStats?
 
     private let fetch: () async throws -> UserStats
 
     init(fetch: @escaping () async throws -> UserStats = { try await SupabaseService.shared.myStats() }) {
         self.fetch = fetch
+        phase = Self.lastKnown.map(Phase.loaded) ?? .loading
     }
 
     func load() async {
         if case .loaded = phase {} else { phase = .loading }
         do {
-            phase = .loaded(try await fetch())
+            let stats = try await fetch()
+            Self.lastKnown = stats
+            phase = .loaded(stats)
         } catch {
             phase = .failed
         }

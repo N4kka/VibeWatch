@@ -18,6 +18,10 @@ struct MainTabView: View {
     /// libera va al Tracking, che e' la schermata che un utente TV Time apre ogni giorno e che
     /// la spec vuole "a un tap".
     @State private var showAI = false
+    /// Redesign 2.0: Scopri e Clip sono la stessa area (tab 0) con uno switcher. La modalità
+    /// vive qui perché `.navigateToClipsTab` — deep link, quota, scorciatoie — deve poterla
+    /// impostare anche quando l'utente sta su un altro tab.
+    @State private var discoverMode: DiscoverMode = .discover
 
     private var passwordRecoveryBinding: Binding<Bool> {
         Binding(
@@ -33,17 +37,21 @@ struct MainTabView: View {
                 // Simple tab container - no swipe navigation
                 ZStack {
                     if selectedTab == 0 {
-                        DiscoveryView(selectedMovie: $selectedMovie, selectedMediaType: $selectedMediaType)
-                            .transition(.opacity)
+                        DiscoverHubView(
+                            selectedMovie: $selectedMovie,
+                            selectedMediaType: $selectedMediaType,
+                            mode: $discoverMode
+                        )
+                        .transition(.opacity)
                     }
 
                     if selectedTab == 1 {
-                        ClipsView()
+                        TVShowsTrackingView()
                             .transition(.opacity)
                     }
 
                     if selectedTab == 2 {
-                        TVShowsTrackingView()
+                        SocialView()
                             .transition(.opacity)
                     }
 
@@ -77,7 +85,10 @@ struct MainTabView: View {
             .background(Color.theme.background.ignoresSafeArea())
             .navigationBarHidden(true)
             .navigationDestination(item: $selectedMovie) { movie in
-                if selectedMediaType == .movie {
+                // Il tipo lo porta l'item: la closure cattura una copia della view, e uno
+                // selectedMediaType letto qui poteva essere stantio — con l'id di una serie
+                // si apriva il film che per caso ha lo stesso id TMDB.
+                if (movie.navigationMediaType ?? selectedMediaType) == .movie {
                     MovieDetailView(movieId: movie.id)
                 } else {
                     TVShowDetailView(tvShowId: movie.id)
@@ -92,21 +103,25 @@ struct MainTabView: View {
     private var nativeTabBarView: some View {
         NavigationStack {
             TabView(selection: $selectedTab) {
-                DiscoveryView(selectedMovie: $selectedMovie, selectedMediaType: $selectedMediaType)
-                    .tabItem {
-                        Label("tab.discovery".localized, systemImage: "house.fill")
-                    }
-                    .tag(0)
-
-                ClipsView()
-                    .tabItem {
-                        Label("tab.clips".localized, systemImage: "play.rectangle.fill")
-                    }
-                    .tag(1)
+                DiscoverHubView(
+                    selectedMovie: $selectedMovie,
+                    selectedMediaType: $selectedMediaType,
+                    mode: $discoverMode
+                )
+                .tabItem {
+                    Label("tab.discovery".localized, systemImage: "house.fill")
+                }
+                .tag(0)
 
                 TVShowsTrackingView()
                     .tabItem {
                         Label("tab.tracking".localized, systemImage: "tv")
+                    }
+                    .tag(1)
+
+                SocialView()
+                    .tabItem {
+                        Label("tab.social".localized, systemImage: "person.2.fill")
                     }
                     .tag(2)
 
@@ -120,7 +135,10 @@ struct MainTabView: View {
             .background(Color.theme.background.ignoresSafeArea())
             .navigationBarHidden(true)
             .navigationDestination(item: $selectedMovie) { movie in
-                if selectedMediaType == .movie {
+                // Il tipo lo porta l'item: la closure cattura una copia della view, e uno
+                // selectedMediaType letto qui poteva essere stantio — con l'id di una serie
+                // si apriva il film che per caso ha lo stesso id TMDB.
+                if (movie.navigationMediaType ?? selectedMediaType) == .movie {
                     MovieDetailView(movieId: movie.id)
                 } else {
                     TVShowDetailView(tvShowId: movie.id)
@@ -201,18 +219,22 @@ struct MainTabView: View {
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .navigateToDiscoveryTab)) { _ in
-            // Navigate to Discovery tab
+            // Redesign 2.0: Scopri e Clip condividono il tab 0 — "vai a Scopri" implica anche
+            // la modalità, altrimenti chi arriva dal feed clip resterebbe sui clip.
             withAnimation {
                 selectedTab = 0
+                discoverMode = .discover
             }
             Logger.debug("[MainTabView] Navigated to Discovery tab")
         }
         .onReceive(NotificationCenter.default.publisher(for: .navigateToClipsTab)) { _ in
-            // Navigate to Clips tab
+            // I Clip non sono più un tab: la stessa notifica ora porta al tab 0 in modalità
+            // clip. Il nome resta per non rompere i chiamanti (deep link, quota, scorciatoie).
             withAnimation {
-                selectedTab = 1
+                selectedTab = 0
+                discoverMode = .clips
             }
-            Logger.debug("[MainTabView] Navigated to Clips tab")
+            Logger.debug("[MainTabView] Navigated to Clips mode")
         }
         .onReceive(NotificationCenter.default.publisher(for: .navigateToListsTab)) { _ in
             // Navigate to Lists tab
@@ -228,7 +250,7 @@ struct MainTabView: View {
             Logger.debug("[MainTabView] Opened AI panel")
         }
         .onReceive(NotificationCenter.default.publisher(for: .navigateToTrackingTab)) { _ in
-            withAnimation { selectedTab = 2 }
+            withAnimation { selectedTab = 1 }
             Logger.debug("[MainTabView] Navigated to Tracking tab")
         }
         // `sheet` e non `fullScreenCover`: il primo si chiude con lo swipe verso il basso, il
@@ -331,7 +353,7 @@ struct MainTabView: View {
 
         // Build a minimal Movie placeholder — navigationDestination(item: $selectedMovie) only
         // uses movie.id to route to MovieDetailView(movieId:) or TVShowDetailView(tvShowId:)
-        let placeholder = Movie(
+        var placeholder = Movie(
             id: target.mediaId,
             title: "",
             overview: "",
@@ -353,6 +375,7 @@ struct MainTabView: View {
         )
 
         selectedMediaType = target.mediaType == "tv" ? .tv : .movie
+        placeholder.navigationMediaType = selectedMediaType
         selectedMovie = placeholder
         navigationManager.clearDeepLinkTarget()
     }
@@ -390,16 +413,16 @@ struct LiquidGlassBottomBar: View {
             }
 
             TabBarButton(
-                icon: "play.rectangle.fill",
-                title: "tab.clips".localized,
+                icon: "tv",
+                title: "tab.tracking".localized,
                 isSelected: selectedTab == 1
             ) {
                 selectedTab = 1
             }
 
             TabBarButton(
-                icon: "tv",
-                title: "tab.tracking".localized,
+                icon: "person.2.fill",
+                title: "tab.social".localized,
                 isSelected: selectedTab == 2
             ) {
                 selectedTab = 2

@@ -19,6 +19,7 @@ struct MovieDetailView: View {
     @State private var selectedActor: Cast?
     @State private var showWhyForMeSheet = false
     @State private var showAIPaywall = false
+    @State private var toastMessageKey: String?
     
     init(movieId: Int) {
         _viewModel = StateObject(wrappedValue: MovieDetailViewModel(movieId: movieId))
@@ -39,62 +40,47 @@ struct MovieDetailView: View {
                     } else if let error = viewModel.error {
                         errorView(error)
                     } else if let movie = viewModel.movie {
-                        MovieDetailHeaderView(
-                            movie: movie,
-                            onDismiss: { dismiss() },
-                            onSearch: { showSearch = true },
-                            onShare: {
-                                Task {
-                                    await handleShare(movie: movie)
-                                }
-                            }
+                        MediaDetailHero(
+                            backdropURL: movie.backdropURL,
+                            title: movie.title,
+                            year: movie.year,
+                            runtime: movie.formattedRuntime,
+                            genres: movie.genres?.map(\.name) ?? [],
+                            rating: movie.rating,
+                            voteCount: movie.voteCount,
+                            affinityPercent: movie.ratingPercentage,
+                            onBack: { dismiss() },
+                            onShare: { Task { await handleShare(movie: movie) } }
                         )
 
-                        VStack(spacing: 24) {
-                            MovieInfoSection(movie: movie)
-
-                            ActionButtonsSection(
-                                movie: movie,
-                                mediaType: .movie,
-                                onSaveTap: {
-                                    showSavePanel = true
-                                },
-                                onSeenTap: {
-                                    Task {
-                                        await handleSeenTap(movie: movie)
-                                    }
-                                },
-                                onLikedTap: {
-                                    Task {
-                                        await handleLikedTap(movie: movie)
-                                    }
-                                },
-                                onDislikedTap: {
-                                    Task {
-                                        await handleDislikedTap(movie: movie)
-                                    }
-                                }
-                            )
-
-                            // §3.6: stelle = giudizio, cuore = "mi rappresenta". Coesistono.
-                            StarRatingSection(mediaType: "movie", tmdbId: movie.id)
-                            FavoriteButton(mediaType: "movie", tmdbId: movie.id)
-
-                            GoodFitSection(
-                                title: String(format: "movieDetail.goodFitTitle".localized, movie.title),
-                                subtitle: "movieDetail.goodFitSubtitle".localized,
-                                onWhyTap: { handleWhyForMeTap() }
-                            )
-
-                            WatchNowSection(
+                        VStack(alignment: .leading, spacing: 20) {
+                            MediaProviderDisclosure(
                                 providerState: viewModel.watchProviderState,
-                                mediaType: .movie,
                                 title: movie.title,
-                                year: movie.year,
-                                imdbId: viewModel.imdbId,
-                                movie: movie,
-                                onReportIssue: { showReportBug = true }
+                                mediaType: .movie,
+                                movie: movie
                             )
+
+                            MediaDetailActionStrip(
+                                mediaId: movie.id,
+                                mediaType: .movie,
+                                onWatchlist: { Task { await handleWatchlistTap(movie: movie) } },
+                                onSeen: { Task { await handleSeenTap(movie: movie) } },
+                                onLiked: { Task { await handleLikedTap(movie: movie) } },
+                                onList: { showSavePanel = true }
+                            )
+
+                            if !movie.overview.isEmpty {
+                                Text(movie.overview)
+                                    .font(.system(size: 15.5))
+                                    .foregroundColor(.theme.textSecondary)
+                                    .lineSpacing(5)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+
+                            StarRatingSection(mediaType: "movie", tmdbId: movie.id)
+
+                            MediaWhyForMeCard { handleWhyForMeTap() }
 
                             if let trailer = viewModel.trailer {
                                 TrailerSection(trailer: trailer)
@@ -115,7 +101,7 @@ struct MovieDetailView: View {
                                 SimilarMoviesSection(movies: viewModel.similarMovies)
                             }
                         }
-                        .padding(.horizontal, 50)
+                        .padding(.horizontal, 28)
                         .padding(.bottom, shouldShowAd ? 90 : 40)
                     }
                 }
@@ -124,6 +110,12 @@ struct MovieDetailView: View {
             if shouldShowAd {
                 BannerAdView(adUnitID: AppConstants.AdMob.bannerAdUnitID)
                     .frame(height: 50)
+            }
+
+            if let toastMessageKey {
+                MediaDetailToast(message: toastMessageKey.localized)
+                    .padding(.bottom, shouldShowAd ? 62 : 20)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
         .background(Color.theme.background.ignoresSafeArea())
@@ -169,7 +161,8 @@ struct MovieDetailView: View {
         .sheet(isPresented: $showWhyForMeSheet) {
             WhyForMeSheetView(
                 title: "movieDetail.whyForMe".localized,
-                message: viewModel.whyForMeMessage,
+                affinityPercent: viewModel.movie?.ratingPercentage ?? 0,
+                analysis: viewModel.whyForMeAnalysis,
                 isLoading: viewModel.isWhyForMeLoading,
                 error: viewModel.whyForMeError
             ) {
@@ -232,16 +225,39 @@ struct MovieDetailView: View {
     }
     
     // Action Handlers
+
+    private func handleWatchlistTap(movie: Movie) async {
+        let wasActive = listManager.isInList(
+            listId: listManager.watchlist.id,
+            mediaId: movie.id,
+            mediaType: .movie
+        )
+        do {
+            if wasActive,
+               let item = listManager.watchlist.items.first(where: {
+                   $0.mediaId == movie.id && $0.mediaType == .movie
+               }) {
+                try await listManager.removeFromList(listId: listManager.watchlist.id, itemId: item.id)
+            } else if !wasActive {
+                try await listManager.addToList(listId: listManager.watchlist.id, movie: movie, mediaType: .movie)
+            }
+            showFeedback(.watchlist, isActive: !wasActive)
+        } catch {
+            ErrorHandler.shared.handle(error, context: "Toggle Watchlist")
+        }
+    }
     
     private func handleSeenTap(movie: Movie) async {
+        let wasActive = listManager.isInList(listId: listManager.seenList.id, mediaId: movie.id, mediaType: .movie)
         do {
-            if listManager.isInList(listId: listManager.seenList.id, mediaId: movie.id, mediaType: .movie) {
+            if wasActive {
                 if let item = listManager.seenList.items.first(where: { $0.mediaId == movie.id && $0.mediaType == .movie }) {
                     try await listManager.removeFromList(listId: listManager.seenList.id, itemId: item.id)
                 }
             } else {
                 try await listManager.addToList(listId: listManager.seenList.id, movie: movie, mediaType: .movie)
             }
+            showFeedback(.seen, isActive: !wasActive)
         } catch {
             ErrorHandler.shared.handle(error, context: "Toggle Seen")
         }
@@ -253,8 +269,13 @@ struct MovieDetailView: View {
             return
         }
 
+        guard AITokenManager.shared.canMakeRequest() else {
+            if !quotaManager.isProUser { showAIPaywall = true }
+            return
+        }
+
         showWhyForMeSheet = true
-        if viewModel.whyForMeMessage?.isEmpty != false {
+        if viewModel.whyForMeAnalysis == nil {
             Task { await viewModel.generateWhyForMe() }
         }
     }
@@ -281,8 +302,21 @@ struct MovieDetailView: View {
                     oldReaction: isCurrentlyDisliked ? .dislike : nil, newReaction: .like
                 )
             }
+            showFeedback(.liked, isActive: !isCurrentlyLiked)
         } catch {
             ErrorHandler.shared.handle(error, context: "Toggle Liked")
+        }
+    }
+
+    private func showFeedback(_ action: MediaDetailFeedback.Action, isActive: Bool) {
+        let key = MediaDetailFeedback.messageKey(for: action, isActive: isActive)
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.84)) { toastMessageKey = key }
+        Task {
+            try? await Task.sleep(for: .seconds(2.2))
+            await MainActor.run {
+                guard toastMessageKey == key else { return }
+                withAnimation { toastMessageKey = nil }
+            }
         }
     }
     
@@ -923,87 +957,190 @@ struct YouTubePlayerView: UIViewRepresentable {
 }
 
 struct WhyForMeSheetView: View {
+    @Environment(\.dismiss) private var dismiss
+    @StateObject private var aiTokenManager = AITokenManager.shared
     let title: String
-    let message: String?
+    let affinityPercent: Int
+    let analysis: WhyForMeAnalysis?
     let isLoading: Bool
     let error: String?
     let onRetry: () -> Void
 
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack(spacing: 10) {
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.theme.accentOrange)
-                    Text(title)
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(.theme.textPrimary)
-                }
-                if isLoading {
-                    contentCard {
-                        HStack(spacing: 10) {
-                            ProgressView()
-                            Text("common.loading".localized)
-                                .font(.system(size: 14))
-                                .foregroundColor(.theme.textSecondary)
-                        }
-                    }
-                } else if let error, !error.isEmpty {
-                    contentCard {
-                        Text(error)
-                            .font(.system(size: 14))
-                            .foregroundColor(.theme.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+    @State private var feedback: Bool?
 
-                    Button(action: onRetry) {
-                        Text("common.tryAgain".localized)
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.theme.accentOrange)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 8)
-                            .background(Color.white.opacity(0.08))
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                    }
-                } else if let message, !message.isEmpty {
-                    contentCard {
-                        Text(message)
-                            .font(.system(size: 15))
-                            .foregroundColor(.theme.textPrimary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                } else {
-                    contentCard {
-                        Text("common.loading".localized)
-                            .font(.system(size: 14))
-                            .foregroundColor(.theme.textSecondary)
-                    }
+    var body: some View {
+        VStack(spacing: 0) {
+            Capsule()
+                .fill(Color.white.opacity(0.18))
+                .frame(width: 42, height: 5)
+                .padding(.top, 10)
+
+            HStack(spacing: 12) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.theme.accentOrange)
+                Text("mediaDetail.why.title".localized)
+                    .font(.system(size: 21, weight: .heavy))
+                    .foregroundColor(.theme.textPrimary)
+                Spacer()
+                Button { dismiss() } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundColor(.theme.textPrimary)
+                        .frame(width: 42, height: 42)
+                        .background(Color.white.opacity(0.08))
+                        .clipShape(Circle())
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(24)
+            .padding(.horizontal, 28)
+            .padding(.top, 16)
+            .padding(.bottom, 18)
+
+            ScrollView(showsIndicators: false) {
+                Group {
+                    if isLoading {
+                        loadingContent
+                    } else if let error, !error.isEmpty {
+                        errorContent(error)
+                    } else if let analysis {
+                        loadedContent(analysis)
+                    } else {
+                        loadingContent
+                    }
+                }
+                .padding(.horizontal, 28)
+                .padding(.bottom, 28)
+            }
         }
-        .presentationDetents([.fraction(0.5)])
-        .presentationDragIndicator(.visible)
-        .presentationBackground(Color.theme.background)
+        .presentationDetents([.fraction(0.84), .large])
+        .presentationDragIndicator(.hidden)
+        .presentationBackground(Color(hex: "16171c"))
     }
 
-    @ViewBuilder
-    private func contentCard<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            content()
+    private var loadingContent: some View {
+        VStack(spacing: 12) {
+            ForEach(0..<4, id: \.self) { index in
+                RoundedRectangle(cornerRadius: 17)
+                    .fill(Color.white.opacity(0.045))
+                    .frame(height: index == 0 ? 88 : 108)
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.white.opacity(0.06))
+        .redacted(reason: .placeholder)
+    }
+
+    private func loadedContent(_ analysis: WhyForMeAnalysis) -> some View {
+        let presentation = WhyForMePresentation.make(
+            analysis: analysis,
+            affinityPercent: affinityPercent
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
-        )
+        return VStack(spacing: 12) {
+            HStack(spacing: 15) {
+                Text("\(presentation.affinityPercent)%")
+                    .font(.system(size: 25, weight: .heavy))
+                    .foregroundColor(.theme.accentOrange)
+                VStack(alignment: .leading, spacing: 9) {
+                    Text("mediaDetail.why.affinity".localized)
+                        .font(.system(size: 14.5, weight: .heavy))
+                        .foregroundColor(.theme.textPrimary)
+                    GeometryReader { geometry in
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(Color.white.opacity(0.13))
+                            Capsule().fill(Color.theme.accentOrange)
+                                .frame(width: geometry.size.width * CGFloat(presentation.affinityPercent) / 100)
+                        }
+                    }
+                    .frame(height: 6)
+                }
+            }
+            .padding(16)
+            .background(Color.theme.accentOrange.opacity(0.08))
+            .overlay(
+                RoundedRectangle(cornerRadius: 17)
+                    .stroke(Color.theme.accentOrange.opacity(0.55), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 17))
+
+            ForEach(Array(presentation.reasons.enumerated()), id: \.offset) { index, reason in
+                reasonCard(index: index, reason: reason)
+            }
+
+            HStack {
+                Text("mediaDetail.why.helpful".localized)
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundColor(.theme.textSecondary)
+                feedbackButton(icon: "hand.thumbsup", value: true)
+                feedbackButton(icon: "hand.thumbsdown", value: false)
+                Spacer()
+                Button(action: onRetry) {
+                    Label("mediaDetail.why.regenerate".localized, systemImage: "arrow.clockwise")
+                        .font(.system(size: 13.5, weight: .heavy))
+                        .foregroundColor(.theme.accentOrange)
+                }
+            }
+            .padding(.top, 5)
+
+            Text(String(
+                format: "mediaDetail.why.quota".localized,
+                aiTokenManager.requestsUsedToday,
+                aiTokenManager.dailyLimit
+            ))
+            .font(.system(size: 11.5))
+            .foregroundColor(Color(hex: "6f7077"))
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private func reasonCard(index: Int, reason: WhyForMePresentation.Reason) -> some View {
+        let icons = ["heart", "chart.bar", "person"]
+        return HStack(alignment: .top, spacing: 13) {
+            Image(systemName: icons[index % icons.count])
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(.theme.accentOrange)
+                .frame(width: 42, height: 42)
+                .background(Color.theme.accentOrange.opacity(0.12))
+                .clipShape(Circle())
+            VStack(alignment: .leading, spacing: 5) {
+                Text(reason.titleKey.localized)
+                    .font(.system(size: 15, weight: .heavy))
+                    .foregroundColor(.theme.textPrimary)
+                Text(reason.body)
+                    .font(.system(size: 13.5))
+                    .foregroundColor(.theme.textSecondary)
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(15)
+        .background(Color.white.opacity(0.05))
+        .clipShape(RoundedRectangle(cornerRadius: 17))
+    }
+
+    private func feedbackButton(icon: String, value: Bool) -> some View {
+        Button { feedback = value } label: {
+            Image(systemName: feedback == value ? "\(icon).fill" : icon)
+                .font(.system(size: 14))
+                .foregroundColor(feedback == value ? .theme.accentOrange : .theme.textSecondary)
+                .frame(width: 38, height: 38)
+                .background(Color.white.opacity(0.06))
+                .clipShape(Circle())
+        }
+    }
+
+    private func errorContent(_ error: String) -> some View {
+        VStack(spacing: 16) {
+            Text(error)
+                .font(.system(size: 14))
+                .foregroundColor(.theme.textSecondary)
+                .multilineTextAlignment(.center)
+            Button("common.tryAgain".localized, action: onRetry)
+                .font(.system(size: 14, weight: .heavy))
+                .foregroundColor(.theme.accentOrange)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(22)
+        .background(Color.white.opacity(0.05))
+        .clipShape(RoundedRectangle(cornerRadius: 17))
     }
 }
 

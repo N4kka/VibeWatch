@@ -42,8 +42,10 @@ export function manualContextFromCheckpoint(
   checkpoint: unknown,
   jobId: string,
 ): ManualEpisodeContext | null {
-  if (!checkpoint || typeof checkpoint !== 'object' || Array.isArray(checkpoint)) return null
-  const raw = (checkpoint as Record<string, unknown>).manual_episode_context
+  return manualContextsFromCheckpoint(checkpoint, jobId)[0] ?? null
+}
+
+function normalizeManualContext(raw: unknown, jobId: string): ManualEpisodeContext | null {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
   const value = raw as Record<string, unknown>
   const contextJobId = String(value.job_id ?? '').trim()
@@ -53,6 +55,40 @@ export function manualContextFromCheckpoint(
   if (!Number.isSafeInteger(tvdbSeriesId) || tvdbSeriesId <= 0) return null
   if (!Number.isSafeInteger(tmdbShowId) || tmdbShowId <= 0) return null
   return { job_id: contextJobId, tvdb_series_id: tvdbSeriesId, tmdb_show_id: tmdbShowId }
+}
+
+export function manualContextsFromCheckpoint(
+  checkpoint: unknown,
+  jobId: string,
+): ManualEpisodeContext[] {
+  if (!checkpoint || typeof checkpoint !== 'object' || Array.isArray(checkpoint)) return []
+  const value = checkpoint as Record<string, unknown>
+  if (Array.isArray(value.manual_episode_contexts)) {
+    const contexts: ManualEpisodeContext[] = []
+    const seen = new Set<number>()
+    for (const raw of value.manual_episode_contexts) {
+      const context = normalizeManualContext(raw, jobId)
+      if (!context || seen.has(context.tvdb_series_id)) continue
+      seen.add(context.tvdb_series_id)
+      contexts.push(context)
+    }
+    return contexts
+  }
+
+  const legacy = normalizeManualContext(value.manual_episode_context, jobId)
+  return legacy ? [legacy] : []
+}
+
+export function manualContextForPending(
+  contexts: ManualEpisodeContext[],
+  pending: PendingEventRow[],
+): ManualEpisodeContext | null {
+  const bySeries = new Map(contexts.map((context) => [context.tvdb_series_id, context]))
+  for (const row of pending) {
+    const context = bySeries.get(Number(row.raw.tvdb_series_id))
+    if (context) return context
+  }
+  return null
 }
 
 export function planEpisodeResolutionBatch(

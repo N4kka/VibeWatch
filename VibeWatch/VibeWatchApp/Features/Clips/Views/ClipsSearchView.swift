@@ -161,6 +161,8 @@ struct ClipsSearchView: View {
                     }
                     .scrollTargetLayout()
                 }
+                // Stesso nome usato da ClipPlayerView per misurare la visibilità della pagina.
+                .coordinateSpace(name: "clipsScroll")
                 .scrollTargetBehavior(.paging)
                 .scrollPosition(id: .init(get: {
                     viewModel.currentIndex

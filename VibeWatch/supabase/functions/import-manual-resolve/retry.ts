@@ -9,6 +9,11 @@ export interface RetryStagingRow {
   error: string | null
 }
 
+export interface ManualResolution {
+  tvdbSeriesId: number
+  tmdbShowId: number
+}
+
 export interface PendingRetryRow {
   row_index: number
   raw: Record<string, unknown>
@@ -27,6 +32,23 @@ export interface ManualRetryPlan {
 const positiveInt = (value: unknown): number | null => {
   const number = Number(value)
   return Number.isSafeInteger(number) && number > 0 ? number : null
+}
+
+export function normalizeManualResolutions(raw: unknown): ManualResolution[] | null {
+  if (!Array.isArray(raw) || raw.length === 0) return null
+
+  const resolutions: ManualResolution[] = []
+  const seriesIds = new Set<number>()
+  for (const item of raw) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return null
+    const value = item as Record<string, unknown>
+    const tvdbSeriesId = positiveInt(value.tvdb_series_id)
+    const tmdbShowId = positiveInt(value.tmdb_show_id)
+    if (tvdbSeriesId === null || tmdbShowId === null || seriesIds.has(tvdbSeriesId)) return null
+    seriesIds.add(tvdbSeriesId)
+    resolutions.push({ tvdbSeriesId, tmdbShowId })
+  }
+  return resolutions
 }
 
 const pendingCopy = (row: RetryStagingRow): PendingRetryRow => ({

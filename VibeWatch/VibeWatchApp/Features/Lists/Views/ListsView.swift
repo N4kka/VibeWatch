@@ -6,7 +6,6 @@ struct ListsView: View {
     @ObservedObject var localizationManager = LocalizationManager.shared
     @EnvironmentObject var quotaManager: DailyQuotaManager
     @EnvironmentObject var appState: AppState
-    @State private var selectedSection: LibrarySection = .myLists
     @State private var selectedFilter: MediaFilter = .all
     @State private var selectedListType: ListViewType = .watchlist
     @State private var showCreateList = false
@@ -67,23 +66,22 @@ struct ListsView: View {
             VStack(spacing: 0) {
                 OfflineBanner()
 
-                // No filter button here: the Lists tab has its own inline "Filtri" control,
-                // so the header keeps just search + avatar (one door to the filter sheet).
+                // Il filtro di Liste resta inline: l'header globale mantiene ricerca,
+                // gamification e profilo senza una seconda porta verso lo stesso sheet.
                 AppHeaderView(
                     onSearchTap: { showSearch = true },
                     onProfileTap: { showProfile = true },
-                    avatarURL: appState.currentUser?.avatarURL,
-                    isProUser: quotaManager.isProUser
+                    avatarURL: appState.currentUser?.avatarURL
                 )
 
-                LibrarySectionSwitcher(selectedSection: $selectedSection)
-                    .padding(.bottom, 8)
+                // Redesign 2.0: Liste è SOLO l'archivio personale — le liste pubbliche vivono
+                // nel tab Social. Il ruolo sta scritto nel sottotitolo, come nel Tracking.
+                ScreenTitleHeader(
+                    title: "tab.lists".localized,
+                    subtitle: "lists.subtitle".localized
+                )
 
-                if selectedSection == .myLists {
-                    myListsContent
-                } else {
-                    PublicListsView()
-                }
+                myListsContent
             }
         }
         .navigationBarHidden(true)

@@ -1,7 +1,9 @@
 import { assertEquals } from 'https://deno.land/std@0.224.0/assert/mod.ts'
 import {
+  manualContextForPending,
   manualEpisodeDisposition,
   manualContextFromCheckpoint,
+  manualContextsFromCheckpoint,
   planEpisodeResolutionBatch,
 } from './manual.ts'
 
@@ -19,6 +21,27 @@ Deno.test('manual checkpoint is accepted only for the current job and positive i
     ...context, tmdb_show_id: 0,
   } }, JOB), null)
   assertEquals(manualContextFromCheckpoint({}, JOB), null)
+})
+
+Deno.test('manual batch keeps valid current-job contexts and selects the pending series', () => {
+  const second = { job_id: JOB, tvdb_series_id: 121361, tmdb_show_id: 1402 }
+  const contexts = manualContextsFromCheckpoint({ manual_episode_contexts: [
+    context,
+    { ...context, job_id: 'other-job', tvdb_series_id: 99 },
+    second,
+  ] }, JOB)
+
+  assertEquals(contexts, [context, second])
+  assertEquals(manualContextForPending(contexts, [
+    { row_index: 1, raw: { tvdb_series_id: 121361, tvdb_episode_id: 201 } },
+  ]), second)
+  assertEquals(manualContextForPending(contexts, [
+    { row_index: 2, raw: { tvdb_series_id: 999, tvdb_episode_id: 202 } },
+  ]), null)
+})
+
+Deno.test('manual batch reader remains compatible with the legacy singular checkpoint', () => {
+  assertEquals(manualContextsFromCheckpoint({ manual_episode_context: context }, JOB), [context])
 })
 
 Deno.test('manual batch retries unresolved maps, keeps found identity and defers beyond limit', () => {

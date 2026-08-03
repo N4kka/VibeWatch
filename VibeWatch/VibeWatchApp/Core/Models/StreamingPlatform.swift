@@ -5,6 +5,8 @@ enum StreamingPlatform: String, CaseIterable, Identifiable, Codable {
     case netflix = "Netflix"
     case disney = "Disney+"
     case prime = "Prime Video"
+    case sky = "Sky"
+    case now = "Now"
     case hbo = "HBO Max"
     case apple = "Apple TV+"
     case paramount = "Paramount+"
@@ -39,6 +41,7 @@ enum StreamingPlatform: String, CaseIterable, Identifiable, Codable {
         case .netflix: return "play.rectangle.fill"
         case .disney: return "star.fill"
         case .prime: return "play.circle.fill"
+        case .sky, .now: return "play.tv.fill"
         case .hbo, .max: return "h.square.fill"
         case .apple: return "applelogo"
         case .paramount: return "mountain.2.fill"
@@ -62,6 +65,7 @@ enum StreamingPlatform: String, CaseIterable, Identifiable, Codable {
         case .netflix: return "netflix_logo"
         case .disney: return "disney_plus_logo"
         case .prime: return "prime_video_logo"
+        case .sky, .now: return nil
         case .hbo: return "hbo_logo"
         case .max: return "hbo_max_logo"
         case .apple: return "apple_tv_logo"
@@ -79,6 +83,8 @@ enum StreamingPlatform: String, CaseIterable, Identifiable, Codable {
         case .netflix: return Color(red: 0.9, green: 0.1, blue: 0.15)
         case .disney: return Color(red: 0.05, green: 0.2, blue: 0.5)
         case .prime: return Color(red: 0.0, green: 0.7, blue: 0.85)
+        case .sky: return Color(red: 0.0, green: 0.45, blue: 0.82)
+        case .now: return Color(red: 0.0, green: 0.68, blue: 0.32)
         case .hbo, .max: return Color(red: 0.4, green: 0.1, blue: 0.7)
         case .apple: return Color(red: 0.0, green: 0.0, blue: 0.0)
         case .paramount: return Color(red: 0.0, green: 0.4, blue: 0.8)

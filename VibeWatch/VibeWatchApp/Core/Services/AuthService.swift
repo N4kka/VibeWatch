@@ -2,7 +2,9 @@ import Foundation
 import Supabase
 import Auth
 import AuthenticationServices
+import CryptoKit
 import RevenueCat
+import UIKit
 
 @MainActor
 class AuthService: AuthServiceProtocol {
@@ -314,6 +316,21 @@ class AuthService: AuthServiceProtocol {
             // Network error or session expired
             Logger.warning("[Auth] Session check failed: \(error.localizedDescription)")
 
+            // Sessione rifiutata dal server (o assente): restare "loggati" con la cache
+            // Keychain è una bugia — ogni SELECT sotto RLS torna vuota e il primo INSERT
+            // muore con "new row violates row-level security policy" (l'import da
+            // TestFlight con la sessione ferma da gennaio). Qui si pulisce e basta:
+            // niente wipe del DB locale, un re-login con lo stesso account riparte
+            // dallo specchio che c'è.
+            if isSessionDefinitivelyInvalid(error) {
+                Logger.error("[Auth] Session rejected by server — clearing cached auth state, sign-in required")
+                self.currentUser = nil
+                self.isAuthenticated = false
+                clearCachedAuthState()
+                await syncRevenueCatUser(with: nil)
+                return
+            }
+
             // Check if we have a cached user (offline mode)
             if let cachedUser = currentUser, isAuthenticated {
                 Logger.debug("[Auth] Using cached user for offline access: \(cachedUser.id.prefix(8))...")
@@ -333,6 +350,21 @@ class AuthService: AuthServiceProtocol {
             clearCachedAuthState()
             await syncRevenueCatUser(with: nil)
         }
+    }
+
+    /// Distingue "sono offline" da "il server ha rifiutato la sessione". Gli errori di
+    /// trasporto (URLError) mantengono la cache offline com'è sempre stato; un AuthError
+    /// locale (`sessionMissing`) o una risposta 4xx del GoTrue (refresh token revocato,
+    /// scaduto, riusato) sono definitivi. Un 5xx è un inciampo del server: non butta
+    /// fuori nessuno.
+    private func isSessionDefinitivelyInvalid(_ error: Error) -> Bool {
+        if error is URLError { return false }
+        if (error as NSError).domain == NSURLErrorDomain { return false }
+        guard let authError = error as? AuthError else { return false }
+        if case .api(_, _, _, let response) = authError {
+            return (400..<500).contains(response.statusCode)
+        }
+        return true
     }
 
     // MARK: - Email/Password Authentication
@@ -561,6 +593,8 @@ class AuthService: AuthServiceProtocol {
 
     // MARK: - Social Authentication
 
+    private let appleSignInCoordinator = AppleSignInCoordinator()
+
     func signInWithApple() async throws -> User {
         guard let client = client else {
             throw AppAuthError.notConfigured
@@ -569,23 +603,42 @@ class AuthService: AuthServiceProtocol {
         // Clear reset expectation since this is an explicit action
         userDefaults.set(false, forKey: expectingPasswordResetKey)
 
-        Logger.debug("[Auth] Starting Apple Sign In...")
+        Logger.debug("[Auth] Starting native Apple Sign In...")
 
-        // Sign in with Apple OAuth
-        try await client.auth.signInWithOAuth(
-            provider: .apple,
-            redirectTo: authCallbackURL
+        // Flusso nativo (ASAuthorizationController + signInWithIdToken) invece dell'OAuth web:
+        // quello passava dallo scambio code↔secret lato Supabase, che richiede un client secret
+        // della Services ID rinnovato ogni 6 mesi ("Unable to exchange external code" quando
+        // scade). L'id token nativo si verifica contro le chiavi pubbliche di Apple.
+        let (credential, nonce) = try await appleSignInCoordinator.requestCredential()
+
+        guard let tokenData = credential.identityToken,
+              let idToken = String(data: tokenData, encoding: .utf8) else {
+            Logger.error("[Auth] Apple credential missing identity token")
+            throw AppAuthError.invalidResponse
+        }
+
+        let session = try await client.auth.signInWithIdToken(
+            credentials: OpenIDConnectCredentials(provider: .apple, idToken: idToken, nonce: nonce)
         )
 
-        // Wait for auth to complete
-        try await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
+        await fetchUserProfile(userId: session.user.id.uuidString)
 
-        // Check auth state and fetch profile
-        await checkAuthState()
+        // Apple fornisce nome e cognome solo alla primissima autorizzazione: se il profilo è
+        // ancora senza display name questa è l'unica occasione per salvarlo.
+        if let fullName = credential.fullName {
+            let name = PersonNameComponentsFormatter().string(from: fullName)
+                .trimmingCharacters(in: .whitespaces)
+            if !name.isEmpty, (currentUser?.displayName ?? "").isEmpty {
+                try? await updateUserProfile(displayName: name, avatarURL: nil)
+            }
+        }
 
         guard let user = currentUser else {
             throw AppAuthError.userNotFound
         }
+
+        AnalyticsService.shared.logSignIn(method: "apple")
+        AnalyticsService.shared.setUserId(user.id)
 
         Logger.info("[Auth] Apple Sign In successful")
         return user
@@ -601,10 +654,12 @@ class AuthService: AuthServiceProtocol {
 
         Logger.debug("[Auth] Starting Google Sign In...")
 
-        // Sign in with Google OAuth
+        // prompt=select_account: senza, Google riusa la sessione del browser e non lascia
+        // scegliere tra più account.
         try await client.auth.signInWithOAuth(
             provider: .google,
-            redirectTo: authCallbackURL
+            redirectTo: authCallbackURL,
+            queryParams: [(name: "prompt", value: "select_account")]
         )
 
         // Wait for auth to complete
@@ -616,6 +671,9 @@ class AuthService: AuthServiceProtocol {
         guard let user = currentUser else {
             throw AppAuthError.userNotFound
         }
+
+        AnalyticsService.shared.logSignIn(method: "google")
+        AnalyticsService.shared.setUserId(user.id)
 
         Logger.info("[Auth] Google Sign In successful")
         return user
@@ -1202,6 +1260,85 @@ class AuthService: AuthServiceProtocol {
             Logger.error("[Auth] Error updating user preferences: \(error)")
             throw AppAuthError.databaseError
         }
+    }
+}
+
+// MARK: - Native Sign in with Apple
+
+/// Esegue il flusso nativo di Sign in with Apple e restituisce la credenziale insieme al
+/// nonce raw da passare a Supabase (nella richiesta ad Apple viaggia il suo SHA-256).
+@MainActor
+final class AppleSignInCoordinator: NSObject, ASAuthorizationControllerDelegate,
+                                    ASAuthorizationControllerPresentationContextProviding {
+    private var continuation: CheckedContinuation<ASAuthorizationAppleIDCredential, Error>?
+
+    func requestCredential() async throws -> (credential: ASAuthorizationAppleIDCredential, nonce: String) {
+        let rawNonce = Self.randomNonceString()
+
+        let request = ASAuthorizationAppleIDProvider().createRequest()
+        request.requestedScopes = [.fullName, .email]
+        request.nonce = Self.sha256(rawNonce)
+
+        let controller = ASAuthorizationController(authorizationRequests: [request])
+        controller.delegate = self
+        controller.presentationContextProvider = self
+
+        let credential = try await withCheckedThrowingContinuation {
+            (continuation: CheckedContinuation<ASAuthorizationAppleIDCredential, Error>) in
+            self.continuation = continuation
+            controller.performRequests()
+        }
+        return (credential, rawNonce)
+    }
+
+    func authorizationController(
+        controller: ASAuthorizationController,
+        didCompleteWithAuthorization authorization: ASAuthorization
+    ) {
+        if let credential = authorization.credential as? ASAuthorizationAppleIDCredential {
+            continuation?.resume(returning: credential)
+        } else {
+            continuation?.resume(throwing: AppAuthError.invalidResponse)
+        }
+        continuation = nil
+    }
+
+    func authorizationController(
+        controller: ASAuthorizationController,
+        didCompleteWithError error: Error
+    ) {
+        if let authError = error as? ASAuthorizationError, authError.code == .canceled {
+            // L'annullamento non è un errore da mostrare: le view lo filtrano come
+            // CancellationError.
+            continuation?.resume(throwing: CancellationError())
+        } else {
+            continuation?.resume(throwing: error)
+        }
+        continuation = nil
+    }
+
+    func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows)
+            .first { $0.isKeyWindow } ?? ASPresentationAnchor()
+    }
+
+    private static func randomNonceString(length: Int = 32) -> String {
+        var bytes = [UInt8](repeating: 0, count: length)
+        let status = SecRandomCopyBytes(kSecRandomDefault, length, &bytes)
+        guard status == errSecSuccess else {
+            // SecRandom non deve fallire; se succede, un nonce da UUID resta imprevedibile.
+            return UUID().uuidString + UUID().uuidString
+        }
+        let charset = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-._")
+        return String(bytes.map { charset[Int($0) % charset.count] })
+    }
+
+    private static func sha256(_ input: String) -> String {
+        SHA256.hash(data: Data(input.utf8))
+            .map { String(format: "%02x", $0) }
+            .joined()
     }
 }
 

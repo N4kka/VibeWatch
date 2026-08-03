@@ -156,6 +156,14 @@ class AppState: ObservableObject {
 
             }
         }
+
+        NotificationCenter.default.addObserver(
+            forName: .importJobCompleted,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { await self?.handleImportCompleted() }
+        }
     }
 
     deinit {
@@ -188,8 +196,11 @@ class AppState: ObservableObject {
         // Unblock any PGRST205-stuck operations from previous sessions before pushing
         SyncEngine.shared.unblockAndRetryBlockedOperations()
 
-        // Process any pending outbox operations
-        await SyncEngine.shared.pushPendingChanges()
+        // Push + PULL. Questo si chiama "full sync" da sempre ma faceva solo push: lo specchio
+        // locale (tracking, liste, eventi) si riempiva soltanto al sink del NetworkMonitor —
+        // di fatto una volta per processo, mai su richiesta. Il pull mette il tracking in
+        // testa e notifica le view appena quelle tabelle sono dentro.
+        await SyncEngine.shared.performFullSync(trigger: .appLaunch)
 
         // SPEC v3 blocco 7: lo storico di chi usava VibeWatch prima del tracking nuovo vive in
         // UserDefaults e nelle liste, e `watch_events` per lui e' vuota — cioe' la schermata
@@ -230,10 +241,28 @@ class AppState: ObservableObject {
         // Sync lists
         await ListManager.shared.syncListsForAuthenticatedUser()
 
-        // Process pending outbox
-        await SyncEngine.shared.pushPendingChanges()
+        // Push + pull, come al lancio: un altro device (o un import concluso mentre l'app era
+        // in background) deve arrivare sullo schermo al rientro, non al prossimo cold start.
+        // Il throttle da 2 minuti qui sopra tiene il costo sotto controllo.
+        await SyncEngine.shared.performFullSync(trigger: .foregroundResume)
 
         Logger.info("[AppState] Foreground sync completed")
+    }
+
+    /// Chiamata dopo un login riuscito (email, Apple o Google): stesso giro completo del
+    /// lancio. Un account appena entrato ha lo specchio locale vuoto — senza questo pull
+    /// immediato Tracking e Scopri restavano vuoti per minuti, finché un evento di rete
+    /// qualsiasi non faceva ripartire il sync.
+    func syncAfterSignIn() {
+        Task { await performFullSyncOnLaunch() }
+    }
+
+    /// Dopo un import concluso: pull immediato dello specchio locale e caroselli da rifare.
+    /// I caroselli di oggi sono stati generati su un profilo che lo storico appena importato
+    /// non lo aveva ancora — senza invalidazione resterebbero congelati fino a mezzanotte.
+    private func handleImportCompleted() async {
+        await SyncEngine.shared.performFullSync(trigger: .manualRefresh)
+        await DiscoveryPersonalizationService.shared.invalidateCache(userId: currentUser?.id)
     }
 
     // P5 (SPEC v3): `checkOnboardingFromProfile()` lived here and pretended to sync the onboarding
@@ -277,20 +306,10 @@ class AppState: ObservableObject {
         // Phase 4: Preload images for instant display
         await preloadDiscoveryImages()
 
-        // Pre-warm personalization cache (background, low priority)
-        Task(priority: .utility) { [self] in
-            guard !self.carouselsGeneratedThisLaunch else { return }
-            self.carouselsGeneratedThisLaunch = true
-            let profile = await UserPreferenceManager.shared.aggregatePreferences()
-            do {
-                _ = try await DiscoveryPersonalizationService.shared.generatePersonalizedCarousels(
-                    userProfile: profile,
-                    forceRefresh: false
-                )
-            } catch {
-                Logger.error("[AppState] Failed to generate personalized carousels: \(error.localizedDescription)")
-            }
-        }
+        // Niente pre-warm dei caroselli qui: la DiscoveryView è il tab 0 e parte comunque al
+        // lancio con lo stesso generatore. La seconda passata "di riscaldamento" non dedupava
+        // con quella della view (carouselsGeneratedThisLaunch proteggeva solo da se stessa):
+        // a cache scaduta erano ~100 richieste TMDB DOPPIE, in gara sullo stesso throttle.
     }
 
     // MARK: - Image Preloading (Phase 4)

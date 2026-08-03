@@ -245,10 +245,11 @@ struct SignInView: View {
                 emailOrUsername: credential,
                 password: password
             )
-            
+
             appState.currentUser = user
             appState.isAuthenticated = true
-            
+            appState.syncAfterSignIn()
+
             dismiss()
         } catch {
             errorMessage = error.localizedDescription
@@ -265,7 +266,10 @@ struct SignInView: View {
             let user = try await authService.signInWithApple()
             appState.currentUser = user
             appState.isAuthenticated = true
+            appState.syncAfterSignIn()
             dismiss()
+        } catch is CancellationError {
+            // Annullato dall'utente: niente errore a schermo
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -281,7 +285,10 @@ struct SignInView: View {
             let user = try await authService.signInWithGoogle()
             appState.currentUser = user
             appState.isAuthenticated = true
+            appState.syncAfterSignIn()
             dismiss()
+        } catch is CancellationError {
+            // Annullato dall'utente: niente errore a schermo
         } catch {
             errorMessage = error.localizedDescription
         }
