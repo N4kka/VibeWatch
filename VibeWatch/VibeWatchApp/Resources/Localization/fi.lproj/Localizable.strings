@@ -812,3 +812,19 @@
 "tracking.watchOn" = "Katso: %@";
 "tracking.rentOn" = "Vuokraa: %@";
 "tracking.buyOn" = "Osta: %@";
+
+// MARK: - Redesign 2.0 (tab Social, strip uscite, calendario, sottotitoli)
+"tab.social" = "Yhteisö";
+"social.subtitle" = "Ystävät ja seuraamasi listat";
+"discovery.continueWatching" = "Jatka katselua";
+"discovery.strip.today" = "Tänään";
+"discovery.releases.title" = "Julkaisut";
+"discovery.releases.none" = "Ei julkaisuja tänä päivänä.";
+"discovery.releases.countOne" = "1 julkaisu";
+"discovery.releases.countMany" = "%d julkaisua";
+"tracking.subtitle" = "Mitä katsot juuri nyt";
+"lists.subtitle" = "Arkistosi ja kokoelmasi";
+"profile.group.activity" = "Toiminta";
+"profile.group.preferences" = "Asetukset";
+"profile.group.account" = "Tili";
+"profile.badgesLevels" = "Merkit ja tasot";

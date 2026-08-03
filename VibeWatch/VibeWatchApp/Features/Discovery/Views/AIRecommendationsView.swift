@@ -47,7 +47,8 @@ struct AIRecommendationsView: View {
                     .font(.system(size: 28, weight: .bold))
                     .foregroundStyle(
                         LinearGradient(
-                            colors: [Color.theme.accentOrange, Color.purple],
+                            // Il magenta del prototipo 2.0 (#e858c8), non il purple di sistema.
+                            colors: [Color.theme.accentOrange, Color(hex: "e858c8")],
                             startPoint: .leading,
                             endPoint: .trailing
                         )

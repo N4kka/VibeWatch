@@ -800,3 +800,19 @@
 "tracking.watchOn" = "İzle: %@";
 "tracking.rentOn" = "Kirala: %@";
 "tracking.buyOn" = "Satın al: %@";
+
+// MARK: - Redesign 2.0 (tab Social, strip uscite, calendario, sottotitoli)
+"tab.social" = "Sosyal";
+"social.subtitle" = "Arkadaşlar ve takip ettiğin listeler";
+"discovery.continueWatching" = "İzlemeye devam et";
+"discovery.strip.today" = "Bugün";
+"discovery.releases.title" = "Yayınlar";
+"discovery.releases.none" = "Bu günde yayın yok.";
+"discovery.releases.countOne" = "1 yayın";
+"discovery.releases.countMany" = "%d yayın";
+"tracking.subtitle" = "Şu an izlediklerin";
+"lists.subtitle" = "Arşivin ve koleksiyonların";
+"profile.group.activity" = "Etkinlik";
+"profile.group.preferences" = "Tercihler";
+"profile.group.account" = "Hesap";
+"profile.badgesLevels" = "Rozetler ve seviyeler";

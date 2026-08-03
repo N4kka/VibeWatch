@@ -812,3 +812,19 @@
 "tracking.watchOn" = "%@ पर देखें";
 "tracking.rentOn" = "%@ पर किराये पर लें";
 "tracking.buyOn" = "%@ पर खरीदें";
+
+// MARK: - Redesign 2.0 (tab Social, strip uscite, calendario, sottotitoli)
+"tab.social" = "सोशल";
+"social.subtitle" = "दोस्त और आपकी फ़ॉलो की गई सूचियाँ";
+"discovery.continueWatching" = "देखना जारी रखें";
+"discovery.strip.today" = "आज";
+"discovery.releases.title" = "रिलीज़";
+"discovery.releases.none" = "इस दिन कोई रिलीज़ नहीं।";
+"discovery.releases.countOne" = "1 रिलीज़";
+"discovery.releases.countMany" = "%d रिलीज़";
+"tracking.subtitle" = "अभी आप क्या देख रहे हैं";
+"lists.subtitle" = "आपका संग्रह और कलेक्शन";
+"profile.group.activity" = "गतिविधि";
+"profile.group.preferences" = "प्राथमिकताएँ";
+"profile.group.account" = "खाता";
+"profile.badgesLevels" = "बैज और लेवल";

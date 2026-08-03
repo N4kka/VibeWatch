@@ -800,3 +800,19 @@
 "tracking.watchOn" = "Se på %@";
 "tracking.rentOn" = "Hyr på %@";
 "tracking.buyOn" = "Köp på %@";
+
+// MARK: - Redesign 2.0 (tab Social, strip uscite, calendario, sottotitoli)
+"tab.social" = "Socialt";
+"social.subtitle" = "Vänner och listor du följer";
+"discovery.continueWatching" = "Fortsätt titta";
+"discovery.strip.today" = "Idag";
+"discovery.releases.title" = "Premiärer";
+"discovery.releases.none" = "Inga premiärer denna dag.";
+"discovery.releases.countOne" = "1 premiär";
+"discovery.releases.countMany" = "%d premiärer";
+"tracking.subtitle" = "Det du tittar på nu";
+"lists.subtitle" = "Ditt arkiv och dina samlingar";
+"profile.group.activity" = "Aktivitet";
+"profile.group.preferences" = "Inställningar";
+"profile.group.account" = "Konto";
+"profile.badgesLevels" = "Märken och nivåer";

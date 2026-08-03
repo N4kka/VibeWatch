@@ -812,3 +812,19 @@
 "tracking.watchOn" = "Δες στο %@";
 "tracking.rentOn" = "Ενοικίαση στο %@";
 "tracking.buyOn" = "Αγορά στο %@";
+
+// MARK: - Redesign 2.0 (tab Social, strip uscite, calendario, sottotitoli)
+"tab.social" = "Κοινότητα";
+"social.subtitle" = "Φίλοι και λίστες που ακολουθείς";
+"discovery.continueWatching" = "Συνέχισε την παρακολούθηση";
+"discovery.strip.today" = "Σήμερα";
+"discovery.releases.title" = "Κυκλοφορίες";
+"discovery.releases.none" = "Καμία κυκλοφορία αυτή την ημέρα.";
+"discovery.releases.countOne" = "1 κυκλοφορία";
+"discovery.releases.countMany" = "%d κυκλοφορίες";
+"tracking.subtitle" = "Αυτά που βλέπεις τώρα";
+"lists.subtitle" = "Το αρχείο και οι συλλογές σου";
+"profile.group.activity" = "Δραστηριότητα";
+"profile.group.preferences" = "Προτιμήσεις";
+"profile.group.account" = "Λογαριασμός";
+"profile.badgesLevels" = "Παράσημα και επίπεδα";

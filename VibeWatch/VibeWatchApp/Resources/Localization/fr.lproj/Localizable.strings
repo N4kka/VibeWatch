@@ -812,3 +812,19 @@
 "tracking.watchOn" = "Regarder sur %@";
 "tracking.rentOn" = "Louer sur %@";
 "tracking.buyOn" = "Acheter sur %@";
+
+// MARK: - Redesign 2.0 (tab Social, strip uscite, calendario, sottotitoli)
+"tab.social" = "Social";
+"social.subtitle" = "Les amis et les listes que tu suis";
+"discovery.continueWatching" = "Continuer à regarder";
+"discovery.strip.today" = "Auj.";
+"discovery.releases.title" = "Sorties";
+"discovery.releases.none" = "Aucune sortie ce jour-là.";
+"discovery.releases.countOne" = "1 sortie";
+"discovery.releases.countMany" = "%d sorties";
+"tracking.subtitle" = "Ce que tu regardes en ce moment";
+"lists.subtitle" = "Tes archives et tes collections";
+"profile.group.activity" = "Activité";
+"profile.group.preferences" = "Préférences";
+"profile.group.account" = "Compte";
+"profile.badgesLevels" = "Badges et niveaux";

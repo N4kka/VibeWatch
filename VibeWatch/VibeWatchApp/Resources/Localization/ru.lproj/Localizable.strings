@@ -800,3 +800,19 @@
 "tracking.watchOn" = "Смотреть на %@";
 "tracking.rentOn" = "Аренда на %@";
 "tracking.buyOn" = "Купить на %@";
+
+// MARK: - Redesign 2.0 (tab Social, strip uscite, calendario, sottotitoli)
+"tab.social" = "Сообщество";
+"social.subtitle" = "Друзья и списки, на которые вы подписаны";
+"discovery.continueWatching" = "Продолжить просмотр";
+"discovery.strip.today" = "Сегодня";
+"discovery.releases.title" = "Премьеры";
+"discovery.releases.none" = "В этот день премьер нет.";
+"discovery.releases.countOne" = "1 премьера";
+"discovery.releases.countMany" = "%d премьер";
+"tracking.subtitle" = "Что вы смотрите сейчас";
+"lists.subtitle" = "Ваш архив и коллекции";
+"profile.group.activity" = "Активность";
+"profile.group.preferences" = "Настройки";
+"profile.group.account" = "Аккаунт";
+"profile.badgesLevels" = "Значки и уровни";

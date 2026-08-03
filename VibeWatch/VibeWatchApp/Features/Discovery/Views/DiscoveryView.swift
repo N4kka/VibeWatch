@@ -4,6 +4,10 @@ struct DiscoveryView: View {
     @StateObject private var viewModel = DiscoveryViewModel()
     @StateObject private var searchViewModel = SearchViewModel()
     @StateObject private var gamificationService = GamificationService.shared
+    /// Redesign 2.0: strip "In uscita" e "Continua a guardare" leggono lo specchio del Tracking.
+    @StateObject private var trackingHighlights = DiscoveryTrackingHighlightsViewModel()
+    @State private var showReleaseCalendar = false
+    @State private var releaseCalendarDay: Date? = nil
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var quotaManager: DailyQuotaManager
     @ObservedObject var localizationManager = LocalizationManager.shared
@@ -12,6 +16,9 @@ struct DiscoveryView: View {
     @State private var showFilters = false
     @Binding var selectedMovie: Movie?
     @Binding var selectedMediaType: MediaType
+    /// Redesign 2.0: Scopri e Clip sono due modalità dello stesso tab. Il binding arriva da
+    /// `DiscoverHubView`; qui serve solo per disegnare lo switcher sotto l'header.
+    @Binding var discoverMode: DiscoverMode
     @State private var scrollPosition: String? = nil
     @State private var moodCarouselIndex = 0
     @State private var lastTappedMovieId: Int? = nil
@@ -35,6 +42,7 @@ struct DiscoveryView: View {
         }
         .background(Color.theme.background.ignoresSafeArea())
         .task {
+            await trackingHighlights.load()
             await viewModel.loadContentIfNeeded()
 
             // Load gamification state
@@ -68,6 +76,9 @@ struct DiscoveryView: View {
         }
         .sheet(isPresented: $showProfile) {
             ProfileView()
+        }
+        .sheet(isPresented: $showReleaseCalendar) {
+            ReleaseCalendarView(viewModel: trackingHighlights, initialDay: releaseCalendarDay)
         }
         .fullScreenCover(isPresented: $showSearch) {
             SearchView(viewModel: searchViewModel)
@@ -160,7 +171,27 @@ struct DiscoveryView: View {
                         )
                         .padding(.top, 4)
                         .id("header")
-                    
+
+                        DiscoverModeSwitcher(mode: $discoverMode)
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, -18)
+
+                        // Le due sezioni "di casa" (prototipo 2.0): cosa esce e cosa stavi
+                        // guardando, PRIMA delle raccomandazioni. Compaiono solo se lo specchio
+                        // locale del tracking ha materiale: per un anonimo non esistono.
+                        if !trackingHighlights.upcoming.isEmpty {
+                            ReleaseStripSection(viewModel: trackingHighlights) { day in
+                                releaseCalendarDay = day
+                                showReleaseCalendar = true
+                            }
+                        }
+
+                        if !trackingHighlights.continueWatching.isEmpty {
+                            ContinueWatchingSection(viewModel: trackingHighlights) { showId in
+                                openShow(showId)
+                            }
+                        }
+
                         ForEach(viewModel.visibleCarousels, id: \.type.rawValue) { carousel in
                             if carousel.type == .dailyMix {
                                 MoodCarouselSection(
@@ -250,6 +281,19 @@ struct DiscoveryView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
             hasRestoredScroll = true
         }
+    }
+
+    /// Apre il dettaglio di una serie dalle sezioni tracking. Il placeholder con il solo id è lo
+    /// stesso contratto dei deep link: `navigationDestination` usa solo `movie.id`.
+    private func openShow(_ showId: Int) {
+        let placeholder = Movie(
+            id: showId, title: "", overview: "", posterPath: nil, backdropPath: nil,
+            releaseDate: nil, voteAverage: 0, voteCount: 0, genreIds: nil, genres: nil,
+            adult: false, originalLanguage: "", popularity: 0, runtime: nil, status: nil,
+            tagline: nil, productionCountries: nil, imdbId: nil
+        )
+        selectedMediaType = .tv
+        selectedMovie = placeholder
     }
 
     private func mediaType(for carouselType: CarouselType) -> MediaType {

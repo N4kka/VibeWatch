@@ -16,6 +16,9 @@ enum ListViewType: String, CaseIterable {
     }
 }
 
+/// Redesign 2.0 — chips pill come nel prototipo: la selezione è arancio tenue con bordo, non
+/// un segmented pieno. Le liste pubbliche non sono più una sezione qui: vivono nel tab Social,
+/// quindi lo switcher My/Public è sparito insieme al suo enum.
 struct ListTypeSwitcher: View {
     @Binding var selectedType: ListViewType
 
@@ -23,66 +26,28 @@ struct ListTypeSwitcher: View {
     private static let orderedTypes: [ListViewType] = [.watchlist, .seen, .liked, .myLists]
 
     var body: some View {
-        SegmentedPicker(
-            items: Self.orderedTypes,
-            selection: $selectedType,
-            label: { $0.displayName }
-        )
-    }
-}
-
-/// §9.1: `tvTracking` non c'e' piu'. Il Tracking ha un tab suo e "smette di essere una sezione
-/// dentro Liste" — tenerlo in due posti significherebbe due schermate da mantenere allineate, e
-/// una delle due sarebbe sempre quella vecchia.
-enum LibrarySection: String, CaseIterable {
-    case myLists = "lists.section.myLists"
-    case publicLists = "lists.section.publicLists"
-
-    var displayName: String {
-        rawValue.localizedMainSafe()
-    }
-}
-
-struct LibrarySectionSwitcher: View {
-    @Binding var selectedSection: LibrarySection
-    @Namespace private var underline
-
-    var body: some View {
-        HStack(spacing: 24) {
-            ForEach(LibrarySection.allCases, id: \.self) { section in
-                let isSelected = selectedSection == section
+        HStack(spacing: 8) {
+            ForEach(Self.orderedTypes, id: \.self) { type in
+                let isSelected = selectedType == type
                 Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        selectedSection = section
-                    }
+                    withAnimation(.easeInOut(duration: 0.15)) { selectedType = type }
                 } label: {
-                    VStack(spacing: 8) {
-                        Text(section.displayName)
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundColor(isSelected ? .theme.textPrimary : .theme.textSecondary)
-                            .fixedSize(horizontal: true, vertical: false)
-
-                        ZStack {
-                            Capsule().fill(Color.clear).frame(height: 2.5)
-                            if isSelected {
-                                Capsule()
-                                    .fill(Color.theme.accentOrange)
-                                    .frame(height: 2.5)
-                                    .matchedGeometryEffect(id: "sectionUnderline", in: underline)
-                            }
-                        }
-                    }
+                    Text(type.displayName)
+                        .font(.system(size: 12.5, weight: .bold))
+                        .foregroundColor(isSelected ? .theme.accentOrange : .theme.textSecondary)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(isSelected ? Color.theme.accentOrange.opacity(0.14) : Color.white.opacity(0.06))
+                        .overlay(
+                            Capsule().stroke(
+                                isSelected ? Color.theme.accentOrange.opacity(0.5) : Color.white.opacity(0.08),
+                                lineWidth: 1
+                            )
+                        )
+                        .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
             }
-
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 20)
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(Color.white.opacity(0.07))
-                .frame(height: 1)
         }
     }
 }

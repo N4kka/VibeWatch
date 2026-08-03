@@ -812,3 +812,19 @@
 "tracking.watchOn" = "%@에서 시청";
 "tracking.rentOn" = "%@에서 대여";
 "tracking.buyOn" = "%@에서 구매";
+
+// MARK: - Redesign 2.0 (tab Social, strip uscite, calendario, sottotitoli)
+"tab.social" = "소셜";
+"social.subtitle" = "친구와 팔로우 중인 리스트";
+"discovery.continueWatching" = "이어서 보기";
+"discovery.strip.today" = "오늘";
+"discovery.releases.title" = "공개 일정";
+"discovery.releases.none" = "이 날짜에는 공개 예정이 없습니다.";
+"discovery.releases.countOne" = "공개 1건";
+"discovery.releases.countMany" = "공개 %d건";
+"tracking.subtitle" = "지금 보고 있는 작품";
+"lists.subtitle" = "보관함과 컬렉션";
+"profile.group.activity" = "활동";
+"profile.group.preferences" = "환경설정";
+"profile.group.account" = "계정";
+"profile.badgesLevels" = "배지와 레벨";

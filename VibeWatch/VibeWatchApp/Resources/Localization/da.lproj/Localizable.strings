@@ -814,3 +814,19 @@
 "tracking.watchOn" = "Se på %@";
 "tracking.rentOn" = "Lej på %@";
 "tracking.buyOn" = "Køb på %@";
+
+// MARK: - Redesign 2.0 (tab Social, strip uscite, calendario, sottotitoli)
+"tab.social" = "Social";
+"social.subtitle" = "Venner og lister du følger";
+"discovery.continueWatching" = "Fortsæt med at se";
+"discovery.strip.today" = "I dag";
+"discovery.releases.title" = "Udgivelser";
+"discovery.releases.none" = "Ingen udgivelser denne dag.";
+"discovery.releases.countOne" = "1 udgivelse";
+"discovery.releases.countMany" = "%d udgivelser";
+"tracking.subtitle" = "Det du ser lige nu";
+"lists.subtitle" = "Dit arkiv og dine samlinger";
+"profile.group.activity" = "Aktivitet";
+"profile.group.preferences" = "Præferencer";
+"profile.group.account" = "Konto";
+"profile.badgesLevels" = "Badges og niveauer";

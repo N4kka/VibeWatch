@@ -6,7 +6,6 @@ struct ListsView: View {
     @ObservedObject var localizationManager = LocalizationManager.shared
     @EnvironmentObject var quotaManager: DailyQuotaManager
     @EnvironmentObject var appState: AppState
-    @State private var selectedSection: LibrarySection = .myLists
     @State private var selectedFilter: MediaFilter = .all
     @State private var selectedListType: ListViewType = .watchlist
     @State private var showCreateList = false
@@ -76,14 +75,14 @@ struct ListsView: View {
                     isProUser: quotaManager.isProUser
                 )
 
-                LibrarySectionSwitcher(selectedSection: $selectedSection)
-                    .padding(.bottom, 8)
+                // Redesign 2.0: Liste è SOLO l'archivio personale — le liste pubbliche vivono
+                // nel tab Social. Il ruolo sta scritto nel sottotitolo, come nel Tracking.
+                ScreenTitleHeader(
+                    title: "tab.lists".localized,
+                    subtitle: "lists.subtitle".localized
+                )
 
-                if selectedSection == .myLists {
-                    myListsContent
-                } else {
-                    PublicListsView()
-                }
+                myListsContent
             }
         }
         .navigationBarHidden(true)

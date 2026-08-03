@@ -22,10 +22,26 @@ struct TVShowsTrackingView: View {
     /// §13.6 si misura sulla PRIMA apertura: dopo, la cache di SwiftUI e quella delle immagini
     /// rendono il numero piu' bello e meno vero.
     @State private var hasMeasured = false
+    /// Redesign 2.0: il calendario delle uscite si apre anche da qui. Il ViewModel legge lo
+    /// stesso specchio locale di questa schermata (zero rete: §13.6 resta intatto) e si carica
+    /// solo quando lo sheet compare — il primo fotogramma del Tracking non lo paga.
+    @StateObject private var calendarViewModel = DiscoveryTrackingHighlightsViewModel()
+    @State private var showReleaseCalendar = false
 
     var body: some View {
-        content
+        VStack(spacing: 0) {
+            ScreenTitleHeader(
+                title: "tab.tracking".localized,
+                subtitle: "tracking.subtitle".localized,
+                trailingIcon: "calendar",
+                onTrailingTap: { showReleaseCalendar = true }
+            )
+            content
+        }
             .background(Color.theme.backgroundDark.ignoresSafeArea())
+            .sheet(isPresented: $showReleaseCalendar) {
+                ReleaseCalendarView(viewModel: calendarViewModel)
+            }
             .task {
                 let first = !hasMeasured
                 hasMeasured = true
@@ -106,17 +122,20 @@ struct TVShowsTrackingView: View {
         Button { viewModel.toggle(bucket) } label: {
             HStack(spacing: 8) {
                 Text(bucket.titleKey.localized)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: 15, weight: .heavy))
                     .foregroundColor(.theme.textPrimary)
                 // Il conteggio sta nell'intestazione anche a sezione chiusa: §9.2 lo chiede, e
                 // una sezione chiusa senza numero non dice se vale la pena aprirla.
                 Text("\(count)")
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(.theme.textSecondary)
                 Spacer()
-                Image(systemName: viewModel.isExpanded(bucket) ? "chevron.down" : "chevron.right")
+                // Un chevron solo, che ruota: lo stato aperto/chiuso si legge dal verso.
+                Image(systemName: "chevron.down")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(.theme.textSecondary)
+                    .rotationEffect(.degrees(viewModel.isExpanded(bucket) ? 0 : -90))
+                    .animation(.easeInOut(duration: 0.2), value: viewModel.isExpanded(bucket))
             }
             .contentShape(Rectangle())
         }

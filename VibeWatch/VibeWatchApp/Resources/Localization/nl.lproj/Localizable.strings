@@ -812,3 +812,19 @@
 "tracking.watchOn" = "Kijk op %@";
 "tracking.rentOn" = "Huur op %@";
 "tracking.buyOn" = "Koop op %@";
+
+// MARK: - Redesign 2.0 (tab Social, strip uscite, calendario, sottotitoli)
+"tab.social" = "Sociaal";
+"social.subtitle" = "Vrienden en lijsten die je volgt";
+"discovery.continueWatching" = "Verder kijken";
+"discovery.strip.today" = "Vandaag";
+"discovery.releases.title" = "Releases";
+"discovery.releases.none" = "Geen releases op deze dag.";
+"discovery.releases.countOne" = "1 release";
+"discovery.releases.countMany" = "%d releases";
+"tracking.subtitle" = "Wat je nu kijkt";
+"lists.subtitle" = "Je archief en verzamelingen";
+"profile.group.activity" = "Activiteit";
+"profile.group.preferences" = "Voorkeuren";
+"profile.group.account" = "Account";
+"profile.badgesLevels" = "Badges en niveaus";

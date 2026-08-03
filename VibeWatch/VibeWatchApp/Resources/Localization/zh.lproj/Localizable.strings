@@ -797,3 +797,19 @@
 "tracking.watchOn" = "在%@观看";
 "tracking.rentOn" = "在%@租借";
 "tracking.buyOn" = "在%@购买";
+
+// MARK: - Redesign 2.0 (tab Social, strip uscite, calendario, sottotitoli)
+"tab.social" = "社交";
+"social.subtitle" = "好友和你关注的片单";
+"discovery.continueWatching" = "继续观看";
+"discovery.strip.today" = "今天";
+"discovery.releases.title" = "上线日程";
+"discovery.releases.none" = "这一天没有上线内容。";
+"discovery.releases.countOne" = "1 部上线";
+"discovery.releases.countMany" = "%d 部上线";
+"tracking.subtitle" = "你正在看的内容";
+"lists.subtitle" = "你的存档与合集";
+"profile.group.activity" = "动态";
+"profile.group.preferences" = "偏好设置";
+"profile.group.account" = "账户";
+"profile.badgesLevels" = "徽章与等级";

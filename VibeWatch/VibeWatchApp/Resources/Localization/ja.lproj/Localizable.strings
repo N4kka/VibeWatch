@@ -812,3 +812,19 @@
 "tracking.watchOn" = "%@で視聴";
 "tracking.rentOn" = "%@でレンタル";
 "tracking.buyOn" = "%@で購入";
+
+// MARK: - Redesign 2.0 (tab Social, strip uscite, calendario, sottotitoli)
+"tab.social" = "ソーシャル";
+"social.subtitle" = "友達とフォロー中のリスト";
+"discovery.continueWatching" = "続きを見る";
+"discovery.strip.today" = "今日";
+"discovery.releases.title" = "配信予定";
+"discovery.releases.none" = "この日の配信はありません。";
+"discovery.releases.countOne" = "1件の配信";
+"discovery.releases.countMany" = "%d件の配信";
+"tracking.subtitle" = "今見ている作品";
+"lists.subtitle" = "アーカイブとコレクション";
+"profile.group.activity" = "アクティビティ";
+"profile.group.preferences" = "設定";
+"profile.group.account" = "アカウント";
+"profile.badgesLevels" = "バッジとレベル";

@@ -67,6 +67,14 @@ struct ProfileView: View {
     @StateObject private var notificationService = NotificationService.shared
     @StateObject private var localizationManager = LocalizationManager.shared
     @StateObject private var dailyQuotaManager = DailyQuotaManager.shared
+    /// Redesign 2.0: la card livello nel profilo legge lo stesso stato del resto dell'app.
+    @StateObject private var gamificationService = GamificationService.shared
+    /// Redesign 2.0: le 4 tiles sono numeri del SERVER (`get_my_stats`), mai somme locali —
+    /// la ragione della decisione "un posto solo" del 2026-08-01 resta rispettata: la fonte è
+    /// una, questa è solo una seconda finestra sugli stessi numeri.
+    @StateObject private var serverStats = ProfileStatsViewModel()
+    @State private var showAnalyticsDashboard = false
+    @State private var showBadges = false
     @State private var showSignUp = false
     @State private var showSignIn = false
     @State private var showImagePicker = false
@@ -275,6 +283,12 @@ struct ProfileView: View {
                 // Con la riga spenta il giro di rete sarebbe lavoro per nessuno.
                 if Self.shareProfileEnabled && appState.isAuthenticated {
                     await loadShareUsername()
+                }
+                if appState.isAuthenticated {
+                    if let userId = appState.currentUser?.id {
+                        await gamificationService.loadUserState(userId: userId)
+                    }
+                    await serverStats.load()
                 }
             }
             .overlay {
@@ -497,23 +511,148 @@ struct ProfileView: View {
             VStack(spacing: 12) {
                 profileHeader
 
-                settingsSection
-                
-                Button {
-                    showLogoutConfirmation = true
-                } label: {
-                    Text("profile.logout".localized)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.red)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.red.opacity(0.1))
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                if gamificationService.isLoaded {
+                    gamificationCard
                 }
-                .padding(.horizontal, 20)
+
+                statsTiles
+
+                settingsSection
             }
             .padding(.vertical, 20)
         }
+        .sheet(isPresented: $showAnalyticsDashboard) {
+            NavigationView { AnalyticsDashboardView() }
+        }
+        .sheet(isPresented: $showBadges) {
+            NavigationView { BadgeGalleryView(gamificationService: gamificationService) }
+        }
+    }
+
+    // MARK: - Card livello (Redesign 2.0)
+
+    /// Livello, rank e barra XP — il tap apre la galleria di badge e livelli.
+    private var gamificationCard: some View {
+        Button { showBadges = true } label: {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [gamificationService.userState.rank.color,
+                                         gamificationService.userState.rank.color.opacity(0.5)],
+                                startPoint: .topLeading, endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 38, height: 38)
+                    Text("\(gamificationService.userState.currentLevel)")
+                        .font(.system(size: 16, weight: .heavy))
+                        .foregroundColor(.white)
+                }
+
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(spacing: 6) {
+                        Text("\("gamification.level".localized) \(gamificationService.userState.currentLevel)")
+                            .font(.system(size: 13.5, weight: .heavy))
+                            .foregroundColor(.theme.textPrimary)
+                        Text(gamificationService.userState.rank.name)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.theme.textSecondary)
+                    }
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(Color.white.opacity(0.14))
+                            Capsule()
+                                .fill(Color.theme.accentOrange)
+                                .frame(width: max(0, geo.size.width * gamificationService.userState.levelProgress))
+                        }
+                    }
+                    .frame(height: 5)
+                }
+
+                Text("\(gamificationService.userState.xpProgressInLevel)/\(gamificationService.userState.xpNeededForNextLevel) XP")
+                    .font(.system(size: 11.5, weight: .bold))
+                    .foregroundColor(.theme.accentOrange)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(
+                LinearGradient(
+                    colors: [Color.theme.accentOrange.opacity(0.16), Color.theme.accentOrange.opacity(0.05)],
+                    startPoint: .leading, endPoint: .trailing
+                )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.theme.accentOrange.opacity(0.35), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+        }
+        .buttonStyle(PlainButtonStyle())
+        .padding(.horizontal, 20)
+    }
+
+    // MARK: - Tiles stats (Redesign 2.0)
+
+    /// Numeri del server, tre stati distinti (lezione di `ProfileStatsSection`): caricamento,
+    /// numeri veri (zero compreso), fallimento CON riprova — mai zeri con la faccia di un dato.
+    @ViewBuilder
+    private var statsTiles: some View {
+        switch serverStats.phase {
+        case .loading:
+            HStack { Spacer(); ProgressView().tint(.theme.accentOrange); Spacer() }
+                .padding(.vertical, 10)
+        case .failed:
+            Button {
+                Task { await serverStats.load() }
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text("profile.stats.loadFailed".localized)
+                        .font(.system(size: 13))
+                }
+                .foregroundColor(.theme.textSecondary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+            }
+        case .loaded(let stats):
+            HStack(spacing: 8) {
+                statTile(value: "\(stats.moviesWatched)", label: "profile.stats.movies".localized)
+                statTile(value: "\(stats.episodesWatched)", label: "profile.stats.episodes".localized)
+                statTile(value: Self.watchTimeText(stats.watchTimeSeconds),
+                         label: "profile.stats.watchTime".localized, highlight: true)
+                statTile(value: "\(stats.showsWatched)", label: "profile.stats.shows".localized)
+            }
+            .padding(.horizontal, 20)
+        }
+    }
+
+    private func statTile(value: String, label: String, highlight: Bool = false) -> some View {
+        VStack(spacing: 2) {
+            Text(value)
+                .font(.system(size: 15, weight: .heavy))
+                .foregroundColor(highlight ? .theme.accentOrange : .theme.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Text(label)
+                .font(.system(size: 10, weight: .bold))
+                .foregroundColor(.theme.textSecondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 11)
+        .padding(.horizontal, 4)
+        .background(Color.white.opacity(0.05))
+        .clipShape(RoundedRectangle(cornerRadius: 13))
+    }
+
+    private static func watchTimeText(_ seconds: Int) -> String {
+        let f = DateComponentsFormatter()
+        f.allowedUnits = seconds >= 3600 ? [.hour] : [.hour, .minute]
+        f.unitsStyle = .abbreviated
+        return f.string(from: TimeInterval(seconds)) ?? "0"
     }
     
     private var unauthenticatedView: some View {
@@ -666,19 +805,47 @@ struct ProfileView: View {
                 .padding(.horizontal, 20)
             }
 
-            VStack(spacing: 0) {
+            // Redesign 2.0: le righe si raggruppano per ruolo, come nel prototipo. La ricerca
+            // utenti non è più qui: è la porta del tab Social, e una seconda porta nel profilo
+            // sarebbe la copia che diverge.
+            groupLabel("profile.group.activity".localized)
+            groupCard {
+                SettingsRow(icon: "chart.bar", title: "profile.stats.title".localized) {
+                    showAnalyticsDashboard = true
+                }
+
+                rowDivider
+
+                // §9.3: il diario. Si legge dalla cache locale (12 mesi, §5), zero rete.
+                SettingsRow(icon: "book", title: "diary.title".localized) {
+                    showDiary = true
+                }
+
+                rowDivider
+
+                SettingsRow(icon: "trophy", title: "profile.badgesLevels".localized) {
+                    showBadges = true
+                }
+
+                rowDivider
+
+                shareProfileRow
+            }
+
+            groupLabel("profile.group.preferences".localized)
+            groupCard {
                 HStack {
                     Image(systemName: "bell")
                         .font(.system(size: 20))
                         .foregroundColor(.theme.accentOrange)
-                        .frame(width: 24)
-                    
+                        .frame(width: 30)
+
                     Text("profile.notifications".localized)
                         .font(.system(size: 16))
                         .foregroundColor(.theme.textPrimary)
-                    
+
                     Spacer()
-                    
+
                     // Use default iOS toggle (iOS 26+ has new design automatically)
                     Toggle("", isOn: $notificationService.notificationsEnabled)
                         .labelsHidden()
@@ -691,105 +858,56 @@ struct ProfileView: View {
                     }
                 }
                 .padding()
-                
-                Divider()
-                    .background(Color.white.opacity(0.1))
-                
-                SettingsRow(
-                    icon: "person.2",
-                    title: "social.search.title".localized,
-                    action: {
-                        showUserSearch = true
+
+                rowDivider
+
+                SettingsRow(icon: "play.tv", title: "profile.streamingServices".localized) {
+                    withAnimation {
+                        showPlatformSelector = true
                     }
-                )
+                }
 
-                Divider()
-                    .background(Color.white.opacity(0.1))
-
-                shareProfileRow
-
-                // §9.3: il diario. Si legge dalla cache locale (12 mesi, §5), zero rete.
-                SettingsRow(
-                    icon: "book",
-                    title: "diary.title".localized,
-                    action: {
-                        showDiary = true
-                    }
-                )
-
-                Divider()
-                    .background(Color.white.opacity(0.1))
-
-                SettingsRow(
-                    icon: "play.tv",
-                    title: "profile.streamingServices".localized,
-                    action: {
-                        withAnimation {
-                            showPlatformSelector = true
-                        }
-                    }
-                )
-
-                Divider()
-                    .background(Color.white.opacity(0.1))
+                rowDivider
 
                 // SPEC v3 §7: l'import dello storico. La schermata è una lista di sorgenti
                 // (oggi solo TV Time) apposta: gli import futuri sono righe, non schermate.
-                SettingsRow(
-                    icon: "square.and.arrow.down",
-                    title: "profile.importFrom".localized,
-                    action: {
-                        showImport = true
-                    }
-                )
+                SettingsRow(icon: "square.and.arrow.down", title: "profile.importFrom".localized) {
+                    showImport = true
+                }
 
-                Divider()
-                    .background(Color.white.opacity(0.1))
+                rowDivider
 
-                SettingsRow(
-                    icon: "envelope",
-                    title: "profile.sendFeedback".localized,
-                    action: {
-                        showFeedback = true
-                    }
-                )
-                
-                Divider()
-                    .background(Color.white.opacity(0.1))
-                
-                SettingsRow(
-                    icon: "key.fill",
-                    title: "profile.changePassword".localized,
-                    action: {
-                        showChangePassword = true
-                    }
-                )
-                
-                Divider()
-                    .background(Color.white.opacity(0.1))
-                
-                SettingsRow(
-                    icon: "gear",
-                    title: "profile.settings".localized,
-                    action: {
-                        showSettings = true
-                    }
-                )
-                
-                Divider()
-                    .background(Color.white.opacity(0.1))
-                
-                SettingsRow(
-                    icon: "questionmark.circle",
-                    title: "profile.helpSupport".localized,
-                    action: {
-                        showHelpSupport = true
-                    }
-                )
+                SettingsRow(icon: "gear", title: "profile.settings".localized) {
+                    showSettings = true
+                }
             }
-            .background(Color.white.opacity(0.05))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            .padding(.horizontal, 20)
+
+            groupLabel("profile.group.account".localized)
+            groupCard {
+                SettingsRow(icon: "key.fill", title: "profile.changePassword".localized) {
+                    showChangePassword = true
+                }
+
+                rowDivider
+
+                SettingsRow(icon: "envelope", title: "profile.sendFeedback".localized) {
+                    showFeedback = true
+                }
+
+                rowDivider
+
+                SettingsRow(icon: "questionmark.circle", title: "profile.helpSupport".localized) {
+                    showHelpSupport = true
+                }
+
+                rowDivider
+
+                SettingsRow(icon: "rectangle.portrait.and.arrow.right",
+                            title: "profile.logout".localized,
+                            iconColor: .red, textColor: .red) {
+                    showLogoutConfirmation = true
+                }
+            }
         }
         .alert("notifications.permissionRequired".localized, isPresented: $showNotificationAlert) {
             Button("notifications.openSettings".localized) {
@@ -814,6 +932,29 @@ struct ProfileView: View {
         }
     }
     
+    // MARK: - Gruppi (Redesign 2.0)
+
+    private func groupLabel(_ text: String) -> some View {
+        Text(text.uppercased())
+            .font(.system(size: 11, weight: .heavy))
+            .kerning(1.2)
+            .foregroundColor(Color.white.opacity(0.4))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 20)
+            .padding(.top, 10)
+    }
+
+    private func groupCard<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        VStack(spacing: 0) { content() }
+            .background(Color.white.opacity(0.05))
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .padding(.horizontal, 20)
+    }
+
+    private var rowDivider: some View {
+        Divider().background(Color.white.opacity(0.1))
+    }
+
     private func handleNotificationToggle() {
         Task {
             defer { pendingNotificationToggle = false }
