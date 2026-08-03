@@ -19,10 +19,11 @@ struct DiscoverModeSwitcher: View {
             segment(.clips, title: "tab.clips".localized)
         }
         .padding(3)
-        .background(Color.white.opacity(0.07))
-        .overlay(
-            Capsule().stroke(Color.white.opacity(0.13), lineWidth: 1)
-        )
+        // La stessa ricetta liquid glass della bottom bar (materiale + gradiente di
+        // profondità + bordo highlight), non una tinta piatta: il prototipo dà allo switcher
+        // il `backdrop blur` proprio perché i poster gli scorrono sotto. Il raggio supera la
+        // mezza altezza, quindi il RoundedRectangle interno del modifier È la capsula.
+        .liquidGlass(cornerRadius: 22, opacity: 0.9)
         .clipShape(Capsule())
     }
 
