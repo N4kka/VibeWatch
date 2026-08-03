@@ -154,27 +154,27 @@ struct DiscoveryView: View {
     private var discoveryMainView: some View {
         VStack(spacing: 0) {
             OfflineBanner()
-            
+
+            // Redesign 2.0: l'header globale è FISSO, fuori dallo scroll — nel prototipo è
+            // sempre visibile su ogni tab, e il contenuto scorre sotto di lui.
+            AppHeaderView(
+                onSearchTap: { showSearch = true },
+                onFilterTap: {
+                    filterSessionId = UUID().uuidString
+                    showFilters = true
+                },
+                onProfileTap: { showProfile = true },
+                avatarURL: appState.currentUser?.avatarURL,
+                isProUser: quotaManager.isProUser,
+                activeFilterCount: viewModel.globalFilters.activeFilterCount
+            )
+
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(spacing: 32) {
-                        AppHeaderView(
-                            onSearchTap: { showSearch = true },
-                            onFilterTap: {
-                                filterSessionId = UUID().uuidString
-                                showFilters = true
-                            },
-                            onProfileTap: { showProfile = true },
-                            avatarURL: appState.currentUser?.avatarURL,
-                            isProUser: quotaManager.isProUser,
-                            activeFilterCount: viewModel.globalFilters.activeFilterCount
-                        )
-                        .padding(.top, 4)
-                        .id("header")
-
                         DiscoverModeSwitcher(mode: $discoverMode)
                             .frame(maxWidth: .infinity)
-                            .padding(.top, -18)
+                            .padding(.top, 8)
 
                         // Le due sezioni "di casa" (prototipo 2.0): cosa esce e cosa stavi
                         // guardando, PRIMA delle raccomandazioni. Compaiono solo se lo specchio

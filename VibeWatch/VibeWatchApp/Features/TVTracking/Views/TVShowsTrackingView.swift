@@ -27,9 +27,23 @@ struct TVShowsTrackingView: View {
     /// solo quando lo sheet compare — il primo fotogramma del Tracking non lo paga.
     @StateObject private var calendarViewModel = DiscoveryTrackingHighlightsViewModel()
     @State private var showReleaseCalendar = false
+    /// Redesign 2.0: l'header globale è persistente su OGNI tab (prototipo). Disegna da stato
+    /// locale (l'avatar arriva dalla cache immagini, differito): il budget §13.6 del primo
+    /// frame non lo paga — la misura del probe resta dentro `content`.
+    @EnvironmentObject var appState: AppState
+    @EnvironmentObject var quotaManager: DailyQuotaManager
+    @StateObject private var searchViewModel = SearchViewModel()
+    @State private var showSearch = false
+    @State private var showProfile = false
 
     var body: some View {
         VStack(spacing: 0) {
+            AppHeaderView(
+                onSearchTap: { showSearch = true },
+                onProfileTap: { showProfile = true },
+                avatarURL: appState.currentUser?.avatarURL,
+                isProUser: quotaManager.isProUser
+            )
             ScreenTitleHeader(
                 title: "tab.tracking".localized,
                 subtitle: "tracking.subtitle".localized,
@@ -41,6 +55,12 @@ struct TVShowsTrackingView: View {
             .background(Color.theme.backgroundDark.ignoresSafeArea())
             .sheet(isPresented: $showReleaseCalendar) {
                 ReleaseCalendarView(viewModel: calendarViewModel)
+            }
+            .fullScreenCover(isPresented: $showSearch) {
+                SearchView(viewModel: searchViewModel)
+            }
+            .sheet(isPresented: $showProfile) {
+                ProfileView()
             }
             .task {
                 let first = !hasMeasured

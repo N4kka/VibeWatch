@@ -8,10 +8,23 @@ import SwiftUI
 /// questa schermata — non si mostra un placeholder finto nel frattempo.
 struct SocialView: View {
     @State private var showUserSearch = false
+    /// Redesign 2.0: l'header globale è persistente su ogni tab (prototipo).
+    @EnvironmentObject var appState: AppState
+    @EnvironmentObject var quotaManager: DailyQuotaManager
+    @StateObject private var searchViewModel = SearchViewModel()
+    @State private var showSearch = false
+    @State private var showProfile = false
 
     var body: some View {
         VStack(spacing: 0) {
             OfflineBanner()
+
+            AppHeaderView(
+                onSearchTap: { showSearch = true },
+                onProfileTap: { showProfile = true },
+                avatarURL: appState.currentUser?.avatarURL,
+                isProUser: quotaManager.isProUser
+            )
 
             ScreenTitleHeader(
                 title: "tab.social".localized,
@@ -28,6 +41,12 @@ struct SocialView: View {
         .background(Color.theme.background.ignoresSafeArea())
         .sheet(isPresented: $showUserSearch) {
             UserSearchView()
+        }
+        .fullScreenCover(isPresented: $showSearch) {
+            SearchView(viewModel: searchViewModel)
+        }
+        .sheet(isPresented: $showProfile) {
+            ProfileView()
         }
     }
 }
