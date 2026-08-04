@@ -81,8 +81,13 @@ async function handle(req: Request): Promise<Response> {
   const seriesIds = resolutions.map((item) => item.tvdbSeriesId)
   const resolutionBySeries = new Map(resolutions.map((item) => [item.tvdbSeriesId, item]))
 
-  // Le mappe serie: mai sopra una riga già buona. Se una scelta contraddice una mappa finale,
-  // l'intero batch viene rifiutato prima di modificare job o staging (§1.5).
+  // Le mappe serie: mai sopra una riga già buona (§1.5). Ma una scelta in disaccordo con una
+  // mappa FINALE non boccia più l'intero batch: al primo collaudo del redesign 2.0 bastava UNA
+  // serie già mappata (dalla pipeline di un import precedente) per rendere un 409 tutte le 91
+  // risoluzioni dell'utente — e il pannello restava lì, senza via d'uscita. La scelta su quella
+  // serie non è comunque applicabile — una mappa `found` è immutabile e condivisa — quindi si
+  // ADOTTA l'identità già mappata: è la stessa che la pipeline userà in ogni caso, e per gli
+  // episodi conta il contesto manuale (il fallback sui numeri vive lì), non il gusto del click.
   const { data: mapRows, error: mapReadError } = await admin
     .from('tvdb_tmdb_map')
     .select('tvdb_id, resolution, tmdb_show_id')
@@ -91,15 +96,22 @@ async function handle(req: Request): Promise<Response> {
   if (mapReadError) {
     return jsonResponse({ error: 'map_read_failed', detail: mapReadError.message }, 500)
   }
+  const mappeAdottate: { tvdb_series_id: number; tmdb_show_id: number }[] = []
   for (const mapRow of mapRows ?? []) {
     const selected = resolutionBySeries.get(Number(mapRow.tvdb_id))
     if (selected && mapRow.resolution === 'found' &&
       Number(mapRow.tmdb_show_id) !== selected.tmdbShowId) {
-      return jsonResponse({
-        error: 'series_already_mapped',
-        tvdb_series_id: selected.tvdbSeriesId,
-        tmdb_show_id: mapRow.tmdb_show_id,
-      }, 409)
+      const adottata: ManualResolution = {
+        tvdbSeriesId: selected.tvdbSeriesId,
+        tmdbShowId: Number(mapRow.tmdb_show_id),
+      }
+      resolutionBySeries.set(adottata.tvdbSeriesId, adottata)
+      resolutions = resolutions.map((item) =>
+        item.tvdbSeriesId === adottata.tvdbSeriesId ? adottata : item)
+      mappeAdottate.push({
+        tvdb_series_id: adottata.tvdbSeriesId,
+        tmdb_show_id: adottata.tmdbShowId,
+      })
     }
   }
 
@@ -284,6 +296,9 @@ async function handle(req: Request): Promise<Response> {
     stati_da_ritentare: counts.statuses,
     favorites_da_ritentare: counts.favorites,
     voti_da_ritentare: counts.ratings,
+    // Le serie la cui identità era già decisa dalla mappa condivisa: la scelta dell'utente
+    // è stata sostituita da quella. Dichiarato, non nascosto.
+    mappe_adottate: mappeAdottate,
     phase: 'resolving',
   }, 200)
 }
