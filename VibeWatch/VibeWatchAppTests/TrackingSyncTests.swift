@@ -244,6 +244,65 @@ final class TrackingSyncTests: XCTestCase {
         XCTAssertEqual(sync.trackingPulls, 0)
     }
 
+    // MARK: - Riparazione del catalogo mancante
+
+    /// Una serie aggiunta alla watchlist prima che il catalogo esistesse resta senza poster né
+    /// prossimo episodio (la card "Da iniziare" col check pieno). La riparazione riscalda il
+    /// catalogo e ri-upserta lo user_status corrente: è ciò che fa ripartire il ricalcolo
+    /// server, che `catalog-resolve` da solo non tocca.
+    @MainActor
+    func testRiparareIlCatalogoRiscaldaEPoiFaRicalcolare() async {
+        let sync = MockSyncEngine()
+        let backend = MockSeenBackend()
+        let actions = TrackingActions(
+            syncEngine: sync, currentUserId: { "u-1" },
+            seenBackend: backend, mirror: FakeWatchEventMirror())
+
+        await actions.repairMissingCatalog(rows: [(101, "active"), (102, "for_later")])
+
+        XCTAssertEqual(backend.warmed, [[101, 102]], "un warm solo, in lotto")
+        let stateOps = sync.queued.filter { $0.table == "tv_show_state" }
+        XCTAssertEqual(stateOps.count, 2)
+        XCTAssertEqual(stateOps.map { $0.payload["user_status"] as? String },
+                       ["active", "for_later"],
+                       "si ri-scrive lo stato che c'era: la riparazione non cambia la scelta dell'utente")
+        XCTAssertEqual(sync.trackingPulls, 1)
+    }
+
+    /// Se il warm fallisce (offline), ricalcolare produrrebbe gli stessi zeri: non si accoda
+    /// niente e si riproverà alla prossima apertura.
+    @MainActor
+    func testSenzaCatalogoLaRiparazioneNonAccodaNiente() async {
+        let sync = MockSyncEngine()
+        let backend = MockSeenBackend()
+        backend.warmError = URLError(.notConnectedToInternet)
+        let actions = TrackingActions(
+            syncEngine: sync, currentUserId: { "u-1" },
+            seenBackend: backend, mirror: FakeWatchEventMirror())
+
+        await actions.repairMissingCatalog(rows: [(101, "active")])
+
+        XCTAssertTrue(sync.queued.isEmpty)
+        XCTAssertEqual(sync.trackingPulls, 0)
+    }
+
+    /// L'origine del difetto: aggiungere alla watchlist senza riscaldare il catalogo faceva
+    /// nascere la riga vuota. Ora il warm precede lo stato.
+    @MainActor
+    func testAggiungereAllaWatchlistRiscaldaPrimaIlCatalogo() async throws {
+        let sync = MockSyncEngine()
+        let backend = MockSeenBackend()
+        let actions = TrackingActions(
+            syncEngine: sync, currentUserId: { "u-1" },
+            seenBackend: backend, mirror: FakeWatchEventMirror())
+
+        try await actions.addToWatchlist(showId: 1396)
+
+        XCTAssertEqual(backend.warmed, [[1396]])
+        XCTAssertEqual(sync.queued.first?.table, "tv_show_state")
+        XCTAssertEqual(sync.queued.first?.payload["user_status"] as? String, "active")
+    }
+
     // MARK: - Righe di prova
 
     private func rigaConProssimoEpisodio() -> TrackingRow {

@@ -15,6 +15,10 @@ final class TVShowsTrackingViewModel: ObservableObject {
     private let repository: any TrackingRepositoryProtocol
     private let refreshTitles: (Set<Int>) async -> Bool
     private let refreshEpisodeNames: ([Int: Set<LocalizedTitleStore.EpisodeRef>]) async -> Bool
+    private let repairCatalog: ([(showId: Int, userStatus: String)]) async -> Void
+    /// Serie per cui la riparazione è già partita in questa sessione: se il catalogo resta
+    /// irrisolvibile non si riprova a ogni ricarica (il giro riparte alla prossima apertura).
+    private var catalogRepairAttempted: Set<Int> = []
     private var cancellables = Set<AnyCancellable>()
 
     convenience init() {
@@ -33,10 +37,14 @@ final class TVShowsTrackingViewModel: ObservableObject {
                  }
              }
              return wrote
+         },
+         repairCatalog: @escaping ([(showId: Int, userStatus: String)]) async -> Void = {
+             await TrackingActions.shared.repairMissingCatalog(rows: $0)
          }) {
         self.repository = repository
         self.refreshTitles = refreshTitles
         self.refreshEpisodeNames = refreshEpisodeNames
+        self.repairCatalog = repairCatalog
 
         // Si ricarica quando il sync ha portato righe nuove, non quando cambia una lista locale.
         // È la differenza con la versione precedente, che si agganciava a `ListManager` e a
@@ -63,6 +71,21 @@ final class TVShowsTrackingViewModel: ObservableObject {
                     rows: sections.sections.reduce(0) { $0 + $1.rows.count })
             }
             lastError = nil
+
+            // Self-heal per le righe nate senza catalogo (pre-fix di addToWatchlist): una serie
+            // NON in pari senza prossimo episodio è una serie di cui il server non conosce gli
+            // episodi — la card "Da iniziare" senza copertina e col check pieno. Si riscalda il
+            // catalogo, si fa ricalcolare lo stato e la schermata si riallinea all'annuncio.
+            let broken = sections.sections
+                .filter { $0.bucket != .upToDate }
+                .flatMap(\.rows)
+                .filter { $0.nextSeason == nil && !catalogRepairAttempted.contains($0.showId) }
+            if !broken.isEmpty {
+                broken.forEach { catalogRepairAttempted.insert($0.showId) }
+                Task { [weak self] in
+                    await self?.repairCatalog(broken.map { ($0.showId, $0.userStatus) })
+                }
+            }
 
             // Il primo fotogramma è già a schermo, coi titoli del catalogo come ripiego: ora,
             // fuori dal budget di §13.6, si riempie la cache dei titoli nella lingua dell'app —
