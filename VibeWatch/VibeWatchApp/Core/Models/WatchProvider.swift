@@ -99,3 +99,28 @@ struct PriceInfo: Codable, Hashable {
 }
 
 // Note: WatchmodeSource and WatchmodeResponse are defined in Core/Network/WatchmodeService.swift
+
+// MARK: - Elenco provider per regione (`/watch/providers/{movie|tv}`)
+
+/// La risposta dell'elenco completo dei provider di una regione. È una forma diversa da
+/// `WatchProvider` (che è "chi trasmette QUESTO titolo"): qui non c'è un titolo, c'è un catalogo.
+struct AvailableProvidersResponse: Codable {
+    let results: [AvailableProvider]
+}
+
+struct AvailableProvider: Codable {
+    let providerId: Int
+    let providerName: String
+    let logoPath: String?
+    /// Priorità globale; `displayPriorities` la specializza per regione.
+    let displayPriority: Int?
+    let displayPriorities: [String: Int]?
+
+    enum CodingKeys: String, CodingKey {
+        case providerId = "provider_id"
+        case providerName = "provider_name"
+        case logoPath = "logo_path"
+        case displayPriority = "display_priority"
+        case displayPriorities = "display_priorities"
+    }
+}

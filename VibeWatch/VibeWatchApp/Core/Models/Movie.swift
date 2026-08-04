@@ -19,6 +19,12 @@ struct Movie: Codable, Identifiable, Hashable, Sendable {
     let tagline: String?
     let productionCountries: [ProductionCountry]?
     let imdbId: String?
+    /// `var` con default: la init membro a membro è chiamata in una dozzina di punti che
+    /// costruiscono un `Movie` sintetico (liste, cache, clip) e non hanno questi campi.
+    var budget: Int? = nil
+    var revenue: Int? = nil
+    var productionCompanies: [ProductionCompany]? = nil
+    var spokenLanguages: [SpokenLanguage]? = nil
 
     /// Il tipo con cui navigare quando questo Movie fa da item di `navigationDestination`
     /// (il modello fa da contenitore anche per le serie, con il solo id valorizzato).
@@ -39,6 +45,9 @@ struct Movie: Codable, Identifiable, Hashable, Sendable {
         case originalLanguage = "original_language"
         case productionCountries = "production_countries"
         case imdbId = "imdb_id"
+        case budget, revenue
+        case productionCompanies = "production_companies"
+        case spokenLanguages = "spoken_languages"
     }
     
     var posterURL: URL? {
@@ -89,6 +98,34 @@ struct ProductionCountry: Codable, Hashable {
         case iso = "iso_3166_1"
         case name
     }
+}
+
+/// Casa di produzione o network (stessa forma in TMDB).
+struct ProductionCompany: Codable, Hashable {
+    let id: Int
+    let name: String
+    let logoPath: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, name
+        case logoPath = "logo_path"
+    }
+}
+
+struct SpokenLanguage: Codable, Hashable {
+    let iso: String?
+    let name: String?
+
+    enum CodingKeys: String, CodingKey {
+        case iso = "iso_639_1"
+        case name
+    }
+}
+
+/// Creatore di una serie (`created_by`).
+struct Creator: Codable, Hashable, Identifiable {
+    let id: Int
+    let name: String
 }
 
 struct Credits: Codable {
@@ -188,6 +225,10 @@ struct TVShow: Codable, Identifiable, Hashable {
     let seasons: [Season]?
     /// Prossimo episodio in uscita (TMDB) — usato per il badge "soon" nel tracking In pari.
     let nextEpisodeToAir: TVEpisodeStub?
+    var networks: [ProductionCompany]? = nil
+    var createdBy: [Creator]? = nil
+    var type: String? = nil
+    var lastEpisodeToAir: TVEpisodeStub? = nil
 
     enum CodingKeys: String, CodingKey {
         case id, name, overview, popularity, status, tagline, genres, seasons
@@ -206,6 +247,9 @@ struct TVShow: Codable, Identifiable, Hashable {
         case numberOfEpisodes = "number_of_episodes"
         case inProduction = "in_production"
         case nextEpisodeToAir = "next_episode_to_air"
+        case networks, type
+        case createdBy = "created_by"
+        case lastEpisodeToAir = "last_episode_to_air"
     }
 
     /// True se TMDB segnala un episodio futuro (badge "soon").

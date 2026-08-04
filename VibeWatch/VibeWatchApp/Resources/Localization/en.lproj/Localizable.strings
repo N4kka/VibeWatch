@@ -655,7 +655,7 @@
 "error.oops" = "Oops!";
 
 // TV Show Detail - Mark All Seen Confirmation
-"tvDetail.markAllSeenTitle" = "Mark all episodes as seen";
+"tvDetail.markAllSeenTitle" = "Mark the whole series as seen";
 "tvDetail.markAllSeenDescription" = "This action will apply to all episodes and seasons of the series available.";
 "tvDetail.markAllSeenQuestion" = "Do you want to continue?";
 "tvDetail.markAllSeenConfirm" = "Yes, mark as seen";
@@ -990,3 +990,143 @@
 "import.toast.mapping.done" = "%d titles resolved · library in order";
 
 "import.report.outOfStructure" = "%d episodes could not be placed in the TMDB structure of their confirmed show.";
+
+
+// MARK: - Toast (Task 10)
+"mediaDetail.toast.markingSeen" = "Marking as seen…";
+"lists.toast.adding" = "Adding…";
+"lists.toast.removing" = "Removing…";
+"lists.toast.addedTo" = "Added to %@";
+"lists.toast.removedFrom" = "Removed from %@";
+"lists.toast.removed" = "Removed from the list";
+"lists.toast.failed" = "Something went wrong";
+"lists.toast.creating" = "Creating list…";
+"lists.toast.created" = "List created";
+"tracking.toast.markingWatched" = "Marking episode…";
+"tracking.toast.markedWatched" = "Episode marked as watched";
+"tracking.toast.snoozing" = "Snoozing…";
+"tracking.toast.snoozed" = "Series snoozed";
+"auth.error.recoveryLinkExpired" = "Email link is invalid or has expired. Request a new password reset link.";
+
+
+// MARK: - Regole password (Task 2)
+"auth.pwRule.length" = "8+ characters";
+"auth.pwRule.uppercase" = "1 uppercase";
+"auth.pwRule.lowercase" = "1 lowercase";
+"auth.pwRule.number" = "1 number";
+"auth.pwRule.symbol" = "1 symbol";
+"auth.accountCreated" = "Account created";
+
+
+// MARK: - Modali (Task 9+14)
+"tvDetail.markAllSeenSubtitle" = "Applies to every episode of every season already released.";
+"tvDetail.markAllSeenCTA" = "Mark %d episodes as seen";
+"tvDetail.markAllSeen.episodes" = "Episodes marked as seen";
+"tvDetail.markAllSeen.diary" = "Entries added to the diary";
+"tvDetail.markAllSeenReversible" = "Reversible: you can restore single episodes from the diary.";
+"tvDetail.seasonsCount" = "%d seasons";
+"tvDetail.episodesCount" = "%d episodes";
+"auth.changePasswordSubtitle" = "For your security, we'll sign you out of your other devices.";
+"auth.newPasswordPlaceholder" = "New password";
+"auth.forgotCurrentPassword" = "Don't remember your current one?";
+"auth.show" = "Show";
+"auth.hide" = "Hide";
+"profile.feedback.subtitle" = "We read everything. We usually reply within two days.";
+"profile.feedback.keepUpdatedEmail" = "We'll write to %@";
+"profile.feedback.placeholder.bug" = "What went wrong? What were you doing just before…";
+"profile.feedback.placeholder.suggest" = "What's missing? Describe how you'd use it…";
+"profile.feedback.placeholder.other" = "Write whatever you want to tell us…";
+"profile.feedback.category.crash" = "Crash";
+"profile.feedback.category.import" = "TV Time import";
+"profile.feedback.category.notifications" = "Notifications";
+"profile.feedback.category.sync" = "Sync";
+"profile.feedback.category.ui" = "Layout";
+"profile.feedback.category.other" = "Other";
+
+
+// MARK: - Update forzato (Task 3)
+"update.required" = "UPDATE REQUIRED";
+"update.whatsChanged" = "WHAT'S CHANGED";
+"update.fullReleaseNotes" = "Full release notes";
+"update.cta" = "Update from the App Store";
+"update.versionFootnote" = "Version %@";
+"update.dataSafe" = "Your library and your data stay safe.";
+
+
+// MARK: - Preferiti (Task 7)
+"favorites.subtitle" = "The 4 titles showcased on your profile";
+"favorites.inYourFavorites" = "In your favorites";
+"favorites.showcased" = "Showcased on your profile";
+"favorites.addedToast" = "Added to favorites";
+"favorites.removedToast" = "Removed from favorites";
+
+
+// MARK: - Informazioni estese (Task 8)
+"movieDetail.releaseDate" = "Release date";
+"movieDetail.status" = "Status";
+"movieDetail.productionCompanies" = "Production";
+"movieDetail.budget" = "Budget";
+"movieDetail.revenue" = "Box office";
+"movieDetail.originalLanguage" = "Original language";
+"movieDetail.tagline" = "Tagline";
+"tvDetail.firstAirDate" = "First aired";
+"tvDetail.lastAirDate" = "Last aired";
+"tvDetail.seasonsEpisodes" = "Seasons";
+"tvDetail.network" = "Network";
+"tvDetail.createdBy" = "Created by";
+"mediaStatus.released" = "Released";
+"mediaStatus.inProduction" = "In production";
+"mediaStatus.postProduction" = "Post-production";
+"mediaStatus.planned" = "Planned";
+"mediaStatus.rumored" = "Rumored";
+"mediaStatus.canceled" = "Canceled";
+"mediaStatus.returningSeries" = "Returning series";
+"mediaStatus.ended" = "Ended";
+"mediaStatus.pilot" = "Pilot";
+
+
+// MARK: - Piattaforme (Task 12+17)
+"platforms.active" = "active platforms";
+"platforms.activeCount" = "%d active";
+"platforms.clear" = "Clear";
+"platforms.coverage" = "Your watchlist coverage";
+"platforms.libraryCount" = "%d titles in your library";
+"platforms.recommended" = "RECOMMENDED";
+"platforms.manage" = "Manage";
+"platforms.empty" = "No platforms available for your country yet.";
+
+
+// MARK: - Preferiti nel profilo (Task 15)
+"favorites.sectionTitle" = "Your favorites";
+"favorites.sectionCount" = "%1$d of %2$d";
+
+
+// MARK: - Ricerca (Task 16)
+"search.mostRelevant" = "Most relevant";
+"common.movie" = "Movie";
+"common.tvShow" = "TV Show";
+
+
+// MARK: - Toast con fase di progresso (bug 7)
+"mediaDetail.toast.addingToWatchlist" = "Adding to your watchlist…";
+"mediaDetail.toast.removingFromWatchlist" = "Removing from your watchlist…";
+"mediaDetail.toast.liking" = "Adding to your likes…";
+"mediaDetail.toast.unliking" = "Removing from your likes…";
+"mediaDetail.toast.markingUnseen" = "Removing from seen…";
+"mediaDetail.toast.disliking" = "Adding to your dislikes…";
+"mediaDetail.toast.undisliking" = "Removing from your dislikes…";
+"mediaDetail.toast.disliked" = "Added to your dislikes";
+"mediaDetail.toast.dislikeRemoved" = "Removed from your dislikes";
+"favorites.adding" = "Adding to favourites…";
+"favorites.removing" = "Removing from favourites…";
+
+
+// MARK: - Ricerca ridisegnata (bug 1)
+"search.scope.all" = "All";
+"search.scope.movies" = "Movies";
+"search.scope.series" = "Series";
+"search.clear" = "Clear";
+"search.trending.today" = "Today";
+"search.trending.subtitle" = "The most searched titles in %@ over the last 24 hours.";
+"search.results.subtitle" = "Matches for “%@”, then related titles.";
+"search.resultsCount" = "%d titles";

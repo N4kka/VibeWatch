@@ -656,7 +656,7 @@
 "error.oops" = "Hups!";
 
 // TV Show Detail - Mark All Seen Confirmation
-"tvDetail.markAllSeenTitle" = "Mark all episodes as seen";
+"tvDetail.markAllSeenTitle" = "Merkitse koko sarja nähdyksi";
 "tvDetail.markAllSeenDescription" = "This action will apply to all episodes and seasons of the series available.";
 "tvDetail.markAllSeenQuestion" = "Do you want to continue?";
 "tvDetail.markAllSeenConfirm" = "Yes, mark as seen";
@@ -907,12 +907,12 @@
 "mediaDetail.action.watchlist" = "Watchlist";
 "mediaDetail.action.like" = "Like";
 "mediaDetail.action.list" = "To list";
-"mediaDetail.toast.watchlistAdded" = "Added to your watchlist";
-"mediaDetail.toast.watchlistRemoved" = "Removed from your watchlist";
-"mediaDetail.toast.markedSeen" = "Marked as seen";
-"mediaDetail.toast.markedUnseen" = "Removed from seen";
-"mediaDetail.toast.liked" = "Added to your likes";
-"mediaDetail.toast.likeRemoved" = "Removed from your likes";
+"mediaDetail.toast.watchlistAdded" = "Lisätty katselulistallesi";
+"mediaDetail.toast.watchlistRemoved" = "Poistettu katselulistaltasi";
+"mediaDetail.toast.markedSeen" = "Merkitty nähdyksi";
+"mediaDetail.toast.markedUnseen" = "Poistettu nähdyistä";
+"mediaDetail.toast.liked" = "Lisätty tykkäyksiisi";
+"mediaDetail.toast.likeRemoved" = "Poistettu tykkäyksistäsi";
 "mediaDetail.why.cardTitle" = "Why is it right for you?";
 "mediaDetail.why.title" = "Why for you";
 "mediaDetail.why.affinity" = "Affinity with your tastes";
@@ -989,3 +989,143 @@
 "import.toast.mapping.done" = "%d nimikettä ratkaistu · kirjasto kunnossa";
 
 "import.report.outOfStructure" = "%d jaksoa ei voitu sijoittaa sarjan TMDB-rakenteeseen.";
+
+
+// MARK: - Toast (Task 10)
+"mediaDetail.toast.markingSeen" = "Merkitään nähdyksi…";
+"lists.toast.adding" = "Lisätään…";
+"lists.toast.removing" = "Poistetaan…";
+"lists.toast.addedTo" = "Lisätty listaan %@";
+"lists.toast.removedFrom" = "Poistettu listasta %@";
+"lists.toast.removed" = "Poistettu listalta";
+"lists.toast.failed" = "Jokin meni pieleen";
+"lists.toast.creating" = "Luodaan listaa…";
+"lists.toast.created" = "Lista luotu";
+"tracking.toast.markingWatched" = "Merkitään jaksoa…";
+"tracking.toast.markedWatched" = "Jakso merkitty nähdyksi";
+"tracking.toast.snoozing" = "Siirretään myöhemmäksi…";
+"tracking.toast.snoozed" = "Sarja siirretty myöhemmäksi";
+"auth.error.recoveryLinkExpired" = "Linkki on virheellinen tai vanhentunut. Pyydä uusi salasanan palautuslinkki.";
+
+
+// MARK: - Regole password (Task 2)
+"auth.pwRule.length" = "8+ merkkiä";
+"auth.pwRule.uppercase" = "1 iso kirjain";
+"auth.pwRule.lowercase" = "1 pieni kirjain";
+"auth.pwRule.number" = "1 numero";
+"auth.pwRule.symbol" = "1 erikoismerkki";
+"auth.accountCreated" = "Tili luotu";
+
+
+// MARK: - Modali (Task 9+14)
+"tvDetail.markAllSeenSubtitle" = "Koskee kaikkia jaksoja jo julkaistuilta kausilta.";
+"tvDetail.markAllSeenCTA" = "Merkitse %d jaksoa nähdyiksi";
+"tvDetail.markAllSeen.episodes" = "Nähdyiksi merkityt jaksot";
+"tvDetail.markAllSeen.diary" = "Päiväkirjaan lisätyt merkinnät";
+"tvDetail.markAllSeenReversible" = "Peruttavissa: voit palauttaa yksittäisiä jaksoja päiväkirjasta.";
+"tvDetail.seasonsCount" = "%d kautta";
+"tvDetail.episodesCount" = "%d jaksoa";
+"auth.changePasswordSubtitle" = "Turvallisuuden vuoksi kirjaudut ulos muilta laitteiltasi.";
+"auth.newPasswordPlaceholder" = "Uusi salasana";
+"auth.forgotCurrentPassword" = "Etkö muista nykyistä?";
+"auth.show" = "Näytä";
+"auth.hide" = "Piilota";
+"profile.feedback.subtitle" = "Luemme kaiken. Vastaamme yleensä kahden päivän kuluessa.";
+"profile.feedback.keepUpdatedEmail" = "Kirjoitamme osoitteeseen %@";
+"profile.feedback.placeholder.bug" = "Mikä meni pieleen? Mitä teit juuri ennen…";
+"profile.feedback.placeholder.suggest" = "Mitä puuttuu? Kerro, miten käyttäisit sitä…";
+"profile.feedback.placeholder.other" = "Kirjoita mitä haluat kertoa…";
+"profile.feedback.category.crash" = "Kaatuminen";
+"profile.feedback.category.import" = "TV Time -tuonti";
+"profile.feedback.category.notifications" = "Ilmoitukset";
+"profile.feedback.category.sync" = "Synkronointi";
+"profile.feedback.category.ui" = "Ulkoasu";
+"profile.feedback.category.other" = "Muu";
+
+
+// MARK: - Update forzato (Task 3)
+"update.required" = "PÄIVITYS VAADITAAN";
+"update.whatsChanged" = "MIKÄ MUUTTUU";
+"update.fullReleaseNotes" = "Kaikki julkaisutiedot";
+"update.cta" = "Päivitä App Storesta";
+"update.versionFootnote" = "Versio %@";
+"update.dataSafe" = "Kirjastosi ja tietosi säilyvät turvassa.";
+
+
+// MARK: - Preferiti (Task 7)
+"favorites.subtitle" = "Neljä profiilissasi esillä olevaa nimikettä";
+"favorites.inYourFavorites" = "Suosikeissasi";
+"favorites.showcased" = "Näkyy profiilissasi";
+"favorites.addedToast" = "Lisätty suosikkeihin";
+"favorites.removedToast" = "Poistettu suosikeista";
+
+
+// MARK: - Informazioni estese (Task 8)
+"movieDetail.releaseDate" = "Julkaisupäivä";
+"movieDetail.status" = "Tila";
+"movieDetail.productionCompanies" = "Tuotanto";
+"movieDetail.budget" = "Budjetti";
+"movieDetail.revenue" = "Lipputulot";
+"movieDetail.originalLanguage" = "Alkuperäiskieli";
+"movieDetail.tagline" = "Iskulause";
+"tvDetail.firstAirDate" = "Ensiesitys";
+"tvDetail.lastAirDate" = "Viimeisin esitys";
+"tvDetail.seasonsEpisodes" = "Kaudet";
+"tvDetail.network" = "Kanava";
+"tvDetail.createdBy" = "Käsikirjoitus";
+"mediaStatus.released" = "Julkaistu";
+"mediaStatus.inProduction" = "Tuotannossa";
+"mediaStatus.postProduction" = "Jälkituotannossa";
+"mediaStatus.planned" = "Suunnitteilla";
+"mediaStatus.rumored" = "Huhuttu";
+"mediaStatus.canceled" = "Peruttu";
+"mediaStatus.returningSeries" = "Jatkuu";
+"mediaStatus.ended" = "Päättynyt";
+"mediaStatus.pilot" = "Pilottijakso";
+
+
+// MARK: - Piattaforme (Task 12+17)
+"platforms.active" = "aktiivista palvelua";
+"platforms.activeCount" = "%d aktiivista";
+"platforms.clear" = "Tyhjennä";
+"platforms.coverage" = "Katselulistasi kattavuus";
+"platforms.libraryCount" = "%d nimikettä kirjastossasi";
+"platforms.recommended" = "SUOSITELTU";
+"platforms.manage" = "Hallitse";
+"platforms.empty" = "Maallesi ei ole vielä palveluita.";
+
+
+// MARK: - Preferiti nel profilo (Task 15)
+"favorites.sectionTitle" = "Suosikkisi";
+"favorites.sectionCount" = "%1$d/%2$d";
+
+
+// MARK: - Ricerca (Task 16)
+"search.mostRelevant" = "Osuvimmat";
+"common.movie" = "Elokuva";
+"common.tvShow" = "Sarja";
+
+
+// MARK: - Toast con fase di progresso (bug 7)
+"mediaDetail.toast.addingToWatchlist" = "Lisätään katselulistallesi…";
+"mediaDetail.toast.removingFromWatchlist" = "Poistetaan katselulistaltasi…";
+"mediaDetail.toast.liking" = "Lisätään tykkäyksiisi…";
+"mediaDetail.toast.unliking" = "Poistetaan tykkäyksistäsi…";
+"mediaDetail.toast.markingUnseen" = "Poistetaan nähdyistä…";
+"mediaDetail.toast.disliking" = "Lisätään ei-tykkäyksiisi…";
+"mediaDetail.toast.undisliking" = "Poistetaan ei-tykkäyksistäsi…";
+"mediaDetail.toast.disliked" = "Lisätty ei-tykkäyksiisi";
+"mediaDetail.toast.dislikeRemoved" = "Poistettu ei-tykkäyksistäsi";
+"favorites.adding" = "Lisätään suosikkeihin…";
+"favorites.removing" = "Poistetaan suosikeista…";
+
+
+// MARK: - Ricerca ridisegnata (bug 1)
+"search.scope.all" = "Kaikki";
+"search.scope.movies" = "Elokuvat";
+"search.scope.series" = "Sarjat";
+"search.clear" = "Tyhjennä";
+"search.trending.today" = "Tänään";
+"search.trending.subtitle" = "Haetuimmat maassa %@ viimeisen 24 tunnin aikana.";
+"search.results.subtitle" = "Osumat haulle ”%@”, sitten aiheeseen liittyvät.";
+"search.resultsCount" = "%d nimikettä";

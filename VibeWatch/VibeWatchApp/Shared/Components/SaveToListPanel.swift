@@ -46,18 +46,34 @@ struct SaveToListPanel: View {
                             isLocked: list.type == .custom && !appState.isAuthenticated
                         ) {
                             Task {
+                                let isRemoval = listManager.isInList(
+                                    listId: list.id,
+                                    mediaId: movie.id,
+                                    mediaType: mediaType
+                                )
+                                let toastId = ToastCenter.shared.begin(
+                                    message: (isRemoval ? "lists.toast.removing" : "lists.toast.adding").localized
+                                )
                                 do {
-                                    if listManager.isInList(listId: list.id, mediaId: movie.id, mediaType: mediaType) {
+                                    if isRemoval {
                                         if let existing = list.items.first(where: { $0.mediaId == movie.id }) {
                                             try await listManager.removeFromList(listId: list.id, itemId: existing.id)
                                         }
                                     } else {
                                         try await listManager.addToList(listId: list.id, movie: movie, mediaType: mediaType)
                                     }
+                                    ToastCenter.shared.complete(
+                                        toastId,
+                                        message: String(
+                                            format: (isRemoval ? "lists.toast.removedFrom" : "lists.toast.addedTo").localized,
+                                            list.name
+                                        )
+                                    )
                                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                                         dismiss()
                                     }
                                 } catch {
+                                    ToastCenter.shared.fail(toastId, message: "lists.toast.failed".localized)
                                     // Check if it's an authentication error
                                     if let listError = error as? ListError, listError == .authenticationRequired {
                                         showAuthGate = true
@@ -121,11 +137,15 @@ struct SaveToListPanel: View {
             }
             Button("common.save".localized) {
                 if !newListName.isEmpty {
+                    let name = newListName
                     Task {
+                        let toastId = ToastCenter.shared.begin(message: "lists.toast.creating".localized)
                         do {
-                            try await listManager.createList(name: newListName)
+                            try await listManager.createList(name: name)
                             newListName = ""
+                            ToastCenter.shared.complete(toastId, message: "lists.toast.created".localized)
                         } catch {
+                            ToastCenter.shared.fail(toastId, message: "lists.toast.failed".localized)
                             Logger.warning("[SaveToListPanel] Failed to create list: \(error)")
                         }
                     }

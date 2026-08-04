@@ -19,7 +19,6 @@ struct MovieDetailView: View {
     @State private var selectedActor: Cast?
     @State private var showWhyForMeSheet = false
     @State private var showAIPaywall = false
-    @State private var toastMessageKey: String?
     
     init(movieId: Int) {
         _viewModel = StateObject(wrappedValue: MovieDetailViewModel(movieId: movieId))
@@ -34,9 +33,7 @@ struct MovieDetailView: View {
             ScrollView {
                 VStack(spacing: 0) {
                     if viewModel.isLoading {
-                        ProgressView()
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .padding(.top, 100)
+                        MediaDetailSkeletonView()
                     } else if let error = viewModel.error {
                         errorView(error)
                     } else if let movie = viewModel.movie {
@@ -53,6 +50,8 @@ struct MovieDetailView: View {
                             onShare: { Task { await handleShare(movie: movie) } }
                         )
 
+                        // Il margine sta sui singoli blocchi, non sul contenitore: le sezioni con
+                        // carosello portano già il proprio, e sommarli le rientrava del doppio.
                         VStack(alignment: .leading, spacing: 20) {
                             MediaProviderDisclosure(
                                 providerState: viewModel.watchProviderState,
@@ -60,6 +59,7 @@ struct MovieDetailView: View {
                                 mediaType: .movie,
                                 movie: movie
                             )
+                            .padding(.horizontal, 20)
 
                             MediaDetailActionStrip(
                                 mediaId: movie.id,
@@ -69,18 +69,22 @@ struct MovieDetailView: View {
                                 onLiked: { Task { await handleLikedTap(movie: movie) } },
                                 onList: { showSavePanel = true }
                             )
+                            .padding(.horizontal, 20)
 
                             if !movie.overview.isEmpty {
                                 Text(movie.overview)
-                                    .font(.system(size: 15.5))
+                                    .font(.system(size: 14))
                                     .foregroundColor(.theme.textSecondary)
-                                    .lineSpacing(5)
+                                    .lineSpacing(4)
                                     .fixedSize(horizontal: false, vertical: true)
+                                    .padding(.horizontal, 20)
                             }
 
-                            StarRatingSection(mediaType: "movie", tmdbId: movie.id)
+                            MediaRatingFavoriteCard(mediaType: "movie", tmdbId: movie.id)
+                                .padding(.horizontal, 20)
 
                             MediaWhyForMeCard { handleWhyForMeTap() }
+                                .padding(.horizontal, 20)
 
                             if let trailer = viewModel.trailer {
                                 TrailerSection(trailer: trailer)
@@ -101,7 +105,6 @@ struct MovieDetailView: View {
                                 SimilarMoviesSection(movies: viewModel.similarMovies)
                             }
                         }
-                        .padding(.horizontal, 28)
                         .padding(.bottom, shouldShowAd ? 90 : 40)
                     }
                 }
@@ -112,11 +115,6 @@ struct MovieDetailView: View {
                     .frame(height: 50)
             }
 
-            if let toastMessageKey {
-                MediaDetailToast(message: toastMessageKey.localized)
-                    .padding(.bottom, shouldShowAd ? 62 : 20)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
         }
         .background(Color.theme.background.ignoresSafeArea())
         .navigationBarHidden(true)
@@ -232,7 +230,7 @@ struct MovieDetailView: View {
             mediaId: movie.id,
             mediaType: .movie
         )
-        do {
+        await runWithFeedback(.watchlist, willBeActive: !wasActive, context: "Toggle Watchlist") {
             if wasActive,
                let item = listManager.watchlist.items.first(where: {
                    $0.mediaId == movie.id && $0.mediaType == .movie
@@ -241,15 +239,12 @@ struct MovieDetailView: View {
             } else if !wasActive {
                 try await listManager.addToList(listId: listManager.watchlist.id, movie: movie, mediaType: .movie)
             }
-            showFeedback(.watchlist, isActive: !wasActive)
-        } catch {
-            ErrorHandler.shared.handle(error, context: "Toggle Watchlist")
         }
     }
     
     private func handleSeenTap(movie: Movie) async {
         let wasActive = listManager.isInList(listId: listManager.seenList.id, mediaId: movie.id, mediaType: .movie)
-        do {
+        await runWithFeedback(.seen, willBeActive: !wasActive, context: "Toggle Seen") {
             if wasActive {
                 if let item = listManager.seenList.items.first(where: { $0.mediaId == movie.id && $0.mediaType == .movie }) {
                     try await listManager.removeFromList(listId: listManager.seenList.id, itemId: item.id)
@@ -257,9 +252,6 @@ struct MovieDetailView: View {
             } else {
                 try await listManager.addToList(listId: listManager.seenList.id, movie: movie, mediaType: .movie)
             }
-            showFeedback(.seen, isActive: !wasActive)
-        } catch {
-            ErrorHandler.shared.handle(error, context: "Toggle Seen")
         }
     }
 
@@ -281,10 +273,10 @@ struct MovieDetailView: View {
     }
     
     private func handleLikedTap(movie: Movie) async {
-        do {
-            let isCurrentlyLiked = listManager.isInList(listId: listManager.likedList.id, mediaId: movie.id, mediaType: .movie)
-            let isCurrentlyDisliked = listManager.isInList(listId: listManager.dislikedList.id, mediaId: movie.id, mediaType: .movie)
-            
+        let isCurrentlyLiked = listManager.isInList(listId: listManager.likedList.id, mediaId: movie.id, mediaType: .movie)
+        let isCurrentlyDisliked = listManager.isInList(listId: listManager.dislikedList.id, mediaId: movie.id, mediaType: .movie)
+
+        await runWithFeedback(.liked, willBeActive: !isCurrentlyLiked, context: "Toggle Liked") {
             if isCurrentlyLiked {
                 if let item = listManager.likedList.items.first(where: { $0.mediaId == movie.id && $0.mediaType == .movie }) {
                     try await listManager.removeFromList(listId: listManager.likedList.id, itemId: item.id)
@@ -302,29 +294,37 @@ struct MovieDetailView: View {
                     oldReaction: isCurrentlyDisliked ? .dislike : nil, newReaction: .like
                 )
             }
-            showFeedback(.liked, isActive: !isCurrentlyLiked)
-        } catch {
-            ErrorHandler.shared.handle(error, context: "Toggle Liked")
         }
     }
 
-    private func showFeedback(_ action: MediaDetailFeedback.Action, isActive: Bool) {
-        let key = MediaDetailFeedback.messageKey(for: action, isActive: isActive)
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.84)) { toastMessageKey = key }
-        Task {
-            try? await Task.sleep(for: .seconds(2.2))
-            await MainActor.run {
-                guard toastMessageKey == key else { return }
-                withAnimation { toastMessageKey = nil }
-            }
+    /// Avvolge la mutazione nel ciclo del toast: fase in corso mentre l'operazione gira, poi
+    /// l'esito. Prima partiva un toast già terminale e la barra di avanzamento non si vedeva mai.
+    private func runWithFeedback(
+        _ action: MediaDetailFeedback.Action,
+        willBeActive: Bool,
+        context: String,
+        _ operation: () async throws -> Void
+    ) async {
+        let toastId = ToastCenter.shared.begin(
+            message: MediaDetailFeedback.progressKey(for: action, isActive: willBeActive).localized
+        )
+        do {
+            try await operation()
+            ToastCenter.shared.complete(
+                toastId,
+                message: MediaDetailFeedback.messageKey(for: action, isActive: willBeActive).localized
+            )
+        } catch {
+            ToastCenter.shared.fail(toastId, message: "common.pleaseTryAgain".localized)
+            ErrorHandler.shared.handle(error, context: context)
         }
     }
     
     private func handleDislikedTap(movie: Movie) async {
-        do {
-            let isCurrentlyLiked = listManager.isInList(listId: listManager.likedList.id, mediaId: movie.id, mediaType: .movie)
-            let isCurrentlyDisliked = listManager.isInList(listId: listManager.dislikedList.id, mediaId: movie.id, mediaType: .movie)
-            
+        let isCurrentlyLiked = listManager.isInList(listId: listManager.likedList.id, mediaId: movie.id, mediaType: .movie)
+        let isCurrentlyDisliked = listManager.isInList(listId: listManager.dislikedList.id, mediaId: movie.id, mediaType: .movie)
+
+        await runWithFeedback(.disliked, willBeActive: !isCurrentlyDisliked, context: "Toggle Disliked") {
             if isCurrentlyDisliked {
                 if let item = listManager.dislikedList.items.first(where: { $0.mediaId == movie.id && $0.mediaType == .movie }) {
                     try await listManager.removeFromList(listId: listManager.dislikedList.id, itemId: item.id)
@@ -342,8 +342,6 @@ struct MovieDetailView: View {
                     oldReaction: isCurrentlyLiked ? .like : nil, newReaction: .dislike
                 )
             }
-        } catch {
-            ErrorHandler.shared.handle(error, context: "Toggle Disliked")
         }
     }
     
@@ -622,255 +620,6 @@ struct TrailerSection: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 20)
-    }
-}
-
-struct WatchNowSection: View {
-    let providerState: WatchProviderLoadState
-    let mediaType: MediaType
-    let title: String
-    let year: String?
-    let imdbId: String?
-    let movie: Movie?
-    var onReportIssue: () -> Void = {}
-    
-    @StateObject private var listManager = ListManager.shared
-    @State private var showNotifyMeAlert = false
-
-    private var providers: CountryProviders? {
-        providerState.providers
-    }
-
-    private var hasAnyProvider: Bool {
-        guard let providers else { return false }
-        return WatchProviderDisplayFiltering.hasAnyVisibleProvider(in: providers)
-    }
-
-    private var justWatchURL: URL? {
-        JustWatchLinkBuilder.url(
-            providerLink: providers?.link,
-            countryId: LocalizationManager.shared.currentCountry.id,
-            title: title
-        )
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("movieDetail.watchNow".localized)
-                .font(.system(size: 20, weight: .bold))
-                .foregroundColor(.theme.textPrimary)
-            
-            if providerState.isLoading {
-                HStack {
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: .theme.accentOrange))
-                        .frame(maxWidth: .infinity)
-                }
-                .frame(height: 72)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.white.opacity(0.05))
-                )
-            } else if hasAnyProvider {
-                if let providers {
-                    ForEach(WatchProviderTierGroupsBuilder.groups(in: providers), id: \.titleKey) { group in
-                        ProviderGroup(
-                            title: group.titleKey.localized,
-                            providers: group.providers,
-                            justWatchLink: group.justWatchLink,
-                            mediaTitle: title
-                        )
-                    }
-                }
-
-                if let url = justWatchURL {
-                    CinemaJustWatchGroup(title: "platforms.cinema".localized, url: url)
-                }
-            } else {
-                HStack(spacing: 12) {
-                    ZStack {
-                        Circle()
-                            .fill(Color.theme.accentOrange.opacity(0.15))
-                            .frame(width: 40, height: 40)
-                        
-                        Image(systemName: "bell.badge.fill")
-                            .font(.system(size: 18))
-                            .foregroundColor(.theme.accentOrange)
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(MovieUnavailableNotificationCopyBuilder.unavailableMessage(title: title))
-                            .font(.system(size: 14))
-                            .foregroundColor(.theme.textSecondary)
-                        
-                        Text(MovieUnavailableNotificationCopyBuilder.notificationQuestion)
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundColor(.white)
-                    }
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    
-                    Button {
-                        handleNotifyMe()
-                    } label: {
-                        Text(MovieUnavailableNotificationCopyBuilder.notifyButtonTitle)
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(Color.theme.accentOrange)
-                            .clipShape(Capsule())
-                    }
-                }
-                .padding(16)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.white.opacity(0.05))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.white.opacity(0.08), lineWidth: 1)
-                        )
-                )
-            }
-            
-            Button {
-                onReportIssue()
-            } label: {
-                HStack(spacing: 8) {
-                    Text("misc.somethingWrong".localized)
-                        .font(.system(size: 14))
-                        .foregroundColor(.theme.textSecondary)
-                    Text("misc.letUsKnow".localized)
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.theme.accentOrange)
-                }
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 20)
-        .alert(MovieUnavailableNotificationCopyBuilder.alertTitle, isPresented: $showNotifyMeAlert) {
-            Button("OK", role: .cancel) { }
-        } message: {
-            Text(MovieUnavailableNotificationCopyBuilder.alertMessage(title: title))
-        }
-    }
-    
-    private func handleNotifyMe() {
-        showNotifyMeAlert = true
-        if let movie = movie {
-            Task {
-                if !listManager.isInList(listId: listManager.watchlist.id, mediaId: movie.id, mediaType: mediaType) {
-                    try? await listManager.addToList(listId: listManager.watchlist.id, movie: movie, mediaType: mediaType)
-                }
-                try? await LiveNotificationRepository.shared.toggleAlert(mediaId: movie.id, mediaType: mediaType, enabled: true)
-            }
-        }
-    }
-}
-
-struct CinemaJustWatchGroup: View {
-    let title: String
-    let url: URL
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(title)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(.theme.textPrimary)
-
-            Button {
-                UIApplication.shared.open(url, options: [:])
-            } label: {
-                VStack(spacing: 6) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.white)
-                        Image(systemName: "ticket.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(.black)
-                    }
-                    .frame(width: 60, height: 60)
-
-                    Text("platforms.justwatch".localized)
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(.theme.textSecondary)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.center)
-                        .frame(width: 80)
-                }
-                .frame(width: 80)
-            }
-        }
-    }
-}
-
-struct ProviderGroup: View {
-    let title: String
-    let providers: [Provider]
-    let justWatchLink: String?
-    let mediaTitle: String
-
-    private var visibleProviders: [Provider] {
-        WatchProviderDisplayFiltering.visibleProviders(providers, justWatchLink: justWatchLink)
-    }
-    
-    var body: some View {
-        Group {
-            if !visibleProviders.isEmpty {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text(title)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.theme.textPrimary)
-                    
-                    LazyVGrid(columns: [
-                        GridItem(.adaptive(minimum: 80), spacing: 16)
-                    ], spacing: 16) {
-                        ForEach(visibleProviders) { (provider: Provider) in
-                            Button {
-                                PlatformDeepLinkHelper.openPlatform(provider: provider, justWatchLink: justWatchLink, title: mediaTitle)
-                            } label: {
-                                VStack(spacing: 6) {
-                                    CachedAsyncImage(url: provider.logoURL, maxPixelSize: 180)
-                                        .frame(width: 60, height: 60)
-                                        .aspectRatio(contentMode: .fit)
-                                        .background(Color.white)
-                                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                                    
-                                    VStack(spacing: 2) {
-                                        if let price = provider.price?.displayPrice {
-                                            HStack(spacing: 4) {
-                                                Text(price)
-                                                    .font(.system(size: 12, weight: .semibold))
-                                                    .foregroundColor(.theme.accentOrange)
-                                                
-                                                if let quality = provider.formattedQuality {
-                                                    Text("•")
-                                                        .font(.system(size: 10))
-                                                        .foregroundColor(.theme.textSecondary)
-                                                    
-                                                    Text(quality)
-                                                        .font(.system(size: 12, weight: .medium))
-                                                        .foregroundColor(.theme.textSecondary)
-                                                }
-                                            }
-                                        } else if let quality = provider.formattedQuality {
-                                            Text(quality)
-                                                .font(.system(size: 10, weight: .medium))
-                                                .foregroundColor(.theme.textSecondary)
-                                        } else {
-                                            Text(" ")
-                                                .font(.system(size: 10))
-                                        }
-                                    }
-                                    .frame(height: 16)
-                                }
-                                .frame(width: 80)
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 }
 
@@ -1159,7 +908,7 @@ struct MovieCreditsSection: View {
                 
                 VStack(alignment: .leading, spacing: 12) {
                     ForEach(MovieCreditsInfoBuilder.rows(movie: movie, director: director), id: \.titleKey) { row in
-                        InfoRow(title: row.titleKey.localized, value: row.value)
+                        InfoRow(title: row.titleKey.localized, value: row.value, isItalic: row.isItalic)
                     }
                 }
             }
@@ -1173,7 +922,8 @@ struct MovieCreditsSection: View {
                         .padding(.horizontal, 20)
                     
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 12) {
+                        // Pigro: il cast completo di una serie lunga sono centinaia di schede.
+                        LazyHStack(spacing: 12) {
                             ForEach(cast) { actor in
                                 CastMemberCard(actor: actor) {
                                     onActorTap(actor)
@@ -1191,6 +941,7 @@ struct MovieCreditsSection: View {
 struct InfoRow: View {
     let title: String
     let value: String
+    var isItalic: Bool = false
     
     var body: some View {
         HStack(alignment: .top) {
@@ -1201,7 +952,9 @@ struct InfoRow: View {
             
             Text(value)
                 .font(.system(size: 14))
-                .foregroundColor(.theme.textPrimary)
+                .italic(isItalic)
+                .foregroundColor(isItalic ? .theme.textSecondary : .theme.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
             
             Spacer()
         }

@@ -1961,6 +1961,8 @@ final class MovieCreditsInfoBuilderTests: XCTestCase {
         )
     }
 
+    /// L'ordine è quello della sezione "Informazioni": la data di uscita e la lingua originale si
+    /// sono aggiunte alle cinque righe storiche, che restano dove erano e con gli stessi valori.
     func test_rowsPreserveCurrentOrderAndValues() {
         let director = Crew(id: 10, name: "Denis Villeneuve", job: "Director", department: "Directing", profilePath: nil)
 
@@ -1970,25 +1972,34 @@ final class MovieCreditsInfoBuilderTests: XCTestCase {
             "movieDetail.rating",
             "movieDetail.genres",
             "movieDetail.runtime",
+            "movieDetail.releaseDate",
             "movieDetail.country",
-            "movieDetail.director"
+            "movieDetail.director",
+            "movieDetail.originalLanguage"
         ])
-        XCTAssertEqual(rows.map(\.value), [
-            "84%",
-            "Drama, Sci-Fi",
-            "2h 35m",
-            "United States",
-            "Denis Villeneuve"
-        ])
+        XCTAssertEqual(rows.first(where: { $0.titleKey == "movieDetail.rating" })?.value, "84%")
+        XCTAssertEqual(rows.first(where: { $0.titleKey == "movieDetail.genres" })?.value, "Drama, Sci-Fi")
+        XCTAssertEqual(rows.first(where: { $0.titleKey == "movieDetail.runtime" })?.value, "2h 35m")
+        XCTAssertEqual(rows.first(where: { $0.titleKey == "movieDetail.country" })?.value, "United States")
+        XCTAssertEqual(rows.first(where: { $0.titleKey == "movieDetail.director" })?.value, "Denis Villeneuve")
+        XCTAssertNotNil(rows.first(where: { $0.titleKey == "movieDetail.releaseDate" })?.value)
     }
 
+    /// Senza dati non nascono righe. Restano solo quelle che il film porta comunque con sé
+    /// (la data di uscita e la lingua originale, che non sono opzionali in `Movie`).
     func test_rowsOmitEmptyOptionalInformation() {
         let rows = MovieCreditsInfoBuilder.rows(
             movie: movie(voteAverage: 0, genres: [], runtime: nil, countries: []),
             director: nil
         )
 
-        XCTAssertTrue(rows.isEmpty)
+        XCTAssertEqual(Set(rows.map(\.titleKey)),
+                       ["movieDetail.releaseDate", "movieDetail.originalLanguage"])
+        for chiave in ["movieDetail.rating", "movieDetail.genres", "movieDetail.runtime",
+                       "movieDetail.country", "movieDetail.director", "movieDetail.budget",
+                       "movieDetail.revenue", "movieDetail.tagline"] {
+            XCTAssertFalse(rows.contains { $0.titleKey == chiave }, "\(chiave) non deve esserci")
+        }
     }
 
     func test_rowsUseFirstProductionCountryOnly() {

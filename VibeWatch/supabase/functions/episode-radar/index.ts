@@ -1,3 +1,18 @@
+// "È uscito un episodio nuovo": la notifica giornaliera, alle 05:30 UTC (dopo `refresh-backlog`).
+//
+// **Cosa è cambiato.** Prima questa funzione leggeva `list_items` e poi chiamava TMDB una volta
+// per serie distinta — centinaia di chiamate a notte, sullo stesso catalogo che il resto del
+// sistema ha già in tabella. E le leggeva *fresche*, quindi poteva annunciare un episodio che lo
+// stato dell'utente non conosceva ancora: due fonti di verità per lo stesso fatto.
+//
+// Ora la sorgente è `tv_show_state`, che `refresh_backlog_since()` ha appena ricalcolato: chi
+// segue la serie, qual è il prossimo episodio e quando esce stanno già lì. Zero chiamate TMDB,
+// zero `TMDB_API_KEY`, e la notifica dice esattamente ciò che l'utente vedrà aprendo l'app.
+//
+// Restano invariati: solo chiamante di servizio, `dryRun`/`windowDays` per la diagnostica, il
+// cooldown di 7 giorni per (utente, serie) e la forma della notifica (`episode_aired`,
+// `thread_id: episode:{id}`), perché il resto della pipeline li usa così.
+
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { rejectIfNotServiceCaller } from '../_shared/cronAuth.ts'
@@ -10,7 +25,6 @@ const SUPABASE_SERVICE_ROLE_KEY = (() => {
   if (s) { try { const k = JSON.parse(s)?.default; if (k) return k as string } catch { /* fall back */ } }
   return Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 })()
-const TMDB_API_KEY = Deno.env.get('TMDB_API_KEY') ?? ''
 
 // The cron runs at a fixed UTC hour while episodes air in local time, so "today" has to be a
 // two-day window or genuine airings fall through the crack. The 7-day per-series dedup below
@@ -18,10 +32,12 @@ const TMDB_API_KEY = Deno.env.get('TMDB_API_KEY') ?? ''
 const AIRED_WINDOW_DAYS = 1
 const SERIES_COOLDOWN_DAYS = 7
 
-type LastEpisode = {
-  air_date: string | null
-  season_number?: number | null
-  episode_number?: number | null
+type PendingRow = {
+  user_id: string
+  tmdb_show_id: number
+  next_season: number | null
+  next_episode: number | null
+  next_air_date: string | null
 }
 
 function isoDay(offsetDays = 0) {
@@ -53,11 +69,14 @@ serve(async (req) => {
     const windowStart = isoDay(-windowDays)
     const cooldownStart = new Date(Date.now() - SERIES_COOLDOWN_DAYS * 24 * 60 * 60 * 1000).toISOString()
 
-    const { data: items, error } = await supabase
-      .from('list_items')
-      .select('user_id, media_id')
-      .eq('media_type', 'tv')
-      .is('deleted_at', null) // removed items must stop notifying
+    // Lo stato appena ricalcolato: `next_air_date` dentro la finestra vuol dire "è appena
+    // uscito", e `user_status = 'active'` esclude chi ha messo la serie in pausa.
+    const { data: rows, error } = await supabase
+      .from('tv_show_state')
+      .select('user_id, tmdb_show_id, next_season, next_episode, next_air_date')
+      .eq('user_status', 'active')
+      .gte('next_air_date', windowStart)
+      .lte('next_air_date', today)
 
     if (error) throw error
 
@@ -76,52 +95,41 @@ serve(async (req) => {
 
     // Deduplicate the (user, series) pairs still eligible for a notification.
     const seen = new Set<string>()
-    const pending: Array<{ user_id: string; media_id: number }> = []
-    for (const item of items ?? []) {
-      const key = `${item.user_id}:${item.media_id}`
+    const pending: PendingRow[] = []
+    for (const row of (rows ?? []) as PendingRow[]) {
+      const key = `${row.user_id}:${row.tmdb_show_id}`
       if (seen.has(key) || inCooldown.has(key)) continue
       seen.add(key)
-      pending.push(item)
+      pending.push(row)
     }
 
-    // One TMDB lookup per distinct series, shared across the users who follow it.
-    const tmdbCache = new Map<number, { name: string; episode: LastEpisode | null }>()
+    // I nomi delle serie: una lettura sola su `tmdb_shows`, sugli id distinti.
+    const showIds = [...new Set(pending.map((r) => r.tmdb_show_id))]
+    const names = new Map<number, string>()
+    for (let i = 0; i < showIds.length; i += 500) {
+      const { data: shows, error: showsError } = await supabase
+        .from('tmdb_shows')
+        .select('tmdb_show_id, name')
+        .in('tmdb_show_id', showIds.slice(i, i + 500))
+      if (showsError) throw showsError
+      for (const s of shows ?? []) names.set(s.tmdb_show_id as number, (s.name as string) ?? '')
+    }
+
     const matched: string[] = []
     let created = 0
 
-    for (const item of pending) {
-      let showData = tmdbCache.get(item.media_id)
-      if (!showData) {
-        const res = await fetch(
-          `https://api.themoviedb.org/3/tv/${item.media_id}?api_key=${TMDB_API_KEY}&language=en-US`
-        )
-        if (!res.ok) continue
-        const json = await res.json()
-        showData = {
-          name: json.name ?? 'A series you follow',
-          // `last_episode_to_air` is the episode that has actually aired. The old code read
-          // `next_episode_to_air`, which is by definition the one that has *not* aired yet, and
-          // then fired whenever its date was in the past — announcing episodes off stale data.
-          episode: (json.last_episode_to_air ?? null) as LastEpisode | null,
-        }
-        tmdbCache.set(item.media_id, showData)
-      }
-
-      const airDate = showData.episode?.air_date
-      if (!airDate || airDate > today || airDate < windowStart) continue
-
-      const season = showData.episode?.season_number
-      const number = showData.episode?.episode_number
-      const label = season != null && number != null
-        ? `S${String(season).padStart(2, '0')}E${String(number).padStart(2, '0')}`
+    for (const row of pending) {
+      const name = names.get(row.tmdb_show_id) || 'A series you follow'
+      const label = row.next_season != null && row.next_episode != null
+        ? `S${String(row.next_season).padStart(2, '0')}E${String(row.next_episode).padStart(2, '0')}`
         : null
 
       const body = label
-        ? `${showData.name} ${label} is out.`
-        : `${showData.name} has a new episode out.`
+        ? `${name} ${label} is out.`
+        : `${name} has a new episode out.`
 
       if (dryRun) {
-        matched.push(`${showData.name} (${airDate})`)
+        matched.push(`${name} (${row.next_air_date})`)
         created += 1
         continue
       }
@@ -129,21 +137,21 @@ serve(async (req) => {
       const { error: insertError } = await supabase
         .from('notifications')
         .insert({
-          user_id: item.user_id,
+          user_id: row.user_id,
           notification_type: 'episode_aired',
           title: 'New episode available',
           body,
-          media_id: item.media_id,
+          media_id: row.tmdb_show_id,
           media_type: 'tv',
           is_sent: false,
           category: 'episode_aired',
-          thread_id: `episode:${item.media_id}`,
+          thread_id: `episode:${row.tmdb_show_id}`,
         })
 
       if (!insertError) created += 1
     }
 
-    return new Response(JSON.stringify({ created, seriesChecked: tmdbCache.size, dryRun, windowDays, matched }), {
+    return new Response(JSON.stringify({ created, seriesChecked: showIds.length, dryRun, windowDays, matched }), {
       headers: { 'Content-Type': 'application/json' },
       status: 200,
     })

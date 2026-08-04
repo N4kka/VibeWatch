@@ -644,7 +644,7 @@
 "movieDetail.goodFitSubtitle" = "A quick, personalized take based on your taste.";
 
 // TV Show Detail - Mark All Seen Confirmation
-"tvDetail.markAllSeenTitle" = "Mark all episodes as seen";
+"tvDetail.markAllSeenTitle" = "Markera hela serien som sedd";
 "tvDetail.markAllSeenDescription" = "This action will apply to all episodes and seasons of the series available.";
 "tvDetail.markAllSeenQuestion" = "Do you want to continue?";
 "tvDetail.markAllSeenConfirm" = "Yes, mark as seen";
@@ -895,12 +895,12 @@
 "mediaDetail.action.watchlist" = "Watchlist";
 "mediaDetail.action.like" = "Like";
 "mediaDetail.action.list" = "To list";
-"mediaDetail.toast.watchlistAdded" = "Added to your watchlist";
-"mediaDetail.toast.watchlistRemoved" = "Removed from your watchlist";
-"mediaDetail.toast.markedSeen" = "Marked as seen";
-"mediaDetail.toast.markedUnseen" = "Removed from seen";
-"mediaDetail.toast.liked" = "Added to your likes";
-"mediaDetail.toast.likeRemoved" = "Removed from your likes";
+"mediaDetail.toast.watchlistAdded" = "Tillagd i din bevakningslista";
+"mediaDetail.toast.watchlistRemoved" = "Borttagen från din bevakningslista";
+"mediaDetail.toast.markedSeen" = "Markerad som sedd";
+"mediaDetail.toast.markedUnseen" = "Borttagen från sedda";
+"mediaDetail.toast.liked" = "Tillagd bland dina gillanden";
+"mediaDetail.toast.likeRemoved" = "Borttagen från dina gillanden";
 "mediaDetail.why.cardTitle" = "Why is it right for you?";
 "mediaDetail.why.title" = "Why for you";
 "mediaDetail.why.affinity" = "Affinity with your tastes";
@@ -977,3 +977,143 @@
 "import.toast.mapping.done" = "%d titlar lösta · biblioteket är i ordning";
 
 "import.report.outOfStructure" = "%d avsnitt fick inte plats i seriens TMDB-struktur.";
+
+
+// MARK: - Toast (Task 10)
+"mediaDetail.toast.markingSeen" = "Markerar som sedd…";
+"lists.toast.adding" = "Lägger till…";
+"lists.toast.removing" = "Tar bort…";
+"lists.toast.addedTo" = "Tillagd i %@";
+"lists.toast.removedFrom" = "Borttagen från %@";
+"lists.toast.removed" = "Borttagen från listan";
+"lists.toast.failed" = "Något gick fel";
+"lists.toast.creating" = "Skapar lista…";
+"lists.toast.created" = "Listan har skapats";
+"tracking.toast.markingWatched" = "Markerar avsnitt…";
+"tracking.toast.markedWatched" = "Avsnittet markerat som sett";
+"tracking.toast.snoozing" = "Pausar…";
+"tracking.toast.snoozed" = "Serien har pausats";
+"auth.error.recoveryLinkExpired" = "Länken är ogiltig eller har gått ut. Begär en ny länk för att återställa lösenordet.";
+
+
+// MARK: - Regole password (Task 2)
+"auth.pwRule.length" = "8+ tecken";
+"auth.pwRule.uppercase" = "1 versal";
+"auth.pwRule.lowercase" = "1 gemen";
+"auth.pwRule.number" = "1 siffra";
+"auth.pwRule.symbol" = "1 symbol";
+"auth.accountCreated" = "Kontot har skapats";
+
+
+// MARK: - Modali (Task 9+14)
+"tvDetail.markAllSeenSubtitle" = "Gäller varje avsnitt i varje säsong som redan släppts.";
+"tvDetail.markAllSeenCTA" = "Markera %d avsnitt som sedda";
+"tvDetail.markAllSeen.episodes" = "Avsnitt markerade som sedda";
+"tvDetail.markAllSeen.diary" = "Poster tillagda i dagboken";
+"tvDetail.markAllSeenReversible" = "Går att ångra: du kan återställa enskilda avsnitt från dagboken.";
+"tvDetail.seasonsCount" = "%d säsonger";
+"tvDetail.episodesCount" = "%d avsnitt";
+"auth.changePasswordSubtitle" = "Av säkerhetsskäl loggar vi ut dig från dina andra enheter.";
+"auth.newPasswordPlaceholder" = "Nytt lösenord";
+"auth.forgotCurrentPassword" = "Minns du inte det nuvarande?";
+"auth.show" = "Visa";
+"auth.hide" = "Dölj";
+"profile.feedback.subtitle" = "Vi läser allt. Vi svarar oftast inom två dagar.";
+"profile.feedback.keepUpdatedEmail" = "Vi skriver till %@";
+"profile.feedback.placeholder.bug" = "Vad gick fel? Vad gjorde du precis innan…";
+"profile.feedback.placeholder.suggest" = "Vad saknas? Beskriv hur du skulle använda det…";
+"profile.feedback.placeholder.other" = "Skriv vad du vill säga oss…";
+"profile.feedback.category.crash" = "Krasch";
+"profile.feedback.category.import" = "Import från TV Time";
+"profile.feedback.category.notifications" = "Aviseringar";
+"profile.feedback.category.sync" = "Synkronisering";
+"profile.feedback.category.ui" = "Utseende";
+"profile.feedback.category.other" = "Annat";
+
+
+// MARK: - Update forzato (Task 3)
+"update.required" = "UPPDATERING KRÄVS";
+"update.whatsChanged" = "VAD SOM ÄNDRATS";
+"update.fullReleaseNotes" = "Fullständiga versionsanteckningar";
+"update.cta" = "Uppdatera från App Store";
+"update.versionFootnote" = "Version %@";
+"update.dataSafe" = "Ditt bibliotek och dina data är kvar i säkerhet.";
+
+
+// MARK: - Preferiti (Task 7)
+"favorites.subtitle" = "De 4 titlarna i skyltfönstret på din profil";
+"favorites.inYourFavorites" = "Bland dina favoriter";
+"favorites.showcased" = "Visas på din profil";
+"favorites.addedToast" = "Tillagd bland favoriter";
+"favorites.removedToast" = "Borttagen från favoriter";
+
+
+// MARK: - Informazioni estese (Task 8)
+"movieDetail.releaseDate" = "Premiärdatum";
+"movieDetail.status" = "Status";
+"movieDetail.productionCompanies" = "Produktion";
+"movieDetail.budget" = "Budget";
+"movieDetail.revenue" = "Intäkter";
+"movieDetail.originalLanguage" = "Originalspråk";
+"movieDetail.tagline" = "Slogan";
+"tvDetail.firstAirDate" = "Första sändning";
+"tvDetail.lastAirDate" = "Senaste sändning";
+"tvDetail.seasonsEpisodes" = "Säsonger";
+"tvDetail.network" = "Kanal";
+"tvDetail.createdBy" = "Skapad av";
+"mediaStatus.released" = "Släppt";
+"mediaStatus.inProduction" = "Under produktion";
+"mediaStatus.postProduction" = "Efterproduktion";
+"mediaStatus.planned" = "Planerad";
+"mediaStatus.rumored" = "Rykte";
+"mediaStatus.canceled" = "Nedlagd";
+"mediaStatus.returningSeries" = "Pågående";
+"mediaStatus.ended" = "Avslutad";
+"mediaStatus.pilot" = "Pilotavsnitt";
+
+
+// MARK: - Piattaforme (Task 12+17)
+"platforms.active" = "aktiva plattformar";
+"platforms.activeCount" = "%d aktiva";
+"platforms.clear" = "Rensa";
+"platforms.coverage" = "Täckning av din bevakningslista";
+"platforms.libraryCount" = "%d titlar i ditt bibliotek";
+"platforms.recommended" = "REKOMMENDERAS";
+"platforms.manage" = "Hantera";
+"platforms.empty" = "Inga plattformar tillgängliga för ditt land ännu.";
+
+
+// MARK: - Preferiti nel profilo (Task 15)
+"favorites.sectionTitle" = "Dina favoriter";
+"favorites.sectionCount" = "%1$d av %2$d";
+
+
+// MARK: - Ricerca (Task 16)
+"search.mostRelevant" = "Mest relevanta";
+"common.movie" = "Film";
+"common.tvShow" = "Serie";
+
+
+// MARK: - Toast con fase di progresso (bug 7)
+"mediaDetail.toast.addingToWatchlist" = "Lägger till i din bevakningslista…";
+"mediaDetail.toast.removingFromWatchlist" = "Tar bort från din bevakningslista…";
+"mediaDetail.toast.liking" = "Lägger till bland dina gillanden…";
+"mediaDetail.toast.unliking" = "Tar bort från dina gillanden…";
+"mediaDetail.toast.markingUnseen" = "Tar bort från sedda…";
+"mediaDetail.toast.disliking" = "Lägger till bland dina ogillanden…";
+"mediaDetail.toast.undisliking" = "Tar bort från dina ogillanden…";
+"mediaDetail.toast.disliked" = "Tillagd bland dina ogillanden";
+"mediaDetail.toast.dislikeRemoved" = "Borttagen från dina ogillanden";
+"favorites.adding" = "Lägger till bland favoriter…";
+"favorites.removing" = "Tar bort från favoriter…";
+
+
+// MARK: - Ricerca ridisegnata (bug 1)
+"search.scope.all" = "Alla";
+"search.scope.movies" = "Filmer";
+"search.scope.series" = "Serier";
+"search.clear" = "Rensa";
+"search.trending.today" = "I dag";
+"search.trending.subtitle" = "Mest sökta i %@ det senaste dygnet.";
+"search.results.subtitle" = "Träffar för ”%@”, sedan närliggande titlar.";
+"search.resultsCount" = "%d titlar";

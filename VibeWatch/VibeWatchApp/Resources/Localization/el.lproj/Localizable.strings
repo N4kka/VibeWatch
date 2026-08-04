@@ -656,7 +656,7 @@
 "error.oops" = "Ουπς!";
 
 // TV Show Detail - Mark All Seen Confirmation
-"tvDetail.markAllSeenTitle" = "Mark all episodes as seen";
+"tvDetail.markAllSeenTitle" = "Σήμανση όλης της σειράς ως προβεβλημένης";
 "tvDetail.markAllSeenDescription" = "This action will apply to all episodes and seasons of the series available.";
 "tvDetail.markAllSeenQuestion" = "Do you want to continue?";
 "tvDetail.markAllSeenConfirm" = "Yes, mark as seen";
@@ -907,12 +907,12 @@
 "mediaDetail.action.watchlist" = "Watchlist";
 "mediaDetail.action.like" = "Like";
 "mediaDetail.action.list" = "To list";
-"mediaDetail.toast.watchlistAdded" = "Added to your watchlist";
-"mediaDetail.toast.watchlistRemoved" = "Removed from your watchlist";
-"mediaDetail.toast.markedSeen" = "Marked as seen";
-"mediaDetail.toast.markedUnseen" = "Removed from seen";
-"mediaDetail.toast.liked" = "Added to your likes";
-"mediaDetail.toast.likeRemoved" = "Removed from your likes";
+"mediaDetail.toast.watchlistAdded" = "Προστέθηκε στη λίστα σου";
+"mediaDetail.toast.watchlistRemoved" = "Αφαιρέθηκε από τη λίστα σου";
+"mediaDetail.toast.markedSeen" = "Σημειώθηκε ως προβεβλημένο";
+"mediaDetail.toast.markedUnseen" = "Αφαιρέθηκε από τα προβεβλημένα";
+"mediaDetail.toast.liked" = "Προστέθηκε στα «μου αρέσει»";
+"mediaDetail.toast.likeRemoved" = "Αφαιρέθηκε από τα «μου αρέσει»";
 "mediaDetail.why.cardTitle" = "Why is it right for you?";
 "mediaDetail.why.title" = "Why for you";
 "mediaDetail.why.affinity" = "Affinity with your tastes";
@@ -989,3 +989,143 @@
 "import.toast.mapping.done" = "%d τίτλοι επιλύθηκαν · η βιβλιοθήκη είναι εντάξει";
 
 "import.report.outOfStructure" = "%d επεισόδια δεν χωρούν στη δομή TMDB της επιβεβαιωμένης σειράς.";
+
+
+// MARK: - Toast (Task 10)
+"mediaDetail.toast.markingSeen" = "Σήμανση ως προβεβλημένο…";
+"lists.toast.adding" = "Προσθήκη…";
+"lists.toast.removing" = "Αφαίρεση…";
+"lists.toast.addedTo" = "Προστέθηκε στη λίστα %@";
+"lists.toast.removedFrom" = "Αφαιρέθηκε από τη λίστα %@";
+"lists.toast.removed" = "Αφαιρέθηκε από τη λίστα";
+"lists.toast.failed" = "Κάτι πήγε στραβά";
+"lists.toast.creating" = "Δημιουργία λίστας…";
+"lists.toast.created" = "Η λίστα δημιουργήθηκε";
+"tracking.toast.markingWatched" = "Σήμανση επεισοδίου…";
+"tracking.toast.markedWatched" = "Το επεισόδιο σημειώθηκε ως προβεβλημένο";
+"tracking.toast.snoozing" = "Αναβολή…";
+"tracking.toast.snoozed" = "Η σειρά αναβλήθηκε";
+"auth.error.recoveryLinkExpired" = "Ο σύνδεσμος δεν είναι έγκυρος ή έχει λήξει. Ζήτησε νέο σύνδεσμο επαναφοράς κωδικού.";
+
+
+// MARK: - Regole password (Task 2)
+"auth.pwRule.length" = "8+ χαρακτήρες";
+"auth.pwRule.uppercase" = "1 κεφαλαίο";
+"auth.pwRule.lowercase" = "1 πεζό";
+"auth.pwRule.number" = "1 αριθμός";
+"auth.pwRule.symbol" = "1 σύμβολο";
+"auth.accountCreated" = "Ο λογαριασμός δημιουργήθηκε";
+
+
+// MARK: - Modali (Task 9+14)
+"tvDetail.markAllSeenSubtitle" = "Ισχύει για κάθε επεισόδιο κάθε σεζόν που έχει ήδη κυκλοφορήσει.";
+"tvDetail.markAllSeenCTA" = "Σήμανση %d επεισοδίων ως προβεβλημένων";
+"tvDetail.markAllSeen.episodes" = "Επεισόδια που σημειώνονται ως προβεβλημένα";
+"tvDetail.markAllSeen.diary" = "Καταχωρίσεις στο ημερολόγιο";
+"tvDetail.markAllSeenReversible" = "Αναστρέψιμο: μπορείς να επαναφέρεις μεμονωμένα επεισόδια από το ημερολόγιο.";
+"tvDetail.seasonsCount" = "%d σεζόν";
+"tvDetail.episodesCount" = "%d επεισόδια";
+"auth.changePasswordSubtitle" = "Για ασφάλεια, θα αποσυνδεθείς από τις άλλες συσκευές σου.";
+"auth.newPasswordPlaceholder" = "Νέος κωδικός";
+"auth.forgotCurrentPassword" = "Δεν θυμάσαι τον τρέχοντα;";
+"auth.show" = "Εμφάνιση";
+"auth.hide" = "Απόκρυψη";
+"profile.feedback.subtitle" = "Τα διαβάζουμε όλα. Συνήθως απαντάμε μέσα σε δύο μέρες.";
+"profile.feedback.keepUpdatedEmail" = "Θα σου γράψουμε στο %@";
+"profile.feedback.placeholder.bug" = "Τι πήγε στραβά; Τι έκανες λίγο πριν…";
+"profile.feedback.placeholder.suggest" = "Τι λείπει; Περίγραψε πώς θα το χρησιμοποιούσες…";
+"profile.feedback.placeholder.other" = "Γράψε ό,τι θέλεις να μας πεις…";
+"profile.feedback.category.crash" = "Κατάρρευση";
+"profile.feedback.category.import" = "Εισαγωγή από TV Time";
+"profile.feedback.category.notifications" = "Ειδοποιήσεις";
+"profile.feedback.category.sync" = "Συγχρονισμός";
+"profile.feedback.category.ui" = "Εμφάνιση";
+"profile.feedback.category.other" = "Άλλο";
+
+
+// MARK: - Update forzato (Task 3)
+"update.required" = "ΑΠΑΙΤΕΙΤΑΙ ΕΝΗΜΕΡΩΣΗ";
+"update.whatsChanged" = "ΤΙ ΑΛΛΑΖΕΙ";
+"update.fullReleaseNotes" = "Πλήρεις σημειώσεις έκδοσης";
+"update.cta" = "Ενημέρωση από το App Store";
+"update.versionFootnote" = "Έκδοση %@";
+"update.dataSafe" = "Η βιβλιοθήκη και τα δεδομένα σου παραμένουν ασφαλή.";
+
+
+// MARK: - Preferiti (Task 7)
+"favorites.subtitle" = "Οι 4 τίτλοι στη βιτρίνα του προφίλ σου";
+"favorites.inYourFavorites" = "Στα αγαπημένα σου";
+"favorites.showcased" = "Προβάλλεται στο προφίλ σου";
+"favorites.addedToast" = "Προστέθηκε στα αγαπημένα";
+"favorites.removedToast" = "Αφαιρέθηκε από τα αγαπημένα";
+
+
+// MARK: - Informazioni estese (Task 8)
+"movieDetail.releaseDate" = "Ημερομηνία κυκλοφορίας";
+"movieDetail.status" = "Κατάσταση";
+"movieDetail.productionCompanies" = "Παραγωγή";
+"movieDetail.budget" = "Προϋπολογισμός";
+"movieDetail.revenue" = "Εισπράξεις";
+"movieDetail.originalLanguage" = "Γλώσσα πρωτοτύπου";
+"movieDetail.tagline" = "Σλόγκαν";
+"tvDetail.firstAirDate" = "Πρώτη προβολή";
+"tvDetail.lastAirDate" = "Τελευταία προβολή";
+"tvDetail.seasonsEpisodes" = "Σεζόν";
+"tvDetail.network" = "Δίκτυο";
+"tvDetail.createdBy" = "Δημιουργήθηκε από";
+"mediaStatus.released" = "Κυκλοφόρησε";
+"mediaStatus.inProduction" = "Σε παραγωγή";
+"mediaStatus.postProduction" = "Μετα-παραγωγή";
+"mediaStatus.planned" = "Προγραμματισμένο";
+"mediaStatus.rumored" = "Φημολογείται";
+"mediaStatus.canceled" = "Ακυρώθηκε";
+"mediaStatus.returningSeries" = "Σε εξέλιξη";
+"mediaStatus.ended" = "Ολοκληρώθηκε";
+"mediaStatus.pilot" = "Πιλότος";
+
+
+// MARK: - Piattaforme (Task 12+17)
+"platforms.active" = "ενεργές πλατφόρμες";
+"platforms.activeCount" = "%d ενεργές";
+"platforms.clear" = "Καθαρισμός";
+"platforms.coverage" = "Κάλυψη της λίστας σου";
+"platforms.libraryCount" = "%d τίτλοι στη βιβλιοθήκη σου";
+"platforms.recommended" = "ΣΥΝΙΣΤΑΤΑΙ";
+"platforms.manage" = "Διαχείριση";
+"platforms.empty" = "Δεν υπάρχουν ακόμη πλατφόρμες για τη χώρα σου.";
+
+
+// MARK: - Preferiti nel profilo (Task 15)
+"favorites.sectionTitle" = "Τα αγαπημένα σου";
+"favorites.sectionCount" = "%1$d από %2$d";
+
+
+// MARK: - Ricerca (Task 16)
+"search.mostRelevant" = "Πιο σχετικά";
+"common.movie" = "Ταινία";
+"common.tvShow" = "Σειρά";
+
+
+// MARK: - Toast con fase di progresso (bug 7)
+"mediaDetail.toast.addingToWatchlist" = "Προσθήκη στη λίστα σου…";
+"mediaDetail.toast.removingFromWatchlist" = "Αφαίρεση από τη λίστα σου…";
+"mediaDetail.toast.liking" = "Προσθήκη στα «μου αρέσει»…";
+"mediaDetail.toast.unliking" = "Αφαίρεση από τα «μου αρέσει»…";
+"mediaDetail.toast.markingUnseen" = "Αφαίρεση από τα προβεβλημένα…";
+"mediaDetail.toast.disliking" = "Προσθήκη στα «δεν μου αρέσει»…";
+"mediaDetail.toast.undisliking" = "Αφαίρεση από τα «δεν μου αρέσει»…";
+"mediaDetail.toast.disliked" = "Προστέθηκε στα «δεν μου αρέσει»";
+"mediaDetail.toast.dislikeRemoved" = "Αφαιρέθηκε από τα «δεν μου αρέσει»";
+"favorites.adding" = "Προσθήκη στα αγαπημένα…";
+"favorites.removing" = "Αφαίρεση από τα αγαπημένα…";
+
+
+// MARK: - Ricerca ridisegnata (bug 1)
+"search.scope.all" = "Όλα";
+"search.scope.movies" = "Ταινίες";
+"search.scope.series" = "Σειρές";
+"search.clear" = "Εκκαθάριση";
+"search.trending.today" = "Σήμερα";
+"search.trending.subtitle" = "Οι πιο αναζητημένοι τίτλοι σε %@ τις τελευταίες 24 ώρες.";
+"search.results.subtitle" = "Αντιστοιχίες για «%@», μετά συναφείς τίτλοι.";
+"search.resultsCount" = "%d τίτλοι";

@@ -13,7 +13,6 @@ struct SignUpView: View {
     @State private var showSignIn = false
     @State private var showCheckEmail = false
     @State private var emailTouched = false
-    @State private var passwordTouched = false
     @State private var confirmPasswordTouched = false
     
     var isEmailValid: Bool {
@@ -134,28 +133,12 @@ struct SignUpView: View {
                 SecureField("auth.passwordPlaceholder".localized, text: $password)
                     .textFieldStyle(CustomTextFieldStyle())
                     .textContentType(.newPassword)
-                    .onChange(of: password) {_, _ in
-                        passwordTouched = true
-                    }
                 
-                if passwordTouched && !password.isEmpty && !isPasswordValid {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("auth.invalidPassword".localized)
-                            .font(.system(size: 12))
-                            .foregroundColor(.red)
-                        
-                        Text("• At least 8 characters")
-                            .font(.system(size: 11))
-                            .foregroundColor(.red.opacity(0.8))
-                        Text("• Uppercase & lowercase letter")
-                            .font(.system(size: 11))
-                            .foregroundColor(.red.opacity(0.8))
-                        Text("• At least one number")
-                            .font(.system(size: 11))
-                            .foregroundColor(.red.opacity(0.8))
-                    }
-                    .padding(.leading, 16)
-                }
+                // Le regole si vedono sempre: nasconderle finché il campo è vuoto significa
+                // chiedere una password senza dire quali sono i requisiti.
+                PasswordRequirementsChecklist(password: password)
+                    .padding(.horizontal, 4)
+                    .padding(.top, 4)
             }
             
             // Confirm Password with validation
@@ -295,8 +278,7 @@ struct SignUpView: View {
                 appState.currentUser = user
                 appState.isAuthenticated = true
                 appState.syncAfterSignIn()
-                appState.showSuccessToast = true
-                appState.toastMessage = "Account created successfully!"
+                ToastCenter.shared.show(success: "auth.accountCreated".localized)
                 dismiss()
             } else {
                 // Session is nil, email confirmation is required
@@ -304,8 +286,7 @@ struct SignUpView: View {
             }
         } catch {
             errorMessage = error.localizedDescription
-            appState.showErrorToast = true
-            appState.toastMessage = error.localizedDescription
+            ToastCenter.shared.show(error: error.localizedDescription)
         }
         
         isLoading = false

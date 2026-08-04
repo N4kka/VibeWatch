@@ -60,6 +60,22 @@ enum MediaDetailFeedback {
         case watchlist
         case seen
         case liked
+        case disliked
+    }
+
+    /// Il messaggio della fase in corso. Le azioni del dettaglio partivano da un toast già
+    /// terminale: l'utente non vedeva mai che qualcosa stava succedendo, solo che era successo.
+    static func progressKey(for action: Action, isActive: Bool) -> String {
+        switch (action, isActive) {
+        case (.watchlist, true): return "mediaDetail.toast.addingToWatchlist"
+        case (.watchlist, false): return "mediaDetail.toast.removingFromWatchlist"
+        case (.seen, true): return "mediaDetail.toast.markingSeen"
+        case (.seen, false): return "mediaDetail.toast.markingUnseen"
+        case (.liked, true): return "mediaDetail.toast.liking"
+        case (.liked, false): return "mediaDetail.toast.unliking"
+        case (.disliked, true): return "mediaDetail.toast.disliking"
+        case (.disliked, false): return "mediaDetail.toast.undisliking"
+        }
     }
 
     static func messageKey(for action: Action, isActive: Bool) -> String {
@@ -70,6 +86,8 @@ enum MediaDetailFeedback {
         case (.seen, false): return "mediaDetail.toast.markedUnseen"
         case (.liked, true): return "mediaDetail.toast.liked"
         case (.liked, false): return "mediaDetail.toast.likeRemoved"
+        case (.disliked, true): return "mediaDetail.toast.disliked"
+        case (.disliked, false): return "mediaDetail.toast.dislikeRemoved"
         }
     }
 }

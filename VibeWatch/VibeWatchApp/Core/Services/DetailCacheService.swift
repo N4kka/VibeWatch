@@ -36,11 +36,13 @@ class DetailCacheService {
         let videosJSON = try? JSONEncoder().encode(videos).base64EncodedString()
         let providersJSON = try? JSONEncoder().encode(watchProviders).base64EncodedString()
         let similarJSON = try? JSONEncoder().encode(similarMovies).base64EncodedString()
+        let modelJSON = try? JSONEncoder().encode(movie).base64EncodedString()
 
         let values: [String: Any] = [
             "id": UUID().uuidString,
             "media_id": movie.id,
             "media_type": "movie",
+            "model_json": modelJSON ?? "",
             "title": movie.title,
             "overview": movie.overview,
             "poster_path": movie.posterPath ?? "",
@@ -130,11 +132,13 @@ class DetailCacheService {
         let videosJSON = try? JSONEncoder().encode(videos).base64EncodedString()
         let providersJSON = try? JSONEncoder().encode(watchProviders).base64EncodedString()
         let similarJSON = try? JSONEncoder().encode(similarShows).base64EncodedString()
+        let modelJSON = try? JSONEncoder().encode(tvShow).base64EncodedString()
 
         let values: [String: Any] = [
             "id": UUID().uuidString,
             "media_id": tvShow.id,
             "media_type": "tv",
+            "model_json": modelJSON ?? "",
             "title": tvShow.name,
             "overview": tvShow.overview,
             "poster_path": tvShow.posterPath ?? "",
@@ -219,7 +223,11 @@ class DetailCacheService {
         let genresString = row["genres"] as? String ?? ""
         let genreIds = genresString.split(separator: ",").compactMap { Int($0) }
 
-        let movie = Movie(
+        // Il modello intero, quando c'è: le righe scritte prima della migration 8 non ce l'hanno
+        // e ricadono sulla ricostruzione colonna per colonna (che perde i campi non colonnati).
+        let decoded = decodeFromBase64(row["model_json"] as? String, as: Movie.self)
+
+        let movie = decoded ?? Movie(
             id: row["media_id"] as? Int ?? 0,
             title: row["title"] as? String ?? "",
             overview: row["overview"] as? String ?? "",
@@ -261,7 +269,9 @@ class DetailCacheService {
         let genresString = row["genres"] as? String ?? ""
         let genreIds = genresString.split(separator: ",").compactMap { Int($0) }
 
-        let tvShow = TVShow(
+        let decoded = decodeFromBase64(row["model_json"] as? String, as: TVShow.self)
+
+        let tvShow = decoded ?? TVShow(
             id: row["media_id"] as? Int ?? 0,
             name: row["title"] as? String ?? "",
             overview: row["overview"] as? String ?? "",

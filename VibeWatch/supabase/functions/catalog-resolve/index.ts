@@ -134,6 +134,13 @@ interface Body {
   show_ids?: number[]
   /** Set false to resolve ids without pulling the episode catalog (cheaper, for a first pass). */
   populate_episodes?: boolean
+  /**
+   * Rinfresca gli `show_ids` chiesti anche se il TTL non e' scaduto. Onorato SOLO per le chiamate
+   * di servizio: e' la leva di `catalog-refresh`, che deve poter rinfrescare proprio le serie che
+   * `filterShowsNeedingRefresh` considera fresche — una serie "ended" ha un TTL a 90 giorni, ed e'
+   * esattamente quella che viene rinnovata senza che il catalogo se ne accorga.
+   */
+  force_refresh?: boolean
   /** Un `import_jobs` proprio e in fase `resolving`: sblocca il budget da import. */
   job_id?: string
   /**
@@ -238,6 +245,8 @@ async function handle(req: Request): Promise<Response> {
   }
 
   const populateEpisodes = body.populate_episodes !== false
+  // Solo da servizio: un utente non puo' aggirare il TTL a comando (sarebbe una leva di spesa).
+  const forceRefresh = daServizio && body.force_refresh === true
   const now = new Date()
   const deadline = Date.now() + DEADLINE_MS
 
@@ -440,7 +449,20 @@ async function handle(req: Request): Promise<Response> {
       ...(manualContext ? [manualContext.tmdb_show_id] : []),
     ])]
 
-    for (const showId of await filterShowsNeedingRefresh(supabase, showIds, now)) {
+    // Con `force_refresh` gli id chiesti esplicitamente saltano il filtro del TTL; gli altri
+    // (quelli arrivati per via di `populate_episodes`) restano soggetti al filtro.
+    const daRinfrescare = forceRefresh
+      ? [...new Set([
+          ...requestedShowIds,
+          ...await filterShowsNeedingRefresh(
+            supabase,
+            showIds.filter((id) => !requestedShowIds.includes(id)),
+            now,
+          ),
+        ])]
+      : await filterShowsNeedingRefresh(supabase, showIds, now)
+
+    for (const showId of daRinfrescare) {
       if (Date.now() > deadline || budgetExhausted) break
 
       const outcome = await populateShow(supabase, showId, callerScope, now, callerLimit)

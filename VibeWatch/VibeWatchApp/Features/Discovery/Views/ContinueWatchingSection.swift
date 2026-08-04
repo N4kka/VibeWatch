@@ -154,10 +154,13 @@ struct ContinueWatchingSection: View {
         busyShowId = row.showId
         Task {
             defer { busyShowId = nil }
+            let toastId = ToastCenter.shared.begin(message: "tracking.toast.markingWatched".localized)
             do {
                 try await TrackingActions.shared.markNextWatched(row)
                 await viewModel.load()
+                ToastCenter.shared.complete(toastId, message: "tracking.toast.markedWatched".localized)
             } catch {
+                ToastCenter.shared.fail(toastId, message: error.localizedDescription)
                 // L'errore si dichiara: una mutazione persa qui è un episodio che non risulta
                 // visto, e l'utente non ha altro modo di accorgersene (lezione del Tracking).
                 actionError = error.localizedDescription

@@ -309,17 +309,34 @@ struct ListsView: View {
                         isInSeenList: selectedListType == .seen,
                         onMarkAsSeen: {
                             Task {
-                                if let currentList = currentLists.first {
-                                    try? await viewModel.removeFromList(listId: currentList.id, itemId: item.id)
-                                }
+                                let toastId = ToastCenter.shared.begin(
+                                    message: "mediaDetail.toast.markingSeen".localized
+                                )
+                                do {
+                                    if let currentList = currentLists.first {
+                                        try? await viewModel.removeFromList(listId: currentList.id, itemId: item.id)
+                                    }
 
-                                try await viewModel.addToList(listId: viewModel.seenList.id, movie: item.asMovie(), mediaType: item.mediaType)
+                                    try await viewModel.addToList(listId: viewModel.seenList.id, movie: item.asMovie(), mediaType: item.mediaType)
+                                    ToastCenter.shared.complete(
+                                        toastId,
+                                        message: "mediaDetail.toast.markedSeen".localized
+                                    )
+                                } catch {
+                                    ToastCenter.shared.fail(toastId, message: "lists.toast.failed".localized)
+                                }
                             }
                         },
                         onDelete: {
                             Task {
                                 if let currentList = currentLists.first {
-                                    try? await viewModel.removeFromList(listId: currentList.id, itemId: item.id)
+                                    let toastId = ToastCenter.shared.begin(message: "lists.toast.removing".localized)
+                                    do {
+                                        try await viewModel.removeFromList(listId: currentList.id, itemId: item.id)
+                                        ToastCenter.shared.complete(toastId, message: "lists.toast.removed".localized)
+                                    } catch {
+                                        ToastCenter.shared.fail(toastId, message: "lists.toast.failed".localized)
+                                    }
                                 }
                             }
                         }
@@ -687,10 +704,19 @@ struct MediaItemRow: View {
                             // Remove from seen list - find the correct item ID in seen list
                             Task {
                                 if let seenItem = listManager.seenList.items.first(where: { $0.mediaId == item.mediaId && $0.mediaType == item.mediaType }) {
-                                    try? await listManager.removeFromList(
-                                        listId: listManager.seenList.id,
-                                        itemId: seenItem.id
-                                    )
+                                    let toastId = ToastCenter.shared.begin(message: "lists.toast.removing".localized)
+                                    do {
+                                        try await listManager.removeFromList(
+                                            listId: listManager.seenList.id,
+                                            itemId: seenItem.id
+                                        )
+                                        ToastCenter.shared.complete(
+                                            toastId,
+                                            message: "mediaDetail.toast.markedUnseen".localized
+                                        )
+                                    } catch {
+                                        ToastCenter.shared.fail(toastId, message: "lists.toast.failed".localized)
+                                    }
                                 }
                             }
                         } else {
@@ -1087,14 +1113,31 @@ struct CustomListDetailView: View {
                                     isInSeenList: false,
                                     onMarkAsSeen: {
                                         Task {
-                                            try? await listManager.removeFromList(listId: list.id, itemId: item.id)
+                                            let toastId = ToastCenter.shared.begin(
+                                                message: "mediaDetail.toast.markingSeen".localized
+                                            )
+                                            do {
+                                                try? await listManager.removeFromList(listId: list.id, itemId: item.id)
 
-                                            try await listManager.addToList(listId: listManager.seenList.id, movie: item.asMovie(), mediaType: item.mediaType)
+                                                try await listManager.addToList(listId: listManager.seenList.id, movie: item.asMovie(), mediaType: item.mediaType)
+                                                ToastCenter.shared.complete(
+                                                    toastId,
+                                                    message: "mediaDetail.toast.markedSeen".localized
+                                                )
+                                            } catch {
+                                                ToastCenter.shared.fail(toastId, message: "lists.toast.failed".localized)
+                                            }
                                         }
                                     },
                                     onDelete: {
                                         Task {
-                                            try? await listManager.removeFromList(listId: list.id, itemId: item.id)
+                                            let toastId = ToastCenter.shared.begin(message: "lists.toast.removing".localized)
+                                            do {
+                                                try await listManager.removeFromList(listId: list.id, itemId: item.id)
+                                                ToastCenter.shared.complete(toastId, message: "lists.toast.removed".localized)
+                                            } catch {
+                                                ToastCenter.shared.fail(toastId, message: "lists.toast.failed".localized)
+                                            }
                                         }
                                     }
                                 )
@@ -1467,13 +1510,16 @@ struct CreateListView: View {
     }
 
     private func performCreate() async {
+        let toastId = ToastCenter.shared.begin(message: "lists.toast.creating".localized)
         do {
             let newList = try await listManager.createList(name: listName, description: listDescription.isEmpty ? nil : listDescription)
             if isPublic {
                 try await listManager.setListVisibility(listId: newList.id, isPublic: true)
             }
+            ToastCenter.shared.complete(toastId, message: "lists.toast.created".localized)
             dismiss()
         } catch {
+            ToastCenter.shared.fail(toastId, message: "lists.toast.failed".localized)
             self.error = .database(error)
         }
     }
@@ -1574,47 +1620,6 @@ struct EditListView: View {
             await MainActor.run {
                 errorMessage = error.localizedDescription
                 showError = true
-            }
-        }
-    }
-}
-
-struct PlatformChip: View {
-    let platform: StreamingPlatform
-    let isSelected: Bool
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 8) {
-                ZStack {
-                    if let logoName = platform.logoAssetName {
-                        Image(logoName)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 60, height: 60)
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                    } else {
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.white.opacity(0.08))
-                            .frame(width: 60, height: 60)
-                            .overlay(
-                                Image(systemName: platform.icon)
-                                    .font(.system(size: 24, weight: .semibold))
-                                    .foregroundColor(.white)
-                            )
-                    }
-                    
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(isSelected ? Color.theme.accentOrange : Color.white.opacity(0.12), lineWidth: isSelected ? 3 : 1)
-                        .frame(width: 60, height: 60)
-                }
-                
-                Text(platform.rawValue)
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(.theme.textPrimary)
-                    .lineLimit(1)
-                    .frame(width: 60)
             }
         }
     }

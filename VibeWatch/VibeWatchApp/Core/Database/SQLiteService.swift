@@ -463,7 +463,7 @@ final class SQLiteService: ObservableObject {
         }
         
         let currentVersion = Int(migrationVersionString) ?? 0
-        let latestVersion = 7
+        let latestVersion = 9
         
         // Only run migrations if not already at latest version
         if currentVersion >= latestVersion {
@@ -701,6 +701,35 @@ final class SQLiteService: ObservableObject {
             execute(createPublicListsCacheTable())
         }
 
+        if currentVersion < 8 {
+            // Migration 8: la cache dei dettagli conserva il modello INTERO.
+            //
+            // Le colonne una-per-campo perdevano generi, stato, tagline e paesi: da cache la
+            // sezione "Informazioni" mostrava meno righe che da rete, e i campi nuovi (budget,
+            // incassi, network, creatori) non avrebbero avuto dove stare. Una colonna JSON del
+            // modello Codable evita una colonna per ogni campo che TMDB aggiungerà.
+            Logger.info("[SQLite] Migration 8: detail_cache.model_json")
+            if !columnExists("detail_cache", column: "model_json") {
+                execute("ALTER TABLE detail_cache ADD COLUMN model_json TEXT")
+            }
+        }
+
+        if currentVersion < 9 {
+            // Migration 9: il legame fra una lista pubblica e la lista da cui è stata copiata.
+            //
+            // "Crea lista pubblica da questa" produceva uno snapshot morto: aggiungere un titolo
+            // alla watchlist non lo faceva comparire nella copia che gli amici seguono. Le due
+            // colonne dicono da dove viene la copia, e `ListManager` propaga le aggiunte e le
+            // rimozioni verso di essa.
+            Logger.info("[SQLite] Migration 9: lists.source_list_id / source_list_type")
+            if !columnExists("lists", column: "source_list_id") {
+                execute("ALTER TABLE lists ADD COLUMN source_list_id TEXT")
+            }
+            if !columnExists("lists", column: "source_list_type") {
+                execute("ALTER TABLE lists ADD COLUMN source_list_type TEXT")
+            }
+        }
+
         // Re-enable foreign keys
         execute("PRAGMA foreign_keys = ON")
 
@@ -723,7 +752,7 @@ final class SQLiteService: ObservableObject {
     }
 
     /// Returns the labels of any expected end-state artifacts (columns, tables, indexes) that the
-    /// migrations 1–7 should have produced but didn't. Empty means the schema matches what the
+    /// migrations 1–9 should have produced but didn't. Empty means the schema matches what the
     /// latest version promises. Used to gate the version bump (STAB-003).
     private func missingMigrationArtifacts() -> [String] {
         var missing: [String] = []
@@ -742,6 +771,9 @@ final class SQLiteService: ObservableObject {
         requireColumn("lists", "is_public")             // migration 7
         requireObject("list_follows")                   // migration 7
         requireObject("public_lists_cache")             // migration 7
+        requireColumn("detail_cache", "model_json")     // migration 8
+        requireColumn("lists", "source_list_id")        // migration 9
+        requireColumn("lists", "source_list_type")      // migration 9
         return missing
     }
 

@@ -248,8 +248,7 @@ class AuthService: AuthServiceProtocol {
         if let errorDescription = extractErrorDescription(from: url) {
             Logger.error("[Auth] Error detected in callback URL: \(errorDescription)")
             await MainActor.run {
-                AppState.shared.showErrorToast = true
-                AppState.shared.toastMessage = errorDescription
+                ToastCenter.shared.show(error: errorDescription)
             }
             return
         }
@@ -269,8 +268,7 @@ class AuthService: AuthServiceProtocol {
             Logger.error("[Auth] Failed to establish session from callback: \(error)")
             // If session fails, likely the link is invalid/expired.
             await MainActor.run {
-                AppState.shared.showErrorToast = true
-                AppState.shared.toastMessage = "auth.error.invalidLink".localized
+                ToastCenter.shared.show(error: "auth.error.invalidLink".localized)
             }
             throw error
         }
@@ -1194,9 +1192,7 @@ class AuthService: AuthServiceProtocol {
     /// Show a user-facing message if the recovery link is expired/invalid.
     private func handleRecoveryErrorIfNeeded(from url: URL) {
         if AuthCallbackURLParser.shouldShowRecoveryError(from: url) {
-            let message = "Email link is invalid or has expired. Please request a new password reset link."
-            AppState.shared.toastMessage = message
-            AppState.shared.showErrorToast = true
+            ToastCenter.shared.show(error: "auth.error.recoveryLinkExpired".localized)
         }
     }
 

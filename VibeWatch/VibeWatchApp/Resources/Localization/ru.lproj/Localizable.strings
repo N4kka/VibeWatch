@@ -644,7 +644,7 @@
 "movieDetail.goodFitSubtitle" = "A quick, personalized take based on your taste.";
 
 // TV Show Detail - Mark All Seen Confirmation
-"tvDetail.markAllSeenTitle" = "Mark all episodes as seen";
+"tvDetail.markAllSeenTitle" = "Отметить весь сериал как просмотренный";
 "tvDetail.markAllSeenDescription" = "This action will apply to all episodes and seasons of the series available.";
 "tvDetail.markAllSeenQuestion" = "Do you want to continue?";
 "tvDetail.markAllSeenConfirm" = "Yes, mark as seen";
@@ -895,12 +895,12 @@
 "mediaDetail.action.watchlist" = "Watchlist";
 "mediaDetail.action.like" = "Like";
 "mediaDetail.action.list" = "To list";
-"mediaDetail.toast.watchlistAdded" = "Added to your watchlist";
-"mediaDetail.toast.watchlistRemoved" = "Removed from your watchlist";
-"mediaDetail.toast.markedSeen" = "Marked as seen";
-"mediaDetail.toast.markedUnseen" = "Removed from seen";
-"mediaDetail.toast.liked" = "Added to your likes";
-"mediaDetail.toast.likeRemoved" = "Removed from your likes";
+"mediaDetail.toast.watchlistAdded" = "Добавлено в список";
+"mediaDetail.toast.watchlistRemoved" = "Удалено из списка";
+"mediaDetail.toast.markedSeen" = "Отмечено как просмотренное";
+"mediaDetail.toast.markedUnseen" = "Удалено из просмотренных";
+"mediaDetail.toast.liked" = "Добавлено в понравившиеся";
+"mediaDetail.toast.likeRemoved" = "Удалено из понравившихся";
 "mediaDetail.why.cardTitle" = "Why is it right for you?";
 "mediaDetail.why.title" = "Why for you";
 "mediaDetail.why.affinity" = "Affinity with your tastes";
@@ -977,3 +977,143 @@
 "import.toast.mapping.done" = "%d названий сопоставлено · библиотека в порядке";
 
 "import.report.outOfStructure" = "%d эпизодов не удалось разместить в структуре TMDB подтверждённого сериала.";
+
+
+// MARK: - Toast (Task 10)
+"mediaDetail.toast.markingSeen" = "Отмечаем как просмотренное…";
+"lists.toast.adding" = "Добавляем…";
+"lists.toast.removing" = "Удаляем…";
+"lists.toast.addedTo" = "Добавлено в %@";
+"lists.toast.removedFrom" = "Удалено из %@";
+"lists.toast.removed" = "Удалено из списка";
+"lists.toast.failed" = "Что-то пошло не так";
+"lists.toast.creating" = "Создаём список…";
+"lists.toast.created" = "Список создан";
+"tracking.toast.markingWatched" = "Отмечаем эпизод…";
+"tracking.toast.markedWatched" = "Эпизод отмечен как просмотренный";
+"tracking.toast.snoozing" = "Откладываем…";
+"tracking.toast.snoozed" = "Сериал отложен";
+"auth.error.recoveryLinkExpired" = "Ссылка недействительна или устарела. Запросите новую ссылку для сброса пароля.";
+
+
+// MARK: - Regole password (Task 2)
+"auth.pwRule.length" = "8+ символов";
+"auth.pwRule.uppercase" = "1 заглавная";
+"auth.pwRule.lowercase" = "1 строчная";
+"auth.pwRule.number" = "1 цифра";
+"auth.pwRule.symbol" = "1 символ";
+"auth.accountCreated" = "Аккаунт создан";
+
+
+// MARK: - Modali (Task 9+14)
+"tvDetail.markAllSeenSubtitle" = "Применяется ко всем эпизодам всех вышедших сезонов.";
+"tvDetail.markAllSeenCTA" = "Отметить %d эпизодов как просмотренные";
+"tvDetail.markAllSeen.episodes" = "Эпизоды, отмеченные как просмотренные";
+"tvDetail.markAllSeen.diary" = "Записи, добавленные в дневник";
+"tvDetail.markAllSeenReversible" = "Обратимо: отдельные эпизоды можно вернуть из дневника.";
+"tvDetail.seasonsCount" = "%d сезонов";
+"tvDetail.episodesCount" = "%d эпизодов";
+"auth.changePasswordSubtitle" = "В целях безопасности мы выйдем из аккаунта на других устройствах.";
+"auth.newPasswordPlaceholder" = "Новый пароль";
+"auth.forgotCurrentPassword" = "Не помните текущий?";
+"auth.show" = "Показать";
+"auth.hide" = "Скрыть";
+"profile.feedback.subtitle" = "Мы читаем всё. Обычно отвечаем в течение двух дней.";
+"profile.feedback.keepUpdatedEmail" = "Напишем на %@";
+"profile.feedback.placeholder.bug" = "Что пошло не так? Что вы делали перед этим…";
+"profile.feedback.placeholder.suggest" = "Чего не хватает? Опишите, как бы вы этим пользовались…";
+"profile.feedback.placeholder.other" = "Напишите, что хотите нам сказать…";
+"profile.feedback.category.crash" = "Сбой";
+"profile.feedback.category.import" = "Импорт из TV Time";
+"profile.feedback.category.notifications" = "Уведомления";
+"profile.feedback.category.sync" = "Синхронизация";
+"profile.feedback.category.ui" = "Оформление";
+"profile.feedback.category.other" = "Другое";
+
+
+// MARK: - Update forzato (Task 3)
+"update.required" = "ТРЕБУЕТСЯ ОБНОВЛЕНИЕ";
+"update.whatsChanged" = "ЧТО ИЗМЕНИЛОСЬ";
+"update.fullReleaseNotes" = "Полный список изменений";
+"update.cta" = "Обновить в App Store";
+"update.versionFootnote" = "Версия %@";
+"update.dataSafe" = "Ваша библиотека и данные останутся в сохранности.";
+
+
+// MARK: - Preferiti (Task 7)
+"favorites.subtitle" = "Четыре тайтла на витрине вашего профиля";
+"favorites.inYourFavorites" = "В ваших избранных";
+"favorites.showcased" = "Показано в вашем профиле";
+"favorites.addedToast" = "Добавлено в избранное";
+"favorites.removedToast" = "Удалено из избранного";
+
+
+// MARK: - Informazioni estese (Task 8)
+"movieDetail.releaseDate" = "Дата выхода";
+"movieDetail.status" = "Статус";
+"movieDetail.productionCompanies" = "Производство";
+"movieDetail.budget" = "Бюджет";
+"movieDetail.revenue" = "Сборы";
+"movieDetail.originalLanguage" = "Язык оригинала";
+"movieDetail.tagline" = "Слоган";
+"tvDetail.firstAirDate" = "Первый эфир";
+"tvDetail.lastAirDate" = "Последний эфир";
+"tvDetail.seasonsEpisodes" = "Сезоны";
+"tvDetail.network" = "Телесеть";
+"tvDetail.createdBy" = "Создатели";
+"mediaStatus.released" = "Вышел";
+"mediaStatus.inProduction" = "В производстве";
+"mediaStatus.postProduction" = "Постпродакшн";
+"mediaStatus.planned" = "Запланирован";
+"mediaStatus.rumored" = "Слухи";
+"mediaStatus.canceled" = "Закрыт";
+"mediaStatus.returningSeries" = "Продолжается";
+"mediaStatus.ended" = "Завершён";
+"mediaStatus.pilot" = "Пилот";
+
+
+// MARK: - Piattaforme (Task 12+17)
+"platforms.active" = "активных платформ";
+"platforms.activeCount" = "%d активных";
+"platforms.clear" = "Сбросить";
+"platforms.coverage" = "Покрытие вашего списка";
+"platforms.libraryCount" = "%d тайтлов из вашей библиотеки";
+"platforms.recommended" = "РЕКОМЕНДУЕМ";
+"platforms.manage" = "Настроить";
+"platforms.empty" = "Для вашей страны пока нет платформ.";
+
+
+// MARK: - Preferiti nel profilo (Task 15)
+"favorites.sectionTitle" = "Ваше избранное";
+"favorites.sectionCount" = "%1$d из %2$d";
+
+
+// MARK: - Ricerca (Task 16)
+"search.mostRelevant" = "Самые подходящие";
+"common.movie" = "Фильм";
+"common.tvShow" = "Сериал";
+
+
+// MARK: - Toast con fase di progresso (bug 7)
+"mediaDetail.toast.addingToWatchlist" = "Добавляем в список…";
+"mediaDetail.toast.removingFromWatchlist" = "Удаляем из списка…";
+"mediaDetail.toast.liking" = "Добавляем в понравившиеся…";
+"mediaDetail.toast.unliking" = "Удаляем из понравившихся…";
+"mediaDetail.toast.markingUnseen" = "Удаляем из просмотренных…";
+"mediaDetail.toast.disliking" = "Добавляем в непонравившиеся…";
+"mediaDetail.toast.undisliking" = "Удаляем из непонравившихся…";
+"mediaDetail.toast.disliked" = "Добавлено в непонравившиеся";
+"mediaDetail.toast.dislikeRemoved" = "Удалено из непонравившихся";
+"favorites.adding" = "Добавляем в избранное…";
+"favorites.removing" = "Удаляем из избранного…";
+
+
+// MARK: - Ricerca ridisegnata (bug 1)
+"search.scope.all" = "Все";
+"search.scope.movies" = "Фильмы";
+"search.scope.series" = "Сериалы";
+"search.clear" = "Очистить";
+"search.trending.today" = "Сегодня";
+"search.trending.subtitle" = "Самое искомое в %@ за последние 24 часа.";
+"search.results.subtitle" = "Совпадения по «%@», затем похожие.";
+"search.resultsCount" = "%d назв.";

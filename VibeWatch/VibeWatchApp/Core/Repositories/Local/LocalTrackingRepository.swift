@@ -133,7 +133,7 @@ final class LocalTrackingRepository: TrackingRepositoryProtocol {
     /// "viste" = `up_to_date`. Il toggle-off resta "smetti di seguire" (`dropped`).
     func fusedListRows(userId: String) async throws -> [FusedListRow] {
         let sql = """
-            SELECT t.tmdb_show_id, t.bucket,
+            SELECT t.tmdb_show_id, t.bucket, t.next_season,
                    COALESCE(lt.title, t.show_name) AS title,
                    t.show_poster_path, t.updated_at, t.completed_at, t.last_watched_at
               FROM tv_tracking t
@@ -150,7 +150,12 @@ final class LocalTrackingRepository: TrackingRepositoryProtocol {
                   // ancora la serie, e in quel caso è la card del Tracking il posto dove appare.
                   let title = row["title"] as? String, !title.isEmpty else { return nil }
 
-            let isSeen = bucket == "up_to_date"
+            // "Vista" vuol dire finita, non "in pari per ora": una serie con un episodio futuro
+            // già annunciato (`next_season` valorizzato) resta in watchlist, e il chip "Visto" del
+            // dettaglio — che legge questa stessa lista — non risulta selezionato. Quando
+            // l'episodio esce, il cron notturno sposta il bucket a `up_next` e la riga torna dove
+            // deve senza che il client debba accorgersene.
+            let isSeen = bucket == "up_to_date" && Self.int(row["next_season"]) == nil
             let addedAt: Date
             if isSeen {
                 addedAt = Self.date(row["completed_at"])

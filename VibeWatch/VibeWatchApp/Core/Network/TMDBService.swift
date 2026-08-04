@@ -3,6 +3,12 @@ import Foundation
 protocol TMDBWatchProvidersServiceProtocol: Sendable {
     func getMovieWatchProviders(id: Int) async throws -> WatchProvider
     func getTVShowWatchProviders(id: Int) async throws -> WatchProvider
+    /// L'elenco COMPLETO dei provider di una regione (`/watch/providers/{movie|tv}`).
+    ///
+    /// Serve alla schermata Piattaforme: l'elenco di 30 nomi scritti a mano nel client invecchia
+    /// da solo — un servizio che chiude, uno che arriva, uno che cambia nome — mentre questo è la
+    /// stessa fonte da cui vengono i loghi mostrati sulle card.
+    func getAvailableWatchProviders(mediaType: String, region: String) async throws -> [Provider]
 }
 
 protocol TMDBServiceProtocol: TMDBWatchProvidersServiceProtocol, TVSeasonProviding, Sendable {
@@ -341,6 +347,23 @@ actor TMDBService: TMDBServiceProtocol {
     func getMovieWatchProviders(id: Int) async throws -> WatchProvider {
         try await request("/movie/\(id)/watch/providers")
     }
+
+    func getAvailableWatchProviders(mediaType: String, region: String) async throws -> [Provider] {
+        // `display_priorities` è una mappa regione→priorità: si appiattisce sulla regione chiesta,
+        // così l'ordine è quello che TMDB considera sensato lì e non una media mondiale.
+        let response: AvailableProvidersResponse = try await request(
+            "/watch/providers/\(mediaType)",
+            queryItems: [URLQueryItem(name: "watch_region", value: region)]
+        )
+        return response.results.map { entry in
+            Provider(
+                providerId: entry.providerId,
+                providerName: entry.providerName,
+                logoPath: entry.logoPath ?? "",
+                displayPriority: entry.displayPriorities?[region] ?? entry.displayPriority ?? 999
+            )
+        }
+    }
     
     func getSimilarMovies(id: Int, page: Int = 1) async throws -> TMDBResponse<Movie> {
         try await request("/movie/\(id)/similar", queryItems: [
@@ -474,9 +497,12 @@ struct SearchResult: Codable, Identifiable, Hashable {
     let firstAirDate: String?
     let voteAverage: Double?
     let voteCount: Int?
+    /// Serve all'ordinamento per rilevanza (`SearchRanking`): a parità di match testuale è ciò
+    /// che distingue Spider-Man da un omonimo che nessuno ha visto.
+    var popularity: Double?
     
     enum CodingKeys: String, CodingKey {
-        case id, overview, title, name
+        case id, overview, title, name, popularity
         case mediaType = "media_type"
         case posterPath = "poster_path"
         case backdropPath = "backdrop_path"

@@ -656,7 +656,7 @@
 "error.oops" = "Oops!";
 
 // TV Show Detail - Mark All Seen Confirmation
-"tvDetail.markAllSeenTitle" = "Mark all episodes as seen";
+"tvDetail.markAllSeenTitle" = "Merk hele serien som sett";
 "tvDetail.markAllSeenDescription" = "This action will apply to all episodes and seasons of the series available.";
 "tvDetail.markAllSeenQuestion" = "Do you want to continue?";
 "tvDetail.markAllSeenConfirm" = "Yes, mark as seen";
@@ -907,12 +907,12 @@
 "mediaDetail.action.watchlist" = "Watchlist";
 "mediaDetail.action.like" = "Like";
 "mediaDetail.action.list" = "To list";
-"mediaDetail.toast.watchlistAdded" = "Added to your watchlist";
-"mediaDetail.toast.watchlistRemoved" = "Removed from your watchlist";
-"mediaDetail.toast.markedSeen" = "Marked as seen";
-"mediaDetail.toast.markedUnseen" = "Removed from seen";
-"mediaDetail.toast.liked" = "Added to your likes";
-"mediaDetail.toast.likeRemoved" = "Removed from your likes";
+"mediaDetail.toast.watchlistAdded" = "Lagt til i watchlisten din";
+"mediaDetail.toast.watchlistRemoved" = "Fjernet fra watchlisten din";
+"mediaDetail.toast.markedSeen" = "Markert som sett";
+"mediaDetail.toast.markedUnseen" = "Fjernet fra sette";
+"mediaDetail.toast.liked" = "Lagt til i likene dine";
+"mediaDetail.toast.likeRemoved" = "Fjernet fra likene dine";
 "mediaDetail.why.cardTitle" = "Why is it right for you?";
 "mediaDetail.why.title" = "Why for you";
 "mediaDetail.why.affinity" = "Affinity with your tastes";
@@ -989,3 +989,143 @@
 "import.toast.mapping.done" = "%d titler løst · biblioteket er i orden";
 
 "import.report.outOfStructure" = "%d episoder fikk ikke plass i seriens TMDB-struktur.";
+
+
+// MARK: - Toast (Task 10)
+"mediaDetail.toast.markingSeen" = "Markerer som sett…";
+"lists.toast.adding" = "Legger til…";
+"lists.toast.removing" = "Fjerner…";
+"lists.toast.addedTo" = "Lagt til i %@";
+"lists.toast.removedFrom" = "Fjernet fra %@";
+"lists.toast.removed" = "Fjernet fra listen";
+"lists.toast.failed" = "Noe gikk galt";
+"lists.toast.creating" = "Oppretter liste…";
+"lists.toast.created" = "Listen er opprettet";
+"tracking.toast.markingWatched" = "Merker episode…";
+"tracking.toast.markedWatched" = "Episoden er merket som sett";
+"tracking.toast.snoozing" = "Setter på pause…";
+"tracking.toast.snoozed" = "Serien er satt på pause";
+"auth.error.recoveryLinkExpired" = "Lenken er ugyldig eller utløpt. Be om en ny lenke for å tilbakestille passordet.";
+
+
+// MARK: - Regole password (Task 2)
+"auth.pwRule.length" = "8+ tegn";
+"auth.pwRule.uppercase" = "1 stor bokstav";
+"auth.pwRule.lowercase" = "1 liten bokstav";
+"auth.pwRule.number" = "1 tall";
+"auth.pwRule.symbol" = "1 symbol";
+"auth.accountCreated" = "Kontoen er opprettet";
+
+
+// MARK: - Modali (Task 9+14)
+"tvDetail.markAllSeenSubtitle" = "Gjelder alle episoder i alle sesonger som allerede er sluppet.";
+"tvDetail.markAllSeenCTA" = "Merk %d episoder som sett";
+"tvDetail.markAllSeen.episodes" = "Episoder merket som sett";
+"tvDetail.markAllSeen.diary" = "Oppføringer lagt til i dagboken";
+"tvDetail.markAllSeenReversible" = "Kan angres: du kan gjenopprette enkeltepisoder fra dagboken.";
+"tvDetail.seasonsCount" = "%d sesonger";
+"tvDetail.episodesCount" = "%d episoder";
+"auth.changePasswordSubtitle" = "Av sikkerhetshensyn logger vi deg ut av de andre enhetene dine.";
+"auth.newPasswordPlaceholder" = "Nytt passord";
+"auth.forgotCurrentPassword" = "Husker du ikke det nåværende?";
+"auth.show" = "Vis";
+"auth.hide" = "Skjul";
+"profile.feedback.subtitle" = "Vi leser alt. Vi svarer vanligvis innen to dager.";
+"profile.feedback.keepUpdatedEmail" = "Vi skriver til %@";
+"profile.feedback.placeholder.bug" = "Hva gikk galt? Hva gjorde du rett før…";
+"profile.feedback.placeholder.suggest" = "Hva mangler? Beskriv hvordan du ville brukt det…";
+"profile.feedback.placeholder.other" = "Skriv det du vil si oss…";
+"profile.feedback.category.crash" = "Krasj";
+"profile.feedback.category.import" = "Import fra TV Time";
+"profile.feedback.category.notifications" = "Varsler";
+"profile.feedback.category.sync" = "Synkronisering";
+"profile.feedback.category.ui" = "Utseende";
+"profile.feedback.category.other" = "Annet";
+
+
+// MARK: - Update forzato (Task 3)
+"update.required" = "OPPDATERING KREVES";
+"update.whatsChanged" = "HVA SOM ER NYTT";
+"update.fullReleaseNotes" = "Fullstendige utgivelsesnotater";
+"update.cta" = "Oppdater fra App Store";
+"update.versionFootnote" = "Versjon %@";
+"update.dataSafe" = "Biblioteket og dataene dine forblir trygge.";
+
+
+// MARK: - Preferiti (Task 7)
+"favorites.subtitle" = "De 4 titlene i utstillingen på profilen din";
+"favorites.inYourFavorites" = "Blant favorittene dine";
+"favorites.showcased" = "Vises på profilen din";
+"favorites.addedToast" = "Lagt til i favoritter";
+"favorites.removedToast" = "Fjernet fra favoritter";
+
+
+// MARK: - Informazioni estese (Task 8)
+"movieDetail.releaseDate" = "Utgivelsesdato";
+"movieDetail.status" = "Status";
+"movieDetail.productionCompanies" = "Produksjon";
+"movieDetail.budget" = "Budsjett";
+"movieDetail.revenue" = "Inntjening";
+"movieDetail.originalLanguage" = "Originalspråk";
+"movieDetail.tagline" = "Slagord";
+"tvDetail.firstAirDate" = "Første sending";
+"tvDetail.lastAirDate" = "Siste sending";
+"tvDetail.seasonsEpisodes" = "Sesonger";
+"tvDetail.network" = "Kanal";
+"tvDetail.createdBy" = "Skapt av";
+"mediaStatus.released" = "Utgitt";
+"mediaStatus.inProduction" = "Under produksjon";
+"mediaStatus.postProduction" = "Etterproduksjon";
+"mediaStatus.planned" = "Planlagt";
+"mediaStatus.rumored" = "Rykte";
+"mediaStatus.canceled" = "Avlyst";
+"mediaStatus.returningSeries" = "Fortsetter";
+"mediaStatus.ended" = "Avsluttet";
+"mediaStatus.pilot" = "Pilot";
+
+
+// MARK: - Piattaforme (Task 12+17)
+"platforms.active" = "aktive plattformer";
+"platforms.activeCount" = "%d aktive";
+"platforms.clear" = "Nullstill";
+"platforms.coverage" = "Dekning av watchlisten din";
+"platforms.libraryCount" = "%d titler i biblioteket ditt";
+"platforms.recommended" = "ANBEFALT";
+"platforms.manage" = "Administrer";
+"platforms.empty" = "Ingen plattformer tilgjengelig for landet ditt ennå.";
+
+
+// MARK: - Preferiti nel profilo (Task 15)
+"favorites.sectionTitle" = "Favorittene dine";
+"favorites.sectionCount" = "%1$d av %2$d";
+
+
+// MARK: - Ricerca (Task 16)
+"search.mostRelevant" = "Mest relevante";
+"common.movie" = "Film";
+"common.tvShow" = "Serie";
+
+
+// MARK: - Toast con fase di progresso (bug 7)
+"mediaDetail.toast.addingToWatchlist" = "Legger til i watchlisten din…";
+"mediaDetail.toast.removingFromWatchlist" = "Fjerner fra watchlisten din…";
+"mediaDetail.toast.liking" = "Legger til i likene dine…";
+"mediaDetail.toast.unliking" = "Fjerner fra likene dine…";
+"mediaDetail.toast.markingUnseen" = "Fjerner fra sette…";
+"mediaDetail.toast.disliking" = "Legger til i dislikene dine…";
+"mediaDetail.toast.undisliking" = "Fjerner fra dislikene dine…";
+"mediaDetail.toast.disliked" = "Lagt til i dislikene dine";
+"mediaDetail.toast.dislikeRemoved" = "Fjernet fra dislikene dine";
+"favorites.adding" = "Legger til i favoritter…";
+"favorites.removing" = "Fjerner fra favoritter…";
+
+
+// MARK: - Ricerca ridisegnata (bug 1)
+"search.scope.all" = "Alle";
+"search.scope.movies" = "Filmer";
+"search.scope.series" = "Serier";
+"search.clear" = "Tøm";
+"search.trending.today" = "I dag";
+"search.trending.subtitle" = "Mest søkt i %@ de siste 24 timene.";
+"search.results.subtitle" = "Treff for «%@», deretter beslektede titler.";
+"search.resultsCount" = "%d titler";

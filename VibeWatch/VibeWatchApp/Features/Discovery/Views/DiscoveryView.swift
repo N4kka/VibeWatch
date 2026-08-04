@@ -110,13 +110,13 @@ struct DiscoveryView: View {
         .sheet(isPresented: $importCenter.showReviewSheet) {
             ImportReviewView()
         }
-        .toast(isShowing: $appState.showSuccessToast, message: appState.toastMessage, type: .success)
-        .toast(isShowing: $appState.showErrorToast, message: appState.toastMessage, type: .error)
         // Redesign 2.0 import: "Libreria importata · N titoli da verificare", una volta per job.
-        .toast(isShowing: Binding(
-            get: { importCenter.toastMessage != nil },
-            set: { if !$0 { importCenter.toastMessage = nil } }
-        ), message: importCenter.toastMessage ?? "", type: .success)
+        // I toast vivono sulla finestra dedicata del ToastCenter (visibili anche sopra sheet).
+        .onChange(of: importCenter.toastMessage) { _, newValue in
+            guard let message = newValue else { return }
+            ToastCenter.shared.show(success: message)
+            importCenter.toastMessage = nil
+        }
         .xpToast(gamificationService: gamificationService)
         .onChange(of: appState.shouldShowSignIn) {_, newValue in
             if newValue {

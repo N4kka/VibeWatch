@@ -86,8 +86,12 @@ class AppState: ObservableObject {
     
     @Published var isAuthenticated = false
     @Published var currentUser: User?
+    /// Deprecati: i toast passano dal `ToastCenter` (finestra dedicata, visibile sopra sheet e cover).
+    @available(*, deprecated, message: "Usa ToastCenter.shared")
     @Published var showSuccessToast = false
+    @available(*, deprecated, message: "Usa ToastCenter.shared")
     @Published var showErrorToast = false
+    @available(*, deprecated, message: "Usa ToastCenter.shared")
     @Published var toastMessage = ""
     @Published var isPreloading = true // Track splash state
     @Published var shouldShowSignIn = false // Trigger for redirecting to sign in flow

@@ -8,6 +8,8 @@ struct GlobalFilterView: View {
     @EnvironmentObject private var quotaManager: DailyQuotaManager
     @ObservedObject private var localizationManager = LocalizationManager.shared
     @AppStorage("selectedPlatforms") private var selectedPlatformsData: Data = Data()
+    @AppStorage("selectedProviderNames") private var selectedProviderNamesData: Data = Data()
+    @State private var showPlatformManager = false
 
     let onApply: (GlobalDiscoveryFilters) -> Void
 
@@ -146,19 +148,56 @@ struct GlobalFilterView: View {
             HStack(spacing: 8) {
                 scopeButton(title: "filters.myPlatforms".localized, selected: usesMyPlatforms) {
                     usesMyPlatforms = true
-                    tempFilters.streamingPlatforms = Set(
-                        PlatformSelectionCodec.decode(selectedPlatformsData).map(\.rawValue)
-                    )
+                    tempFilters.streamingPlatforms = myPlatformNames
                 }
                 scopeButton(title: "filters.platformScopeAll".localized, selected: !usesMyPlatforms) {
                     usesMyPlatforms = false
                     tempFilters.streamingPlatforms.removeAll()
                 }
             }
+            // Quando il filtro è "le mie piattaforme", quali siano si vede: i loghi, non una
+            // parola sola. Il link porta dove si cambiano.
+            if usesMyPlatforms, !myPlatformNames.isEmpty {
+                HStack(spacing: 8) {
+                    ForEach(Array(myPlatformNames.sorted().prefix(5)), id: \.self) { name in
+                        Text(name.prefix(1))
+                            .font(.system(size: 11, weight: .heavy))
+                            .foregroundColor(.theme.textPrimary)
+                            .frame(width: 24, height: 24)
+                            .background(RoundedRectangle(cornerRadius: 6).fill(Color.white.opacity(0.1)))
+                    }
+                    if myPlatformNames.count > 5 {
+                        Text("+\(myPlatformNames.count - 5)")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(.theme.textSecondary)
+                    }
+                    Spacer()
+                    Button {
+                        showPlatformManager = true
+                    } label: {
+                        Text("platforms.manage".localized)
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(.theme.accentOrange)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
             Text("platforms.footnote".localized)
                 .font(.system(size: 11.5))
                 .foregroundColor(Color(hex: "797a80"))
         }
+        .sheet(isPresented: $showPlatformManager) {
+            PlatformSelectionView()
+        }
+    }
+
+    /// I nomi delle piattaforme scelte: quelli nuovi (per provider_id) o, finché la migrazione
+    /// non è passata, quelli della vecchia selezione.
+    private var myPlatformNames: Set<String> {
+        let fromProviders = ProviderSelectionCodec.decodeNames(selectedProviderNamesData)
+        if !fromProviders.isEmpty { return fromProviders }
+        return Set(PlatformSelectionCodec.decode(selectedPlatformsData).map(\.rawValue))
     }
 
     private var releasePeriodSection: some View {

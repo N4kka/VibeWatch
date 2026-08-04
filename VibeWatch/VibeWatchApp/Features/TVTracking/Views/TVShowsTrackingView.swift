@@ -108,10 +108,18 @@ struct TVShowsTrackingView: View {
                                     row: row,
                                     isBusy: busyShowId == row.showId,
                                     onMarkWatched: {
-                                        perform(row) { try await TrackingActions.shared.markNextWatched(row) }
+                                        perform(
+                                            row,
+                                            progress: "tracking.toast.markingWatched".localized,
+                                            success: "tracking.toast.markedWatched".localized
+                                        ) { try await TrackingActions.shared.markNextWatched(row) }
                                     },
                                     onSnooze: {
-                                        perform(row) { try await TrackingActions.shared.snooze(row) }
+                                        perform(
+                                            row,
+                                            progress: "tracking.toast.snoozing".localized,
+                                            success: "tracking.toast.snoozed".localized
+                                        ) { try await TrackingActions.shared.snooze(row) }
                                     }
                                 )
                                 .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
@@ -172,15 +180,23 @@ struct TVShowsTrackingView: View {
     /// L'azione si accoda, il server ricalcola, si ritira, poi la schermata si rilegge. L'errore
     /// si mostra invece di sparire: una mutazione persa qui è una serie che non avanza, e l'utente
     /// non ha modo di accorgersene.
-    private func perform(_ row: TrackingRow, _ action: @escaping () async throws -> Void) {
+    private func perform(
+        _ row: TrackingRow,
+        progress: String,
+        success: String,
+        _ action: @escaping () async throws -> Void
+    ) {
         guard busyShowId == nil else { return }
         busyShowId = row.showId
         Task {
             defer { busyShowId = nil }
+            let toastId = ToastCenter.shared.begin(message: progress)
             do {
                 try await action()
                 await viewModel.load()
+                ToastCenter.shared.complete(toastId, message: success)
             } catch {
+                ToastCenter.shared.fail(toastId, message: error.localizedDescription)
                 actionError = error.localizedDescription
             }
         }

@@ -53,6 +53,11 @@ struct MediaList: Identifiable, Codable {
     var items: [MediaListItem]
     /// Visibilità pubblica (solo liste custom). Mirror locale dello stato server (Liste Pubbliche, Fase 1).
     var isPublic: Bool
+    /// La lista custom da cui questa è stata copiata ("Crea lista pubblica da questa").
+    var sourceListId: String?
+    /// Se la sorgente era una lista core (watchlist/seen/liked/disliked), il suo tipo: le core
+    /// hanno un id diverso su ogni installazione, il tipo no.
+    var sourceListType: ListType?
 
     var displayName: String {
         switch type {
@@ -64,7 +69,7 @@ struct MediaList: Identifiable, Codable {
         }
     }
 
-    init(id: String = UUID().uuidString, name: String, description: String? = nil, type: ListType, createdAt: Date = Date(), items: [MediaListItem] = [], isPublic: Bool = false) {
+    init(id: String = UUID().uuidString, name: String, description: String? = nil, type: ListType, createdAt: Date = Date(), items: [MediaListItem] = [], isPublic: Bool = false, sourceListId: String? = nil, sourceListType: ListType? = nil) {
         self.id = id
         self.name = name
         self.description = description
@@ -72,6 +77,8 @@ struct MediaList: Identifiable, Codable {
         self.createdAt = createdAt
         self.items = items
         self.isPublic = isPublic
+        self.sourceListId = sourceListId
+        self.sourceListType = sourceListType
     }
 
     // Decodifica tollerante: `isPublic` è opzionale nel JSON storico (es. vecchia migrazione
@@ -85,6 +92,8 @@ struct MediaList: Identifiable, Codable {
         self.createdAt = try c.decode(Date.self, forKey: .createdAt)
         self.items = try c.decodeIfPresent([MediaListItem].self, forKey: .items) ?? []
         self.isPublic = try c.decodeIfPresent(Bool.self, forKey: .isPublic) ?? false
+        self.sourceListId = try c.decodeIfPresent(String.self, forKey: .sourceListId)
+        self.sourceListType = try c.decodeIfPresent(ListType.self, forKey: .sourceListType)
     }
 }
 

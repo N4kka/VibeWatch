@@ -641,7 +641,7 @@
 "movieDetail.goodFitSubtitle" = "A quick, personalized take based on your taste.";
 
 // TV Show Detail - Mark All Seen Confirmation
-"tvDetail.markAllSeenTitle" = "Mark all episodes as seen";
+"tvDetail.markAllSeenTitle" = "将整部剧标记为已看";
 "tvDetail.markAllSeenDescription" = "This action will apply to all episodes and seasons of the series available.";
 "tvDetail.markAllSeenQuestion" = "Do you want to continue?";
 "tvDetail.markAllSeenConfirm" = "Yes, mark as seen";
@@ -892,12 +892,12 @@
 "mediaDetail.action.watchlist" = "Watchlist";
 "mediaDetail.action.like" = "Like";
 "mediaDetail.action.list" = "To list";
-"mediaDetail.toast.watchlistAdded" = "Added to your watchlist";
-"mediaDetail.toast.watchlistRemoved" = "Removed from your watchlist";
-"mediaDetail.toast.markedSeen" = "Marked as seen";
-"mediaDetail.toast.markedUnseen" = "Removed from seen";
-"mediaDetail.toast.liked" = "Added to your likes";
-"mediaDetail.toast.likeRemoved" = "Removed from your likes";
+"mediaDetail.toast.watchlistAdded" = "已加入待看列表";
+"mediaDetail.toast.watchlistRemoved" = "已从待看列表移除";
+"mediaDetail.toast.markedSeen" = "已标记为已看";
+"mediaDetail.toast.markedUnseen" = "已从已看中移除";
+"mediaDetail.toast.liked" = "已加入喜欢";
+"mediaDetail.toast.likeRemoved" = "已从喜欢中移除";
 "mediaDetail.why.cardTitle" = "Why is it right for you?";
 "mediaDetail.why.title" = "Why for you";
 "mediaDetail.why.affinity" = "Affinity with your tastes";
@@ -974,3 +974,143 @@
 "import.toast.mapping.done" = "已解决 %d 个标题 · 片库已整理";
 
 "import.report.outOfStructure" = "%d 集无法放入已确认剧集的 TMDB 结构中。";
+
+
+// MARK: - Toast (Task 10)
+"mediaDetail.toast.markingSeen" = "正在标记为已看…";
+"lists.toast.adding" = "正在添加…";
+"lists.toast.removing" = "正在移除…";
+"lists.toast.addedTo" = "已添加到 %@";
+"lists.toast.removedFrom" = "已从 %@ 移除";
+"lists.toast.removed" = "已从列表移除";
+"lists.toast.failed" = "出了点问题";
+"lists.toast.creating" = "正在创建列表…";
+"lists.toast.created" = "列表已创建";
+"tracking.toast.markingWatched" = "正在标记剧集…";
+"tracking.toast.markedWatched" = "剧集已标记为已看";
+"tracking.toast.snoozing" = "正在稍后再看…";
+"tracking.toast.snoozed" = "剧集已设为稍后再看";
+"auth.error.recoveryLinkExpired" = "链接无效或已过期。请重新申请密码重置链接。";
+
+
+// MARK: - Regole password (Task 2)
+"auth.pwRule.length" = "8 个以上字符";
+"auth.pwRule.uppercase" = "1 个大写字母";
+"auth.pwRule.lowercase" = "1 个小写字母";
+"auth.pwRule.number" = "1 个数字";
+"auth.pwRule.symbol" = "1 个符号";
+"auth.accountCreated" = "账号已创建";
+
+
+// MARK: - Modali (Task 9+14)
+"tvDetail.markAllSeenSubtitle" = "适用于已播出各季的每一集。";
+"tvDetail.markAllSeenCTA" = "将 %d 集标记为已看";
+"tvDetail.markAllSeen.episodes" = "标记为已看的剧集";
+"tvDetail.markAllSeen.diary" = "添加到日志的条目";
+"tvDetail.markAllSeenReversible" = "可撤销：你可以从日志中恢复单集。";
+"tvDetail.seasonsCount" = "%d 季";
+"tvDetail.episodesCount" = "%d 集";
+"auth.changePasswordSubtitle" = "出于安全考虑，我们会在你的其他设备上退出登录。";
+"auth.newPasswordPlaceholder" = "新密码";
+"auth.forgotCurrentPassword" = "忘记当前密码？";
+"auth.show" = "显示";
+"auth.hide" = "隐藏";
+"profile.feedback.subtitle" = "我们会看每一条，通常两天内回复。";
+"profile.feedback.keepUpdatedEmail" = "我们会发送到 %@";
+"profile.feedback.placeholder.bug" = "出了什么问题？出问题前你在做什么…";
+"profile.feedback.placeholder.suggest" = "缺少什么？说说你会怎么用…";
+"profile.feedback.placeholder.other" = "写下你想告诉我们的话…";
+"profile.feedback.category.crash" = "崩溃";
+"profile.feedback.category.import" = "TV Time 导入";
+"profile.feedback.category.notifications" = "通知";
+"profile.feedback.category.sync" = "同步";
+"profile.feedback.category.ui" = "界面";
+"profile.feedback.category.other" = "其他";
+
+
+// MARK: - Update forzato (Task 3)
+"update.required" = "需要更新";
+"update.whatsChanged" = "更新内容";
+"update.fullReleaseNotes" = "完整更新说明";
+"update.cta" = "前往 App Store 更新";
+"update.versionFootnote" = "版本 %@";
+"update.dataSafe" = "你的库和数据都会安全保留。";
+
+
+// MARK: - Preferiti (Task 7)
+"favorites.subtitle" = "在你个人主页展示的 4 部作品";
+"favorites.inYourFavorites" = "已在你的收藏中";
+"favorites.showcased" = "正在你的主页展示";
+"favorites.addedToast" = "已加入收藏";
+"favorites.removedToast" = "已从收藏中移除";
+
+
+// MARK: - Informazioni estese (Task 8)
+"movieDetail.releaseDate" = "上映日期";
+"movieDetail.status" = "状态";
+"movieDetail.productionCompanies" = "制作公司";
+"movieDetail.budget" = "预算";
+"movieDetail.revenue" = "票房";
+"movieDetail.originalLanguage" = "原始语言";
+"movieDetail.tagline" = "标语";
+"tvDetail.firstAirDate" = "首播";
+"tvDetail.lastAirDate" = "最近播出";
+"tvDetail.seasonsEpisodes" = "季数";
+"tvDetail.network" = "播出平台";
+"tvDetail.createdBy" = "主创";
+"mediaStatus.released" = "已上映";
+"mediaStatus.inProduction" = "制作中";
+"mediaStatus.postProduction" = "后期制作";
+"mediaStatus.planned" = "已立项";
+"mediaStatus.rumored" = "传闻";
+"mediaStatus.canceled" = "已取消";
+"mediaStatus.returningSeries" = "连载中";
+"mediaStatus.ended" = "已完结";
+"mediaStatus.pilot" = "试播集";
+
+
+// MARK: - Piattaforme (Task 12+17)
+"platforms.active" = "个已启用平台";
+"platforms.activeCount" = "%d 个已启用";
+"platforms.clear" = "清空";
+"platforms.coverage" = "你的待看清单覆盖率";
+"platforms.libraryCount" = "你的库中有 %d 部";
+"platforms.recommended" = "推荐";
+"platforms.manage" = "管理";
+"platforms.empty" = "你所在的国家/地区暂时没有可用平台。";
+
+
+// MARK: - Preferiti nel profilo (Task 15)
+"favorites.sectionTitle" = "你的收藏";
+"favorites.sectionCount" = "%2$d 个中的 %1$d 个";
+
+
+// MARK: - Ricerca (Task 16)
+"search.mostRelevant" = "最相关";
+"common.movie" = "电影";
+"common.tvShow" = "剧集";
+
+
+// MARK: - Toast con fase di progresso (bug 7)
+"mediaDetail.toast.addingToWatchlist" = "正在加入待看列表…";
+"mediaDetail.toast.removingFromWatchlist" = "正在从待看列表移除…";
+"mediaDetail.toast.liking" = "正在加入喜欢…";
+"mediaDetail.toast.unliking" = "正在从喜欢中移除…";
+"mediaDetail.toast.markingUnseen" = "正在从已看中移除…";
+"mediaDetail.toast.disliking" = "正在加入不喜欢…";
+"mediaDetail.toast.undisliking" = "正在从不喜欢中移除…";
+"mediaDetail.toast.disliked" = "已加入不喜欢";
+"mediaDetail.toast.dislikeRemoved" = "已从不喜欢中移除";
+"favorites.adding" = "正在加入收藏…";
+"favorites.removing" = "正在从收藏中移除…";
+
+
+// MARK: - Ricerca ridisegnata (bug 1)
+"search.scope.all" = "全部";
+"search.scope.movies" = "电影";
+"search.scope.series" = "剧集";
+"search.clear" = "清除";
+"search.trending.today" = "今天";
+"search.trending.subtitle" = "过去 24 小时在%@搜索最多的作品。";
+"search.results.subtitle" = "“%@”的匹配结果，之后是相关作品。";
+"search.resultsCount" = "%d 部";

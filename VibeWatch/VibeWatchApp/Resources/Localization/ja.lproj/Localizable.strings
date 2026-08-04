@@ -656,7 +656,7 @@
 "error.oops" = "おっと！";
 
 // TV Show Detail - Mark All Seen Confirmation
-"tvDetail.markAllSeenTitle" = "Mark all episodes as seen";
+"tvDetail.markAllSeenTitle" = "シリーズ全体を視聴済みにする";
 "tvDetail.markAllSeenDescription" = "This action will apply to all episodes and seasons of the series available.";
 "tvDetail.markAllSeenQuestion" = "Do you want to continue?";
 "tvDetail.markAllSeenConfirm" = "Yes, mark as seen";
@@ -907,12 +907,12 @@
 "mediaDetail.action.watchlist" = "Watchlist";
 "mediaDetail.action.like" = "Like";
 "mediaDetail.action.list" = "To list";
-"mediaDetail.toast.watchlistAdded" = "Added to your watchlist";
-"mediaDetail.toast.watchlistRemoved" = "Removed from your watchlist";
-"mediaDetail.toast.markedSeen" = "Marked as seen";
-"mediaDetail.toast.markedUnseen" = "Removed from seen";
-"mediaDetail.toast.liked" = "Added to your likes";
-"mediaDetail.toast.likeRemoved" = "Removed from your likes";
+"mediaDetail.toast.watchlistAdded" = "ウォッチリストに追加しました";
+"mediaDetail.toast.watchlistRemoved" = "ウォッチリストから削除しました";
+"mediaDetail.toast.markedSeen" = "視聴済みにしました";
+"mediaDetail.toast.markedUnseen" = "視聴済みから削除しました";
+"mediaDetail.toast.liked" = "「いいね」に追加しました";
+"mediaDetail.toast.likeRemoved" = "「いいね」から削除しました";
 "mediaDetail.why.cardTitle" = "Why is it right for you?";
 "mediaDetail.why.title" = "Why for you";
 "mediaDetail.why.affinity" = "Affinity with your tastes";
@@ -989,3 +989,143 @@
 "import.toast.mapping.done" = "%d件のタイトルを解決 · ライブラリは整理済み";
 
 "import.report.outOfStructure" = "%d件のエピソードは確認済みシリーズのTMDB構成に配置できませんでした。";
+
+
+// MARK: - Toast (Task 10)
+"mediaDetail.toast.markingSeen" = "視聴済みにしています…";
+"lists.toast.adding" = "追加しています…";
+"lists.toast.removing" = "削除しています…";
+"lists.toast.addedTo" = "%@ に追加しました";
+"lists.toast.removedFrom" = "%@ から削除しました";
+"lists.toast.removed" = "リストから削除しました";
+"lists.toast.failed" = "問題が発生しました";
+"lists.toast.creating" = "リストを作成しています…";
+"lists.toast.created" = "リストを作成しました";
+"tracking.toast.markingWatched" = "エピソードを記録しています…";
+"tracking.toast.markedWatched" = "エピソードを視聴済みにしました";
+"tracking.toast.snoozing" = "保留にしています…";
+"tracking.toast.snoozed" = "シリーズを保留にしました";
+"auth.error.recoveryLinkExpired" = "リンクが無効か期限切れです。パスワード再設定のリンクをもう一度リクエストしてください。";
+
+
+// MARK: - Regole password (Task 2)
+"auth.pwRule.length" = "8文字以上";
+"auth.pwRule.uppercase" = "大文字1つ";
+"auth.pwRule.lowercase" = "小文字1つ";
+"auth.pwRule.number" = "数字1つ";
+"auth.pwRule.symbol" = "記号1つ";
+"auth.accountCreated" = "アカウントを作成しました";
+
+
+// MARK: - Modali (Task 9+14)
+"tvDetail.markAllSeenSubtitle" = "公開済みの全シーズンの全エピソードに適用されます。";
+"tvDetail.markAllSeenCTA" = "%d 話を視聴済みにする";
+"tvDetail.markAllSeen.episodes" = "視聴済みにするエピソード";
+"tvDetail.markAllSeen.diary" = "日記に追加される項目";
+"tvDetail.markAllSeenReversible" = "元に戻せます: 日記から個々のエピソードを戻せます。";
+"tvDetail.seasonsCount" = "%d シーズン";
+"tvDetail.episodesCount" = "%d エピソード";
+"auth.changePasswordSubtitle" = "安全のため、他のデバイスからはサインアウトされます。";
+"auth.newPasswordPlaceholder" = "新しいパスワード";
+"auth.forgotCurrentPassword" = "現在のパスワードを忘れましたか？";
+"auth.show" = "表示";
+"auth.hide" = "非表示";
+"profile.feedback.subtitle" = "すべて読んでいます。通常2日以内に返信します。";
+"profile.feedback.keepUpdatedEmail" = "%@ に連絡します";
+"profile.feedback.placeholder.bug" = "何が起きましたか？ 直前に何をしていましたか…";
+"profile.feedback.placeholder.suggest" = "足りないものは？ どう使いたいか教えてください…";
+"profile.feedback.placeholder.other" = "伝えたいことを書いてください…";
+"profile.feedback.category.crash" = "クラッシュ";
+"profile.feedback.category.import" = "TV Time からの取り込み";
+"profile.feedback.category.notifications" = "通知";
+"profile.feedback.category.sync" = "同期";
+"profile.feedback.category.ui" = "表示";
+"profile.feedback.category.other" = "その他";
+
+
+// MARK: - Update forzato (Task 3)
+"update.required" = "アップデートが必要です";
+"update.whatsChanged" = "変更点";
+"update.fullReleaseNotes" = "リリースノート全文";
+"update.cta" = "App Store で更新";
+"update.versionFootnote" = "バージョン %@";
+"update.dataSafe" = "ライブラリとデータは安全なままです。";
+
+
+// MARK: - Preferiti (Task 7)
+"favorites.subtitle" = "プロフィールに並ぶ4作品";
+"favorites.inYourFavorites" = "お気に入りに入っています";
+"favorites.showcased" = "プロフィールに表示中";
+"favorites.addedToast" = "お気に入りに追加しました";
+"favorites.removedToast" = "お気に入りから削除しました";
+
+
+// MARK: - Informazioni estese (Task 8)
+"movieDetail.releaseDate" = "公開日";
+"movieDetail.status" = "ステータス";
+"movieDetail.productionCompanies" = "製作";
+"movieDetail.budget" = "製作費";
+"movieDetail.revenue" = "興行収入";
+"movieDetail.originalLanguage" = "原語";
+"movieDetail.tagline" = "キャッチコピー";
+"tvDetail.firstAirDate" = "初回放送";
+"tvDetail.lastAirDate" = "最新放送";
+"tvDetail.seasonsEpisodes" = "シーズン";
+"tvDetail.network" = "放送局";
+"tvDetail.createdBy" = "制作者";
+"mediaStatus.released" = "公開済み";
+"mediaStatus.inProduction" = "製作中";
+"mediaStatus.postProduction" = "ポストプロダクション";
+"mediaStatus.planned" = "企画中";
+"mediaStatus.rumored" = "噂段階";
+"mediaStatus.canceled" = "打ち切り";
+"mediaStatus.returningSeries" = "放送中";
+"mediaStatus.ended" = "完結";
+"mediaStatus.pilot" = "パイロット版";
+
+
+// MARK: - Piattaforme (Task 12+17)
+"platforms.active" = "有効なサービス";
+"platforms.activeCount" = "%d 件有効";
+"platforms.clear" = "クリア";
+"platforms.coverage" = "ウォッチリストのカバー率";
+"platforms.libraryCount" = "ライブラリの %d 作品";
+"platforms.recommended" = "おすすめ";
+"platforms.manage" = "管理";
+"platforms.empty" = "お住まいの国で利用できるサービスはまだありません。";
+
+
+// MARK: - Preferiti nel profilo (Task 15)
+"favorites.sectionTitle" = "お気に入り";
+"favorites.sectionCount" = "%2$d 件中 %1$d 件";
+
+
+// MARK: - Ricerca (Task 16)
+"search.mostRelevant" = "関連度が高い順";
+"common.movie" = "映画";
+"common.tvShow" = "テレビ番組";
+
+
+// MARK: - Toast con fase di progresso (bug 7)
+"mediaDetail.toast.addingToWatchlist" = "ウォッチリストに追加しています…";
+"mediaDetail.toast.removingFromWatchlist" = "ウォッチリストから削除しています…";
+"mediaDetail.toast.liking" = "「いいね」に追加しています…";
+"mediaDetail.toast.unliking" = "「いいね」から削除しています…";
+"mediaDetail.toast.markingUnseen" = "視聴済みから削除しています…";
+"mediaDetail.toast.disliking" = "「よくないね」に追加しています…";
+"mediaDetail.toast.undisliking" = "「よくないね」から削除しています…";
+"mediaDetail.toast.disliked" = "「よくないね」に追加しました";
+"mediaDetail.toast.dislikeRemoved" = "「よくないね」から削除しました";
+"favorites.adding" = "お気に入りに追加しています…";
+"favorites.removing" = "お気に入りから削除しています…";
+
+
+// MARK: - Ricerca ridisegnata (bug 1)
+"search.scope.all" = "すべて";
+"search.scope.movies" = "映画";
+"search.scope.series" = "シリーズ";
+"search.clear" = "消去";
+"search.trending.today" = "今日";
+"search.trending.subtitle" = "過去24時間に%@で最も検索された作品。";
+"search.results.subtitle" = "「%@」に一致、そのあとに関連作品。";
+"search.resultsCount" = "%d件";

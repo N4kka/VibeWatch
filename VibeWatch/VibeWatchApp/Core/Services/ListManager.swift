@@ -298,7 +298,8 @@ class ListManager: ObservableObject {
 
         do {
             let listsQuery = """
-                SELECT l.id, l.name, l.description, l.type, l.created_at, l.is_public
+                SELECT l.id, l.name, l.description, l.type, l.created_at, l.is_public,
+                       l.source_list_id, l.source_list_type
                 FROM lists l
                 WHERE l.user_id = ? AND l.deleted_at IS NULL
                 ORDER BY l.created_at DESC
@@ -358,7 +359,9 @@ class ListManager: ObservableObject {
                     type: type,
                     createdAt: ISO8601DateFormatter().date(from: row["created_at"] as? String ?? "") ?? Date(),
                     items: items,
-                    isPublic: (row["is_public"] as? Int ?? 0) != 0
+                    isPublic: (row["is_public"] as? Int ?? 0) != 0,
+                    sourceListId: row["source_list_id"] as? String,
+                    sourceListType: (row["source_list_type"] as? String).flatMap(ListType.init(rawValue:))
                 )
                 loadedLists.append(list)
             }
@@ -985,6 +988,12 @@ class ListManager: ObservableObject {
             )
             PaywallTriggerService.shared.recordSavedToList()
             ReviewPromptManager.shared.recordPositiveAction()
+
+            // Le copie pubbliche seguono anche le serie TV: la destinazione è custom, quindi
+            // passa dal percorso legacy `list_items` e non dal tracking.
+            if let source = lists.first(where: { $0.id == listId }) {
+                await propagateAdd(movie, mediaType: mediaType, from: source)
+            }
             return
         }
 
@@ -1052,6 +1061,10 @@ class ListManager: ObservableObject {
             EpisodeSeenManager.shared.markShowSeen(showId: movie.id)
         }
 
+        if let source = lists.first(where: { $0.id == listId }) {
+            await propagateAdd(movie, mediaType: mediaType, from: source)
+        }
+
         // Prefetch image for offline viewing (watchlist only, WiFi only)
         if listType == .watchlist, let posterPath = item.posterPath {
             Task.detached(priority: .utility) {
@@ -1111,6 +1124,10 @@ class ListManager: ObservableObject {
                 try await trackingActions.unsee(showId: removedItem.mediaId)
             }
             await loadListsFromSQLite()
+            if let source = lists.first(where: { $0.id == listId }) {
+                await propagateRemove(
+                    mediaId: removedItem.mediaId, mediaType: removedItem.mediaType, from: source)
+            }
             return
         }
 
@@ -1132,6 +1149,11 @@ class ListManager: ObservableObject {
         // Also remove from local SQLite.
         // Awaited (non più fire-and-forget) così l'enqueue sull'outbox è deterministico/testabile.
         await removeItemFromSQLite(itemId)
+
+        if let removedItem, let source = lists.first(where: { $0.id == listId }) {
+            await propagateRemove(
+                mediaId: removedItem.mediaId, mediaType: removedItem.mediaType, from: source)
+        }
     }
     
     private func removeItemFromSQLite(_ itemId: String) async {
@@ -1275,6 +1297,8 @@ class ListManager: ObservableObject {
                 "description": existing.description ?? "",
                 "type": existing.type.rawValue,
                 "is_public": isPublic,
+                "source_list_id": existing.sourceListId ?? "",
+                "source_list_type": existing.sourceListType?.rawValue ?? "",
                 "created_at": ISO8601DateFormatter().string(from: existing.createdAt),
                 "updated_at": now
             ],
@@ -1294,10 +1318,97 @@ class ListManager: ObservableObject {
         let trimmed = name?.trimmingCharacters(in: .whitespacesAndNewlines)
         let newName = (trimmed?.isEmpty == false ? trimmed! : source.displayName)
         let newList = try await createList(name: newName, description: source.description)
+        // Il filo con la sorgente: da qui in poi le aggiunte e le rimozioni sulla lista di
+        // origine arrivano anche qui, invece di lasciare uno snapshot che invecchia.
+        await linkList(newList.id, toSource: source)
         for item in source.items {
             try? await addToList(listId: newList.id, movie: item.asMovie(), mediaType: item.mediaType)
         }
         return lists.first(where: { $0.id == newList.id }) ?? newList
+    }
+
+    /// Scrive il legame copia→sorgente su SQLite e lo accoda all'outbox.
+    ///
+    /// Per una lista custom si punta all'id; per una core si punta al **tipo**, perché l'id di
+    /// una watchlist è diverso su ogni installazione mentre il tipo no.
+    private func linkList(_ listId: String, toSource source: MediaList) async {
+        guard let index = lists.firstIndex(where: { $0.id == listId }) else { return }
+
+        let sourceId: String? = source.type == .custom ? source.id : nil
+        let sourceType: ListType? = source.type == .custom ? nil : source.type
+
+        objectWillChange.send()
+        lists[index].sourceListId = sourceId
+        lists[index].sourceListType = sourceType
+        updateDefaultReferences(from: lists)
+
+        let now = ISO8601DateFormatter().string(from: Date())
+        _ = db.execute(
+            """
+            UPDATE lists SET source_list_id = ?, source_list_type = ?, updated_at = datetime('now')
+            WHERE id = ?
+            """,
+            parameters: [sourceId ?? NSNull(), sourceType?.rawValue ?? NSNull(), listId]
+        )
+
+        let existing = lists[index]
+        try? await sync.queueOperation(
+            table: "lists",
+            operationType: "UPDATE",
+            recordId: listId,
+            payload: [
+                "id": listId,
+                "user_id": userId,
+                "name": existing.name,
+                "description": existing.description ?? "",
+                "type": existing.type.rawValue,
+                "is_public": existing.isPublic,
+                "source_list_id": sourceId ?? "",
+                "source_list_type": sourceType?.rawValue ?? "",
+                "created_at": ISO8601DateFormatter().string(from: existing.createdAt),
+                "updated_at": now
+            ],
+            dependsOn: nil
+        )
+    }
+
+    /// Le copie che seguono questa lista. Solo custom: una core non copia nessuno.
+    private func linkedLists(forSource list: MediaList) -> [MediaList] {
+        lists.filter { $0.type == .custom && $0.id != list.id &&
+            ($0.sourceListId == list.id ||
+             ($0.sourceListType != nil && $0.sourceListType == list.type && list.type != .custom)) }
+    }
+
+    /// Propaga un'aggiunta dalla lista mutata alle sue copie.
+    ///
+    /// La destinazione è sempre una lista custom, quindi si passa dal percorso legacy
+    /// `list_items` + outbox: funziona offline e anche per le serie TV. Nessun rischio di
+    /// ricorsione — si propaga solo *dalla* lista mutata *verso* le sue copie, e le catene
+    /// copia-di-copia sono acicliche.
+    private func propagateAdd(_ movie: Movie, mediaType: MediaType, from source: MediaList) async {
+        for linked in linkedLists(forSource: source) {
+            do {
+                try await addToList(listId: linked.id, movie: movie, mediaType: mediaType)
+            } catch ListError.itemAlreadyInList {
+                // C'è già: è l'esito voluto.
+            } catch {
+                Logger.warning("[ListManager] Propagazione verso \(linked.id) fallita: \(error)")
+            }
+        }
+    }
+
+    /// Contraltare di `propagateAdd`: toglie lo stesso (mediaId, mediaType) dalle copie.
+    private func propagateRemove(mediaId: Int, mediaType: MediaType, from source: MediaList) async {
+        for linked in linkedLists(forSource: source) {
+            guard let item = linked.items.first(where: {
+                $0.mediaId == mediaId && $0.mediaType == mediaType
+            }) else { continue }
+            do {
+                try await removeFromList(listId: linked.id, itemId: item.id)
+            } catch {
+                Logger.warning("[ListManager] Rimozione propagata verso \(linked.id) fallita: \(error)")
+            }
+        }
     }
 
     private func existingFollowId(listId: String) async -> String? {

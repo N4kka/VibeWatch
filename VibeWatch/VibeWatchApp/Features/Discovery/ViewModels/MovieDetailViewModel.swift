@@ -97,8 +97,13 @@ class MovieDetailViewModel: ObservableObject {
         credits?.crew.first { $0.job == "Director" }
     }
     
+    /// Il cast intero: il carosello è pigro, e tagliare a dieci nascondeva metà dei nomi che
+    /// l'utente cercava (i comprimari stanno spesso oltre il decimo posto).
     var mainCast: [Cast] {
-        Array(credits?.cast.prefix(10) ?? [])
+        // TMDB elenca due volte chi interpreta più ruoli: con `ForEach` su `id` sarebbero due
+        // schede identiche e un avviso di identità duplicata.
+        var visti = Set<Int>()
+        return (credits?.cast ?? []).filter { visti.insert($0.id).inserted }
     }
     
     var trailer: Video? {
@@ -239,8 +244,13 @@ class TVShowDetailViewModel: ObservableObject {
         credits?.crew.first { $0.job == "Director" }
     }
 
+    /// Il cast intero: il carosello è pigro, e tagliare a dieci nascondeva metà dei nomi che
+    /// l'utente cercava (i comprimari stanno spesso oltre il decimo posto).
     var mainCast: [Cast] {
-        Array(credits?.cast.prefix(10) ?? [])
+        // TMDB elenca due volte chi interpreta più ruoli: con `ForEach` su `id` sarebbero due
+        // schede identiche e un avviso di identità duplicata.
+        var visti = Set<Int>()
+        return (credits?.cast ?? []).filter { visti.insert($0.id).inserted }
     }
 
     var trailer: Video? {

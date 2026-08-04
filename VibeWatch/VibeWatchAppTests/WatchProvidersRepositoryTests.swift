@@ -101,6 +101,11 @@ private struct FakeTMDBWatchProvidersService: TMDBWatchProvidersServiceProtocol 
     func getTVShowWatchProviders(id: Int) async throws -> WatchProvider {
         tvProviders
     }
+
+    /// Il doppio non parla con la rete: l'elenco per regione qui non serve a nessun test.
+    func getAvailableWatchProviders(mediaType: String, region: String) async throws -> [Provider] {
+        []
+    }
 }
 
 private struct FakeStreamingAvailabilityProvider: StreamingAvailabilityProviding {

@@ -57,8 +57,10 @@ struct ProfileView: View {
     @State private var showFeedback = false
     @State private var selectedFeedbackType: FeedbackType?
     @State private var showUpgradePaywall = false
+    @State private var selectedFavorite: ProfileFavoritesViewModel.Entry?
     @State private var pendingNotificationToggle = false
     @AppStorage("selectedPlatforms") private var selectedPlatformsData: Data = Data()
+    @AppStorage("selectedProviderNames") private var selectedProviderNamesData: Data = Data()
     
     private var selectedPlatforms: Set<StreamingPlatform> {
         PlatformSelectionCodec.decode(selectedPlatformsData)
@@ -253,31 +255,22 @@ struct ProfileView: View {
                 _ = await (profile, stats)
                 await loadSocialCounts()
             }
-            .overlay {
-                if showLogoutConfirmation {
-                    popupOverlayBackground(onTap: {
+            .sheet(isPresented: $showLogoutConfirmation) {
+                VWConfirmationSheet(
+                    title: "profile.logoutConfirmationTitle".localized,
+                    confirmTitle: "common.confirm".localized,
+                    isDestructive: true,
+                    onConfirm: {
                         showLogoutConfirmation = false
-                    })
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    
-                    ConfirmationPopup(
-                        title: "profile.logoutConfirmationTitle".localized,
-                        message: nil,
-                        confirmTitle: "common.confirm".localized,
-                        cancelTitle: "common.cancel".localized,
-                        isDestructive: true,
-                        onConfirm: {
-                            showLogoutConfirmation = false
-                            Task {
-                                await handleLogout()
-                            }
-                        },
-                        onCancel: {
-                            showLogoutConfirmation = false
+                        Task {
+                            await handleLogout()
                         }
-                    )
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-                }
+                    },
+                    onCancel: {
+                        showLogoutConfirmation = false
+                    }
+                )
+                .vwModalPresentation()
             }
         }
         .onAppear {
@@ -363,12 +356,27 @@ struct ProfileView: View {
 
                 statsTiles
 
+                ProfileFavoritesSection { entry in
+                    selectedFavorite = entry
+                }
+
                 settingsSection
             }
             .padding(.vertical, 20)
         }
         .sheet(isPresented: $showAnalyticsDashboard) {
             NavigationView { AnalyticsDashboardView() }
+        }
+        .sheet(item: $selectedFavorite) { entry in
+            NavigationStack {
+                if entry.mediaType == "movie" {
+                    MovieDetailView(movieId: entry.tmdbId)
+                } else {
+                    TVShowDetailView(tvShowId: entry.tmdbId)
+                }
+            }
+            .environmentObject(appState)
+            .environmentObject(dailyQuotaManager)
         }
         .sheet(isPresented: $showBadges) {
             // Redesign 2.0: la card livello e la riga "Badge e livelli" aprono la casa unica
@@ -641,7 +649,9 @@ struct ProfileView: View {
     
     /// "Netflix +4": la prima piattaforma scelta e quante altre. Vuoto = niente valore.
     private var platformsValue: String? {
-        let names = selectedPlatforms.map(\.rawValue).sorted()
+        let fromProviders = ProviderSelectionCodec.decodeNames(selectedProviderNamesData)
+        let names = (fromProviders.isEmpty ? Set(selectedPlatforms.map(\.rawValue)) : fromProviders)
+            .sorted()
         guard let first = names.first else { return nil }
         return names.count > 1 ? "\(first) +\(names.count - 1)" : first
     }
@@ -945,9 +955,10 @@ struct SettingsRow: View {
 }
 
 struct HelpSupportSheet: View {
+    // Termini e privacy vivono in `PrivacyTermsView`, che è la loro pagina: qui erano una
+    // seconda copia degli stessi due link, e due posti che dicono la stessa cosa sono un posto
+    // che prima o poi la dirà diversa.
     @Environment(\.dismiss) private var dismiss
-    private let privacyURL = URL(string: "https://vibewatch.vercel.app/privacy")!
-    private let termsOfUseURL = URL(string: "https://vibewatch.vercel.app/terms")!
 
     private var faqItems: [HelpFAQItem] {
         [
@@ -1019,38 +1030,6 @@ struct HelpSupportSheet: View {
                         }
                     }
 
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("profile.legal".localized)
-                            .font(.system(size: 18, weight: .bold))
-                            .foregroundColor(.theme.textPrimary)
-
-                        VStack(spacing: 10) {
-                            Link(destination: privacyURL) {
-                                HStack {
-                                    Text("profile.privacyPolicy".localized)
-                                    Spacer()
-                                    Image(systemName: "arrow.up.right.square")
-                                }
-                                .font(.system(size: 14))
-                                .foregroundColor(.theme.textPrimary)
-                            }
-
-                            Divider()
-
-                            Link(destination: termsOfUseURL) {
-                                HStack {
-                                    Text("profile.termsOfUse".localized)
-                                    Spacer()
-                                    Image(systemName: "arrow.up.right.square")
-                                }
-                                .font(.system(size: 14))
-                                .foregroundColor(.theme.textPrimary)
-                            }
-                        }
-                        .padding()
-                        .background(Color.white.opacity(0.06))
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                    }
                 }
                 .padding(20)
             }
@@ -1126,7 +1105,7 @@ struct FeedbackType: Identifiable, Hashable {
         id: "suggest",
         title: "profile.feedback.suggestFeature".localized,
         description: "profile.feedback.suggestFeatureDescription".localized,
-        iconName: "iphone"
+        iconName: "lightbulb.fill"
     )
     static let bug = FeedbackType(
         id: "bug",
@@ -1138,7 +1117,7 @@ struct FeedbackType: Identifiable, Hashable {
         id: "other",
         title: "profile.feedback.other".localized,
         description: "profile.feedback.otherDescription".localized,
-        iconName: "gearshape.fill"
+        iconName: "bubble.left.fill"
     )
     
     static var all: [FeedbackType] { [.suggest, .bug, .other] }
@@ -1147,45 +1126,101 @@ struct FeedbackType: Identifiable, Hashable {
 struct FeedbackSheet: View {
     @Binding var selectedFeedbackType: FeedbackType?
     @Environment(\.dismiss) private var dismiss
-    
+
     var body: some View {
-        NavigationView {
-            List {
+        VWModalSheet(
+            title: "profile.sendFeedback".localized,
+            subtitle: "profile.feedback.subtitle".localized,
+            onClose: { dismiss() }
+        ) {
+            VStack(spacing: 12) {
                 ForEach(FeedbackType.all) { type in
                     Button {
                         selectedFeedbackType = type
                         dismiss()
                     } label: {
-                        HStack {
-                            Image(systemName: type.iconName)
-                                .font(.system(size: 20))
-                                .foregroundColor(.theme.accentOrange)
-                                .frame(width: 24)
-                            Text(type.title)
-                                .font(.system(size: 16))
-                                .foregroundColor(.theme.textPrimary)
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .foregroundColor(.theme.textSecondary)
-                        }
-                        .padding(.vertical, 6)
+                        row(for: type)
                     }
-                    .listRowBackground(Color.theme.background)
+                    .buttonStyle(.plain)
                 }
-            }
-            .scrollContentBackground(.hidden)
-            .background(Color.theme.background)
-            .navigationTitle("profile.sendFeedback".localized)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    BackCircleButton { dismiss() }
-                }
+
+                Text(AppEnvironmentFootnote.text)
+                    .font(.system(size: 13))
+                    .foregroundColor(.theme.textSecondary)
+                    .padding(.top, 8)
             }
         }
-        .preferredColorScheme(.dark)
-        .presentationDetents([.fraction(0.5), .large])
-        .presentationDragIndicator(.visible)
+        .vwModalPresentation()
+    }
+
+    private func row(for type: FeedbackType) -> some View {
+        HStack(spacing: 14) {
+            Image(systemName: type.iconName)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundColor(.theme.accentOrange)
+                .frame(width: 46, height: 46)
+                .background(
+                    RoundedRectangle(cornerRadius: 13)
+                        .fill(Color.theme.accentOrange.opacity(0.14))
+                )
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(type.title)
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundColor(.theme.textPrimary)
+                Text(type.description)
+                    .font(.system(size: 14))
+                    .foregroundColor(.theme.textSecondary)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 8)
+
+            Image(systemName: "chevron.right")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.theme.textSecondary)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 17).fill(Color.white.opacity(0.065)))
+        .overlay(
+            RoundedRectangle(cornerRadius: 17)
+                .stroke(Color.white.opacity(0.07), lineWidth: 1)
+        )
+    }
+}
+
+/// "VibeWatch 2.4.1 (318) · iOS 18.5" — il piè di pagina delle modali di feedback.
+enum AppEnvironmentFootnote {
+    static var text: String {
+        let info = Bundle.main.infoDictionary
+        let version = info?["CFBundleShortVersionString"] as? String ?? "—"
+        let build = info?["CFBundleVersion"] as? String ?? "—"
+        return "VibeWatch \(version) (\(build)) · iOS \(UIDevice.current.systemVersion)"
+    }
+}
+
+/// Le categorie di "Segnala un problema": restringono il campo prima ancora di leggere il testo.
+enum FeedbackCategory: String, CaseIterable, Identifiable {
+    case crash
+    case tvTimeImport
+    case notifications
+    case sync
+    case ui
+    case other
+
+    var id: String { rawValue }
+
+    var titleKey: String {
+        switch self {
+        case .crash: return "profile.feedback.category.crash"
+        case .tvTimeImport: return "profile.feedback.category.import"
+        case .notifications: return "profile.feedback.category.notifications"
+        case .sync: return "profile.feedback.category.sync"
+        case .ui: return "profile.feedback.category.ui"
+        case .other: return "profile.feedback.category.other"
+        }
     }
 }
 
@@ -1193,125 +1228,180 @@ struct FeedbackDetailSheet: View {
     let type: FeedbackType
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
+    /// Il singleton e non `@EnvironmentObject`: questo foglio si apre anche dal dettaglio film,
+    /// dove non c'è garanzia che l'oggetto sia stato iniettato nell'ambiente.
+    private let appState = AppState.shared
     var onCancel: (() -> Void)? = nil
     @State private var message = ""
     @State private var keepUpdated = true
     @State private var isSending = false
     @State private var sendError: String?
-    @State private var sendSuccess = false
-    
+    @State private var category: FeedbackCategory?
+
+    private static let maxLength = 500
+
     var body: some View {
-        NavigationView {
-            VStack(alignment: .leading, spacing: 16) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(type.title)
-                        .font(.system(size: 22, weight: .bold))
-                        .foregroundColor(.theme.textPrimary)
-                    Text(type.description)
-                        .font(.system(size: 14))
-                        .foregroundColor(.theme.textSecondary)
+        VWModalSheet(
+            title: type.title,
+            subtitle: type.description,
+            onBack: onCancel,
+            onClose: { dismiss() },
+            primaryTitle: "profile.feedback.sendButton".localized,
+            primaryEnabled: canSend && !isSending,
+            primaryAction: { Task { await sendFeedback() } }
+        ) {
+            VStack(alignment: .leading, spacing: 14) {
+                if type.id == FeedbackType.bug.id {
+                    FlowLayout(spacing: 8) {
+                        ForEach(FeedbackCategory.allCases) { item in
+                            categoryChip(item)
+                        }
+                    }
                 }
-                
-                TextEditor(text: $message)
-                    .frame(minHeight: 120, maxHeight: 160)
-                    .padding(12)
-                    .background(Color.white.opacity(0.06))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.white.opacity(0.08))
-                    )
-                    .foregroundColor(.theme.textPrimary)
-                
-                Toggle(isOn: $keepUpdated) {
-                    Text("profile.feedback.keepUpdated".localized)
-                        .foregroundColor(.theme.textPrimary)
-                }
-                .tint(.theme.accentOrange)
-                
+
+                editor
+
+                keepUpdatedCard
+
                 if let sendError {
                     Text(sendError)
                         .font(.system(size: 13))
                         .foregroundColor(.red)
                 }
-                
-                if sendSuccess {
-                    Text("profile.feedback.sent".localized)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.green)
-                }
-                
-                Spacer()
-                
-                Button {
-                    Task { await sendFeedback() }
-                } label: {
-                    HStack {
-                        if isSending {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                        } else {
-                            Text("profile.feedback.sendButton".localized)
-                                .font(.system(size: 16, weight: .semibold))
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 52)
-                    .foregroundColor(.white)
-                    .background(canSend ? Color.theme.accentOrange : Color.theme.accentOrange.opacity(0.5))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-                .disabled(!canSend || isSending)
-            }
-            .padding(20)
-            .background(Color.theme.background.ignoresSafeArea())
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("profile.cancel".localized) {
-                        if let onCancel {
-                            onCancel()
-                        } else {
-                            dismiss()
-                        }
-                    }
-                        .foregroundColor(.theme.textPrimary)
-                }
             }
         }
-        .preferredColorScheme(.dark)
-        .presentationDetents([.fraction(0.5), .large])
-        .presentationDragIndicator(.visible)
+        .vwModalPresentation()
     }
-    
+
+    private func categoryChip(_ item: FeedbackCategory) -> some View {
+        Button {
+            category = (category == item) ? nil : item
+        } label: {
+            Text(item.titleKey.localized)
+                .font(.system(size: 14.5, weight: .semibold))
+                .foregroundColor(category == item ? .black : .theme.textPrimary)
+                .padding(.horizontal, 15)
+                .padding(.vertical, 10)
+                .background(
+                    Capsule().fill(category == item
+                                   ? Color.theme.accentOrange
+                                   : Color.white.opacity(0.065))
+                )
+                .overlay(
+                    Capsule().stroke(Color.white.opacity(category == item ? 0 : 0.12), lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var editor: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ZStack(alignment: .topLeading) {
+                if message.isEmpty {
+                    Text(placeholder)
+                        .font(.system(size: 16))
+                        .foregroundColor(.theme.textSecondary)
+                        .padding(.horizontal, 5)
+                        .padding(.top, 8)
+                }
+
+                TextEditor(text: $message)
+                    .scrollContentBackground(.hidden)
+                    .frame(height: 130)
+                    .foregroundColor(.theme.textPrimary)
+                    .onChange(of: message) { _, newValue in
+                        if newValue.count > Self.maxLength {
+                            message = String(newValue.prefix(Self.maxLength))
+                        }
+                    }
+            }
+
+            Divider().overlay(Color.white.opacity(0.1))
+
+            HStack {
+                Spacer()
+                Text("\(message.count)/\(Self.maxLength)")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(.theme.textSecondary)
+            }
+            .padding(.top, 10)
+        }
+        .padding(14)
+        .background(RoundedRectangle(cornerRadius: 17).fill(Color.white.opacity(0.065)))
+        .overlay(
+            RoundedRectangle(cornerRadius: 17)
+                .stroke(Color.white.opacity(0.07), lineWidth: 1)
+        )
+    }
+
+    private var placeholder: String {
+        switch type.id {
+        case FeedbackType.bug.id: return "profile.feedback.placeholder.bug".localized
+        case FeedbackType.suggest.id: return "profile.feedback.placeholder.suggest".localized
+        default: return "profile.feedback.placeholder.other".localized
+        }
+    }
+
+    private var keepUpdatedCard: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("profile.feedback.keepUpdated".localized)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(.theme.textPrimary)
+                if let email = appState.currentUser?.email, !email.isEmpty {
+                    Text(String(format: "profile.feedback.keepUpdatedEmail".localized, email))
+                        .font(.system(size: 13.5))
+                        .foregroundColor(.theme.textSecondary)
+                        .lineLimit(1)
+                }
+            }
+
+            Spacer(minLength: 8)
+
+            Toggle("", isOn: $keepUpdated)
+                .labelsHidden()
+                .tint(.theme.accentOrange)
+        }
+        .padding(14)
+        .background(RoundedRectangle(cornerRadius: 17).fill(Color.white.opacity(0.065)))
+    }
+
     private var canSend: Bool {
         !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
-    
+
     private func sendFeedback() async {
         guard canSend else { return }
         isSending = true
         sendError = nil
-        sendSuccess = false
-        
-        let subject = type.title
-        let body = message
+
+        // Il canale resta quello di prima: una mail precompilata. Cambia solo ciò che ci
+        // mettiamo dentro — categoria, versione e se l'utente vuole essere ricontattato.
+        var subject = type.title
+        if let category { subject += " · \(category.titleKey.localized)" }
+
+        var body = message
+        body += "\n\n---\n\(AppEnvironmentFootnote.text)"
+        if keepUpdated, let email = appState.currentUser?.email, !email.isEmpty {
+            body += "\n\(String(format: "profile.feedback.keepUpdatedEmail".localized, email))"
+        }
+
         let encodedSubject = subject.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? subject
         let encodedBody = body.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? body
         let mailtoString = "mailto:startingvibe2025@gmail.com?subject=\(encodedSubject)&body=\(encodedBody)"
-        
+
         guard let url = URL(string: mailtoString) else {
             sendError = "profile.feedback.invalidEmail".localized
             isSending = false
             return
         }
-        
+
         openURL(url)
-        sendSuccess = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+        ToastCenter.shared.show(success: "profile.feedback.sent".localized)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
             dismiss()
         }
-        
+
         isSending = false
     }
 }

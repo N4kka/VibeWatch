@@ -108,6 +108,9 @@ extension SQLiteService {
           providers_json TEXT,
           similar_json TEXT,
           imdb_id TEXT,
+          -- Il modello Codable intero: le colonne sopra restano per le query, questa per i
+          -- campi che altrimenti la cache perderebbe (generi, stato, tagline, budget, network).
+          model_json TEXT,
           cached_at TEXT DEFAULT (datetime('now')),
           expires_at TEXT NOT NULL,
           updated_at TEXT DEFAULT (datetime('now')),
@@ -159,6 +162,9 @@ extension SQLiteService {
           description TEXT,
           type TEXT,
           is_public INTEGER NOT NULL DEFAULT 0,
+          -- La lista da cui questa è stata copiata: la copia pubblica segue la sorgente.
+          source_list_id TEXT,
+          source_list_type TEXT,
           created_at TEXT DEFAULT (datetime('now')),
           updated_at TEXT DEFAULT (datetime('now')),
           deleted_at TEXT,

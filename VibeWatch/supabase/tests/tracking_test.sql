@@ -833,6 +833,83 @@ select t.eq(
 
 reset role;
 
+\echo ''
+\echo '=== Task 4: il tracking si aggiorna quando esce un episodio nuovo'
+
+-- Una serie finita e vista tutta: l'utente e' "in pari" e la serie risulta completata.
+insert into public.tmdb_shows (tmdb_show_id, name, status, in_production, number_of_seasons)
+values (900, 'Rinnovata', 'Ended', false, 1);
+insert into public.tmdb_episodes (tmdb_show_id, season_number, episode_number, air_date)
+values (900, 1, 1, current_date - 400), (900, 1, 2, current_date - 393);
+insert into public.watch_events
+  (user_id, media_type, tmdb_show_id, season_number, episode_number, watched_at, source)
+values ('11111111-1111-1111-1111-111111111111', 'tv', 900, 1, 1, now() - interval '1 year', 'manual'),
+       ('11111111-1111-1111-1111-111111111111', 'tv', 900, 1, 2, now() - interval '1 year', 'manual');
+
+select t.eq((select bucket from public.v_tv_tracking where tmdb_show_id = 900), 'up_to_date',
+            'in partenza la serie e'' in pari');
+
+-- La serie viene rinnovata e il catalogo, rinfrescato dal cron notturno, impara la stagione 2.
+insert into public.tmdb_episodes (tmdb_show_id, season_number, episode_number, air_date)
+values (900, 2, 1, current_date - 1);
+
+select t.is_true((select public.refresh_backlog_since() > 0),
+                 'il job ricalcola dopo il rinfresco del catalogo');
+select t.eq((select bucket from public.v_tv_tracking where tmdb_show_id = 900), 'up_next',
+            'la serie in pari torna in "continua a guardare" da sola');
+
+-- Una serie messa in pausa: prima di questo giro `refresh_backlog_since` guardava solo le
+-- 'active', quindi chi riprendeva una serie snoozata la ritrovava com'era il giorno dello snooze.
+insert into public.tmdb_shows (tmdb_show_id, name, status, in_production, number_of_seasons)
+values (901, 'In pausa', 'Returning Series', true, 1);
+insert into public.tmdb_episodes (tmdb_show_id, season_number, episode_number, air_date)
+values (901, 1, 1, current_date - 100), (901, 1, 2, current_date - 2);
+insert into public.watch_events
+  (user_id, media_type, tmdb_show_id, season_number, episode_number, watched_at, source)
+values ('11111111-1111-1111-1111-111111111111', 'tv', 901, 1, 1, now() - interval '90 days', 'manual');
+update public.tv_show_state set user_status = 'for_later', backlog_since = null
+ where tmdb_show_id = 901;
+
+select t.is_true((select public.refresh_backlog_since() > 0),
+                 'il job ricalcola anche le serie in pausa');
+select t.is_true((select backlog_since is not null from public.tv_show_state where tmdb_show_id = 901),
+                 'una serie in pausa non resta ferma al giorno dello snooze');
+
+\echo ''
+\echo '=== Task 4: la selezione del rinfresco notturno'
+
+-- Una serie seguita di cui NON abbiamo il catalogo: e'' la priorita'' massima (self-heal).
+insert into public.tv_show_state (user_id, tmdb_show_id, user_status)
+values ('11111111-1111-1111-1111-111111111111', 902, 'active')
+on conflict do nothing;
+
+select t.is_true(
+  (select 902 = any(array(select tmdb_show_id from public.catalog_shows_needing_refresh(400)))),
+  'una serie seguita senza catalogo entra nella selezione');
+
+-- Una serie chiusa e ferma da mesi: il TTL a 90 giorni non la farebbe mai rinfrescare, ed e''
+-- esattamente il caso della serie rinnovata dopo la chiusura.
+update public.tmdb_shows
+   set refreshed_at = now() - interval '60 days', next_refresh_at = now() + interval '30 days'
+ where tmdb_show_id = 900;
+
+select t.is_true(
+  (select 900 = any(array(select tmdb_show_id from public.catalog_shows_needing_refresh(400)))),
+  'una serie "ended" ferma da oltre 30 giorni entra comunque nella selezione');
+
+select t.eq((select count(*)::integer from public.catalog_shows_needing_refresh(0)), 0,
+            'il limite viene rispettato');
+
+-- La selezione legge lo stato di tutti: esposta direbbe a chiunque cosa guarda la gente.
+select t.eq(
+  (select count(*)::integer from pg_proc p
+     where p.proname = 'catalog_shows_needing_refresh'
+       and (array_to_string(p.proacl, ',') like '%anon=X%'
+         or array_to_string(p.proacl, ',') like '%authenticated=X%')),
+  0, 'la selezione e'' solo service: nessun ruolo client su proacl');
+
+reset role;
+
 rollback;
 
 \echo ''

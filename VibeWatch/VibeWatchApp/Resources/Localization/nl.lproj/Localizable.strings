@@ -656,7 +656,7 @@
 "error.oops" = "Oeps!";
 
 // TV Show Detail - Mark All Seen Confirmation
-"tvDetail.markAllSeenTitle" = "Alle afleveringen als gezien markeren";
+"tvDetail.markAllSeenTitle" = "Hele serie markeren als gezien";
 "tvDetail.markAllSeenDescription" = "Dit geldt voor alle beschikbare afleveringen en seizoenen van de serie.";
 "tvDetail.markAllSeenQuestion" = "Wil je doorgaan?";
 "tvDetail.markAllSeenConfirm" = "Ja, markeer als gezien";
@@ -907,12 +907,12 @@
 "mediaDetail.action.watchlist" = "Watchlist";
 "mediaDetail.action.like" = "Like";
 "mediaDetail.action.list" = "To list";
-"mediaDetail.toast.watchlistAdded" = "Added to your watchlist";
-"mediaDetail.toast.watchlistRemoved" = "Removed from your watchlist";
-"mediaDetail.toast.markedSeen" = "Marked as seen";
-"mediaDetail.toast.markedUnseen" = "Removed from seen";
-"mediaDetail.toast.liked" = "Added to your likes";
-"mediaDetail.toast.likeRemoved" = "Removed from your likes";
+"mediaDetail.toast.watchlistAdded" = "Toegevoegd aan je kijklijst";
+"mediaDetail.toast.watchlistRemoved" = "Verwijderd uit je kijklijst";
+"mediaDetail.toast.markedSeen" = "Gemarkeerd als gezien";
+"mediaDetail.toast.markedUnseen" = "Verwijderd uit gezien";
+"mediaDetail.toast.liked" = "Toegevoegd aan je likes";
+"mediaDetail.toast.likeRemoved" = "Verwijderd uit je likes";
 "mediaDetail.why.cardTitle" = "Why is it right for you?";
 "mediaDetail.why.title" = "Why for you";
 "mediaDetail.why.affinity" = "Affinity with your tastes";
@@ -989,3 +989,143 @@
 "import.toast.mapping.done" = "%d titels opgelost · bibliotheek op orde";
 
 "import.report.outOfStructure" = "%d afleveringen passen niet in de TMDB-structuur van de bevestigde serie.";
+
+
+// MARK: - Toast (Task 10)
+"mediaDetail.toast.markingSeen" = "Markeren als gezien…";
+"lists.toast.adding" = "Toevoegen…";
+"lists.toast.removing" = "Verwijderen…";
+"lists.toast.addedTo" = "Toegevoegd aan %@";
+"lists.toast.removedFrom" = "Verwijderd uit %@";
+"lists.toast.removed" = "Verwijderd uit de lijst";
+"lists.toast.failed" = "Er is iets misgegaan";
+"lists.toast.creating" = "Lijst maken…";
+"lists.toast.created" = "Lijst aangemaakt";
+"tracking.toast.markingWatched" = "Aflevering markeren…";
+"tracking.toast.markedWatched" = "Aflevering gemarkeerd als gezien";
+"tracking.toast.snoozing" = "Uitstellen…";
+"tracking.toast.snoozed" = "Serie uitgesteld";
+"auth.error.recoveryLinkExpired" = "De link is ongeldig of verlopen. Vraag een nieuwe link aan om je wachtwoord opnieuw in te stellen.";
+
+
+// MARK: - Regole password (Task 2)
+"auth.pwRule.length" = "8+ tekens";
+"auth.pwRule.uppercase" = "1 hoofdletter";
+"auth.pwRule.lowercase" = "1 kleine letter";
+"auth.pwRule.number" = "1 cijfer";
+"auth.pwRule.symbol" = "1 symbool";
+"auth.accountCreated" = "Account aangemaakt";
+
+
+// MARK: - Modali (Task 9+14)
+"tvDetail.markAllSeenSubtitle" = "Geldt voor elke aflevering van elk al uitgebracht seizoen.";
+"tvDetail.markAllSeenCTA" = "%d afleveringen markeren als gezien";
+"tvDetail.markAllSeen.episodes" = "Als gezien gemarkeerde afleveringen";
+"tvDetail.markAllSeen.diary" = "Toegevoegde dagboekvermeldingen";
+"tvDetail.markAllSeenReversible" = "Omkeerbaar: je kunt losse afleveringen herstellen via het dagboek.";
+"tvDetail.seasonsCount" = "%d seizoenen";
+"tvDetail.episodesCount" = "%d afleveringen";
+"auth.changePasswordSubtitle" = "Voor je veiligheid loggen we je uit op je andere apparaten.";
+"auth.newPasswordPlaceholder" = "Nieuw wachtwoord";
+"auth.forgotCurrentPassword" = "Weet je je huidige niet meer?";
+"auth.show" = "Tonen";
+"auth.hide" = "Verbergen";
+"profile.feedback.subtitle" = "We lezen alles. Meestal antwoorden we binnen twee dagen.";
+"profile.feedback.keepUpdatedEmail" = "We schrijven je op %@";
+"profile.feedback.placeholder.bug" = "Wat ging er mis? Wat deed je vlak ervoor…";
+"profile.feedback.placeholder.suggest" = "Wat mis je? Beschrijf hoe je het zou gebruiken…";
+"profile.feedback.placeholder.other" = "Schrijf wat je ons wilt vertellen…";
+"profile.feedback.category.crash" = "Crash";
+"profile.feedback.category.import" = "Import uit TV Time";
+"profile.feedback.category.notifications" = "Meldingen";
+"profile.feedback.category.sync" = "Synchronisatie";
+"profile.feedback.category.ui" = "Weergave";
+"profile.feedback.category.other" = "Anders";
+
+
+// MARK: - Update forzato (Task 3)
+"update.required" = "UPDATE VEREIST";
+"update.whatsChanged" = "WAT ER VERANDERT";
+"update.fullReleaseNotes" = "Volledige releaseopmerkingen";
+"update.cta" = "Bijwerken via de App Store";
+"update.versionFootnote" = "Versie %@";
+"update.dataSafe" = "Je bibliotheek en je gegevens blijven veilig.";
+
+
+// MARK: - Preferiti (Task 7)
+"favorites.subtitle" = "De 4 titels in de etalage van je profiel";
+"favorites.inYourFavorites" = "In je favorieten";
+"favorites.showcased" = "Te zien op je profiel";
+"favorites.addedToast" = "Toegevoegd aan favorieten";
+"favorites.removedToast" = "Verwijderd uit favorieten";
+
+
+// MARK: - Informazioni estese (Task 8)
+"movieDetail.releaseDate" = "Releasedatum";
+"movieDetail.status" = "Status";
+"movieDetail.productionCompanies" = "Productie";
+"movieDetail.budget" = "Budget";
+"movieDetail.revenue" = "Opbrengst";
+"movieDetail.originalLanguage" = "Oorspronkelijke taal";
+"movieDetail.tagline" = "Slogan";
+"tvDetail.firstAirDate" = "Eerste uitzending";
+"tvDetail.lastAirDate" = "Laatste uitzending";
+"tvDetail.seasonsEpisodes" = "Seizoenen";
+"tvDetail.network" = "Zender";
+"tvDetail.createdBy" = "Bedacht door";
+"mediaStatus.released" = "Uitgebracht";
+"mediaStatus.inProduction" = "In productie";
+"mediaStatus.postProduction" = "Postproductie";
+"mediaStatus.planned" = "Gepland";
+"mediaStatus.rumored" = "Gerucht";
+"mediaStatus.canceled" = "Geannuleerd";
+"mediaStatus.returningSeries" = "Lopend";
+"mediaStatus.ended" = "Afgelopen";
+"mediaStatus.pilot" = "Pilot";
+
+
+// MARK: - Piattaforme (Task 12+17)
+"platforms.active" = "actieve platforms";
+"platforms.activeCount" = "%d actief";
+"platforms.clear" = "Wissen";
+"platforms.coverage" = "Dekking van je watchlist";
+"platforms.libraryCount" = "%d titels in je bibliotheek";
+"platforms.recommended" = "AANBEVOLEN";
+"platforms.manage" = "Beheren";
+"platforms.empty" = "Nog geen platforms beschikbaar voor jouw land.";
+
+
+// MARK: - Preferiti nel profilo (Task 15)
+"favorites.sectionTitle" = "Je favorieten";
+"favorites.sectionCount" = "%1$d van %2$d";
+
+
+// MARK: - Ricerca (Task 16)
+"search.mostRelevant" = "Meest relevant";
+"common.movie" = "Film";
+"common.tvShow" = "Serie";
+
+
+// MARK: - Toast con fase di progresso (bug 7)
+"mediaDetail.toast.addingToWatchlist" = "Toevoegen aan je kijklijst…";
+"mediaDetail.toast.removingFromWatchlist" = "Verwijderen uit je kijklijst…";
+"mediaDetail.toast.liking" = "Toevoegen aan je likes…";
+"mediaDetail.toast.unliking" = "Verwijderen uit je likes…";
+"mediaDetail.toast.markingUnseen" = "Verwijderen uit gezien…";
+"mediaDetail.toast.disliking" = "Toevoegen aan je dislikes…";
+"mediaDetail.toast.undisliking" = "Verwijderen uit je dislikes…";
+"mediaDetail.toast.disliked" = "Toegevoegd aan je dislikes";
+"mediaDetail.toast.dislikeRemoved" = "Verwijderd uit je dislikes";
+"favorites.adding" = "Toevoegen aan favorieten…";
+"favorites.removing" = "Verwijderen uit favorieten…";
+
+
+// MARK: - Ricerca ridisegnata (bug 1)
+"search.scope.all" = "Alles";
+"search.scope.movies" = "Films";
+"search.scope.series" = "Series";
+"search.clear" = "Wissen";
+"search.trending.today" = "Vandaag";
+"search.trending.subtitle" = "Het meest gezocht in %@ in de afgelopen 24 uur.";
+"search.results.subtitle" = "Overeenkomsten voor ‘%@’, daarna verwante titels.";
+"search.resultsCount" = "%d titels";

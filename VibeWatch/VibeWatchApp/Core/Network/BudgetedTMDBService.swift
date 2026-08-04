@@ -119,6 +119,12 @@ final class BudgetedTMDBService: TMDBServiceProtocol {
         }
     }
 
+    func getAvailableWatchProviders(mediaType: String, region: String) async throws -> [Provider] {
+        try await budget.run(key: "availableWatchProviders:\(mediaType):\(region)") { [wrapped] in
+            try await wrapped.getAvailableWatchProviders(mediaType: mediaType, region: region)
+        }
+    }
+
     // MARK: - TV Shows
 
     func getTrendingTVShows(timeWindow: TimeWindow, page: Int) async throws -> TMDBResponse<TVShow> {

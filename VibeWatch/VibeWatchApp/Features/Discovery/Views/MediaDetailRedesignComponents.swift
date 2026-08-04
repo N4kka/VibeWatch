@@ -71,7 +71,7 @@ struct MediaDetailHero: View {
                         .overlay(Capsule().stroke(Color.theme.accentOrange.opacity(0.65), lineWidth: 1))
                 }
             }
-            .padding(.horizontal, 28)
+            .padding(.horizontal, 20)
             .padding(.bottom, 20)
 
             VStack {
@@ -80,7 +80,7 @@ struct MediaDetailHero: View {
                     Spacer()
                     heroButton(icon: "square.and.arrow.up", action: onShare)
                 }
-                .padding(.horizontal, 28)
+                .padding(.horizontal, 20)
                 .padding(.top, 20)
                 Spacer()
             }
@@ -145,6 +145,14 @@ struct MediaProviderDisclosure: View {
                         if notificationState == .enabling && !presentation.canExpand {
                             ProgressView()
                                 .tint(primaryForegroundColor)
+                        } else if let primaryProvider, primaryProvider.hasUsableLogo {
+                            // Il logo vero al posto del triangolino: "Guarda su Netflix" con
+                            // accanto il simbolo generico di play era l'unico punto dell'app in
+                            // cui un provider non si riconosceva a colpo d'occhio.
+                            CachedAsyncImage(url: primaryProvider.logoURL, maxPixelSize: 66)
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 22, height: 22)
+                                .clipShape(RoundedRectangle(cornerRadius: 6))
                         } else {
                             Image(systemName: primaryIconName)
                                 .font(.system(size: 13, weight: .heavy))
@@ -222,6 +230,12 @@ struct MediaProviderDisclosure: View {
         return notificationState.titleKey.localized
     }
 
+    /// Il provider su cui punta la CTA: il primo del primo tier, lo stesso da cui viene il nome.
+    private var primaryProvider: Provider? {
+        guard presentation.canExpand else { return nil }
+        return presentation.tiers.first?.providers.first
+    }
+
     private var primaryIconName: String {
         if presentation.canExpand { return "play.fill" }
         return notificationState == .enabled ? "checkmark" : "bell.fill"
@@ -289,9 +303,22 @@ struct MediaProviderDisclosure: View {
             PlatformDeepLinkHelper.openPlatform(provider: provider, justWatchLink: link, title: title)
         } label: {
             HStack(spacing: 7) {
-                RoundedRectangle(cornerRadius: 5)
-                    .fill(providerColor(provider.providerName))
-                    .frame(width: 22, height: 22)
+                Group {
+                    if provider.hasUsableLogo {
+                        CachedAsyncImage(url: provider.logoURL, maxPixelSize: 66)
+                            .aspectRatio(contentMode: .fit)
+                    } else {
+                        // Fallback per i loghi che non sappiamo disegnare (SVG): l'iniziale.
+                        ZStack {
+                            Color.white.opacity(0.1)
+                            Text(provider.providerName.prefix(1))
+                                .font(.system(size: 11, weight: .heavy))
+                                .foregroundColor(.theme.textPrimary)
+                        }
+                    }
+                }
+                .frame(width: 22, height: 22)
+                .clipShape(RoundedRectangle(cornerRadius: 5))
                 Text(provider.providerName)
                     .font(.system(size: 12.5, weight: .bold))
                     .foregroundColor(.theme.textPrimary)
@@ -305,15 +332,6 @@ struct MediaProviderDisclosure: View {
         .buttonStyle(.plain)
     }
 
-    private func providerColor(_ name: String) -> Color {
-        let name = name.lowercased()
-        if name.contains("netflix") { return .red }
-        if name == "now" || name.contains("now tv") { return Color(red: 0, green: 0.68, blue: 0.32) }
-        if name.contains("prime") { return Color(red: 0, green: 0.66, blue: 0.84) }
-        if name.contains("youtube") { return .red }
-        if name.contains("apple") { return Color(red: 0.42, green: 0.38, blue: 0.92) }
-        return .theme.accentOrange
-    }
 }
 
 struct MediaDetailActionStrip: View {

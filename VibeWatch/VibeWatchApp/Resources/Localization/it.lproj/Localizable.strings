@@ -653,7 +653,7 @@
 "error.oops" = "Ops!";
 
 // TV Show Detail - Mark All Seen Confirmation
-"tvDetail.markAllSeenTitle" = "Segna tutti gli episodi come visto";
+"tvDetail.markAllSeenTitle" = "Segna tutta la serie come vista";
 "tvDetail.markAllSeenDescription" = "Questa azione si applicherà a tutti gli episodi e le stagioni della serie disponibili.";
 "tvDetail.markAllSeenQuestion" = "Vuoi continuare?";
 "tvDetail.markAllSeenConfirm" = "Sì, segna come visto";
@@ -988,3 +988,143 @@
 "import.toast.mapping.done" = "%d titoli risolti · libreria in ordine";
 
 "import.report.outOfStructure" = "%d episodi non collocabili nella struttura TMDB della serie confermata.";
+
+
+// MARK: - Toast (Task 10)
+"mediaDetail.toast.markingSeen" = "Segno come visto…";
+"lists.toast.adding" = "Aggiunta in corso…";
+"lists.toast.removing" = "Rimozione in corso…";
+"lists.toast.addedTo" = "Aggiunto a %@";
+"lists.toast.removedFrom" = "Rimosso da %@";
+"lists.toast.removed" = "Rimosso dalla lista";
+"lists.toast.failed" = "Qualcosa è andato storto";
+"lists.toast.creating" = "Creazione lista…";
+"lists.toast.created" = "Lista creata";
+"tracking.toast.markingWatched" = "Segno l'episodio…";
+"tracking.toast.markedWatched" = "Episodio segnato come visto";
+"tracking.toast.snoozing" = "Metto in pausa…";
+"tracking.toast.snoozed" = "Serie messa in pausa";
+"auth.error.recoveryLinkExpired" = "Il link non è valido o è scaduto. Richiedi un nuovo link per reimpostare la password.";
+
+
+// MARK: - Regole password (Task 2)
+"auth.pwRule.length" = "8+ caratteri";
+"auth.pwRule.uppercase" = "1 maiuscola";
+"auth.pwRule.lowercase" = "1 minuscola";
+"auth.pwRule.number" = "1 numero";
+"auth.pwRule.symbol" = "1 simbolo";
+"auth.accountCreated" = "Account creato";
+
+
+// MARK: - Modali (Task 9+14)
+"tvDetail.markAllSeenSubtitle" = "Si applica a ogni episodio di ogni stagione già uscita.";
+"tvDetail.markAllSeenCTA" = "Segna %d episodi come visti";
+"tvDetail.markAllSeen.episodes" = "Episodi segnati come visti";
+"tvDetail.markAllSeen.diary" = "Voci aggiunte al diario";
+"tvDetail.markAllSeenReversible" = "Reversibile: puoi ripristinare i singoli episodi dal diario.";
+"tvDetail.seasonsCount" = "%d stagioni";
+"tvDetail.episodesCount" = "%d episodi";
+"auth.changePasswordSubtitle" = "Per sicurezza ti disconnetteremo dagli altri dispositivi.";
+"auth.newPasswordPlaceholder" = "Nuova password";
+"auth.forgotCurrentPassword" = "Non ricordi quella attuale?";
+"auth.show" = "Mostra";
+"auth.hide" = "Nascondi";
+"profile.feedback.subtitle" = "Leggiamo tutto. Di solito rispondiamo entro due giorni.";
+"profile.feedback.keepUpdatedEmail" = "Ti scriviamo a %@";
+"profile.feedback.placeholder.bug" = "Cosa è andato storto? Cosa stavi facendo prima…";
+"profile.feedback.placeholder.suggest" = "Cosa ti manca? Descrivila come la useresti…";
+"profile.feedback.placeholder.other" = "Scrivi quello che vuoi dirci…";
+"profile.feedback.category.crash" = "Crash";
+"profile.feedback.category.import" = "Import da TV Time";
+"profile.feedback.category.notifications" = "Notifiche";
+"profile.feedback.category.sync" = "Sincronizzazione";
+"profile.feedback.category.ui" = "Grafica";
+"profile.feedback.category.other" = "Altro";
+
+
+// MARK: - Update forzato (Task 3)
+"update.required" = "AGGIORNAMENTO RICHIESTO";
+"update.whatsChanged" = "COSA CAMBIA";
+"update.fullReleaseNotes" = "Note di rilascio complete";
+"update.cta" = "Aggiorna dall'App Store";
+"update.versionFootnote" = "Versione %@";
+"update.dataSafe" = "La tua libreria e i tuoi dati restano al sicuro.";
+
+
+// MARK: - Preferiti (Task 7)
+"favorites.subtitle" = "I 4 titoli in vetrina sul tuo profilo";
+"favorites.inYourFavorites" = "Nei tuoi preferiti";
+"favorites.showcased" = "In mostra sul tuo profilo";
+"favorites.addedToast" = "Aggiunto ai preferiti";
+"favorites.removedToast" = "Rimosso dai preferiti";
+
+
+// MARK: - Informazioni estese (Task 8)
+"movieDetail.releaseDate" = "Data di uscita";
+"movieDetail.status" = "Stato";
+"movieDetail.productionCompanies" = "Case di produzione";
+"movieDetail.budget" = "Budget";
+"movieDetail.revenue" = "Incassi";
+"movieDetail.originalLanguage" = "Lingua originale";
+"movieDetail.tagline" = "Slogan";
+"tvDetail.firstAirDate" = "Prima messa in onda";
+"tvDetail.lastAirDate" = "Ultima messa in onda";
+"tvDetail.seasonsEpisodes" = "Stagioni";
+"tvDetail.network" = "Network";
+"tvDetail.createdBy" = "Creata da";
+"mediaStatus.released" = "Uscito";
+"mediaStatus.inProduction" = "In produzione";
+"mediaStatus.postProduction" = "Post-produzione";
+"mediaStatus.planned" = "In programma";
+"mediaStatus.rumored" = "Non confermato";
+"mediaStatus.canceled" = "Cancellata";
+"mediaStatus.returningSeries" = "In corso";
+"mediaStatus.ended" = "Terminata";
+"mediaStatus.pilot" = "Episodio pilota";
+
+
+// MARK: - Piattaforme (Task 12+17)
+"platforms.active" = "piattaforme attive";
+"platforms.activeCount" = "%d attive";
+"platforms.clear" = "Azzera";
+"platforms.coverage" = "Copertura della tua watchlist";
+"platforms.libraryCount" = "%d titoli della tua libreria";
+"platforms.recommended" = "CONSIGLIATA";
+"platforms.manage" = "Gestisci";
+"platforms.empty" = "Nessuna piattaforma disponibile per il tuo paese.";
+
+
+// MARK: - Preferiti nel profilo (Task 15)
+"favorites.sectionTitle" = "I tuoi preferiti";
+"favorites.sectionCount" = "%1$d di %2$d";
+
+
+// MARK: - Ricerca (Task 16)
+"search.mostRelevant" = "Più rilevanti";
+"common.movie" = "Film";
+"common.tvShow" = "Serie TV";
+
+
+// MARK: - Toast con fase di progresso (bug 7)
+"mediaDetail.toast.addingToWatchlist" = "Aggiunta alla tua watchlist…";
+"mediaDetail.toast.removingFromWatchlist" = "Rimozione dalla tua watchlist…";
+"mediaDetail.toast.liking" = "Aggiunta ai tuoi Mi piace…";
+"mediaDetail.toast.unliking" = "Rimozione dai tuoi Mi piace…";
+"mediaDetail.toast.markingUnseen" = "Rimozione dai visti…";
+"mediaDetail.toast.disliking" = "Aggiunta ai tuoi Non mi piace…";
+"mediaDetail.toast.undisliking" = "Rimozione dai tuoi Non mi piace…";
+"mediaDetail.toast.disliked" = "Aggiunto ai tuoi Non mi piace";
+"mediaDetail.toast.dislikeRemoved" = "Rimosso dai tuoi Non mi piace";
+"favorites.adding" = "Aggiunta ai preferiti…";
+"favorites.removing" = "Rimozione dai preferiti…";
+
+
+// MARK: - Ricerca ridisegnata (bug 1)
+"search.scope.all" = "Tutti";
+"search.scope.movies" = "Film";
+"search.scope.series" = "Serie";
+"search.clear" = "Cancella";
+"search.trending.today" = "Oggi";
+"search.trending.subtitle" = "Le più cercate in %@ nelle ultime 24 ore.";
+"search.results.subtitle" = "Corrispondenze per «%@», poi titoli affini.";
+"search.resultsCount" = "%d titoli";

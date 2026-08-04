@@ -45,7 +45,7 @@ extension View {
 
 // MARK: - Skeleton Building Blocks
 
-private struct SkeletonBlock: View {
+struct SkeletonBlock: View {
     var cornerRadius: CGFloat = 8
 
     var body: some View {

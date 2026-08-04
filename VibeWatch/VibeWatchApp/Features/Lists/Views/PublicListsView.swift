@@ -276,7 +276,6 @@ struct PublicListDetailView: View {
     @State private var isFollowing: Bool
     @State private var showReportConfirm = false
     @State private var showBlockConfirm = false
-    @State private var banner: String?
 
     init(list: PublicList) {
         self.list = list
@@ -387,18 +386,6 @@ struct PublicListDetailView: View {
             Button("lists.public.block".localized, role: .destructive) { Task { await blockOwner() } }
             Button("common.cancel".localized, role: .cancel) {}
         }
-        .overlay(alignment: .bottom) {
-            if let banner {
-                Text(banner)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 20).padding(.vertical, 12)
-                    .background(Color.black.opacity(0.8))
-                    .clipShape(Capsule())
-                    .padding(.bottom, 32)
-                    .transition(.opacity)
-            }
-        }
         .task { await loadItems() }
         .onChange(of: filters) { _, _ in itemsLimit = 100 }
         .onChange(of: searchText) { _, _ in itemsLimit = 100 }
@@ -507,15 +494,11 @@ struct PublicListDetailView: View {
             try await SupabaseService.shared.blockListOwner(listId: list.id)
             await MainActor.run { dismiss() }
         } catch {
-            showBanner("common.error".localized)
+            ToastCenter.shared.show(error: "common.error".localized)
         }
     }
 
     private func showBanner(_ text: String) {
-        withAnimation { banner = text }
-        Task {
-            try? await Task.sleep(nanoseconds: 2_000_000_000)
-            await MainActor.run { withAnimation { banner = nil } }
-        }
+        ToastCenter.shared.show(success: text)
     }
 }

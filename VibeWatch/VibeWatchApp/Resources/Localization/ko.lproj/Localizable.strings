@@ -656,7 +656,7 @@
 "error.oops" = "이런!";
 
 // TV Show Detail - Mark All Seen Confirmation
-"tvDetail.markAllSeenTitle" = "Mark all episodes as seen";
+"tvDetail.markAllSeenTitle" = "시리즈 전체를 시청함으로 표시";
 "tvDetail.markAllSeenDescription" = "This action will apply to all episodes and seasons of the series available.";
 "tvDetail.markAllSeenQuestion" = "Do you want to continue?";
 "tvDetail.markAllSeenConfirm" = "Yes, mark as seen";
@@ -907,12 +907,12 @@
 "mediaDetail.action.watchlist" = "Watchlist";
 "mediaDetail.action.like" = "Like";
 "mediaDetail.action.list" = "To list";
-"mediaDetail.toast.watchlistAdded" = "Added to your watchlist";
-"mediaDetail.toast.watchlistRemoved" = "Removed from your watchlist";
-"mediaDetail.toast.markedSeen" = "Marked as seen";
-"mediaDetail.toast.markedUnseen" = "Removed from seen";
-"mediaDetail.toast.liked" = "Added to your likes";
-"mediaDetail.toast.likeRemoved" = "Removed from your likes";
+"mediaDetail.toast.watchlistAdded" = "관심 목록에 추가됨";
+"mediaDetail.toast.watchlistRemoved" = "관심 목록에서 제거됨";
+"mediaDetail.toast.markedSeen" = "시청함으로 표시됨";
+"mediaDetail.toast.markedUnseen" = "시청함에서 제거됨";
+"mediaDetail.toast.liked" = "좋아요에 추가됨";
+"mediaDetail.toast.likeRemoved" = "좋아요에서 제거됨";
 "mediaDetail.why.cardTitle" = "Why is it right for you?";
 "mediaDetail.why.title" = "Why for you";
 "mediaDetail.why.affinity" = "Affinity with your tastes";
@@ -989,3 +989,143 @@
 "import.toast.mapping.done" = "%d개 타이틀 해결됨 · 라이브러리 정리 완료";
 
 "import.report.outOfStructure" = "%d개 에피소드는 확인된 시리즈의 TMDB 구조에 배치할 수 없습니다.";
+
+
+// MARK: - Toast (Task 10)
+"mediaDetail.toast.markingSeen" = "시청함으로 표시하는 중…";
+"lists.toast.adding" = "추가하는 중…";
+"lists.toast.removing" = "제거하는 중…";
+"lists.toast.addedTo" = "%@에 추가됨";
+"lists.toast.removedFrom" = "%@에서 제거됨";
+"lists.toast.removed" = "목록에서 제거됨";
+"lists.toast.failed" = "문제가 발생했습니다";
+"lists.toast.creating" = "목록을 만드는 중…";
+"lists.toast.created" = "목록이 생성되었습니다";
+"tracking.toast.markingWatched" = "에피소드를 표시하는 중…";
+"tracking.toast.markedWatched" = "에피소드를 시청함으로 표시했습니다";
+"tracking.toast.snoozing" = "나중에 보기로 미루는 중…";
+"tracking.toast.snoozed" = "시리즈를 나중에 보기로 미뤘습니다";
+"auth.error.recoveryLinkExpired" = "링크가 유효하지 않거나 만료되었습니다. 비밀번호 재설정 링크를 다시 요청하세요.";
+
+
+// MARK: - Regole password (Task 2)
+"auth.pwRule.length" = "8자 이상";
+"auth.pwRule.uppercase" = "대문자 1개";
+"auth.pwRule.lowercase" = "소문자 1개";
+"auth.pwRule.number" = "숫자 1개";
+"auth.pwRule.symbol" = "기호 1개";
+"auth.accountCreated" = "계정이 생성되었습니다";
+
+
+// MARK: - Modali (Task 9+14)
+"tvDetail.markAllSeenSubtitle" = "이미 공개된 모든 시즌의 모든 에피소드에 적용됩니다.";
+"tvDetail.markAllSeenCTA" = "에피소드 %d개를 시청함으로 표시";
+"tvDetail.markAllSeen.episodes" = "시청함으로 표시할 에피소드";
+"tvDetail.markAllSeen.diary" = "일지에 추가되는 항목";
+"tvDetail.markAllSeenReversible" = "되돌릴 수 있습니다: 일지에서 개별 에피소드를 복원할 수 있습니다.";
+"tvDetail.seasonsCount" = "시즌 %d개";
+"tvDetail.episodesCount" = "에피소드 %d개";
+"auth.changePasswordSubtitle" = "보안을 위해 다른 기기에서는 로그아웃됩니다.";
+"auth.newPasswordPlaceholder" = "새 비밀번호";
+"auth.forgotCurrentPassword" = "현재 비밀번호가 기억나지 않나요?";
+"auth.show" = "표시";
+"auth.hide" = "숨기기";
+"profile.feedback.subtitle" = "모두 읽습니다. 보통 이틀 안에 답장드려요.";
+"profile.feedback.keepUpdatedEmail" = "%@(으)로 연락드립니다";
+"profile.feedback.placeholder.bug" = "무엇이 잘못됐나요? 바로 전에 무엇을 하고 있었나요…";
+"profile.feedback.placeholder.suggest" = "무엇이 필요한가요? 어떻게 사용할지 알려주세요…";
+"profile.feedback.placeholder.other" = "하고 싶은 말을 적어주세요…";
+"profile.feedback.category.crash" = "앱 종료";
+"profile.feedback.category.import" = "TV Time 가져오기";
+"profile.feedback.category.notifications" = "알림";
+"profile.feedback.category.sync" = "동기화";
+"profile.feedback.category.ui" = "화면";
+"profile.feedback.category.other" = "기타";
+
+
+// MARK: - Update forzato (Task 3)
+"update.required" = "업데이트 필요";
+"update.whatsChanged" = "변경 사항";
+"update.fullReleaseNotes" = "전체 릴리스 노트";
+"update.cta" = "App Store에서 업데이트";
+"update.versionFootnote" = "버전 %@";
+"update.dataSafe" = "라이브러리와 데이터는 안전하게 유지됩니다.";
+
+
+// MARK: - Preferiti (Task 7)
+"favorites.subtitle" = "프로필에 전시되는 4개 작품";
+"favorites.inYourFavorites" = "즐겨찾기에 있음";
+"favorites.showcased" = "프로필에 전시 중";
+"favorites.addedToast" = "즐겨찾기에 추가됨";
+"favorites.removedToast" = "즐겨찾기에서 제거됨";
+
+
+// MARK: - Informazioni estese (Task 8)
+"movieDetail.releaseDate" = "개봉일";
+"movieDetail.status" = "상태";
+"movieDetail.productionCompanies" = "제작사";
+"movieDetail.budget" = "제작비";
+"movieDetail.revenue" = "흥행 수익";
+"movieDetail.originalLanguage" = "원어";
+"movieDetail.tagline" = "태그라인";
+"tvDetail.firstAirDate" = "첫 방영";
+"tvDetail.lastAirDate" = "최근 방영";
+"tvDetail.seasonsEpisodes" = "시즌";
+"tvDetail.network" = "방송사";
+"tvDetail.createdBy" = "제작";
+"mediaStatus.released" = "개봉";
+"mediaStatus.inProduction" = "제작 중";
+"mediaStatus.postProduction" = "후반 작업";
+"mediaStatus.planned" = "기획 중";
+"mediaStatus.rumored" = "소문";
+"mediaStatus.canceled" = "취소됨";
+"mediaStatus.returningSeries" = "방영 중";
+"mediaStatus.ended" = "종영";
+"mediaStatus.pilot" = "파일럿";
+
+
+// MARK: - Piattaforme (Task 12+17)
+"platforms.active" = "활성 플랫폼";
+"platforms.activeCount" = "%d개 활성";
+"platforms.clear" = "지우기";
+"platforms.coverage" = "내 시청 목록 커버리지";
+"platforms.libraryCount" = "라이브러리의 %d개 작품";
+"platforms.recommended" = "추천";
+"platforms.manage" = "관리";
+"platforms.empty" = "아직 이 국가에서 이용할 수 있는 플랫폼이 없습니다.";
+
+
+// MARK: - Preferiti nel profilo (Task 15)
+"favorites.sectionTitle" = "내 즐겨찾기";
+"favorites.sectionCount" = "%2$d개 중 %1$d개";
+
+
+// MARK: - Ricerca (Task 16)
+"search.mostRelevant" = "관련성 높은 순";
+"common.movie" = "영화";
+"common.tvShow" = "TV 시리즈";
+
+
+// MARK: - Toast con fase di progresso (bug 7)
+"mediaDetail.toast.addingToWatchlist" = "관심 목록에 추가하는 중…";
+"mediaDetail.toast.removingFromWatchlist" = "관심 목록에서 제거하는 중…";
+"mediaDetail.toast.liking" = "좋아요에 추가하는 중…";
+"mediaDetail.toast.unliking" = "좋아요에서 제거하는 중…";
+"mediaDetail.toast.markingUnseen" = "시청함에서 제거하는 중…";
+"mediaDetail.toast.disliking" = "싫어요에 추가하는 중…";
+"mediaDetail.toast.undisliking" = "싫어요에서 제거하는 중…";
+"mediaDetail.toast.disliked" = "싫어요에 추가됨";
+"mediaDetail.toast.dislikeRemoved" = "싫어요에서 제거됨";
+"favorites.adding" = "즐겨찾기에 추가하는 중…";
+"favorites.removing" = "즐겨찾기에서 제거하는 중…";
+
+
+// MARK: - Ricerca ridisegnata (bug 1)
+"search.scope.all" = "전체";
+"search.scope.movies" = "영화";
+"search.scope.series" = "시리즈";
+"search.clear" = "지우기";
+"search.trending.today" = "오늘";
+"search.trending.subtitle" = "지난 24시간 동안 %@에서 가장 많이 검색된 작품.";
+"search.results.subtitle" = "«%@» 일치 항목, 그다음 관련 작품.";
+"search.resultsCount" = "%d개";
