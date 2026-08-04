@@ -19,6 +19,11 @@ struct TVTrackingCard: View {
 
     @State private var navigate = false
 
+    /// "In pari" è un fatto del bucket, non l'assenza del prossimo episodio: una riga senza
+    /// catalogo (serie appena aggiunta alla watchlist, mai risolta) ha `nextLabel == nil` in
+    /// QUALSIASI bucket, e disegnarle il check verde la faceva sembrare "vista" in "Da iniziare".
+    private var isCaughtUp: Bool { row.bucket == .upToDate && row.nextLabel == nil }
+
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
             poster
@@ -69,9 +74,10 @@ struct TVTrackingCard: View {
     private var header: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 2) {
-                // Senza prossimo episodio l'utente è in pari: si dice, invece di mostrare un
-                // "S1E1" di ripiego che sarebbe semplicemente falso.
-                Text(row.nextLabel ?? "tracking.caughtUp".localized)
+                // Senza prossimo episodio l'utente è in pari — ma solo se il bucket lo dice:
+                // per una riga senza catalogo "In pari" sarebbe falso, si tace in attesa
+                // che il self-heal risolva la serie.
+                Text(row.nextLabel ?? (isCaughtUp ? "tracking.caughtUp".localized : " "))
                     .font(.system(size: 14, weight: .bold))
                     .foregroundColor(row.nextLabel == nil ? .theme.textSecondary : .theme.textPrimary)
 
@@ -91,20 +97,20 @@ struct TVTrackingCard: View {
         Button(action: onMarkWatched) {
             ZStack {
                 Circle()
-                    .fill(row.nextLabel == nil ? Color.green.opacity(0.25) : Color.white.opacity(0.18))
+                    .fill(isCaughtUp ? Color.green.opacity(0.25) : Color.white.opacity(0.18))
                     .frame(width: 34, height: 34)
                 if isBusy {
                     ProgressView().scaleEffect(0.7).tint(.theme.textSecondary)
                 } else {
-                    Image(systemName: row.nextLabel == nil ? "checkmark.circle.fill" : "checkmark")
-                        .font(.system(size: row.nextLabel == nil ? 20 : 15, weight: .semibold))
-                        .foregroundColor(row.nextLabel == nil ? .green : .theme.textSecondary)
+                    Image(systemName: isCaughtUp ? "checkmark.circle.fill" : "checkmark")
+                        .font(.system(size: isCaughtUp ? 20 : 15, weight: .semibold))
+                        .foregroundColor(isCaughtUp ? .green : .theme.textSecondary)
                 }
             }
         }
         .buttonStyle(PlainButtonStyle())
-        // In pari: non c'è un prossimo episodio da marcare, e il segno di spunta pieno lo dice
-        // già. Un tap che scrivesse qualcosa qui dovrebbe inventare quale episodio.
+        // In pari o senza catalogo: non c'è un prossimo episodio da marcare. Un tap che
+        // scrivesse qualcosa qui dovrebbe inventare quale episodio.
         .disabled(row.nextLabel == nil || isBusy)
     }
 

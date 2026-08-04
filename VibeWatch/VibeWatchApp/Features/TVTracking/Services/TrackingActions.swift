@@ -273,8 +273,49 @@ final class TrackingActions {
     /// "Aggiungi alla watchlist" per una serie: la riga di `tv_show_state` nasce `active` con
     /// zero episodi, cioè "Da iniziare" — la scelta dell'utente, stessa semantica dell'import
     /// per le serie seguite mai iniziate.
+    ///
+    /// PRIMA il catalogo: il ricalcolo server deriva prossimo episodio e contatori da
+    /// `tmdb_episodes`, e per una serie mai vista da nessuno il catalogo non c'è ancora — la
+    /// riga nasceva vuota e la card "Da iniziare" compariva senza copertina e senza S1E1.
+    /// Best-effort: se il warm fallisce (offline) lo stato si scrive comunque, e il self-heal
+    /// del Tracking (`repairMissingCatalog`) ripara alla prossima apertura.
     func addToWatchlist(showId: Int) async throws {
+        try? await seenBackend.warmCatalog(showIds: [showId])
         try await setStatus(showId: showId, to: "active")
+    }
+
+    /// Ripara le righe di tracking nate senza catalogo (una serie in "Da iniziare" senza poster
+    /// né prossimo episodio): riscalda il catalogo, poi ri-upserta lo `user_status` corrente —
+    /// è il modo con cui un client fa ripartire `recompute_tv_show_state`, che `catalog-resolve`
+    /// da solo non tocca — e infine ritira lo stato ricalcolato.
+    func repairMissingCatalog(rows: [(showId: Int, userStatus: String)]) async {
+        guard let userId = currentUserId(), !rows.isEmpty else { return }
+
+        do {
+            try await seenBackend.warmCatalog(showIds: rows.map(\.showId))
+        } catch {
+            // Senza catalogo il ricalcolo produrrebbe gli stessi zeri: inutile accodare
+            // mutazioni. Si riproverà alla prossima apertura della schermata.
+            Logger.warning("[Tracking] warm del catalogo fallito: \(error.localizedDescription)")
+            return
+        }
+
+        for row in rows {
+            try? await syncEngine.queueOperation(
+                table: "tv_show_state",
+                operationType: "UPSERT",
+                recordId: "\(userId):\(row.showId)",
+                payload: [
+                    "user_id": userId,
+                    "tmdb_show_id": row.showId,
+                    "user_status": row.userStatus,
+                ],
+                dependsOn: nil
+            )
+        }
+
+        await syncEngine.pullTrackingState()
+        Self.announceTrackingChanged()
     }
 
     /// Togliere dalla watchlist non è cancellare la riga (derivata, il server è autorevole):

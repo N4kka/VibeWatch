@@ -2541,8 +2541,13 @@ final class MockSeenBackend: TrackingSeenBackend, @unchecked Sendable {
     private(set) var expanded: [[[String: Any]]] = []
     private(set) var unseen: [Int] = []
     var showsWithoutCatalog: [Int] = []
+    /// Se impostato, `warmCatalog` fallisce: serve ai test del self-heal del catalogo.
+    var warmError: Error?
 
-    func warmCatalog(showIds: [Int]) async throws { warmed.append(showIds) }
+    func warmCatalog(showIds: [Int]) async throws {
+        warmed.append(showIds)
+        if let warmError { throw warmError }
+    }
     func expandSeenShowsToWatchEvents(
         _ shows: [[String: Any]]
     ) async throws -> LegacyExpansionOutcome {
