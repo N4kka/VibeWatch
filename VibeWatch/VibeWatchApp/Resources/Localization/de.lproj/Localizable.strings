@@ -933,3 +933,15 @@
 "gamification.challenge.list_2" = "Add 2 titles to a list";
 "gamification.challenge.watch_new_genre" = "Watch a clip from a new genre";
 "gamification.challenge.complete_5" = "Complete 5 clips (>70%)";
+
+// SeasonDetailView — conferme di marcatura episodi (2026-08-04)
+"season.confirmUnaired.title" = "Noch nicht ausgestrahlt";
+"season.confirmUnaired.message" = "S%dE%d wurde noch nicht ausgestrahlt. Trotzdem als gesehen markieren?";
+"season.confirmUnaired.confirm" = "Als gesehen markieren";
+"season.confirmPrevious.title" = "Hast du die vorherigen Episoden gesehen?";
+"season.confirmPrevious.message" = "%d frühere Episoden sind nicht als gesehen markiert.";
+"season.confirmPrevious.markAll" = "Ja, alle markieren";
+"season.confirmPrevious.onlyThis" = "Nur diese";
+"season.confirmUnairedSeason.message" = "%d Episoden dieser Staffel wurden noch nicht ausgestrahlt. Trotzdem als gesehen markieren?";
+"season.confirmUnairedSeason.markAll" = "Alle markieren";
+"season.confirmUnairedSeason.onlyAired" = "Nur die ausgestrahlten";

@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Redesign 2.0 — Scopri e Clip sono la stessa area, con uno switcher al posto di due tab.
 ///
@@ -14,21 +15,83 @@ struct DiscoverModeSwitcher: View {
     @Binding var mode: DiscoverMode
 
     var body: some View {
-        Picker(selection: $mode) {
-            Text("tab.discovery".localized)
-                .tag(DiscoverMode.discover)
+        DiscoverModeSegmentedControl(mode: $mode)
+            .frame(width: 190)
+    }
+}
 
-            Text("tab.clips".localized)
-                .tag(DiscoverMode.clips)
-        } label: {
-            EmptyView()
+/// `.tint` non viene applicato al titolo selezionato di un Picker segmentato. Configuriamo
+/// quindi l'istanza UIKit usata da questo switcher, senza alterare l'appearance globale.
+enum DiscoverModeSwitcherStyle {
+    static func apply(to control: UISegmentedControl) {
+        control.tintColor = UIColor(Color.theme.accentOrange)
+        control.setTitleTextAttributes(
+            [.foregroundColor: UIColor(Color.theme.textSecondary)],
+            for: .normal
+        )
+        control.setTitleTextAttributes(
+            [.foregroundColor: UIColor(Color.theme.accentOrange)],
+            for: .selected
+        )
+    }
+}
+
+private struct DiscoverModeSegmentedControl: UIViewRepresentable {
+    private static let modes: [DiscoverMode] = [.discover, .clips]
+
+    @Binding var mode: DiscoverMode
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(mode: $mode)
+    }
+
+    func makeUIView(context: Context) -> UISegmentedControl {
+        let control = UISegmentedControl(items: localizedTitles)
+        DiscoverModeSwitcherStyle.apply(to: control)
+        control.selectedSegmentIndex = selectedIndex
+        control.addTarget(
+            context.coordinator,
+            action: #selector(Coordinator.selectionChanged(_:)),
+            for: .valueChanged
+        )
+        return control
+    }
+
+    func updateUIView(_ control: UISegmentedControl, context: Context) {
+        context.coordinator.mode = $mode
+
+        for (index, title) in localizedTitles.enumerated()
+        where control.titleForSegment(at: index) != title {
+            control.setTitle(title, forSegmentAt: index)
         }
-        // Come la TabView su iOS 26, il Picker segmentato riceve dal sistema il Liquid Glass,
-        // inclusi selezione, animazione e feedback. Il tint colora solo il contenuto attivo,
-        // senza reintrodurre fill o glassEffect custom.
-        .pickerStyle(.segmented)
-        .tint(.theme.accentOrange)
-        .labelsHidden()
-        .frame(width: 190)
+
+        if control.selectedSegmentIndex != selectedIndex {
+            control.selectedSegmentIndex = selectedIndex
+        }
+    }
+
+    private var localizedTitles: [String] {
+        ["tab.discovery".localized, "tab.clips".localized]
+    }
+
+    private var selectedIndex: Int {
+        Self.modes.firstIndex(of: mode) ?? 0
+    }
+
+    final class Coordinator: NSObject {
+        var mode: Binding<DiscoverMode>
+
+        init(mode: Binding<DiscoverMode>) {
+            self.mode = mode
+        }
+
+        @objc func selectionChanged(_ sender: UISegmentedControl) {
+            guard Self.isValid(index: sender.selectedSegmentIndex) else { return }
+            mode.wrappedValue = DiscoverModeSegmentedControl.modes[sender.selectedSegmentIndex]
+        }
+
+        private static func isValid(index: Int) -> Bool {
+            DiscoverModeSegmentedControl.modes.indices.contains(index)
+        }
     }
 }

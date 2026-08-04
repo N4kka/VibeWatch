@@ -17,6 +17,18 @@ struct SeasonDetailView: View {
 
     @State private var showSavePanel = false
     @State private var selectedActor: Cast?
+    /// I due popup del tap "visto": conferma per un episodio non ancora uscito, e il
+    /// "hai visto anche i precedenti?" alla TV Time. Un solo stato: non possono coesistere.
+    @State private var markPrompt: EpisodeMarkPrompt?
+    @State private var actionError: String?
+
+    private enum EpisodeMarkPrompt {
+        case unaired(Episode)
+        case markPrevious(tapped: Episode, previous: [Episode])
+        /// Il bottone "S* vista" su una stagione con episodi non ancora usciti: `unseen` è tutto
+        /// ciò che verrebbe marcato, `aired` il sottoinsieme già andato in onda.
+        case unairedSeason(unseen: [Episode], aired: [Episode])
+    }
 
     init(showId: Int, seasonNumber: Int, showName: String, showBackdropPath: String?, showPosterPath: String? = nil, tvShow: TVShow? = nil, cast: [Cast] = [], director: Crew? = nil) {
         _viewModel = StateObject(wrappedValue: SeasonDetailViewModel(showId: showId, seasonNumber: seasonNumber))
@@ -128,6 +140,69 @@ struct SeasonDetailView: View {
         // quando il sync lo annuncia, la lista episodi si riallinea da sola.
         .onReceive(NotificationCenter.default.publisher(for: .syncEngineCompleted)) { _ in
             Task { await viewModel.refreshWatchedEvents() }
+        }
+        // Conferma per un episodio con data futura (o senza data): può capitare di vederlo in
+        // anticipo per vie traverse, ma un tap involontario non deve sporcare il diario.
+        .alert(
+            "season.confirmUnaired.title".localized,
+            isPresented: promptBinding(matching: { if case .unaired = $0 { return true } else { return false } }),
+            presenting: unairedPromptEpisode
+        ) { episode in
+            Button("season.confirmUnaired.confirm".localized) {
+                if let episodes = viewModel.season?.episodes {
+                    askPreviousOrMark(episode, in: episodes, delayed: true)
+                }
+            }
+            Button("common.cancel".localized, role: .cancel) {}
+        } message: { episode in
+            Text(String(
+                format: "season.confirmUnaired.message".localized,
+                episode.seasonNumber, episode.episodeNumber))
+        }
+        // "S* vista" su una stagione con episodi non ancora usciti: si conferma prima di
+        // marcare il futuro; "solo quelli usciti" compare quando c'è qualcosa di uscito.
+        .alert(
+            "season.confirmUnaired.title".localized,
+            isPresented: promptBinding(matching: { if case .unairedSeason = $0 { return true } else { return false } }),
+            presenting: unairedSeasonPayload
+        ) { payload in
+            Button("season.confirmUnairedSeason.markAll".localized) {
+                mark(payload.unseen)
+            }
+            if !payload.aired.isEmpty {
+                Button("season.confirmUnairedSeason.onlyAired".localized) {
+                    mark(payload.aired)
+                }
+            }
+            Button("common.cancel".localized, role: .cancel) {}
+        } message: { payload in
+            Text(String(
+                format: "season.confirmUnairedSeason.message".localized,
+                payload.unseen.count - payload.aired.count))
+        }
+        // "Hai visto anche i precedenti?" alla TV Time: include i non visti prima del tappato.
+        .alert(
+            "season.confirmPrevious.title".localized,
+            isPresented: promptBinding(matching: { if case .markPrevious = $0 { return true } else { return false } }),
+            presenting: previousPromptPayload
+        ) { payload in
+            Button("season.confirmPrevious.markAll".localized) {
+                mark(payload.previous + [payload.tapped])
+            }
+            Button("season.confirmPrevious.onlyThis".localized) {
+                mark([payload.tapped])
+            }
+            Button("common.cancel".localized, role: .cancel) {}
+        } message: { payload in
+            Text(String(format: "season.confirmPrevious.message".localized, payload.previous.count))
+        }
+        .alert(
+            "tracking.error.title".localized,
+            isPresented: Binding(get: { actionError != nil }, set: { if !$0 { actionError = nil } })
+        ) {
+            Button("common.ok".localized) { actionError = nil }
+        } message: {
+            Text(actionError ?? "")
         }
         .sheet(isPresented: $showSavePanel) {
             SaveToListPanel(movie: showMovie(), mediaType: .tv)
@@ -284,14 +359,7 @@ struct SeasonDetailView: View {
                     EpisodeRow(
                         episode: episode,
                         isSeen: isEpisodeSeen(episode),
-                        onToggleSeen: {
-                            episodeSeenManager.toggleEpisode(
-                                showId: showId,
-                                seasonNumber: episode.seasonNumber,
-                                episodeNumber: episode.episodeNumber,
-                                allEpisodesInSeason: episodes
-                            )
-                        }
+                        onToggleSeen: { handleEpisodeTap(episode, in: episodes) }
                     )
                     .padding(.horizontal, 20)
                 }
@@ -299,13 +367,126 @@ struct SeasonDetailView: View {
         }
     }
 
+    // MARK: - Prompt plumbing
+
+    /// Una binding "questo caso di `markPrompt` è a schermo": il set(false) alla chiusura
+    /// dell'alert azzera lo stato, come vuole `.alert(isPresented:presenting:)`.
+    private func promptBinding(matching: @escaping (EpisodeMarkPrompt) -> Bool) -> Binding<Bool> {
+        Binding(
+            get: { markPrompt.map(matching) ?? false },
+            set: { if !$0 { markPrompt = nil } }
+        )
+    }
+
+    private var unairedPromptEpisode: Episode? {
+        if case .unaired(let episode) = markPrompt { return episode }
+        return nil
+    }
+
+    private var previousPromptPayload: (tapped: Episode, previous: [Episode])? {
+        if case .markPrevious(let tapped, let previous) = markPrompt {
+            return (tapped, previous)
+        }
+        return nil
+    }
+
+    private var unairedSeasonPayload: (unseen: [Episode], aired: [Episode])? {
+        if case .unairedSeason(let unseen, let aired) = markPrompt {
+            return (unseen, aired)
+        }
+        return nil
+    }
+
     // MARK: - Actions
 
-    private func toggleSeasonSeen(episodes: [Episode], seasonNumber: Int) {
-        if episodeSeenManager.isSeasonFullySeen(showId: showId, seasonNumber: seasonNumber, episodes: episodes) {
-            episodeSeenManager.unmarkSeasonSeen(showId: showId, seasonNumber: seasonNumber, episodes: episodes)
+    /// Il tap sul check di un episodio. Lo smarcamento parte subito; la marcatura passa dai
+    /// popup quando serve: prima la conferma per un episodio non ancora uscito, poi — se ci
+    /// sono precedenti non visti — il "hai visto anche i precedenti?".
+    private func handleEpisodeTap(_ episode: Episode, in episodes: [Episode]) {
+        if isEpisodeSeen(episode) {
+            unmark([episode], in: episodes)
+        } else if isUnaired(episode) {
+            markPrompt = .unaired(episode)
         } else {
-            episodeSeenManager.markSeasonSeen(showId: showId, seasonNumber: seasonNumber, episodes: episodes)
+            askPreviousOrMark(episode, in: episodes, delayed: false)
+        }
+    }
+
+    /// Se prima dell'episodio tappato ci sono episodi non visti propone di includerli, altrimenti
+    /// marca solo lui. `delayed` serve quando si arriva qui dal popup "non ancora uscito": il
+    /// nuovo alert deve aspettare che SwiftUI abbia finito di chiudere il precedente, o il
+    /// `set(false)` della binding lo azzera prima che compaia.
+    private func askPreviousOrMark(_ episode: Episode, in episodes: [Episode], delayed: Bool) {
+        let previous = episodes.filter {
+            $0.episodeNumber < episode.episodeNumber && !isEpisodeSeen($0)
+        }
+        guard !previous.isEmpty else {
+            mark([episode])
+            return
+        }
+        if delayed {
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 450_000_000)
+                markPrompt = .markPrevious(tapped: episode, previous: previous)
+            }
+        } else {
+            markPrompt = .markPrevious(tapped: episode, previous: previous)
+        }
+    }
+
+    /// Non uscito = senza data o con data futura. La data di TMDB è un giorno di calendario:
+    /// un episodio che esce oggi è "uscito", quindi il confronto è fra mezzenotti.
+    private func isUnaired(_ episode: Episode) -> Bool {
+        guard let airDate = episode.airDate, !airDate.isEmpty else { return true }
+        let parser = DateFormatter()
+        parser.dateFormat = "yyyy-MM-dd"
+        guard let date = parser.date(from: airDate) else { return true }
+        return date > Calendar.current.startOfDay(for: Date())
+    }
+
+    private func mark(_ episodes: [Episode]) {
+        Task {
+            do {
+                try await TrackingActions.shared.markEpisodesWatched(
+                    showId: showId,
+                    episodes: episodes.map { ($0.seasonNumber, $0.episodeNumber) }
+                )
+            } catch {
+                actionError = error.localizedDescription
+            }
+        }
+    }
+
+    private func unmark(_ episodes: [Episode], in allEpisodes: [Episode]) {
+        Task {
+            do {
+                try await TrackingActions.shared.unmarkEpisodesWatched(
+                    showId: showId,
+                    episodes: episodes.map { ($0.seasonNumber, $0.episodeNumber) },
+                    allEpisodeNumbersInSeason: allEpisodes.map(\.episodeNumber)
+                )
+                await viewModel.refreshWatchedEvents()
+            } catch {
+                actionError = error.localizedDescription
+            }
+        }
+    }
+
+    /// Il bottone "S* vista": stesso canale dei singoli episodi (watch_events + pull), così anche
+    /// da qui le card di Scopri e del Tracking si aggiornano — prima toccava solo lo stato locale.
+    /// Se la stagione contiene episodi non ancora usciti (una stagione futura intera, o la coda
+    /// di una in corso) si chiede prima, come per il tap sul singolo episodio.
+    private func toggleSeasonSeen(episodes: [Episode], seasonNumber: Int) {
+        if isSeasonSeen {
+            unmark(episodes, in: episodes)
+            return
+        }
+        let unseen = episodes.filter { !isEpisodeSeen($0) }
+        let aired = unseen.filter { !isUnaired($0) }
+        if aired.count == unseen.count {
+            mark(unseen)
+        } else {
+            markPrompt = .unairedSeason(unseen: unseen, aired: aired)
         }
     }
 

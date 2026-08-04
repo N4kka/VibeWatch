@@ -81,7 +81,8 @@ final class TrackingSyncTests: XCTestCase {
     @MainActor
     func testSegnareVistoRitiraLoStatoRicalcolatoDalServer() async throws {
         let sync = MockSyncEngine()
-        let actions = TrackingActions(syncEngine: sync, currentUserId: { "u-1" })
+        let actions = TrackingActions(
+            syncEngine: sync, currentUserId: { "u-1" }, mirror: FakeWatchEventMirror())
 
         try await actions.markNextWatched(rigaConProssimoEpisodio())
 
@@ -95,7 +96,8 @@ final class TrackingSyncTests: XCTestCase {
     @MainActor
     func testLEventoPortaSempreUserIdEPrecisioneEsatta() async throws {
         let sync = MockSyncEngine()
-        let actions = TrackingActions(syncEngine: sync, currentUserId: { "u-1" })
+        let actions = TrackingActions(
+            syncEngine: sync, currentUserId: { "u-1" }, mirror: FakeWatchEventMirror())
 
         try await actions.markNextWatched(rigaConProssimoEpisodio())
 
@@ -149,6 +151,99 @@ final class TrackingSyncTests: XCTestCase {
         XCTAssertEqual(TableConflictMapping.strategy(for: "v_tv_timeline"), .serverWins)
     }
 
+    // MARK: - Le azioni episodio-livello (lista episodi di SeasonDetailView)
+
+    /// Il difetto del redesign: il tap sulla lista episodi scriveva solo EpisodeSeenManager
+    /// (UserDefaults) e le card di Scopri/Tracking — che leggono lo specchio calcolato dal
+    /// server — non si muovevano. Ora passa dallo stesso canale della card: evento + pull.
+    @MainActor
+    func testSegnareUnEpisodioDallaListaScriveLEventoERitiraLoStato() async throws {
+        let sync = MockSyncEngine()
+        let mirror = FakeWatchEventMirror()
+        let actions = TrackingActions(syncEngine: sync, currentUserId: { "u-1" }, mirror: mirror)
+
+        try await actions.markEpisodesWatched(showId: 1396, episodes: [(2, 1)])
+
+        XCTAssertEqual(sync.queued.count, 1)
+        XCTAssertEqual(sync.queued.first?.table, "watch_events")
+        XCTAssertEqual(sync.queued.first?.operationType, "INSERT")
+        XCTAssertEqual(sync.queued.first?.payload["user_id"] as? String, "u-1")
+        XCTAssertEqual(sync.queued.first?.payload["season_number"] as? Int, 2)
+        XCTAssertEqual(sync.queued.first?.payload["episode_number"] as? Int, 1)
+        XCTAssertEqual(sync.trackingPulls, 1, "senza il pull le card restano ferme")
+        XCTAssertEqual(mirror.inserted.count, 1,
+                       "il write-through è ciò che permette poi di smarcare prima del pull completo")
+    }
+
+    /// "Hai visto anche i precedenti?" marca N episodi in un colpo: un evento ciascuno, un pull.
+    @MainActor
+    func testSegnareIPrecedentiAccodaUnEventoPerEpisodioEUnSoloPull() async throws {
+        let sync = MockSyncEngine()
+        let actions = TrackingActions(
+            syncEngine: sync, currentUserId: { "u-1" }, mirror: FakeWatchEventMirror())
+
+        try await actions.markEpisodesWatched(showId: 1396, episodes: [(2, 1), (2, 2), (2, 3)])
+
+        XCTAssertEqual(sync.queued.count, 3)
+        XCTAssertEqual(sync.queued.map { $0.payload["episode_number"] as? Int }, [1, 2, 3])
+        XCTAssertEqual(sync.trackingPulls, 1, "un pull per il lotto, non uno per episodio")
+    }
+
+    /// Lo smarcamento mette la lapide su OGNI evento noto di quell'episodio (rewatch compresi):
+    /// DELETE remota per id + tombstone locale, così la lista non lo rivede al prossimo pull.
+    @MainActor
+    func testSmarcareUnEpisodioCancellaTuttiISuoiEventi() async throws {
+        let sync = MockSyncEngine()
+        let mirror = FakeWatchEventMirror()
+        mirror.idsByEpisode["2-1"] = ["ev-a", "ev-b"]
+        let actions = TrackingActions(syncEngine: sync, currentUserId: { "u-1" }, mirror: mirror)
+
+        try await actions.unmarkEpisodesWatched(
+            showId: 1396, episodes: [(2, 1)], allEpisodeNumbersInSeason: [1, 2, 3])
+
+        XCTAssertEqual(sync.queued.map(\.operationType), ["DELETE", "DELETE"])
+        XCTAssertEqual(sync.queued.map(\.recordId), ["ev-a", "ev-b"])
+        XCTAssertEqual(sync.queued.first?.payload["user_id"] as? String, "u-1",
+                       "senza user_id apply_mutations scarta in silenzio")
+        XCTAssertEqual(mirror.tombstoned, ["ev-a", "ev-b"])
+        XCTAssertEqual(sync.trackingPulls, 1)
+    }
+
+    /// Un episodio visto solo in locale (nessun evento nello specchio) si smarca senza accodare
+    /// DELETE inventate: il pull finale riallinea comunque lo stato.
+    @MainActor
+    func testSmarcareSenzaEventiNotiNonAccodaNiente() async throws {
+        let sync = MockSyncEngine()
+        let actions = TrackingActions(
+            syncEngine: sync, currentUserId: { "u-1" }, mirror: FakeWatchEventMirror())
+
+        try await actions.unmarkEpisodesWatched(
+            showId: 1396, episodes: [(2, 1)], allEpisodeNumbersInSeason: [1, 2])
+
+        XCTAssertTrue(sync.queued.isEmpty)
+        XCTAssertEqual(sync.trackingPulls, 1)
+    }
+
+    @MainActor
+    func testLeAzioniEpisodioRichiedonoLAutenticazione() async {
+        let sync = MockSyncEngine()
+        let actions = TrackingActions(
+            syncEngine: sync, currentUserId: { nil }, mirror: FakeWatchEventMirror())
+
+        do {
+            try await actions.markEpisodesWatched(showId: 1, episodes: [(1, 1)])
+            XCTFail("doveva rifiutare")
+        } catch {}
+        do {
+            try await actions.unmarkEpisodesWatched(
+                showId: 1, episodes: [(1, 1)], allEpisodeNumbersInSeason: [1])
+            XCTFail("doveva rifiutare")
+        } catch {}
+
+        XCTAssertTrue(sync.queued.isEmpty)
+        XCTAssertEqual(sync.trackingPulls, 0)
+    }
+
     // MARK: - Righe di prova
 
     private func rigaConProssimoEpisodio() -> TrackingRow {
@@ -171,6 +266,19 @@ final class TrackingSyncTests: XCTestCase {
             backlogSince: nil, lastWatchedAt: nil,
             showName: "Breaking Bad", posterPath: nil, nextStillPath: nil
         )
+    }
+
+    /// Lo specchio locale come dizionario: niente SQLite nei test delle azioni.
+    private final class FakeWatchEventMirror: WatchEventLocalMirror, @unchecked Sendable {
+        private(set) var inserted: [[String: Any]] = []
+        var idsByEpisode: [String: [String]] = [:]
+        private(set) var tombstoned: [String] = []
+
+        func insert(_ record: [String: Any]) async { inserted.append(record) }
+        func activeEventIds(userId: String, showId: Int, season: Int, episode: Int) async -> [String] {
+            idsByEpisode["\(season)-\(episode)"] ?? []
+        }
+        func tombstone(ids: [String]) async { tombstoned.append(contentsOf: ids) }
     }
 
     // MARK: - La sonda di §13.6

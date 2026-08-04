@@ -931,3 +931,15 @@
 "gamification.challenge.list_2" = "Aggiungi 2 titoli a una lista";
 "gamification.challenge.watch_new_genre" = "Guarda una clip di un nuovo genere";
 "gamification.challenge.complete_5" = "Completa 5 clip (>70%)";
+
+// SeasonDetailView — conferme di marcatura episodi (2026-08-04)
+"season.confirmUnaired.title" = "Non ancora uscito";
+"season.confirmUnaired.message" = "S%dE%d non è ancora andato in onda. Vuoi segnarlo comunque come visto?";
+"season.confirmUnaired.confirm" = "Segna come visto";
+"season.confirmPrevious.title" = "Hai visto anche i precedenti?";
+"season.confirmPrevious.message" = "Ci sono %d episodi precedenti non segnati come visti.";
+"season.confirmPrevious.markAll" = "Sì, segnali tutti";
+"season.confirmPrevious.onlyThis" = "Solo questo";
+"season.confirmUnairedSeason.message" = "%d episodi di questa stagione non sono ancora usciti. Vuoi segnarli comunque come visti?";
+"season.confirmUnairedSeason.markAll" = "Segna tutti";
+"season.confirmUnairedSeason.onlyAired" = "Solo quelli usciti";

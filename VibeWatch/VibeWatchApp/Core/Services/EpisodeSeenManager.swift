@@ -103,6 +103,21 @@ final class EpisodeSeenManager: ObservableObject {
         persistEpisodes()
     }
 
+    /// Smarca un episodio gestendo il flag whole-show: se la serie era "vista tutta", il flag si
+    /// espande in chiavi per-episodio di questa stagione (come nel ramo off di `toggleEpisode`,
+    /// che però vuole gli `Episode` interi — qui bastano i numeri).
+    func unmarkEpisode(showId: Int, seasonNumber: Int, episodeNumber: Int, allEpisodeNumbersInSeason: [Int]) {
+        if seenShowIds.contains(showId) {
+            seenShowIds.remove(showId)
+            persistShows()
+            for n in allEpisodeNumbersInSeason where n != episodeNumber {
+                seenKeys.insert(makeKey(showId: showId, season: seasonNumber, episode: n))
+            }
+        }
+        seenKeys.remove(makeKey(showId: showId, season: seasonNumber, episode: episodeNumber))
+        persistEpisodes()
+    }
+
     /// Espande il flag whole-show in chiavi per-episodio, così è possibile poi smarcarne uno
     /// specifico (usato dal check "In pari" → torna a "Continua a guardare"). `allEpisodes` sono
     /// le coppie (stagione, episodio) di tutta la serie, enumerabili dagli episodeCount.

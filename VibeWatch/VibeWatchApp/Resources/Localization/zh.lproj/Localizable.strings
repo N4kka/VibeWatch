@@ -917,3 +917,15 @@
 "gamification.challenge.list_2" = "Add 2 titles to a list";
 "gamification.challenge.watch_new_genre" = "Watch a clip from a new genre";
 "gamification.challenge.complete_5" = "Complete 5 clips (>70%)";
+
+// SeasonDetailView — conferme di marcatura episodi (2026-08-04)
+"season.confirmUnaired.title" = "尚未播出";
+"season.confirmUnaired.message" = "S%dE%d尚未播出。仍要标记为已看吗？";
+"season.confirmUnaired.confirm" = "标记为已看";
+"season.confirmPrevious.title" = "之前的剧集也看过了吗？";
+"season.confirmPrevious.message" = "有%d集之前的剧集未标记为已看。";
+"season.confirmPrevious.markAll" = "是，全部标记";
+"season.confirmPrevious.onlyThis" = "仅此一集";
+"season.confirmUnairedSeason.message" = "本季有%d集尚未播出。仍要标记为已看吗？";
+"season.confirmUnairedSeason.markAll" = "全部标记";
+"season.confirmUnairedSeason.onlyAired" = "仅已播出的";

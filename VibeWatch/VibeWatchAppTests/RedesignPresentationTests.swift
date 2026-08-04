@@ -1,7 +1,19 @@
+import SwiftUI
+import UIKit
 import XCTest
 @testable import VibeWatchApp
 
 final class RedesignPresentationTests: XCTestCase {
+
+    @MainActor
+    func testDiscoverModeSwitcherSelectedTitleUsesTabAccentColor() {
+        let control = UISegmentedControl(items: ["Scopri", "Clip"])
+
+        DiscoverModeSwitcherStyle.apply(to: control)
+
+        let selectedColor = control.titleTextAttributes(for: .selected)?[.foregroundColor] as? UIColor
+        XCTAssertEqual(selectedColor, UIColor(Color.theme.accentOrange))
+    }
 
     func testPlatformSelectionCodecRoundTripsReferencePlatforms() throws {
         let platforms: Set<StreamingPlatform> = [.netflix, .disney, .prime, .sky, .now, .apple]

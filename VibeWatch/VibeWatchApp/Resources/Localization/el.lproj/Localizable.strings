@@ -932,3 +932,15 @@
 "gamification.challenge.list_2" = "Add 2 titles to a list";
 "gamification.challenge.watch_new_genre" = "Watch a clip from a new genre";
 "gamification.challenge.complete_5" = "Complete 5 clips (>70%)";
+
+// SeasonDetailView — conferme di marcatura episodi (2026-08-04)
+"season.confirmUnaired.title" = "Δεν έχει προβληθεί ακόμα";
+"season.confirmUnaired.message" = "Το S%dE%d δεν έχει προβληθεί ακόμα. Να σημειωθεί ως παρακολουθημένο έτσι κι αλλιώς;";
+"season.confirmUnaired.confirm" = "Σήμανση ως παρακολουθημένο";
+"season.confirmPrevious.title" = "Είδες και τα προηγούμενα επεισόδια;";
+"season.confirmPrevious.message" = "Υπάρχουν %d προηγούμενα επεισόδια που δεν έχουν σημειωθεί ως παρακολουθημένα.";
+"season.confirmPrevious.markAll" = "Ναι, σήμανση όλων";
+"season.confirmPrevious.onlyThis" = "Μόνο αυτό";
+"season.confirmUnairedSeason.message" = "%d επεισόδια αυτής της σεζόν δεν έχουν προβληθεί ακόμα. Να σημειωθούν ως παρακολουθημένα έτσι κι αλλιώς;";
+"season.confirmUnairedSeason.markAll" = "Σήμανση όλων";
+"season.confirmUnairedSeason.onlyAired" = "Μόνο όσα έχουν προβληθεί";

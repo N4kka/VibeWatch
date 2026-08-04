@@ -2636,21 +2636,27 @@ final class ListsTrackingFusionTests: XCTestCase {
                      completedAt: "2026-07-30T20:00:00Z")
         seedTracking(803, bucket: "archived", name: "Archiviata")
         seedTracking(804, bucket: "up_next", name: "In Corso")
+        seedTracking(805, bucket: "stale", name: "In Corso Da Un Pezzo")
 
         await manager.loadListsFromSQLite()
 
         let watchlistIds = Set(manager.watchlist.items.map(\.mediaId))
-        // Il film legacy resta; le serie arrivano dal tracking (not_started ∪ for_later).
-        XCTAssertEqual(watchlistIds, [500, 800, 801])
+        // Il film legacy resta; le serie arrivano dal tracking. Dal 2026-08-04 la watchlist TV
+        // comprende anche le serie in corso (`up_next`/`stale`): coi soli not_started/for_later,
+        // una serie con episodi visti non poteva MAI comparirci — "Aggiunto alla watchlist"
+        // mostrava il toast e la lista restava identica.
+        XCTAssertEqual(watchlistIds, [500, 800, 801, 804, 805])
         // La serie TV legacy in list_items NON si mostra più: sarebbe il doppio binario.
         XCTAssertFalse(watchlistIds.contains(900),
                        "una serie TV legacy in watchlist non deve comparire: deriva dal tracking")
 
-        // Seen: solo chi è in pari. Archiviate e in-corso non stanno in NESSUNA lista.
+        // Seen: solo chi è in pari. Le archiviate non stanno in NESSUNA lista; le in-corso
+        // stanno in watchlist, non in "viste".
         XCTAssertEqual(manager.seenList.items.map(\.mediaId), [802])
         let everywhere = Set(manager.lists.flatMap { $0.items.map(\.mediaId) })
         XCTAssertFalse(everywhere.contains(803), "le archiviate vivono solo nel Tracking")
-        XCTAssertFalse(everywhere.contains(804), "una serie a metà è in corso, non è 'vista'")
+        XCTAssertFalse(manager.seenList.items.contains { $0.mediaId == 804 },
+                       "una serie a metà è in corso, non è 'vista'")
 
         // Gli id derivati portano il prefisso: nessuna strada legacy può scambiarli per righe.
         XCTAssertTrue(manager.seenList.items.allSatisfy {
