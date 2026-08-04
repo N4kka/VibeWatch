@@ -1021,12 +1021,11 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
     /// sommato dal client, perché in cache c'è solo un anno. Deve arrivare dal server come
     /// aggregato — che è comunque ciò che §1.1 prescrive e che serve alle stats del blocco 9.
     nonisolated static func pullWindow(for table: String) -> (column: String, months: Int)? {
-        switch table {
-        case "watch_events":
-            return ("watched_at", 12)
-        default:
-            return nil
-        }
+        // `watch_events` NON ha più la finestra a 12 mesi: un import TV Time porta ANNI di
+        // storico, e SeasonView marca i "visto" leggendo lo specchio locale — con la finestra
+        // il server aveva 20k eventi e il telefono ne scaricava un decimo, quindi le stagioni
+        // sembravano mai viste. Il pull resta paginato (SyncPagination): ~20 pagine una tantum.
+        nil
     }
 
     /// Normalizes a row for storage (handles media_type, JSON arrays, etc.).
