@@ -77,6 +77,16 @@ final class ImportViewModelTests: XCTestCase {
             currentJob = ImportJobSnapshot(id: jobId, phase: "resolving", status: "running",
                                            error: nil)
         }
+
+        var excludeFails = false
+        private(set) var excludes:
+            [(jobId: String, seriesIds: [String], movieUuids: [String], titles: [String])] = []
+
+        func excludeUnresolved(jobId: String, seriesIds: [String], movieUuids: [String],
+                               seriesTitles: [String]) async throws {
+            if excludeFails { throw Rotto() }
+            excludes.append((jobId, seriesIds, movieUuids, seriesTitles))
+        }
     }
 
     private static let unReport = ImportReport(
@@ -283,13 +293,32 @@ final class ImportViewModelTests: XCTestCase {
         XCTAssertEqual(vm.state, .sources)
     }
 
-    func testLoadExistingConJobDoneRestaSulleSorgenti() async {
-        // Il report di un import già visto non si ripropone: la schermata serve al prossimo.
+    func testLoadExistingConJobDoneRiprendeIlReport() async {
+        // Redesign 2.0: il report (e con lui l'inbox "Titoli da verificare") si RIPRENDE —
+        // prima, chiuso il report, i non risolti diventavano irraggiungibili per sempre.
         let fake = Fake()
         fake.currentJob = ImportJobSnapshot(id: "j9", phase: "done", status: "done", error: nil)
+        fake.report = Self.unReport
         let vm = makeVM(fake)
         await vm.loadExisting()
-        XCTAssertEqual(vm.state, .sources)
+        XCTAssertEqual(vm.state, .done(Self.unReport))
+    }
+
+    func testLaRipresaDiUnJobDoneNonRifaIlSync() async {
+        // La ripresa di un job già concluso non deve rinotificare `importJobCompleted`:
+        // quei dati sono già nello specchio locale, un pull a ogni apertura sarebbe rumore.
+        let fake = Fake()
+        fake.currentJob = ImportJobSnapshot(id: "j9", phase: "done", status: "done", error: nil)
+        fake.report = Self.unReport
+        let vm = makeVM(fake)
+
+        var notified = false
+        let observer = NotificationCenter.default.addObserver(
+            forName: .importJobCompleted, object: nil, queue: nil) { _ in notified = true }
+        defer { NotificationCenter.default.removeObserver(observer) }
+
+        await vm.loadExisting()
+        XCTAssertFalse(notified, "la ripresa non è un completamento")
     }
 
     // MARK: - Il report
@@ -495,5 +524,93 @@ final class ImportViewModelTests: XCTestCase {
         XCTAssertEqual(report?.nonRiconosciutiElenco.first?.tvdbSeriesId, "75530")
         // Senza id la maniglia non c'è: il pulsante Risolvi non esiste per quella riga.
         XCTAssertNil(report?.nonRiconosciutiElenco.last?.tvdbSeriesId)
+    }
+
+    // MARK: - Redesign 2.0: inbox, progresso, esclusione
+
+    func testLInboxFondeSerieStatiEFilm() {
+        let report = ImportReport(json: [
+            "episodi_importati": 1,
+            "non_riconosciuti_elenco": [
+                ["titolo": "The Office", "episodi": 201, "motivo": "catalogo: not_found",
+                 "tvdb_series_id": "73244"],
+            ],
+            "stati_non_risolti_elenco": [
+                // Stessa serie degli episodi: NON deve fare una seconda card.
+                ["titolo": "The Office", "stato": "watchlist", "motivo": "catalogo: not_found",
+                 "tvdb_series_id": "73244"],
+                ["titolo": "Solo stato", "stato": "archived", "motivo": "catalogo: not_found",
+                 "tvdb_series_id": "999"],
+            ],
+            "film_non_risolti_elenco": [
+                ["titolo": "Un film", "tipo": "seen", "motivo": "film: anno mancante",
+                 "tvtime_movie_uuid": "uuid-1"],
+            ],
+        ])
+        let items = report?.reviewItems ?? []
+        XCTAssertEqual(items.count, 3, "una card per serie, una per lo stato orfano, una film")
+        XCTAssertEqual(items.filter(\.isMovie).count, 1)
+        XCTAssertTrue(items.first { $0.titolo == "The Office" }?.isResolvable ?? false)
+        // Il film non ha risoluzione a mano: solo esclusione.
+        XCTAssertFalse(items.first { $0.isMovie }?.isResolvable ?? true)
+    }
+
+    func testIlProgressoVieneDaiContatoriVeri() {
+        // Fase di risoluzione a metà: 9.000 eventi processati su 18.000, niente altro.
+        let snapshot = ImportJobSnapshot(
+            id: "j1", phase: "resolving", status: "running", error: nil,
+            totals: ["events": 18_000, "resolved": 8_500, "unresolved": 500])
+        let progress = snapshot.progress
+        XCTAssertEqual(progress.processedEpisodes, 9_000)
+        XCTAssertEqual(progress.totalEpisodes, 18_000)
+        // 0.15 + 0.60 * 0.5 = 0.45
+        XCTAssertEqual(progress.fraction, 0.45, accuracy: 0.001)
+
+        // Scrittura a metà: banda 0.78–0.96.
+        let writing = ImportJobSnapshot(
+            id: "j1", phase: "writing", status: "running", error: nil,
+            totals: ["events": 18_000, "staged_rows": 20_000,
+                     "written": 9_000, "already_present": 1_000])
+        XCTAssertEqual(writing.progress.fraction, 0.78 + 0.18 * 0.5, accuracy: 0.001)
+    }
+
+    func testLEsclusioneChiamaIlBackendERileggeIlReport() async {
+        let fake = Fake()
+        fake.currentJob = ImportJobSnapshot(id: "j1", phase: "done", status: "done", error: nil)
+        fake.report = Self.unReport
+        let vm = makeVM(fake)
+        await vm.loadExisting()
+
+        // Dopo l'esclusione il server non conta più il titolo: il report riletto è pulito.
+        let pulito = ImportReport(
+            episodiImportati: 42, serieImportate: 3, dal: nil, al: nil,
+            nonRiconosciutiEpisodi: 0, nonRiconosciutiSerie: 0, nonRiconosciutiElenco: [],
+            votiStelle: 0, votiReaction: 0, votiImportati: true)
+        fake.report = pulito
+
+        let item = ImportReviewItem(source: .series(tvdbSeriesId: "901"),
+                                    titolo: "Sconosciuta", episodi: 5,
+                                    motivo: "no match", statoRichiesto: nil)
+        let ok = await vm.excludeItems([item])
+        XCTAssertTrue(ok)
+        XCTAssertEqual(fake.excludes.count, 1)
+        XCTAssertEqual(fake.excludes.first?.seriesIds, ["901"])
+        XCTAssertEqual(vm.state, .done(pulito), "il report a schermo è quello riletto")
+    }
+
+    func testLEsclusioneSenzaManiglieNonChiamaIlServer() async {
+        let fake = Fake()
+        fake.currentJob = ImportJobSnapshot(id: "j1", phase: "done", status: "done", error: nil)
+        fake.report = Self.unReport
+        let vm = makeVM(fake)
+        await vm.loadExisting()
+
+        // Un film senza uuid non ha maniglia: la chiamata non parte.
+        let item = ImportReviewItem(source: .movie(tvtimeMovieUuid: nil),
+                                    titolo: "Film orfano", episodi: 0,
+                                    motivo: "x", statoRichiesto: nil)
+        let ok = await vm.excludeItems([item])
+        XCTAssertFalse(ok)
+        XCTAssertEqual(fake.excludes.count, 0)
     }
 }

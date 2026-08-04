@@ -944,3 +944,48 @@
 "season.confirmUnairedSeason.message" = "%d επεισόδια αυτής της σεζόν δεν έχουν προβληθεί ακόμα. Να σημειωθούν ως παρακολουθημένα έτσι κι αλλιώς;";
 "season.confirmUnairedSeason.markAll" = "Σήμανση όλων";
 "season.confirmUnairedSeason.onlyAired" = "Μόνο όσα έχουν προβληθεί";
+
+/* Import redesign 2.0 — banner, review inbox, onboarding options */
+"onboarding.import.durationHint" = "Ένα αρχείο με χρόνια ιστορικού μπορεί να χρειαστεί αρκετά λεπτά.";
+"onboarding.import.meanwhile" = "Στο μεταξύ";
+"onboarding.import.wait" = "Θα μείνω να περιμένω";
+"onboarding.import.wait.subtitle" = "Μπες στην εφαρμογή με τη βιβλιοθήκη σου ήδη πλήρη";
+"onboarding.import.background" = "Συνέχισε το onboarding";
+"onboarding.import.background.subtitle" = "Η εισαγωγή συνεχίζεται στο παρασκήνιο — θα σε ειδοποιήσουμε όταν ολοκληρωθεί";
+"onboarding.import.waitingHint" = "Περιμένουμε εδώ: μόλις ολοκληρωθεί η εισαγωγή, ο έλεγχος ανοίγει αυτόματα.";
+"onboarding.import.manage" = "Διαχείριση %d τίτλων";
+"import.banner.running" = "Εισαγωγή σε εξέλιξη";
+"import.banner.episodes" = "%1$@ από %2$@ επεισόδια";
+"import.banner.completed" = "Η εισαγωγή ολοκληρώθηκε";
+"import.banner.review" = "%1$d τίτλοι για έλεγχο από %2$@";
+"import.banner.manage" = "Διαχείριση";
+"import.banner.ok" = "OK";
+"import.banner.summary" = "%1$@ σειρές · %2$@ επεισόδια · %3$@ ταινίες";
+"import.toast.imported" = "Η βιβλιοθήκη εισήχθη";
+"import.toast.imported.review" = "Η βιβλιοθήκη εισήχθη · %d τίτλοι για έλεγχο";
+"import.review.title" = "Τίτλοι για έλεγχο";
+"import.review.remaining" = "%1$d από %2$d απομένουν";
+"import.review.allResolved" = "Όλα τακτοποιήθηκαν";
+"import.review.intro" = "Δεν βρήκαμε σίγουρη αντιστοίχιση για αυτούς τους τίτλους από το αρχείο σου στο TV Time. Διάλεξε τον σωστό ή απόκλεισέ τον.";
+"import.review.episodesSeen" = "%d παρακολουθημένα επεισόδια";
+"import.review.searchManually" = "Χειροκίνητη αναζήτηση";
+"import.review.exclude" = "Αποκλεισμός";
+"import.review.later" = "Αναβολή, θα το κάνω αργότερα";
+"import.review.importCount" = "Εισαγωγή %d τίτλων";
+"import.review.importOne" = "Εισαγωγή 1 τίτλου";
+"import.review.libraryOk" = "Η βιβλιοθήκη είναι εντάξει";
+"import.review.libraryOk.subtitle" = "Κάθε τίτλος από το αρχείο σου στο TV Time αντιστοιχίστηκε σωστά.";
+"import.review.noCandidates" = "Δεν βρέθηκαν προτάσεις — δοκίμασε χειροκίνητη αναζήτηση.";
+"import.review.manualPick" = "Επιλέχθηκε χειροκίνητα";
+"import.review.movieHint" = "Οι ταινίες χωρίς αντιστοίχιση μπορούν μόνο να αποκλειστούν.";
+"import.review.seasons" = "%d σεζόν";
+"import.review.reason.notFound" = "δεν βρέθηκε στον κατάλογο";
+"import.review.reason.ambiguous" = "διφορούμενη αντιστοίχιση";
+"import.review.reason.conflict" = "σύγκρουση σειρών";
+"import.review.reason.yearMissing" = "έτος που λείπει ή δεν ταιριάζει";
+"import.review.reason.missingId" = "χωρίς ID σειράς στην εξαγωγή";
+
+"import.toast.mapping.partial" = "%1$d τίτλοι επιλύθηκαν · %2$d ακόμη για έλεγχο";
+"import.toast.mapping.done" = "%d τίτλοι επιλύθηκαν · η βιβλιοθήκη είναι εντάξει";
+
+"import.report.outOfStructure" = "%d επεισόδια δεν χωρούν στη δομή TMDB της επιβεβαιωμένης σειράς.";

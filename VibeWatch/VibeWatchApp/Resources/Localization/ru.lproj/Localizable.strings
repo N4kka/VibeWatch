@@ -932,3 +932,48 @@
 "season.confirmUnairedSeason.message" = "%d серий этого сезона ещё не вышли. Всё равно отметить их как просмотренные?";
 "season.confirmUnairedSeason.markAll" = "Отметить все";
 "season.confirmUnairedSeason.onlyAired" = "Только вышедшие";
+
+/* Import redesign 2.0 — banner, review inbox, onboarding options */
+"onboarding.import.durationHint" = "Архив с многолетней историей может занять несколько минут.";
+"onboarding.import.meanwhile" = "А пока";
+"onboarding.import.wait" = "Останусь и подожду";
+"onboarding.import.wait.subtitle" = "Войдите в приложение с уже готовой библиотекой";
+"onboarding.import.background" = "Продолжить онбординг";
+"onboarding.import.background.subtitle" = "Импорт продолжится в фоне — мы сообщим, когда он завершится";
+"onboarding.import.waitingHint" = "Подождём здесь: как только импорт закончится, проверка откроется автоматически.";
+"onboarding.import.manage" = "Разобрать %d тайтлов";
+"import.banner.running" = "Импорт выполняется";
+"import.banner.episodes" = "%1$@ из %2$@ эпизодов";
+"import.banner.completed" = "Импорт завершён";
+"import.banner.review" = "%1$d тайтлов на проверку из %2$@";
+"import.banner.manage" = "Разобрать";
+"import.banner.ok" = "OK";
+"import.banner.summary" = "%1$@ сериалов · %2$@ эпизодов · %3$@ фильмов";
+"import.toast.imported" = "Библиотека импортирована";
+"import.toast.imported.review" = "Библиотека импортирована · %d тайтлов на проверку";
+"import.review.title" = "Тайтлы на проверку";
+"import.review.remaining" = "Осталось %1$d из %2$d";
+"import.review.allResolved" = "Всё решено";
+"import.review.intro" = "Для этих тайтлов из вашего архива TV Time не нашлось уверенного совпадения. Выберите правильный вариант или исключите его.";
+"import.review.episodesSeen" = "%d эпизодов просмотрено";
+"import.review.searchManually" = "Искать вручную";
+"import.review.exclude" = "Исключить";
+"import.review.later" = "Отложить, сделаю позже";
+"import.review.importCount" = "Импортировать %d тайтлов";
+"import.review.importOne" = "Импортировать 1 тайтл";
+"import.review.libraryOk" = "Библиотека в порядке";
+"import.review.libraryOk.subtitle" = "Все тайтлы из вашего архива TV Time сопоставлены правильно.";
+"import.review.noCandidates" = "Подсказок не найдено — попробуйте ручной поиск.";
+"import.review.manualPick" = "Выбрано вручную";
+"import.review.movieHint" = "Фильмы без совпадения можно только исключить.";
+"import.review.seasons" = "%d сезонов";
+"import.review.reason.notFound" = "не найдено в каталоге";
+"import.review.reason.ambiguous" = "неоднозначное совпадение";
+"import.review.reason.conflict" = "конфликт сериалов";
+"import.review.reason.yearMissing" = "год отсутствует или не совпадает";
+"import.review.reason.missingId" = "в экспорте нет ID сериала";
+
+"import.toast.mapping.partial" = "%1$d названий сопоставлено · ещё %2$d на проверку";
+"import.toast.mapping.done" = "%d названий сопоставлено · библиотека в порядке";
+
+"import.report.outOfStructure" = "%d эпизодов не удалось разместить в структуре TMDB подтверждённого сериала.";

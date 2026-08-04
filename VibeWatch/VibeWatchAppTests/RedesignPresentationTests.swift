@@ -6,6 +6,23 @@ import XCTest
 final class RedesignPresentationTests: XCTestCase {
 
     @MainActor
+    func testNotificationAuthorizationAdvancesOnboardingAsSoonAsNativeDecisionResolves() async {
+        let viewModel = OnboardingViewModel()
+        viewModel.currentStep = .notifications
+
+        let granted = await viewModel.resolveNotificationPermission {
+            true
+        }
+
+        XCTAssertTrue(granted)
+        XCTAssertTrue(viewModel.notificationsGranted)
+        XCTAssertEqual(
+            viewModel.currentStep.rawValue,
+            OnboardingViewModel.OnboardingStep.ready.rawValue
+        )
+    }
+
+    @MainActor
     func testDiscoverModeSwitcherSelectedTitleUsesTabAccentColor() {
         let control = UISegmentedControl(items: ["Scopri", "Clip"])
 

@@ -944,3 +944,48 @@
 "season.confirmUnairedSeason.message" = "%d afleveringen van dit seizoen zijn nog niet uitgezonden. Toch als gezien markeren?";
 "season.confirmUnairedSeason.markAll" = "Markeer ze allemaal";
 "season.confirmUnairedSeason.onlyAired" = "Alleen de uitgezonden";
+
+/* Import redesign 2.0 — banner, review inbox, onboarding options */
+"onboarding.import.durationHint" = "Een archief met jaren aan geschiedenis kan meerdere minuten duren.";
+"onboarding.import.meanwhile" = "Ondertussen";
+"onboarding.import.wait" = "Ik blijf wachten";
+"onboarding.import.wait.subtitle" = "Start de app met je bibliotheek al compleet";
+"onboarding.import.background" = "Ga door met de onboarding";
+"onboarding.import.background.subtitle" = "De import loopt door op de achtergrond — we sturen je een melding zodra hij klaar is";
+"onboarding.import.waitingHint" = "We wachten hier: zodra de import klaar is, opent de controle automatisch.";
+"onboarding.import.manage" = "%d titels beheren";
+"import.banner.running" = "Import bezig";
+"import.banner.episodes" = "%1$@ van %2$@ afleveringen";
+"import.banner.completed" = "Import voltooid";
+"import.banner.review" = "%1$d titels te controleren van %2$@";
+"import.banner.manage" = "Beheren";
+"import.banner.ok" = "OK";
+"import.banner.summary" = "%1$@ series · %2$@ afleveringen · %3$@ films";
+"import.toast.imported" = "Bibliotheek geïmporteerd";
+"import.toast.imported.review" = "Bibliotheek geïmporteerd · %d titels te controleren";
+"import.review.title" = "Titels om te controleren";
+"import.review.remaining" = "%1$d van %2$d over";
+"import.review.allResolved" = "Alles opgelost";
+"import.review.intro" = "Voor deze titels uit je TV Time-archief vonden we geen zekere match. Kies de juiste of sluit hem uit.";
+"import.review.episodesSeen" = "%d afleveringen gekeken";
+"import.review.searchManually" = "Handmatig zoeken";
+"import.review.exclude" = "Uitsluiten";
+"import.review.later" = "Uitstellen, ik doe het later";
+"import.review.importCount" = "%d titels importeren";
+"import.review.importOne" = "1 titel importeren";
+"import.review.libraryOk" = "Bibliotheek op orde";
+"import.review.libraryOk.subtitle" = "Elke titel uit je TV Time-archief is correct gekoppeld.";
+"import.review.noCandidates" = "Geen suggesties gevonden — probeer handmatig te zoeken.";
+"import.review.manualPick" = "Handmatig gekozen";
+"import.review.movieHint" = "Films zonder match kunnen alleen worden uitgesloten.";
+"import.review.seasons" = "%d seizoenen";
+"import.review.reason.notFound" = "niet gevonden in de catalogus";
+"import.review.reason.ambiguous" = "dubbelzinnige match";
+"import.review.reason.conflict" = "serieconflict";
+"import.review.reason.yearMissing" = "jaartal ontbreekt of komt niet overeen";
+"import.review.reason.missingId" = "geen serie-ID in de export";
+
+"import.toast.mapping.partial" = "%1$d titels opgelost · nog %2$d te controleren";
+"import.toast.mapping.done" = "%d titels opgelost · bibliotheek op orde";
+
+"import.report.outOfStructure" = "%d afleveringen passen niet in de TMDB-structuur van de bevestigde serie.";

@@ -33,6 +33,9 @@ const SERVICE_KEY = (() => {
 
 /** §7.2: l'import risolve in batch da 50 — è anche il massimo che `catalog-resolve` accetta. */
 const BATCH = 50
+/** La chiave TMDB del progetto (la stessa di catalog-resolve): serve SOLO al fallback della
+ *  risoluzione manuale, per validare i numeri dell'export contro la struttura stagioni. */
+const TMDB_API_KEY = Deno.env.get('TMDB_API_KEY') ?? ''
 /**
  * Righe di staging lette per invocazione.
  *
@@ -288,10 +291,23 @@ serve(async (req: Request) => {
       }
     }
 
+    // Redesign 2.0, il fallback della serie CONFERMATA A MANO. TMDB `/find` non indicizza
+    // tutti gli id episodio TVDB: per molte serie la mappa serie è `found` ma OGNI episodio
+    // torna not_found — e il retry manuale sarebbe un giro a vuoto: l'utente sceglie la serie,
+    // l'import gira, il titolo torna nell'inbox identico (la "risoluzione fittizia" vista al
+    // primo collaudo). §6 vieta i numeri dell'export come identità DEDOTTA; qui però la serie
+    // è una dichiarazione esplicita dell'utente, e i numeri si accettano solo se esistono
+    // nella struttura stagioni TMDB di quella serie. L'esito finisce SOLO nello staging del
+    // job — mai nella mappa globale, che resta catalogo puro.
+    const stagioniManuali = manualContext
+      ? await stagioniDellaSerieManuale(manualContext.tmdb_show_id)
+      : null
+
     // Si annota ciò che la mappa sa: tutto il blocco nel caso normale, la sola parte già
     // risolvibile quando si arriva qui col budget esaurito.
     let risolte = 0
     let irrisolte = 0
+    let fuoriStrutturaRighe = 0
 
     // **Si scrive in blocco, non riga per riga.** Una UPDATE per riga sono ~47 ms di andata e
     // ritorno l'una: misurato, annotare 1000 righe costava **47 secondi**, cioe' piu' di tutte le
@@ -329,24 +345,65 @@ serve(async (req: Request) => {
         ? disposizioneManuale === 'resolved'
         : mappa.resolution === 'found' && mappa.tmdb_show_id !== null
 
+      // Nel caso normale i numeri vengono da TMDB, mai da quelli dell'export (§6). Il ramo
+      // manuale, quando il catalogo ha detto not_found, prova i numeri DICHIARATI: validi solo
+      // se la stagione esiste su TMDB e l'episodio sta dentro il suo conteggio.
+      let resolvedRow: Record<string, unknown> | null = trovato
+        ? {
+          tmdb_show_id: mappa.tmdb_show_id,
+          season_number: mappa.season_number,
+          episode_number: mappa.episode_number,
+        }
+        : null
+      let esitoRisolto = trovato
+      let fuoriStruttura = false
+      let erroreRiga = trovato
+        ? null
+        : (conflittoSerie ? 'catalogo: conflitto_serie' : `catalogo: ${mappa.resolution ?? 'assente'}`)
+
+      if (!trovato && manualContext && disposizioneManuale === 'unresolved' && stagioniManuali) {
+        const stagione = Number(raw.season_number)
+        const numero = Number(raw.episode_number)
+        if (Number.isSafeInteger(stagione) && stagione >= 0 &&
+          Number.isSafeInteger(numero) && numero >= 1 &&
+          (stagioniManuali.get(stagione) ?? 0) >= numero) {
+          resolvedRow = {
+            tmdb_show_id: manualContext.tmdb_show_id,
+            season_number: stagione,
+            episode_number: numero,
+            // Tracciabilità: questa identità viene dai numeri dell'export confermati
+            // dall'utente, non dalla mappa globale. La fase 4 legge solo i tre campi sopra.
+            via: 'numeri_export',
+          }
+          esitoRisolto = true
+          erroreRiga = null
+        } else {
+          // La serie è CONFERMATA e la struttura TMDB è QUI: se i numeri dell'export non
+          // ci stanno (episodio 0 = "TV Time non sa più il numero", stagioni che TMDB non
+          // ha, speciali assenti), nessun retry potrà mai collocarli. Lasciarli
+          // `unresolved` teneva la card nell'inbox per sempre, con l'utente che riprovava
+          // a vuoto — visto al primo import vero: 692 episodi su 36 serie, tutti così.
+          // Diventano una decisione terminale, dichiarata nel report (§7.4: la perdita
+          // si dice, non si nasconde). Solo con la struttura in mano: un fetch TMDB
+          // fallito NON è un verdetto e lascia la riga retriabile.
+          resolvedRow = null
+          erroreRiga = 'manuale: fuori_struttura_tmdb'
+          fuoriStruttura = true
+        }
+      }
+
       daScrivere.push({
         job_id: jobId,
         row_index: riga.row_index,
         raw,
-        // I numeri vengono da TMDB, mai da quelli dell'export (§6).
-        resolved: trovato
-          ? {
-            tmdb_show_id: mappa.tmdb_show_id,
-            season_number: mappa.season_number,
-            episode_number: mappa.episode_number,
-          }
-          : null,
-        status: trovato ? 'resolved' : 'unresolved',
-        error: trovato
-          ? null
-          : (conflittoSerie ? 'catalogo: conflitto_serie' : `catalogo: ${mappa.resolution ?? 'assente'}`),
+        resolved: resolvedRow,
+        // `skipped` per il fuori-struttura: è una decisione, non un lavoro rimasto a metà —
+        // e non deve riaprirsi al prossimo giro di risoluzione manuale.
+        status: esitoRisolto ? 'resolved' : (fuoriStruttura ? 'skipped' : 'unresolved'),
+        error: erroreRiga,
       })
-      trovato ? risolte++ : irrisolte++
+      esitoRisolto ? risolte++ : irrisolte++
+      if (fuoriStruttura) fuoriStrutturaRighe++
     }
 
     for (let i = 0; i < daScrivere.length; i += ROWS_PER_UPSERT) {
@@ -362,6 +419,10 @@ serve(async (req: Request) => {
       ...(job.totals as Record<string, unknown> ?? {}),
       resolved: ((job.totals as Record<string, number>)?.resolved ?? 0) + risolte,
       unresolved: ((job.totals as Record<string, number>)?.unresolved ?? 0) + irrisolte,
+      // Quanti dei non risolti sono decisioni TERMINALI del ramo manuale (numeri dell'export
+      // fuori dalla struttura TMDB della serie confermata): il report li dichiara a parte.
+      fuori_struttura:
+        ((job.totals as Record<string, number>)?.fuori_struttura ?? 0) + fuoriStrutturaRighe,
     }
 
     const { error: updateError } = await admin.from('import_jobs')
@@ -384,6 +445,38 @@ serve(async (req: Request) => {
     return jsonResponse({ error: 'resolve_failed', detail: message }, 500)
   }
 })
+
+/**
+ * La struttura stagioni della serie confermata a mano: stagione → numero di episodi.
+ * Una chiamata TMDB per invocazione (solo nel ramo manuale), e un esito nullo — chiave
+ * assente, serie sconosciuta, TMDB giù — spegne il fallback per questo giro invece di
+ * rischiare episodi inventati: le righe restano `unresolved`, un retry successivo riprova.
+ */
+async function stagioniDellaSerieManuale(
+  tmdbShowId: number,
+): Promise<Map<number, number> | null> {
+  if (TMDB_API_KEY === '') return null
+  try {
+    const risposta = await fetch(
+      `https://api.themoviedb.org/3/tv/${tmdbShowId}?api_key=${TMDB_API_KEY}`,
+    )
+    if (!risposta.ok) return null
+    const corpo = await risposta.json() as { seasons?: unknown[] }
+    const mappa = new Map<number, number>()
+    for (const stagione of corpo?.seasons ?? []) {
+      const s = stagione as Record<string, unknown>
+      const numero = Number(s?.season_number)
+      const episodi = Number(s?.episode_count)
+      if (Number.isSafeInteger(numero) && numero >= 0 &&
+        Number.isSafeInteger(episodi) && episodi > 0) {
+        mappa.set(numero, episodi)
+      }
+    }
+    return mappa.size > 0 ? mappa : null
+  } catch {
+    return null
+  }
+}
 
 /**
  * La coda della fase 3: le righe per-SERIE — stati (§7.1) e candidati favorites (§7.1),

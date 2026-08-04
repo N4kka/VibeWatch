@@ -932,3 +932,48 @@
 "season.confirmUnairedSeason.message" = "%d avsnitt av denna säsong har inte sänts än. Markera som sedda ändå?";
 "season.confirmUnairedSeason.markAll" = "Markera alla";
 "season.confirmUnairedSeason.onlyAired" = "Bara de sända";
+
+/* Import redesign 2.0 — banner, review inbox, onboarding options */
+"onboarding.import.durationHint" = "Ett arkiv med flera års historik kan ta flera minuter.";
+"onboarding.import.meanwhile" = "Under tiden";
+"onboarding.import.wait" = "Jag stannar och väntar";
+"onboarding.import.wait.subtitle" = "Gå in i appen med ditt bibliotek redan komplett";
+"onboarding.import.background" = "Fortsätt onboardingen";
+"onboarding.import.background.subtitle" = "Importen fortsätter i bakgrunden — vi meddelar dig när den är klar";
+"onboarding.import.waitingHint" = "Vi väntar här: så fort importen är klar öppnas granskningen automatiskt.";
+"onboarding.import.manage" = "Hantera %d titlar";
+"import.banner.running" = "Import pågår";
+"import.banner.episodes" = "%1$@ av %2$@ avsnitt";
+"import.banner.completed" = "Import klar";
+"import.banner.review" = "%1$d titlar att granska av %2$@";
+"import.banner.manage" = "Hantera";
+"import.banner.ok" = "OK";
+"import.banner.summary" = "%1$@ serier · %2$@ avsnitt · %3$@ filmer";
+"import.toast.imported" = "Bibliotek importerat";
+"import.toast.imported.review" = "Bibliotek importerat · %d titlar att granska";
+"import.review.title" = "Titlar att granska";
+"import.review.remaining" = "%1$d av %2$d kvar";
+"import.review.allResolved" = "Allt löst";
+"import.review.intro" = "Vi hittade ingen säker matchning för de här titlarna från ditt TV Time-arkiv. Välj rätt titel eller uteslut den.";
+"import.review.episodesSeen" = "%d avsnitt sedda";
+"import.review.searchManually" = "Sök manuellt";
+"import.review.exclude" = "Uteslut";
+"import.review.later" = "Skjut upp, jag gör det senare";
+"import.review.importCount" = "Importera %d titlar";
+"import.review.importOne" = "Importera 1 titel";
+"import.review.libraryOk" = "Biblioteket är i ordning";
+"import.review.libraryOk.subtitle" = "Alla titlar från ditt TV Time-arkiv har matchats korrekt.";
+"import.review.noCandidates" = "Inga förslag hittades — prova en manuell sökning.";
+"import.review.manualPick" = "Vald manuellt";
+"import.review.movieHint" = "Filmer utan matchning kan bara uteslutas.";
+"import.review.seasons" = "%d säsonger";
+"import.review.reason.notFound" = "hittades inte i katalogen";
+"import.review.reason.ambiguous" = "tvetydig matchning";
+"import.review.reason.conflict" = "seriekonflikt";
+"import.review.reason.yearMissing" = "år saknas eller stämmer inte";
+"import.review.reason.missingId" = "inget serie-ID i exporten";
+
+"import.toast.mapping.partial" = "%1$d titlar lösta · %2$d kvar att granska";
+"import.toast.mapping.done" = "%d titlar lösta · biblioteket är i ordning";
+
+"import.report.outOfStructure" = "%d avsnitt fick inte plats i seriens TMDB-struktur.";

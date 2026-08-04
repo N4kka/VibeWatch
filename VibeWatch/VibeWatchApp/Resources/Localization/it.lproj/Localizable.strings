@@ -943,3 +943,48 @@
 "season.confirmUnairedSeason.message" = "%d episodi di questa stagione non sono ancora usciti. Vuoi segnarli comunque come visti?";
 "season.confirmUnairedSeason.markAll" = "Segna tutti";
 "season.confirmUnairedSeason.onlyAired" = "Solo quelli usciti";
+
+/* Import redesign 2.0 — banner, inbox di verifica, opzioni onboarding */
+"onboarding.import.durationHint" = "Un archivio con anni di storico può richiedere diversi minuti.";
+"onboarding.import.meanwhile" = "Nel frattempo";
+"onboarding.import.wait" = "Resto qui e aspetto";
+"onboarding.import.wait.subtitle" = "Entri in app con la libreria già completa";
+"onboarding.import.background" = "Continua l'onboarding";
+"onboarding.import.background.subtitle" = "L'import va avanti in background, ti avvisiamo alla fine";
+"onboarding.import.waitingHint" = "Restiamo qui: appena l'import finisce, la verifica si apre da sola.";
+"onboarding.import.manage" = "Gestisci %d titoli";
+"import.banner.running" = "Import in corso";
+"import.banner.episodes" = "%1$@ di %2$@ episodi";
+"import.banner.completed" = "Import completato";
+"import.banner.review" = "%1$d titoli da verificare su %2$@";
+"import.banner.manage" = "Gestisci";
+"import.banner.ok" = "OK";
+"import.banner.summary" = "%1$@ serie · %2$@ episodi · %3$@ film";
+"import.toast.imported" = "Libreria importata";
+"import.toast.imported.review" = "Libreria importata · %d titoli da verificare";
+"import.review.title" = "Titoli da verificare";
+"import.review.remaining" = "%1$d di %2$d rimasti";
+"import.review.allResolved" = "Tutto risolto";
+"import.review.intro" = "Non abbiamo trovato una corrispondenza sicura per questi titoli del tuo archivio TV Time. Scegli quello giusto o escludilo.";
+"import.review.episodesSeen" = "%d episodi visti";
+"import.review.searchManually" = "Cerca manualmente";
+"import.review.exclude" = "Escludi";
+"import.review.later" = "Rimanda, lo faccio dopo";
+"import.review.importCount" = "Importa %d titoli";
+"import.review.importOne" = "Importa 1 titolo";
+"import.review.libraryOk" = "Libreria in ordine";
+"import.review.libraryOk.subtitle" = "Ogni titolo del tuo archivio TV Time è stato abbinato correttamente.";
+"import.review.noCandidates" = "Nessun suggerimento trovato — prova la ricerca manuale.";
+"import.review.manualPick" = "Scelta manuale";
+"import.review.movieHint" = "I film senza corrispondenza si possono solo escludere.";
+"import.review.seasons" = "%d stagioni";
+"import.review.reason.notFound" = "non trovato nel catalogo";
+"import.review.reason.ambiguous" = "corrispondenza ambigua";
+"import.review.reason.conflict" = "conflitto tra serie";
+"import.review.reason.yearMissing" = "anno mancante o non combaciante";
+"import.review.reason.missingId" = "id serie mancante nell'export";
+
+"import.toast.mapping.partial" = "%1$d titoli risolti · %2$d ancora da verificare";
+"import.toast.mapping.done" = "%d titoli risolti · libreria in ordine";
+
+"import.report.outOfStructure" = "%d episodi non collocabili nella struttura TMDB della serie confermata.";

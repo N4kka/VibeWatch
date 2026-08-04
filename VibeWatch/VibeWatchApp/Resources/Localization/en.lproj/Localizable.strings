@@ -945,3 +945,48 @@
 "season.confirmUnairedSeason.message" = "%d episodes of this season have not aired yet. Mark them as watched anyway?";
 "season.confirmUnairedSeason.markAll" = "Mark them all";
 "season.confirmUnairedSeason.onlyAired" = "Only the aired ones";
+
+/* Import redesign 2.0 — banner, review inbox, onboarding options */
+"onboarding.import.durationHint" = "An archive with years of history can take several minutes.";
+"onboarding.import.meanwhile" = "In the meantime";
+"onboarding.import.wait" = "I'll stay and wait";
+"onboarding.import.wait.subtitle" = "Enter the app with your library already complete";
+"onboarding.import.background" = "Continue onboarding";
+"onboarding.import.background.subtitle" = "The import keeps running in the background — we'll notify you when it's done";
+"onboarding.import.waitingHint" = "We'll wait here: as soon as the import finishes, the review opens automatically.";
+"onboarding.import.manage" = "Manage %d titles";
+"import.banner.running" = "Import in progress";
+"import.banner.episodes" = "%1$@ of %2$@ episodes";
+"import.banner.completed" = "Import completed";
+"import.banner.review" = "%1$d titles to review out of %2$@";
+"import.banner.manage" = "Manage";
+"import.banner.ok" = "OK";
+"import.banner.summary" = "%1$@ shows · %2$@ episodes · %3$@ movies";
+"import.toast.imported" = "Library imported";
+"import.toast.imported.review" = "Library imported · %d titles to review";
+"import.review.title" = "Titles to review";
+"import.review.remaining" = "%1$d of %2$d left";
+"import.review.allResolved" = "All resolved";
+"import.review.intro" = "We couldn't find a confident match for these titles from your TV Time archive. Pick the right one or exclude it.";
+"import.review.episodesSeen" = "%d episodes watched";
+"import.review.searchManually" = "Search manually";
+"import.review.exclude" = "Exclude";
+"import.review.later" = "Postpone, I'll do it later";
+"import.review.importCount" = "Import %d titles";
+"import.review.importOne" = "Import 1 title";
+"import.review.libraryOk" = "Library in order";
+"import.review.libraryOk.subtitle" = "Every title from your TV Time archive has been matched correctly.";
+"import.review.noCandidates" = "No suggestions found — try a manual search.";
+"import.review.manualPick" = "Chosen manually";
+"import.review.movieHint" = "Movies without a match can only be excluded.";
+"import.review.seasons" = "%d seasons";
+"import.review.reason.notFound" = "not found in the catalog";
+"import.review.reason.ambiguous" = "ambiguous match";
+"import.review.reason.conflict" = "series conflict";
+"import.review.reason.yearMissing" = "missing or mismatched year";
+"import.review.reason.missingId" = "no series ID in the export";
+
+"import.toast.mapping.partial" = "%1$d titles resolved · %2$d still to review";
+"import.toast.mapping.done" = "%d titles resolved · library in order";
+
+"import.report.outOfStructure" = "%d episodes could not be placed in the TMDB structure of their confirmed show.";
