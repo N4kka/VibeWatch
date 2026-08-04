@@ -944,3 +944,48 @@
 "season.confirmUnairedSeason.message" = "इस सीज़न के %d एपिसोड अभी प्रसारित नहीं हुए हैं। फिर भी देखा हुआ चिह्नित करें?";
 "season.confirmUnairedSeason.markAll" = "सभी चिह्नित करें";
 "season.confirmUnairedSeason.onlyAired" = "केवल प्रसारित हुए";
+
+/* Import redesign 2.0 — banner, review inbox, onboarding options */
+"onboarding.import.durationHint" = "सालों की हिस्ट्री वाले आर्काइव में कई मिनट लग सकते हैं।";
+"onboarding.import.meanwhile" = "इस बीच";
+"onboarding.import.wait" = "मैं यहीं रुककर इंतज़ार करूँगा";
+"onboarding.import.wait.subtitle" = "पूरी तरह तैयार लाइब्रेरी के साथ ऐप में जाएँ";
+"onboarding.import.background" = "ऑनबोर्डिंग जारी रखें";
+"onboarding.import.background.subtitle" = "इंपोर्ट बैकग्राउंड में चलता रहेगा — पूरा होते ही हम आपको सूचित करेंगे";
+"onboarding.import.waitingHint" = "हम यहीं इंतज़ार करेंगे: इंपोर्ट पूरा होते ही समीक्षा अपने आप खुल जाएगी।";
+"onboarding.import.manage" = "%d टाइटल प्रबंधित करें";
+"import.banner.running" = "इंपोर्ट जारी है";
+"import.banner.episodes" = "%2$@ में से %1$@ एपिसोड";
+"import.banner.completed" = "इंपोर्ट पूरा हुआ";
+"import.banner.review" = "%2$@ में से %1$d टाइटल समीक्षा के लिए";
+"import.banner.manage" = "प्रबंधित करें";
+"import.banner.ok" = "OK";
+"import.banner.summary" = "%1$@ सीरीज़ · %2$@ एपिसोड · %3$@ फ़िल्में";
+"import.toast.imported" = "लाइब्रेरी इंपोर्ट हुई";
+"import.toast.imported.review" = "लाइब्रेरी इंपोर्ट हुई · %d टाइटल समीक्षा के लिए";
+"import.review.title" = "समीक्षा के लिए टाइटल";
+"import.review.remaining" = "%2$d में से %1$d बाकी";
+"import.review.allResolved" = "सब हल हो गया";
+"import.review.intro" = "आपके TV Time आर्काइव के इन टाइटल के लिए हमें पक्का मिलान नहीं मिला। सही वाला चुनें या इसे बाहर कर दें।";
+"import.review.episodesSeen" = "%d एपिसोड देखे गए";
+"import.review.searchManually" = "मैन्युअल रूप से खोजें";
+"import.review.exclude" = "बाहर करें";
+"import.review.later" = "टालें, मैं बाद में करूँगा";
+"import.review.importCount" = "%d टाइटल इंपोर्ट करें";
+"import.review.importOne" = "1 टाइटल इंपोर्ट करें";
+"import.review.libraryOk" = "लाइब्रेरी ठीक है";
+"import.review.libraryOk.subtitle" = "आपके TV Time आर्काइव का हर टाइटल सही तरह मिलाया गया है।";
+"import.review.noCandidates" = "कोई सुझाव नहीं मिला — मैन्युअल खोज आज़माएँ।";
+"import.review.manualPick" = "मैन्युअल रूप से चुना गया";
+"import.review.movieHint" = "बिना मिलान वाली फ़िल्मों को सिर्फ़ बाहर किया जा सकता है।";
+"import.review.seasons" = "%d सीज़न";
+"import.review.reason.notFound" = "कैटलॉग में नहीं मिला";
+"import.review.reason.ambiguous" = "अस्पष्ट मिलान";
+"import.review.reason.conflict" = "सीरीज़ का टकराव";
+"import.review.reason.yearMissing" = "साल गायब है या मेल नहीं खाता";
+"import.review.reason.missingId" = "एक्सपोर्ट में सीरीज़ ID नहीं";
+
+"import.toast.mapping.partial" = "%1$d शीर्षक हल हुए · %2$d की समीक्षा बाकी";
+"import.toast.mapping.done" = "%d शीर्षक हल हुए · लाइब्रेरी व्यवस्थित है";
+
+"import.report.outOfStructure" = "%d एपिसोड पुष्ट सीरीज़ की TMDB संरचना में नहीं आ सके।";

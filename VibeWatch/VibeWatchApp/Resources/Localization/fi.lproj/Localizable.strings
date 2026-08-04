@@ -944,3 +944,48 @@
 "season.confirmUnairedSeason.message" = "%d tämän kauden jaksoa ei ole vielä esitetty. Merkitäänkö silti katsotuiksi?";
 "season.confirmUnairedSeason.markAll" = "Merkitse kaikki";
 "season.confirmUnairedSeason.onlyAired" = "Vain esitetyt";
+
+/* Import redesign 2.0 — banner, review inbox, onboarding options */
+"onboarding.import.durationHint" = "Arkisto, jossa on vuosien historia, voi viedä useita minuutteja.";
+"onboarding.import.meanwhile" = "Sillä välin";
+"onboarding.import.wait" = "Jään odottamaan";
+"onboarding.import.wait.subtitle" = "Pääset sovellukseen kirjasto jo valmiina";
+"onboarding.import.background" = "Jatka käyttöönottoa";
+"onboarding.import.background.subtitle" = "Tuonti jatkuu taustalla — ilmoitamme, kun se on valmis";
+"onboarding.import.waitingHint" = "Odotamme tässä: heti kun tuonti valmistuu, tarkistus avautuu automaattisesti.";
+"onboarding.import.manage" = "Hallitse %d nimikettä";
+"import.banner.running" = "Tuonti käynnissä";
+"import.banner.episodes" = "%1$@ / %2$@ jaksoa";
+"import.banner.completed" = "Tuonti valmis";
+"import.banner.review" = "%1$d nimikettä tarkistettavana (yhteensä %2$@)";
+"import.banner.manage" = "Hallitse";
+"import.banner.ok" = "OK";
+"import.banner.summary" = "%1$@ sarjaa · %2$@ jaksoa · %3$@ elokuvaa";
+"import.toast.imported" = "Kirjasto tuotu";
+"import.toast.imported.review" = "Kirjasto tuotu · %d nimikettä tarkistettavana";
+"import.review.title" = "Tarkistettavat nimikkeet";
+"import.review.remaining" = "%1$d/%2$d jäljellä";
+"import.review.allResolved" = "Kaikki selvitetty";
+"import.review.intro" = "Emme löytäneet varmaa vastinetta näille TV Time -arkistosi nimikkeille. Valitse oikea tai jätä se pois.";
+"import.review.episodesSeen" = "%d jaksoa katsottu";
+"import.review.searchManually" = "Hae manuaalisesti";
+"import.review.exclude" = "Jätä pois";
+"import.review.later" = "Lykkää, teen sen myöhemmin";
+"import.review.importCount" = "Tuo %d nimikettä";
+"import.review.importOne" = "Tuo 1 nimike";
+"import.review.libraryOk" = "Kirjasto kunnossa";
+"import.review.libraryOk.subtitle" = "Kaikki TV Time -arkistosi nimikkeet on yhdistetty oikein.";
+"import.review.noCandidates" = "Ehdotuksia ei löytynyt — kokeile manuaalista hakua.";
+"import.review.manualPick" = "Valittu manuaalisesti";
+"import.review.movieHint" = "Elokuvat ilman vastinetta voi vain jättää pois.";
+"import.review.seasons" = "%d kautta";
+"import.review.reason.notFound" = "ei löytynyt katalogista";
+"import.review.reason.ambiguous" = "moniselitteinen vastine";
+"import.review.reason.conflict" = "sarjojen ristiriita";
+"import.review.reason.yearMissing" = "vuosi puuttuu tai ei täsmää";
+"import.review.reason.missingId" = "sarjan ID puuttuu viennistä";
+
+"import.toast.mapping.partial" = "%1$d nimikettä ratkaistu · %2$d vielä tarkistettavana";
+"import.toast.mapping.done" = "%d nimikettä ratkaistu · kirjasto kunnossa";
+
+"import.report.outOfStructure" = "%d jaksoa ei voitu sijoittaa sarjan TMDB-rakenteeseen.";

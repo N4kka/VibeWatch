@@ -944,3 +944,48 @@
 "season.confirmUnairedSeason.message" = "%d episoder av denne sesongen er ikke sendt ennå. Merke som sett likevel?";
 "season.confirmUnairedSeason.markAll" = "Merk alle";
 "season.confirmUnairedSeason.onlyAired" = "Bare de sendte";
+
+/* Import redesign 2.0 — banner, review inbox, onboarding options */
+"onboarding.import.durationHint" = "Et arkiv med mange års historikk kan ta flere minutter.";
+"onboarding.import.meanwhile" = "I mellomtiden";
+"onboarding.import.wait" = "Jeg blir og venter";
+"onboarding.import.wait.subtitle" = "Gå inn i appen med biblioteket ditt allerede komplett";
+"onboarding.import.background" = "Fortsett onboardingen";
+"onboarding.import.background.subtitle" = "Importen fortsetter i bakgrunnen — vi varsler deg når den er ferdig";
+"onboarding.import.waitingHint" = "Vi venter her: så snart importen er ferdig, åpnes gjennomgangen automatisk.";
+"onboarding.import.manage" = "Administrer %d titler";
+"import.banner.running" = "Import pågår";
+"import.banner.episodes" = "%1$@ av %2$@ episoder";
+"import.banner.completed" = "Import fullført";
+"import.banner.review" = "%1$d titler å gjennomgå av %2$@";
+"import.banner.manage" = "Administrer";
+"import.banner.ok" = "OK";
+"import.banner.summary" = "%1$@ serier · %2$@ episoder · %3$@ filmer";
+"import.toast.imported" = "Bibliotek importert";
+"import.toast.imported.review" = "Bibliotek importert · %d titler å gjennomgå";
+"import.review.title" = "Titler å gjennomgå";
+"import.review.remaining" = "%1$d av %2$d igjen";
+"import.review.allResolved" = "Alt løst";
+"import.review.intro" = "Vi fant ingen sikker match for disse titlene fra TV Time-arkivet ditt. Velg riktig tittel eller utelat den.";
+"import.review.episodesSeen" = "%d episoder sett";
+"import.review.searchManually" = "Søk manuelt";
+"import.review.exclude" = "Utelat";
+"import.review.later" = "Utsett, jeg gjør det senere";
+"import.review.importCount" = "Importer %d titler";
+"import.review.importOne" = "Importer 1 tittel";
+"import.review.libraryOk" = "Biblioteket er i orden";
+"import.review.libraryOk.subtitle" = "Alle titlene fra TV Time-arkivet ditt er matchet riktig.";
+"import.review.noCandidates" = "Ingen forslag funnet — prøv et manuelt søk.";
+"import.review.manualPick" = "Valgt manuelt";
+"import.review.movieHint" = "Filmer uten match kan bare utelates.";
+"import.review.seasons" = "%d sesonger";
+"import.review.reason.notFound" = "ikke funnet i katalogen";
+"import.review.reason.ambiguous" = "tvetydig match";
+"import.review.reason.conflict" = "seriekonflikt";
+"import.review.reason.yearMissing" = "manglende eller avvikende år";
+"import.review.reason.missingId" = "ingen serie-ID i eksporten";
+
+"import.toast.mapping.partial" = "%1$d titler løst · %2$d gjenstår å sjekke";
+"import.toast.mapping.done" = "%d titler løst · biblioteket er i orden";
+
+"import.report.outOfStructure" = "%d episoder fikk ikke plass i seriens TMDB-struktur.";

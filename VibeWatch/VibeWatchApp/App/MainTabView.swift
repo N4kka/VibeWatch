@@ -150,7 +150,7 @@ struct MainTabView: View {
             .overlay(alignment: .bottomTrailing) {
                 AIFloatingButton { showAI = true }
                     .padding(.trailing, 22)
-                    .padding(.bottom, 8)
+                    .padding(.bottom, 56)
             }
         }
         .transition(.opacity)
@@ -329,6 +329,10 @@ struct MainTabView: View {
 
             // Request ATT permission (only relevant for ad attribution; not required for product analytics)
             await TrackingPermissionManager.shared.requestTrackingIfNeeded()
+
+            // Redesign 2.0 import: al lancio si ritrova l'import in corso (o l'ultimo
+            // concluso con titoli da verificare) — il banner in Scopri vive di questo.
+            ImportStatusCenter.shared.startIfNeeded()
         }
         .fullScreenCover(isPresented: $showProPaywall) {
             ProPaywallView(isPresented: $showProPaywall, source: proPaywallSource)

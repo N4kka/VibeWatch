@@ -9,16 +9,15 @@ import UniformTypeIdentifiers
 /// esplicitamente — "puoi chiudere l'app" — perché è la promessa della spec, non un dettaglio.
 @MainActor
 struct ImportView: View {
-    @StateObject private var viewModel: ImportViewModel
+    /// Redesign 2.0: l'oblò CONDIVISO di tutta l'app (banner in home compreso). Osservato e
+    /// non posseduto: il polling deve sopravvivere alla chiusura di questa schermata.
+    @ObservedObject private var viewModel: ImportViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var showPicker = false
-    /// Tutte le righe risolvibili del report: lo sheet raccoglie le scelte senza avviare il job.
-    @State private var risoluzioneBatch: ImportManualResolveBatch?
+    @State private var showReview = false
 
     init(viewModel: ImportViewModel? = nil) {
-        // Il default sta QUI e non nella firma: un default argument è nonisolated, e il
-        // ViewModel è @MainActor.
-        _viewModel = StateObject(wrappedValue: viewModel ?? ImportViewModel())
+        self.viewModel = viewModel ?? ImportStatusCenter.shared.importViewModel
     }
 
     var body: some View {
@@ -35,7 +34,6 @@ struct ImportView: View {
                 }
             }
             .task { await viewModel.loadExisting() }
-            .onDisappear { viewModel.stopPolling() }
             .fileImporter(isPresented: $showPicker,
                           allowedContentTypes: [.zip]) { result in
                 if case .success(let url) = result {
@@ -43,8 +41,8 @@ struct ImportView: View {
                 }
                 // Il picker annullato non è un errore: si resta sulle sorgenti.
             }
-            .sheet(item: $risoluzioneBatch) { batch in
-                ImportManualResolveSheet(items: batch.items, viewModel: viewModel)
+            .fullScreenCover(isPresented: $showReview) {
+                ImportReviewView()
             }
         }
     }
@@ -241,24 +239,27 @@ struct ImportView: View {
                         .frame(maxWidth: .infinity, alignment: .center)
                 }
 
-                // §7.4: "N elementi non riconosciuti, con l'elenco dei titoli". Senza abbellire.
-                if report.nonRiconosciutiEpisodi > 0 {
-                    let risolvibili = report.nonRiconosciutiElenco.filter {
-                        $0.tvdbSeriesId != nil
-                    }
+                // Redesign 2.0: l'inbox "Titoli da verificare" — l'elenco resta visibile
+                // (§7.4: senza abbellire), la gestione passa dalla pagina dedicata con
+                // candidati, ricerca manuale ed esclusione.
+                let pendingItems = report.reviewItems
+                if !pendingItems.isEmpty {
                     VStack(alignment: .leading, spacing: 10) {
                         Text(String(format: "import.report.unresolvedTitle".localized,
                                     report.nonRiconosciutiEpisodi))
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundColor(.theme.textPrimary)
-                        ForEach(report.nonRiconosciutiElenco, id: \.titolo) { item in
+                        ForEach(pendingItems) { item in
                             HStack(alignment: .center, spacing: 8) {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(item.titolo)
                                         .font(.system(size: 14))
                                         .foregroundColor(.theme.textPrimary)
-                                    Text(String(format: "import.report.unresolvedRow".localized,
-                                                item.episodi) + " · " + item.motivo)
+                                    Text((item.episodi > 0
+                                          ? String(format: "import.report.unresolvedRow".localized,
+                                                   item.episodi) + " · "
+                                          : "")
+                                         + ImportReviewReason.label(for: item.motivo))
                                         .font(.system(size: 12))
                                         .foregroundColor(.theme.textSecondary)
                                 }
@@ -266,17 +267,15 @@ struct ImportView: View {
                             }
                             .padding(.vertical, 2)
                         }
-                        if !risolvibili.isEmpty {
-                            Button {
-                                risoluzioneBatch = ImportManualResolveBatch(items: risolvibili)
-                            } label: {
-                                Text(String(format: "import.resolve.batchButton".localized,
-                                            risolvibili.count))
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(.theme.accentOrange)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 8)
-                            }
+                        Button {
+                            showReview = true
+                        } label: {
+                            Text(String(format: "onboarding.import.manage".localized,
+                                        pendingItems.count))
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(.theme.accentOrange)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 8)
                         }
                     }
                     .padding()
@@ -284,6 +283,16 @@ struct ImportView: View {
                         .fill(Color.white.opacity(0.05)))
                 } else {
                     Text("import.report.allResolved".localized)
+                        .font(.system(size: 13))
+                        .foregroundColor(.theme.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
+
+                // La perdita dichiarata del ramo manuale: numeri dell'export che la serie
+                // confermata non può ospitare su TMDB. Fuori dall'inbox, ma detto qui.
+                if report.episodiFuoriStruttura > 0 {
+                    Text(String(format: "import.report.outOfStructure".localized,
+                                report.episodiFuoriStruttura))
                         .font(.system(size: 13))
                         .foregroundColor(.theme.textSecondary)
                         .frame(maxWidth: .infinity, alignment: .center)
@@ -348,255 +357,3 @@ struct ImportView: View {
     }
 }
 
-// MARK: - Risoluzione a mano (§7.4)
-
-struct ImportManualResolveBatch: Identifiable {
-    let id = UUID()
-    let items: [ImportReport.Unresolved]
-}
-
-extension ImportReport.Unresolved: Identifiable {
-    /// L'id TVDB è unico dentro l'elenco; il titolo copre difensivamente le righe senza id.
-    public var id: String { tvdbSeriesId ?? titolo }
-}
-
-/// Raccoglie prima tutte le corrispondenze e solo dopo avvia un unico retry dell'import.
-/// La scelta di un risultato TMDB è quindi locale e correggibile: nessun titolo fa ripartire
-/// da solo una serie lunga mentre l'utente sta ancora lavorando sugli altri.
-@MainActor
-struct ImportManualResolveSheet: View {
-    let items: [ImportReport.Unresolved]
-    @ObservedObject var viewModel: ImportViewModel
-    @Environment(\.dismiss) private var dismiss
-
-    @State private var selectedShows: [String: TVShow] = [:]
-    @State private var activeItemId: String?
-    @State private var query: String = ""
-    @State private var results: [TVShow] = []
-    @State private var searching = false
-    @State private var searchFailed = false
-    @State private var submitting = false
-
-    private var activeItem: ImportReport.Unresolved? {
-        items.first { $0.id == activeItemId }
-    }
-
-    private var isComplete: Bool {
-        !items.isEmpty && items.allSatisfy { selectedShows[$0.id] != nil }
-    }
-
-    var body: some View {
-        NavigationStack {
-            ZStack {
-                Color.theme.background.ignoresSafeArea()
-                if let activeItem {
-                    searchView(for: activeItem)
-                } else {
-                    batchSummary
-                }
-            }
-            .navigationTitle("import.resolve.button".localized)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        if activeItemId == nil { dismiss() } else { activeItemId = nil }
-                    } label: {
-                        if activeItemId == nil {
-                            Text("common.cancel".localized)
-                        } else {
-                            Image(systemName: "chevron.left")
-                        }
-                    }
-                    .disabled(submitting)
-                }
-            }
-        }
-    }
-
-    private var batchSummary: some View {
-        VStack(spacing: 12) {
-            Text("import.resolve.batchHint".localized)
-                .font(.system(size: 13))
-                .foregroundColor(.theme.textSecondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal)
-
-            Text(String(format: "import.resolve.batchProgress".localized,
-                        selectedShows.count, items.count))
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(.theme.textPrimary)
-
-            if let errore = viewModel.manualResolveError {
-                Text("import.resolve.failed".localized + " " + errore)
-                    .font(.system(size: 12, design: .monospaced))
-                    .foregroundColor(.theme.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
-            }
-
-            List(items) { item in
-                Button { openSearch(for: item) } label: {
-                    HStack(spacing: 10) {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(item.titolo)
-                                .font(.system(size: 15, weight: .medium))
-                                .foregroundColor(.theme.textPrimary)
-                            if let show = selectedShows[item.id] {
-                                Text(show.name)
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.theme.accentOrange)
-                            } else {
-                                Text("import.resolve.searchPlaceholder".localized)
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.theme.textSecondary)
-                            }
-                        }
-                        Spacer()
-                        Image(systemName: selectedShows[item.id] == nil
-                              ? "chevron.right" : "checkmark.circle.fill")
-                            .foregroundColor(selectedShows[item.id] == nil
-                                             ? .theme.textSecondary : .theme.accentOrange)
-                    }
-                }
-                .disabled(submitting)
-                .listRowBackground(Color.white.opacity(0.05))
-            }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-
-            Button {
-                Task { await submitBatch() }
-            } label: {
-                if submitting {
-                    ProgressView()
-                        .frame(maxWidth: .infinity)
-                } else {
-                    Text("import.resolve.startBatch".localized)
-                        .font(.system(size: 15, weight: .semibold))
-                        .frame(maxWidth: .infinity)
-                }
-            }
-            .foregroundColor(.theme.accentOrange)
-            .disabled(!isComplete || submitting)
-            .opacity(isComplete ? 1 : 0.45)
-            .padding(.horizontal)
-            .padding(.bottom, 12)
-        }
-        .padding(.top, 12)
-    }
-
-    private func searchView(for item: ImportReport.Unresolved) -> some View {
-        VStack(spacing: 12) {
-            Text(String(format: "import.resolve.title".localized, item.titolo))
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundColor(.theme.textPrimary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal)
-
-            Text("import.resolve.hint".localized)
-                .font(.system(size: 12))
-                .foregroundColor(.theme.textSecondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal)
-
-            TextField("import.resolve.searchPlaceholder".localized, text: $query)
-                .textFieldStyle(.roundedBorder)
-                .autocorrectionDisabled()
-                .padding(.horizontal)
-                .onSubmit { Task { await search() } }
-
-            if searching {
-                ProgressView().frame(maxHeight: .infinity)
-            } else if searchFailed {
-                VStack(spacing: 8) {
-                    Text("import.resolve.searchFailed".localized)
-                        .font(.system(size: 13))
-                        .foregroundColor(.theme.textSecondary)
-                    Button("common.retry".localized) { Task { await search() } }
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.theme.accentOrange)
-                }
-                .frame(maxHeight: .infinity)
-            } else if results.isEmpty {
-                Text("import.resolve.empty".localized)
-                    .font(.system(size: 13))
-                    .foregroundColor(.theme.textSecondary)
-                    .frame(maxHeight: .infinity)
-            } else {
-                List(results) { show in
-                    Button { select(show, for: item) } label: {
-                        HStack(spacing: 10) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(show.name)
-                                    .font(.system(size: 15))
-                                    .foregroundColor(.theme.textPrimary)
-                                if let anno = show.firstAirDate?.prefix(4), !anno.isEmpty {
-                                    Text(String(anno))
-                                        .font(.system(size: 12))
-                                        .foregroundColor(.theme.textSecondary)
-                                }
-                            }
-                            Spacer()
-                            if selectedShows[item.id]?.id == show.id {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(.theme.accentOrange)
-                            }
-                        }
-                    }
-                    .listRowBackground(Color.white.opacity(0.05))
-                }
-                .listStyle(.plain)
-                .scrollContentBackground(.hidden)
-            }
-        }
-        .padding(.top, 12)
-    }
-
-    private func openSearch(for item: ImportReport.Unresolved) {
-        activeItemId = item.id
-        query = item.titolo
-        results = []
-        searchFailed = false
-        Task { await search() }
-    }
-
-    private func search() async {
-        let testo = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !testo.isEmpty else { return }
-        searching = true
-        searchFailed = false
-        do {
-            results = try await TMDBService.shared.searchTVShows(query: testo, page: 1).results
-        } catch {
-            results = []
-            searchFailed = true
-        }
-        searching = false
-    }
-
-    private func select(_ show: TVShow, for item: ImportReport.Unresolved) {
-        selectedShows[item.id] = show
-        if let next = items.first(where: { selectedShows[$0.id] == nil }) {
-            openSearch(for: next)
-        } else {
-            activeItemId = nil
-        }
-    }
-
-    private func submitBatch() async {
-        guard isComplete else { return }
-        let resolutions = items.compactMap { item -> ImportManualResolution? in
-            guard let tvdbId = item.tvdbSeriesId, let show = selectedShows[item.id] else {
-                return nil
-            }
-            return ImportManualResolution(tvdbSeriesId: tvdbId, tmdbShowId: show.id)
-        }
-        guard resolutions.count == items.count else { return }
-        submitting = true
-        let ok = await viewModel.resolveManually(resolutions)
-        submitting = false
-        // Solo qui parte il job. Il polling ricaricherà il report e farà sparire le righe risolte.
-        if ok { dismiss() }
-    }
-}

@@ -929,3 +929,48 @@
 "season.confirmUnairedSeason.message" = "本季有%d集尚未播出。仍要标记为已看吗？";
 "season.confirmUnairedSeason.markAll" = "全部标记";
 "season.confirmUnairedSeason.onlyAired" = "仅已播出的";
+
+/* Import redesign 2.0 — banner, review inbox, onboarding options */
+"onboarding.import.durationHint" = "包含多年记录的存档可能需要几分钟。";
+"onboarding.import.meanwhile" = "与此同时";
+"onboarding.import.wait" = "我留在这里等";
+"onboarding.import.wait.subtitle" = "进入应用时片库已完整就绪";
+"onboarding.import.background" = "继续引导流程";
+"onboarding.import.background.subtitle" = "导入会在后台继续进行——完成后我们会通知你";
+"onboarding.import.waitingHint" = "我们在这里等：导入一完成，核对页面会自动打开。";
+"onboarding.import.manage" = "管理 %d 个作品";
+"import.banner.running" = "正在导入";
+"import.banner.episodes" = "%1$@ / %2$@ 集";
+"import.banner.completed" = "导入完成";
+"import.banner.review" = "%2$@ 个作品中有 %1$d 个待核对";
+"import.banner.manage" = "管理";
+"import.banner.ok" = "OK";
+"import.banner.summary" = "%1$@ 部剧集 · %2$@ 集 · %3$@ 部电影";
+"import.toast.imported" = "片库已导入";
+"import.toast.imported.review" = "片库已导入 · %d 个作品待核对";
+"import.review.title" = "待核对的作品";
+"import.review.remaining" = "剩余 %1$d / %2$d";
+"import.review.allResolved" = "全部处理完毕";
+"import.review.intro" = "我们无法为你的 TV Time 存档中的这些作品找到确定的匹配。请选择正确的一项，或将其排除。";
+"import.review.episodesSeen" = "已看 %d 集";
+"import.review.searchManually" = "手动搜索";
+"import.review.exclude" = "排除";
+"import.review.later" = "先放一放，稍后处理";
+"import.review.importCount" = "导入 %d 个作品";
+"import.review.importOne" = "导入 1 个作品";
+"import.review.libraryOk" = "片库一切就绪";
+"import.review.libraryOk.subtitle" = "你的 TV Time 存档中的所有作品都已正确匹配。";
+"import.review.noCandidates" = "未找到建议——试试手动搜索。";
+"import.review.manualPick" = "手动选择";
+"import.review.movieHint" = "没有匹配的电影只能排除。";
+"import.review.seasons" = "%d 季";
+"import.review.reason.notFound" = "未在目录中找到";
+"import.review.reason.ambiguous" = "匹配不明确";
+"import.review.reason.conflict" = "剧集冲突";
+"import.review.reason.yearMissing" = "年份缺失或不一致";
+"import.review.reason.missingId" = "导出中没有剧集 ID";
+
+"import.toast.mapping.partial" = "已解决 %1$d 个标题 · 还有 %2$d 个待确认";
+"import.toast.mapping.done" = "已解决 %d 个标题 · 片库已整理";
+
+"import.report.outOfStructure" = "%d 集无法放入已确认剧集的 TMDB 结构中。";

@@ -5,7 +5,10 @@ import SwiftUI
 /// cover a valle di "Inizia a guardare" — mai come tappa, e mai per chi è già PRO.
 struct OnboardingContainerView: View {
     @StateObject private var viewModel = OnboardingViewModel()
-    @StateObject private var importViewModel = ImportViewModel()
+    /// Redesign 2.0: l'oblò dell'import è quello CONDIVISO di tutta l'app. Se l'utente
+    /// prosegue l'onboarding con l'import in corso, il polling non muore con questa vista —
+    /// il banner in Scopri continua a raccontarlo.
+    @ObservedObject private var importViewModel = ImportStatusCenter.shared.importViewModel
     @EnvironmentObject var authService: AuthService
     @Binding var showOnboarding: Bool
 
@@ -72,9 +75,9 @@ struct OnboardingContainerView: View {
         .onAppear {
             viewModel.trackStepViewed(step: .welcome)
         }
-        .onDisappear {
-            importViewModel.stopPolling()
-        }
+        // Niente stopPolling alla dismiss: il ViewModel è condiviso e il polling deve
+        // sopravvivere all'onboarding — è ciò che alimenta il banner in home. Si spegne da
+        // solo quando il job esce da `running`.
     }
 }
 

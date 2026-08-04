@@ -112,12 +112,21 @@ struct OnboardingAccountStep: View {
 // MARK: - Tappa 3: Import da TV Time
 
 /// "Porta con te la tua storia". La schermata è un oblò sui medesimi stati di ImportView
-/// (§7: lo stato vive sul server): sorgenti → upload → progresso → report. Qui il report è
-/// la card verde con i quattro numeri, e "Continua" porta alla tappa notifiche.
+/// (§7: lo stato vive sul server): sorgenti → upload → progresso → report.
+///
+/// Redesign 2.0: l'import NON blocca più l'onboarding. Durante il lavoro compaiono le due
+/// strade del mockup — "Resto qui e aspetto" (si entra in app a libreria completa) e
+/// "Continua l'onboarding" (il job prosegue server-side, il banner in home e la push fanno
+/// il resto). A import finito, se restano titoli da verificare si apre subito la pagina di
+/// risoluzione, con "Rimanda, lo faccio dopo" che riporta qui.
 struct OnboardingImportStep: View {
     @ObservedObject var viewModel: OnboardingViewModel
     @ObservedObject var importViewModel: ImportViewModel
     @State private var showPicker = false
+    /// "Resto qui e aspetto": cambia solo la resa (le opzioni si compattano in un'attesa
+    /// dichiarata), non il lavoro — il job è comunque server-side.
+    @State private var waiting = false
+    @State private var showReview = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -142,6 +151,12 @@ struct OnboardingImportStep: View {
             stateCard
                 .padding(.horizontal, 24)
 
+            if isWorking {
+                meanwhileSection
+                    .padding(.horizontal, 24)
+                    .padding(.top, 22)
+            }
+
             Spacer()
 
             bottomActions
@@ -156,6 +171,23 @@ struct OnboardingImportStep: View {
                 Task { await importViewModel.importFile(at: url) }
             }
         }
+        .onChange(of: importViewModel.state) { _, newState in
+            // Import finito mentre si è ancora su questa tappa: se restano titoli da
+            // verificare, la risoluzione si apre da sola ("Rimanda" riporta qui).
+            if case .done(let report) = newState, !report.reviewItems.isEmpty {
+                showReview = true
+            }
+        }
+        .fullScreenCover(isPresented: $showReview) {
+            ImportReviewView()
+        }
+    }
+
+    private var isWorking: Bool {
+        switch importViewModel.state {
+        case .uploading, .running: return true
+        default: return false
+        }
     }
 
     // MARK: Card centrale, per stato
@@ -169,9 +201,9 @@ struct OnboardingImportStep: View {
                 comingSoonRow
             }
         case .uploading:
-            progressCard(labelKey: "import.state.uploading", progress: 0.1)
+            progressCard(labelKey: "import.state.uploading")
         case .running(_, let phase):
-            progressCard(labelKey: phaseLabelKey(phase), progress: phaseProgress(phase))
+            progressCard(labelKey: phaseLabelKey(phase))
         case .done(let report):
             completedCard(report)
         case .failed(let messageKey, let detail, _):
@@ -237,26 +269,50 @@ struct OnboardingImportStep: View {
         )
     }
 
-    /// La card col progresso ("Quasi fatto… 80%"). Il progresso è derivato dalla fase del
-    /// server — le fasi sono discrete, la barra è una lettura onesta, non un cronometro.
-    private func progressCard(labelKey: String, progress: Double) -> some View {
-        VStack(spacing: 14) {
+    /// La card col progresso REALE: i contatori delle fasi ("12.140 di 18.422 episodi"),
+    /// non più la rampa a scatti derivata dal solo nome della fase. Con l'avviso onesto:
+    /// un archivio con anni di storico può richiedere diversi minuti.
+    private func progressCard(labelKey: String) -> some View {
+        let progress = importViewModel.progress
+        let fraction: Double = {
+            if case .uploading = importViewModel.state { return 0.02 }
+            return progress?.fraction ?? 0.05
+        }()
+        return VStack(spacing: 14) {
             HStack(spacing: 14) {
                 TVTimeBadge()
-                Text(labelKey.localized)
-                    .font(.system(size: 17, weight: .bold))
-                    .foregroundColor(.theme.textPrimary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(labelKey.localized)
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundColor(.theme.textPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                    if let processed = progress?.processedEpisodes,
+                       let total = progress?.totalEpisodes, total > 0 {
+                        Text(String(format: "import.banner.episodes".localized,
+                                    processed.formatted(), total.formatted()))
+                            .font(.system(size: 13))
+                            .foregroundColor(.theme.textSecondary)
+                    }
+                }
                 Spacer()
-                Text("\(Int(progress * 100))%")
+                Text("\(Int((fraction * 100).rounded()))%")
                     .font(.system(size: 17, weight: .bold))
                     .foregroundColor(.theme.accentOrange)
             }
-            ProgressView(value: progress)
+            ProgressView(value: fraction)
                 .progressViewStyle(.linear)
                 .tint(Color.theme.accentOrange)
                 .scaleEffect(x: 1, y: 1.6, anchor: .center)
+            HStack(spacing: 7) {
+                Image(systemName: "clock")
+                    .font(.system(size: 12))
+                    .foregroundColor(.theme.textSecondary)
+                Text("onboarding.import.durationHint".localized)
+                    .font(.system(size: 12))
+                    .foregroundColor(.theme.textSecondary)
+                Spacer(minLength: 0)
+            }
         }
         .padding(18)
         .background(
@@ -265,7 +321,94 @@ struct OnboardingImportStep: View {
                 .overlay(RoundedRectangle(cornerRadius: 18)
                     .stroke(Color.white.opacity(0.08), lineWidth: 1))
         )
-        .animation(.easeInOut(duration: 0.5), value: progress)
+        .animation(.easeInOut(duration: 0.5), value: fraction)
+    }
+
+    // MARK: "Nel frattempo" — le due strade del mockup
+
+    private var meanwhileSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("onboarding.import.meanwhile".localized.uppercased())
+                .font(.system(size: 12, weight: .semibold))
+                .tracking(1.2)
+                .foregroundColor(.theme.textSecondary)
+
+            if waiting {
+                // L'attesa dichiarata: si resta qui, a fine import la verifica si apre da sola.
+                HStack(spacing: 14) {
+                    optionIcon("hourglass", highlighted: false)
+                    Text("onboarding.import.waitingHint".localized)
+                        .font(.system(size: 14))
+                        .foregroundColor(.theme.textSecondary)
+                        .lineSpacing(3)
+                    Spacer(minLength: 0)
+                }
+                .padding(16)
+                .background(
+                    RoundedRectangle(cornerRadius: 18)
+                        .fill(Color.white.opacity(0.04))
+                        .overlay(RoundedRectangle(cornerRadius: 18)
+                            .stroke(Color.white.opacity(0.08), lineWidth: 1))
+                )
+            } else {
+                optionRow(icon: "hourglass",
+                          titleKey: "onboarding.import.wait",
+                          subtitleKey: "onboarding.import.wait.subtitle",
+                          highlighted: false) {
+                    waiting = true
+                }
+                optionRow(icon: "bell",
+                          titleKey: "onboarding.import.background",
+                          subtitleKey: "onboarding.import.background.subtitle",
+                          highlighted: true) {
+                    viewModel.nextStep()
+                }
+            }
+        }
+    }
+
+    private func optionRow(icon: String, titleKey: String, subtitleKey: String,
+                           highlighted: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                optionIcon(icon, highlighted: highlighted)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(titleKey.localized)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(highlighted ? .theme.accentOrange : .theme.textPrimary)
+                    Text(subtitleKey.localized)
+                        .font(.system(size: 13))
+                        .foregroundColor(.theme.textSecondary)
+                        .multilineTextAlignment(.leading)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(highlighted ? .theme.accentOrange : .theme.textSecondary)
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 18)
+                    .fill(highlighted ? Color.theme.accentOrange.opacity(0.07)
+                                      : Color.white.opacity(0.04))
+                    .overlay(RoundedRectangle(cornerRadius: 18)
+                        .stroke(highlighted ? Color.theme.accentOrange.opacity(0.55)
+                                            : Color.white.opacity(0.08), lineWidth: 1))
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func optionIcon(_ systemName: String, highlighted: Bool) -> some View {
+        RoundedRectangle(cornerRadius: 12)
+            .fill(highlighted ? Color.theme.accentOrange.opacity(0.15)
+                              : Color.white.opacity(0.06))
+            .frame(width: 44, height: 44)
+            .overlay(
+                Image(systemName: systemName)
+                    .font(.system(size: 18))
+                    .foregroundColor(highlighted ? .theme.accentOrange : .theme.textSecondary)
+            )
     }
 
     /// La card verde "Import completato" con i quattro numeri del prototipo.
@@ -368,13 +511,32 @@ struct OnboardingImportStep: View {
                 }
             }
         case .uploading, .running:
-            // Come nel prototipo: la CTA resta, spenta, finché il lavoro non è finito.
-            PrimaryButton(title: "onboarding.import.tvtime".localized, action: {})
-                .disabled(true)
-                .opacity(0.5)
-        case .done:
-            PrimaryButton(title: "common.continue".localized) {
-                viewModel.nextStep()
+            // Le due strade stanno nella sezione "Nel frattempo"; qui resta solo la via
+            // d'uscita per chi aveva scelto di aspettare e ci ripensa.
+            if waiting {
+                Button {
+                    viewModel.nextStep()
+                } label: {
+                    Text("onboarding.import.background".localized)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.theme.textPrimary)
+                }
+            }
+        case .done(let report):
+            VStack(spacing: 14) {
+                let pending = report.reviewItems.count
+                if pending > 0 {
+                    Button {
+                        showReview = true
+                    } label: {
+                        Text(String(format: "onboarding.import.manage".localized, pending))
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.theme.accentOrange)
+                    }
+                }
+                PrimaryButton(title: "common.continue".localized) {
+                    viewModel.nextStep()
+                }
             }
         }
     }
@@ -389,17 +551,6 @@ struct OnboardingImportStep: View {
         case "writing":     return "import.phase.writing"
         case "recomputing": return "import.phase.finishing"
         default:            return "import.phase.queued"
-        }
-    }
-
-    private func phaseProgress(_ phase: String) -> Double {
-        switch phase {
-        case "uploaded":    return 0.2
-        case "parsing":     return 0.4
-        case "resolving":   return 0.6
-        case "writing":     return 0.8
-        case "recomputing": return 0.95
-        default:            return 0.2
         }
     }
 }
@@ -462,10 +613,18 @@ struct OnboardingNotificationsStep: View {
                     // la chip finale "Notifiche attive" appare solo se ha detto sì.
                     Task {
                         isRequesting = true
-                        let granted = await NotificationService.shared.enableNotifications()
+                        let notificationService = NotificationService.shared
+                        let granted = await viewModel.resolveNotificationPermission {
+                            await notificationService.requestAuthorizationDecision()
+                        }
                         isRequesting = false
-                        viewModel.notificationsGranted = granted
-                        viewModel.nextStep()
+
+                        // Token APNs/FCM e preferenze Supabase non bloccano la navigazione.
+                        Task {
+                            await notificationService.completeNotificationEnablement(
+                                afterAuthorization: granted
+                            )
+                        }
                     }
                 }
 

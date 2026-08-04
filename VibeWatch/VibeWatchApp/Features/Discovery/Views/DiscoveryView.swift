@@ -6,6 +6,9 @@ struct DiscoveryView: View {
     @StateObject private var gamificationService = GamificationService.shared
     /// Redesign 2.0: strip "In uscita" e "Continua a guardare" leggono lo specchio del Tracking.
     @StateObject private var trackingHighlights = DiscoveryTrackingHighlightsViewModel()
+    /// Redesign 2.0 import: il banner di stato (in corso / da verificare / completato) e la
+    /// pagina "Titoli da verificare" vivono qui, sotto l'header di Scopri.
+    @ObservedObject private var importCenter = ImportStatusCenter.shared
     @State private var showReleaseCalendar = false
     @State private var releaseCalendarDay: Date? = nil
     @EnvironmentObject var appState: AppState
@@ -104,8 +107,16 @@ struct DiscoveryView: View {
             }
             .presentationBackground(.clear)
         }
+        .sheet(isPresented: $importCenter.showReviewSheet) {
+            ImportReviewView()
+        }
         .toast(isShowing: $appState.showSuccessToast, message: appState.toastMessage, type: .success)
         .toast(isShowing: $appState.showErrorToast, message: appState.toastMessage, type: .error)
+        // Redesign 2.0 import: "Libreria importata · N titoli da verificare", una volta per job.
+        .toast(isShowing: Binding(
+            get: { importCenter.toastMessage != nil },
+            set: { if !$0 { importCenter.toastMessage = nil } }
+        ), message: importCenter.toastMessage ?? "", type: .success)
         .xpToast(gamificationService: gamificationService)
         .onChange(of: appState.shouldShowSignIn) {_, newValue in
             if newValue {
@@ -160,6 +171,11 @@ struct DiscoveryView: View {
                 onProfileTap: { showProfile = true },
                 avatarURL: appState.currentUser?.avatarURL
             )
+
+            // Redesign 2.0 import: lo stato dell'import sotto l'header — in corso con la
+            // percentuale reale, completato con "Gestisci" se restano titoli da verificare,
+            // verde con "OK" se è tutto in ordine.
+            ImportStatusBanner(center: importCenter)
 
             ScrollViewReader { proxy in
                 ScrollView {

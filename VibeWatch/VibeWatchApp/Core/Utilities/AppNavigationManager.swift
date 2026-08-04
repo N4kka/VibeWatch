@@ -53,7 +53,19 @@ class AppNavigationManager: ObservableObject {
     /// - Parameter userInfo: The dictionary containing deep link information.
     func handle(userInfo: [AnyHashable: Any]) {
         Logger.debug("[AppNavigationManager] Handling userInfo for deep link: \(userInfo)")
-        
+
+        // Redesign 2.0 import: il tap sulla push "Import finished" porta in home CON l'inbox
+        // "Titoli da verificare" già aperto (se c'è qualcosa da gestire) — prima atterrava su
+        // Discovery generica e la promessa di `import.canClose` finiva nel vuoto.
+        if (userInfo["notification_type"] as? String) == "import_done" {
+            Logger.info("[AppNavigationManager] import_done push → home + inbox import")
+            NotificationCenter.default.post(name: .navigateToDiscoveryTab, object: nil)
+            Task { @MainActor in
+                ImportStatusCenter.shared.handleImportPushTap()
+            }
+            return
+        }
+
         // --- More robust parsing to handle different possible keys ---
         let mediaIdKey = userInfo["media_id"] != nil ? "media_id" : "movie_id"
         let mediaTypeKey = userInfo["media_type"] != nil ? "media_type" : "movie_type"

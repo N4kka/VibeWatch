@@ -607,7 +607,7 @@ class SupabaseService: ObservableObject {
         guard let client else { throw SupabaseError.notAuthenticated }
         let rows: [ImportJobSnapshot] = try await client
             .from("import_jobs")
-            .select("id, phase, status, error, created_at")
+            .select("id, phase, status, error, totals, created_at")
             .order("created_at", ascending: false)
             .limit(1)
             .execute()
@@ -621,12 +621,35 @@ class SupabaseService: ObservableObject {
         guard let client else { throw SupabaseError.notAuthenticated }
         let rows: [ImportJobSnapshot] = try await client
             .from("import_jobs")
-            .select("id, phase, status, error, created_at")
+            .select("id, phase, status, error, totals, created_at")
             .eq("id", value: id)
             .limit(1)
             .execute()
             .value
         return rows.first
+    }
+
+    /// Redesign 2.0: esclude dall'inbox "Titoli da verificare" i titoli che l'utente ha scelto
+    /// di lasciar perdere. La RPC (`import_exclude_unresolved`, security definer con controllo
+    /// del proprietario) marca le righe di staging e il report smette di contarle.
+    func excludeImportUnresolved(jobId: String, seriesIds: [String], movieUuids: [String],
+                                 seriesTitles: [String]) async throws {
+        var payload: [String: Any] = ["p_job_id": jobId]
+        if !seriesIds.isEmpty { payload["p_tvdb_series_ids"] = seriesIds }
+        if !movieUuids.isEmpty { payload["p_movie_uuids"] = movieUuids }
+        if !seriesTitles.isEmpty { payload["p_series_titles"] = seriesTitles }
+        let data = try await callRPC(function: "import_exclude_unresolved", payload: payload)
+        guard let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+              let ok = json["ok"] as? Bool else {
+            throw SupabaseError.unexpectedResponse(
+                body: String(data: data.prefix(300), encoding: .utf8) ?? "<non-UTF8>")
+        }
+        // `nothing_to_exclude` non è un guasto: le righe erano già fuori (per esempio un
+        // doppio tap, o un'esclusione arrivata da un altro device). Il report riletto farà fede.
+        if !ok, (json["reason"] as? String) != "nothing_to_exclude" {
+            throw SupabaseError.unexpectedResponse(
+                body: (json["reason"] as? String) ?? "exclude_failed")
+        }
     }
 
     /// §7.4: la risoluzione A MANO delle serie non riconosciute. Il server (Edge Function

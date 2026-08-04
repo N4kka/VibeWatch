@@ -944,3 +944,48 @@
 "season.confirmUnairedSeason.message" = "このシーズンの%d話はまだ放送されていません。それでも視聴済みにしますか？";
 "season.confirmUnairedSeason.markAll" = "すべて視聴済みにする";
 "season.confirmUnairedSeason.onlyAired" = "放送済みのみ";
+
+/* Import redesign 2.0 — banner, review inbox, onboarding options */
+"onboarding.import.durationHint" = "何年分もの履歴があるアーカイブは、数分かかることがあります。";
+"onboarding.import.meanwhile" = "その間に";
+"onboarding.import.wait" = "ここで待つ";
+"onboarding.import.wait.subtitle" = "ライブラリが完成した状態でアプリを始められます";
+"onboarding.import.background" = "オンボーディングを続ける";
+"onboarding.import.background.subtitle" = "インポートはバックグラウンドで続行され、完了したらお知らせします";
+"onboarding.import.waitingHint" = "ここでお待ちください。インポートが完了すると、確認画面が自動的に開きます。";
+"onboarding.import.manage" = "%d件のタイトルを管理";
+"import.banner.running" = "インポート中";
+"import.banner.episodes" = "%1$@ / %2$@ エピソード";
+"import.banner.completed" = "インポート完了";
+"import.banner.review" = "%2$@件中%1$d件のタイトルを要確認";
+"import.banner.manage" = "管理";
+"import.banner.ok" = "OK";
+"import.banner.summary" = "%1$@ 番組 · %2$@ エピソード · %3$@ 映画";
+"import.toast.imported" = "ライブラリをインポートしました";
+"import.toast.imported.review" = "ライブラリをインポートしました · 要確認のタイトル%d件";
+"import.review.title" = "確認が必要なタイトル";
+"import.review.remaining" = "残り %1$d / %2$d";
+"import.review.allResolved" = "すべて解決済み";
+"import.review.intro" = "TV Timeアーカイブのこれらのタイトルには、確実な一致が見つかりませんでした。正しいものを選ぶか、除外してください。";
+"import.review.episodesSeen" = "%d エピソード視聴済み";
+"import.review.searchManually" = "手動で検索";
+"import.review.exclude" = "除外";
+"import.review.later" = "後回しにする";
+"import.review.importCount" = "%d件のタイトルをインポート";
+"import.review.importOne" = "1件のタイトルをインポート";
+"import.review.libraryOk" = "ライブラリは問題なし";
+"import.review.libraryOk.subtitle" = "TV Timeアーカイブのすべてのタイトルが正しく照合されました。";
+"import.review.noCandidates" = "候補が見つかりません — 手動検索をお試しください。";
+"import.review.manualPick" = "手動で選択";
+"import.review.movieHint" = "一致しない映画は除外のみ可能です。";
+"import.review.seasons" = "%d シーズン";
+"import.review.reason.notFound" = "カタログに見つかりません";
+"import.review.reason.ambiguous" = "一致があいまい";
+"import.review.reason.conflict" = "シリーズの競合";
+"import.review.reason.yearMissing" = "年が欠落または不一致";
+"import.review.reason.missingId" = "エクスポートにシリーズIDがありません";
+
+"import.toast.mapping.partial" = "%1$d件のタイトルを解決 · 残り%2$d件を確認";
+"import.toast.mapping.done" = "%d件のタイトルを解決 · ライブラリは整理済み";
+
+"import.report.outOfStructure" = "%d件のエピソードは確認済みシリーズのTMDB構成に配置できませんでした。";

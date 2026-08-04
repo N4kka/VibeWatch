@@ -932,3 +932,48 @@
 "season.confirmUnairedSeason.message" = "Bu sezonun %d bölümü henüz yayınlanmadı. Yine de izlendi olarak işaretlensin mi?";
 "season.confirmUnairedSeason.markAll" = "Hepsini işaretle";
 "season.confirmUnairedSeason.onlyAired" = "Sadece yayınlananlar";
+
+/* Import redesign 2.0 — banner, review inbox, onboarding options */
+"onboarding.import.durationHint" = "Yıllarca geçmiş içeren bir arşiv birkaç dakika sürebilir.";
+"onboarding.import.meanwhile" = "Bu arada";
+"onboarding.import.wait" = "Burada kalıp bekleyeceğim";
+"onboarding.import.wait.subtitle" = "Uygulamaya kitaplığın hazır halde gir";
+"onboarding.import.background" = "Kuruluma devam et";
+"onboarding.import.background.subtitle" = "İçe aktarma arka planda devam eder — bitince sana haber veririz";
+"onboarding.import.waitingHint" = "Burada bekliyoruz: içe aktarma biter bitmez inceleme otomatik olarak açılır.";
+"onboarding.import.manage" = "%d yapımı yönet";
+"import.banner.running" = "İçe aktarma sürüyor";
+"import.banner.episodes" = "%2$@ bölümden %1$@";
+"import.banner.completed" = "İçe aktarma tamamlandı";
+"import.banner.review" = "%2$@ yapımdan %1$d tanesi incelenecek";
+"import.banner.manage" = "Yönet";
+"import.banner.ok" = "OK";
+"import.banner.summary" = "%1$@ dizi · %2$@ bölüm · %3$@ film";
+"import.toast.imported" = "Kitaplık içe aktarıldı";
+"import.toast.imported.review" = "Kitaplık içe aktarıldı · incelenecek %d yapım";
+"import.review.title" = "İncelenecek yapımlar";
+"import.review.remaining" = "%2$d yapımdan %1$d kaldı";
+"import.review.allResolved" = "Hepsi çözüldü";
+"import.review.intro" = "TV Time arşivindeki bu yapımlar için güvenilir bir eşleşme bulamadık. Doğrusunu seç ya da hariç tut.";
+"import.review.episodesSeen" = "%d bölüm izlendi";
+"import.review.searchManually" = "Elle ara";
+"import.review.exclude" = "Hariç tut";
+"import.review.later" = "Ertele, sonra yaparım";
+"import.review.importCount" = "%d yapımı içe aktar";
+"import.review.importOne" = "1 yapımı içe aktar";
+"import.review.libraryOk" = "Kitaplık düzenli";
+"import.review.libraryOk.subtitle" = "TV Time arşivindeki her yapım doğru şekilde eşleştirildi.";
+"import.review.noCandidates" = "Öneri bulunamadı — elle aramayı dene.";
+"import.review.manualPick" = "Elle seçildi";
+"import.review.movieHint" = "Eşleşmeyen filmler yalnızca hariç tutulabilir.";
+"import.review.seasons" = "%d sezon";
+"import.review.reason.notFound" = "katalogda bulunamadı";
+"import.review.reason.ambiguous" = "belirsiz eşleşme";
+"import.review.reason.conflict" = "dizi çakışması";
+"import.review.reason.yearMissing" = "yıl eksik veya uyuşmuyor";
+"import.review.reason.missingId" = "dışa aktarmada dizi ID'si yok";
+
+"import.toast.mapping.partial" = "%1$d başlık çözüldü · %2$d incelenecek";
+"import.toast.mapping.done" = "%d başlık çözüldü · kitaplık düzenli";
+
+"import.report.outOfStructure" = "%d bölüm, onaylanan dizinin TMDB yapısına yerleştirilemedi.";

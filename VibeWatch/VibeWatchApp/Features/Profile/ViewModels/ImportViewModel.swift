@@ -31,12 +31,111 @@ struct ImportJobSnapshot: Decodable, Equatable {
     let phase: String
     let status: String
     let error: String?
+    /// I contatori veri di `import_jobs.totals` (events, resolved, written…). Le fasi li
+    /// aggiornano a ogni giro: sono ciò che rende il progresso una lettura, non una stima.
+    var totals: [String: Double] = [:]
 
     enum CodingKeys: String, CodingKey {
-        case id, phase, status, error
+        case id, phase, status, error, totals
+    }
+
+    init(id: String, phase: String, status: String, error: String?,
+         totals: [String: Double] = [:]) {
+        self.id = id
+        self.phase = phase
+        self.status = status
+        self.error = error
+        self.totals = totals
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        phase = try container.decode(String.self, forKey: .phase)
+        status = try container.decode(String.self, forKey: .status)
+        error = try container.decodeIfPresent(String.self, forKey: .error)
+        // `totals` è jsonb libero: dentro ci sono numeri ma anche stringhe (user_language,
+        // user_timezone). Si tengono i numeri e si lascia cadere il resto senza far fallire
+        // l'intera riga — un totale illeggibile non deve spegnere il polling.
+        let raw = (try? container.decodeIfPresent([String: LossyNumber].self, forKey: .totals))
+            ?? nil
+        totals = (raw ?? [:]).compactMapValues(\.value)
     }
 
     var isOpen: Bool { status == "running" || status == "paused" }
+
+    var progress: ImportProgress { ImportProgress(phase: phase, totals: totals) }
+
+    /// Un valore jsonb che vorremmo numerico ma può non esserlo: `value` nullo = non lo era.
+    struct LossyNumber: Decodable {
+        let value: Double?
+        init(from decoder: Decoder) throws {
+            let single = try decoder.singleValueContainer()
+            if let double = try? single.decode(Double.self) { value = double } else { value = nil }
+        }
+    }
+}
+
+/// Il progresso REALE dell'import, letto dai contatori delle fasi — non più la rampa a
+/// scatti derivata dal solo nome della fase. Le bande per fase riflettono il costo osservato:
+/// la risoluzione è di gran lunga il tratto più lungo (una chiamata TMDB per episodio nuovo).
+struct ImportProgress: Equatable {
+    /// 0…1 sull'intero import.
+    let fraction: Double
+    /// "X di Y episodi" della card: eventi processati dalla risoluzione. Nulli quando la
+    /// fase corrente non ha ancora un contatore onesto da mostrare.
+    let processedEpisodes: Int?
+    let totalEpisodes: Int?
+
+    init(phase: String, totals: [String: Double]) {
+        let events = Int(totals["events"] ?? 0)
+
+        func frac(_ done: Double, of total: Double) -> Double {
+            total > 0 ? min(1, max(0, done / total)) : 0
+        }
+
+        switch phase {
+        case "uploaded":
+            fraction = 0.05
+            processedEpisodes = nil
+            totalEpisodes = nil
+        case "parsing":
+            fraction = 0.10
+            processedEpisodes = nil
+            totalEpisodes = nil
+        case "resolving":
+            // Tutte le code della fase 3 contano: eventi, stati, favorites, film.
+            let doneUnits = (totals["resolved"] ?? 0) + (totals["unresolved"] ?? 0)
+                + (totals["statuses_resolved"] ?? 0) + (totals["statuses_unresolved"] ?? 0)
+                + (totals["favorites_resolved"] ?? 0) + (totals["favorites_unresolved"] ?? 0)
+                + (totals["movies_resolved"] ?? 0) + (totals["movies_unresolved"] ?? 0)
+            let totalUnits = Double(events) + (totals["series_statuses"] ?? 0)
+                + (totals["favorites"] ?? 0)
+                + (totals["movies_seen"] ?? 0) + (totals["movies_watchlist"] ?? 0)
+            fraction = 0.15 + 0.60 * frac(doneUnits, of: totalUnits)
+            let processed = Int((totals["resolved"] ?? 0) + (totals["unresolved"] ?? 0))
+            processedEpisodes = events > 0 ? min(processed, events) : nil
+            totalEpisodes = events > 0 ? events : nil
+        case "writing":
+            let written = (totals["written"] ?? 0) + (totals["already_present"] ?? 0)
+                + (totals["not_written"] ?? 0)
+            fraction = 0.78 + 0.18 * frac(written, of: totals["staged_rows"] ?? 0)
+            processedEpisodes = events > 0 ? events : nil
+            totalEpisodes = events > 0 ? events : nil
+        case "recomputing":
+            fraction = 0.97
+            processedEpisodes = events > 0 ? events : nil
+            totalEpisodes = events > 0 ? events : nil
+        case "done":
+            fraction = 1
+            processedEpisodes = events > 0 ? events : nil
+            totalEpisodes = events > 0 ? events : nil
+        default:
+            fraction = 0.05
+            processedEpisodes = nil
+            totalEpisodes = nil
+        }
+    }
 }
 
 /// Il report di §7.4, così come `import_report` lo costruisce. I nomi restano quelli del
@@ -49,6 +148,24 @@ struct ImportReport: Equatable {
         /// L'id TVDB della serie nell'export: è la maniglia della risoluzione a mano (§7.4).
         /// Nullo per le righe che non ce l'hanno — lì il pulsante "Risolvi" non esiste.
         let tvdbSeriesId: String?
+    }
+
+    /// Uno stato per-serie (watchlist/archivio) rimasto senza catalogo: stessa maniglia
+    /// delle serie (`tvdb_series_id`), quindi stessa risoluzione a mano.
+    struct UnresolvedStatus: Equatable {
+        let titolo: String
+        let stato: String?
+        let motivo: String
+        let tvdbSeriesId: String?
+    }
+
+    /// Un film di v1 non riconosciuto. Nessun id esterno: la sola azione possibile è
+    /// l'esclusione, e la maniglia è l'uuid TV Time che il report porta con la riga.
+    struct UnresolvedMovie: Equatable {
+        let titolo: String
+        let tipo: String?
+        let motivo: String
+        let tvtimeMovieUuid: String?
     }
 
     let episodiImportati: Int
@@ -71,6 +188,7 @@ struct ImportReport: Equatable {
     let statiSupportati: Bool
     let statiSerieImportati: Int
     let statiSerieNonRisolti: Int
+    var statiNonRisoltiElenco: [UnresolvedStatus] = []
     /// §7.1: i Favorites — riempiono solo gli slot liberi (slot pieni e già favoriti non sono
     /// perdite e non allarmano); i favorite film si dichiarano non supportati.
     let favoritesSupportati: Bool
@@ -83,6 +201,10 @@ struct ImportReport: Equatable {
     let filmImportati: Int
     let filmWatchlistImportati: Int
     let filmNonRisolti: Int
+    var filmNonRisoltiElenco: [UnresolvedMovie] = []
+    /// Episodi di serie confermate a mano i cui numeri dell'export non esistono nella
+    /// struttura TMDB: perdita dichiarata dal server, non più card eterne nell'inbox.
+    var episodiFuoriStruttura: Int = 0
 
     init?(json: [String: Any]) {
         // Un report senza il conteggio principale non è un report: meglio un errore visibile
@@ -111,6 +233,14 @@ struct ImportReport: Equatable {
         statiSupportati = json["stati_supportati"] as? Bool ?? false
         statiSerieImportati = json["stati_serie_importati"] as? Int ?? 0
         statiSerieNonRisolti = json["stati_serie_non_risolti"] as? Int ?? 0
+        statiNonRisoltiElenco = (json["stati_non_risolti_elenco"] as? [[String: Any]] ?? [])
+            .compactMap { row in
+                guard let titolo = row["titolo"] as? String else { return nil }
+                return UnresolvedStatus(titolo: titolo,
+                                        stato: row["stato"] as? String,
+                                        motivo: row["motivo"] as? String ?? "",
+                                        tvdbSeriesId: row["tvdb_series_id"] as? String)
+            }
         favoritesSupportati = json["favorites_supportati"] as? Bool ?? false
         favoritesImportati = json["favorites_importati"] as? Int ?? 0
         favoritesNonRisolti = json["favorites_non_risolti"] as? Int ?? 0
@@ -121,6 +251,15 @@ struct ImportReport: Equatable {
         filmImportati = json["film_importati"] as? Int ?? 0
         filmWatchlistImportati = json["film_watchlist_importati"] as? Int ?? 0
         filmNonRisolti = json["film_non_risolti"] as? Int ?? 0
+        filmNonRisoltiElenco = (json["film_non_risolti_elenco"] as? [[String: Any]] ?? [])
+            .compactMap { row in
+                guard let titolo = row["titolo"] as? String else { return nil }
+                return UnresolvedMovie(titolo: titolo,
+                                       tipo: row["tipo"] as? String,
+                                       motivo: row["motivo"] as? String ?? "",
+                                       tvtimeMovieUuid: row["tvtime_movie_uuid"] as? String)
+            }
+        episodiFuoriStruttura = json["episodi_fuori_struttura"] as? Int ?? 0
     }
 
     init(episodiImportati: Int, serieImportate: Int, dal: String?, al: String?,
@@ -160,6 +299,87 @@ struct ImportReport: Equatable {
     }
 }
 
+// MARK: - Titoli da verificare (redesign 2.0)
+
+/// Una card dell'inbox "Titoli da verificare": la vista unificata di ciò che l'import non ha
+/// riconosciuto — serie (eventi e stati per-serie condividono la maniglia `tvdb_series_id`)
+/// e film (solo esclusione: non esiste una risoluzione a mano per titolo lato server).
+struct ImportReviewItem: Identifiable, Equatable {
+    enum Source: Equatable {
+        case series(tvdbSeriesId: String?)
+        case movie(tvtimeMovieUuid: String?)
+    }
+
+    let source: Source
+    let titolo: String
+    /// Episodi visti nell'export (0 per gli stati puri e per i film).
+    let episodi: Int
+    let motivo: String
+    /// Lo stato per-serie richiesto dall'export (watchlist/archivio), quando la card nasce
+    /// da un `user_show_special_status` e non da episodi visti.
+    let statoRichiesto: String?
+
+    var id: String {
+        switch source {
+        case .series(let tvdbId): return "s:\(tvdbId ?? titolo)"
+        case .movie(let uuid):    return "m:\(uuid ?? titolo)"
+        }
+    }
+
+    /// La risoluzione a mano esiste solo per le serie con un id TVDB usabile.
+    var isResolvable: Bool {
+        if case .series(let tvdbId) = source,
+           let tvdbId, let numero = Int(tvdbId), numero > 0 { return true }
+        return false
+    }
+
+    var isMovie: Bool {
+        if case .movie = source { return true }
+        return false
+    }
+}
+
+extension ImportReport {
+    /// L'inbox derivato dal report: serie non riconosciute (eventi), stati per-serie rimasti
+    /// fuori (fusi con la serie se già presente), film non risolti. È la lista della pagina
+    /// "Titoli da verificare" e il conteggio del banner.
+    var reviewItems: [ImportReviewItem] {
+        var items: [ImportReviewItem] = []
+        var serieViste = Set<String>()
+
+        for row in nonRiconosciutiElenco {
+            let item = ImportReviewItem(source: .series(tvdbSeriesId: row.tvdbSeriesId),
+                                        titolo: row.titolo,
+                                        episodi: row.episodi,
+                                        motivo: row.motivo,
+                                        statoRichiesto: nil)
+            serieViste.insert(item.id)
+            items.append(item)
+        }
+
+        for row in statiNonRisoltiElenco {
+            let item = ImportReviewItem(source: .series(tvdbSeriesId: row.tvdbSeriesId),
+                                        titolo: row.titolo,
+                                        episodi: 0,
+                                        motivo: row.motivo,
+                                        statoRichiesto: row.stato)
+            // La stessa serie può avere sia episodi sia uno stato irrisolti: una card sola.
+            guard serieViste.insert(item.id).inserted else { continue }
+            items.append(item)
+        }
+
+        for row in filmNonRisoltiElenco {
+            items.append(ImportReviewItem(source: .movie(tvtimeMovieUuid: row.tvtimeMovieUuid),
+                                          titolo: row.titolo,
+                                          episodi: 0,
+                                          motivo: row.motivo,
+                                          statoRichiesto: row.tipo))
+        }
+
+        return items
+    }
+}
+
 // MARK: - La dipendenza, isolata (modello UsernameBackend)
 
 /// Una delle associazioni raccolte prima di riaprire l'import. Il batch intero viene inviato
@@ -179,6 +399,15 @@ protocol ImportBackend {
     func report(jobId: String) async throws -> ImportReport
     /// §7.4: tutte le identità dichiarate dall'utente riaprono UN solo giro di risoluzione.
     func manualResolve(jobId: String, resolutions: [ImportManualResolution]) async throws
+    /// Redesign 2.0: i titoli che l'utente ha scelto di lasciar perdere escono dall'inbox.
+    func excludeUnresolved(jobId: String, seriesIds: [String], movieUuids: [String],
+                           seriesTitles: [String]) async throws
+}
+
+extension ImportBackend {
+    /// Default vuoto: i backend di test che non esercitano l'esclusione non devono cambiare.
+    func excludeUnresolved(jobId: String, seriesIds: [String], movieUuids: [String],
+                           seriesTitles: [String]) async throws {}
 }
 
 @MainActor
@@ -203,6 +432,12 @@ struct SupabaseImportBackend: ImportBackend {
     }
     func manualResolve(jobId: String, resolutions: [ImportManualResolution]) async throws {
         try await SupabaseService.shared.manualResolveImport(jobId: jobId, resolutions: resolutions)
+    }
+    func excludeUnresolved(jobId: String, seriesIds: [String], movieUuids: [String],
+                           seriesTitles: [String]) async throws {
+        try await SupabaseService.shared.excludeImportUnresolved(
+            jobId: jobId, seriesIds: seriesIds, movieUuids: movieUuids,
+            seriesTitles: seriesTitles)
     }
 }
 
@@ -233,6 +468,11 @@ final class ImportViewModel: ObservableObject {
 
     @Published private(set) var state: FlowState = .sources
 
+    /// Il progresso reale (contatori delle fasi) dell'ultimo giro di polling. Vive accanto a
+    /// `state` e non dentro: lo stato è il contratto storico (e dei test), il progresso è
+    /// una lettura in più che la card e il banner mostrano quando c'è.
+    @Published private(set) var progress: ImportProgress?
+
     private let backend: any ImportBackend
     private let pollInterval: Duration
     /// Legge lo ZIP dal picker. Iniettabile: i test non hanno file veri.
@@ -259,20 +499,26 @@ final class ImportViewModel: ObservableObject {
 
     deinit { pollTask?.cancel() }
 
-    /// All'apertura: l'import in corso (o l'ultimo fallito) vive sul server e va ritrovato.
-    /// Un errore di rete qui lascia la lista delle sorgenti: da lì ogni strada è ancora
-    /// percorribile, e un doppio avvio muore comunque su `already_running`.
+    /// All'apertura: l'import in corso (o l'ultimo concluso/fallito) vive sul server e va
+    /// ritrovato. Un errore di rete qui lascia la lista delle sorgenti: da lì ogni strada è
+    /// ancora percorribile, e un doppio avvio muore comunque su `already_running`.
+    ///
+    /// Redesign 2.0: anche un job `done` si riprende — è l'inbox "Titoli da verificare",
+    /// che prima diventava irraggiungibile per sempre alla chiusura del report. La ripresa
+    /// NON rinotifica il sync (`notify: false`): i dati di quel job sono già nello specchio
+    /// locale, e un pull a ogni apertura sarebbe rumore.
     func loadExisting() async {
         guard case .sources = state else { return }
         guard let job = try? await backend.latestJob() else { return }
+        progress = job.progress
         if job.isOpen {
             startPolling(jobId: job.id, phase: job.phase)
         } else if job.status == "failed" {
             state = .failed(messageKey: "import.error.failed", detail: job.error,
                             retryJobId: job.id)
+        } else if job.phase == "done" || job.status == "done" {
+            await showReport(jobId: job.id, notify: false)
         }
-        // `done`: nessuna ripresa — il report si è già visto, la schermata riparte dalle
-        // sorgenti per l'import successivo.
     }
 
     /// Dal picker. La lettura sta fuori dal main actor: uno ZIP GDPR è decine di MB.
@@ -378,6 +624,7 @@ final class ImportViewModel: ObservableObject {
                 return
             }
             pollFailures = 0
+            progress = job.progress
             if job.status == "failed" {
                 state = .failed(messageKey: "import.error.failed", detail: job.error,
                                 retryJobId: job.id)
@@ -411,7 +658,7 @@ final class ImportViewModel: ObservableObject {
         }
     }
 
-    private func showReport(jobId: String) async {
+    private func showReport(jobId: String, notify: Bool = true) async {
         do {
             state = .done(try await backend.report(jobId: jobId))
             doneJobId = jobId
@@ -420,13 +667,26 @@ final class ImportViewModel: ObservableObject {
             // gli item comparivano solo al prossimo evento di rete, minuti dopo, con la
             // faccia di un import fallito. Notifica e non chiamata diretta: il ViewModel
             // resta testabile senza trascinarsi dietro il SyncEngine.
-            NotificationCenter.default.post(name: .importJobCompleted, object: nil)
+            //
+            // `notify: false` è la RIPRESA di un job già concluso (loadExisting): quei dati
+            // sono già stati tirati giù a suo tempo, rinotificare farebbe un pull a ogni
+            // apertura dell'app.
+            if notify {
+                NotificationCenter.default.post(name: .importJobCompleted, object: nil)
+            }
         } catch {
             // Il lavoro è fatto ma il report non si legge: dirlo, con la ripresa che
             // ricarica il report e non certo l'import.
             state = .failed(messageKey: "import.error.reportFailed",
                             detail: error.localizedDescription, retryJobId: jobId)
         }
+    }
+
+    /// Rilegge il report del job concluso a schermo — dopo un'esclusione, o al tap della
+    /// push quando il report a schermo può essere invecchiato.
+    func refreshReport() async {
+        guard case .done = state, let jobId = doneJobId else { return }
+        await showReport(jobId: jobId, notify: false)
     }
 
     // MARK: - Risoluzione a mano (§7.4)
@@ -457,6 +717,39 @@ final class ImportViewModel: ObservableObject {
         do {
             try await backend.manualResolve(jobId: jobId, resolutions: resolutions)
             startPolling(jobId: jobId, phase: "resolving")
+            return true
+        } catch {
+            manualResolveError = error.localizedDescription
+            return false
+        }
+    }
+
+    /// Redesign 2.0: escludere un titolo dall'inbox. Il server marca le righe come scelte
+    /// dell'utente ('escluso: utente') e il report smette di contarle; qui si rilegge il
+    /// report perché card e banner calino subito.
+    func excludeItems(_ items: [ImportReviewItem]) async -> Bool {
+        guard case .done = state, let jobId = doneJobId, !items.isEmpty else { return false }
+        var seriesIds: [String] = []
+        var seriesTitles: [String] = []
+        var movieUuids: [String] = []
+        for item in items {
+            switch item.source {
+            case .series(let tvdbId):
+                if let tvdbId, !tvdbId.isEmpty { seriesIds.append(tvdbId) }
+                else { seriesTitles.append(item.titolo) }
+            case .movie(let uuid):
+                if let uuid, !uuid.isEmpty { movieUuids.append(uuid) }
+            }
+        }
+        guard !(seriesIds.isEmpty && seriesTitles.isEmpty && movieUuids.isEmpty) else {
+            return false
+        }
+        manualResolveError = nil
+        do {
+            try await backend.excludeUnresolved(jobId: jobId, seriesIds: seriesIds,
+                                                movieUuids: movieUuids,
+                                                seriesTitles: seriesTitles)
+            await refreshReport()
             return true
         } catch {
             manualResolveError = error.localizedDescription
