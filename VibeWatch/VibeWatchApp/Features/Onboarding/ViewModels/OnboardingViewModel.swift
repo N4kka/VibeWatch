@@ -39,6 +39,18 @@ class OnboardingViewModel: ObservableObject {
         nextStep()
     }
 
+    /// The onboarding navigation is tied only to the native permission decision. Device-token
+    /// registration and the backend preferences sync happen afterwards and must not hold the
+    /// user on the notifications step.
+    func resolveNotificationPermission(
+        _ requestPermission: () async -> Bool
+    ) async -> Bool {
+        let granted = await requestPermission()
+        notificationsGranted = granted
+        nextStep()
+        return granted
+    }
+
     /// "Inizia a guardare": il paywall appare SOLO se l'utente non è già PRO — un login con
     /// un account PRO deve entrare diretto. La verifica passa da RevenueCat (con cache
     /// offline dentro ClipQuotaService), quindi va aspettata, non letta al volo.

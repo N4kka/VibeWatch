@@ -57,7 +57,19 @@ class NotificationService: ObservableObject { // Conform to ObservableObject
     }
 
     func enableNotifications() async -> Bool {
-        let granted = await requestAuthorization()
+        let granted = await requestAuthorizationDecision()
+        await completeNotificationEnablement(afterAuthorization: granted)
+        return granted
+    }
+
+    /// Returns as soon as the native authorization popup has produced a decision.
+    /// Onboarding uses this boundary to advance immediately.
+    func requestAuthorizationDecision() async -> Bool {
+        await requestAuthorization()
+    }
+
+    /// Finishes the non-UI work that follows the native authorization decision.
+    func completeNotificationEnablement(afterAuthorization granted: Bool) async {
         await refreshAuthorizationStatus()
 
         if granted {
@@ -66,8 +78,6 @@ class NotificationService: ObservableObject { // Conform to ObservableObject
             let prefs = NotificationPreferencesView.loadFromDefaults()
             await syncPreferencesToSupabase(prefs)
         }
-
-        return granted
     }
 
     func disableNotifications() async {
