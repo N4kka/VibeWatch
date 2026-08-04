@@ -932,3 +932,15 @@
 "gamification.challenge.list_2" = "Add 2 titles to a list";
 "gamification.challenge.watch_new_genre" = "Watch a clip from a new genre";
 "gamification.challenge.complete_5" = "Complete 5 clips (>70%)";
+
+// SeasonDetailView — conferme di marcatura episodi (2026-08-04)
+"season.confirmUnaired.title" = "まだ放送されていません";
+"season.confirmUnaired.message" = "S%dE%dはまだ放送されていません。それでも視聴済みにしますか？";
+"season.confirmUnaired.confirm" = "視聴済みにする";
+"season.confirmPrevious.title" = "前のエピソードも見ましたか？";
+"season.confirmPrevious.message" = "視聴済みになっていない前のエピソードが%d話あります。";
+"season.confirmPrevious.markAll" = "はい、すべて視聴済みにする";
+"season.confirmPrevious.onlyThis" = "これだけ";
+"season.confirmUnairedSeason.message" = "このシーズンの%d話はまだ放送されていません。それでも視聴済みにしますか？";
+"season.confirmUnairedSeason.markAll" = "すべて視聴済みにする";
+"season.confirmUnairedSeason.onlyAired" = "放送済みのみ";

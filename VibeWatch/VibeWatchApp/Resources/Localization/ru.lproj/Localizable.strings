@@ -920,3 +920,15 @@
 "gamification.challenge.list_2" = "Add 2 titles to a list";
 "gamification.challenge.watch_new_genre" = "Watch a clip from a new genre";
 "gamification.challenge.complete_5" = "Complete 5 clips (>70%)";
+
+// SeasonDetailView — conferme di marcatura episodi (2026-08-04)
+"season.confirmUnaired.title" = "Ещё не вышел";
+"season.confirmUnaired.message" = "S%dE%d ещё не вышел. Всё равно отметить как просмотренный?";
+"season.confirmUnaired.confirm" = "Отметить просмотренным";
+"season.confirmPrevious.title" = "Вы смотрели предыдущие серии?";
+"season.confirmPrevious.message" = "Есть %d предыдущих серий, не отмеченных как просмотренные.";
+"season.confirmPrevious.markAll" = "Да, отметить все";
+"season.confirmPrevious.onlyThis" = "Только эту";
+"season.confirmUnairedSeason.message" = "%d серий этого сезона ещё не вышли. Всё равно отметить их как просмотренные?";
+"season.confirmUnairedSeason.markAll" = "Отметить все";
+"season.confirmUnairedSeason.onlyAired" = "Только вышедшие";

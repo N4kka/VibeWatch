@@ -18,6 +18,67 @@ protocol TrackingSeenBackend {
 
 extension SupabaseService: TrackingSeenBackend {}
 
+/// Lo specchio locale di `watch_events`, ridotto a ciò che serve alle azioni episodio-livello
+/// della lista episodi (SeasonDetailView). Protocollo per gli stessi motivi di
+/// `TrackingSeenBackend`: nei test lo specchio è un dizionario, non il database dell'app.
+protocol WatchEventLocalMirror {
+    func insert(_ record: [String: Any]) async
+    func activeEventIds(userId: String, showId: Int, season: Int, episode: Int) async -> [String]
+    func tombstone(ids: [String]) async
+}
+
+struct SQLiteWatchEventMirror: WatchEventLocalMirror {
+    func insert(_ record: [String: Any]) async {
+        let id = record["id"] as? String ?? ""
+        let userId = record["user_id"] as? String ?? ""
+        let showId = record["tmdb_show_id"] as? Int ?? 0
+        let season = record["season_number"] as? Int ?? 0
+        let episode = record["episode_number"] as? Int ?? 0
+        let watchedAt = record["watched_at"] as? String ?? ""
+        let precision = record["watched_at_precision"] as? String ?? "exact"
+        let isSpecial = (record["is_special"] as? Bool) == true ? 1 : 0
+        let source = record["source"] as? String ?? "manual"
+        let parameters: [Any] = [
+            id, userId, showId, season, episode, watchedAt, precision, isSpecial, source,
+        ]
+        do {
+            try await SQLiteService.shared.executeWrite(
+                """
+                INSERT OR IGNORE INTO watch_events (
+                    id, user_id, media_type, tmdb_show_id, season_number, episode_number,
+                    watched_at, watched_at_precision, is_special, source
+                ) VALUES (?, ?, 'tv', ?, ?, ?, ?, ?, ?, ?)
+                """,
+                parameters: parameters
+            )
+        } catch {
+            // Lo specchio si riallinea comunque al prossimo pull completo: si logga e basta.
+            Logger.warning("[Tracking] write-through specchio fallito: \(error.localizedDescription)")
+        }
+    }
+
+    func activeEventIds(userId: String, showId: Int, season: Int, episode: Int) async -> [String] {
+        let rows = (try? await SQLiteService.shared.queryRaw(
+            """
+            SELECT id FROM watch_events
+            WHERE user_id = ? AND tmdb_show_id = ? AND season_number = ? AND episode_number = ?
+              AND media_type = 'tv' AND deleted_at IS NULL
+            """,
+            parameters: [userId, showId, season, episode]
+        )) ?? []
+        return rows.compactMap { $0["id"] as? String }
+    }
+
+    func tombstone(ids: [String]) async {
+        guard !ids.isEmpty else { return }
+        let placeholders = ids.map { _ in "?" }.joined(separator: ", ")
+        try? await SQLiteService.shared.executeWrite(
+            "UPDATE watch_events SET deleted_at = datetime('now') WHERE id IN (\(placeholders))",
+            parameters: ids
+        )
+    }
+}
+
 @MainActor
 final class TrackingActions {
     static let shared = TrackingActions()
@@ -25,15 +86,18 @@ final class TrackingActions {
     private let syncEngine: any SyncEngineProtocol
     private let currentUserId: @MainActor () -> String?
     private let seenBackend: any TrackingSeenBackend
+    private let mirror: any WatchEventLocalMirror
 
     init(
         syncEngine: any SyncEngineProtocol = SyncEngine.shared,
         currentUserId: @escaping @MainActor () -> String? = { SupabaseService.shared.currentUser?.id },
-        seenBackend: any TrackingSeenBackend = SupabaseService.shared
+        seenBackend: any TrackingSeenBackend = SupabaseService.shared,
+        mirror: any WatchEventLocalMirror = SQLiteWatchEventMirror()
     ) {
         self.syncEngine = syncEngine
         self.currentUserId = currentUserId
         self.seenBackend = seenBackend
+        self.mirror = mirror
     }
 
     enum ActionError: LocalizedError, Equatable {
@@ -61,13 +125,91 @@ final class TrackingActions {
             throw ActionError.noNextEpisode
         }
 
+        try await queueWatchEvent(userId: userId, showId: row.showId, season: season, episode: episode)
+
+        // Il ponte verso la lista episodi: SeasonDetailView legge EpisodeSeenManager per i
+        // tap fatti lì dentro, e senza questa riga un "visto" dalle card non vi compariva
+        // finché il pull non riportava l'evento nello specchio. `markEpisodeSeen` esisteva
+        // per questo (dice il suo commento) ma nessuno lo chiamava.
+        EpisodeSeenManager.shared.markEpisodeSeen(
+            showId: row.showId, seasonNumber: season, episodeNumber: episode)
+
+        // Senza questo il tap non produce **niente di visibile**: l'evento parte, il trigger
+        // ricalcola `tv_show_state` sul server, e la schermata continua a leggere lo specchio
+        // locale `tv_tracking`, che solo un pull aggiorna. Il progresso lo decide il server
+        // (§1.1) — quindi l'unico modo di sapere qual è il prossimo episodio è chiederglielo.
+        await syncEngine.pullTrackingState()
+        Self.announceTrackingChanged()
+    }
+
+    // MARK: - Azioni episodio-livello (lista episodi di SeasonDetailView)
+
+    /// Un "visto" tappato sulla lista episodi. Stessa mutazione della card Tracking — è ciò che
+    /// fa avanzare le card di Scopri e del Tracking, che prima questo tap non toccava affatto —
+    /// più il write-through nello specchio locale, così lo smarcamento ritrova l'id anche prima
+    /// del pull completo. Batch perché "hai visto anche i precedenti?" ne marca N in un colpo.
+    func markEpisodesWatched(showId: Int, episodes: [(season: Int, episode: Int)]) async throws {
+        guard let userId = currentUserId() else { throw ActionError.notAuthenticated }
+        guard !episodes.isEmpty else { return }
+
+        for ep in episodes {
+            try await queueWatchEvent(userId: userId, showId: showId, season: ep.season, episode: ep.episode)
+            EpisodeSeenManager.shared.markEpisodeSeen(
+                showId: showId, seasonNumber: ep.season, episodeNumber: ep.episode)
+        }
+
+        await syncEngine.pullTrackingState()
+        Self.announceTrackingChanged()
+    }
+
+    /// Lo smarcamento di un episodio dalla lista: lapide sugli eventi noti allo specchio locale
+    /// (DELETE remota per id) + rimozione del tap locale. `allEpisodeNumbersInSeason` serve a
+    /// EpisodeSeenManager per espandere l'eventuale flag "serie vista" in chiavi per-episodio.
+    func unmarkEpisodesWatched(
+        showId: Int,
+        episodes: [(season: Int, episode: Int)],
+        allEpisodeNumbersInSeason: [Int]
+    ) async throws {
+        guard let userId = currentUserId() else { throw ActionError.notAuthenticated }
+        guard !episodes.isEmpty else { return }
+
+        for ep in episodes {
+            let ids = await mirror.activeEventIds(
+                userId: userId, showId: showId, season: ep.season, episode: ep.episode)
+            for id in ids {
+                try await syncEngine.queueOperation(
+                    table: "watch_events",
+                    operationType: "DELETE",
+                    recordId: id,
+                    payload: ["id": id, "user_id": userId],
+                    dependsOn: nil
+                )
+            }
+            await mirror.tombstone(ids: ids)
+            EpisodeSeenManager.shared.unmarkEpisode(
+                showId: showId, seasonNumber: ep.season, episodeNumber: ep.episode,
+                allEpisodeNumbersInSeason: allEpisodeNumbersInSeason)
+        }
+
+        await syncEngine.pullTrackingState()
+        Self.announceTrackingChanged()
+    }
+
+    /// Le card di Scopri e del Tracking si rileggono al `syncEngineCompleted`: dopo un'azione
+    /// partita da un'altra schermata (la lista episodi) non c'è nessun ViewModel da ricaricare a
+    /// mano, quindi si annuncia — come fa il sync — e ognuno si riallinea da sé.
+    private static func announceTrackingChanged() {
+        NotificationCenter.default.post(name: .syncEngineCompleted, object: nil)
+    }
+
+    private func queueWatchEvent(userId: String, showId: Int, season: Int, episode: Int) async throws {
         let id = UUID().uuidString
         let payload: [String: Any] = [
             "id": id,
             // Obbligatorio. Vedi il commento in testa: senza, l'evento viene scartato in silenzio.
             "user_id": userId,
             "media_type": "tv",
-            "tmdb_show_id": row.showId,
+            "tmdb_show_id": showId,
             "season_number": season,
             "episode_number": episode,
             "watched_at": ISO8601DateFormatter().string(from: Date()),
@@ -86,19 +228,7 @@ final class TrackingActions {
             payload: payload,
             dependsOn: nil
         )
-
-        // Il ponte verso la lista episodi: SeasonDetailView legge EpisodeSeenManager per i
-        // tap fatti lì dentro, e senza questa riga un "visto" dalle card non vi compariva
-        // finché il pull non riportava l'evento nello specchio. `markEpisodeSeen` esisteva
-        // per questo (dice il suo commento) ma nessuno lo chiamava.
-        EpisodeSeenManager.shared.markEpisodeSeen(
-            showId: row.showId, seasonNumber: season, episodeNumber: episode)
-
-        // Senza questo il tap non produce **niente di visibile**: l'evento parte, il trigger
-        // ricalcola `tv_show_state` sul server, e la schermata continua a leggere lo specchio
-        // locale `tv_tracking`, che solo un pull aggiorna. Il progresso lo decide il server
-        // (§1.1) — quindi l'unico modo di sapere qual è il prossimo episodio è chiederglielo.
-        await syncEngine.pullTrackingState()
+        await mirror.insert(payload)
     }
 
     /// "Più avanti": sposta la serie nel bucket `for_later` (§3.4).

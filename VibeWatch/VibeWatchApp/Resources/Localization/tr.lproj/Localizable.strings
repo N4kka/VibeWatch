@@ -920,3 +920,15 @@
 "gamification.challenge.list_2" = "Add 2 titles to a list";
 "gamification.challenge.watch_new_genre" = "Watch a clip from a new genre";
 "gamification.challenge.complete_5" = "Complete 5 clips (>70%)";
+
+// SeasonDetailView — conferme di marcatura episodi (2026-08-04)
+"season.confirmUnaired.title" = "Henüz yayınlanmadı";
+"season.confirmUnaired.message" = "S%dE%d henüz yayınlanmadı. Yine de izlendi olarak işaretlensin mi?";
+"season.confirmUnaired.confirm" = "İzlendi olarak işaretle";
+"season.confirmPrevious.title" = "Önceki bölümleri izledin mi?";
+"season.confirmPrevious.message" = "İzlendi olarak işaretlenmemiş %d önceki bölüm var.";
+"season.confirmPrevious.markAll" = "Evet, hepsini işaretle";
+"season.confirmPrevious.onlyThis" = "Sadece bu";
+"season.confirmUnairedSeason.message" = "Bu sezonun %d bölümü henüz yayınlanmadı. Yine de izlendi olarak işaretlensin mi?";
+"season.confirmUnairedSeason.markAll" = "Hepsini işaretle";
+"season.confirmUnairedSeason.onlyAired" = "Sadece yayınlananlar";

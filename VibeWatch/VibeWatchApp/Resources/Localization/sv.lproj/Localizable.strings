@@ -920,3 +920,15 @@
 "gamification.challenge.list_2" = "Add 2 titles to a list";
 "gamification.challenge.watch_new_genre" = "Watch a clip from a new genre";
 "gamification.challenge.complete_5" = "Complete 5 clips (>70%)";
+
+// SeasonDetailView — conferme di marcatura episodi (2026-08-04)
+"season.confirmUnaired.title" = "Har inte sänts än";
+"season.confirmUnaired.message" = "S%dE%d har inte sänts än. Markera som sedd ändå?";
+"season.confirmUnaired.confirm" = "Markera som sedd";
+"season.confirmPrevious.title" = "Har du sett de tidigare avsnitten?";
+"season.confirmPrevious.message" = "Det finns %d tidigare avsnitt som inte är markerade som sedda.";
+"season.confirmPrevious.markAll" = "Ja, markera alla";
+"season.confirmPrevious.onlyThis" = "Bara detta";
+"season.confirmUnairedSeason.message" = "%d avsnitt av denna säsong har inte sänts än. Markera som sedda ändå?";
+"season.confirmUnairedSeason.markAll" = "Markera alla";
+"season.confirmUnairedSeason.onlyAired" = "Bara de sända";

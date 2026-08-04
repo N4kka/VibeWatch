@@ -932,3 +932,15 @@
 "gamification.challenge.list_2" = "Add 2 titles to a list";
 "gamification.challenge.watch_new_genre" = "Watch a clip from a new genre";
 "gamification.challenge.complete_5" = "Complete 5 clips (>70%)";
+
+// SeasonDetailView — conferme di marcatura episodi (2026-08-04)
+"season.confirmUnaired.title" = "Ei ole vielä esitetty";
+"season.confirmUnaired.message" = "Jaksoa S%dE%d ei ole vielä esitetty. Merkitäänkö silti katsotuksi?";
+"season.confirmUnaired.confirm" = "Merkitse katsotuksi";
+"season.confirmPrevious.title" = "Katsoitko myös aiemmat jaksot?";
+"season.confirmPrevious.message" = "%d aiempaa jaksoa ei ole merkitty katsotuiksi.";
+"season.confirmPrevious.markAll" = "Kyllä, merkitse kaikki";
+"season.confirmPrevious.onlyThis" = "Vain tämä";
+"season.confirmUnairedSeason.message" = "%d tämän kauden jaksoa ei ole vielä esitetty. Merkitäänkö silti katsotuiksi?";
+"season.confirmUnairedSeason.markAll" = "Merkitse kaikki";
+"season.confirmUnairedSeason.onlyAired" = "Vain esitetyt";

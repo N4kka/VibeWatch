@@ -932,3 +932,15 @@
 "gamification.challenge.list_2" = "Add 2 titles to a list";
 "gamification.challenge.watch_new_genre" = "Watch a clip from a new genre";
 "gamification.challenge.complete_5" = "Complete 5 clips (>70%)";
+
+// SeasonDetailView — conferme di marcatura episodi (2026-08-04)
+"season.confirmUnaired.title" = "아직 방영되지 않음";
+"season.confirmUnaired.message" = "S%dE%d은(는) 아직 방영되지 않았습니다. 그래도 시청함으로 표시할까요?";
+"season.confirmUnaired.confirm" = "시청함으로 표시";
+"season.confirmPrevious.title" = "이전 에피소드도 보셨나요?";
+"season.confirmPrevious.message" = "시청함으로 표시되지 않은 이전 에피소드가 %d개 있습니다.";
+"season.confirmPrevious.markAll" = "네, 모두 표시";
+"season.confirmPrevious.onlyThis" = "이것만";
+"season.confirmUnairedSeason.message" = "이 시즌의 %d개 에피소드는 아직 방영되지 않았습니다. 그래도 시청함으로 표시할까요?";
+"season.confirmUnairedSeason.markAll" = "모두 표시";
+"season.confirmUnairedSeason.onlyAired" = "방영된 것만";
