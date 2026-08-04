@@ -124,6 +124,13 @@ final class LocalTrackingRepository: TrackingRepositoryProtocol {
     /// `UserPreferenceManager` leggevano ancora le liste legacy e vedevano meno serie di quelle
     /// che ListsView mostra — la copia che diverge, di nuovo. Chiunque abbia bisogno delle "TV
     /// in watchlist/viste" passa da qui; `ListManager` ci mappa sopra i suoi `MediaListItem`.
+    ///
+    /// La watchlist TV comprende anche `up_next` e `stale` (2026-08-04): con i soli
+    /// `not_started`/`for_later`, una serie con episodi visti non poteva MAI comparirci — il
+    /// ricalcolo server la spostava in un bucket che nessuna lista leggeva, così "Aggiunto alla
+    /// watchlist" mostrava il toast e non cambiava niente (né checkmark né riga in ListsView).
+    /// Semantica risultante, alla TV Time: watchlist = serie che segui e non hai finito;
+    /// "viste" = `up_to_date`. Il toggle-off resta "smetti di seguire" (`dropped`).
     func fusedListRows(userId: String) async throws -> [FusedListRow] {
         let sql = """
             SELECT t.tmdb_show_id, t.bucket,
@@ -132,7 +139,8 @@ final class LocalTrackingRepository: TrackingRepositoryProtocol {
               FROM tv_tracking t
               LEFT JOIN localized_titles lt
                 ON lt.media_type = 'tv' AND lt.tmdb_id = t.tmdb_show_id AND lt.language = ?
-             WHERE t.user_id = ? AND t.bucket IN ('not_started', 'for_later', 'up_to_date')
+             WHERE t.user_id = ?
+               AND t.bucket IN ('not_started', 'for_later', 'up_next', 'stale', 'up_to_date')
         """
 
         return try await sqlite.queryRaw(sql, parameters: [language(), userId]).compactMap { row in
