@@ -224,9 +224,15 @@ struct ImportReviewView: View {
     /// Chiamata quando il batch è partito o l'utente rimanda: l'onboarding la usa per
     /// proseguire con le tappe; in app non serve.
     var onFinished: (() -> Void)?
+    /// La card da cui si arriva: la ricerca si apre già su quel titolo, invece di far
+    /// ritrovare la riga in un elenco lungo.
+    var focusItemId: String?
 
-    init(viewModel: ImportReviewViewModel? = nil, onFinished: (() -> Void)? = nil) {
+    init(viewModel: ImportReviewViewModel? = nil,
+         focusItemId: String? = nil,
+         onFinished: (() -> Void)? = nil) {
         _viewModel = StateObject(wrappedValue: viewModel ?? ImportReviewViewModel())
+        self.focusItemId = focusItemId
         self.onFinished = onFinished
     }
 
@@ -253,6 +259,12 @@ struct ImportReviewView: View {
         }
         .sheet(item: $viewModel.searchItem) { item in
             ImportReviewSearchSheet(item: item, viewModel: viewModel)
+        }
+        .task {
+            guard let focusItemId,
+                  let item = viewModel.items.first(where: { $0.id == focusItemId })
+            else { return }
+            viewModel.searchItem = item
         }
     }
 

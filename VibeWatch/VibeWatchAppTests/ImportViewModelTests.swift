@@ -598,6 +598,62 @@ final class ImportViewModelTests: XCTestCase {
         XCTAssertEqual(vm.state, .done(pulito), "il report a schermo è quello riletto")
     }
 
+    /// Redesign 2.0: chi escludi resta nel report — ma fuori dall'inbox, che è l'elenco di
+    /// quello che c'è ancora da fare.
+    func testGliEsclusiRestanoNelReportMaNonNellInbox() {
+        let json: [String: Any] = [
+            "episodi_importati": 10,
+            "non_riconosciuti_elenco": [
+                ["titolo": "Da verificare", "episodi": 3, "motivo": "catalogo: not_found",
+                 "tvdb_series_id": "900", "escluso": false],
+                ["titolo": "Escluso da me", "episodi": 1, "motivo": "escluso: utente",
+                 "tvdb_series_id": "901", "escluso": true]
+            ]
+        ]
+        let report = ImportReport(json: json)
+
+        XCTAssertEqual(report?.leftOutItems.count, 2, "il report li mostra entrambi")
+        XCTAssertEqual(report?.reviewItems.map(\.titolo), ["Da verificare"],
+                       "l'inbox mostra solo ciò che è ancora da verificare")
+        XCTAssertEqual(report?.leftOutItems.last?.escluso, true)
+        XCTAssertEqual(report?.leftOutItems.last?.isResolvable, false,
+                       "un escluso non si riapre dalla card: è una decisione già presa")
+    }
+
+    /// I film non risolti portano anno e data di visione: senza, la card del report non
+    /// saprebbe dire quale film è.
+    func testIlFilmNonRisoltoPortaAnnoEDataDiVisione() {
+        let json: [String: Any] = [
+            "episodi_importati": 0,
+            "film_supportati": true,
+            "film_non_risolti_elenco": [
+                ["titolo": "Sotto il cielo di Kyoto", "tipo": "seen", "motivo": "film: not_found",
+                 "tvtime_movie_uuid": "u-1", "anno": "2018", "visto_il": "2019-03-12 21:00:00"]
+            ]
+        ]
+        let report = ImportReport(json: json)
+        let item = report?.leftOutItems.first
+
+        XCTAssertEqual(item?.anno, "2018")
+        XCTAssertEqual(item?.vistoIl, "2019-03-12 21:00:00")
+        XCTAssertEqual(item?.isMovie, true)
+    }
+
+    /// Un report vecchio non ha il campo: nessuno è escluso, e l'inbox resta quella di prima.
+    func testUnReportVecchioNonInventaEsclusioni() {
+        let json: [String: Any] = [
+            "episodi_importati": 1,
+            "non_riconosciuti_elenco": [
+                ["titolo": "Serie", "episodi": 2, "motivo": "catalogo: not_found",
+                 "tvdb_series_id": "900"]
+            ]
+        ]
+        let report = ImportReport(json: json)
+
+        XCTAssertEqual(report?.leftOutItems.first?.escluso, false)
+        XCTAssertEqual(report?.reviewItems.count, 1)
+    }
+
     func testLEsclusioneSenzaManiglieNonChiamaIlServer() async {
         let fake = Fake()
         fake.currentJob = ImportJobSnapshot(id: "j1", phase: "done", status: "done", error: nil)

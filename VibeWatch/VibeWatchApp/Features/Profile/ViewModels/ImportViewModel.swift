@@ -148,6 +148,9 @@ struct ImportReport: Equatable {
         /// L'id TVDB della serie nell'export: è la maniglia della risoluzione a mano (§7.4).
         /// Nullo per le righe che non ce l'hanno — lì il pulsante "Risolvi" non esiste.
         let tvdbSeriesId: String?
+        /// Escluso dall'utente durante la verifica. Resta nel report — sparire senza traccia
+        /// sarebbe peggio di restare — ma fuori dai conteggi di ciò che c'è ancora da fare.
+        var escluso: Bool = false
     }
 
     /// Uno stato per-serie (watchlist/archivio) rimasto senza catalogo: stessa maniglia
@@ -157,6 +160,7 @@ struct ImportReport: Equatable {
         let stato: String?
         let motivo: String
         let tvdbSeriesId: String?
+        var escluso: Bool = false
     }
 
     /// Un film di v1 non riconosciuto. Nessun id esterno: la sola azione possibile è
@@ -166,6 +170,10 @@ struct ImportReport: Equatable {
         let tipo: String?
         let motivo: String
         let tvtimeMovieUuid: String?
+        var escluso: Bool = false
+        /// Dall'export: servono alla card del report per dire QUALE film non è passato.
+        var anno: String? = nil
+        var vistoIl: String? = nil
     }
 
     let episodiImportati: Int
@@ -222,7 +230,8 @@ struct ImportReport: Equatable {
                 return Unresolved(titolo: titolo,
                                   episodi: row["episodi"] as? Int ?? 0,
                                   motivo: row["motivo"] as? String ?? "",
-                                  tvdbSeriesId: row["tvdb_series_id"] as? String)
+                                  tvdbSeriesId: row["tvdb_series_id"] as? String,
+                                  escluso: row["escluso"] as? Bool ?? false)
             }
         votiStelle = json["voti_stelle"] as? Int ?? 0
         votiReaction = json["voti_reaction"] as? Int ?? 0
@@ -239,7 +248,8 @@ struct ImportReport: Equatable {
                 return UnresolvedStatus(titolo: titolo,
                                         stato: row["stato"] as? String,
                                         motivo: row["motivo"] as? String ?? "",
-                                        tvdbSeriesId: row["tvdb_series_id"] as? String)
+                                        tvdbSeriesId: row["tvdb_series_id"] as? String,
+                                        escluso: row["escluso"] as? Bool ?? false)
             }
         favoritesSupportati = json["favorites_supportati"] as? Bool ?? false
         favoritesImportati = json["favorites_importati"] as? Int ?? 0
@@ -257,7 +267,10 @@ struct ImportReport: Equatable {
                 return UnresolvedMovie(titolo: titolo,
                                        tipo: row["tipo"] as? String,
                                        motivo: row["motivo"] as? String ?? "",
-                                       tvtimeMovieUuid: row["tvtime_movie_uuid"] as? String)
+                                       tvtimeMovieUuid: row["tvtime_movie_uuid"] as? String,
+                                       escluso: row["escluso"] as? Bool ?? false,
+                                       anno: row["anno"] as? String,
+                                       vistoIl: row["visto_il"] as? String)
             }
         episodiFuoriStruttura = json["episodi_fuori_struttura"] as? Int ?? 0
     }
@@ -318,6 +331,11 @@ struct ImportReviewItem: Identifiable, Equatable {
     /// Lo stato per-serie richiesto dall'export (watchlist/archivio), quando la card nasce
     /// da un `user_show_special_status` e non da episodi visti.
     let statoRichiesto: String?
+    /// Escluso dall'utente: fuori dall'inbox, ma nel report resta visibile col suo motivo.
+    var escluso: Bool = false
+    /// Solo per i film, e solo quando l'export li ha: anno di uscita e data di visione.
+    var anno: String? = nil
+    var vistoIl: String? = nil
 
     var id: String {
         switch source {
@@ -328,6 +346,7 @@ struct ImportReviewItem: Identifiable, Equatable {
 
     /// La risoluzione a mano esiste solo per le serie con un id TVDB usabile.
     var isResolvable: Bool {
+        guard !escluso else { return false }
         if case .series(let tvdbId) = source,
            let tvdbId, let numero = Int(tvdbId), numero > 0 { return true }
         return false
@@ -344,6 +363,13 @@ extension ImportReport {
     /// fuori (fusi con la serie se già presente), film non risolti. È la lista della pagina
     /// "Titoli da verificare" e il conteggio del banner.
     var reviewItems: [ImportReviewItem] {
+        leftOutItems.filter { !$0.escluso }
+    }
+
+    /// Tutto ciò che è rimasto fuori dalla libreria, **esclusioni comprese**. È la lista della
+    /// pagina di report: un titolo che hai escluso tu non è più lavoro da fare, ma deve restare
+    /// visibile — sparire senza traccia è il modo migliore per non fidarsi più di un import.
+    var leftOutItems: [ImportReviewItem] {
         var items: [ImportReviewItem] = []
         var serieViste = Set<String>()
 
@@ -352,7 +378,8 @@ extension ImportReport {
                                         titolo: row.titolo,
                                         episodi: row.episodi,
                                         motivo: row.motivo,
-                                        statoRichiesto: nil)
+                                        statoRichiesto: nil,
+                                        escluso: row.escluso)
             serieViste.insert(item.id)
             items.append(item)
         }
@@ -362,7 +389,8 @@ extension ImportReport {
                                         titolo: row.titolo,
                                         episodi: 0,
                                         motivo: row.motivo,
-                                        statoRichiesto: row.stato)
+                                        statoRichiesto: row.stato,
+                                        escluso: row.escluso)
             // La stessa serie può avere sia episodi sia uno stato irrisolti: una card sola.
             guard serieViste.insert(item.id).inserted else { continue }
             items.append(item)
@@ -373,7 +401,10 @@ extension ImportReport {
                                           titolo: row.titolo,
                                           episodi: 0,
                                           motivo: row.motivo,
-                                          statoRichiesto: row.tipo))
+                                          statoRichiesto: row.tipo,
+                                          escluso: row.escluso,
+                                          anno: row.anno,
+                                          vistoIl: row.vistoIl))
         }
 
         return items

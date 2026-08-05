@@ -395,6 +395,38 @@ select t.eq(public.import_report('aaaaaaaa-0000-4000-8000-000000000001')
               ->'film_non_risolti_elenco'->0->>'motivo',
             'film: not_found', 'con titolo e motivo, come per le serie');
 
+-- Redesign 2.0: chi escludi durante la verifica non sparisce dal report. Resta nell'elenco
+-- marcato `escluso`, ma FUORI dai contatori — quelli guidano l'inbox, e una scelta gia' presa
+-- non e' lavoro rimasto da fare.
+insert into public.import_staging (job_id, row_index, raw, resolved, status, error) values
+  ('aaaaaaaa-0000-4000-8000-000000000001', 94,
+   '{"row_kind":"event","series_name":"Serie Esclusa","tvdb_series_id":"902","watched_at":"2020-02-02 00:00:00"}'::jsonb,
+   null, 'skipped', 'escluso: utente'),
+  ('aaaaaaaa-0000-4000-8000-000000000001', 95,
+   '{"row_kind":"movie","movie_kind":"seen","title":"Film Escluso","tvtime_movie_uuid":"u-fe","release_year":2018,"happened_at":"2019-03-12 21:00:00"}'::jsonb,
+   null, 'skipped', 'escluso: utente');
+
+select t.eq((public.import_report('aaaaaaaa-0000-4000-8000-000000000001')->>'non_riconosciuti_serie')::int,
+            1, 'una serie esclusa non torna a contare fra i titoli da verificare');
+select t.eq(jsonb_array_length(public.import_report('aaaaaaaa-0000-4000-8000-000000000001')
+              ->'non_riconosciuti_elenco'),
+            2, 'ma resta nell''elenco: escluderla non la fa sparire senza traccia');
+select t.eq(public.import_report('aaaaaaaa-0000-4000-8000-000000000001')
+              ->'non_riconosciuti_elenco'->1->>'escluso',
+            'true', 'ed e'' marcata come esclusa, in fondo all''elenco');
+select t.eq(public.import_report('aaaaaaaa-0000-4000-8000-000000000001')
+              ->'non_riconosciuti_elenco'->0->>'escluso',
+            'false', 'mentre chi e'' ancora da verificare non lo e''');
+
+select t.eq((public.import_report('aaaaaaaa-0000-4000-8000-000000000001')->>'film_non_risolti')::int,
+            1, 'stessa regola per i film: l''escluso non conta');
+select t.eq(public.import_report('aaaaaaaa-0000-4000-8000-000000000001')
+              ->'film_non_risolti_elenco'->1->>'anno',
+            '2018', 'il report porta l''anno del film: la card deve poter dire quale film e''');
+select t.eq(public.import_report('aaaaaaaa-0000-4000-8000-000000000001')
+              ->'film_non_risolti_elenco'->1->>'visto_il',
+            '2019-03-12 21:00:00', 'e la data di visione dell''export');
+
 -- §7.5: i voti scritti davvero (import-write v5). Un secondo job coi quattro esiti della
 -- pipeline nuova: stella scritta, gia' in app (non e' una perdita), non risolta, reaction
 -- conservata. `voti_importati` qui e' STRUTTURALE: ogni stella processata → true.

@@ -77,7 +77,10 @@ for file in "$MIGRATIONS"/*.sql; do
     20260802240000_import_manual_resolve_atomic.sql) ;;
     20260802250000_catalog_map_found_immutable.sql) ;;
     20260803160000_import_manual_resolve_batch.sql) ;;
+    20260804100000_import_exclude_unresolved.sql) ;;
+    20260804150000_import_report_fuori_struttura.sql) ;;
     20260805100000_catalog_refresh_cron.sql) ;;
+    20260805120000_import_report_excluded_visible.sql) ;;
     *) continue ;;
   esac
   [ "$pass" = 1 ] && echo "   $(basename "$file")"

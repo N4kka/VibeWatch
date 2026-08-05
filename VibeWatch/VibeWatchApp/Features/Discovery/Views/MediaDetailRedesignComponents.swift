@@ -210,10 +210,12 @@ struct MediaProviderDisclosure: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .trailing)
-        .alert(MovieUnavailableNotificationCopyBuilder.alertTitle, isPresented: $showNotifyConfirmation) {
-            Button("OK", role: .cancel) { }
+        // Il copy della conferma esiste già localizzato per le stesse notifiche in Liste: qui
+        // prima era inglese scritto nel codice, in tutte e 20 le lingue.
+        .alert("lists.notifyMeTitle".localized, isPresented: $showNotifyConfirmation) {
+            Button("common.ok".localized, role: .cancel) { }
         } message: {
-            Text(MovieUnavailableNotificationCopyBuilder.alertMessage(title: title))
+            Text(String(format: "lists.notifyMeMessage".localized, title))
         }
         .task(id: notificationEnrollmentKey) {
             restoreNotificationState()
@@ -283,7 +285,10 @@ struct MediaProviderDisclosure: View {
                     notificationState = .enabled
                     showNotifyConfirmation = true
                 } catch {
+                    // Tornare a "Avvisami" senza dire niente sembra un tap che non ha fatto
+                    // effetto: l'utente deve sapere che non è stato attivato niente.
                     notificationState = .idle
+                    ToastCenter.shared.show(error: "mediaDetail.notifyMeFailed".localized)
                 }
             }
         }

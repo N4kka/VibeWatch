@@ -162,6 +162,10 @@ struct PlatformSelectionView: View {
     @StateObject private var viewModel = PlatformSelectionViewModel()
     @State private var selected: Set<Int> = []
     @State private var tier: PlatformSelectionViewModel.Tier = .streaming
+    /// L'elenco per regione può superare il centinaio di voci: senza filtro, trovare la propria
+    /// piattaforma significa scorrere.
+    @State private var query = ""
+    @FocusState private var isSearchFocused: Bool
 
     var body: some View {
         ZStack {
@@ -172,6 +176,7 @@ struct PlatformSelectionView: View {
                     VStack(alignment: .leading, spacing: 22) {
                         summaryCard
                         tierPicker
+                        searchField
                         Text("platforms.footnote".localized)
                             .font(.system(size: 12.5))
                             .foregroundColor(Color(hex: "6f7076"))
@@ -329,11 +334,60 @@ struct PlatformSelectionView: View {
         .background(RoundedRectangle(cornerRadius: 18).fill(Color.white.opacity(0.05)))
     }
 
+    // MARK: - Ricerca
+
+    private var searchField: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(isSearchActive ? .theme.accentOrange : .theme.textSecondary)
+
+            TextField("platforms.search".localized, text: $query)
+                .font(.system(size: 15.5))
+                .foregroundColor(.theme.textPrimary)
+                .focused($isSearchFocused)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+
+            if !query.isEmpty {
+                Button {
+                    query = ""
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 10.5, weight: .heavy))
+                        .foregroundColor(.theme.textPrimary)
+                        .frame(width: 24, height: 24)
+                        .background(Circle().fill(Color.white.opacity(0.14)))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 15)
+        .frame(height: 46)
+        .background(Capsule().fill(Color.white.opacity(0.05)))
+        .overlay(
+            Capsule().stroke(
+                isSearchActive ? Color.theme.accentOrange : Color.white.opacity(0.08),
+                lineWidth: isSearchActive ? 1.5 : 1
+            )
+        )
+    }
+
+    private var isSearchActive: Bool { isSearchFocused || !query.isEmpty }
+
+    /// Filtro per nome, con la stessa normalizzazione della ricerca titoli: "disney" trova
+    /// "Disney Plus", "canal" trova "Canal+".
+    private func matchesQuery(_ provider: Provider) -> Bool {
+        let normalized = SearchRanking.normalize(query)
+        guard !normalized.isEmpty else { return true }
+        return SearchRanking.normalize(provider.providerName).contains(normalized)
+    }
+
     // MARK: - Righe
 
     @ViewBuilder
     private var providerRows: some View {
-        let rows = viewModel.providers(for: tier, selected: selected)
+        let rows = viewModel.providers(for: tier, selected: selected).filter(matchesQuery)
         let recommended = viewModel.recommendedProviderId(selected: selected)
 
         if rows.isEmpty {
@@ -342,9 +396,10 @@ struct PlatformSelectionView: View {
                 if viewModel.isLoading {
                     ProgressView()
                 } else {
-                    Text("platforms.empty".localized)
+                    Text((query.isEmpty ? "platforms.empty" : "platforms.searchEmpty").localized)
                         .font(.system(size: 14))
                         .foregroundColor(.theme.textSecondary)
+                        .multilineTextAlignment(.center)
                 }
                 Spacer()
             }
