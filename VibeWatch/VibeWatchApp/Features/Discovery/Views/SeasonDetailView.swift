@@ -291,8 +291,9 @@ struct SeasonDetailView: View {
                         InfoRow(title: "movieDetail.runtime".localized, value: runtime)
                     }
 
-                    if let countries = tvShow?.productionCountries, !countries.isEmpty {
-                        InfoRow(title: "movieDetail.country".localized, value: countries.first?.name ?? "")
+                    if let country = tvShow?.productionCountries?.first,
+                       let name = MediaInfoFormatting.localizedCountry(iso: country.iso, fallback: country.name) {
+                        InfoRow(title: "movieDetail.country".localized, value: name)
                     }
 
                     if let director = director {
@@ -349,7 +350,7 @@ struct SeasonDetailView: View {
 
     private func episodesSection(episodes: [Episode]) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Episodes")
+            Text("tvDetail.episodesTitle".localized)
                 .font(.system(size: 20, weight: .bold))
                 .foregroundColor(.theme.textPrimary)
                 .padding(.horizontal, 20)

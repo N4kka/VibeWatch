@@ -36,7 +36,7 @@
 // Lists
 "list.all" = "전체";
 "list.movies" = "영화";
-"list.tvShows" = "TV";
+"list.tvShows" = "TV 시리즈";
 "lists.myLists" = "내 리스트";
 "lists.collections" = "컬렉션";
 "lists.empty" = "아직 리스트가 없어요";
@@ -52,7 +52,7 @@
 "lists.descriptionPlaceholder" = "설명을 추가하세요... (선택)";
 "lists.listDescriptionPlaceholder" = "설명을 추가하세요...";
 "lists.searchPlaceholder" = "이 리스트에서 검색";
-"lists.watchlist" = "시청 예정";
+"lists.watchlist" = "시청 목록";
 "lists.seen" = "봤어요";
 "lists.liked" = "좋아요";
 "lists.disliked" = "별로였어요";
@@ -128,7 +128,7 @@
 "clips.noClipsAvailable" = "클립이 없어요";
 "clips.noClipsDescription" = "좋아하는 영화와 시리즈의 멋진 장면은 나중에 다시 확인해 주세요";
 "clips.addToList" = "리스트에 추가";
-"clips.card.addToWatchlist" = "+ Watchlist";
+"clips.card.addToWatchlist" = "+ 시청 목록";
 "clips.card.goToDetail" = "상세 보기";
 "clips.createFirstList" = "픽을 저장하려면 첫 번째 시청 목록을 만들어 보세요";
 "clips.createNewList" = "새 리스트 만들기";
@@ -417,7 +417,7 @@
 "import.report.favoritesApplied" = "즐겨찾기 %d개를 빈 슬롯으로 가져왔습니다.";
 "import.report.favoriteMoviesUnsupported" = "영화 즐겨찾기 %d개는 TV Time에서 가져올 수 없습니다.";
 "import.report.moviesApplied" = "영화 %d편을 시청 날짜와 함께 가져왔습니다.";
-"import.report.moviesWatchlistApplied" = "영화 %d편을 시청 예정 목록에 추가했습니다.";
+"import.report.moviesWatchlistApplied" = "영화 %d편을 시청 목록에 추가했습니다.";
 "import.report.moviesUnresolved" = "영화 %d편을 인식하지 못했습니다(제목과 연도가 TMDB와 일치하지 않음).";
 "import.resolve.button" = "해결";
 "import.resolve.batchButton" = "제목 %d개 해결";
@@ -430,7 +430,7 @@
 "import.resolve.empty" = "결과가 없습니다.";
 "import.resolve.failed" = "해결하지 못했습니다:";
 "import.resolve.searchFailed" = "검색에 실패했습니다.";
-"import.report.statusesApplied" = "%d개의 시리즈 상태를 복원했습니다(찜 목록 및 보관).";
+"import.report.statusesApplied" = "%d개의 시리즈 상태를 복원했습니다(시청 목록 및 보관함).";
 "import.report.statusesUnresolved" = "%d개의 시리즈 상태를 적용하지 못했습니다.";
 "import.report.unresolvedTitle" = "에피소드 %d개를 맞추지 못했습니다";
 "import.report.unresolvedRow" = "%d개 에피소드";
@@ -493,9 +493,9 @@
 "actor.biography.showMore" = "더 보기";
 "actor.biography.showLess" = "접기";
 
-"actor.birthday" = "Born: %@";
-"actor.birthday.line" = "%@ (%@ years old)";
-"actor.known_for" = "Known For";
+"actor.birthday" = "출생: %@";
+"actor.birthday.line" = "%@ (%@세)";
+"actor.known_for" = "주요 작품";
 "actor.search.placeholder" = "필모그래피 검색…";
 "actor.search.noResults" = "검색 결과 없음:";
 "actor.filmography.empty" = "크레딧을 찾을 수 없습니다.";
@@ -503,7 +503,7 @@
 // Global Discovery Filters
 "filters.mediaType" = "미디어 유형";
 "filters.movies" = "영화";
-"filters.tvShows" = "TV 쇼";
+"filters.tvShows" = "TV 시리즈";
 "filters.both" = "둘 다";
 "filters.rating" = "평점";
 "filters.releasePeriod" = "개봉 기간";
@@ -602,7 +602,7 @@
 "notifications.enableButton" = "알림 켜기";
 "notifications.types" = "알림 종류";
 "notifications.newEpisodes" = "새 에피소드";
-"notifications.newEpisodesDesc" = "시청 중인 시리즈의 새 에피소드가 उपलब्ध해지면 알려드려요";
+"notifications.newEpisodesDesc" = "시청 중인 시리즈의 새 에피소드가 공개되면 알려드려요";
 "notifications.personalizedReleases" = "맞춤 신작";
 "notifications.personalizedReleasesDesc" = "취향에 맞는 새로운 영화와 시리즈";
 "notifications.favoriteActors" = "좋아하는 배우 & 감독";
@@ -630,7 +630,7 @@
 "notifications.preferencesUpdated" = "알림 설정이 업데이트되었습니다.";
 "notifications.typesFooter" = "받고 싶은 알림을 선택하세요";
 "notifications.newAvailability" = "새 이용 가능 알림";
-"notifications.newAvailabilityDesc" = "관심 목록의 항목을 스트리밍, 대여 또는 구매할 수 있게 될 때";
+"notifications.newAvailabilityDesc" = "시청 목록의 작품을 스트리밍, 대여 또는 구매할 수 있게 될 때";
 "notifications.newRelease" = "새 출시";
 "notifications.newReleaseDesc" = "\"알림 받기\"를 누른 영화와 시리즈가 공개될 때";
 "notifications.episodeAired" = "새 에피소드";
@@ -650,31 +650,31 @@
 "lists.notifyMe" = "알림 받기";
 "lists.watchOn" = "%@에서 보기";
 "lists.notifyMeTitle" = "알림 받기";
-"lists.notifyMeMessage" = "'%@'이(가) 스트리밍/대여/구매로 उपलब्ध해지는 즉시 알림을 보내드릴게요.";
+"lists.notifyMeMessage" = "'%@'을(를) 스트리밍/대여/구매로 볼 수 있게 되면 바로 알려드릴게요.";
 
 // Error Views
 "error.oops" = "이런!";
 
 // TV Show Detail - Mark All Seen Confirmation
 "tvDetail.markAllSeenTitle" = "시리즈 전체를 시청함으로 표시";
-"tvDetail.markAllSeenDescription" = "This action will apply to all episodes and seasons of the series available.";
-"tvDetail.markAllSeenQuestion" = "Do you want to continue?";
-"tvDetail.markAllSeenConfirm" = "Yes, mark as seen";
-"tvDetail.markAllSeenCancel" = "No, cancel";
-"tvDetail.seasonSeenShort" = "seen";
+"tvDetail.markAllSeenDescription" = "이 작업은 공개된 모든 시즌과 에피소드에 적용돼요.";
+"tvDetail.markAllSeenQuestion" = "계속할까요?";
+"tvDetail.markAllSeenConfirm" = "네, 시청함으로 표시";
+"tvDetail.markAllSeenCancel" = "아니요, 취소";
+"tvDetail.seasonSeenShort" = "시청함";
 
 // Library section switcher
-"lists.section.myLists" = "My Lists";
-"lists.section.tvTracking" = "TV Shows Tracking";
+"lists.section.myLists" = "내 리스트";
+"lists.section.tvTracking" = "TV 시리즈 트래킹";
 
 // TV Shows Tracking
-"tvTracking.continuing" = "Continue Watching";
-"tvTracking.notStarted" = "Not Started";
-"tvTracking.upToDate" = "Up to Date";
-"tvTracking.emptyState" = "No TV shows found";
+"tvTracking.continuing" = "이어서 보기";
+"tvTracking.notStarted" = "시작 안 함";
+"tvTracking.upToDate" = "최신까지 시청";
+"tvTracking.emptyState" = "TV 시리즈를 찾을 수 없어요";
 "carousel.fromActor" = "%@의 다른 작품";
 "carousel.decadeClassics" = "%@ 클래식";
-"carousel.moodTonight" = "오늘 밤 %@";
+"carousel.moodTonight" = "오늘 밤은 %@";
 "carousel.regionSpotlight" = "%@ 스포트라이트";
 "carousel.topInGenre" = "%@ 인기작";
 "carousel.hotThisWeekInGenre" = "이번 주 %@ 인기작";
@@ -690,35 +690,35 @@
 "carousel.documentaries" = "나를 위한 다큐멘터리";
 "discovery.endOfFeed" = "모두 확인했어요";
 /* MARK: - Public Lists (Fase 1) */
-"lists.section.publicLists" = "Public Lists";
-"lists.public.scope.explore" = "Explore";
-"lists.public.scope.followed" = "Followed";
-"lists.public.searchPlaceholder" = "Search public lists";
-"lists.public.empty.explore" = "No public lists found";
-"lists.public.empty.followed" = "You're not following any list yet";
-"lists.public.follow" = "Follow";
-"lists.public.following" = "Following";
-"lists.public.unavailable" = "This list is no longer available";
-"lists.public.report" = "Report list";
-"lists.public.report.confirm" = "Report this list as inappropriate?";
-"lists.public.report.done" = "Thanks, your report has been received";
-"lists.public.block" = "Block user";
-"lists.public.block.confirm" = "Block this user? Their public lists will be hidden.";
-"lists.public.createFromThis" = "Create public list from this";
-"lists.public.toggle" = "Public list";
-"lists.public.toggle.footer" = "Public lists can be discovered and followed by other users.";
-"lists.public.profanity.title" = "Inappropriate content";
-"lists.public.profanity" = "Please remove inappropriate language from the name or description before publishing.";
-"lists.public.guidelines.title" = "Community guidelines";
-"lists.public.guidelines.body" = "By publishing a list you agree to our community guidelines: no offensive, hateful or illegal content. Lists that violate them may be hidden and reported users may be removed.";
-"lists.public.guidelines.accept" = "Accept and publish";
-"lists.duplicateName" = "Copy of %@";
+"lists.section.publicLists" = "공개 리스트";
+"lists.public.scope.explore" = "둘러보기";
+"lists.public.scope.followed" = "팔로우 중";
+"lists.public.searchPlaceholder" = "공개 리스트 검색";
+"lists.public.empty.explore" = "공개 리스트를 찾을 수 없어요";
+"lists.public.empty.followed" = "아직 팔로우 중인 리스트가 없어요";
+"lists.public.follow" = "팔로우";
+"lists.public.following" = "팔로우 중";
+"lists.public.unavailable" = "이 리스트는 더 이상 이용할 수 없어요";
+"lists.public.report" = "리스트 신고";
+"lists.public.report.confirm" = "이 리스트를 부적절한 콘텐츠로 신고할까요?";
+"lists.public.report.done" = "감사합니다. 신고가 접수되었어요";
+"lists.public.block" = "사용자 차단";
+"lists.public.block.confirm" = "이 사용자를 차단할까요? 이 사용자의 공개 리스트는 숨겨져요.";
+"lists.public.createFromThis" = "이 리스트로 공개 리스트 만들기";
+"lists.public.toggle" = "공개 리스트";
+"lists.public.toggle.footer" = "공개 리스트는 다른 사용자가 찾아보고 팔로우할 수 있어요.";
+"lists.public.profanity.title" = "부적절한 콘텐츠";
+"lists.public.profanity" = "게시하기 전에 이름이나 설명에서 부적절한 표현을 지워 주세요.";
+"lists.public.guidelines.title" = "커뮤니티 가이드라인";
+"lists.public.guidelines.body" = "리스트를 게시하면 커뮤니티 가이드라인에 동의하는 것으로 간주돼요. 모욕적이거나 혐오를 조장하거나 불법적인 콘텐츠는 금지됩니다. 이를 위반한 리스트는 숨겨질 수 있고, 신고된 사용자는 제재될 수 있어요.";
+"lists.public.guidelines.accept" = "동의하고 게시";
+"lists.duplicateName" = "%@ 복사본";
 /* MARK: - TV Tracking (card stile JustWatch) */
-"tvTracking.titlesCount" = "%d titles";
-"tvTracking.episodesRemaining" = "%d episodes remaining";
-"tvTracking.lastSeen" = "LAST SEEN %@";
-"tvTracking.soon" = "soon";
-"tvTracking.watchNow" = "Watch now";
+"tvTracking.titlesCount" = "작품 %d개";
+"tvTracking.episodesRemaining" = "에피소드 %d개 남음";
+"tvTracking.lastSeen" = "마지막 시청 %@";
+"tvTracking.soon" = "곧";
+"tvTracking.watchNow" = "지금 보기";
 
 /* SPEC v3 §9.2 — schermata Tracking */
 "tracking.title" = "트래킹";
@@ -857,7 +857,7 @@
 "profile.edit.bioPlaceholder" = "자신에 대해 알려주세요 (선택 사항)";
 "profile.edit.changePhoto" = "사진 변경";
 "profile.edit.publicProfile" = "공개 프로필";
-"profile.edit.publicProfileSubtitle" = "다른 사용자가 나를 찾고 공개 목록을 팔로우할 수 있습니다";
+"profile.edit.publicProfileSubtitle" = "다른 사용자가 나를 찾고 공개 리스트를 팔로우할 수 있어요";
 "profile.edit.saveError" = "프로필을 저장할 수 없습니다. 다시 시도해 주세요.";
 "profile.imageCache" = "이미지 캐시";
 "profile.imageCache.subtitle" = "WiFi에서만 미리 불러오기";
@@ -872,9 +872,9 @@
 "auth.fullNamePlaceholder" = "성명";
 "onboarding.welcome.cta" = "시작하기";
 "onboarding.import.title" = "시청 기록을 가져오세요";
-"onboarding.import.subtitle" = "시리즈, 시청한 에피소드, 시청 예정 목록을 가져옵니다. 가져오기가 끝나면 앱은 바로 준비 완료.";
+"onboarding.import.subtitle" = "시리즈, 시청한 에피소드, 시청 목록을 가져옵니다. 가져오기가 끝나면 앱은 바로 준비 완료.";
 "onboarding.import.tvtime" = "TV Time에서 가져오기";
-"onboarding.import.tvtime.subtitle" = "시리즈, 시청한 에피소드, 시청 예정 목록, 평점";
+"onboarding.import.tvtime.subtitle" = "시리즈, 시청한 에피소드, 시청 목록, 평점";
 "onboarding.import.other" = "다른 앱";
 "onboarding.import.other.subtitle" = "Trakt, Letterboxd — 곧 지원 예정";
 "onboarding.import.skip" = "건너뛰고 처음부터 시작";
@@ -882,11 +882,11 @@
 "onboarding.import.stat.shows" = "시리즈";
 "onboarding.import.stat.episodes" = "시청한 에피소드";
 "onboarding.import.stat.movies" = "영화";
-"onboarding.import.stat.watchlist" = "시청 예정";
+"onboarding.import.stat.watchlist" = "시청 목록";
 "onboarding.notifications.title" = "아무것도 놓치지 마세요";
-"onboarding.notifications.subtitle" = "팔로우하는 것만 알려드려요 — 새 에피소드, 시청 예정작 공개, 스트리밍 공개 소식.";
+"onboarding.notifications.subtitle" = "팔로우하는 것만 알려드려요 — 새 에피소드, 시청 목록 작품 공개, 스트리밍 공개 소식.";
 "onboarding.notifications.row1" = "팔로우 중인 시리즈의 새 에피소드";
-"onboarding.notifications.row2" = "시청 예정 목록 작품의 공개";
+"onboarding.notifications.row2" = "시청 목록 작품의 공개";
 "onboarding.notifications.row3" = "작품이 스트리밍에 올라올 때";
 "onboarding.notifications.enable" = "알림 켜기";
 "onboarding.notifications.later" = "나중에";
@@ -897,41 +897,41 @@
 "onboarding.ready.chip.notifications" = "알림 켜짐";
 "onboarding.ready.cta" = "시청 시작하기";
 
-"filters.myPlatforms" = "Mine";
-"filters.platformScopeAll" = "All";
-"mediaDetail.forYou" = "for you";
-"mediaDetail.watchOn" = "Watch on";
-"mediaDetail.notifyMe" = "Notify me";
-"mediaDetail.notifyMeEnabling" = "Activating notification…";
-"mediaDetail.notifyMeEnabled" = "Notification active";
-"mediaDetail.action.watchlist" = "Watchlist";
-"mediaDetail.action.like" = "Like";
-"mediaDetail.action.list" = "To list";
-"mediaDetail.toast.watchlistAdded" = "관심 목록에 추가됨";
-"mediaDetail.toast.watchlistRemoved" = "관심 목록에서 제거됨";
+"filters.myPlatforms" = "내 서비스";
+"filters.platformScopeAll" = "전체";
+"mediaDetail.forYou" = "취향 일치";
+"mediaDetail.watchOn" = "시청하기";
+"mediaDetail.notifyMe" = "알림 받기";
+"mediaDetail.notifyMeEnabling" = "켜는 중…";
+"mediaDetail.notifyMeEnabled" = "알려드릴게요";
+"mediaDetail.action.watchlist" = "시청 목록";
+"mediaDetail.action.like" = "좋아요";
+"mediaDetail.action.list" = "리스트에";
+"mediaDetail.toast.watchlistAdded" = "시청 목록에 추가됨";
+"mediaDetail.toast.watchlistRemoved" = "시청 목록에서 제거됨";
 "mediaDetail.toast.markedSeen" = "시청함으로 표시됨";
 "mediaDetail.toast.markedUnseen" = "시청함에서 제거됨";
 "mediaDetail.toast.liked" = "좋아요에 추가됨";
 "mediaDetail.toast.likeRemoved" = "좋아요에서 제거됨";
-"mediaDetail.why.cardTitle" = "Why is it right for you?";
-"mediaDetail.why.title" = "Why for you";
-"mediaDetail.why.affinity" = "Affinity with your tastes";
-"mediaDetail.why.reason.mood" = "In line with your mood";
-"mediaDetail.why.reason.genres" = "Genres you love";
-"mediaDetail.why.reason.cast" = "Cast you know";
-"mediaDetail.why.helpful" = "Was this helpful?";
-"mediaDetail.why.regenerate" = "Regenerate";
-"mediaDetail.why.quota" = "Generated by Vibe AI from ratings, mood and history. %d/%d requests today.";
-"settings.cacheManagement.clearCacheAction" = "Clear cache";
-"gamification.missionsToday" = "Today's missions";
-"gamification.xpToNext" = "%d XP to the next level";
-"gamification.mission.openApp" = "Open the app";
-"gamification.mission.keepStreak" = "Keep your daily streak";
-"gamification.challenge.watch_3" = "Watch 3 clips";
-"gamification.challenge.like_5" = "Like 5 clips";
-"gamification.challenge.list_2" = "Add 2 titles to a list";
-"gamification.challenge.watch_new_genre" = "Watch a clip from a new genre";
-"gamification.challenge.complete_5" = "Complete 5 clips (>70%)";
+"mediaDetail.why.cardTitle" = "왜 나에게 맞을까요?";
+"mediaDetail.why.title" = "추천 이유";
+"mediaDetail.why.affinity" = "내 취향과의 적합도";
+"mediaDetail.why.reason.mood" = "지금 기분과 잘 맞아요";
+"mediaDetail.why.reason.genres" = "좋아하는 장르";
+"mediaDetail.why.reason.cast" = "아는 출연진";
+"mediaDetail.why.helpful" = "도움이 되었나요?";
+"mediaDetail.why.regenerate" = "다시 생성";
+"mediaDetail.why.quota" = "평점, 기분, 시청 기록을 바탕으로 Vibe AI가 생성했어요. 오늘 %d/%d회 사용.";
+"settings.cacheManagement.clearCacheAction" = "캐시 지우기";
+"gamification.missionsToday" = "오늘의 미션";
+"gamification.xpToNext" = "다음 레벨까지 %d XP";
+"gamification.mission.openApp" = "앱 열기";
+"gamification.mission.keepStreak" = "연속 기록 이어가기";
+"gamification.challenge.watch_3" = "클립 3개 보기";
+"gamification.challenge.like_5" = "클립 5개에 좋아요 누르기";
+"gamification.challenge.list_2" = "리스트에 작품 2개 추가하기";
+"gamification.challenge.watch_new_genre" = "새로운 장르의 클립 보기";
+"gamification.challenge.complete_5" = "클립 5개를 70% 이상 시청하기";
 
 // SeasonDetailView — conferme di marcatura episodi (2026-08-04)
 "season.confirmUnaired.title" = "아직 방영되지 않음";
@@ -959,7 +959,7 @@
 "import.banner.completed" = "가져오기 완료";
 "import.banner.review" = "%2$@개 중 %1$d개 타이틀 검토 필요";
 "import.banner.manage" = "관리";
-"import.banner.ok" = "OK";
+"import.banner.ok" = "확인";
 "import.banner.summary" = "시리즈 %1$@ · 에피소드 %2$@ · 영화 %3$@";
 "import.toast.imported" = "라이브러리 가져오기 완료";
 "import.toast.imported.review" = "라이브러리 가져옴 · 검토할 타이틀 %d개";
@@ -997,10 +997,10 @@
 "lists.toast.removing" = "제거하는 중…";
 "lists.toast.addedTo" = "%@에 추가됨";
 "lists.toast.removedFrom" = "%@에서 제거됨";
-"lists.toast.removed" = "목록에서 제거됨";
+"lists.toast.removed" = "리스트에서 제거됨";
 "lists.toast.failed" = "문제가 발생했습니다";
-"lists.toast.creating" = "목록을 만드는 중…";
-"lists.toast.created" = "목록이 생성되었습니다";
+"lists.toast.creating" = "리스트를 만드는 중…";
+"lists.toast.created" = "리스트를 만들었어요";
 "tracking.toast.markingWatched" = "에피소드를 표시하는 중…";
 "tracking.toast.markedWatched" = "에피소드를 시청함으로 표시했습니다";
 "tracking.toast.snoozing" = "나중에 보기로 미루는 중…";
@@ -1107,8 +1107,8 @@
 
 
 // MARK: - Toast con fase di progresso (bug 7)
-"mediaDetail.toast.addingToWatchlist" = "관심 목록에 추가하는 중…";
-"mediaDetail.toast.removingFromWatchlist" = "관심 목록에서 제거하는 중…";
+"mediaDetail.toast.addingToWatchlist" = "시청 목록에 추가하는 중…";
+"mediaDetail.toast.removingFromWatchlist" = "시청 목록에서 제거하는 중…";
 "mediaDetail.toast.liking" = "좋아요에 추가하는 중…";
 "mediaDetail.toast.unliking" = "좋아요에서 제거하는 중…";
 "mediaDetail.toast.markingUnseen" = "시청함에서 제거하는 중…";
@@ -1127,5 +1127,152 @@
 "search.clear" = "지우기";
 "search.trending.today" = "오늘";
 "search.trending.subtitle" = "지난 24시간 동안 %@에서 가장 많이 검색된 작품.";
-"search.results.subtitle" = "«%@» 일치 항목, 그다음 관련 작품.";
+"search.results.subtitle" = "‘%@’ 일치 항목, 그다음 관련 작품.";
 "search.resultsCount" = "%d개";
+
+
+// MARK: - Ricerca piattaforme + esito notifica
+"platforms.search" = "플랫폼 검색";
+"platforms.searchEmpty" = "해당 이름의 플랫폼이 없습니다.";
+"mediaDetail.notifyMeFailed" = "알림을 켜지 못했습니다.";
+
+
+// MARK: - Report import ridisegnato
+"import.report.title" = "가져오기 리포트";
+"import.report.sourcePeriod" = "%@ · %@ – %@";
+"import.report.success.title" = "라이브러리를 가져왔습니다";
+"import.report.success.subtitle" = "시리즈 %d개와 영화 %d개를 카탈로그와 연결했습니다.";
+"import.report.success.subtitleWithRatings" = "시리즈 %d개와 영화 %d개를 시청 날짜와 평점까지 카탈로그와 연결했습니다.";
+"import.report.tile.episodes" = "에피소드";
+"import.report.tile.movies" = "영화";
+"import.report.leftOut.title" = "제외된 항목";
+"import.report.leftOut.subtitle" = "이 작품들은 카탈로그에서 확실한 일치 항목이 없습니다. 카드를 눌러 직접 검색해 보세요.";
+"import.report.leftOut.excluded" = "직접 제외함";
+"import.report.leftOut.episodes" = "시청한 에피소드 %d개";
+"import.report.leftOut.seenOn" = "%@에 시청";
+"import.report.copyList" = "목록 복사";
+"import.report.copied" = "목록을 복사했습니다";
+"import.report.details" = "세부 정보";
+
+
+// MARK: - Report import — dettagli
+"import.report.detail.period" = "포함 기간";
+"import.report.detail.years" = "%d년";
+"import.report.detail.oneYear" = "1년";
+"import.report.detail.lessThanYear" = "1년 미만";
+"import.report.detail.statuses" = "복원된 시리즈 상태";
+"import.report.detail.statuses.hint" = "TV Time과 동일한 시청 목록과 보관함";
+"import.report.detail.ratings" = "이어받은 평점";
+"import.report.detail.ratingsUnmatched" = "연결되지 않은 평점";
+"import.report.detail.ratingsUnmatched.hint" = "카탈로그에 없는 평가된 에피소드";
+"import.report.detail.ratingsDeferred" = "아직 가져오지 않은 평점";
+"import.report.detail.favorites" = "복원된 즐겨찾기";
+"import.report.detail.moviesSeen" = "시청함으로 표시된 영화";
+"import.report.detail.moviesWatchlist" = "시청 목록의 영화";
+"import.report.detail.statusesUnresolved" = "복원되지 않은 상태";
+"import.report.detail.outOfStructure" = "배치할 수 없는 에피소드";
+"import.report.detail.outOfStructure.hint" = "시리즈 구조 밖의 스페셜과 확장판";
+"import.report.detail.favoriteMovies" = "가져오지 못한 즐겨찾기 영화";
+
+
+// MARK: - Report import — titolo mancante
+"import.report.leftOut.untitled" = "내보내기에 제목이 없음";
+
+
+// MARK: - 장르 (TMDB)
+// 화면에 보이는 장르 이름(캐러셀 제목, 통계의 장르 차트).
+// TMDB는 작품 상세에서만 번역된 장르를 주고 캐러셀에는 숫자 ID로 오기 때문에 이름은 여기서 가져옵니다.
+"genre.action" = "액션";
+"genre.adventure" = "모험";
+"genre.animation" = "애니메이션";
+"genre.comedy" = "코미디";
+"genre.crime" = "범죄";
+"genre.documentary" = "다큐멘터리";
+"genre.drama" = "드라마";
+"genre.family" = "가족";
+"genre.fantasy" = "판타지";
+"genre.history" = "역사";
+"genre.horror" = "공포";
+"genre.music" = "음악";
+"genre.mystery" = "미스터리";
+"genre.romance" = "로맨스";
+"genre.scienceFiction" = "SF";
+"genre.tvMovie" = "TV 영화";
+"genre.thriller" = "스릴러";
+"genre.war" = "전쟁";
+"genre.western" = "서부극";
+"genre.actionAdventure" = "액션 & 모험";
+"genre.kids" = "키즈";
+"genre.news" = "뉴스";
+"genre.reality" = "리얼리티";
+"genre.sciFiFantasy" = "SF & 판타지";
+"genre.soap" = "연속극";
+"genre.talk" = "토크쇼";
+"genre.warPolitics" = "전쟁 & 정치";
+
+
+// MARK: - 기분(무드)
+// "carousel.moodTonight"("오늘 밤은 %@")의 %@ 자리에 들어갑니다. 형용사가 아니라 명사입니다.
+"mood.happy" = "힐링";
+"mood.sad" = "멜랑콜리";
+"mood.excited" = "짜릿함";
+"mood.relaxed" = "편안한 휴식";
+"mood.scared" = "오싹함";
+"mood.thoughtful" = "생각할 거리";
+"mood.romantic" = "로맨스";
+"mood.adventurous" = "모험";
+"mood.nostalgic" = "추억";
+"mood.energetic" = "에너지 폭발";
+
+
+// MARK: - 캐러셀 — 인자와 장르 없는 대체 제목
+// "%d"는 연대의 시작 연도(2020). 한국어로는 "2020년대".
+"carousel.arg.decade" = "%d년대";
+// 선호 장르가 아직 없을 때 쓰는 대체 제목(일반 제목의 %@에 넣는 단어가 아닙니다).
+"carousel.hiddenGems.generic" = "숨은 보석";
+"carousel.staffPicks.generic" = "당신을 위한 팀 추천";
+
+
+// MARK: - 통계
+"analytics.noData" = "데이터 없음";
+
+
+// MARK: - 통계와 게이미피케이션 (뷰에서 추출한 문자열)
+// AnalyticsDashboardView / FloatingXPBadgeView / BadgeGalleryView / LevelProgressView 안에
+// 하드코딩되어 `.localized`를 거치지 않았기 때문에 20개 언어 모두에서 영어로 남아 있던 문자열.
+"stats.title" = "내 통계";
+"stats.yourActivity" = "내 활동";
+"stats.viewFull" = "전체 통계 보기";
+"stats.loading" = "통계를 불러오는 중…";
+"stats.errorTitle" = "통계를 불러오지 못했어요";
+"stats.emptyTitle" = "아직 통계가 없어요";
+"stats.emptySubtitle" = "시청을 시작하면 통계가 쌓여요!";
+"stats.genreDistribution" = "장르 분포";
+"stats.genreEmpty" = "아직 장르 데이터가 없어요";
+"stats.whenActive" = "주로 보는 시간대";
+"stats.topContent" = "많이 본 작품";
+"stats.contentEmpty" = "아직 작품 데이터가 없어요";
+"stats.discoveryChannels" = "작품을 찾는 경로";
+"stats.discoveryEmpty" = "아직 발견 데이터가 없어요";
+"stats.moodProfile" = "무드 프로필";
+"stats.moodEmpty" = "아직 데이터가 부족해요 — 계속 보면 무드 프로필이 나타나요.";
+
+// "%d"는 레벨 번호.
+"gamification.levelNumber" = "레벨 %d";
+// 화면 상단의 좁은 배지에 들어가는 짧은 버전.
+"gamification.levelShort" = "Lv.%d";
+"gamification.bestStreak" = "최고 연속 기록";
+"gamification.xpBonus" = "XP 보너스";
+"gamification.todaysChallenge" = "오늘의 챌린지";
+"gamification.completed" = "완료!";
+"gamification.badgeUnlocked" = "배지 획득!";
+"gamification.badges.collected" = "모은 배지";
+"gamification.badges.unlocked" = "획득함";
+// "%d"는 전체 배지 수. "12 / 40"처럼 숫자 뒤에 붙는다.
+"gamification.badges.ofTotal" = "/ %d";
+"gamification.levels.progressTitle" = "레벨 진행 상황";
+"gamification.allLevels" = "모든 레벨";
+
+"common.progress" = "진행 상황";
+"tvDetail.seasonsTitle" = "시즌";
+"tvDetail.episodesTitle" = "에피소드";

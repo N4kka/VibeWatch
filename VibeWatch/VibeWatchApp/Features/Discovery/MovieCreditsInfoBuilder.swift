@@ -36,8 +36,9 @@ enum MovieCreditsInfoBuilder {
             rows.append(Row(titleKey: "movieDetail.status", value: status))
         }
 
-        if let countries = movie.productionCountries, !countries.isEmpty {
-            rows.append(Row(titleKey: "movieDetail.country", value: countries.first?.name ?? ""))
+        if let country = movie.productionCountries?.first,
+           let name = MediaInfoFormatting.localizedCountry(iso: country.iso, fallback: country.name) {
+            rows.append(Row(titleKey: "movieDetail.country", value: name))
         }
 
         if let director {
@@ -123,8 +124,9 @@ enum TVShowCreditsInfoBuilder {
             rows.append(Row(titleKey: "movieDetail.director", value: director.name))
         }
 
-        if let countries = tvShow.productionCountries, !countries.isEmpty {
-            rows.append(Row(titleKey: "movieDetail.country", value: countries.first?.name ?? ""))
+        if let country = tvShow.productionCountries?.first,
+           let name = MediaInfoFormatting.localizedCountry(iso: country.iso, fallback: country.name) {
+            rows.append(Row(titleKey: "movieDetail.country", value: name))
         }
 
         if let tagline = tvShow.tagline, !tagline.trimmingCharacters(in: .whitespaces).isEmpty {
@@ -138,6 +140,20 @@ enum TVShowCreditsInfoBuilder {
 /// I formattatori condivisi dalle due sezioni. Puri: nessuno stato, nessuna rete.
 enum MediaInfoFormatting {
 
+    /// Fissa il locale usato dai formattatori. Serve ai test, che devono poter verificare più
+    /// lingue senza toccare le preferenze dell'utente. `nil` = segui la scelta in-app.
+    nonisolated(unsafe) static var localeOverride: Locale?
+
+    /// Il locale con cui Foundation deve tradurre date, paesi e lingue.
+    ///
+    /// È quello della lingua **scelta in-app**, non `Locale.current`: su un iPhone in inglese con
+    /// VibeWatch in italiano queste righe tornavano in inglese, e la scheda risultava mezza
+    /// tradotta. Calcolato a ogni accesso, non memorizzato, così cambiare lingua dalle
+    /// impostazioni si vede subito senza riavviare l'app.
+    nonisolated static var displayLocale: Locale {
+        localeOverride ?? LocalizationManager.shared.appLocale
+    }
+
     /// "2024-05-17" → data lunga nella lingua dell'utente. Nil se la stringa non è una data.
     static func formatDate(_ raw: String?) -> String? {
         guard let raw, !raw.isEmpty else { return nil }
@@ -147,10 +163,27 @@ enum MediaInfoFormatting {
         guard let date = parser.date(from: raw) else { return nil }
 
         let printer = DateFormatter()
-        printer.locale = Locale.current
+        printer.locale = displayLocale
         printer.dateStyle = .long
         printer.timeStyle = .none
         return printer.string(from: date)
+    }
+
+    /// "GB" → "Regno Unito". Nil solo se non resta niente da mostrare.
+    ///
+    /// TMDB manda `production_countries[].name` **sempre in inglese**, anche con `language=it-IT`:
+    /// la riga "Paese" diceva "United Kingdom" in ogni lingua. Il codice ISO che accompagna il
+    /// nome, invece, lo traduce iOS. Il nome TMDB resta come rete di sicurezza per i (rari) codici
+    /// che Foundation non riconosce.
+    static func localizedCountry(iso: String?, fallback: String?) -> String? {
+        let cleanFallback = fallback?.trimmingCharacters(in: .whitespaces)
+        guard let iso, !iso.isEmpty else {
+            return (cleanFallback?.isEmpty == false) ? cleanFallback : nil
+        }
+        if let name = displayLocale.localizedString(forRegionCode: iso), name != iso {
+            return name
+        }
+        return (cleanFallback?.isEmpty == false) ? cleanFallback : iso
     }
 
     /// 185_000_000 → "$185M". Zero e nil valgono "dato assente": TMDB usa 0 per "non lo so".
@@ -173,7 +206,7 @@ enum MediaInfoFormatting {
     /// "en" → "English"/"Inglese". Nil se il codice non è riconosciuto.
     static func localizedLanguage(_ code: String?) -> String? {
         guard let code, !code.isEmpty,
-              let name = Locale.current.localizedString(forLanguageCode: code),
+              let name = displayLocale.localizedString(forLanguageCode: code),
               name != code else { return nil }
         return name.prefix(1).uppercased() + name.dropFirst()
     }

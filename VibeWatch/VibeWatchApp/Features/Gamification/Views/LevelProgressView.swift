@@ -28,7 +28,7 @@ struct LevelProgressView: View {
                 }
             }
             .background(Color.theme.background.ignoresSafeArea())
-            .navigationTitle("Level Progress")
+            .navigationTitle("gamification.levels.progressTitle".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -73,7 +73,7 @@ struct LevelProgressView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Level \(gamificationService.userState.currentLevel)")
+                    Text(String(format: "gamification.levelNumber".localized, gamificationService.userState.currentLevel))
                         .font(.system(size: 22, weight: .bold))
                         .foregroundColor(.white)
 
@@ -134,7 +134,7 @@ struct LevelProgressView: View {
 
     private var allLevelsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("ALL LEVELS")
+            Text("gamification.allLevels".localized)
                 .font(.system(size: 12, weight: .bold))
                 .foregroundColor(.white.opacity(0.5))
                 .tracking(1)
@@ -219,7 +219,7 @@ struct LevelRowView: View {
             // Level Info
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
-                    Text("Level \(level)")
+                    Text(String(format: "gamification.levelNumber".localized, level))
                         .font(.system(size: 15, weight: isCurrent ? .bold : .medium))
                         .foregroundColor(isCurrent ? .white : (isLocked ? .white.opacity(0.4) : .white.opacity(0.7)))
 

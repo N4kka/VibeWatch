@@ -53,11 +53,19 @@ final class TrackingSyncTests: XCTestCase {
 
     // MARK: - Finestra del pull (§5)
 
-    func testGliEventiSiRitiranoSoloPerDodiciMesi() {
-        let finestra = SyncEngine.pullWindow(for: "watch_events")
-
-        XCTAssertEqual(finestra?.column, "watched_at")
-        XCTAssertEqual(finestra?.months, 12, "coincide col confine free/PRO del diario (§10)")
+    /// `watch_events` **non** ha finestra, ed è una scelta che è costata un bug.
+    ///
+    /// La finestra a 12 mesi era nata per non scaricare 8.000 righe di storico che nessuna
+    /// schermata leggeva. Poi è arrivato l'import da TV Time, che porta anni di visioni, e
+    /// SeasonView ha iniziato a marcare i "visto" leggendo lo specchio locale: con la finestra il
+    /// server aveva 20k eventi e il telefono ne scaricava un decimo, quindi le stagioni importate
+    /// sembravano mai viste.
+    ///
+    /// Questo test asseriva ancora i 12 mesi ed era rimasto rosso dopo la rimozione. Ora fissa il
+    /// comportamento voluto: se qualcuno rimette una finestra qui, le stagioni importate tornano
+    /// a sembrare non viste.
+    func testGliEventiNonHannoFinestra() {
+        XCTAssertNil(SyncEngine.pullWindow(for: "watch_events"))
     }
 
     /// Lo stato della serie è una riga per serie: filtrarlo nel tempo lo renderebbe incompleto,

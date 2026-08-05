@@ -239,7 +239,7 @@ class AnalyticsInsightsService: ObservableObject {
             .map { gid, count in
                 GenreDistribution(
                     genreId: gid,
-                    genreName: TMDBGenres.name(for: gid) ?? "Genre \(gid)",
+                    genreName: TMDBGenres.displayName(for: gid),
                     count: count,
                     percentage: totalCount > 0 ? Double(count) / Double(totalCount) : 0.0,
                     watchTimeMinutes: runtimeByGenre[gid] ?? 0
@@ -247,7 +247,7 @@ class AnalyticsInsightsService: ObservableObject {
             }
 
         let topGenre = distribution.first ?? GenreDistribution(
-            genreId: 0, genreName: "No Data", count: 0, percentage: 0.0, watchTimeMinutes: 0
+            genreId: 0, genreName: "analytics.noData".localized, count: 0, percentage: 0.0, watchTimeMinutes: 0
         )
         let emergingGenre = await detectEmergingGenre(userId: userId)
 
@@ -280,7 +280,7 @@ class AnalyticsInsightsService: ObservableObject {
 
         guard let (gid, count) = emerging else { return nil }
         return GenreDistribution(
-            genreId: gid, genreName: TMDBGenres.name(for: gid) ?? "Genre \(gid)",
+            genreId: gid, genreName: TMDBGenres.displayName(for: gid),
             count: count, percentage: 0.0, watchTimeMinutes: 0
         )
     }

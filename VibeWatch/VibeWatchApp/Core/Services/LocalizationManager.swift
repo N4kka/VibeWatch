@@ -108,6 +108,19 @@ final class LocalizationManager: ObservableObject {
         return NSLocalizedString(key, comment: "")
     }
     
+    /// Il `Locale` che corrisponde alla lingua **scelta in-app**, non a quella del dispositivo.
+    ///
+    /// Serve ovunque si chieda a Foundation di formattare qualcosa per l'utente: nomi di paese e
+    /// di lingua, date. Usare `Locale.current` lì funziona solo finché lingua di sistema e lingua
+    /// scelta coincidono — su un iPhone in inglese con l'app in italiano la scheda film tornava a
+    /// dire "English" e "July 15, 2026".
+    ///
+    /// `nonisolated(unsafe)` per la stessa ragione di `localized(_:)`: è una lettura pura di due
+    /// stringhe già in memoria, chiamata anche da formatter non main-actor.
+    nonisolated(unsafe) var appLocale: Locale {
+        Locale(identifier: "\(currentLanguage.id)_\(currentCountry.id)")
+    }
+
     @MainActor
     func currentLanguageAndRegion() -> (String, String) {
         (currentLanguage.id, currentCountry.id)

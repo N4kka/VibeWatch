@@ -22,7 +22,7 @@ struct ProUpgradeIconButton: View {
                     .background(Color.theme.accentOrange.opacity(0.9))
                     .clipShape(Circle())
                     .shadow(color: Color.theme.accentOrange.opacity(0.25), radius: 10, x: 0, y: 6)
-                    .accessibilityLabel("Upgrade to Pro")
+                    .accessibilityLabel("paywall.upgrade".localized)
             }
         }
     }

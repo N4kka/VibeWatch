@@ -8,12 +8,12 @@
 // Onboarding
 "onboarding.page1.title" = "Πιο έξυπνες επιλογές με AI";
 "onboarding.page1.description" = "Προτάσεις AI για ταινίες και σειρές προσαρμοσμένες στο vibe σου, ώστε να ξέρεις πάντα τι να δεις στη συνέχεια.";
-"onboarding.page2.title" = "Οργάνωσε τη watchlist σου";
-"onboarding.page2.description" = "Δημιούργησε watchlists και συλλογές ανά mood για να οργανώνεις κάθε ταινία και σειρά που ανακαλύπτεις.";
-"onboarding.page3.title" = "Ανακάλυψε Trailers & Clips";
-"onboarding.page3.description" = "Δες trailers και clips και μετά αποθήκευσε τις καλύτερες ανακαλύψεις στις λίστες σου για να τις δεις αργότερα.";
+"onboarding.page2.title" = "Οργάνωσε τη λίστα προβολής σου";
+"onboarding.page2.description" = "Δημιούργησε λίστες προβολής και συλλογές ανά διάθεση για να οργανώνεις κάθε ταινία και σειρά που ανακαλύπτεις.";
+"onboarding.page3.title" = "Ανακάλυψε τρέιλερ και κλιπ";
+"onboarding.page3.description" = "Δες τρέιλερ και κλιπ και μετά αποθήκευσε τις καλύτερες ανακαλύψεις στις λίστες σου για να τις δεις αργότερα.";
 "onboarding.page4.title" = "Έτοιμος/η να ξεκινήσεις;";
-"onboarding.page4.description" = "Δημιούργησε λογαριασμό για να συγχρονίζεις τις watchlists και τις προτιμήσεις σου σε όλες τις συσκευές σου.";
+"onboarding.page4.description" = "Δημιούργησε λογαριασμό για να συγχρονίζεις τις λίστες και τις προτιμήσεις σου σε όλες τις συσκευές σου.";
 "onboarding.page4.createAccount" = "Δημιουργία λογαριασμού";
 "onboarding.page4.skip" = "Παράλειψη προς το παρόν";
 
@@ -36,11 +36,11 @@
 // Lists
 "list.all" = "Όλα";
 "list.movies" = "Ταινίες";
-"list.tvShows" = "TV";
+"list.tvShows" = "Σειρές";
 "lists.myLists" = "Οι λίστες μου";
 "lists.collections" = "Συλλογές";
 "lists.empty" = "Δεν υπάρχουν λίστες ακόμα";
-"lists.emptyDescription" = "Δημιούργησε την πρώτη σου watchlist για να οργανώσεις ταινίες και σειρές που ανακαλύπτεις";
+"lists.emptyDescription" = "Δημιούργησε την πρώτη σου λίστα για να οργανώσεις ταινίες και σειρές που ανακαλύπτεις";
 "lists.noItems" = "Δεν υπάρχουν στοιχεία ακόμα";
 "lists.createList" = "Δημιουργία Λίστας";
 "lists.editList" = "Επεξεργασία λίστας";
@@ -52,7 +52,7 @@
 "lists.descriptionPlaceholder" = "Πρόσθεσε μια περιγραφή... (προαιρετικό)";
 "lists.listDescriptionPlaceholder" = "Πρόσθεσε μια περιγραφή...";
 "lists.searchPlaceholder" = "Αναζήτηση σε αυτή τη λίστα";
-"lists.watchlist" = "Watchlist";
+"lists.watchlist" = "Λίστα προβολής";
 "lists.seen" = "Είδα";
 "lists.liked" = "Μου άρεσε";
 "lists.disliked" = "Δεν μου άρεσε";
@@ -75,11 +75,11 @@
 "movieDetail.runtime" = "Διάρκεια";
 "movieDetail.rating" = "Βαθμολογία";
 "movieDetail.ratings" = "βαθμολογίες";
-"movieDetail.trailer" = "Trailer";
+"movieDetail.trailer" = "Τρέιλερ";
 "movieDetail.watchNow" = "Δες τώρα";
-"movieDetail.save" = "Αποθήκευση στη watchlist";
+"movieDetail.save" = "Αποθήκευση στη λίστα προβολής";
 "movieDetail.seen" = "Είδα";
-"movieDetail.similar" = "Όσοι/ες τους άρεσε αυτό, τους άρεσε επίσης";
+"movieDetail.similar" = "Σε όσους άρεσε αυτό, άρεσαν επίσης";
 "movieDetail.whyForMe" = "Γιατί για εμένα;";
 "movieDetail.whyForMe.basedOnGenres" = "Με βάση τα 3 αγαπημένα σου είδη";
 "movieDetail.goodFitTitle" = "Γιατί το %@ μου ταιριάζει;";
@@ -128,11 +128,11 @@
 "clips.noClipsAvailable" = "Δεν υπάρχουν διαθέσιμα κλιπς";
 "clips.noClipsDescription" = "Έλα ξανά αργότερα για συναρπαστικές σκηνές από τις αγαπημένες σου ταινίες και σειρές";
 "clips.addToList" = "Προσθήκη στη λίστα";
-"clips.card.addToWatchlist" = "+ Watchlist";
+"clips.card.addToWatchlist" = "+ Λίστα προβολής";
 "clips.card.goToDetail" = "Προβολή λεπτομερειών";
-"clips.createFirstList" = "Δημιούργησε την πρώτη σου watchlist για να αποθηκεύεις επιλογές";
+"clips.createFirstList" = "Δημιούργησε την πρώτη σου λίστα για να αποθηκεύεις επιλογές";
 "clips.createNewList" = "Δημιουργία νέας λίστας";
-"clips.feed.craftingTitle" = "Φτιάχνουμε το τέλειο feed σου";
+"clips.feed.craftingTitle" = "Φτιάχνουμε την τέλεια ροή σου";
 "clips.feed.craftingSubtitle" = "Διαλέγουμε τα καλύτερα κλιπς μόνο για εσένα ✨";
 "clips.comment" = "Σχόλιο";
 "clips.comments" = "Σχόλια";
@@ -177,7 +177,7 @@
 "profile.done" = "Τέλος";
 "profile.cancel" = "Ακύρωση";
 "profile.settings" = "Ρυθμίσεις";
-"profile.streamingServices" = "Υπηρεσίες streaming";
+"profile.streamingServices" = "Υπηρεσίες στρίμινγκ";
 "profile.notifications" = "Ειδοποιήσεις";
 "profile.helpSupport" = "Βοήθεια & Υποστήριξη";
 "profile.logout" = "Αποσύνδεση";
@@ -192,24 +192,24 @@
 "settings.selectCountry" = "Επιλογή χώρας";
 
 // Cache Management
-"settings.cacheManagement.title" = "Διαχείριση cache";
-"settings.cacheManagement.cacheSize" = "Μέγεθος cache";
-"settings.cacheManagement.cacheSizeTitle" = "Επιλογή μεγέθους cache";
-"settings.cacheManagement.cacheSizeDescription" = "Επίλεξε πόσο χώρο θα χρησιμοποιείται για cache εικόνων. Μεγαλύτερη cache επιτρέπει περισσότερο offline περιεχόμενο.";
+"settings.cacheManagement.title" = "Διαχείριση προσωρινής μνήμης";
+"settings.cacheManagement.cacheSize" = "Μέγεθος προσωρινής μνήμης";
+"settings.cacheManagement.cacheSizeTitle" = "Επιλογή μεγέθους προσωρινής μνήμης";
+"settings.cacheManagement.cacheSizeDescription" = "Επίλεξε πόσος χώρος θα χρησιμοποιείται για την προσωρινή μνήμη εικόνων. Μεγαλύτερη μνήμη επιτρέπει περισσότερο περιεχόμενο εκτός σύνδεσης.";
 "settings.cacheManagement.prefetchOption" = "Προφόρτωση εικόνων";
 "settings.cacheManagement.prefetchTitle" = "Επιλογές προφόρτωσης εικόνων";
-"settings.cacheManagement.prefetchDescription" = "Έλεγξε πότε κατεβαίνουν εικόνες για offline προβολή. Μόνο Wi-Fi βοηθά στην εξοικονόμηση δεδομένων.";
-"settings.cacheManagement.prefetchNeverWarning" = "Προειδοποίηση: Η offline λειτουργία θα είναι περιορισμένη";
-"settings.cacheManagement.clearCache" = "Εκκαθάριση cache εικόνων";
+"settings.cacheManagement.prefetchDescription" = "Έλεγξε πότε κατεβαίνουν εικόνες για προβολή εκτός σύνδεσης. Μόνο Wi-Fi βοηθά στην εξοικονόμηση δεδομένων.";
+"settings.cacheManagement.prefetchNeverWarning" = "Προειδοποίηση: η λειτουργία εκτός σύνδεσης θα είναι περιορισμένη";
+"settings.cacheManagement.clearCache" = "Εκκαθάριση προσωρινής μνήμης εικόνων";
 "settings.cacheManagement.clearCacheWarning" = "Διαγράφει όλες τις αποθηκευμένες εικόνες";
-"settings.cacheManagement.clearCacheConfirmTitle" = "Εκκαθάριση cache;";
+"settings.cacheManagement.clearCacheConfirmTitle" = "Εκκαθάριση προσωρινής μνήμης;";
 "settings.cacheManagement.clearCacheConfirmMessage" = "Αυτό θα αφαιρέσει όλες τις αποθηκευμένες εικόνες και θα ελευθερώσει χώρο. Θα χρειαστεί να είσαι online για να τις δεις ξανά μέχρι να αποθηκευτούν εκ νέου.";
-"settings.cacheManagement.clearCacheConfirm" = "Εκκαθάριση cache";
+"settings.cacheManagement.clearCacheConfirm" = "Εκκαθάριση προσωρινής μνήμης";
 
 // Platforms
-"platform.title" = "Πλατφόρμες streaming";
+"platform.title" = "Πλατφόρμες στρίμινγκ";
 "platform.selectionCount" = "%d από %d επιλεγμένα";
-"platforms.streaming" = "Streaming";
+"platforms.streaming" = "Στρίμινγκ";
 "platforms.rent" = "Ενοικίαση";
 "platforms.buy" = "Αγορά";
 "platforms.cinema" = "Σινεμά";
@@ -240,8 +240,8 @@
 "auth.invalidEmail" = "Μη έγκυρο email";
 "auth.invalidPassword" = "Μη έγκυρος κωδικός";
 "auth.passwordsDontMatch" = "Οι κωδικοί δεν ταιριάζουν";
-"auth.error.notConfigured" = "Η υπηρεσία ταυτοποίησης δεν έχει ρυθμιστεί. Πρόσθεσε τα Supabase credentials.";
-"auth.error.invalidResponse" = "Μη έγκυρη απάντηση από τον server.";
+"auth.error.notConfigured" = "Η υπηρεσία ταυτοποίησης δεν έχει ρυθμιστεί. Πρόσθεσε τα διαπιστευτήρια Supabase.";
+"auth.error.invalidResponse" = "Μη έγκυρη απάντηση από τον διακομιστή.";
 "auth.error.userNotFound" = "Ο χρήστης δεν βρέθηκε.";
 "auth.error.invalidCredentials" = "Λάθος email ή κωδικός.";
 "auth.error.tooManyAttempts" = "Πολλές προσπάθειες. Δοκίμασε ξανά αργότερα.";
@@ -254,7 +254,7 @@
 
 // Auth Gate
 "auth.gate.accountRequired" = "Απαιτείται λογαριασμός";
-"auth.gate.authRequiredAI" = "Χρειάζεσαι λογαριασμό για να χρησιμοποιήσεις το AI chat.";
+"auth.gate.authRequiredAI" = "Χρειάζεσαι λογαριασμό για να χρησιμοποιήσεις τη συνομιλία AI.";
 "auth.gate.createTitle" = "Δημιούργησε δωρεάν λογαριασμό VibeWatch";
 "auth.gate.description" = "Χρειάζεσαι λογαριασμό για να δημιουργείς προσαρμοσμένες λίστες και να τις συγχρονίζεις στις συσκευές σου.";
 "auth.gate.createFree" = "Δημιούργησε δωρεάν λογαριασμό";
@@ -284,34 +284,34 @@
 "ai.title" = "Vibe AI";
 "ai.subtitle" = "Πες μου το vibe σου — το AI θα βρει τι να δεις στη συνέχεια.";
 "ai.describeVibe" = "Περιέγραψε το vibe σου";
-"ai.placeholder" = "Π.χ. \"Sci-fi με ανατροπή\"";
+"ai.placeholder" = "Π.χ. \"Επιστημονική φαντασία με ανατροπή\"";
 "ai.editMessage" = "Επεξεργασία μηνύματος";
 "ai.thinking" = "Σκέφτεται...";
 "ai.resultsTitle" = "Να τι βρήκα:";
 "ai.saveRegenerate" = "Αποθήκευση & επαναδημιουργία";
 "ai.requestsUsage" = "%d/%d ημερήσια αιτήματα";
-"ai.softLimitMessage" = "Πλησιάζεις το σημερινό όριο AI. Κράτα τα prompts σύντομα.";
+"ai.softLimitMessage" = "Πλησιάζεις το σημερινό όριο AI. Κράτα τα ερωτήματά σου σύντομα.";
 "ai.hardLimitMessage" = "Έφτασες το σημερινό όριο AI. Έλα ξανά αύριο.";
-"ai.proRequired" = "Το AI chat είναι διαθέσιμο μόνο για μέλη Pro.";
-"ai.suggestion.chips1" = "💖 Cozy romance, επιλεγμένο από AI για μένα";
-"ai.suggestion.chips2" = "💥 80s action-comedy, προτείνει το AI";
+"ai.proRequired" = "Η συνομιλία AI είναι διαθέσιμη μόνο για μέλη Pro.";
+"ai.suggestion.chips1" = "💖 Ρομαντική ταινία για χαλάρωση, επιλογή του AI";
+"ai.suggestion.chips2" = "💥 Κωμωδία δράσης της δεκαετίας του '80, προτείνει το AI";
 "ai.suggestion.chips3" = "🕵️‍♂️ Υποτιμημένο θρίλερ με ανατροπή";
 "ai.suggestion.chips4" = "🤖 AI: τι να δω μετά;";
 "ai.tryAsking" = "Δοκίμασε να ρωτήσεις...";
 
 // AI Paywall
-"ai.paywall.title" = "Ξεκλείδωσε το AI movie buddy σου";
+"ai.paywall.title" = "Ξεκλείδωσε τον AI σύντροφό σου για ταινίες";
 "ai.paywall.description" = "Απόκτησε πιο έξυπνες AI προτάσεις για ταινίες και σειρές για να βρεις το ιδανικό σου.";
 "ai.paywall.benefit.unlimited" = "Απεριόριστες AI προτάσεις";
 "ai.paywall.benefit.smarter" = "Πιο έξυπνη ανακάλυψη περιεχομένου";
-"ai.paywall.benefit.personalized" = "Εξατομικευμένες watchlists";
-"ai.paywall.unlockAI" = "Ξεκλείδωσε το AI Chat";
+"ai.paywall.benefit.personalized" = "Εξατομικευμένες λίστες προβολής";
+"ai.paywall.unlockAI" = "Ξεκλείδωσε τη συνομιλία AI";
 "ai.paywall.goBack" = "Πίσω";
 
 // Paywall
 "paywall.bestValue" = "ΚΑΛΥΤΕΡΗ ΕΠΙΛΟΓΗ";
 "paywall.ensurePro" = "Εξασφάλισε το Pro πλάνο σου!";
-"paywall.proDescription" = "Το Pro ξεκλειδώνει απεριόριστα clips, AI movie buddy και συγχρονισμένες watchlists.";
+"paywall.proDescription" = "Το Pro ξεκλειδώνει απεριόριστα κλιπ, τον AI σύντροφό σου για ταινίες και συγχρονισμένες λίστες.";
 "paywall.cta.selectPlan" = "Επιλογή πλάνου";
 "paywall.cta.continue" = "Συνέχεια";
 "paywall.cta.startTrial" = "Ξεκίνα %@ δωρεάν δοκιμή";
@@ -323,18 +323,18 @@
 "paywall.trial.badge" = "%@ δωρεάν";
 "paywall.restore" = "Επαναφορά αγορών";
 "paywall.upgrade" = "Αναβάθμιση σε Pro";
-"paywall.unlockUnlimited" = "Ξεκλείδωσε απεριόριστα clips";
+"paywall.unlockUnlimited" = "Ξεκλείδωσε απεριόριστα κλιπ";
 "paywall.daily.title" = "Έλα ξανά αύριο";
 "paywall.daily.limitReached" = "Έφτασες το σημερινό όριο";
 "paywall.daily.limitDescription" = "Οι δωρεάν χρήστες μπορούν να δουν 25 κλιπς την ημέρα. Αναβάθμισε σε Pro για απεριόριστα κλιπς και premium δυνατότητες.";
 "paywall.daily.resetIn" = "Επαναφορά σε";
 "paywall.daily.nextReset" = "Επόμενη επαναφορά σε";
-"paywall.feature.unlimitedClips" = "▶️ Απεριόριστα κλιπς και trailers";
+"paywall.feature.unlimitedClips" = "▶️ Απεριόριστα κλιπ και τρέιλερ";
 "paywall.feature.noAds" = "❌ Χωρίς διαφημίσεις που διακόπτουν τα κλιπς";
 "paywall.feature.aiAssistant" = "🤖 AI προτάσεις για ταινίες & σειρές";
 "paywall.feature.advancedFilters" = "🔎 Προηγμένα φίλτρα για γρηγορότερες επιλογές";
-"paywall.feature.lists" = "📋 Έως 100 συγχρονισμένες watchlists";
-"paywall.feature.offlineMode" = "📵 Offline λειτουργία για αποθηκευμένες επιλογές";
+"paywall.feature.lists" = "📋 Έως 100 συγχρονισμένες λίστες";
+"paywall.feature.offlineMode" = "📵 Λειτουργία εκτός σύνδεσης για αποθηκευμένες επιλογές";
 "paywall.feature.releaseAlerts" = "🔔 Ειδοποιήσεις όταν τα αγαπημένα είναι διαθέσιμα";
 
 // Common
@@ -374,15 +374,15 @@
 
 // Redeem Code
 "settings.redeemCode" = "Εξαργύρωση κωδικού";
-"settings.redeemCode.description" = "Εισάγετε έναν promo ή offer κωδικό";
-"paywall.haveCode" = "Έχεις promo κωδικό;";
+"settings.redeemCode.description" = "Βάλε έναν προωθητικό κωδικό ή κωδικό προσφοράς";
+"paywall.haveCode" = "Έχεις προωθητικό κωδικό;";
 "paywall.price.perYear" = "%@/έτος";
 "paywall.cancelAnytime" = "Ακύρωση όποτε θέλεις";
 
 // Help & Support - About Us
 "profile.aboutUs" = "Σχετικά με εμάς";
-"profile.aboutUsDetail" = "Μάθε περισσότερα για την ομάδα του VibeWatch και την αποστολή μας να βελτιώσουμε την εμπειρία ανακάλυψης streaming.";
-"profile.aboutUsDescription" = "Είμαστε δύο φίλοι που φτιάχνουμε έναν νέο τύπο συνοδού για ταινίες/σειρές. Το VibeWatch γεννήθηκε από την απογοήτευση με δύσχρηστους trackers: εστιάζουμε στη σύγχρονη, clip-first ανακάλυψη, γρήγορους συνδέσμους streaming και εργαλεία που βοηθούν τόσο τους cinephiles όσο και τους casual θεατές να βρίσκουν την ιδανική επιλογή χωρίς ατελείωτο scrolling.";
+"profile.aboutUsDetail" = "Μάθε περισσότερα για την ομάδα του VibeWatch και την αποστολή μας να βελτιώσουμε την ανακάλυψη περιεχομένου στο στρίμινγκ.";
+"profile.aboutUsDescription" = "Είμαστε δύο φίλοι που φτιάχνουμε έναν νέο τύπο συνοδού για ταινίες και σειρές. Το VibeWatch γεννήθηκε από την απογοήτευση με δύσχρηστες εφαρμογές παρακολούθησης: εστιάζουμε στη σύγχρονη ανακάλυψη μέσα από κλιπ, σε γρήγορους συνδέσμους στρίμινγκ και σε εργαλεία που βοηθούν τόσο τους λάτρεις του σινεμά όσο και τους απλούς θεατές να βρίσκουν την ιδανική επιλογή χωρίς ατελείωτο ψάξιμο.";
 "profile.faqs" = "Συχνές Ερωτήσεις";
 "profile.faq" = "FAQ";
 "profile.faqDetail" = "Βρες γρήγορες απαντήσεις σε συχνές ερωτήσεις για λογαριασμούς, συνδρομές και λειτουργίες.";
@@ -417,7 +417,7 @@
 "import.report.favoritesApplied" = "%d αγαπημένα εισήχθησαν σε ελεύθερες θέσεις.";
 "import.report.favoriteMoviesUnsupported" = "%d αγαπημένες ταινίες δεν μπορούν να εισαχθούν από το TV Time.";
 "import.report.moviesApplied" = "%d ταινίες εισήχθησαν με τις ημερομηνίες προβολής τους.";
-"import.report.moviesWatchlistApplied" = "%d ταινίες προστέθηκαν στο Watchlist.";
+"import.report.moviesWatchlistApplied" = "%d ταινίες προστέθηκαν στη λίστα προβολής.";
 "import.report.moviesUnresolved" = "%d ταινίες δεν αναγνωρίστηκαν (τίτλος και έτος δεν ταιριάζουν στο TMDB).";
 "import.resolve.button" = "Επίλυση";
 "import.resolve.batchButton" = "Αντιστοίχιση %d τίτλων";
@@ -446,7 +446,7 @@
 // Profile - Support & Feedback
 "profile.feedback.suggestFeature" = "Πρότεινε νέα λειτουργία";
 "profile.feedback.suggestFeatureDescription" = "Πες μας τι θα έκανε το VibeWatch καλύτερο για εσένα.";
-"profile.feedback.reportBug" = "Αναφορά bug/προβλήματος";
+"profile.feedback.reportBug" = "Αναφορά σφάλματος/προβλήματος";
 "profile.feedback.reportBugDescription" = "Περιέγραψε το πρόβλημα για να το διορθώσουμε γρήγορα.";
 "profile.feedback.other" = "Άλλο";
 "profile.feedback.otherDescription" = "Μοιράσου οποιεσδήποτε άλλες σκέψεις ή σχόλια.";
@@ -456,15 +456,15 @@
 "profile.feedback.invalidEmail" = "Μη έγκυρο περιεχόμενο email.";
 
 // FAQ Items
-"profile.faq.question1" = "Πώς με βοηθούν τα Clips να ανακαλύπτω νέους τίτλους;";
-"profile.faq.answer1" = "Τα Clips είναι σύντομα, κάθετα previews που ταιριάζουν στο γούστο σου, ώστε να κάνεις binge-scroll χωρίς να νιώθεις ότι χάνεις χρόνο.";
+"profile.faq.question1" = "Πώς με βοηθούν τα κλιπ να ανακαλύπτω νέους τίτλους;";
+"profile.faq.answer1" = "Τα κλιπ είναι σύντομες, κάθετες προεπισκοπήσεις που ταιριάζουν στο γούστο σου, ώστε να τα βλέπεις στη σειρά χωρίς να νιώθεις ότι χάνεις χρόνο.";
 "profile.faq.question2" = "Μπορώ να παρακολουθώ τι βλέπω;";
 "profile.faq.answer2" = "Ναι. Αποθήκευσε σε λίστες, σημείωσε ως είδα/μου άρεσε/δεν μου άρεσε και συγχρόνισε σε ταινίες και σειρές.";
 "profile.faq.question3" = "Πού μπορώ να το δω;";
-"profile.faq.answer3" = "Οι σύνδεσμοι streaming εμφανίζονται ανά χώρα, ώστε να ανοίγεις απευθείας τη σωστή εφαρμογή.";
+"profile.faq.answer3" = "Οι σύνδεσμοι στρίμινγκ εμφανίζονται ανά χώρα, ώστε να ανοίγεις απευθείας τη σωστή εφαρμογή.";
 "profile.faq.question4" = "Κι αν κάτι φαίνεται λάθος;";
-"profile.faq.answer4" = "Χρησιμοποίησε το \"Ενημέρωσέ μας\" σε οποιονδήποτε τίτλο για να αναφέρεις bugs ή λάθος links και θα το διορθώσουμε γρήγορα.";
-"profile.faq.question5" = "Δουλεύει το VibeWatch για casual θεατές;";
+"profile.faq.answer4" = "Χρησιμοποίησε το \"Ενημέρωσέ μας\" σε οποιονδήποτε τίτλο για να αναφέρεις σφάλματα ή χαλασμένους συνδέσμους και θα το διορθώσουμε γρήγορα.";
+"profile.faq.question5" = "Δουλεύει το VibeWatch για απλούς θεατές;";
 "profile.faq.answer5" = "Φυσικά. Προβάλλουμε εύκολες επιλογές όπως μια ταινία Σαββατόβραδου με φίλους, αλλά και πιο \"ψαγμένα\" για τους λάτρεις του σινεμά.";
 
 // Settings - Account Deletion
@@ -493,15 +493,15 @@
 "actor.biography.showMore" = "Εμφάνιση περισσότερων";
 "actor.biography.showLess" = "Εμφάνιση λιγότερων";
 
-"actor.birthday" = "Born: %@";
-"actor.birthday.line" = "%@ (%@ years old)";
-"actor.known_for" = "Known For";
+"actor.birthday" = "Γεννήθηκε: %@";
+"actor.birthday.line" = "%@ (%@ ετών)";
+"actor.known_for" = "Γνωστός/ή για";
 "actor.search.placeholder" = "Αναζήτηση φιλμογραφίας…";
 "actor.search.noResults" = "Κανένα αποτέλεσμα για";
-"actor.filmography.empty" = "Δεν βρέθηκαν ταινίες.";
+"actor.filmography.empty" = "Δεν βρέθηκαν συμμετοχές.";
 
 // Global Discovery Filters
-"filters.mediaType" = "Τύπος μέσου";
+"filters.mediaType" = "Τύπος περιεχομένου";
 "filters.movies" = "Ταινίες";
 "filters.tvShows" = "Σειρές";
 "filters.both" = "Και τα δύο";
@@ -525,7 +525,7 @@
 "filters.sortRatingAsc" = "Χαμηλότερη βαθμολογία";
 "filters.sortReleaseDateDesc" = "Νεότερα πρώτα";
 "filters.sortReleaseDateAsc" = "Παλιότερα πρώτα";
-"filters.proFilters" = "Pro φίλτρα";
+"filters.proFilters" = "Φίλτρα Pro";
 "filters.hideWatched" = "Απόκρυψη όσων είδα";
 "filters.hideDisliked" = "Απόκρυψη όσων δεν μου άρεσαν";
 "filters.proTitle" = "Ξεκλείδωσε προηγμένα φίλτρα";
@@ -535,28 +535,28 @@
 
 // Filters - Streaming Platforms
 "filters.allPlatforms" = "Όλες οι πλατφόρμες";
-"platforms.title" = "Πλατφόρμες streaming";
+"platforms.title" = "Πλατφόρμες στρίμινγκ";
 
 // Personalized Carousels
-"carousel.dailyMix" = "Το Daily Mix σου";
-"carousel.trendingInGenre" = "Τάσεις στο %@";
-"carousel.becauseYouLiked" = "Επειδή σου άρεσε το %@";
-"carousel.hiddenGems" = "Κρυμμένα διαμάντια στο %@";
+"carousel.dailyMix" = "Το καθημερινό σου μιξ";
+"carousel.trendingInGenre" = "Τάσεις: %@";
+"carousel.becauseYouLiked" = "Επειδή σου άρεσε το «%@»";
+"carousel.hiddenGems" = "Κρυμμένα διαμάντια: %@";
 "carousel.continueJourney" = "Συνέχισε το ταξίδι σου";
 "carousel.fromSearches" = "Από τις αναζητήσεις σου";
 "carousel.topTVPicks" = "Κορυφαίες σειρές για εσένα";
-"carousel.staffPicks" = "Επιλογές ομάδας για fans του %@";
-"carousel.yearlyRewind" = "Το ετήσιο rewind σου";
-"carousel.hotThisWeek" = "Hot αυτή την εβδομάδα";
+"carousel.staffPicks" = "Επιλογές της ομάδας για φαν: %@";
+"carousel.yearlyRewind" = "Η ετήσια ανασκόπησή σου";
+"carousel.hotThisWeek" = "Δημοφιλή αυτή την εβδομάδα";
 "carousel.awardWinners" = "Βραβευμένοι τίτλοι που θα σου αρέσουν";
 
 // Privacy / Analytics
 "settings.privacy.title" = "Απόρρητο";
 "settings.analytics.title" = "Αναλυτικά";
-"settings.analytics.share" = "Κοινοποίηση ανώνυμων analytics";
+"settings.analytics.share" = "Κοινοποίηση ανώνυμων στατιστικών";
 "settings.analytics.share.description" = "Μας βοηθά να καταλάβουμε ποιες λειτουργίες χρησιμοποιείς και να βελτιώσουμε την εφαρμογή. Χωρίς παρακολούθηση διαφημίσεων.";
 "settings.analytics.viewStats" = "Προβολή στατιστικών";
-"settings.analytics.description" = "Δες ιστορικό προβολών και insights";
+"settings.analytics.description" = "Δες το ιστορικό προβολών και τα στατιστικά σου";
 
 // Settings - Notifications (Settings Screen)
 "settings.notifications.title" = "Ειδοποιήσεις";
@@ -568,10 +568,10 @@
 "onboarding.welcome.subtitle" = "Ανακάλυψε, παρακολούθησε και μη χάσεις καμία κυκλοφορία. Ταινίες και σειρές, όλα σε ένα μέρος.";
 "onboarding.clips.title" = "Δες, μην διαβάζεις";
 "onboarding.clips.subtitle" = "Ζήσε τις ταινίες μέσα από σύντομα, συναρπαστικά κλιπς.";
-"onboarding.lists.title" = "Η watchlist σου, παντού";
+"onboarding.lists.title" = "Η λίστα προβολής σου, παντού";
 "onboarding.lists.subtitle" = "Αποθήκευσε ταινίες και συγχρόνισε σε όλες τις συσκευές σου.";
 "onboarding.account.title" = "Αποθήκευσε το προφίλ σου";
-"onboarding.account.subtitle" = "Δημιούργησε λογαριασμό για συγχρονισμό watchlist και προτιμήσεων σε όλες τις συσκευές.";
+"onboarding.account.subtitle" = "Δημιούργησε λογαριασμό για συγχρονισμό της λίστας προβολής και των προτιμήσεών σου σε όλες τις συσκευές.";
 "onboarding.skip" = "Παράλειψη προς το παρόν";
 
 // Email Verification
@@ -584,12 +584,12 @@
 "auth.verificationPending" = "Αναμονή για επιβεβαίωση...";
 
 // Gamification
-"gamification.levelUp" = "LEVEL UP!";
+"gamification.levelUp" = "ΑΝΕΒΗΚΕΣ ΕΠΙΠΕΔΟ!";
 "gamification.level" = "Επίπεδο";
-"gamification.rankAchieved" = "Επιτεύχθηκε βαθμίδα \"%@\"";
+"gamification.rankAchieved" = "Επιτεύχθηκε η βαθμίδα «%@»";
 "gamification.xp.base" = "βάση";
-"gamification.xp.proBoost" = "Pro boost";
-"gamification.xp.streakBonus" = "Streak bonus";
+"gamification.xp.proBoost" = "Μπόνους Pro";
+"gamification.xp.streakBonus" = "Μπόνους σερί";
 "gamification.xp.total" = "Σύνολο XP";
 "gamification.challengeComplete" = "Η πρόκληση ολοκληρώθηκε!";
 
@@ -598,7 +598,7 @@
 "notifications.status" = "Κατάσταση";
 "notifications.enabled" = "Οι ειδοποιήσεις είναι ενεργές";
 "notifications.disabled" = "Οι ειδοποιήσεις είναι απενεργοποιημένες";
-"notifications.enableDescription" = "Ενεργοποίησε ειδοποιήσεις για να λαμβάνεις εξατομικευμένα alerts για νέα επεισόδια, κυκλοφορίες και περιεχόμενο που θα σου αρέσει.";
+"notifications.enableDescription" = "Ενεργοποίησε τις ειδοποιήσεις για να λαμβάνεις εξατομικευμένες ενημερώσεις για νέα επεισόδια, κυκλοφορίες και περιεχόμενο που θα σου αρέσει.";
 "notifications.enableButton" = "Ενεργοποίηση ειδοποιήσεων";
 "notifications.types" = "Τύποι ειδοποιήσεων";
 "notifications.newEpisodes" = "Νέα επεισόδια";
@@ -609,10 +609,10 @@
 "notifications.favoriteActorsDesc" = "Νέο περιεχόμενο από άτομα που σου αρέσουν";
 "notifications.similarContent" = "Παρόμοιο περιεχόμενο";
 "notifications.similarContentDesc" = "Προτάσεις με βάση ό,τι σου άρεσε";
-"notifications.watchlistAlerts" = "Ειδοποιήσεις watchlist";
-"notifications.watchlistAlertsDesc" = "Όταν τίτλοι στη watchlist σου γίνουν διαθέσιμοι";
+"notifications.watchlistAlerts" = "Ειδοποιήσεις λίστας προβολής";
+"notifications.watchlistAlertsDesc" = "Όταν τίτλοι στη λίστα προβολής σου γίνουν διαθέσιμοι";
 "notifications.milestones" = "Ορόσημα & επιτεύγματα";
-"notifications.milestonesDesc" = "Γιόρτασε τα streaks και τα επιτεύγματά σου";
+"notifications.milestonesDesc" = "Γιόρτασε τα σερί και τα επιτεύγματά σου";
 "notifications.frequency" = "Συχνότητα";
 "notifications.dailyLimit" = "Ημερήσιο όριο";
 "notifications.perDay" = "ανά ημέρα";
@@ -621,16 +621,16 @@
 "notifications.startTime" = "Ώρα έναρξης";
 "notifications.endTime" = "Ώρα λήξης";
 "notifications.quietHoursDesc" = "Δεν θα αποστέλλονται ειδοποιήσεις σε αυτές τις ώρες";
-"notifications.proFeatures" = "Pro λειτουργίες";
-"notifications.customActorAlerts" = "Προσαρμοσμένα alerts ηθοποιών";
-"notifications.customGenreAlerts" = "Προσαρμοσμένα alerts ειδών";
-"notifications.proFeaturesDesc" = "Λάβε alerts για συγκεκριμένους ηθοποιούς και είδη που επιλέγεις";
+"notifications.proFeatures" = "Λειτουργίες Pro";
+"notifications.customActorAlerts" = "Προσαρμοσμένες ειδοποιήσεις ηθοποιών";
+"notifications.customGenreAlerts" = "Προσαρμοσμένες ειδοποιήσεις ειδών";
+"notifications.proFeaturesDesc" = "Λάβε ειδοποιήσεις για συγκεκριμένους ηθοποιούς και είδη που επιλέγεις";
 "notifications.save" = "Αποθήκευση";
 "notifications.settingsSaved" = "Οι ρυθμίσεις αποθηκεύτηκαν";
 "notifications.preferencesUpdated" = "Οι προτιμήσεις ειδοποιήσεων ενημερώθηκαν.";
 "notifications.typesFooter" = "Επίλεξε ποιες ειδοποιήσεις θέλεις να λαμβάνεις";
 "notifications.newAvailability" = "Νέα διαθεσιμότητα";
-"notifications.newAvailabilityDesc" = "Όταν στοιχεία στη λίστα παρακολούθησής σου γίνονται διαθέσιμα για streaming, ενοικίαση ή αγορά";
+"notifications.newAvailabilityDesc" = "Όταν τίτλοι στη λίστα προβολής σου γίνονται διαθέσιμοι για στρίμινγκ, ενοικίαση ή αγορά";
 "notifications.newRelease" = "Νέες κυκλοφορίες";
 "notifications.newReleaseDesc" = "Ταινίες και σειρές στις οποίες πάτησες \"Ειδοποίησέ με\" όταν κυκλοφορήσουν";
 "notifications.episodeAired" = "Νέα επεισόδια";
@@ -650,75 +650,75 @@
 "lists.notifyMe" = "ΕΙΔΟΠΟΙΗΣΕ ΜΕ";
 "lists.watchOn" = "ΔΕΣ ΣΤΟ %@";
 "lists.notifyMeTitle" = "Ειδοποίησέ με";
-"lists.notifyMeMessage" = "Θα σου στείλουμε ειδοποίηση μόλις το '%@' είναι διαθέσιμο για streaming, ενοικίαση ή αγορά.";
+"lists.notifyMeMessage" = "Θα σου στείλουμε ειδοποίηση μόλις το '%@' είναι διαθέσιμο για στρίμινγκ, ενοικίαση ή αγορά.";
 
 // Error Views
 "error.oops" = "Ουπς!";
 
 // TV Show Detail - Mark All Seen Confirmation
 "tvDetail.markAllSeenTitle" = "Σήμανση όλης της σειράς ως προβεβλημένης";
-"tvDetail.markAllSeenDescription" = "This action will apply to all episodes and seasons of the series available.";
-"tvDetail.markAllSeenQuestion" = "Do you want to continue?";
-"tvDetail.markAllSeenConfirm" = "Yes, mark as seen";
-"tvDetail.markAllSeenCancel" = "No, cancel";
-"tvDetail.seasonSeenShort" = "seen";
+"tvDetail.markAllSeenDescription" = "Η ενέργεια θα εφαρμοστεί σε όλα τα διαθέσιμα επεισόδια και τις σεζόν της σειράς.";
+"tvDetail.markAllSeenQuestion" = "Θέλεις να συνεχίσεις;";
+"tvDetail.markAllSeenConfirm" = "Ναι, σήμανση ως προβεβλημένα";
+"tvDetail.markAllSeenCancel" = "Όχι, ακύρωση";
+"tvDetail.seasonSeenShort" = "είδα";
 
 // Library section switcher
-"lists.section.myLists" = "My Lists";
-"lists.section.tvTracking" = "TV Shows Tracking";
+"lists.section.myLists" = "Οι λίστες μου";
+"lists.section.tvTracking" = "Παρακολούθηση σειρών";
 
 // TV Shows Tracking
-"tvTracking.continuing" = "Continue Watching";
-"tvTracking.notStarted" = "Not Started";
-"tvTracking.upToDate" = "Up to Date";
-"tvTracking.emptyState" = "No TV shows found";
-"carousel.fromActor" = "Περισσότερα από %@";
-"carousel.decadeClassics" = "Κλασικά %@";
+"tvTracking.continuing" = "Συνέχισε την παρακολούθηση";
+"tvTracking.notStarted" = "Δεν ξεκίνησαν";
+"tvTracking.upToDate" = "Ενημερωμένα";
+"tvTracking.emptyState" = "Δεν βρέθηκαν σειρές";
+"carousel.fromActor" = "Περισσότερα από τη φιλμογραφία: %@";
+"carousel.decadeClassics" = "Κλασικά: %@";
 "carousel.moodTonight" = "%@ απόψε";
 "carousel.regionSpotlight" = "Στο επίκεντρο: %@";
-"carousel.topInGenre" = "Κορυφαία σε %@";
-"carousel.hotThisWeekInGenre" = "Δημοφιλή αυτή την εβδομάδα σε %@";
+"carousel.topInGenre" = "Κορυφαία: %@";
+"carousel.hotThisWeekInGenre" = "Δημοφιλή αυτή την εβδομάδα: %@";
 "carousel.quickWatches" = "Γρήγορες προβολές";
 "carousel.epicWatches" = "Επικές προβολές";
 "carousel.internationalPicks" = "Διεθνείς επιλογές";
-"carousel.throwback" = "Αναδρομή %@";
+"carousel.throwback" = "Αναδρομή: %@";
 "carousel.fromAIChat" = "Από τη συνομιλία AI σου";
 "carousel.comingSoon" = "Έρχονται σύντομα";
 "carousel.trendingTVWeek" = "Δημοφιλείς σειρές αυτή την εβδομάδα";
-"carousel.criticallyAcclaimedRecent" = "Επαινεμένα από κριτικούς %@";
+"carousel.criticallyAcclaimedRecent" = "Επαινεμένα από τους κριτικούς: %@";
 "carousel.returningTV" = "Επιστρέφουν σύντομα";
 "carousel.documentaries" = "Ντοκιμαντέρ για εσένα";
 "discovery.endOfFeed" = "Τα έχεις δει όλα";
 /* MARK: - Public Lists (Fase 1) */
-"lists.section.publicLists" = "Public Lists";
-"lists.public.scope.explore" = "Explore";
-"lists.public.scope.followed" = "Followed";
-"lists.public.searchPlaceholder" = "Search public lists";
-"lists.public.empty.explore" = "No public lists found";
-"lists.public.empty.followed" = "You're not following any list yet";
-"lists.public.follow" = "Follow";
-"lists.public.following" = "Following";
-"lists.public.unavailable" = "This list is no longer available";
-"lists.public.report" = "Report list";
-"lists.public.report.confirm" = "Report this list as inappropriate?";
-"lists.public.report.done" = "Thanks, your report has been received";
-"lists.public.block" = "Block user";
-"lists.public.block.confirm" = "Block this user? Their public lists will be hidden.";
-"lists.public.createFromThis" = "Create public list from this";
-"lists.public.toggle" = "Public list";
-"lists.public.toggle.footer" = "Public lists can be discovered and followed by other users.";
-"lists.public.profanity.title" = "Inappropriate content";
-"lists.public.profanity" = "Please remove inappropriate language from the name or description before publishing.";
-"lists.public.guidelines.title" = "Community guidelines";
-"lists.public.guidelines.body" = "By publishing a list you agree to our community guidelines: no offensive, hateful or illegal content. Lists that violate them may be hidden and reported users may be removed.";
-"lists.public.guidelines.accept" = "Accept and publish";
-"lists.duplicateName" = "Copy of %@";
+"lists.section.publicLists" = "Δημόσιες λίστες";
+"lists.public.scope.explore" = "Εξερεύνηση";
+"lists.public.scope.followed" = "Ακολουθείς";
+"lists.public.searchPlaceholder" = "Αναζήτηση δημόσιων λιστών";
+"lists.public.empty.explore" = "Δεν βρέθηκαν δημόσιες λίστες";
+"lists.public.empty.followed" = "Δεν ακολουθείς καμία λίστα ακόμα";
+"lists.public.follow" = "Ακολούθησε";
+"lists.public.following" = "Την ακολουθείς";
+"lists.public.unavailable" = "Αυτή η λίστα δεν είναι πλέον διαθέσιμη";
+"lists.public.report" = "Αναφορά λίστας";
+"lists.public.report.confirm" = "Αναφορά αυτής της λίστας ως ακατάλληλης;";
+"lists.public.report.done" = "Ευχαριστούμε, λάβαμε την αναφορά σου";
+"lists.public.block" = "Αποκλεισμός χρήστη";
+"lists.public.block.confirm" = "Αποκλεισμός αυτού του χρήστη; Οι δημόσιες λίστες του θα αποκρυφτούν.";
+"lists.public.createFromThis" = "Δημιουργία δημόσιας λίστας από αυτή";
+"lists.public.toggle" = "Δημόσια λίστα";
+"lists.public.toggle.footer" = "Οι δημόσιες λίστες μπορούν να ανακαλυφθούν και να ακολουθηθούν από άλλους χρήστες.";
+"lists.public.profanity.title" = "Ακατάλληλο περιεχόμενο";
+"lists.public.profanity" = "Αφαίρεσε την ακατάλληλη γλώσσα από το όνομα ή την περιγραφή πριν τη δημοσίευση.";
+"lists.public.guidelines.title" = "Κανόνες κοινότητας";
+"lists.public.guidelines.body" = "Δημοσιεύοντας μια λίστα αποδέχεσαι τους κανόνες της κοινότητας: κανένα προσβλητικό, μισαλλόδοξο ή παράνομο περιεχόμενο. Οι λίστες που τους παραβιάζουν μπορεί να αποκρύπτονται και οι χρήστες που αναφέρονται να αφαιρούνται.";
+"lists.public.guidelines.accept" = "Αποδοχή και δημοσίευση";
+"lists.duplicateName" = "Αντίγραφο: %@";
 /* MARK: - TV Tracking (card stile JustWatch) */
-"tvTracking.titlesCount" = "%d titles";
-"tvTracking.episodesRemaining" = "%d episodes remaining";
-"tvTracking.lastSeen" = "LAST SEEN %@";
-"tvTracking.soon" = "soon";
-"tvTracking.watchNow" = "Watch now";
+"tvTracking.titlesCount" = "%d τίτλοι";
+"tvTracking.episodesRemaining" = "%d επεισόδια απομένουν";
+"tvTracking.lastSeen" = "ΤΕΛΕΥΤΑΙΑ ΠΡΟΒΟΛΗ %@";
+"tvTracking.soon" = "σύντομα";
+"tvTracking.watchNow" = "Δες τώρα";
 
 /* SPEC v3 §9.2 — schermata Tracking */
 "tracking.title" = "Παρακολούθηση";
@@ -843,11 +843,11 @@
 "gamification.levels.title" = "Επίπεδα";
 "gamification.challenge.none" = "Καμία αποστολή σήμερα";
 "common.seeAll" = "Δες όλα";
-"profile.stats.subtitle" = "Είδη, mood, ώρες προβολής";
+"profile.stats.subtitle" = "Είδη, διάθεση, ώρες προβολής";
 "diary.subtitle" = "Ιστορικό επεισοδίων και ταινιών";
 "profile.badgesLevels.subtitle" = "Επίπεδο %d · %d/%d παράσημα";
 "notifications.row.subtitle" = "Κυκλοφορίες, νέα επεισόδια, ώρες ησυχίας";
-"platforms.row.subtitle" = "Streaming, ενοικίαση και αγορά";
+"platforms.row.subtitle" = "Στρίμινγκ, ενοικίαση και αγορά";
 "platforms.footnote" = "Οι επιλεγμένες πλατφόρμες φιλτράρουν πού βλέπεις σε όλη την εφαρμογή.";
 "profile.languageCountry" = "Γλώσσα και χώρα";
 "profile.edit.title" = "Επεξεργασία προφίλ";
@@ -859,10 +859,10 @@
 "profile.edit.publicProfile" = "Δημόσιο προφίλ";
 "profile.edit.publicProfileSubtitle" = "Οι χρήστες μπορούν να σε βρίσκουν και να ακολουθούν τις δημόσιες λίστες σου";
 "profile.edit.saveError" = "Δεν ήταν δυνατή η αποθήκευση του προφίλ. Δοκίμασε ξανά.";
-"profile.imageCache" = "Cache εικόνων";
+"profile.imageCache" = "Προσωρινή μνήμη εικόνων";
 "profile.imageCache.subtitle" = "Προφόρτωση μόνο μέσω WiFi";
-"common.on" = "Ναι";
-"common.off" = "Όχι";
+"common.on" = "Ενεργό";
+"common.off" = "Ανενεργό";
 "profile.privacyTerms" = "Απόρρητο και όροι";
 "profile.footer.tmdb" = "Αυτό το προϊόν χρησιμοποιεί το TMDb API αλλά δεν είναι εγκεκριμένο από το TMDb.";
 "settings.cacheManagement.inUse" = "%d MB σε χρήση";
@@ -872,9 +872,9 @@
 "auth.fullNamePlaceholder" = "Ονοματεπώνυμο";
 "onboarding.welcome.cta" = "Ξεκίνα";
 "onboarding.import.title" = "Πάρε μαζί το ιστορικό σου";
-"onboarding.import.subtitle" = "Κάνε εισαγωγή σειρών, επεισοδίων που έχεις δει και watchlist. Μόλις ολοκληρωθεί, η εφαρμογή είναι έτοιμη.";
+"onboarding.import.subtitle" = "Κάνε εισαγωγή σειρών, επεισοδίων που έχεις δει και της λίστας προβολής σου. Μόλις ολοκληρωθεί, η εφαρμογή είναι έτοιμη.";
 "onboarding.import.tvtime" = "Εισαγωγή από το TV Time";
-"onboarding.import.tvtime.subtitle" = "Σειρές, επεισόδια, watchlist και βαθμολογίες";
+"onboarding.import.tvtime.subtitle" = "Σειρές, επεισόδια, λίστα προβολής και βαθμολογίες";
 "onboarding.import.other" = "Άλλες εφαρμογές";
 "onboarding.import.other.subtitle" = "Trakt, Letterboxd — έρχονται σύντομα";
 "onboarding.import.skip" = "Παράλειψη, ξεκινώ από το μηδέν";
@@ -882,12 +882,12 @@
 "onboarding.import.stat.shows" = "Σειρές";
 "onboarding.import.stat.episodes" = "Επεισόδια";
 "onboarding.import.stat.movies" = "Ταινίες";
-"onboarding.import.stat.watchlist" = "Στη watchlist";
+"onboarding.import.stat.watchlist" = "Στη λίστα";
 "onboarding.notifications.title" = "Μη χάσεις τίποτα";
-"onboarding.notifications.subtitle" = "Σε ειδοποιούμε μόνο για ό,τι παρακολουθείς — νέα επεισόδια, κυκλοφορίες από τη watchlist και διαθεσιμότητα σε streaming.";
+"onboarding.notifications.subtitle" = "Σε ειδοποιούμε μόνο για ό,τι παρακολουθείς — νέα επεισόδια, κυκλοφορίες από τη λίστα προβολής και διαθεσιμότητα σε στρίμινγκ.";
 "onboarding.notifications.row1" = "Νέα επεισόδια των σειρών που παρακολουθείς";
-"onboarding.notifications.row2" = "Κυκλοφορίες τίτλων από τη watchlist σου";
-"onboarding.notifications.row3" = "Όταν ένας τίτλος φτάνει σε streaming";
+"onboarding.notifications.row2" = "Κυκλοφορίες τίτλων από τη λίστα προβολής σου";
+"onboarding.notifications.row3" = "Όταν ένας τίτλος φτάνει στο στρίμινγκ";
 "onboarding.notifications.enable" = "Ενεργοποίηση ειδοποιήσεων";
 "onboarding.notifications.later" = "Ίσως αργότερα";
 "onboarding.ready.title" = "Όλα έτοιμα";
@@ -897,41 +897,41 @@
 "onboarding.ready.chip.notifications" = "Ειδοποιήσεις ενεργές";
 "onboarding.ready.cta" = "Ξεκίνα να βλέπεις";
 
-"filters.myPlatforms" = "Mine";
-"filters.platformScopeAll" = "All";
-"mediaDetail.forYou" = "for you";
-"mediaDetail.watchOn" = "Watch on";
-"mediaDetail.notifyMe" = "Notify me";
-"mediaDetail.notifyMeEnabling" = "Activating notification…";
-"mediaDetail.notifyMeEnabled" = "Notification active";
-"mediaDetail.action.watchlist" = "Watchlist";
-"mediaDetail.action.like" = "Like";
-"mediaDetail.action.list" = "To list";
+"filters.myPlatforms" = "Δικές μου";
+"filters.platformScopeAll" = "Όλες";
+"mediaDetail.forYou" = "για εσένα";
+"mediaDetail.watchOn" = "Δες στο";
+"mediaDetail.notifyMe" = "Ειδοποίησέ με";
+"mediaDetail.notifyMeEnabling" = "Ενεργοποίηση…";
+"mediaDetail.notifyMeEnabled" = "Θα σε ειδοποιήσουμε";
+"mediaDetail.action.watchlist" = "Λίστα προβολής";
+"mediaDetail.action.like" = "Μου αρέσει";
+"mediaDetail.action.list" = "Σε λίστα";
 "mediaDetail.toast.watchlistAdded" = "Προστέθηκε στη λίστα σου";
 "mediaDetail.toast.watchlistRemoved" = "Αφαιρέθηκε από τη λίστα σου";
 "mediaDetail.toast.markedSeen" = "Σημειώθηκε ως προβεβλημένο";
 "mediaDetail.toast.markedUnseen" = "Αφαιρέθηκε από τα προβεβλημένα";
 "mediaDetail.toast.liked" = "Προστέθηκε στα «μου αρέσει»";
 "mediaDetail.toast.likeRemoved" = "Αφαιρέθηκε από τα «μου αρέσει»";
-"mediaDetail.why.cardTitle" = "Why is it right for you?";
-"mediaDetail.why.title" = "Why for you";
-"mediaDetail.why.affinity" = "Affinity with your tastes";
-"mediaDetail.why.reason.mood" = "In line with your mood";
-"mediaDetail.why.reason.genres" = "Genres you love";
-"mediaDetail.why.reason.cast" = "Cast you know";
-"mediaDetail.why.helpful" = "Was this helpful?";
-"mediaDetail.why.regenerate" = "Regenerate";
-"mediaDetail.why.quota" = "Generated by Vibe AI from ratings, mood and history. %d/%d requests today.";
-"settings.cacheManagement.clearCacheAction" = "Clear cache";
-"gamification.missionsToday" = "Today's missions";
-"gamification.xpToNext" = "%d XP to the next level";
-"gamification.mission.openApp" = "Open the app";
-"gamification.mission.keepStreak" = "Keep your daily streak";
-"gamification.challenge.watch_3" = "Watch 3 clips";
-"gamification.challenge.like_5" = "Like 5 clips";
-"gamification.challenge.list_2" = "Add 2 titles to a list";
-"gamification.challenge.watch_new_genre" = "Watch a clip from a new genre";
-"gamification.challenge.complete_5" = "Complete 5 clips (>70%)";
+"mediaDetail.why.cardTitle" = "Γιατί σου ταιριάζει;";
+"mediaDetail.why.title" = "Γιατί για εσένα";
+"mediaDetail.why.affinity" = "Συνάφεια με τα γούστα σου";
+"mediaDetail.why.reason.mood" = "Ταιριάζει με τη διάθεσή σου";
+"mediaDetail.why.reason.genres" = "Είδη που αγαπάς";
+"mediaDetail.why.reason.cast" = "Ηθοποιοί που ξέρεις";
+"mediaDetail.why.helpful" = "Σου φάνηκε χρήσιμο;";
+"mediaDetail.why.regenerate" = "Δημιουργία ξανά";
+"mediaDetail.why.quota" = "Δημιουργήθηκε από το Vibe AI με βάση βαθμολογίες, διάθεση και ιστορικό. %d/%d αιτήματα σήμερα.";
+"settings.cacheManagement.clearCacheAction" = "Εκκαθάριση προσωρινής μνήμης";
+"gamification.missionsToday" = "Οι αποστολές σήμερα";
+"gamification.xpToNext" = "%d XP για το επόμενο επίπεδο";
+"gamification.mission.openApp" = "Άνοιξε την εφαρμογή";
+"gamification.mission.keepStreak" = "Κράτα το καθημερινό σου σερί";
+"gamification.challenge.watch_3" = "Δες 3 κλιπ";
+"gamification.challenge.like_5" = "Πάτα «μου αρέσει» σε 5 κλιπ";
+"gamification.challenge.list_2" = "Πρόσθεσε 2 τίτλους σε λίστα";
+"gamification.challenge.watch_new_genre" = "Δες ένα κλιπ από νέο είδος";
+"gamification.challenge.complete_5" = "Ολοκλήρωσε 5 κλιπ (>70%)";
 
 // SeasonDetailView — conferme di marcatura episodi (2026-08-04)
 "season.confirmUnaired.title" = "Δεν έχει προβληθεί ακόμα";
@@ -950,7 +950,7 @@
 "onboarding.import.meanwhile" = "Στο μεταξύ";
 "onboarding.import.wait" = "Θα μείνω να περιμένω";
 "onboarding.import.wait.subtitle" = "Μπες στην εφαρμογή με τη βιβλιοθήκη σου ήδη πλήρη";
-"onboarding.import.background" = "Συνέχισε το onboarding";
+"onboarding.import.background" = "Συνέχισε τη ρύθμιση";
 "onboarding.import.background.subtitle" = "Η εισαγωγή συνεχίζεται στο παρασκήνιο — θα σε ειδοποιήσουμε όταν ολοκληρωθεί";
 "onboarding.import.waitingHint" = "Περιμένουμε εδώ: μόλις ολοκληρωθεί η εισαγωγή, ο έλεγχος ανοίγει αυτόματα.";
 "onboarding.import.manage" = "Διαχείριση %d τίτλων";
@@ -1126,6 +1126,159 @@
 "search.scope.series" = "Σειρές";
 "search.clear" = "Εκκαθάριση";
 "search.trending.today" = "Σήμερα";
-"search.trending.subtitle" = "Οι πιο αναζητημένοι τίτλοι σε %@ τις τελευταίες 24 ώρες.";
+"search.trending.subtitle" = "Οι πιο αναζητημένοι τίτλοι τις τελευταίες 24 ώρες. Χώρα: %@";
 "search.results.subtitle" = "Αντιστοιχίες για «%@», μετά συναφείς τίτλοι.";
 "search.resultsCount" = "%d τίτλοι";
+
+
+// MARK: - Ricerca piattaforme + esito notifica
+"platforms.search" = "Αναζήτηση πλατφόρμας";
+"platforms.searchEmpty" = "Καμία πλατφόρμα με αυτό το όνομα.";
+"mediaDetail.notifyMeFailed" = "Δεν ήταν δυνατή η ενεργοποίηση της ειδοποίησης.";
+
+
+// MARK: - Report import ridisegnato
+"import.report.title" = "Αναφορά εισαγωγής";
+"import.report.sourcePeriod" = "%@ · %@ – %@";
+"import.report.success.title" = "Η βιβλιοθήκη εισήχθη";
+"import.report.success.subtitle" = "%d σειρές και %d ταινίες αντιστοιχίστηκαν στον κατάλογο.";
+"import.report.success.subtitleWithRatings" = "%d σειρές και %d ταινίες αντιστοιχίστηκαν στον κατάλογο, με ημερομηνίες και βαθμολογίες.";
+"import.report.tile.episodes" = "Επεισόδια";
+"import.report.tile.movies" = "Ταινίες";
+"import.report.leftOut.title" = "Έμειναν εκτός";
+"import.report.leftOut.subtitle" = "Γι' αυτούς τους τίτλους δεν υπάρχει σίγουρη αντιστοιχία στον κατάλογο. Άγγιξε μια κάρτα για χειροκίνητη αναζήτηση.";
+"import.report.leftOut.excluded" = "Το εξαίρεσες εσύ";
+"import.report.leftOut.episodes" = "%d επεισόδια σε προβολή";
+"import.report.leftOut.seenOn" = "σε προβολή στις %@";
+"import.report.copyList" = "Αντιγραφή λίστας";
+"import.report.copied" = "Η λίστα αντιγράφηκε";
+"import.report.details" = "Λεπτομέρειες";
+
+
+// MARK: - Report import — dettagli
+"import.report.detail.period" = "Καλυπτόμενη περίοδος";
+"import.report.detail.years" = "%d χρόνια";
+"import.report.detail.oneYear" = "1 χρόνος";
+"import.report.detail.lessThanYear" = "λιγότερο από έναν χρόνο";
+"import.report.detail.statuses" = "Καταστάσεις σειρών που επανήλθαν";
+"import.report.detail.statuses.hint" = "Λίστα και αρχείο όπως στο TV Time";
+"import.report.detail.ratings" = "Βαθμολογίες που μεταφέρθηκαν";
+"import.report.detail.ratingsUnmatched" = "Βαθμολογίες χωρίς αντιστοίχιση";
+"import.report.detail.ratingsUnmatched.hint" = "Βαθμολογημένα επεισόδια που δεν υπάρχουν στον κατάλογο";
+"import.report.detail.ratingsDeferred" = "Βαθμολογίες που δεν εισήχθησαν ακόμη";
+"import.report.detail.favorites" = "Αγαπημένα που επανήλθαν";
+"import.report.detail.moviesSeen" = "Ταινίες σημειωμένες ως προβεβλημένες";
+"import.report.detail.moviesWatchlist" = "Ταινίες στη λίστα";
+"import.report.detail.statusesUnresolved" = "Καταστάσεις που δεν επανήλθαν";
+"import.report.detail.outOfStructure" = "Επεισόδια χωρίς θέση";
+"import.report.detail.outOfStructure.hint" = "Ειδικά επεισόδια και εκτεταμένες εκδοχές εκτός της δομής της σειράς";
+"import.report.detail.favoriteMovies" = "Αγαπημένες ταινίες που δεν εισήχθησαν";
+
+
+// MARK: - Report import — titolo mancante
+"import.report.leftOut.untitled" = "Λείπει ο τίτλος από την εξαγωγή";
+
+
+// MARK: - Generi TMDB
+// I nomi dei generi mostrati a schermo (titoli dei caroselli, grafico dei generi in Analytics).
+// TMDB li restituisce tradotti solo dentro la scheda di un film; nei caroselli il genere arriva
+// come id numerico, quindi il nome deve venire da qui. Da tradurre in ogni lingua.
+"genre.action" = "Δράση";
+"genre.adventure" = "Περιπέτεια";
+"genre.animation" = "Κινούμενα σχέδια";
+"genre.comedy" = "Κωμωδία";
+"genre.crime" = "Έγκλημα";
+"genre.documentary" = "Ντοκιμαντέρ";
+"genre.drama" = "Δράμα";
+"genre.family" = "Οικογενειακή";
+"genre.fantasy" = "Φαντασία";
+"genre.history" = "Ιστορία";
+"genre.horror" = "Τρόμου";
+"genre.music" = "Μουσική";
+"genre.mystery" = "Μυστήριο";
+"genre.romance" = "Ρομαντική";
+"genre.scienceFiction" = "Επιστημονική φαντασία";
+"genre.tvMovie" = "Τηλεταινία";
+"genre.thriller" = "Θρίλερ";
+"genre.war" = "Πολεμική";
+"genre.western" = "Γουέστερν";
+"genre.actionAdventure" = "Δράση και περιπέτεια";
+"genre.kids" = "Παιδικά";
+"genre.news" = "Ειδήσεις";
+"genre.reality" = "Ριάλιτι";
+"genre.sciFiFantasy" = "Επιστημονική φαντασία και φαντασία";
+"genre.soap" = "Σαπουνόπερα";
+"genre.talk" = "Τοκ σόου";
+"genre.warPolitics" = "Πόλεμος και πολιτική";
+
+
+// MARK: - Mood
+// Vanno nel `%@` di "carousel.moodTonight" ("%@ απόψε"): sono SOSTANTIVI al nominativo, non
+// aggettivi (un aggettivo dovrebbe concordare con una parola che nel template non c'e').
+"mood.happy" = "Καλή διάθεση";
+"mood.sad" = "Μελαγχολία";
+"mood.excited" = "Αδρεναλίνη";
+"mood.relaxed" = "Χαλάρωση";
+"mood.scared" = "Ανατριχίλα";
+"mood.thoughtful" = "Τροφή για σκέψη";
+"mood.romantic" = "Ρομαντισμός";
+"mood.adventurous" = "Περιπέτεια";
+"mood.nostalgic" = "Νοσταλγία";
+"mood.energetic" = "Καθαρή ενέργεια";
+
+
+// MARK: - Caroselli — argomenti e varianti senza genere
+// "%d" e' l'anno d'inizio del decennio (2020): in greco "δεκαετία του 2020". Il valore finisce
+// dentro "carousel.decadeClassics" ("Κλασικά: %@") e "carousel.throwback" ("Αναδρομή: %@"):
+// entrambi i template sono stati riscritti con i due punti, perche' con la preposizione
+// servirebbe il genitivo/accusativo e la forma non reggerebbe.
+"carousel.arg.decade" = "δεκαετία του %d";
+// Usati quando il profilo non ha ancora un genere preferito: non un fallback infilato nel "%@" del
+// titolo normale, ma una frase alternativa che sta in piedi da sola.
+"carousel.hiddenGems.generic" = "Κρυμμένα διαμάντια";
+"carousel.staffPicks.generic" = "Επιλογές της ομάδας για εσένα";
+
+
+// MARK: - Analytics
+"analytics.noData" = "Χωρίς δεδομένα";
+
+
+// MARK: - Statistiche e gamification (stringhe estratte dalle view)
+// Erano letterali dentro AnalyticsDashboardView / FloatingXPBadgeView / BadgeGalleryView /
+// LevelProgressView: non passando da `.localized` restavano in inglese in tutte e 20 le lingue.
+"stats.title" = "Τα στατιστικά σου";
+"stats.yourActivity" = "Η δραστηριότητά σου";
+"stats.viewFull" = "Δες όλα τα στατιστικά";
+"stats.loading" = "Φόρτωση στατιστικών…";
+"stats.errorTitle" = "Δεν φορτώθηκαν τα στατιστικά σου";
+"stats.emptyTitle" = "Δεν υπάρχουν στατιστικά ακόμα";
+"stats.emptySubtitle" = "Ξεκίνα να βλέπεις για να δεις τα στατιστικά σου!";
+"stats.genreDistribution" = "Ανάλυση ανά είδος";
+"stats.genreEmpty" = "Δεν υπάρχουν δεδομένα ειδών ακόμα";
+"stats.whenActive" = "Πότε βλέπεις";
+"stats.topContent" = "Οι κορυφαίοι τίτλοι σου";
+"stats.contentEmpty" = "Δεν υπάρχουν δεδομένα τίτλων ακόμα";
+"stats.discoveryChannels" = "Πώς βρίσκεις τίτλους";
+"stats.discoveryEmpty" = "Δεν υπάρχουν δεδομένα ανακάλυψης ακόμα";
+"stats.moodProfile" = "Προφίλ διάθεσης";
+"stats.moodEmpty" = "Δεν υπάρχουν αρκετά δεδομένα ακόμα — συνέχισε να βλέπεις για να δεις το προφίλ διάθεσής σου.";
+
+// "%d" è il numero del livello.
+"gamification.levelNumber" = "Επίπεδο %d";
+// Versione corta per il badge in cima alla schermata, dove lo spazio è quello che è.
+"gamification.levelShort" = "Επ.%d";
+"gamification.bestStreak" = "Καλύτερο σερί";
+"gamification.xpBonus" = "Μπόνους XP";
+"gamification.todaysChallenge" = "Η πρόκληση της ημέρας";
+"gamification.completed" = "Ολοκληρώθηκε!";
+"gamification.badgeUnlocked" = "Ξεκλείδωσες παράσημο!";
+"gamification.badges.collected" = "Παράσημα που συγκέντρωσες";
+"gamification.badges.unlocked" = "Ξεκλειδώθηκε";
+// "%d" è il totale dei badge esistenti: compare come "12 από 40".
+"gamification.badges.ofTotal" = "από %d";
+"gamification.levels.progressTitle" = "Πρόοδος επιπέδων";
+"gamification.allLevels" = "ΟΛΑ ΤΑ ΕΠΙΠΕΔΑ";
+
+"common.progress" = "Πρόοδος";
+"tvDetail.seasonsTitle" = "Σεζόν";
+"tvDetail.episodesTitle" = "Επεισόδια";

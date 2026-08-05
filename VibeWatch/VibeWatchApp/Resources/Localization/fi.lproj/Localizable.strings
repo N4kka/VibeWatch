@@ -36,7 +36,7 @@
 // Lists
 "list.all" = "Kaikki";
 "list.movies" = "Elokuvat";
-"list.tvShows" = "TV";
+"list.tvShows" = "Sarjat";
 "lists.myLists" = "Omat listani";
 "lists.collections" = "Kokoelmat";
 "lists.empty" = "Ei listoja vielä";
@@ -128,11 +128,11 @@
 "clips.noClipsAvailable" = "Klippejä ei saatavilla";
 "clips.noClipsDescription" = "Palaa myöhemmin nähdäksesi kohtauksia suosikkielokuvistasi ja -sarjoistasi";
 "clips.addToList" = "Lisää listaan";
-"clips.card.addToWatchlist" = "+ Watchlist";
+"clips.card.addToWatchlist" = "+ Katselulista";
 "clips.card.goToDetail" = "Näytä tiedot";
 "clips.createFirstList" = "Luo ensimmäinen katselulistasi tallentaaksesi valintoja";
 "clips.createNewList" = "Luo uusi lista";
-"clips.feed.craftingTitle" = "Rakennamme sinulle täydellisen feedeen";
+"clips.feed.craftingTitle" = "Rakennamme sinulle täydellisen syötteen";
 "clips.feed.craftingSubtitle" = "Poimimme parhaat klipit juuri sinulle ✨";
 "clips.comment" = "Kommentti";
 "clips.comments" = "Kommentit";
@@ -179,7 +179,7 @@
 "profile.settings" = "Asetukset";
 "profile.streamingServices" = "Suoratoistopalvelut";
 "profile.notifications" = "Ilmoitukset";
-"profile.helpSupport" = "Ohje & tuki";
+"profile.helpSupport" = "Ohje ja tuki";
 "profile.logout" = "Kirjaudu ulos";
 "profile.changePassword" = "Vaihda salasana";
 
@@ -208,7 +208,7 @@
 
 // Platforms
 "platform.title" = "Suoratoistoalustat";
-"platform.selectionCount" = "%d of %d selected";
+"platform.selectionCount" = "%d/%d valittu";
 "platforms.streaming" = "Suoratoisto";
 "platforms.rent" = "Vuokraa";
 "platforms.buy" = "Osta";
@@ -293,7 +293,7 @@
 "ai.softLimitMessage" = "Lähestyt päivän AI-rajaa. Pidä pyynnöt ytimekkäinä.";
 "ai.hardLimitMessage" = "Olet saavuttanut päivän AI-rajan. Tule huomenna uudelleen.";
 "ai.proRequired" = "AI-chat on saatavilla vain Pro-jäsenille.";
-"ai.suggestion.chips1" = "💖 Cozy romance, AI:n valitsema";
+"ai.suggestion.chips1" = "💖 Lämminhenkinen romanssi, AI:n valitsema";
 "ai.suggestion.chips2" = "💥 80-luvun toiminta-komedia, AI suosittelee";
 "ai.suggestion.chips3" = "🕵️‍♂️ Aliarvostettu trilleri juonenkäänteellä";
 "ai.suggestion.chips4" = "🤖 AI: mitä katsoisin seuraavaksi?";
@@ -335,7 +335,7 @@
 "paywall.feature.advancedFilters" = "🔎 Edistyneet suodattimet nopeampiin valintoihin";
 "paywall.feature.lists" = "📋 Jopa 100 synkronoitua katselulistaa";
 "paywall.feature.offlineMode" = "📵 Offline-tila tallennetuille valinnoille";
-"paywall.feature.releaseAlerts" = "🔔 Hälytykset, kun suosikit ovat katsottavissa";
+"paywall.feature.releaseAlerts" = "🔔 Ilmoitukset, kun suosikit tulevat katsottaviksi";
 
 // Common
 "common.ok" = "OK";
@@ -386,7 +386,7 @@
 "profile.faqs" = "UKK";
 "profile.faq" = "UKK";
 "profile.faqDetail" = "Löydä nopeat vastaukset yleisiin kysymyksiin tileistä, tilauksista ja ominaisuuksista.";
-"profile.legal" = "Oikeudellinen";
+"profile.legal" = "Lakiasiat";
 "profile.legalNotes" = "Oikeudelliset huomautukset";
 "profile.tmdbAttribution" = "Tämä tuote käyttää TMDb API:a, mutta TMDb ei tue tai sertifioi sitä.";
 "profile.privacyPolicy" = "Tietosuojakäytäntö";
@@ -456,7 +456,7 @@
 "profile.feedback.invalidEmail" = "Virheellinen sähköpostisisältö.";
 
 // FAQ Items
-"profile.faq.question1" = "Miten Clips auttaa minua löytämään uusia nimikkeitä?";
+"profile.faq.question1" = "Miten klipit auttavat minua löytämään uusia nimikkeitä?";
 "profile.faq.answer1" = "Klipit ovat lyhyitä, pystysuuntaisia esikatseluja, jotka on sovitettu makuusi, jotta voit selata ilman tunnetta ajanhukasta.";
 "profile.faq.question2" = "Voinko seurata, mitä katson?";
 "profile.faq.answer2" = "Kyllä. Tallenna listoille, merkitse katsotuksi/tykätyksi/ei tykätyksi ja synkronoi elokuva- ja TV-nimikkeiden välillä.";
@@ -493,12 +493,12 @@
 "actor.biography.showMore" = "Näytä lisää";
 "actor.biography.showLess" = "Näytä vähemmän";
 
-"actor.birthday" = "Born: %@";
-"actor.birthday.line" = "%@ (%@ years old)";
-"actor.known_for" = "Known For";
+"actor.birthday" = "Syntynyt: %@";
+"actor.birthday.line" = "%@ (%@ vuotta)";
+"actor.known_for" = "Tunnetuimmat työt";
 "actor.search.placeholder" = "Hae filmografiaa…";
 "actor.search.noResults" = "Ei tuloksia haulle";
-"actor.filmography.empty" = "Ei löydettyjä elokuvia.";
+"actor.filmography.empty" = "Rooleja ei löytynyt.";
 
 // Global Discovery Filters
 "filters.mediaType" = "Mediatyyppi";
@@ -514,15 +514,15 @@
 "filters.customRange" = "Mukautettu alue";
 "filters.customYearRange" = "Mukautettu vuosialue";
 "filters.min" = "Min";
-"filters.max" = "Max";
+"filters.max" = "Maks";
 "filters.from" = "Alkaen";
 "filters.to" = "Asti";
 "filters.custom" = "Mukautettu";
 "filters.allCountries" = "Kaikki maat";
 "filters.sortPopularityDesc" = "Suosituimmat";
-"filters.sortPopularityAsc" = "Vähiten suosittu";
+"filters.sortPopularityAsc" = "Vähiten suositut";
 "filters.sortRatingDesc" = "Parhaiten arvioidut";
-"filters.sortRatingAsc" = "Heikoiten arvioidut";
+"filters.sortRatingAsc" = "Heikoimmin arvioidut";
 "filters.sortReleaseDateDesc" = "Uusimmat ensin";
 "filters.sortReleaseDateAsc" = "Vanhimmat ensin";
 "filters.proFilters" = "Pro-suodattimet";
@@ -539,14 +539,14 @@
 
 // Personalized Carousels
 "carousel.dailyMix" = "Päivittäinen mixisi";
-"carousel.trendingInGenre" = "Trendaa genressä %@";
+"carousel.trendingInGenre" = "Nousussa genressä %@";
 "carousel.becauseYouLiked" = "Koska pidit: %@";
 "carousel.hiddenGems" = "Piilotetut helmet genressä %@";
 "carousel.continueJourney" = "Jatka matkaasi";
 "carousel.fromSearches" = "Hauistasi";
 "carousel.topTVPicks" = "Parhaat TV-valinnat sinulle";
-"carousel.staffPicks" = "Tiimin valinnat %@-faneille";
-"carousel.yearlyRewind" = "Vuotuinen rewindisi";
+"carousel.staffPicks" = "Toimituksen valinnat %@-faneille";
+"carousel.yearlyRewind" = "Vuosikatsauksesi";
 "carousel.hotThisWeek" = "Kuuminta tällä viikolla";
 "carousel.awardWinners" = "Palkitut, joista pidät";
 
@@ -556,7 +556,7 @@
 "settings.analytics.share" = "Jaa anonyymi analytiikka";
 "settings.analytics.share.description" = "Auttaa meitä ymmärtämään, mitä ominaisuuksia käytät, ja parantamaan sovellusta. Ei mainosseurantaa.";
 "settings.analytics.viewStats" = "Näytä tilastosi";
-"settings.analytics.description" = "Katso katseluhistoria ja oivallukset";
+"settings.analytics.description" = "Katso katseluhistoriasi ja tilastosi";
 
 // Settings - Notifications (Settings Screen)
 "settings.notifications.title" = "Ilmoitukset";
@@ -584,12 +584,12 @@
 "auth.verificationPending" = "Odotetaan vahvistusta...";
 
 // Gamification
-"gamification.levelUp" = "LEVEL UP!";
+"gamification.levelUp" = "TASO NOUSI!";
 "gamification.level" = "Taso";
 "gamification.rankAchieved" = "\"%@\" -taso saavutettu";
-"gamification.xp.base" = "perus";
+"gamification.xp.base" = "peruspisteet";
 "gamification.xp.proBoost" = "Pro-boost";
-"gamification.xp.streakBonus" = "Streak-bonus";
+"gamification.xp.streakBonus" = "Putkibonus";
 "gamification.xp.total" = "XP yhteensä";
 "gamification.challengeComplete" = "Haaste suoritettu!";
 
@@ -605,14 +605,14 @@
 "notifications.newEpisodesDesc" = "Saat ilmoituksen, kun seuraamiesi sarjojen uudet jaksot ovat saatavilla";
 "notifications.personalizedReleases" = "Personoidut julkaisut";
 "notifications.personalizedReleasesDesc" = "Uudet elokuvat ja sarjat, jotka sopivat makuusi";
-"notifications.favoriteActors" = "Suosikkinäyttelijät & ohjaajat";
+"notifications.favoriteActors" = "Suosikkinäyttelijät ja -ohjaajat";
 "notifications.favoriteActorsDesc" = "Uutta sisältöä ihmisiltä, joista pidät";
 "notifications.similarContent" = "Samankaltainen sisältö";
 "notifications.similarContentDesc" = "Suosituksia sen perusteella, mistä pidit";
-"notifications.watchlistAlerts" = "Katselulista-hälytykset";
+"notifications.watchlistAlerts" = "Katselulistan ilmoitukset";
 "notifications.watchlistAlertsDesc" = "Kun katselulistasi nimikkeet tulevat saataville";
-"notifications.milestones" = "Virstanpylväät & saavutukset";
-"notifications.milestonesDesc" = "Juhlista katselustreakejäsi ja saavutuksiasi";
+"notifications.milestones" = "Virstanpylväät ja saavutukset";
+"notifications.milestonesDesc" = "Juhlista katseluputkiasi ja saavutuksiasi";
 "notifications.frequency" = "Tiheys";
 "notifications.dailyLimit" = "Päivittäinen raja";
 "notifications.perDay" = "päivässä";
@@ -622,9 +622,9 @@
 "notifications.endTime" = "Lopetusaika";
 "notifications.quietHoursDesc" = "Näinä aikoina ei lähetetä ilmoituksia";
 "notifications.proFeatures" = "Pro-ominaisuudet";
-"notifications.customActorAlerts" = "Mukautetut näyttelijähälytykset";
-"notifications.customGenreAlerts" = "Mukautetut genre-hälytykset";
-"notifications.proFeaturesDesc" = "Saat hälytyksiä valitsemistasi näyttelijöistä ja genreistä";
+"notifications.customActorAlerts" = "Valittujen näyttelijöiden ilmoitukset";
+"notifications.customGenreAlerts" = "Valittujen genrejen ilmoitukset";
+"notifications.proFeaturesDesc" = "Saat ilmoituksia valitsemistasi näyttelijöistä ja genreistä";
 "notifications.save" = "Tallenna";
 "notifications.settingsSaved" = "Asetukset tallennettu";
 "notifications.preferencesUpdated" = "Ilmoitusasetuksesi on päivitetty.";
@@ -657,31 +657,31 @@
 
 // TV Show Detail - Mark All Seen Confirmation
 "tvDetail.markAllSeenTitle" = "Merkitse koko sarja nähdyksi";
-"tvDetail.markAllSeenDescription" = "This action will apply to all episodes and seasons of the series available.";
-"tvDetail.markAllSeenQuestion" = "Do you want to continue?";
-"tvDetail.markAllSeenConfirm" = "Yes, mark as seen";
-"tvDetail.markAllSeenCancel" = "No, cancel";
-"tvDetail.seasonSeenShort" = "seen";
+"tvDetail.markAllSeenDescription" = "Toiminto koskee kaikkia sarjan saatavilla olevia jaksoja ja kausia.";
+"tvDetail.markAllSeenQuestion" = "Haluatko jatkaa?";
+"tvDetail.markAllSeenConfirm" = "Kyllä, merkitse nähdyksi";
+"tvDetail.markAllSeenCancel" = "Ei, peruuta";
+"tvDetail.seasonSeenShort" = "katsottu";
 
 // Library section switcher
-"lists.section.myLists" = "My Lists";
-"lists.section.tvTracking" = "TV Shows Tracking";
+"lists.section.myLists" = "Omat listat";
+"lists.section.tvTracking" = "Sarjojen seuranta";
 
 // TV Shows Tracking
-"tvTracking.continuing" = "Continue Watching";
-"tvTracking.notStarted" = "Not Started";
-"tvTracking.upToDate" = "Up to Date";
-"tvTracking.emptyState" = "No TV shows found";
+"tvTracking.continuing" = "Jatka katselua";
+"tvTracking.notStarted" = "Aloittamatta";
+"tvTracking.upToDate" = "Ajan tasalla";
+"tvTracking.emptyState" = "Sarjoja ei löytynyt";
 "carousel.fromActor" = "Lisää: %@";
-"carousel.decadeClassics" = "%@-klassikot";
-"carousel.moodTonight" = "%@ tänä iltana";
+"carousel.decadeClassics" = "%@ klassikot";
+"carousel.moodTonight" = "Tänä iltana: %@";
 "carousel.regionSpotlight" = "%@ valokeilassa";
-"carousel.topInGenre" = "Parhaat kategoriassa %@";
-"carousel.hotThisWeekInGenre" = "Tämän viikon kuumat kategoriassa %@";
+"carousel.topInGenre" = "Parhaat genressä %@";
+"carousel.hotThisWeekInGenre" = "Tämän viikon kuumimmat genressä %@";
 "carousel.quickWatches" = "Nopeat katsottavat";
 "carousel.epicWatches" = "Eeppiset katsottavat";
 "carousel.internationalPicks" = "Kansainväliset poiminnat";
-"carousel.throwback" = "Takaisin: %@";
+"carousel.throwback" = "Paluu %@ tunnelmiin";
 "carousel.fromAIChat" = "AI-chatistasi";
 "carousel.comingSoon" = "Tulossa pian";
 "carousel.trendingTVWeek" = "Tämän viikon trendisarjat";
@@ -690,35 +690,35 @@
 "carousel.documentaries" = "Dokumentteja sinulle";
 "discovery.endOfFeed" = "Olet ajan tasalla";
 /* MARK: - Public Lists (Fase 1) */
-"lists.section.publicLists" = "Public Lists";
-"lists.public.scope.explore" = "Explore";
-"lists.public.scope.followed" = "Followed";
-"lists.public.searchPlaceholder" = "Search public lists";
-"lists.public.empty.explore" = "No public lists found";
-"lists.public.empty.followed" = "You're not following any list yet";
-"lists.public.follow" = "Follow";
-"lists.public.following" = "Following";
-"lists.public.unavailable" = "This list is no longer available";
-"lists.public.report" = "Report list";
-"lists.public.report.confirm" = "Report this list as inappropriate?";
-"lists.public.report.done" = "Thanks, your report has been received";
-"lists.public.block" = "Block user";
-"lists.public.block.confirm" = "Block this user? Their public lists will be hidden.";
-"lists.public.createFromThis" = "Create public list from this";
-"lists.public.toggle" = "Public list";
-"lists.public.toggle.footer" = "Public lists can be discovered and followed by other users.";
-"lists.public.profanity.title" = "Inappropriate content";
-"lists.public.profanity" = "Please remove inappropriate language from the name or description before publishing.";
-"lists.public.guidelines.title" = "Community guidelines";
-"lists.public.guidelines.body" = "By publishing a list you agree to our community guidelines: no offensive, hateful or illegal content. Lists that violate them may be hidden and reported users may be removed.";
-"lists.public.guidelines.accept" = "Accept and publish";
-"lists.duplicateName" = "Copy of %@";
+"lists.section.publicLists" = "Julkiset listat";
+"lists.public.scope.explore" = "Tutustu";
+"lists.public.scope.followed" = "Seuratut";
+"lists.public.searchPlaceholder" = "Hae julkisia listoja";
+"lists.public.empty.explore" = "Julkisia listoja ei löytynyt";
+"lists.public.empty.followed" = "Et seuraa vielä yhtään listaa";
+"lists.public.follow" = "Seuraa";
+"lists.public.following" = "Seurataan";
+"lists.public.unavailable" = "Tämä lista ei ole enää saatavilla";
+"lists.public.report" = "Ilmoita listasta";
+"lists.public.report.confirm" = "Ilmoitetaanko tämä lista asiattomaksi?";
+"lists.public.report.done" = "Kiitos, ilmoituksesi on vastaanotettu";
+"lists.public.block" = "Estä käyttäjä";
+"lists.public.block.confirm" = "Estetäänkö tämä käyttäjä? Hänen julkiset listansa piilotetaan.";
+"lists.public.createFromThis" = "Luo tästä julkinen lista";
+"lists.public.toggle" = "Julkinen lista";
+"lists.public.toggle.footer" = "Muut käyttäjät voivat löytää julkiset listat ja seurata niitä.";
+"lists.public.profanity.title" = "Asiaton sisältö";
+"lists.public.profanity" = "Poista asiaton kieli nimestä tai kuvauksesta ennen julkaisua.";
+"lists.public.guidelines.title" = "Yhteisön säännöt";
+"lists.public.guidelines.body" = "Julkaisemalla listan hyväksyt yhteisön säännöt: ei loukkaavaa, vihamielistä tai laitonta sisältöä. Sääntöjä rikkovat listat voidaan piilottaa ja ilmoitetut käyttäjät poistaa.";
+"lists.public.guidelines.accept" = "Hyväksy ja julkaise";
+"lists.duplicateName" = "%@ (kopio)";
 /* MARK: - TV Tracking (card stile JustWatch) */
-"tvTracking.titlesCount" = "%d titles";
-"tvTracking.episodesRemaining" = "%d episodes remaining";
-"tvTracking.lastSeen" = "LAST SEEN %@";
-"tvTracking.soon" = "soon";
-"tvTracking.watchNow" = "Watch now";
+"tvTracking.titlesCount" = "%d nimikettä";
+"tvTracking.episodesRemaining" = "%d jaksoa jäljellä";
+"tvTracking.lastSeen" = "VIIMEKSI KATSOTTU %@";
+"tvTracking.soon" = "pian";
+"tvTracking.watchNow" = "Katso nyt";
 
 /* SPEC v3 §9.2 — schermata Tracking */
 "tracking.title" = "Seuranta";
@@ -843,7 +843,7 @@
 "gamification.levels.title" = "Tasot";
 "gamification.challenge.none" = "Ei tehtävää tänään";
 "common.seeAll" = "Näytä kaikki";
-"profile.stats.subtitle" = "Lajityypit, mood, katseluaika";
+"profile.stats.subtitle" = "Genret, tunnelma, katseluaika";
 "diary.subtitle" = "Katsottujen jaksojen ja elokuvien historia";
 "profile.badgesLevels.subtitle" = "Taso %d · %d/%d merkkiä";
 "notifications.row.subtitle" = "Julkaisut, uudet jaksot, hiljaiset tunnit";
@@ -897,41 +897,41 @@
 "onboarding.ready.chip.notifications" = "Ilmoitukset käytössä";
 "onboarding.ready.cta" = "Aloita katselu";
 
-"filters.myPlatforms" = "Mine";
-"filters.platformScopeAll" = "All";
-"mediaDetail.forYou" = "for you";
-"mediaDetail.watchOn" = "Watch on";
-"mediaDetail.notifyMe" = "Notify me";
-"mediaDetail.notifyMeEnabling" = "Activating notification…";
-"mediaDetail.notifyMeEnabled" = "Notification active";
-"mediaDetail.action.watchlist" = "Watchlist";
-"mediaDetail.action.like" = "Like";
-"mediaDetail.action.list" = "To list";
+"filters.myPlatforms" = "Omat";
+"filters.platformScopeAll" = "Kaikki";
+"mediaDetail.forYou" = "sinulle";
+"mediaDetail.watchOn" = "Katso palvelussa";
+"mediaDetail.notifyMe" = "Ilmoita minulle";
+"mediaDetail.notifyMeEnabling" = "Otetaan käyttöön…";
+"mediaDetail.notifyMeEnabled" = "Ilmoitamme sinulle";
+"mediaDetail.action.watchlist" = "Katselulista";
+"mediaDetail.action.like" = "Tykkää";
+"mediaDetail.action.list" = "Listalle";
 "mediaDetail.toast.watchlistAdded" = "Lisätty katselulistallesi";
 "mediaDetail.toast.watchlistRemoved" = "Poistettu katselulistaltasi";
 "mediaDetail.toast.markedSeen" = "Merkitty nähdyksi";
 "mediaDetail.toast.markedUnseen" = "Poistettu nähdyistä";
 "mediaDetail.toast.liked" = "Lisätty tykkäyksiisi";
 "mediaDetail.toast.likeRemoved" = "Poistettu tykkäyksistäsi";
-"mediaDetail.why.cardTitle" = "Why is it right for you?";
-"mediaDetail.why.title" = "Why for you";
-"mediaDetail.why.affinity" = "Affinity with your tastes";
-"mediaDetail.why.reason.mood" = "In line with your mood";
-"mediaDetail.why.reason.genres" = "Genres you love";
-"mediaDetail.why.reason.cast" = "Cast you know";
-"mediaDetail.why.helpful" = "Was this helpful?";
-"mediaDetail.why.regenerate" = "Regenerate";
-"mediaDetail.why.quota" = "Generated by Vibe AI from ratings, mood and history. %d/%d requests today.";
-"settings.cacheManagement.clearCacheAction" = "Clear cache";
-"gamification.missionsToday" = "Today's missions";
-"gamification.xpToNext" = "%d XP to the next level";
-"gamification.mission.openApp" = "Open the app";
-"gamification.mission.keepStreak" = "Keep your daily streak";
-"gamification.challenge.watch_3" = "Watch 3 clips";
-"gamification.challenge.like_5" = "Like 5 clips";
-"gamification.challenge.list_2" = "Add 2 titles to a list";
-"gamification.challenge.watch_new_genre" = "Watch a clip from a new genre";
-"gamification.challenge.complete_5" = "Complete 5 clips (>70%)";
+"mediaDetail.why.cardTitle" = "Miksi tämä sopii sinulle?";
+"mediaDetail.why.title" = "Miksi sinulle";
+"mediaDetail.why.affinity" = "Osuvuus makuusi";
+"mediaDetail.why.reason.mood" = "Sopii tunnelmaasi";
+"mediaDetail.why.reason.genres" = "Genret, joista pidät";
+"mediaDetail.why.reason.cast" = "Tuttuja näyttelijöitä";
+"mediaDetail.why.helpful" = "Oliko tästä apua?";
+"mediaDetail.why.regenerate" = "Luo uudelleen";
+"mediaDetail.why.quota" = "Vibe AI:n luoma arvioidesi, tunnelmasi ja historiasi perusteella. %d/%d pyyntöä tänään.";
+"settings.cacheManagement.clearCacheAction" = "Tyhjennä välimuisti";
+"gamification.missionsToday" = "Päivän tehtävät";
+"gamification.xpToNext" = "%d XP seuraavaan tasoon";
+"gamification.mission.openApp" = "Avaa sovellus";
+"gamification.mission.keepStreak" = "Pidä päiväputkesi käynnissä";
+"gamification.challenge.watch_3" = "Katso 3 klippiä";
+"gamification.challenge.like_5" = "Tykkää 5 klipistä";
+"gamification.challenge.list_2" = "Lisää 2 nimikettä listalle";
+"gamification.challenge.watch_new_genre" = "Katso klippi uudesta genrestä";
+"gamification.challenge.complete_5" = "Katso 5 klippiä loppuun (>70%)";
 
 // SeasonDetailView — conferme di marcatura episodi (2026-08-04)
 "season.confirmUnaired.title" = "Ei ole vielä esitetty";
@@ -1072,7 +1072,7 @@
 "tvDetail.lastAirDate" = "Viimeisin esitys";
 "tvDetail.seasonsEpisodes" = "Kaudet";
 "tvDetail.network" = "Kanava";
-"tvDetail.createdBy" = "Käsikirjoitus";
+"tvDetail.createdBy" = "Luonut";
 "mediaStatus.released" = "Julkaistu";
 "mediaStatus.inProduction" = "Tuotannossa";
 "mediaStatus.postProduction" = "Jälkituotannossa";
@@ -1129,3 +1129,156 @@
 "search.trending.subtitle" = "Haetuimmat maassa %@ viimeisen 24 tunnin aikana.";
 "search.results.subtitle" = "Osumat haulle ”%@”, sitten aiheeseen liittyvät.";
 "search.resultsCount" = "%d nimikettä";
+
+
+// MARK: - Ricerca piattaforme + esito notifica
+"platforms.search" = "Etsi palvelua";
+"platforms.searchEmpty" = "Ei palvelua tällä nimellä.";
+"mediaDetail.notifyMeFailed" = "Ilmoitusta ei voitu ottaa käyttöön.";
+
+
+// MARK: - Report import ridisegnato
+"import.report.title" = "Tuontiraportti";
+"import.report.sourcePeriod" = "%@ · %@ – %@";
+"import.report.success.title" = "Kirjasto tuotu";
+"import.report.success.subtitle" = "%d sarjaa ja %d elokuvaa yhdistettiin katalogiin.";
+"import.report.success.subtitleWithRatings" = "%d sarjaa ja %d elokuvaa yhdistettiin katalogiin katselupäivineen ja arvioineen.";
+"import.report.tile.episodes" = "Jaksot";
+"import.report.tile.movies" = "Elokuvat";
+"import.report.leftOut.title" = "Jäivät ulkopuolelle";
+"import.report.leftOut.subtitle" = "Näille nimikkeille ei löydy varmaa vastinetta katalogista. Napauta korttia ja hae käsin.";
+"import.report.leftOut.excluded" = "Jätit tämän pois";
+"import.report.leftOut.episodes" = "%d katsottua jaksoa";
+"import.report.leftOut.seenOn" = "katsottu %@";
+"import.report.copyList" = "Kopioi lista";
+"import.report.copied" = "Lista kopioitu";
+"import.report.details" = "Tiedot";
+
+
+// MARK: - Report import — dettagli
+"import.report.detail.period" = "Kattava ajanjakso";
+"import.report.detail.years" = "%d vuotta";
+"import.report.detail.oneYear" = "1 vuosi";
+"import.report.detail.lessThanYear" = "alle vuosi";
+"import.report.detail.statuses" = "Palautetut sarjatilat";
+"import.report.detail.statuses.hint" = "Katselulista ja arkisto kuten TV Timessa";
+"import.report.detail.ratings" = "Siirretyt arviot";
+"import.report.detail.ratingsUnmatched" = "Kohdistamattomat arviot";
+"import.report.detail.ratingsUnmatched.hint" = "Arvioidut jaksot, joita katalogissa ei ole";
+"import.report.detail.ratingsDeferred" = "Arvioita ei ole vielä tuotu";
+"import.report.detail.favorites" = "Palautetut suosikit";
+"import.report.detail.moviesSeen" = "Nähdyiksi merkityt elokuvat";
+"import.report.detail.moviesWatchlist" = "Elokuvat katselulistalla";
+"import.report.detail.statusesUnresolved" = "Palauttamattomat tilat";
+"import.report.detail.outOfStructure" = "Jaksot, joille ei ole paikkaa";
+"import.report.detail.outOfStructure.hint" = "Erikoisjaksot ja pidennetyt versiot sarjan rakenteen ulkopuolella";
+"import.report.detail.favoriteMovies" = "Suosikkielokuvia ei tuotu";
+
+
+// MARK: - Report import — titolo mancante
+"import.report.leftOut.untitled" = "Nimi puuttuu viennistä";
+
+
+// MARK: - TMDB-genret
+// Genrejen nimet sellaisina kuin ne näkyvät käyttäjälle (karusellien otsikot, Analytiikan
+// genrekaavio). TMDB kääntää ne vain nimikkeen omalla sivulla; karuselleissa genre saapuu
+// numeerisena tunnisteena, joten nimi otetaan täältä.
+"genre.action" = "Toiminta";
+"genre.adventure" = "Seikkailu";
+"genre.animation" = "Animaatio";
+"genre.comedy" = "Komedia";
+"genre.crime" = "Rikos";
+"genre.documentary" = "Dokumentti";
+"genre.drama" = "Draama";
+"genre.family" = "Perhe";
+"genre.fantasy" = "Fantasia";
+"genre.history" = "Historia";
+"genre.horror" = "Kauhu";
+"genre.music" = "Musiikki";
+"genre.mystery" = "Mysteeri";
+"genre.romance" = "Romantiikka";
+"genre.scienceFiction" = "Scifi";
+"genre.tvMovie" = "TV-elokuva";
+"genre.thriller" = "Trilleri";
+"genre.war" = "Sota";
+"genre.western" = "Western";
+"genre.actionAdventure" = "Toiminta ja seikkailu";
+"genre.kids" = "Lastenohjelmat";
+"genre.news" = "Uutiset";
+"genre.reality" = "Tosi-tv";
+"genre.sciFiFantasy" = "Scifi ja fantasia";
+"genre.soap" = "Saippuasarja";
+"genre.talk" = "Keskusteluohjelma";
+"genre.warPolitics" = "Sota ja politiikka";
+
+
+// MARK: - Tunnelmat (mood)
+// Menevät kohdan "carousel.moodTonight" ("Tänä iltana: %@") "%@"-paikkaan. Nämä ovat
+// SUBSTANTIIVEJA, eivät adjektiiveja: adjektiivin pitäisi taipua sanan mukaan, jota mallissa ei ole.
+"mood.happy" = "Hyvä mieli";
+"mood.sad" = "Haikeus";
+"mood.excited" = "Jännitys";
+"mood.relaxed" = "Jotain rentouttavaa";
+"mood.scared" = "Kylmät väreet";
+"mood.thoughtful" = "Ajateltavaa";
+"mood.romantic" = "Romantiikka";
+"mood.adventurous" = "Seikkailu";
+"mood.nostalgic" = "Nostalgia";
+"mood.energetic" = "Täyttä energiaa";
+
+
+// MARK: - Karusellit — argumentit ja genrettömät variantit
+// "%d" on vuosikymmenen alkuvuosi (2020). Englanniksi sanotaan "2020s", suomeksi "2020-luvun":
+// pääte on kielioppia, ei numero, ja se on käännettävä. Arvo on genetiivissä, jotta molemmat
+// otsikot toimivat: "2020-luvun klassikot" ja "Paluu 2020-luvun tunnelmiin".
+"carousel.arg.decade" = "%d-luvun";
+// Käytetään, kun profiilissa ei vielä ole suosikkigenreä: ei tavallisen otsikon "%@"-paikkaan
+// tungettu arvo, vaan oma erillinen ilmaisunsa.
+"carousel.hiddenGems.generic" = "Piilotetut helmet";
+"carousel.staffPicks.generic" = "Toimituksen valinnat sinulle";
+
+
+// MARK: - Analytiikka
+"analytics.noData" = "Ei tietoja";
+
+
+// MARK: - Tilastot ja gamification (näkymistä poimitut merkkijonot)
+// Nämä olivat literaaleina tiedostoissa AnalyticsDashboardView / FloatingXPBadgeView /
+// BadgeGalleryView / LevelProgressView: koska ne eivät kulkeneet `.localized`-kutsun kautta,
+// ne jäivät englanniksi.
+"stats.title" = "Tilastosi";
+"stats.yourActivity" = "Aktiivisuutesi";
+"stats.viewFull" = "Näytä kaikki tilastot";
+"stats.loading" = "Ladataan tilastoja…";
+"stats.errorTitle" = "Tilastojen lataus epäonnistui";
+"stats.emptyTitle" = "Ei vielä tilastoja";
+"stats.emptySubtitle" = "Aloita katselu, niin saat tilastoja!";
+"stats.genreDistribution" = "Jakauma genreittäin";
+"stats.genreEmpty" = "Ei vielä genretietoja";
+"stats.whenActive" = "Milloin katselet";
+"stats.topContent" = "Katsotuimmat nimikkeesi";
+"stats.contentEmpty" = "Ei vielä nimiketietoja";
+"stats.discoveryChannels" = "Näin löydät nimikkeitä";
+"stats.discoveryEmpty" = "Ei vielä tietoja löytötavoista";
+"stats.moodProfile" = "Tunnelmaprofiili";
+"stats.moodEmpty" = "Tietoja on vielä liian vähän — jatka katselua, niin näet tunnelmaprofiilisi.";
+
+// "%d" on tason numero.
+"gamification.levelNumber" = "Taso %d";
+// Lyhyt muoto näytön yläreunan merkkiin, jossa tila on tiukassa.
+"gamification.levelShort" = "Tas.%d";
+"gamification.bestStreak" = "Paras putki";
+"gamification.xpBonus" = "XP-bonus";
+"gamification.todaysChallenge" = "Päivän haaste";
+"gamification.completed" = "Suoritettu!";
+"gamification.badgeUnlocked" = "Merkki avattu!";
+"gamification.badges.collected" = "Kerätyt merkit";
+"gamification.badges.unlocked" = "Avattu";
+// "%d" on merkkien kokonaismäärä: näkyy muodossa "12 / 40".
+"gamification.badges.ofTotal" = "/ %d";
+"gamification.levels.progressTitle" = "Tasojen edistyminen";
+"gamification.allLevels" = "KAIKKI TASOT";
+
+"common.progress" = "Edistyminen";
+"tvDetail.seasonsTitle" = "Kaudet";
+"tvDetail.episodesTitle" = "Jaksot";

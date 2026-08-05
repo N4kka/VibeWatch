@@ -23,12 +23,10 @@ class UserPreferenceManager: ObservableObject {
     // MARK: - Constants
 
     private let deviceId: String
-    private let genreNames: [Int: String] = [
-        28: "Action", 12: "Adventure", 16: "Animation", 35: "Comedy", 80: "Crime",
-        99: "Documentary", 18: "Drama", 10751: "Family", 14: "Fantasy", 36: "History",
-        27: "Horror", 10402: "Music", 9648: "Mystery", 10749: "Romance", 878: "Science Fiction",
-        10770: "TV Movie", 53: "Thriller", 10752: "War", 37: "Western"
-    ]
+    /// I nomi qui dentro restano **inglesi** di proposito: `GenrePreference.genreName` finisce nei
+    /// prompt AI e nei log, dove il testo deve essere stabile. Chi mostra un genere a schermo passa
+    /// invece da `TMDBGenres.displayName(for:)`, che traduce.
+    private var genreNames: [Int: String] { TMDBGenres.idToName }
 
     // MARK: - Initialization
 

@@ -41,7 +41,7 @@ struct BadgeGalleryView: View {
             .padding()
         }
         .background(Color.theme.background.ignoresSafeArea())
-        .navigationTitle("Badges")
+        .navigationTitle("gamification.badges.title".localized)
         .navigationBarTitleDisplayMode(.large)
         .sheet(item: $selectedBadge) { badge in
             BadgeDetailSheet(
@@ -82,13 +82,13 @@ struct BadgeGalleryView: View {
                     Text("\(unlockedCount)")
                         .font(.system(size: 36, weight: .bold))
                         .foregroundColor(.white)
-                    Text("of \(totalCount)")
+                    Text(String(format: "gamification.badges.ofTotal".localized, totalCount))
                         .font(.system(size: 14))
                         .foregroundColor(.white.opacity(0.6))
                 }
             }
 
-            Text("Badges Collected")
+            Text("gamification.badges.collected".localized)
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundColor(.white.opacity(0.8))
         }
@@ -337,7 +337,7 @@ struct BadgeDetailSheet: View {
             if isUnlocked {
                 if let date = unlockedAt {
                     VStack(spacing: 4) {
-                        Text("Unlocked")
+                        Text("gamification.badges.unlocked".localized)
                             .font(.system(size: 14))
                             .foregroundColor(.white.opacity(0.5))
                         Text(date, style: .date)
@@ -352,7 +352,7 @@ struct BadgeDetailSheet: View {
                 }
             } else {
                 VStack(spacing: 8) {
-                    Text("Progress")
+                    Text("common.progress".localized)
                         .font(.system(size: 14))
                         .foregroundColor(.white.opacity(0.5))
 

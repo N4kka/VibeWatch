@@ -279,8 +279,10 @@ class AIRecommendationViewModel: ObservableObject {
 
     private func buildLanguageInstruction(detectedLangCode: String?) -> String {
         let detectedLanguageDescription: String
+        // Il nome della lingua va in inglese perché finisce dentro un prompt in inglese: con
+        // `Locale.current` l'istruzione diventava "You MUST respond ONLY in italiano (it)".
         if let langCode = detectedLangCode,
-           let localizedName = Locale.current.localizedString(forLanguageCode: langCode) {
+           let localizedName = Locale(identifier: "en_US").localizedString(forLanguageCode: langCode) {
             detectedLanguageDescription = "\(localizedName) (\(langCode))"
         } else {
             detectedLanguageDescription = "the user's last input language"

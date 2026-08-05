@@ -1508,6 +1508,91 @@ final class DiscoveryRankingTests: XCTestCase {
     }
 }
 
+// MARK: - CarouselTitleSpec (gli argomenti dei titoli dei caroselli)
+
+final class CarouselTitleSpecTests: XCTestCase {
+
+    /// I titoli finiscono in `personalized_discovery` come JSON e vengono riletti al lancio
+    /// successivo. Se un tipo di argomento non sopravvive al giro, il carosello sparisce (la
+    /// lettura scarta le righe che non decodificano): questo round-trip è il contratto.
+    func test_everyArgKindSurvivesTheJsonRoundTrip() throws {
+        let spec = CarouselTitleSpec(key: "carousel.test", args: [
+            .literal("Christopher Nolan"),
+            .region("IT"),
+            .genre(878),
+            .decade(2020),
+            .localizedKey("mood.excited")
+        ])
+
+        let data = try JSONEncoder().encode(spec)
+        let decoded = try JSONDecoder().decode(CarouselTitleSpec.self, from: data)
+
+        XCTAssertEqual(decoded.key, spec.key)
+        XCTAssertEqual(decoded.args.count, 5)
+        guard case .literal(let name) = decoded.args[0],
+              case .region(let region) = decoded.args[1],
+              case .genre(let genreId) = decoded.args[2],
+              case .decade(let decade) = decoded.args[3],
+              case .localizedKey(let key) = decoded.args[4]
+        else { return XCTFail("un argomento ha cambiato tipo nel round-trip") }
+        XCTAssertEqual(name, "Christopher Nolan")
+        XCTAssertEqual(region, "IT")
+        XCTAssertEqual(genreId, 878)
+        XCTAssertEqual(decade, 2020)
+        XCTAssertEqual(key, "mood.excited")
+    }
+
+    /// Una riga di cache con un id non numerico non deve far fallire il decode dell'intero
+    /// carosello: degrada a testo e il titolo resta leggibile.
+    func test_malformedNumericArgDegradesToLiteralInsteadOfThrowing() throws {
+        let json = #"{"key":"carousel.topInGenre","args":[{"type":"genre","value":"boh"}]}"#
+        let decoded = try JSONDecoder().decode(CarouselTitleSpec.self, from: Data(json.utf8))
+
+        guard case .literal(let value) = decoded.args.first else {
+            return XCTFail("ci si aspetta un fallback a .literal")
+        }
+        XCTAssertEqual(value, "boh")
+    }
+
+    /// Il nome del genere non deve MAI viaggiare come testo dentro lo spec: è quello il bug che
+    /// produceva "Il meglio di Science Fiction" con l'app in italiano.
+    func test_genreArgResolvesToATranslatableName() {
+        XCTAssertEqual(TMDBGenres.name(for: 878), "Science Fiction")
+        XCTAssertNotNil(TMDBGenres.localizedName(for: 878))
+        // Un id che TMDB non usa non deve produrre "#0" a schermo: il chiamante lo riconosce da nil.
+        XCTAssertNil(TMDBGenres.localizedName(for: 0))
+    }
+
+    /// Senza un genere in cima al profilo il titolo cambia frase invece di infilare "Your
+    /// Favorites" nel `%@`: "Scelti dallo staff per fan di I tuoi preferiti" non è italiano.
+    func test_withoutATopGenreTheTitleUsesTheGenericPhrase() {
+        let spec = DiscoveryPersonalizationService.topGenreTitleSpec(
+            key: "carousel.staffPicks", genericKey: "carousel.staffPicks.generic", userProfile: .empty)
+
+        XCTAssertEqual(spec.key, "carousel.staffPicks.generic")
+        XCTAssertTrue(spec.args.isEmpty)
+    }
+
+    func test_withATopGenreTheTitleCarriesTheGenreId() {
+        let profile = UserProfile(
+            userId: "u",
+            topGenres: [GenrePreference(genreId: 80, genreName: "Crime", totalScore: 10)],
+            topActors: [],
+            preferredMoods: [],
+            watchPatterns: WatchPattern(),
+            contentTypePreference: ContentTypeRatio(movieRatio: 0.5, tvRatio: 0.5),
+            recentActivity: RecentActivity()
+        )
+
+        let spec = DiscoveryPersonalizationService.topGenreTitleSpec(
+            key: "carousel.hiddenGems", genericKey: "carousel.hiddenGems.generic", userProfile: profile)
+
+        XCTAssertEqual(spec.key, "carousel.hiddenGems")
+        guard case .genre(let id) = spec.args.first else { return XCTFail("atteso un argomento .genre") }
+        XCTAssertEqual(id, 80)
+    }
+}
+
 // MARK: - ClipFormatters (count + relative-time puri estratti da ClipsView)
 
 final class ClipFormattersTests: XCTestCase {
@@ -1933,6 +2018,18 @@ final class SupabaseSyncFormattingTests: XCTestCase {
 
 final class MovieCreditsInfoBuilderTests: XCTestCase {
 
+    /// Queste righe passano da `Locale`, quindi il loro valore dipende dalla lingua. Fissarla qui
+    /// evita che i test dicano cose diverse a seconda di come è configurata la macchina.
+    override func setUp() {
+        super.setUp()
+        MediaInfoFormatting.localeOverride = Locale(identifier: "en_US")
+    }
+
+    override func tearDown() {
+        MediaInfoFormatting.localeOverride = nil
+        super.tearDown()
+    }
+
     private func movie(
         voteAverage: Double = 8.4,
         genres: [Genre]? = [Genre(id: 1, name: "Drama"), Genre(id: 2, name: "Sci-Fi")],
@@ -2012,6 +2109,41 @@ final class MovieCreditsInfoBuilderTests: XCTestCase {
         )
 
         XCTAssertEqual(rows.first(where: { $0.titleKey == "movieDetail.country" })?.value, "Canada")
+    }
+
+    /// Il punto della riga "Paese": TMDB manda `production_countries[].name` **sempre in inglese**,
+    /// anche quando la richiesta porta `language=it-IT`. Il nome va ricavato dal codice ISO, che
+    /// iOS sa tradurre — altrimenti una scheda in italiano continua a dire "United Kingdom".
+    func test_countryIsTranslatedFromIsoCodeNotFromTmdbName() {
+        MediaInfoFormatting.localeOverride = Locale(identifier: "it_IT")
+
+        let rows = MovieCreditsInfoBuilder.rows(
+            movie: movie(countries: [ProductionCountry(iso: "GB", name: "United Kingdom")]),
+            director: nil
+        )
+
+        XCTAssertEqual(rows.first(where: { $0.titleKey == "movieDetail.country" })?.value, "Regno Unito")
+    }
+
+    /// Anche la lingua originale segue la lingua scelta in-app, non quella del dispositivo.
+    func test_originalLanguageFollowsSelectedLanguage() {
+        MediaInfoFormatting.localeOverride = Locale(identifier: "it_IT")
+
+        let rows = MovieCreditsInfoBuilder.rows(movie: movie(), director: nil)
+
+        XCTAssertEqual(rows.first(where: { $0.titleKey == "movieDetail.originalLanguage" })?.value, "Inglese")
+    }
+
+    /// Se il codice ISO manca resta il nome TMDB: meglio "United Kingdom" che una riga vuota.
+    func test_countryFallsBackToTmdbNameWithoutIsoCode() {
+        MediaInfoFormatting.localeOverride = Locale(identifier: "it_IT")
+
+        let rows = MovieCreditsInfoBuilder.rows(
+            movie: movie(countries: [ProductionCountry(iso: "", name: "United Kingdom")]),
+            director: nil
+        )
+
+        XCTAssertEqual(rows.first(where: { $0.titleKey == "movieDetail.country" })?.value, "United Kingdom")
     }
 }
 

@@ -393,7 +393,7 @@ class DiscoveryPersonalizationService: ObservableObject {
 
         return PersonalizedCarousel(
             type: .trendingGenre,
-            titleSpec: .init(key: "carousel.trendingInGenre", args: [.literal(genre.genreName)]),
+            titleSpec: .init(key: "carousel.trendingInGenre", args: [.genre(genre.genreId)]),
             items: top20.map { $0.item },
             descriptions: [:],
             reason: "Popular \(genre.genreName) content right now"
@@ -494,11 +494,13 @@ class DiscoveryPersonalizationService: ObservableObject {
 
         let top20 = Array(scored.prefix(maxItemsPerCarousel))
 
-        let genreName = userProfile.topGenres.first?.genreName ?? "Your Favorites"
-
         return PersonalizedCarousel(
             type: .hiddenGems,
-            titleSpec: .init(key: "carousel.hiddenGems", args: [.literal(genreName)]),
+            titleSpec: Self.topGenreTitleSpec(
+                key: "carousel.hiddenGems",
+                genericKey: "carousel.hiddenGems.generic",
+                userProfile: userProfile
+            ),
             items: top20.map { $0.item },
             descriptions: [:],
             reason: "Underrated movies you'll love"
@@ -675,15 +677,40 @@ class DiscoveryPersonalizationService: ObservableObject {
 
         let top20 = Array(allCandidates.prefix(maxItemsPerCarousel))
 
-        let genreName = userProfile.topGenres.first?.genreName ?? "Your Favorites"
-
         return PersonalizedCarousel(
             type: .staffPicks,
-            titleSpec: .init(key: "carousel.staffPicks", args: [.literal(genreName)]),
+            titleSpec: Self.topGenreTitleSpec(
+                key: "carousel.staffPicks",
+                genericKey: "carousel.staffPicks.generic",
+                userProfile: userProfile
+            ),
             items: top20,
             descriptions: [:],
             reason: "Curated classics and modern masterpieces"
         )
+    }
+
+    // MARK: - Private Methods - Title Specs
+
+    /// Il titolo di un carosello agganciato al genere preferito dell'utente.
+    ///
+    /// Quando il genere manca — profilo nuovo, o `preference_id` non numerico — il codice
+    /// precedente infilava la stringa inglese `"Your Favorites"` nel `%@` di un template già
+    /// tradotto, e usciva "Scelti dallo staff per fan di Your Favorites". Tradurre quel literal non
+    /// basterebbe: "per fan di I tuoi preferiti" resta storto in italiano e peggio altrove, perché
+    /// ogni lingua regge la preposizione a modo suo. L'unica forma che tiene in tutte è una frase
+    /// alternativa intera, da tradurre come tale — da cui `genericKey`.
+    ///
+    /// Il ramo con genere passa un **id**, non un nome: la traduzione avviene al render, così il
+    /// titolo in cache segue l'utente se cambia lingua.
+    nonisolated static func topGenreTitleSpec(key: String, genericKey: String, userProfile: UserProfile) -> CarouselTitleSpec {
+        // `TMDBGenres.localizedName` filtra anche il genreId 0 che `UserPreferenceManager` produce
+        // per un `preference_id` non parsabile: senza questo controllo il titolo direbbe "#0".
+        guard let genreId = userProfile.topGenres.first?.genreId,
+              TMDBGenres.localizedName(for: genreId) != nil else {
+            return .init(key: genericKey)
+        }
+        return .init(key: key, args: [.genre(genreId)])
     }
 
     // MARK: - Private Methods - Carousel Catalog
@@ -1080,7 +1107,7 @@ class DiscoveryPersonalizationService: ObservableObject {
             if allCandidates.count >= maxItemsPerCarousel { break }
         }
         guard allCandidates.count >= 10 else { throw PersonalizationError.noResults }
-        return PersonalizedCarousel(type: type, titleSpec: .init(key: "carousel.topInGenre", args: [.literal(genre.genreName)]), items: Array(allCandidates.prefix(maxItemsPerCarousel)), descriptions: [:], reason: "Popular \(genre.genreName) films")
+        return PersonalizedCarousel(type: type, titleSpec: .init(key: "carousel.topInGenre", args: [.genre(genre.genreId)]), items: Array(allCandidates.prefix(maxItemsPerCarousel)), descriptions: [:], reason: "Popular \(genre.genreName) films")
     }
 
     private func generateFromActor(actor: ActorPreference, type: CarouselType, userProfile: UserProfile, excluding: Set<Int> = []) async throws -> PersonalizedCarousel {
@@ -1092,7 +1119,31 @@ class DiscoveryPersonalizationService: ObservableObject {
             .filter { !excluding.contains($0.id) }
             .sorted { ($0.popularity) > ($1.popularity) }
         guard movies.count >= 10 else { throw PersonalizationError.noResults }
-        return PersonalizedCarousel(type: type, titleSpec: .init(key: "carousel.fromActor", args: [.literal(actor.name)]), items: Array(movies.prefix(maxItemsPerCarousel)), descriptions: [:], reason: "Movies featuring \(actor.name)")
+        let name = try await resolvedActorName(actor)
+        return PersonalizedCarousel(type: type, titleSpec: .init(key: "carousel.fromActor", args: [.literal(name)]), items: Array(movies.prefix(maxItemsPerCarousel)), descriptions: [:], reason: "Movies featuring \(name)")
+    }
+
+    /// Il nome da mostrare nel titolo "Altro con %@".
+    ///
+    /// `ActorPreference.name` arriva da `user_preferences.preference_name`, che per le preferenze
+    /// di categoria `actor` **nessuno scrive mai** (`UserEngagementTracker` salva solo id e score):
+    /// il fallback `?? "Unknown"` di `UserPreferenceManager` vinceva sempre, e il carosello si
+    /// intitolava "Altro con Unknown" in ogni lingua. Qui il nome vero si chiede a TMDB — la
+    /// risposta è già in URLCache nella stragrande maggioranza dei casi, e il carosello ha appena
+    /// fatto una richiesta per lo stesso id.
+    ///
+    /// Se anche TMDB non lo sa, il carosello **non si mostra**: un titolo senza soggetto è peggio
+    /// di un carosello in meno.
+    private func resolvedActorName(_ actor: ActorPreference) async throws -> String {
+        let stored = actor.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !stored.isEmpty && stored.lowercased() != "unknown" { return stored }
+
+        guard let details = try? await tmdbService.getPersonDetails(id: actor.actorId) else {
+            throw PersonalizationError.noResults
+        }
+        let fetched = details.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !fetched.isEmpty else { throw PersonalizationError.noResults }
+        return fetched
     }
 
     private func generateDecadeCarousel(decade: Int, type: CarouselType, userProfile: UserProfile, filters: GlobalDiscoveryFilters?, excluding: Set<Int> = []) async throws -> PersonalizedCarousel {
@@ -1108,11 +1159,12 @@ class DiscoveryPersonalizationService: ObservableObject {
             if allCandidates.count >= maxItemsPerCarousel { break }
         }
         guard allCandidates.count >= 10 else { throw PersonalizationError.noResults }
-        let label = "\(decade)s"
+        // Il decennio viaggia come numero: "2020s" è grammatica inglese, in italiano si dice
+        // "anni 2020" e in altre lingue cambia ancora. Ci pensa `Arg.decade` al render.
         let titleSpec: CarouselTitleSpec = type == .throwbackDecade
-            ? .init(key: "carousel.throwback", args: [.literal(label)])
-            : .init(key: "carousel.decadeClassics", args: [.literal(label)])
-        return PersonalizedCarousel(type: type, titleSpec: titleSpec, items: Array(allCandidates.prefix(maxItemsPerCarousel)), descriptions: [:], reason: "Top-rated films from the \(label)")
+            ? .init(key: "carousel.throwback", args: [.decade(decade)])
+            : .init(key: "carousel.decadeClassics", args: [.decade(decade)])
+        return PersonalizedCarousel(type: type, titleSpec: titleSpec, items: Array(allCandidates.prefix(maxItemsPerCarousel)), descriptions: [:], reason: "Top-rated films from the \(decade)s")
     }
 
     private func generateMoodTonight(mood: Mood, userProfile: UserProfile, filters: GlobalDiscoveryFilters?, excluding: Set<Int> = []) async throws -> PersonalizedCarousel {
@@ -1128,11 +1180,14 @@ class DiscoveryPersonalizationService: ObservableObject {
             }
         }
         guard allCandidates.count >= 10 else { throw PersonalizationError.noResults }
-        return PersonalizedCarousel(type: .moodTonight, titleSpec: .init(key: "carousel.moodTonight", args: [.literal(mood.rawValue.capitalized)]), items: Array(allCandidates.prefix(maxItemsPerCarousel)), descriptions: [:], reason: "Perfect for when you're feeling \(mood.rawValue)")
+        return PersonalizedCarousel(type: .moodTonight, titleSpec: .init(key: "carousel.moodTonight", args: [.localizedKey(mood.localizationKey)]), items: Array(allCandidates.prefix(maxItemsPerCarousel)), descriptions: [:], reason: "Perfect for when you're feeling \(mood.rawValue)")
     }
 
     private func generateRegionSpotlight(userProfile: UserProfile, filters: GlobalDiscoveryFilters?, excluding: Set<Int> = []) async throws -> PersonalizedCarousel {
-        let countryCode = Locale.current.region?.identifier ?? "US"
+        // Il paese scelto in Impostazioni, non quello del dispositivo: è lo stesso che l'app manda
+        // a TMDB come `region`, e un carosello "In evidenza: X" che nomina un paese diverso da
+        // quello dei risultati confonde e basta.
+        let countryCode = LocalizationManager.shared.appLocale.region?.identifier ?? "US"
         Logger.debug("[DiscoveryPersonalizationService] Generating Region Spotlight (\(countryCode)) (excluding \(excluding.count))")
         var allCandidates: [Movie] = []
         for page in 1...5 {
@@ -1142,7 +1197,7 @@ class DiscoveryPersonalizationService: ObservableObject {
             if allCandidates.count >= maxItemsPerCarousel { break }
         }
         guard allCandidates.count >= 10 else { throw PersonalizationError.noResults }
-        return PersonalizedCarousel(type: .regionSpotlight, titleSpec: .init(key: "carousel.regionSpotlight", args: [.region(countryCode)]), items: Array(allCandidates.prefix(maxItemsPerCarousel)), descriptions: [:], reason: "Popular in \(Locale.current.localizedString(forRegionCode: countryCode) ?? countryCode)")
+        return PersonalizedCarousel(type: .regionSpotlight, titleSpec: .init(key: "carousel.regionSpotlight", args: [.region(countryCode)]), items: Array(allCandidates.prefix(maxItemsPerCarousel)), descriptions: [:], reason: "Popular in \(countryCode)")
     }
 
     private func generateHotThisWeekInGenre(genre: GenrePreference, filters: GlobalDiscoveryFilters?, excluding: Set<Int> = []) async throws -> PersonalizedCarousel {
@@ -1155,7 +1210,7 @@ class DiscoveryPersonalizationService: ObservableObject {
             if allCandidates.count >= maxItemsPerCarousel { break }
         }
         guard allCandidates.count >= 10 else { throw PersonalizationError.noResults }
-        return PersonalizedCarousel(type: .hotThisWeekInGenre, titleSpec: .init(key: "carousel.hotThisWeekInGenre", args: [.literal(genre.genreName)]), items: Array(allCandidates.prefix(maxItemsPerCarousel)), descriptions: [:], reason: "Trending \(genre.genreName) films this week")
+        return PersonalizedCarousel(type: .hotThisWeekInGenre, titleSpec: .init(key: "carousel.hotThisWeekInGenre", args: [.genre(genre.genreId)]), items: Array(allCandidates.prefix(maxItemsPerCarousel)), descriptions: [:], reason: "Trending \(genre.genreName) films this week")
     }
 
     private func generateQuickWatches(userProfile: UserProfile, filters: GlobalDiscoveryFilters?, excluding: Set<Int> = []) async throws -> PersonalizedCarousel {
@@ -1746,12 +1801,22 @@ struct CarouselTitleSpec: Codable {
         self.args = args
     }
 
+    /// Un argomento del titolo. Tutti i casi tranne `.literal` sono **dati**, non testo: si
+    /// traducono al momento del render, così un titolo salvato in cache resta corretto anche se
+    /// l'utente cambia lingua dopo.
+    ///
+    /// `.literal` resta per ciò che non si traduce davvero — nomi propri (titolo di un film, nome
+    /// di un attore) e intervalli numerici. Passarci un nome di genere o un mood è il bug che
+    /// produceva "Il meglio di Science Fiction".
     enum Arg: Codable {
         case literal(String)
-        case region(String) // ISO country code — resolved at render time
+        case region(String)  // ISO country code — resolved at render time
+        case genre(Int)      // TMDB genre id
+        case decade(Int)     // anno d'inizio del decennio, es. 2020
+        case localizedKey(String) // chiave di Localizable.strings da risolvere in loco
 
         private enum CodingKeys: String, CodingKey { case type, value }
-        private enum ArgType: String, Codable { case literal, region }
+        private enum ArgType: String, Codable { case literal, region, genre, decade, localizedKey }
 
         init(from decoder: Decoder) throws {
             let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -1760,6 +1825,11 @@ struct CarouselTitleSpec: Codable {
             switch t {
             case .literal: self = .literal(v)
             case .region: self = .region(v)
+            // Un id non numerico verrebbe da una riga di cache corrotta: meglio degradare a testo
+            // che far fallire il decode e perdere l'intero carosello.
+            case .genre: self = Int(v).map { .genre($0) } ?? .literal(v)
+            case .decade: self = Int(v).map { .decade($0) } ?? .literal(v)
+            case .localizedKey: self = .localizedKey(v)
             }
         }
 
@@ -1772,6 +1842,15 @@ struct CarouselTitleSpec: Codable {
             case .region(let code):
                 try c.encode(ArgType.region, forKey: .type)
                 try c.encode(code, forKey: .value)
+            case .genre(let id):
+                try c.encode(ArgType.genre, forKey: .type)
+                try c.encode(String(id), forKey: .value)
+            case .decade(let year):
+                try c.encode(ArgType.decade, forKey: .type)
+                try c.encode(String(year), forKey: .value)
+            case .localizedKey(let key):
+                try c.encode(ArgType.localizedKey, forKey: .type)
+                try c.encode(key, forKey: .value)
             }
         }
     }
@@ -1781,7 +1860,12 @@ struct CarouselTitleSpec: Codable {
         let resolved = args.map { arg -> CVarArg in
             switch arg {
             case .literal(let s): return s
-            case .region(let code): return Locale.current.localizedString(forRegionCode: code) ?? code
+            case .region(let code):
+                return LocalizationManager.shared.appLocale.localizedString(forRegionCode: code) ?? code
+            case .genre(let id): return TMDBGenres.displayName(for: id)
+            // "anni %d" / "%ds": il suffisso del decennio è grammatica, non un numero.
+            case .decade(let year): return String(format: "carousel.arg.decade".localized, year)
+            case .localizedKey(let key): return key.localized
             }
         }
         return String(format: key.localized, arguments: resolved)

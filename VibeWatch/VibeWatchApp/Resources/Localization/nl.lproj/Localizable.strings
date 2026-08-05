@@ -36,7 +36,7 @@
 // Lists
 "list.all" = "Alles";
 "list.movies" = "Films";
-"list.tvShows" = "TV";
+"list.tvShows" = "Series";
 "lists.myLists" = "Mijn lijsten";
 "lists.collections" = "Collecties";
 "lists.empty" = "Nog geen lijsten";
@@ -334,7 +334,7 @@
 "paywall.feature.aiAssistant" = "🤖 AI-aanbevelingen voor films en series";
 "paywall.feature.advancedFilters" = "🔎 Geavanceerde filters om sneller te kiezen";
 "paywall.feature.lists" = "📋 Tot 100 gesynchroniseerde watchlists";
-"paywall.feature.offlineMode" = "📵 Offlinemodus voor bewaarde vondsten";
+"paywall.feature.offlineMode" = "📵 Offlinemodus voor bewaarde titels";
 "paywall.feature.releaseAlerts" = "🔔 Meldingen als je favorieten te streamen zijn";
 
 // Common
@@ -407,8 +407,8 @@
 "import.report.moviesApplied" = "%d films geïmporteerd met hun kijkdata.";
 "import.report.moviesWatchlistApplied" = "%d films toegevoegd aan je watchlist.";
 "import.report.moviesUnresolved" = "%d films niet herkend (titel en jaar komen niet overeen op TMDB).";
-"import.resolve.button" = "Oplossen";
-"import.resolve.batchButton" = "%d titels oplossen";
+"import.resolve.button" = "Koppelen";
+"import.resolve.batchButton" = "%d titels koppelen";
 "import.resolve.batchHint" = "Zoek voor elke titel de bijbehorende TMDB-serie. Er wordt niets geïmporteerd totdat alle overeenkomsten zijn gekozen; daarna lost één import ze samen op.";
 "import.resolve.batchProgress" = "%d van %d titels gekoppeld";
 "import.resolve.startBatch" = "Eén import starten";
@@ -416,9 +416,9 @@
 "import.resolve.hint" = "De afleveringen worden opnieuw gecontroleerd met hun exacte TVDB-ID's. Alles wat TMDB niet kan bevestigen, blijft in het rapport staan.";
 "import.resolve.searchPlaceholder" = "Zoek de serie op TMDB";
 "import.resolve.empty" = "Geen resultaten.";
-"import.resolve.failed" = "Oplossen mislukt:";
+"import.resolve.failed" = "Koppelen mislukt:";
 "import.resolve.searchFailed" = "Zoeken mislukt.";
-"import.report.statusesApplied" = "%d seriestatussen hersteld (kijklijst en archief).";
+"import.report.statusesApplied" = "%d seriestatussen hersteld (watchlist en archief).";
 "import.report.statusesUnresolved" = "%d seriestatussen konden niet worden toegepast.";
 "import.report.unresolvedTitle" = "%d afleveringen konden niet worden gekoppeld";
 "import.report.unresolvedRow" = "%d afleveringen";
@@ -584,8 +584,8 @@
 "auth.verificationPending" = "Nog aan het wachten op verificatie…";
 
 // Gamification
-"gamification.levelUp" = "LEVEL OMHOOG!";
-"gamification.level" = "Level";
+"gamification.levelUp" = "NIVEAU OMHOOG!";
+"gamification.level" = "Niveau";
 "gamification.rankAchieved" = "Rang \"%@\" behaald";
 "gamification.xp.base" = "basis";
 "gamification.xp.proBoost" = "Pro-boost";
@@ -673,19 +673,19 @@
 "tvTracking.upToDate" = "Helemaal bij";
 "tvTracking.emptyState" = "Geen series gevonden";
 "carousel.fromActor" = "Meer van %@";
-"carousel.decadeClassics" = "Klassiekers uit %@";
-"carousel.moodTonight" = "%@ vanavond";
+"carousel.decadeClassics" = "Klassiekers uit de %@";
+"carousel.moodTonight" = "Vanavond: %@";
 "carousel.regionSpotlight" = "%@ in de schijnwerpers";
-"carousel.topInGenre" = "Top in %@";
+"carousel.topInGenre" = "De beste in %@";
 "carousel.hotThisWeekInGenre" = "Deze week populair in %@";
-"carousel.quickWatches" = "Snel gekeken";
+"carousel.quickWatches" = "Voor tussendoor";
 "carousel.epicWatches" = "Epische kijkavonden";
 "carousel.internationalPicks" = "Internationale keuzes";
-"carousel.throwback" = "Terug naar %@";
+"carousel.throwback" = "Terug naar de %@";
 "carousel.fromAIChat" = "Uit je AI-chat";
 "carousel.comingSoon" = "Binnenkort";
 "carousel.trendingTVWeek" = "Populaire series deze week";
-"carousel.criticallyAcclaimedRecent" = "Lovend ontvangen %@";
+"carousel.criticallyAcclaimedRecent" = "Lovend ontvangen · %@";
 "carousel.returningTV" = "Binnenkort terug";
 "carousel.documentaries" = "Documentaires voor jou";
 "discovery.endOfFeed" = "Je bent helemaal bij";
@@ -823,7 +823,7 @@
 "tracking.buyOn" = "Koop op %@";
 
 // MARK: - Redesign 2.0 (tab Social, strip uscite, calendario, sottotitoli)
-"tab.social" = "Sociaal";
+"tab.social" = "Vrienden";
 "social.subtitle" = "Vrienden en lijsten die je volgt";
 "discovery.continueWatching" = "Verder kijken";
 "discovery.strip.today" = "Vandaag";
@@ -897,41 +897,41 @@
 "onboarding.ready.chip.notifications" = "Meldingen aan";
 "onboarding.ready.cta" = "Begin met kijken";
 
-"filters.myPlatforms" = "Mine";
-"filters.platformScopeAll" = "All";
-"mediaDetail.forYou" = "for you";
-"mediaDetail.watchOn" = "Watch on";
-"mediaDetail.notifyMe" = "Notify me";
-"mediaDetail.notifyMeEnabling" = "Activating notification…";
-"mediaDetail.notifyMeEnabled" = "Notification active";
+"filters.myPlatforms" = "Van mij";
+"filters.platformScopeAll" = "Alle";
+"mediaDetail.forYou" = "voor jou";
+"mediaDetail.watchOn" = "Kijk op";
+"mediaDetail.notifyMe" = "Waarschuw me";
+"mediaDetail.notifyMeEnabling" = "Inschakelen…";
+"mediaDetail.notifyMeEnabled" = "We waarschuwen je";
 "mediaDetail.action.watchlist" = "Watchlist";
 "mediaDetail.action.like" = "Like";
-"mediaDetail.action.list" = "To list";
-"mediaDetail.toast.watchlistAdded" = "Toegevoegd aan je kijklijst";
-"mediaDetail.toast.watchlistRemoved" = "Verwijderd uit je kijklijst";
+"mediaDetail.action.list" = "Naar lijst";
+"mediaDetail.toast.watchlistAdded" = "Toegevoegd aan je watchlist";
+"mediaDetail.toast.watchlistRemoved" = "Verwijderd uit je watchlist";
 "mediaDetail.toast.markedSeen" = "Gemarkeerd als gezien";
 "mediaDetail.toast.markedUnseen" = "Verwijderd uit gezien";
 "mediaDetail.toast.liked" = "Toegevoegd aan je likes";
 "mediaDetail.toast.likeRemoved" = "Verwijderd uit je likes";
-"mediaDetail.why.cardTitle" = "Why is it right for you?";
-"mediaDetail.why.title" = "Why for you";
-"mediaDetail.why.affinity" = "Affinity with your tastes";
-"mediaDetail.why.reason.mood" = "In line with your mood";
-"mediaDetail.why.reason.genres" = "Genres you love";
-"mediaDetail.why.reason.cast" = "Cast you know";
-"mediaDetail.why.helpful" = "Was this helpful?";
-"mediaDetail.why.regenerate" = "Regenerate";
-"mediaDetail.why.quota" = "Generated by Vibe AI from ratings, mood and history. %d/%d requests today.";
-"settings.cacheManagement.clearCacheAction" = "Clear cache";
-"gamification.missionsToday" = "Today's missions";
-"gamification.xpToNext" = "%d XP to the next level";
-"gamification.mission.openApp" = "Open the app";
-"gamification.mission.keepStreak" = "Keep your daily streak";
-"gamification.challenge.watch_3" = "Watch 3 clips";
+"mediaDetail.why.cardTitle" = "Waarom past dit bij jou?";
+"mediaDetail.why.title" = "Waarom voor jou";
+"mediaDetail.why.affinity" = "Match met jouw smaak";
+"mediaDetail.why.reason.mood" = "Past bij je mood";
+"mediaDetail.why.reason.genres" = "Genres die je leuk vindt";
+"mediaDetail.why.reason.cast" = "Cast die je kent";
+"mediaDetail.why.helpful" = "Had je hier iets aan?";
+"mediaDetail.why.regenerate" = "Opnieuw genereren";
+"mediaDetail.why.quota" = "Gegenereerd door Vibe AI op basis van beoordelingen, mood en kijkgeschiedenis. %d/%d verzoeken vandaag.";
+"settings.cacheManagement.clearCacheAction" = "Cache wissen";
+"gamification.missionsToday" = "Missies van vandaag";
+"gamification.xpToNext" = "%d XP tot het volgende niveau";
+"gamification.mission.openApp" = "Open de app";
+"gamification.mission.keepStreak" = "Houd je streak vol";
+"gamification.challenge.watch_3" = "Bekijk 3 clips";
 "gamification.challenge.like_5" = "Like 5 clips";
-"gamification.challenge.list_2" = "Add 2 titles to a list";
-"gamification.challenge.watch_new_genre" = "Watch a clip from a new genre";
-"gamification.challenge.complete_5" = "Complete 5 clips (>70%)";
+"gamification.challenge.list_2" = "Voeg 2 titels toe aan een lijst";
+"gamification.challenge.watch_new_genre" = "Bekijk een clip uit een nieuw genre";
+"gamification.challenge.complete_5" = "Bekijk 5 clips helemaal (>70%)";
 
 // SeasonDetailView — conferme di marcatura episodi (2026-08-04)
 "season.confirmUnaired.title" = "Nog niet uitgezonden";
@@ -965,7 +965,7 @@
 "import.toast.imported.review" = "Bibliotheek geïmporteerd · %d titels te controleren";
 "import.review.title" = "Titels om te controleren";
 "import.review.remaining" = "%1$d van %2$d over";
-"import.review.allResolved" = "Alles opgelost";
+"import.review.allResolved" = "Alles gekoppeld";
 "import.review.intro" = "Voor deze titels uit je TV Time-archief vonden we geen zekere match. Kies de juiste of sluit hem uit.";
 "import.review.episodesSeen" = "%d afleveringen gekeken";
 "import.review.searchManually" = "Handmatig zoeken";
@@ -985,8 +985,8 @@
 "import.review.reason.yearMissing" = "jaartal ontbreekt of komt niet overeen";
 "import.review.reason.missingId" = "geen serie-ID in de export";
 
-"import.toast.mapping.partial" = "%1$d titels opgelost · nog %2$d te controleren";
-"import.toast.mapping.done" = "%d titels opgelost · bibliotheek op orde";
+"import.toast.mapping.partial" = "%1$d titels gekoppeld · nog %2$d te controleren";
+"import.toast.mapping.done" = "%d titels gekoppeld · bibliotheek op orde";
 
 "import.report.outOfStructure" = "%d afleveringen passen niet in de TMDB-structuur van de bevestigde serie.";
 
@@ -1107,8 +1107,8 @@
 
 
 // MARK: - Toast con fase di progresso (bug 7)
-"mediaDetail.toast.addingToWatchlist" = "Toevoegen aan je kijklijst…";
-"mediaDetail.toast.removingFromWatchlist" = "Verwijderen uit je kijklijst…";
+"mediaDetail.toast.addingToWatchlist" = "Toevoegen aan je watchlist…";
+"mediaDetail.toast.removingFromWatchlist" = "Verwijderen uit je watchlist…";
 "mediaDetail.toast.liking" = "Toevoegen aan je likes…";
 "mediaDetail.toast.unliking" = "Verwijderen uit je likes…";
 "mediaDetail.toast.markingUnseen" = "Verwijderen uit gezien…";
@@ -1129,3 +1129,155 @@
 "search.trending.subtitle" = "Het meest gezocht in %@ in de afgelopen 24 uur.";
 "search.results.subtitle" = "Overeenkomsten voor ‘%@’, daarna verwante titels.";
 "search.resultsCount" = "%d titels";
+
+
+// MARK: - Ricerca piattaforme + esito notifica
+"platforms.search" = "Zoek een platform";
+"platforms.searchEmpty" = "Geen platform met die naam.";
+"mediaDetail.notifyMeFailed" = "We konden de melding niet inschakelen.";
+
+
+// MARK: - Report import ridisegnato
+"import.report.title" = "Importrapport";
+"import.report.sourcePeriod" = "%@ · %@ – %@";
+"import.report.success.title" = "Bibliotheek geïmporteerd";
+"import.report.success.subtitle" = "%d series en %d films gekoppeld aan de catalogus.";
+"import.report.success.subtitleWithRatings" = "%d series en %d films gekoppeld aan de catalogus, met kijkdata en beoordelingen.";
+"import.report.tile.episodes" = "Afleveringen";
+"import.report.tile.movies" = "Films";
+"import.report.leftOut.title" = "Buiten gebleven";
+"import.report.leftOut.subtitle" = "Voor deze titels is er geen zekere overeenkomst in de catalogus. Tik op een kaart om handmatig te zoeken.";
+"import.report.leftOut.excluded" = "Door jou uitgesloten";
+"import.report.leftOut.episodes" = "%d bekeken afleveringen";
+"import.report.leftOut.seenOn" = "bekeken op %@";
+"import.report.copyList" = "Kopieer de lijst";
+"import.report.copied" = "Lijst gekopieerd";
+"import.report.details" = "Details";
+
+
+// MARK: - Report import — dettagli
+"import.report.detail.period" = "Gedekte periode";
+"import.report.detail.years" = "%d jaar";
+"import.report.detail.oneYear" = "1 jaar";
+"import.report.detail.lessThanYear" = "minder dan een jaar";
+"import.report.detail.statuses" = "Herstelde seriestatussen";
+"import.report.detail.statuses.hint" = "Watchlist en archief zoals op TV Time";
+"import.report.detail.ratings" = "Overgezette beoordelingen";
+"import.report.detail.ratingsUnmatched" = "Niet-gekoppelde beoordelingen";
+"import.report.detail.ratingsUnmatched.hint" = "Beoordeelde afleveringen die niet in de catalogus staan";
+"import.report.detail.ratingsDeferred" = "Beoordelingen nog niet geïmporteerd";
+"import.report.detail.favorites" = "Herstelde favorieten";
+"import.report.detail.moviesSeen" = "Films gemarkeerd als gezien";
+"import.report.detail.moviesWatchlist" = "Films in de watchlist";
+"import.report.detail.statusesUnresolved" = "Niet-herstelde statussen";
+"import.report.detail.outOfStructure" = "Afleveringen zonder plek";
+"import.report.detail.outOfStructure.hint" = "Specials en uitgebreide versies buiten de structuur van de serie";
+"import.report.detail.favoriteMovies" = "Favoriete films niet geïmporteerd";
+
+
+// MARK: - Report import — titolo mancante
+"import.report.leftOut.untitled" = "Titel ontbreekt in de export";
+
+
+// MARK: - Generi TMDB
+// I nomi dei generi mostrati a schermo (titoli dei caroselli, grafico dei generi in Analytics).
+// TMDB li restituisce tradotti solo dentro la scheda di un film; nei caroselli il genere arriva
+// come id numerico, quindi il nome deve venire da qui. Da tradurre in ogni lingua.
+"genre.action" = "Actie";
+"genre.adventure" = "Avontuur";
+"genre.animation" = "Animatie";
+"genre.comedy" = "Komedie";
+"genre.crime" = "Misdaad";
+"genre.documentary" = "Documentaire";
+"genre.drama" = "Drama";
+"genre.family" = "Familie";
+"genre.fantasy" = "Fantasy";
+"genre.history" = "Geschiedenis";
+"genre.horror" = "Horror";
+"genre.music" = "Muziek";
+"genre.mystery" = "Mysterie";
+"genre.romance" = "Romantiek";
+"genre.scienceFiction" = "Sciencefiction";
+"genre.tvMovie" = "TV-film";
+"genre.thriller" = "Thriller";
+"genre.war" = "Oorlog";
+"genre.western" = "Western";
+"genre.actionAdventure" = "Actie & Avontuur";
+"genre.kids" = "Kinderen";
+"genre.news" = "Nieuws";
+"genre.reality" = "Realityshow";
+"genre.sciFiFantasy" = "Sci-Fi & Fantasy";
+"genre.soap" = "Soap";
+"genre.talk" = "Talkshow";
+"genre.warPolitics" = "Oorlog & Politiek";
+
+
+// MARK: - Mood
+// Vanno nel `%@` di "carousel.moodTonight" ("Vanavond: %@"). Sono SOSTANTIVI, non aggettivi: un
+// aggettivo dovrebbe concordare con una parola che nel template non c'è.
+"mood.happy" = "Feelgood";
+"mood.sad" = "Melancholie";
+"mood.excited" = "Spanning";
+"mood.relaxed" = "Ontspanning";
+"mood.scared" = "Kippenvel";
+"mood.thoughtful" = "Stof tot nadenken";
+"mood.romantic" = "Romantiek";
+"mood.adventurous" = "Avontuur";
+"mood.nostalgic" = "Nostalgie";
+"mood.energetic" = "Pure energie";
+
+
+// MARK: - Caroselli — argomenti e varianti senza genere
+// "%d" è l'anno d'inizio del decennio (2020). In inglese si dice "2020s", in olandese "jaren 2020":
+// il suffisso è grammatica, non un numero, e va tradotto. I template "carousel.decadeClassics" e
+// "carousel.throwback" portano l'articolo ("...uit de %@", "Terug naar de %@").
+"carousel.arg.decade" = "jaren %d";
+// Usati quando il profilo non ha ancora un genere preferito: non un fallback infilato nel "%@" del
+// titolo normale, ma una frase alternativa.
+"carousel.hiddenGems.generic" = "Verborgen pareltjes";
+"carousel.staffPicks.generic" = "Onze keuze voor jou";
+
+
+// MARK: - Analytics
+"analytics.noData" = "Geen gegevens";
+
+
+// MARK: - Statistiche e gamification (stringhe estratte dalle view)
+// Erano letterali dentro AnalyticsDashboardView / FloatingXPBadgeView / BadgeGalleryView /
+// LevelProgressView: non passando da `.localized` restavano in inglese in tutte e 20 le lingue.
+"stats.title" = "Jouw statistieken";
+"stats.yourActivity" = "Jouw activiteit";
+"stats.viewFull" = "Alle statistieken bekijken";
+"stats.loading" = "Statistieken laden…";
+"stats.errorTitle" = "Statistieken konden niet worden geladen";
+"stats.emptyTitle" = "Nog geen statistieken";
+"stats.emptySubtitle" = "Begin met kijken om je statistieken te zien!";
+"stats.genreDistribution" = "Verdeling per genre";
+"stats.genreEmpty" = "Nog geen genregegevens";
+"stats.whenActive" = "Wanneer je kijkt";
+"stats.topContent" = "Je meest bekeken titels";
+"stats.contentEmpty" = "Nog geen gegevens over titels";
+"stats.discoveryChannels" = "Hoe je titels vindt";
+"stats.discoveryEmpty" = "Nog geen gegevens over ontdekken";
+"stats.moodProfile" = "Moodprofiel";
+"stats.moodEmpty" = "Nog te weinig gegevens — blijf kijken om je moodprofiel te zien.";
+
+// "%d" è il numero del livello.
+"gamification.levelNumber" = "Niveau %d";
+// Versione corta per il badge in cima alla schermata, dove lo spazio è quello che è.
+"gamification.levelShort" = "Niv.%d";
+"gamification.bestStreak" = "Langste streak";
+"gamification.xpBonus" = "XP-bonus";
+"gamification.todaysChallenge" = "Uitdaging van vandaag";
+"gamification.completed" = "Voltooid!";
+"gamification.badgeUnlocked" = "Badge ontgrendeld!";
+"gamification.badges.collected" = "Verzamelde badges";
+"gamification.badges.unlocked" = "Ontgrendeld";
+// "%d" è il totale dei badge esistenti: compare come "12 van 40".
+"gamification.badges.ofTotal" = "van %d";
+"gamification.levels.progressTitle" = "Voortgang in niveaus";
+"gamification.allLevels" = "ALLE NIVEAUS";
+
+"common.progress" = "Voortgang";
+"tvDetail.seasonsTitle" = "Seizoenen";
+"tvDetail.episodesTitle" = "Afleveringen";

@@ -8,11 +8,11 @@
 // Onboarding
 "onboarding.page1.description" = "AI-rekommendationer för film och TV anpassade efter din vibe, så att du alltid vet vad du ska titta på härnäst.";
 "onboarding.page1.title" = "Smartare val med AI";
-"onboarding.page2.description" = "Skapa watchlists och stämningsbaserade samlingar för att organisera varje film och serie du upptäcker.";
-"onboarding.page2.title" = "Organisera din watchlist";
+"onboarding.page2.description" = "Skapa bevakningslistor och stämningsbaserade samlingar för att organisera varje film och serie du upptäcker.";
+"onboarding.page2.title" = "Organisera din bevakningslista";
 "onboarding.page3.description" = "Titta på trailers och klipp och spara sedan de bästa fynden till dina listor för senare streaming.";
 "onboarding.page3.title" = "Upptäck trailers & klipp";
-"onboarding.page4.description" = "Skapa ett konto för att synka dina watchlists och inställningar på alla dina enheter.";
+"onboarding.page4.description" = "Skapa ett konto för att synka dina bevakningslistor och inställningar på alla dina enheter.";
 "onboarding.page4.title" = "Redo att börja?";
 "onboarding.page4.createAccount" = "Skapa konto";
 "onboarding.page4.skip" = "Hoppa över";
@@ -36,7 +36,7 @@
 // Lists
 "list.all" = "Alla";
 "list.movies" = "Filmer";
-"list.tvShows" = "TV";
+"list.tvShows" = "Serier";
 "lists.createList" = "Skapa lista";
 "lists.deleteConfirmation" = "Är du säker på att du vill ta bort %@? Alla objekt i denna lista tas bort.";
 "lists.deleteList" = "Ta bort lista";
@@ -45,7 +45,7 @@
 "lists.disliked" = "Ogillade";
 "lists.editList" = "Redigera lista";
 "lists.empty" = "Inga listor ännu";
-"lists.emptyDescription" = "Skapa din första watchlist för att organisera filmer och serier du upptäcker";
+"lists.emptyDescription" = "Skapa din första bevakningslista för att organisera filmer och serier du upptäcker";
 "lists.watchlist" = "Bevakningslista";
 "lists.error.authRequired" = "Du måste vara inloggad för att skapa anpassade listor.";
 "lists.error.defaultImmutable" = "Den här listan kan inte ändras";
@@ -65,7 +65,7 @@
 "lists.searchPlaceholder" = "Sök i denna lista";
 "lists.seen" = "Sett";
 "lists.softLimitWarning" = "\"{name}\" har redan {limit} objekt. Fundera på att skapa en ny lista för att hålla ordning.";
-"lists.watchOn" = "TITTA PÅ %@";
+"lists.watchOn" = "SE PÅ %@";
 "lists.notifyMeTitle" = "Avisera mig";
 "lists.notifyMeMessage" = "Vi skickar en notis så snart '%@' finns tillgänglig för streaming, hyra eller köp.";
 "error.oops" = "Hoppsan!";
@@ -75,11 +75,11 @@
 "movieDetail.country" = "Land";
 "movieDetail.director" = "Regissör";
 "movieDetail.genres" = "Genrer";
-"movieDetail.information" = "Information om";
+"movieDetail.information" = "Information";
 "movieDetail.rating" = "Betyg";
 "movieDetail.ratings" = "betyg";
 "movieDetail.runtime" = "Speltid";
-"movieDetail.save" = "Spara till watchlist";
+"movieDetail.save" = "Spara i bevakningslistan";
 "movieDetail.seen" = "Sett";
 "movieDetail.similar" = "Personer som gillade detta, gillade också";
 "movieDetail.trailer" = "Trailer";
@@ -116,16 +116,16 @@
 "filters.reset" = "Återställ";
 "filters.runtime" = "Speltid";
 "filters.runtimeAny" = "Vilken som helst";
-"filters.runtimeLong" = "> 120 minuter";
+"filters.runtimeLong" = "> 120 min";
 "filters.runtimeMedium" = "90–120 min";
-"filters.runtimeShort" = "< 90 minuter";
+"filters.runtimeShort" = "< 90 min";
 "filters.sortBy" = "Sortera efter";
 "filters.title" = "Filter";
 
 // Clips
 "clips.title" = "Klipp";
 "clips.addToList" = "Lägg till i lista";
-"clips.card.addToWatchlist" = "+ Watchlist";
+"clips.card.addToWatchlist" = "+ Bevaka";
 "clips.card.goToDetail" = "Visa detaljer";
 "clips.beFirstToComment" = "Bli först att kommentera";
 "clips.comment" = "Kommentar";
@@ -133,7 +133,7 @@
 "clips.comments.deleteConfirmation" = "Är du säker på att du vill radera denna kommentar? Detta går inte att ångra.";
 "clips.comments.loading" = "Laddar kommentarer...";
 "clips.comments.replying" = "Svarar...";
-"clips.createFirstList" = "Skapa din första watchlist för att spara favoriter";
+"clips.createFirstList" = "Skapa din första bevakningslista för att spara favoriter";
 "clips.createNewList" = "Skapa ny lista";
 "clips.feed.craftingSubtitle" = "Vi handplockar de bästa klippen just för dig ✨";
 "clips.feed.craftingTitle" = "Skapar din perfekta feed";
@@ -158,7 +158,7 @@
 "profile.cancel" = "Avbryt";
 "profile.createAccount" = "Skapa konto";
 "profile.done" = "Klart";
-"profile.helpSupport" = "Hjälp & Support";
+"profile.helpSupport" = "Hjälp och support";
 "profile.logout" = "Logga ut";
 "profile.notifications" = "Notiser";
 "profile.passwordPlaceholder" = "Lösenord";
@@ -166,7 +166,7 @@
 "profile.signIn" = "Logga in";
 "profile.signInDescription" = "Skapa listor, spara klipp och anpassa din upplevelse";
 "profile.signInToVibeWatch" = "Logga in på VibeWatch";
-"profile.streamingServices" = "Streaming-tjänster";
+"profile.streamingServices" = "Streamingtjänster";
 "profile.userNamePlaceholder" = "E-post eller användarnamn";
 
 // Settings
@@ -194,7 +194,7 @@
 
 // Platforms
 "platform.selectionCount" = "%d av %d valda";
-"platform.title" = "Streaming-plattformar";
+"platform.title" = "Streamingplattformar";
 "platforms.buy" = "Köp";
 "platforms.cinema" = "Bio";
 "platforms.justwatch" = "JustWatch";
@@ -257,7 +257,7 @@
 "ai.thinking" = "Tänker...";
 "ai.editMessage" = "Redigera meddelande";
 "ai.hardLimitMessage" = "Du har nått dagens AI-gräns. Kom tillbaka imorgon.";
-"ai.paywall.benefit.personalized" = "Personliga watchlists";
+"ai.paywall.benefit.personalized" = "Personliga bevakningslistor";
 "ai.paywall.benefit.smarter" = "Smartare innehållsupptäckt";
 "ai.paywall.benefit.unlimited" = "Obegränsade AI-rekommendationer";
 "ai.paywall.description" = "Få smartare AI-rekommendationer för film och TV och hitta det perfekta valet.";
@@ -289,12 +289,12 @@
 "paywall.ensurePro" = "Säkra din Pro-plan!";
 "paywall.feature.advancedFilters" = "🔎 Avancerade filter för snabbare val";
 "paywall.feature.aiAssistant" = "🤖 AI-rekommendationer för film och TV";
-"paywall.feature.lists" = "📋 Upp till 100 synkade watchlists";
+"paywall.feature.lists" = "📋 Upp till 100 synkade bevakningslistor";
 "paywall.feature.noAds" = "❌ Inga annonser som avbryter klipp";
 "paywall.feature.offlineMode" = "📵 Offlineläge för sparade val";
 "paywall.feature.releaseAlerts" = "🔔 Aviseringar när favoriter blir tillgängliga";
 "paywall.feature.unlimitedClips" = "▶️ Obegränsade klipp och trailers";
-"paywall.proDescription" = "Pro låser upp obegränsade klipp, AI-filmkompis och synkade watchlists.";
+"paywall.proDescription" = "Pro låser upp obegränsade klipp, AI-filmkompis och synkade bevakningslistor.";
 "paywall.plan.annual" = "Årsvis";
 "paywall.plan.monthly" = "Månadsvis";
 "paywall.price.perMonth" = "%@/månad";
@@ -454,12 +454,12 @@
 "actor.biography.showMore" = "Visa mer";
 "actor.biography.showLess" = "Visa mindre";
 
-"actor.birthday" = "Born: %@";
-"actor.birthday.line" = "%@ (%@ years old)";
-"actor.known_for" = "Known For";
+"actor.birthday" = "Född: %@";
+"actor.birthday.line" = "%@ (%@ år)";
+"actor.known_for" = "Känd för";
 "actor.search.placeholder" = "Sök i filmografi…";
 "actor.search.noResults" = "Inga resultat för";
-"actor.filmography.empty" = "Inga krediter hittades.";
+"actor.filmography.empty" = "Inga roller hittades.";
 
 "clips.search.placeholder" = "Sök klipp, karaktärer eller citat";
 "clips.search.emptyTitle" = "Hitta klipp du gillar";
@@ -486,30 +486,30 @@
 
 // FAQ Items
 "profile.faq.question1" = "Hur hjälper Clips mig att hitta nya titlar?";
-"profile.faq.answer1" = "Klipp är korta, vertikala förhandsvisningar som matchar din smak så du kan scroll-bingea utan att känna att du slösar tid.";
+"profile.faq.answer1" = "Klipp är korta, vertikala förhandsvisningar som matchar din smak, så att du kan bläddra vidare utan att känna att du slösar tid.";
 "profile.faq.question2" = "Kan jag hålla koll på vad jag tittar på?";
-"profile.faq.answer2" = "Ja. Spara till listor, markera som sett/tyckt om/inte tyckt om och synka över filmer och serier.";
+"profile.faq.answer2" = "Ja. Spara i listor, markera som sedd, gillad eller ogillad — och synka allt mellan filmer och serier.";
 "profile.faq.question3" = "Var kan jag se den?";
 "profile.faq.answer3" = "Streaminglänkar hämtas per land så att du kan hoppa direkt in i rätt app.";
 "profile.faq.question4" = "Vad om något ser fel ut?";
 "profile.faq.answer4" = "Använd \"Hör av dig\" på valfri titel för att rapportera buggar eller dåliga länkar så fixar vi det snabbt.";
-"profile.faq.question5" = "Fungerar VibeWatch för casual-tittare?";
+"profile.faq.question5" = "Fungerar VibeWatch för den som bara tittar då och då?";
 "profile.faq.answer5" = "Absolut. Vi lyfter fram enkla val som en lördagsfilm med vänner samt djupdykningar för filmälskare.";
-"carousel.hotThisWeek" = "Hett just nu";
+"carousel.hotThisWeek" = "Hetast denna vecka";
 "carousel.awardWinners" = "Prisvinnare du kommer att älska";
 
 // --- Synced from en.lproj ---
 "clips.search.showcaseTitle" = "Upptäck klipp";
 "filters.mediaType" = "Typ av media";
 "filters.movies" = "Filmer";
-"filters.tvShows" = "TV-program";
+"filters.tvShows" = "TV-serier";
 "filters.both" = "Båda";
 "filters.rating" = "Betyg";
 "filters.releasePeriod" = "Releaseperiod";
-"filters.releasePeriodRecent" = "Nyligen (2020+)";
-"filters.releasePeriodModern" = "Modern (2010-2019)";
-"filters.releasePeriodClassic" = "Klassisk (<2010)";
-"filters.customRange" = "Anpassat sortiment";
+"filters.releasePeriodRecent" = "Nytt (2020+)";
+"filters.releasePeriodModern" = "Modernt (2010–2019)";
+"filters.releasePeriodClassic" = "Klassiskt (före 2010)";
+"filters.customRange" = "Anpassat intervall";
 "filters.customYearRange" = "Anpassat årsintervall";
 "filters.min" = "Min";
 "filters.max" = "Max";
@@ -520,11 +520,11 @@
 "filters.sortPopularityDesc" = "Mest populära";
 "filters.sortPopularityAsc" = "Minst populära";
 "filters.sortRatingDesc" = "Högsta betyg";
-"filters.sortRatingAsc" = "Lägst rankad";
+"filters.sortRatingAsc" = "Lägst betyg";
 "filters.sortReleaseDateDesc" = "Nyaste först";
-"filters.sortReleaseDateAsc" = "Äldst Först";
-"filters.proFilters" = "Proffsfilter";
-"filters.hideWatched" = "Dölj Bevakad";
+"filters.sortReleaseDateAsc" = "Äldst först";
+"filters.proFilters" = "Pro-filter";
+"filters.hideWatched" = "Dölj sedda";
 "filters.hideDisliked" = "Dölj ogillade";
 "filters.proTitle" = "Lås upp avancerade filter";
 "filters.proDescription" = "Uppgradera till Pro för anpassade intervall, val av flera länder och avancerade filtreringsalternativ";
@@ -533,21 +533,21 @@
 "carousel.dailyMix" = "Din dagliga mix";
 "carousel.trendingInGenre" = "Trender i %@";
 "carousel.becauseYouLiked" = "För att du gillade %@";
-"carousel.hiddenGems" = "Dolda ädelstenar i %@";
+"carousel.hiddenGems" = "Dolda pärlor i %@";
 "carousel.continueJourney" = "Fortsätt din resa";
 "carousel.fromSearches" = "Från dina sökningar";
 "carousel.topTVPicks" = "De bästa TV-valen för dig";
-"carousel.staffPicks" = "Personalens val för %@-fans";
+"carousel.staffPicks" = "Redaktionens val för %@-fans";
 "carousel.yearlyRewind" = "Din årliga tillbakablick";
 "settings.privacy.title" = "Integritet";
 "settings.analytics.share" = "Dela anonyma analyser";
 "settings.analytics.share.description" = "Hjälper oss att förstå vilka funktioner du använder och förbättra appen. Ingen spårning av annonser.";
 "settings.analytics.title" = "Analys";
 "settings.analytics.viewStats" = "Visa din statistik";
-"settings.analytics.description" = "Se din klockhistorik och dina insikter";
-"settings.notifications.title" = "Meddelanden";
-"settings.notifications.manage" = "Hantera aviseringar";
-"settings.notifications.description" = "Personliga aviseringar om nytt innehåll";
+"settings.analytics.description" = "Se din tittarhistorik och dina insikter";
+"settings.notifications.title" = "Notiser";
+"settings.notifications.manage" = "Hantera notiser";
+"settings.notifications.description" = "Personliga notiser om nytt innehåll";
 "onboarding.welcome.title" = "Välkommen till VibeWatch";
 "onboarding.welcome.subtitle" = "Upptäck, följ och missa aldrig en premiär. Filmer och serier — på ett ställe.";
 "onboarding.clips.title" = "Titta, läs inte";
@@ -598,8 +598,8 @@
 "notifications.favoriteActorsDesc" = "Nytt innehåll från personer du gillar";
 "notifications.similarContent" = "Liknande innehåll";
 "notifications.similarContentDesc" = "Rekommendationer baserade på det du gillat";
-"notifications.watchlistAlerts" = "Bevakningar i watchlist";
-"notifications.watchlistAlertsDesc" = "När objekt i din watchlist blir tillgängliga";
+"notifications.watchlistAlerts" = "Notiser för bevakningslistan";
+"notifications.watchlistAlertsDesc" = "När titlar i din bevakningslista blir tillgängliga";
 "notifications.milestones" = "Milstolpar och prestationer";
 "notifications.milestonesDesc" = "Fira dina tittarsviter och prestationer";
 "notifications.frequency" = "Frekvens";
@@ -611,15 +611,15 @@
 "notifications.endTime" = "Sluttid";
 "notifications.quietHoursDesc" = "Inga notiser skickas under dessa timmar";
 "notifications.proFeatures" = "Pro-funktioner";
-"notifications.customActorAlerts" = "Anpassade skådespelaraviseringar";
-"notifications.customGenreAlerts" = "Anpassade genreaviseringar";
-"notifications.proFeaturesDesc" = "Få aviseringar för specifika skådespelare och genrer du väljer";
+"notifications.customActorAlerts" = "Notiser för valda skådespelare";
+"notifications.customGenreAlerts" = "Notiser för valda genrer";
+"notifications.proFeaturesDesc" = "Få notiser om specifika skådespelare och genrer som du väljer";
 "notifications.save" = "Spara";
 "notifications.settingsSaved" = "Inställningar sparade";
 "notifications.preferencesUpdated" = "Dina notisinställningar har uppdaterats.";
 "notifications.typesFooter" = "Välj vilka notiser du vill få";
 "notifications.newAvailability" = "Ny tillgänglighet";
-"notifications.newAvailabilityDesc" = "När titlar i din watchlist blir tillgängliga att streama, hyra eller köpa";
+"notifications.newAvailabilityDesc" = "När titlar i din bevakningslista blir tillgängliga att streama, hyra eller köpa";
 "notifications.newRelease" = "Nya releaser";
 "notifications.newReleaseDesc" = "Filmer och serier där du tryckte på \"Meddela mig\" när de kommer ut";
 "notifications.episodeAired" = "Nya avsnitt";
@@ -636,40 +636,40 @@
 "notifications.fromPreferences" = "Från dina preferenser";
 "lists.notifyMe" = "AVISERA MIG";
 
-"movieDetail.whyForMe" = "Why for me?";
+"movieDetail.whyForMe" = "Varför för mig?";
 
-"movieDetail.whyForMe.basedOnGenres" = "Based on your 3 favorite genres";
+"movieDetail.whyForMe.basedOnGenres" = "Baserat på dina 3 favoritgenrer";
 
-"movieDetail.goodFitTitle" = "Why %@ is a good fit for me?";
-"movieDetail.goodFitSubtitle" = "A quick, personalized take based on your taste.";
+"movieDetail.goodFitTitle" = "Varför passar %@ mig?";
+"movieDetail.goodFitSubtitle" = "En snabb och personlig bedömning utifrån din smak.";
 
 // TV Show Detail - Mark All Seen Confirmation
 "tvDetail.markAllSeenTitle" = "Markera hela serien som sedd";
-"tvDetail.markAllSeenDescription" = "This action will apply to all episodes and seasons of the series available.";
-"tvDetail.markAllSeenQuestion" = "Do you want to continue?";
-"tvDetail.markAllSeenConfirm" = "Yes, mark as seen";
-"tvDetail.markAllSeenCancel" = "No, cancel";
-"tvDetail.seasonSeenShort" = "seen";
+"tvDetail.markAllSeenDescription" = "Åtgärden gäller alla tillgängliga avsnitt och säsonger av serien.";
+"tvDetail.markAllSeenQuestion" = "Vill du fortsätta?";
+"tvDetail.markAllSeenConfirm" = "Ja, markera som sedd";
+"tvDetail.markAllSeenCancel" = "Nej, avbryt";
+"tvDetail.seasonSeenShort" = "sedd";
 
 // Library section switcher
-"lists.section.myLists" = "My Lists";
-"lists.section.tvTracking" = "TV Shows Tracking";
+"lists.section.myLists" = "Mina listor";
+"lists.section.tvTracking" = "Bevakning av serier";
 
 // TV Shows Tracking
-"tvTracking.continuing" = "Continue Watching";
-"tvTracking.notStarted" = "Not Started";
-"tvTracking.upToDate" = "Up to Date";
-"tvTracking.emptyState" = "No TV shows found";
+"tvTracking.continuing" = "Fortsätt titta";
+"tvTracking.notStarted" = "Inte påbörjade";
+"tvTracking.upToDate" = "Ikapp";
+"tvTracking.emptyState" = "Inga serier hittades";
 "carousel.fromActor" = "Mer från %@";
-"carousel.decadeClassics" = "%@-klassiker";
-"carousel.moodTonight" = "%@ ikväll";
+"carousel.decadeClassics" = "Klassiker från %@";
+"carousel.moodTonight" = "Ikväll: %@";
 "carousel.regionSpotlight" = "%@ i fokus";
 "carousel.topInGenre" = "Topp i %@";
 "carousel.hotThisWeekInGenre" = "Hetast denna vecka i %@";
-"carousel.quickWatches" = "Snabba tittar";
-"carousel.epicWatches" = "Episka tittar";
+"carousel.quickWatches" = "Kort och gott";
+"carousel.epicWatches" = "Episka upplevelser";
 "carousel.internationalPicks" = "Internationella val";
-"carousel.throwback" = "Tillbakablick %@";
+"carousel.throwback" = "Tillbaka till %@";
 "carousel.fromAIChat" = "Från din AI-chatt";
 "carousel.comingSoon" = "Kommer snart";
 "carousel.trendingTVWeek" = "Trendande TV denna vecka";
@@ -678,35 +678,35 @@
 "carousel.documentaries" = "Dokumentärer för dig";
 "discovery.endOfFeed" = "Du är helt ikapp";
 /* MARK: - Public Lists (Fase 1) */
-"lists.section.publicLists" = "Public Lists";
-"lists.public.scope.explore" = "Explore";
-"lists.public.scope.followed" = "Followed";
-"lists.public.searchPlaceholder" = "Search public lists";
-"lists.public.empty.explore" = "No public lists found";
-"lists.public.empty.followed" = "You're not following any list yet";
-"lists.public.follow" = "Follow";
-"lists.public.following" = "Following";
-"lists.public.unavailable" = "This list is no longer available";
-"lists.public.report" = "Report list";
-"lists.public.report.confirm" = "Report this list as inappropriate?";
-"lists.public.report.done" = "Thanks, your report has been received";
-"lists.public.block" = "Block user";
-"lists.public.block.confirm" = "Block this user? Their public lists will be hidden.";
-"lists.public.createFromThis" = "Create public list from this";
-"lists.public.toggle" = "Public list";
-"lists.public.toggle.footer" = "Public lists can be discovered and followed by other users.";
-"lists.public.profanity.title" = "Inappropriate content";
-"lists.public.profanity" = "Please remove inappropriate language from the name or description before publishing.";
-"lists.public.guidelines.title" = "Community guidelines";
-"lists.public.guidelines.body" = "By publishing a list you agree to our community guidelines: no offensive, hateful or illegal content. Lists that violate them may be hidden and reported users may be removed.";
-"lists.public.guidelines.accept" = "Accept and publish";
-"lists.duplicateName" = "Copy of %@";
+"lists.section.publicLists" = "Offentliga listor";
+"lists.public.scope.explore" = "Utforska";
+"lists.public.scope.followed" = "Följda";
+"lists.public.searchPlaceholder" = "Sök offentliga listor";
+"lists.public.empty.explore" = "Inga offentliga listor hittades";
+"lists.public.empty.followed" = "Du följer ingen lista än";
+"lists.public.follow" = "Följ";
+"lists.public.following" = "Följer";
+"lists.public.unavailable" = "Den här listan är inte längre tillgänglig";
+"lists.public.report" = "Anmäl lista";
+"lists.public.report.confirm" = "Vill du anmäla den här listan som olämplig?";
+"lists.public.report.done" = "Tack, din anmälan har tagits emot";
+"lists.public.block" = "Blockera användare";
+"lists.public.block.confirm" = "Vill du blockera den här användaren? Deras offentliga listor döljs.";
+"lists.public.createFromThis" = "Skapa en offentlig lista av den här";
+"lists.public.toggle" = "Offentlig lista";
+"lists.public.toggle.footer" = "Offentliga listor kan hittas och följas av andra användare.";
+"lists.public.profanity.title" = "Olämpligt innehåll";
+"lists.public.profanity" = "Ta bort olämpligt språk från namnet eller beskrivningen innan du publicerar.";
+"lists.public.guidelines.title" = "Riktlinjer för communityn";
+"lists.public.guidelines.body" = "När du publicerar en lista godkänner du våra riktlinjer för communityn: inget stötande, hatiskt eller olagligt innehåll. Listor som bryter mot dem kan döljas och anmälda användare kan stängas av.";
+"lists.public.guidelines.accept" = "Godkänn och publicera";
+"lists.duplicateName" = "Kopia av %@";
 /* MARK: - TV Tracking (card stile JustWatch) */
-"tvTracking.titlesCount" = "%d titles";
-"tvTracking.episodesRemaining" = "%d episodes remaining";
-"tvTracking.lastSeen" = "LAST SEEN %@";
-"tvTracking.soon" = "soon";
-"tvTracking.watchNow" = "Watch now";
+"tvTracking.titlesCount" = "%d titlar";
+"tvTracking.episodesRemaining" = "%d avsnitt kvar";
+"tvTracking.lastSeen" = "SENAST SEDD %@";
+"tvTracking.soon" = "snart";
+"tvTracking.watchNow" = "Titta nu";
 
 /* SPEC v3 §9.2 — schermata Tracking */
 "tracking.title" = "Bevakning";
@@ -831,7 +831,7 @@
 "gamification.levels.title" = "Nivåer";
 "gamification.challenge.none" = "Inget uppdrag idag";
 "common.seeAll" = "Visa alla";
-"profile.stats.subtitle" = "Genrer, mood, tittartid";
+"profile.stats.subtitle" = "Genrer, humör, tittartid";
 "diary.subtitle" = "Historik över sedda avsnitt och filmer";
 "profile.badgesLevels.subtitle" = "Nivå %d · %d/%d märken";
 "notifications.row.subtitle" = "Premiärer, nya avsnitt, tysta timmar";
@@ -885,41 +885,41 @@
 "onboarding.ready.chip.notifications" = "Notiser på";
 "onboarding.ready.cta" = "Börja titta";
 
-"filters.myPlatforms" = "Mine";
-"filters.platformScopeAll" = "All";
-"mediaDetail.forYou" = "for you";
-"mediaDetail.watchOn" = "Watch on";
-"mediaDetail.notifyMe" = "Notify me";
-"mediaDetail.notifyMeEnabling" = "Activating notification…";
-"mediaDetail.notifyMeEnabled" = "Notification active";
-"mediaDetail.action.watchlist" = "Watchlist";
-"mediaDetail.action.like" = "Like";
-"mediaDetail.action.list" = "To list";
+"filters.myPlatforms" = "Mina";
+"filters.platformScopeAll" = "Alla";
+"mediaDetail.forYou" = "för dig";
+"mediaDetail.watchOn" = "Se på";
+"mediaDetail.notifyMe" = "Meddela mig";
+"mediaDetail.notifyMeEnabling" = "Aktiverar…";
+"mediaDetail.notifyMeEnabled" = "Vi meddelar dig";
+"mediaDetail.action.watchlist" = "Bevaka";
+"mediaDetail.action.like" = "Gilla";
+"mediaDetail.action.list" = "Till lista";
 "mediaDetail.toast.watchlistAdded" = "Tillagd i din bevakningslista";
 "mediaDetail.toast.watchlistRemoved" = "Borttagen från din bevakningslista";
 "mediaDetail.toast.markedSeen" = "Markerad som sedd";
 "mediaDetail.toast.markedUnseen" = "Borttagen från sedda";
 "mediaDetail.toast.liked" = "Tillagd bland dina gillanden";
 "mediaDetail.toast.likeRemoved" = "Borttagen från dina gillanden";
-"mediaDetail.why.cardTitle" = "Why is it right for you?";
-"mediaDetail.why.title" = "Why for you";
-"mediaDetail.why.affinity" = "Affinity with your tastes";
-"mediaDetail.why.reason.mood" = "In line with your mood";
-"mediaDetail.why.reason.genres" = "Genres you love";
-"mediaDetail.why.reason.cast" = "Cast you know";
-"mediaDetail.why.helpful" = "Was this helpful?";
-"mediaDetail.why.regenerate" = "Regenerate";
-"mediaDetail.why.quota" = "Generated by Vibe AI from ratings, mood and history. %d/%d requests today.";
-"settings.cacheManagement.clearCacheAction" = "Clear cache";
-"gamification.missionsToday" = "Today's missions";
-"gamification.xpToNext" = "%d XP to the next level";
-"gamification.mission.openApp" = "Open the app";
-"gamification.mission.keepStreak" = "Keep your daily streak";
-"gamification.challenge.watch_3" = "Watch 3 clips";
-"gamification.challenge.like_5" = "Like 5 clips";
-"gamification.challenge.list_2" = "Add 2 titles to a list";
-"gamification.challenge.watch_new_genre" = "Watch a clip from a new genre";
-"gamification.challenge.complete_5" = "Complete 5 clips (>70%)";
+"mediaDetail.why.cardTitle" = "Varför passar den dig?";
+"mediaDetail.why.title" = "Varför för dig";
+"mediaDetail.why.affinity" = "Matchning med din smak";
+"mediaDetail.why.reason.mood" = "I linje med ditt humör";
+"mediaDetail.why.reason.genres" = "Genrer du älskar";
+"mediaDetail.why.reason.cast" = "Skådespelare du känner igen";
+"mediaDetail.why.helpful" = "Var det här till hjälp?";
+"mediaDetail.why.regenerate" = "Generera igen";
+"mediaDetail.why.quota" = "Genererat av Vibe AI utifrån betyg, humör och historik. %d/%d förfrågningar i dag.";
+"settings.cacheManagement.clearCacheAction" = "Rensa cache";
+"gamification.missionsToday" = "Dagens uppdrag";
+"gamification.xpToNext" = "%d XP till nästa nivå";
+"gamification.mission.openApp" = "Öppna appen";
+"gamification.mission.keepStreak" = "Håll igång din dagliga streak";
+"gamification.challenge.watch_3" = "Titta på 3 klipp";
+"gamification.challenge.like_5" = "Gilla 5 klipp";
+"gamification.challenge.list_2" = "Lägg till 2 titlar i en lista";
+"gamification.challenge.watch_new_genre" = "Titta på ett klipp från en ny genre";
+"gamification.challenge.complete_5" = "Slutför 5 klipp (>70%)";
 
 // SeasonDetailView — conferme di marcatura episodi (2026-08-04)
 "season.confirmUnaired.title" = "Har inte sänts än";
@@ -1025,7 +1025,7 @@
 "profile.feedback.placeholder.other" = "Skriv vad du vill säga oss…";
 "profile.feedback.category.crash" = "Krasch";
 "profile.feedback.category.import" = "Import från TV Time";
-"profile.feedback.category.notifications" = "Aviseringar";
+"profile.feedback.category.notifications" = "Notiser";
 "profile.feedback.category.sync" = "Synkronisering";
 "profile.feedback.category.ui" = "Utseende";
 "profile.feedback.category.other" = "Annat";
@@ -1117,3 +1117,156 @@
 "search.trending.subtitle" = "Mest sökta i %@ det senaste dygnet.";
 "search.results.subtitle" = "Träffar för ”%@”, sedan närliggande titlar.";
 "search.resultsCount" = "%d titlar";
+
+
+// MARK: - Ricerca piattaforme + esito notifica
+"platforms.search" = "Sök efter en plattform";
+"platforms.searchEmpty" = "Ingen plattform med det namnet.";
+"mediaDetail.notifyMeFailed" = "Vi kunde inte aktivera notisen.";
+
+
+// MARK: - Report import ridisegnato
+"import.report.title" = "Importrapport";
+"import.report.sourcePeriod" = "%@ · %@ – %@";
+"import.report.success.title" = "Biblioteket är importerat";
+"import.report.success.subtitle" = "%d serier och %d filmer matchades mot katalogen.";
+"import.report.success.subtitleWithRatings" = "%d serier och %d filmer matchades mot katalogen, med visningsdatum och betyg.";
+"import.report.tile.episodes" = "Avsnitt";
+"import.report.tile.movies" = "Filmer";
+"import.report.leftOut.title" = "Hamnade utanför";
+"import.report.leftOut.subtitle" = "Det finns ingen säker träff i katalogen för de här titlarna. Tryck på ett kort för att söka manuellt.";
+"import.report.leftOut.excluded" = "Utesluten av dig";
+"import.report.leftOut.episodes" = "%d sedda avsnitt";
+"import.report.leftOut.seenOn" = "sedd %@";
+"import.report.copyList" = "Kopiera listan";
+"import.report.copied" = "Listan kopierad";
+"import.report.details" = "Detaljer";
+
+
+// MARK: - Report import — dettagli
+"import.report.detail.period" = "Täckt period";
+"import.report.detail.years" = "%d år";
+"import.report.detail.oneYear" = "1 år";
+"import.report.detail.lessThanYear" = "mindre än ett år";
+"import.report.detail.statuses" = "Återställda seriestatusar";
+"import.report.detail.statuses.hint" = "Bevakningslista och arkiv som i TV Time";
+"import.report.detail.ratings" = "Överförda betyg";
+"import.report.detail.ratingsUnmatched" = "Omatchade betyg";
+"import.report.detail.ratingsUnmatched.hint" = "Betygsatta avsnitt som inte finns i katalogen";
+"import.report.detail.ratingsDeferred" = "Betyg är inte importerade än";
+"import.report.detail.favorites" = "Återställda favoriter";
+"import.report.detail.moviesSeen" = "Filmer markerade som sedda";
+"import.report.detail.moviesWatchlist" = "Filmer i bevakningslistan";
+"import.report.detail.statusesUnresolved" = "Statusar som inte återställdes";
+"import.report.detail.outOfStructure" = "Avsnitt utan plats";
+"import.report.detail.outOfStructure.hint" = "Specialavsnitt och utökade versioner utanför seriens struktur";
+"import.report.detail.favoriteMovies" = "Favoritfilmer importerades inte";
+
+
+// MARK: - Report import — titolo mancante
+"import.report.leftOut.untitled" = "Titeln saknas i exporten";
+
+
+// MARK: - TMDB-genrer
+// Genrenamnen som visas i appen (karusellrubriker, genrediagrammet i Analys).
+// TMDB översätter dem bara inne på en titelsida; i karusellerna kommer genren som ett numeriskt
+// id, så namnet måste hämtas härifrån.
+"genre.action" = "Action";
+"genre.adventure" = "Äventyr";
+"genre.animation" = "Animerat";
+"genre.comedy" = "Komedi";
+"genre.crime" = "Kriminal";
+"genre.documentary" = "Dokumentär";
+"genre.drama" = "Drama";
+"genre.family" = "Familj";
+"genre.fantasy" = "Fantasy";
+"genre.history" = "Historia";
+"genre.horror" = "Skräck";
+"genre.music" = "Musik";
+"genre.mystery" = "Mysterium";
+"genre.romance" = "Romantik";
+"genre.scienceFiction" = "Science Fiction";
+"genre.tvMovie" = "TV-film";
+"genre.thriller" = "Thriller";
+"genre.war" = "Krig";
+"genre.western" = "Western";
+"genre.actionAdventure" = "Action och äventyr";
+"genre.kids" = "Barn";
+"genre.news" = "Nyheter";
+"genre.reality" = "Reality";
+"genre.sciFiFantasy" = "Sci-fi och fantasy";
+"genre.soap" = "Såpopera";
+"genre.talk" = "Talkshow";
+"genre.warPolitics" = "Krig och politik";
+
+
+// MARK: - Mood
+// Hamnar i "%@" i "carousel.moodTonight" ("Ikväll: %@"). Det är SUBSTANTIV, inte adjektiv: ett
+// adjektiv skulle behöva böjas efter ett ord som inte finns i mallen.
+"mood.happy" = "Feelgood";
+"mood.sad" = "Vemod";
+"mood.excited" = "Spänning";
+"mood.relaxed" = "Något avkopplande";
+"mood.scared" = "Rysningar";
+"mood.thoughtful" = "Något att fundera på";
+"mood.romantic" = "Romantik";
+"mood.adventurous" = "Äventyr";
+"mood.nostalgic" = "Nostalgi";
+"mood.energetic" = "Ren energi";
+
+
+// MARK: - Karuseller — argument och varianter utan genre
+// "%d" är decenniets startår (2020). På engelska heter det "2020s", på svenska "2020-talet":
+// ändelsen är grammatik, inte en siffra, och ska översättas.
+// Används i "carousel.decadeClassics" ("Klassiker från 2020-talet") och "carousel.throwback"
+// ("Tillbaka till 2020-talet").
+"carousel.arg.decade" = "%d-talet";
+// Används när profilen ännu inte har någon favoritgenre: inte ett värde inklistrat i "%@" i den
+// vanliga rubriken, utan en egen formulering.
+"carousel.hiddenGems.generic" = "Dolda pärlor";
+"carousel.staffPicks.generic" = "Redaktionens val för dig";
+
+
+// MARK: - Analys
+"analytics.noData" = "Inga data";
+
+
+// MARK: - Statistik och gamification (strängar hämtade ur vyerna)
+// Låg som literaler i AnalyticsDashboardView / FloatingXPBadgeView / BadgeGalleryView /
+// LevelProgressView: eftersom de aldrig gick via `.localized` stod de kvar på engelska.
+"stats.title" = "Din statistik";
+"stats.yourActivity" = "Din aktivitet";
+"stats.viewFull" = "Visa all statistik";
+"stats.loading" = "Laddar statistik…";
+"stats.errorTitle" = "Statistiken kunde inte läsas in";
+"stats.emptyTitle" = "Ingen statistik ännu";
+"stats.emptySubtitle" = "Börja titta så får du din statistik!";
+"stats.genreDistribution" = "Fördelning per genre";
+"stats.genreEmpty" = "Inga genredata ännu";
+"stats.whenActive" = "När du är aktiv";
+"stats.topContent" = "Dina topptitlar";
+"stats.contentEmpty" = "Inga titeldata ännu";
+"stats.discoveryChannels" = "Så hittar du titlar";
+"stats.discoveryEmpty" = "Inga data om upptäckter ännu";
+"stats.moodProfile" = "Humörprofil";
+"stats.moodEmpty" = "Ännu för lite data — fortsätt titta så visas din humörprofil.";
+
+// "%d" är nivåns nummer.
+"gamification.levelNumber" = "Nivå %d";
+// Kort variant för märket högst upp på skärmen, där utrymmet är knappt.
+"gamification.levelShort" = "Niv.%d";
+"gamification.bestStreak" = "Bästa streak";
+"gamification.xpBonus" = "XP-bonus";
+"gamification.todaysChallenge" = "Dagens utmaning";
+"gamification.completed" = "Klart!";
+"gamification.badgeUnlocked" = "Märke upplåst!";
+"gamification.badges.collected" = "Insamlade märken";
+"gamification.badges.unlocked" = "Upplåst";
+// "%d" är totalantalet märken: visas som "12 av 40".
+"gamification.badges.ofTotal" = "av %d";
+"gamification.levels.progressTitle" = "Nivåframsteg";
+"gamification.allLevels" = "ALLA NIVÅER";
+
+"common.progress" = "Framsteg";
+"tvDetail.seasonsTitle" = "Säsonger";
+"tvDetail.episodesTitle" = "Avsnitt";

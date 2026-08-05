@@ -784,7 +784,7 @@ struct CommentsView: View {
                     onCountsChange: onCountsChange
                 )
             }
-            .navigationTitle("Comments")
+            .navigationTitle("clips.comments".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {

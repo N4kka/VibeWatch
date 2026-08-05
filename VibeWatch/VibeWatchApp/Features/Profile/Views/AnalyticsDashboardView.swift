@@ -42,7 +42,7 @@ struct AnalyticsDashboardView: View {
             .padding(.top, 8)
         }
         .background(Color.theme.background.ignoresSafeArea())
-        .navigationTitle("Your Stats")
+        .navigationTitle("stats.title".localized)
         .navigationBarTitleDisplayMode(.large)
         // La pagina arriva sia come sheet (dal profilo) sia pushata (da Impostazioni, dove la
         // barra di sistema è spenta): la porta se la porta dietro da sola.
@@ -89,7 +89,7 @@ struct AnalyticsDashboardView: View {
             // Level Info
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 8) {
-                    Text("Level \(gamificationService.userState.currentLevel)")
+                    Text(String(format: "gamification.levelNumber".localized, gamificationService.userState.currentLevel))
                         .font(.system(size: 18, weight: .bold))
                         .foregroundColor(.white)
 
@@ -174,7 +174,7 @@ struct AnalyticsDashboardView: View {
                         .font(.system(size: 24, weight: .bold))
                         .foregroundColor(.white)
 
-                    Text("Day Streak")
+                    Text("gamification.dayStreak".localized)
                         .font(.system(size: 11))
                         .foregroundColor(.white.opacity(0.5))
                 }
@@ -236,7 +236,7 @@ struct AnalyticsDashboardView: View {
                 .padding(.horizontal, 16)
             } else {
                 VStack {
-                    Text("No Challenge")
+                    Text("gamification.challenge.none".localized)
                         .font(.system(size: 12))
                         .foregroundColor(.white.opacity(0.4))
                 }
@@ -255,7 +255,7 @@ struct AnalyticsDashboardView: View {
     private var badgesPreviewSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Badges")
+                Text("gamification.badges.title".localized)
                     .font(.system(size: 14, weight: .bold))
                     .foregroundColor(.white.opacity(0.6))
                     .textCase(.uppercase)
@@ -265,7 +265,7 @@ struct AnalyticsDashboardView: View {
 
                 NavigationLink(destination: BadgeGalleryView(gamificationService: gamificationService)) {
                     HStack(spacing: 4) {
-                        Text("See all")
+                        Text("common.seeAll".localized)
                             .font(.system(size: 13, weight: .medium))
                         Image(systemName: "arrow.right")
                             .font(.system(size: 11))
@@ -329,7 +329,7 @@ struct AnalyticsDashboardView: View {
 
             // Header with timeframe picker
             HStack {
-                Text("Your Activity")
+                Text("stats.yourActivity".localized)
                     .font(.system(size: 14, weight: .bold))
                     .foregroundColor(.white.opacity(0.6))
                     .textCase(.uppercase)
@@ -456,7 +456,7 @@ struct AnalyticsDashboardView: View {
             ProgressView()
                 .scaleEffect(1.2)
                 .tint(.theme.accentOrange)
-            Text("Loading stats...")
+            Text("stats.loading".localized)
                 .font(.system(size: 13))
                 .foregroundColor(.white.opacity(0.5))
         }
@@ -469,7 +469,7 @@ struct AnalyticsDashboardView: View {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 32))
                 .foregroundColor(.orange)
-            Text("Error Loading Stats")
+            Text("stats.errorTitle".localized)
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(.white)
             Text(error)
@@ -486,10 +486,10 @@ struct AnalyticsDashboardView: View {
             Image(systemName: "chart.bar.xaxis")
                 .font(.system(size: 32))
                 .foregroundColor(.white.opacity(0.3))
-            Text("No Stats Yet")
+            Text("stats.emptyTitle".localized)
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(.white)
-            Text("Start watching to see your analytics!")
+            Text("stats.emptySubtitle".localized)
                 .font(.system(size: 12))
                 .foregroundColor(.white.opacity(0.5))
         }
@@ -572,7 +572,7 @@ struct GenreDistributionCard: View {
             HStack {
                 Image(systemName: "theatermasks.fill")
                     .foregroundColor(.purple)
-                Text("Genre Distribution")
+                Text("stats.genreDistribution".localized)
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(.white)
                 Spacer()
@@ -591,7 +591,7 @@ struct GenreDistributionCard: View {
                 .frame(height: 180)
                 .chartLegend(position: .bottom, spacing: 8)
             } else {
-                Text("No genre data available")
+                Text("stats.genreEmpty".localized)
                     .font(.system(size: 13))
                     .foregroundColor(.white.opacity(0.4))
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -616,7 +616,7 @@ struct ViewingHeatmapCard: View {
                     .foregroundColor(.blue)
                 // Relabelled (ARCH-001): the heatmap is built on when you add titles to lists
                 // (added_at = activity), not on watch times, which the app doesn't record.
-                Text("When You're Active")
+                Text("stats.whenActive".localized)
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(.white)
                 Spacer()
@@ -672,7 +672,7 @@ struct TopContentCard: View {
             HStack {
                 Image(systemName: "star.fill")
                     .foregroundColor(.yellow)
-                Text("Top Content")
+                Text("stats.topContent".localized)
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(.white)
                 Spacer()
@@ -692,7 +692,7 @@ struct TopContentCard: View {
                     }
                 }
             } else {
-                Text("No content data available")
+                Text("stats.contentEmpty".localized)
                     .font(.system(size: 13))
                     .foregroundColor(.white.opacity(0.4))
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -714,7 +714,7 @@ struct DiscoveryInsightsCard: View {
             HStack {
                 Image(systemName: "sparkles")
                     .foregroundColor(.cyan)
-                Text("Discovery Channels")
+                Text("stats.discoveryChannels".localized)
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(.white)
                 Spacer()
@@ -752,7 +752,7 @@ struct DiscoveryInsightsCard: View {
                     }
                 }
             } else {
-                Text("No discovery data available")
+                Text("stats.discoveryEmpty".localized)
                     .font(.system(size: 13))
                     .foregroundColor(.white.opacity(0.4))
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -774,14 +774,14 @@ struct MoodAnalysisCard: View {
             HStack {
                 Image(systemName: "theatermasks")
                     .foregroundColor(.pink)
-                Text("Mood Profile")
+                Text("stats.moodProfile".localized)
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(.white)
                 Spacer()
             }
 
             if moodAnalysis.moodDistribution.isEmpty {
-                Text("Not enough data yet — keep watching to see your mood profile.")
+                Text("stats.moodEmpty".localized)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)

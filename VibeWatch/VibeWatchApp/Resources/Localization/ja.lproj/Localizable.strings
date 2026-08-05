@@ -36,7 +36,7 @@
 // Lists
 "list.all" = "すべて";
 "list.movies" = "映画";
-"list.tvShows" = "TV";
+"list.tvShows" = "TVシリーズ";
 "lists.myLists" = "マイリスト";
 "lists.collections" = "コレクション";
 "lists.empty" = "まだリストがありません";
@@ -128,7 +128,7 @@
 "clips.noClipsAvailable" = "クリップがありません";
 "clips.noClipsDescription" = "お気に入りの映画やドラマの名シーンは後でもう一度チェックしてください";
 "clips.addToList" = "リストに追加";
-"clips.card.addToWatchlist" = "+ Watchlist";
+"clips.card.addToWatchlist" = "＋ウォッチリスト";
 "clips.card.goToDetail" = "詳細を見る";
 "clips.createFirstList" = "お気に入りを保存するために最初のウォッチリストを作成しましょう";
 "clips.createNewList" = "新しいリストを作成";
@@ -318,7 +318,7 @@
 "paywall.cta.skip" = "今はスキップ";
 "paywall.plan.monthly" = "月額";
 "paywall.plan.annual" = "年額";
-"paywall.discount.annual" = "33% OFF";
+"paywall.discount.annual" = "33%オフ";
 "paywall.price.perMonth" = "%@/月";
 "paywall.trial.badge" = "%@ 無料";
 "paywall.restore" = "購入を復元";
@@ -493,9 +493,9 @@
 "actor.biography.showMore" = "もっと見る";
 "actor.biography.showLess" = "閉じる";
 
-"actor.birthday" = "Born: %@";
-"actor.birthday.line" = "%@ (%@ years old)";
-"actor.known_for" = "Known For";
+"actor.birthday" = "生年月日: %@";
+"actor.birthday.line" = "%@（%@歳）";
+"actor.known_for" = "代表作";
 "actor.search.placeholder" = "フィルモグラフィを検索…";
 "actor.search.noResults" = "検索結果なし：";
 "actor.filmography.empty" = "クレジットが見つかりません。";
@@ -539,13 +539,13 @@
 
 // Personalized Carousels
 "carousel.dailyMix" = "今日のミックス";
-"carousel.trendingInGenre" = "%@ のトレンド";
-"carousel.becauseYouLiked" = "%@ が好きなら";
+"carousel.trendingInGenre" = "%@のトレンド";
+"carousel.becauseYouLiked" = "%@が好きなら";
 "carousel.hiddenGems" = "%@ の隠れた名作";
 "carousel.continueJourney" = "続きを見る";
 "carousel.fromSearches" = "検索履歴から";
 "carousel.topTVPicks" = "あなた向けTVおすすめ";
-"carousel.staffPicks" = "%@ 好きにスタッフのおすすめ";
+"carousel.staffPicks" = "%@好きへのスタッフおすすめ";
 "carousel.yearlyRewind" = "今年のまとめ";
 "carousel.hotThisWeek" = "今週の注目";
 "carousel.awardWinners" = "受賞作から厳選";
@@ -657,24 +657,24 @@
 
 // TV Show Detail - Mark All Seen Confirmation
 "tvDetail.markAllSeenTitle" = "シリーズ全体を視聴済みにする";
-"tvDetail.markAllSeenDescription" = "This action will apply to all episodes and seasons of the series available.";
-"tvDetail.markAllSeenQuestion" = "Do you want to continue?";
-"tvDetail.markAllSeenConfirm" = "Yes, mark as seen";
-"tvDetail.markAllSeenCancel" = "No, cancel";
-"tvDetail.seasonSeenShort" = "seen";
+"tvDetail.markAllSeenDescription" = "この操作は、公開済みの全シーズン・全エピソードに適用されます。";
+"tvDetail.markAllSeenQuestion" = "続けますか？";
+"tvDetail.markAllSeenConfirm" = "はい、視聴済みにする";
+"tvDetail.markAllSeenCancel" = "いいえ、キャンセル";
+"tvDetail.seasonSeenShort" = "視聴済み";
 
 // Library section switcher
-"lists.section.myLists" = "My Lists";
-"lists.section.tvTracking" = "TV Shows Tracking";
+"lists.section.myLists" = "マイリスト";
+"lists.section.tvTracking" = "TVシリーズのトラッキング";
 
 // TV Shows Tracking
-"tvTracking.continuing" = "Continue Watching";
-"tvTracking.notStarted" = "Not Started";
-"tvTracking.upToDate" = "Up to Date";
-"tvTracking.emptyState" = "No TV shows found";
+"tvTracking.continuing" = "続きを見る";
+"tvTracking.notStarted" = "未視聴";
+"tvTracking.upToDate" = "最新まで視聴済み";
+"tvTracking.emptyState" = "TVシリーズが見つかりません";
 "carousel.fromActor" = "%@の他の作品";
 "carousel.decadeClassics" = "%@の名作";
-"carousel.moodTonight" = "今夜の%@";
+"carousel.moodTonight" = "今夜は%@";
 "carousel.regionSpotlight" = "%@特集";
 "carousel.topInGenre" = "%@のトップ作品";
 "carousel.hotThisWeekInGenre" = "%@で今週話題";
@@ -690,35 +690,35 @@
 "carousel.documentaries" = "あなた向けドキュメンタリー";
 "discovery.endOfFeed" = "すべてチェック済みです";
 /* MARK: - Public Lists (Fase 1) */
-"lists.section.publicLists" = "Public Lists";
-"lists.public.scope.explore" = "Explore";
-"lists.public.scope.followed" = "Followed";
-"lists.public.searchPlaceholder" = "Search public lists";
-"lists.public.empty.explore" = "No public lists found";
-"lists.public.empty.followed" = "You're not following any list yet";
-"lists.public.follow" = "Follow";
-"lists.public.following" = "Following";
-"lists.public.unavailable" = "This list is no longer available";
-"lists.public.report" = "Report list";
-"lists.public.report.confirm" = "Report this list as inappropriate?";
-"lists.public.report.done" = "Thanks, your report has been received";
-"lists.public.block" = "Block user";
-"lists.public.block.confirm" = "Block this user? Their public lists will be hidden.";
-"lists.public.createFromThis" = "Create public list from this";
-"lists.public.toggle" = "Public list";
-"lists.public.toggle.footer" = "Public lists can be discovered and followed by other users.";
-"lists.public.profanity.title" = "Inappropriate content";
-"lists.public.profanity" = "Please remove inappropriate language from the name or description before publishing.";
-"lists.public.guidelines.title" = "Community guidelines";
-"lists.public.guidelines.body" = "By publishing a list you agree to our community guidelines: no offensive, hateful or illegal content. Lists that violate them may be hidden and reported users may be removed.";
-"lists.public.guidelines.accept" = "Accept and publish";
-"lists.duplicateName" = "Copy of %@";
+"lists.section.publicLists" = "公開リスト";
+"lists.public.scope.explore" = "探す";
+"lists.public.scope.followed" = "フォロー中";
+"lists.public.searchPlaceholder" = "公開リストを検索";
+"lists.public.empty.explore" = "公開リストが見つかりません";
+"lists.public.empty.followed" = "まだどのリストもフォローしていません";
+"lists.public.follow" = "フォロー";
+"lists.public.following" = "フォロー中";
+"lists.public.unavailable" = "このリストは利用できなくなりました";
+"lists.public.report" = "リストを報告";
+"lists.public.report.confirm" = "このリストを不適切として報告しますか？";
+"lists.public.report.done" = "ありがとうございます。報告を受け付けました";
+"lists.public.block" = "ユーザーをブロック";
+"lists.public.block.confirm" = "このユーザーをブロックしますか？ このユーザーの公開リストは表示されなくなります。";
+"lists.public.createFromThis" = "これをもとに公開リストを作成";
+"lists.public.toggle" = "公開リスト";
+"lists.public.toggle.footer" = "公開リストは、ほかのユーザーが見つけてフォローできます。";
+"lists.public.profanity.title" = "不適切な内容";
+"lists.public.profanity" = "公開する前に、名前または説明から不適切な表現を削除してください。";
+"lists.public.guidelines.title" = "コミュニティガイドライン";
+"lists.public.guidelines.body" = "リストを公開すると、コミュニティガイドラインに同意したことになります。攻撃的・差別的・違法な内容は禁止です。違反したリストは非表示になり、報告されたユーザーは削除されることがあります。";
+"lists.public.guidelines.accept" = "同意して公開";
+"lists.duplicateName" = "%@ のコピー";
 /* MARK: - TV Tracking (card stile JustWatch) */
-"tvTracking.titlesCount" = "%d titles";
-"tvTracking.episodesRemaining" = "%d episodes remaining";
-"tvTracking.lastSeen" = "LAST SEEN %@";
-"tvTracking.soon" = "soon";
-"tvTracking.watchNow" = "Watch now";
+"tvTracking.titlesCount" = "%d作品";
+"tvTracking.episodesRemaining" = "残り%d話";
+"tvTracking.lastSeen" = "最終視聴 %@";
+"tvTracking.soon" = "まもなく";
+"tvTracking.watchNow" = "今すぐ見る";
 
 /* SPEC v3 §9.2 — schermata Tracking */
 "tracking.title" = "トラッキング";
@@ -897,41 +897,41 @@
 "onboarding.ready.chip.notifications" = "通知オン";
 "onboarding.ready.cta" = "視聴をはじめる";
 
-"filters.myPlatforms" = "Mine";
-"filters.platformScopeAll" = "All";
-"mediaDetail.forYou" = "for you";
-"mediaDetail.watchOn" = "Watch on";
-"mediaDetail.notifyMe" = "Notify me";
-"mediaDetail.notifyMeEnabling" = "Activating notification…";
-"mediaDetail.notifyMeEnabled" = "Notification active";
-"mediaDetail.action.watchlist" = "Watchlist";
-"mediaDetail.action.like" = "Like";
-"mediaDetail.action.list" = "To list";
+"filters.myPlatforms" = "自分のサービス";
+"filters.platformScopeAll" = "すべて";
+"mediaDetail.forYou" = "あなた向け";
+"mediaDetail.watchOn" = "視聴する";
+"mediaDetail.notifyMe" = "通知を受け取る";
+"mediaDetail.notifyMeEnabling" = "オンにしています…";
+"mediaDetail.notifyMeEnabled" = "通知します";
+"mediaDetail.action.watchlist" = "ウォッチリスト";
+"mediaDetail.action.like" = "いいね";
+"mediaDetail.action.list" = "リストへ";
 "mediaDetail.toast.watchlistAdded" = "ウォッチリストに追加しました";
 "mediaDetail.toast.watchlistRemoved" = "ウォッチリストから削除しました";
 "mediaDetail.toast.markedSeen" = "視聴済みにしました";
 "mediaDetail.toast.markedUnseen" = "視聴済みから削除しました";
 "mediaDetail.toast.liked" = "「いいね」に追加しました";
 "mediaDetail.toast.likeRemoved" = "「いいね」から削除しました";
-"mediaDetail.why.cardTitle" = "Why is it right for you?";
-"mediaDetail.why.title" = "Why for you";
-"mediaDetail.why.affinity" = "Affinity with your tastes";
-"mediaDetail.why.reason.mood" = "In line with your mood";
-"mediaDetail.why.reason.genres" = "Genres you love";
-"mediaDetail.why.reason.cast" = "Cast you know";
-"mediaDetail.why.helpful" = "Was this helpful?";
-"mediaDetail.why.regenerate" = "Regenerate";
-"mediaDetail.why.quota" = "Generated by Vibe AI from ratings, mood and history. %d/%d requests today.";
-"settings.cacheManagement.clearCacheAction" = "Clear cache";
-"gamification.missionsToday" = "Today's missions";
-"gamification.xpToNext" = "%d XP to the next level";
-"gamification.mission.openApp" = "Open the app";
-"gamification.mission.keepStreak" = "Keep your daily streak";
-"gamification.challenge.watch_3" = "Watch 3 clips";
-"gamification.challenge.like_5" = "Like 5 clips";
-"gamification.challenge.list_2" = "Add 2 titles to a list";
-"gamification.challenge.watch_new_genre" = "Watch a clip from a new genre";
-"gamification.challenge.complete_5" = "Complete 5 clips (>70%)";
+"mediaDetail.why.cardTitle" = "なぜあなたにおすすめ？";
+"mediaDetail.why.title" = "おすすめの理由";
+"mediaDetail.why.affinity" = "あなたの好みとの相性";
+"mediaDetail.why.reason.mood" = "今の気分に合っています";
+"mediaDetail.why.reason.genres" = "好きなジャンル";
+"mediaDetail.why.reason.cast" = "知っているキャスト";
+"mediaDetail.why.helpful" = "参考になりましたか？";
+"mediaDetail.why.regenerate" = "再生成";
+"mediaDetail.why.quota" = "評価・気分・視聴履歴をもとに Vibe AI が生成しました。本日 %d/%d 回。";
+"settings.cacheManagement.clearCacheAction" = "キャッシュを削除";
+"gamification.missionsToday" = "今日のミッション";
+"gamification.xpToNext" = "次のレベルまで %d XP";
+"gamification.mission.openApp" = "アプリを開く";
+"gamification.mission.keepStreak" = "連続記録を続ける";
+"gamification.challenge.watch_3" = "クリップを3本見る";
+"gamification.challenge.like_5" = "クリップに5回いいねする";
+"gamification.challenge.list_2" = "リストに2作品追加する";
+"gamification.challenge.watch_new_genre" = "新しいジャンルのクリップを見る";
+"gamification.challenge.complete_5" = "クリップを5本、70%以上まで見る";
 
 // SeasonDetailView — conferme di marcatura episodi (2026-08-04)
 "season.confirmUnaired.title" = "まだ放送されていません";
@@ -1129,3 +1129,150 @@
 "search.trending.subtitle" = "過去24時間に%@で最も検索された作品。";
 "search.results.subtitle" = "「%@」に一致、そのあとに関連作品。";
 "search.resultsCount" = "%d件";
+
+
+// MARK: - Ricerca piattaforme + esito notifica
+"platforms.search" = "プラットフォームを検索";
+"platforms.searchEmpty" = "その名前のプラットフォームはありません。";
+"mediaDetail.notifyMeFailed" = "通知をオンにできませんでした。";
+
+
+// MARK: - Report import ridisegnato
+"import.report.title" = "インポートレポート";
+"import.report.sourcePeriod" = "%@ · %@ – %@";
+"import.report.success.title" = "ライブラリを取り込みました";
+"import.report.success.subtitle" = "%d件のシリーズと%d件の映画をカタログと照合しました。";
+"import.report.success.subtitleWithRatings" = "%d件のシリーズと%d件の映画を、視聴日と評価つきでカタログと照合しました。";
+"import.report.tile.episodes" = "エピソード";
+"import.report.tile.movies" = "映画";
+"import.report.leftOut.title" = "取り込めなかった作品";
+"import.report.leftOut.subtitle" = "これらの作品はカタログ内で確実に一致するものがありません。カードをタップして手動で検索できます。";
+"import.report.leftOut.excluded" = "自分で除外しました";
+"import.report.leftOut.episodes" = "視聴済み%d話";
+"import.report.leftOut.seenOn" = "%@に視聴";
+"import.report.copyList" = "リストをコピー";
+"import.report.copied" = "リストをコピーしました";
+"import.report.details" = "詳細";
+
+
+// MARK: - Report import — dettagli
+"import.report.detail.period" = "対象期間";
+"import.report.detail.years" = "%d年";
+"import.report.detail.oneYear" = "1年";
+"import.report.detail.lessThanYear" = "1年未満";
+"import.report.detail.statuses" = "復元したシリーズの状態";
+"import.report.detail.statuses.hint" = "TV Time と同じウォッチリストとアーカイブ";
+"import.report.detail.ratings" = "引き継いだ評価";
+"import.report.detail.ratingsUnmatched" = "紐づかなかった評価";
+"import.report.detail.ratingsUnmatched.hint" = "カタログに存在しない、評価済みのエピソード";
+"import.report.detail.ratingsDeferred" = "まだ取り込んでいない評価";
+"import.report.detail.favorites" = "復元したお気に入り";
+"import.report.detail.moviesSeen" = "視聴済みにした映画";
+"import.report.detail.moviesWatchlist" = "ウォッチリストの映画";
+"import.report.detail.statusesUnresolved" = "復元できなかった状態";
+"import.report.detail.outOfStructure" = "配置できないエピソード";
+"import.report.detail.outOfStructure.hint" = "シリーズ構成の外にある特別編や拡張版";
+"import.report.detail.favoriteMovies" = "取り込めなかったお気に入りの映画";
+
+
+// MARK: - Report import — titolo mancante
+"import.report.leftOut.untitled" = "エクスポートにタイトルがありません";
+
+
+// MARK: - ジャンル (TMDB)
+// 画面に表示されるジャンル名（カルーセルのタイトル、分析のジャンルグラフ）。
+// TMDBは作品の詳細内でしか翻訳を返さない。カルーセルではジャンルが数値IDで届くため、名前はここから取る。
+"genre.action" = "アクション";
+"genre.adventure" = "アドベンチャー";
+"genre.animation" = "アニメーション";
+"genre.comedy" = "コメディ";
+"genre.crime" = "犯罪";
+"genre.documentary" = "ドキュメンタリー";
+"genre.drama" = "ドラマ";
+"genre.family" = "ファミリー";
+"genre.fantasy" = "ファンタジー";
+"genre.history" = "歴史";
+"genre.horror" = "ホラー";
+"genre.music" = "音楽";
+"genre.mystery" = "ミステリー";
+"genre.romance" = "ロマンス";
+"genre.scienceFiction" = "サイエンスフィクション";
+"genre.tvMovie" = "TVムービー";
+"genre.thriller" = "スリラー";
+"genre.war" = "戦争";
+"genre.western" = "西部劇";
+"genre.actionAdventure" = "アクション＆アドベンチャー";
+"genre.kids" = "キッズ";
+"genre.news" = "ニュース";
+"genre.reality" = "リアリティ";
+"genre.sciFiFantasy" = "SF＆ファンタジー";
+"genre.soap" = "ソープオペラ";
+"genre.talk" = "トークショー";
+"genre.warPolitics" = "戦争＆政治";
+
+
+// MARK: - 気分（ムード）
+// "carousel.moodTonight"（「今夜は%@」）の %@ に入る。形容詞ではなく名詞。
+"mood.happy" = "ハートウォーミング";
+"mood.sad" = "メランコリー";
+"mood.excited" = "スリル";
+"mood.relaxed" = "リラックス";
+"mood.scared" = "ゾクゾク";
+"mood.thoughtful" = "考えさせられる一本";
+"mood.romantic" = "ロマンス";
+"mood.adventurous" = "アドベンチャー";
+"mood.nostalgic" = "ノスタルジー";
+"mood.energetic" = "パワー全開";
+
+
+// MARK: - カルーセル — 引数とジャンルなしの代替タイトル
+// "%d" は年代の開始年（2020）。日本語では「2020年代」。
+"carousel.arg.decade" = "%d年代";
+// 好みのジャンルがまだない場合に使う代替タイトル（通常タイトルの %@ に入れる語ではない）。
+"carousel.hiddenGems.generic" = "隠れた名作";
+"carousel.staffPicks.generic" = "あなたへのスタッフおすすめ";
+
+
+// MARK: - 分析
+"analytics.noData" = "データなし";
+
+
+// MARK: - 統計とゲーミフィケーション（ビューから抽出した文字列）
+// AnalyticsDashboardView / FloatingXPBadgeView / BadgeGalleryView / LevelProgressView に
+// 直書きされていて `.localized` を通っていなかったため、全20言語で英語のままだったもの。
+"stats.title" = "あなたの統計";
+"stats.yourActivity" = "あなたのアクティビティ";
+"stats.viewFull" = "統計をすべて見る";
+"stats.loading" = "統計を読み込み中…";
+"stats.errorTitle" = "統計を読み込めませんでした";
+"stats.emptyTitle" = "まだ統計がありません";
+"stats.emptySubtitle" = "視聴を始めると統計が表示されます！";
+"stats.genreDistribution" = "ジャンル別の内訳";
+"stats.genreEmpty" = "ジャンルのデータはまだありません";
+"stats.whenActive" = "よく見る時間帯";
+"stats.topContent" = "あなたのトップ作品";
+"stats.contentEmpty" = "作品のデータはまだありません";
+"stats.discoveryChannels" = "作品との出会い方";
+"stats.discoveryEmpty" = "発見のデータはまだありません";
+"stats.moodProfile" = "ムードの傾向";
+"stats.moodEmpty" = "データがまだ足りません。視聴を続けるとムードの傾向が表示されます。";
+
+// "%d" はレベルの番号。
+"gamification.levelNumber" = "レベル%d";
+// 画面上部の狭いバッジ用の短縮形。
+"gamification.levelShort" = "Lv.%d";
+"gamification.bestStreak" = "最長連続日数";
+"gamification.xpBonus" = "XPボーナス";
+"gamification.todaysChallenge" = "今日のチャレンジ";
+"gamification.completed" = "達成！";
+"gamification.badgeUnlocked" = "バッジを獲得！";
+"gamification.badges.collected" = "獲得したバッジ";
+"gamification.badges.unlocked" = "獲得済み";
+// "%d" はバッジの総数。「12 / 40」のように数字のあとに続く。
+"gamification.badges.ofTotal" = "/ %d";
+"gamification.levels.progressTitle" = "レベルの進捗";
+"gamification.allLevels" = "すべてのレベル";
+
+"common.progress" = "進捗";
+"tvDetail.seasonsTitle" = "シーズン";
+"tvDetail.episodesTitle" = "エピソード";

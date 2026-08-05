@@ -128,7 +128,7 @@ struct DiscoverySkeletonView: View {
         .scrollDisabled(true)
         .shimmering()
         .background(Color.theme.background.ignoresSafeArea())
-        .accessibilityLabel("Loading content")
+        .accessibilityLabel("common.loading".localized)
     }
 }
 

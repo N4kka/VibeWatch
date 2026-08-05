@@ -36,7 +36,7 @@ struct AppHeaderView: View {
 
                 Button { showGamificationProgress = true } label: {
                     HStack(spacing: 5) {
-                        Text("Lv.\(gamificationService.userState.currentLevel)")
+                        Text(String(format: "gamification.levelShort".localized, gamificationService.userState.currentLevel))
                             .foregroundColor(.theme.accentOrange)
 
                         Text("·")

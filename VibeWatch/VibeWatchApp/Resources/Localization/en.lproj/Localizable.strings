@@ -675,7 +675,7 @@
 // New Discovery Carousels
 "carousel.fromActor" = "More from %@";
 "carousel.decadeClassics" = "%@ Classics";
-"carousel.moodTonight" = "%@ Tonight";
+"carousel.moodTonight" = "Tonight: %@";
 "carousel.regionSpotlight" = "%@ Spotlight";
 "carousel.topInGenre" = "Top in %@";
 "carousel.hotThisWeekInGenre" = "Hot This Week in %@";
@@ -903,8 +903,8 @@
 "mediaDetail.forYou" = "for you";
 "mediaDetail.watchOn" = "Watch on";
 "mediaDetail.notifyMe" = "Notify me";
-"mediaDetail.notifyMeEnabling" = "Activating notification…";
-"mediaDetail.notifyMeEnabled" = "Notification active";
+"mediaDetail.notifyMeEnabling" = "Turning on…";
+"mediaDetail.notifyMeEnabled" = "We'll notify you";
 "mediaDetail.action.watchlist" = "Watchlist";
 "mediaDetail.action.like" = "Like";
 "mediaDetail.action.list" = "To list";
@@ -1130,3 +1130,154 @@
 "search.trending.subtitle" = "The most searched titles in %@ over the last 24 hours.";
 "search.results.subtitle" = "Matches for “%@”, then related titles.";
 "search.resultsCount" = "%d titles";
+
+
+// MARK: - Ricerca piattaforme + esito notifica
+"platforms.search" = "Search for a platform";
+"platforms.searchEmpty" = "No platform with that name.";
+"mediaDetail.notifyMeFailed" = "We couldn't turn on the notification.";
+
+
+// MARK: - Report import ridisegnato
+"import.report.title" = "Import report";
+"import.report.sourcePeriod" = "%@ · %@ – %@";
+"import.report.success.title" = "Library imported";
+"import.report.success.subtitle" = "%d series and %d movies matched to the catalogue.";
+"import.report.success.subtitleWithRatings" = "%d series and %d movies matched to the catalogue, with watch dates and ratings.";
+"import.report.tile.episodes" = "Episodes";
+"import.report.tile.movies" = "Movies";
+"import.report.leftOut.title" = "Left out";
+"import.report.leftOut.subtitle" = "There's no certain match in the catalogue for these titles. Tap a card to search by hand.";
+"import.report.leftOut.excluded" = "Excluded by you";
+"import.report.leftOut.episodes" = "%d episodes watched";
+"import.report.leftOut.seenOn" = "watched on %@";
+"import.report.copyList" = "Copy the list";
+"import.report.copied" = "List copied";
+"import.report.details" = "Details";
+
+
+// MARK: - Report import — dettagli
+"import.report.detail.period" = "Period covered";
+"import.report.detail.years" = "%d years";
+"import.report.detail.oneYear" = "1 year";
+"import.report.detail.lessThanYear" = "less than a year";
+"import.report.detail.statuses" = "Series states restored";
+"import.report.detail.statuses.hint" = "Watchlist and archive as on TV Time";
+"import.report.detail.ratings" = "Ratings carried over";
+"import.report.detail.ratingsUnmatched" = "Unmatched ratings";
+"import.report.detail.ratingsUnmatched.hint" = "Rated episodes that don't exist in the catalogue";
+"import.report.detail.ratingsDeferred" = "Ratings not imported yet";
+"import.report.detail.favorites" = "Favourites restored";
+"import.report.detail.moviesSeen" = "Movies marked as seen";
+"import.report.detail.moviesWatchlist" = "Movies in the watchlist";
+"import.report.detail.statusesUnresolved" = "States not restored";
+"import.report.detail.outOfStructure" = "Episodes with no place";
+"import.report.detail.outOfStructure.hint" = "Specials and extended versions outside the show's structure";
+"import.report.detail.favoriteMovies" = "Favourite movies not imported";
+
+
+// MARK: - Report import — titolo mancante
+"import.report.leftOut.untitled" = "Title missing from the export";
+
+
+// MARK: - Generi TMDB
+// I nomi dei generi mostrati a schermo (titoli dei caroselli, grafico dei generi in Analytics).
+// TMDB li restituisce tradotti solo dentro la scheda di un film; nei caroselli il genere arriva
+// come id numerico, quindi il nome deve venire da qui. Da tradurre in ogni lingua.
+"genre.action" = "Action";
+"genre.adventure" = "Adventure";
+"genre.animation" = "Animation";
+"genre.comedy" = "Comedy";
+"genre.crime" = "Crime";
+"genre.documentary" = "Documentary";
+"genre.drama" = "Drama";
+"genre.family" = "Family";
+"genre.fantasy" = "Fantasy";
+"genre.history" = "History";
+"genre.horror" = "Horror";
+"genre.music" = "Music";
+"genre.mystery" = "Mystery";
+"genre.romance" = "Romance";
+"genre.scienceFiction" = "Science Fiction";
+"genre.tvMovie" = "TV Movie";
+"genre.thriller" = "Thriller";
+"genre.war" = "War";
+"genre.western" = "Western";
+"genre.actionAdventure" = "Action & Adventure";
+"genre.kids" = "Kids";
+"genre.news" = "News";
+"genre.reality" = "Reality";
+"genre.sciFiFantasy" = "Sci-Fi & Fantasy";
+"genre.soap" = "Soap";
+"genre.talk" = "Talk Show";
+"genre.warPolitics" = "War & Politics";
+
+
+// MARK: - Mood
+// Vanno nel `%@` di "carousel.moodTonight" ("Tonight: %@"). Sono SOSTANTIVI, non aggettivi: un
+// aggettivo dovrebbe concordare con una parola che nel template non c'è.
+"mood.happy" = "Feel-Good";
+"mood.sad" = "Melancholy";
+"mood.excited" = "Thrills";
+"mood.relaxed" = "Something Relaxing";
+"mood.scared" = "Chills";
+"mood.thoughtful" = "Food for Thought";
+"mood.romantic" = "Romance";
+"mood.adventurous" = "Adventure";
+"mood.nostalgic" = "Nostalgia";
+"mood.energetic" = "Pure Energy";
+
+
+// MARK: - Caroselli — argomenti e varianti senza genere
+// "%d" è l'anno d'inizio del decennio (2020). In inglese si dice "2020s", in italiano "anni 2020":
+// il suffisso è grammatica, non un numero, e va tradotto.
+"carousel.arg.decade" = "%ds";
+// Usati quando il profilo non ha ancora un genere preferito: non un fallback infilato nel "%@" del
+// titolo normale (che darebbe "Staff Picks for Your Favorites Fans"), ma una frase alternativa.
+"carousel.hiddenGems.generic" = "Hidden Gems";
+"carousel.staffPicks.generic" = "Staff Picks for You";
+
+
+// MARK: - Analytics
+"analytics.noData" = "No data";
+
+
+// MARK: - Statistiche e gamification (stringhe estratte dalle view)
+// Erano letterali dentro AnalyticsDashboardView / FloatingXPBadgeView / BadgeGalleryView /
+// LevelProgressView: non passando da `.localized` restavano in inglese in tutte e 20 le lingue.
+"stats.title" = "Your Stats";
+"stats.yourActivity" = "Your Activity";
+"stats.viewFull" = "View Full Stats";
+"stats.loading" = "Loading stats…";
+"stats.errorTitle" = "Couldn't load your stats";
+"stats.emptyTitle" = "No stats yet";
+"stats.emptySubtitle" = "Start watching to see your stats!";
+"stats.genreDistribution" = "Genre breakdown";
+"stats.genreEmpty" = "No genre data yet";
+"stats.whenActive" = "When you're active";
+"stats.topContent" = "Your top titles";
+"stats.contentEmpty" = "No title data yet";
+"stats.discoveryChannels" = "How you find titles";
+"stats.discoveryEmpty" = "No discovery data yet";
+"stats.moodProfile" = "Mood profile";
+"stats.moodEmpty" = "Not enough data yet — keep watching to see your mood profile.";
+
+// "%d" è il numero del livello.
+"gamification.levelNumber" = "Level %d";
+// Versione corta per il badge in cima alla schermata, dove lo spazio è quello che è.
+"gamification.levelShort" = "Lv.%d";
+"gamification.bestStreak" = "Best streak";
+"gamification.xpBonus" = "XP bonus";
+"gamification.todaysChallenge" = "Today's challenge";
+"gamification.completed" = "Completed!";
+"gamification.badgeUnlocked" = "Badge unlocked!";
+"gamification.badges.collected" = "Badges collected";
+"gamification.badges.unlocked" = "Unlocked";
+// "%d" è il totale dei badge esistenti: compare come "12 of 40".
+"gamification.badges.ofTotal" = "of %d";
+"gamification.levels.progressTitle" = "Level progress";
+"gamification.allLevels" = "ALL LEVELS";
+
+"common.progress" = "Progress";
+"tvDetail.seasonsTitle" = "Seasons";
+"tvDetail.episodesTitle" = "Episodes";

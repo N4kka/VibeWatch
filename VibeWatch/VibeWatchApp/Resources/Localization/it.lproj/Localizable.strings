@@ -544,7 +544,7 @@
 "carousel.topTVPicks" = "Migliori serie TV per te";
 "carousel.staffPicks" = "Scelti dallo staff per fan di %@";
 "carousel.yearlyRewind" = "Il tuo riepilogo annuale";
-"carousel.hotThisWeek" = "Hot questa settimana";
+"carousel.hotThisWeek" = "Di tendenza questa settimana";
 "carousel.awardWinners" = "Vincitori di premi che amerai";
 
 // Privacy / Analytics
@@ -673,18 +673,18 @@
 // New Discovery Carousels
 "carousel.fromActor" = "Altro con %@";
 "carousel.decadeClassics" = "Classici %@";
-"carousel.moodTonight" = "%@ stasera";
+"carousel.moodTonight" = "Stasera: %@";
 "carousel.regionSpotlight" = "In evidenza: %@";
 "carousel.topInGenre" = "Il meglio di %@";
 "carousel.hotThisWeekInGenre" = "Popolari questa settimana in %@";
 "carousel.quickWatches" = "Da vedere al volo";
 "carousel.epicWatches" = "Visioni epiche";
 "carousel.internationalPicks" = "Scelte internazionali";
-"carousel.throwback" = "Ritorno ai %@";
+"carousel.throwback" = "Ritorno agli %@";
 "carousel.fromAIChat" = "Dalla tua chat AI";
 "carousel.comingSoon" = "In arrivo";
 "carousel.trendingTVWeek" = "Serie TV di tendenza questa settimana";
-"carousel.criticallyAcclaimedRecent" = "%@ acclamati dalla critica";
+"carousel.criticallyAcclaimedRecent" = "Acclamati dalla critica %@";
 "carousel.returningTV" = "In ritorno a breve";
 "carousel.documentaries" = "Documentari per te";
 "discovery.endOfFeed" = "Sei al passo";
@@ -716,7 +716,7 @@
 "tvTracking.titlesCount" = "%d titoli";
 "tvTracking.episodesRemaining" = "%d episodi rimanenti";
 "tvTracking.lastSeen" = "ULTIMO VISTO %@";
-"tvTracking.soon" = "soon";
+"tvTracking.soon" = "a breve";
 "tvTracking.watchNow" = "Guarda ora";
 
 /* SPEC v3 §9.2 — schermata Tracking */
@@ -860,8 +860,8 @@
 "profile.edit.saveError" = "Non è stato possibile salvare il profilo. Riprova.";
 "profile.imageCache" = "Cache immagini";
 "profile.imageCache.subtitle" = "Precaricamento solo WiFi";
-"common.on" = "On";
-"common.off" = "Off";
+"common.on" = "Attivo";
+"common.off" = "Disattivato";
 "profile.privacyTerms" = "Privacy e termini";
 "profile.footer.tmdb" = "Questo prodotto usa l'API TMDb ma non è approvato o certificato da TMDb.";
 "settings.cacheManagement.inUse" = "%d MB in uso";
@@ -900,9 +900,9 @@
 "filters.platformScopeAll" = "Tutte";
 "mediaDetail.forYou" = "per te";
 "mediaDetail.watchOn" = "Guarda su";
-"mediaDetail.notifyMe" = "Notify me";
+"mediaDetail.notifyMe" = "Avvisami";
 "mediaDetail.notifyMeEnabling" = "Attivazione…";
-"mediaDetail.notifyMeEnabled" = "Notifica attivata";
+"mediaDetail.notifyMeEnabled" = "Ti avviseremo";
 "mediaDetail.action.watchlist" = "Watchlist";
 "mediaDetail.action.like" = "Mi piace";
 "mediaDetail.action.list" = "A lista";
@@ -1070,7 +1070,7 @@
 "tvDetail.firstAirDate" = "Prima messa in onda";
 "tvDetail.lastAirDate" = "Ultima messa in onda";
 "tvDetail.seasonsEpisodes" = "Stagioni";
-"tvDetail.network" = "Network";
+"tvDetail.network" = "Emittente";
 "tvDetail.createdBy" = "Creata da";
 "mediaStatus.released" = "Uscito";
 "mediaStatus.inProduction" = "In produzione";
@@ -1128,3 +1128,155 @@
 "search.trending.subtitle" = "Le più cercate in %@ nelle ultime 24 ore.";
 "search.results.subtitle" = "Corrispondenze per «%@», poi titoli affini.";
 "search.resultsCount" = "%d titoli";
+
+
+// MARK: - Ricerca piattaforme + esito notifica
+"platforms.search" = "Cerca una piattaforma";
+"platforms.searchEmpty" = "Nessuna piattaforma con questo nome.";
+"mediaDetail.notifyMeFailed" = "Non siamo riusciti ad attivare la notifica.";
+
+
+// MARK: - Report import ridisegnato
+"import.report.title" = "Report import";
+"import.report.sourcePeriod" = "%@ · %@ – %@";
+"import.report.success.title" = "Libreria importata";
+"import.report.success.subtitle" = "%d serie e %d film abbinati al catalogo.";
+"import.report.success.subtitleWithRatings" = "%d serie e %d film abbinati al catalogo, con date di visione e voti.";
+"import.report.tile.episodes" = "Episodi";
+"import.report.tile.movies" = "Film";
+"import.report.leftOut.title" = "Rimasti fuori";
+"import.report.leftOut.subtitle" = "Per questi titoli non esiste una corrispondenza sicura nel catalogo. Tocca una card per cercarli a mano.";
+"import.report.leftOut.excluded" = "Escluso da te";
+"import.report.leftOut.episodes" = "%d episodi visti";
+"import.report.leftOut.seenOn" = "visto il %@";
+"import.report.copyList" = "Copia l'elenco";
+"import.report.copied" = "Elenco copiato";
+"import.report.details" = "Dettagli";
+
+
+// MARK: - Report import — dettagli
+"import.report.detail.period" = "Periodo coperto";
+"import.report.detail.years" = "%d anni";
+"import.report.detail.oneYear" = "1 anno";
+"import.report.detail.lessThanYear" = "meno di un anno";
+"import.report.detail.statuses" = "Stati serie ripristinati";
+"import.report.detail.statuses.hint" = "Watchlist e archivio come su TV Time";
+"import.report.detail.ratings" = "Voti riportati";
+"import.report.detail.ratingsUnmatched" = "Voti non abbinati";
+"import.report.detail.ratingsUnmatched.hint" = "Episodi votati che non esistono nel catalogo";
+"import.report.detail.ratingsDeferred" = "Voti non ancora importati";
+"import.report.detail.favorites" = "Preferiti ripristinati";
+"import.report.detail.moviesSeen" = "Film segnati come visti";
+"import.report.detail.moviesWatchlist" = "Film in watchlist";
+"import.report.detail.statusesUnresolved" = "Stati non ripristinati";
+"import.report.detail.outOfStructure" = "Episodi non collocabili";
+"import.report.detail.outOfStructure.hint" = "Speciali e versioni estese fuori dalla struttura della serie";
+"import.report.detail.favoriteMovies" = "Film preferiti non importati";
+
+
+// MARK: - Report import — titolo mancante
+"import.report.leftOut.untitled" = "Titolo mancante nell'export";
+
+
+// MARK: - Generi TMDB
+// I nomi dei generi mostrati a schermo (titoli dei caroselli, grafico dei generi in Analytics).
+// TMDB li restituisce tradotti solo dentro la scheda di un film; nei caroselli il genere arriva
+// come id numerico, quindi il nome deve venire da qui. Da tradurre in ogni lingua.
+"genre.action" = "Azione";
+"genre.adventure" = "Avventura";
+"genre.animation" = "Animazione";
+"genre.comedy" = "Commedia";
+"genre.crime" = "Crime";
+"genre.documentary" = "Documentario";
+"genre.drama" = "Drammatico";
+"genre.family" = "Famiglia";
+"genre.fantasy" = "Fantasy";
+"genre.history" = "Storico";
+"genre.horror" = "Horror";
+"genre.music" = "Musica";
+"genre.mystery" = "Mistero";
+"genre.romance" = "Romantico";
+"genre.scienceFiction" = "Fantascienza";
+"genre.tvMovie" = "Film TV";
+"genre.thriller" = "Thriller";
+"genre.war" = "Guerra";
+"genre.western" = "Western";
+"genre.actionAdventure" = "Azione e avventura";
+"genre.kids" = "Per bambini";
+"genre.news" = "Notiziari";
+"genre.reality" = "Reality";
+"genre.sciFiFantasy" = "Fantascienza e fantasy";
+"genre.soap" = "Soap opera";
+"genre.talk" = "Talk show";
+"genre.warPolitics" = "Guerra e politica";
+
+
+// MARK: - Mood
+// Vanno nel `%@` di "carousel.moodTonight" ("Stasera: %@"). Sono SOSTANTIVI, non aggettivi: un
+// aggettivo dovrebbe concordare con una parola che nel template non c'è.
+"mood.happy" = "Buonumore";
+"mood.sad" = "Malinconia";
+"mood.excited" = "Adrenalina";
+"mood.relaxed" = "Relax";
+"mood.scared" = "Brividi";
+"mood.thoughtful" = "Riflessione";
+"mood.romantic" = "Romanticismo";
+"mood.adventurous" = "Avventura";
+"mood.nostalgic" = "Nostalgia";
+"mood.energetic" = "Pura energia";
+
+
+// MARK: - Caroselli — argomenti e varianti senza genere
+// "%d" è l'anno d'inizio del decennio (2020). In inglese si dice "2020s", in italiano "anni 2020":
+// il suffisso è grammatica, non un numero, e va tradotto.
+"carousel.arg.decade" = "anni %d";
+// Usati quando il profilo non ha ancora un genere preferito: non un fallback infilato nel "%@" del
+// titolo normale (che darebbe "Scelti dallo staff per fan di I tuoi preferiti"), ma una frase
+// alternativa.
+"carousel.hiddenGems.generic" = "Gemme nascoste";
+"carousel.staffPicks.generic" = "Scelti dallo staff per te";
+
+
+// MARK: - Analytics
+"analytics.noData" = "Nessun dato";
+
+
+// MARK: - Statistiche e gamification (stringhe estratte dalle view)
+// Erano letterali dentro AnalyticsDashboardView / FloatingXPBadgeView / BadgeGalleryView /
+// LevelProgressView: non passando da `.localized` restavano in inglese in tutte e 20 le lingue.
+"stats.title" = "Le tue statistiche";
+"stats.yourActivity" = "La tua attività";
+"stats.viewFull" = "Vedi tutte le statistiche";
+"stats.loading" = "Caricamento statistiche…";
+"stats.errorTitle" = "Statistiche non caricate";
+"stats.emptyTitle" = "Ancora nessuna statistica";
+"stats.emptySubtitle" = "Inizia a guardare per vedere le tue statistiche!";
+"stats.genreDistribution" = "Ripartizione per genere";
+"stats.genreEmpty" = "Ancora nessun dato sui generi";
+"stats.whenActive" = "Quando sei attivo";
+"stats.topContent" = "I tuoi titoli principali";
+"stats.contentEmpty" = "Ancora nessun dato sui titoli";
+"stats.discoveryChannels" = "Come scopri i titoli";
+"stats.discoveryEmpty" = "Ancora nessun dato sulle scoperte";
+"stats.moodProfile" = "Profilo dell'umore";
+"stats.moodEmpty" = "Dati ancora insufficienti: continua a guardare per vedere il tuo profilo dell'umore.";
+
+// "%d" è il numero del livello.
+"gamification.levelNumber" = "Livello %d";
+// Versione corta per il badge in cima alla schermata, dove lo spazio è quello che è.
+"gamification.levelShort" = "Lv.%d";
+"gamification.bestStreak" = "Serie record";
+"gamification.xpBonus" = "Bonus XP";
+"gamification.todaysChallenge" = "Sfida di oggi";
+"gamification.completed" = "Completata!";
+"gamification.badgeUnlocked" = "Badge sbloccato!";
+"gamification.badges.collected" = "Badge collezionati";
+"gamification.badges.unlocked" = "Sbloccato";
+// "%d" è il totale dei badge esistenti: compare come "12 di 40".
+"gamification.badges.ofTotal" = "di %d";
+"gamification.levels.progressTitle" = "Progressi di livello";
+"gamification.allLevels" = "TUTTI I LIVELLI";
+
+"common.progress" = "Progressi";
+"tvDetail.seasonsTitle" = "Stagioni";
+"tvDetail.episodesTitle" = "Episodi";

@@ -125,7 +125,7 @@
 // Clips
 "clips.title" = "Клипы";
 "clips.addToList" = "Добавить в список";
-"clips.card.addToWatchlist" = "+ Watchlist";
+"clips.card.addToWatchlist" = "+ К просмотру";
 "clips.card.goToDetail" = "Открыть карточку";
 "clips.beFirstToComment" = "Станьте первым, кто оставит комментарий";
 "clips.comment" = "Комментарий";
@@ -454,12 +454,12 @@
 "actor.biography.showMore" = "Показать больше";
 "actor.biography.showLess" = "Свернуть";
 
-"actor.birthday" = "Born: %@";
-"actor.birthday.line" = "%@ (%@ years old)";
-"actor.known_for" = "Known For";
+"actor.birthday" = "Дата рождения: %@";
+"actor.birthday.line" = "%@ (%@ лет)";
+"actor.known_for" = "Известен по";
 "actor.search.placeholder" = "Поиск фильмографии…";
 "actor.search.noResults" = "Нет результатов для";
-"actor.filmography.empty" = "Кредиты не найдены.";
+"actor.filmography.empty" = "Ролей не найдено.";
 
 "clips.search.placeholder" = "Поиск клипов, персонажей или цитат";
 "clips.search.emptyTitle" = "Найдите любимые клипы";
@@ -483,7 +483,7 @@
 // Help & Support - About Us
 "profile.aboutUsDescription" = "Мы — двое друзей, создающих новый вид кино/ТВ-компаньона. VibeWatch родился из-за разочарования в громоздких трекерах: мы делаем упор на современное открытие контента через клипы, быстрые ссылки на стриминг и инструменты, которые помогают и киноманам, и обычным зрителям найти идеальный выбор без бесконечного скроллинга.";
 "profile.faqs" = "FAQ";
-"profile.legal" = "Юридическое";
+"profile.legal" = "Правовая информация";
 
 // FAQ Items
 "profile.faq.question1" = "Как клипы помогают открывать новые тайтлы?";
@@ -500,51 +500,51 @@
 "carousel.awardWinners" = "Лауреаты премий, которые вам понравятся";
 
 // --- Synced from en.lproj ---
-"filters.mediaType" = "Тип носителя";
+"filters.mediaType" = "Тип контента";
 "filters.movies" = "Фильмы";
-"filters.tvShows" = "Телешоу";
+"filters.tvShows" = "Сериалы";
 "filters.both" = "Оба";
 "filters.rating" = "Рейтинг";
 "filters.releasePeriod" = "Период выпуска";
 "filters.releasePeriodRecent" = "Последние годы (2020+)";
 "filters.releasePeriodModern" = "Современность (2010-2019)";
 "filters.releasePeriodClassic" = "Классика (<2010)";
-"filters.customRange" = "Пользовательский диапазон";
-"filters.customYearRange" = "Пользовательский диапазон лет";
+"filters.customRange" = "Свой диапазон";
+"filters.customYearRange" = "Свой диапазон лет";
 "filters.min" = "Мин";
 "filters.max" = "Макс";
-"filters.from" = "С сайта";
-"filters.to" = "На";
-"filters.custom" = "Пользовательское";
+"filters.from" = "От";
+"filters.to" = "До";
+"filters.custom" = "Свой";
 "filters.allCountries" = "Все страны";
-"filters.sortPopularityDesc" = "Самые популярные";
-"filters.sortPopularityAsc" = "Наименее популярный";
-"filters.sortRatingDesc" = "Самый высокий рейтинг";
-"filters.sortRatingAsc" = "Самая низкая оценка";
-"filters.sortReleaseDateDesc" = "Самый новый первый";
-"filters.sortReleaseDateAsc" = "Самый старый первый";
-"filters.proFilters" = "Профессиональные фильтры";
-"filters.hideWatched" = "Спрятаться под наблюдением";
-"filters.hideDisliked" = "Скрыть Не понравилось";
+"filters.sortPopularityDesc" = "Сначала популярные";
+"filters.sortPopularityAsc" = "Сначала непопулярные";
+"filters.sortRatingDesc" = "Сначала с высоким рейтингом";
+"filters.sortRatingAsc" = "Сначала с низким рейтингом";
+"filters.sortReleaseDateDesc" = "Сначала новые";
+"filters.sortReleaseDateAsc" = "Сначала старые";
+"filters.proFilters" = "Фильтры Pro";
+"filters.hideWatched" = "Скрыть просмотренные";
+"filters.hideDisliked" = "Скрыть непонравившиеся";
 "filters.proTitle" = "Разблокируйте расширенные фильтры";
 "filters.proDescription" = "Перейдите на версию Pro, чтобы получить пользовательские диапазоны, выбор нескольких стран и расширенные возможности фильтрации";
-"filters.upgradeToPro" = "Обновление до Pro";
-"filters.filtersActive" = "%d фильтров активны";
+"filters.upgradeToPro" = "Перейти на Pro";
+"filters.filtersActive" = "Активных фильтров: %d";
 "carousel.dailyMix" = "Ваш ежедневный микс";
-"carousel.trendingInGenre" = "Тенденция в %@";
-"carousel.becauseYouLiked" = "Потому что тебе нравилось %@";
-"carousel.hiddenGems" = "Скрытые драгоценные камни в %@";
-"carousel.continueJourney" = "Продолжайте свое путешествие";
+"carousel.trendingInGenre" = "В тренде: %@";
+"carousel.becauseYouLiked" = "Потому что вам понравилось «%@»";
+"carousel.hiddenGems" = "Скрытые жемчужины: %@";
+"carousel.continueJourney" = "Продолжайте своё путешествие";
 "carousel.fromSearches" = "Из ваших поисков";
-"carousel.topTVPicks" = "Лучшие телевизионные подборки для вас";
-"carousel.staffPicks" = "Выбор сотрудников для фанатов %@";
-"carousel.yearlyRewind" = "Ваша годовая перемотка";
+"carousel.topTVPicks" = "Лучшие сериалы для вас";
+"carousel.staffPicks" = "Выбор редакции для фанатов жанра «%@»";
+"carousel.yearlyRewind" = "Итоги вашего года";
 "settings.privacy.title" = "Конфиденциальность";
-"settings.analytics.share" = "Обменивайтесь анонимной аналитикой";
+"settings.analytics.share" = "Отправлять анонимную аналитику";
 "settings.analytics.share.description" = "Помогает нам понять, какими функциями вы пользуетесь, и улучшить приложение. Никакого отслеживания рекламы.";
 "settings.analytics.title" = "Аналитика";
 "settings.analytics.viewStats" = "Просмотр статистики";
-"settings.analytics.description" = "Просматривайте историю своих часов и информацию о них";
+"settings.analytics.description" = "Смотрите историю просмотров и статистику по ней";
 "settings.notifications.title" = "Уведомления";
 "settings.notifications.manage" = "Управление уведомлениями";
 "settings.notifications.description" = "Персональные оповещения о новых материалах";
@@ -552,32 +552,32 @@
 "onboarding.welcome.subtitle" = "Открывайте, отслеживайте и не пропускайте премьеры. Фильмы и сериалы — в одном месте.";
 "onboarding.clips.title" = "Смотреть, не читать";
 "onboarding.clips.subtitle" = "Познакомьтесь с фильмами через короткие, увлекательные ролики.";
-"onboarding.lists.title" = "Ваш список наблюдения, везде";
+"onboarding.lists.title" = "Ваш список «К просмотру» — везде";
 "onboarding.lists.subtitle" = "Сохраняйте фильмы и синхронизируйте их на всех устройствах.";
 "onboarding.account.title" = "Сохранить профиль";
-"onboarding.account.subtitle" = "Создайте учетную запись, чтобы синхронизировать список просмотра и предпочтения на разных устройствах.";
-"onboarding.skip" = "Пока пропустите";
-"paywall.cta.skip" = "Пока пропустите";
+"onboarding.account.subtitle" = "Создайте аккаунт, чтобы синхронизировать список к просмотру и настройки на всех устройствах.";
+"onboarding.skip" = "Пропустить";
+"paywall.cta.skip" = "Пропустить";
 "filters.allPlatforms" = "Все платформы";
 
 // --- Synced from en.lproj ---
 "filters.releasePeriodAny" = "Любой";
-"common.next" = "Следующий";
+"common.next" = "Далее";
 "ai.tryAsking" = "Попробуйте спросить...";
 
 // --- Synced from en.lproj ---
-"auth.checkEmailTitle" = "Проверьте свою электронную почту";
-"auth.checkEmailMessage" = "Мы отправили вам ссылку для подтверждения. Пожалуйста, проверьте свой почтовый ящик, чтобы подтвердить учетную запись.";
+"auth.checkEmailTitle" = "Проверьте почту";
+"auth.checkEmailMessage" = "Мы отправили вам ссылку для подтверждения. Проверьте почтовый ящик, чтобы подтвердить аккаунт.";
 
 // --- Synced from en.lproj ---
-"auth.openMailApp" = "Откройте приложение \"Почта";
-"auth.iHaveVerified" = "Я проверил";
-"auth.resendEmail" = "Повторная отправка электронной почты";
-"auth.changeEmail" = "Изменить электронную почту";
-"auth.verificationPending" = "Все еще жду проверки...";
+"auth.openMailApp" = "Открыть приложение «Почта»";
+"auth.iHaveVerified" = "Я подтвердил";
+"auth.resendEmail" = "Отправить письмо ещё раз";
+"auth.changeEmail" = "Изменить email";
+"auth.verificationPending" = "Ждём подтверждения…";
 "gamification.levelUp" = "НОВЫЙ УРОВЕНЬ!";
 "gamification.level" = "Уровень";
-"gamification.rankAchieved" = "Достигнут ранг \"%@\"";
+"gamification.rankAchieved" = "Достигнут ранг «%@»";
 "gamification.xp.base" = "база";
 "gamification.xp.proBoost" = "Pro-бонус";
 "gamification.xp.streakBonus" = "Бонус за серию";
@@ -598,8 +598,8 @@
 "notifications.favoriteActorsDesc" = "Новый контент от людей, которые вам нравятся";
 "notifications.similarContent" = "Похожий контент";
 "notifications.similarContentDesc" = "Рекомендации на основе того, что вам понравилось";
-"notifications.watchlistAlerts" = "Оповещения списка просмотра";
-"notifications.watchlistAlertsDesc" = "Когда элементы из вашего списка просмотра становятся доступны";
+"notifications.watchlistAlerts" = "Оповещения списка к просмотру";
+"notifications.watchlistAlertsDesc" = "Когда тайтлы из вашего списка к просмотру становятся доступны";
 "notifications.milestones" = "Этапы и достижения";
 "notifications.milestonesDesc" = "Отмечайте свои серии просмотров и достижения";
 "notifications.frequency" = "Частота";
@@ -619,9 +619,9 @@
 "notifications.preferencesUpdated" = "Ваши настройки уведомлений обновлены.";
 "notifications.typesFooter" = "Выберите, какие уведомления хотите получать";
 "notifications.newAvailability" = "Новая доступность";
-"notifications.newAvailabilityDesc" = "Когда элементы из вашего списка просмотра становятся доступны для просмотра, аренды или покупки";
+"notifications.newAvailabilityDesc" = "Когда тайтлы из вашего списка к просмотру становятся доступны для просмотра, аренды или покупки";
 "notifications.newRelease" = "Новые релизы";
-"notifications.newReleaseDesc" = "Фильмы и сериалы, для которых вы нажали \"Уведомить меня\", когда они выходят";
+"notifications.newReleaseDesc" = "Фильмы и сериалы, для которых вы включили «Уведомить меня», когда они выходят";
 "notifications.episodeAired" = "Новые эпизоды";
 "notifications.episodeAiredDesc" = "Когда выходит новый эпизод сериала из ваших списков";
 "notifications.continueWatching" = "Продолжить просмотр";
@@ -636,36 +636,36 @@
 "notifications.fromPreferences" = "Из ваших предпочтений";
 "lists.notifyMe" = "УВЕДОМИТЬ";
 
-"movieDetail.whyForMe" = "Why for me?";
+"movieDetail.whyForMe" = "Почему мне подойдёт?";
 
-"movieDetail.whyForMe.basedOnGenres" = "Based on your 3 favorite genres";
+"movieDetail.whyForMe.basedOnGenres" = "На основе трёх ваших любимых жанров";
 
-"movieDetail.goodFitTitle" = "Why %@ is a good fit for me?";
-"movieDetail.goodFitSubtitle" = "A quick, personalized take based on your taste.";
+"movieDetail.goodFitTitle" = "Почему «%@» мне подойдёт?";
+"movieDetail.goodFitSubtitle" = "Короткое мнение с учётом ваших вкусов.";
 
 // TV Show Detail - Mark All Seen Confirmation
 "tvDetail.markAllSeenTitle" = "Отметить весь сериал как просмотренный";
-"tvDetail.markAllSeenDescription" = "This action will apply to all episodes and seasons of the series available.";
-"tvDetail.markAllSeenQuestion" = "Do you want to continue?";
-"tvDetail.markAllSeenConfirm" = "Yes, mark as seen";
-"tvDetail.markAllSeenCancel" = "No, cancel";
-"tvDetail.seasonSeenShort" = "seen";
+"tvDetail.markAllSeenDescription" = "Действие применится ко всем доступным сериям и сезонам сериала.";
+"tvDetail.markAllSeenQuestion" = "Продолжить?";
+"tvDetail.markAllSeenConfirm" = "Да, отметить просмотренным";
+"tvDetail.markAllSeenCancel" = "Нет, отмена";
+"tvDetail.seasonSeenShort" = "просмотрен";
 
 // Library section switcher
-"lists.section.myLists" = "My Lists";
-"lists.section.tvTracking" = "TV Shows Tracking";
+"lists.section.myLists" = "Мои списки";
+"lists.section.tvTracking" = "Трекинг сериалов";
 
 // TV Shows Tracking
-"tvTracking.continuing" = "Continue Watching";
-"tvTracking.notStarted" = "Not Started";
-"tvTracking.upToDate" = "Up to Date";
-"tvTracking.emptyState" = "No TV shows found";
-"carousel.fromActor" = "Больше с %@";
-"carousel.decadeClassics" = "Классика %@";
-"carousel.moodTonight" = "%@ на вечер";
+"tvTracking.continuing" = "Продолжить просмотр";
+"tvTracking.notStarted" = "Не начатые";
+"tvTracking.upToDate" = "Всё просмотрено";
+"tvTracking.emptyState" = "Сериалы не найдены";
+"carousel.fromActor" = "Ещё в фильмографии: %@";
+"carousel.decadeClassics" = "Классика: %@";
+"carousel.moodTonight" = "Сегодня вечером: %@";
 "carousel.regionSpotlight" = "%@ в центре внимания";
-"carousel.topInGenre" = "Лучшее в %@";
-"carousel.hotThisWeekInGenre" = "Популярное на этой неделе в %@";
+"carousel.topInGenre" = "Лучшее: %@";
+"carousel.hotThisWeekInGenre" = "Популярное на этой неделе: %@";
 "carousel.quickWatches" = "Быстрый просмотр";
 "carousel.epicWatches" = "Эпичные просмотры";
 "carousel.internationalPicks" = "Международная подборка";
@@ -673,40 +673,40 @@
 "carousel.fromAIChat" = "Из вашего AI-чата";
 "carousel.comingSoon" = "Скоро";
 "carousel.trendingTVWeek" = "Популярные сериалы недели";
-"carousel.criticallyAcclaimedRecent" = "Признанные критиками %@";
+"carousel.criticallyAcclaimedRecent" = "Признанные критиками: %@";
 "carousel.returningTV" = "Скоро вернутся";
 "carousel.documentaries" = "Документальные фильмы для вас";
 "discovery.endOfFeed" = "Вы всё посмотрели";
 /* MARK: - Public Lists (Fase 1) */
-"lists.section.publicLists" = "Public Lists";
-"lists.public.scope.explore" = "Explore";
-"lists.public.scope.followed" = "Followed";
-"lists.public.searchPlaceholder" = "Search public lists";
-"lists.public.empty.explore" = "No public lists found";
-"lists.public.empty.followed" = "You're not following any list yet";
-"lists.public.follow" = "Follow";
-"lists.public.following" = "Following";
-"lists.public.unavailable" = "This list is no longer available";
-"lists.public.report" = "Report list";
-"lists.public.report.confirm" = "Report this list as inappropriate?";
-"lists.public.report.done" = "Thanks, your report has been received";
-"lists.public.block" = "Block user";
-"lists.public.block.confirm" = "Block this user? Their public lists will be hidden.";
-"lists.public.createFromThis" = "Create public list from this";
-"lists.public.toggle" = "Public list";
-"lists.public.toggle.footer" = "Public lists can be discovered and followed by other users.";
-"lists.public.profanity.title" = "Inappropriate content";
-"lists.public.profanity" = "Please remove inappropriate language from the name or description before publishing.";
-"lists.public.guidelines.title" = "Community guidelines";
-"lists.public.guidelines.body" = "By publishing a list you agree to our community guidelines: no offensive, hateful or illegal content. Lists that violate them may be hidden and reported users may be removed.";
-"lists.public.guidelines.accept" = "Accept and publish";
-"lists.duplicateName" = "Copy of %@";
+"lists.section.publicLists" = "Публичные списки";
+"lists.public.scope.explore" = "Обзор";
+"lists.public.scope.followed" = "Подписки";
+"lists.public.searchPlaceholder" = "Поиск публичных списков";
+"lists.public.empty.explore" = "Публичные списки не найдены";
+"lists.public.empty.followed" = "Вы ещё не подписаны ни на один список";
+"lists.public.follow" = "Подписаться";
+"lists.public.following" = "Вы подписаны";
+"lists.public.unavailable" = "Этот список больше недоступен";
+"lists.public.report" = "Пожаловаться на список";
+"lists.public.report.confirm" = "Пожаловаться на этот список как на неприемлемый?";
+"lists.public.report.done" = "Спасибо, жалоба получена";
+"lists.public.block" = "Заблокировать пользователя";
+"lists.public.block.confirm" = "Заблокировать этого пользователя? Его публичные списки будут скрыты.";
+"lists.public.createFromThis" = "Создать публичный список на основе этого";
+"lists.public.toggle" = "Публичный список";
+"lists.public.toggle.footer" = "Публичные списки видны другим пользователям, и на них можно подписаться.";
+"lists.public.profanity.title" = "Неприемлемое содержание";
+"lists.public.profanity" = "Уберите неприемлемые выражения из названия или описания перед публикацией.";
+"lists.public.guidelines.title" = "Правила сообщества";
+"lists.public.guidelines.body" = "Публикуя список, вы принимаете правила сообщества: никакого оскорбительного, разжигающего ненависть или незаконного содержания. Списки, которые их нарушают, могут быть скрыты, а пользователи по жалобам — удалены.";
+"lists.public.guidelines.accept" = "Принять и опубликовать";
+"lists.duplicateName" = "Копия «%@»";
 /* MARK: - TV Tracking (card stile JustWatch) */
-"tvTracking.titlesCount" = "%d titles";
-"tvTracking.episodesRemaining" = "%d episodes remaining";
-"tvTracking.lastSeen" = "LAST SEEN %@";
-"tvTracking.soon" = "soon";
-"tvTracking.watchNow" = "Watch now";
+"tvTracking.titlesCount" = "Тайтлов: %d";
+"tvTracking.episodesRemaining" = "Осталось эпизодов: %d";
+"tvTracking.lastSeen" = "ПОСЛЕДНИЙ ПРОСМОТР %@";
+"tvTracking.soon" = "скоро";
+"tvTracking.watchNow" = "Смотреть сейчас";
 
 /* SPEC v3 §9.2 — schermata Tracking */
 "tracking.title" = "Трекинг";
@@ -885,41 +885,41 @@
 "onboarding.ready.chip.notifications" = "Уведомления включены";
 "onboarding.ready.cta" = "Начать просмотр";
 
-"filters.myPlatforms" = "Mine";
-"filters.platformScopeAll" = "All";
-"mediaDetail.forYou" = "for you";
-"mediaDetail.watchOn" = "Watch on";
-"mediaDetail.notifyMe" = "Notify me";
-"mediaDetail.notifyMeEnabling" = "Activating notification…";
-"mediaDetail.notifyMeEnabled" = "Notification active";
-"mediaDetail.action.watchlist" = "Watchlist";
-"mediaDetail.action.like" = "Like";
-"mediaDetail.action.list" = "To list";
+"filters.myPlatforms" = "Мои";
+"filters.platformScopeAll" = "Все";
+"mediaDetail.forYou" = "для вас";
+"mediaDetail.watchOn" = "Смотреть на";
+"mediaDetail.notifyMe" = "Уведомить меня";
+"mediaDetail.notifyMeEnabling" = "Включаем…";
+"mediaDetail.notifyMeEnabled" = "Мы уведомим вас";
+"mediaDetail.action.watchlist" = "К просмотру";
+"mediaDetail.action.like" = "Нравится";
+"mediaDetail.action.list" = "В список";
 "mediaDetail.toast.watchlistAdded" = "Добавлено в список";
 "mediaDetail.toast.watchlistRemoved" = "Удалено из списка";
 "mediaDetail.toast.markedSeen" = "Отмечено как просмотренное";
 "mediaDetail.toast.markedUnseen" = "Удалено из просмотренных";
 "mediaDetail.toast.liked" = "Добавлено в понравившиеся";
 "mediaDetail.toast.likeRemoved" = "Удалено из понравившихся";
-"mediaDetail.why.cardTitle" = "Why is it right for you?";
-"mediaDetail.why.title" = "Why for you";
-"mediaDetail.why.affinity" = "Affinity with your tastes";
-"mediaDetail.why.reason.mood" = "In line with your mood";
-"mediaDetail.why.reason.genres" = "Genres you love";
-"mediaDetail.why.reason.cast" = "Cast you know";
-"mediaDetail.why.helpful" = "Was this helpful?";
-"mediaDetail.why.regenerate" = "Regenerate";
-"mediaDetail.why.quota" = "Generated by Vibe AI from ratings, mood and history. %d/%d requests today.";
-"settings.cacheManagement.clearCacheAction" = "Clear cache";
-"gamification.missionsToday" = "Today's missions";
-"gamification.xpToNext" = "%d XP to the next level";
-"gamification.mission.openApp" = "Open the app";
-"gamification.mission.keepStreak" = "Keep your daily streak";
-"gamification.challenge.watch_3" = "Watch 3 clips";
-"gamification.challenge.like_5" = "Like 5 clips";
-"gamification.challenge.list_2" = "Add 2 titles to a list";
-"gamification.challenge.watch_new_genre" = "Watch a clip from a new genre";
-"gamification.challenge.complete_5" = "Complete 5 clips (>70%)";
+"mediaDetail.why.cardTitle" = "Почему это вам подойдёт?";
+"mediaDetail.why.title" = "Почему это для вас";
+"mediaDetail.why.affinity" = "Совпадение с вашими вкусами";
+"mediaDetail.why.reason.mood" = "Совпадает с вашим настроением";
+"mediaDetail.why.reason.genres" = "Жанры, которые вы любите";
+"mediaDetail.why.reason.cast" = "Знакомые вам актёры";
+"mediaDetail.why.helpful" = "Это было полезно?";
+"mediaDetail.why.regenerate" = "Сгенерировать заново";
+"mediaDetail.why.quota" = "Сгенерировано Vibe AI на основе оценок, настроения и истории. Запросов сегодня: %d/%d.";
+"settings.cacheManagement.clearCacheAction" = "Очистить кэш";
+"gamification.missionsToday" = "Миссии на сегодня";
+"gamification.xpToNext" = "%d XP до следующего уровня";
+"gamification.mission.openApp" = "Откройте приложение";
+"gamification.mission.keepStreak" = "Продолжите серию дней";
+"gamification.challenge.watch_3" = "Посмотрите 3 клипа";
+"gamification.challenge.like_5" = "Поставьте лайк 5 клипам";
+"gamification.challenge.list_2" = "Добавьте 2 тайтла в список";
+"gamification.challenge.watch_new_genre" = "Посмотрите клип в новом жанре";
+"gamification.challenge.complete_5" = "Досмотрите 5 клипов (>70%)";
 
 // SeasonDetailView — conferme di marcatura episodi (2026-08-04)
 "season.confirmUnaired.title" = "Ещё не вышел";
@@ -947,7 +947,7 @@
 "import.banner.completed" = "Импорт завершён";
 "import.banner.review" = "%1$d тайтлов на проверку из %2$@";
 "import.banner.manage" = "Разобрать";
-"import.banner.ok" = "OK";
+"import.banner.ok" = "ОК";
 "import.banner.summary" = "%1$@ сериалов · %2$@ эпизодов · %3$@ фильмов";
 "import.toast.imported" = "Библиотека импортирована";
 "import.toast.imported.review" = "Библиотека импортирована · %d тайтлов на проверку";
@@ -1114,6 +1114,155 @@
 "search.scope.series" = "Сериалы";
 "search.clear" = "Очистить";
 "search.trending.today" = "Сегодня";
-"search.trending.subtitle" = "Самое искомое в %@ за последние 24 часа.";
+"search.trending.subtitle" = "Что ищут чаще всего за последние 24 часа. Страна: %@";
 "search.results.subtitle" = "Совпадения по «%@», затем похожие.";
 "search.resultsCount" = "%d назв.";
+
+
+// MARK: - Ricerca piattaforme + esito notifica
+"platforms.search" = "Поиск платформы";
+"platforms.searchEmpty" = "Платформа с таким названием не найдена.";
+"mediaDetail.notifyMeFailed" = "Не удалось включить уведомление.";
+
+
+// MARK: - Report import ridisegnato
+"import.report.title" = "Отчёт об импорте";
+"import.report.sourcePeriod" = "%@ · %@ – %@";
+"import.report.success.title" = "Библиотека импортирована";
+"import.report.success.subtitle" = "%d сериалов и %d фильмов сопоставлены с каталогом.";
+"import.report.success.subtitleWithRatings" = "%d сериалов и %d фильмов сопоставлены с каталогом — с датами просмотра и оценками.";
+"import.report.tile.episodes" = "Серии";
+"import.report.tile.movies" = "Фильмы";
+"import.report.leftOut.title" = "Остались вне";
+"import.report.leftOut.subtitle" = "Для этих названий в каталоге нет надёжного совпадения. Нажмите карточку, чтобы найти вручную.";
+"import.report.leftOut.excluded" = "Исключено вами";
+"import.report.leftOut.episodes" = "%d просмотренных серий";
+"import.report.leftOut.seenOn" = "просмотрено %@";
+"import.report.copyList" = "Скопировать список";
+"import.report.copied" = "Список скопирован";
+"import.report.details" = "Подробности";
+
+
+// MARK: - Report import — dettagli
+"import.report.detail.period" = "Охваченный период";
+"import.report.detail.years" = "%d лет";
+"import.report.detail.oneYear" = "1 год";
+"import.report.detail.lessThanYear" = "меньше года";
+"import.report.detail.statuses" = "Восстановленные статусы сериалов";
+"import.report.detail.statuses.hint" = "Список и архив как в TV Time";
+"import.report.detail.ratings" = "Перенесённые оценки";
+"import.report.detail.ratingsUnmatched" = "Несопоставленные оценки";
+"import.report.detail.ratingsUnmatched.hint" = "Оценённые серии, которых нет в каталоге";
+"import.report.detail.ratingsDeferred" = "Оценки ещё не импортированы";
+"import.report.detail.favorites" = "Восстановленное избранное";
+"import.report.detail.moviesSeen" = "Фильмы, отмеченные просмотренными";
+"import.report.detail.moviesWatchlist" = "Фильмы в списке";
+"import.report.detail.statusesUnresolved" = "Невосстановленные статусы";
+"import.report.detail.outOfStructure" = "Серии без места в структуре";
+"import.report.detail.outOfStructure.hint" = "Спецвыпуски и расширенные версии вне структуры сериала";
+"import.report.detail.favoriteMovies" = "Любимые фильмы не импортированы";
+
+
+// MARK: - Report import — titolo mancante
+"import.report.leftOut.untitled" = "В экспорте нет названия";
+
+
+// MARK: - Generi TMDB
+// I nomi dei generi mostrati a schermo (titoli dei caroselli, grafico dei generi in Analytics).
+// TMDB li restituisce tradotti solo dentro la scheda di un film; nei caroselli il genere arriva
+// come id numerico, quindi il nome deve venire da qui. Da tradurre in ogni lingua.
+"genre.action" = "Боевик";
+"genre.adventure" = "Приключения";
+"genre.animation" = "Мультфильм";
+"genre.comedy" = "Комедия";
+"genre.crime" = "Криминал";
+"genre.documentary" = "Документальный";
+"genre.drama" = "Драма";
+"genre.family" = "Семейный";
+"genre.fantasy" = "Фэнтези";
+"genre.history" = "История";
+"genre.horror" = "Ужасы";
+"genre.music" = "Музыка";
+"genre.mystery" = "Детектив";
+"genre.romance" = "Мелодрама";
+"genre.scienceFiction" = "Фантастика";
+"genre.tvMovie" = "Телефильм";
+"genre.thriller" = "Триллер";
+"genre.war" = "Военный";
+"genre.western" = "Вестерн";
+"genre.actionAdventure" = "Боевик и приключения";
+"genre.kids" = "Детский";
+"genre.news" = "Новости";
+"genre.reality" = "Реалити-шоу";
+"genre.sciFiFantasy" = "Фантастика и фэнтези";
+"genre.soap" = "Мыльная опера";
+"genre.talk" = "Ток-шоу";
+"genre.warPolitics" = "Война и политика";
+
+
+// MARK: - Mood
+// Vanno nel `%@` di "carousel.moodTonight" ("Сегодня вечером: %@"). Sono SOSTANTIVI, non aggettivi.
+"mood.happy" = "Хорошее настроение";
+"mood.sad" = "Меланхолия";
+"mood.excited" = "Адреналин";
+"mood.relaxed" = "Спокойствие";
+"mood.scared" = "Мурашки";
+"mood.thoughtful" = "Пища для размышлений";
+"mood.romantic" = "Романтика";
+"mood.adventurous" = "Приключения";
+"mood.nostalgic" = "Ностальгия";
+"mood.energetic" = "Чистая энергия";
+
+
+// MARK: - Caroselli — argomenti e varianti senza genere
+// "%d" e' l'anno d'inizio del decennio (2020). In russo "2020-е": il suffisso e' grammatica.
+// Finisce in "carousel.decadeClassics" ("Классика: %@") e "carousel.throwback" ("Ностальгия: %@").
+"carousel.arg.decade" = "%d-е";
+// Usati quando il profilo non ha ancora un genere preferito: una frase alternativa che sta in piedi da sola.
+"carousel.hiddenGems.generic" = "Скрытые жемчужины";
+"carousel.staffPicks.generic" = "Выбор редакции для вас";
+
+
+// MARK: - Analytics
+"analytics.noData" = "Нет данных";
+
+
+// MARK: - Statistiche e gamification (stringhe estratte dalle view)
+// Erano letterali dentro AnalyticsDashboardView / FloatingXPBadgeView / BadgeGalleryView /
+// LevelProgressView: non passando da `.localized` restavano in inglese in tutte e 20 le lingue.
+"stats.title" = "Ваша статистика";
+"stats.yourActivity" = "Ваша активность";
+"stats.viewFull" = "Вся статистика";
+"stats.loading" = "Загрузка статистики…";
+"stats.errorTitle" = "Не удалось загрузить статистику";
+"stats.emptyTitle" = "Статистики пока нет";
+"stats.emptySubtitle" = "Начните смотреть — и здесь появится статистика!";
+"stats.genreDistribution" = "Разбивка по жанрам";
+"stats.genreEmpty" = "Данных по жанрам пока нет";
+"stats.whenActive" = "Когда вы смотрите";
+"stats.topContent" = "Ваши главные тайтлы";
+"stats.contentEmpty" = "Данных по тайтлам пока нет";
+"stats.discoveryChannels" = "Как вы находите тайтлы";
+"stats.discoveryEmpty" = "Данных о находках пока нет";
+"stats.moodProfile" = "Профиль настроения";
+"stats.moodEmpty" = "Данных пока мало — смотрите дальше, и профиль настроения появится.";
+
+// "%d" è il numero del livello.
+"gamification.levelNumber" = "Уровень %d";
+// Versione corta per il badge in cima alla schermata, dove lo spazio è quello che è.
+"gamification.levelShort" = "Ур.%d";
+"gamification.bestStreak" = "Лучшая серия";
+"gamification.xpBonus" = "Бонус XP";
+"gamification.todaysChallenge" = "Испытание дня";
+"gamification.completed" = "Выполнено!";
+"gamification.badgeUnlocked" = "Значок получен!";
+"gamification.badges.collected" = "Собрано значков";
+"gamification.badges.unlocked" = "Получен";
+// "%d" è il totale dei badge esistenti: compare come "12 из 40".
+"gamification.badges.ofTotal" = "из %d";
+"gamification.levels.progressTitle" = "Прогресс уровня";
+"gamification.allLevels" = "ВСЕ УРОВНИ";
+
+"common.progress" = "Прогресс";
+"tvDetail.seasonsTitle" = "Сезоны";
+"tvDetail.episodesTitle" = "Эпизоды";

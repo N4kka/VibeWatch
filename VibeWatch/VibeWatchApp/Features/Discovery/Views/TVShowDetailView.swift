@@ -797,7 +797,7 @@ struct SeasonsCarouselSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Seasons")
+            Text("tvDetail.seasonsTitle".localized)
                 .font(.system(size: 20, weight: .bold))
                 .foregroundColor(.theme.textPrimary)
                 .padding(.horizontal, 20)

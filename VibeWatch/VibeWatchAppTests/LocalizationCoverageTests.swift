@@ -166,6 +166,347 @@ final class LocalizationCoverageTests: XCTestCase {
         }
     }
 
+    /// I prestiti inglesi ammessi in **tutte** le lingue.
+    ///
+    /// Sono nomi propri (`VibeWatch`, `JustWatch`, `TV Time`), sigle entrate nell'uso ovunque
+    /// (`AI`, `OK`, `PRO`, `FAQ`) e formati puramente numerici (`8.0+`, `< 90 min`, `{count}/{limit}`).
+    /// Tutto il resto, se in una lingua è identico all'inglese, è una stringa non tradotta.
+    private static let prestitiAmmessi: Set<String> = [
+        "tab.ai", "ai.title", "common.ok", "common.pro", "common.privacy",
+        "discovery.vibeWatch", "import.banner.ok", "import.source.tvtime",
+        "platforms.justwatch", "profile.faq", "settings.privacy.title",
+        "lists.limitInfo", "import.report.sourcePeriod",
+        "filters.ratingGood", "filters.ratingExcellent", "filters.ratingMasterpiece",
+        "filters.runtimeShort", "filters.runtimeMedium", "filters.runtimeLong",
+        "auth.emailPlaceholder", "tracking.title", "tab.tracking",
+        "gamification.levelShort",
+    ]
+
+    /// I prestiti decisi lingua per lingua.
+    ///
+    /// "Watchlist" è italiano corrente e cinese no; "Cast" e "Trailer" sono entrati in molte
+    /// lingue europee e in nessuna asiatica. Ogni voce qui è una scelta, non una dimenticanza:
+    /// se una riga sparisce da questa mappa il test la segnala, ed è esattamente quello che serve.
+    private static let prestitiPerLingua: [String: Set<String>] = [
+        // da: 27
+        "da": [
+            "auth.pwRule.symbol",
+            "clips.card.addToWatchlist",
+            "filters.min",
+            "filters.myPlatforms",
+            "gamification.badges.title",
+            "genre.action",
+            "genre.animation",
+            "genre.drama",
+            "genre.fantasy",
+            "genre.reality",
+            "genre.soap",
+            "genre.thriller",
+            "genre.western",
+            "lists.watchlist",
+            "mediaDetail.action.like",
+            "mediaDetail.action.watchlist",
+            "mediaStatus.pilot",
+            "movieDetail.budget",
+            "movieDetail.information",
+            "movieDetail.status",
+            "movieDetail.trailer",
+            "notifications.status",
+            "platforms.streaming",
+            "profile.feedback.category.ui",
+            "profile.feedback.sendButton",
+            "tracking.special",
+            "update.versionFootnote",
+        ],
+        // de: 29
+        "de": [
+            "carousel.topInGenre",
+            "clips.card.addToWatchlist",
+            "clips.title",
+            "gamification.level",
+            "gamification.levelNumber",
+            "genre.action",
+            "genre.animation",
+            "genre.drama",
+            "genre.fantasy",
+            "genre.horror",
+            "genre.mystery",
+            "genre.sciFiFantasy",
+            "genre.thriller",
+            "genre.western",
+            "import.report.details",
+            "lists.watchlist",
+            "mediaDetail.action.like",
+            "mediaDetail.action.watchlist",
+            "movieDetail.budget",
+            "movieDetail.genres",
+            "movieDetail.status",
+            "movieDetail.trailer",
+            "notifications.status",
+            "platforms.streaming",
+            "profile.edit.bio",
+            "profile.edit.name",
+            "tab.clips",
+            "tracking.special",
+            "update.versionFootnote",
+        ],
+        // es: 14
+        "es": [
+            "clips.title",
+            "common.error",
+            "gamification.xp.base",
+            "genre.drama",
+            "genre.romance",
+            "genre.western",
+            "mood.nostalgic",
+            "mood.romantic",
+            "movieDetail.director",
+            "platforms.streaming",
+            "profile.legal",
+            "search.scope.series",
+            "tab.clips",
+            "tab.social",
+        ],
+        // fi: 3
+        "fi": [
+            "filters.min",
+            "genre.western",
+            "mood.nostalgic",
+        ],
+        // fr: 28
+        "fr": [
+            "clips.card.addToWatchlist",
+            "clips.title",
+            "filters.max",
+            "filters.min",
+            "gamification.badges.title",
+            "gamification.xp.base",
+            "genre.action",
+            "genre.animation",
+            "genre.crime",
+            "genre.romance",
+            "genre.thriller",
+            "genre.western",
+            "lists.collections",
+            "mediaDetail.action.watchlist",
+            "mediaStatus.postProduction",
+            "mood.romantic",
+            "movieDetail.budget",
+            "movieDetail.genres",
+            "movieDetail.productionCompanies",
+            "notifications.title",
+            "platforms.streaming",
+            "profile.edit.bio",
+            "profile.feedback.category.notifications",
+            "profile.notifications",
+            "settings.notifications.title",
+            "tab.clips",
+            "tab.social",
+            "update.versionFootnote",
+        ],
+        // it: 25
+        "it": [
+            "auth.passwordPlaceholder",
+            "clips.card.addToWatchlist",
+            "favorites.slot",
+            "filters.min",
+            "gamification.xp.base",
+            "genre.crime",
+            "genre.fantasy",
+            "genre.horror",
+            "genre.reality",
+            "genre.thriller",
+            "genre.western",
+            "mediaDetail.action.watchlist",
+            "mood.nostalgic",
+            "movieDetail.budget",
+            "movieDetail.cast",
+            "movieDetail.trailer",
+            "onboarding.import.stat.watchlist",
+            "platforms.cinema",
+            "platforms.streaming",
+            "profile.edit.bio",
+            "profile.feedback.category.crash",
+            "profile.group.account",
+            "profile.passwordPlaceholder",
+            "tab.social",
+            "username.placeholder",
+        ],
+        // nb: 16
+        "nb": [
+            "auth.pwRule.symbol",
+            "clips.card.addToWatchlist",
+            "filters.min",
+            "filters.myPlatforms",
+            "genre.action",
+            "genre.drama",
+            "genre.fantasy",
+            "genre.reality",
+            "genre.scienceFiction",
+            "genre.thriller",
+            "genre.western",
+            "lists.watchlist",
+            "mediaDetail.action.watchlist",
+            "movieDetail.status",
+            "movieDetail.trailer",
+            "notifications.status",
+        ],
+        // nl: 40
+        "nl": [
+            "clips.card.addToWatchlist",
+            "clips.search.quotes",
+            "clips.title",
+            "common.item",
+            "common.items",
+            "discovery.releases.countMany",
+            "discovery.releases.countOne",
+            "discovery.releases.title",
+            "filters.max",
+            "filters.min",
+            "filters.releasePeriodModern",
+            "filters.releasePeriodRecent",
+            "filters.title",
+            "gamification.badges.title",
+            "gamification.challenge.like_5",
+            "genre.drama",
+            "genre.fantasy",
+            "genre.horror",
+            "genre.sciFiFantasy",
+            "genre.soap",
+            "genre.thriller",
+            "genre.western",
+            "import.report.details",
+            "lists.watchlist",
+            "mediaDetail.action.like",
+            "mediaDetail.action.watchlist",
+            "mediaStatus.pilot",
+            "movieDetail.budget",
+            "movieDetail.cast",
+            "movieDetail.genres",
+            "movieDetail.status",
+            "movieDetail.trailer",
+            "notifications.status",
+            "profile.edit.bio",
+            "profile.feedback.category.crash",
+            "profile.group.account",
+            "search.scope.series",
+            "tab.clips",
+            "tracking.action.later",
+            "tracking.special",
+        ],
+        // no: 16
+        "no": [
+            "auth.pwRule.symbol",
+            "clips.card.addToWatchlist",
+            "filters.min",
+            "filters.myPlatforms",
+            "genre.action",
+            "genre.drama",
+            "genre.fantasy",
+            "genre.reality",
+            "genre.scienceFiction",
+            "genre.thriller",
+            "genre.western",
+            "lists.watchlist",
+            "mediaDetail.action.watchlist",
+            "movieDetail.status",
+            "movieDetail.trailer",
+            "notifications.status",
+        ],
+        // pl: 11
+        "pl": [
+            "auth.pwRule.symbol",
+            "filters.min",
+            "genre.fantasy",
+            "genre.horror",
+            "genre.thriller",
+            "genre.western",
+            "import.title",
+            "mood.nostalgic",
+            "movieDetail.status",
+            "notifications.status",
+            "platforms.streaming",
+        ],
+        // pt: 13
+        "pt": [
+            "clips.title",
+            "common.item",
+            "gamification.xp.base",
+            "genre.crime",
+            "genre.drama",
+            "genre.romance",
+            "mood.nostalgic",
+            "mood.romantic",
+            "movieDetail.trailer",
+            "platforms.cinema",
+            "platforms.streaming",
+            "tab.clips",
+            "tab.social",
+        ],
+        // sv: 19
+        "sv": [
+            "auth.pwRule.symbol",
+            "filters.max",
+            "filters.min",
+            "genre.action",
+            "genre.drama",
+            "genre.fantasy",
+            "genre.reality",
+            "genre.scienceFiction",
+            "genre.thriller",
+            "genre.western",
+            "movieDetail.budget",
+            "movieDetail.information",
+            "movieDetail.status",
+            "movieDetail.trailer",
+            "notifications.status",
+            "platforms.streaming",
+            "profile.edit.information",
+            "tracking.special",
+            "update.versionFootnote",
+        ],
+        // tr: 3
+        "tr": [
+            "filters.min",
+            "filters.releasePeriodModern",
+            "genre.talk",
+        ],
+    ]
+
+    /// Nessuna stringa inglese in una lingua che non è l'inglese.
+    ///
+    /// **Perché serve.** Con l'app in italiano la schermata Scopri mostrava "Il meglio di Science
+    /// Fiction" e "Scelti dallo staff per fan di Your Favorites": il template era tradotto, la
+    /// parola dentro no. Lo stesso vale per una traduzione semplicemente dimenticata, che resta
+    /// identica all'inglese e non fa fallire nulla — `testNessunaLinguaEUnaCopiaDiUnAltra` scatta
+    /// solo se un file INTERO è una copia, non se lo sono novanta righe su mille.
+    ///
+    /// Le eccezioni per lingua stanno in `prestitiPerLingua`: un prestito è una decisione
+    /// consapevole su una parola precisa ("Watchlist" in italiano sì, in cinese no), e va scritta
+    /// qui perché la prossima persona sappia che è voluta.
+    func testNessunaLinguaLasciaStringheInInglese() throws {
+        let file = try leggiTutte()
+        let base = try XCTUnwrap(file.first { $0.lingua == Self.riferimento })
+
+        for f in file where f.lingua != Self.riferimento {
+            let ammesse = Self.prestitiAmmessi.union(Self.prestitiPerLingua[f.lingua] ?? [])
+            let inglesi = base.chiavi
+                .filter { !ammesse.contains($0) }
+                .filter { chiave in
+                    guard let mia = f.valore(chiave), let en = base.valore(chiave) else { return false }
+                    return mia == en
+                }
+                .sorted()
+
+            XCTAssertTrue(inglesi.isEmpty, """
+                \(f.lingua): \(inglesi.count) stringhe identiche all'inglese.
+                Se sono traduzioni mancanti, traducile. Se sono prestiti voluti, aggiungile a
+                `prestitiPerLingua["\(f.lingua)"]` con il perché.
+                \(inglesi.map { "  \($0) = \"\(base.valore($0) ?? "")\"" }.joined(separator: "\n"))
+                """)
+        }
+    }
+
     /// Ogni `"chiave".localized` del codice deve esistere in `en`. Senza, `.localized`
     /// restituisce la chiave e l'utente legge `auth.error.invalidLink` sullo schermo.
     func testOgniChiaveUsataNelCodiceEsiste() throws {
