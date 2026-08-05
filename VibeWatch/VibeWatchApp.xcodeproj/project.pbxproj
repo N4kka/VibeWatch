@@ -31,6 +31,7 @@
 		A1B2C3D40007E5F600000001 /* TrackingSyncTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40007E5F600000002 /* TrackingSyncTests.swift */; };
 		A1B2C3D40009E5F600000001 /* LegacyTrackingMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40009E5F600000002 /* LegacyTrackingMigrationTests.swift */; };
 		A1B2C3D4000AE5F600000001 /* LocalizationCoverageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000AE5F600000002 /* LocalizationCoverageTests.swift */; };
+		A1B2C3D4000AE5F600000101 /* UpdateConfigLocalizationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000AE5F600000102 /* UpdateConfigLocalizationTests.swift */; };
 		A1B2C3D4000BE5F600000001 /* UsernameSetupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000BE5F600000002 /* UsernameSetupTests.swift */; };
 		A1B2C3D4000BE5F600000003 /* SocialProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000BE5F600000004 /* SocialProfileTests.swift */; };
 		A1B2C3D4000BE5F600000005 /* FavoritesRatingsActionsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000BE5F600000006 /* FavoritesRatingsActionsTests.swift */; };
@@ -97,6 +98,7 @@
 		A1B2C3D40007E5F600000002 /* TrackingSyncTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackingSyncTests.swift; sourceTree = "<group>"; };
 		A1B2C3D40009E5F600000002 /* LegacyTrackingMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyTrackingMigrationTests.swift; sourceTree = "<group>"; };
 		A1B2C3D4000AE5F600000002 /* LocalizationCoverageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationCoverageTests.swift; sourceTree = "<group>"; };
+		A1B2C3D4000AE5F600000102 /* UpdateConfigLocalizationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateConfigLocalizationTests.swift; sourceTree = "<group>"; };
 		A1B2C3D4000BE5F600000002 /* UsernameSetupTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsernameSetupTests.swift; sourceTree = "<group>"; };
 		A1B2C3D4000BE5F600000004 /* SocialProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialProfileTests.swift; sourceTree = "<group>"; };
 		A1B2C3D4000BE5F600000006 /* FavoritesRatingsActionsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesRatingsActionsTests.swift; sourceTree = "<group>"; };
@@ -196,6 +198,7 @@
 				A1B2C3D4000CE5F600000002 /* UniversalLinksTests.swift */,
 				A1B2C3D4000DE5F600000002 /* ImportViewModelTests.swift */,
 				A1B2C3D4000AE5F600000002 /* LocalizationCoverageTests.swift */,
+				A1B2C3D4000AE5F600000102 /* UpdateConfigLocalizationTests.swift */,
 				A1B2C3D40009E5F600000002 /* LegacyTrackingMigrationTests.swift */,
 				7C39F30EEBCD42B48EC2203D /* SyncStateMachineTests.swift */,
 				75B51919D2BF4686B686EDCA /* ConflictResolverTests.swift */,
@@ -432,6 +435,7 @@
 				A1B2C3D4000CE5F600000001 /* UniversalLinksTests.swift in Sources */,
 				A1B2C3D4000DE5F600000001 /* ImportViewModelTests.swift in Sources */,
 				A1B2C3D4000AE5F600000001 /* LocalizationCoverageTests.swift in Sources */,
+				A1B2C3D4000AE5F600000101 /* UpdateConfigLocalizationTests.swift in Sources */,
 				A1B2C3D40009E5F600000001 /* LegacyTrackingMigrationTests.swift in Sources */,
 				B276FBD367C144A78E0A9217 /* SyncStateMachineTests.swift in Sources */,
 				6041113C7B15457BB8A1B4EB /* ConflictResolverTests.swift in Sources */,

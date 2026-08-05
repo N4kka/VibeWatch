@@ -1030,6 +1030,7 @@
 
 // MARK: - Update forzato (Task 3)
 "update.required" = "需要更新";
+"update.fallbackTitle" = "新版本已发布";
 "update.whatsChanged" = "更新内容";
 "update.fullReleaseNotes" = "完整更新说明";
 "update.cta" = "前往 App Store 更新";

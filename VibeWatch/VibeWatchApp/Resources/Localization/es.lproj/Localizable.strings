@@ -1043,6 +1043,7 @@
 
 // MARK: - Update forzato (Task 3)
 "update.required" = "ACTUALIZACIÓN NECESARIA";
+"update.fallbackTitle" = "Hay una nueva versión disponible";
 "update.whatsChanged" = "QUÉ CAMBIA";
 "update.fullReleaseNotes" = "Notas de la versión completas";
 "update.cta" = "Actualizar desde la App Store";

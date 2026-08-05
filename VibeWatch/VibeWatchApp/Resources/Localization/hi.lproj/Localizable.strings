@@ -1045,6 +1045,7 @@
 
 // MARK: - Update forzato (Task 3)
 "update.required" = "अपडेट ज़रूरी है";
+"update.fallbackTitle" = "नया वर्शन उपलब्ध है";
 "update.whatsChanged" = "क्या बदला है";
 "update.fullReleaseNotes" = "पूरी रिलीज़ नोट्स";
 "update.cta" = "App Store से अपडेट करें";

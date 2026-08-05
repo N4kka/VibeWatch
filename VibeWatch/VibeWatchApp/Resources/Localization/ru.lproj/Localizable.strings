@@ -1033,6 +1033,7 @@
 
 // MARK: - Update forzato (Task 3)
 "update.required" = "ТРЕБУЕТСЯ ОБНОВЛЕНИЕ";
+"update.fallbackTitle" = "Доступна новая версия";
 "update.whatsChanged" = "ЧТО ИЗМЕНИЛОСЬ";
 "update.fullReleaseNotes" = "Полный список изменений";
 "update.cta" = "Обновить в App Store";

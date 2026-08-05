@@ -971,6 +971,7 @@
 
 // MARK: - Update forzato (Task 3)
 "update.required" = "OPPDATERING KREVES";
+"update.fallbackTitle" = "En ny versjon er tilgjengelig";
 "update.whatsChanged" = "HVA SOM ER NYTT";
 "update.fullReleaseNotes" = "Fullstendige utgivelsesnotater";
 "update.cta" = "Oppdater fra App Store";

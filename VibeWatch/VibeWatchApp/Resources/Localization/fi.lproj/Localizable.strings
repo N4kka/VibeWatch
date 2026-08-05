@@ -1045,6 +1045,7 @@
 
 // MARK: - Update forzato (Task 3)
 "update.required" = "PÄIVITYS VAADITAAN";
+"update.fallbackTitle" = "Uusi versio on saatavilla";
 "update.whatsChanged" = "MIKÄ MUUTTUU";
 "update.fullReleaseNotes" = "Kaikki julkaisutiedot";
 "update.cta" = "Päivitä App Storesta";

@@ -1045,6 +1045,7 @@
 
 // MARK: - Update forzato (Task 3)
 "update.required" = "ΑΠΑΙΤΕΙΤΑΙ ΕΝΗΜΕΡΩΣΗ";
+"update.fallbackTitle" = "Διαθέσιμη νέα έκδοση";
 "update.whatsChanged" = "ΤΙ ΑΛΛΑΖΕΙ";
 "update.fullReleaseNotes" = "Πλήρεις σημειώσεις έκδοσης";
 "update.cta" = "Ενημέρωση από το App Store";

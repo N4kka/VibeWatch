@@ -1033,6 +1033,7 @@
 
 // MARK: - Update forzato (Task 3)
 "update.required" = "GÜNCELLEME GEREKLİ";
+"update.fallbackTitle" = "Yeni bir sürüm mevcut";
 "update.whatsChanged" = "NELER DEĞİŞTİ";
 "update.fullReleaseNotes" = "Tüm sürüm notları";
 "update.cta" = "App Store'dan güncelle";

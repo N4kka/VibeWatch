@@ -1045,6 +1045,7 @@
 
 // MARK: - Update forzato (Task 3)
 "update.required" = "MISE À JOUR REQUISE";
+"update.fallbackTitle" = "Une nouvelle version est disponible";
 "update.whatsChanged" = "CE QUI CHANGE";
 "update.fullReleaseNotes" = "Notes de version complètes";
 "update.cta" = "Mettre à jour depuis l’App Store";

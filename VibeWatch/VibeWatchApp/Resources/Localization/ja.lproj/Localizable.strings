@@ -1045,6 +1045,7 @@
 
 // MARK: - Update forzato (Task 3)
 "update.required" = "アップデートが必要です";
+"update.fallbackTitle" = "新しいバージョンが利用できます";
 "update.whatsChanged" = "変更点";
 "update.fullReleaseNotes" = "リリースノート全文";
 "update.cta" = "App Store で更新";
