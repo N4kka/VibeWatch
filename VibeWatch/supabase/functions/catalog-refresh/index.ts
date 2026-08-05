@@ -14,9 +14,9 @@
 
 import { serve } from 'https://deno.land/std@0.131.0/http/server.ts'
 import { adminClient, jsonResponse } from '../_shared/proxy.ts'
+import { rejectIfNotServiceCaller } from '../_shared/cronAuth.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
-const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
 const SERVICE_KEY = (() => {
   const s = Deno.env.get('SUPABASE_SECRET_KEYS')
   if (s) {
@@ -38,11 +38,20 @@ const SELECTION_LIMIT = 400
 serve(async (req: Request) => {
   if (req.method !== 'POST') return jsonResponse({ error: 'method_not_allowed' }, 405)
 
-  const authHeader = req.headers.get('authorization') ?? req.headers.get('Authorization') ?? ''
-  if (SERVICE_KEY === '' || authHeader !== `Bearer ${SERVICE_KEY}`) {
-    // Fallisce chiuso: è un lavoro che spende budget condiviso senza che nessuno l'abbia chiesto.
-    return jsonResponse({ error: 'service_key_required' }, 401)
-  }
+  // Fallisce chiuso: è un lavoro che spende budget condiviso senza che nessuno l'abbia chiesto.
+  //
+  // Il confronto va fatto con `cronAuth` e non con la sola `SERVICE_KEY` risolta qui sotto: la
+  // chiave che il cron manda è quella del Vault (`edge_service_key`, la nuova `sb_secret_`),
+  // mentre `SUPABASE_SERVICE_ROLE_KEY` nell'ambiente della funzione può essere ancora il JWT
+  // legacy. Sono due valori diversi, quindi `authHeader !== 'Bearer ' + SERVICE_KEY` rispondeva
+  // 401 **al cron vero** — verificato invocando la funzione esattamente come fa lo scheduler.
+  // È la stessa trappola documentata in `cronAuth.ts`, che accetta l'intero insieme di chiavi
+  // che identificano legittimamente il progetto.
+  //
+  // `SERVICE_KEY` resta, ma solo per la chiamata in USCITA a `catalog-resolve`, che si aspetta
+  // proprio la chiave d'ambiente.
+  const nonAutorizzato = rejectIfNotServiceCaller(req)
+  if (nonAutorizzato) return nonAutorizzato
 
   const admin = adminClient()
 
@@ -74,8 +83,13 @@ serve(async (req: Request) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          // **Le due intestazioni devono portare la STESSA chiave.** Con la chiave pubblicabile su
+          // `apikey` e quella di servizio su `Authorization`, il gateway risponde 401 "Conflicting
+          // API keys" e non arriva mai a `catalog-resolve` — verificato in produzione. La chiave
+          // di servizio serve su `Authorization` perché è lì che `catalog-resolve` riconosce il
+          // ramo "senza utente"; quindi va messa anche su `apikey`.
           'Authorization': `Bearer ${SERVICE_KEY}`,
-          'apikey': SUPABASE_ANON_KEY,
+          'apikey': SERVICE_KEY,
         },
         // `force_refresh`: senza, il filtro interno di `catalog-resolve` riscarterebbe proprio le
         // serie che stiamo cercando di rinfrescare (quelle "ended" col TTL ancora aperto).
