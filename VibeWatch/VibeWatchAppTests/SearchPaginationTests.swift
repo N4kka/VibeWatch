@@ -25,11 +25,26 @@ final class SearchPaginationTests: XCTestCase {
         try await super.tearDown()
     }
 
-    /// Fa la prima ricerca e attende che la pagina 1 sia in lista.
-    private func cerca(_ query: String) async {
+    /// Fa una ricerca e attende che in lista ci siano **esattamente** i risultati attesi.
+    ///
+    /// Prima aspettava `!searchResults.isEmpty && pagineChieste.contains(1)`, che dalla SECONDA
+    /// ricerca in poi è già vero appena parte: la lista è ancora piena dei risultati precedenti,
+    /// quindi l'attesa finiva nell'istante in cui la pagina 1 veniva *chiesta*, prima che i nuovi
+    /// risultati la sostituissero. È così che `testUnaNuovaRicercaAzzeraLaPaginazione` falliva
+    /// circa una volta su sei leggendo `[1, 2]` invece di `[5]` — e il difetto era nell'attesa,
+    /// non nel codice sotto esame.
+    ///
+    /// Aspettare l'insieme esatto vale anche al contrario: se la ricerca nuova NON azzerasse la
+    /// lista, qui si arriverebbe al timeout con scritto cosa mancava.
+    private func cerca(
+        _ query: String, attesi: Set<Int>,
+        file: StaticString = #filePath, line: UInt = #line
+    ) async {
         viewModel.searchQuery = query
         viewModel.search()
-        await attendi { !self.viewModel.searchResults.isEmpty && self.tmdb.pagineChieste.contains(1) }
+        await attendi("i risultati di \"\(query)\": \(attesi.sorted())", file: file, line: line) {
+            Set(self.viewModel.searchResults.map(\.id)) == attesi
+        }
     }
 
     func testLaSecondaPaginaSiAggiungeAllaPrima() async {
@@ -38,11 +53,10 @@ final class SearchPaginationTests: XCTestCase {
                           Self.result(id: 2, title: "Spider-Man 2")], totalPages: 2),
             2: (results: [Self.result(id: 3, title: "Spider-Man 3")], totalPages: 2)
         ]
-        await cerca("spider")
-        XCTAssertEqual(viewModel.searchResults.count, 2)
+        await cerca("spider", attesi: [1, 2])
 
         viewModel.loadMoreIfNeeded(currentItem: viewModel.searchResults.last!)
-        await attendi { self.viewModel.searchResults.count == 3 }
+        await attendi("la pagina 2 in coda alla 1") { self.viewModel.searchResults.count == 3 }
 
         XCTAssertEqual(Set(viewModel.searchResults.map(\.id)), [1, 2, 3])
     }
@@ -55,19 +69,19 @@ final class SearchPaginationTests: XCTestCase {
             2: (results: [Self.result(id: 1, title: "Spider-Man"),
                           Self.result(id: 9, title: "Spider-Man Nuovo")], totalPages: 2)
         ]
-        await cerca("spider")
+        await cerca("spider", attesi: [1])
         viewModel.loadMoreIfNeeded(currentItem: viewModel.searchResults.last!)
-        await attendi { self.viewModel.searchResults.count == 2 }
+        await attendi("la pagina 2, deduplicata") { self.viewModel.searchResults.count == 2 }
 
         XCTAssertEqual(viewModel.searchResults.map(\.id).sorted(), [1, 9])
     }
 
     func testAllUltimaPaginaNonSiChiedeAltro() async {
         tmdb.pages = [1: (results: [Self.result(id: 1, title: "Solo")], totalPages: 1)]
-        await cerca("solo")
+        await cerca("solo", attesi: [1])
 
         viewModel.loadMoreIfNeeded(currentItem: viewModel.searchResults.last!)
-        await attendi { true }
+        await nonDeveSuccedereNiente()
 
         XCTAssertEqual(tmdb.pagineChieste, [1], "non c'è una pagina 2 da chiedere")
     }
@@ -80,10 +94,10 @@ final class SearchPaginationTests: XCTestCase {
             1: (results: primaPagina, totalPages: 3),
             2: (results: [Self.result(id: 21, title: "Titolo 21")], totalPages: 3)
         ]
-        await cerca("titolo")
+        await cerca("titolo", attesi: Set(1...20))
 
         viewModel.loadMoreIfNeeded(currentItem: viewModel.searchResults[0])
-        await attendi { true }
+        await nonDeveSuccedereNiente()
 
         XCTAssertEqual(tmdb.pagineChieste, [1])
     }
@@ -93,13 +107,13 @@ final class SearchPaginationTests: XCTestCase {
             1: (results: [Self.result(id: 1, title: "Alfa")], totalPages: 3),
             2: (results: [Self.result(id: 2, title: "Alfa due")], totalPages: 3)
         ]
-        await cerca("alfa")
+        await cerca("alfa", attesi: [1])
         viewModel.loadMoreIfNeeded(currentItem: viewModel.searchResults.last!)
-        await attendi { self.viewModel.searchResults.count == 2 }
+        await attendi("la pagina 2 di \"alfa\"") { self.viewModel.searchResults.count == 2 }
 
         tmdb.pagineChieste.removeAll()
         tmdb.pages = [1: (results: [Self.result(id: 5, title: "Beta")], totalPages: 1)]
-        await cerca("beta")
+        await cerca("beta", attesi: [5])
 
         XCTAssertEqual(viewModel.searchResults.map(\.id), [5],
                        "i risultati della ricerca precedente non restano in lista")
@@ -111,7 +125,7 @@ final class SearchPaginationTests: XCTestCase {
             Self.result(id: 1, title: "Il caso Arachnospidone", popularity: 5000, votes: 200_000),
             Self.result(id: 2, title: "Spid", popularity: 0.2, votes: 3)
         ], totalPages: 1)]
-        await cerca("Spid")
+        await cerca("Spid", attesi: [1, 2])
 
         XCTAssertEqual(viewModel.searchResults.first?.id, 2,
                        "il match esatto sta in cima, anche se è meno popolare")
@@ -130,8 +144,14 @@ final class SearchPaginationTests: XCTestCase {
     }
 
     /// `search()` debouncia di 350 ms e lavora su un `Task`: qui si aspetta la condizione.
+    ///
+    /// Allo scadere **fa fallire il test**. Prima usciva in silenzio, quindi un caricamento che
+    /// non arrivava mai non si presentava come un timeout ma come un'asserzione incomprensibile
+    /// venti righe più giù, senza dire cosa si stava aspettando.
     private func attendi(
+        _ cosa: String,
         timeout: TimeInterval = 5,
+        file: StaticString = #filePath, line: UInt = #line,
         _ condizione: @escaping () -> Bool
     ) async {
         let scadenza = Date().addingTimeInterval(timeout)
@@ -139,6 +159,16 @@ final class SearchPaginationTests: XCTestCase {
             if condizione() { return }
             try? await Task.sleep(nanoseconds: 30_000_000)
         }
+        XCTFail("timeout dopo \(timeout)s aspettando \(cosa)", file: file, line: line)
+    }
+
+    /// Per le asserzioni negative: dà a una richiesta indesiderata il tempo di farsi vedere.
+    ///
+    /// I due test che vietano una pagina 2 usavano `attendi { true }`, che torna all'istante e
+    /// non aspetta niente: una richiesta partita anche solo un tick dopo sarebbe sfuggita a
+    /// entrambi, e il test sarebbe passato senza aver verificato nulla.
+    private func nonDeveSuccedereNiente(entro: TimeInterval = 0.5) async {
+        try? await Task.sleep(nanoseconds: UInt64(entro * 1_000_000_000))
     }
 }
 
@@ -156,12 +186,32 @@ private final class StubTMDBSearchService: TMDBServiceProtocol, @unchecked Senda
         let totalPages: Int
     }
 
-    var pages: [Int: (results: [SearchResult], totalPages: Int)] = [:]
-    var pagineChieste: [Int] = []
+    /// `searchMulti` la chiama il `Task` del view model, che non gira sul main actor; il test
+    /// invece legge e scrive dal main actor. Senza lock sono due thread sullo stesso `Array`: un
+    /// data race vero, di quelli che il Thread Sanitizer segnala e che ogni tanto fanno leggere
+    /// un array a metà aggiornamento. Il `@unchecked Sendable` qui sopra dichiarava una sicurezza
+    /// che non c'era.
+    private let lock = NSLock()
+    private var _pages: [Int: (results: [SearchResult], totalPages: Int)] = [:]
+    private var _pagineChieste: [Int] = []
+
+    var pages: [Int: (results: [SearchResult], totalPages: Int)] {
+        get { lock.withLock { _pages } }
+        set { lock.withLock { _pages = newValue } }
+    }
+
+    var pagineChieste: [Int] {
+        get { lock.withLock { _pagineChieste } }
+        set { lock.withLock { _pagineChieste = newValue } }
+    }
 
     func searchMulti(query: String, page: Int) async throws -> TMDBMultiResponse {
-        pagineChieste.append(page)
-        let entry = pages[page] ?? (results: [], totalPages: page)
+        // Registrazione e lettura in un solo giro di lock: se fossero due, fra l'append e la
+        // lettura potrebbe infilarsi il `pages =` della riga successiva di un test.
+        let entry = lock.withLock { () -> (results: [SearchResult], totalPages: Int) in
+            _pagineChieste.append(page)
+            return _pages[page] ?? (results: [], totalPages: page)
+        }
         return TMDBMultiResponse(
             page: page,
             results: entry.results,
