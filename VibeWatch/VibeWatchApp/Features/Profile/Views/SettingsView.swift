@@ -104,6 +104,13 @@ struct SettingsView: View {
                             AnalyticsService.shared.setEnabled(newValue)
                         }
 
+                        // Social feed M1: visibilità nel feed attività. La sezione è
+                        // autocontenuta (Features/Social) — qui solo l'aggancio, e solo per
+                        // chi ha una sessione: il flag vive sul profilo remoto.
+                        if authService.currentUser != nil {
+                            SocialSettingsSection()
+                        }
+
                         // Notifications Section
                         if let userId = authService.currentUser?.id {
                             VStack(spacing: 16) {
