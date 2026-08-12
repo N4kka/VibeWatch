@@ -218,8 +218,10 @@ final class LocalizationCoverageTests: XCTestCase {
             "tracking.special",
             "update.versionFootnote",
         ],
-        // de: 29
+        // de: 30
         "de": [
+            // "Details" è tedesco corretto (come import.report.details già in lista).
+            "ai.card.details",
             "carousel.topInGenre",
             "clips.card.addToWatchlist",
             "clips.title",
@@ -306,6 +308,9 @@ final class LocalizationCoverageTests: XCTestCase {
         ],
         // it: 25
         "it": [
+            // "watchlist" è un prestito consolidato in tutta l'app italiana (vedi
+            // mediaDetail.action.watchlist): "2 in watchlist" è come parla l'utente.
+            "ai.history.inWatchlist",
             "auth.passwordPlaceholder",
             "clips.card.addToWatchlist",
             "favorites.slot",
@@ -353,6 +358,10 @@ final class LocalizationCoverageTests: XCTestCase {
         ],
         // nl: 40
         "nl": [
+            // "Details" è olandese corretto e "watchlist" un prestito consolidato
+            // (come import.report.details e lists.watchlist già in lista).
+            "ai.card.details",
+            "ai.history.inWatchlist",
             "clips.card.addToWatchlist",
             "clips.search.quotes",
             "clips.title",
