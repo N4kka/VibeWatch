@@ -81,6 +81,7 @@ for file in "$MIGRATIONS"/*.sql; do
     20260804150000_import_report_fuori_struttura.sql) ;;
     20260805100000_catalog_refresh_cron.sql) ;;
     20260805120000_import_report_excluded_visible.sql) ;;
+    20260812100000_next_episode_resumes_from_progress.sql) ;;
     *) continue ;;
   esac
   [ "$pass" = 1 ] && echo "   $(basename "$file")"
