@@ -196,7 +196,7 @@ class AIRecommendationViewModel: ObservableObject {
             )
 
             // Switch to Cerebras
-            let (content, tokens) = try await cerebrasService.chat(
+            let (content, tokens, serverUsage) = try await cerebrasService.chat(
                 history: history,
                 prompt: prompt,
                 systemPrompt: systemPrompt
@@ -204,9 +204,14 @@ class AIRecommendationViewModel: ObservableObject {
 
             let aiMessage = AIMessage(content: content, isUser: false)
             messages.append(aiMessage)
-            
-            // Record Usage
-            aiTokenManager.recordUsage()
+
+            // Record Usage: il proxy ritorna il conteggio autorevole negli header; il +1 locale
+            // resta solo come fallback per risposte senza header.
+            if let serverUsage {
+                aiTokenManager.applyServerUsage(used: serverUsage.requestsUsed, limit: serverUsage.dailyLimit)
+            } else {
+                aiTokenManager.recordUsage()
+            }
             await syncWithTokenManager()
 
             await conversationMemory.append(

@@ -1,8 +1,12 @@
 import { serve } from 'https://deno.land/std@0.131.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import {
+  GLOBAL_DAILY_TOKEN_BUDGET,
+  QuotaBucket,
+  bucketForRequest,
   dailyLimitForTier,
   hasReachedDailyLimit,
+  parseRequestBody,
   requestBodyForCerebras,
   usageCountForToday,
   usageDayKey,
@@ -93,11 +97,12 @@ async function requestsUsedToday(
   adminSupabase: SupabaseAdminClient,
   userId: string,
   todayKey: string,
+  bucket: QuotaBucket,
 ): Promise<number> {
   try {
     const { data, error } = await adminSupabase
       .from('user_ai_token_usage')
-      .select('request_count, usage_date, last_updated')
+      .select('request_count, aux_request_count, usage_date, last_updated')
       .eq('user_id', userId)
       .limit(1)
 
@@ -106,20 +111,22 @@ async function requestsUsedToday(
       return 0
     }
 
-    return usageCountForToday(data?.[0] ?? null, todayKey)
+    return usageCountForToday(data?.[0] ?? null, todayKey, bucket)
   } catch (error) {
     console.warn('Failed to read AI request usage:', error)
   }
 
-  try {
-    const { data, error } = await adminSupabase.rpc('get_ai_token_usage', {
-      p_user_id: userId,
-    })
-    if (!error && typeof data === 'number') {
-      return data
+  if (bucket === 'chat') {
+    try {
+      const { data, error } = await adminSupabase.rpc('get_ai_token_usage', {
+        p_user_id: userId,
+      })
+      if (!error && typeof data === 'number') {
+        return data
+      }
+    } catch (_) {
+      // Ignore: quota should fail open if both tracking paths are unavailable.
     }
-  } catch (_) {
-    // Ignore: quota should fail open if both tracking paths are unavailable.
   }
 
   return 0
@@ -128,21 +135,51 @@ async function requestsUsedToday(
 async function recordSuccessfulRequest(
   adminSupabase: SupabaseAdminClient,
   userId: string,
+  bucket: QuotaBucket,
 ) {
-  // Single writer for the daily request counter: the log_ai_token_usage RPC. It increments
-  // request_count atomically on (user_id, usage_date), so it needs no read-modify-write and
-  // has no conflict-target bug. (The previous direct upsert used onConflict 'user_id' while the
-  // primary key is (user_id, usage_date), so it never succeeded and always fell through to here.)
+  // Single writer for the daily request counters: the log_ai_request_usage RPC increments the
+  // bucket's column atomically on (user_id, usage_date), so it needs no read-modify-write.
   try {
-    const { error } = await adminSupabase.rpc('log_ai_token_usage', {
+    const { error } = await adminSupabase.rpc('log_ai_request_usage', {
       p_user_id: userId,
-      p_requests: 1,
+      p_bucket: bucket,
     })
     if (error) {
       console.warn('AI request usage logging failed:', error.message)
     }
   } catch (error) {
     console.warn('AI request usage logging failed:', error)
+  }
+}
+
+// Circuit breaker sul budget giornaliero della key Cerebras (1M token/day): oltre la soglia il
+// proxy smette di inoltrare. Fail-open: se la lettura fallisce non si blocca il traffico.
+async function globalTokensUsedToday(adminSupabase: SupabaseAdminClient): Promise<number> {
+  try {
+    const { data, error } = await adminSupabase.rpc('get_ai_global_tokens_today')
+    if (!error && typeof data === 'number') {
+      return data
+    }
+    if (error) {
+      console.warn('Failed to read global AI token usage:', error.message)
+    }
+  } catch (error) {
+    console.warn('Failed to read global AI token usage:', error)
+  }
+  return 0
+}
+
+async function recordGlobalTokens(adminSupabase: SupabaseAdminClient, tokens: number) {
+  if (!Number.isFinite(tokens) || tokens <= 0) return
+  try {
+    const { error } = await adminSupabase.rpc('log_ai_global_tokens', {
+      p_tokens: Math.round(tokens),
+    })
+    if (error) {
+      console.warn('Global AI token logging failed:', error.message)
+    }
+  } catch (error) {
+    console.warn('Global AI token logging failed:', error)
   }
 }
 
@@ -172,29 +209,44 @@ serve(async (req) => {
       return jsonResponse({ error: 'Supabase service role key is not configured' }, 500)
     }
 
+    // 3. Parse the body first: the quota bucket depends on the client-sent feature tag.
+    const body = await req.text()
+    let parsedBody: Record<string, unknown>
+    try {
+      parsedBody = parseRequestBody(body)
+    } catch (_) {
+      return jsonResponse({ error: 'Invalid JSON request body' }, 400)
+    }
+    const bucket = bucketForRequest(parsedBody)
+
     const adminSupabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
     const todayKey = usageDayKey()
     const isPro = await isProUser(user.id)
-    const usedToday = await requestsUsedToday(adminSupabase, user.id, todayKey)
-    const dailyLimit = dailyLimitForTier(isPro)
+    const usedToday = await requestsUsedToday(adminSupabase, user.id, todayKey, bucket)
+    const dailyLimit = dailyLimitForTier(isPro, bucket)
 
-    if (hasReachedDailyLimit(usedToday, isPro)) {
+    if (hasReachedDailyLimit(usedToday, isPro, bucket)) {
       return jsonResponse({
         error: 'Daily AI request limit reached',
         requestsUsedToday: usedToday,
         dailyLimit,
         isPro,
+        bucket,
       }, 429)
     }
 
-    // 3. Forward request to Cerebras with gateway-owned model selection.
-    const body = await req.text()
-    let cerebrasBody: string
-    try {
-      cerebrasBody = JSON.stringify(requestBodyForCerebras(body))
-    } catch (_) {
-      return jsonResponse({ error: 'Invalid JSON request body' }, 400)
+    // Circuit breaker: la key Cerebras ha ~1M token/day; oltre la soglia si smette di inoltrare
+    // per tutti, a prescindere dalle quote individuali.
+    const globalTokens = await globalTokensUsedToday(adminSupabase)
+    if (globalTokens > GLOBAL_DAILY_TOKEN_BUDGET) {
+      return jsonResponse({
+        error: 'global_capacity',
+        message: 'Daily AI capacity reached, try again tomorrow',
+      }, 429)
     }
+
+    // 4. Forward request to Cerebras with gateway-owned model selection.
+    const cerebrasBody = JSON.stringify(requestBodyForCerebras(parsedBody))
 
     const cerebrasResp = await fetch(CEREBRAS_ENDPOINT, {
       method: 'POST',
@@ -215,13 +267,28 @@ serve(async (req) => {
       }, cerebrasResp.status)
     }
 
-    // 4. Count one successful chatbot request.
-    await recordSuccessfulRequest(adminSupabase, user.id)
+    // 5. Count one successful request on the right bucket + feed the global token ledger.
+    await recordSuccessfulRequest(adminSupabase, user.id, bucket)
+    try {
+      const totalTokens = JSON.parse(respBody)?.usage?.total_tokens
+      if (typeof totalTokens === 'number') {
+        await recordGlobalTokens(adminSupabase, totalTokens)
+      }
+    } catch (_) {
+      // Il ledger globale e best-effort: una risposta non parsabile non blocca il flusso.
+    }
 
-    // 5. Return raw Cerebras response.
+    // 6. Return raw Cerebras response, with authoritative usage in headers so the client can
+    // sync its badge without re-fetching (kills the local double-count reconciliation).
     return new Response(respBody, {
       status: cerebrasResp.status,
-      headers: { 'Content-Type': 'application/json' }
+      headers: {
+        'Content-Type': 'application/json',
+        'X-AI-Bucket': bucket,
+        'X-AI-Requests-Used': String(usedToday + 1),
+        'X-AI-Daily-Limit': String(dailyLimit),
+        'X-AI-Is-Pro': String(isPro),
+      }
     })
   } catch (error) {
     console.error('cerebras-proxy error:', error)

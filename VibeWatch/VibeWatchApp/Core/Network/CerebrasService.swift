@@ -16,6 +16,8 @@ struct CerebrasChatRequest: Codable {
     let maxTokens: Int?
     let temperature: Double?
     let stream: Bool
+    /// Quota bucket tag consumed by cerebras-proxy ("chat" or "aux"); stripped before forwarding.
+    let feature: String
 
     enum CodingKeys: String, CodingKey {
         case model
@@ -23,6 +25,28 @@ struct CerebrasChatRequest: Codable {
         case maxTokens = "max_tokens"
         case temperature
         case stream
+        case feature
+    }
+}
+
+/// Authoritative usage snapshot returned by cerebras-proxy in X-AI-* response headers.
+struct AIServerUsage {
+    let bucket: String
+    let requestsUsed: Int
+    let dailyLimit: Int
+    let isPro: Bool
+
+    init?(httpResponse: HTTPURLResponse) {
+        guard
+            let usedString = httpResponse.value(forHTTPHeaderField: "X-AI-Requests-Used"),
+            let limitString = httpResponse.value(forHTTPHeaderField: "X-AI-Daily-Limit"),
+            let used = Int(usedString),
+            let limit = Int(limitString)
+        else { return nil }
+        self.requestsUsed = used
+        self.dailyLimit = limit
+        self.bucket = httpResponse.value(forHTTPHeaderField: "X-AI-Bucket") ?? "chat"
+        self.isPro = httpResponse.value(forHTTPHeaderField: "X-AI-Is-Pro") == "true"
     }
 }
 
@@ -89,11 +113,12 @@ class CerebrasService {
         let host = base.replacingOccurrences(of: ".supabase.co", with: ".functions.supabase.co")
         return "\(host)/cerebras-proxy"
     }()
-    // User-facing chatbot model for Cerebras-backed requests.
-    private let defaultModel = "llama3.1-8b"
+    // Placeholder: il model effettivo lo decide cerebras-proxy (quota.ts CHATBOT_MODEL),
+    // che sovrascrive sempre questo campo.
+    private let defaultModel = "gateway-managed"
 
     private init() {
-        Logger.info("[CerebrasService] Initialized with model: \(defaultModel)")
+        Logger.info("[CerebrasService] Initialized (model selection is gateway-owned)")
     }
 
     // MARK: - Content Enhancement
@@ -258,12 +283,12 @@ class CerebrasService {
     ///   - history: Previous messages in the conversation
     ///   - prompt: The new user message
     ///   - systemPrompt: Optional system override
-    /// - Returns: Tuple of (response text, token usage)
+    /// - Returns: Tuple of (response text, token usage, authoritative server-side quota usage)
     func chat(
         history: [AIChatMessage],
         prompt: String,
         systemPrompt: String? = nil
-    ) async throws -> (content: String, tokens: Int) {
+    ) async throws -> (content: String, tokens: Int, serverUsage: AIServerUsage?) {
         
         guard let url = URL(string: baseURL) else {
             throw CerebrasError.invalidURL
@@ -297,7 +322,8 @@ class CerebrasService {
             messages: messages,
             maxTokens: 1024,
             temperature: 0.7,
-            stream: false
+            stream: false,
+            feature: "chat"
         )
 
         do {
@@ -325,14 +351,15 @@ class CerebrasService {
         do {
             let decodedResponse = try JSONDecoder().decode(CerebrasChatResponse.self, from: data)
             var content = decodedResponse.choices.first?.message.responseText ?? ""
-            
+
             // Clean content: remove <think>...</think> or similar reasoning tags if present
             content = cleanAIResponse(content)
-            
+
             let tokens = decodedResponse.usage?.totalTokens ?? 0
-            
+            let serverUsage = AIServerUsage(httpResponse: httpResponse)
+
             Logger.debug("[CerebrasService] Chat generated \(tokens) tokens")
-            return (content, tokens)
+            return (content, tokens, serverUsage)
         } catch {
             Logger.error("[CerebrasService] Decoding Error: \(error.localizedDescription)")
             throw CerebrasError.decodingError
@@ -522,7 +549,8 @@ class CerebrasService {
             messages: messages,
             maxTokens: 1024,
             temperature: 0.7,
-            stream: false
+            stream: false,
+            feature: "aux"
         )
 
         do {
