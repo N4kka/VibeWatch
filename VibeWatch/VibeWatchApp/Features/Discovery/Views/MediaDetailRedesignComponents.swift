@@ -1,5 +1,129 @@
 import SwiftUI
 
+// MARK: - Barra di navigazione fissa
+
+/// Quanto è stato scrollato il contenuto di una schermata di dettaglio, in punti dall'alto.
+///
+/// Un `PreferenceKey` e non `onScrollGeometryChange`: il target minimo è iOS 17 e quell'API
+/// arriva con la 18.
+struct DetailScrollOffsetKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
+
+    /// Il valore da mettere nello `@State`, non quello grezzo.
+    ///
+    /// Grezzo, la preferenza cambia a ogni fotogramma di scorrimento e ridisegna l'intera
+    /// schermata di dettaglio — caroselli compresi — per una barra che deve solo sfumare. Qui si
+    /// arrotonda a passi di 3 punti e si taglia a 300: oltre quella soglia la barra è già del
+    /// tutto comparsa, quindi per tutto il resto della pagina il valore **non cambia più** e non
+    /// si rivaluta niente.
+    static func quantized(_ raw: CGFloat) -> CGFloat {
+        let clamped = min(max(0, raw), 300)
+        return (clamped / 3).rounded() * 3
+    }
+}
+
+extension View {
+    /// Misura lo scorrimento del contenuto dentro lo spazio di coordinate `space`.
+    ///
+    /// Va messo sul contenuto della ScrollView; la ScrollView dichiara lo stesso
+    /// `.coordinateSpace(name:)` e il chiamante legge il valore con `onPreferenceChange`.
+    func measuringDetailScrollOffset(in space: String) -> some View {
+        background(
+            GeometryReader { proxy in
+                Color.clear.preference(
+                    key: DetailScrollOffsetKey.self,
+                    value: -proxy.frame(in: .named(space)).minY
+                )
+            }
+        )
+    }
+}
+
+/// Il back button (più l'eventuale condivisione) che resta in alto mentre il contenuto scorre.
+///
+/// Prima i due bottoni stavano dentro l'hero, cioè dentro la ScrollView: bastavano due dita di
+/// scorrimento e per tornare indietro si doveva risalire tutta la pagina, o ricordarsi dello
+/// swipe dal bordo. Ora vivono in un overlay ancorato all'alto e non si muovono mai.
+///
+/// Fermi in cima la barra è invisibile — solo i due cerchi scuri sul backdrop, com'era — e
+/// compare (sfondo + titolo) man mano che l'hero esce di scena: una barra opaca da subito
+/// taglierebbe in due l'immagine di apertura, che è il pezzo di design che si sta difendendo.
+struct StickyDetailNavBar: View {
+    let title: String
+    /// Punti scrollati dall'alto, da `DetailScrollOffsetKey`.
+    let scrollOffset: CGFloat
+    /// Per la pagina di una stagione, dove il titolo è sempre stato scritto nella barra.
+    var showsTitleAlways = false
+    let onBack: () -> Void
+    var onShare: (() -> Void)?
+
+    /// Lo sfondo entra appena il contenuto si muove: senza, i cerchi finirebbero sopra il testo
+    /// della pagina senza niente che li separi.
+    private var backgroundOpacity: Double { ramp(from: 12, to: 64) }
+    /// Il titolo entra più tardi, quando quello grande dell'hero è ormai passato sotto la barra:
+    /// averli entrambi a schermo insieme li fa sembrare un errore.
+    private var titleOpacity: Double { showsTitleAlways ? 1 : ramp(from: 210, to: 268) }
+
+    private func ramp(from start: CGFloat, to end: CGFloat) -> Double {
+        guard scrollOffset > start else { return 0 }
+        return Double(min(1, (scrollOffset - start) / (end - start)))
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            circleButton(icon: "chevron.left", action: onBack)
+            Spacer(minLength: 8)
+            if let onShare {
+                circleButton(icon: "square.and.arrow.up", action: onShare)
+            }
+        }
+        .overlay {
+            Text(title)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(.theme.textPrimary)
+                .lineLimit(1)
+                // Larghezza dei due cerchi più il respiro: un titolo lungo si tronca invece di
+                // finirci sotto.
+                .padding(.horizontal, 56)
+                .opacity(titleOpacity)
+                .allowsHitTesting(false)
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 20)
+        .padding(.bottom, 10)
+        .background {
+            Color.theme.background
+                .opacity(0.94 * backgroundOpacity)
+                .overlay(alignment: .bottom) {
+                    Rectangle()
+                        .fill(Color.white.opacity(0.08))
+                        .frame(height: 1)
+                        .opacity(backgroundOpacity)
+                }
+                // La barra sta dentro l'area sicura, lo sfondo no: senza questo, sotto la barra
+                // scorrerebbe il contenuto nudo all'altezza dell'orologio.
+                .ignoresSafeArea(edges: .top)
+                // Uno sfondo trasparente resta comunque tappabile, e questo sta sopra la
+                // ScrollView: senza, la striscia in alto si mangerebbe le dita che iniziano uno
+                // scorrimento da lì. Interattivi restano solo i due cerchi.
+                .allowsHitTesting(false)
+        }
+    }
+
+    private func circleButton(icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundColor(.white)
+                .frame(width: 44, height: 44)
+                .background(Color.black.opacity(0.44))
+                .clipShape(Circle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 struct MediaDetailHero: View {
     let backdropURL: URL?
     let title: String
@@ -9,8 +133,6 @@ struct MediaDetailHero: View {
     let rating: String
     let voteCount: Int
     let affinityPercent: Int
-    let onBack: () -> Void
-    let onShare: () -> Void
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
@@ -73,17 +195,6 @@ struct MediaDetailHero: View {
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 20)
-
-            VStack {
-                HStack {
-                    heroButton(icon: "chevron.left", action: onBack)
-                    Spacer()
-                    heroButton(icon: "square.and.arrow.up", action: onShare)
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 20)
-                Spacer()
-            }
         }
         .frame(height: 340)
     }
@@ -101,18 +212,6 @@ struct MediaDetailHero: View {
         Text("·")
             .font(.system(size: 15, weight: .heavy))
             .foregroundColor(.theme.textSecondary)
-    }
-
-    private func heroButton(icon: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: icon)
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundColor(.white)
-                .frame(width: 44, height: 44)
-                .background(Color.black.opacity(0.44))
-                .clipShape(Circle())
-        }
-        .buttonStyle(.plain)
     }
 }
 

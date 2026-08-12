@@ -20,7 +20,11 @@ struct TVShowDetailView: View {
     @State private var showWhyForMeSheet = false
     @State private var showAIPaywall = false
     @State private var showMarkAllSeenConfirmation = false
-    
+    /// Quanto si è scrollato: lo legge la barra fissa per decidere quando comparire.
+    @State private var scrollOffset: CGFloat = 0
+
+    private static let scrollSpace = "tvShowDetailScroll"
+
     init(tvShowId: Int) {
         _viewModel = StateObject(wrappedValue: TVShowDetailViewModel(tvShowId: tvShowId))
     }
@@ -50,6 +54,13 @@ struct TVShowDetailView: View {
 
     private var shouldShowAd: Bool {
         !quotaManager.isProUser
+    }
+
+    /// Niente da condividere finché la serie non è caricata: la barra mostra il solo back button,
+    /// che durante il caricamento prima non c'era affatto.
+    private var shareAction: (() -> Void)? {
+        guard let tvShow = viewModel.tvShow else { return nil }
+        return { Task { await handleShare(tvShow: tvShow) } }
     }
 
     private var isAllSeasonsSeen: Bool {
@@ -86,9 +97,7 @@ struct TVShowDetailView: View {
                             genres: tvShow.genres?.map(\.name) ?? [],
                             rating: tvShow.rating,
                             voteCount: tvShow.voteCount,
-                            affinityPercent: tvShow.ratingPercentage,
-                            onBack: { dismiss() },
-                            onShare: { Task { await handleShare(tvShow: tvShow) } }
+                            affinityPercent: tvShow.ratingPercentage
                         )
 
                         // Il margine sta sui singoli blocchi, non sul contenitore: le sezioni con
@@ -147,6 +156,12 @@ struct TVShowDetailView: View {
                         .padding(.bottom, shouldShowAd ? 90 : 40)
                     }
                 }
+                .measuringDetailScrollOffset(in: Self.scrollSpace)
+            }
+            .coordinateSpace(name: Self.scrollSpace)
+            .onPreferenceChange(DetailScrollOffsetKey.self) { raw in
+                let stepped = DetailScrollOffsetKey.quantized(raw)
+                if stepped != scrollOffset { scrollOffset = stepped }
             }
 
             if shouldShowAd {
@@ -154,6 +169,15 @@ struct TVShowDetailView: View {
                     .frame(height: 50)
             }
 
+        }
+        .overlay(alignment: .top) {
+            // Fuori dalla ScrollView: è ciò che la tiene ferma mentre il contenuto scorre.
+            StickyDetailNavBar(
+                title: viewModel.tvShow?.name ?? "",
+                scrollOffset: scrollOffset,
+                onBack: { dismiss() },
+                onShare: shareAction
+            )
         }
         .background(Color.theme.background.ignoresSafeArea())
         .navigationBarHidden(true)

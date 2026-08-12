@@ -19,13 +19,24 @@ struct MovieDetailView: View {
     @State private var selectedActor: Cast?
     @State private var showWhyForMeSheet = false
     @State private var showAIPaywall = false
-    
+    /// Quanto si è scrollato: lo legge la barra fissa per decidere quando comparire.
+    @State private var scrollOffset: CGFloat = 0
+
+    private static let scrollSpace = "movieDetailScroll"
+
     init(movieId: Int) {
         _viewModel = StateObject(wrappedValue: MovieDetailViewModel(movieId: movieId))
     }
     
     private var shouldShowAd: Bool {
         !quotaManager.isProUser
+    }
+
+    /// Niente da condividere finché il film non è caricato: la barra mostra il solo back button,
+    /// che durante il caricamento prima non c'era affatto.
+    private var shareAction: (() -> Void)? {
+        guard let movie = viewModel.movie else { return nil }
+        return { Task { await handleShare(movie: movie) } }
     }
 
     var body: some View {
@@ -45,9 +56,7 @@ struct MovieDetailView: View {
                             genres: movie.genres?.map(\.name) ?? [],
                             rating: movie.rating,
                             voteCount: movie.voteCount,
-                            affinityPercent: movie.ratingPercentage,
-                            onBack: { dismiss() },
-                            onShare: { Task { await handleShare(movie: movie) } }
+                            affinityPercent: movie.ratingPercentage
                         )
 
                         // Il margine sta sui singoli blocchi, non sul contenitore: le sezioni con
@@ -108,6 +117,12 @@ struct MovieDetailView: View {
                         .padding(.bottom, shouldShowAd ? 90 : 40)
                     }
                 }
+                .measuringDetailScrollOffset(in: Self.scrollSpace)
+            }
+            .coordinateSpace(name: Self.scrollSpace)
+            .onPreferenceChange(DetailScrollOffsetKey.self) { raw in
+                let stepped = DetailScrollOffsetKey.quantized(raw)
+                if stepped != scrollOffset { scrollOffset = stepped }
             }
 
             if shouldShowAd {
@@ -115,6 +130,15 @@ struct MovieDetailView: View {
                     .frame(height: 50)
             }
 
+        }
+        .overlay(alignment: .top) {
+            // Fuori dalla ScrollView: è ciò che la tiene ferma mentre il contenuto scorre.
+            StickyDetailNavBar(
+                title: viewModel.movie?.title ?? "",
+                scrollOffset: scrollOffset,
+                onBack: { dismiss() },
+                onShare: shareAction
+            )
         }
         .background(Color.theme.background.ignoresSafeArea())
         .navigationBarHidden(true)
