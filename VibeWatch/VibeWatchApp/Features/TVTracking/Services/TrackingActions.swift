@@ -380,12 +380,20 @@ final class TrackingActions {
             throw ActionError.showNotInCatalog
         }
 
-        // L'annuncio mancava, e con lui il pezzo visibile: l'espansione scriveva gli eventi, il
-        // server ricalcolava, il pull riempiva lo specchio — e Tracking e Scopri continuavano a
-        // mostrare la serie dov'era, perché nessuno gli aveva detto di rileggere. Da fuori:
-        // "l'ho segnata vista tutta e nel Tracking non risulta in pari".
-        await syncEngine.pullTrackingState()
-        Self.announceTrackingChanged()
+        // E poi lo stato, che è la metà che mancava.
+        //
+        // L'espansione scrive solo `watch_events`: `user_status` non lo tocca nessuno, di
+        // proposito — è l'unica colonna che appartiene all'utente. Ma per una serie che era
+        // `dropped` o `archived` il bucket resta quello **anche con tutti gli episodi visti**, e
+        // `tv_tracking_bucket` lo mette davanti a tutto il resto: la serie non compare né in
+        // "Visti" né in watchlist né nel Tracking, e il chip "Visto" del dettaglio resta spento.
+        // Marcare vista una serie e vederla sparire è il modo peggiore di riuscire. In produzione
+        // ne sono state trovate 16 in questo stato, tutte con `completed_at` valorizzato.
+        //
+        // Dichiarare "l'ho vista tutta" è anche dire che la si segue di nuovo: `active` è
+        // l'unico stato in cui i contatori significano qualcosa. `setStatus` porta con sé
+        // push, pull e annuncio, quindi da qui la schermata si riallinea da sé.
+        try await setStatus(showId: showId, to: "active")
     }
 
     /// Il contraltare: lapide su tutti gli eventi della serie + `dropped`, in un'unica RPC —

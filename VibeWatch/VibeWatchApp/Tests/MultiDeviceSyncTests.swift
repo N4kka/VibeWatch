@@ -2874,6 +2874,22 @@ final class ListsTrackingFusionTests: XCTestCase {
         XCTAssertTrue(sync.queued.filter { $0.table == "list_items" }.isEmpty)
     }
 
+    /// Una serie `dropped` — tolta dalla watchlist, o rimasta così da un giro precedente —
+    /// restava `dropped` anche dopo il "vista tutta": gli episodi risultavano visti in SeasonView
+    /// ma il bucket la nascondeva da tutte le liste e il chip "Visto" del dettaglio non si
+    /// accendeva. In produzione se ne sono trovate 16 così, tutte finite e invisibili.
+    func test_segnareSerieVista_laRiportaAttiva_ancheSeEraDropped() async throws {
+        seedTracking(1396, bucket: "dropped", name: "Breaking Bad")
+        await manager.loadListsFromSQLite()
+
+        try await manager.addToList(listId: manager.seenList.id,
+                                    movie: tvShow(1396, "Breaking Bad"), mediaType: .tv)
+
+        let stateOps = sync.queued.filter { $0.table == "tv_show_state" }
+        XCTAssertEqual(stateOps.last?.payload["user_status"] as? String, "active",
+                       "dichiarare di averla vista tutta è anche tornare a seguirla")
+    }
+
     func test_serieFuoriCatalogo_erroreVisibile_nonSuccessoVuoto() async throws {
         await manager.loadListsFromSQLite()
         seenBackend.showsWithoutCatalog = [42]
