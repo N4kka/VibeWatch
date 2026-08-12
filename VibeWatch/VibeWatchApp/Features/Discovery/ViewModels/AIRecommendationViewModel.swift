@@ -10,6 +10,27 @@ class AIRecommendationViewModel: ObservableObject {
     @Published var error: String?
     /// Chip filtro attive: diventano vincoli nel system prompt.
     @Published var activeFilters: [AIChatFilter] = []
+
+    /// Chip disponibili: le piattaforme scelte dall'utente (se presenti) + i filtri fissi.
+    var availableFilters: [AIChatFilter] {
+        var filters: [AIChatFilter] = []
+        let names = ProviderSelectionCodec.decodeNames(
+            UserDefaults.standard.data(forKey: "selectedProviderNames") ?? Data()
+        )
+        if !names.isEmpty {
+            filters.append(.myPlatforms(names.sorted()))
+        }
+        filters.append(contentsOf: [.recent, .shorter, .hiddenGems])
+        return filters
+    }
+
+    func toggleFilter(_ filter: AIChatFilter) {
+        if let index = activeFilters.firstIndex(of: filter) {
+            activeFilters.remove(at: index)
+        } else {
+            activeFilters.append(filter)
+        }
+    }
     
     // Daily Request Quota Management (service is request-based)
     @Published var requestsUsedToday: Int = 0
@@ -259,6 +280,82 @@ class AIRecommendationViewModel: ObservableObject {
     func requestMore() async {
         prompt = "ai.moreLikeThese".localized
         await sendMessage()
+    }
+
+    /// Titolo della chat corrente per il sottotitolo dell'header: primo messaggio utente,
+    /// troncato a confine di parola.
+    var chatTitle: String? {
+        guard let first = messages.first(where: { $0.isUser })?.content else { return nil }
+        return Self.chatTitle(from: first)
+    }
+
+    static func chatTitle(from firstUserMessage: String, maxLength: Int = 40) -> String {
+        let collapsed = firstUserMessage
+            .components(separatedBy: .whitespacesAndNewlines)
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+        guard collapsed.count > maxLength else { return collapsed }
+        let cut = collapsed.prefix(maxLength)
+        let trimmed = cut.lastIndex(of: " ").map { String(cut[..<$0]) } ?? String(cut)
+        return trimmed + "…"
+    }
+
+    /// Nuova chat: azzera la sessione della memoria conversazionale e la UI.
+    func startNewChat() async {
+        await conversationMemory.resetSession()
+        messages = []
+        prompt = ""
+        error = nil
+    }
+
+    // MARK: - Multi-chat
+
+    @Published var sessions: [AIChatSessionSummary] = []
+
+    func loadSessions() async {
+        sessions = await conversationMemory.listSessions()
+    }
+
+    /// Riapre una chat dalla cronologia.
+    func selectSession(_ sessionId: String) async {
+        await conversationMemory.switchSession(to: sessionId)
+        hydrateMessagesFromMemory()
+        error = nil
+    }
+
+    /// Quanti dei titoli proposti in una sessione sono ora in watchlist (meta "2 in watchlist").
+    func watchlistCount(for summary: AIChatSessionSummary) -> Int {
+        let listManager = ListManager.shared
+        let watchlistIds = Set(listManager.watchlist.items.map { $0.mediaId })
+        return summary.proposedMediaIds.filter { watchlistIds.contains($0) }.count
+    }
+
+    // MARK: - Card actions
+
+    func isCardInWatchlist(_ card: AIRecommendationCardModel) -> Bool {
+        let listManager = ListManager.shared
+        return listManager.isInList(listId: listManager.watchlist.id, mediaId: card.tmdbId, mediaType: card.mediaType)
+    }
+
+    /// "+ Aggiungi": salva il titolo della card in watchlist.
+    func addCardToWatchlist(_ card: AIRecommendationCardModel) async {
+        let listManager = ListManager.shared
+        do {
+            try await listManager.addToList(
+                listId: listManager.watchlist.id,
+                movie: card.asMovie(),
+                mediaType: card.mediaType
+            )
+        } catch {
+            Logger.warning("[AIRecommendationViewModel] addCardToWatchlist failed: \(error)")
+        }
+    }
+
+    /// Feedback pollice su/giù sull'ultima risposta (v1: stato locale + log).
+    func recordFeedback(for messageId: UUID, positive: Bool) {
+        guard let index = messages.firstIndex(where: { $0.id == messageId }) else { return }
+        messages[index].feedback = positive
+        Logger.info("[AIRecommendationViewModel] Feedback \(positive ? "up" : "down") on message \(messageId)")
     }
     
     func toggleEdit(for messageId: UUID) {

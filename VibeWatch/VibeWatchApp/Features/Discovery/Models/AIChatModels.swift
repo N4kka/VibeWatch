@@ -27,12 +27,41 @@ struct AIMessage: Identifiable, Equatable {
     var isEditing: Bool = false
     var text: String
     var cards: [AIRecommendationCardModel]
+    /// Feedback pollice su/giù dell'utente su questa risposta (solo UI/analytics, v1 locale).
+    var feedback: Bool?
 
     init(content: String, isUser: Bool, text: String? = nil, cards: [AIRecommendationCardModel] = []) {
         self.content = content
         self.isUser = isUser
         self.text = text ?? content
         self.cards = cards
+        self.feedback = nil
+    }
+}
+
+extension AIRecommendationCardModel {
+    /// Movie sintetico per ListManager.addToList (stesso pattern di MediaListItem.asMovie()).
+    func asMovie() -> Movie {
+        Movie(
+            id: tmdbId,
+            title: title,
+            overview: "",
+            posterPath: posterPath,
+            backdropPath: nil,
+            releaseDate: year.map { "\($0)-01-01" },
+            voteAverage: 0.0,
+            voteCount: 0,
+            genreIds: nil,
+            genres: nil,
+            adult: false,
+            originalLanguage: "",
+            popularity: 0.0,
+            runtime: nil,
+            status: nil,
+            tagline: nil,
+            productionCountries: nil,
+            imdbId: nil
+        )
     }
 }
 
