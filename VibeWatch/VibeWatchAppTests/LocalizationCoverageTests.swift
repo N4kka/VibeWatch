@@ -180,6 +180,8 @@ final class LocalizationCoverageTests: XCTestCase {
         "filters.runtimeShort", "filters.runtimeMedium", "filters.runtimeLong",
         "auth.emailPlaceholder", "tracking.title", "tab.tracking",
         "gamification.levelShort",
+        // Nome proprio del formato di condivisione: resta inglese ovunque, come JustWatch.
+        "shareCard.instagramStories",
     ]
 
     /// I prestiti decisi lingua per lingua.
@@ -188,7 +190,7 @@ final class LocalizationCoverageTests: XCTestCase {
     /// lingue europee e in nessuna asiatica. Ogni voce qui è una scelta, non una dimenticanza:
     /// se una riga sparisce da questa mappa il test la segnala, ed è esattamente quello che serve.
     private static let prestitiPerLingua: [String: Set<String>] = [
-        // da: 27
+        // da: 28
         "da": [
             "auth.pwRule.symbol",
             "clips.card.addToWatchlist",
@@ -215,10 +217,12 @@ final class LocalizationCoverageTests: XCTestCase {
             "platforms.streaming",
             "profile.feedback.category.ui",
             "profile.feedback.sendButton",
+            // Il formato Instagram: in danese si dice "story", "historie" suonerebbe da fiaba.
+            "shareCard.format.story",
             "tracking.special",
             "update.versionFootnote",
         ],
-        // de: 30
+        // de: 32
         "de": [
             // "Details" è tedesco corretto (come import.report.details già in lista).
             "ai.card.details",
@@ -248,11 +252,14 @@ final class LocalizationCoverageTests: XCTestCase {
             "platforms.streaming",
             "profile.edit.bio",
             "profile.edit.name",
+            // "Story" e "Community" sono tedesco corrente (Instagram tedesco usa entrambi).
+            "shareCard.format.story",
+            "social.segment.community",
             "tab.clips",
             "tracking.special",
             "update.versionFootnote",
         ],
-        // es: 14
+        // es: 15
         "es": [
             "clips.title",
             "common.error",
@@ -266,6 +273,8 @@ final class LocalizationCoverageTests: XCTestCase {
             "platforms.streaming",
             "profile.legal",
             "search.scope.series",
+            // "Social" come tab.social, già in lista: stesso prestito, stessa parola.
+            "social.settings.title",
             "tab.clips",
             "tab.social",
         ],
@@ -275,7 +284,7 @@ final class LocalizationCoverageTests: XCTestCase {
             "genre.western",
             "mood.nostalgic",
         ],
-        // fr: 28
+        // fr: 30
         "fr": [
             "clips.card.addToWatchlist",
             "clips.title",
@@ -302,11 +311,15 @@ final class LocalizationCoverageTests: XCTestCase {
             "profile.feedback.category.notifications",
             "profile.notifications",
             "settings.notifications.title",
+            // "Story" è il termine corrente in francese per il formato Instagram.
+            "shareCard.format.story",
+            // "Social" come tab.social, già in lista.
+            "social.settings.title",
             "tab.clips",
             "tab.social",
             "update.versionFootnote",
         ],
-        // it: 25
+        // it: 28
         "it": [
             // "watchlist" è un prestito consolidato in tutta l'app italiana (vedi
             // mediaDetail.action.watchlist): "2 in watchlist" è come parla l'utente.
@@ -334,10 +347,14 @@ final class LocalizationCoverageTests: XCTestCase {
             "profile.feedback.category.crash",
             "profile.group.account",
             "profile.passwordPlaceholder",
+            // "Post" e "Community" sono italiano corrente; "Social" come tab.social, già in lista.
+            "shareCard.format.post",
+            "social.segment.community",
+            "social.settings.title",
             "tab.social",
             "username.placeholder",
         ],
-        // nb: 16
+        // nb: 17
         "nb": [
             "auth.pwRule.symbol",
             "clips.card.addToWatchlist",
@@ -355,8 +372,10 @@ final class LocalizationCoverageTests: XCTestCase {
             "movieDetail.status",
             "movieDetail.trailer",
             "notifications.status",
+            // Il formato Instagram: anche in norvegese si dice "story".
+            "shareCard.format.story",
         ],
-        // nl: 40
+        // nl: 43
         "nl": [
             // "Details" è olandese corretto e "watchlist" un prestito consolidato
             // (come import.report.details e lists.watchlist già in lista).
@@ -399,11 +418,15 @@ final class LocalizationCoverageTests: XCTestCase {
             "profile.feedback.category.crash",
             "profile.group.account",
             "search.scope.series",
+            // "Story", "Post" e "Community" sono olandese corrente sui social.
+            "shareCard.format.post",
+            "shareCard.format.story",
+            "social.segment.community",
             "tab.clips",
             "tracking.action.later",
             "tracking.special",
         ],
-        // no: 16
+        // no: 17
         "no": [
             "auth.pwRule.symbol",
             "clips.card.addToWatchlist",
@@ -421,8 +444,10 @@ final class LocalizationCoverageTests: XCTestCase {
             "movieDetail.status",
             "movieDetail.trailer",
             "notifications.status",
+            // Come in nb: il formato Instagram resta "story".
+            "shareCard.format.story",
         ],
-        // pl: 11
+        // pl: 12
         "pl": [
             "auth.pwRule.symbol",
             "filters.min",
@@ -435,8 +460,10 @@ final class LocalizationCoverageTests: XCTestCase {
             "movieDetail.status",
             "notifications.status",
             "platforms.streaming",
+            // "Post" è polacco corrente; la story invece è "relacja".
+            "shareCard.format.post",
         ],
-        // pt: 13
+        // pt: 16
         "pt": [
             "clips.title",
             "common.item",
@@ -449,10 +476,14 @@ final class LocalizationCoverageTests: XCTestCase {
             "movieDetail.trailer",
             "platforms.cinema",
             "platforms.streaming",
+            // "Story" e "post" sono correnti nel portoghese brasiliano; "Social" come tab.social.
+            "shareCard.format.post",
+            "shareCard.format.story",
+            "social.settings.title",
             "tab.clips",
             "tab.social",
         ],
-        // sv: 19
+        // sv: 21
         "sv": [
             "auth.pwRule.symbol",
             "filters.max",
@@ -471,6 +502,9 @@ final class LocalizationCoverageTests: XCTestCase {
             "notifications.status",
             "platforms.streaming",
             "profile.edit.information",
+            // "Story" e "community" sono svedese corrente sui social.
+            "shareCard.format.story",
+            "social.segment.community",
             "tracking.special",
             "update.versionFootnote",
         ],
