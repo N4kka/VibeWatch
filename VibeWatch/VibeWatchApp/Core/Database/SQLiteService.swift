@@ -101,6 +101,13 @@ enum SQLiteTable: String, CaseIterable {
     // una lingua sola, e §13.6 vieta la rete al primo fotogramma. Locale e basta, niente sync.
     case localizedTitles = "localized_titles"
 
+    // Social feed M1. `user_reviews` e' lo specchio della review breve (id sintetico generato
+    // dal CLIENT, a differenza di user_ratings: report e activities la referenziano).
+    // `activity_feed_cache` e' locale e basta, come public_lists_cache: righe gia' pronte per
+    // la UI del feed, ritirate via RPC — nessun percorso di scrittura verso il server.
+    case userReviews = "user_reviews"
+    case activityFeedCache = "activity_feed_cache"
+
     /// All valid table names as a Set for O(1) lookup
     static let validTableNames: Set<String> = Set(SQLiteTable.allCases.map(\.rawValue))
 

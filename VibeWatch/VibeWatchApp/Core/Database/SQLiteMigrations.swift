@@ -8,7 +8,7 @@ extension SQLiteService {
     /// Run personalization migrations (Phase 1)
     func runPersonalizationMigrations() {
         let currentVersion = getPersonalizationMigrationVersion()
-        let latestVersion = 13
+        let latestVersion = 15
 
         guard currentVersion < latestVersion else {
             Logger.info("[SQLite] Personalization migrations already applied (version \(currentVersion))")
@@ -62,6 +62,12 @@ extension SQLiteService {
             }
             if currentVersion < 13 {
                 migration13_LocalizedTitlesLearnEpisodes()
+            }
+            if currentVersion < 14 {
+                migration14_AddSocialFeedTables()
+            }
+            if currentVersion < 15 {
+                migration15_AddFeedConsentToProfiles()
             }
 
             // Update migration version
@@ -313,7 +319,78 @@ extension SQLiteService {
         Logger.info("[SQLite] Migration 13 complete")
     }
 
+    /// Social feed M1 — lo specchio locale di `user_reviews` e la cache del feed.
+    ///
+    /// `user_reviews` e' `lastWriteWins` come `user_ratings`, ma con una differenza voluta:
+    /// l'id sintetico esiste e lo genera il CLIENT (report e `activities.review_id` lo
+    /// referenziano sul server). L'unicita' per titolo e' dell'indice unico parziale remoto:
+    /// qui basta l'indice di lookup, la convergenza multi-device la fa `apply_mutations`
+    /// mettendo la lapide alle altre righe vive della stessa chiave naturale.
+    ///
+    /// `activity_feed_cache` e' il gemello di `public_lists_cache`: righe gia' pronte per la
+    /// UI, mai una tabella di dominio. Si popola dalla prima pagina del feed per scope e si
+    /// legge offline — nessun percorso di scrittura verso il server, quindi niente outbox.
+    private func migration14_AddSocialFeedTables() {
+        Logger.info("[SQLite] Migration 14: Adding user_reviews and activity_feed_cache")
+
+        executeScript(createUserReviewsTable())
+        executeScript(createActivityFeedCacheTable())
+
+        Logger.info("[SQLite] Migration 14 complete")
+    }
+
+    /// Social feed M1: il consenso al feed sullo specchio `profiles`. Il pull dei profili fa
+    /// `SELECT *` e l'upsert filtra sulle colonne LOCALI — senza queste due, il timbro del
+    /// server (`feed_activated_at`) e il flag (`activity_feed_enabled`) verrebbero scartati
+    /// in silenzio a ogni sync, e l'annuncio si ripresenterebbe per sempre su ogni device.
+    /// Nullable di proposito: NULL = "mai risposto", che è un'informazione, non un default.
+    private func migration15_AddFeedConsentToProfiles() {
+        Logger.info("[SQLite] Migration 15: Adding feed consent columns to profiles")
+
+        if !columnExists("profiles", column: "activity_feed_enabled") {
+            execute("ALTER TABLE profiles ADD COLUMN activity_feed_enabled INTEGER")
+        }
+        if !columnExists("profiles", column: "feed_activated_at") {
+            execute("ALTER TABLE profiles ADD COLUMN feed_activated_at TEXT")
+        }
+
+        Logger.info("[SQLite] Migration 15 complete")
+    }
+
     // MARK: - Table Creation Methods
+
+    private func createUserReviewsTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS user_reviews (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            media_type TEXT NOT NULL,
+            tmdb_id INTEGER NOT NULL,
+            content TEXT NOT NULL,
+            contains_spoilers INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT,
+            updated_at TEXT,
+            deleted_at TEXT,
+            synced_at TEXT
+        );
+        -- La lettura calda: la review viva di UN titolo (ReviewActions.review(for:)).
+        CREATE INDEX IF NOT EXISTS idx_user_reviews_title
+            ON user_reviews(user_id, media_type, tmdb_id);
+        """
+    }
+
+    private func createActivityFeedCacheTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS activity_feed_cache (
+            scope TEXT NOT NULL,
+            activity_id TEXT NOT NULL,
+            position INTEGER NOT NULL,
+            payload_json TEXT NOT NULL,
+            cached_at TEXT DEFAULT (datetime('now')),
+            PRIMARY KEY (scope, activity_id)
+        );
+        """
+    }
 
     private func createLocalizedTitlesTable() -> String {
         """

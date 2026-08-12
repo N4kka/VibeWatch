@@ -772,8 +772,9 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
         }
     }
 
-    /// Le due tabelle del blocco 9 che le azioni riscaricano dopo una scrittura.
-    nonisolated static let profileContentTables = ["user_favorites", "user_ratings"]
+    /// Le tabelle di profilo che le azioni riscaricano dopo una scrittura (blocco 9 +
+    /// social feed M1: la review deve comparire subito dopo il salvataggio).
+    nonisolated static let profileContentTables = ["user_favorites", "user_ratings", "user_reviews"]
 
     /// Ritira **solo** favorites e voti, dopo un'azione di scrittura su uno dei due.
     ///
@@ -851,6 +852,9 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             // colonne della chiave — nessuna da sola e' unica nel sottoinsieme dell'utente.
             "user_favorites",
             "user_ratings",
+            // Social feed M1: la review breve. lastWriteWins come user_ratings, ma con id
+            // sintetico generato dal client — chiave e ordinamento restano quelli del default.
+            "user_reviews",
             "watch_events"
         ]
 

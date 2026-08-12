@@ -1301,7 +1301,11 @@ extension SupabaseService {
                 coverPosterPaths: row.cover_poster_paths ?? [],
                 followerCount: row.follower_count,
                 updatedAt: row.updated_at,
-                isFollowing: row.is_following
+                isFollowing: row.is_following,
+                ownerId: row.owner_id,
+                ownerUsername: row.owner_username,
+                ownerDisplayName: row.owner_display_name,
+                ownerAvatarUrl: row.owner_avatar_url
             )
         }
     }
@@ -1310,6 +1314,49 @@ extension SupabaseService {
     func blockListOwner(listId: String) async throws {
         _ = try await callRPC(function: "block_list_owner", payload: ["p_list_id": listId])
     }
+}
+
+// MARK: - Activity Feed (Social feed M1)
+
+extension SupabaseService {
+    /// Il feed attività via RPC `get_activity_feed`. La RPC applica già privacy (opt-out),
+    /// blocchi nei due versi e lo scope; la paginazione è keyset su (occurred_at, activity_id):
+    /// `before` è la coda dell'ultima pagina, mai un offset — le card nuove in testa non fanno
+    /// scivolare le pagine successive.
+    func fetchActivityFeed(scope: ActivityFeedScope, userId: UUID?,
+                           before: (Date, UUID)?, limit: Int) async throws -> [ActivityItem] {
+        guard let client = client else { throw SupabaseError.notConfigured }
+        // Il cursore viaggia come stringa ISO8601 con i frazionali: l'encoder di default
+        // troncherebbe ai secondi e il confronto `occurred_at < p_before` salterebbe righe.
+        let cursorFormatter = ISO8601DateFormatter()
+        cursorFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let rows: [ActivityItem] = try await client
+            .rpc("get_activity_feed", params: ActivityFeedParams(
+                p_scope: scope.rawValue,
+                p_user: userId?.uuidString.lowercased(),
+                p_before: before.map { cursorFormatter.string(from: $0.0) },
+                p_before_id: before.map { $0.1.uuidString.lowercased() },
+                p_limit: limit
+            ))
+            .execute()
+            .value
+        return rows
+    }
+
+    /// Opt-out (e rientro) dal feed: `set_activity_feed_visibility` scrive il flag sul profilo
+    /// lato server — nessuna colonna da conoscere qui, nessuna RLS da rilassare.
+    func setActivityFeedVisibility(_ enabled: Bool) async throws {
+        _ = try await callRPC(function: "set_activity_feed_visibility",
+                              payload: ["p_enabled": enabled])
+    }
+}
+
+private struct ActivityFeedParams: Encodable {
+    let p_scope: String
+    let p_user: String?
+    let p_before: String?
+    let p_before_id: String?
+    let p_limit: Int
 }
 
 private struct PublicListsParams: Encodable {
@@ -1330,6 +1377,12 @@ private struct PublicListRow: Decodable {
     let cover_poster_paths: [String]?
     let follower_count: Int
     let is_following: Bool
+    // Social feed M1: l'autore esce dall'anonimato. Optional non per pigrizia: un server non
+    // ancora migrato non manda le colonne, e il feed liste deve continuare a decodificarsi.
+    let owner_id: String?
+    let owner_username: String?
+    let owner_display_name: String?
+    let owner_avatar_url: String?
 }
 
 private struct ListItemsWithProvidersParams: Encodable {

@@ -89,6 +89,34 @@ final class SQLiteTableWhitelistTests: XCTestCase {
             "watch_providers must be writable through the whitelisted CRUD layer")
     }
 
+    /// Social feed M1: le due tabelle nuove sono scrivibili dal primo giorno — la lezione di
+    /// watch_providers (creata ma mai whitelisted, cache muta per mesi), non ripetuta.
+    func testSocialFeedTablesArePersistable() async throws {
+        _ = try await service.insert("user_reviews", values: [
+            "id": "r-1",
+            "user_id": "u1",
+            "media_type": "movie",
+            "tmdb_id": 603,
+            "content": "Una review",
+            "contains_spoilers": 0,
+            "updated_at": "2026-08-12T00:00:00Z"
+        ])
+        let reviews = try await service.queryRaw(
+            "SELECT content FROM user_reviews WHERE id = ?", parameters: ["r-1"])
+        XCTAssertEqual(reviews.first?["content"] as? String, "Una review")
+
+        _ = try await service.insert("activity_feed_cache", values: [
+            "scope": "following",
+            "activity_id": "a-1",
+            "position": 0,
+            "payload_json": "{}"
+        ])
+        let cached = try await service.queryRaw(
+            "SELECT payload_json FROM activity_feed_cache WHERE scope = ?",
+            parameters: ["following"])
+        XCTAssertEqual(cached.first?["payload_json"] as? String, "{}")
+    }
+
     // MARK: - Helpers
 
     /// Table names present in the freshly created database, minus SQLite's own bookkeeping and the
