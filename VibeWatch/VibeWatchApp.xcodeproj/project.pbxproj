@@ -57,6 +57,7 @@
 		E8A7B6C5D4E3F20123456789 /* WatchProvidersRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8A7B6C5D4E3F2012345678A /* WatchProvidersRepositoryTests.swift */; };
 		E8A7B6C5D4E3F2012345678B /* WatchProviderLoadStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8A7B6C5D4E3F2012345678C /* WatchProviderLoadStateTests.swift */; };
 		E8B7C6D5A4F3920123456790 /* AIQuotaConfigurationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8B7C6D5A4F3920123456791 /* AIQuotaConfigurationTests.swift */; };
+		E8B7C6D5A4F39201234567A0 /* AIResponseParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8B7C6D5A4F39201234567A1 /* AIResponseParserTests.swift */; };
 		E8B7C6D5A4F3920123456792 /* MediaListItemTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8B7C6D5A4F3920123456793 /* MediaListItemTests.swift */; };
 		E8B7C6D5A4F3920123456794 /* DetailLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8B7C6D5A4F3920123456795 /* DetailLayoutTests.swift */; };
 		F00D00000000000000000001 /* RedesignPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00D00000000000000000002 /* RedesignPresentationTests.swift */; };
@@ -118,6 +119,7 @@
 		E8A7B6C5D4E3F2012345678A /* WatchProvidersRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchProvidersRepositoryTests.swift; sourceTree = "<group>"; };
 		E8A7B6C5D4E3F2012345678C /* WatchProviderLoadStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchProviderLoadStateTests.swift; sourceTree = "<group>"; };
 		E8B7C6D5A4F3920123456791 /* AIQuotaConfigurationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIQuotaConfigurationTests.swift; sourceTree = "<group>"; };
+		E8B7C6D5A4F39201234567A1 /* AIResponseParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIResponseParserTests.swift; sourceTree = "<group>"; };
 		E8B7C6D5A4F3920123456793 /* MediaListItemTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaListItemTests.swift; sourceTree = "<group>"; };
 		E8B7C6D5A4F3920123456795 /* DetailLayoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailLayoutTests.swift; sourceTree = "<group>"; };
 		F00D00000000000000000002 /* RedesignPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RedesignPresentationTests.swift; sourceTree = "<group>"; };
@@ -216,6 +218,7 @@
 				E8A7B6C5D4E3F2012345678A /* WatchProvidersRepositoryTests.swift */,
 				E8A7B6C5D4E3F2012345678C /* WatchProviderLoadStateTests.swift */,
 				E8B7C6D5A4F3920123456791 /* AIQuotaConfigurationTests.swift */,
+				E8B7C6D5A4F39201234567A1 /* AIResponseParserTests.swift */,
 				E8B7C6D5A4F3920123456793 /* MediaListItemTests.swift */,
 				E8B7C6D5A4F3920123456795 /* DetailLayoutTests.swift */,
 				F00D00000000000000000002 /* RedesignPresentationTests.swift */,
@@ -453,6 +456,7 @@
 				E8A7B6C5D4E3F20123456789 /* WatchProvidersRepositoryTests.swift in Sources */,
 				E8A7B6C5D4E3F2012345678B /* WatchProviderLoadStateTests.swift in Sources */,
 				E8B7C6D5A4F3920123456790 /* AIQuotaConfigurationTests.swift in Sources */,
+				E8B7C6D5A4F39201234567A0 /* AIResponseParserTests.swift in Sources */,
 				E8B7C6D5A4F3920123456792 /* MediaListItemTests.swift in Sources */,
 				E8B7C6D5A4F3920123456794 /* DetailLayoutTests.swift in Sources */,
 				F00D00000000000000000001 /* RedesignPresentationTests.swift in Sources */,
