@@ -18,8 +18,10 @@ final class StarRatingViewModel: ObservableObject {
     @Published private(set) var isSaving = false
     @Published private(set) var saveFailed = false
 
-    private let mediaType: String
-    private let tmdbId: Int
+    /// Leggibili dalla View: la riga review e la card condivisa hanno bisogno della stessa
+    /// identità del titolo, e duplicarla nella View sarebbe la copia che diverge.
+    let mediaType: String
+    let tmdbId: Int
     private let actions: RatingActions
     private let sqlite: SQLiteService
     private let currentUserId: @MainActor () -> String?
@@ -96,20 +98,46 @@ struct StarRatingSection: View {
     @State private var starsWidth: CGFloat = 0
     @State private var dragX: CGFloat = 0
 
+    /// La review viva del titolo (specchio locale). Solo movie/tv: per gli altri media type
+    /// l'affordance non esiste, come la tabella remota vuole.
+    @State private var review: ReviewActions.LocalReview?
+    @State private var showComposer = false
+    /// Item-based: la card nasce già con poster e firma risolti, mai un foglio mezzo vuoto.
+    @State private var shareItem: RatedTitleShareItem?
+    @State private var isPreparingShare = false
+
     private let haptics = UISelectionFeedbackGenerator()
 
     /// Quando è incorporata nella card condivisa con i preferiti, lo sfondo lo mette il
     /// contenitore: due sfondi sovrapposti disegnerebbero un bordo dove non c'è.
     private let isEmbedded: Bool
 
-    init(mediaType: String, tmdbId: Int, isEmbedded: Bool = false) {
+    /// Identità del titolo per la card condivisibile: senza titolo la card non si compone e
+    /// l'affordance di share non compare. I chiamanti storici non passano niente e la sezione
+    /// resta identica a prima.
+    private let title: String?
+    private let posterPath: String?
+
+    init(mediaType: String, tmdbId: Int, isEmbedded: Bool = false,
+         title: String? = nil, posterPath: String? = nil) {
         _viewModel = StateObject(wrappedValue: StarRatingViewModel(mediaType: mediaType, tmdbId: tmdbId))
         self.isEmbedded = isEmbedded
+        self.title = title
+        self.posterPath = posterPath
     }
 
-    init(viewModel: StarRatingViewModel, isEmbedded: Bool = false) {
+    init(viewModel: StarRatingViewModel, isEmbedded: Bool = false,
+         title: String? = nil, posterPath: String? = nil) {
         _viewModel = StateObject(wrappedValue: viewModel)
         self.isEmbedded = isEmbedded
+        self.title = title
+        self.posterPath = posterPath
+    }
+
+    /// Le review sono un fatto di film e serie interi ('movie'|'tv', come il CHECK remoto):
+    /// per qualsiasi altro media type la riga sotto le stelle non deve nemmeno esistere.
+    private var supportsReview: Bool {
+        ["movie", "tv"].contains(viewModel.mediaType)
     }
 
     /// Da `x` sulla riga delle stelle al voto 1-10. Pura, così si può verificare senza toccare
@@ -147,7 +175,22 @@ struct StarRatingSection: View {
                     )
             }
         }
-        .task { await viewModel.load() }
+        .task {
+            await viewModel.load()
+            await loadReview()
+        }
+        .sheet(isPresented: $showComposer) {
+            ReviewComposerView(
+                mediaType: viewModel.mediaType,
+                tmdbId: viewModel.tmdbId,
+                existingReview: review,
+                onSaved: { Task { await loadReview() } },
+                onDeleted: { review = nil }
+            )
+        }
+        .sheet(item: $shareItem) { item in
+            ShareCardSheet(content: item.content, onClose: { shareItem = nil })
+        }
     }
 
     private var content: some View {
@@ -166,10 +209,118 @@ struct StarRatingSection: View {
                     .font(.system(size: 12))
                     .foregroundColor(.red)
             }
+
+            // La riga review+share compare solo A VALLE del voto: le stelle restano il
+            // protagonista della sezione, e senza voto la card non avrebbe niente da dire.
+            if supportsReview && viewModel.rating > 0 {
+                reviewShareRow
+            }
         }
         .padding(.horizontal, 17)
+        // Con la sola riga del titolo il totale resta sotto `minHeight` e il layout storico
+        // non si muove; quando c'è la riga review il padding evita che tocchi il bordo.
+        .padding(.vertical, 13)
         .frame(maxWidth: .infinity)
         .frame(minHeight: 66)
+    }
+
+    // MARK: - Review e condivisione (social feed M1)
+
+    private var reviewShareRow: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            Divider().overlay(Color.white.opacity(0.08))
+
+            HStack(alignment: .center, spacing: 10) {
+                Button {
+                    showComposer = true
+                } label: {
+                    if let review {
+                        // Anteprima su due righe, in corsivo come sulla card: il tap riapre
+                        // il composer precompilato.
+                        HStack(alignment: .firstTextBaseline, spacing: 7) {
+                            Image(systemName: "pencil")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(.theme.textSecondary)
+                            Text("\u{201C}\(review.content)\u{201D}")
+                                .font(.system(size: 13))
+                                .italic()
+                                .foregroundColor(.theme.textSecondary)
+                                .multilineTextAlignment(.leading)
+                                .lineLimit(2)
+                        }
+                    } else {
+                        HStack(spacing: 7) {
+                            Image(systemName: "pencil")
+                                .font(.system(size: 12, weight: .semibold))
+                            Text("review.add".localized)
+                                .font(.system(size: 13.5, weight: .semibold))
+                        }
+                        .foregroundColor(.theme.textSecondary)
+                    }
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text((review == nil
+                                          ? "review.composer.title"
+                                          : "review.composer.editTitle").localized))
+
+                Spacer(minLength: 8)
+
+                if title != nil {
+                    shareButton
+                }
+            }
+        }
+        .padding(.top, 3)
+    }
+
+    private var shareButton: some View {
+        Button {
+            prepareShare()
+        } label: {
+            Group {
+                if isPreparingShare {
+                    ProgressView()
+                        .scaleEffect(0.6)
+                        .tint(.theme.textSecondary)
+                } else {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.theme.textSecondary)
+                }
+            }
+            .frame(width: 30, height: 30)
+            .background(Circle().fill(Color.white.opacity(0.07)))
+        }
+        .buttonStyle(.plain)
+        .disabled(isPreparingShare)
+        .accessibilityLabel(Text("shareCard.share".localized))
+    }
+
+    private func loadReview() async {
+        guard supportsReview else { return }
+        review = await ReviewActions.shared.review(for: viewModel.mediaType, tmdbId: viewModel.tmdbId)
+    }
+
+    /// La card si prepara prima di presentare il foglio: poster e firma arrivano in async e
+    /// un foglio aperto "a metà" mostrerebbe il placeholder per poi cambiare faccia.
+    private func prepareShare() {
+        guard let title, !isPreparingShare, viewModel.rating > 0 else { return }
+        isPreparingShare = true
+        Task {
+            let poster = await ShareCardRenderer.posterImage(path: posterPath)
+            let username = await ShareCardIdentity.username()
+            // Una review segnata spoiler non finisce su una card pubblica: la card resta
+            // voto+poster, che non rovinano niente a nessuno.
+            let quote = (review?.containsSpoilers == false) ? review?.content : nil
+            shareItem = RatedTitleShareItem(content: .ratedTitle(.init(
+                title: title,
+                rating: viewModel.rating,
+                review: quote,
+                username: username,
+                poster: poster
+            )))
+            isPreparingShare = false
+        }
     }
 
     private var starsRow: some View {
@@ -236,6 +387,12 @@ struct StarRatingSection: View {
                 .allowsHitTesting(false)
                 .transition(.opacity)
         }
+    }
+
+    /// Wrapper Identifiable per `.sheet(item:)`: il contenuto della card da solo non basta.
+    fileprivate struct RatedTitleShareItem: Identifiable {
+        let id = UUID()
+        let content: ShareCardContent
     }
 
     private func starView(_ star: Int) -> some View {

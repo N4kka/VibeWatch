@@ -20,7 +20,11 @@ struct TVShowDetailView: View {
     @State private var showWhyForMeSheet = false
     @State private var showAIPaywall = false
     @State private var showMarkAllSeenConfirmation = false
-    
+    /// Quanto si è scrollato: lo legge la barra fissa per decidere quando comparire.
+    @State private var scrollOffset: CGFloat = 0
+
+    private static let scrollSpace = "tvShowDetailScroll"
+
     init(tvShowId: Int) {
         _viewModel = StateObject(wrappedValue: TVShowDetailViewModel(tvShowId: tvShowId))
     }
@@ -50,6 +54,13 @@ struct TVShowDetailView: View {
 
     private var shouldShowAd: Bool {
         !quotaManager.isProUser
+    }
+
+    /// Niente da condividere finché la serie non è caricata: la barra mostra il solo back button,
+    /// che durante il caricamento prima non c'era affatto.
+    private var shareAction: (() -> Void)? {
+        guard let tvShow = viewModel.tvShow else { return nil }
+        return { Task { await handleShare(tvShow: tvShow) } }
     }
 
     private var isAllSeasonsSeen: Bool {
@@ -86,9 +97,7 @@ struct TVShowDetailView: View {
                             genres: tvShow.genres?.map(\.name) ?? [],
                             rating: tvShow.rating,
                             voteCount: tvShow.voteCount,
-                            affinityPercent: tvShow.ratingPercentage,
-                            onBack: { dismiss() },
-                            onShare: { Task { await handleShare(tvShow: tvShow) } }
+                            affinityPercent: tvShow.ratingPercentage
                         )
 
                         // Il margine sta sui singoli blocchi, non sul contenitore: le sezioni con
@@ -131,7 +140,8 @@ struct TVShowDetailView: View {
                                     .padding(.horizontal, 20)
                             }
 
-                            MediaRatingFavoriteCard(mediaType: "tv", tmdbId: tvShow.id)
+                            MediaRatingFavoriteCard(mediaType: "tv", tmdbId: tvShow.id,
+                                                    title: tvShow.name, posterPath: tvShow.posterPath)
                                 .padding(.horizontal, 20)
                             MediaWhyForMeCard { handleWhyForMeTap() }
                                 .padding(.horizontal, 20)
@@ -147,6 +157,12 @@ struct TVShowDetailView: View {
                         .padding(.bottom, shouldShowAd ? 90 : 40)
                     }
                 }
+                .measuringDetailScrollOffset(in: Self.scrollSpace)
+            }
+            .coordinateSpace(name: Self.scrollSpace)
+            .onPreferenceChange(DetailScrollOffsetKey.self) { raw in
+                let stepped = DetailScrollOffsetKey.quantized(raw)
+                if stepped != scrollOffset { scrollOffset = stepped }
             }
 
             if shouldShowAd {
@@ -154,6 +170,15 @@ struct TVShowDetailView: View {
                     .frame(height: 50)
             }
 
+        }
+        .overlay(alignment: .top) {
+            // Fuori dalla ScrollView: è ciò che la tiene ferma mentre il contenuto scorre.
+            StickyDetailNavBar(
+                title: viewModel.tvShow?.name ?? "",
+                scrollOffset: scrollOffset,
+                onBack: { dismiss() },
+                onShare: shareAction
+            )
         }
         .background(Color.theme.background.ignoresSafeArea())
         .navigationBarHidden(true)
@@ -178,17 +203,9 @@ struct TVShowDetailView: View {
                     episodeCount: viewModel.displaySeasons.reduce(0) { $0 + $1.episodeCount },
                     onConfirm: {
                         showMarkAllSeenConfirmation = false
-                        Task {
-                            let toastId = ToastCenter.shared.begin(
-                                message: "mediaDetail.toast.markingSeen".localized
-                            )
-                            await handleSeenTap(tvShow: tvShow, movie: movie, silent: true)
-                            EpisodeSeenManager.shared.markShowSeen(showId: tvShow.id)
-                            ToastCenter.shared.complete(
-                                toastId,
-                                message: "mediaDetail.toast.markedSeen".localized
-                            )
-                        }
+                        // Stessa azione delle liste, in un posto solo: eventi lato server, flag
+                        // locale per la lista episodi, toast.
+                        Task { await MarkShowSeen.apply(show: movie) }
                     },
                     onCancel: {
                         showMarkAllSeenConfirmation = false
@@ -371,9 +388,12 @@ struct TVShowDetailView: View {
         }
     }
 
-    private func handleSeenTap(tvShow: TVShow, movie: Movie, silent: Bool = false) async {
+    /// Il chip "Visto" quando la serie è GIÀ vista, cioè lo smarcamento: la direzione opposta
+    /// passa dal foglio di conferma e da `MarkShowSeen.apply`, perché segnare vista una serie
+    /// intera è una decisione da confermare, toglierla no.
+    private func handleSeenTap(tvShow: TVShow, movie: Movie) async {
         let wasActive = listManager.isInList(listId: listManager.seenList.id, mediaId: tvShow.id, mediaType: .tv)
-        let mutation: () async throws -> Void = {
+        await runWithFeedback(.seen, willBeActive: !wasActive, context: "Toggle Seen") {
             if wasActive {
                 if let item = listManager.seenList.items.first(where: { $0.mediaId == tvShow.id && $0.mediaType == .tv }) {
                     try await listManager.removeFromList(listId: listManager.seenList.id, itemId: item.id)
@@ -383,16 +403,6 @@ struct TVShowDetailView: View {
                 try await listManager.addToList(listId: listManager.seenList.id, movie: movie, mediaType: .tv)
             }
         }
-
-        // "Segna tutta la serie" ha già il suo toast: qui non se ne apre un secondo.
-        guard !silent else {
-            do { try await mutation() } catch {
-                ErrorHandler.shared.handle(error, context: "Toggle Seen")
-            }
-            return
-        }
-
-        await runWithFeedback(.seen, willBeActive: !wasActive, context: "Toggle Seen", mutation)
     }
     
     private func handleLikedTap(tvShow: TVShow, movie: Movie) async {
@@ -827,108 +837,6 @@ struct SeasonsCarouselSection: View {
 }
 
 // MARK: - Mark All Seen Confirmation
-
-struct MarkAllSeenConfirmationSheet: View {
-    let posterURL: URL?
-    let showName: String
-    let seasonCount: Int
-    let episodeCount: Int
-    let onConfirm: () -> Void
-    let onCancel: () -> Void
-
-    var body: some View {
-        VWModalSheet(
-            title: "tvDetail.markAllSeenTitle".localized,
-            subtitle: "tvDetail.markAllSeenSubtitle".localized,
-            onClose: onCancel,
-            primaryTitle: String(format: "tvDetail.markAllSeenCTA".localized, episodeCount),
-            primaryAction: onConfirm,
-            secondaryTitle: "common.cancel".localized,
-            secondaryAction: onCancel
-        ) {
-            VStack(spacing: 14) {
-                showCard
-                summaryCard
-                reversibleNote
-            }
-        }
-    }
-
-    private var showCard: some View {
-        HStack(spacing: 14) {
-            Group {
-                if let posterURL {
-                    CachedAsyncImage(url: posterURL, maxPixelSize: 300)
-                        .aspectRatio(contentMode: .fill)
-                } else {
-                    Color.white.opacity(0.08)
-                }
-            }
-            .frame(width: 52, height: 76)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(showName)
-                    .font(.system(size: 17, weight: .bold))
-                    .foregroundColor(.theme.textPrimary)
-                    .lineLimit(2)
-
-                Text(subtitleCounts)
-                    .font(.system(size: 14))
-                    .foregroundColor(.theme.textSecondary)
-            }
-
-            Spacer(minLength: 0)
-        }
-        .padding(14)
-        .background(RoundedRectangle(cornerRadius: 17).fill(Color.white.opacity(0.065)))
-        .overlay(
-            RoundedRectangle(cornerRadius: 17)
-                .stroke(Color.white.opacity(0.07), lineWidth: 1)
-        )
-    }
-
-    private var subtitleCounts: String {
-        let seasons = String(format: "tvDetail.seasonsCount".localized, seasonCount)
-        let episodes = String(format: "tvDetail.episodesCount".localized, episodeCount)
-        return "\(seasons) · \(episodes)"
-    }
-
-    private var summaryCard: some View {
-        // La riga "esperienza guadagnata" della reference non c'è: la gamification non espone
-        // un XP per episodio visto, e un numero inventato sarebbe peggio di una riga in meno.
-        VStack(spacing: 18) {
-            VWModalSummaryRow(
-                icon: "checkmark",
-                iconColor: .green,
-                title: "tvDetail.markAllSeen.episodes".localized,
-                value: "\(episodeCount)",
-                valueColor: .green
-            )
-            VWModalSummaryRow(
-                icon: "line.3.horizontal",
-                iconColor: .theme.textSecondary,
-                title: "tvDetail.markAllSeen.diary".localized,
-                value: String(format: "tvDetail.seasonsCount".localized, seasonCount)
-            )
-        }
-        .padding(16)
-        .background(RoundedRectangle(cornerRadius: 17).fill(Color.white.opacity(0.065)))
-    }
-
-    private var reversibleNote: some View {
-        HStack(spacing: 9) {
-            Image(systemName: "arrow.counterclockwise")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(.theme.textSecondary)
-            Text("tvDetail.markAllSeenReversible".localized)
-                .font(.system(size: 13))
-                .foregroundColor(.theme.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: 0)
-        }
-    }
-}
 
 struct SeasonCard: View {
     let season: Season

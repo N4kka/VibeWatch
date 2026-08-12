@@ -72,14 +72,21 @@ final class TVShowsTrackingViewModel: ObservableObject {
             }
             lastError = nil
 
-            // Self-heal per le righe nate senza catalogo (pre-fix di addToWatchlist): una serie
-            // NON in pari senza prossimo episodio è una serie di cui il server non conosce gli
-            // episodi — la card "Da iniziare" senza copertina e col check pieno. Si riscalda il
-            // catalogo, si fa ricalcolare lo stato e la schermata si riallinea all'annuncio.
+            // Self-heal per le righe nate senza catalogo (pre-fix di addToWatchlist): zero
+            // episodi TOTALI vuol dire che il server non conosce gli episodi di quella serie —
+            // la card senza copertina, senza prossimo episodio e col progresso su un denominatore
+            // che non esiste. Si riscalda il catalogo, si fa ricalcolare lo stato e la schermata
+            // si riallinea all'annuncio.
+            //
+            // Il filtro era `bucket != .upToDate`, e lasciava fuori proprio il caso peggiore: una
+            // serie con episodi visti ma senza catalogo finisce in `up_to_date` (watched > 0,
+            // nessun arretrato possibile senza episodi da confrontare) — cioè in una sezione
+            // chiusa di default, dove nessuno la vede e nessuno la ripara. `totalCount == 0` dice
+            // la stessa cosa senza dipendere dal bucket, e una serie davvero finita non lo è mai.
             let broken = sections.sections
-                .filter { $0.bucket != .upToDate }
                 .flatMap(\.rows)
-                .filter { $0.nextSeason == nil && !catalogRepairAttempted.contains($0.showId) }
+                .filter { $0.totalCount == 0 && $0.nextSeason == nil
+                          && !catalogRepairAttempted.contains($0.showId) }
             if !broken.isEmpty {
                 broken.forEach { catalogRepairAttempted.insert($0.showId) }
                 Task { [weak self] in

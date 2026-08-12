@@ -354,11 +354,17 @@ final class MockSyncEngine: SyncEngineProtocol, @unchecked Sendable {
     }
     private(set) var trackingPulls = 0
     private(set) var profileContentPulls = 0
+    /// L'ordine in cui sono arrivate le chiamate: dopo un "visto" il push deve precedere il pull,
+    /// o si ritira uno stato server che l'evento non ha ancora ricevuto.
+    private(set) var calls: [String] = []
 
     func performFullSync(trigger: SyncTrigger) async {}
-    func pushPendingChanges() async {}
+    func pushPendingChanges() async { calls.append("push") }
     func pullFromRemote() async {}
-    func pullTrackingState() async { trackingPulls += 1 }
+    func pullTrackingState() async {
+        trackingPulls += 1
+        calls.append("pullTracking")
+    }
     func pullProfileContent() async { profileContentPulls += 1 }
 }
 
@@ -2868,6 +2874,22 @@ final class ListsTrackingFusionTests: XCTestCase {
         XCTAssertTrue(sync.queued.filter { $0.table == "list_items" }.isEmpty)
     }
 
+    /// Una serie `dropped` — tolta dalla watchlist, o rimasta così da un giro precedente —
+    /// restava `dropped` anche dopo il "vista tutta": gli episodi risultavano visti in SeasonView
+    /// ma il bucket la nascondeva da tutte le liste e il chip "Visto" del dettaglio non si
+    /// accendeva. In produzione se ne sono trovate 16 così, tutte finite e invisibili.
+    func test_segnareSerieVista_laRiportaAttiva_ancheSeEraDropped() async throws {
+        seedTracking(1396, bucket: "dropped", name: "Breaking Bad")
+        await manager.loadListsFromSQLite()
+
+        try await manager.addToList(listId: manager.seenList.id,
+                                    movie: tvShow(1396, "Breaking Bad"), mediaType: .tv)
+
+        let stateOps = sync.queued.filter { $0.table == "tv_show_state" }
+        XCTAssertEqual(stateOps.last?.payload["user_status"] as? String, "active",
+                       "dichiarare di averla vista tutta è anche tornare a seguirla")
+    }
+
     func test_serieFuoriCatalogo_erroreVisibile_nonSuccessoVuoto() async throws {
         await manager.loadListsFromSQLite()
         seenBackend.showsWithoutCatalog = [42]
@@ -2905,5 +2927,47 @@ final class ListsTrackingFusionTests: XCTestCase {
         let stateOps = sync.queued.filter { $0.table == "tv_show_state" }
         XCTAssertEqual(stateOps.first?.payload["user_status"] as? String, "dropped",
                        "rimuovere non è cancellare la riga: è dropped, che la fa sparire ovunque")
+    }
+
+    // MARK: Visto ⇒ non più da vedere
+
+    /// Un film segnato visto restava anche fra quelli da vedere: due liste che si contraddicono,
+    /// e la watchlist che non si svuota mai. Per le serie succedeva già da sé (watchlist e
+    /// "visti" sono due letture dello stesso stato); i film no.
+    func test_segnareFilmVisto_loToglieDallaWatchlist() async throws {
+        await manager.loadListsFromSQLite()
+        try await manager.addToList(listId: manager.watchlist.id,
+                                    movie: tvShow(603, "Matrix"), mediaType: .movie)
+        XCTAssertTrue(manager.watchlist.items.contains { $0.mediaId == 603 })
+
+        try await manager.addToList(listId: manager.seenList.id,
+                                    movie: tvShow(603, "Matrix"), mediaType: .movie)
+
+        XCTAssertFalse(manager.watchlist.items.contains { $0.mediaId == 603 },
+                       "visto vuol dire non più da vedere")
+        XCTAssertTrue(manager.seenList.items.contains { $0.mediaId == 603 })
+    }
+
+    /// La regola non tocca le altre liste: "mi piace" e i visti convivono, anzi si presuppongono.
+    func test_segnareFilmVisto_nonSvuotaLeAltreListe() async throws {
+        await manager.loadListsFromSQLite()
+        try await manager.addToList(listId: manager.likedList.id,
+                                    movie: tvShow(603, "Matrix"), mediaType: .movie)
+
+        try await manager.addToList(listId: manager.seenList.id,
+                                    movie: tvShow(603, "Matrix"), mediaType: .movie)
+
+        XCTAssertTrue(manager.likedList.items.contains { $0.mediaId == 603 })
+    }
+
+    /// Un film che nella watchlist non c'è non deve far fallire il "visto": la rimozione è
+    /// un di più, il visto è l'operazione.
+    func test_segnareFilmVistoSenzaWatchlist_nonFallisce() async throws {
+        await manager.loadListsFromSQLite()
+
+        try await manager.addToList(listId: manager.seenList.id,
+                                    movie: tvShow(603, "Matrix"), mediaType: .movie)
+
+        XCTAssertTrue(manager.seenList.items.contains { $0.mediaId == 603 })
     }
 }

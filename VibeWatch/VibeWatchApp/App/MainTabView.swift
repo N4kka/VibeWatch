@@ -257,18 +257,9 @@ struct MainTabView: View {
         // secondo non si chiude affatto se dentro non c'e' un pulsante — ed e' com'era, un
         // pannello senza uscita. Il pulsante c'e' lo stesso, perche' lo swipe non si vede.
         .sheet(isPresented: $showAI) {
-            NavigationStack {
-                AIRecommendationsView(viewModel: aiViewModel)
-                    .toolbar {
-                        ToolbarItem(placement: .topBarLeading) {
-                            Button { showAI = false } label: {
-                                Image(systemName: "chevron.down")
-                                    .font(.system(size: 15, weight: .semibold))
-                            }
-                            .accessibilityLabel(Text("common.close".localized))
-                        }
-                    }
-            }
+            // Il pulsante di chiusura ora vive nell'header interno della pagina (AIChatHeader),
+            // quindi niente NavigationStack/toolbar: la pagina e' autosufficiente.
+            AIRecommendationsView(viewModel: aiViewModel)
         }
         // SPEC v3 §9.4: `/@{username}` presenta il profilo come sheet, da qualunque tab. La
         // destinazione è la stessa schermata della ricerca; qui serve il suo NavigationStack

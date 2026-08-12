@@ -162,6 +162,72 @@ select t.is_true((select backlog_since is not null from public.tv_show_state whe
             'la serie torna in arretrato');
 
 \echo ''
+\echo '=== il prossimo episodio riparte dal punto raggiunto, non dal primo buco (bug 2.7)'
+
+-- Serie a parte e utente a parte: le asserzioni su 100 sono in sequenza fra loro e infilarsi in
+-- mezzo e' gia' costato due test sbagliati in questo file.
+insert into public.tmdb_shows (tmdb_show_id, name, status, in_production, number_of_seasons)
+values (400, 'Pechino Express', 'Returning Series', true, 3);
+insert into public.tmdb_episodes (tmdb_show_id, season_number, episode_number, air_date, runtime_minutes)
+select 400, s, n, current_date - 300, 90
+from generate_series(1, 3) s, generate_series(1, 8) n;
+
+-- L'utente parte dalla terza stagione senza aver visto le prime due: e' il caso segnalato.
+insert into public.watch_events
+  (user_id, media_type, tmdb_show_id, season_number, episode_number, watched_at, source)
+values ('11111111-1111-1111-1111-111111111111', 'tv', 400, 3, 1, now(), 'manual');
+
+select t.eq((select next_season from public.tv_show_state where tmdb_show_id = 400), 3,
+            'next resta nella stagione da cui l''utente ha iniziato');
+select t.eq((select next_episode from public.tv_show_state where tmdb_show_id = 400), 2,
+            'e punta a S3E2, non a S1E1');
+select t.eq((select watched_count from public.tv_show_state where tmdb_show_id = 400), 1,
+            'il progresso resta onesto: 1 episodio su 24, i buchi dietro contano nel denominatore');
+select t.eq((select bucket from public.v_tv_tracking where tmdb_show_id = 400), 'up_next',
+            'la serie e'' in "Continua a guardare", non ferma in fondo');
+
+-- Segnare un episodio piu' avanti (il tap dalla lista episodi di una stagione qualsiasi) sposta
+-- il puntatore: e' il secondo bug segnalato, "da SeasonView non aggiorna niente".
+insert into public.watch_events
+  (user_id, media_type, tmdb_show_id, season_number, episode_number, watched_at, source)
+values ('11111111-1111-1111-1111-111111111111', 'tv', 400, 3, 5, now(), 'manual');
+
+select t.eq((select next_episode from public.tv_show_state where tmdb_show_id = 400), 6,
+            'dopo S3E5 il prossimo e'' S3E6, non il buco di S3E2');
+
+-- Un recupero all'indietro non fa tornare indietro il puntatore.
+insert into public.watch_events
+  (user_id, media_type, tmdb_show_id, season_number, episode_number, watched_at, source)
+values ('11111111-1111-1111-1111-111111111111', 'tv', 400, 1, 1, now(), 'manual');
+
+select t.eq((select next_season from public.tv_show_state where tmdb_show_id = 400), 3,
+            'recuperare S1E1 non riporta il prossimo alla prima stagione');
+select t.eq((select next_episode from public.tv_show_state where tmdb_show_id = 400), 6,
+            'il punto raggiunto e'' il piu'' avanti, non il piu'' recente');
+
+-- Arrivati in fondo con dei buchi dietro: niente prossimo episodio, l'utente e' "in pari".
+insert into public.watch_events
+  (user_id, media_type, tmdb_show_id, season_number, episode_number, watched_at, source)
+values ('11111111-1111-1111-1111-111111111111', 'tv', 400, 3, 8, now(), 'manual');
+
+select t.eq((select next_season from public.tv_show_state where tmdb_show_id = 400), null,
+            'visto l''ultimo episodio, non c''e'' un prossimo da proporre');
+select t.eq((select bucket from public.v_tv_tracking where tmdb_show_id = 400), 'up_to_date',
+            'bucket = up_to_date, con la barra ancora a 4/24: i buchi si vedono, non si ripropongono');
+
+-- Chi non ha visto niente riparte dall'inizio, come prima.
+insert into public.tv_show_state (user_id, tmdb_show_id, user_status)
+values ('22222222-2222-2222-2222-222222222222', 400, 'active');
+select public.recompute_tv_show_state('22222222-2222-2222-2222-222222222222', 400);
+
+select t.eq((select next_season from public.tv_show_state
+              where user_id = '22222222-2222-2222-2222-222222222222' and tmdb_show_id = 400), 1,
+            'senza eventi il prossimo e'' il primo episodio del catalogo');
+select t.eq((select next_episode from public.tv_show_state
+              where user_id = '22222222-2222-2222-2222-222222222222' and tmdb_show_id = 400), 1,
+            'S1E1');
+
+\echo ''
 \echo '=== §3.4 bucket'
 
 select t.eq(public.tv_tracking_bucket('active', 0, null), 'not_started', 'not_started');
@@ -244,9 +310,16 @@ select t.eq((select count(*)::integer from pg_proc where proname = 'get_tv_track
 set local role authenticated;
 set local request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
 
-select t.eq((select count(*)::integer from public.watch_events), 15,
+-- Si asserisce l'assenza delle righe altrui, non un totale scritto a mano: il totale cresce ogni
+-- volta che si aggiunge una fixture sopra, e un test che va aggiornato a ogni fixture finisce per
+-- essere aggiornato senza guardare cosa dice.
+select t.is_true((select count(*) from public.watch_events) > 0,
+            'precondizione: sotto RLS l''utente vede i propri eventi');
+select t.eq((select count(*)::integer from public.watch_events
+              where user_id <> '11111111-1111-1111-1111-111111111111'), 0,
             'l''utente vede solo i propri eventi, non quelli dell''altro');
-select t.eq((select count(*)::integer from public.tv_show_state), 2,
+select t.eq((select count(*)::integer from public.tv_show_state
+              where user_id <> '11111111-1111-1111-1111-111111111111'), 0,
             'e solo il proprio stato');
 
 select t.rejects($$

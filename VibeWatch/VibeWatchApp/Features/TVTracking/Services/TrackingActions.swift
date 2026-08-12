@@ -87,17 +87,42 @@ final class TrackingActions {
     private let currentUserId: @MainActor () -> String?
     private let seenBackend: any TrackingSeenBackend
     private let mirror: any WatchEventLocalMirror
+    private let showHasCatalog: @MainActor (Int) async -> Bool
 
     init(
         syncEngine: any SyncEngineProtocol = SyncEngine.shared,
         currentUserId: @escaping @MainActor () -> String? = { SupabaseService.shared.currentUser?.id },
         seenBackend: any TrackingSeenBackend = SupabaseService.shared,
-        mirror: any WatchEventLocalMirror = SQLiteWatchEventMirror()
+        mirror: any WatchEventLocalMirror = SQLiteWatchEventMirror(),
+        showHasCatalog: @escaping @MainActor (Int) async -> Bool = {
+            await TrackingActions.catalogIsKnown(showId: $0)
+        }
     ) {
         self.syncEngine = syncEngine
         self.currentUserId = currentUserId
         self.seenBackend = seenBackend
         self.mirror = mirror
+        self.showHasCatalog = showHasCatalog
+    }
+
+    /// Il server conosce gli episodi di questa serie?
+    ///
+    /// Si legge dallo specchio locale invece di chiederlo alla rete: `total_count` viene da
+    /// `tmdb_episodes`, quindi vale zero esattamente quando il catalogo non c'è. Una serie che
+    /// non compare affatto nello specchio non è mai stata tracciata, e il catalogo per lei può
+    /// non essere mai stato risolto da nessuno (§1.5).
+    private static func catalogIsKnown(showId: Int) async -> Bool {
+        guard let userId = SupabaseService.shared.currentUser?.id else { return false }
+        let rows = (try? await SQLiteService.shared.queryRaw(
+            "SELECT total_count FROM tv_tracking WHERE user_id = ? AND tmdb_show_id = ? LIMIT 1",
+            parameters: [userId, showId]
+        )) ?? []
+        guard let raw = rows.first?["total_count"] else { return false }
+        if let value = raw as? Int { return value > 0 }
+        if let value = raw as? Int64 { return value > 0 }
+        if let value = raw as? Double { return value > 0 }
+        if let value = raw as? String { return (Int(value) ?? 0) > 0 }
+        return false
     }
 
     enum ActionError: LocalizedError, Equatable {
@@ -138,7 +163,8 @@ final class TrackingActions {
         // ricalcola `tv_show_state` sul server, e la schermata continua a leggere lo specchio
         // locale `tv_tracking`, che solo un pull aggiorna. Il progresso lo decide il server
         // (§1.1) — quindi l'unico modo di sapere qual è il prossimo episodio è chiederglielo.
-        await syncEngine.pullTrackingState()
+        // `flush`: prima che l'evento sia arrivato, ritirare lo stato riscrive la card com'era.
+        await syncEngine.flushAndPullTrackingState()
         Self.announceTrackingChanged()
     }
 
@@ -152,13 +178,25 @@ final class TrackingActions {
         guard let userId = currentUserId() else { throw ActionError.notAuthenticated }
         guard !episodes.isEmpty else { return }
 
+        // PRIMA il catalogo, come in `addToWatchlist`, e per la stessa ragione: il ricalcolo
+        // server deriva prossimo episodio e contatori da `tmdb_episodes`, e per una serie che
+        // nessuno ha mai tracciato quel catalogo non esiste ancora. Senza, marcare un episodio
+        // dalla lista di SeasonView produceva una riga con zero episodi totali — nessun prossimo
+        // episodio, bucket `up_to_date`, quindi né in "Continua a guardare" né in cima al
+        // Tracking: "l'ho segnato e non si è mosso niente". Best-effort: se il warm fallisce
+        // (offline) l'evento si scrive lo stesso e il self-heal del Tracking ripara dopo.
+        let catalogoNoto = await showHasCatalog(showId)
+        if !catalogoNoto {
+            try? await seenBackend.warmCatalog(showIds: [showId])
+        }
+
         for ep in episodes {
             try await queueWatchEvent(userId: userId, showId: showId, season: ep.season, episode: ep.episode)
             EpisodeSeenManager.shared.markEpisodeSeen(
                 showId: showId, seasonNumber: ep.season, episodeNumber: ep.episode)
         }
 
-        await syncEngine.pullTrackingState()
+        await syncEngine.flushAndPullTrackingState()
         Self.announceTrackingChanged()
     }
 
@@ -191,7 +229,7 @@ final class TrackingActions {
                 allEpisodeNumbersInSeason: allEpisodeNumbersInSeason)
         }
 
-        await syncEngine.pullTrackingState()
+        await syncEngine.flushAndPullTrackingState()
         Self.announceTrackingChanged()
     }
 
@@ -264,8 +302,9 @@ final class TrackingActions {
         )
 
         // Come sopra: il bucket lo calcola `tv_tracking_bucket` lato server, e finché non si
-        // ritira la vista la serie resta dov'era.
-        await syncEngine.pullTrackingState()
+        // ritira la vista la serie resta dov'era — dopo che la mutazione è arrivata, non prima.
+        await syncEngine.flushAndPullTrackingState()
+        Self.announceTrackingChanged()
     }
 
     // MARK: - Fusione ListsView-Tracking (2026-08-02)
@@ -314,7 +353,7 @@ final class TrackingActions {
             )
         }
 
-        await syncEngine.pullTrackingState()
+        await syncEngine.flushAndPullTrackingState()
         Self.announceTrackingChanged()
     }
 
@@ -341,7 +380,20 @@ final class TrackingActions {
             throw ActionError.showNotInCatalog
         }
 
-        await syncEngine.pullTrackingState()
+        // E poi lo stato, che è la metà che mancava.
+        //
+        // L'espansione scrive solo `watch_events`: `user_status` non lo tocca nessuno, di
+        // proposito — è l'unica colonna che appartiene all'utente. Ma per una serie che era
+        // `dropped` o `archived` il bucket resta quello **anche con tutti gli episodi visti**, e
+        // `tv_tracking_bucket` lo mette davanti a tutto il resto: la serie non compare né in
+        // "Visti" né in watchlist né nel Tracking, e il chip "Visto" del dettaglio resta spento.
+        // Marcare vista una serie e vederla sparire è il modo peggiore di riuscire. In produzione
+        // ne sono state trovate 16 in questo stato, tutte con `completed_at` valorizzato.
+        //
+        // Dichiarare "l'ho vista tutta" è anche dire che la si segue di nuovo: `active` è
+        // l'unico stato in cui i contatori significano qualcosa. `setStatus` porta con sé
+        // push, pull e annuncio, quindi da qui la schermata si riallinea da sé.
+        try await setStatus(showId: showId, to: "active")
     }
 
     /// Il contraltare: lapide su tutti gli eventi della serie + `dropped`, in un'unica RPC —
@@ -351,5 +403,6 @@ final class TrackingActions {
         guard currentUserId() != nil else { throw ActionError.notAuthenticated }
         _ = try await seenBackend.unseeTVShow(showId: showId)
         await syncEngine.pullTrackingState()
+        Self.announceTrackingChanged()
     }
 }

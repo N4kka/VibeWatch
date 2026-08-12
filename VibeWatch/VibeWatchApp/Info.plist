@@ -35,6 +35,7 @@
 
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
+		<string>instagram-stories</string>
 		<string>googlegmail</string>
 		<string>ms-outlook</string>
 		<string>readdle-spark</string>

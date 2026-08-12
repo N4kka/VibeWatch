@@ -21,6 +21,10 @@ struct SeasonDetailView: View {
     /// "hai visto anche i precedenti?" alla TV Time. Un solo stato: non possono coesistere.
     @State private var markPrompt: EpisodeMarkPrompt?
     @State private var actionError: String?
+    /// Quanto si è scrollato: lo legge la barra fissa per decidere quando comparire.
+    @State private var scrollOffset: CGFloat = 0
+
+    private static let scrollSpace = "seasonDetailScroll"
 
     private enum EpisodeMarkPrompt {
         case unaired(Episode)
@@ -111,11 +115,7 @@ struct SeasonDetailView: View {
                 GeometryReader { geometry in
                     ScrollView {
                         VStack(spacing: 0) {
-                            SeasonDetailHeaderView(
-                                heroURL: heroURL,
-                                seasonName: viewModel.season.map { "\(showName) – \($0.name)" } ?? showName,
-                                onDismiss: { dismiss() }
-                            )
+                            SeasonDetailHeaderView(heroURL: heroURL)
 
                             VStack(spacing: 24) {
                                 if let season = viewModel.season {
@@ -129,9 +129,25 @@ struct SeasonDetailView: View {
                             .padding(.bottom, 40)
                         }
                         .frame(width: geometry.size.width)
+                        .measuringDetailScrollOffset(in: Self.scrollSpace)
+                    }
+                    .coordinateSpace(name: Self.scrollSpace)
+                    .onPreferenceChange(DetailScrollOffsetKey.self) { raw in
+                        let stepped = DetailScrollOffsetKey.quantized(raw)
+                        if stepped != scrollOffset { scrollOffset = stepped }
                     }
                 }
             }
+        }
+        .overlay(alignment: .top) {
+            // Fuori dalla ScrollView: il back button resta a portata anche in fondo alla lista
+            // episodi, che è lunga quanto la stagione.
+            StickyDetailNavBar(
+                title: viewModel.season.map { "\(showName) – \($0.name)" } ?? showName,
+                scrollOffset: scrollOffset,
+                showsTitleAlways: true,
+                onBack: { dismiss() }
+            )
         }
         .navigationBarHidden(true)
         .swipeBackGesture { dismiss() }
@@ -520,51 +536,25 @@ struct SeasonDetailView: View {
 
 // MARK: - Header
 
+/// Solo l'immagine: back button e titolo stanno nella `StickyDetailNavBar` della schermata, che
+/// non scorre con il contenuto.
 struct SeasonDetailHeaderView: View {
     let heroURL: URL?
-    let seasonName: String
-    let onDismiss: () -> Void
 
     var body: some View {
-        ZStack(alignment: .top) {
-            CachedAsyncImage(url: heroURL)
-                .aspectRatio(contentMode: .fill)
-                .frame(maxWidth: .infinity, maxHeight: 300)
-                .clipped()
-                .overlay {
-                    LinearGradient(
-                        colors: [.clear, Color.theme.background.opacity(0.8), Color.theme.background],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                }
-
-            HStack {
-                Button(action: onDismiss) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(.white)
-                        .frame(width: 40, height: 40)
-                        .background(Color.black.opacity(0.5))
-                        .clipShape(Circle())
-                }
-
-                Spacer()
-
-                Text(seasonName)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.white)
-                    .lineLimit(1)
-
-                Spacer()
-
-                Color.clear.frame(width: 40, height: 40)
+        CachedAsyncImage(url: heroURL)
+            .aspectRatio(contentMode: .fill)
+            .frame(maxWidth: .infinity, maxHeight: 300)
+            .clipped()
+            .overlay {
+                LinearGradient(
+                    colors: [.clear, Color.theme.background.opacity(0.8), Color.theme.background],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
             }
-            .padding(.horizontal, 64)
-            .padding(.top, 30)
-        }
-        .frame(height: 300)
-        .frame(maxWidth: .infinity)
+            .frame(height: 300)
+            .frame(maxWidth: .infinity)
     }
 }
 

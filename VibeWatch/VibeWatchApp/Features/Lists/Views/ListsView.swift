@@ -25,6 +25,9 @@ struct ListsView: View {
     @State private var showInlineSearch = false
     @FocusState private var searchFieldFocused: Bool
     @State private var forkedList: MediaList?
+    /// "Hai visto tutta la serie?" — la stessa conferma della pagina di dettaglio. Un tap sul
+    /// check di una riga TV marca N stagioni: chiederlo non è una cortesia.
+    @StateObject private var markSeenFlow = MarkShowSeenFlow()
 
     private var mediaFilterBinding: Binding<MediaFilter> {
         Binding(
@@ -156,6 +159,7 @@ struct ListsView: View {
             // Reset limit when switching lists
             itemsLimit = 50
         }
+        .markShowSeenFlow(markSeenFlow)
     }
     private var myListsContent: some View {
         VStack(spacing: 0) {
@@ -307,7 +311,16 @@ struct ListsView: View {
                     MediaItemRow(
                         item: item,
                         isInSeenList: selectedListType == .seen,
+                        isPreparingSeen: markSeenFlow.loadingShowId == item.mediaId,
                         onMarkAsSeen: {
+                            // Una serie passa dalla conferma: il tap marca ogni episodio uscito
+                            // di ogni stagione, e la riga da sola non lo lascia immaginare. Il
+                            // resto della catena — via dalla watchlist, "in pari" nel Tracking,
+                            // check pieni in SeasonView — la fa `MarkShowSeen.apply`.
+                            guard item.mediaType != .tv else {
+                                Task { await markSeenFlow.start(show: item.asMovie()) }
+                                return
+                            }
                             Task {
                                 let toastId = ToastCenter.shared.begin(
                                     message: "mediaDetail.toast.markingSeen".localized
@@ -495,6 +508,9 @@ struct ListsView: View {
 struct MediaItemRow: View {
     let item: MediaListItem
     let isInSeenList: Bool // From parent context (which list we're viewing)
+    /// Serie TV: si stanno caricando stagioni ed episodi per la conferma. Il tap non apre niente
+    /// finché non arrivano, e senza la rotella sembrerebbe non essere stato registrato.
+    var isPreparingSeen: Bool = false
     let onMarkAsSeen: () -> Void
     let onDelete: () -> Void
     /// Liste pubbliche altrui: nasconde il checkmark "visto" e disabilita lo swipe-to-delete.
@@ -731,11 +747,18 @@ struct MediaItemRow: View {
                                     Circle().stroke(Color.white.opacity(0.07), lineWidth: isActuallyInSeenList ? 0 : 1)
                                 )
 
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundColor(isActuallyInSeenList ? .white : .theme.textSecondary)
+                            if isPreparingSeen {
+                                ProgressView()
+                                    .scaleEffect(0.6)
+                                    .tint(.theme.textSecondary)
+                            } else {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundColor(isActuallyInSeenList ? .white : .theme.textSecondary)
+                            }
                         }
                     }
+                    .disabled(isPreparingSeen)
 
                     Spacer()
                 }
@@ -1013,6 +1036,8 @@ struct CustomListDetailView: View {
     @State private var showEditSheet = false
     @State private var showDeleteAlert = false
     @State private var error: AppError?
+    /// Come in ListsView: una serie non si segna vista senza conferma.
+    @StateObject private var markSeenFlow = MarkShowSeenFlow()
     @Environment(\.dismiss) private var dismiss
     
     private var mediaFilterBinding: Binding<MediaFilter> {
@@ -1111,7 +1136,12 @@ struct CustomListDetailView: View {
                                 MediaItemRow(
                                     item: item,
                                     isInSeenList: false,
+                                    isPreparingSeen: markSeenFlow.loadingShowId == item.mediaId,
                                     onMarkAsSeen: {
+                                        guard item.mediaType != .tv else {
+                                            Task { await markSeenFlow.start(show: item.asMovie()) }
+                                            return
+                                        }
                                         Task {
                                             let toastId = ToastCenter.shared.begin(
                                                 message: "mediaDetail.toast.markingSeen".localized
@@ -1232,6 +1262,7 @@ struct CustomListDetailView: View {
                 dismissButton: .default(Text("common.ok".localized))
             )
         }
+        .markShowSeenFlow(markSeenFlow)
     }
 
     private var searchField: some View {

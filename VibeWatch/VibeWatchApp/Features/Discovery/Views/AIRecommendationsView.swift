@@ -5,59 +5,46 @@ struct AIRecommendationsView: View {
     @StateObject private var viewModel: AIRecommendationViewModel
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var quotaManager: DailyQuotaManager
+    @Environment(\.dismiss) private var dismiss
     @FocusState private var isInputFocused: Bool
     @ObservedObject private var localizationManager = LocalizationManager.shared
-    
+
     @State private var showAuthGate = false
     @State private var showAIPaywall = false
+    @State private var showHistorySheet = false
+    @State private var detailCard: AIRecommendationCardModel?
 
     private var canUseAI: Bool {
         appState.isAuthenticated
     }
-    
+
     // Dependency-injected initializer (for previews/tests)
     init(viewModel: AIRecommendationViewModel) {
         _viewModel = StateObject(wrappedValue: viewModel)
     }
-    
+
     // Default initializer creates the model on the main actor
     init() {
         _viewModel = StateObject(wrappedValue: AIRecommendationViewModel())
     }
-    
-    private var suggestionChips: [String] {
-        // Observe locale changes to re-render localized strings
-        _ = localizationManager.localeDidChange
-        return [
-            "ai.suggestion.chips1".localized,
-            "ai.suggestion.chips2".localized,
-            "ai.suggestion.chips3".localized,
-            "ai.suggestion.chips4".localized
-        ]
-    }
-    
+
     var body: some View {
         ZStack {
-            // Background
             Color.theme.background.ignoresSafeArea()
-            
-            VStack(spacing: 20) {
-                // Header
-                Text("ai.title".localized)
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundStyle(
-                        LinearGradient(
-                            // Il magenta del prototipo 2.0 (#e858c8), non il purple di sistema.
-                            colors: [Color.theme.accentOrange, Color(hex: "e858c8")],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .padding(.top, 10)
-                
-                // --- PRO Check & Gating ---
+
+            VStack(spacing: 0) {
+                AIChatHeader(
+                    requestsUsedToday: viewModel.requestsUsedToday,
+                    dailyRequestLimit: viewModel.dailyRequestLimit,
+                    chatTitle: viewModel.chatTitle,
+                    onClose: { dismiss() },
+                    onNewChat: { Task { await viewModel.startNewChat() } },
+                    onShowHistory: { showHistorySheet = true }
+                )
+
+                Divider().background(Color.theme.separator)
+
                 if canUseAI {
-                    // --- AI Chat Content ---
                     chatContent
                 } else {
                     authGate
@@ -97,14 +84,22 @@ struct AIRecommendationsView: View {
                 source: "ai_quota"
             )
         }
-        .overlay(alignment: .topTrailing) {
-            HStack(spacing: 10) {
-                ProUpgradeIconButton(isProUser: quotaManager.isProUser, source: "ai_top_right")
+        .sheet(isPresented: $showHistorySheet) {
+            AIChatHistoryView(viewModel: viewModel)
+        }
+        .sheet(item: $detailCard) { card in
+            NavigationStack {
+                Group {
+                    if card.mediaType == .tv {
+                        TVShowDetailView(tvShowId: card.tmdbId)
+                    } else {
+                        MovieDetailView(movieId: card.tmdbId)
+                    }
+                }
             }
-            .padding()
         }
     }
-    
+
     private func presentAccessGate() {
         if !appState.isAuthenticated {
             showAuthGate = true
@@ -124,26 +119,26 @@ struct AIRecommendationsView: View {
             showAIPaywall = true
         }
     }
-    
+
     private var authGate: some View {
         VStack(spacing: 20) {
             Spacer()
-            
+
             Image(systemName: "sparkles.tv")
                 .font(.system(size: 60))
                 .foregroundStyle(Color.theme.textSecondary.opacity(0.5))
-            
+
             Text("ai.title".localized)
                 .font(.system(size: 24, weight: .bold))
                 .multilineTextAlignment(.center)
                 .foregroundStyle(Color.theme.textPrimary)
-            
+
             Text("auth.gate.authRequiredAI".localized)
                 .font(.system(size: 16))
                 .multilineTextAlignment(.center)
                 .foregroundStyle(Color.theme.textSecondary)
                 .padding(.horizontal)
-            
+
             Button {
                 presentAccessGate()
             } label: {
@@ -156,79 +151,39 @@ struct AIRecommendationsView: View {
                     .cornerRadius(16)
             }
             .padding(.horizontal, 20)
-            
+
             Spacer()
         }
     }
-    
+
     // MARK: - Chat Content
-    
+
     private var chatContent: some View {
         let inputDisabled = viewModel.isLoading || viewModel.hardLimitReached || !canUseAI
-        
+
         return VStack(spacing: 0) {
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(spacing: 24) {
-                        // Introduction / Empty State
                         if viewModel.messages.isEmpty && !viewModel.isLoading {
-                            VStack(spacing: 16) {
-                                Image(systemName: "sparkles.tv")
-                                    .font(.system(size: 60))
-                                    .foregroundStyle(Color.theme.textSecondary.opacity(0.5))
-                                
-                                Text("ai.describeVibe".localized)
-                                    .font(.headline)
-                                    .foregroundStyle(Color.theme.textPrimary)
-                                
-                                Text("ai.subtitle".localized)
-                                    .font(.subheadline)
-                                    .foregroundStyle(Color.theme.textSecondary)
-                                    .multilineTextAlignment(.center)
-                                    .padding(.horizontal)
-                            }
-                            .padding(.top, 40)
-                            
-                            // Suggestion Chips
-            VStack(alignment: .leading, spacing: 12) {
-                Text("ai.tryAsking".localized)
-                    .font(.caption)
-                    .foregroundStyle(Color.theme.textSecondary)
-                    .padding(.leading, 4)
-                                
-                                FlowLayout(spacing: 10) {
-                                    ForEach(suggestionChips, id: \.self) { chip in
-                                        Button(action: {
-                                            Task {
-                                                await viewModel.sendSuggestion(chip)
-                                                isInputFocused = false
-                                            }
-                                        }) {
-                                            Text(chip)
-                                                .font(.system(size: 14, weight: .medium))
-                                                .padding(.horizontal, 16)
-                                                .padding(.vertical, 10)
-                                                .background(Color.theme.cardBackground)
-                                                .foregroundStyle(Color.theme.textPrimary)
-                                                .clipShape(Capsule())
-                                                .overlay(
-                                                    Capsule()
-                                                        .stroke(Color.theme.separator, lineWidth: 1)
-                                                )
-                                        }
-                                    }
+                            AIEmptyStateView { starter in
+                                Task {
+                                    await viewModel.sendSuggestion(starter)
+                                    isInputFocused = false
                                 }
-                                .padding(.horizontal, 20)
                             }
-                            .padding(.bottom, 20) // Add padding to separate intro from chat
-                            .frame(maxWidth: .infinity, alignment: .center)
                         }
-                        
-                        // Chat Messages
-                        LazyVStack(spacing: 16) {
+
+                        LazyVStack(spacing: 28) {
                             ForEach($viewModel.messages) { $message in
-                                MessageBubble(
+                                AIChatMessageView(
                                     message: $message,
+                                    isLastAssistantMessage: message.id == lastAssistantMessageId,
+                                    isInWatchlist: { viewModel.isCardInWatchlist($0) },
+                                    onAddCard: { card in Task { await viewModel.addCardToWatchlist(card) } },
+                                    onCardDetails: { detailCard = $0 },
+                                    onThumb: { positive in viewModel.recordFeedback(for: message.id, positive: positive) },
+                                    onMore: { Task { await viewModel.requestMore() } },
                                     onRegenerate: { newContent in
                                         Task {
                                             await viewModel.regenerateResponse(for: message.id, newContent: newContent)
@@ -240,23 +195,12 @@ struct AIRecommendationsView: View {
                                 )
                                 .id(message.id)
                             }
-                            
-                            // Loading State
+
                             if viewModel.isLoading {
-                                HStack {
-                                    ProgressView()
-                                        .tint(Color.theme.accentOrange)
-                                        .scaleEffect(1.0)
-                                    Text("ai.thinking".localized)
-                                        .font(.caption)
-                                        .foregroundStyle(Color.theme.textSecondary)
-                                }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.leading, 20)
-                                .id("loading")
+                                AILoadingStateView()
+                                    .id("loading")
                             }
-                            
-                            // Error / Hard Limit Message
+
                             if let error = viewModel.error {
                                 Text(error)
                                     .foregroundStyle(.red)
@@ -269,10 +213,11 @@ struct AIRecommendationsView: View {
                                     .padding(.horizontal)
                             }
                         }
-                        .padding(.horizontal)
+                        .padding(.horizontal, 16)
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.bottom, 100) // Spacing for input area
+                    .padding(.top, 14)
+                    .padding(.bottom, 28)
                 }
                 .scrollDismissesKeyboard(.interactively)
                 .onChange(of: viewModel.messages.count) {
@@ -291,188 +236,156 @@ struct AIRecommendationsView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            
-            // Input Area
+
+            AIFilterChipsRow(
+                availableFilters: viewModel.availableFilters,
+                activeFilters: viewModel.activeFilters,
+                onToggle: { viewModel.toggleFilter($0) }
+            )
+            .padding(.top, 10)
+            .padding(.bottom, 10)
+
             Divider()
                 .background(Color.theme.separator)
-            
-            // Daily Requests Counter
-            HStack {
-                Text(String(format: "ai.requestsUsage".localized, viewModel.requestsUsedToday, viewModel.dailyRequestLimit))
-                    .font(.caption2)
-                    .foregroundStyle(viewModel.hardLimitReached ? .red : Color.theme.textSecondary)
-                Spacer()
-            }
-            .padding(.horizontal)
-            .padding(.vertical, 6)
-            
-            HStack(spacing: 12) {
-                TextField("ai.placeholder".localized, text: $viewModel.prompt)
-                    .focused($isInputFocused)
-                    .padding()
-                    .background(Color.theme.cardBackground)
-                    .cornerRadius(25)
-                    .foregroundStyle(Color.theme.textPrimary)
-                    .submitLabel(.send)
-                    .disabled(inputDisabled)
-                    .onSubmit {
-                        Task {
-                            await viewModel.sendMessage()
-                        }
-                    }
-                
-                Button(action: {
+
+            AIChatInputBar(
+                prompt: $viewModel.prompt,
+                isDisabled: inputDisabled,
+                onSend: {
                     Task {
                         await viewModel.sendMessage()
                         isInputFocused = false
                     }
-                }) {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .font(.system(size: 32))
-                        .foregroundStyle(
-                            viewModel.prompt.isEmpty || viewModel.hardLimitReached ? Color.theme.textSecondary : Color.theme.accentOrange
-                        )
-                }
-                .disabled(viewModel.prompt.isEmpty || inputDisabled)
-            }
-            .padding()
-            .background(Color.theme.background.opacity(0.95))
+                },
+                focus: $isInputFocused
+            )
         }
+    }
+
+    private var lastAssistantMessageId: UUID? {
+        viewModel.messages.last(where: { !$0.isUser })?.id
     }
 }
 
-struct MessageBubble: View {
+/// Un messaggio della chat: bolla utente (editabile) oppure risposta AI con testo + card.
+private struct AIChatMessageView: View {
     @Binding var message: AIMessage
+    let isLastAssistantMessage: Bool
+    let isInWatchlist: (AIRecommendationCardModel) -> Bool
+    let onAddCard: (AIRecommendationCardModel) -> Void
+    let onCardDetails: (AIRecommendationCardModel) -> Void
+    let onThumb: (Bool) -> Void
+    let onMore: () -> Void
     let onRegenerate: (String) -> Void
     let onToggleEdit: () -> Void
-    
+
     @State private var editedContent: String = ""
-    
+
     var body: some View {
+        if message.isUser {
+            userBubble
+        } else {
+            assistantContent
+        }
+    }
+
+    private var userBubble: some View {
         HStack {
-            if message.isUser {
-                Spacer()
-                
-                if message.isEditing {
-                    VStack(alignment: .trailing, spacing: 8) {
-                        TextField("ai.editMessage".localized, text: $editedContent)
-                            .padding(10)
-                            .background(Color.theme.cardBackground)
-                            .cornerRadius(12)
-                            .foregroundStyle(Color.theme.textPrimary)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.theme.accentOrange, lineWidth: 1)
-                            )
-                        
-                        HStack {
-                            Button("common.cancel".localized) {
-                                onToggleEdit()
-                            }
-                            .font(.caption)
-                            .foregroundStyle(Color.theme.textSecondary)
-                            
-                            Button("ai.saveRegenerate".localized) {
-                                onRegenerate(editedContent)
-                            }
-                            .font(.caption.bold())
-                            .foregroundStyle(Color.theme.accentOrange)
+            Spacer(minLength: 48)
+
+            if message.isEditing {
+                VStack(alignment: .trailing, spacing: 8) {
+                    TextField("ai.editMessage".localized, text: $editedContent)
+                        .padding(10)
+                        .background(Color.theme.cardBackground)
+                        .cornerRadius(12)
+                        .foregroundStyle(Color.theme.textPrimary)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.theme.accentOrange, lineWidth: 1)
+                        )
+
+                    HStack {
+                        Button("common.cancel".localized) {
+                            onToggleEdit()
                         }
+                        .font(.caption)
+                        .foregroundStyle(Color.theme.textSecondary)
+
+                        Button("ai.saveRegenerate".localized) {
+                            onRegenerate(editedContent)
+                        }
+                        .font(.caption.bold())
+                        .foregroundStyle(Color.theme.accentOrange)
                     }
-                    .frame(maxWidth: 300)
-                    .onAppear {
-                        editedContent = message.content
+                }
+                .frame(maxWidth: 300)
+                .onAppear {
+                    editedContent = message.content
+                }
+            } else {
+                Text(message.content)
+                    .font(.system(size: 16))
+                    .foregroundStyle(Color.theme.textPrimary)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(Color.theme.accentOrange.opacity(0.16))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .stroke(Color.theme.accentOrange.opacity(0.25), lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .onLongPressGesture {
+                        onToggleEdit()
                     }
-                } else {
-                    Text(message.content)
-                        .padding(12)
-                        .background(
+            }
+        }
+    }
+
+    private var assistantContent: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            if !message.text.isEmpty {
+                HStack(alignment: .top, spacing: 10) {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(
                             LinearGradient(
-                                colors: [Color.theme.accentOrange, Color.purple],
+                                colors: [Color.theme.accentOrange, Color(hex: "e858c8")],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
                         )
-                        .foregroundStyle(.white)
-                        .cornerRadius(16, corners: [.topLeft, .topRight, .bottomLeft])
-                        .onLongPressGesture {
-                            onToggleEdit()
-                        }
-                }
-            } else {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(message.content)
-                        .padding(16)
-                        .background(Color.theme.cardBackground)
+                        .frame(width: 24, height: 24)
+                        .padding(.top, 2)
+
+                    Text(message.text)
+                        .font(.system(size: 16))
                         .foregroundStyle(Color.theme.textPrimary)
-                        .cornerRadius(16, corners: [.topLeft, .topRight, .bottomRight])
                         .lineSpacing(4)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Spacer(minLength: 0)
                 }
-                Spacer()
+            }
+
+            ForEach(message.cards) { card in
+                AIRecommendationCardView(
+                    card: card,
+                    isInWatchlist: isInWatchlist(card),
+                    onAdd: { onAddCard(card) },
+                    onDetails: { onCardDetails(card) }
+                )
+            }
+
+            if !message.cards.isEmpty && isLastAssistantMessage {
+                AIFeedbackRow(
+                    feedback: message.feedback,
+                    onThumbUp: { onThumb(true) },
+                    onThumbDown: { onThumb(false) },
+                    onMore: onMore
+                )
+                .padding(.top, 2)
             }
         }
-    }
-}
-
-extension View {
-    func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
-        clipShape(RoundedCorner(radius: radius, corners: corners))
-    }
-}
-
-struct RoundedCorner: Shape {
-    var radius: CGFloat = .infinity
-    var corners: UIRectCorner = .allCorners
-
-    func path(in rect: CGRect) -> Path {
-        let path = UIBezierPath(
-            roundedRect: rect,
-            byRoundingCorners: corners,
-            cornerRadii: CGSize(width: radius, height: radius)
-        )
-        return Path(path.cgPath)
-    }
-}
-
-// Helper for suggestion chips layout
-struct FlowLayout: Layout {
-            var spacing: CGFloat = 8
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let result = flow(proposal: proposal, subviews: subviews, perform: false)
-        return result.size
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        _ = flow(proposal: proposal, subviews: subviews, perform: true, in: bounds)
-    }
-
-    private func flow(proposal: ProposedViewSize, subviews: Subviews, perform: Bool, in bounds: CGRect = .zero) -> (size: CGSize, maxX: CGFloat) {
-        var currentX: CGFloat = 0
-        var currentY: CGFloat = 0
-        var lineHeight: CGFloat = 0
-        var maxWidth: CGFloat = 0
-        
-        let containerWidth = proposal.width ?? .infinity
-
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
-            
-            if currentX + size.width > containerWidth {
-                currentX = 0
-                currentY += lineHeight + spacing
-                lineHeight = 0
-            }
-
-            if perform {
-                subview.place(at: CGPoint(x: bounds.minX + currentX, y: bounds.minY + currentY), proposal: .unspecified)
-            }
-
-            lineHeight = max(lineHeight, size.height)
-            currentX += size.width + spacing
-            maxWidth = max(maxWidth, currentX)
-        }
-
-        return (CGSize(width: maxWidth, height: currentY + lineHeight), maxWidth)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

@@ -101,6 +101,13 @@ enum SQLiteTable: String, CaseIterable {
     // una lingua sola, e §13.6 vieta la rete al primo fotogramma. Locale e basta, niente sync.
     case localizedTitles = "localized_titles"
 
+    // Social feed M1. `user_reviews` e' lo specchio della review breve (id sintetico generato
+    // dal CLIENT, a differenza di user_ratings: report e activities la referenziano).
+    // `activity_feed_cache` e' locale e basta, come public_lists_cache: righe gia' pronte per
+    // la UI del feed, ritirate via RPC — nessun percorso di scrittura verso il server.
+    case userReviews = "user_reviews"
+    case activityFeedCache = "activity_feed_cache"
+
     /// All valid table names as a Set for O(1) lookup
     static let validTableNames: Set<String> = Set(SQLiteTable.allCases.map(\.rawValue))
 
@@ -1006,6 +1013,29 @@ final class SQLiteService: ObservableObject {
         return names
     }
 
+    /// Cache delle colonne che accettano NULL, accanto a `tableColumnsCache`.
+    private var tableNullableColumnsCache: [String: Set<String>] = [:]
+
+    /// Le colonne in cui un NULL è un valore legittimo, non un dato mancante.
+    ///
+    /// Serve a `upsert` per distinguere le due cose che finora collassavano in una: una colonna che
+    /// il record non porta (da non toccare) e una colonna che il record dichiara vuota (da
+    /// svuotare). Su una NOT NULL la seconda non esiste, quindi resta esclusa.
+    private func nullableColumns(for table: String) async throws -> Set<String> {
+        try validateTableName(table)
+        if let cached = tableNullableColumnsCache[table] { return cached }
+        let nullable = Set(
+            try await queryRaw("PRAGMA table_info(\(table))").compactMap { row -> String? in
+                guard let name = row["name"] as? String,
+                      (row["notnull"] as? Int ?? 0) == 0,
+                      (row["pk"] as? Int ?? 0) == 0 else { return nil }
+                return name
+            }
+        )
+        tableNullableColumnsCache[table] = nullable
+        return nullable
+    }
+
     /// Cache of conflict targets per table, alongside `tableColumnsCache`.
     private var tableConflictTargetsCache: [String: [[String]]] = [:]
 
@@ -1074,14 +1104,26 @@ final class SQLiteService: ObservableObject {
         let now = ISO8601DateFormatter().string(from: Date())
         let targets = try await conflictTargets(for: table)
 
+        let nullable = try await nullableColumns(for: table)
+
         for row in safeRows {
             var filtered: [String: Any] = [:]
             for col in cols {
-                if let v = row.raw[col], !(v is NSNull) {
-                    filtered[col] = v
-                }
+                // Chiave assente = "il record non parla di questa colonna": non si tocca, ed è la
+                // semantica su cui contano i chiamanti che passano record parziali.
+                guard let v = row.raw[col] else { continue }
+                // Chiave presente con NULL = "questa colonna adesso è vuota", e va scritta. Prima
+                // veniva scartata insieme alle assenti, e il risultato era uno specchio che sapeva
+                // solo riempire campi, mai svuotarli: `v_tv_tracking` arrivava con `next_season`
+                // NULL per una serie finita e in locale restava il vecchio prossimo episodio,
+                // quindi la serie non risultava mai "vista" (`bucket = up_to_date` **e**
+                // `next_season IS NULL`) né "In pari" nelle card. Le NOT NULL restano escluse: per
+                // loro un NULL in arrivo non è un'informazione ma un errore, e scriverlo farebbe
+                // fallire l'intera pagina del pull invece della sola riga malformata.
+                if v is NSNull, !nullable.contains(col) { continue }
+                filtered[col] = v
             }
-            if hasSyncedAt, filtered["synced_at"] == nil {
+            if hasSyncedAt, filtered["synced_at"] == nil || filtered["synced_at"] is NSNull {
                 filtered["synced_at"] = now
             }
 

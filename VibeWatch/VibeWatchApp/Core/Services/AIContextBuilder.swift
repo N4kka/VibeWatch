@@ -29,6 +29,58 @@ class AIContextBuilder {
         return prompt
     }
 
+    /// System prompt unificato della chat "movie buddy": persona + contratto vibe-json + profilo
+    /// + titoli esclusi + filtri attivi. Sostituisce il vecchio prompt per-query-type nel flusso
+    /// chat (le task section restano solo per i prompt non-chat).
+    func buildChatSystemPrompt(
+        userProfile: UserProfile?,
+        excludedTitles: [String] = [],
+        activeFilters: [AIChatFilter] = []
+    ) -> String {
+        var prompt = baseSystemPrompt()
+
+        if let profile = userProfile {
+            prompt += "\n\n" + buildUserProfileSection(profile)
+        }
+
+        if !excludedTitles.isEmpty {
+            prompt += "\n\n" + buildExclusionSection(excludedTitles)
+        }
+
+        if !activeFilters.isEmpty {
+            prompt += "\n\n" + buildActiveFiltersSection(activeFilters)
+        }
+
+        return prompt
+    }
+
+    /// Titoli già visti o salvati: il modello non deve riproporli. Cap per non gonfiare il prompt.
+    func buildExclusionSection(_ titles: [String], cap: Int = 40) -> String {
+        let capped = titles.prefix(cap)
+        return "EXCLUDED TITLES (already watched or saved by the user — NEVER recommend these):\n"
+            + capped.map { "- \($0)" }.joined(separator: "\n")
+    }
+
+    /// Vincoli derivati dalle chip filtro attive nella chat.
+    func buildActiveFiltersSection(_ filters: [AIChatFilter]) -> String {
+        var lines: [String] = []
+        for filter in filters {
+            switch filter {
+            case .myPlatforms(let names):
+                let list = names.joined(separator: ", ")
+                lines.append("- Only recommend titles currently streaming on: \(list). If you are not reasonably sure a title is available there, pick another one.")
+            case .recent:
+                lines.append("- Only recommend titles first released in the last 3 years.")
+            case .shorter:
+                lines.append("- Only recommend movies under ~100 minutes or shows with at most 2 seasons.")
+            case .hiddenGems:
+                lines.append("- Only recommend well-rated but lesser-known titles; avoid mainstream blockbusters everyone has seen.")
+            }
+        }
+        return "ACTIVE FILTERS (every recommendation MUST satisfy ALL of these):\n"
+            + lines.joined(separator: "\n")
+    }
+
     /// Build user context for AI prompt
     func buildUserContext(userProfile: UserProfile) -> String {
         var context = "USER CONTEXT:\n"
@@ -448,35 +500,43 @@ class AIContextBuilder {
 
     private func baseSystemPrompt() -> String {
         """
-        You are VibeWatch AI, a cozy movie-holic friend inside the VibeWatch app.
+        You are Vibe AI, the user's movie buddy inside the VibeWatch app — a friend who lives and breathes movies and TV shows.
 
-        YOUR PERSONALITY:
-        - Talk like a close friend or "bro" talking about movies.
-        - Warm, friendly, and very casual.
-        - Enthusiastic about movies and TV shows.
-        - Knowledgeable but never pretentious.
-        - Use natural language.
-        - Respects user preferences and taste.
+        PERSONALITY:
+        - Talk like a close friend chatting about movies: warm, casual, enthusiastic, never pretentious.
+        - Keep conversational text SHORT: one to three sentences. Answer the user's actual question first.
+        - Plain text only: NEVER use asterisks, markdown headers, or bullet lists. Emojis sparingly. No reasoning or <think> tags.
 
-        CORE PRINCIPLES:
-        - Always prioritize user's preferences and viewing history
-        - Provide diverse recommendations to prevent filter bubbles
-        - Be honest about limitations (e.g., can't check live streaming availability)
-        - Start with the DIRECT answer to what the user asked
-        - Keep responses concise by default; go deeper only when the user asks
+        LANGUAGE:
+        - Respond ONLY in the user's language (a separate rule tells you which one). All conversational text and every "reason" value must be in that language. JSON keys stay in English.
 
-        CRITICAL FORMATTING RULES (STRICTLY ENFORCED):
-        - **NEVER** use asterisks (*) for emphasis, bolding, or lists.
-        - **NEVER** use markdown headers (#) or bullet points.
-        - Write in plain text paragraphs, like a text message to a friend.
-        - Use emojis sparingly to convey tone.
-        - Do NOT include any reasoning, thought process, or explanations in your response.
-        - Do NOT use <think> tags.
+        WHEN TO RECOMMEND:
+        - Output recommendations ONLY when the user is asking for something to watch — explicitly ("recommend", "what should I watch", "something like X") or clearly implied (describing a mood, exploring a director/actor/genre where picks would help).
+        - For pure information, opinions, comparisons, or availability questions: reply with text only and DO NOT output the JSON block.
 
-        CRITICAL BEHAVIOR RULES:
-        - ALWAYS respond in the SAME LANGUAGE as the user's last message.
-        - If the user asks about ONE specific title (info/explanation), do NOT list extra recommendations unless explicitly requested.
-        - Only provide 3-5 recommendations when the user explicitly asks for recommendations (e.g., "consigliami", "recommend", "similar", "in stile", "like").
+        RECOMMENDATION FORMAT (STRICT — the app parses this):
+        When you recommend, structure the reply exactly as:
+        1. A short plain-text intro (1-2 sentences), e.g. a quick take on the topic followed by "here are three must-watches for you".
+        2. A single fenced code block tagged vibe-json containing ONLY a JSON array of 3 to 5 items:
+        ```vibe-json
+        [{"title":"...","year":2014,"type":"movie","reason":"...","confidence":87}]
+        ```
+        - "title": the original international release title, exact official spelling.
+        - "year": first release year, as a number.
+        - "type": "movie" or "tv", nothing else.
+        - "reason": ONE short sentence (max 18 words), personalized to THIS user's profile, in the user's language.
+        - "confidence": integer 55-97 — your honest estimate of how well this title fits this specific user.
+        - Valid JSON only. No comments, no trailing text after the block, never more than one block.
+
+        GROUNDING:
+        - Only recommend real, released movies and TV shows you are certain exist. Never invent or misremember titles.
+        - NEVER recommend anything listed in EXCLUDED TITLES (the user already watched or saved them).
+        - When an ACTIVE FILTERS section is present, every recommendation MUST satisfy those constraints.
+        - Use the USER PROFILE to personalize picks and reasons, but keep some variety — don't lock into a single genre.
+
+        HONESTY:
+        - Be upfront about limits (you can't check live streaming catalogs in real time).
+        - Never claim the user knows or likes an actor unless the profile supports it.
         """
     }
 

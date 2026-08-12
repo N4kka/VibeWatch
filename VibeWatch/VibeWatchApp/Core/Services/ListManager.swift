@@ -1061,6 +1061,15 @@ class ListManager: ObservableObject {
             EpisodeSeenManager.shared.markShowSeen(showId: movie.id)
         }
 
+        // Visto ⇒ non è più da vedere. Per le serie TV succede da sé — watchlist e "visti" sono
+        // due letture dello stesso stato di tracking, e quando la serie va in pari cambia
+        // sezione — mentre i film restavano in entrambe le liste: segnavi visto un film dalla
+        // pagina di dettaglio e te lo ritrovavi ancora fra quelli da vedere. La regola vale
+        // ovunque si segni visto (dettaglio, liste, Scopri) perché sta qui e non nelle View.
+        if listType == .seen, mediaType == .movie {
+            await removeFromWatchlistAfterSeen(mediaId: movie.id, mediaType: mediaType)
+        }
+
         if let source = lists.first(where: { $0.id == listId }) {
             await propagateAdd(movie, mediaType: mediaType, from: source)
         }
@@ -1104,6 +1113,26 @@ class ListManager: ObservableObject {
         }
     }
     
+    /// Toglie dalla watchlist ciò che è appena stato segnato visto, se c'era.
+    ///
+    /// Best-effort per scelta: il "visto" è già scritto e riuscito: fallire qui — offline, o una
+    /// riga già rimossa da un altro dispositivo — non deve trasformarsi in un errore su
+    /// un'operazione andata a buon fine. Al massimo resta una riga di troppo nella watchlist, che
+    /// l'utente può togliere a mano.
+    private func removeFromWatchlistAfterSeen(mediaId: Int, mediaType: MediaType) async {
+        guard let watchlistId = lists.first(where: { $0.type == .watchlist })?.id,
+              let item = lists.first(where: { $0.id == watchlistId })?.items
+                .first(where: { $0.mediaId == mediaId && $0.mediaType == mediaType })
+        else { return }
+
+        do {
+            try await removeFromList(listId: watchlistId, itemId: item.id)
+        } catch {
+            Logger.warning("[Lists] rimozione dalla watchlist dopo il visto fallita: "
+                           + error.localizedDescription)
+        }
+    }
+
     func removeFromList(listId: String, itemId: String) async throws {
         guard let listIndex = lists.firstIndex(where: { $0.id == listId }) else {
             throw ListError.listNotFound

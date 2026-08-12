@@ -48,8 +48,25 @@ public protocol SyncEngineProtocol: AnyObject {
     /// Ritira lo stato del tracking e nient'altro, dopo un'azione sulla schermata (§9.2).
     func pullTrackingState() async
 
+    /// Spinge l'outbox e **poi** ritira lo stato del tracking, in quest'ordine.
+    ///
+    /// È la coppia che serve dopo un "visto": il progresso lo ricalcola il server (§1.1), quindi
+    /// ritirarlo prima che l'evento sia arrivato riporta indietro lo stato di prima. Vedi
+    /// l'implementazione in `SyncEngine` per il motivo per cui il push va atteso e non solo
+    /// chiesto.
+    func flushAndPullTrackingState() async
+
     /// Ritira favorites e voti e nient'altro, dopo una scrittura (§3.6, blocco 9).
     func pullProfileContent() async
+}
+
+public extension SyncEngineProtocol {
+    /// L'ordine giusto, per chiunque non abbia una macchina a stati da aspettare (i doppioni dei
+    /// test). `SyncEngine` la sovrascrive con la versione che attende il sync in corso.
+    func flushAndPullTrackingState() async {
+        await pushPendingChanges()
+        await pullTrackingState()
+    }
 }
 
 // MARK: - SyncEngine Implementation
@@ -98,6 +115,10 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
 
     /// Conflict resolver for handling local/remote conflicts during pull
     private let conflictResolver: ConflictResolverProtocol
+
+    /// Il recupero armato da `flushAndPullTrackingState` quando il push non è passato. Uno solo
+    /// alla volta: N tap durante il sync di avvio non devono lasciare N attese in giro.
+    private var trackingCatchUpTask: Task<Void, Never>?
 
     /// Maximum number of retry attempts before marking an operation as stuck
     private let maxRetries = 5
@@ -695,8 +716,65 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
         }
     }
 
-    /// Le due tabelle del blocco 9 che le azioni riscaricano dopo una scrittura.
-    nonisolated static let profileContentTables = ["user_favorites", "user_ratings"]
+    /// Spinge l'outbox — aspettando il proprio turno — e solo dopo ritira lo stato del tracking.
+    ///
+    /// **Perché non basta `pullTrackingState()`.** `queueOperation` un push immediato lo tenta
+    /// già, ma `pushPendingChanges` esce in silenzio quando la macchina a stati è occupata, e lo
+    /// è per tutti i secondi del sync di avvio (21 tabelle paginate). Il pull invece parte
+    /// comunque, perché non passa dalla macchina a stati: ritirava uno stato server che l'evento
+    /// appena scritto non l'aveva ancora ricevuto, e **riscriveva la card com'era prima**. È il
+    /// quarto difetto della 2.7 — "appena apro l'app i primi due o tre tap vanno a vuoto, ma il
+    /// toast dice che è andata": andava davvero, l'evento era nell'outbox; a mentire era la card.
+    ///
+    /// Nel caso normale — nessun sync in corso — non si aspetta niente: `queueOperation` ha già
+    /// spinto e l'outbox è vuota, quindi si va dritti al pull. L'attesa serve solo alla finestra
+    /// del sync di avvio, ha un tetto corto (una rotella lunga è peggio di una card in ritardo) e
+    /// se scade non si molla il colpo: si riaggancia alla fine del sync in corso.
+    public func flushAndPullTrackingState() async {
+        if pendingOperationsCount > 0 {
+            await waitForPushSlot(timeout: 8)
+            await pushPendingChanges()
+        }
+        await pullTrackingState()
+        if pendingOperationsCount > 0 { scheduleTrackingCatchUp() }
+    }
+
+    /// Attende che la macchina a stati accetti un push. L'unico stato che lo vieta è `.syncing`:
+    /// da `.offline` la transizione è ammessa e sarà `pushPendingChanges` a fermarsi sulla rete,
+    /// quindi qui non si aspetta mai per una mancanza di connessione.
+    private func waitForPushSlot(timeout: TimeInterval) async {
+        let deadline = Date().addingTimeInterval(timeout)
+        while !stateMachine.canTransition(to: .syncing(.push)), Date() < deadline {
+            try? await Task.sleep(nanoseconds: 150_000_000)
+        }
+    }
+
+    /// L'evento è ancora nell'outbox: il sync in corso non ha liberato in tempo.
+    ///
+    /// Senza questo la card resterebbe ferma fino al sync periodico — cinque minuti, cioè "non si
+    /// è aggiornata". Si aspetta la fine del sync in corso (una volta sola, non a ogni azione),
+    /// si spinge, si ritira e si annuncia: le schermate che leggono lo specchio si ridisegnano da
+    /// sé. Nessun ciclo: la sottoscrizione muore appena scatta, e a riarmarla può essere solo una
+    /// nuova azione dell'utente.
+    private func scheduleTrackingCatchUp() {
+        guard trackingCatchUpTask == nil else { return }
+        trackingCatchUpTask = Task { [weak self] in
+            for await _ in NotificationCenter.default.notifications(
+                named: SyncEngine.syncCompletedNotification) {
+                break
+            }
+            guard let self, !Task.isCancelled else { return }
+            self.trackingCatchUpTask = nil
+            await self.pushPendingChanges()
+            await self.pullTrackingState()
+            NotificationCenter.default.post(
+                name: SyncEngine.syncCompletedNotification, object: nil)
+        }
+    }
+
+    /// Le tabelle di profilo che le azioni riscaricano dopo una scrittura (blocco 9 +
+    /// social feed M1: la review deve comparire subito dopo il salvataggio).
+    nonisolated static let profileContentTables = ["user_favorites", "user_ratings", "user_reviews"]
 
     /// Ritira **solo** favorites e voti, dopo un'azione di scrittura su uno dei due.
     ///
@@ -774,6 +852,9 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             // colonne della chiave — nessuna da sola e' unica nel sottoinsieme dell'utente.
             "user_favorites",
             "user_ratings",
+            // Social feed M1: la review breve. lastWriteWins come user_ratings, ma con id
+            // sintetico generato dal client — chiave e ordinamento restano quelli del default.
+            "user_reviews",
             "watch_events"
         ]
 

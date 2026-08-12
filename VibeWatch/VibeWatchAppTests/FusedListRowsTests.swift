@@ -86,6 +86,33 @@ final class FusedListRowsTests: XCTestCase {
         XCTAssertEqual(rows.first { $0.showId == 201 }?.isSeen, false)
     }
 
+    /// Il difetto vero dietro "segno vista una serie e non si sposta mai".
+    ///
+    /// Il server fa la sua parte: finiti gli episodi, la riga di `v_tv_tracking` torna con
+    /// `bucket = up_to_date` e `next_season` NULL. Era lo specchio a non saperla ricevere —
+    /// `upsert` scartava i NULL insieme alle colonne assenti, quindi il vecchio prossimo episodio
+    /// restava scritto e la serie non superava mai la condizione di "vista".
+    func testIlProssimoEpisodioSvuotatoDalServerSvuotaAncheLoSpecchio() async throws {
+        try await insertShow(id: 400, name: "Quasi finita", bucket: "up_next", nextSeason: 4)
+
+        // La riga che arriva dal pull dopo l'ultimo episodio visto: gli stessi campi, con il
+        // prossimo episodio esplicitamente vuoto.
+        try await service.upsert(table: "tv_tracking", rows: [[
+            "user_id": userId,
+            "tmdb_show_id": 400,
+            "bucket": "up_to_date",
+            "show_name": "Quasi finita",
+            "user_status": "active",
+            "next_season": NSNull(),
+            "next_episode": NSNull(),
+            "backlog_since": NSNull(),
+        ]])
+
+        let rows = try await repository().fusedListRows(userId: userId)
+        XCTAssertEqual(rows.first?.isSeen, true,
+                       "con il prossimo episodio svuotato la serie deve risultare vista")
+    }
+
     /// Le righe di un altro utente non entrano mai nella lista.
     func testLaListaEDelSoloUtenteCorrente() async throws {
         try await insertShow(id: 300, name: "Mia", bucket: "up_to_date", nextSeason: nil)
