@@ -58,11 +58,9 @@ struct StickyDetailNavBar: View {
     let onBack: () -> Void
     var onShare: (() -> Void)?
 
-    /// Lo sfondo entra appena il contenuto si muove: senza, i cerchi finirebbero sopra il testo
-    /// della pagina senza niente che li separi.
-    private var backgroundOpacity: Double { ramp(from: 12, to: 64) }
-    /// Il titolo entra più tardi, quando quello grande dell'hero è ormai passato sotto la barra:
-    /// averli entrambi a schermo insieme li fa sembrare un errore.
+    /// Il titolo entra quando quello grande dell'hero è ormai passato sotto la barra: averli
+    /// entrambi a schermo insieme li fa sembrare un errore. In mezzo la barra resta vuota, che
+    /// è come si comporta qualunque barra di navigazione.
     private var titleOpacity: Double { showsTitleAlways ? 1 : ramp(from: 210, to: 268) }
 
     private func ramp(from start: CGFloat, to end: CGFloat) -> Double {
@@ -90,16 +88,21 @@ struct StickyDetailNavBar: View {
                 .allowsHitTesting(false)
         }
         .padding(.horizontal, 20)
-        .padding(.top, 20)
-        .padding(.bottom, 10)
+        // Più stretta di quando i bottoni galleggiavano sull'immagine: adesso è una striscia
+        // piena, e ogni punto in più è immagine coperta.
+        .padding(.top, 10)
+        .padding(.bottom, 8)
         .background {
+            // Striscia piena, sempre. Prima lo sfondo sfumava dentro con lo scorrimento e nei
+            // primi punti i due cerchi restavano appesi sopra l'immagine, senza niente che li
+            // tenesse: la barra sembrava staccata dalla pagina. Un contenitore che c'è sempre
+            // dice cos'è — la navigazione — e nasconde il contenuto che gli scorre sotto invece
+            // di lasciarlo trasparire a metà.
             Color.theme.background
-                .opacity(0.94 * backgroundOpacity)
                 .overlay(alignment: .bottom) {
                     Rectangle()
                         .fill(Color.white.opacity(0.08))
                         .frame(height: 1)
-                        .opacity(backgroundOpacity)
                 }
                 // La barra sta dentro l'area sicura, lo sfondo no: senza questo, sotto la barra
                 // scorrerebbe il contenuto nudo all'altezza dell'orologio.
@@ -117,7 +120,10 @@ struct StickyDetailNavBar: View {
                 .font(.system(size: 17, weight: .semibold))
                 .foregroundColor(.white)
                 .frame(width: 44, height: 44)
-                .background(Color.black.opacity(0.44))
+                // Nero al 44% serviva a staccare l'icona da un backdrop qualsiasi. Ora sotto c'è
+                // la striscia, e su fondo scuro un cerchio nero è una macchia più scura senza
+                // motivo: si usa il riempimento chiaro delle altre superfici dell'app.
+                .background(Color.white.opacity(0.09))
                 .clipShape(Circle())
         }
         .buttonStyle(.plain)
