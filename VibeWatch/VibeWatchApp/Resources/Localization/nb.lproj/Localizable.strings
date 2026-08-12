@@ -1250,3 +1250,8 @@
 "ai.filter.applied" = "Filter: %@";
 "ai.history.delete" = "Slett chat";
 "ai.history.deleteConfirmTitle" = "Slette denne chatten?";
+"ai.history.pin" = "Fest øverst";
+"ai.history.unpin" = "Løsne";
+"ai.history.rename" = "Gi chatten nytt navn";
+"ai.history.renamePlaceholder" = "Chatnavn";
+"ai.history.pinnedSection" = "Festet";

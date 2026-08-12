@@ -1303,3 +1303,8 @@
 "ai.filter.applied" = "已应用筛选：%@";
 "ai.history.delete" = "删除对话";
 "ai.history.deleteConfirmTitle" = "删除此对话？";
+"ai.history.pin" = "置顶";
+"ai.history.unpin" = "取消置顶";
+"ai.history.rename" = "重命名对话";
+"ai.history.renamePlaceholder" = "对话名称";
+"ai.history.pinnedSection" = "已置顶";

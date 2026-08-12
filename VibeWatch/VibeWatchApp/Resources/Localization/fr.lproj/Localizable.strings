@@ -1323,3 +1323,8 @@
 "ai.filter.applied" = "Filtre appliqué : %@";
 "ai.history.delete" = "Supprimer le chat";
 "ai.history.deleteConfirmTitle" = "Supprimer ce chat ?";
+"ai.history.pin" = "Épingler en haut";
+"ai.history.unpin" = "Désépingler";
+"ai.history.rename" = "Renommer le chat";
+"ai.history.renamePlaceholder" = "Nom du chat";
+"ai.history.pinnedSection" = "Épinglés";

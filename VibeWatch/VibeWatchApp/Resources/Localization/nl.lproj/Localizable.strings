@@ -1323,3 +1323,8 @@
 "ai.filter.applied" = "Filter actief: %@";
 "ai.history.delete" = "Chat verwijderen";
 "ai.history.deleteConfirmTitle" = "Deze chat verwijderen?";
+"ai.history.pin" = "Bovenaan vastzetten";
+"ai.history.unpin" = "Losmaken";
+"ai.history.rename" = "Chat hernoemen";
+"ai.history.renamePlaceholder" = "Chatnaam";
+"ai.history.pinnedSection" = "Vastgezet";

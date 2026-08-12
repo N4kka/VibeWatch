@@ -1324,3 +1324,8 @@
 "ai.filter.applied" = "Suodatin: %@";
 "ai.history.delete" = "Poista keskustelu";
 "ai.history.deleteConfirmTitle" = "Poistetaanko tämä keskustelu?";
+"ai.history.pin" = "Kiinnitä ylös";
+"ai.history.unpin" = "Irrota kiinnitys";
+"ai.history.rename" = "Nimeä keskustelu uudelleen";
+"ai.history.renamePlaceholder" = "Keskustelun nimi";
+"ai.history.pinnedSection" = "Kiinnitetyt";

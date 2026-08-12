@@ -1323,3 +1323,8 @@
 "ai.filter.applied" = "Filter applied: %@";
 "ai.history.delete" = "Delete chat";
 "ai.history.deleteConfirmTitle" = "Delete this chat?";
+"ai.history.pin" = "Pin to top";
+"ai.history.unpin" = "Unpin";
+"ai.history.rename" = "Rename chat";
+"ai.history.renamePlaceholder" = "Chat name";
+"ai.history.pinnedSection" = "Pinned";

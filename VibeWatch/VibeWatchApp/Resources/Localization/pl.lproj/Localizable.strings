@@ -1324,3 +1324,8 @@
 "ai.filter.applied" = "Filtr: %@";
 "ai.history.delete" = "Usuń czat";
 "ai.history.deleteConfirmTitle" = "Usunąć ten czat?";
+"ai.history.pin" = "Przypnij na górze";
+"ai.history.unpin" = "Odepnij";
+"ai.history.rename" = "Zmień nazwę czatu";
+"ai.history.renamePlaceholder" = "Nazwa czatu";
+"ai.history.pinnedSection" = "Przypięte";

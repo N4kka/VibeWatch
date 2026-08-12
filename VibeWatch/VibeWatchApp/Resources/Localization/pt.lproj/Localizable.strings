@@ -1311,3 +1311,8 @@
 "ai.filter.applied" = "Filtro aplicado: %@";
 "ai.history.delete" = "Eliminar chat";
 "ai.history.deleteConfirmTitle" = "Eliminar este chat?";
+"ai.history.pin" = "Fixar no topo";
+"ai.history.unpin" = "Desafixar";
+"ai.history.rename" = "Renomear chat";
+"ai.history.renamePlaceholder" = "Nome do chat";
+"ai.history.pinnedSection" = "Fixados";

@@ -1325,3 +1325,8 @@
 "ai.filter.applied" = "Filter: %@";
 "ai.history.delete" = "Slet chat";
 "ai.history.deleteConfirmTitle" = "Slet denne chat?";
+"ai.history.pin" = "Fastgør øverst";
+"ai.history.unpin" = "Frigør";
+"ai.history.rename" = "Omdøb chat";
+"ai.history.renamePlaceholder" = "Chatnavn";
+"ai.history.pinnedSection" = "Fastgjorte";

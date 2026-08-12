@@ -1318,3 +1318,8 @@
 "ai.filter.applied" = "フィルター: %@";
 "ai.history.delete" = "チャットを削除";
 "ai.history.deleteConfirmTitle" = "このチャットを削除しますか？";
+"ai.history.pin" = "上部にピン留め";
+"ai.history.unpin" = "ピン留めを解除";
+"ai.history.rename" = "チャット名を変更";
+"ai.history.renamePlaceholder" = "チャット名";
+"ai.history.pinnedSection" = "ピン留め";

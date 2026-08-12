@@ -1314,3 +1314,8 @@
 "ai.filter.applied" = "Filtre: %@";
 "ai.history.delete" = "Sohbeti sil";
 "ai.history.deleteConfirmTitle" = "Bu sohbet silinsin mi?";
+"ai.history.pin" = "Üste sabitle";
+"ai.history.unpin" = "Sabitlemeyi kaldır";
+"ai.history.rename" = "Sohbeti yeniden adlandır";
+"ai.history.renamePlaceholder" = "Sohbet adı";
+"ai.history.pinnedSection" = "Sabitlenenler";

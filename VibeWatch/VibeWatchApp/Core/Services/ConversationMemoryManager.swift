@@ -9,6 +9,8 @@ struct AIChatSessionSummary: Identifiable, Equatable {
     let messageCount: Int
     /// Id TMDB distinti proposti dall'AI in questa sessione (da mentioned_media_ids).
     let proposedMediaIds: [Int]
+    /// Fissata in cima alla cronologia (preferenza locale al device).
+    let isPinned: Bool
 
     var id: String { sessionId }
 }
@@ -154,6 +156,55 @@ final class ConversationMemoryManager: ObservableObject {
         messages = []
     }
 
+    // MARK: - Pin e rinomina (preferenze locali al device: non esiste una tabella sessioni
+    // lato server, e pin/titolo custom non valgono un nuovo percorso di sync)
+
+    private static let pinnedKey = "ai_chat_pinned_sessions"
+    private static let titlesKey = "ai_chat_session_titles"
+
+    private var pinnedSessionIds: Set<String> {
+        get { Set(UserDefaults.standard.stringArray(forKey: Self.pinnedKey) ?? []) }
+        set { UserDefaults.standard.set(Array(newValue), forKey: Self.pinnedKey) }
+    }
+
+    private var customTitles: [String: String] {
+        get { (UserDefaults.standard.dictionary(forKey: Self.titlesKey) as? [String: String]) ?? [:] }
+        set { UserDefaults.standard.set(newValue, forKey: Self.titlesKey) }
+    }
+
+    func isPinned(_ id: String) -> Bool {
+        pinnedSessionIds.contains(id)
+    }
+
+    func setPinned(_ id: String, pinned: Bool) {
+        var ids = pinnedSessionIds
+        if pinned { ids.insert(id) } else { ids.remove(id) }
+        pinnedSessionIds = ids
+    }
+
+    /// Titolo custom per una sessione; vuoto = torna all'euristica dal primo messaggio.
+    func renameSession(_ id: String, title: String) {
+        var titles = customTitles
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            titles.removeValue(forKey: id)
+        } else {
+            titles[id] = trimmed
+        }
+        customTitles = titles
+    }
+
+    func customTitle(for id: String) -> String? {
+        customTitles[id]
+    }
+
+    private func clearSessionPreferences(_ id: String) {
+        setPinned(id, pinned: false)
+        var titles = customTitles
+        titles.removeValue(forKey: id)
+        customTitles = titles
+    }
+
     /// Elimina una sessione: righe locali via, e una DELETE in coda al sync per ogni riga
     /// (apply_mutations fa la cancellazione owner-scoped lato server). Se era la sessione
     /// corrente, si riparte con una nuova.
@@ -188,6 +239,8 @@ final class ConversationMemoryManager: ObservableObject {
         } catch {
             Logger.error("[ConversationMemoryManager] Failed to delete session", error: error)
         }
+
+        clearSessionPreferences(id)
 
         if id == sessionId {
             await resetSession()
@@ -237,10 +290,11 @@ final class ConversationMemoryManager: ObservableObject {
 
                 return AIChatSessionSummary(
                     sessionId: sessionId,
-                    title: Self.sessionTitle(from: firstUserMessage),
+                    title: customTitle(for: sessionId) ?? Self.sessionTitle(from: firstUserMessage),
                     lastMessageAt: lastAt,
                     messageCount: count,
-                    proposedMediaIds: Self.parseMediaIds(row["media_ids"] as? String)
+                    proposedMediaIds: Self.parseMediaIds(row["media_ids"] as? String),
+                    isPinned: isPinned(sessionId)
                 )
             }
         } catch {

@@ -1324,3 +1324,8 @@
 "ai.filter.applied" = "Φίλτρο: %@";
 "ai.history.delete" = "Διαγραφή συνομιλίας";
 "ai.history.deleteConfirmTitle" = "Διαγραφή αυτής της συνομιλίας;";
+"ai.history.pin" = "Καρφίτσωμα στην κορυφή";
+"ai.history.unpin" = "Ξεκαρφίτσωμα";
+"ai.history.rename" = "Μετονομασία συνομιλίας";
+"ai.history.renamePlaceholder" = "Όνομα συνομιλίας";
+"ai.history.pinnedSection" = "Καρφιτσωμένες";

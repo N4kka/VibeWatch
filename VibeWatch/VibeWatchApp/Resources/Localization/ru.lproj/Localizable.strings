@@ -1308,3 +1308,8 @@
 "ai.filter.applied" = "Фильтр: %@";
 "ai.history.delete" = "Удалить чат";
 "ai.history.deleteConfirmTitle" = "Удалить этот чат?";
+"ai.history.pin" = "Закрепить сверху";
+"ai.history.unpin" = "Открепить";
+"ai.history.rename" = "Переименовать чат";
+"ai.history.renamePlaceholder" = "Название чата";
+"ai.history.pinnedSection" = "Закреплённые";

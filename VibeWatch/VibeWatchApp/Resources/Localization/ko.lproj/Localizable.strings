@@ -1318,3 +1318,8 @@
 "ai.filter.applied" = "필터: %@";
 "ai.history.delete" = "채팅 삭제";
 "ai.history.deleteConfirmTitle" = "이 채팅을 삭제할까요?";
+"ai.history.pin" = "상단에 고정";
+"ai.history.unpin" = "고정 해제";
+"ai.history.rename" = "채팅 이름 변경";
+"ai.history.renamePlaceholder" = "채팅 이름";
+"ai.history.pinnedSection" = "고정됨";

@@ -288,9 +288,12 @@ class AIRecommendationViewModel: ObservableObject {
         await sendMessage()
     }
 
-    /// Titolo della chat corrente per il sottotitolo dell'header: primo messaggio utente,
-    /// troncato a confine di parola.
+    /// Titolo della chat corrente per il sottotitolo dell'header: il titolo custom (rinomina)
+    /// se presente, altrimenti il primo messaggio utente troncato a confine di parola.
     var chatTitle: String? {
+        if let custom = conversationMemory.customTitle(for: conversationMemory.sessionId) {
+            return custom
+        }
         guard let first = messages.first(where: { $0.isUser })?.content else { return nil }
         return Self.chatTitle(from: first)
     }
@@ -327,6 +330,19 @@ class AIRecommendationViewModel: ObservableObject {
         await conversationMemory.switchSession(to: sessionId)
         hydrateMessagesFromMemory()
         error = nil
+    }
+
+    /// Fissa/sblocca una chat in cima alla cronologia.
+    func togglePin(_ sessionId: String) async {
+        conversationMemory.setPinned(sessionId, pinned: !conversationMemory.isPinned(sessionId))
+        await loadSessions()
+    }
+
+    /// Rinomina una chat (stringa vuota = torna al titolo automatico).
+    func renameSession(_ sessionId: String, title: String) async {
+        conversationMemory.renameSession(sessionId, title: title)
+        await loadSessions()
+        objectWillChange.send() // il sottotitolo dell'header legge chatTitle
     }
 
     /// Elimina una chat dalla cronologia (e, se era quella aperta, riparte pulita).

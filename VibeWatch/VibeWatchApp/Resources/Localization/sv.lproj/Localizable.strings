@@ -1312,3 +1312,8 @@
 "ai.filter.applied" = "Filter: %@";
 "ai.history.delete" = "Radera chatt";
 "ai.history.deleteConfirmTitle" = "Radera den här chatten?";
+"ai.history.pin" = "Fäst högst upp";
+"ai.history.unpin" = "Lossa";
+"ai.history.rename" = "Byt namn på chatten";
+"ai.history.renamePlaceholder" = "Chattnamn";
+"ai.history.pinnedSection" = "Fästa";

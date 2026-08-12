@@ -5,6 +5,8 @@ struct AIChatHistoryView: View {
     @ObservedObject var viewModel: AIRecommendationViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var sessionPendingDeletion: AIChatSessionSummary?
+    @State private var sessionPendingRename: AIChatSessionSummary?
+    @State private var renameDraft: String = ""
 
     private struct SessionGroup: Identifiable {
         let titleKey: String
@@ -105,6 +107,24 @@ struct AIChatHistoryView: View {
         } message: {
             Text(sessionPendingDeletion?.title ?? "")
         }
+        .alert(
+            "ai.history.rename".localized,
+            isPresented: Binding(
+                get: { sessionPendingRename != nil },
+                set: { if !$0 { sessionPendingRename = nil } }
+            )
+        ) {
+            TextField("ai.history.renamePlaceholder".localized, text: $renameDraft)
+            Button("common.save".localized) {
+                if let session = sessionPendingRename {
+                    Task { await viewModel.renameSession(session.sessionId, title: renameDraft) }
+                }
+                sessionPendingRename = nil
+            }
+            Button("common.cancel".localized, role: .cancel) {
+                sessionPendingRename = nil
+            }
+        }
     }
 
     private func sessionRow(_ session: AIChatSessionSummary) -> some View {
@@ -142,6 +162,13 @@ struct AIChatHistoryView: View {
 
                 Spacer()
 
+                if session.isPinned {
+                    Image(systemName: "pin.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.theme.accentOrange.opacity(0.8))
+                        .rotationEffect(.degrees(45))
+                }
+
                 Text(relativeTime(for: session.lastMessageAt))
                     .font(.system(size: 13))
                     .foregroundStyle(Color.theme.textSecondary)
@@ -155,8 +182,24 @@ struct AIChatHistoryView: View {
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .buttonStyle(.plain)
-        // Long press per eliminare la chat (con conferma).
+        // Long press: fissa in alto, rinomina, elimina (con conferma).
         .contextMenu {
+            Button {
+                Task { await viewModel.togglePin(session.sessionId) }
+            } label: {
+                Label(
+                    session.isPinned ? "ai.history.unpin".localized : "ai.history.pin".localized,
+                    systemImage: session.isPinned ? "pin.slash" : "pin"
+                )
+            }
+
+            Button {
+                renameDraft = session.title
+                sessionPendingRename = session
+            } label: {
+                Label("ai.history.rename".localized, systemImage: "pencil")
+            }
+
             Button(role: .destructive) {
                 sessionPendingDeletion = session
             } label: {
@@ -184,12 +227,15 @@ struct AIChatHistoryView: View {
     private var groupedSessions: [SessionGroup] {
         let calendar = Calendar.current
         let now = Date()
+        var pinned: [AIChatSessionSummary] = []
         var today: [AIChatSessionSummary] = []
         var lastWeek: [AIChatSessionSummary] = []
         var earlier: [AIChatSessionSummary] = []
 
         for session in viewModel.sessions {
-            if calendar.isDateInToday(session.lastMessageAt) {
+            if session.isPinned {
+                pinned.append(session)
+            } else if calendar.isDateInToday(session.lastMessageAt) {
                 today.append(session)
             } else if let days = calendar.dateComponents([.day], from: session.lastMessageAt, to: now).day,
                       days < 7 {
@@ -200,6 +246,7 @@ struct AIChatHistoryView: View {
         }
 
         var groups: [SessionGroup] = []
+        if !pinned.isEmpty { groups.append(SessionGroup(titleKey: "ai.history.pinnedSection", sessions: pinned)) }
         if !today.isEmpty { groups.append(SessionGroup(titleKey: "ai.history.today", sessions: today)) }
         if !lastWeek.isEmpty { groups.append(SessionGroup(titleKey: "ai.history.last7days", sessions: lastWeek)) }
         if !earlier.isEmpty { groups.append(SessionGroup(titleKey: "ai.history.earlier", sessions: earlier)) }
