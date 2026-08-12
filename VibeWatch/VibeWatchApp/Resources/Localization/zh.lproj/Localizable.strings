@@ -1301,3 +1301,5 @@
 "ai.filter.shorter" = "更短";
 "ai.filter.hiddenGems" = "冷门佳作";
 "ai.filter.applied" = "已应用筛选：%@";
+"ai.history.delete" = "删除对话";
+"ai.history.deleteConfirmTitle" = "删除此对话？";

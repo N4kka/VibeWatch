@@ -1310,3 +1310,5 @@
 "ai.filter.shorter" = "Kortare";
 "ai.filter.hiddenGems" = "Dolda pärlor";
 "ai.filter.applied" = "Filter: %@";
+"ai.history.delete" = "Radera chatt";
+"ai.history.deleteConfirmTitle" = "Radera den här chatten?";

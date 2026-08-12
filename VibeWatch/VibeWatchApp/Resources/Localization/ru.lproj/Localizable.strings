@@ -1306,3 +1306,5 @@
 "ai.filter.shorter" = "Покороче";
 "ai.filter.hiddenGems" = "Скрытые жемчужины";
 "ai.filter.applied" = "Фильтр: %@";
+"ai.history.delete" = "Удалить чат";
+"ai.history.deleteConfirmTitle" = "Удалить этот чат?";

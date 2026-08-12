@@ -1321,3 +1321,5 @@
 "ai.filter.shorter" = "Shorter";
 "ai.filter.hiddenGems" = "Hidden gems";
 "ai.filter.applied" = "Filter applied: %@";
+"ai.history.delete" = "Delete chat";
+"ai.history.deleteConfirmTitle" = "Delete this chat?";

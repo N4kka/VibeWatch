@@ -5,7 +5,8 @@ enum CerebrasError: Error {
     case noData
     case decodingError
     case serverError(String)
-    case quotaExceeded
+    /// Quota giornaliera raggiunta; se il server ha allegato il conteggio, e' qui.
+    case quotaExceeded(serverUsage: AIServerUsage?)
     case unknown
 }
 
@@ -29,12 +30,27 @@ struct CerebrasChatRequest: Codable {
     }
 }
 
-/// Authoritative usage snapshot returned by cerebras-proxy in X-AI-* response headers.
-struct AIServerUsage {
+/// Authoritative usage snapshot returned by cerebras-proxy: nel body della risposta come campo
+/// `vw_usage` (canale primario, i gateway non lo filtrano) e negli header X-AI-* (fallback).
+struct AIServerUsage: Codable {
     let bucket: String
     let requestsUsed: Int
     let dailyLimit: Int
     let isPro: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case bucket
+        case requestsUsed = "requests_used"
+        case dailyLimit = "daily_limit"
+        case isPro = "is_pro"
+    }
+
+    init(bucket: String, requestsUsed: Int, dailyLimit: Int, isPro: Bool) {
+        self.bucket = bucket
+        self.requestsUsed = requestsUsed
+        self.dailyLimit = dailyLimit
+        self.isPro = isPro
+    }
 
     init?(httpResponse: HTTPURLResponse) {
         guard
@@ -47,6 +63,17 @@ struct AIServerUsage {
         self.dailyLimit = limit
         self.bucket = httpResponse.value(forHTTPHeaderField: "X-AI-Bucket") ?? "chat"
         self.isPro = httpResponse.value(forHTTPHeaderField: "X-AI-Is-Pro") == "true"
+    }
+
+    /// Estrae il conteggio dal body di un 429 del proxy ({requestsUsedToday, dailyLimit, ...}).
+    init?(quotaErrorBody data: Data) {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let used = json["requestsUsedToday"] as? Int,
+              let limit = json["dailyLimit"] as? Int else { return nil }
+        self.requestsUsed = used
+        self.dailyLimit = limit
+        self.bucket = json["bucket"] as? String ?? "chat"
+        self.isPro = json["isPro"] as? Bool ?? false
     }
 }
 
@@ -76,6 +103,13 @@ struct CerebrasChatResponse: Codable {
     let model: String
     let choices: [CerebrasChoice]
     let usage: CerebrasUsage?
+    /// Iniettato da cerebras-proxy: conteggio quota autorevole del server.
+    let vwUsage: AIServerUsage?
+
+    enum CodingKeys: String, CodingKey {
+        case id, object, created, model, choices, usage
+        case vwUsage = "vw_usage"
+    }
 }
 
 struct CerebrasChoice: Codable {
@@ -340,7 +374,9 @@ class CerebrasService {
 
         guard (200...299).contains(httpResponse.statusCode) else {
             if httpResponse.statusCode == 402 || httpResponse.statusCode == 429 {
-                throw CerebrasError.quotaExceeded
+                // Il body del 429 del proxy contiene il conteggio autorevole: lo si propaga
+                // cosi il badge si riallinea anche quando il limite scatta lato server.
+                throw CerebrasError.quotaExceeded(serverUsage: AIServerUsage(quotaErrorBody: data))
             }
             if let errorString = String(data: data, encoding: .utf8) {
                 throw CerebrasError.serverError(errorString)
@@ -356,9 +392,10 @@ class CerebrasService {
             content = cleanAIResponse(content)
 
             let tokens = decodedResponse.usage?.totalTokens ?? 0
-            let serverUsage = AIServerUsage(httpResponse: httpResponse)
+            // Usage: prima il body (vw_usage, immune ai gateway che filtrano header), poi header.
+            let serverUsage = decodedResponse.vwUsage ?? AIServerUsage(httpResponse: httpResponse)
 
-            Logger.debug("[CerebrasService] Chat generated \(tokens) tokens")
+            Logger.debug("[CerebrasService] Chat generated \(tokens) tokens (serverUsage: \(serverUsage.map { "\($0.requestsUsed)/\($0.dailyLimit)" } ?? "assente"))")
             return (content, tokens, serverUsage)
         } catch {
             Logger.error("[CerebrasService] Decoding Error: \(error.localizedDescription)")
@@ -567,7 +604,7 @@ class CerebrasService {
 
         guard (200...299).contains(httpResponse.statusCode) else {
             if httpResponse.statusCode == 402 || httpResponse.statusCode == 429 {
-                throw CerebrasError.quotaExceeded
+                throw CerebrasError.quotaExceeded(serverUsage: AIServerUsage(quotaErrorBody: data))
             }
             if let errorString = String(data: data, encoding: .utf8) {
                 throw CerebrasError.serverError(errorString)

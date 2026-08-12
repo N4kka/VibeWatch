@@ -1321,3 +1321,5 @@
 "ai.filter.shorter" = "Korter";
 "ai.filter.hiddenGems" = "Verborgen parels";
 "ai.filter.applied" = "Filter actief: %@";
+"ai.history.delete" = "Chat verwijderen";
+"ai.history.deleteConfirmTitle" = "Deze chat verwijderen?";

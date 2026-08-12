@@ -1322,3 +1322,5 @@
 "ai.filter.shorter" = "Krótsze";
 "ai.filter.hiddenGems" = "Mniej znane";
 "ai.filter.applied" = "Filtr: %@";
+"ai.history.delete" = "Usuń czat";
+"ai.history.deleteConfirmTitle" = "Usunąć ten czat?";

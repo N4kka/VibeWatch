@@ -253,7 +253,13 @@ class AIRecommendationViewModel: ObservableObject {
                 tokensUsed: tokens
             )
 
-        } catch CerebrasError.quotaExceeded {
+        } catch CerebrasError.quotaExceeded(let serverUsage) {
+            // Il 429 del proxy porta il conteggio autorevole: il badge si riallinea subito
+            // invece di restare indietro rispetto al server.
+            if let serverUsage {
+                aiTokenManager.applyServerUsage(used: serverUsage.requestsUsed, limit: serverUsage.dailyLimit)
+                await syncWithTokenManager()
+            }
             self.error = "ai.hardLimitMessage".localized
         } catch {
             Logger.error("[AIRecommendationViewModel] AI Error", error: error)
@@ -321,6 +327,18 @@ class AIRecommendationViewModel: ObservableObject {
         await conversationMemory.switchSession(to: sessionId)
         hydrateMessagesFromMemory()
         error = nil
+    }
+
+    /// Elimina una chat dalla cronologia (e, se era quella aperta, riparte pulita).
+    func deleteSession(_ sessionId: String) async {
+        let wasCurrent = sessionId == conversationMemory.sessionId
+        await conversationMemory.deleteSession(sessionId)
+        sessions.removeAll { $0.sessionId == sessionId }
+        if wasCurrent {
+            messages = []
+            prompt = ""
+            error = nil
+        }
     }
 
     /// Quanti dei titoli proposti in una sessione sono ora in watchlist (meta "2 in watchlist").

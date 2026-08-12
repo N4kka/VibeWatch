@@ -1320,3 +1320,5 @@
 "ai.filter.shorter" = "Più corti";
 "ai.filter.hiddenGems" = "Meno noti";
 "ai.filter.applied" = "Filtro applicato: %@";
+"ai.history.delete" = "Elimina chat";
+"ai.history.deleteConfirmTitle" = "Eliminare questa chat?";

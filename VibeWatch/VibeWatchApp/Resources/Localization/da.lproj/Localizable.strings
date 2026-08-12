@@ -1323,3 +1323,5 @@
 "ai.filter.shorter" = "Kortere";
 "ai.filter.hiddenGems" = "Skjulte perler";
 "ai.filter.applied" = "Filter: %@";
+"ai.history.delete" = "Slet chat";
+"ai.history.deleteConfirmTitle" = "Slet denne chat?";

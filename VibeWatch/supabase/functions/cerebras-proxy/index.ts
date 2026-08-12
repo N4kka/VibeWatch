@@ -100,10 +100,13 @@ async function requestsUsedToday(
   bucket: QuotaBucket,
 ): Promise<number> {
   try {
+    // Filtrare per usage_date e' essenziale: la PK e' (user_id, usage_date), quindi un utente ha
+    // una riga per giorno e un .limit(1) senza filtro puo' pescare la riga di ieri (conteggio 0).
     const { data, error } = await adminSupabase
       .from('user_ai_token_usage')
       .select('request_count, aux_request_count, usage_date, last_updated')
       .eq('user_id', userId)
+      .eq('usage_date', todayKey)
       .limit(1)
 
     if (error) {
@@ -260,27 +263,41 @@ serve(async (req) => {
     const respBody = await cerebrasResp.text()
 
     if (!cerebrasResp.ok) {
+      // 502 esplicito, NON il passthrough dello status: un 429 di Cerebras arrivava al client
+      // identico al nostro 429 di quota e veniva mostrato come "limite giornaliero raggiunto".
+      console.error(`Cerebras request failed (${cerebrasResp.status}):`, respBody.slice(0, 500))
       return jsonResponse({
-        error: 'Cerebras request failed',
+        error: 'upstream_error',
         status: cerebrasResp.status,
         details: respBody,
-      }, cerebrasResp.status)
+      }, 502)
     }
 
     // 5. Count one successful request on the right bucket + feed the global token ledger.
     await recordSuccessfulRequest(adminSupabase, user.id, bucket)
+
+    // 6. Return the Cerebras response with the authoritative usage embedded in the body
+    // (vw_usage): gli header custom possono essere filtrati dai gateway, il body no.
+    // Gli header X-AI-* restano come canale secondario.
+    let outBody = respBody
     try {
-      const totalTokens = JSON.parse(respBody)?.usage?.total_tokens
+      const parsed = JSON.parse(respBody)
+      const totalTokens = parsed?.usage?.total_tokens
       if (typeof totalTokens === 'number') {
         await recordGlobalTokens(adminSupabase, totalTokens)
       }
+      parsed.vw_usage = {
+        bucket,
+        requests_used: usedToday + 1,
+        daily_limit: dailyLimit,
+        is_pro: isPro,
+      }
+      outBody = JSON.stringify(parsed)
     } catch (_) {
-      // Il ledger globale e best-effort: una risposta non parsabile non blocca il flusso.
+      // Body non parsabile: si inoltra raw, il client ricade sugli header/fallback locale.
     }
 
-    // 6. Return raw Cerebras response, with authoritative usage in headers so the client can
-    // sync its badge without re-fetching (kills the local double-count reconciliation).
-    return new Response(respBody, {
+    return new Response(outBody, {
       status: cerebrasResp.status,
       headers: {
         'Content-Type': 'application/json',

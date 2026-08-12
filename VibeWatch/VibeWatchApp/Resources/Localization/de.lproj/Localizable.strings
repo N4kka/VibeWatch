@@ -1321,3 +1321,5 @@
 "ai.filter.shorter" = "Kürzere";
 "ai.filter.hiddenGems" = "Geheimtipps";
 "ai.filter.applied" = "Filter aktiv: %@";
+"ai.history.delete" = "Chat löschen";
+"ai.history.deleteConfirmTitle" = "Diesen Chat löschen?";

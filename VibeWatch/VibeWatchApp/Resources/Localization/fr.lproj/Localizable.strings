@@ -1321,3 +1321,5 @@
 "ai.filter.shorter" = "Plus courts";
 "ai.filter.hiddenGems" = "Pépites cachées";
 "ai.filter.applied" = "Filtre appliqué : %@";
+"ai.history.delete" = "Supprimer le chat";
+"ai.history.deleteConfirmTitle" = "Supprimer ce chat ?";

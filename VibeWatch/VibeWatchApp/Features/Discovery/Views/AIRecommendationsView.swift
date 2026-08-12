@@ -164,7 +164,7 @@ struct AIRecommendationsView: View {
         return VStack(spacing: 0) {
             ScrollViewReader { proxy in
                 ScrollView {
-                    VStack(spacing: 20) {
+                    VStack(spacing: 24) {
                         if viewModel.messages.isEmpty && !viewModel.isLoading {
                             AIEmptyStateView { starter in
                                 Task {
@@ -174,7 +174,7 @@ struct AIRecommendationsView: View {
                             }
                         }
 
-                        LazyVStack(spacing: 18) {
+                        LazyVStack(spacing: 28) {
                             ForEach($viewModel.messages) { $message in
                                 AIChatMessageView(
                                     message: $message,
@@ -216,7 +216,8 @@ struct AIRecommendationsView: View {
                         .padding(.horizontal, 16)
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.bottom, 24)
+                    .padding(.top, 14)
+                    .padding(.bottom, 28)
                 }
                 .scrollDismissesKeyboard(.interactively)
                 .onChange(of: viewModel.messages.count) {
@@ -241,7 +242,8 @@ struct AIRecommendationsView: View {
                 activeFilters: viewModel.activeFilters,
                 onToggle: { viewModel.toggleFilter($0) }
             )
-            .padding(.bottom, 6)
+            .padding(.top, 10)
+            .padding(.bottom, 10)
 
             Divider()
                 .background(Color.theme.separator)
@@ -341,7 +343,7 @@ private struct AIChatMessageView: View {
     }
 
     private var assistantContent: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 16) {
             if !message.text.isEmpty {
                 HStack(alignment: .top, spacing: 10) {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
@@ -381,6 +383,7 @@ private struct AIChatMessageView: View {
                     onThumbDown: { onThumb(false) },
                     onMore: onMore
                 )
+                .padding(.top, 2)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

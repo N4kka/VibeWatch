@@ -154,6 +154,46 @@ final class ConversationMemoryManager: ObservableObject {
         messages = []
     }
 
+    /// Elimina una sessione: righe locali via, e una DELETE in coda al sync per ogni riga
+    /// (apply_mutations fa la cancellazione owner-scoped lato server). Se era la sessione
+    /// corrente, si riparte con una nuova.
+    func deleteSession(_ id: String) async {
+        guard let userId = AuthService.shared.currentUser?.id else { return }
+
+        do {
+            let rows = try await sqliteService.queryRaw(
+                "SELECT id FROM ai_conversation_history WHERE user_id = ? AND session_id = ?",
+                parameters: [userId, id]
+            )
+            let recordIds = rows.compactMap { $0["id"] as? String }
+
+            try await sqliteService.executeWrite(
+                "DELETE FROM ai_conversation_history WHERE user_id = ? AND session_id = ?",
+                parameters: [userId, id]
+            )
+
+            for recordId in recordIds {
+                do {
+                    try await SyncEngine.shared.queueOperation(
+                        table: "ai_conversation_history",
+                        operationType: "DELETE",
+                        recordId: recordId,
+                        payload: ["id": recordId, "user_id": userId],
+                        dependsOn: nil
+                    )
+                } catch {
+                    Logger.error("[ConversationMemoryManager] Failed to queue delete: \(error)")
+                }
+            }
+        } catch {
+            Logger.error("[ConversationMemoryManager] Failed to delete session", error: error)
+        }
+
+        if id == sessionId {
+            await resetSession()
+        }
+    }
+
     /// Passa a una sessione esistente e ne ricarica i messaggi.
     func switchSession(to id: String) async {
         guard id != sessionId else { return }

@@ -1322,3 +1322,5 @@
 "ai.filter.shorter" = "Πιο σύντομα";
 "ai.filter.hiddenGems" = "Κρυμμένα διαμάντια";
 "ai.filter.applied" = "Φίλτρο: %@";
+"ai.history.delete" = "Διαγραφή συνομιλίας";
+"ai.history.deleteConfirmTitle" = "Διαγραφή αυτής της συνομιλίας;";

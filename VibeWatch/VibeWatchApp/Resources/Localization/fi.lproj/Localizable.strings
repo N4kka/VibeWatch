@@ -1322,3 +1322,5 @@
 "ai.filter.shorter" = "Lyhyemmät";
 "ai.filter.hiddenGems" = "Piilotetut helmet";
 "ai.filter.applied" = "Suodatin: %@";
+"ai.history.delete" = "Poista keskustelu";
+"ai.history.deleteConfirmTitle" = "Poistetaanko tämä keskustelu?";

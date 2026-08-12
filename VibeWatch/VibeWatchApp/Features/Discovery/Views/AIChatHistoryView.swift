@@ -4,6 +4,7 @@ import SwiftUI
 struct AIChatHistoryView: View {
     @ObservedObject var viewModel: AIRecommendationViewModel
     @Environment(\.dismiss) private var dismiss
+    @State private var sessionPendingDeletion: AIChatSessionSummary?
 
     private struct SessionGroup: Identifiable {
         let titleKey: String
@@ -84,6 +85,26 @@ struct AIChatHistoryView: View {
         .task {
             await viewModel.loadSessions()
         }
+        .confirmationDialog(
+            "ai.history.deleteConfirmTitle".localized,
+            isPresented: Binding(
+                get: { sessionPendingDeletion != nil },
+                set: { if !$0 { sessionPendingDeletion = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("ai.history.delete".localized, role: .destructive) {
+                if let session = sessionPendingDeletion {
+                    Task { await viewModel.deleteSession(session.sessionId) }
+                }
+                sessionPendingDeletion = nil
+            }
+            Button("common.cancel".localized, role: .cancel) {
+                sessionPendingDeletion = nil
+            }
+        } message: {
+            Text(sessionPendingDeletion?.title ?? "")
+        }
     }
 
     private func sessionRow(_ session: AIChatSessionSummary) -> some View {
@@ -134,6 +155,14 @@ struct AIChatHistoryView: View {
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .buttonStyle(.plain)
+        // Long press per eliminare la chat (con conferma).
+        .contextMenu {
+            Button(role: .destructive) {
+                sessionPendingDeletion = session
+            } label: {
+                Label("ai.history.delete".localized, systemImage: "trash")
+            }
+        }
     }
 
     private func metaLine(for session: AIChatSessionSummary) -> String? {

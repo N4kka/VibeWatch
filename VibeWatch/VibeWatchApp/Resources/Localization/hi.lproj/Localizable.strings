@@ -1327,3 +1327,5 @@
 "ai.filter.shorter" = "छोटे";
 "ai.filter.hiddenGems" = "कम जाने-पहचाने";
 "ai.filter.applied" = "फ़िल्टर: %@";
+"ai.history.delete" = "चैट हटाएं";
+"ai.history.deleteConfirmTitle" = "यह चैट हटाएं?";

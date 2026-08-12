@@ -1312,3 +1312,5 @@
 "ai.filter.shorter" = "Daha kısa";
 "ai.filter.hiddenGems" = "Az bilinenler";
 "ai.filter.applied" = "Filtre: %@";
+"ai.history.delete" = "Sohbeti sil";
+"ai.history.deleteConfirmTitle" = "Bu sohbet silinsin mi?";
