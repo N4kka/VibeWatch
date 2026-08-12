@@ -18,11 +18,22 @@ struct TVTrackingCard: View {
     var onSnooze: () -> Void = {}
 
     @State private var navigate = false
+    /// La card celebrativa "serie finita" (social feed M1). Item-based: il foglio nasce col
+    /// poster già scaricato e la firma già risolta.
+    @State private var shareItem: CompletedShareItem?
+    @State private var isPreparingShare = false
 
     /// "In pari" è un fatto del bucket, non l'assenza del prossimo episodio: una riga senza
     /// catalogo (serie appena aggiunta alla watchlist, mai risolta) ha `nextLabel == nil` in
     /// QUALSIASI bucket, e disegnarle il check verde la faceva sembrare "vista" in "Da iniziare".
     private var isCaughtUp: Bool { row.bucket == .upToDate && row.nextLabel == nil }
+
+    /// COMPLETATA è più stretto di "in pari": nessuna stagione futura annunciata (stessa
+    /// semantica di `fusedListRows.isSeen`) e almeno un episodio visto — condividere il
+    /// traguardo di una serie mai iniziata sarebbe una card che mente.
+    private var isCompleted: Bool {
+        row.bucket == .upToDate && row.nextSeason == nil && row.watchedCount > 0
+    }
 
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
@@ -55,6 +66,9 @@ struct TVTrackingCard: View {
         .onTapGesture { navigate = true }
         .navigationDestination(isPresented: $navigate) {
             TVShowDetailView(tvShowId: row.showId)
+        }
+        .sheet(item: $shareItem) { item in
+            ShareCardSheet(content: item.content, onClose: { shareItem = nil })
         }
         // §9.2: swipe → segna visto, ← rimanda.
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
@@ -89,8 +103,61 @@ struct TVTrackingCard: View {
                     .lineLimit(2)
             }
             Spacer()
-            markButton
+            VStack(spacing: 8) {
+                markButton
+                // Il momento di condivisione vive solo sulle serie FINITE: sulla card in
+                // pari-per-ora non c'è nessun traguardo da celebrare.
+                if isCompleted {
+                    shareButton
+                }
+            }
         }
+    }
+
+    private var shareButton: some View {
+        Button(action: prepareShare) {
+            ZStack {
+                Circle()
+                    .fill(Color.white.opacity(0.12))
+                    .frame(width: 34, height: 34)
+                if isPreparingShare {
+                    ProgressView().scaleEffect(0.7).tint(.theme.textSecondary)
+                } else {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.theme.textSecondary)
+                }
+            }
+        }
+        .buttonStyle(PlainButtonStyle())
+        .disabled(isPreparingShare)
+        .accessibilityLabel(Text("shareCard.share".localized))
+    }
+
+    /// Prima si preparano poster e firma, poi si apre il foglio: mai una card a metà.
+    /// Le ore totali restano nil di proposito — lo specchio `tv_show_state` non porta i
+    /// runtime, e la card sa accorciare la riga dei numeri.
+    private func prepareShare() {
+        guard !isPreparingShare else { return }
+        isPreparingShare = true
+        Task {
+            let poster = await ShareCardRenderer.posterImage(path: row.posterPath)
+            let username = await ShareCardIdentity.username()
+            shareItem = CompletedShareItem(content: .showCompleted(.init(
+                title: row.showName ?? "tracking.unknownShow".localized,
+                episodesWatched: row.watchedCount,
+                totalHours: nil,
+                username: username,
+                poster: poster
+            )))
+            isPreparingShare = false
+        }
+    }
+
+    /// Wrapper Identifiable per `.sheet(item:)`.
+    fileprivate struct CompletedShareItem: Identifiable {
+        let id = UUID()
+        let content: ShareCardContent
     }
 
     private var markButton: some View {

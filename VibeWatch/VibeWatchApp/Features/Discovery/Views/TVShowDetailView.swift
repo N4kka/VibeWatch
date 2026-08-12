@@ -140,7 +140,8 @@ struct TVShowDetailView: View {
                                     .padding(.horizontal, 20)
                             }
 
-                            MediaRatingFavoriteCard(mediaType: "tv", tmdbId: tvShow.id)
+                            MediaRatingFavoriteCard(mediaType: "tv", tmdbId: tvShow.id,
+                                                    title: tvShow.name, posterPath: tvShow.posterPath)
                                 .padding(.horizontal, 20)
                             MediaWhyForMeCard { handleWhyForMeTap() }
                                 .padding(.horizontal, 20)

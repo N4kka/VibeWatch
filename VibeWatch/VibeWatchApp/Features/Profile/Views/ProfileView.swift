@@ -52,6 +52,15 @@ struct ProfileView: View {
         case noUsername
         case failed
     }
+    /// Social feed M1 — la card immagine del profilo (avatar + preferiti), da affiancare al
+    /// link testuale di §9.4. Item-based: si presenta solo quando poster e avatar sono pronti.
+    @State private var profileShareCard: ProfileShareCardItem?
+    @State private var isPreparingShareCard = false
+
+    struct ProfileShareCardItem: Identifiable {
+        let id = UUID()
+        let content: ShareCardContent
+    }
     @State private var showChangePassword = false
     @State private var showHelpSupport = false
     @State private var showFeedback = false
@@ -171,6 +180,85 @@ struct ProfileView: View {
             trailing()
         }
         .padding()
+    }
+
+    /// La riga "Condividi la card del profilo": prepara i materiali (avatar, poster dei
+    /// preferiti) e poi apre `ShareCardSheet` con la card profilo già componibile.
+    private var shareProfileCardRow: some View {
+        SettingsRow(icon: "person.crop.rectangle",
+                    title: "profile.shareCard".localized,
+                    subtitle: "profile.shareCard.subtitle".localized,
+                    value: isPreparingShareCard ? "…" : nil) {
+            presentProfileShareCard()
+        }
+        .disabled(isPreparingShareCard)
+    }
+
+    private func presentProfileShareCard() {
+        guard !isPreparingShareCard, let username = ownUsername else { return }
+        isPreparingShareCard = true
+        Task {
+            // Stessa fonte della vetrina del profilo (`user_favorites` via il suo ViewModel):
+            // la card mostra ESATTAMENTE ciò che la sezione preferiti mostra, non una copia.
+            let favoritesVM = ProfileFavoritesViewModel()
+            await favoritesVM.load()
+
+            var movies: [ProfileShareCard.FavoriteItem] = []
+            var shows: [ProfileShareCard.FavoriteItem] = []
+            for entry in favoritesVM.entries {
+                let item = await shareFavoriteItem(entry)
+                if entry.mediaType == "movie" { movies.append(item) } else { shows.append(item) }
+            }
+
+            let avatar = await ShareCardRenderer.remoteImage(urlString: appState.currentUser?.avatarURL)
+
+            profileShareCard = ProfileShareCardItem(content: .profile(.init(
+                displayName: displayNameOrEmail,
+                username: username,
+                avatar: avatar,
+                favoriteMovies: Array(movies.prefix(4)),
+                favoriteShows: Array(shows.prefix(4)),
+                // I follower sono già in memoria se l'header li ha caricati; niente fetch
+                // apposta per un numero secondario della card.
+                followerCount: socialCounts?.followers
+            )))
+            isPreparingShareCard = false
+        }
+    }
+
+    private func shareFavoriteItem(_ entry: ProfileFavoritesViewModel.Entry) async -> ProfileShareCard.FavoriteItem {
+        // Poster con la stessa scala di costi delle tile della vetrina (cache → specchio →
+        // rete), poi l'immagine vera per la rasterizzazione.
+        let path = await FavoritePosterResolver.live.posterPath(
+            mediaType: entry.mediaType, tmdbId: entry.tmdbId)
+        let poster = await ShareCardRenderer.posterImage(path: path, width: 342)
+        let title = await shareFavoriteTitle(entry)
+        return .init(title: title, poster: poster)
+    }
+
+    /// Il titolo serve alla card solo come segnaposto quando il poster manca: si cerca dove
+    /// costa meno (cache dei dettagli, poi lo specchio delle liste) e ci si accontenta.
+    private func shareFavoriteTitle(_ entry: ProfileFavoritesViewModel.Entry) async -> String {
+        if entry.mediaType == "movie" {
+            if let cached = (try? await DetailCacheService.shared.getCachedMovieDetails(movieId: entry.tmdbId)) ?? nil {
+                return cached.movie.title
+            }
+        } else {
+            if let cached = (try? await DetailCacheService.shared.getCachedTVShowDetails(tvShowId: entry.tmdbId)) ?? nil {
+                return cached.tvShow.name
+            }
+        }
+
+        let rows = (try? await SQLiteService.shared.queryRaw(
+            """
+            SELECT title FROM list_items
+             WHERE media_id = ? AND media_type = ? AND deleted_at IS NULL
+               AND title IS NOT NULL AND title <> ''
+             LIMIT 1
+            """,
+            parameters: [entry.tmdbId, entry.mediaType]
+        )) ?? []
+        return (rows.first?["title"] as? String) ?? ""
     }
 
     private func loadShareUsername() async {
@@ -366,6 +454,9 @@ struct ProfileView: View {
         }
         .sheet(isPresented: $showAnalyticsDashboard) {
             NavigationView { AnalyticsDashboardView() }
+        }
+        .sheet(item: $profileShareCard) { item in
+            ShareCardSheet(content: item.content, onClose: { profileShareCard = nil })
         }
         .sheet(item: $selectedFavorite) { entry in
             NavigationStack {
@@ -712,6 +803,13 @@ struct ProfileView: View {
                 rowDivider
 
                 shareProfileRow
+
+                // La card immagine accanto al link: il link porta AL profilo, la card lo
+                // RACCONTA (avatar, preferiti, follower) su story/post. Senza username non
+                // c'è pagina pubblica da firmare, e la riga non compare — come quella sopra.
+                if ownUsername != nil {
+                    shareProfileCardRow
+                }
             }
 
             groupLabel("profile.group.preferences".localized)

@@ -89,7 +89,8 @@ struct MovieDetailView: View {
                                     .padding(.horizontal, 20)
                             }
 
-                            MediaRatingFavoriteCard(mediaType: "movie", tmdbId: movie.id)
+                            MediaRatingFavoriteCard(mediaType: "movie", tmdbId: movie.id,
+                                                    title: movie.title, posterPath: movie.posterPath)
                                 .padding(.horizontal, 20)
 
                             MediaWhyForMeCard { handleWhyForMeTap() }

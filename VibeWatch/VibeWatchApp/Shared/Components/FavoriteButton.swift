@@ -236,10 +236,15 @@ struct FavoriteButton: View {
 struct MediaRatingFavoriteCard: View {
     let mediaType: String
     let tmdbId: Int
+    /// Identità del titolo per la card condivisibile del voto (social feed M1): senza,
+    /// la sezione stelle funziona come sempre ma non offre lo share.
+    var title: String? = nil
+    var posterPath: String? = nil
 
     var body: some View {
         VStack(spacing: 0) {
-            StarRatingSection(mediaType: mediaType, tmdbId: tmdbId, isEmbedded: true)
+            StarRatingSection(mediaType: mediaType, tmdbId: tmdbId, isEmbedded: true,
+                              title: title, posterPath: posterPath)
 
             Divider()
                 .overlay(Color.white.opacity(0.08))

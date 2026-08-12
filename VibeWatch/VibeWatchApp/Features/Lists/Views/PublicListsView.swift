@@ -75,8 +75,16 @@ final class PublicListsViewModel: ObservableObject {
 
 // MARK: - Feed
 
+/// Il profilo dell'autore da aprire: wrapper Identifiable per `navigationDestination(item:)`.
+/// La destinazione è la stessa di UserSearchView/MainTabView — `PublicProfileView(username:)`.
+struct PublicListOwnerTarget: Identifiable, Hashable {
+    let username: String
+    var id: String { username }
+}
+
 struct PublicListsView: View {
     @StateObject private var viewModel = PublicListsViewModel()
+    @State private var ownerTarget: PublicListOwnerTarget?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -131,7 +139,14 @@ struct PublicListsView: View {
                     NavigationLink(destination: PublicListDetailView(list: list)) {
                         PublicListCard(
                             list: list,
-                            onToggleFollow: { Task { await viewModel.toggleFollow(list) } }
+                            onToggleFollow: { Task { await viewModel.toggleFollow(list) } },
+                            onOpenOwner: {
+                                // Il tap sull'autore apre il suo profilo, non il dettaglio
+                                // della lista: la riga è un Button dentro il label del link,
+                                // come il pulsante Segui, e intercetta il tocco allo stesso modo.
+                                guard let username = list.ownerUsername else { return }
+                                ownerTarget = PublicListOwnerTarget(username: username)
+                            }
                         )
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -144,6 +159,9 @@ struct PublicListsView: View {
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 100)
+        }
+        .navigationDestination(item: $ownerTarget) { target in
+            PublicProfileView(username: target.username)
         }
     }
 
@@ -167,6 +185,9 @@ struct PublicListsView: View {
 struct PublicListCard: View {
     let list: PublicList
     let onToggleFollow: () -> Void
+    /// Tap sulla riga autore. Opzionale: dove non è cablato (o l'owner è privato e i campi
+    /// arrivano null) la card resta anonima com'era.
+    var onOpenOwner: (() -> Void)? = nil
 
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
@@ -175,6 +196,16 @@ struct PublicListCard: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
 
             VStack(alignment: .leading, spacing: 6) {
+                // L'autore sopra il nome, come firma della lista: piccolo apposta, il
+                // contenuto resta il protagonista della card.
+                if let username = list.ownerUsername {
+                    PublicListOwnerRow(
+                        username: username,
+                        avatarUrl: list.ownerAvatarUrl,
+                        onTap: onOpenOwner
+                    )
+                }
+
                 Text(list.name)
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundColor(.theme.textPrimary)
@@ -254,6 +285,63 @@ struct PublicListCard: View {
     }
 }
 
+// MARK: - Riga autore
+
+/// Avatar tondo (24) + @username: la stessa riga sulla card del feed e nell'header del
+/// dettaglio, così l'autore ha una faccia sola ovunque. Con `onTap` è un Button; senza,
+/// solo testo (il dettaglio la incapsula in un NavigationLink suo).
+struct PublicListOwnerRow: View {
+    let username: String
+    let avatarUrl: String?
+    var onTap: (() -> Void)? = nil
+
+    var body: some View {
+        if let onTap {
+            Button(action: onTap) { label }
+                .buttonStyle(PlainButtonStyle())
+        } else {
+            label
+        }
+    }
+
+    private var label: some View {
+        HStack(spacing: 7) {
+            avatar
+                .frame(width: 24, height: 24)
+                .clipShape(Circle())
+                .overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 1))
+
+            Text("@\(username)")
+                .font(.system(size: 12.5, weight: .semibold))
+                .foregroundColor(.theme.textSecondary)
+                .lineLimit(1)
+        }
+        .contentShape(Rectangle())
+    }
+
+    @ViewBuilder
+    private var avatar: some View {
+        if let avatarUrl, let url = URL(string: avatarUrl) {
+            CachedAsyncImage(url: url, maxPixelSize: 96) { image in
+                image.resizable().scaledToFill()
+            } placeholder: {
+                avatarPlaceholder
+            }
+        } else {
+            avatarPlaceholder
+        }
+    }
+
+    private var avatarPlaceholder: some View {
+        ZStack {
+            Circle().fill(Color.white.opacity(0.08))
+            Image(systemName: "person.fill")
+                .font(.system(size: 11))
+                .foregroundColor(.theme.textSecondary)
+        }
+    }
+}
+
 // MARK: - Detail (read-only)
 
 struct PublicListDetailView: View {
@@ -318,6 +406,19 @@ struct PublicListDetailView: View {
             Color.theme.background.ignoresSafeArea()
 
             VStack(spacing: 0) {
+                // L'autore nell'header del dettaglio, quando il suo profilo è pubblico: il
+                // titolo grande resta il nome della lista, la firma sta subito sotto e porta
+                // al profilo (stessa destinazione della card del feed).
+                if let username = list.ownerUsername {
+                    NavigationLink(destination: PublicProfileView(username: username)) {
+                        PublicListOwnerRow(username: username, avatarUrl: list.ownerAvatarUrl)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 10)
+                }
+
                 HStack(spacing: 10) {
                     MediaFilterSwitcher(selectedFilter: mediaFilterBinding)
 
