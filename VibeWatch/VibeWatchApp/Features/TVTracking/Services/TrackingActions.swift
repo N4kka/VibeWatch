@@ -304,6 +304,7 @@ final class TrackingActions {
         // Come sopra: il bucket lo calcola `tv_tracking_bucket` lato server, e finché non si
         // ritira la vista la serie resta dov'era — dopo che la mutazione è arrivata, non prima.
         await syncEngine.flushAndPullTrackingState()
+        Self.announceTrackingChanged()
     }
 
     // MARK: - Fusione ListsView-Tracking (2026-08-02)
@@ -379,7 +380,12 @@ final class TrackingActions {
             throw ActionError.showNotInCatalog
         }
 
+        // L'annuncio mancava, e con lui il pezzo visibile: l'espansione scriveva gli eventi, il
+        // server ricalcolava, il pull riempiva lo specchio — e Tracking e Scopri continuavano a
+        // mostrare la serie dov'era, perché nessuno gli aveva detto di rileggere. Da fuori:
+        // "l'ho segnata vista tutta e nel Tracking non risulta in pari".
         await syncEngine.pullTrackingState()
+        Self.announceTrackingChanged()
     }
 
     /// Il contraltare: lapide su tutti gli eventi della serie + `dropped`, in un'unica RPC —
@@ -389,5 +395,6 @@ final class TrackingActions {
         guard currentUserId() != nil else { throw ActionError.notAuthenticated }
         _ = try await seenBackend.unseeTVShow(showId: showId)
         await syncEngine.pullTrackingState()
+        Self.announceTrackingChanged()
     }
 }

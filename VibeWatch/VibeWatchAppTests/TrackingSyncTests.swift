@@ -310,6 +310,69 @@ final class TrackingSyncTests: XCTestCase {
         XCTAssertEqual(sync.trackingPulls, 0)
     }
 
+    // MARK: - L'annuncio, cioè il pezzo visibile
+
+    /// Ogni azione di tracking finisce con un annuncio, e non è un dettaglio: Tracking e la strip
+    /// di Scopri si rileggono da lì. `markSeen` non ce l'aveva — scriveva gli eventi, il server
+    /// ricalcolava, il pull riempiva lo specchio, e le due schermate continuavano a mostrare la
+    /// serie dov'era. Da fuori: "l'ho segnata vista tutta e nel Tracking non risulta in pari".
+    @MainActor
+    func testSegnareLaSerieVistaTuttaAnnunciaIlCambiamento() async throws {
+        let annunci = ContatoreAnnunci()
+        let actions = TrackingActions(
+            syncEngine: MockSyncEngine(), currentUserId: { "u-1" },
+            seenBackend: MockSeenBackend(), mirror: FakeWatchEventMirror())
+
+        try await actions.markSeen(showId: 1396)
+
+        XCTAssertEqual(annunci.count, 1)
+    }
+
+    @MainActor
+    func testSmarcareLaSerieAnnunciaIlCambiamento() async throws {
+        let annunci = ContatoreAnnunci()
+        let actions = TrackingActions(
+            syncEngine: MockSyncEngine(), currentUserId: { "u-1" },
+            seenBackend: MockSeenBackend(), mirror: FakeWatchEventMirror())
+
+        try await actions.unsee(showId: 1396)
+
+        XCTAssertEqual(annunci.count, 1)
+    }
+
+    /// Vale anche per "più avanti" e per l'aggiunta alla watchlist, che passano da `setStatus`:
+    /// cambiano il bucket, quindi cambiano cosa il Tracking deve disegnare.
+    @MainActor
+    func testCambiareStatoAnnunciaIlCambiamento() async throws {
+        let annunci = ContatoreAnnunci()
+        let actions = TrackingActions(
+            syncEngine: MockSyncEngine(), currentUserId: { "u-1" },
+            seenBackend: MockSeenBackend(), mirror: FakeWatchEventMirror())
+
+        try await actions.setStatus(showId: 1396, to: "for_later")
+
+        XCTAssertEqual(annunci.count, 1)
+    }
+
+    /// Conta gli annunci finché resta in vita.
+    @MainActor
+    private final class ContatoreAnnunci {
+        private(set) var count = 0
+        private var token: NSObjectProtocol?
+
+        init() {
+            token = NotificationCenter.default.addObserver(
+                forName: .syncEngineCompleted, object: nil, queue: .main
+            ) { [weak self] _ in
+                MainActor.assumeIsolated { self?.count += 1 }
+            }
+        }
+
+        deinit {
+            if let token { NotificationCenter.default.removeObserver(token) }
+        }
+    }
+
     // MARK: - Riparazione del catalogo mancante
 
     /// Una serie aggiunta alla watchlist prima che il catalogo esistesse resta senza poster né
