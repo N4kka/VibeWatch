@@ -15,12 +15,6 @@ class DataCoordinator: ObservableObject {
     @Published var isInitializing = true
     @Published var initialClipsReady = false
     
-    // Shared data cache
-    private(set) var trendingMovies: [Movie] = []
-    private(set) var trendingTVShows: [TVShow] = []
-    private(set) var popularMovies: [Movie] = []
-    private(set) var topRatedMovies: [Movie] = []
-    
     // Clips cache (managed by ClipsViewModel)
     var initialClips: [Clip] = []
     var additionalClips: [Clip] = []
@@ -38,7 +32,6 @@ class DataCoordinator: ObservableObject {
     }()
 
     // Track what's been fetched
-    private var discoveryFetched = false
     private var usedMovieIds = Set<Int>()
     private var usedTVShowIds = Set<Int>()
     private var nextMoviePage = 2 // Start from page 2 for pagination
@@ -73,7 +66,7 @@ class DataCoordinator: ObservableObject {
         }
 
         let duration = Date().timeIntervalSince(startTime)
-        Logger.info("[DataCoordinator] Fast init complete in \(String(format: "%.2f", duration))s - Discovery: \(trendingMovies.count) movies, \(trendingTVShows.count) TV, Initial clips: \(initialClips.count)")
+        Logger.info("[DataCoordinator] Fast init complete in \(String(format: "%.2f", duration))s - Initial clips: \(initialClips.count)")
 
         isInitializing = false
         initialClipsReady = true
@@ -153,12 +146,6 @@ class DataCoordinator: ObservableObject {
                              !cachedContent.tv.isEmpty
 
             if hasContent {
-                // Set content immediately - user sees data NOW
-                self.trendingMovies = cachedContent.trending
-                self.popularMovies = cachedContent.popular
-                self.topRatedMovies = cachedContent.topRated
-                self.trendingTVShows = cachedContent.tv
-                discoveryFetched = true
                 Logger.debug("[DataCoordinator] Loaded \(cachedContent.trending.count) trending movies from cache")
 
                 // Prefetch images for cached content in background (don't block UI)
@@ -201,14 +188,6 @@ class DataCoordinator: ObservableObject {
             try await discoveryCache.refreshContent()
             let newContent = try await discoveryCache.getDiscoveryContent()
 
-            // Update UI on main actor
-            await MainActor.run {
-                self.trendingMovies = newContent.trending
-                self.popularMovies = newContent.popular
-                self.topRatedMovies = newContent.topRated
-                self.trendingTVShows = newContent.tv
-            }
-
             // Prefetch new images
             await prefetchDiscoveryImages(
                 trendingMovies: newContent.trending,
@@ -233,12 +212,6 @@ class DataCoordinator: ObservableObject {
             try await discoveryCache.refreshContent()
             let content = try await discoveryCache.getDiscoveryContent()
 
-            self.trendingMovies = content.trending
-            self.popularMovies = content.popular
-            self.topRatedMovies = content.topRated
-            self.trendingTVShows = content.tv
-
-            discoveryFetched = true
             Logger.debug("[DataCoordinator] Network fetch completed - \(content.trending.count) trending movies")
 
             // Prefetch images in background
@@ -302,26 +275,7 @@ class DataCoordinator: ObservableObject {
         await ImageCacheService.shared.prefetchImages(uniqueUrls, onWiFiOnly: true)
         Logger.debug("[DataCoordinator] Prefetched \(uniqueUrls.count) discovery images")
     }
-    
-    /// Refresh discovery content (e.g., when language changes)
-    func refreshDiscoveryContent() async {
-        Logger.debug("[DataCoordinator] Refreshing discovery content")
-        discoveryFetched = false
-        await fetchDiscoveryContent()
-    }
-    
-    /// Get discovery content for DiscoveryViewModel (instant, no API calls)
-    func getDiscoveryContent() async -> (movies: [Movie], topRated: [Movie], popular: [Movie], tvShows: [TVShow])? {
-        // Wait for discovery to be fetched if it's in progress
-        if !discoveryFetched {
-            await fetchDiscoveryContent()
-        }
-        
-        guard discoveryFetched else { return nil }
-        
-        return (trendingMovies, topRatedMovies, popularMovies, trendingTVShows)
-    }
-    
+
     // MARK: - Initial Clips (5 for instant playback from DATABASE)
     
     /// Fetch 5 clips from DATABASE for INSTANT playback (super fast!)
@@ -507,29 +461,12 @@ class DataCoordinator: ObservableObject {
             Logger.warning("[DataCoordinator] TMDB videos failed for \(movie.title): \(error.localizedDescription)")
         }
 
-        // Fallback to YouTube search with timeout and retry
+        // Fallback to YouTube search. Goes through YouTubeSearchClient so an exhausted daily quota
+        // is recognised as such instead of being read as "no results" — see that type for why.
         do {
-            let query = "\(movie.title) official trailer"
-            guard let encodedQuery = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
-                return nil
-            }
+            let items = try await YouTubeSearchClient.shared.search(query: "\(movie.title) official trailer")
 
-            let urlString = "https://www.googleapis.com/youtube/v3/search?part=snippet&q=\(encodedQuery)&type=video&videoDuration=short&maxResults=1&key=\(Config.youtubeApiKey)"
-
-            guard let url = URL(string: urlString) else { return nil }
-
-            let (data, response) = try await youtubeSession.data(from: url)
-
-            // Validate response
-            guard let httpResponse = response as? HTTPURLResponse,
-                  (200...299).contains(httpResponse.statusCode) else {
-                Logger.warning("[DataCoordinator] YouTube API returned error for \(movie.title)")
-                return nil
-            }
-
-            let decodedResponse = try JSONDecoder().decode(YouTubeSearchResponse.self, from: data)
-
-            guard let item = decodedResponse.items.first else { return nil }
+            guard let item = items.first else { return nil }
 
             let clip = Clip(
                 id: "\(movie.id)-yt-\(item.id.videoId)",
@@ -603,29 +540,11 @@ class DataCoordinator: ObservableObject {
             Logger.warning("[DataCoordinator] TMDB videos failed for \(tvShow.name): \(error.localizedDescription)")
         }
 
-        // Fallback to YouTube search with timeout and retry
+        // Fallback to YouTube search, through the quota-aware client (see YouTubeSearchClient).
         do {
-            let query = "\(tvShow.name) official trailer"
-            guard let encodedQuery = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
-                return nil
-            }
+            let items = try await YouTubeSearchClient.shared.search(query: "\(tvShow.name) official trailer")
 
-            let urlString = "https://www.googleapis.com/youtube/v3/search?part=snippet&q=\(encodedQuery)&type=video&videoDuration=short&maxResults=1&key=\(Config.youtubeApiKey)"
-
-            guard let url = URL(string: urlString) else { return nil }
-
-            let (data, response) = try await youtubeSession.data(from: url)
-
-            // Validate response
-            guard let httpResponse = response as? HTTPURLResponse,
-                  (200...299).contains(httpResponse.statusCode) else {
-                Logger.warning("[DataCoordinator] YouTube API returned error for \(tvShow.name)")
-                return nil
-            }
-
-            let decodedResponse = try JSONDecoder().decode(YouTubeSearchResponse.self, from: data)
-
-            guard let item = decodedResponse.items.first else { return nil }
+            guard let item = items.first else { return nil }
 
             let clip = Clip(
                 id: "\(tvShow.id)-yt-\(item.id.videoId)",
@@ -651,17 +570,6 @@ class DataCoordinator: ObservableObject {
         }
     }
     
-    // MARK: - Stats & Debug
-    
-    func getStats() -> String {
-        """
-        📊 DataCoordinator Stats:
-        - Discovery: \(trendingMovies.count + popularMovies.count + topRatedMovies.count) movies, \(trendingTVShows.count) TV
-        - Clips ready: \(initialClips.count) initial + \(additionalClips.count) additional
-        - Used sources: \(usedMovieIds.count) movies, \(usedTVShowIds.count) TV
-        - Next pages: Movie p\(nextMoviePage), TV p\(nextTVPage)
-        """
-    }
 }
 
 // YouTube models are in Core/Models/YouTubeModels.swift

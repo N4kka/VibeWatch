@@ -96,6 +96,35 @@ public enum TableConflictMapping {
         case "clips":
             return .serverWins
 
+        // SPEC v3 §4. Gli eventi sono append-only: non si perde mai una visione, e due dispositivi
+        // che ne registrano di diversi li tengono entrambi.
+        case "watch_events":
+            return .union
+
+        // Derivata dagli eventi e ricalcolata dal server (§1.1). Il client scrive solo
+        // `user_status`, e lo fa via outbox: qui vince sempre ciò che arriva.
+        case "tv_show_state":
+            return .serverWins
+
+        // Le due viste di §9.2 sono cache di righe già pronte per la schermata: nessuno in locale
+        // le scrive mai, quindi non esiste un caso in cui la copia locale debba vincere. Erano
+        // finite nel `default` (`lastWriteWins`), che le confronta per `updated_at` — e
+        // `v_tv_timeline` un `updated_at` non ce l'ha nemmeno. Con `serverWins` la riga che arriva
+        // sostituisce quella che c'è, che è l'unico comportamento sensato per uno specchio.
+        case "v_tv_tracking", "v_tv_timeline":
+            return .serverWins
+
+        // SPEC v3 §4: un follow non si perde mai. Il soft delete e' l'unfollow e viaggia come
+        // contenuto della riga, quindi l'union lo conserva come conserva il resto.
+        case "user_follows":
+            return .union
+
+        // SPEC v3 §4 (blocco 9): l'ultimo intento dell'utente, confrontato su updated_at — che
+        // entrambe le tabelle hanno. Esplicite e non nel `default`, che dice lo stesso valore:
+        // il default e' una decisione non presa, ed e' gia' costato le due viste di §9.2.
+        case "user_favorites", "user_ratings":
+            return .lastWriteWins
+
         // Default fallback for unknown tables
         default:
             return .lastWriteWins

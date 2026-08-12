@@ -17,15 +17,9 @@ class PersonalizedClipsService {
     private var nextMoviePage = 1
     private var nextTVPage = 1
     
-    // Genre IDs from TMDb
-    private let genreNames: [Int: String] = [
-        28: "Action", 12: "Adventure", 16: "Animation", 35: "Comedy",
-        80: "Crime", 99: "Documentary", 18: "Drama", 10751: "Family",
-        14: "Fantasy", 36: "History", 27: "Horror", 10402: "Music",
-        9648: "Mystery", 10749: "Romance", 878: "Science Fiction",
-        10770: "TV Movie", 53: "Thriller", 10752: "War", 37: "Western"
-    ]
-    
+    // La mappa id→nome dei generi che stava qui non era letta da nessuno: la copia canonica è
+    // `TMDBGenres`, e per la UI serve comunque `TMDBGenres.displayName(for:)`, che traduce.
+
     // Classic movie IDs (curated list of must-watch movies)
     private let classicMovieIds: [Int] = [
         238,   // The Godfather

@@ -1,16 +1,31 @@
 import Foundation
 
-/// Service for fetching comprehensive streaming availability, pricing, and quality data
-/// Uses the "Movie of the Night" API (via RapidAPI)
-/// Limits: 1,000 requests/month (Free Tier)
-class StreamingAvailabilityService {
+protocol StreamingAvailabilityProviding: Sendable {
+    func getProviders(tmdbId: Int, type: MediaType, region: String) async throws -> CountryProviders
+}
+
+/// Fetches comprehensive streaming availability, pricing and quality data — the "Movie of the
+/// Night" service, reached through the `watch-providers` Edge Function rather than directly.
+///
+/// The service is metered at **1.000 requests/month** on the tier this project uses, shared by
+/// ~305 users: roughly three lookups per user per month. Calling it from the device meant the same
+/// title looked up on two phones cost two requests out of that allowance. The proxy caches each
+/// answer for a week server-side, so one request now serves everyone, and it keeps the RapidAPI key
+/// out of the app bundle where it was extractable from the IPA.
+///
+/// A failure here is soft by design: `LiveWatchProvidersRepository` falls back to TMDB's
+/// watch/providers, losing the deep links and pricing this adds but not the provider list.
+final class StreamingAvailabilityService: StreamingAvailabilityProviding {
     @MainActor static let shared = StreamingAvailabilityService()
-    
-    private let baseURL = "https://streaming-availability.p.rapidapi.com"
-    private let rapidAPIKey = "4f23d6c502msh1c6ccc90b956bb3p18cabcjsn051c85bd5b33"
-    private let rapidAPIHost = "streaming-availability.p.rapidapi.com"
+
+    private let proxyURL: String = {
+        let base = Config.supabaseURL
+        guard !base.isEmpty else { return "" }
+        let host = base.replacingOccurrences(of: ".supabase.co", with: ".functions.supabase.co")
+        return "\(host)/watch-providers"
+    }()
     private let session: URLSession
-    
+
     private init() {
         let config = URLSessionConfiguration.default
         config.requestCachePolicy = .useProtocolCachePolicy
@@ -26,46 +41,53 @@ class StreamingAvailabilityService {
     }
     
     /// Fetch streaming sources from Movie of the Night API
+    /// Envelope returned by the `watch-providers` Edge Function. `show` is the upstream payload
+    /// unchanged, or null when the title is not in the catalogue.
+    private struct ProxyResponse: Decodable {
+        let show: StreamingAvailabilityShow?
+        let cached: Bool?
+    }
+
     nonisolated(nonsending)
     private func fetchSources(tmdbId: Int, type: MediaType, region: String) async throws -> [WatchmodeSource] {
-        let typeString = type == .movie ? "movie" : "series"
-        let endpoint = "\(baseURL)/shows/\(typeString)/\(tmdbId)"
-        
-        guard var components = URLComponents(string: endpoint) else {
+        guard !proxyURL.isEmpty, let url = URL(string: proxyURL) else {
             throw StreamingAvailabilityError.invalidURL
         }
-        
-        components.queryItems = [
-            URLQueryItem(name: "country", value: region.lowercased())
+
+        let body: [String: Any] = [
+            "tmdbId": tmdbId,
+            "mediaType": type == .movie ? "movie" : "series",
+            "region": region.lowercased()
         ]
-        
-        guard let url = components.url else {
-            throw StreamingAvailabilityError.invalidURL
-        }
-        
-        Logger.debug("[StreamingAvailability] Fetching sources: \(url.absoluteString)")
-        
+
         var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.setValue(rapidAPIKey, forHTTPHeaderField: "X-RapidAPI-Key")
-        request.setValue(rapidAPIHost, forHTTPHeaderField: "X-RapidAPI-Host")
-        
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(Config.supabaseAnonKey)", forHTTPHeaderField: "Authorization")
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        Logger.debug("[StreamingAvailability] Fetching providers for \(tmdbId) (\(region))")
+
         let (data, response) = try await session.data(for: request)
-        
+
         guard let httpResponse = response as? HTTPURLResponse else {
             throw StreamingAvailabilityError.invalidResponse
         }
-        
+
         if !(200...299).contains(httpResponse.statusCode) {
+            // 429 covers both the per-caller rate limit and the exhausted monthly allowance; the
+            // caller treats them the same way, by falling back to TMDB.
             if httpResponse.statusCode == 429 {
-                Logger.warning("[StreamingAvailability] Rate limit reached")
+                Logger.warning("[StreamingAvailability] Rate limited or monthly quota exhausted")
                 throw StreamingAvailabilityError.rateLimitExceeded
             }
             throw StreamingAvailabilityError.httpError(httpResponse.statusCode)
         }
-        
-        let showResponse = try JSONDecoder().decode(StreamingAvailabilityShow.self, from: data)
-        return convertToSources(showResponse, region: region)
+
+        let proxyResponse = try JSONDecoder().decode(ProxyResponse.self, from: data)
+        guard let show = proxyResponse.show else { return [] }
+        return convertToSources(show, region: region)
     }
     
     private func convertToSources(_ response: StreamingAvailabilityShow, region: String) -> [WatchmodeSource] {

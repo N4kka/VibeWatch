@@ -23,7 +23,7 @@ final class ClipQuotaService: ObservableObject {
 
     // MARK: - Constants
 
-    private let anonymousLimit = 25
+    private let anonymousLimit = AppConstants.Clips.freeUserDailyLimit
     private let defaults = UserDefaults.standard
 
     private enum Keys {
@@ -63,7 +63,7 @@ final class ClipQuotaService: ObservableObject {
     
     /// Returns true if an anonymous user can watch another clip.
     func canWatchClipAnonymous() -> Bool {
-        anonymousClipsWatched < anonymousLimit
+        EntitlementPolicy.canConsumeClip(tier: .anonymous, clipsWatched: anonymousClipsWatched)
     }
     
     /// Records a clip watch for an anonymous user. Call this as soon as a clip starts.
@@ -95,7 +95,7 @@ final class ClipQuotaService: ObservableObject {
     
     /// Returns the gate type to show for the current anonymous state.
     func gateTypeForAnonymousUser() -> ClipGateType? {
-        canWatchClipAnonymous() ? nil : .accountCreation
+        EntitlementPolicy.gate(tier: .anonymous, clipsWatched: anonymousClipsWatched)
     }
     
     // MARK: - RevenueCat Pro Status
@@ -151,6 +151,22 @@ final class ClipQuotaService: ObservableObject {
     
     /// Updates Pro status and triggers appropriate actions on status change
     private func updateProStatus(_ newValue: Bool) {
+        // Riconciliazione verso DailyQuotaManager PRIMA dell'early-return, e in base allo stato
+        // della copia di DESTINAZIONE — non alla nostra cache (ARCH-002: lo stato Pro esiste in
+        // due copie e questo è l'unico ponte). Con un abbonamento stabilmente attivo RevenueCat
+        // non emette mai una transizione: se la nostra cache era già `true` mentre
+        // DailyQuotaManager era rimasto `false`, il guard qui sotto usciva senza mai chiamare
+        // `upgradeToPro()` e il flag sbagliato restava per sempre — cioè paywall, filtri
+        // bloccati e row di upsell mostrati a un account Pro.
+        if DailyQuotaManager.shared.isProUser != newValue {
+            Logger.info("[ClipQuota] Pro-state reconciliation: DailyQuotaManager \(DailyQuotaManager.shared.isProUser) → \(newValue)")
+            if newValue {
+                DailyQuotaManager.shared.upgradeToPro()
+            } else {
+                DailyQuotaManager.shared.downgradeToFree()
+            }
+        }
+
         guard isProUser != newValue else { return }
 
         let wasProBefore = isProUser
@@ -159,31 +175,29 @@ final class ClipQuotaService: ObservableObject {
         // Cache PRO status for offline mode
         defaults.set(newValue, forKey: Keys.cachedProStatus)
         Logger.debug("[ClipQuota] Cached PRO status for offline access: \(newValue)")
-        
+
         if !newValue && wasProBefore {
-            // Downgraded from Pro to Free
+            // Downgraded from Pro to Free (DailyQuotaManager già riconciliato sopra)
             Logger.debug("[ClipQuota] Subscription expired - downgrading to Free")
-            DailyQuotaManager.shared.downgradeToFree()
-            
+
             // Analytics
             Task { @MainActor in
                 AnalyticsService.shared.logEvent("subscription_expired", parameters: [:])
             }
-            
+
             // Sync to database
             Task {
                 await syncStatusToDatabase()
             }
         } else if newValue && !wasProBefore {
-            // Upgraded from Free to Pro
+            // Upgraded from Free to Pro (DailyQuotaManager già riconciliato sopra)
             Logger.info("[ClipQuota] Subscription activated")
-            DailyQuotaManager.shared.upgradeToPro()
-            
+
             // Analytics
             Task { @MainActor in
                 AnalyticsService.shared.logEvent("subscription_activated", parameters: [:])
             }
-            
+
             // Sync to database
             Task {
                 await syncStatusToDatabase()

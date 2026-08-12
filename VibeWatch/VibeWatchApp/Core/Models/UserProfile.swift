@@ -69,9 +69,17 @@ enum Mood: String, Codable, Sendable, CaseIterable {
     case nostalgic = "nostalgic"
     case energetic = "energetic"
 
+    /// Nome inglese, per i prompt AI e i log. **Non** per la UI: lì serve `localizationKey`.
     var displayName: String {
         rawValue.capitalized
     }
+
+    /// La chiave da risolvere quando il mood finisce a schermo.
+    ///
+    /// I valori tradotti sono **sostantivi** ("Adrenalina", "Nostalgia"), non aggettivi: il titolo
+    /// del carosello è "Stasera: %@", e un aggettivo lì dovrebbe concordare in genere e numero con
+    /// una parola che nel template non c'è. Con un sostantivo la frase regge in tutte le lingue.
+    var localizationKey: String { "mood.\(rawValue)" }
 }
 
 // MARK: - Time of Day

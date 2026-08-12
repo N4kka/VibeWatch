@@ -14,7 +14,7 @@
 "onboarding.page3.title" = "Fragmanları ve Klipleri Keşfet";
 "onboarding.page4.createAccount" = "Hesap Oluştur";
 "onboarding.page4.description" = "İzleme listelerini ve tercihlerini tüm cihazlarında senkronize etmek için bir hesap oluştur.";
-"onboarding.page4.skip" = "Şimdilik geç";
+"onboarding.page4.skip" = "Şimdilik atla";
 "onboarding.page4.title" = "Hazır mısın?";
 
 // Discovery
@@ -36,7 +36,7 @@
 // Lists
 "list.all" = "Tümü";
 "list.movies" = "Filmler";
-"list.tvShows" = "TV";
+"list.tvShows" = "Diziler";
 "lists.createList" = "Liste Oluştur";
 "lists.deleteConfirmation" = "%@ listesini silmek istediğine emin misin? Bu listedeki tüm öğeler kaldırılacak.";
 "lists.deleteList" = "Listeyi Sil";
@@ -59,12 +59,16 @@
 "lists.listName" = "Liste Adı";
 "lists.listNamePlaceholder" = "Yeni Liste";
 "lists.myLists" = "Listelerim";
+"lists.collections" = "Koleksiyonlar";
 "lists.noItems" = "Henüz öğe yok";
 "lists.searchPlaceholder" = "Bu listede ara";
 "lists.seen" = "İzlendi";
 "lists.softLimitWarning" = "\"{name}\" listesinde zaten {limit} öğe var. Düzeni korumak için yeni bir liste oluşturmayı düşünebilirsin.";
 "lists.watchlist" = "İzleme Listesi";
-"lists.watchOn" = "İZLE";
+"lists.watchOn" = "%@ ÜZERİNDE İZLE";
+"lists.notifyMeTitle" = "Bana Bildir";
+"lists.notifyMeMessage" = "'%@' streaming, kiralama veya satın alma için hazır olur olmaz sana bildirim göndereceğiz.";
+"error.oops" = "Eyvah!";
 
 // Movie Detail
 "movieDetail.cast" = "Oyuncular";
@@ -121,6 +125,8 @@
 // Clips
 "clips.title" = "Klipler";
 "clips.addToList" = "Listeye ekle";
+"clips.card.addToWatchlist" = "+ İzleme listesi";
+"clips.card.goToDetail" = "Detayları gör";
 "clips.beFirstToComment" = "İlk yorumu sen yap";
 "clips.comment" = "Yorum";
 "clips.comments" = "Yorumlar";
@@ -136,7 +142,6 @@
 "clips.noClipsAvailable" = "Klip yok";
 "clips.noClipsDescription" = "Favori film ve dizilerinden heyecanlı sahneler için daha sonra tekrar kontrol et";
 "clips.noComments" = "Henüz yorum yok";
-"clips.noListsYet" = "Henüz liste yok";
 "clips.reply" = "Yanıtla";
 "clips.replies" = "yanıt";
 "clips.replyingTo" = "Şuna yanıt veriliyor:";
@@ -237,6 +242,7 @@
 "auth.error.invalidResponse" = "Sunucudan geçersiz yanıt.";
 "auth.error.userNotFound" = "Kullanıcı bulunamadı.";
 "auth.error.invalidCredentials" = "Geçersiz e-posta veya şifre.";
+"auth.error.tooManyAttempts" = "Çok fazla deneme. Daha sonra tekrar dene.";
 "auth.error.networkError" = "Ağ hatası. Bağlantını kontrol et.";
 "auth.error.databaseError" = "Profil kaydedilirken veritabanı hatası. Tekrar dene.";
 "auth.error.signUpFailed" = "Kayıt başarısız. Tekrar dene.";
@@ -352,14 +358,64 @@
 
 // Profile - Support & Feedback
 "profile.sendFeedback" = "Geri Bildirim Gönder";
+"profile.share" = "Profili paylaş";
+"profile.share.comingSoon" = "Çok yakında";
+"profile.importFrom" = "Şuradan içe aktar";
+"import.title" = "İçe aktar";
+"import.source.tvtime" = "TV Time (.zip)";
+"import.source.tvtime.subtitle" = "TV Time veri dışa aktarımın";
+"import.source.footer" = "TV Time'dan veri dışa aktarımını iste (GDPR), sonra .zip dosyasını burada seç. Aynı formatı dışa aktaran uygulamalar da çalışır.";
+"import.state.uploading" = "Yükleniyor…";
+"import.state.uploadingHint" = "Dosya yüklenirken uygulamayı açık tut.";
+"import.canClose" = "Geçmişin içe aktarılıyor. Uygulamayı kapatabilirsin — bittiğinde bildirim göndereceğiz.";
+"import.phase.queued" = "Sırada, birazdan başlıyor…";
+"import.phase.parsing" = "Geçmişin okunuyor…";
+"import.phase.resolving" = "Diziler ve bölümler eşleştiriliyor…";
+"import.phase.writing" = "Bölümlerin kaydediliyor…";
+"import.phase.finishing" = "Tamamlanıyor…";
+"import.report.episodes" = "İçe aktarılan bölümler";
+"import.report.shows" = "Diziler";
+"import.report.period" = "%@ – %@ arası";
+"import.report.ratingsDeferred" = "%d puan bulundu — henüz içe aktarılmadı.";
+"import.report.ratingsApplied" = "%d puan yıldız olarak içe aktarıldı.";
+"import.report.ratingsUnresolved" = "%d puan eşleştirilemedi.";
+"import.report.favoritesApplied" = "%d favori boş yuvalara aktarıldı.";
+"import.report.favoriteMoviesUnsupported" = "%d film favorisi TV Time üzerinden aktarılamıyor.";
+"import.report.moviesApplied" = "%d film izleme tarihleriyle içe aktarıldı.";
+"import.report.moviesWatchlistApplied" = "%d film izleme listene eklendi.";
+"import.report.moviesUnresolved" = "%d film tanınamadı (başlık ve yıl TMDB ile eşleşmiyor).";
+"import.resolve.button" = "Çöz";
+"import.resolve.batchButton" = "%d başlığı çöz";
+"import.resolve.batchHint" = "Her başlık için eşleşen TMDB dizisini bul. Tüm eşleşmeler seçilene kadar hiçbir şey içe aktarılmaz; ardından tek bir içe aktarma hepsini birlikte çözer.";
+"import.resolve.batchProgress" = "%d/%d başlık eşleştirildi";
+"import.resolve.startBatch" = "Tek içe aktarmayı başlat";
+"import.resolve.title" = "“%@” hangi dizi?";
+"import.resolve.hint" = "Bölümler tam TVDB kimlikleriyle yeniden kontrol edilir. TMDB'nin doğrulayamadığı her şey raporda kalır.";
+"import.resolve.searchPlaceholder" = "Diziyi TMDB’de ara";
+"import.resolve.empty" = "Sonuç yok.";
+"import.resolve.failed" = "Çözülemedi:";
+"import.resolve.searchFailed" = "Arama başarısız oldu.";
+"import.report.statusesApplied" = "%d dizi durumu geri yüklendi (izleme listesi ve arşiv).";
+"import.report.statusesUnresolved" = "%d dizi durumu uygulanamadı.";
+"import.report.unresolvedTitle" = "%d bölüm eşleştirilemedi";
+"import.report.unresolvedRow" = "%d bölüm";
+"import.report.allResolved" = "Her şey eşleştirildi.";
+"import.error.failed" = "İçe aktarma bir hatayla durdu.";
+"import.error.network" = "İçe aktarma şu anda kontrol edilemiyor.";
+"import.error.uploadFailed" = "Yükleme tamamlanmadı.";
+"import.error.startFailed" = "İçe aktarma başlatılamadı.";
+"import.error.fileRead" = "Bu dosya okunamadı.";
+"import.error.reportFailed" = "İçe aktarma bitti ama rapor yüklenemedi.";
+"import.error.sessionExpired" = "Oturumun süresi doldu. Yeniden giriş yap ve içe aktarmayı tekrar dene.";
 "profile.aboutUs" = "Hakkımızda";
-"profile.aboutUsDetail" = "VibeWatch ekibi ve yayın keşif deneyiminizi iyileştirme misyonumuz hakkında daha fazla bilgi edinin.";
+"profile.aboutUsDetail" = "VibeWatch ekibi ve yayın keşfi deneyimini iyileştirme misyonumuz hakkında daha fazla bilgi edin.";
 "profile.tmdbAttribution" = "Bu ürün TMDb API'sini kullanır ancak TMDb tarafından onaylanmamış veya sertifikalandırılmamıştır.";
 "profile.legalNotes" = "Yasal bilgiler";
 "profile.faq" = "SSS";
 "profile.faqDetail" = "Hesaplar, abonelikler ve özellikler hakkında sık sorulan sorulara hızlı cevaplar bul.";
 "profile.privacyPolicy" = "Gizlilik Politikası";
 "profile.termsOfUse" = "Kullanım Şartları";
+"profile.terms" = "Şartlar";
 "profile.feedback.suggestFeature" = "Yeni özellik öner";
 "profile.feedback.suggestFeatureDescription" = "VibeWatch'u senin için daha iyi yapacak şeyleri anlat.";
 "profile.feedback.reportBug" = "Hata/sorun bildir";
@@ -398,6 +454,13 @@
 "actor.biography.showMore" = "Daha fazla göster";
 "actor.biography.showLess" = "Daha az göster";
 
+"actor.birthday" = "Doğum: %@";
+"actor.birthday.line" = "%@ (%@ yaşında)";
+"actor.known_for" = "Öne çıkan yapımlar";
+"actor.search.placeholder" = "Filmografi ara…";
+"actor.search.noResults" = "Sonuç yok:";
+"actor.filmography.empty" = "Kredi bulunamadı.";
+
 "clips.search.placeholder" = "Klip, karakter veya replik ara";
 "clips.search.emptyTitle" = "Sevdiğin klipleri bul";
 "clips.search.emptySubtitle" = "Eşleşen klipleri ve önerileri görmek için film, dizi, karakter veya replik ara.";
@@ -405,11 +468,17 @@
 "clips.search.showcaseSubtitle" = "Favori film ve dizilerinden klip bulmak için yukarıdan ara";
 "clips.search.matched" = "Eşleşen";
 "clips.search.recommended" = "Önerilen";
+"clips.search.quotes" = "Alıntılar";
+"clips.search.characters" = "Karakterler";
+"clips.search.scenes" = "Sahneler";
+"clips.search.popular" = "Popüler";
 
 // Redeem Code
 "settings.redeemCode" = "Kodu Kullan";
 "settings.redeemCode.description" = "Promosyon veya teklif kodu gir";
 "paywall.haveCode" = "Promosyon kodun var mı?";
+"paywall.price.perYear" = "%@/yıl";
+"paywall.cancelAnytime" = "İstediğin zaman iptal et";
 
 // Help & Support - About Us
 "profile.aboutUsDescription" = "Yeni bir tür film/dizi arkadaşı oluşturan iki arkadaşız. VibeWatch, hantal takip uygulamalarından duyduğumuz hayal kırıklığından doğdu: modern, klip öncelikli keşif, hızlı yayın bağlantıları ve hem sinema tutkunlarının hem de sıradan izleyicilerin sonsuz kaydırma olmadan mükemmel seçimi bulmasına yardımcı olan araçlara odaklanıyoruz.";
@@ -427,89 +496,780 @@
 "profile.faq.answer4" = "Herhangi bir içerikte \"Bize bildir\" seçeneğini kullanarak hataları veya bozuk bağlantıları bildir, hızlıca düzeltelim.";
 "profile.faq.question5" = "VibeWatch sıradan izleyiciler için de uygun mu?";
 "profile.faq.answer5" = "Kesinlikle. Arkadaşlarla Cumartesi akşamı filmi gibi kolay seçimler ve sinema tutkunları için gizli hazineler sunuyoruz.";
-"carousel.hotThisWeek" = "Bu Haftanın Gözdesi";
-"carousel.awardWinners" = "Seveceğin Ödüllü Yapımlar";
+"carousel.hotThisWeek" = "Bu hafta öne çıkanlar";
+"carousel.awardWinners" = "Seveceğin ödüllü yapımlar";
 
 // --- Synced from en.lproj ---
-"filters.mediaType" = "Medya Türü";
+"filters.mediaType" = "Medya türü";
 "filters.movies" = "Filmler";
-"filters.tvShows" = "TV Programları";
+"filters.tvShows" = "Diziler";
 "filters.both" = "Her ikisi de";
-"filters.rating" = "Değerlendirme";
-"filters.releasePeriod" = "Serbest Bırakma Dönemi";
+"filters.rating" = "Puan";
+"filters.releasePeriod" = "Çıkış dönemi";
 "filters.releasePeriodRecent" = "Yeni (2020+)";
 "filters.releasePeriodModern" = "Modern (2010-2019)";
 "filters.releasePeriodClassic" = "Klasik (<2010)";
-"filters.customRange" = "Özel Aralık";
-"filters.customYearRange" = "Özel Yıl Aralığı";
+"filters.customRange" = "Özel aralık";
+"filters.customYearRange" = "Özel yıl aralığı";
 "filters.min" = "Min";
-"filters.max" = "Maksimum";
-"filters.from" = "Kimden";
-"filters.to" = "Için";
+"filters.max" = "Maks";
+"filters.from" = "Başlangıç";
+"filters.to" = "Bitiş";
 "filters.custom" = "Özel";
-"filters.allCountries" = "Tüm Ülkeler";
-"filters.sortPopularityDesc" = "En Popüler";
-"filters.sortPopularityAsc" = "En Az Popüler";
-"filters.sortRatingDesc" = "En Yüksek Puan";
-"filters.sortRatingAsc" = "En Düşük Puan";
-"filters.sortReleaseDateDesc" = "En Yeni İlk";
-"filters.sortReleaseDateAsc" = "En Yaşlı İlk";
-"filters.proFilters" = "Profesyonel Filtreler";
-"filters.hideWatched" = "İzlenenleri Gizle";
-"filters.hideDisliked" = "Hide Disliked";
-"filters.proTitle" = "Gelişmiş Filtrelerin Kilidini Aç";
-"filters.proDescription" = "Özel aralıklar, çoklu ülke seçimi ve gelişmiş filtreleme seçenekleri için Pro'ya yükseltin";
-"filters.upgradeToPro" = "Pro'ya Yükseltme";
-"filters.filtersActive" = "d filtreler etkin";
-"carousel.dailyMix" = "Günlük Karışımınız";
-"carousel.trendingInGenre" = "Trend %@";
-"carousel.becauseYouLiked" = "Çünkü %@'yı Beğendiniz";
-"carousel.hiddenGems" = "Gizli Mücevherler %@ içinde";
-"carousel.continueJourney" = "Yolculuğunuza Devam Edin";
-"carousel.fromSearches" = "Aramalarınızdan";
-"carousel.topTVPicks" = "Sizin İçin En İyi TV Seçimleri";
-"carousel.staffPicks" = "Personel %@ Hayranları için Seçiyor";
-"carousel.yearlyRewind" = "Yıllık Geri Dönüşünüz";
+"filters.allCountries" = "Tüm ülkeler";
+"filters.sortPopularityDesc" = "En popüler";
+"filters.sortPopularityAsc" = "En az popüler";
+"filters.sortRatingDesc" = "En yüksek puan";
+"filters.sortRatingAsc" = "En düşük puan";
+"filters.sortReleaseDateDesc" = "Önce en yeni";
+"filters.sortReleaseDateAsc" = "Önce en eski";
+"filters.proFilters" = "Pro filtreler";
+"filters.hideWatched" = "İzlenenleri gizle";
+"filters.hideDisliked" = "Beğenmediklerini gizle";
+"filters.proTitle" = "Gelişmiş filtrelerin kilidini aç";
+"filters.proDescription" = "Özel aralıklar, çoklu ülke seçimi ve gelişmiş filtreleme seçenekleri için Pro'ya yükselt";
+"filters.upgradeToPro" = "Pro'ya yükselt";
+"filters.filtersActive" = "%d filtre etkin";
+"carousel.dailyMix" = "Günlük karışımın";
+"carousel.trendingInGenre" = "%@ türünde trend olanlar";
+"carousel.becauseYouLiked" = "%@ beğendiğin için";
+"carousel.hiddenGems" = "%@ türünde gizli hazineler";
+"carousel.continueJourney" = "Yolculuğuna devam et";
+"carousel.fromSearches" = "Aramalarından";
+"carousel.topTVPicks" = "Senin için en iyi diziler";
+"carousel.staffPicks" = "%@ hayranları için editör seçkileri";
+"carousel.yearlyRewind" = "Yıllık özetin";
 "settings.privacy.title" = "Gizlilik";
-"settings.analytics.share" = "Anonim analizleri paylaşın";
-"settings.analytics.share.description" = "Hangi özellikleri kullandığınızı anlamamıza ve uygulamayı geliştirmemize yardımcı olur. Reklam takibi yok.";
-"settings.analytics.title" = "Analitik";
-"settings.analytics.viewStats" = "İstatistiklerinizi Görüntüleyin";
-"settings.analytics.description" = "Saat geçmişinizi ve içgörülerinizi görün";
+"settings.analytics.share" = "Anonim analizleri paylaş";
+"settings.analytics.share.description" = "Hangi özellikleri kullandığını anlamamıza ve uygulamayı geliştirmemize yardımcı olur. Reklam takibi yok.";
+"settings.analytics.title" = "Analizler";
+"settings.analytics.viewStats" = "İstatistiklerini görüntüle";
+"settings.analytics.description" = "İzleme geçmişini ve içgörülerini gör";
 "settings.notifications.title" = "Bildirimler";
-"settings.notifications.manage" = "Bildirimleri Yönet";
+"settings.notifications.manage" = "Bildirimleri yönet";
 "settings.notifications.description" = "Yeni içerikler için kişiselleştirilmiş uyarılar";
-"onboarding.welcome.title" = "Vibe'ınızı Keşfedin";
-"onboarding.welcome.subtitle" = "Sadece size özel yapay zeka destekli öneriler.";
-"onboarding.clips.title" = "İzle, Okuma";
-"onboarding.clips.subtitle" = "Filmleri kısa, ilgi çekici kliplerle deneyimleyin.";
-"onboarding.lists.title" = "İzleme Listeniz, Her Yerde";
-"onboarding.lists.subtitle" = "Filmleri kaydedin ve tüm cihazlarınızda senkronize edin.";
-"onboarding.account.title" = "Profilinizi Kaydedin";
-"onboarding.account.subtitle" = "İzleme listenizi ve tercihlerinizi cihazlar arasında senkronize etmek için bir hesap oluşturun.";
+"onboarding.welcome.title" = "VibeWatch'a hoş geldin";
+"onboarding.welcome.subtitle" = "Keşfet, takip et ve hiçbir çıkışı kaçırma. Filmler ve diziler tek bir yerde.";
+"onboarding.clips.title" = "Okuma, izle";
+"onboarding.clips.subtitle" = "Filmleri kısa, sürükleyici kliplerle deneyimle.";
+"onboarding.lists.title" = "İzleme listen, her yerde";
+"onboarding.lists.subtitle" = "Filmleri kaydet ve tüm cihazlarında senkronize et.";
+"onboarding.account.title" = "Profilini kaydet";
+"onboarding.account.subtitle" = "İzleme listeni ve tercihlerini cihazların arasında senkronize etmek için bir hesap oluştur.";
 "onboarding.skip" = "Şimdilik atla";
 "paywall.cta.skip" = "Şimdilik atla";
-"filters.allPlatforms" = "Tüm Platformlar";
+"filters.allPlatforms" = "Tüm platformlar";
 
 // --- Synced from en.lproj ---
-"filters.releasePeriodAny" = "Herhangi bir";
+"filters.releasePeriodAny" = "Herhangi bir dönem";
 "common.next" = "Sonraki";
 "ai.tryAsking" = "Sormayı dene.";
 
 // --- Synced from en.lproj ---
-"auth.checkEmailTitle" = "E-postanızı kontrol edin";
-"auth.checkEmailMessage" = "Size bir onay bağlantısı gönderdik. Hesabınızı doğrulamak için lütfen gelen kutunuzu kontrol edin.";
+"auth.checkEmailTitle" = "E-postanı kontrol et";
+"auth.checkEmailMessage" = "Sana bir onay bağlantısı gönderdik. Hesabını doğrulamak için lütfen gelen kutunu kontrol et.";
 
 // --- Synced from en.lproj ---
 "auth.openMailApp" = "Posta Uygulamasını Aç";
 "auth.iHaveVerified" = "Doğruladım";
 "auth.resendEmail" = "E-postayı Yeniden Gönder";
 "auth.changeEmail" = "E-posta Değiştir";
-"auth.verificationPending" = "Hala doğrulama bekliyorum...";
+"auth.verificationPending" = "Doğrulama bekleniyor…";
+"gamification.levelUp" = "SEVİYE ATLADIN!";
+"gamification.level" = "Seviye";
+"gamification.rankAchieved" = "\"%@\" rütbesine ulaşıldı";
+"gamification.xp.base" = "temel";
+"gamification.xp.proBoost" = "Pro Artışı";
+"gamification.xp.streakBonus" = "Seri Bonusu";
+"gamification.xp.total" = "Toplam XP";
+"gamification.challengeComplete" = "Görev Tamamlandı!";
+"notifications.title" = "Bildirimler";
+"notifications.status" = "Durum";
+"notifications.enabled" = "Bildirimler Açık";
+"notifications.disabled" = "Bildirimler Kapalı";
+"notifications.enableDescription" = "Yeni bölümler, yayınlar ve seveceğin içerikler hakkında kişisel uyarılar almak için bildirimleri aç.";
+"notifications.enableButton" = "Bildirimleri Aç";
+"notifications.types" = "Bildirim Türleri";
+"notifications.newEpisodes" = "Yeni Bölümler";
+"notifications.newEpisodesDesc" = "İzlediğin dizilerin yeni bölümleri hazır olduğunda bildirim al";
+"notifications.personalizedReleases" = "Kişiselleştirilmiş Yayınlar";
+"notifications.personalizedReleasesDesc" = "Zevkine uyan yeni filmler ve diziler";
+"notifications.favoriteActors" = "Favori Oyuncular ve Yönetmenler";
+"notifications.favoriteActorsDesc" = "Sevdiğin kişilerden yeni içerikler";
+"notifications.similarContent" = "Benzer İçerik";
+"notifications.similarContentDesc" = "Sevdiklerine göre öneriler";
+"notifications.watchlistAlerts" = "İzleme Listesi Uyarıları";
+"notifications.watchlistAlertsDesc" = "İzleme listendeki içerikler hazır olduğunda";
+"notifications.milestones" = "Kilometre Taşları ve Başarılar";
+"notifications.milestonesDesc" = "İzleme serilerini ve başarılarını kutla";
+"notifications.frequency" = "Sıklık";
+"notifications.dailyLimit" = "Günlük Limit";
+"notifications.perDay" = "günde";
+"notifications.unlimited" = "Sınırsız";
+"notifications.quietHours" = "Sessiz Saatler";
+"notifications.startTime" = "Başlangıç Saati";
+"notifications.endTime" = "Bitiş Saati";
+"notifications.quietHoursDesc" = "Bu saatlerde bildirim gönderilmez";
+"notifications.proFeatures" = "Pro Özellikler";
+"notifications.customActorAlerts" = "Özel Oyuncu Uyarıları";
+"notifications.customGenreAlerts" = "Özel Tür Uyarıları";
+"notifications.proFeaturesDesc" = "Seçtiğin belirli oyuncular ve türler için uyarı al";
+"notifications.save" = "Kaydet";
+"notifications.settingsSaved" = "Ayarlar Kaydedildi";
+"notifications.preferencesUpdated" = "Bildirim tercihlerin güncellendi.";
+"notifications.typesFooter" = "Hangi bildirimleri almak istediğini seç";
+"notifications.newAvailability" = "Yeni erişilebilirlik";
+"notifications.newAvailabilityDesc" = "İzleme listendeki yapımlar izlemeye, kiralamaya veya satın almaya açıldığında";
+"notifications.newRelease" = "Yeni çıkanlar";
+"notifications.newReleaseDesc" = "\"Bana bildir\"e dokunduğun film ve diziler çıktığında";
+"notifications.episodeAired" = "Yeni bölümler";
+"notifications.episodeAiredDesc" = "Listelerindeki bir dizinin yeni bölümü yayınlandığında";
+"notifications.continueWatching" = "İzlemeye devam et";
+"notifications.continueWatchingDesc" = "İzlediğin dizilere devam etmen için hatırlatmalar";
+"notifications.listMilestone" = "Liste dönüm noktaları";
+"notifications.listMilestoneDesc" = "İzleme dönüm noktalarına ulaştığında kutla";
+"notifications.frequencyFooter" = "Günde alacağın maksimum bildirim sayısı";
+"notifications.favoriteActorsTitle" = "Favori Oyuncuların";
+"notifications.favoriteActorsFooter" = "Bu oyuncuların yeni içeriği olduğunda bildirim al";
+"notifications.favoriteGenresTitle" = "Favori Türlerin";
+"notifications.favoriteGenresFooter" = "Bu türlerde yeni yayınlar hakkında bildirim al";
+"notifications.fromPreferences" = "Tercihlerinden";
+"lists.notifyMe" = "BANA BİLDİR";
 
-"movieDetail.whyForMe" = "Why for me?";
+"movieDetail.whyForMe" = "Neden bana uygun?";
 
-"movieDetail.whyForMe.basedOnGenres" = "Based on your 3 favorite genres";
+"movieDetail.whyForMe.basedOnGenres" = "En sevdiğin 3 türe göre";
 
-"movieDetail.goodFitTitle" = "Why %@ is a good fit for me?";
-"movieDetail.goodFitSubtitle" = "A quick, personalized take based on your taste.";
+"movieDetail.goodFitTitle" = "%@ bana neden uygun?";
+"movieDetail.goodFitSubtitle" = "Zevkine göre hazırlanmış hızlı bir değerlendirme.";
+
+// TV Show Detail - Mark All Seen Confirmation
+"tvDetail.markAllSeenTitle" = "Tüm diziyi izlendi olarak işaretle";
+"tvDetail.markAllSeenDescription" = "Bu işlem dizinin mevcut tüm bölüm ve sezonları için geçerli olacak.";
+"tvDetail.markAllSeenQuestion" = "Devam etmek istiyor musun?";
+"tvDetail.markAllSeenConfirm" = "Evet, izlendi olarak işaretle";
+"tvDetail.markAllSeenCancel" = "Hayır, iptal";
+"tvDetail.seasonSeenShort" = "izlendi";
+
+// Library section switcher
+"lists.section.myLists" = "Listelerim";
+"lists.section.tvTracking" = "Dizi takibi";
+
+// TV Shows Tracking
+"tvTracking.continuing" = "İzlemeye devam et";
+"tvTracking.notStarted" = "Başlanmadı";
+"tvTracking.upToDate" = "Güncel";
+"tvTracking.emptyState" = "Dizi bulunamadı";
+"carousel.fromActor" = "%@ ile daha fazlası";
+"carousel.decadeClassics" = "%@ klasikleri";
+"carousel.moodTonight" = "Bu gece: %@";
+"carousel.regionSpotlight" = "Öne çıkanlar: %@";
+"carousel.topInGenre" = "%@ türünün en iyileri";
+"carousel.hotThisWeekInGenre" = "%@ türünde bu hafta popüler";
+"carousel.quickWatches" = "Hızlı izlemeler";
+"carousel.epicWatches" = "Epik izlemeler";
+"carousel.internationalPicks" = "Uluslararası seçkiler";
+"carousel.throwback" = "Geçmişe dönüş: %@";
+"carousel.fromAIChat" = "AI sohbetinden";
+"carousel.comingSoon" = "Yakında";
+"carousel.trendingTVWeek" = "Bu hafta trend diziler";
+"carousel.criticallyAcclaimedRecent" = "Eleştirmenlerden övgü alanlar: %@";
+"carousel.returningTV" = "Yakında dönüyor";
+"carousel.documentaries" = "Senin için belgeseller";
+"discovery.endOfFeed" = "Hepsini gördün";
+/* MARK: - Public Lists (Fase 1) */
+"lists.section.publicLists" = "Herkese açık listeler";
+"lists.public.scope.explore" = "Keşfet";
+"lists.public.scope.followed" = "Takip edilenler";
+"lists.public.searchPlaceholder" = "Herkese açık listelerde ara";
+"lists.public.empty.explore" = "Herkese açık liste bulunamadı";
+"lists.public.empty.followed" = "Henüz hiçbir listeyi takip etmiyorsun";
+"lists.public.follow" = "Takip et";
+"lists.public.following" = "Takip ediliyor";
+"lists.public.unavailable" = "Bu liste artık mevcut değil";
+"lists.public.report" = "Listeyi şikayet et";
+"lists.public.report.confirm" = "Bu liste uygunsuz olarak şikayet edilsin mi?";
+"lists.public.report.done" = "Teşekkürler, şikayetin bize ulaştı";
+"lists.public.block" = "Kullanıcıyı engelle";
+"lists.public.block.confirm" = "Bu kullanıcı engellensin mi? Herkese açık listeleri gizlenecek.";
+"lists.public.createFromThis" = "Bundan herkese açık liste oluştur";
+"lists.public.toggle" = "Herkese açık liste";
+"lists.public.toggle.footer" = "Herkese açık listeler diğer kullanıcılar tarafından keşfedilebilir ve takip edilebilir.";
+"lists.public.profanity.title" = "Uygunsuz içerik";
+"lists.public.profanity" = "Yayımlamadan önce addaki veya açıklamadaki uygunsuz ifadeleri kaldır.";
+"lists.public.guidelines.title" = "Topluluk kuralları";
+"lists.public.guidelines.body" = "Bir liste yayımlayarak topluluk kurallarımızı kabul edersin: saldırgan, nefret içeren veya yasa dışı içerik yok. Kuralları ihlal eden listeler gizlenebilir, şikayet edilen kullanıcılar kaldırılabilir.";
+"lists.public.guidelines.accept" = "Kabul et ve yayımla";
+"lists.duplicateName" = "%@ kopyası";
+/* MARK: - TV Tracking (card stile JustWatch) */
+"tvTracking.titlesCount" = "%d yapım";
+"tvTracking.episodesRemaining" = "%d bölüm kaldı";
+"tvTracking.lastSeen" = "SON İZLENEN %@";
+"tvTracking.soon" = "yakında";
+"tvTracking.watchNow" = "Şimdi izle";
+
+/* SPEC v3 §9.2 — schermata Tracking */
+"tracking.title" = "Takip";
+"tracking.bucket.upNext" = "İzlenecekler";
+"tracking.bucket.stale" = "Uzun süredir izlenmedi";
+"tracking.bucket.forLater" = "Sonrası için";
+"tracking.bucket.upToDate" = "Güncel";
+"tracking.bucket.notStarted" = "Başlanmadı";
+"tracking.bucket.dropped" = "Bırakılanlar";
+"tracking.bucket.archived" = "Arşivlenenler";
+"tracking.timeline.today" = "Bugün çıkıyor";
+"tracking.timeline.tomorrow" = "Yarın";
+"tracking.timeline.thisWeek" = "Bu hafta";
+"tracking.timeline.thisMonth" = "Bu ay";
+"tracking.action.watched" = "İzlendi";
+"tracking.action.later" = "Sonra";
+"tracking.caughtUp" = "Güncel";
+"tracking.unknownShow" = "Bilinmeyen dizi";
+"tracking.special" = "ÖZEL";
+"tracking.empty.title" = "Henüz izlenecek bir şey yok";
+"tracking.empty.subtitle" = "Bir diziyi takip et ya da TV Time geçmişini içe aktar; burada görünecek.";
+"tracking.error.title" = "Bir şeyler ters gitti";
+"tracking.error.notAuthenticated" = "Giriş yapmış olman gerekiyor.";
+"tracking.error.showNotInCatalog" = "Bu dizi henüz katalogda yok — birazdan tekrar dene.";
+"tracking.error.noNextEpisode" = "Bu dizinin sonraki bölümü yok.";
+
+"tab.tracking" = "Takip";
+
+"common.close" = "Kapat";
+
+/* Chiavi chiamate dal codice e mai tradotte */
+"auth.error.invalidLink" = "Bu bağlantı geçersiz ya da süresi dolmuş.";
+"clips.noListsYet" = "Henüz liste yok";
+
+/* SPEC v3 §3.7 — scelta dello username */
+"username.confirm.title" = "Kullanıcı adını onayla";
+"username.confirm.subtitle" = "Bunu adından türettik. Başkaları seni böyle bulacak — bunu tut ya da başka bir tane seç.";
+"username.confirm.action" = "Onayla";
+"username.choose.title" = "Kullanıcı adını seç";
+"username.choose.subtitle" = "VibeWatch'ta görünmek için gerekli: başkaları profilini ve listelerini böyle buluyor.";
+"username.choose.action" = "Devam";
+"username.placeholder" = "kullanıcı adı";
+"username.hint" = "Küçük harf, rakam ve _ — 3 ile 20 karakter.";
+"username.checking" = "Kontrol ediliyor…";
+"username.available" = "Uygun";
+"username.later" = "Şimdi değil";
+"username.error.empty" = "Bir kullanıcı adı seç.";
+"username.error.tooShort" = "En az 3 karakter.";
+"username.error.tooLong" = "En fazla 20 karakter.";
+"username.error.invalidCharacters" = "Yalnızca küçük harf, rakam ve _.";
+"username.error.taken" = "Zaten alınmış.";
+"username.error.checkFailed" = "Kontrol edilemedi. Tekrar dene.";
+"username.error.reserved" = "Bu ad ayrılmış.";
+
+// Social (SPEC v3 blocco 8)
+"social.search.title" = "Arkadaş bul";
+"social.search.placeholder" = "Kullanıcı adı veya isim";
+"social.search.prompt" = "Profillerini görmek için kişileri kullanıcı adı veya isimle ara.";
+"social.search.noResults" = "Kimse bulunamadı.";
+"social.search.failed" = "Arama başarısız oldu. Bağlantını kontrol et.";
+"social.profile.followers" = "Takipçiler";
+"social.profile.following" = "Takip edilenler";
+"social.follow" = "Takip et";
+"social.unfollow" = "Takibi bırak";
+"social.followsYou" = "Seni takip ediyor";
+"social.profile.notFound" = "Bu profil mevcut değil.";
+"social.profile.you" = "Bu sensin.";
+"social.profile.loadFailed" = "Profil yüklenemedi.";
+
+// Blocco 9 (SPEC v3 §3.6/§9.3): voti in stelle, favorites, stats
+"rating.title" = "Puanın";
+"rating.saveFailed" = "Puan kaydedilemedi. Tekrar dene.";
+"profile.favorites.movies" = "Favori filmler";
+"profile.favorites.shows" = "Favori diziler";
+"profile.lists.title" = "Herkese açık listeler";
+"profile.lists.loadFailed" = "Herkese açık listeler yüklenemedi.";
+"profile.stats.title" = "İstatistiklerin";
+"profile.stats.watchTime" = "İzleme süresi";
+"profile.stats.movies" = "Filmler";
+"profile.stats.shows" = "Diziler";
+"profile.stats.episodes" = "Bölümler";
+"profile.stats.loadFailed" = "İstatistikler yüklenemedi.";
+"profile.stats.advanced.title" = "Gelişmiş istatistikler";
+"profile.stats.advanced.byGenre" = "Türe göre";
+"profile.stats.advanced.byDecade" = "On yıla göre";
+"profile.stats.advanced.ratings" = "Puanların";
+"profile.stats.advanced.noGenre" = "Tür bilgisi olmayan %d dizi";
+"profile.stats.advanced.proLocked" = "Gelişmiş istatistikler Pro'nun bir parçasıdır.";
+
+// Blocco 9, seconda meta' (§9.3): diario e modifica dei favorites
+"diary.title" = "Günlük";
+"diary.empty" = "Henüz bir şey yok — izlediklerin burada görünecek.";
+"diary.loadFailed" = "Günlük okunamadı.";
+"favorites.add" = "Favorilere ekle";
+"favorites.remove" = "Favorilerden kaldır";
+"favorites.slot" = "Yuva %d";
+"favorites.saveFailed" = "Favoriler güncellenemedi. Tekrar dene.";
+
+// La pillola del Tracking: dove lo guardo (streaming > noleggio > acquisto)
+"tracking.watchOn" = "İzle: %@";
+"tracking.rentOn" = "Kirala: %@";
+"tracking.buyOn" = "Satın al: %@";
+
+// MARK: - Redesign 2.0 (tab Social, strip uscite, calendario, sottotitoli)
+"tab.social" = "Sosyal";
+"social.subtitle" = "Arkadaşlar ve takip ettiğin listeler";
+"discovery.continueWatching" = "İzlemeye devam et";
+"discovery.strip.today" = "Bugün";
+"discovery.releases.title" = "Yayınlar";
+"discovery.releases.none" = "Bu günde yayın yok.";
+"discovery.releases.countOne" = "1 yayın";
+"discovery.releases.countMany" = "%d yayın";
+"tracking.subtitle" = "Şu an izlediklerin";
+"lists.subtitle" = "Arşivin ve koleksiyonların";
+"profile.group.activity" = "Etkinlik";
+"profile.group.preferences" = "Tercihler";
+"profile.group.account" = "Hesap";
+"profile.badgesLevels" = "Rozetler ve seviyeler";
+"gamification.progress.title" = "İlerlemen";
+"gamification.dayStreak" = "Gün serisi";
+"gamification.badges.title" = "Rozetler";
+"gamification.levels.title" = "Seviyeler";
+"gamification.challenge.none" = "Bugün görev yok";
+"common.seeAll" = "Tümünü gör";
+"profile.stats.subtitle" = "Türler, ruh hali, izleme süresi";
+"diary.subtitle" = "İzlenen bölüm ve film geçmişi";
+"profile.badgesLevels.subtitle" = "Seviye %d · %d/%d rozet";
+"notifications.row.subtitle" = "Yayınlar, yeni bölümler, sessiz saatler";
+"platforms.row.subtitle" = "Yayın, kiralama ve satın alma";
+"platforms.footnote" = "Seçilen platformlar tüm uygulamada nereden izleneceğini filtreler.";
+"profile.languageCountry" = "Dil ve ülke";
+"profile.edit.title" = "Profili düzenle";
+"profile.edit.information" = "Bilgiler";
+"profile.edit.name" = "Ad";
+"profile.edit.bio" = "Hakkında";
+"profile.edit.bioPlaceholder" = "Kendinden biraz bahset (isteğe bağlı)";
+"profile.edit.changePhoto" = "Fotoğrafı değiştir";
+"profile.edit.publicProfile" = "Herkese açık profil";
+"profile.edit.publicProfileSubtitle" = "İnsanlar seni bulabilir ve herkese açık listelerini takip edebilir";
+"profile.edit.saveError" = "Profilin kaydedilemedi. Lütfen tekrar dene.";
+"profile.imageCache" = "Görsel önbelleği";
+"profile.imageCache.subtitle" = "Yalnızca WiFi'da ön yükleme";
+"common.on" = "Açık";
+"common.off" = "Kapalı";
+"profile.privacyTerms" = "Gizlilik ve koşullar";
+"profile.footer.tmdb" = "Bu ürün TMDb API'sini kullanır ancak TMDb tarafından onaylanmamıştır.";
+"settings.cacheManagement.inUse" = "%d MB kullanımda";
+
+// MARK: - Onboarding 2.0
+"common.continue" = "Devam";
+"auth.fullNamePlaceholder" = "Ad soyad";
+"onboarding.welcome.cta" = "Başla";
+"onboarding.import.title" = "Geçmişini yanında getir";
+"onboarding.import.subtitle" = "Dizileri, izlenen bölümleri ve izleme listeni içe aktar. Aktarım bitince uygulama hazır.";
+"onboarding.import.tvtime" = "TV Time'dan içe aktar";
+"onboarding.import.tvtime.subtitle" = "Diziler, izlenen bölümler, izleme listesi ve puanlar";
+"onboarding.import.other" = "Diğer uygulamalar";
+"onboarding.import.other.subtitle" = "Trakt, Letterboxd — çok yakında";
+"onboarding.import.skip" = "Atla, sıfırdan başlıyorum";
+"onboarding.import.completed" = "İçe aktarma tamamlandı";
+"onboarding.import.stat.shows" = "Dizi";
+"onboarding.import.stat.episodes" = "İzlenen bölüm";
+"onboarding.import.stat.movies" = "Film";
+"onboarding.import.stat.watchlist" = "İzleme listesinde";
+"onboarding.notifications.title" = "Hiçbir şeyi kaçırma";
+"onboarding.notifications.subtitle" = "Yalnızca takip ettiklerin için bildirim göndeririz — yeni bölümler, izleme listendeki çıkışlar ve yayın platformuna gelenler.";
+"onboarding.notifications.row1" = "Takip ettiğin dizilerin yeni bölümleri";
+"onboarding.notifications.row2" = "İzleme listendeki yapımların çıkışları";
+"onboarding.notifications.row3" = "Bir yapım yayın platformuna geldiğinde";
+"onboarding.notifications.enable" = "Bildirimleri aç";
+"onboarding.notifications.later" = "Belki sonra";
+"onboarding.ready.title" = "Her şey hazır";
+"onboarding.ready.subtitle" = "Kitaplığın hazır, hiçbir çıkışı kaçırmayacaksın. \"İzlemeye devam et\" yukarıda seni bekliyor.";
+"onboarding.ready.chip.shows" = "%d dizi";
+"onboarding.ready.chip.episodes" = "%d bölüm";
+"onboarding.ready.chip.notifications" = "Bildirimler açık";
+"onboarding.ready.cta" = "İzlemeye başla";
+
+"filters.myPlatforms" = "Benimkiler";
+"filters.platformScopeAll" = "Tümü";
+"mediaDetail.forYou" = "senin için";
+"mediaDetail.watchOn" = "Nereden izlenir";
+"mediaDetail.notifyMe" = "Beni haberdar et";
+"mediaDetail.notifyMeEnabling" = "Açılıyor…";
+"mediaDetail.notifyMeEnabled" = "Seni haberdar edeceğiz";
+"mediaDetail.action.watchlist" = "İzleme listesi";
+"mediaDetail.action.like" = "Beğen";
+"mediaDetail.action.list" = "Listeye";
+"mediaDetail.toast.watchlistAdded" = "İzleme listene eklendi";
+"mediaDetail.toast.watchlistRemoved" = "İzleme listenden kaldırıldı";
+"mediaDetail.toast.markedSeen" = "İzlendi olarak işaretlendi";
+"mediaDetail.toast.markedUnseen" = "İzlenenlerden kaldırıldı";
+"mediaDetail.toast.liked" = "Beğenilerine eklendi";
+"mediaDetail.toast.likeRemoved" = "Beğenilerinden kaldırıldı";
+"mediaDetail.why.cardTitle" = "Sana neden uygun?";
+"mediaDetail.why.title" = "Neden senin için";
+"mediaDetail.why.affinity" = "Zevklerinle uyum";
+"mediaDetail.why.reason.mood" = "Ruh haline uygun";
+"mediaDetail.why.reason.genres" = "Sevdiğin türler";
+"mediaDetail.why.reason.cast" = "Tanıdığın oyuncular";
+"mediaDetail.why.helpful" = "Bu işine yaradı mı?";
+"mediaDetail.why.regenerate" = "Yeniden oluştur";
+"mediaDetail.why.quota" = "Puanlarına, ruh haline ve geçmişine göre Vibe AI tarafından oluşturuldu. Bugün %d/%d istek.";
+"settings.cacheManagement.clearCacheAction" = "Önbelleği temizle";
+"gamification.missionsToday" = "Bugünün görevleri";
+"gamification.xpToNext" = "Sonraki seviyeye %d XP";
+"gamification.mission.openApp" = "Uygulamayı aç";
+"gamification.mission.keepStreak" = "Günlük serini sürdür";
+"gamification.challenge.watch_3" = "3 klip izle";
+"gamification.challenge.like_5" = "5 klibi beğen";
+"gamification.challenge.list_2" = "Bir listeye 2 yapım ekle";
+"gamification.challenge.watch_new_genre" = "Yeni bir türden klip izle";
+"gamification.challenge.complete_5" = "5 klibi tamamla (>%70)";
+
+// SeasonDetailView — conferme di marcatura episodi (2026-08-04)
+"season.confirmUnaired.title" = "Henüz yayınlanmadı";
+"season.confirmUnaired.message" = "S%dE%d henüz yayınlanmadı. Yine de izlendi olarak işaretlensin mi?";
+"season.confirmUnaired.confirm" = "İzlendi olarak işaretle";
+"season.confirmPrevious.title" = "Önceki bölümleri izledin mi?";
+"season.confirmPrevious.message" = "İzlendi olarak işaretlenmemiş %d önceki bölüm var.";
+"season.confirmPrevious.markAll" = "Evet, hepsini işaretle";
+"season.confirmPrevious.onlyThis" = "Sadece bu";
+"season.confirmUnairedSeason.message" = "Bu sezonun %d bölümü henüz yayınlanmadı. Yine de izlendi olarak işaretlensin mi?";
+"season.confirmUnairedSeason.markAll" = "Hepsini işaretle";
+"season.confirmUnairedSeason.onlyAired" = "Sadece yayınlananlar";
+
+/* Import redesign 2.0 — banner, review inbox, onboarding options */
+"onboarding.import.durationHint" = "Yıllarca geçmiş içeren bir arşiv birkaç dakika sürebilir.";
+"onboarding.import.meanwhile" = "Bu arada";
+"onboarding.import.wait" = "Burada kalıp bekleyeceğim";
+"onboarding.import.wait.subtitle" = "Uygulamaya kitaplığın hazır halde gir";
+"onboarding.import.background" = "Kuruluma devam et";
+"onboarding.import.background.subtitle" = "İçe aktarma arka planda devam eder — bitince sana haber veririz";
+"onboarding.import.waitingHint" = "Burada bekliyoruz: içe aktarma biter bitmez inceleme otomatik olarak açılır.";
+"onboarding.import.manage" = "%d yapımı yönet";
+"import.banner.running" = "İçe aktarma sürüyor";
+"import.banner.episodes" = "%2$@ bölümden %1$@";
+"import.banner.completed" = "İçe aktarma tamamlandı";
+"import.banner.review" = "%2$@ yapımdan %1$d tanesi incelenecek";
+"import.banner.manage" = "Yönet";
+"import.banner.ok" = "Tamam";
+"import.banner.summary" = "%1$@ dizi · %2$@ bölüm · %3$@ film";
+"import.toast.imported" = "Kitaplık içe aktarıldı";
+"import.toast.imported.review" = "Kitaplık içe aktarıldı · incelenecek %d yapım";
+"import.review.title" = "İncelenecek yapımlar";
+"import.review.remaining" = "%2$d yapımdan %1$d kaldı";
+"import.review.allResolved" = "Hepsi çözüldü";
+"import.review.intro" = "TV Time arşivindeki bu yapımlar için güvenilir bir eşleşme bulamadık. Doğrusunu seç ya da hariç tut.";
+"import.review.episodesSeen" = "%d bölüm izlendi";
+"import.review.searchManually" = "Elle ara";
+"import.review.exclude" = "Hariç tut";
+"import.review.later" = "Ertele, sonra yaparım";
+"import.review.importCount" = "%d yapımı içe aktar";
+"import.review.importOne" = "1 yapımı içe aktar";
+"import.review.libraryOk" = "Kitaplık düzenli";
+"import.review.libraryOk.subtitle" = "TV Time arşivindeki her yapım doğru şekilde eşleştirildi.";
+"import.review.noCandidates" = "Öneri bulunamadı — elle aramayı dene.";
+"import.review.manualPick" = "Elle seçildi";
+"import.review.movieHint" = "Eşleşmeyen filmler yalnızca hariç tutulabilir.";
+"import.review.seasons" = "%d sezon";
+"import.review.reason.notFound" = "katalogda bulunamadı";
+"import.review.reason.ambiguous" = "belirsiz eşleşme";
+"import.review.reason.conflict" = "dizi çakışması";
+"import.review.reason.yearMissing" = "yıl eksik veya uyuşmuyor";
+"import.review.reason.missingId" = "dışa aktarmada dizi ID'si yok";
+
+"import.toast.mapping.partial" = "%1$d başlık çözüldü · %2$d incelenecek";
+"import.toast.mapping.done" = "%d başlık çözüldü · kitaplık düzenli";
+
+"import.report.outOfStructure" = "%d bölüm, onaylanan dizinin TMDB yapısına yerleştirilemedi.";
+
+
+// MARK: - Toast (Task 10)
+"mediaDetail.toast.markingSeen" = "İzlendi olarak işaretleniyor…";
+"lists.toast.adding" = "Ekleniyor…";
+"lists.toast.removing" = "Kaldırılıyor…";
+"lists.toast.addedTo" = "%@ listesine eklendi";
+"lists.toast.removedFrom" = "%@ listesinden kaldırıldı";
+"lists.toast.removed" = "Listeden kaldırıldı";
+"lists.toast.failed" = "Bir şeyler ters gitti";
+"lists.toast.creating" = "Liste oluşturuluyor…";
+"lists.toast.created" = "Liste oluşturuldu";
+"tracking.toast.markingWatched" = "Bölüm işaretleniyor…";
+"tracking.toast.markedWatched" = "Bölüm izlendi olarak işaretlendi";
+"tracking.toast.snoozing" = "Erteleniyor…";
+"tracking.toast.snoozed" = "Dizi ertelendi";
+"auth.error.recoveryLinkExpired" = "Bağlantı geçersiz veya süresi dolmuş. Yeni bir şifre sıfırlama bağlantısı iste.";
+
+
+// MARK: - Regole password (Task 2)
+"auth.pwRule.length" = "8+ karakter";
+"auth.pwRule.uppercase" = "1 büyük harf";
+"auth.pwRule.lowercase" = "1 küçük harf";
+"auth.pwRule.number" = "1 rakam";
+"auth.pwRule.symbol" = "1 sembol";
+"auth.accountCreated" = "Hesap oluşturuldu";
+
+
+// MARK: - Modali (Task 9+14)
+"tvDetail.markAllSeenSubtitle" = "Yayınlanmış her sezonun her bölümü için geçerlidir.";
+"tvDetail.markAllSeenCTA" = "%d bölümü izlendi olarak işaretle";
+"tvDetail.markAllSeen.episodes" = "İzlendi olarak işaretlenen bölümler";
+"tvDetail.markAllSeen.diary" = "Günlüğe eklenen kayıtlar";
+"tvDetail.markAllSeenReversible" = "Geri alınabilir: tek tek bölümleri günlükten geri yükleyebilirsin.";
+"tvDetail.seasonsCount" = "%d sezon";
+"tvDetail.episodesCount" = "%d bölüm";
+"auth.changePasswordSubtitle" = "Güvenlik için diğer cihazlarındaki oturumları kapatacağız.";
+"auth.newPasswordPlaceholder" = "Yeni şifre";
+"auth.forgotCurrentPassword" = "Mevcut şifreni hatırlamıyor musun?";
+"auth.show" = "Göster";
+"auth.hide" = "Gizle";
+"profile.feedback.subtitle" = "Hepsini okuyoruz. Genelde iki gün içinde yanıtlıyoruz.";
+"profile.feedback.keepUpdatedEmail" = "Sana %@ adresine yazacağız";
+"profile.feedback.placeholder.bug" = "Ne ters gitti? Hemen öncesinde ne yapıyordun…";
+"profile.feedback.placeholder.suggest" = "Ne eksik? Nasıl kullanacağını anlat…";
+"profile.feedback.placeholder.other" = "Bize söylemek istediğini yaz…";
+"profile.feedback.category.crash" = "Çökme";
+"profile.feedback.category.import" = "TV Time içe aktarma";
+"profile.feedback.category.notifications" = "Bildirimler";
+"profile.feedback.category.sync" = "Eşitleme";
+"profile.feedback.category.ui" = "Görünüm";
+"profile.feedback.category.other" = "Diğer";
+
+
+// MARK: - Update forzato (Task 3)
+"update.required" = "GÜNCELLEME GEREKLİ";
+"update.fallbackTitle" = "Yeni bir sürüm mevcut";
+"update.whatsChanged" = "NELER DEĞİŞTİ";
+"update.fullReleaseNotes" = "Tüm sürüm notları";
+"update.cta" = "App Store'dan güncelle";
+"update.versionFootnote" = "Sürüm %@";
+"update.dataSafe" = "Kitaplığın ve verilerin güvende kalır.";
+
+
+// MARK: - Preferiti (Task 7)
+"favorites.subtitle" = "Profilinde vitrinde duran 4 yapım";
+"favorites.inYourFavorites" = "Favorilerinde";
+"favorites.showcased" = "Profilinde sergileniyor";
+"favorites.addedToast" = "Favorilere eklendi";
+"favorites.removedToast" = "Favorilerden kaldırıldı";
+
+
+// MARK: - Informazioni estese (Task 8)
+"movieDetail.releaseDate" = "Yayın tarihi";
+"movieDetail.status" = "Durum";
+"movieDetail.productionCompanies" = "Yapım";
+"movieDetail.budget" = "Bütçe";
+"movieDetail.revenue" = "Hasılat";
+"movieDetail.originalLanguage" = "Orijinal dil";
+"movieDetail.tagline" = "Slogan";
+"tvDetail.firstAirDate" = "İlk yayın";
+"tvDetail.lastAirDate" = "Son yayın";
+"tvDetail.seasonsEpisodes" = "Sezonlar";
+"tvDetail.network" = "Kanal";
+"tvDetail.createdBy" = "Yaratıcı";
+"mediaStatus.released" = "Yayınlandı";
+"mediaStatus.inProduction" = "Yapım aşamasında";
+"mediaStatus.postProduction" = "Post prodüksiyon";
+"mediaStatus.planned" = "Planlandı";
+"mediaStatus.rumored" = "Söylenti";
+"mediaStatus.canceled" = "İptal edildi";
+"mediaStatus.returningSeries" = "Devam ediyor";
+"mediaStatus.ended" = "Sona erdi";
+"mediaStatus.pilot" = "Pilot bölüm";
+
+
+// MARK: - Piattaforme (Task 12+17)
+"platforms.active" = "etkin platform";
+"platforms.activeCount" = "%d etkin";
+"platforms.clear" = "Temizle";
+"platforms.coverage" = "İzleme listesi kapsamın";
+"platforms.libraryCount" = "kitaplığındaki %d yapım";
+"platforms.recommended" = "ÖNERİLEN";
+"platforms.manage" = "Yönet";
+"platforms.empty" = "Ülken için henüz platform yok.";
+
+
+// MARK: - Preferiti nel profilo (Task 15)
+"favorites.sectionTitle" = "Favorilerin";
+"favorites.sectionCount" = "%2$d üzerinden %1$d";
+
+
+// MARK: - Ricerca (Task 16)
+"search.mostRelevant" = "En alakalı";
+"common.movie" = "Film";
+"common.tvShow" = "Dizi";
+
+
+// MARK: - Toast con fase di progresso (bug 7)
+"mediaDetail.toast.addingToWatchlist" = "İzleme listene ekleniyor…";
+"mediaDetail.toast.removingFromWatchlist" = "İzleme listenden kaldırılıyor…";
+"mediaDetail.toast.liking" = "Beğenilerine ekleniyor…";
+"mediaDetail.toast.unliking" = "Beğenilerinden kaldırılıyor…";
+"mediaDetail.toast.markingUnseen" = "İzlenenlerden kaldırılıyor…";
+"mediaDetail.toast.disliking" = "Beğenmediklerine ekleniyor…";
+"mediaDetail.toast.undisliking" = "Beğenmediklerinden kaldırılıyor…";
+"mediaDetail.toast.disliked" = "Beğenmediklerine eklendi";
+"mediaDetail.toast.dislikeRemoved" = "Beğenmediklerinden kaldırıldı";
+"favorites.adding" = "Favorilere ekleniyor…";
+"favorites.removing" = "Favorilerden kaldırılıyor…";
+
+
+// MARK: - Ricerca ridisegnata (bug 1)
+"search.scope.all" = "Tümü";
+"search.scope.movies" = "Filmler";
+"search.scope.series" = "Diziler";
+"search.clear" = "Temizle";
+"search.trending.today" = "Bugün";
+"search.trending.subtitle" = "Son 24 saatte %@ ülkesinde en çok aranan yapımlar.";
+"search.results.subtitle" = "«%@» eşleşmeleri, ardından benzer yapımlar.";
+"search.resultsCount" = "%d yapım";
+
+
+// MARK: - Ricerca piattaforme + esito notifica
+"platforms.search" = "Platform ara";
+"platforms.searchEmpty" = "Bu adda bir platform yok.";
+"mediaDetail.notifyMeFailed" = "Bildirimi açamadık.";
+
+
+// MARK: - Report import ridisegnato
+"import.report.title" = "İçe aktarma raporu";
+"import.report.sourcePeriod" = "%@ · %@ – %@";
+"import.report.success.title" = "Kitaplık içe aktarıldı";
+"import.report.success.subtitle" = "%d dizi ve %d film katalogla eşleştirildi.";
+"import.report.success.subtitleWithRatings" = "%d dizi ve %d film, izleme tarihleri ve puanlarıyla katalogla eşleştirildi.";
+"import.report.tile.episodes" = "Bölüm";
+"import.report.tile.movies" = "Film";
+"import.report.leftOut.title" = "Dışarıda kalanlar";
+"import.report.leftOut.subtitle" = "Bu yapımlar için katalogda kesin bir eşleşme yok. Elle aramak için bir karta dokun.";
+"import.report.leftOut.excluded" = "Senin tarafından hariç tutuldu";
+"import.report.leftOut.episodes" = "%d bölüm izlendi";
+"import.report.leftOut.seenOn" = "%@ tarihinde izlendi";
+"import.report.copyList" = "Listeyi kopyala";
+"import.report.copied" = "Liste kopyalandı";
+"import.report.details" = "Ayrıntılar";
+
+
+// MARK: - Report import — dettagli
+"import.report.detail.period" = "Kapsanan dönem";
+"import.report.detail.years" = "%d yıl";
+"import.report.detail.oneYear" = "1 yıl";
+"import.report.detail.lessThanYear" = "bir yıldan az";
+"import.report.detail.statuses" = "Geri yüklenen dizi durumları";
+"import.report.detail.statuses.hint" = "TV Time'daki gibi izleme listesi ve arşiv";
+"import.report.detail.ratings" = "Aktarılan puanlar";
+"import.report.detail.ratingsUnmatched" = "Eşleşmeyen puanlar";
+"import.report.detail.ratingsUnmatched.hint" = "Katalogda bulunmayan puanlanmış bölümler";
+"import.report.detail.ratingsDeferred" = "Henüz içe aktarılmayan puanlar";
+"import.report.detail.favorites" = "Geri yüklenen favoriler";
+"import.report.detail.moviesSeen" = "İzlendi olarak işaretlenen filmler";
+"import.report.detail.moviesWatchlist" = "İzleme listesindeki filmler";
+"import.report.detail.statusesUnresolved" = "Geri yüklenemeyen durumlar";
+"import.report.detail.outOfStructure" = "Yerleştirilemeyen bölümler";
+"import.report.detail.outOfStructure.hint" = "Dizinin yapısı dışındaki özel bölümler ve uzatılmış sürümler";
+"import.report.detail.favoriteMovies" = "İçe aktarılmayan favori filmler";
+
+
+// MARK: - Report import — titolo mancante
+"import.report.leftOut.untitled" = "Dışa aktarımda başlık yok";
+
+
+// MARK: - Generi TMDB
+// I nomi dei generi mostrati a schermo (titoli dei caroselli, grafico dei generi in Analytics).
+// TMDB li restituisce tradotti solo dentro la scheda di un film; nei caroselli il genere arriva
+// come id numerico, quindi il nome deve venire da qui. Da tradurre in ogni lingua.
+"genre.action" = "Aksiyon";
+"genre.adventure" = "Macera";
+"genre.animation" = "Animasyon";
+"genre.comedy" = "Komedi";
+"genre.crime" = "Suç";
+"genre.documentary" = "Belgesel";
+"genre.drama" = "Dram";
+"genre.family" = "Aile";
+"genre.fantasy" = "Fantastik";
+"genre.history" = "Tarih";
+"genre.horror" = "Korku";
+"genre.music" = "Müzik";
+"genre.mystery" = "Gizem";
+"genre.romance" = "Romantik";
+"genre.scienceFiction" = "Bilim Kurgu";
+"genre.tvMovie" = "TV Filmi";
+"genre.thriller" = "Gerilim";
+"genre.war" = "Savaş";
+"genre.western" = "Vahşi Batı";
+"genre.actionAdventure" = "Aksiyon ve Macera";
+"genre.kids" = "Çocuk";
+"genre.news" = "Haber";
+"genre.reality" = "Realite";
+"genre.sciFiFantasy" = "Bilim Kurgu ve Fantastik";
+"genre.soap" = "Pembe Dizi";
+"genre.talk" = "Talk Show";
+"genre.warPolitics" = "Savaş ve Politika";
+
+
+// MARK: - Mood
+// Vanno nel `%@` di "carousel.moodTonight" ("Bu gece: %@"). Sono SOSTANTIVI, non aggettivi: in
+// turco il template usa i due punti proprio per non dover attaccare un suffisso al segnaposto.
+"mood.happy" = "Keyif";
+"mood.sad" = "Hüzün";
+"mood.excited" = "Adrenalin";
+"mood.relaxed" = "Huzur";
+"mood.scared" = "Ürperti";
+"mood.thoughtful" = "Düşündürenler";
+"mood.romantic" = "Romantizm";
+"mood.adventurous" = "Macera";
+"mood.nostalgic" = "Nostalji";
+"mood.energetic" = "Saf enerji";
+
+
+// MARK: - Caroselli — argomenti e varianti senza genere
+// "%d" è l'anno d'inizio del decennio (2020). In inglese "2020s", in turco il suffisso del
+// decennio ("2020'ler" / "2010'lar") cambia con l'armonia vocalica del numero letto ad alta voce,
+// quindi si usa "%d yılları", che è corretto per ogni decennio.
+// Composti: "1990 yılları klasikleri" (decadeClassics), "Geçmişe dönüş: 1990 yılları" (throwback).
+"carousel.arg.decade" = "%d yılları";
+// Usati quando il profilo non ha ancora un genere preferito: non un fallback infilato nel "%@" del
+// titolo normale, ma una frase alternativa.
+"carousel.hiddenGems.generic" = "Gizli hazineler";
+"carousel.staffPicks.generic" = "Senin için editör seçkileri";
+
+
+// MARK: - Analytics
+"analytics.noData" = "Veri yok";
+
+
+// MARK: - Statistiche e gamification (stringhe estratte dalle view)
+// Erano letterali dentro AnalyticsDashboardView / FloatingXPBadgeView / BadgeGalleryView /
+// LevelProgressView: non passando da `.localized` restavano in inglese in tutte e 20 le lingue.
+"stats.title" = "İstatistiklerin";
+"stats.yourActivity" = "Etkinliğin";
+"stats.viewFull" = "Tüm istatistikleri gör";
+"stats.loading" = "İstatistikler yükleniyor…";
+"stats.errorTitle" = "İstatistikler yüklenemedi";
+"stats.emptyTitle" = "Henüz istatistik yok";
+"stats.emptySubtitle" = "İstatistiklerini görmek için izlemeye başla!";
+"stats.genreDistribution" = "Türlere göre dağılım";
+"stats.genreEmpty" = "Henüz tür verisi yok";
+"stats.whenActive" = "Ne zaman aktifsin";
+"stats.topContent" = "En çok izlediklerin";
+"stats.contentEmpty" = "Henüz yapım verisi yok";
+"stats.discoveryChannels" = "Yapımları nasıl buluyorsun";
+"stats.discoveryEmpty" = "Henüz keşif verisi yok";
+"stats.moodProfile" = "Ruh hali profilin";
+"stats.moodEmpty" = "Henüz yeterli veri yok — ruh hali profilini görmek için izlemeye devam et.";
+
+// "%d" è il numero del livello.
+"gamification.levelNumber" = "Seviye %d";
+// Versione corta per il badge in cima alla schermata, dove lo spazio è quello che è.
+"gamification.levelShort" = "Sv.%d";
+"gamification.bestStreak" = "En uzun seri";
+"gamification.xpBonus" = "XP bonusu";
+"gamification.todaysChallenge" = "Bugünün görevi";
+"gamification.completed" = "Tamamlandı!";
+"gamification.badgeUnlocked" = "Rozet açıldı!";
+"gamification.badges.collected" = "Toplanan rozetler";
+"gamification.badges.unlocked" = "Açıldı";
+// "%d" è il totale dei badge esistenti: in inglese "12 of 40". In turco la forma piena è
+// "40 üzerinden 12", che rovescia l'ordine e non regge come suffisso di un numero già stampato:
+// resta la barra, che dà "12 / 40".
+"gamification.badges.ofTotal" = "/ %d";
+"gamification.levels.progressTitle" = "Seviye ilerlemesi";
+"gamification.allLevels" = "TÜM SEVİYELER";
+
+"common.progress" = "İlerleme";
+"tvDetail.seasonsTitle" = "Sezonlar";
+"tvDetail.episodesTitle" = "Bölümler";

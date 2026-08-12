@@ -19,7 +19,21 @@ struct Movie: Codable, Identifiable, Hashable, Sendable {
     let tagline: String?
     let productionCountries: [ProductionCountry]?
     let imdbId: String?
-    
+    /// `var` con default: la init membro a membro è chiamata in una dozzina di punti che
+    /// costruiscono un `Movie` sintetico (liste, cache, clip) e non hanno questi campi.
+    var budget: Int? = nil
+    var revenue: Int? = nil
+    var productionCompanies: [ProductionCompany]? = nil
+    var spokenLanguages: [SpokenLanguage]? = nil
+
+    /// Il tipo con cui navigare quando questo Movie fa da item di `navigationDestination`
+    /// (il modello fa da contenitore anche per le serie, con il solo id valorizzato).
+    /// Sta QUI e non in uno stato parallelo perché la closure della destination cattura una
+    /// copia della view: uno `selectedMediaType` separato poteva arrivare stantio e aprire
+    /// il FILM che per caso ha lo stesso id TMDB della serie. Fuori da CodingKeys: è un
+    /// dettaglio di navigazione, non un dato TMDB.
+    var navigationMediaType: MediaType? = nil
+
     enum CodingKeys: String, CodingKey {
         case id, title, overview, adult, popularity, runtime, status, tagline, genres
         case posterPath = "poster_path"
@@ -31,6 +45,9 @@ struct Movie: Codable, Identifiable, Hashable, Sendable {
         case originalLanguage = "original_language"
         case productionCountries = "production_countries"
         case imdbId = "imdb_id"
+        case budget, revenue
+        case productionCompanies = "production_companies"
+        case spokenLanguages = "spoken_languages"
     }
     
     var posterURL: URL? {
@@ -81,6 +98,34 @@ struct ProductionCountry: Codable, Hashable {
         case iso = "iso_3166_1"
         case name
     }
+}
+
+/// Casa di produzione o network (stessa forma in TMDB).
+struct ProductionCompany: Codable, Hashable {
+    let id: Int
+    let name: String
+    let logoPath: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, name
+        case logoPath = "logo_path"
+    }
+}
+
+struct SpokenLanguage: Codable, Hashable {
+    let iso: String?
+    let name: String?
+
+    enum CodingKeys: String, CodingKey {
+        case iso = "iso_639_1"
+        case name
+    }
+}
+
+/// Creatore di una serie (`created_by`).
+struct Creator: Codable, Hashable, Identifiable {
+    let id: Int
+    let name: String
 }
 
 struct Credits: Codable {
@@ -140,6 +185,21 @@ struct Video: Codable, Identifiable, Hashable {
 }
 
 
+/// Episodio "stub" da TMDB (next_episode_to_air / last_episode_to_air): solo i campi che servono.
+struct TVEpisodeStub: Codable, Hashable {
+    let name: String?
+    let airDate: String?
+    let episodeNumber: Int?
+    let seasonNumber: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case name
+        case airDate = "air_date"
+        case episodeNumber = "episode_number"
+        case seasonNumber = "season_number"
+    }
+}
+
 struct TVShow: Codable, Identifiable, Hashable {
     let id: Int
     let name: String
@@ -157,9 +217,21 @@ struct TVShow: Codable, Identifiable, Hashable {
     let tagline: String?
     let productionCountries: [ProductionCountry]?
     let imdbId: String?
-    
+    let numberOfSeasons: Int?
+    let episodeRunTime: [Int]?
+    let lastAirDate: String?
+    let numberOfEpisodes: Int?
+    let inProduction: Bool?
+    let seasons: [Season]?
+    /// Prossimo episodio in uscita (TMDB) — usato per il badge "soon" nel tracking In pari.
+    let nextEpisodeToAir: TVEpisodeStub?
+    var networks: [ProductionCompany]? = nil
+    var createdBy: [Creator]? = nil
+    var type: String? = nil
+    var lastEpisodeToAir: TVEpisodeStub? = nil
+
     enum CodingKeys: String, CodingKey {
-        case id, name, overview, popularity, status, tagline, genres
+        case id, name, overview, popularity, status, tagline, genres, seasons
         case posterPath = "poster_path"
         case backdropPath = "backdrop_path"
         case firstAirDate = "first_air_date"
@@ -169,7 +241,19 @@ struct TVShow: Codable, Identifiable, Hashable {
         case originalLanguage = "original_language"
         case productionCountries = "production_countries"
         case imdbId = "imdb_id"
+        case numberOfSeasons = "number_of_seasons"
+        case episodeRunTime = "episode_run_time"
+        case lastAirDate = "last_air_date"
+        case numberOfEpisodes = "number_of_episodes"
+        case inProduction = "in_production"
+        case nextEpisodeToAir = "next_episode_to_air"
+        case networks, type
+        case createdBy = "created_by"
+        case lastEpisodeToAir = "last_episode_to_air"
     }
+
+    /// True se TMDB segnala un episodio futuro (badge "soon").
+    var hasUpcomingEpisode: Bool { nextEpisodeToAir != nil }
     
     var posterURL: URL? {
         guard let posterPath = posterPath else { return nil }
@@ -185,9 +269,41 @@ struct TVShow: Codable, Identifiable, Hashable {
         guard let firstAirDate = firstAirDate else { return nil }
         return String(firstAirDate.prefix(4))
     }
-    
+
     var rating: String {
         String(format: "%.1f", voteAverage)
+    }
+
+    var ratingPercentage: Int {
+        Int(voteAverage * 10)
+    }
+
+    var formattedEpisodeRuntime: String? {
+        guard let first = episodeRunTime?.first, first > 0 else { return nil }
+        let hours = first / 60
+        let minutes = first % 60
+        return hours > 0 ? "\(hours)h \(minutes)m" : "\(minutes) min"
+    }
+
+    var airYearRange: String? {
+        guard let firstAirDate, firstAirDate.count >= 4 else { return nil }
+        let firstYear = String(firstAirDate.prefix(4))
+
+        if inProduction == true {
+            let currentYear = String(Calendar.current.component(.year, from: Date()))
+            if let lastAirDate, lastAirDate.count >= 4 {
+                let lastYear = String(lastAirDate.prefix(4))
+                if lastYear < currentYear {
+                    return "\(firstYear)-Present"
+                }
+                return lastYear == firstYear ? firstYear : "\(firstYear)-\(lastYear)"
+            }
+            return "\(firstYear)-Present"
+        }
+
+        guard let lastAirDate, lastAirDate.count >= 4 else { return firstYear }
+        let lastYear = String(lastAirDate.prefix(4))
+        return firstYear == lastYear ? firstYear : "\(firstYear)-\(lastYear)"
     }
 }
 

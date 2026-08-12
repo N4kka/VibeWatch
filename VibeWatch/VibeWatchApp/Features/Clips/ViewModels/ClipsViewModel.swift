@@ -47,7 +47,8 @@ class ClipsViewModel: ObservableObject {
                 Logger.info("📅 [ClipsViewModel] Triggering daily clips pre-fetch...")
                 Task {
                     do {
-                        try await prefetchService.prefetchClips(targetCount: 800)
+                        // Fase 4 (3.1): target 100 (era 800) + gate Wi-Fi/Low-Power dentro il service.
+                        try await prefetchService.prefetchClips(targetCount: 100)
                     } catch {
                         Logger.error("[ClipsViewModel] Failed to prefetch clips: \(error.localizedDescription)")
                     }

@@ -58,20 +58,16 @@ class DailyQuotaManager: ObservableObject {
     
     // MARK: - Public Methods
     
+    private var tier: UserTier { isProUser ? .pro : .free }
+
     /// Check if user can watch more clips today
     func canWatchMoreClips() -> Bool {
-        if isProUser {
-            return true
-        }
-        return clipsWatchedToday < freeUserLimit
+        EntitlementPolicy.canConsumeClip(tier: tier, clipsWatched: clipsWatchedToday)
     }
-    
+
     /// Get remaining clips for today
     func remainingClips() -> Int {
-        if isProUser {
-            return Int.max
-        }
-        return max(0, freeUserLimit - clipsWatchedToday)
+        EntitlementPolicy.remainingClips(tier: tier, clipsWatched: clipsWatchedToday)
     }
     
     /// Increment clip count when user watches a clip
@@ -199,10 +195,15 @@ class DailyQuotaManager: ObservableObject {
 
         do {
             let sql = """
-                REPLACE INTO user_daily_quota (id, user_id, device_id, clips_watched_today, last_reset_at, is_pro, created_at, updated_at)
+                INSERT INTO user_daily_quota (id, user_id, device_id, clips_watched_today, last_reset_at, is_pro, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+                ON CONFLICT(user_id, device_id) DO UPDATE SET
+                    clips_watched_today = excluded.clips_watched_today,
+                    last_reset_at = excluded.last_reset_at,
+                    is_pro = excluded.is_pro,
+                    updated_at = excluded.updated_at
             """
-            _ = try await db.queryRaw(sql, parameters: [
+            try await db.executeWrite(sql, parameters: [
                 quotaId, userId, deviceId, oldCount,
                 ISO8601DateFormatter().string(from: oldReset),
                 isProUser ? 1 : 0
@@ -249,10 +250,15 @@ class DailyQuotaManager: ObservableObject {
             let userId = SupabaseService.shared.currentUser?.id ?? "anonymous"
             let quotaId = "\(userId)_\(deviceId)"
             let sql = """
-                REPLACE INTO user_daily_quota (id, user_id, device_id, clips_watched_today, last_reset_at, is_pro, updated_at)
+                INSERT INTO user_daily_quota (id, user_id, device_id, clips_watched_today, last_reset_at, is_pro, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+                ON CONFLICT(user_id, device_id) DO UPDATE SET
+                    clips_watched_today = excluded.clips_watched_today,
+                    last_reset_at = excluded.last_reset_at,
+                    is_pro = excluded.is_pro,
+                    updated_at = excluded.updated_at
             """
-            _ = try await db.queryRaw(sql, parameters: [
+            try await db.executeWrite(sql, parameters: [
                 quotaId, userId, deviceId, clipsWatchedToday,
                 ISO8601DateFormatter().string(from: lastResetDate),
                 isProUser ? 1 : 0

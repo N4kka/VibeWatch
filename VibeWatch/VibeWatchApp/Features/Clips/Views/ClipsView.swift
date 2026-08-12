@@ -2,6 +2,13 @@ import SwiftUI
 import AVKit
 import YouTubeiOSPlayerHelper
 
+/// La destinazione di "Vai alla scheda": basta l'id TMDB e il tipo, il resto lo carica la
+/// pagina di dettaglio.
+struct ClipDetailTarget: Identifiable, Hashable {
+    let id: Int
+    let mediaType: MediaType
+}
+
 @MainActor
 struct ClipsView: View {
     @StateObject private var viewModel = ClipsViewModel()
@@ -10,29 +17,22 @@ struct ClipsView: View {
     @EnvironmentObject var quotaManager: DailyQuotaManager
     @State private var showDailyPaywall = false
     @State private var showAccountGate = false
-    @State private var navigateToDiscovery = false
     @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var appState: AppState
     @State private var hasScrolledToSavedPosition = false
-    @State private var dragOffset: CGFloat = 0
-    @State private var showSearch = false
-    @State private var isSearchTrayVisible = false
-    @State private var inlineQuery = ""
-    @State private var pendingSearchQuery: String?
-    @FocusState private var isInlineSearchFocused: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var isAuroraAnimating = false
-    @State private var isGlyphPulsing = false
+    @State private var isSkeletonPulsing = false
     @State private var isProgressSweeping = false
     @State private var feedSessionId = UUID().uuidString
     @State private var seenClipIds: Set<String> = []
+    @State private var detailTarget: ClipDetailTarget?
 
     var body: some View {
         // Main content - Clips
         ZStack {
             VStack(spacing: 0) {
                 OfflineBanner()
-                
+
                 if viewModel.isLoading {
                     loadingView
                         .transition(.opacity)
@@ -47,41 +47,6 @@ struct ClipsView: View {
                         .transition(.opacity)
                 }
             }
-            .offset(x: dragOffset) // Apply drag offset
-            // Horizontal swipe navigation (AI / Discovery) without blocking vertical scroll
-            .simultaneousGesture(
-                DragGesture()
-                    .onChanged { value in
-                        // Only allow horizontal drag if it dominates vertical
-                        if abs(value.translation.width) > abs(value.translation.height) {
-                            dragOffset = value.translation.width
-                        }
-                    }
-                    .onEnded { value in
-                        let screenWidth = UIScreen.main.bounds.width
-                        let threshold = screenWidth * 0.5
-                        
-                        if value.translation.width < -threshold {
-                            // Swipe Left -> Go to AI (Tab 2)
-                            NotificationCenter.default.post(name: .navigateToAITab, object: nil)
-                            // Reset offset after a delay to allow transition
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                dragOffset = 0
-                            }
-                        } else if value.translation.width > threshold {
-                            // Swipe Right -> Go to Discovery (Tab 0)
-                            NotificationCenter.default.post(name: .navigateToDiscoveryTab, object: nil)
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                dragOffset = 0
-                            }
-                        } else {
-                            // Snap back
-                            withAnimation(.spring()) {
-                                dragOffset = 0
-                            }
-                        }
-                    }
-            )
 
             if showAccountGate {
                 AccountCreationGateView(
@@ -135,26 +100,12 @@ struct ClipsView: View {
             showAccountGate = false
             showDailyPaywall = false
         }
-        
-        .safeAreaInset(edge: .top) {
-            searchDock
-        }
-        .overlay {
-            searchDimOverlay
-        }
-        .overlay(alignment: .top) {
-            searchTray
-        }
-        .background(searchNavigationLink)
         .xpToast(gamificationService: gamificationService)
-        .onChange(of: isSearchTrayVisible) { _, newValue in
-            if newValue {
-                NotificationCenter.default.post(name: .pauseAllClips, object: nil)
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    isInlineSearchFocused = true
-                }
+        .navigationDestination(item: $detailTarget) { target in
+            if target.mediaType == .movie {
+                MovieDetailView(movieId: target.id)
             } else {
-                isInlineSearchFocused = false
+                TVShowDetailView(tvShowId: target.id)
             }
         }
     }
@@ -202,211 +153,6 @@ struct ClipsView: View {
         }
     }
 
-    private var searchDock: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .center, spacing: 12) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("clips.title".localized)
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(.white)
-
-                    Text("clips.search.placeholder".localized)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.white.opacity(0.6))
-                }
-                
-                Spacer()
-
-                ProUpgradeIconButton(isProUser: quotaManager.isProUser, source: "clips_top_right")
-                
-                Button {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    withAnimation(.spring(response: 0.28, dampingFraction: 0.85)) {
-                        isSearchTrayVisible = true
-                    }
-                } label: {
-                    HStack(spacing: 10) {
-                        Image(systemName: "magnifyingglass")
-                        Text("clips.search.placeholder".localized)
-                            .lineLimit(1)
-                    }
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(.ultraThinMaterial)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                    )
-                    .clipShape(Capsule())
-                    .shadow(color: .black.opacity(0.3), radius: 12, x: 0, y: 8)
-                }
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
-        .padding(.bottom, 12)
-        .background(
-            Color.black
-                .ignoresSafeArea(edges: .top)
-        )
-    }
-
-    private var searchTray: some View {
-        Group {
-            if isSearchTrayVisible {
-                VStack(alignment: .leading, spacing: 14) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "magnifyingglass")
-                            .foregroundColor(.white.opacity(0.85))
-                        
-                        TextField("clips.search.placeholder".localized, text: $inlineQuery)
-                            .foregroundColor(.white)
-                            .autocorrectionDisabled()
-                            .textInputAutocapitalization(.none)
-                            .focused($isInlineSearchFocused)
-                            .onSubmit { launchSearch(with: inlineQuery) }
-                        
-                        if !inlineQuery.isEmpty {
-                            Button {
-                                inlineQuery = ""
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundColor(.white.opacity(0.7))
-                            }
-                        }
-                        
-                        Button {
-                            launchSearch(with: inlineQuery)
-                        } label: {
-                            Image(systemName: "arrow.forward.circle.fill")
-                                .foregroundColor(.black)
-                                .frame(width: 32, height: 32)
-                                .background(Color.theme.accentOrange)
-                                .clipShape(Circle())
-                        }
-                        
-                        Button("common.cancel".localized) {
-                            withAnimation(.spring(response: 0.28, dampingFraction: 0.85)) {
-                                isSearchTrayVisible = false
-                            }
-                        }
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.white.opacity(0.8))
-                    }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 12)
-                    .background(.ultraThinMaterial)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                    
-                    chipsRow
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, safeAreaTopInset + 10)
-                .padding(.bottom, 16)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(
-                    LinearGradient(
-                        colors: [
-                            Color.black.opacity(0.95),
-                            Color.black.opacity(0.82),
-                            Color.black.opacity(0.6)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .ignoresSafeArea(edges: .top)
-                )
-                .transition(.move(edge: .top).combined(with: .opacity))
-                .zIndex(50)
-            }
-        }
-    }
-
-    private var searchDimOverlay: some View {
-        Group {
-            if isSearchTrayVisible {
-                Color.black.opacity(0.25)
-                    .ignoresSafeArea()
-                    .transition(.opacity)
-                    .zIndex(30)
-                    .onTapGesture {
-                        withAnimation(.spring(response: 0.28, dampingFraction: 0.85)) {
-                            isSearchTrayVisible = false
-                        }
-                    }
-            }
-        }
-    }
-
-    private var chipsRow: some View {
-        let chips = [
-            "clips.search.quotes".localized,
-            "clips.search.characters".localized,
-            "clips.search.scenes".localized,
-            "clips.search.popular".localized
-        ]
-
-        return ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 10) {
-                ForEach(chips, id: \.self) { chip in
-                    Button {
-                        launchSearch(with: chip)
-                    } label: {
-                        Text(chip)
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 8)
-                            .background(Color.white.opacity(0.14))
-                            .overlay(
-                                Capsule()
-                                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                            )
-                            .clipShape(Capsule())
-                    }
-                }
-            }
-            .padding(.leading, 2)
-        }
-    }
-
-    private var safeAreaTopInset: CGFloat {
-        UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .first?.windows.first?.safeAreaInsets.top ?? 0
-    }
-    
-    private func launchSearch(with query: String) {
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else {
-            withAnimation(.spring(response: 0.28, dampingFraction: 0.85)) {
-                isSearchTrayVisible = false
-            }
-            return
-        }
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        pendingSearchQuery = trimmed
-        inlineQuery = trimmed
-        showSearch = true
-        withAnimation(.spring(response: 0.28, dampingFraction: 0.85)) {
-            isSearchTrayVisible = false
-        }
-    }
-
-    private var searchNavigationLink: some View {
-        Color.clear
-            .frame(height: 0)
-            .navigationDestination(isPresented: $showSearch) {
-                ClipsSearchView(initialQuery: pendingSearchQuery)
-            }
-    }
-
     private var clipsScrollView: some View {
         GeometryReader { outerGeometry in
             ScrollViewReader { proxy in
@@ -435,6 +181,14 @@ struct ClipsView: View {
                                     onLikeToggle: { isLiked in
                                         viewModel.toggleLike(for: clip.id, isLiked: isLiked)
                                     },
+                                    onOpenDetail: {
+                                        guard let mediaId = clip.movieId ?? clip.tvShowId else { return }
+                                        NotificationCenter.default.post(name: .pauseAllClips, object: nil)
+                                        detailTarget = ClipDetailTarget(
+                                            id: mediaId,
+                                            mediaType: clip.inferredMediaType
+                                        )
+                                    },
                                     analyticsContext: context
                                 )
                             }
@@ -453,6 +207,9 @@ struct ClipsView: View {
                     }
                     .scrollTargetLayout()
                 }
+                // Il player misura la propria posizione in questo spazio per capire quando è la
+                // pagina corrente: con il layout a card non coincide più col bordo dello schermo.
+                .coordinateSpace(name: "clipsScroll")
                 .scrollTargetBehavior(.paging)
                 .scrollPosition(id: .init(get: {
                     return viewModel.currentIndex
@@ -473,134 +230,75 @@ struct ClipsView: View {
         }
     }
 
+    // Skeleton del redesign: la stessa forma del contenuto vero (card video + testo + rail
+    // azioni), attenuata, con il messaggio e la barra di avanzamento al centro. Niente aurora:
+    // il prototipo è nero, quieto, e lascia parlare il testo.
     private var loadingView: some View {
-        GeometryReader { geometry in
-            ZStack {
-                // Animated aurora backdrop
+        ZStack {
+            SkeletonClipPage()
+                .opacity(isSkeletonPulsing ? 0.45 : 1.0)
+                .animation(
+                    reduceMotion ? .none : .easeInOut(duration: 1.4).repeatForever(autoreverses: true),
+                    value: isSkeletonPulsing
+                )
+
+            VStack(spacing: 16) {
                 ZStack {
-                    LinearGradient(
-                        colors: [
-                            Color(red: 0.97, green: 0.53, blue: 0.28),
-                            Color(red: 0.74, green: 0.27, blue: 0.93),
-                            Color(red: 0.18, green: 0.33, blue: 0.78)
-                        ],
-                        startPoint: isAuroraAnimating ? .topLeading : .bottomTrailing,
-                        endPoint: isAuroraAnimating ? .bottomTrailing : .topLeading
-                    )
-                    .opacity(0.55)
-                    .blur(radius: 50)
-                    
-                    LinearGradient(
-                        colors: [
-                            Color.black.opacity(0.95),
-                            Color.black.opacity(0.75),
-                            Color.black.opacity(0.9)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                }
-                .ignoresSafeArea()
-                .onAppear {
-                    guard !reduceMotion else { return }
-                    withAnimation(.easeInOut(duration: 4.0).repeatForever(autoreverses: true)) {
-                        isAuroraAnimating = true
-                    }
+                    Circle()
+                        .fill(Color.theme.accentOrange.opacity(0.12))
+                        .frame(width: 76, height: 76)
+                    Circle()
+                        .stroke(Color.theme.accentOrange.opacity(0.35), lineWidth: 1)
+                        .frame(width: 76, height: 76)
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 26, weight: .semibold))
+                        .foregroundColor(.theme.accentOrange)
                 }
 
-                // Skeleton clip cards with shimmer
-                VStack(spacing: 12) {
-                    ForEach(0..<3, id: \.self) { index in
-                        SkeletonClipCard()
-                            .frame(height: geometry.size.height / 3.2)
-                            .padding(.horizontal, 12)
-                            .offset(y: reduceMotion ? 0 : CGFloat(index) * 6)
-                    }
+                VStack(spacing: 8) {
+                    Text("clips.feed.craftingTitle".localized)
+                        .font(.system(size: 22, weight: .heavy))
+                        .foregroundColor(.white)
+                        .multilineTextAlignment(.center)
+
+                    Text("clips.feed.craftingSubtitle".localized)
+                        .font(.system(size: 14))
+                        .foregroundColor(.theme.textSecondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 36)
                 }
-                .ignoresSafeArea()
-                
-                // Center content overlay
-                VStack(spacing: 18) {
-                    // Animated icon badge
-                    ZStack {
-                        Circle()
-                            .fill(Color.white.opacity(0.06))
-                            .frame(width: 140, height: 140)
-                            .overlay(
-                                Circle()
-                                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
-                            )
-                            .scaleEffect(isGlyphPulsing ? 1.08 : 0.96)
-                        
-                        Image("stars90x90")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 88, height: 88)
-                            .opacity(0.95)
-                            .scaleEffect(isGlyphPulsing ? 1.12 : 0.98)
-                            .rotationEffect(.degrees(isGlyphPulsing && !reduceMotion ? 360 : 0))
-                    }
-                    .animation(
-                        reduceMotion ?
-                            .none :
-                            .easeInOut(duration: 1.8).repeatForever(autoreverses: true),
-                        value: isGlyphPulsing
-                    )
-                    
-                    VStack(spacing: 10) {
-                        // Main message
-                        Text("clips.feed.craftingTitle".localized)
-                            .font(.system(size: 26, weight: .bold))
-                            .foregroundColor(.white)
-                            .multilineTextAlignment(.center)
-                        
-                        // Subtext
-                        Text("clips.feed.craftingSubtitle".localized)
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.white.opacity(0.82))
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 36)
-                        
-                        // Breathing progress capsule
+
+                Capsule()
+                    .fill(Color.white.opacity(0.14))
+                    .frame(width: 180, height: 5)
+                    .overlay(alignment: .leading) {
                         Capsule()
-                            .fill(Color.white.opacity(0.14))
-                            .frame(height: 10)
-                            .overlay(
-                                GeometryReader { proxy in
-                                    Capsule()
-                                        .fill(
-                                            LinearGradient(
-                                                colors: [
-                                                    Color.theme.accentOrange.opacity(0.9),
-                                                    Color.purple.opacity(0.85)
-                                                ],
-                                                startPoint: .leading,
-                                                endPoint: .trailing
-                                            )
-                                        )
-                                        .frame(width: proxy.size.width * 0.35)
-                                        .offset(x: isProgressSweeping ? proxy.size.width * 0.65 : 0)
-                                        .animation(
-                                            reduceMotion ?
-                                                .none :
-                                                .easeInOut(duration: 1.6).repeatForever(autoreverses: true),
-                                            value: isProgressSweeping
-                                        )
-                                }
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color.theme.accentOrange, Color(hex: "ffa057")],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
                             )
-                            .padding(.top, 4)
+                            .frame(width: 126)
+                            .offset(x: isProgressSweeping ? 54 : 0)
+                            .animation(
+                                reduceMotion ? .none : .easeInOut(duration: 1.4).repeatForever(autoreverses: true),
+                                value: isProgressSweeping
+                            )
                     }
-                }
-                .padding(.horizontal, 24)
-                .onAppear {
-                    if !reduceMotion {
-                        isGlyphPulsing = true
-                        isProgressSweeping = true
-                    }
-                }
+                    .clipShape(Capsule())
+                    .padding(.top, 2)
             }
+            .padding(.horizontal, 24)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.black.ignoresSafeArea())
+        .onAppear {
+            guard !reduceMotion else { return }
+            isSkeletonPulsing = true
+            isProgressSweeping = true
+        }
     }
 
     private var emptyStateView: some View {
@@ -661,8 +359,9 @@ struct ClipPlayerView: View {
     let isCurrentClip: Bool
     let onBecomeVisible: () -> Void
     let onLikeToggle: (Bool) -> Void
+    let onOpenDetail: () -> Void
     let analyticsContext: AnalyticsContext?
-    
+
     @State private var isLiked: Bool
     @State private var likeCount: Int
     @State private var commentCount: Int
@@ -670,34 +369,41 @@ struct ClipPlayerView: View {
     @State private var showAddToList = false
     @State private var hasAppeared = false
     @State private var isFullyVisible = false
-    @State private var showControls = false
-    @State private var controlsTimer: Timer?
-    
+
     // Engagement tracking
     @StateObject private var engagementTracker = UserEngagementTracker.shared
     @State private var watchStartTime: Date?
     @State private var accumulatedWatchTime: TimeInterval = 0
-    
+
     init(
         clip: Clip,
         isCurrentClip: Bool,
         onBecomeVisible: @escaping () -> Void,
         onLikeToggle: @escaping (Bool) -> Void,
+        onOpenDetail: @escaping () -> Void = {},
         analyticsContext: AnalyticsContext? = nil
     ) {
         self.clip = clip
         self.isCurrentClip = isCurrentClip
         self.onBecomeVisible = onBecomeVisible
         self.onLikeToggle = onLikeToggle
+        self.onOpenDetail = onOpenDetail
         self.analyticsContext = analyticsContext
         _isLiked = State(initialValue: clip.isLiked)
         _likeCount = State(initialValue: clip.likes)
         _commentCount = State(initialValue: clip.comments)
     }
-    
+
+    private var hasDetailPage: Bool {
+        clip.movieId != nil || clip.tvShowId != nil
+    }
+
+    // Redesign 2.0 — dal video a tutto schermo alla card del prototipo: player 16:9 con angoli
+    // arrotondati in alto, sotto titolo/descrizione a sinistra e la rail delle azioni a destra,
+    // con le pill "+ Watchlist" e "Vai alla scheda". Una clip resta una pagina intera del feed.
     var body: some View {
-        ZStack(alignment: .bottomTrailing) {
-            // YouTube player contained within bounds
+        VStack(alignment: .leading, spacing: 0) {
+            // Video card
             ZStack {
                 VerticalYouTubePlayer(
                     clipId: clip.id,
@@ -716,21 +422,28 @@ struct ClipPlayerView: View {
                         .contentShape(Rectangle())
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .aspectRatio(16 / 9, contentMode: .fit)
+            .frame(maxWidth: .infinity)
             .background(Color.black)
-            .clipped()
-            .contentShape(Rectangle())
+            .clipShape(RoundedRectangle(cornerRadius: 20))
+            .padding(.horizontal, 16)
+            .padding(.top, 10)
             .background(
                 GeometryReader { innerGeometry in
                     Color.clear
-                        .preference(key: ViewOffsetKey.self, value: innerGeometry.frame(in: .global).minY)
+                        .preference(
+                            key: ViewOffsetKey.self,
+                            value: innerGeometry.frame(in: .named("clipsScroll")).minY
+                        )
                 }
             )
             .onPreferenceChange(ViewOffsetKey.self) { offset in
-                // Check if clip is fully visible (within threshold)
-                let threshold: CGFloat = 50 // Allow small offset
+                // La pagina corrente è quella il cui bordo superiore coincide (quasi) con il
+                // viewport dello scroll: la card sta a ~10pt dal bordo, la soglia assorbe
+                // sia quel padding sia il jitter del paging.
+                let threshold: CGFloat = 50
                 let newIsFullyVisible = abs(offset) < threshold
-                
+
                 if newIsFullyVisible != isFullyVisible {
                     isFullyVisible = newIsFullyVisible
                     if isFullyVisible && isCurrentClip {
@@ -738,77 +451,94 @@ struct ClipPlayerView: View {
                     }
                 }
             }
-                .simultaneousGesture(
-                    TapGesture()
-                        .onEnded { _ in
-                            handleTap()
-                        }
-                )
-            
-            // Action buttons on the right (always visible)
-            VStack(alignment: .trailing, spacing: 20) {
-                Spacer()
 
-                ClipActionButton(
-                    icon: isLiked ? "heart.fill" : "heart",
-                    count: likeCount,
-                    color: isLiked ? .red : .white
-                ) {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                        isLiked.toggle()
-                        likeCount = isLiked ? likeCount + 1 : likeCount - 1
-                        onLikeToggle(isLiked)
-                    }
-                }
-
-                ClipActionButton(
-                    icon: "message",
-                    count: commentCount,
-                    color: .white
-                ) {
-                    showComments = true
-                }
-
-                ClipActionButton(
-                    icon: "plus",
-                    color: .white
-                ) {
-                    showAddToList = true
-                }
-
-                ClipActionButton(
-                    icon: "square.and.arrow.up",
-                    color: .white
-                ) {
-                    shareClip()
-                }
-            }
-            .padding(.trailing, 16)
-            .padding(.bottom, showControls ? 140 : 60)
-            .animation(.easeInOut(duration: 0.2), value: showControls)
-
-            // Title and description on the left bottom (always visible)
-            VStack(alignment: .leading, spacing: 8) {
-                Spacer()
-
-                VStack(alignment: .leading, spacing: 8) {
+            // Info + azioni
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text(clip.title)
-                        .font(.system(size: 18, weight: .bold))
+                        .font(.system(size: 22, weight: .heavy))
                         .foregroundColor(.white)
-                        .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 1)
+                        .lineLimit(2)
 
                     Text(clip.description)
                         .font(.system(size: 14))
-                        .foregroundColor(.white.opacity(0.9))
-                        .lineLimit(2)
-                        .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 1)
+                        .foregroundColor(.theme.textSecondary)
+                        .lineLimit(3)
+
+                    HStack(spacing: 10) {
+                        Button {
+                            showAddToList = true
+                        } label: {
+                            Text("clips.card.addToWatchlist".localized)
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundColor(.theme.accentOrange)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 9)
+                                .background(Color.theme.accentOrange.opacity(0.1))
+                                .overlay(
+                                    Capsule().stroke(Color.theme.accentOrange.opacity(0.6), lineWidth: 1)
+                                )
+                                .clipShape(Capsule())
+                        }
+
+                        if hasDetailPage {
+                            Button(action: onOpenDetail) {
+                                Text("clips.card.goToDetail".localized)
+                                    .font(.system(size: 13, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 9)
+                                    .background(Color.white.opacity(0.1))
+                                    .clipShape(Capsule())
+                            }
+                        }
+                    }
+                    .padding(.top, 10)
+                }
+
+                Spacer(minLength: 8)
+
+                // Rail azioni
+                VStack(spacing: 18) {
+                    ClipActionButton(
+                        icon: isLiked ? "heart.fill" : "heart",
+                        count: likeCount,
+                        color: isLiked ? .red : .white
+                    ) {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                            isLiked.toggle()
+                            likeCount = isLiked ? likeCount + 1 : likeCount - 1
+                            onLikeToggle(isLiked)
+                        }
+                    }
+
+                    ClipActionButton(
+                        icon: "message",
+                        count: commentCount,
+                        color: .white
+                    ) {
+                        showComments = true
+                    }
+
+                    ClipActionButton(
+                        icon: "plus",
+                        color: .white
+                    ) {
+                        showAddToList = true
+                    }
+
+                    ClipActionButton(
+                        icon: "square.and.arrow.up",
+                        color: .white
+                    ) {
+                        shareClip()
+                    }
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 16)
-            .padding(.bottom, showControls ? 140 : 60)
-            .padding(.trailing, 80)
-            .animation(.easeInOut(duration: 0.2), value: showControls)
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+
+            Spacer(minLength: 0)
         }
         .onAppear {
             hasAppeared = true
@@ -820,8 +550,7 @@ struct ClipPlayerView: View {
         .onDisappear {
             hasAppeared = false
             isFullyVisible = false
-            controlsTimer?.invalidate()
-            
+
             // End tracking and save engagement data
             if let startTime = watchStartTime {
                 let watchDuration = Date().timeIntervalSince(startTime) + accumulatedWatchTime
@@ -882,25 +611,6 @@ struct ClipPlayerView: View {
             )
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.hidden)
-        }
-    }
-    
-    private func handleTap() {
-        // Invalidate existing timer
-        controlsTimer?.invalidate()
-        
-        // Show controls
-        withAnimation(.easeInOut(duration: 0.2)) {
-            showControls = true
-        }
-        
-        // Hide controls after 3 seconds - struct doesn't need weak self
-        controlsTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false) { _ in
-            Task { @MainActor in
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    showControls = false
-                }
-            }
         }
     }
     
@@ -1052,13 +762,7 @@ struct ClipActionButton: View {
     }
     
     private func formatCount(_ count: Int) -> String {
-        if count >= 1_000_000 {
-            return String(format: "%.1fM", Double(count) / 1_000_000)
-        } else if count >= 1_000 {
-            return String(format: "%.1fK", Double(count) / 1_000)
-        } else {
-            return "\(count)"
-        }
+        ClipFormatters.shortCount(count)
     }
 }
 
@@ -1080,7 +784,7 @@ struct CommentsView: View {
                     onCountsChange: onCountsChange
                 )
             }
-            .navigationTitle("Comments")
+            .navigationTitle("clips.comments".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -1225,23 +929,7 @@ struct CommentRow: View {
     }
     
     private func timeAgoString(from date: Date) -> String {
-        let calendar = Calendar.current
-        let now = Date()
-        let components = calendar.dateComponents([.second, .minute, .hour, .day, .weekOfYear], from: date, to: now)
-        
-        if let weeks = components.weekOfYear, weeks > 0 {
-            return "\(weeks)w"
-        } else if let days = components.day, days > 0 {
-            return "\(days)d"
-        } else if let hours = components.hour, hours > 0 {
-            return "\(hours)h"
-        } else if let minutes = components.minute, minutes > 0 {
-            return "\(minutes)m"
-        } else if let seconds = components.second, seconds > 0 {
-            return "\(seconds)s"
-        } else {
-            return "now"
-        }
+        ClipFormatters.shortTimeAgo(from: date)
     }
 }
 
@@ -1325,23 +1013,7 @@ struct ReplyRow: View {
     }
     
     private func timeAgoString(from date: Date) -> String {
-        let calendar = Calendar.current
-        let now = Date()
-        let components = calendar.dateComponents([.second, .minute, .hour, .day, .weekOfYear], from: date, to: now)
-        
-        if let weeks = components.weekOfYear, weeks > 0 {
-            return "\(weeks)w"
-        } else if let days = components.day, days > 0 {
-            return "\(days)d"
-        } else if let hours = components.hour, hours > 0 {
-            return "\(hours)h"
-        } else if let minutes = components.minute, minutes > 0 {
-            return "\(minutes)m"
-        } else if let seconds = components.second, seconds > 0 {
-                return "\(seconds)s"
-        } else {
-            return "now"
-        }
+        ClipFormatters.shortTimeAgo(from: date)
     }
 }
 
@@ -1584,10 +1256,10 @@ struct ListSelectionRow: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(list.name)
+                    Text(list.displayName)
                         .font(.system(size: 16, weight: .medium))
                         .foregroundColor(.white)
-                    
+
                     Text("\(list.items.count) \("common.items".localized)")
                         .font(.system(size: 13))
                         .foregroundColor(.gray)
@@ -1608,113 +1280,60 @@ struct ListSelectionRow: View {
     }
 }
 
-// MARK: - Skeleton Loading Card
-struct SkeletonClipCard: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var isAnimating = false
-    
+// MARK: - Skeleton Loading Page
+
+/// Placeholder che ha la stessa forma di una pagina vera del feed (card video 16:9, testo a
+/// sinistra, rail azioni a destra, pill sotto): quando il contenuto arriva, prende il posto
+/// dello skeleton senza cambiare geometria. Il pulse lo guida `loadingView`.
+struct SkeletonClipPage: View {
     var body: some View {
-        ZStack(alignment: .bottomLeading) {
-            // Background shimmer
-            LinearGradient(
-                colors: [
-                    Color(white: 0.15),
-                    Color(white: 0.2),
-                    Color(white: 0.15)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .opacity(isAnimating ? 0.6 : 0.3)
-            
-            // Shimmer effect overlay
-            GeometryReader { geometry in
-                LinearGradient(
-                    colors: [
-                        Color.clear,
-                        Color.white.opacity(0.1),
-                        Color.clear
-                    ],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-                .frame(width: geometry.size.width * 0.3)
-                .offset(x: isAnimating ? geometry.size.width : -geometry.size.width * 0.3)
-            }
-            
-            // Skeleton UI elements on the right (like real clips)
-            HStack {
-                Spacer()
-                
-                VStack(spacing: 24) {
-                    Spacer()
-                    
-                    // Like button skeleton
-                    VStack(spacing: 6) {
-                        Circle()
-                            .fill(Color.white.opacity(0.15))
-                            .frame(width: 48, height: 48)
-                        
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(Color.white.opacity(0.15))
-                            .frame(width: 30, height: 12)
+        VStack(alignment: .leading, spacing: 0) {
+            RoundedRectangle(cornerRadius: 20)
+                .fill(Color.white.opacity(0.05))
+                .aspectRatio(16 / 9, contentMode: .fit)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 16)
+                .padding(.top, 10)
+
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 10) {
+                    RoundedRectangle(cornerRadius: 5)
+                        .fill(Color.white.opacity(0.1))
+                        .frame(width: 180, height: 18)
+
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.white.opacity(0.07))
+                        .frame(width: 120, height: 12)
+
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.white.opacity(0.07))
+                        .frame(width: 210, height: 12)
+
+                    HStack(spacing: 10) {
+                        Capsule()
+                            .fill(Color.white.opacity(0.07))
+                            .frame(width: 110, height: 34)
+                        Capsule()
+                            .fill(Color.white.opacity(0.07))
+                            .frame(width: 120, height: 34)
                     }
-                    
-                    // Comment button skeleton
-                    VStack(spacing: 6) {
-                        Circle()
-                            .fill(Color.white.opacity(0.15))
-                            .frame(width: 48, height: 48)
-                        
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(Color.white.opacity(0.15))
-                            .frame(width: 30, height: 12)
-                    }
-                    
-                    // Add to list button skeleton
-                    Circle()
-                        .fill(Color.white.opacity(0.15))
-                        .frame(width: 48, height: 48)
-                    
-                    // Share button skeleton
-                    Circle()
-                        .fill(Color.white.opacity(0.15))
-                        .frame(width: 48, height: 48)
-                    
-                    Spacer()
-                        .frame(height: 100) // Safe area spacing
+                    .padding(.top, 8)
                 }
-                .padding(.trailing, 12)
+
+                Spacer(minLength: 8)
+
+                VStack(spacing: 18) {
+                    ForEach(0..<4, id: \.self) { _ in
+                        Circle()
+                            .fill(Color.white.opacity(0.07))
+                            .frame(width: 40, height: 40)
+                    }
+                }
             }
-            
-            // Bottom title/description skeleton
-            VStack(alignment: .leading, spacing: 8) {
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(Color.white.opacity(0.2))
-                    .frame(width: 200, height: 20)
-                
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(Color.white.opacity(0.15))
-                    .frame(width: 280, height: 14)
-                
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(Color.white.opacity(0.15))
-                    .frame(width: 150, height: 14)
-            }
-            .padding(.leading, 16)
-            .padding(.bottom, 120) // Safe area spacing
-        }
-        .onAppear {
-            guard !reduceMotion else {
-                isAnimating = false
-                return
-            }
-            withAnimation(
-                .easeInOut(duration: 1.6)
-                .repeatForever(autoreverses: false)
-            ) {
-                isAnimating = true
-            }
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+
+            Spacer(minLength: 0)
         }
     }
 }

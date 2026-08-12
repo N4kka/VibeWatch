@@ -65,7 +65,7 @@ class AIRecommendationViewModel: ObservableObject {
 
         // Limit is now managed by AITokenManager (requests)
         self.dailyRequestLimit = aiTokenManager.dailyLimit
-        self.requestsUsedToday = aiTokenManager.tokensUsedToday
+        self.requestsUsedToday = aiTokenManager.requestsUsedToday
 
         startDayChangeMonitoring()
         Task {
@@ -105,7 +105,7 @@ class AIRecommendationViewModel: ObservableObject {
             let userIdString = "\(user.id)"
             if let userId = UUID(uuidString: userIdString) {
                 if let newTotal = try? await SupabaseService.shared.getAITokenUsage(userId: userId) {
-                    aiTokenManager.syncTokens(newTotal)
+                    aiTokenManager.syncRequests(newTotal)
                 }
             }
         }
@@ -115,7 +115,7 @@ class AIRecommendationViewModel: ObservableObject {
     @MainActor
     private func syncWithTokenManager() async {
         self.dailyRequestLimit = aiTokenManager.dailyLimit
-        self.requestsUsedToday = aiTokenManager.tokensUsedToday
+        self.requestsUsedToday = aiTokenManager.requestsUsedToday
     }
     
     func sendMessage() async {
@@ -129,7 +129,7 @@ class AIRecommendationViewModel: ObservableObject {
         }
         
         guard aiTokenManager.canMakeRequest() else {
-            self.error = "Daily AI token limit reached. Upgrade to Pro for more."
+            self.error = "ai.hardLimitMessage".localized
             return
         }
         
@@ -152,7 +152,7 @@ class AIRecommendationViewModel: ObservableObject {
             return
         }
         guard aiTokenManager.canMakeRequest() else {
-            self.error = "Daily AI token limit reached. Upgrade to Pro for more."
+            self.error = "ai.hardLimitMessage".localized
             return
         }
         
@@ -206,7 +206,7 @@ class AIRecommendationViewModel: ObservableObject {
             messages.append(aiMessage)
             
             // Record Usage
-            aiTokenManager.recordUsage(tokens)
+            aiTokenManager.recordUsage()
             await syncWithTokenManager()
 
             await conversationMemory.append(
@@ -218,6 +218,8 @@ class AIRecommendationViewModel: ObservableObject {
                 tokensUsed: tokens
             )
             
+        } catch CerebrasError.quotaExceeded {
+            self.error = "ai.hardLimitMessage".localized
         } catch {
             Logger.error("[AIRecommendationViewModel] AI Error", error: error)
             self.error = "Failed to get recommendations. Please try again."
@@ -277,8 +279,10 @@ class AIRecommendationViewModel: ObservableObject {
 
     private func buildLanguageInstruction(detectedLangCode: String?) -> String {
         let detectedLanguageDescription: String
+        // Il nome della lingua va in inglese perché finisce dentro un prompt in inglese: con
+        // `Locale.current` l'istruzione diventava "You MUST respond ONLY in italiano (it)".
         if let langCode = detectedLangCode,
-           let localizedName = Locale.current.localizedString(forLanguageCode: langCode) {
+           let localizedName = Locale(identifier: "en_US").localizedString(forLanguageCode: langCode) {
             detectedLanguageDescription = "\(localizedName) (\(langCode))"
         } else {
             detectedLanguageDescription = "the user's last input language"

@@ -174,8 +174,18 @@ public final class ConflictResolver: ConflictResolverProtocol {
             )
         }
 
-        // Both deleted or both not deleted - use last write wins
-        return resolveWithLastWriteWins(local: local, remote: remote)
+        // Both deleted or both not deleted - the content is decided by recency, but the
+        // strategy APPLIED is still `union`: this is union's own tie-break, not a change of
+        // strategy. Relabeling matters because `strategyUsed` is the contract the tests (and
+        // the sync log) check against `TableConflictMapping.strategy(for:)` — reporting
+        // `.lastWriteWins` here made the mapping look violated on every non-tombstone merge.
+        let fallback = resolveWithLastWriteWins(local: local, remote: remote)
+        return ResolvedRecord(
+            record: fallback.record,
+            strategyUsed: .union,
+            wasModified: fallback.wasModified,
+            source: fallback.source
+        )
     }
 
     /// Max wins strategy: Take maximum values for numeric fields.
@@ -301,25 +311,7 @@ public final class ConflictResolver: ConflictResolverProtocol {
     /// - Level 31-40: 40000 + (level - 30) * 4000
     /// - Level 41+: 80000 + (level - 40) * 5000
     public func calculateLevel(from xp: Int) -> Int {
-        var level = 1
-        while levelThreshold(for: level + 1) <= xp && level < 50 {
-            level += 1
-        }
-        return level
-    }
-
-    private func levelThreshold(for level: Int) -> Int {
-        switch level {
-        case 1: return 0
-        case 2...5: return (level - 1) * 100
-        case 6...10: return 500 + (level - 5) * 300
-        case 11...15: return 2000 + (level - 10) * 600
-        case 16...20: return 5000 + (level - 15) * 1000
-        case 21...25: return 10000 + (level - 20) * 2000
-        case 26...30: return 20000 + (level - 25) * 4000
-        case 31...40: return 40000 + (level - 30) * 4000
-        default: return 80000 + (level - 40) * 5000
-        }
+        GamificationLeveling.level(forTotalXP: xp)
     }
 
     /// Last write wins strategy: Most recent timestamp wins.

@@ -23,33 +23,42 @@ final class DatabaseMigrationService {
         
         do {
             try await DatabaseUtilities.retryOnFailure(maxAttempts: 3) { @MainActor in
-                // Migrate clips (this is the most important)
-                await self.migrateClips()
-                
-                // Migrate discovery cache
+                // Migrate clips (this is the most important). Throws on a real failure — a missing
+                // Supabase client or a fetch error — so retryOnFailure retries, and, crucially, the
+                // "completed" flag below is NOT written. Before, migrateClips swallowed its own
+                // errors and always returned, so the migration marked itself done even when it had
+                // imported nothing, and never ran again.
+                try await self.migrateClips()
+
+                // Discovery cache is a refillable warm cache, not essential data: it stays
+                // best-effort and never blocks completion.
                 await self.migrateDiscoveryCache()
-                
-                // Mark as completed
+
+                // Mark as completed — reached only when clips actually migrated.
                 UserDefaults.standard.set(true, forKey: "initialDataPopulated")
                 UserDefaults.standard.set(Date(), forKey: "initialDataMigratedDate")
-                
+
                 Logger.info("[Migration] Initial data migration complete!")
             }
         } catch {
-            Logger.error("[Migration] Migration failed after retries: \(error)")
+            Logger.error("[Migration] Migration failed after retries, will retry next launch: \(error)")
         }
+    }
+
+    enum MigrationError: Error {
+        case supabaseNotConfigured
     }
     
     // MARK: - Clip Migration
     
-    private func migrateClips() async {
+    private func migrateClips() async throws {
         Logger.info("[Migration] Migrating clips from Supabase...")
-        
+
         guard let client = supabase.client else {
-            Logger.warning("[Migration] Supabase not configured, skipping clips migration")
-            return
+            Logger.warning("[Migration] Supabase not configured — clips migration cannot complete")
+            throw MigrationError.supabaseNotConfigured
         }
-        
+
         do {
             // Fetch all active clips from Supabase
             let clips: [SupabaseClip] = try await client
@@ -67,51 +76,48 @@ final class DatabaseMigrationService {
             let batchSize = 100
             
             for batch in clips.chunked(into: batchSize) {
-                // Compute inserted count for this batch within the transaction,
-                // and return it instead of mutating a captured var.
-                let localBatchInserted: Int = try await DatabaseUtilities.executeInTransaction {
-                    try await db.transaction {
-                        for clip in batch {
-                            let values: [String: Any] = await [
-                                "id": clip.id,
-                                "clip_id": clip.clipId,
-                                "video_id": clip.videoId,
-                                "title": clip.title,
-                                "description": clip.description ?? "",
-                                "video_url": clip.videoUrl,
-                                "thumbnail_url": clip.thumbnailUrl ?? "",
-                                "movie_id": clip.movieId as Any,
-                                "tv_show_id": clip.tvShowId as Any,
-                                "media_type": clip.mediaType ?? "",
-                                "genres": jsonString(from: clip.genres) ?? "[]",
-                                "actors": jsonString(from: clip.actors) ?? "[]",
-                                "mood": clip.mood ?? "",
-                                "keywords": jsonString(from: clip.keywords) ?? "[]",
-                                "likes": clip.likes ?? 0,
-                                "comments": clip.comments ?? 0,
-                                "views": clip.views ?? 0,
-                                "youtube_views": clip.youtubeViews as Any,
-                                "tmdb_rating": clip.tmdbRating as Any,
-                                "quality_score": clip.qualityScore as Any,
-                                "is_active": true,
-                                "is_premium": clip.isPremium ?? false
-                            ]
-                            
-                            _ = try await db.insert("clips", values: values)
-                        }
+                try db.transaction { txn in
+                    for clip in batch {
+                        let values: [String: Any] = [
+                            "id": clip.id,
+                            "clip_id": clip.clipId,
+                            "video_id": clip.videoId,
+                            "title": clip.title,
+                            "description": clip.description ?? "",
+                            "video_url": clip.videoUrl,
+                            "thumbnail_url": clip.thumbnailUrl ?? "",
+                            "movie_id": clip.movieId as Any,
+                            "tv_show_id": clip.tvShowId as Any,
+                            "media_type": clip.mediaType ?? "",
+                            "genres": jsonString(from: clip.genres) ?? "[]",
+                            "actors": jsonString(from: clip.actors) ?? "[]",
+                            "mood": clip.mood ?? "",
+                            "keywords": jsonString(from: clip.keywords) ?? "[]",
+                            "likes": clip.likes ?? 0,
+                            "comments": clip.comments ?? 0,
+                            "views": clip.views ?? 0,
+                            "youtube_views": clip.youtubeViews as Any,
+                            "tmdb_rating": clip.tmdbRating as Any,
+                            "quality_score": clip.qualityScore as Any,
+                            "is_active": true,
+                            "is_premium": clip.isPremium ?? false
+                        ]
+
+                        try txn.insert("clips", values: values)
                     }
-                    // If we reach here without throwing, the whole batch was inserted.
-                    return batch.count
                 }
-                
-                insertedCount += localBatchInserted
+
+                // Reaching here without throwing means the whole batch committed.
+                insertedCount += batch.count
                 Logger.debug("[Migration] Inserted \(insertedCount)/\(clips.count) clips")
             }
             
             Logger.info("[Migration] Successfully migrated \(insertedCount) clips to local SQLite")
-            
+
         } catch {
+            // Re-raise: a failed clips import must NOT be recorded as a completed migration.
             Logger.error("[Migration] Failed to migrate clips: \(error)")
+            throw error
         }
     }
     
@@ -136,10 +142,12 @@ final class DatabaseMigrationService {
             
             Logger.debug("[Migration] Fetched \(cacheItems.count) discovery cache items")
             
-            // Insert into local SQLite
-            try await DatabaseUtilities.executeInTransaction {
+            // Insert into local SQLite. This used to go through DatabaseUtilities
+            // .executeInTransaction, which never opened a transaction: a failure part-way left the
+            // cache half-populated instead of empty.
+            try db.transaction { txn in
                 for item in cacheItems {
-                    let values: [String: Any] = await [
+                    let values: [String: Any] = [
                         "id": item.id,
                         "content_type": item.contentType,
                         "tmdb_id": item.tmdbId,
@@ -153,8 +161,8 @@ final class DatabaseMigrationService {
                         "cached_at": ISO8601DateFormatter().string(from: item.cachedAt),
                         "expires_at": ISO8601DateFormatter().string(from: item.expiresAt)
                     ]
-                    
-                    _ = try await db.insert("discovery_cache", values: values)
+
+                    try txn.insert("discovery_cache", values: values)
                 }
             }
             

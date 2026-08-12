@@ -1,0 +1,458 @@
+// Unit tests for the pure part of `catalog-resolve` (SPEC v3 §6).
+//
+// Run: deno test supabase/functions/catalog-resolve/
+//
+// These cover the decisions that would fail silently in production: attributing an episode to the
+// wrong show, caching a "not found" forever, refreshing a finished series every week, or losing
+// specials on the way into the catalog.
+
+import {
+  assert,
+  assertEquals,
+  assertFalse,
+} from 'https://deno.land/std@0.224.0/assert/mod.ts'
+import {
+  episodeRowsFromSeasons,
+  initialSeasonChunk,
+  normalizeManualEpisodeContext,
+  normalizeShowIds,
+  NOT_FOUND_RETRY_DAYS,
+  REFRESH_DAYS_ENDED,
+  REFRESH_DAYS_RUNNING,
+  resolveEpisodeForExpectedShow,
+  resolveFromFind,
+  sanitizeFind,
+  SEASONS_PER_APPEND,
+  seasonAppendChunks,
+  seasonRange,
+  shouldRetry,
+  showRow,
+} from './resolution.ts'
+
+const NOW = new Date('2026-07-30T12:00:00.000Z')
+const daysAgo = (days: number) =>
+  new Date(NOW.getTime() - days * 24 * 60 * 60 * 1000).toISOString()
+
+// ------------------------------------------------------------------ resolveFromFind
+
+Deno.test('a series id resolves to a TMDB show', () => {
+  const row = resolveFromFind(79824, 'series', { tv_results: [{ id: 1399 }] }, NOW)
+
+  assertEquals(row.resolution, 'found')
+  assertEquals(row.tmdb_show_id, 1399)
+  assertEquals(row.method, 'tmdb_find')
+  assertEquals(row.season_number, null)
+})
+
+Deno.test('an episode takes its numbers from TMDB, never from the export', () => {
+  // The TV Time export calls this one S1E17 (absolute numbering); TMDB says S2E5. The stored row
+  // must say S2E5, otherwise the import writes the viewing history onto the wrong episode.
+  const row = resolveFromFind(335156, 'episode', {
+    tv_episode_results: [{ id: 63056, show_id: 1399, season_number: 2, episode_number: 5 }],
+  }, NOW)
+
+  assertEquals(row.resolution, 'found')
+  assertEquals(row.tmdb_show_id, 1399)
+  assertEquals(row.season_number, 2)
+  assertEquals(row.episode_number, 5)
+})
+
+Deno.test('manual episode resolution accepts only the exact result in the selected show', () => {
+  const row = resolveEpisodeForExpectedShow(335156, 1399, {
+    tv_episode_results: [
+      { id: 1, show_id: 10, season_number: 1, episode_number: 17 },
+      { id: 2, show_id: 1399, season_number: 2, episode_number: 5 },
+    ],
+  }, NOW)
+
+  assertEquals(row.resolution, 'found')
+  assertEquals(row.tmdb_show_id, 1399)
+  assertEquals(row.season_number, 2)
+  assertEquals(row.episode_number, 5)
+  assertEquals(row.method, 'tmdb_find_manual')
+})
+
+Deno.test('manual episode resolution leaves another show and duplicate exact hits unresolved', () => {
+  const otherShow = resolveEpisodeForExpectedShow(335156, 1399, {
+    tv_episode_results: [
+      { id: 1, show_id: 10, season_number: 1, episode_number: 17 },
+    ],
+  }, NOW)
+  assertEquals(otherShow.resolution, 'ambiguous')
+  assertEquals(otherShow.tmdb_show_id, null)
+
+  const duplicate = resolveEpisodeForExpectedShow(335156, 1399, {
+    tv_episode_results: [
+      { id: 2, show_id: 1399, season_number: 2, episode_number: 5 },
+      { id: 3, show_id: 1399, season_number: 2, episode_number: 6 },
+    ],
+  }, NOW)
+  assertEquals(duplicate.resolution, 'ambiguous')
+  assertEquals(duplicate.tmdb_show_id, null)
+
+  const absent = resolveEpisodeForExpectedShow(335156, 1399, {}, NOW)
+  assertEquals(absent.resolution, 'not_found')
+})
+
+Deno.test('a movie id resolves to a TMDB movie', () => {
+  const row = resolveFromFind(603, 'movie', { movie_results: [{ id: 603 }] }, NOW)
+
+  assertEquals(row.resolution, 'found')
+  assertEquals(row.tmdb_movie_id, 603)
+  assertEquals(row.tmdb_show_id, null)
+})
+
+Deno.test('nothing anywhere is not_found', () => {
+  const row = resolveFromFind(999999, 'series', {}, NOW)
+
+  assertEquals(row.resolution, 'not_found')
+  assertEquals(row.tmdb_show_id, null)
+})
+
+Deno.test('two shows under one id is ambiguous, not a guess', () => {
+  const row = resolveFromFind(123, 'series', { tv_results: [{ id: 1 }, { id: 2 }] }, NOW)
+
+  assertEquals(row.resolution, 'ambiguous')
+  assertEquals(row.tmdb_show_id, null)
+})
+
+Deno.test('an id TMDB also knows as an episode still resolves', () => {
+  // The real case: /find/121361 (Game of Thrones) answers tv: 1, tv_episode: 1. Treating that as
+  // ambiguous sent most of a real import to the manual pile. Only the requested bucket decides;
+  // the other one is ignored.
+  const row = resolveFromFind(121361, 'series', {
+    tv_results: [{ id: 1399 }],
+    tv_episode_results: [{ id: 63056, show_id: 66732, season_number: 1, episode_number: 1 }],
+  }, NOW)
+
+  assertEquals(row.resolution, 'found')
+  assertEquals(row.tmdb_show_id, 1399, 'the series wins, not the unrelated episode\'s show')
+})
+
+Deno.test('an episode resolves even when that number is also a series', () => {
+  // The mirror image: an episode is asked for, and TMDB knows the number as a series too. The
+  // requested bucket has exactly one hit, so that is the answer.
+  const row = resolveFromFind(4711, 'episode', {
+    tv_results: [{ id: 1399 }],
+    tv_episode_results: [{ id: 63056, show_id: 66732, season_number: 3, episode_number: 9 }],
+  }, NOW)
+
+  assertEquals(row.resolution, 'found')
+  assertEquals(row.tmdb_show_id, 66732)
+  assertEquals(row.season_number, 3)
+  assertEquals(row.episode_number, 9)
+})
+
+Deno.test('a hit in the wrong bucket does not resolve the entity', () => {
+  // Asked for an episode, TMDB knows the id only as a series: not decidable here.
+  const row = resolveFromFind(4711, 'episode', { tv_results: [{ id: 1399 }] }, NOW)
+
+  assertEquals(row.resolution, 'ambiguous')
+  assertEquals(row.season_number, null)
+})
+
+// ---------------------------------------------------------------------- shouldRetry
+
+Deno.test('a found row is never re-resolved', () => {
+  assertFalse(shouldRetry({ resolution: 'found', resolved_at: daysAgo(400) }, NOW))
+})
+
+Deno.test('a not_found is left alone for 30 days, then retried', () => {
+  assertFalse(shouldRetry(
+    { resolution: 'not_found', resolved_at: daysAgo(NOT_FOUND_RETRY_DAYS - 1) }, NOW,
+  ))
+  assert(shouldRetry(
+    { resolution: 'not_found', resolved_at: daysAgo(NOT_FOUND_RETRY_DAYS + 1) }, NOW,
+  ))
+})
+
+Deno.test('an ambiguous row waits for a human, not for another identical call', () => {
+  assertFalse(shouldRetry({ resolution: 'ambiguous', resolved_at: daysAgo(365) }, NOW))
+})
+
+Deno.test('a manual show choice retries unresolved rows but never overwrites found identity', () => {
+  assert(shouldRetry({ resolution: 'not_found', resolved_at: daysAgo(1) }, NOW, true))
+  assert(shouldRetry({ resolution: 'ambiguous', resolved_at: daysAgo(1) }, NOW, true))
+  assertFalse(shouldRetry({ resolution: 'found', resolved_at: daysAgo(400) }, NOW, true))
+})
+
+// -------------------------------------------------------------------------- showRow
+
+Deno.test('a finished series is not refreshed weekly', () => {
+  const row = showRow(
+    { id: 1, name: 'Ended Show', status: 'Ended', in_production: false, number_of_seasons: 5 },
+    NOW,
+  )
+  const days = (new Date(row.next_refresh_at).getTime() - NOW.getTime()) / 86_400_000
+
+  assertEquals(days, REFRESH_DAYS_ENDED)
+})
+
+Deno.test('a returning series is refreshed weekly', () => {
+  const row = showRow(
+    { id: 2, name: 'Returning', status: 'Returning Series', in_production: true },
+    NOW,
+  )
+  const days = (new Date(row.next_refresh_at).getTime() - NOW.getTime()) / 86_400_000
+
+  assertEquals(days, REFRESH_DAYS_RUNNING)
+})
+
+Deno.test('a cancelled show still in production keeps the short TTL', () => {
+  const row = showRow({ id: 3, name: 'Limbo', status: 'Canceled', in_production: true }, NOW)
+  const days = (new Date(row.next_refresh_at).getTime() - NOW.getTime()) / 86_400_000
+
+  assertEquals(days, REFRESH_DAYS_RUNNING)
+})
+
+Deno.test('an empty date becomes null, not an empty string', () => {
+  // TMDB sends "" for an unknown date and a `date` column will not take it.
+  const row = showRow({ id: 4, name: 'No dates', first_air_date: '', last_air_date: undefined }, NOW)
+
+  assertEquals(row.first_air_date, null)
+  assertEquals(row.last_air_date, null)
+})
+
+// ------------------------------------------------------------ episodeRowsFromSeasons
+
+Deno.test('episodes are flattened with their season number', () => {
+  const rows = episodeRowsFromSeasons(1399, [{
+    season_number: 1,
+    episodes: [
+      { id: 63056, episode_number: 1, name: 'Winter Is Coming', air_date: '2011-04-17', runtime: 62 },
+      { id: 63057, episode_number: 2, name: 'The Kingsroad', air_date: '2011-04-24', runtime: 56 },
+    ],
+  }], NOW)
+
+  assertEquals(rows.length, 2)
+  assertEquals(rows[0].tmdb_show_id, 1399)
+  assertEquals(rows[0].season_number, 1)
+  assertEquals(rows[0].episode_number, 1)
+  assertEquals(rows[0].runtime_minutes, 62)
+  assertEquals(rows[1].tmdb_episode_id, 63057)
+})
+
+Deno.test('specials are kept: §1.3 marks them, it does not filter them', () => {
+  const rows = episodeRowsFromSeasons(1399, [{
+    season_number: 0,
+    episodes: [{ id: 1, episode_number: 1, name: 'Special', air_date: '2010-01-01' }],
+  }], NOW)
+
+  assertEquals(rows.length, 1)
+  assertEquals(rows[0].season_number, 0)
+})
+
+Deno.test('an episode with no air date carries null, not an empty string', () => {
+  const rows = episodeRowsFromSeasons(1, [{
+    season_number: 1,
+    episodes: [{ id: 9, episode_number: 1, air_date: '' }],
+  }], NOW)
+
+  assertEquals(rows[0].air_date, null)
+})
+
+Deno.test('a duplicate episode in the payload is dropped once', () => {
+  // The primary key is (show, season, episode). A duplicate would abort the whole upsert with
+  // "cannot affect row a second time", taking every good row of the batch down with it.
+  const rows = episodeRowsFromSeasons(1, [{
+    season_number: 1,
+    episodes: [
+      { id: 1, episode_number: 1, name: 'first' },
+      { id: 2, episode_number: 1, name: 'duplicate' },
+    ],
+  }], NOW)
+
+  assertEquals(rows.length, 1)
+  assertEquals(rows[0].name, 'first')
+})
+
+Deno.test('an episode without a number is skipped rather than written as null', () => {
+  const rows = episodeRowsFromSeasons(1, [{
+    season_number: 1,
+    episodes: [{ id: 1, name: 'unnumbered' }, { id: 2, episode_number: 3 }],
+  }], NOW)
+
+  assertEquals(rows.length, 1)
+  assertEquals(rows[0].episode_number, 3)
+})
+
+// ---------------------------------------------------------------------- season math
+
+Deno.test('the season range includes specials', () => {
+  assertEquals(seasonRange({ id: 1, number_of_seasons: 3 }), [0, 1, 2, 3])
+  assertEquals(seasonRange({ id: 1 }), [0])
+})
+
+Deno.test('the first call asks for one full group of seasons', () => {
+  const chunk = initialSeasonChunk()
+
+  assertEquals(chunk.length, SEASONS_PER_APPEND)
+  assertEquals(chunk[0], 'season/0')
+  assertEquals(chunk[SEASONS_PER_APPEND - 1], `season/${SEASONS_PER_APPEND - 1}`)
+})
+
+Deno.test('seasons past the first group are chunked, never sent in one oversized call', () => {
+  // TMDB caps append_to_response at 20; a long-running show (Pokémon, One Piece) exceeds it.
+  const chunks = seasonAppendChunks(seasonRange({ id: 1, number_of_seasons: 45 })
+    .slice(SEASONS_PER_APPEND))
+
+  assertEquals(chunks.length, 2)
+  assertEquals(chunks[0].length, SEASONS_PER_APPEND)
+  assertEquals(chunks[0][0], 'season/20')
+  assertEquals(chunks[1].length, 6)
+  assertEquals(chunks[1][5], 'season/45')
+})
+
+Deno.test('a short show needs no extra call', () => {
+  const chunks = seasonAppendChunks(seasonRange({ id: 1, number_of_seasons: 3 })
+    .slice(SEASONS_PER_APPEND))
+
+  assertEquals(chunks, [])
+})
+
+// ------------------------------------------------------------------- normalizeShowIds
+//
+// L'ingresso per id TMDB serve alla migrazione dello storico (blocco 7), dove le serie sono gia'
+// identificate per TMDB e `/find` non c'entra. Un id sporco che passasse di qui diventerebbe una
+// chiamata a TMDB su un URL senza senso, o peggio una riga di catalogo sotto l'id sbagliato.
+
+Deno.test('gli id di serie assenti valgono "nessuno", non un errore', () => {
+  assertEquals(normalizeShowIds(undefined, 50), [])
+  assertEquals(normalizeShowIds(null, 50), [])
+  assertEquals(normalizeShowIds([], 50), [])
+})
+
+Deno.test('gli id duplicati si fondono: la stessa serie non si riscalda due volte', () => {
+  assertEquals(normalizeShowIds([1399, 1399, 66732], 50), [1399, 66732])
+})
+
+Deno.test('un id non intero o non positivo fa rifiutare tutta la richiesta', () => {
+  // Rifiutare il lotto invece di scartare la riga: se il client manda spazzatura, e' un difetto
+  // suo, e una risposta 200 su meta' lavoro lo nasconderebbe.
+  assertEquals(normalizeShowIds([1399, 0], 50), null)
+  assertEquals(normalizeShowIds([1399, -3], 50), null)
+  assertEquals(normalizeShowIds([1399, 1.5], 50), null)
+  assertEquals(normalizeShowIds(['1399'], 50), [1399])   // una stringa numerica e' accettabile
+  assertEquals(normalizeShowIds(['boh'], 50), null)
+  assertEquals(normalizeShowIds('1399', 50), null)       // ma non un valore che non e' una lista
+})
+
+Deno.test('il tetto per richiesta e lo stesso delle entita TVDB', () => {
+  const many = Array.from({ length: 51 }, (_, i) => i + 1)
+  assertEquals(normalizeShowIds(many, 50), null)
+  assertEquals(normalizeShowIds(many.slice(0, 50), 50)?.length, 50)
+})
+
+Deno.test('un elemento null dentro /find non deve far crollare la risoluzione', () => {
+  // Visto in produzione (2026-08-02, primo import vero): per certe entita' TMDB restituisce
+  // array con dentro null, e `findDiagnostics` moriva su `.id` A OGNI retry — deterministico,
+  // perche' il lotto dei mancanti riproponeva sempre la stessa entita'. La sanificazione sta
+  // al confine, una volta: da li' in poi i tipi dicono la verita'.
+  const sporco = {
+    tv_results: [null, { id: 1 }],
+    tv_episode_results: [{ id: 10, show_id: 1, season_number: 1, episode_number: 2 }, null],
+    movie_results: [undefined, { id: 7 }],
+    // deno-lint-ignore no-explicit-any
+  } as any
+  const pulito = sanitizeFind(sporco)
+  assertEquals(pulito.tv_results, [{ id: 1 }])
+  assertEquals(pulito.tv_episode_results?.length, 1)
+  assertEquals(pulito.movie_results, [{ id: 7 }])
+  assertEquals(pulito.tv_season_results, [])
+
+  // La coppia che in produzione andava in crash: dopo la sanificazione non deve piu' poterlo.
+  const row = resolveFromFind(42, 'episode', pulito, new Date('2026-08-02T00:00:00Z'))
+  assertEquals(row.resolution, 'found')
+  assertEquals(row.tmdb_show_id, 1)
+})
+
+// ---------------------------------------------------------- manual episode context (§7.4)
+
+Deno.test('manual context accepts only a job-bound episode batch with positive ids', () => {
+  const entities = [{ tvdb_id: 101, entity_type: 'episode' as const }]
+  assertEquals(normalizeManualEpisodeContext(undefined, entities), undefined)
+  assertEquals(normalizeManualEpisodeContext({
+    job_id: '7d70f2b0-531c-4ef5-a5e9-95d102fea1dc',
+    tvdb_series_id: '79824',
+    tmdb_show_id: '1399',
+  }, entities), {
+    job_id: '7d70f2b0-531c-4ef5-a5e9-95d102fea1dc',
+    tvdb_series_id: 79824,
+    tmdb_show_id: 1399,
+  })
+})
+
+Deno.test('manual context rejects invalid ids, missing job and non-episode entities', () => {
+  const episodes = [{ tvdb_id: 101, entity_type: 'episode' as const }]
+  assertEquals(normalizeManualEpisodeContext({
+    job_id: '', tvdb_series_id: 79824, tmdb_show_id: 1399,
+  }, episodes), null)
+  assertEquals(normalizeManualEpisodeContext({
+    job_id: 'job', tvdb_series_id: 0, tmdb_show_id: 1399,
+  }, episodes), null)
+  assertEquals(normalizeManualEpisodeContext({
+    job_id: 'job', tvdb_series_id: 79824, tmdb_show_id: -1,
+  }, episodes), null)
+  assertEquals(normalizeManualEpisodeContext({
+    job_id: 'job', tvdb_series_id: 79824, tmdb_show_id: 1399,
+  }, [{ tvdb_id: 79824, entity_type: 'series' }]), null)
+})
+
+// --------------------------------------------------------------------------- film (§7.1)
+
+import { matchMovieByTitle, normalizeMovieTitles } from './resolution.ts'
+
+Deno.test('film: exact-match sul titolo localizzato O sull originale, NFC+casefold', () => {
+  const results = [
+    { id: 559969, title: 'El Camino: A Breaking Bad Movie', original_title: 'El Camino: A Breaking Bad Movie', release_date: '2019-10-11' },
+    { id: 1, title: 'El Camino', original_title: 'El Camino', release_date: '2019-01-01' },
+  ]
+  const match = matchMovieByTitle('el camino: a breaking bad movie', results)
+  assertEquals(match.outcome, 'found')
+  assertEquals(match.tmdb_movie_id, 559969)
+
+  // Il giapponese passa dall'original_title.
+  const jp = matchMovieByTitle('範馬刃牙VSケンガンアシュラ', [
+    { id: 7, title: 'Baki Hanma VS Kengan Ashura', original_title: '範馬刃牙VSケンガンアシュラ', release_date: '2024-06-06' },
+  ])
+  assertEquals(jp.outcome, 'found')
+  assertEquals(jp.tmdb_movie_id, 7)
+})
+
+Deno.test('film: quasi-uguale NON basta — meglio un non risolto dichiarato che il film sbagliato', () => {
+  const match = matchMovieByTitle('Made in Abyss: Journey’s Dawn', [
+    { id: 9, title: 'Made in Abyss: Journey’s Dawn — Compilation', original_title: '劇場版総集編【前編】メイドインアビス 旅立ちの夜明け' },
+  ])
+  assertEquals(match.outcome, 'not_found')
+  assertEquals(match.tmdb_movie_id, null)
+})
+
+Deno.test('film: due candidati distinti con lo stesso titolo esatto = ambiguous, non si indovina', () => {
+  const match = matchMovieByTitle('The Thing', [
+    { id: 1, title: 'The Thing', original_title: 'The Thing' },
+    { id: 2, title: 'The Thing', original_title: 'The Thing' },
+  ])
+  assertEquals(match.outcome, 'ambiguous')
+  assertEquals(match.candidates, 2)
+
+  // Lo STESSO id ripetuto invece non e' un'ambiguita': e' un candidato solo.
+  const dup = matchMovieByTitle('The Thing', [
+    { id: 1, title: 'The Thing' },
+    { id: 1, title: 'The Thing', original_title: 'The Thing' },
+  ])
+  assertEquals(dup.outcome, 'found')
+})
+
+Deno.test('film: normalizeMovieTitles esige key e titolo, anno 1888-2100 o null, dedup per key', () => {
+  assertEquals(normalizeMovieTitles(undefined, 50), [])
+  assertEquals(normalizeMovieTitles([{ key: 'a', title: 'X', year: 1500 }], 50), null)
+  assertEquals(normalizeMovieTitles([{ key: '', title: 'X', year: 2000 }], 50), null)
+  assertEquals(normalizeMovieTitles([{ key: 'a', title: '', year: 2000 }], 50), null)
+  const ok = normalizeMovieTitles([
+    { key: 'a', title: 'X', year: 2000 },
+    { key: 'a', title: 'X', year: 2000 },
+    { key: 'b', title: 'Y', year: null },
+  ], 50)
+  assertEquals(ok?.length, 2)
+  assertEquals(ok?.[1].year, null)
+})

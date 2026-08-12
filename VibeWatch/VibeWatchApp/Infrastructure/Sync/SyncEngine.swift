@@ -44,6 +44,12 @@ public protocol SyncEngineProtocol: AnyObject {
     /// Pull only changes from the remote server.
     /// Typically used for pull-to-refresh.
     func pullFromRemote() async
+
+    /// Ritira lo stato del tracking e nient'altro, dopo un'azione sulla schermata (§9.2).
+    func pullTrackingState() async
+
+    /// Ritira favorites e voti e nient'altro, dopo una scrittura (§3.6, blocco 9).
+    func pullProfileContent() async
 }
 
 // MARK: - SyncEngine Implementation
@@ -102,11 +108,95 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
     /// Exponential backoff schedule in seconds: 60s, 5min, 15min, 1hr, 4hr
     private let backoffSchedule: [TimeInterval] = [60, 300, 900, 3600, 14400]
 
-    /// Interval between periodic sync attempts (60 seconds)
-    private let periodicSyncInterval: TimeInterval = 60
+    /// Interval between periodic sync attempts.
+    ///
+    /// Fase 4 (3.2 — batteria): era 60s, alzato a 5 min come SOLO fallback. Il push non
+    /// dipende più da questo timer per la latenza: `queueOperation` fa già un push
+    /// immediato quando online (event-driven), e foreground-resume / network-restored
+    /// triggerano una sync. Inoltre il push periodico skippa subito se l'outbox è vuota
+    /// (pushPendingChangesInternal). Allungare l'intervallo taglia i wakeup CPU periodici
+    /// a parità di comportamento osservabile.
+    private let periodicSyncInterval: TimeInterval = 300
 
     /// Minimum time in background before triggering full sync on resume (2 minutes)
     private let backgroundThreshold: TimeInterval = 120
+
+    nonisolated static func normalizedMutationRecord(
+        table: String,
+        operationType: String,
+        recordId: String,
+        payload: [String: Any]
+    ) -> [String: Any] {
+        var record = payload
+        if record["id"] == nil {
+            record["id"] = recordId
+        }
+
+        if ["clips", "list_items", "movie_reactions"].contains(table),
+           let mediaType = record["media_type"] as? String,
+           !["movie", "tv"].contains(mediaType) {
+            record["media_type"] = "movie"
+        }
+
+        let op = operationType.uppercased()
+        if table == "list_items", op == "INSERT" || op == "UPDATE" || op == "UPSERT" {
+            let now = ISO8601DateFormatter().string(from: Date())
+            let addedAt = timestampString(record["added_at"]) ?? timestampString(record["created_at"]) ?? now
+            record["added_at"] = timestampString(record["added_at"]) ?? addedAt
+            record["created_at"] = timestampString(record["created_at"]) ?? addedAt
+            record["updated_at"] = timestampString(record["updated_at"]) ?? now
+        }
+
+        return record
+    }
+
+    /// Recovers outbox operations that have exhausted their retries, for **every** table — not
+    /// just list_items (STAB-007). Safe to reset unconditionally because every push goes through
+    /// `apply_mutations`, which now dead-letters deterministic per-item failures server-side
+    /// (logging them to `sync_rejected_mutations` and returning 200). So a client op that stays
+    /// failing did so on transport/5xx errors, which are transient and worth retrying on a later
+    /// run. Also catches the pre-existing backlog: legacy exhausted ops sit at status
+    /// 'pending'/'failed' with high `attempts`, from before exhaustion set 'stuck'.
+    /// 'blocked' (schema-missing) rows are left to their own PGRST205 recovery.
+    nonisolated static func recoverStuckOperationsSQL(maxRetries: Int) -> String {
+        """
+            UPDATE sync_outbox
+            SET status = 'pending',
+                attempts = 0,
+                next_retry_at = NULL,
+                last_error = NULL
+            WHERE status = 'stuck'
+               OR (status IN ('pending', 'failed') AND attempts >= \(maxRetries))
+        """
+    }
+
+    nonisolated static func recoverRetryableListItemOperationsSQL(maxRetries: Int) -> String {
+        """
+            UPDATE sync_outbox
+            SET status = 'pending',
+                attempts = 0,
+                next_retry_at = NULL,
+                last_error = NULL
+            WHERE table_name = 'list_items'
+              AND operation_type IN ('INSERT', 'UPDATE', 'UPSERT')
+              AND status IN ('pending', 'failed', 'blocked', 'stuck')
+              AND (
+                    attempts >= \(maxRetries)
+                    OR next_retry_at IS NOT NULL
+                    OR payload NOT LIKE '%"created_at"%'
+                  )
+        """
+    }
+
+    private nonisolated static func timestampString(_ value: Any?) -> String? {
+        if let string = value as? String, !string.isEmpty {
+            return string
+        }
+        if let date = value as? Date {
+            return ISO8601DateFormatter().string(from: date)
+        }
+        return nil
+    }
 
     // MARK: - Internal State
 
@@ -137,13 +227,7 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
         self.stateMachine = stateMachine ?? SyncStateMachine()
 
         // Load or create device ID
-        if let savedDeviceId = UserDefaults.standard.string(forKey: "deviceIdentifier") {
-            self.deviceId = savedDeviceId
-        } else {
-            let newDeviceId = UUID().uuidString
-            UserDefaults.standard.set(newDeviceId, forKey: "deviceIdentifier")
-            self.deviceId = newDeviceId
-        }
+        self.deviceId = DeviceIdentity.installation
 
         // Load last sync time
         if let lastSync = UserDefaults.standard.object(forKey: "SyncEngine.lastSyncTimestamp") as? Date {
@@ -291,9 +375,15 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
     ) async throws {
         let operationId = UUID().uuidString
         let now = ISO8601DateFormatter().string(from: Date())
+        let normalizedPayload = Self.normalizedMutationRecord(
+            table: table,
+            operationType: operationType,
+            recordId: recordId,
+            payload: payload
+        )
 
         // Serialize payload to JSON
-        let payloadData = try JSONSerialization.data(withJSONObject: payload)
+        let payloadData = try JSONSerialization.data(withJSONObject: normalizedPayload)
         let payloadString = String(data: payloadData, encoding: .utf8) ?? "{}"
 
         // Get current user ID
@@ -369,42 +459,68 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
 
         postNotification(SyncEngine.syncStartedNotification, trigger: trigger)
 
-        do {
-            // Push pending changes first
-            if trigger.shouldPushChanges {
-                await pushPendingChangesInternal()
-            }
+        // Neither half throws — they absorb their own errors and report them — so this used to sit
+        // inside a do/catch whose catch could never run. A sync where every table and every queued
+        // operation failed still reached completeSync(), logged "completed successfully", advanced
+        // lastSyncAt and cleared lastError, and syncFailedNotification was never posted anywhere in
+        // the app. The outcomes below are what makes a failure observable.
+        var outcome = SyncOutcome()
 
-            // Pull remote changes
-            if trigger.shouldPullChanges {
-                await pullFromRemoteInternal()
-            }
+        if trigger.shouldPushChanges {
+            outcome.merge(await pushPendingChangesInternal())
+        }
 
-            // Update state
-            let now = Date()
-            lastSyncAt = now
-            UserDefaults.standard.set(now, forKey: "SyncEngine.lastSyncTimestamp")
-            lastError = nil
+        if trigger.shouldPullChanges {
+            outcome.merge(await pullFromRemoteInternal(trigger: trigger))
+        }
 
-            // Transition to idle state
-            stateMachine.completeSync(reason: "Sync completed for \(trigger.logDescription)")
+        guard !outcome.hasFailures else {
+            let stateError = SyncStateError.partialFailure(failed: outcome.failed, total: outcome.attempted)
+            lastError = stateError.localizedDescription
 
-            postNotification(SyncEngine.syncCompletedNotification, trigger: trigger)
-            Logger.info("[SyncEngine] Sync completed successfully (\(trigger.logDescription))")
-
-        } catch {
-            lastError = error.localizedDescription
-
-            // Determine if error is network-related
-            let stateError = SyncStateError.from(error)
-            if case .networkFailure = stateError {
-                stateMachine.goOffline(reason: "Network lost during sync")
+            // A sync that failed because the network went away is offline, not broken.
+            if networkMonitor.isConnected {
+                stateMachine.failSync(with: stateError, reason: "Sync failed: \(lastError ?? "")")
             } else {
-                stateMachine.failSync(with: stateError, reason: "Sync failed: \(error.localizedDescription)")
+                stateMachine.goOffline(reason: "Network lost during sync")
             }
 
-            postNotification(SyncEngine.syncFailedNotification, trigger: trigger, error: error)
-            Logger.error("[SyncEngine] Sync failed (\(trigger.logDescription))", error: error)
+            postNotification(SyncEngine.syncFailedNotification, trigger: trigger, error: stateError)
+            Logger.error("[SyncEngine] Sync failed (\(trigger.logDescription)): \(lastError ?? "")")
+            return
+        }
+
+        // lastSyncAt only advances on a clean sync: it is what tells us how stale the device is.
+        let now = Date()
+        lastSyncAt = now
+        UserDefaults.standard.set(now, forKey: "SyncEngine.lastSyncTimestamp")
+        lastError = nil
+
+        stateMachine.completeSync(reason: "Sync completed for \(trigger.logDescription)")
+
+        postNotification(SyncEngine.syncCompletedNotification, trigger: trigger)
+        Logger.info("[SyncEngine] Sync completed successfully (\(trigger.logDescription))")
+    }
+
+    /// What one half of a sync actually managed to do.
+    struct SyncOutcome {
+        /// Operations or tables the sync tried to process.
+        private(set) var attempted = 0
+        /// How many of those failed.
+        private(set) var failed = 0
+
+        var hasFailures: Bool { failed > 0 }
+
+        mutating func recordSuccess() { attempted += 1 }
+
+        mutating func recordFailure() {
+            attempted += 1
+            failed += 1
+        }
+
+        mutating func merge(_ other: SyncOutcome) {
+            attempted += other.attempted
+            failed += other.failed
         }
     }
 
@@ -421,20 +537,38 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             return
         }
 
+        // Remote sync is an authenticated-only feature: anonymous users are local-only
+        // (see OVERVIEW tier model). The hardened apply_mutations rejects unauthenticated
+        // callers, so attempting a push here would only generate failed retries.
+        guard AuthService.shared.currentUser != nil else {
+            Logger.debug("[SyncEngine] Push skipped - not authenticated (local-only mode)")
+            return
+        }
+
         guard stateMachine.startSync(.push, reason: "Pushing pending changes") else {
             Logger.debug("[SyncEngine] Push skipped - failed to start sync")
             return
         }
 
-        await pushPendingChangesInternal()
+        let outcome = await pushPendingChangesInternal()
 
         // Complete the sync if we're still in syncing state
         if stateMachine.currentState.isSyncing {
-            stateMachine.completeSync(reason: "Push completed")
+            if outcome.hasFailures {
+                stateMachine.failSync(
+                    with: .partialFailure(failed: outcome.failed, total: outcome.attempted),
+                    reason: "Push failed"
+                )
+            } else {
+                stateMachine.completeSync(reason: "Push completed")
+            }
         }
     }
 
-    private func pushPendingChangesInternal() async {
+    @discardableResult
+    private func pushPendingChangesInternal() async -> SyncOutcome {
+        var outcome = SyncOutcome()
+
         do {
             // Unblock previously blocked schema-missing operations
             unblockSchemaErrorOperations()
@@ -444,7 +578,7 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
 
             guard !operations.isEmpty else {
                 Logger.debug("[SyncEngine] No pending operations to push")
-                return
+                return outcome
             }
 
             Logger.info("[SyncEngine] Pushing \(operations.count) pending operations")
@@ -458,6 +592,7 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
                     try await executeOperation(operation)
                     try await markOperationCompleted(operationId: operation.operationId)
                     successCount += 1
+                    outcome.recordSuccess()
                 } catch {
                     let errorMessage = error.localizedDescription
 
@@ -478,6 +613,7 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
                         Logger.warning("[SyncEngine] Operation failed: \(operation.tableName) - \(errorMessage)")
                     }
                     failCount += 1
+                    outcome.recordFailure()
                 }
             }
 
@@ -485,8 +621,12 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             Logger.info("[SyncEngine] Push complete: \(successCount) succeeded, \(failCount) failed")
 
         } catch {
+            // Reaching here means the outbox itself could not be read: nothing was pushed.
+            outcome.recordFailure()
             Logger.error("[SyncEngine] Push failed", error: error)
         }
+
+        return outcome
     }
 
     // MARK: - Pull Changes
@@ -507,29 +647,119 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             return
         }
 
-        await pullFromRemoteInternal()
+        let outcome = await pullFromRemoteInternal()
 
         // Complete the sync if we're still in syncing state
         if stateMachine.currentState.isSyncing {
-            stateMachine.completeSync(reason: "Pull completed")
+            if outcome.hasFailures {
+                stateMachine.failSync(
+                    with: .partialFailure(failed: outcome.failed, total: outcome.attempted),
+                    reason: "Pull failed"
+                )
+            } else {
+                stateMachine.completeSync(reason: "Pull completed")
+                // Un pull "nudo" aggiornava SQLite senza dirlo a nessuno: le view che leggono
+                // lo specchio locale (Tracking, strip di Scopri, liste) restavano indietro
+                // fino a un evento qualsiasi. Il pull è un sync completato a tutti gli effetti.
+                postNotification(SyncEngine.syncCompletedNotification, trigger: .manualRefresh)
+            }
         }
     }
 
-    private func pullFromRemoteInternal() async {
+    /// Le sole tabelle che servono a ridisegnare la schermata Tracking (§9.2).
+    ///
+    /// `tv_show_state` prima delle due viste: sono derivate da lui, e ritirarle nell'ordine
+    /// inverso non cambia il risultato ma rende illeggibile un log letto in fretta.
+    nonisolated static let trackingTables = ["tv_show_state", "v_tv_tracking", "v_tv_timeline"]
+
+    /// Ritira **solo** lo stato del tracking, dopo un "visto" o un "più avanti".
+    ///
+    /// **Perché serve una cosa a parte invece di un `pullFromRemote()`.** Marcare un episodio
+    /// accoda una mutazione e la spinge; il progresso però lo ricalcola il server (§1.1), e la
+    /// schermata legge lo specchio locale `tv_tracking`, che **solo un pull aggiorna**. Senza
+    /// questo, premere "visto" scriveva l'evento in produzione e non cambiava niente sullo
+    /// schermo: la forma di guasto peggiore, perché sembra che il tap non sia arrivato e invita a
+    /// premere di nuovo. Un pull completo qui sarebbe 19 tabelle per un tocco.
+    public func pullTrackingState() async {
+        guard networkMonitor.isConnected else { return }
+        guard let userId = AuthService.shared.currentUser?.id else { return }
+
+        for table in Self.trackingTables {
+            do {
+                try await pullTableWithConflictResolution(name: table, userId: userId)
+            } catch {
+                // Si dichiara. La schermata resterà indietro di un'azione fino al sync successivo,
+                // ed è meglio saperlo dal log che dedurlo da una card che non avanza.
+                Logger.warning("[SyncEngine] Tracking pull failed on \(table): \(error.localizedDescription)")
+            }
+        }
+    }
+
+    /// Le due tabelle del blocco 9 che le azioni riscaricano dopo una scrittura.
+    nonisolated static let profileContentTables = ["user_favorites", "user_ratings"]
+
+    /// Ritira **solo** favorites e voti, dopo un'azione di scrittura su uno dei due.
+    ///
+    /// Stessa ragione di `pullTrackingState`: la scrittura passa dall'outbox e lo specchio
+    /// locale e' ottimistico, ma se il server la respinge (un rifiuto registrato, non un
+    /// errore) solo un pull riallinea lo schermo. Un `pullFromRemote()` qui sarebbe venti
+    /// tabelle per un tocco su una stella.
+    public func pullProfileContent() async {
+        guard networkMonitor.isConnected else { return }
+        guard let userId = AuthService.shared.currentUser?.id else { return }
+
+        for table in Self.profileContentTables {
+            do {
+                try await pullTableWithConflictResolution(name: table, userId: userId)
+            } catch {
+                Logger.warning("[SyncEngine] Profile content pull failed on \(table): \(error.localizedDescription)")
+            }
+        }
+    }
+
+    @discardableResult
+    private func pullFromRemoteInternal(trigger: SyncTrigger = .manualRefresh) async -> SyncOutcome {
+        var outcome = SyncOutcome()
+
         guard let userId = AuthService.shared.currentUser?.id else {
             Logger.debug("[SyncEngine] Pull skipped - not authenticated")
-            return
+            return outcome
         }
 
         Logger.info("[SyncEngine] Pulling remote changes for user \(userId)")
 
-        // Tables to sync (user-scoped)
+        // Tables to sync (user-scoped).
+        //
+        // L'ordine non è estetico: lo specchio del Tracking (tv_show_state + le due viste §9.2)
+        // sta IN TESTA perché è ciò che l'utente guarda subito dopo un import o un login — con
+        // le viste in coda a 21 tabelle sequenziali, la schermata Tracking restava vuota per
+        // tutta la durata del pull, con la faccia di un import fallito. Appena il blocco
+        // tracking è dentro, `syncCompletedNotification` parte una prima volta (vedi sotto) e
+        // le view che leggono lo specchio si ridisegnano mentre il resto continua.
         let userTables = [
+            "tv_show_state",
+            // §9.2: le due viste che la schermata Tracking legge. Sono viste e non tabelle, ma
+            // dal lato del pull non cambia niente — sono user-scoped e PostgREST le espone
+            // uguale. Ritirarle e' cio' che permette a §13.6 di reggere: la schermata si disegna
+            // da qui, senza rete.
+            "v_tv_tracking",
+            "v_tv_timeline",
             "profiles",
             "lists",
             "list_items",
             "user_preferences",
+            // unified_user_preferences now has a working push path again (STAB-010), so pull it too
+            // to keep the discovery-personalization store consistent across devices.
+            "unified_user_preferences",
+            // "movie_reactions" was removed from this list because the table did not exist on
+            // Supabase and pulling it failed on every sync. The table now exists, with RLS scoped
+            // to auth.uid() and a natural key of (user_id, media_id, media_type), so the pull is
+            // back. Its aggregate companion, movie_reaction_counts, is deliberately NOT pulled:
+            // it is global rather than user-scoped, and a trigger maintains it server-side.
             "movie_reactions",
+            // SPEC v3 §3.6 (blocco 8). Non ha user_id: il filtro e l'ordinamento hanno i loro
+            // casi speciali qui sotto, perche' l'identita' e' la coppia (follower, followee).
+            "user_follows",
             "user_gamification",
             "user_badges",
             "user_daily_challenges",
@@ -538,44 +768,125 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             "user_clip_signals",
             "ai_conversation_history",
             "global_discovery_filters",
-            "device_info"
+            "device_info",
+            // SPEC v3 §3.6/§4 (blocco 9): in produzione dal 2026-07-31. Entrambe lastWriteWins;
+            // le chiavi sono composite (getKeyColumns) e l'ordinamento di pagina usa tutte le
+            // colonne della chiave — nessuna da sola e' unica nel sottoinsieme dell'utente.
+            "user_favorites",
+            "user_ratings",
+            "watch_events"
         ]
 
-        for table in userTables {
+        let trackingPrefixCount = Self.trackingTables.count
+        for (index, table) in userTables.enumerated() {
             do {
                 try await pullTableWithConflictResolution(name: table, userId: userId)
+                outcome.recordSuccess()
                 Logger.debug("[SyncEngine] Pulled \(table)")
             } catch {
+                outcome.recordFailure()
                 Logger.warning("[SyncEngine] Failed to pull \(table): \(error.localizedDescription)")
+            }
+
+            if index == trackingPrefixCount - 1 {
+                // Primo paint: lo specchio del tracking è scritto, Tracking e le strip di
+                // Scopri possono ridisegnarsi adesso invece che a fine pull.
+                postNotification(SyncEngine.syncCompletedNotification, trigger: trigger)
             }
         }
 
-        Logger.info("[SyncEngine] Pull complete")
+        Logger.info("[SyncEngine] Pull complete: \(outcome.attempted - outcome.failed) of \(outcome.attempted) tables")
+        return outcome
     }
 
     /// Pulls a table from remote with conflict resolution applied.
     ///
     /// For each remote record, checks if a local record exists and uses
     /// the appropriate conflict resolution strategy to merge them.
+    ///
+    /// The fetch is paginated (see `SyncPagination`): an unbounded `select("*")` over a table the
+    /// size of an imported TV Time history either times out against the 8s `statement_timeout` or,
+    /// on a project with `db-max-rows` set, comes back truncated without saying so.
     private func pullTableWithConflictResolution(name: String, userId: String) async throws {
         guard let client = SupabaseService.shared.client else {
             throw SyncEngineError.notAuthenticated
         }
 
-        // Fetch remote records
-        var query = client.from(name).select("*")
-        if name == "profiles" {
-            query = query.eq("id", value: userId)
-        } else {
-            query = query.eq("user_id", value: userId)
+        let keyColumn = getPrimaryKeyColumn(for: name)
+        var totalConflictsResolved = 0
+
+        let rowsPulled = try await SyncPagination.walk(
+            table: name,
+            fetchPage: { offset, limit in
+                var query = client.from(name).select("*")
+                if name == "profiles" {
+                    query = query.eq("id", value: userId)
+                } else if name == "user_follows" {
+                    // Niente user_id: si è uno dei due capi. La RLS filtra comunque le righe
+                    // altrui; il filtro esplicito qui tiene la richiesta uguale ovunque e le
+                    // pagine deterministiche.
+                    query = query.or("follower_id.eq.\(userId),followee_id.eq.\(userId)")
+                } else {
+                    query = query.eq("user_id", value: userId)
+                }
+
+                if let window = SyncEngine.pullWindow(for: name),
+                   let cutoff = Calendar.current.date(byAdding: .month, value: -window.months, to: Date()) {
+                    query = query.gte(window.column, value: ISO8601DateFormatter().string(from: cutoff))
+                }
+
+                // Ordering is what makes paging correct, not just deterministic output. Without an
+                // ORDER BY, Postgres may return rows in a different order for each request, so
+                // two windows over the same table can overlap and miss rows at the same time. The
+                // primary key is unique within the filtered set, which is what a stable sort needs.
+                var ordered = query.order(keyColumn, ascending: true)
+                // Le chiavi composite ordinano su TUTTE le loro colonne: la prima da sola non e'
+                // unica nel sottoinsieme dell'utente, e un ordinamento non totale fa sovrapporre
+                // le pagine (§5). L'elenco viene da getKeyColumns, cosi' chi aggiunge una tabella
+                // a chiave composta eredita l'ordinamento giusto senza un altro if da ricordare.
+                for extra in self.getKeyColumns(for: name).dropFirst() {
+                    ordered = ordered.order(extra, ascending: true)
+                }
+                let data = try await ordered
+                    .range(from: offset, to: offset + limit - 1)
+                    .execute()
+                    .data
+
+                // Parsed strictly on purpose. PostgREST answers a rejected request with a JSON
+                // *object* describing the error, and treating anything that is not an array of
+                // rows as "no rows" would turn a 400 into a silent "pulled 0 rows" — the table
+                // would look empty and healthy while nothing was ever fetched.
+                let parsed = try JSONSerialization.jsonObject(with: data)
+                guard let rows = parsed as? [[String: Any]] else {
+                    let body = String(data: data.prefix(500), encoding: .utf8) ?? "<non-utf8>"
+                    throw SyncEngineError.operationFailed("\(name): unexpected pull response: \(body)")
+                }
+                return rows
+            },
+            handlePage: { remoteRows in
+                let resolved = await self.resolvePage(remoteRows, table: name)
+                totalConflictsResolved += resolved.conflictsResolved
+
+                if !resolved.rows.isEmpty {
+                    try await self.sqliteService.upsert(
+                        table: SyncEngine.localTable(for: name), rows: resolved.rows)
+                }
+            }
+        )
+
+        if totalConflictsResolved > 0 {
+            let strategy = TableConflictMapping.strategy(for: name)
+            Logger.info("[SyncEngine] Resolved \(totalConflictsResolved) conflicts in \(name) using \(strategy.rawValue) strategy")
         }
 
-        let data = try await query.execute().data
-        guard let remoteRows = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
-            return
-        }
+        Logger.debug("[SyncEngine] Pulled \(rowsPulled) rows from \(name)")
+    }
 
-        let strategy = TableConflictMapping.strategy(for: name)
+    /// Applies conflict resolution to one page of remote rows.
+    private func resolvePage(
+        _ remoteRows: [[String: Any]],
+        table name: String
+    ) async -> (rows: [[String: Any]], conflictsResolved: Int) {
         var resolvedRows: [[String: Any]] = []
         var conflictsResolved = 0
 
@@ -583,14 +894,8 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             // Normalize remote row
             let normalizedRemote = normalizeRow(remoteRow, for: name)
 
-            // Get the record ID
-            guard let recordId = getRecordId(from: normalizedRemote, table: name) else {
-                resolvedRows.append(normalizedRemote)
-                continue
-            }
-
-            // Check for local record
-            if let localRow = await fetchLocalRecord(table: name, id: recordId) {
+            // Check for local record (keyed by the table's key columns, composite included)
+            if let localRow = await fetchLocalRecord(table: name, row: normalizedRemote) {
                 // Conflict exists - resolve it
                 let resolved = conflictResolver.resolve(
                     table: name,
@@ -610,26 +915,61 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             }
         }
 
-        // Upsert resolved records to local database
-        if !resolvedRows.isEmpty {
-            try await sqliteService.upsert(table: name, rows: resolvedRows)
-        }
-
-        if conflictsResolved > 0 {
-            Logger.info("[SyncEngine] Resolved \(conflictsResolved) conflicts in \(name) using \(strategy.rawValue) strategy")
-        }
+        return (resolvedRows, conflictsResolved)
     }
 
-    /// Fetches a local record by ID for conflict resolution.
-    private func fetchLocalRecord(table: String, id: String) async -> [String: Any]? {
-        let idColumn = getPrimaryKeyColumn(for: table)
-        let sql = "SELECT * FROM \(table) WHERE \(idColumn) = ? LIMIT 1"
+    /// Fetches the local counterpart of a remote row for conflict resolution.
+    ///
+    /// Prende la riga e non un id: per `user_follows` la chiave è la coppia
+    /// (follower_id, followee_id) e non esiste una colonna sola che identifichi la riga.
+    /// Cercare per il solo `follower_id` confronterebbe righe sbagliate — l'union "risolverebbe"
+    /// un conflitto fra due follow diversi.
+    private func fetchLocalRecord(table: String, row: [String: Any]) async -> [String: Any]? {
+        let keyColumns = getKeyColumns(for: table)
+        let values = keyColumns.compactMap { row[$0].map { String(describing: $0) } }
+        guard values.count == keyColumns.count else { return nil }
+
+        let local = SyncEngine.localTable(for: table)
+        let whereClause = keyColumns.map { "\($0) = ?" }.joined(separator: " AND ")
+        let sql = "SELECT * FROM \(local) WHERE \(whereClause) LIMIT 1"
 
         do {
-            let rows = try await sqliteService.queryRaw(sql, parameters: [id])
+            let rows = try await sqliteService.queryRaw(sql, parameters: values)
             return rows.first
         } catch {
             return nil
+        }
+    }
+
+    /// Le colonne che identificano una riga. Una sola per quasi tutte; composite per i follow,
+    /// i favorites e i voti. `user_id` non compare mai: il pull filtra gia' per utente, e lo
+    /// specchio locale e' di un utente solo (precedente: tv_show_state).
+    ///
+    /// La PRIMA colonna deve coincidere con getPrimaryKeyColumn: il pull ordina le pagine su
+    /// quella e poi su tutte le successive di questo elenco.
+    private func getKeyColumns(for table: String) -> [String] {
+        switch table {
+        case "user_follows": return ["follower_id", "followee_id"]
+        case "user_favorites": return ["media_type", "slot"]
+        case "user_ratings":
+            // season/episode sono nella chiave col sentinello -1 (vedi normalizeRow): senza,
+            // il voto a un film e quello alla serie con lo stesso tmdb_id collasserebbero.
+            return ["media_type", "tmdb_id", "season_number", "episode_number"]
+        default: return [getPrimaryKeyColumn(for: table)]
+        }
+    }
+
+    /// In quale tabella locale atterra una sorgente remota.
+    ///
+    /// Serve perché due sorgenti del pull sono **viste** (§9.2): il nome remoto porta il prefisso
+    /// `v_`, ma in SQLite quella roba è una tabella e chiamarla `v_tv_tracking` direbbe una cosa
+    /// falsa a chiunque la legga. La mappatura sta in un posto solo, così il giorno che se ne
+    /// aggiunge una terza non ci sono tre punti da ricordare.
+    nonisolated static func localTable(for remote: String) -> String {
+        switch remote {
+        case "v_tv_tracking": return "tv_tracking"
+        case "v_tv_timeline": return "tv_timeline"
+        default: return remote
         }
     }
 
@@ -642,18 +982,50 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             return "device_id"
         case "global_discovery_filters":
             return "user_id"
+        case "v_tv_tracking":
+            // Come tv_show_state: la chiave e' composta, ma dentro il sottoinsieme di un utente
+            // tmdb_show_id e' unico, che basta per identificare la riga e per ordinare le pagine.
+            return "tmdb_show_id"
+        case "v_tv_timeline":
+            // La vista si porta un id sintetico apposta: senza una colonna unica, due pagine
+            // sulla stessa tabella riescono a sovrapporsi e a saltare righe insieme (§5).
+            return "id"
+        case "tv_show_state":
+            // Chiave composta (user_id, tmdb_show_id): dato che il pull filtra già per user_id,
+            // dentro quel sottoinsieme tmdb_show_id è unico, che è quanto serve sia per
+            // identificare la riga sia per ordinare le pagine in modo stabile.
+            return "tmdb_show_id"
+        case "user_follows":
+            // La chiave vera è la coppia: questa è solo la PRIMA colonna d'ordinamento delle
+            // pagine (il pull aggiunge followee_id) e non basta da sola a identificare una riga —
+            // per quello c'è getKeyColumns.
+            return "follower_id"
+        case "user_favorites", "user_ratings":
+            // Come per i follow: prima colonna d'ordinamento, non la chiave intera. Il resto
+            // dell'ordine (slot; tmdb_id/stagione/episodio) lo aggiunge il pull da getKeyColumns.
+            return "media_type"
         default:
             return "id"
         }
     }
 
-    /// Gets the record ID from a row based on table type.
-    private func getRecordId(from row: [String: Any], table: String) -> String? {
-        let keyColumn = getPrimaryKeyColumn(for: table)
-        if let id = row[keyColumn] {
-            return String(describing: id)
-        }
-        return nil
+    /// Quanta storia ritira il pull per una tabella.
+    ///
+    /// Il fixture reale di un import TV Time contiene 21.344 eventi su 432 serie: il **94,5% ha
+    /// più di 12 mesi**, e il solo 2015 ne conta 7.801. Ritirarli tutti costa ~12 MB e 25 richieste
+    /// a ogni sync completo per righe che nessuna schermata legge — §10 mette il diario oltre i 12
+    /// mesi dietro il paywall, quindi per un utente free quelle righe non sono nemmeno mostrabili.
+    /// Con la finestra: 1.605 righe, ~0,8 MB, 5 richieste.
+    ///
+    /// Conseguenza da non dimenticare: il totale di tempo di visione (§13.7) **non** può più essere
+    /// sommato dal client, perché in cache c'è solo un anno. Deve arrivare dal server come
+    /// aggregato — che è comunque ciò che §1.1 prescrive e che serve alle stats del blocco 9.
+    nonisolated static func pullWindow(for table: String) -> (column: String, months: Int)? {
+        // `watch_events` NON ha più la finestra a 12 mesi: un import TV Time porta ANNI di
+        // storico, e SeasonView marca i "visto" leggendo lo specchio locale — con la finestra
+        // il server aveva 20k eventi e il telefono ne scaricava un decimo, quindi le stagioni
+        // sembravano mai viste. Il pull resta paginato (SyncPagination): ~20 pagine una tantum.
+        nil
     }
 
     /// Normalizes a row for storage (handles media_type, JSON arrays, etc.).
@@ -678,6 +1050,19 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             }
         }
 
+        // §3.6 (blocco 9): sul server un voto a un film ha season/episode NULL; nello specchio
+        // locale sono NOT NULL DEFAULT -1, lo stesso sentinello del coalesce(-1) nell'indice
+        // unico remoto. Senza questa conversione fetchLocalRecord non ritroverebbe la riga
+        // (NSNull non combacia con -1) e ogni pull tratterebbe il voto come una riga nuova,
+        // saltando la risoluzione dei conflitti.
+        if table == "user_ratings" {
+            for field in ["season_number", "episode_number"] {
+                if normalized[field] == nil || normalized[field] is NSNull {
+                    normalized[field] = -1
+                }
+            }
+        }
+
         return normalized
     }
 
@@ -685,17 +1070,12 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
 
     private func executeOperation(_ operation: SyncOutboxOperation) async throws {
         // Build mutation for Supabase
-        var record = operation.payload
-        if record["id"] == nil {
-            record["id"] = operation.recordId
-        }
-
-        // Sanitize media_type for tables that require it
-        if ["clips", "list_items", "movie_reactions"].contains(operation.tableName) {
-            if let mt = record["media_type"] as? String, !["movie", "tv"].contains(mt) {
-                record["media_type"] = "movie"
-            }
-        }
+        let record = Self.normalizedMutationRecord(
+            table: operation.tableName,
+            operationType: operation.operationType,
+            recordId: operation.recordId,
+            payload: operation.payload
+        )
 
         let mutation: [String: Any] = [
             "op": operation.operationType.uppercased(),
@@ -764,14 +1144,19 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
         let nextRetry = calculateNextRetryTime(attempts: attempts)
         let nextRetryString = ISO8601DateFormatter().string(from: nextRetry)
 
+        // When this increment reaches the retry ceiling, mark the op 'stuck' so it leaves the
+        // active pool explicitly instead of lingering as a high-`attempts` 'failed' row that
+        // fetchPendingOperations silently skips forever (STAB-007). Launch-time recovery
+        // (recoverStuckOperationsSQL) then gives it a fresh chance on a later run.
         let sql = """
             UPDATE sync_outbox
             SET attempts = attempts + 1,
                 last_error = ?,
-                next_retry_at = ?
+                next_retry_at = ?,
+                status = CASE WHEN attempts + 1 >= ? THEN 'stuck' ELSE status END
             WHERE operation_id = ?
         """
-        let success = sqliteService.execute(sql, parameters: [error, nextRetryString, operationId])
+        let success = sqliteService.execute(sql, parameters: [error, nextRetryString, maxRetries, operationId])
         if !success {
             throw SyncEngineError.databaseError
         }
@@ -798,13 +1183,17 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
             WHERE status = 'blocked' AND last_error LIKE '%PGRST205%'
         """
         _ = sqliteService.execute(sql)
+        _ = sqliteService.execute(Self.recoverRetryableListItemOperationsSQL(maxRetries: maxRetries))
     }
 
     /// Resets all PGRST205-blocked outbox operations to `pending` so they will be retried
     /// on this launch's sync push. Called once at app launch before pushPendingChanges().
     public func unblockAndRetryBlockedOperations() {
         unblockSchemaErrorOperations()
-        Logger.info("[SyncEngine] Unblocked PGRST205-blocked operations for retry on launch")
+        // Once per launch (not per push, so in-session backoff is preserved): give retry-exhausted
+        // ops of every table a fresh chance. STAB-007.
+        _ = sqliteService.execute(Self.recoverStuckOperationsSQL(maxRetries: maxRetries))
+        Logger.info("[SyncEngine] Unblocked PGRST205-blocked and retry-exhausted operations for retry on launch")
     }
 
     private func isSchemaError(_ error: String) -> Bool {

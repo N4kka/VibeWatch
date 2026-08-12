@@ -90,7 +90,7 @@ struct FloatingXPBadgeView: View {
                 Image(systemName: "star.fill")
                     .font(.system(size: 12))
                     .foregroundColor(.yellow)
-                Text("Lv.\(gamificationService.userState.currentLevel)")
+                Text(String(format: "gamification.levelShort".localized, gamificationService.userState.currentLevel))
                     .font(.system(size: 14, weight: .bold))
                     .foregroundColor(.white)
             }
@@ -311,7 +311,7 @@ struct XPMiniDashboardView: View {
                     // View Full Stats Button
                     NavigationLink(destination: AnalyticsDashboardView()) {
                         HStack {
-                            Text("View Full Stats")
+                            Text("stats.viewFull".localized)
                                 .font(.system(size: 16, weight: .semibold))
                             Spacer()
                             Image(systemName: "chevron.right")
@@ -331,7 +331,7 @@ struct XPMiniDashboardView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    Text("Your Progress")
+                    Text("gamification.progress.title".localized)
                         .font(.system(size: 18, weight: .bold))
                         .foregroundColor(.theme.textPrimary)
                 }
@@ -359,7 +359,7 @@ struct XPMiniDashboardView: View {
                             .font(.system(size: 24))
                             .foregroundColor(.yellow)
 
-                        Text("Level \(gamificationService.userState.currentLevel)")
+                        Text(String(format: "gamification.levelNumber".localized, gamificationService.userState.currentLevel))
                             .font(.system(size: 24, weight: .bold))
                             .foregroundColor(.white)
                     }
@@ -430,7 +430,7 @@ struct XPMiniDashboardView: View {
                     .font(.system(size: 32, weight: .bold))
                     .foregroundColor(.white)
 
-                Text("Day Streak")
+                Text("gamification.dayStreak".localized)
                     .font(.system(size: 12))
                     .foregroundColor(.white.opacity(0.6))
             }
@@ -449,7 +449,7 @@ struct XPMiniDashboardView: View {
                     .font(.system(size: 32, weight: .bold))
                     .foregroundColor(.white)
 
-                Text("Best Streak")
+                Text("gamification.bestStreak".localized)
                     .font(.system(size: 12))
                     .foregroundColor(.white.opacity(0.6))
             }
@@ -469,7 +469,7 @@ struct XPMiniDashboardView: View {
                         .font(.system(size: 24, weight: .bold))
                         .foregroundColor(.theme.accentOrange)
 
-                    Text("XP Bonus")
+                    Text("gamification.xpBonus".localized)
                         .font(.system(size: 12))
                         .foregroundColor(.white.opacity(0.6))
                 }
@@ -496,7 +496,7 @@ struct XPMiniDashboardView: View {
                     .font(.system(size: 20))
                     .foregroundColor(.green)
 
-                Text("Today's Challenge")
+                Text("gamification.todaysChallenge".localized)
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.white)
 
@@ -541,7 +541,7 @@ struct XPMiniDashboardView: View {
                     HStack {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundColor(.green)
-                        Text("Completed!")
+                        Text("gamification.completed".localized)
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(.green)
                     }
@@ -574,7 +574,7 @@ struct XPMiniDashboardView: View {
             }
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("Badge Unlocked!")
+                Text("gamification.badgeUnlocked".localized)
                     .font(.system(size: 12))
                     .foregroundColor(.yellow)
 

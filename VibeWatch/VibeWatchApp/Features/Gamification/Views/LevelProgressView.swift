@@ -28,7 +28,7 @@ struct LevelProgressView: View {
                 }
             }
             .background(Color.theme.background.ignoresSafeArea())
-            .navigationTitle("Level Progress")
+            .navigationTitle("gamification.levels.progressTitle".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -73,7 +73,7 @@ struct LevelProgressView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Level \(gamificationService.userState.currentLevel)")
+                    Text(String(format: "gamification.levelNumber".localized, gamificationService.userState.currentLevel))
                         .font(.system(size: 22, weight: .bold))
                         .foregroundColor(.white)
 
@@ -134,7 +134,7 @@ struct LevelProgressView: View {
 
     private var allLevelsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("ALL LEVELS")
+            Text("gamification.allLevels".localized)
                 .font(.system(size: 12, weight: .bold))
                 .foregroundColor(.white.opacity(0.5))
                 .tracking(1)
@@ -219,7 +219,7 @@ struct LevelRowView: View {
             // Level Info
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
-                    Text("Level \(level)")
+                    Text(String(format: "gamification.levelNumber".localized, level))
                         .font(.system(size: 15, weight: isCurrent ? .bold : .medium))
                         .foregroundColor(isCurrent ? .white : (isLocked ? .white.opacity(0.4) : .white.opacity(0.7)))
 
@@ -293,34 +293,17 @@ struct LevelRowView: View {
 // MARK: - Level Calculator
 
 struct LevelCalculator {
-    /// XP thresholds for each level (cumulative)
-    static let levelThresholds: [Int] = {
-        var thresholds: [Int] = [0]
-        var cumulative = 0
-        for level in 1...50 {
-            let xpForLevel: Int
-            switch level {
-            case 1...5:
-                xpForLevel = 100 + (level - 1) * 50  // 100, 150, 200, 250, 300
-            case 6...15:
-                xpForLevel = 400 + (level - 6) * 100  // 400-1300
-            case 16...30:
-                xpForLevel = 1500 + (level - 16) * 200  // 1500-4300
-            case 31...50:
-                xpForLevel = 5000 + (level - 31) * 500  // 5000-14500
-            default:
-                xpForLevel = 15000
-            }
-            cumulative += xpForLevel
-            thresholds.append(cumulative)
-        }
-        return thresholds
-    }()
-
+    /// XP bracket and rank for a level, derived from the SINGLE source of truth
+    /// `GamificationLeveling` — the same curve that computes the user's stored `currentLevel`.
+    ///
+    /// Previously this used its own divergent cumulative curve, so the progress UI was
+    /// inconsistent with the actual level (e.g. a current-level user could show NEGATIVE
+    /// progress because `totalXP < xpStart`). Deriving from `GamificationLeveling` keeps the
+    /// bracket `[xpStart, xpEnd)` aligned with `currentLevel`, so progress is always in [0, 1).
     static func getLevelInfo(level: Int) -> (xpStart: Int, xpEnd: Int, rank: UserRank) {
         let clampedLevel = max(1, min(level, 50))
-        let xpStart = levelThresholds[clampedLevel - 1]
-        let xpEnd = levelThresholds[clampedLevel]
+        let xpStart = GamificationLeveling.threshold(for: clampedLevel)
+        let xpEnd = GamificationLeveling.threshold(for: clampedLevel + 1)
         let rank = UserRank.forLevel(clampedLevel)
         return (xpStart, xpEnd, rank)
     }

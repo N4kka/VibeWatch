@@ -2,7 +2,9 @@ import Foundation
 import Supabase
 import Auth
 import AuthenticationServices
+import CryptoKit
 import RevenueCat
+import UIKit
 
 @MainActor
 class AuthService: AuthServiceProtocol {
@@ -246,8 +248,7 @@ class AuthService: AuthServiceProtocol {
         if let errorDescription = extractErrorDescription(from: url) {
             Logger.error("[Auth] Error detected in callback URL: \(errorDescription)")
             await MainActor.run {
-                AppState.shared.showErrorToast = true
-                AppState.shared.toastMessage = errorDescription
+                ToastCenter.shared.show(error: errorDescription)
             }
             return
         }
@@ -267,8 +268,7 @@ class AuthService: AuthServiceProtocol {
             Logger.error("[Auth] Failed to establish session from callback: \(error)")
             // If session fails, likely the link is invalid/expired.
             await MainActor.run {
-                AppState.shared.showErrorToast = true
-                AppState.shared.toastMessage = "auth.error.invalidLink".localized
+                ToastCenter.shared.show(error: "auth.error.invalidLink".localized)
             }
             throw error
         }
@@ -314,6 +314,21 @@ class AuthService: AuthServiceProtocol {
             // Network error or session expired
             Logger.warning("[Auth] Session check failed: \(error.localizedDescription)")
 
+            // Sessione rifiutata dal server (o assente): restare "loggati" con la cache
+            // Keychain è una bugia — ogni SELECT sotto RLS torna vuota e il primo INSERT
+            // muore con "new row violates row-level security policy" (l'import da
+            // TestFlight con la sessione ferma da gennaio). Qui si pulisce e basta:
+            // niente wipe del DB locale, un re-login con lo stesso account riparte
+            // dallo specchio che c'è.
+            if isSessionDefinitivelyInvalid(error) {
+                Logger.error("[Auth] Session rejected by server — clearing cached auth state, sign-in required")
+                self.currentUser = nil
+                self.isAuthenticated = false
+                clearCachedAuthState()
+                await syncRevenueCatUser(with: nil)
+                return
+            }
+
             // Check if we have a cached user (offline mode)
             if let cachedUser = currentUser, isAuthenticated {
                 Logger.debug("[Auth] Using cached user for offline access: \(cachedUser.id.prefix(8))...")
@@ -333,6 +348,21 @@ class AuthService: AuthServiceProtocol {
             clearCachedAuthState()
             await syncRevenueCatUser(with: nil)
         }
+    }
+
+    /// Distingue "sono offline" da "il server ha rifiutato la sessione". Gli errori di
+    /// trasporto (URLError) mantengono la cache offline com'è sempre stato; un AuthError
+    /// locale (`sessionMissing`) o una risposta 4xx del GoTrue (refresh token revocato,
+    /// scaduto, riusato) sono definitivi. Un 5xx è un inciampo del server: non butta
+    /// fuori nessuno.
+    private func isSessionDefinitivelyInvalid(_ error: Error) -> Bool {
+        if error is URLError { return false }
+        if (error as NSError).domain == NSURLErrorDomain { return false }
+        guard let authError = error as? AuthError else { return false }
+        if case .api(_, _, _, let response) = authError {
+            return (400..<500).contains(response.statusCode)
+        }
+        return true
     }
 
     // MARK: - Email/Password Authentication
@@ -436,22 +466,21 @@ class AuthService: AuthServiceProtocol {
         // Clear reset expectation since this is an explicit action
         userDefaults.set(false, forKey: expectingPasswordResetKey)
 
-        // Check if input is email or username
-        let email: String
+        // Email diretta a GoTrue; username alla Edge Function, che fa risoluzione e
+        // autenticazione in un colpo solo: l'email non lascia mai il server senza la password
+        // giusta. La strada vecchia (leggere profiles.email dal client, per giunta con un ilike
+        // su display_name) era un endpoint di raccolta indirizzi, e la RLS la bloccava comunque.
+        let userId: String
         if emailOrUsername.contains("@") {
-            email = emailOrUsername
+            let response = try await client.auth.signIn(
+                email: emailOrUsername,
+                password: password
+            )
+            userId = response.user.id.uuidString
         } else {
-            // Fetch email from username
-            email = try await getEmailFromUsername(emailOrUsername)
+            let session = try await signInWithUsername(emailOrUsername, password: password)
+            userId = session.user.id.uuidString
         }
-
-        // Sign in with email and password
-        let response = try await client.auth.signIn(
-            email: email,
-            password: password
-        )
-
-        let userId = response.user.id.uuidString
 
         // Fetch user profile
         await fetchUserProfile(userId: userId)
@@ -474,6 +503,16 @@ class AuthService: AuthServiceProtocol {
             throw AppAuthError.notConfigured
         }
 
+        // Flush local edits while the session is still valid: signing out invalidates the token,
+        // and cleanupLocalUserData() below wipes the local database. Best effort and bounded —
+        // a slow or offline network must not trap the user in a half-signed-out state, and a
+        // forced sign-out (invalid session) has no usable token to push with anyway.
+        if !force {
+            await withTimeout(seconds: 5) {
+                await SyncEngine.shared.pushPendingChanges()
+            }
+        }
+
         try await client.auth.signOut()
 
         self.currentUser = nil
@@ -487,10 +526,24 @@ class AuthService: AuthServiceProtocol {
         // Analytics: Clear user ID
         AnalyticsService.shared.setUserId(nil)
 
-        // Clear Discovery memory cache
-        DiscoveryPersonalizationService.shared.clearMemoryCache()
+        // The local SQLite store is not scoped per account, so leaving it in place let the next
+        // user to sign in on this device read the previous one's lists, history and preferences —
+        // and re-upload them under their own id on the next sync. Deleting an account already
+        // went through this cleanup; signing out has to do the same.
+        await cleanupLocalUserData()
 
         Logger.info("[Auth] User signed out successfully")
+    }
+
+    /// Run `operation`, giving up after `seconds`. Used where a slow network must not block
+    /// a user-initiated action that has to complete regardless.
+    private func withTimeout(seconds: Double, operation: @escaping @Sendable () async -> Void) async {
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask { await operation() }
+            group.addTask { try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000)) }
+            await group.next()
+            group.cancelAll()
+        }
     }
 
     func sendPasswordReset(email: String) async throws {
@@ -538,6 +591,8 @@ class AuthService: AuthServiceProtocol {
 
     // MARK: - Social Authentication
 
+    private let appleSignInCoordinator = AppleSignInCoordinator()
+
     func signInWithApple() async throws -> User {
         guard let client = client else {
             throw AppAuthError.notConfigured
@@ -546,23 +601,42 @@ class AuthService: AuthServiceProtocol {
         // Clear reset expectation since this is an explicit action
         userDefaults.set(false, forKey: expectingPasswordResetKey)
 
-        Logger.debug("[Auth] Starting Apple Sign In...")
+        Logger.debug("[Auth] Starting native Apple Sign In...")
 
-        // Sign in with Apple OAuth
-        try await client.auth.signInWithOAuth(
-            provider: .apple,
-            redirectTo: authCallbackURL
+        // Flusso nativo (ASAuthorizationController + signInWithIdToken) invece dell'OAuth web:
+        // quello passava dallo scambio code↔secret lato Supabase, che richiede un client secret
+        // della Services ID rinnovato ogni 6 mesi ("Unable to exchange external code" quando
+        // scade). L'id token nativo si verifica contro le chiavi pubbliche di Apple.
+        let (credential, nonce) = try await appleSignInCoordinator.requestCredential()
+
+        guard let tokenData = credential.identityToken,
+              let idToken = String(data: tokenData, encoding: .utf8) else {
+            Logger.error("[Auth] Apple credential missing identity token")
+            throw AppAuthError.invalidResponse
+        }
+
+        let session = try await client.auth.signInWithIdToken(
+            credentials: OpenIDConnectCredentials(provider: .apple, idToken: idToken, nonce: nonce)
         )
 
-        // Wait for auth to complete
-        try await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
+        await fetchUserProfile(userId: session.user.id.uuidString)
 
-        // Check auth state and fetch profile
-        await checkAuthState()
+        // Apple fornisce nome e cognome solo alla primissima autorizzazione: se il profilo è
+        // ancora senza display name questa è l'unica occasione per salvarlo.
+        if let fullName = credential.fullName {
+            let name = PersonNameComponentsFormatter().string(from: fullName)
+                .trimmingCharacters(in: .whitespaces)
+            if !name.isEmpty, (currentUser?.displayName ?? "").isEmpty {
+                try? await updateUserProfile(displayName: name, avatarURL: nil)
+            }
+        }
 
         guard let user = currentUser else {
             throw AppAuthError.userNotFound
         }
+
+        AnalyticsService.shared.logSignIn(method: "apple")
+        AnalyticsService.shared.setUserId(user.id)
 
         Logger.info("[Auth] Apple Sign In successful")
         return user
@@ -578,10 +652,12 @@ class AuthService: AuthServiceProtocol {
 
         Logger.debug("[Auth] Starting Google Sign In...")
 
-        // Sign in with Google OAuth
+        // prompt=select_account: senza, Google riusa la sessione del browser e non lascia
+        // scegliere tra più account.
         try await client.auth.signInWithOAuth(
             provider: .google,
-            redirectTo: authCallbackURL
+            redirectTo: authCallbackURL,
+            queryParams: [(name: "prompt", value: "select_account")]
         )
 
         // Wait for auth to complete
@@ -593,6 +669,9 @@ class AuthService: AuthServiceProtocol {
         guard let user = currentUser else {
             throw AppAuthError.userNotFound
         }
+
+        AnalyticsService.shared.logSignIn(method: "google")
+        AnalyticsService.shared.setUserId(user.id)
 
         Logger.info("[Auth] Google Sign In successful")
         return user
@@ -736,45 +815,58 @@ class AuthService: AuthServiceProtocol {
         }
     }
 
-    private func getEmailFromUsername(_ username: String) async throws -> String {
-        guard let client = client else {
+    /// SPEC v3 §3.7 — il login con username, tutto server-side.
+    ///
+    /// La Edge Function risolve username → email e chiama GoTrue **nella stessa richiesta**:
+    /// l'email non passa mai dal client prima dell'autenticazione. Ogni fallimento di
+    /// credenziali risponde `invalid_credentials`, identico per username inesistente e password
+    /// sbagliata — distinguerli sarebbe un oracolo sugli username, quindi anche qui non si
+    /// distingue. Il 429 invece si dice: "riprova più tardi" non rivela niente.
+    private func signInWithUsername(_ username: String, password: String) async throws -> Session {
+        guard let client = client, let baseURL = URL(string: Config.supabaseURL) else {
             throw AppAuthError.notConfigured
         }
 
-        struct EmailRow: Decodable { let email: String }
+        let url = baseURL
+            .appendingPathComponent("functions")
+            .appendingPathComponent("v1")
+            .appendingPathComponent("login-with-username")
 
-        func fetchEmail(filter: (PostgrestFilterBuilder) -> PostgrestFilterBuilder) async throws -> String? {
-            let rows: [EmailRow] = try await filter(
-                client
-                    .from("profiles")
-                    .select("email")
-            )
-            .limit(1)
-            .execute()
-            .value
-            return rows.first?.email
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
+        if Config.supabaseAnonKey.hasPrefix("eyJ") {
+            // Come in callRPC: la legacy anon key è un JWT e vale come Bearer; le publishable
+            // (sb_publishable_...) no, e il gateway le rifiuterebbe.
+            request.setValue("Bearer \(Config.supabaseAnonKey)", forHTTPHeaderField: "Authorization")
+        }
+        request.httpBody = try JSONSerialization.data(
+            withJSONObject: ["username": username, "password": password])
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            throw AppAuthError.networkError
+        }
+        guard http.statusCode != 429 else {
+            throw AppAuthError.custom("auth.error.tooManyAttempts".localized)
+        }
+        guard http.statusCode == 200 else {
+            throw AppAuthError.invalidCredentials
         }
 
-        let normalized = username.trimmingCharacters(in: .whitespacesAndNewlines)
-        Logger.debug("[Auth] Looking up email for username: [REDACTED]")
-
-        // Try filters in order: exact, case-insensitive, fuzzy
-        let likePattern = "%\(normalized)%"
-        let filters: [(PostgrestFilterBuilder) -> PostgrestFilterBuilder] = [
-            { $0.eq("display_name", value: normalized) },
-            { $0.ilike("display_name", pattern: normalized) },
-            { $0.ilike("display_name", pattern: likePattern) }
-        ]
-
-        for filter in filters {
-            if let emailFound = try? await fetchEmail(filter: filter) {
-                Logger.info("[Auth] Found email for username")
-                return emailFound
-            }
+        guard let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+              let accessToken = json["access_token"] as? String,
+              let refreshToken = json["refresh_token"] as? String else {
+            // Un 200 illeggibile è un errore, non delle credenziali sbagliate (la lezione di
+            // username_available).
+            throw AppAuthError.invalidResponse
         }
 
-        Logger.error("[Auth] Username lookup failed: userNotFound")
-        throw AppAuthError.userNotFound
+        // La sessione diventa quella del client Supabase: da qui in poi il percorso è identico
+        // al login con email.
+        return try await client.auth.setSession(
+            accessToken: accessToken, refreshToken: refreshToken)
     }
 
     func updateUserProfile(displayName: String?, avatarURL: String?) async throws {
@@ -906,6 +998,9 @@ class AuthService: AuthServiceProtocol {
         DailyQuotaManager.shared.downgradeToFree()
         ClipQuotaService.shared.resetAll()
         ContentCacheManager.shared.clearAllCaches()
+        // In-memory, so wiping the database alone would leave the previous user's
+        // personalization live until the process restarts.
+        DiscoveryPersonalizationService.shared.clearMemoryCache()
         SQLiteService.shared.resetDatabase()
 
         // Clear any cached auth state
@@ -1075,68 +1170,29 @@ class AuthService: AuthServiceProtocol {
     }
 
     private func isPasswordRecoveryURL(_ url: URL) -> Bool {
-        let queryItems = combinedQueryItems(from: url)
-
         // Debug: Print all keys found
-        let keys = queryItems.map { $0.name }
+        let keys = combinedQueryItems(from: url).map { $0.name }
         Logger.debug("[Auth] Callback Params: \(keys)")
 
-        let isRecovery = queryItems.contains(where: { item in
-            item.name == "type" && item.value == "recovery"
-        })
-
+        let isRecovery = AuthCallbackURLParser.isPasswordRecovery(url)
         Logger.debug("[Auth] Is Recovery: \(isRecovery)")
         return isRecovery
     }
 
     /// Combine query items from both the query string and the fragment portion (#) to support Supabase OAuth/recovery redirects.
     private func combinedQueryItems(from url: URL) -> [URLQueryItem] {
-        var items: [URLQueryItem] = []
-
-        let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
-        if let query = components?.queryItems {
-            items.append(contentsOf: query)
-        }
-
-        if let fragment = components?.fragment,
-           let fragComponents = URLComponents(string: "?\(fragment)"),
-           let fragItems = fragComponents.queryItems {
-            items.append(contentsOf: fragItems)
-        }
-
-        return items
+        AuthCallbackURLParser.combinedQueryItems(from: url)
     }
 
     /// Supabase sometimes returns tokens in the fragment; this helper moves them into the query string for proper parsing.
     private func moveFragmentToQueryIfNeeded(_ url: URL) -> URL {
-        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-              let fragment = components.fragment,
-              !fragment.isEmpty,
-              var merged = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
-            return url
-        }
-
-        // Merge existing query items with fragment items
-        var queryItems = merged.queryItems ?? []
-        if let fragComponents = URLComponents(string: "?\(fragment)"),
-           let fragItems = fragComponents.queryItems {
-            queryItems.append(contentsOf: fragItems)
-        }
-        merged.fragment = nil
-        merged.queryItems = queryItems
-        return merged.url ?? url
+        AuthCallbackURLParser.moveFragmentToQueryIfNeeded(url)
     }
 
     /// Show a user-facing message if the recovery link is expired/invalid.
     private func handleRecoveryErrorIfNeeded(from url: URL) {
-        let items = combinedQueryItems(from: url)
-        let errorCode = items.first(where: { $0.name == "error_code" })?.value
-        let isRecovery = items.contains(where: { $0.name == "type" && $0.value == "recovery" })
-
-        if isRecovery || errorCode == "otp_expired" {
-            let message = "Email link is invalid or has expired. Please request a new password reset link."
-            AppState.shared.toastMessage = message
-            AppState.shared.showErrorToast = true
+        if AuthCallbackURLParser.shouldShowRecoveryError(from: url) {
+            ToastCenter.shared.show(error: "auth.error.recoveryLinkExpired".localized)
         }
     }
 
@@ -1200,6 +1256,85 @@ class AuthService: AuthServiceProtocol {
             Logger.error("[Auth] Error updating user preferences: \(error)")
             throw AppAuthError.databaseError
         }
+    }
+}
+
+// MARK: - Native Sign in with Apple
+
+/// Esegue il flusso nativo di Sign in with Apple e restituisce la credenziale insieme al
+/// nonce raw da passare a Supabase (nella richiesta ad Apple viaggia il suo SHA-256).
+@MainActor
+final class AppleSignInCoordinator: NSObject, ASAuthorizationControllerDelegate,
+                                    ASAuthorizationControllerPresentationContextProviding {
+    private var continuation: CheckedContinuation<ASAuthorizationAppleIDCredential, Error>?
+
+    func requestCredential() async throws -> (credential: ASAuthorizationAppleIDCredential, nonce: String) {
+        let rawNonce = Self.randomNonceString()
+
+        let request = ASAuthorizationAppleIDProvider().createRequest()
+        request.requestedScopes = [.fullName, .email]
+        request.nonce = Self.sha256(rawNonce)
+
+        let controller = ASAuthorizationController(authorizationRequests: [request])
+        controller.delegate = self
+        controller.presentationContextProvider = self
+
+        let credential = try await withCheckedThrowingContinuation {
+            (continuation: CheckedContinuation<ASAuthorizationAppleIDCredential, Error>) in
+            self.continuation = continuation
+            controller.performRequests()
+        }
+        return (credential, rawNonce)
+    }
+
+    func authorizationController(
+        controller: ASAuthorizationController,
+        didCompleteWithAuthorization authorization: ASAuthorization
+    ) {
+        if let credential = authorization.credential as? ASAuthorizationAppleIDCredential {
+            continuation?.resume(returning: credential)
+        } else {
+            continuation?.resume(throwing: AppAuthError.invalidResponse)
+        }
+        continuation = nil
+    }
+
+    func authorizationController(
+        controller: ASAuthorizationController,
+        didCompleteWithError error: Error
+    ) {
+        if let authError = error as? ASAuthorizationError, authError.code == .canceled {
+            // L'annullamento non è un errore da mostrare: le view lo filtrano come
+            // CancellationError.
+            continuation?.resume(throwing: CancellationError())
+        } else {
+            continuation?.resume(throwing: error)
+        }
+        continuation = nil
+    }
+
+    func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows)
+            .first { $0.isKeyWindow } ?? ASPresentationAnchor()
+    }
+
+    private static func randomNonceString(length: Int = 32) -> String {
+        var bytes = [UInt8](repeating: 0, count: length)
+        let status = SecRandomCopyBytes(kSecRandomDefault, length, &bytes)
+        guard status == errSecSuccess else {
+            // SecRandom non deve fallire; se succede, un nonce da UUID resta imprevedibile.
+            return UUID().uuidString + UUID().uuidString
+        }
+        let charset = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-._")
+        return String(bytes.map { charset[Int($0) % charset.count] })
+    }
+
+    private static func sha256(_ input: String) -> String {
+        SHA256.hash(data: Data(input.utf8))
+            .map { String(format: "%02x", $0) }
+            .joined()
     }
 }
 

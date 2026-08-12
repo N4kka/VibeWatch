@@ -7,8 +7,10 @@ class MovieReactionService: ObservableObject {
     private let db = SQLiteService.shared
     private let supabase = SupabaseService.shared
     
-    // Cache for reaction counts to avoid repeated DB queries
-    private var countsCache: [String: MovieReactionCounts] = [:]
+    // Cache for reaction counts (Fase 3 §1.4): ContentCache unica con TTL + capacità,
+    // al posto del vecchio [String:...] che cresceva senza limite né scadenza (2.1).
+    // TTL 5 min: i conteggi reazioni non sono critici e si rinfrescano dal DB/Supabase.
+    private let countsCache = ContentCache<String, MovieReactionCounts>(ttl: 300, countLimit: 500)
     
     private init() {}
     
@@ -19,7 +21,7 @@ class MovieReactionService: ObservableObject {
         let cacheKey = "\(mediaType.rawValue)_\(mediaId)"
         
         // Return cached if available
-        if let cached = countsCache[cacheKey] {
+        if let cached = await countsCache.value(for: cacheKey) {
             return cached
         }
         
@@ -27,7 +29,7 @@ class MovieReactionService: ObservableObject {
         if supabase.currentUser != nil {
             do {
                 let counts = try await fetchCountsFromSupabase(mediaId: mediaId, mediaType: mediaType)
-                countsCache[cacheKey] = counts
+                await countsCache.insert(counts, for: cacheKey)
                 return counts
             } catch {
                 Logger.warning("[MovieReaction] Failed to fetch from Supabase: \(error)")
@@ -37,7 +39,7 @@ class MovieReactionService: ObservableObject {
         
         // Fetch from local SQLite
         let counts = try await fetchCountsFromSQLite(mediaId: mediaId, mediaType: mediaType)
-        countsCache[cacheKey] = counts
+        await countsCache.insert(counts, for: cacheKey)
         return counts
     }
     
@@ -73,20 +75,13 @@ class MovieReactionService: ObservableObject {
         
         // Clear cache
         let cacheKey = "\(mediaType.rawValue)_\(mediaId)"
-        countsCache.removeValue(forKey: cacheKey)
-        
-        // Sync to Supabase if authenticated
-        if supabase.currentUser != nil {
-            Task {
-                do {
-                    try await syncCountsToSupabase(mediaId: mediaId, mediaType: mediaType)
-                    Logger.debug("[MovieReaction] Synced counts to Supabase")
-                } catch {
-                    Logger.warning("[MovieReaction] Failed to sync counts to Supabase: \(error)")
-                }
-            }
-        }
-        
+        await countsCache.removeValue(for: cacheKey)
+
+        // I conteggi remoti NON vengono più spinti dal client. `movie_reaction_counts` è un
+        // aggregato globale: lasciarlo scrivere a ogni device significherebbe permettere a chiunque
+        // di fissare like_count a piacere su qualsiasi titolo. Ora lo mantiene un trigger su
+        // `movie_reactions`, e la tabella è di sola lettura per i client.
+
         // Analytics
         if let new = newReaction {
             AnalyticsService.shared.logEvent(
@@ -134,8 +129,8 @@ class MovieReactionService: ObservableObject {
         
         // Clear cache to force refresh
         let cacheKey = "\(mediaType.rawValue)_\(mediaId)"
-        countsCache.removeValue(forKey: cacheKey)
-        
+        await countsCache.removeValue(for: cacheKey)
+
         // Analytics
         AnalyticsService.shared.logEventWithContext(
             currentReaction == reaction ? "reaction_removed" : "reaction_added",
@@ -151,9 +146,12 @@ class MovieReactionService: ObservableObject {
     // MARK: - Private Helpers
     
     private func setReaction(mediaId: Int, mediaType: MediaType, userId: String, reaction: ReactionType, previousReaction: ReactionType?) async throws {
-        let reactionId = UUID().uuidString
+        // Lowercased: la colonna id su Postgres è `uuid`, che normalizza in minuscolo. Generarlo
+        // maiuscolo qui farebbe tornare dal pull un id diverso da quello locale, e la riga
+        // verrebbe duplicata invece che riconosciuta.
+        let reactionId = UUID().uuidString.lowercased()
         let now = ISO8601DateFormatter().string(from: Date())
-        
+
         // 1. Insert or update reaction in SQLite
         let upsertQuery = """
             INSERT INTO movie_reactions (id, user_id, media_id, media_type, reaction_type, created_at, updated_at)
@@ -300,7 +298,10 @@ class MovieReactionService: ObservableObject {
         }
 
         let now = ISO8601DateFormatter().string(from: Date())
-        let reactionId = "\(userId)_\(mediaId)_\(mediaType.rawValue)"
+        guard let reactionId = await localReactionId(mediaId: mediaId, mediaType: mediaType, userId: userId) else {
+            Logger.warning("[MovieReaction] No local row to sync for \(mediaType.rawValue) \(mediaId)")
+            return
+        }
 
         struct ReactionRecord: Encodable {
             let id: String
@@ -356,42 +357,25 @@ class MovieReactionService: ObservableObject {
         }
     }
     
-    private func syncCountsToSupabase(mediaId: Int, mediaType: MediaType) async throws {
-        guard let client = supabase.client else { return }
-
-        // Get current local counts
-        let counts = try await fetchCountsFromSQLite(mediaId: mediaId, mediaType: mediaType)
-        let now = ISO8601DateFormatter().string(from: Date())
-
-        struct CountsRecord: Encodable {
-            let media_id: Int
-            let media_type: String
-            let like_count: Int
-            let dislike_count: Int
-            let updated_at: String
-        }
-
-        let record = CountsRecord(
-            media_id: mediaId,
-            media_type: mediaType.rawValue,
-            like_count: counts.likeCount,
-            dislike_count: counts.dislikeCount,
-            updated_at: now
-        )
-
-        do {
-            try await client.from("movie_reaction_counts")
-                .upsert(record)
-                .execute()
-
-            Logger.debug("[MovieReaction] Synced counts to Supabase: \(counts.likeCount) likes, \(counts.dislikeCount) dislikes")
-        } catch {
-            Logger.warning("[MovieReaction] Failed to sync counts: \(error)")
-        }
+    /// L'id della riga locale per questa reazione.
+    ///
+    /// Va letto, non ricostruito: locale e remoto devono avere lo **stesso** id, altrimenti il pull
+    /// riporta indietro una riga che `fetchLocalRecord(id:)` non riconosce e la duplica. Prima qui
+    /// si componeva `"{userId}_{mediaId}_{mediaType}"`, che non coincideva con l'UUID scritto da
+    /// `setReaction` — e non era nemmeno un uuid valido per la colonna su Postgres.
+    private func localReactionId(mediaId: Int, mediaType: MediaType, userId: String) async -> String? {
+        let rows = try? await db.queryRaw("""
+            SELECT id FROM movie_reactions
+            WHERE user_id = ? AND media_id = ? AND media_type = ?
+        """, parameters: [userId, mediaId, mediaType.rawValue])
+        return rows?.first?["id"] as? String
     }
-    
+
     private func queueReactionForSync(mediaId: Int, mediaType: MediaType, userId: String, reaction: ReactionType) async {
-        let reactionId = "\(userId)_\(mediaId)_\(mediaType.rawValue)"
+        guard let reactionId = await localReactionId(mediaId: mediaId, mediaType: mediaType, userId: userId) else {
+            Logger.warning("[MovieReaction] No local row to queue for \(mediaType.rawValue) \(mediaId)")
+            return
+        }
         let now = ISO8601DateFormatter().string(from: Date())
 
         let payload: [String: Any] = [
@@ -421,11 +405,13 @@ class MovieReactionService: ObservableObject {
     // MARK: - Cache Management
 
     func clearCache() {
-        countsCache.removeAll()
+        // Firma sincrona mantenuta (MovieReactionServiceProtocol): l'invalidazione della
+        // cache-attore è best-effort, incapsulata in un Task.
+        Task { await countsCache.removeAll() }
     }
-    
+
     func clearCache(for mediaId: Int, mediaType: MediaType) {
         let cacheKey = "\(mediaType.rawValue)_\(mediaId)"
-        countsCache.removeValue(forKey: cacheKey)
+        Task { await countsCache.removeValue(for: cacheKey) }
     }
 }

@@ -218,31 +218,30 @@ final class ClipCommentService: ObservableObject {
         let parentIdParam: String? = parentId
         let commentId = UUID().uuidString
         
-        try await sqlite.transaction {
-            // Build Any/NSNull inside the @Sendable closure to avoid capturing non-Sendable Any
+        try sqlite.transaction { txn in
             let parentSQLParam: Any = parentIdParam ?? NSNull()
-            
-            let success = sqlite.execute("""
-                INSERT OR REPLACE INTO clip_comments (
+
+            // Plain INSERT, not REPLACE: commentId is a fresh UUID, so this only ever inserts.
+            // It also matters that clip_comments is a CASCADE parent (of its own replies and of
+            // clip_comment_likes) — a REPLACE here was the one site of ARCH-010 whose delete could
+            // have fired those cascades, had the id ever collided.
+            // txn.execute throws on failure, rolling back the whole transaction.
+            try txn.execute("""
+                INSERT INTO clip_comments (
                     id, clip_id, user_id, parent_comment_id, content,
                     like_count, reply_count, created_at, updated_at, synced_at
                 ) VALUES (?, ?, ?, ?, ?, 0, 0, ?, ?, NULL)
             """, parameters: [commentId, clipId, userId, parentSQLParam, content, now, now])
-            
-            if !success {
-                throw NSError(domain: "ClipCommentService", code: 3, userInfo: [
-                    NSLocalizedDescriptionKey: "Failed to post comment"
-                ])
-            }
-            
+
             if let parentId = parentIdParam {
-                let success2 = sqlite.execute("""
-                    UPDATE clip_comments
-                    SET reply_count = reply_count + 1
-                    WHERE id = ?
-                """, parameters: [parentId])
-                
-                if !success2 {
+                // A failed reply-count bump shouldn't abort the posted comment: swallow it as before.
+                do {
+                    try txn.execute("""
+                        UPDATE clip_comments
+                        SET reply_count = reply_count + 1
+                        WHERE id = ?
+                    """, parameters: [parentId])
+                } catch {
                     Logger.warning("[ClipComment] Failed to increment reply count for parent \(parentId)")
                 }
             }
@@ -343,21 +342,21 @@ final class ClipCommentService: ObservableObject {
         let clipId = row["clip_id"] as? String ?? ""
         let now = isoFormatter.string(from: Date())
         
-        try await sqlite.transaction {
-            _ = sqlite.execute("""
+        try sqlite.transaction { txn in
+            try txn.execute("""
                 UPDATE clip_comments
                 SET deleted_at = ?, updated_at = ?, synced_at = NULL
                 WHERE id = ?
             """, parameters: [now, now, commentId])
-            
+
             if let parentId = parentId {
-                let success = sqlite.execute("""
-                    UPDATE clip_comments
-                    SET reply_count = MAX(0, reply_count - 1)
-                    WHERE id = ?
-                """, parameters: [parentId])
-                
-                if !success {
+                do {
+                    try txn.execute("""
+                        UPDATE clip_comments
+                        SET reply_count = MAX(0, reply_count - 1)
+                        WHERE id = ?
+                    """, parameters: [parentId])
+                } catch {
                     Logger.warning("[ClipComment] Failed to decrement reply count for parent \(parentId)")
                 }
             }
@@ -802,8 +801,11 @@ final class ClipCommentService: ObservableObject {
             
             let now = isoFormatter.string(from: Date())
             let success = sqlite.execute("""
-                INSERT OR REPLACE INTO clip_reactions (id, clip_id, user_id, reaction_type, created_at, updated_at, synced_at)
+                INSERT INTO clip_reactions (id, clip_id, user_id, reaction_type, created_at, updated_at, synced_at)
                 VALUES (?, ?, ?, 'like', ?, ?, ?)
+                ON CONFLICT(user_id, clip_id, reaction_type) DO UPDATE SET
+                    updated_at = excluded.updated_at,
+                    synced_at = excluded.synced_at
             """, parameters: [reactionId, clipId, userId, now, now, markSynced ? now : NSNull()])
             
             guard success else {
@@ -844,8 +846,10 @@ final class ClipCommentService: ObservableObject {
         if liked && !wasLiked {
             let now = isoFormatter.string(from: Date())
             let success = sqlite.execute("""
-                INSERT OR REPLACE INTO clip_comment_likes (id, comment_id, user_id, created_at, synced_at)
+                INSERT INTO clip_comment_likes (id, comment_id, user_id, created_at, synced_at)
                 VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(user_id, comment_id) DO UPDATE SET
+                    synced_at = excluded.synced_at
             """, parameters: [likeId, commentId, userId, now, markSynced ? now : NSNull()])
             
             guard success else {
@@ -966,7 +970,7 @@ final class ClipCommentService: ObservableObject {
     }
     
     private func setLocalClipCommentCount(clipId: String, count: Int) async throws {
-        _ = try await sqlite.queryRaw("""
+        try await sqlite.executeWrite("""
             UPDATE clips
             SET comments = ?
             WHERE clip_id = ?

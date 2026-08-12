@@ -1,0 +1,635 @@
+// Pure logic of the TV Time import parser (SPEC v3 §7.1-§7.3, §7.5), separated from I/O so it can
+// be tested without Storage, a ZIP or a database: `deno test supabase/functions/import-parse/`.
+//
+// These rules are a port of `build_oracle.py`, not a reinterpretation of the spec. The oracle is
+// what §12 puts before this block precisely so the pipeline has something to be right *against*:
+// same input, same 21.344 events, same 41 divergences each with a cause. Where a rule looks
+// arbitrary it is because a real export made it so — the comments say which.
+
+/** A CSV row, already split into columns. */
+export type Row = Record<string, string | undefined>
+
+export type EventKind = 'watch' | 'rewatch'
+export type Origin = 'v1' | 'v2'
+export type Precision = 'exact' | 'inferred'
+
+export interface WatchEvent {
+  tvdb_series_id: string
+  tvdb_episode_id: string
+  season_number: number | null
+  episode_number: number | null
+  watched_at: string
+  runtime_seconds: number | null
+  /** §1.3: derived from the season, never from the export's own flag. */
+  is_special: boolean
+  /** The export's flag, kept verbatim for `external_ref`. */
+  tvtime_is_special_raw: boolean
+  /** False when TV Time had lost the episode's numbering — see `hasKnownNumbering`. */
+  numbering_known: boolean
+  series_name: string | null
+  event_kind: EventKind
+  bulk_type: string | null
+  watched_at_precision: Precision
+  origin: Origin
+  rewatch_index?: number
+  dedup_key?: string | null
+}
+
+export function asInt(value: string | undefined | null): number | null {
+  if (value === undefined || value === null || value.trim() === '') return null
+  const n = Number(value)
+  return Number.isInteger(n) ? n : null
+}
+
+/**
+ * §1.3 `DECISO`: season 0 is the space of specials, and there is no second criterion.
+ *
+ * Twin of `public.is_special_episode(integer)`, which is what `recompute_tv_show_state` actually
+ * filters on. The export's own `is_special` column is **not** consulted: TV Time only populates it
+ * on recent records, so on the real export 128 events disagree with their own season in both
+ * directions. Reading it would put a value in `watch_events.is_special` that contradicts the
+ * function computing the progress right next to it.
+ */
+export function isSpecialEpisode(seasonNumber: number | null): boolean {
+  return (seasonNumber ?? 0) === 0
+}
+
+/**
+ * `episode_number = 0` on a season >= 1 means "TV Time no longer knows the number", not "episode
+ * zero". Those rows carry `ep_no: 0`, `runtime: 0` and a 2023 `updated_at`: they were orphaned by
+ * an episode reorganised on TVDB. 195 events over 12 series on the real export, 149 of them
+ * Digimon alone.
+ *
+ * They must not be folded onto a `(season, 0)` pair — that turned 16 distinct episodes of Mario
+ * into one. Their identity is `tvdb_episode_id`, which the `resolving` phase looks up on TMDB to
+ * recover the real numbering (§6); whatever stays unresolved belongs in the §7.4 report.
+ */
+export function hasKnownNumbering(
+  seasonNumber: number | null,
+  episodeNumber: number | null,
+): boolean {
+  if (seasonNumber === null || episodeNumber === null) return false
+  if (isSpecialEpisode(seasonNumber)) return true // season 0 is out of progress regardless
+  return episodeNumber > 0
+}
+
+// --------------------------------------------------------------------------- eventi
+
+/** `watch-episode` and `rewatch-episode` from the current export format. */
+export function parseV2Events(rows: Row[]): WatchEvent[] {
+  const events: WatchEvent[] = []
+
+  for (const r of rows) {
+    const key = r.key ?? ''
+    let kind: EventKind
+    if (key.startsWith('watch-episode')) kind = 'watch'
+    else if (key.startsWith('rewatch-episode')) kind = 'rewatch'
+    else continue
+
+    const bulk = (r.bulk_type ?? '').trim()
+    const season = asInt(r.season_number)
+    const episode = asInt(r.episode_number)
+
+    events.push({
+      tvdb_series_id: r.s_id ?? '',
+      tvdb_episode_id: r.ep_id ?? '',
+      season_number: season,
+      episode_number: episode,
+      watched_at: r.created_at ?? '',
+      runtime_seconds: asInt(r.runtime),
+      is_special: isSpecialEpisode(season),
+      tvtime_is_special_raw: r.is_special === 'true',
+      numbering_known: hasKnownNumbering(season, episode),
+      series_name: r.series_name ?? null,
+      event_kind: kind,
+      bulk_type: bulk === '' ? null : bulk,
+      // §3.2: un episodio marcato in blocco porta il timestamp del "segna stagione", non quello
+      // della visione. Va importato, ma non è un dato temporale attendibile.
+      watched_at_precision: bulk === '' ? 'exact' : 'inferred',
+      origin: 'v2',
+    })
+  }
+
+  return events
+}
+
+/**
+ * Legacy format: same events, different schema. Only what v2 is missing survives the dedup.
+ *
+ * `unusable` counts rows dropped because they carry no ids: v1 contains `rewatch` rows without
+ * series_id or episode_id — counters, not events. They cannot be imported, and they belong in the
+ * final report (§7.4) rather than being made to disappear quietly.
+ */
+export function parseV1Events(rows: Row[]): { events: WatchEvent[]; unusable: number } {
+  const events: WatchEvent[] = []
+  let unusable = 0
+
+  for (const r of rows) {
+    if (r.entity_type !== 'episode') continue
+    const kind = r.type
+    if (kind !== 'watch' && kind !== 'rewatch') continue
+
+    if (!r.series_id || !r.episode_id) {
+      unusable++
+      continue
+    }
+
+    const bulk = (r.bulk_type ?? '').trim()
+    const season = asInt(r.season_number)
+    const episode = asInt(r.episode_number)
+
+    events.push({
+      tvdb_series_id: r.series_id,
+      tvdb_episode_id: r.episode_id,
+      season_number: season,
+      episode_number: episode,
+      watched_at: r.created_at ?? '',
+      runtime_seconds: asInt(r.runtime),
+      // v1 non ha nemmeno la colonna `is_special`, quindi qui la regola di §1.3 era già quella
+      // giusta. Ora è la stessa funzione per entrambi i formati.
+      is_special: isSpecialEpisode(season),
+      tvtime_is_special_raw: false,
+      numbering_known: hasKnownNumbering(season, episode),
+      series_name: r.series_name ?? null,
+      event_kind: kind,
+      bulk_type: bulk === '' ? null : bulk,
+      watched_at_precision: bulk === '' ? 'exact' : 'inferred',
+      origin: 'v1',
+    })
+  }
+
+  return { events, unusable }
+}
+
+/**
+ * §7.3 `DECISO`: v2 wins.
+ *
+ * From v1 keep only the events whose `tvdb_episode_id` does not appear in v2 **at all**. Do not
+ * merge on `(season, episode)`: the two files number differently — One-Punch Man is 36 episodes in
+ * one and 44 in the other — so merging by number invents episodes that were never watched.
+ */
+export function dedupV1IntoV2(
+  v2Events: WatchEvent[],
+  v1Events: WatchEvent[],
+): { kept: WatchEvent[]; dropped: number } {
+  const v2EpisodeIds = new Set(
+    v2Events.map((e) => e.tvdb_episode_id).filter((id) => id !== ''),
+  )
+
+  const kept: WatchEvent[] = []
+  let dropped = 0
+
+  for (const e of v1Events) {
+    if (e.tvdb_episode_id !== '' && v2EpisodeIds.has(e.tvdb_episode_id)) {
+      dropped++
+      continue
+    }
+    kept.push(e)
+  }
+
+  return { kept, dropped }
+}
+
+/**
+ * §3.2: `rewatch_index` 0 is the first viewing, then 1, 2, … chronologically on the same episode.
+ *
+ * `dedup_key = 'tvtime:{tvdb_episode_id}:{rewatch_index}'` is what makes the import idempotent:
+ * re-importing the same ZIP does not duplicate anything (criterio di accettazione 2). The sort has
+ * to be total, not just by timestamp — two events on the same episode can share a timestamp, and
+ * an unstable order would hand the same episode a different `dedup_key` on a re-run, which is
+ * exactly the duplication the key exists to prevent. Tie-break: v2 before v1, then watch before
+ * rewatch, mirroring the oracle.
+ */
+export function assignRewatchIndex(events: WatchEvent[]): WatchEvent[] {
+  const byEpisode = new Map<string, WatchEvent[]>()
+
+  for (const e of events) {
+    const bucket = `${e.tvdb_series_id}\u0000${e.tvdb_episode_id}`
+    const group = byEpisode.get(bucket)
+    if (group) group.push(e)
+    else byEpisode.set(bucket, [e])
+  }
+
+  for (const group of byEpisode.values()) {
+    group.sort((a, b) => {
+      const byDate = (a.watched_at || '').localeCompare(b.watched_at || '')
+      if (byDate !== 0) return byDate
+      const byOrigin = Number(a.origin === 'v1') - Number(b.origin === 'v1')
+      if (byOrigin !== 0) return byOrigin
+      return Number(a.event_kind === 'rewatch') - Number(b.event_kind === 'rewatch')
+    })
+
+    group.forEach((event, index) => {
+      event.rewatch_index = index
+      event.dedup_key = event.tvdb_episode_id
+        ? `tvtime:${event.tvdb_episode_id}:${index}`
+        : null
+    })
+  }
+
+  return events
+}
+
+// ----------------------------------------------------------------------- stati serie
+
+export type SeriesUserStatus = 'active' | 'for_later' | 'archived'
+
+export interface SeriesStatus {
+  tvdb_series_id: string
+  series_name: string | null
+  user_status: SeriesUserStatus
+  /** Vero se l'export contiene almeno un evento di visione per la serie. */
+  has_events: boolean
+}
+
+/**
+ * §7.1: lo stato per-serie che TV Time aveva già — `is_for_later`/`is_archived` sulle righe
+ * `user-series` di v2, più i due CSV dedicati (`user_show_special_status.csv` per il "watch
+ * later", `followed_tv_show.csv` per l'archivio). Le tre sorgenti si UNISCONO, non si sceglie
+ * la più recente: sul fixture reale l'archivio ne conosce 57 fra `user-series` e 51 nel CSV, e
+ * nessuna delle due liste contiene l'altra. È la stessa lezione di `seenShowIds` ∪ lista `seen`
+ * della migrazione legacy: due sorgenti parziali si sommano, scegliere è perdere.
+ *
+ * Le regole di emissione, ognuna col suo perché:
+ *
+ *   - **`archived` vince su `for_later`.** Una serie con entrambi i flag messa in "Da vedere
+ *     più avanti" tornerebbe a galla nel Tracking: archiviare è l'atto che dice "non
+ *     ripresentarmela", e disfarlo in import sarebbe una scelta fatta al posto dell'utente.
+ *   - **`active` si emette SOLO per le serie seguite senza eventi.** Per quelle con eventi la
+ *     riga di `tv_show_state` nasce già dal ricalcolo, e riscriverla `active` da qui
+ *     sovrascriverebbe uno stato che l'utente può aver già cambiato in app. Senza eventi invece
+ *     nessun ricalcolo la creerà mai: senza questa emissione le serie "seguite ma mai iniziate"
+ *     — la watchlist vera di chi arriva da TV Time — sparirebbero in silenzio (37 sull'export
+ *     reale, `state_without_events` nell'oracolo).
+ *   - Una serie non seguita, senza flag e senza eventi non produce niente: non c'è stato da
+ *     importare.
+ */
+export function parseSeriesStatuses(
+  v2Rows: Row[],
+  specialStatusRows: Row[],
+  followedRows: Row[],
+  eventSeriesIds: Set<string>,
+): SeriesStatus[] {
+  interface Flags {
+    name: string | null
+    forLater: boolean
+    archived: boolean
+    followed: boolean
+  }
+  const bySeries = new Map<string, Flags>()
+
+  const flags = (id: string, name: string | null | undefined): Flags => {
+    let f = bySeries.get(id)
+    if (!f) {
+      f = { name: null, forLater: false, archived: false, followed: false }
+      bySeries.set(id, f)
+    }
+    if (name && !f.name) f.name = name
+    return f
+  }
+
+  for (const r of v2Rows) {
+    if (!(r.key ?? '').startsWith('user-series')) continue
+    const id = r.s_id ?? ''
+    if (id === '') continue
+    const f = flags(id, r.series_name)
+    if (r.is_for_later === 'true') f.forLater = true
+    if (r.is_archived === 'true') f.archived = true
+    if (r.is_followed === 'true') f.followed = true
+  }
+
+  for (const r of specialStatusRows) {
+    const id = r.tv_show_id ?? ''
+    if (id === '') continue
+    if (r.status === 'for_later') flags(id, r.tv_show_name).forLater = true
+  }
+
+  for (const r of followedRows) {
+    const id = r.tv_show_id ?? ''
+    if (id === '') continue
+    const f = flags(id, r.tv_show_name)
+    if (r.archived === '1') f.archived = true
+    else if (r.active === '1') f.followed = true
+  }
+
+  const out: SeriesStatus[] = []
+  for (const [id, f] of bySeries) {
+    const hasEvents = eventSeriesIds.has(id)
+    let status: SeriesUserStatus | null = null
+    if (f.archived) status = 'archived'
+    else if (f.forLater) status = 'for_later'
+    else if (f.followed && !hasEvents) status = 'active'
+    if (status === null) continue
+    out.push({
+      tvdb_series_id: id,
+      series_name: f.name,
+      user_status: status,
+      has_events: hasEvents,
+    })
+  }
+
+  // Ordine totale e riproducibile: `row_index` in staging deve restare lo stesso a ogni
+  // invocazione della fase 2, che rianalizza lo ZIP da capo (vedi il commento in testa a
+  // `index.ts`). L'ordine di una Map è d'inserimento, cioè l'ordine dei CSV: stabile in
+  // pratica, ma l'ordinamento esplicito non chiede di fidarsi.
+  out.sort((a, b) => {
+    const na = Number(a.tvdb_series_id)
+    const nb = Number(b.tvdb_series_id)
+    if (Number.isFinite(na) && Number.isFinite(nb) && na !== nb) return na - nb
+    return a.tvdb_series_id.localeCompare(b.tvdb_series_id)
+  })
+
+  return out
+}
+
+// ----------------------------------------------------------------------------- voti
+
+export type RatingKind = 'star' | 'reaction' | 'undecodable'
+
+export interface ParsedRating {
+  tvdb_episode_id: string | null
+  raw_value: number | null
+  kind: RatingKind
+  /** `user_ratings` uses 1-10 for half stars, so a 0-5 star becomes `raw * 2`. */
+  star_rating: number | null
+  tvtime_star_raw: number | null
+  reaction_id: number | null
+  series_name: string | null
+  season_number: number | null
+  episode_number: number | null
+  source_file: string
+}
+
+/** Highest value still read as a star rating (§7.5). */
+export const STAR_MAX = 5
+/** Lowest value still read as a reaction id (§7.5). */
+export const REACTION_MIN = 13
+
+/**
+ * §7.5 `DECISO`. `vote_key = '{episode_id}-{user_id}-{X}'`, and `X` carries two different things.
+ *
+ * `X <= 5` is a 0-5 star rating; `X >= 13` is a reaction id, kept raw because TV Time's reaction
+ * lookup table was server-side and is switched off — turning it into an emoji here would be
+ * inventing data. `6..12` was never observed in a real export, so it is reported as undecodable
+ * rather than guessed: §7.4 would rather declare a gap than paper over it.
+ */
+export function parseRatings(rows: Row[], sourceFile: string): ParsedRating[] {
+  return rows.map((r) => {
+    const parts = (r.vote_key ?? '').split('-')
+    const raw = parts.length === 3 ? asInt(parts[parts.length - 1]) : null
+
+    let kind: RatingKind
+    let starRating: number | null = null
+    let reactionId: number | null = null
+
+    if (raw === null) {
+      kind = 'undecodable'
+    } else if (raw <= STAR_MAX) {
+      kind = 'star'
+      starRating = raw * 2
+    } else if (raw >= REACTION_MIN) {
+      kind = 'reaction'
+      reactionId = raw
+    } else {
+      kind = 'undecodable'
+    }
+
+    return {
+      tvdb_episode_id: r.episode_id ?? null,
+      raw_value: raw,
+      kind,
+      star_rating: starRating,
+      tvtime_star_raw: kind === 'star' ? raw : null,
+      reaction_id: reactionId,
+      series_name: r.series_name ?? r.movie_name ?? null,
+      season_number: asInt(r.season_number),
+      episode_number: asInt(r.episode_number),
+      source_file: sourceFile,
+    }
+  })
+}
+
+// ----------------------------------------------------------------------------- favorites
+
+/** Un candidato Favorite dall'export (§7.1, `lists-prod-lists.csv`). */
+export interface ParsedFavorite {
+  tvdb_series_id: string
+  /** Quando l'utente l'ha resa preferita su TV Time: è l'ordine con cui i (max 4) slot
+   *  liberi si riempiono — i più vecchi sono i preferiti di lunga data. */
+  favorited_at: string | null
+  position: number
+}
+
+export interface ParsedFavorites {
+  series: ParsedFavorite[]
+  /** I favorite-movies dell'export: contati e dichiarati, non importati — i film di TV Time
+   *  non hanno un id TVDB risolvibile (solo uuid interni e nomi), vedi il doc di stato. */
+  movies_unsupported: number
+}
+
+/**
+ * §7.1: `lists-prod-lists.csv`, righe `s_key = 'favorite-series' | 'favorite-movies'`.
+ *
+ * Il campo `objects` non è JSON ma la serializzazione Go di una slice di mappe:
+ * `[map[created_at:1.57515197e+09 id:300472 type:series] map[...] ...]` — stessa famiglia del
+ * `most_recent_ep_watched` di `user-series`. Si estraggono i blocchi `map[...]` e dentro le
+ * coppie `chiave:valore` separate da spazi: qui i valori non contengono spazi (epoch, interi,
+ * `series`/`movie`), quindi lo split è affidabile; un blocco che non torna si scarta invece di
+ * inventare un id.
+ */
+export function parseFavorites(rows: Row[]): ParsedFavorites {
+  const series: ParsedFavorite[] = []
+  let movies = 0
+
+  for (const r of rows) {
+    const kind = r.s_key ?? ''
+    if (kind !== 'favorite-series' && kind !== 'favorite-movies') continue
+    const objects = r.objects ?? ''
+
+    for (const blocco of objects.matchAll(/map\[([^\]]*)\]/g)) {
+      const campi = new Map<string, string>()
+      for (const coppia of blocco[1].split(' ')) {
+        const sep = coppia.indexOf(':')
+        if (sep > 0) campi.set(coppia.slice(0, sep), coppia.slice(sep + 1))
+      }
+      const tipo = campi.get('type')
+      if (tipo === 'movie' || kind === 'favorite-movies') {
+        movies++
+        continue
+      }
+      if (tipo !== 'series') continue
+
+      const id = asInt(campi.get('id') ?? null)
+      if (id === null || id <= 0) continue
+
+      // `created_at` è un epoch in secondi serializzato come float Go (`1.57515197e+09`).
+      const epoch = Number(campi.get('created_at'))
+      const favoritedAt = Number.isFinite(epoch) && epoch > 0
+        ? new Date(epoch * 1000).toISOString()
+        : null
+
+      series.push({ tvdb_series_id: String(id), favorited_at: favoritedAt, position: 0 })
+    }
+  }
+
+  // Ordine totale e riproducibile (stessa ragione di parseSeriesStatuses): per data di
+  // preferenza, poi per id. `position` fissa l'ordine per la fase di scrittura.
+  series.sort((a, b) => {
+    const ta = a.favorited_at ?? '9999'
+    const tb = b.favorited_at ?? '9999'
+    if (ta !== tb) return ta < tb ? -1 : 1
+    return Number(a.tvdb_series_id) - Number(b.tvdb_series_id)
+  })
+  series.forEach((f, i) => f.position = i)
+
+  return { series, movies_unsupported: movies }
+}
+
+// --------------------------------------------------------------------------- user.csv
+
+export interface UserProfile {
+  language: string | null
+  timezone: string | null
+}
+
+/**
+ * §7.1: `user.csv` — the ONLY two columns worth reading are `language` and `timezone`.
+ *
+ * The same row also carries a bcrypt password hash, Facebook/Twitter OAuth tokens and the
+ * account's email. None of that must ever leave this function: the return type is the contract.
+ *
+ * Strict-or-null, like every other rule here: a value that does not look like what it claims to
+ * be (`language` a BCP-47-ish two-letter code, `timezone` an IANA zone with at least one `/`)
+ * becomes null and gets *declared* in the totals, instead of flowing into
+ * `user_notification_preferences` where a garbage zone would silently break the quiet hours.
+ */
+export function parseUserProfile(rows: Row[]): UserProfile {
+  const r = rows[0]
+  if (!r) return { language: null, timezone: null }
+
+  const lang = (r.language ?? '').trim().toLowerCase()
+  const language = /^[a-z]{2}(-[a-z]{2})?$/.test(lang) ? lang : null
+
+  const tz = (r.timezone ?? '').trim()
+  const timezone = tz.length <= 64 && /^[A-Za-z_]+(\/[A-Za-z0-9_+\-]+)+$/.test(tz) ? tz : null
+
+  return { language, timezone }
+}
+
+// --------------------------------------------------------------------------- film (v1)
+
+export type MovieKind = 'seen' | 'watchlist'
+
+export interface ParsedMovie {
+  /** L'uuid interno di TV Time: non risolve niente da solo, ma è l'identità stabile del film
+   *  dentro l'export — è ciò che rende idempotente il re-import (`dedup_key`). */
+  tvtime_movie_uuid: string
+  movie_kind: MovieKind
+  title: string
+  /** Dall'anno della release_date; null quando TV Time ha perso la data (0001-01-01). */
+  release_year: number | null
+  /** seen: `created_at` della riga watch (quando l'hai visto); watchlist: quando l'hai aggiunto. */
+  happened_at: string
+  runtime_seconds: number | null
+  /** Come per gli episodi: 0 = prima visione, poi in ordine cronologico. Solo per i seen. */
+  rewatch_index: number
+}
+
+/**
+ * §7.1: i film dell'export — solo v1 li contiene (`entity_type = 'movie'`, 17 righe sull'export
+ * vero). Non hanno id TVDB: solo uuid interni e NOMI (anche giapponesi), quindi la risoluzione
+ * (fase 3) è per titolo, exact-match+anno o niente — deciso dall'utente il 2026-08-02, insieme
+ * alla destinazione: `watch_events` media_type movie con le date vere + lista legacy "visti".
+ *
+ * Le righe dello stesso film si UNISCONO per uuid prima di decidere: la riga `watch` di El Camino
+ * ha `release_date = 0001-01-01` (persa), ma la sua riga `follow` ha la data vera — leggere solo
+ * la watch butterebbe l'anno che serve alla risoluzione. `rewatch_count` è un contatore senza
+ * date: non se ne può ricostruire un evento, e si ignora (le visioni vere sono le righe watch).
+ *
+ * watchlist = le righe `towatch` il cui film NON ha righe watch: un film visto non torna in
+ * watchlist per il fatto di esserci passato.
+ */
+export function parseMovies(rows: Row[]): ParsedMovie[] {
+  interface MovieInfo {
+    title: string
+    releaseYear: number | null
+    runtime: number | null
+    watches: string[]   // created_at delle righe watch
+    towatchAt: string | null
+  }
+  const byUuid = new Map<string, MovieInfo>()
+
+  for (const r of rows) {
+    if (r.entity_type !== 'movie') continue
+    const uuid = (r.uuid ?? '').trim()
+    if (uuid === '') continue
+
+    let info = byUuid.get(uuid)
+    if (!info) {
+      info = { title: '', releaseYear: null, runtime: null, watches: [], towatchAt: null }
+      byUuid.set(uuid, info)
+    }
+
+    const name = (r.movie_name ?? '').trim()
+    if (info.title === '' && name !== '') info.title = name
+
+    // `0001-01-01` è "data persa", non l'anno 1: qualunque anno prima del cinema si scarta.
+    const yearText = (r.release_date ?? '').slice(0, 4)
+    const year = asInt(yearText)
+    if (info.releaseYear === null && year !== null && year >= 1888) info.releaseYear = year
+
+    const runtime = asInt(r.runtime)
+    if (info.runtime === null && runtime !== null && runtime > 0) info.runtime = runtime
+
+    if (r.type === 'watch' && (r.created_at ?? '') !== '') info.watches.push(r.created_at!)
+    if (r.type === 'towatch' && info.towatchAt === null) info.towatchAt = r.created_at ?? ''
+  }
+
+  const movies: ParsedMovie[] = []
+  for (const [uuid, info] of byUuid) {
+    // Senza titolo non c'è niente da cercare su TMDB e niente da mostrare nel report: si scarta
+    // qui, dove il vuoto è visibile, invece di produrre una riga irrisolvibile senza nome.
+    if (info.title === '') continue
+
+    if (info.watches.length > 0) {
+      // Ordine cronologico per il rewatch_index, come per gli episodi: stessa data → un ordine
+      // comunque totale (l'indice dell'array dopo il sort è stabile perché il sort è stabile).
+      const sorted = [...info.watches].sort((a, b) => a.localeCompare(b))
+      sorted.forEach((watchedAt, index) => {
+        movies.push({
+          tvtime_movie_uuid: uuid,
+          movie_kind: 'seen',
+          title: info.title,
+          release_year: info.releaseYear,
+          happened_at: watchedAt,
+          runtime_seconds: info.runtime,
+          rewatch_index: index,
+        })
+      })
+    } else if (info.towatchAt !== null) {
+      movies.push({
+        tvtime_movie_uuid: uuid,
+        movie_kind: 'watchlist',
+        title: info.title,
+        release_year: info.releaseYear,
+        happened_at: info.towatchAt,
+        runtime_seconds: info.runtime,
+        rewatch_index: 0,
+      })
+    }
+    // Solo follow/rewatch_count: seguito ma mai visto né in watchlist — non c'è una
+    // destinazione, e non si inventa.
+  }
+
+  // Ordine totale e riproducibile (stessa ragione degli stati e dei favorites): per data,
+  // poi per uuid — il `row_index` dello staging deve essere lo stesso a ogni ripresa.
+  movies.sort((a, b) => {
+    if (a.happened_at !== b.happened_at) return a.happened_at < b.happened_at ? -1 : 1
+    if (a.tvtime_movie_uuid !== b.tvtime_movie_uuid) {
+      return a.tvtime_movie_uuid < b.tvtime_movie_uuid ? -1 : 1
+    }
+    return a.rewatch_index - b.rewatch_index
+  })
+
+  return movies
+}

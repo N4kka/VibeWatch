@@ -1,585 +1,1284 @@
 // Tab Bar
-"tab.clips" = "Klipy";
-"tab.discovery" = "Odkrywaj";
-"tab.lists" = "Listy";
-"tab.profile" = "Profil";
+"tab.clips" = "Clips";
+"tab.discovery" = "Ontdekken";
+"tab.lists" = "Lijsten";
+"tab.profile" = "Profiel";
 "tab.ai" = "AI";
 
 // Onboarding
-"onboarding.page1.title" = "Mądrzejsze wybory z AI";
-"onboarding.page1.description" = "Rekomendacje filmów i seriali AI dopasowane do Twojego nastroju, żebyś zawsze wiedział(-a), co obejrzeć następne.";
-"onboarding.page2.title" = "Uporządkuj swoją watchlistę";
-"onboarding.page2.description" = "Twórz watchlisty i kolekcje według nastroju, aby uporządkować każdy odkryty film i serial.";
-"onboarding.page3.title" = "Odkrywaj zwiastuny i klipy";
-"onboarding.page3.description" = "Oglądaj zwiastuny i klipy, a potem zapisuj najlepsze odkrycia na listach do obejrzenia później.";
-"onboarding.page4.title" = "Gotowy(-a), by zacząć?";
-"onboarding.page4.description" = "Utwórz konto, aby synchronizować watchlisty i preferencje na wszystkich urządzeniach.";
-"onboarding.page4.createAccount" = "Utwórz konto";
-"onboarding.page4.skip" = "Pomiń na razie";
+"onboarding.page1.title" = "Slimmere keuzes met AI";
+"onboarding.page1.description" = "AI-aanbevelingen voor films en series, afgestemd op jouw vibe, zodat je altijd weet wat je hierna kijkt.";
+"onboarding.page2.title" = "Orden je watchlist";
+"onboarding.page2.description" = "Maak watchlists en collecties op stemming om elke film en serie die je ontdekt te ordenen.";
+"onboarding.page3.title" = "Ontdek trailers en clips";
+"onboarding.page3.description" = "Bekijk trailers en clips en bewaar je beste vondsten in je lijsten om later te streamen.";
+"onboarding.page4.title" = "Klaar om te beginnen?";
+"onboarding.page4.description" = "Maak een account om je watchlists en voorkeuren op al je apparaten te synchroniseren.";
+"onboarding.page4.createAccount" = "Account maken";
+"onboarding.page4.skip" = "Voorlopig overslaan";
 
 // Discovery
 "discovery.vibeWatch" = "VibeWatch";
-"discovery.forYou" = "Dla Ciebie";
-"discovery.basedOnMood" = "Wybrane specjalnie dla Ciebie";
-"discovery.trending" = "Na topie";
-"discovery.popular" = "Popularne";
-"discovery.topRated" = "Najwyżej oceniane";
-"discovery.upcoming" = "Wkrótce";
-"discovery.tvShows" = "Seriale";
+"discovery.forYou" = "Voor jou";
+"discovery.basedOnMood" = "Speciaal voor jou gekozen";
+"discovery.trending" = "Nu populair";
+"discovery.popular" = "Populair";
+"discovery.topRated" = "Best beoordeeld";
+"discovery.upcoming" = "Binnenkort";
+"discovery.tvShows" = "Series";
 
 // Browse
-"browse.title" = "Przeglądaj";
-"browse.movies" = "Filmy";
-"browse.tvShows" = "Seriale";
-"browse.emptyMessage" = "Dotknij przycisku filtra, aby przeglądać treści";
+"browse.title" = "Bladeren";
+"browse.movies" = "Films";
+"browse.tvShows" = "Series";
+"browse.emptyMessage" = "Tik op de filterknop om door content te bladeren";
 
 // Lists
-"list.all" = "Wszystkie";
-"list.movies" = "Filmy";
-"list.tvShows" = "TV";
-"lists.myLists" = "Moje listy";
-"lists.empty" = "Brak list";
-"lists.emptyDescription" = "Utwórz pierwszą watchlistę, aby uporządkować odkryte filmy i seriale";
-"lists.noItems" = "Brak elementów";
-"lists.createList" = "Utwórz listę";
-"lists.editList" = "Edytuj listę";
-"lists.deleteList" = "Usuń listę";
-"lists.deleteConfirmation" = "Na pewno chcesz usunąć %@? Wszystkie elementy na tej liście zostaną usunięte.";
-"lists.listName" = "Nazwa listy";
-"lists.listNamePlaceholder" = "Nowa lista";
-"lists.description" = "Opis (opcjonalnie)";
-"lists.descriptionPlaceholder" = "Dodaj opis... (opcjonalnie)";
-"lists.listDescriptionPlaceholder" = "Dodaj opis...";
-"lists.searchPlaceholder" = "Szukaj na tej liście";
-"lists.watchlist" = "Do obejrzenia";
-"lists.seen" = "Obejrzane";
-"lists.liked" = "Lubię";
-"lists.disliked" = "Nie lubię";
+"list.all" = "Alles";
+"list.movies" = "Films";
+"list.tvShows" = "Series";
+"lists.myLists" = "Mijn lijsten";
+"lists.collections" = "Collecties";
+"lists.empty" = "Nog geen lijsten";
+"lists.emptyDescription" = "Maak je eerste watchlist om de films en series die je ontdekt te ordenen";
+"lists.noItems" = "Nog niets";
+"lists.createList" = "Lijst maken";
+"lists.editList" = "Lijst bewerken";
+"lists.deleteList" = "Lijst verwijderen";
+"lists.deleteConfirmation" = "Weet je zeker dat je %@ wilt verwijderen? Dit verwijdert alles wat in deze lijst staat.";
+"lists.listName" = "Naam van de lijst";
+"lists.listNamePlaceholder" = "Nieuwe lijst";
+"lists.description" = "Beschrijving (optioneel)";
+"lists.descriptionPlaceholder" = "Voeg een beschrijving toe… (optioneel)";
+"lists.listDescriptionPlaceholder" = "Voeg een beschrijving toe…";
+"lists.searchPlaceholder" = "Zoek in deze lijst";
+"lists.watchlist" = "Watchlist";
+"lists.seen" = "Gezien";
+"lists.liked" = "Leuk";
+"lists.disliked" = "Niet leuk";
 "lists.limitInfo" = "{count}/{limit}";
-"lists.softLimitWarning" = "Lista \"{name}\" ma już {limit} elementów. Rozważ utworzenie nowej listy, aby zachować porządek.";
-"lists.error.authRequired" = "Musisz być zalogowany(-a), aby tworzyć własne listy.";
-"lists.error.defaultImmutable" = "Ta lista nie może zostać zmieniona";
-"lists.error.invalidName" = "Wpisz prawidłową nazwę listy";
-"lists.error.itemAlreadyInList" = "Element jest już na tej liście";
-"lists.error.listNotFound" = "Nie znaleziono listy";
-"lists.error.maxItemsReached" = "Osiągnięto limit {limit} elementów dla tej listy";
-"lists.error.maxListsReached" = "Osiągnięto limit {limit} własnych list";
+"lists.softLimitWarning" = "\"{name}\" bevat al {limit} items. Begin eventueel een nieuwe lijst om het overzichtelijk te houden.";
+"lists.error.authRequired" = "Je moet ingelogd zijn om eigen lijsten te maken.";
+"lists.error.defaultImmutable" = "Deze lijst kan niet worden gewijzigd";
+"lists.error.invalidName" = "Voer een geldige naam voor de lijst in";
+"lists.error.itemAlreadyInList" = "Staat al in deze lijst";
+"lists.error.listNotFound" = "Lijst niet gevonden";
+"lists.error.maxItemsReached" = "Maximum van {limit} items bereikt voor deze lijst";
+"lists.error.maxListsReached" = "Maximum van {limit} eigen lijsten bereikt";
 
 // Movie Detail
-"movieDetail.information" = "Informacje";
-"movieDetail.cast" = "Obsada";
-"movieDetail.director" = "Reżyser";
-"movieDetail.country" = "Kraj";
-"movieDetail.genres" = "Gatunki";
-"movieDetail.runtime" = "Czas trwania";
-"movieDetail.rating" = "Ocena";
-"movieDetail.ratings" = "ocen";
-"movieDetail.trailer" = "Zwiastun";
-"movieDetail.watchNow" = "Oglądaj teraz";
-"movieDetail.save" = "Zapisz na watchliście";
-"movieDetail.seen" = "Obejrzane";
-"movieDetail.similar" = "Osoby, którym podobało się to, lubiły także";
-"movieDetail.whyForMe" = "Dlaczego dla mnie?";
-"movieDetail.whyForMe.basedOnGenres" = "Na podstawie Twoich 3 ulubionych gatunków";
-"movieDetail.goodFitTitle" = "Dlaczego %@ pasuje do mnie?";
-"movieDetail.goodFitSubtitle" = "Szybka, spersonalizowana ocena na podstawie Twojego gustu.";
+"movieDetail.information" = "Informatie";
+"movieDetail.cast" = "Cast";
+"movieDetail.director" = "Regisseur";
+"movieDetail.country" = "Land";
+"movieDetail.genres" = "Genres";
+"movieDetail.runtime" = "Speelduur";
+"movieDetail.rating" = "Beoordeling";
+"movieDetail.ratings" = "beoordelingen";
+"movieDetail.trailer" = "Trailer";
+"movieDetail.watchNow" = "Nu kijken";
+"movieDetail.save" = "Bewaar in watchlist";
+"movieDetail.seen" = "Gezien";
+"movieDetail.similar" = "Wie dit leuk vond, vond ook leuk";
+"movieDetail.whyForMe" = "Waarom voor mij?";
+"movieDetail.whyForMe.basedOnGenres" = "Op basis van je 3 favoriete genres";
+"movieDetail.goodFitTitle" = "Waarom past %@ goed bij mij?";
+"movieDetail.goodFitSubtitle" = "Een korte, persoonlijke inschatting op basis van je smaak.";
 
 // Filters
-"filter.all" = "Wszystkie";
-"filter.movies" = "Filmy";
-"filter.tvSeries" = "Seriale";
+"filter.all" = "Alles";
+"filter.movies" = "Films";
+"filter.tvSeries" = "Series";
 
 // Sort
-"sort.sortBy" = "Sortuj według";
-"sort.title" = "Tytuł";
-"sort.dateAdded" = "Data dodania";
-"sort.popularityAsc" = "Popularność ↑";
-"sort.popularityDesc" = "Popularność ↓";
-"sort.rating" = "Ocena";
-"sort.ratingAsc" = "Ocena ↑";
-"sort.ratingDesc" = "Ocena ↓";
-"sort.releaseDate" = "Data premiery";
-"sort.releaseDateAsc" = "Data premiery ↑";
-"sort.releaseDateDesc" = "Data premiery ↓";
+"sort.sortBy" = "Sorteren op";
+"sort.title" = "Titel";
+"sort.dateAdded" = "Datum toegevoegd";
+"sort.popularityAsc" = "Populariteit ↑";
+"sort.popularityDesc" = "Populariteit ↓";
+"sort.rating" = "Beoordeling";
+"sort.ratingAsc" = "Beoordeling ↑";
+"sort.ratingDesc" = "Beoordeling ↓";
+"sort.releaseDate" = "Releasedatum";
+"sort.releaseDateAsc" = "Releasedatum ↑";
+"sort.releaseDateDesc" = "Releasedatum ↓";
 
 // Advanced Filters
-"filters.title" = "Filtry";
-"filters.apply" = "Zastosuj";
-"filters.reset" = "Resetuj";
-"filters.sortBy" = "Sortuj według";
-"filters.anyCountry" = "Dowolny kraj";
-"filters.country" = "Kraj";
-"filters.searchCountry" = "Szukaj kraju";
-"filters.minimumRating" = "Minimalna ocena";
-"filters.ratingAny" = "Dowolna";
-"filters.ratingGood" = "7.0+";
-"filters.ratingExcellent" = "8.0+";
-"filters.ratingMasterpiece" = "9.0+";
-"filters.runtime" = "Czas trwania";
-"filters.runtimeAny" = "Dowolny";
+"filters.title" = "Filters";
+"filters.apply" = "Toepassen";
+"filters.reset" = "Wissen";
+"filters.sortBy" = "Sorteren op";
+"filters.anyCountry" = "Elk land";
+"filters.country" = "Land";
+"filters.searchCountry" = "Zoek land";
+"filters.minimumRating" = "Minimale beoordeling";
+"filters.ratingAny" = "Alle";
+"filters.ratingGood" = "7,0+";
+"filters.ratingExcellent" = "8,0+";
+"filters.ratingMasterpiece" = "9,0+";
+"filters.runtime" = "Speelduur";
+"filters.runtimeAny" = "Alle";
 "filters.runtimeShort" = "< 90 min";
-"filters.runtimeMedium" = "90–120 min";
+"filters.runtimeMedium" = "90-120 min";
 "filters.runtimeLong" = "> 120 min";
 
 // Clips
-"clips.title" = "Klipy";
-"clips.loadingClips" = "Ładowanie klipów...";
-"clips.noClipsAvailable" = "Brak dostępnych klipów";
-"clips.noClipsDescription" = "Wróć później po ekscytujące sceny z ulubionych filmów i seriali";
-"clips.addToList" = "Dodaj do listy";
-"clips.createFirstList" = "Utwórz pierwszą watchlistę, aby zapisywać wybory";
-"clips.createNewList" = "Utwórz nową listę";
-"clips.feed.craftingTitle" = "Tworzymy Twój idealny feed";
-"clips.feed.craftingSubtitle" = "Ręcznie wybieramy najlepsze klipy specjalnie dla Ciebie ✨";
-"clips.comment" = "Komentarz";
-"clips.comments" = "Komentarze";
-"clips.noComments" = "Brak komentarzy";
-"clips.beFirstToComment" = "Bądź pierwszym(-ą), który(-a) skomentuje";
-"clips.reply" = "Odpowiedz";
-"clips.replies" = "odpowiedzi";
-"clips.replyingTo" = "Odpowiedź dla";
-"clips.comments.loading" = "Ładowanie komentarzy...";
-"clips.comments.replying" = "Odpowiadanie...";
-"clips.comments.deleteConfirmation" = "Na pewno chcesz usunąć ten komentarz? Tej operacji nie można cofnąć.";
-"clips.hideReplies" = "Ukryj";
-"clips.viewReplies" = "Pokaż";
+"clips.title" = "Clips";
+"clips.loadingClips" = "Clips laden…";
+"clips.noClipsAvailable" = "Geen clips beschikbaar";
+"clips.noClipsDescription" = "Kom later terug voor scènes uit je favoriete films en series";
+"clips.addToList" = "Aan lijst toevoegen";
+"clips.card.addToWatchlist" = "+ Watchlist";
+"clips.card.goToDetail" = "Bekijk details";
+"clips.createFirstList" = "Maak je eerste watchlist om vondsten te bewaren";
+"clips.createNewList" = "Nieuwe lijst maken";
+"clips.feed.craftingTitle" = "Je perfecte feed wordt samengesteld";
+"clips.feed.craftingSubtitle" = "We kiezen de beste clips speciaal voor jou ✨";
+"clips.comment" = "Reactie";
+"clips.comments" = "Reacties";
+"clips.noComments" = "Nog geen reacties";
+"clips.beFirstToComment" = "Wees de eerste die reageert";
+"clips.reply" = "Antwoorden";
+"clips.replies" = "antwoorden";
+"clips.replyingTo" = "Antwoord aan";
+"clips.comments.loading" = "Reacties laden…";
+"clips.comments.replying" = "Antwoorden…";
+"clips.comments.deleteConfirmation" = "Weet je zeker dat je deze reactie wilt verwijderen? Dit kan niet ongedaan worden gemaakt.";
+"clips.hideReplies" = "Verbergen";
+"clips.viewReplies" = "Bekijken";
 
 // Clips Search
-"clips.search.placeholder" = "Szukaj klipów, postaci lub cytatów";
-"clips.search.emptyTitle" = "Znajdź klipy, które lubisz";
-"clips.search.emptySubtitle" = "Szukaj dowolnego filmu, serialu, postaci lub cytatu, aby zobaczyć pasujące klipy i powiązane propozycje.";
-"clips.search.showcaseTitle" = "Odkryj klipy";
-"clips.search.showcaseSubtitle" = "Szukaj powyżej, aby znaleźć klipy z ulubionych filmów i seriali";
-"clips.search.matched" = "Dopasowane";
-"clips.search.recommended" = "Polecane";
-"clips.search.quotes" = "Cytaty";
-"clips.search.characters" = "Postacie";
-"clips.search.scenes" = "Sceny";
-"clips.search.popular" = "Popularne";
+"clips.search.placeholder" = "Zoek clips, personages of quotes";
+"clips.search.emptyTitle" = "Vind clips die je leuk vindt";
+"clips.search.emptySubtitle" = "Zoek op een film, serie, personage of quote om bijpassende clips en tips te zien.";
+"clips.search.showcaseTitle" = "Clips ontdekken";
+"clips.search.showcaseSubtitle" = "Zoek hierboven naar clips uit je favoriete films en series";
+"clips.search.matched" = "Gevonden";
+"clips.search.recommended" = "Aanbevolen";
+"clips.search.quotes" = "Quotes";
+"clips.search.characters" = "Personages";
+"clips.search.scenes" = "Scènes";
+"clips.search.popular" = "Populair";
 
 // Search
-"search.latestVisited" = "Ostatnio odwiedzane";
-"search.trendingSearches" = "Popularne wyszukiwania";
-"search.placeholder" = "Znajdź gdzie obejrzeć film lub serial...";
-"search.results" = "Wyniki";
-"search.noResultsFound" = "Nie znaleziono wyników";
+"search.latestVisited" = "Laatst bekeken";
+"search.trendingSearches" = "Populaire zoekopdrachten";
+"search.placeholder" = "Vind waar je een film of serie kunt kijken…";
+"search.results" = "Resultaten";
+"search.noResultsFound" = "Geen resultaten gevonden";
 
 // Profile
-"profile.signInToVibeWatch" = "Zaloguj się do VibeWatch";
-"profile.signIn" = "Zaloguj się";
-"profile.signInDescription" = "Twórz listy, zapisuj klipy i personalizuj swoje doświadczenie";
-"profile.createAccount" = "Utwórz konto";
-"profile.userNamePlaceholder" = "E-mail lub nazwa użytkownika";
-"profile.passwordPlaceholder" = "Hasło";
-"profile.done" = "Gotowe";
-"profile.cancel" = "Anuluj";
-"profile.settings" = "Ustawienia";
-"profile.streamingServices" = "Serwisy streamingowe";
-"profile.notifications" = "Powiadomienia";
-"profile.helpSupport" = "Pomoc i wsparcie";
-"profile.logout" = "Wyloguj się";
-"profile.changePassword" = "Zmień hasło";
+"profile.signInToVibeWatch" = "Inloggen bij VibeWatch";
+"profile.signIn" = "Inloggen";
+"profile.signInDescription" = "Maak lijsten, bewaar clips en maak het jouw eigen";
+"profile.createAccount" = "Account maken";
+"profile.userNamePlaceholder" = "E-mail of gebruikersnaam";
+"profile.passwordPlaceholder" = "Wachtwoord";
+"profile.done" = "Klaar";
+"profile.cancel" = "Annuleren";
+"profile.settings" = "Instellingen";
+"profile.streamingServices" = "Streamingdiensten";
+"profile.notifications" = "Meldingen";
+"profile.helpSupport" = "Help en ondersteuning";
+"profile.logout" = "Uitloggen";
+"profile.changePassword" = "Wachtwoord wijzigen";
 
 // Settings
-"settings.title" = "Ustawienia";
-"settings.comingSoon" = "Wkrótce więcej ustawień...";
-"settings.language" = "Język";
-"settings.country" = "Kraj";
-"settings.selectLanguage" = "Wybierz język";
-"settings.selectCountry" = "Wybierz kraj";
+"settings.title" = "Instellingen";
+"settings.comingSoon" = "Meer instellingen volgen binnenkort…";
+"settings.language" = "Taal";
+"settings.country" = "Land";
+"settings.selectLanguage" = "Kies een taal";
+"settings.selectCountry" = "Kies een land";
 
 // Cache Management
-"settings.cacheManagement.title" = "Zarządzanie pamięcią podręczną";
-"settings.cacheManagement.cacheSize" = "Rozmiar pamięci podręcznej";
-"settings.cacheManagement.cacheSizeTitle" = "Wybierz rozmiar pamięci podręcznej";
-"settings.cacheManagement.cacheSizeDescription" = "Wybierz ile miejsca przeznaczyć na pamięć podręczną obrazów. Większa pamięć pozwala na więcej treści offline.";
-"settings.cacheManagement.prefetchOption" = "Pobieranie obrazów";
-"settings.cacheManagement.prefetchTitle" = "Opcje pobierania obrazów";
-"settings.cacheManagement.prefetchDescription" = "Określ kiedy obrazy są pobierane do przeglądania offline. Tylko Wi-Fi oszczędza dane komórkowe.";
-"settings.cacheManagement.prefetchNeverWarning" = "Ostrzeżenie: Funkcjonalność offline będzie ograniczona";
-"settings.cacheManagement.clearCache" = "Wyczyść pamięć podręczną obrazów";
-"settings.cacheManagement.clearCacheWarning" = "Usuwa wszystkie zapisane obrazy";
-"settings.cacheManagement.clearCacheConfirmTitle" = "Wyczyścić pamięć podręczną?";
-"settings.cacheManagement.clearCacheConfirmMessage" = "To usunie wszystkie zapisane obrazy i zwolni miejsce. Będziesz potrzebować połączenia z internetem, aby ponownie zobaczyć obrazy.";
-"settings.cacheManagement.clearCacheConfirm" = "Wyczyść pamięć podręczną";
+"settings.cacheManagement.title" = "Cachebeheer";
+"settings.cacheManagement.cacheSize" = "Cachegrootte";
+"settings.cacheManagement.cacheSizeTitle" = "Kies de cachegrootte";
+"settings.cacheManagement.cacheSizeDescription" = "Kies hoeveel opslag je wilt gebruiken om afbeeldingen te bewaren. Een grotere cache betekent meer offline content.";
+"settings.cacheManagement.prefetchOption" = "Afbeeldingen vooraf laden";
+"settings.cacheManagement.prefetchTitle" = "Opties voor vooraf laden";
+"settings.cacheManagement.prefetchDescription" = "Bepaal wanneer afbeeldingen worden gedownload voor offline gebruik. Alleen wifi scheelt mobiele data.";
+"settings.cacheManagement.prefetchNeverWarning" = "Let op: offline werkt dan maar beperkt";
+"settings.cacheManagement.clearCache" = "Afbeeldingscache wissen";
+"settings.cacheManagement.clearCacheWarning" = "Wist alle bewaarde afbeeldingen";
+"settings.cacheManagement.clearCacheConfirmTitle" = "Cache wissen?";
+"settings.cacheManagement.clearCacheConfirmMessage" = "Hiermee verwijder je alle bewaarde afbeeldingen en maak je opslagruimte vrij. Je hebt weer internet nodig om afbeeldingen te zien tot ze opnieuw zijn bewaard.";
+"settings.cacheManagement.clearCacheConfirm" = "Cache wissen";
 
 // Platforms
-"platform.title" = "Platformy streamingowe";
-"platform.selectionCount" = "Wybrano %d z %d";
-"platforms.title" = "Platformy";
-"platforms.streaming" = "Streaming";
-"platforms.rent" = "Wypożycz";
-"platforms.buy" = "Kup";
-"platforms.cinema" = "Kino";
+"platform.title" = "Streamingplatforms";
+"platform.selectionCount" = "%d van %d geselecteerd";
+"platforms.streaming" = "Streamen";
+"platforms.rent" = "Huren";
+"platforms.buy" = "Kopen";
+"platforms.cinema" = "Bioscoop";
 "platforms.justwatch" = "JustWatch";
 
 // Notifications
-"notifications.disableButton" = "Wyłącz powiadomienia";
-"notifications.disableConfirmation" = "Wyłączyć powiadomienia?";
-"notifications.disableMessage" = "Nie będziesz otrzymywać powiadomień o nowych premierach, zmianach cen i spersonalizowanych rekomendacjach.";
-"notifications.enableInSettings" = "Włącz powiadomienia w Ustawieniach, aby otrzymywać informacje o nowych premierach, zmianach cen i innych aktualizacjach.";
-"notifications.openSettings" = "Otwórz Ustawienia";
-"notifications.permissionRequired" = "Wymagane jest zezwolenie na powiadomienia";
+"notifications.disableButton" = "Meldingen uitschakelen";
+"notifications.disableConfirmation" = "Meldingen uitschakelen?";
+"notifications.disableMessage" = "Je krijgt dan geen meldingen meer over nieuwe releases, prijswijzigingen en persoonlijke aanbevelingen.";
+"notifications.enableInSettings" = "Zet meldingen aan in Instellingen om updates te krijgen over nieuwe releases, prijswijzigingen en meer.";
+"notifications.openSettings" = "Instellingen openen";
+"notifications.permissionRequired" = "Toestemming voor meldingen nodig";
 
 // Auth
-"auth.welcomeBack" = "Witaj ponownie";
-"auth.joinVibeWatch" = "Dołącz do VibeWatch i zacznij odkrywać nowe tytuły";
-"auth.signIn" = "Zaloguj się";
-"auth.signUp" = "Zarejestruj się";
-"auth.signInContinue" = "Zaloguj się, aby kontynuować";
-"auth.alreadyHaveAccount" = "Masz już konto?";
-"auth.dontHaveAccount" = "Nie masz konta?";
+"auth.welcomeBack" = "Welkom terug";
+"auth.joinVibeWatch" = "Word lid van VibeWatch en begin met ontdekken";
+"auth.signIn" = "Inloggen";
+"auth.signUp" = "Registreren";
+"auth.signInContinue" = "Log in om verder te gaan";
+"auth.alreadyHaveAccount" = "Heb je al een account?";
+"auth.dontHaveAccount" = "Nog geen account?";
 "auth.emailPlaceholder" = "E-mail";
-"auth.usernamePlaceholder" = "Nazwa użytkownika";
-"auth.passwordPlaceholder" = "Hasło";
-"auth.confirmPasswordPlaceholder" = "Potwierdź hasło";
-"auth.createAccount" = "Utwórz konto";
-"auth.forgotPassword" = "Zapomniałeś(-a) hasła?";
-"auth.invalidEmail" = "Nieprawidłowy e-mail";
-"auth.invalidPassword" = "Nieprawidłowe hasło";
-"auth.passwordsDontMatch" = "Hasła nie są takie same";
-"auth.error.notConfigured" = "Usługa uwierzytelniania nie jest skonfigurowana. Dodaj swoje dane Supabase.";
-"auth.error.invalidResponse" = "Nieprawidłowa odpowiedź z serwera.";
-"auth.error.userNotFound" = "Użytkownik nie został znaleziony.";
-"auth.error.invalidCredentials" = "Nieprawidłowy e-mail lub hasło.";
-"auth.error.networkError" = "Błąd sieci. Sprawdź połączenie.";
-"auth.error.databaseError" = "Błąd bazy danych przy zapisie profilu. Spróbuj ponownie.";
-"auth.error.signUpFailed" = "Rejestracja nie powiodła się. Spróbuj ponownie.";
-"auth.error.passwordResetFailed" = "Nie udało się wysłać e-maila resetującego. Spróbuj ponownie.";
-"auth.error.passwordUpdateFailed" = "Nie udało się zaktualizować hasła. Spróbuj ponownie.";
-"auth.error.accountDeletionFailed" = "Nie udało się usunąć konta. Spróbuj ponownie.";
+"auth.usernamePlaceholder" = "Gebruikersnaam";
+"auth.passwordPlaceholder" = "Wachtwoord";
+"auth.confirmPasswordPlaceholder" = "Bevestig wachtwoord";
+"auth.createAccount" = "Account maken";
+"auth.forgotPassword" = "Wachtwoord vergeten?";
+"auth.invalidEmail" = "Ongeldig e-mailadres";
+"auth.invalidPassword" = "Ongeldig wachtwoord";
+"auth.passwordsDontMatch" = "De wachtwoorden komen niet overeen";
+"auth.error.notConfigured" = "De authenticatiedienst is niet geconfigureerd. Voeg je Supabase-gegevens toe.";
+"auth.error.invalidResponse" = "Ongeldig antwoord van de server.";
+"auth.error.userNotFound" = "Gebruiker niet gevonden.";
+"auth.error.invalidCredentials" = "Ongeldig e-mailadres of wachtwoord.";
+"auth.error.tooManyAttempts" = "Te veel pogingen. Probeer het later opnieuw.";
+"auth.error.networkError" = "Netwerkfout. Controleer je verbinding.";
+"auth.error.databaseError" = "Databasefout bij het opslaan van je profiel. Probeer het opnieuw.";
+"auth.error.signUpFailed" = "Registreren is mislukt. Probeer het opnieuw.";
+"auth.error.passwordResetFailed" = "We konden de herstelmail niet versturen. Probeer het opnieuw.";
+"auth.error.passwordUpdateFailed" = "Het wachtwoord bijwerken is mislukt. Probeer het opnieuw.";
+"auth.error.accountDeletionFailed" = "We konden je account niet verwijderen. Probeer het opnieuw.";
 
 // Auth Gate
-"auth.gate.accountRequired" = "Wymagane jest konto";
-"auth.gate.authRequiredAI" = "Aby korzystać z czatu AI, potrzebujesz konta.";
-"auth.gate.createTitle" = "Utwórz darmowe konto VibeWatch";
-"auth.gate.description" = "Potrzebujesz konta, aby tworzyć własne listy i synchronizować je między urządzeniami.";
-"auth.gate.createFree" = "Utwórz darmowe konto";
-"auth.gate.haveAccount" = "Mam już konto";
-"auth.gate.signupFree" = "Rejestracja jest darmowa i trwa mniej niż minutę.";
-"auth.gate.limitMessage" = "Wykorzystałeś(-aś) dziś 25 darmowych klipów. Zarejestruj się, aby synchronizować postępy i od razu odblokować jutrzejsze klipy.";
-"auth.gate.benefit.saveClips" = "Zapisuj ulubione klipy";
-"auth.gate.benefit.syncDevices" = "Synchronizuj na wszystkich urządzeniach";
-"auth.gate.benefit.personalizedRecs" = "Otrzymuj spersonalizowane rekomendacje";
+"auth.gate.accountRequired" = "Account vereist";
+"auth.gate.authRequiredAI" = "Je hebt een account nodig om AI-chat te gebruiken.";
+"auth.gate.createTitle" = "Maak je gratis VibeWatch-account";
+"auth.gate.description" = "Je hebt een account nodig om eigen lijsten te maken en ze op al je apparaten te synchroniseren.";
+"auth.gate.createFree" = "Gratis account maken";
+"auth.gate.haveAccount" = "Ik heb al een account";
+"auth.gate.signupFree" = "Registreren is gratis en kost minder dan een minuut.";
+"auth.gate.limitMessage" = "Je hebt de 25 gratis clips van vandaag bekeken. Registreer je om je voortgang te bewaren en morgen meteen verder te kijken.";
+"auth.gate.benefit.saveClips" = "Bewaar je favoriete clips";
+"auth.gate.benefit.syncDevices" = "Synchroniseer op al je apparaten";
+"auth.gate.benefit.personalizedRecs" = "Krijg persoonlijke aanbevelingen";
 
 // Password Reset
-"auth.resetPassword" = "Zresetuj hasło";
-"auth.resetPasswordDescription" = "Wpisz e-mail, a wyślemy Ci link do resetu.";
-"auth.sendResetLink" = "Wyślij link resetujący";
-"auth.resetEmailSent" = "E-mail z resetem wysłany! Sprawdź skrzynkę.";
-"auth.setNewPasswordDescription" = "Utwórz nowe hasło i potwierdź je, aby kontynuować.";
-"auth.updatePassword" = "Zaktualizuj hasło";
-"auth.passwordResetSuccess" = "Hasło zostało zaktualizowane.";
+"auth.resetPassword" = "Wachtwoord herstellen";
+"auth.resetPasswordDescription" = "Vul je e-mailadres in, dan sturen we je een herstellink.";
+"auth.sendResetLink" = "Herstellink sturen";
+"auth.resetEmailSent" = "Herstelmail verstuurd! Kijk in je inbox.";
+"auth.setNewPasswordDescription" = "Maak een nieuw wachtwoord en bevestig het om verder te gaan.";
+"auth.updatePassword" = "Wachtwoord bijwerken";
+"auth.passwordResetSuccess" = "Wachtwoord bijgewerkt.";
 
 // Password Reset Confirmations
-"common.confirm" = "Potwierdź";
-"profile.logoutConfirmationTitle" = "Na pewno chcesz się wylogować?";
-"auth.confirmChangePasswordTitle" = "Zmień hasło";
-"auth.confirmChangePasswordMessage" = "Czy chcesz teraz zaktualizować hasło?";
+"common.confirm" = "Bevestigen";
+"profile.logoutConfirmationTitle" = "Weet je zeker dat je wilt uitloggen?";
+"auth.confirmChangePasswordTitle" = "Wachtwoord wijzigen";
+"auth.confirmChangePasswordMessage" = "Wil je je wachtwoord nu bijwerken?";
 
 // AI
 "ai.title" = "Vibe AI";
-"ai.subtitle" = "Powiedz mi, jaki masz nastrój—AI znajdzie film lub serial do obejrzenia.";
-"ai.describeVibe" = "Opisz swój nastrój";
-"ai.placeholder" = "Np. \"Sci-fi ze zwrotem akcji\"";
-"ai.editMessage" = "Edytuj wiadomość";
-"ai.thinking" = "Myślę...";
-"ai.resultsTitle" = "Oto, co znalazłem:";
-"ai.saveRegenerate" = "Zapisz i wygeneruj ponownie";
-"ai.requestsUsage" = "%d/%d dziennych zapytań";
-"ai.softLimitMessage" = "Zbliżasz się do dziennego limitu AI. Zachowaj krótkie, konkretne zapytania.";
-"ai.hardLimitMessage" = "Osiągnąłeś(-aś) dzienny limit AI. Wróć jutro.";
-"ai.proRequired" = "Czat AI jest dostępny tylko dla użytkowników Pro.";
-"ai.suggestion.chips1" = "💖 Przytulny romans, wybrany przez AI";
-"ai.suggestion.chips2" = "💥 Komedia akcji z lat 80., AI poleca";
-"ai.suggestion.chips3" = "🕵️‍♂️ Niedoceniany thriller ze zwrotem akcji";
-"ai.suggestion.chips4" = "🤖 AI: co powinienem(-am) obejrzeć?";
-"ai.tryAsking" = "Spróbuj zapytać...";
+"ai.subtitle" = "Vertel me je vibe — AI vindt de film of serie voor hierna.";
+"ai.describeVibe" = "Beschrijf je vibe";
+"ai.placeholder" = "Bijv. 'Sci-fi met een plotwending'";
+"ai.editMessage" = "Bericht bewerken";
+"ai.thinking" = "Aan het denken…";
+"ai.resultsTitle" = "Dit heb ik gevonden:";
+"ai.saveRegenerate" = "Bewaren en opnieuw";
+"ai.requestsUsage" = "%d/%d verzoeken vandaag";
+"ai.softLimitMessage" = "Je nadert de AI-limiet van vandaag. Houd je vragen kort.";
+"ai.hardLimitMessage" = "Je hebt de AI-limiet van vandaag bereikt. Kom morgen terug.";
+"ai.proRequired" = "AI-chat is alleen beschikbaar voor Pro-leden.";
+"ai.suggestion.chips1" = "💖 Knusse romance, door AI gekozen";
+"ai.suggestion.chips2" = "💥 Actiekomedie uit de jaren 80, AI raadt aan";
+"ai.suggestion.chips3" = "🕵️‍♂️ Ondergewaardeerde thriller met een twist";
+"ai.suggestion.chips4" = "🤖 AI: wat kijk ik hierna?";
+"ai.tryAsking" = "Vraag bijvoorbeeld…";
 
 // AI Paywall
-"ai.paywall.title" = "Odblokuj swojego filmowego kumpla AI";
-"ai.paywall.description" = "Zdobądź mądrzejsze rekomendacje AI filmów i seriali, aby znaleźć idealne pozycje.";
-"ai.paywall.benefit.unlimited" = "Nielimitowane rekomendacje AI";
-"ai.paywall.benefit.smarter" = "Mądrzejsze odkrywanie treści";
-"ai.paywall.benefit.personalized" = "Spersonalizowane listy do obejrzenia";
-"ai.paywall.unlockAI" = "Odblokuj czat AI";
-"ai.paywall.goBack" = "Wróć";
+"ai.paywall.title" = "Ontgrendel je AI-filmmaatje";
+"ai.paywall.description" = "Krijg slimmere AI-aanbevelingen voor films en series en vind precies wat je zoekt.";
+"ai.paywall.benefit.unlimited" = "Onbeperkte AI-aanbevelingen";
+"ai.paywall.benefit.smarter" = "Slimmer content ontdekken";
+"ai.paywall.benefit.personalized" = "Persoonlijke watchlists";
+"ai.paywall.unlockAI" = "AI-chat ontgrendelen";
+"ai.paywall.goBack" = "Terug";
 
 // Paywall
-"paywall.bestValue" = "NAJLEPSZA OFERTA";
-"paywall.ensurePro" = "Zabezpiecz swój plan Pro!";
-"paywall.proDescription" = "Pro odblokowuje nielimitowane klipy, filmowego kumpla AI i synchronizowane listy.";
-"paywall.cta.selectPlan" = "Wybierz plan";
-"paywall.cta.continue" = "Kontynuuj";
-"paywall.cta.startTrial" = "Rozpocznij %@ darmowy okres próbny";
-"paywall.cta.skip" = "Pomiń na razie";
-"paywall.plan.monthly" = "Miesięczny";
-"paywall.plan.annual" = "Roczny";
-"paywall.discount.annual" = "33% TANIEJ";
-"paywall.price.perMonth" = "%@/mies.";
-"paywall.trial.badge" = "%@ za darmo";
-"paywall.restore" = "Przywróć zakupy";
-"paywall.upgrade" = "Przejdź na Pro";
-"paywall.unlockUnlimited" = "Odblokuj nielimitowane klipy";
-"paywall.daily.title" = "Wróć jutro";
-"paywall.daily.limitReached" = "Osiągnąłeś(-aś) dzisiejszy limit";
-"paywall.daily.limitDescription" = "Darmowi użytkownicy mogą oglądać 25 klipów dziennie. Przejdź na Pro, aby zyskać nielimitowane klipy i funkcje premium.";
-"paywall.daily.resetIn" = "Reset za";
-"paywall.daily.nextReset" = "Następny reset za";
-"paywall.feature.unlimitedClips" = "▶️ Nielimitowane klipy i zwiastuny";
-"paywall.feature.noAds" = "❌ Bez reklam przerywających klipy";
-"paywall.feature.aiAssistant" = "🤖 Rekomendacje AI dla filmów i seriali";
-"paywall.feature.advancedFilters" = "🔎 Zaawansowane filtry do szybszych wyborów";
-"paywall.feature.lists" = "📋 Do 100 synchronizowanych list";
-"paywall.feature.offlineMode" = "📵 Tryb offline dla zapisanych wyborów";
-"paywall.feature.releaseAlerts" = "🔔 Powiadomienia gdy ulubione są dostępne";
+"paywall.bestValue" = "BESTE KEUZE";
+"paywall.ensurePro" = "Zorg voor je Pro-abonnement!";
+"paywall.proDescription" = "Pro geeft je onbeperkte clips, een AI-filmmaatje en gesynchroniseerde watchlists.";
+"paywall.cta.selectPlan" = "Kies een abonnement";
+"paywall.cta.continue" = "Doorgaan";
+"paywall.cta.startTrial" = "Start %@ gratis proefperiode";
+"paywall.cta.skip" = "Voorlopig overslaan";
+"paywall.plan.monthly" = "Maandelijks";
+"paywall.plan.annual" = "Jaarlijks";
+"paywall.discount.annual" = "33% KORTING";
+"paywall.price.perMonth" = "%@/mnd";
+"paywall.trial.badge" = "%@ gratis";
+"paywall.restore" = "Aankopen herstellen";
+"paywall.upgrade" = "Upgraden naar Pro";
+"paywall.unlockUnlimited" = "Ontgrendel onbeperkte clips";
+"paywall.daily.title" = "Kom morgen terug";
+"paywall.daily.limitReached" = "Je hebt de limiet van vandaag bereikt";
+"paywall.daily.limitDescription" = "Gratis leden kunnen 25 clips per dag kijken. Upgrade naar Pro voor onbeperkte clips en premiumfuncties.";
+"paywall.daily.resetIn" = "Weer beschikbaar over";
+"paywall.daily.nextReset" = "Volgende reset over";
+"paywall.feature.unlimitedClips" = "▶️ Onbeperkt clips en trailers";
+"paywall.feature.noAds" = "❌ Geen reclame tussen de clips";
+"paywall.feature.aiAssistant" = "🤖 AI-aanbevelingen voor films en series";
+"paywall.feature.advancedFilters" = "🔎 Geavanceerde filters om sneller te kiezen";
+"paywall.feature.lists" = "📋 Tot 100 gesynchroniseerde watchlists";
+"paywall.feature.offlineMode" = "📵 Offlinemodus voor bewaarde titels";
+"paywall.feature.releaseAlerts" = "🔔 Meldingen als je favorieten te streamen zijn";
 
 // Common
 "common.ok" = "OK";
-"common.cancel" = "Anuluj";
-"common.done" = "Gotowe";
-"common.dismiss" = "Zamknij";
-"common.edit" = "Edytuj";
-"common.save" = "Zapisz";
-"common.delete" = "Usuń";
-"common.search" = "Szukaj";
-"common.retry" = "Spróbuj ponownie";
-"common.tryAgain" = "Spróbuj ponownie";
-"common.loading" = "Ładowanie...";
-"common.uploading" = "Przesyłanie...";
-"common.loadMore" = "Wczytaj więcej";
-"common.next" = "Następny";
-"common.item" = "element";
-"common.items" = "elementów";
-"common.year" = "Rok";
-"common.or" = "LUB";
-"common.reply" = "Odpowiedz";
-"common.liked" = "polubił(a)";
-"common.offline" = "Jesteś w trybie offline. Wyświetlamy zapisane treści.";
+"common.cancel" = "Annuleren";
+"common.done" = "Klaar";
+"common.dismiss" = "Sluiten";
+"common.edit" = "Bewerken";
+"common.save" = "Bewaren";
+"common.delete" = "Verwijderen";
+"common.search" = "Zoeken";
+"common.retry" = "Opnieuw";
+"common.tryAgain" = "Probeer opnieuw";
+"common.loading" = "Laden…";
+"common.uploading" = "Uploaden…";
+"common.loadMore" = "Meer laden";
+"common.next" = "Volgende";
+"common.item" = "item";
+"common.items" = "items";
+"common.year" = "Jaar";
+"common.or" = "OF";
+"common.reply" = "Antwoorden";
+"common.liked" = "leuk gevonden";
+"common.offline" = "Je bent offline. Je ziet bewaarde content.";
 "common.pro" = "PRO";
-"common.privacy" = "Prywatność";
-"common.terms" = "Warunki";
-"common.error" = "Błąd";
-"common.pleaseTryAgain" = "Spróbuj ponownie.";
+"common.privacy" = "Privacy";
+"common.terms" = "Voorwaarden";
+"common.error" = "Fout";
+"common.pleaseTryAgain" = "Probeer het opnieuw.";
 
 // Misc
-"misc.language" = "Polski";
-"misc.of" = "z";
-"misc.selected" = "wybrano";
-"misc.somethingWrong" = "Coś jest nie tak?";
-"misc.letUsKnow" = "Daj nam znać";
+"misc.language" = "Nederlands";
+"misc.of" = "van";
+"misc.selected" = "geselecteerd";
+"misc.somethingWrong" = "Klopt er iets niet?";
+"misc.letUsKnow" = "Laat het ons weten";
 
 // Redeem Code
-"settings.redeemCode" = "Wykorzystaj kod";
-"settings.redeemCode.description" = "Wpisz kod promocyjny lub ofertowy";
-"paywall.haveCode" = "Masz kod promocyjny?";
+"settings.redeemCode" = "Code inwisselen";
+"settings.redeemCode.description" = "Voer een promo- of aanbiedingscode in";
+"paywall.haveCode" = "Heb je een promocode?";
+"paywall.price.perYear" = "%@/jaar";
+"paywall.cancelAnytime" = "Altijd opzegbaar";
 
 // Help & Support - About Us
-"profile.sendFeedback" = "Wyślij opinię";
-"profile.aboutUs" = "O nas";
-"profile.aboutUsDetail" = "Dowiedz się więcej o zespole VibeWatch i naszej misji ulepszania odkrywania streamingu.";
-"profile.tmdbAttribution" = "Ten produkt korzysta z API TMDb, ale nie jest zatwierdzony ani certyfikowany przez TMDb.";
-"profile.legalNotes" = "Informacje prawne";
-"profile.faqs" = "FAQ";
+"profile.sendFeedback" = "Feedback sturen";
+"profile.share" = "Profiel delen";
+"profile.share.comingSoon" = "Binnenkort beschikbaar";
+"profile.importFrom" = "Importeren uit";
+"import.title" = "Importeren";
+"import.source.tvtime" = "TV Time (.zip)";
+"import.source.tvtime.subtitle" = "Je TV Time-gegevensexport";
+"import.source.footer" = "Vraag je gegevensexport aan bij TV Time (AVG) en kies hier het .zip-bestand. Apps die hetzelfde formaat exporteren werken ook.";
+"import.state.uploading" = "Uploaden…";
+"import.state.uploadingHint" = "Houd de app open terwijl het bestand wordt geüpload.";
+"import.canClose" = "Je geschiedenis wordt geïmporteerd. Je kunt de app sluiten – we sturen een melding zodra het klaar is.";
+"import.phase.queued" = "In de wachtrij, begint zo…";
+"import.phase.parsing" = "Je geschiedenis wordt gelezen…";
+"import.phase.resolving" = "Series en afleveringen worden gekoppeld…";
+"import.phase.writing" = "Je afleveringen worden opgeslagen…";
+"import.phase.finishing" = "Afronden…";
+"import.report.episodes" = "Geïmporteerde afleveringen";
+"import.report.shows" = "Series";
+"import.report.period" = "Van %@ tot %@";
+"import.report.ratingsDeferred" = "%d beoordelingen gevonden – nog niet geïmporteerd.";
+"import.report.ratingsApplied" = "%d beoordelingen geïmporteerd als sterren.";
+"import.report.ratingsUnresolved" = "%d beoordelingen konden niet worden gekoppeld.";
+"import.report.favoritesApplied" = "%d favorieten geïmporteerd in vrije plekken.";
+"import.report.favoriteMoviesUnsupported" = "%d filmfavorieten kunnen niet uit TV Time worden geïmporteerd.";
+"import.report.moviesApplied" = "%d films geïmporteerd met hun kijkdata.";
+"import.report.moviesWatchlistApplied" = "%d films toegevoegd aan je watchlist.";
+"import.report.moviesUnresolved" = "%d films niet herkend (titel en jaar komen niet overeen op TMDB).";
+"import.resolve.button" = "Koppelen";
+"import.resolve.batchButton" = "%d titels koppelen";
+"import.resolve.batchHint" = "Zoek voor elke titel de bijbehorende TMDB-serie. Er wordt niets geïmporteerd totdat alle overeenkomsten zijn gekozen; daarna lost één import ze samen op.";
+"import.resolve.batchProgress" = "%d van %d titels gekoppeld";
+"import.resolve.startBatch" = "Eén import starten";
+"import.resolve.title" = "Welke serie is “%@”?";
+"import.resolve.hint" = "De afleveringen worden opnieuw gecontroleerd met hun exacte TVDB-ID's. Alles wat TMDB niet kan bevestigen, blijft in het rapport staan.";
+"import.resolve.searchPlaceholder" = "Zoek de serie op TMDB";
+"import.resolve.empty" = "Geen resultaten.";
+"import.resolve.failed" = "Koppelen mislukt:";
+"import.resolve.searchFailed" = "Zoeken mislukt.";
+"import.report.statusesApplied" = "%d seriestatussen hersteld (watchlist en archief).";
+"import.report.statusesUnresolved" = "%d seriestatussen konden niet worden toegepast.";
+"import.report.unresolvedTitle" = "%d afleveringen konden niet worden gekoppeld";
+"import.report.unresolvedRow" = "%d afleveringen";
+"import.report.allResolved" = "Alles is gekoppeld.";
+"import.error.failed" = "De import is gestopt met een fout.";
+"import.error.network" = "De import kan nu niet worden gecontroleerd.";
+"import.error.uploadFailed" = "De upload is niet voltooid.";
+"import.error.startFailed" = "De import kon niet starten.";
+"import.error.fileRead" = "Dat bestand kon niet worden gelezen.";
+"import.error.reportFailed" = "De import is klaar, maar het rapport kon niet worden geladen.";
+"import.error.sessionExpired" = "Je sessie is verlopen. Log opnieuw in en probeer de import opnieuw.";
+"profile.aboutUs" = "Over ons";
+"profile.aboutUsDetail" = "Lees meer over het VibeWatch-team en onze missie om je streamingontdekkingen beter te maken.";
+"profile.tmdbAttribution" = "Dit product gebruikt de TMDb-API, maar is niet goedgekeurd of gecertificeerd door TMDb.";
+"profile.legalNotes" = "Juridische informatie";
+"profile.faqs" = "Veelgestelde vragen";
 "profile.faq" = "FAQ";
-"profile.faqDetail" = "Znajdź szybkie odpowiedzi na częste pytania o konta, subskrypcje i funkcje.";
-"profile.legal" = "Prawne";
-"profile.privacyPolicy" = "Polityka prywatności";
-"profile.termsOfUse" = "Warunki użytkowania";
-"profile.terms" = "Warunki";
-"profile.aboutUsDescription" = "Jesteśmy dwójką przyjaciół, którzy tworzą nowy rodzaj towarzysza filmowego/serialowego. VibeWatch narodził się z frustracji niewygodnymi trackerami: skupiamy się na nowoczesnym odkrywaniu opartym na klipach, szybkich linkach do streamingu i narzędziach, które pomagają zarówno kinomaniakom, jak i zwykłym widzom znaleźć idealną pozycję bez niekończącego się scrollowania.";
+"profile.faqDetail" = "Snelle antwoorden op veelgestelde vragen over accounts, abonnementen en functies.";
+"profile.legal" = "Juridisch";
+"profile.privacyPolicy" = "Privacybeleid";
+"profile.termsOfUse" = "Gebruiksvoorwaarden";
+"profile.terms" = "Voorwaarden";
+"profile.aboutUsDescription" = "Wij zijn twee vrienden die een nieuw soort film- en seriemaatje bouwen. VibeWatch is ontstaan uit ergernis over stroeve trackers: wij richten ons op modern ontdekken met clips voorop, snelle streaminglinks en tools waarmee zowel cinefielen als gelegenheidskijkers de perfecte keuze vinden zonder eindeloos te scrollen.";
 
 // Profile - Support & Feedback
-"profile.feedback.suggestFeature" = "Zaproponuj nową funkcję";
-"profile.feedback.suggestFeatureDescription" = "Powiedz nam, co uczyniłoby VibeWatch lepszym dla Ciebie.";
-"profile.feedback.reportBug" = "Zgłoś błąd/problem";
-"profile.feedback.reportBugDescription" = "Opisz problem, który widzisz, abyśmy mogli go szybko naprawić.";
-"profile.feedback.other" = "Inne";
-"profile.feedback.otherDescription" = "Podziel się innymi przemyśleniami lub komentarzami.";
-"profile.feedback.keepUpdated" = "Informuj mnie o nowościach";
-"profile.feedback.sendButton" = "Wyślij opinię";
-"profile.feedback.sent" = "Dziękujemy! Twoja opinia została wysłana.";
-"profile.feedback.invalidEmail" = "Nieprawidłowa treść e-maila.";
+"profile.feedback.suggestFeature" = "Nieuwe functie voorstellen";
+"profile.feedback.suggestFeatureDescription" = "Vertel ons wat VibeWatch beter zou maken voor jou.";
+"profile.feedback.reportBug" = "Een bug of probleem melden";
+"profile.feedback.reportBugDescription" = "Beschrijf wat er misgaat, dan lossen we het snel op.";
+"profile.feedback.other" = "Anders";
+"profile.feedback.otherDescription" = "Deel andere gedachten of opmerkingen.";
+"profile.feedback.keepUpdated" = "Houd me op de hoogte";
+"profile.feedback.sendButton" = "Feedback versturen";
+"profile.feedback.sent" = "Bedankt! Je feedback is verstuurd.";
+"profile.feedback.invalidEmail" = "Ongeldige inhoud voor e-mail.";
 
 // FAQ Items
-"profile.faq.question1" = "Jak Klipy pomagają mi odkrywać nowe tytuły?";
-"profile.faq.answer1" = "Klipy to krótkie, pionowe podglądy dopasowane do Twojego gustu, dzięki czemu możesz przewijać bez poczucia marnowania czasu.";
-"profile.faq.question2" = "Czy mogę śledzić co oglądam?";
-"profile.faq.answer2" = "Tak. Zapisuj na listach, oznaczaj jako obejrzane/lubiane/nielubiane i synchronizuj filmy i seriale.";
-"profile.faq.question3" = "Gdzie mogę to obejrzeć?";
-"profile.faq.answer3" = "Linki do streamingu są pobierane dla każdego kraju, więc możesz przejść bezpośrednio do odpowiedniej aplikacji.";
-"profile.faq.question4" = "Co jeśli coś wygląda źle?";
-"profile.faq.answer4" = "Użyj \"Daj nam znać\" przy dowolnym tytule, aby zgłosić błędy lub złe linki, a my szybko to naprawimy.";
-"profile.faq.question5" = "Czy VibeWatch działa dla zwykłych widzów?";
-"profile.faq.answer5" = "Zdecydowanie. Pokazujemy łatwe wybory jak sobotnio-wieczorny film ze znajomymi, ale też perełki dla prawdziwych kinomaniaków.";
+"profile.faq.question1" = "Hoe helpen clips me nieuwe titels te ontdekken?";
+"profile.faq.answer1" = "Clips zijn korte, verticale previews die bij je smaak passen, zodat je kunt doorscrollen zonder het gevoel dat je tijd verspilt.";
+"profile.faq.question2" = "Kan ik bijhouden wat ik kijk?";
+"profile.faq.answer2" = "Ja. Bewaar in lijsten, markeer als gezien/leuk/niet leuk, en synchroniseer over films en series heen.";
+"profile.faq.question3" = "Waar kan ik het kijken?";
+"profile.faq.answer3" = "Streaminglinks worden per land opgehaald, zodat je meteen in de juiste app terechtkomt.";
+"profile.faq.question4" = "En als er iets niet klopt?";
+"profile.faq.answer4" = "Gebruik \"Laat het ons weten\" bij een titel om fouten of verkeerde links te melden, dan lossen we het snel op.";
+"profile.faq.question5" = "Is VibeWatch ook geschikt voor gelegenheidskijkers?";
+"profile.faq.answer5" = "Zeker. We tonen makkelijke keuzes zoals een zaterdagavondfilm met vrienden, én verborgen pareltjes voor filmliefhebbers.";
 
 // Settings - Account Deletion
-"settings.deleteAccount" = "Trwale usuń moje konto";
-"settings.deleteAccountWarningTitle" = "Usunąć konto?";
-"settings.deleteAccountWarningMessage" = "Ta czynność jest trwała i nie może być cofnięta.";
-"settings.deleteAccountKeep" = "Nie, zachowaj";
-"settings.deleteAccountConfirm" = "Tak, usuń moje konto";
-"settings.deleteAccountFinalTitle" = "Trwale usuń konto";
-"settings.deleteAccountFinalMessage" = "Czy jesteś absolutnie pewien(-a)? Tej czynności nie można cofnąć.";
-"settings.deleteAccountError" = "Nie można teraz usunąć konta.";
-"settings.deleteAccountSuccess" = "Twoje konto zostało usunięte.";
-"settings.deleteAccountDeleting" = "Usuwanie...";
+"settings.deleteAccount" = "Mijn account definitief verwijderen";
+"settings.deleteAccountWarningTitle" = "Account verwijderen?";
+"settings.deleteAccountWarningMessage" = "Dit is definitief en kan niet ongedaan worden gemaakt.";
+"settings.deleteAccountKeep" = "Nee, behouden";
+"settings.deleteAccountConfirm" = "Ja, verwijder mijn account";
+"settings.deleteAccountFinalTitle" = "Account definitief verwijderen";
+"settings.deleteAccountFinalMessage" = "Weet je het heel zeker? Dit kan niet ongedaan worden gemaakt.";
+"settings.deleteAccountError" = "Je account kan nu niet worden verwijderd.";
+"settings.deleteAccountSuccess" = "Je account is verwijderd.";
+"settings.deleteAccountDeleting" = "Verwijderen…";
 
 // Profile Upgrade CTA
-"profile.upgradePro.title" = "Przejdź na Pro";
-"profile.upgradePro.subtitle" = "Odblokuj nielimitowane klipy, AI i listy premium.";
+"profile.upgradePro.title" = "Upgraden naar Pro";
+"profile.upgradePro.subtitle" = "Ontgrendel onbeperkte clips, AI en premiumlijsten.";
 
 // Actor Detail
-"actor.biography.title" = "Biografia";
-"actor.biography.loading" = "Ładowanie biografii...";
-"actor.biography.unavailable" = "Biografia niedostępna.";
-"actor.filmography.movies" = "Filmy";
-"actor.filmography.tv" = "Seriale";
-"actor.retry" = "Spróbuj ponownie";
-"actor.biography.showMore" = "Pokaż więcej";
-"actor.biography.showLess" = "Pokaż mniej";
+"actor.biography.title" = "Biografie";
+"actor.biography.loading" = "Biografie laden…";
+"actor.biography.unavailable" = "Biografie niet beschikbaar.";
+"actor.filmography.movies" = "Films";
+"actor.filmography.tv" = "Series";
+"actor.retry" = "Probeer opnieuw";
+"actor.biography.showMore" = "Meer tonen";
+"actor.biography.showLess" = "Minder tonen";
+
+"actor.birthday" = "Geboren: %@";
+"actor.birthday.line" = "%@ (%@ jaar)";
+"actor.known_for" = "Bekend van";
+"actor.search.placeholder" = "Zoek in filmografie…";
+"actor.search.noResults" = "Geen resultaten voor";
+"actor.filmography.empty" = "Geen rollen gevonden.";
 
 // Global Discovery Filters
-"filters.mediaType" = "Typ nośnika";
-"filters.movies" = "Filmy";
-"filters.tvShows" = "Seriale";
-"filters.both" = "Oba";
-"filters.rating" = "Ocena";
-"filters.releasePeriod" = "Okres premiery";
-"filters.releasePeriodAny" = "Dowolny";
-"filters.releasePeriodRecent" = "Niedawno (2020+)";
-"filters.releasePeriodModern" = "Nowoczesne (2010–2019)";
-"filters.releasePeriodClassic" = "Klasyczne (<2010)";
-"filters.customRange" = "Zakres niestandardowy";
-"filters.customYearRange" = "Niestandardowy zakres lat";
+"filters.mediaType" = "Type";
+"filters.movies" = "Films";
+"filters.tvShows" = "Series";
+"filters.both" = "Beide";
+"filters.rating" = "Beoordeling";
+"filters.releasePeriod" = "Releaseperiode";
+"filters.releasePeriodAny" = "Alle";
+"filters.releasePeriodRecent" = "Recent (2020+)";
+"filters.releasePeriodModern" = "Modern (2010-2019)";
+"filters.releasePeriodClassic" = "Klassiek (<2010)";
+"filters.customRange" = "Eigen bereik";
+"filters.customYearRange" = "Eigen jaarbereik";
 "filters.min" = "Min";
 "filters.max" = "Max";
-"filters.from" = "Od";
-"filters.to" = "Do";
-"filters.custom" = "Niestandardowe";
-"filters.allCountries" = "Wszystkie kraje";
-"filters.sortPopularityDesc" = "Najpopularniejsze";
-"filters.sortPopularityAsc" = "Najmniej popularne";
-"filters.sortRatingDesc" = "Najwyżej oceniane";
-"filters.sortRatingAsc" = "Najniżej oceniane";
-"filters.sortReleaseDateDesc" = "Najpierw najnowsze";
-"filters.sortReleaseDateAsc" = "Najpierw najstarsze";
-"filters.proFilters" = "Filtry Pro";
-"filters.hideWatched" = "Ukryj obejrzane";
-"filters.hideDisliked" = "Ukryj nielubiane";
-"filters.proTitle" = "Odblokuj filtry zaawansowane";
-"filters.proDescription" = "Przejdź na Pro, aby uzyskać niestandardowe zakresy, wybór wielu krajów i zaawansowane opcje filtrowania";
-"filters.upgradeToPro" = "Przejdź na Pro";
-"filters.filtersActive" = "%d aktywnych filtrów";
+"filters.from" = "Van";
+"filters.to" = "Tot";
+"filters.custom" = "Eigen";
+"filters.allCountries" = "Alle landen";
+"filters.sortPopularityDesc" = "Meest populair";
+"filters.sortPopularityAsc" = "Minst populair";
+"filters.sortRatingDesc" = "Hoogst beoordeeld";
+"filters.sortRatingAsc" = "Laagst beoordeeld";
+"filters.sortReleaseDateDesc" = "Nieuwste eerst";
+"filters.sortReleaseDateAsc" = "Oudste eerst";
+"filters.proFilters" = "Pro-filters";
+"filters.hideWatched" = "Verberg gekeken";
+"filters.hideDisliked" = "Verberg niet leuk";
+"filters.proTitle" = "Ontgrendel geavanceerde filters";
+"filters.proDescription" = "Upgrade naar Pro voor eigen bereiken, meerdere landen en geavanceerde filteropties";
+"filters.upgradeToPro" = "Upgraden naar Pro";
+"filters.filtersActive" = "%d filters actief";
 
 // Filters - Streaming Platforms
-"filters.allPlatforms" = "Wszystkie platformy";
-"platforms.title" = "Platformy streamingowe";
+"filters.allPlatforms" = "Alle platforms";
+"platforms.title" = "Streamingplatforms";
 
 // Personalized Carousels
-"carousel.dailyMix" = "Twoja codzienna mieszanka";
-"carousel.trendingInGenre" = "Na topie w %@";
-"carousel.becauseYouLiked" = "Ponieważ lubiłeś(-aś) %@";
-"carousel.hiddenGems" = "Ukryte perełki w %@";
-"carousel.continueJourney" = "Kontynuuj swoją podróż";
-"carousel.fromSearches" = "Z Twoich wyszukiwań";
-"carousel.topTVPicks" = "Najlepsze seriale dla Ciebie";
-"carousel.staffPicks" = "Wybór redakcji dla fanów %@";
-"carousel.yearlyRewind" = "Twoje roczne podsumowanie";
-"carousel.hotThisWeek" = "Gorące w tym tygodniu";
-"carousel.awardWinners" = "Laureaci nagród, których pokochasz";
+"carousel.dailyMix" = "Je dagelijkse mix";
+"carousel.trendingInGenre" = "Populair in %@";
+"carousel.becauseYouLiked" = "Omdat je %@ leuk vond";
+"carousel.hiddenGems" = "Verborgen pareltjes in %@";
+"carousel.continueJourney" = "Ga verder waar je was";
+"carousel.fromSearches" = "Uit je zoekopdrachten";
+"carousel.topTVPicks" = "Beste serietips voor jou";
+"carousel.staffPicks" = "Onze keuze voor %@-fans";
+"carousel.yearlyRewind" = "Je jaaroverzicht";
+"carousel.hotThisWeek" = "Deze week populair";
+"carousel.awardWinners" = "Bekroonde titels die je gaat waarderen";
 
 // Privacy / Analytics
-"settings.privacy.title" = "Prywatność";
-"settings.analytics.title" = "Analityka";
-"settings.analytics.share" = "Udostępniaj anonimowe dane analityczne";
-"settings.analytics.share.description" = "Pomaga nam zrozumieć, z jakich funkcji korzystasz i ulepszać aplikację. Brak śledzenia reklam.";
-"settings.analytics.viewStats" = "Zobacz swoje statystyki";
-"settings.analytics.description" = "Zobacz historię oglądania i statystyki";
+"settings.privacy.title" = "Privacy";
+"settings.analytics.title" = "Analyse";
+"settings.analytics.share" = "Anonieme analyses delen";
+"settings.analytics.share.description" = "Helpt ons te begrijpen welke functies je gebruikt en de app te verbeteren. Geen tracking voor advertenties.";
+"settings.analytics.viewStats" = "Bekijk je statistieken";
+"settings.analytics.description" = "Zie je kijkgeschiedenis en inzichten";
 
 // Settings - Notifications (Settings Screen)
-"settings.notifications.title" = "Powiadomienia";
-"settings.notifications.manage" = "Zarządzaj powiadomieniami";
-"settings.notifications.description" = "Spersonalizowane powiadomienia o nowych treściach";
+"settings.notifications.title" = "Meldingen";
+"settings.notifications.manage" = "Meldingen beheren";
+"settings.notifications.description" = "Persoonlijke meldingen over nieuwe content";
 
 // Onboarding Revamp
-"onboarding.welcome.title" = "Odkryj swój klimat";
-"onboarding.welcome.subtitle" = "Rekomendacje oparte na AI, dopasowane specjalnie dla Ciebie.";
-"onboarding.clips.title" = "Oglądaj, nie czytaj";
-"onboarding.clips.subtitle" = "Odkrywaj filmy dzięki krótkim, wciągającym klipom.";
-"onboarding.lists.title" = "Twoja watchlista, wszędzie";
-"onboarding.lists.subtitle" = "Zapisuj filmy i synchronizuj na wszystkich urządzeniach.";
-"onboarding.account.title" = "Zapisz swój profil";
-"onboarding.account.subtitle" = "Utwórz konto, aby synchronizować watchlistę i preferencje między urządzeniami.";
-"onboarding.skip" = "Pomiń na razie";
+"onboarding.welcome.title" = "Welkom bij VibeWatch";
+"onboarding.welcome.subtitle" = "Ontdek, volg en mis geen enkele release. Films en series, alles op één plek.";
+"onboarding.clips.title" = "Kijken in plaats van lezen";
+"onboarding.clips.subtitle" = "Beleef films via korte, meeslepende clips.";
+"onboarding.lists.title" = "Je watchlist, overal";
+"onboarding.lists.subtitle" = "Bewaar films en synchroniseer op al je apparaten.";
+"onboarding.account.title" = "Bewaar je profiel";
+"onboarding.account.subtitle" = "Maak een account om je watchlist en voorkeuren op al je apparaten te synchroniseren.";
+"onboarding.skip" = "Voorlopig overslaan";
 
 // Email Verification
-"auth.checkEmailTitle" = "Sprawdź pocztę e-mail";
-"auth.checkEmailMessage" = "Wysłaliśmy Ci link potwierdzający. Sprawdź skrzynkę odbiorczą, aby zweryfikować konto.";
-"auth.openMailApp" = "Otwórz aplikację Mail";
-"auth.iHaveVerified" = "Zweryfikowałem(-am)";
-"auth.resendEmail" = "Wyślij ponownie e-mail";
-"auth.changeEmail" = "Zmień adres e-mail";
-"auth.verificationPending" = "Wciąż czekam na weryfikację...";
+"auth.checkEmailTitle" = "Check je e-mail";
+"auth.checkEmailMessage" = "We hebben je een bevestigingslink gestuurd. Kijk in je inbox om je account te verifiëren.";
+"auth.openMailApp" = "Mail-app openen";
+"auth.iHaveVerified" = "Ik heb geverifieerd";
+"auth.resendEmail" = "E-mail opnieuw sturen";
+"auth.changeEmail" = "E-mailadres wijzigen";
+"auth.verificationPending" = "Nog aan het wachten op verificatie…";
 
 // Gamification
-"gamification.levelUp" = "AWANS POZIOMU!";
-"gamification.level" = "Poziom";
-"gamification.rankAchieved" = "Osiągnięto rangę \"%@\"";
-"gamification.xp.base" = "bazowe";
-"gamification.xp.proBoost" = "bonus Pro";
-"gamification.xp.streakBonus" = "bonus za serię";
-"gamification.xp.total" = "XP łącznie";
-"gamification.challengeComplete" = "Wyzwanie ukończone!";
+"gamification.levelUp" = "NIVEAU OMHOOG!";
+"gamification.level" = "Niveau";
+"gamification.rankAchieved" = "Rang \"%@\" behaald";
+"gamification.xp.base" = "basis";
+"gamification.xp.proBoost" = "Pro-boost";
+"gamification.xp.streakBonus" = "Streakbonus";
+"gamification.xp.total" = "XP totaal";
+"gamification.challengeComplete" = "Uitdaging voltooid!";
 
 // Notification Preferences
-"notifications.title" = "Powiadomienia";
+"notifications.title" = "Meldingen";
 "notifications.status" = "Status";
-"notifications.enabled" = "Powiadomienia włączone";
-"notifications.disabled" = "Powiadomienia wyłączone";
-"notifications.enableDescription" = "Włącz powiadomienia, aby otrzymywać spersonalizowane informacje o nowych odcinkach, premierach i treściach, które Ci się spodobają.";
-"notifications.enableButton" = "Włącz powiadomienia";
-"notifications.types" = "Typy powiadomień";
-"notifications.newEpisodes" = "Nowe odcinki";
-"notifications.newEpisodesDesc" = "Otrzymuj powiadomienia, gdy dostępne są nowe odcinki obserwowanych seriali";
-"notifications.personalizedReleases" = "Spersonalizowane premiery";
-"notifications.personalizedReleasesDesc" = "Nowe filmy i seriale dopasowane do Twojego gustu";
-"notifications.favoriteActors" = "Ulubieni aktorzy i reżyserzy";
-"notifications.favoriteActorsDesc" = "Nowe treści od osób, które lubisz";
-"notifications.similarContent" = "Podobne treści";
-"notifications.similarContentDesc" = "Rekomendacje na podstawie tego, co Ci się podobało";
-"notifications.watchlistAlerts" = "Alerty watchlisty";
-"notifications.watchlistAlertsDesc" = "Gdy tytuły z Twojej watchlisty staną się dostępne";
-"notifications.milestones" = "Kamienie milowe i osiągnięcia";
-"notifications.milestonesDesc" = "Świętuj serie oglądania i osiągnięcia";
-"notifications.frequency" = "Częstotliwość";
-"notifications.dailyLimit" = "Limit dzienny";
-"notifications.perDay" = "dziennie";
-"notifications.unlimited" = "Bez limitu";
-"notifications.quietHours" = "Ciche godziny";
-"notifications.startTime" = "Godzina rozpoczęcia";
-"notifications.endTime" = "Godzina zakończenia";
-"notifications.quietHoursDesc" = "W tych godzinach powiadomienia nie będą wysyłane";
-"notifications.proFeatures" = "Funkcje Pro";
-"notifications.customActorAlerts" = "Alerty dla wybranych aktorów";
-"notifications.customGenreAlerts" = "Alerty dla wybranych gatunków";
-"notifications.proFeaturesDesc" = "Otrzymuj powiadomienia dla konkretnych aktorów i gatunków, które wybierzesz";
-"notifications.save" = "Zapisz";
-"notifications.settingsSaved" = "Ustawienia zapisane";
-"notifications.preferencesUpdated" = "Twoje preferencje powiadomień zostały zaktualizowane.";
-"notifications.typesFooter" = "Wybierz, jakie powiadomienia chcesz otrzymywać";
-"notifications.frequencyFooter" = "Maksymalna liczba powiadomień dziennie";
-"notifications.favoriteActorsTitle" = "Twoi ulubieni aktorzy";
-"notifications.favoriteActorsFooter" = "Dostaniesz powiadomienie, gdy pojawi się nowa treść z ich udziałem";
-"notifications.favoriteGenresTitle" = "Twoje ulubione gatunki";
-"notifications.favoriteGenresFooter" = "Powiadomienia o nowych premierach w tych gatunkach";
-"notifications.fromPreferences" = "Z Twoich preferencji";
+"notifications.enabled" = "Meldingen aan";
+"notifications.disabled" = "Meldingen uit";
+"notifications.enableDescription" = "Zet meldingen aan voor persoonlijke tips over nieuwe afleveringen, releases en content die bij je past.";
+"notifications.enableButton" = "Meldingen aanzetten";
+"notifications.types" = "Soorten meldingen";
+"notifications.newEpisodes" = "Nieuwe afleveringen";
+"notifications.newEpisodesDesc" = "Krijg bericht als er nieuwe afleveringen zijn van series die je kijkt";
+"notifications.personalizedReleases" = "Persoonlijke releases";
+"notifications.personalizedReleasesDesc" = "Nieuwe films en series die bij je smaak passen";
+"notifications.favoriteActors" = "Favoriete acteurs en regisseurs";
+"notifications.favoriteActorsDesc" = "Nieuwe content van mensen die je goed vindt";
+"notifications.similarContent" = "Vergelijkbare content";
+"notifications.similarContentDesc" = "Aanbevelingen op basis van wat je goed vond";
+"notifications.watchlistAlerts" = "Watchlist-meldingen";
+"notifications.watchlistAlertsDesc" = "Wanneer iets uit je watchlist beschikbaar wordt";
+"notifications.milestones" = "Mijlpalen en prestaties";
+"notifications.milestonesDesc" = "Vier je kijkstreaks en prestaties";
+"notifications.frequency" = "Frequentie";
+"notifications.dailyLimit" = "Daglimiet";
+"notifications.perDay" = "per dag";
+"notifications.unlimited" = "Onbeperkt";
+"notifications.quietHours" = "Stille uren";
+"notifications.startTime" = "Begintijd";
+"notifications.endTime" = "Eindtijd";
+"notifications.quietHoursDesc" = "Tijdens deze uren worden er geen meldingen gestuurd";
+"notifications.proFeatures" = "Pro-functies";
+"notifications.customActorAlerts" = "Eigen acteurmeldingen";
+"notifications.customGenreAlerts" = "Eigen genremeldingen";
+"notifications.proFeaturesDesc" = "Krijg meldingen voor acteurs en genres die jij kiest";
+"notifications.save" = "Bewaren";
+"notifications.settingsSaved" = "Instellingen bewaard";
+"notifications.preferencesUpdated" = "Je meldingsvoorkeuren zijn bijgewerkt.";
+"notifications.typesFooter" = "Kies welke meldingen je wilt ontvangen";
+"notifications.newAvailability" = "Nieuw beschikbaar";
+"notifications.newAvailabilityDesc" = "Wanneer iets uit je watchlist te streamen, huren of kopen is";
+"notifications.newRelease" = "Nieuwe releases";
+"notifications.newReleaseDesc" = "Films en series waarbij je op \"Hou me op de hoogte\" tikte, zodra ze uitkomen";
+"notifications.episodeAired" = "Nieuwe afleveringen";
+"notifications.episodeAiredDesc" = "Wanneer er een nieuwe aflevering is van series in je lijsten";
+"notifications.continueWatching" = "Verder kijken";
+"notifications.continueWatchingDesc" = "Herinneringen om series op te pakken die je aan het kijken was";
+"notifications.listMilestone" = "Mijlpalen in lijsten";
+"notifications.listMilestoneDesc" = "Vier het als je een kijkmijlpaal bereikt";
+"notifications.frequencyFooter" = "Maximaal aantal meldingen dat je per dag krijgt";
+"notifications.favoriteActorsTitle" = "Je favoriete acteurs";
+"notifications.favoriteActorsFooter" = "Krijg bericht als deze acteurs nieuwe content hebben";
+"notifications.favoriteGenresTitle" = "Je favoriete genres";
+"notifications.favoriteGenresFooter" = "Krijg bericht over nieuwe releases in deze genres";
+"notifications.fromPreferences" = "Uit je voorkeuren";
 
 // Media Item Row (Lists)
-"lists.notifyMe" = "POWIADOM MNIE";
-"lists.watchOn" = "OGLĄDAJ NA %@";
-"lists.notifyMeTitle" = "Powiadom mnie";
-"lists.notifyMeMessage" = "Wyślemy Ci powiadomienie, gdy tylko '%@' będzie dostępne do streamingu, wypożyczenia lub zakupu.";
+"lists.notifyMe" = "HOU ME OP DE HOOGTE";
+"lists.watchOn" = "KIJK OP %@";
+"lists.notifyMeTitle" = "Hou me op de hoogte";
+"lists.notifyMeMessage" = "We sturen je een melding zodra '%@' te streamen, huren of kopen is.";
 
 // Error Views
-"error.oops" = "Ups!";
+"error.oops" = "Oeps!";
+
+// TV Show Detail - Mark All Seen Confirmation
+"tvDetail.markAllSeenTitle" = "Hele serie markeren als gezien";
+"tvDetail.markAllSeenDescription" = "Dit geldt voor alle beschikbare afleveringen en seizoenen van de serie.";
+"tvDetail.markAllSeenQuestion" = "Wil je doorgaan?";
+"tvDetail.markAllSeenConfirm" = "Ja, markeer als gezien";
+"tvDetail.markAllSeenCancel" = "Nee, annuleren";
+"tvDetail.seasonSeenShort" = "gezien";
+
+// Library section switcher
+"lists.section.myLists" = "Mijn lijsten";
+"lists.section.tvTracking" = "Series bijhouden";
+
+// TV Shows Tracking
+"tvTracking.continuing" = "Verder kijken";
+"tvTracking.notStarted" = "Nog niet begonnen";
+"tvTracking.upToDate" = "Helemaal bij";
+"tvTracking.emptyState" = "Geen series gevonden";
+"carousel.fromActor" = "Meer van %@";
+"carousel.decadeClassics" = "Klassiekers uit de %@";
+"carousel.moodTonight" = "Vanavond: %@";
+"carousel.regionSpotlight" = "%@ in de schijnwerpers";
+"carousel.topInGenre" = "De beste in %@";
+"carousel.hotThisWeekInGenre" = "Deze week populair in %@";
+"carousel.quickWatches" = "Voor tussendoor";
+"carousel.epicWatches" = "Epische kijkavonden";
+"carousel.internationalPicks" = "Internationale keuzes";
+"carousel.throwback" = "Terug naar de %@";
+"carousel.fromAIChat" = "Uit je AI-chat";
+"carousel.comingSoon" = "Binnenkort";
+"carousel.trendingTVWeek" = "Populaire series deze week";
+"carousel.criticallyAcclaimedRecent" = "Lovend ontvangen · %@";
+"carousel.returningTV" = "Binnenkort terug";
+"carousel.documentaries" = "Documentaires voor jou";
+"discovery.endOfFeed" = "Je bent helemaal bij";
+/* MARK: - Public Lists (Fase 1) */
+"lists.section.publicLists" = "Openbare lijsten";
+"lists.public.scope.explore" = "Verkennen";
+"lists.public.scope.followed" = "Gevolgd";
+"lists.public.searchPlaceholder" = "Zoek openbare lijsten";
+"lists.public.empty.explore" = "Geen openbare lijsten gevonden";
+"lists.public.empty.followed" = "Je volgt nog geen enkele lijst";
+"lists.public.follow" = "Volgen";
+"lists.public.following" = "Volgend";
+"lists.public.unavailable" = "Deze lijst is niet meer beschikbaar";
+"lists.public.report" = "Lijst melden";
+"lists.public.report.confirm" = "Deze lijst melden als ongepast?";
+"lists.public.report.done" = "Bedankt, je melding is ontvangen";
+"lists.public.block" = "Gebruiker blokkeren";
+"lists.public.block.confirm" = "Deze gebruiker blokkeren? Hun openbare lijsten worden verborgen.";
+"lists.public.createFromThis" = "Openbare lijst maken hiervan";
+"lists.public.toggle" = "Openbare lijst";
+"lists.public.toggle.footer" = "Openbare lijsten kunnen door andere gebruikers gevonden en gevolgd worden.";
+"lists.public.profanity.title" = "Ongepaste inhoud";
+"lists.public.profanity" = "Verwijder ongepast taalgebruik uit de naam of beschrijving voordat je publiceert.";
+"lists.public.guidelines.title" = "Communityrichtlijnen";
+"lists.public.guidelines.body" = "Door een lijst te publiceren ga je akkoord met onze communityrichtlijnen: geen aanstootgevende, haatdragende of illegale inhoud. Lijsten die daartegen ingaan kunnen worden verborgen en gemelde gebruikers kunnen worden verwijderd.";
+"lists.public.guidelines.accept" = "Accepteren en publiceren";
+"lists.duplicateName" = "Kopie van %@";
+/* MARK: - TV Tracking (card stile JustWatch) */
+"tvTracking.titlesCount" = "%d titels";
+"tvTracking.episodesRemaining" = "nog %d afleveringen";
+"tvTracking.lastSeen" = "LAATST GEZIEN %@";
+"tvTracking.soon" = "binnenkort";
+"tvTracking.watchNow" = "Nu kijken";
+
+/* SPEC v3 §9.2 — schermata Tracking */
+"tracking.title" = "Tracking";
+"tracking.bucket.upNext" = "Te kijken";
+"tracking.bucket.stale" = "Al een tijd niet gekeken";
+"tracking.bucket.forLater" = "Voor later";
+"tracking.bucket.upToDate" = "Helemaal bij";
+"tracking.bucket.notStarted" = "Nog niet begonnen";
+"tracking.bucket.dropped" = "Gestopt";
+"tracking.bucket.archived" = "Gearchiveerd";
+"tracking.timeline.today" = "Vandaag uit";
+"tracking.timeline.tomorrow" = "Morgen";
+"tracking.timeline.thisWeek" = "Deze week";
+"tracking.timeline.thisMonth" = "Deze maand";
+"tracking.action.watched" = "Gezien";
+"tracking.action.later" = "Later";
+"tracking.caughtUp" = "Helemaal bij";
+"tracking.unknownShow" = "Onbekende serie";
+"tracking.special" = "SPECIAL";
+"tracking.empty.title" = "Nog niets te kijken";
+"tracking.empty.subtitle" = "Volg een serie of importeer je TV Time-geschiedenis, dan verschijnt hij hier.";
+"tracking.error.title" = "Er ging iets mis";
+"tracking.error.notAuthenticated" = "Je moet ingelogd zijn.";
+"tracking.error.showNotInCatalog" = "Deze serie staat nog niet in de catalogus — probeer het zo opnieuw.";
+"tracking.error.noNextEpisode" = "Deze serie heeft geen volgende aflevering.";
+
+"tab.tracking" = "Tracking";
+
+"common.close" = "Sluiten";
+
+/* Chiavi chiamate dal codice e mai tradotte */
+"auth.error.invalidLink" = "Deze link is ongeldig of verlopen.";
+"clips.noListsYet" = "Nog geen lijsten";
+
+/* SPEC v3 §3.7 — scelta dello username */
+"username.confirm.title" = "Bevestig je gebruikersnaam";
+"username.confirm.subtitle" = "Deze hebben we uit je naam afgeleid. Zo vinden anderen je — houd hem, of kies een andere.";
+"username.confirm.action" = "Bevestigen";
+"username.choose.title" = "Kies je gebruikersnaam";
+"username.choose.subtitle" = "Je hebt er een nodig om zichtbaar te zijn op VibeWatch: zo vinden anderen je profiel en je lijsten.";
+"username.choose.action" = "Doorgaan";
+"username.placeholder" = "gebruikersnaam";
+"username.hint" = "Kleine letters, cijfers en _ — 3 tot 20 tekens.";
+"username.checking" = "Controleren…";
+"username.available" = "Beschikbaar";
+"username.later" = "Niet nu";
+"username.error.empty" = "Kies een gebruikersnaam.";
+"username.error.tooShort" = "Minstens 3 tekens.";
+"username.error.tooLong" = "Hoogstens 20 tekens.";
+"username.error.invalidCharacters" = "Alleen kleine letters, cijfers en _.";
+"username.error.taken" = "Al bezet.";
+"username.error.checkFailed" = "Controleren is niet gelukt. Probeer opnieuw.";
+"username.error.reserved" = "Deze is gereserveerd.";
+
+// Social (SPEC v3 blocco 8)
+"social.search.title" = "Vind vrienden";
+"social.search.placeholder" = "Gebruikersnaam of naam";
+"social.search.prompt" = "Zoek mensen op gebruikersnaam of naam om hun profiel te zien.";
+"social.search.noResults" = "Niemand gevonden.";
+"social.search.failed" = "Zoeken mislukt. Controleer je verbinding.";
+"social.profile.followers" = "Volgers";
+"social.profile.following" = "Volgend";
+"social.follow" = "Volgen";
+"social.unfollow" = "Ontvolgen";
+"social.followsYou" = "Volgt jou";
+"social.profile.notFound" = "Dit profiel bestaat niet.";
+"social.profile.you" = "Dit ben jij.";
+"social.profile.loadFailed" = "Profiel kon niet worden geladen.";
+
+// Blocco 9 (SPEC v3 §3.6/§9.3): voti in stelle, favorites, stats
+"rating.title" = "Jouw beoordeling";
+"rating.saveFailed" = "Beoordeling kon niet worden opgeslagen. Probeer opnieuw.";
+"profile.favorites.movies" = "Favoriete films";
+"profile.favorites.shows" = "Favoriete series";
+"profile.lists.title" = "Openbare lijsten";
+"profile.lists.loadFailed" = "Openbare lijsten konden niet worden geladen.";
+"profile.stats.title" = "Jouw statistieken";
+"profile.stats.watchTime" = "Kijktijd";
+"profile.stats.movies" = "Films";
+"profile.stats.shows" = "Series";
+"profile.stats.episodes" = "Afleveringen";
+"profile.stats.loadFailed" = "Statistieken konden niet worden geladen.";
+"profile.stats.advanced.title" = "Geavanceerde statistieken";
+"profile.stats.advanced.byGenre" = "Per genre";
+"profile.stats.advanced.byDecade" = "Per decennium";
+"profile.stats.advanced.ratings" = "Jouw beoordelingen";
+"profile.stats.advanced.noGenre" = "%d series zonder genre-informatie";
+"profile.stats.advanced.proLocked" = "Geavanceerde statistieken zijn onderdeel van Pro.";
+
+// Blocco 9, seconda meta' (§9.3): diario e modifica dei favorites
+"diary.title" = "Dagboek";
+"diary.empty" = "Nog niets hier — wat je kijkt verschijnt hier.";
+"diary.loadFailed" = "Dagboek kon niet worden gelezen.";
+"favorites.add" = "Toevoegen aan favorieten";
+"favorites.remove" = "Verwijderen uit favorieten";
+"favorites.slot" = "Plek %d";
+"favorites.saveFailed" = "Favorieten konden niet worden bijgewerkt. Probeer opnieuw.";
+
+// La pillola del Tracking: dove lo guardo (streaming > noleggio > acquisto)
+"tracking.watchOn" = "Kijk op %@";
+"tracking.rentOn" = "Huur op %@";
+"tracking.buyOn" = "Koop op %@";
+
+// MARK: - Redesign 2.0 (tab Social, strip uscite, calendario, sottotitoli)
+"tab.social" = "Vrienden";
+"social.subtitle" = "Vrienden en lijsten die je volgt";
+"discovery.continueWatching" = "Verder kijken";
+"discovery.strip.today" = "Vandaag";
+"discovery.releases.title" = "Releases";
+"discovery.releases.none" = "Geen releases op deze dag.";
+"discovery.releases.countOne" = "1 release";
+"discovery.releases.countMany" = "%d releases";
+"tracking.subtitle" = "Wat je nu kijkt";
+"lists.subtitle" = "Je archief en verzamelingen";
+"profile.group.activity" = "Activiteit";
+"profile.group.preferences" = "Voorkeuren";
+"profile.group.account" = "Account";
+"profile.badgesLevels" = "Badges en niveaus";
+"gamification.progress.title" = "Je voortgang";
+"gamification.dayStreak" = "Dagen op rij";
+"gamification.badges.title" = "Badges";
+"gamification.levels.title" = "Niveaus";
+"gamification.challenge.none" = "Vandaag geen missie";
+"common.seeAll" = "Alles bekijken";
+"profile.stats.subtitle" = "Genres, mood, kijktijd";
+"diary.subtitle" = "Geschiedenis van bekeken afleveringen en films";
+"profile.badgesLevels.subtitle" = "Niveau %d · %d/%d badges";
+"notifications.row.subtitle" = "Releases, nieuwe afleveringen, stille uren";
+"platforms.row.subtitle" = "Streaming, huren en kopen";
+"platforms.footnote" = "Geselecteerde platforms filteren waar je kunt kijken in de hele app.";
+"profile.languageCountry" = "Taal en land";
+"profile.edit.title" = "Profiel bewerken";
+"profile.edit.information" = "Informatie";
+"profile.edit.name" = "Naam";
+"profile.edit.bio" = "Bio";
+"profile.edit.bioPlaceholder" = "Vertel iets over jezelf (optioneel)";
+"profile.edit.changePhoto" = "Foto wijzigen";
+"profile.edit.publicProfile" = "Openbaar profiel";
+"profile.edit.publicProfileSubtitle" = "Anderen kunnen je vinden en je openbare lijsten volgen";
+"profile.edit.saveError" = "Je profiel kon niet worden opgeslagen. Probeer het opnieuw.";
+"profile.imageCache" = "Afbeeldingscache";
+"profile.imageCache.subtitle" = "Vooraf laden alleen via wifi";
+"common.on" = "Aan";
+"common.off" = "Uit";
+"profile.privacyTerms" = "Privacy en voorwaarden";
+"profile.footer.tmdb" = "Dit product gebruikt de TMDb-API maar is niet goedgekeurd of gecertificeerd door TMDb.";
+"settings.cacheManagement.inUse" = "%d MB in gebruik";
+
+// MARK: - Onboarding 2.0
+"common.continue" = "Doorgaan";
+"auth.fullNamePlaceholder" = "Volledige naam";
+"onboarding.welcome.cta" = "Aan de slag";
+"onboarding.import.title" = "Neem je geschiedenis mee";
+"onboarding.import.subtitle" = "Importeer series, gekeken afleveringen en je watchlist. Zodra de import klaar is, is de app gebruiksklaar.";
+"onboarding.import.tvtime" = "Importeren uit TV Time";
+"onboarding.import.tvtime.subtitle" = "Series, gekeken afleveringen, watchlist en beoordelingen";
+"onboarding.import.other" = "Andere apps";
+"onboarding.import.other.subtitle" = "Trakt, Letterboxd — binnenkort";
+"onboarding.import.skip" = "Overslaan, ik begin opnieuw";
+"onboarding.import.completed" = "Import voltooid";
+"onboarding.import.stat.shows" = "Series";
+"onboarding.import.stat.episodes" = "Gekeken afleveringen";
+"onboarding.import.stat.movies" = "Films";
+"onboarding.import.stat.watchlist" = "Op watchlist";
+"onboarding.notifications.title" = "Mis niets meer";
+"onboarding.notifications.subtitle" = "We sturen alleen meldingen over wat je volgt — nieuwe afleveringen, releases van je watchlist en beschikbaarheid op streaming.";
+"onboarding.notifications.row1" = "Nieuwe afleveringen van series die je volgt";
+"onboarding.notifications.row2" = "Releases van titels op je watchlist";
+"onboarding.notifications.row3" = "Wanneer een titel op streaming verschijnt";
+"onboarding.notifications.enable" = "Meldingen inschakelen";
+"onboarding.notifications.later" = "Misschien later";
+"onboarding.ready.title" = "Alles klaar";
+"onboarding.ready.subtitle" = "Je bibliotheek is klaar en je mist geen release meer. \"Verder kijken\" wacht bovenaan op je.";
+"onboarding.ready.chip.shows" = "%d series";
+"onboarding.ready.chip.episodes" = "%d afleveringen";
+"onboarding.ready.chip.notifications" = "Meldingen aan";
+"onboarding.ready.cta" = "Begin met kijken";
+
+"filters.myPlatforms" = "Van mij";
+"filters.platformScopeAll" = "Alle";
+"mediaDetail.forYou" = "voor jou";
+"mediaDetail.watchOn" = "Kijk op";
+"mediaDetail.notifyMe" = "Waarschuw me";
+"mediaDetail.notifyMeEnabling" = "Inschakelen…";
+"mediaDetail.notifyMeEnabled" = "We waarschuwen je";
+"mediaDetail.action.watchlist" = "Watchlist";
+"mediaDetail.action.like" = "Like";
+"mediaDetail.action.list" = "Naar lijst";
+"mediaDetail.toast.watchlistAdded" = "Toegevoegd aan je watchlist";
+"mediaDetail.toast.watchlistRemoved" = "Verwijderd uit je watchlist";
+"mediaDetail.toast.markedSeen" = "Gemarkeerd als gezien";
+"mediaDetail.toast.markedUnseen" = "Verwijderd uit gezien";
+"mediaDetail.toast.liked" = "Toegevoegd aan je likes";
+"mediaDetail.toast.likeRemoved" = "Verwijderd uit je likes";
+"mediaDetail.why.cardTitle" = "Waarom past dit bij jou?";
+"mediaDetail.why.title" = "Waarom voor jou";
+"mediaDetail.why.affinity" = "Match met jouw smaak";
+"mediaDetail.why.reason.mood" = "Past bij je mood";
+"mediaDetail.why.reason.genres" = "Genres die je leuk vindt";
+"mediaDetail.why.reason.cast" = "Cast die je kent";
+"mediaDetail.why.helpful" = "Had je hier iets aan?";
+"mediaDetail.why.regenerate" = "Opnieuw genereren";
+"mediaDetail.why.quota" = "Gegenereerd door Vibe AI op basis van beoordelingen, mood en kijkgeschiedenis. %d/%d verzoeken vandaag.";
+"settings.cacheManagement.clearCacheAction" = "Cache wissen";
+"gamification.missionsToday" = "Missies van vandaag";
+"gamification.xpToNext" = "%d XP tot het volgende niveau";
+"gamification.mission.openApp" = "Open de app";
+"gamification.mission.keepStreak" = "Houd je streak vol";
+"gamification.challenge.watch_3" = "Bekijk 3 clips";
+"gamification.challenge.like_5" = "Like 5 clips";
+"gamification.challenge.list_2" = "Voeg 2 titels toe aan een lijst";
+"gamification.challenge.watch_new_genre" = "Bekijk een clip uit een nieuw genre";
+"gamification.challenge.complete_5" = "Bekijk 5 clips helemaal (>70%)";
+
+// SeasonDetailView — conferme di marcatura episodi (2026-08-04)
+"season.confirmUnaired.title" = "Nog niet uitgezonden";
+"season.confirmUnaired.message" = "S%dE%d is nog niet uitgezonden. Toch als gezien markeren?";
+"season.confirmUnaired.confirm" = "Markeer als gezien";
+"season.confirmPrevious.title" = "Heb je de vorige afleveringen gezien?";
+"season.confirmPrevious.message" = "Er zijn %d eerdere afleveringen niet als gezien gemarkeerd.";
+"season.confirmPrevious.markAll" = "Ja, markeer ze allemaal";
+"season.confirmPrevious.onlyThis" = "Alleen deze";
+"season.confirmUnairedSeason.message" = "%d afleveringen van dit seizoen zijn nog niet uitgezonden. Toch als gezien markeren?";
+"season.confirmUnairedSeason.markAll" = "Markeer ze allemaal";
+"season.confirmUnairedSeason.onlyAired" = "Alleen de uitgezonden";
+
+/* Import redesign 2.0 — banner, review inbox, onboarding options */
+"onboarding.import.durationHint" = "Een archief met jaren aan geschiedenis kan meerdere minuten duren.";
+"onboarding.import.meanwhile" = "Ondertussen";
+"onboarding.import.wait" = "Ik blijf wachten";
+"onboarding.import.wait.subtitle" = "Start de app met je bibliotheek al compleet";
+"onboarding.import.background" = "Ga door met de onboarding";
+"onboarding.import.background.subtitle" = "De import loopt door op de achtergrond — we sturen je een melding zodra hij klaar is";
+"onboarding.import.waitingHint" = "We wachten hier: zodra de import klaar is, opent de controle automatisch.";
+"onboarding.import.manage" = "%d titels beheren";
+"import.banner.running" = "Import bezig";
+"import.banner.episodes" = "%1$@ van %2$@ afleveringen";
+"import.banner.completed" = "Import voltooid";
+"import.banner.review" = "%1$d titels te controleren van %2$@";
+"import.banner.manage" = "Beheren";
+"import.banner.ok" = "OK";
+"import.banner.summary" = "%1$@ series · %2$@ afleveringen · %3$@ films";
+"import.toast.imported" = "Bibliotheek geïmporteerd";
+"import.toast.imported.review" = "Bibliotheek geïmporteerd · %d titels te controleren";
+"import.review.title" = "Titels om te controleren";
+"import.review.remaining" = "%1$d van %2$d over";
+"import.review.allResolved" = "Alles gekoppeld";
+"import.review.intro" = "Voor deze titels uit je TV Time-archief vonden we geen zekere match. Kies de juiste of sluit hem uit.";
+"import.review.episodesSeen" = "%d afleveringen gekeken";
+"import.review.searchManually" = "Handmatig zoeken";
+"import.review.exclude" = "Uitsluiten";
+"import.review.later" = "Uitstellen, ik doe het later";
+"import.review.importCount" = "%d titels importeren";
+"import.review.importOne" = "1 titel importeren";
+"import.review.libraryOk" = "Bibliotheek op orde";
+"import.review.libraryOk.subtitle" = "Elke titel uit je TV Time-archief is correct gekoppeld.";
+"import.review.noCandidates" = "Geen suggesties gevonden — probeer handmatig te zoeken.";
+"import.review.manualPick" = "Handmatig gekozen";
+"import.review.movieHint" = "Films zonder match kunnen alleen worden uitgesloten.";
+"import.review.seasons" = "%d seizoenen";
+"import.review.reason.notFound" = "niet gevonden in de catalogus";
+"import.review.reason.ambiguous" = "dubbelzinnige match";
+"import.review.reason.conflict" = "serieconflict";
+"import.review.reason.yearMissing" = "jaartal ontbreekt of komt niet overeen";
+"import.review.reason.missingId" = "geen serie-ID in de export";
+
+"import.toast.mapping.partial" = "%1$d titels gekoppeld · nog %2$d te controleren";
+"import.toast.mapping.done" = "%d titels gekoppeld · bibliotheek op orde";
+
+"import.report.outOfStructure" = "%d afleveringen passen niet in de TMDB-structuur van de bevestigde serie.";
+
+
+// MARK: - Toast (Task 10)
+"mediaDetail.toast.markingSeen" = "Markeren als gezien…";
+"lists.toast.adding" = "Toevoegen…";
+"lists.toast.removing" = "Verwijderen…";
+"lists.toast.addedTo" = "Toegevoegd aan %@";
+"lists.toast.removedFrom" = "Verwijderd uit %@";
+"lists.toast.removed" = "Verwijderd uit de lijst";
+"lists.toast.failed" = "Er is iets misgegaan";
+"lists.toast.creating" = "Lijst maken…";
+"lists.toast.created" = "Lijst aangemaakt";
+"tracking.toast.markingWatched" = "Aflevering markeren…";
+"tracking.toast.markedWatched" = "Aflevering gemarkeerd als gezien";
+"tracking.toast.snoozing" = "Uitstellen…";
+"tracking.toast.snoozed" = "Serie uitgesteld";
+"auth.error.recoveryLinkExpired" = "De link is ongeldig of verlopen. Vraag een nieuwe link aan om je wachtwoord opnieuw in te stellen.";
+
+
+// MARK: - Regole password (Task 2)
+"auth.pwRule.length" = "8+ tekens";
+"auth.pwRule.uppercase" = "1 hoofdletter";
+"auth.pwRule.lowercase" = "1 kleine letter";
+"auth.pwRule.number" = "1 cijfer";
+"auth.pwRule.symbol" = "1 symbool";
+"auth.accountCreated" = "Account aangemaakt";
+
+
+// MARK: - Modali (Task 9+14)
+"tvDetail.markAllSeenSubtitle" = "Geldt voor elke aflevering van elk al uitgebracht seizoen.";
+"tvDetail.markAllSeenCTA" = "%d afleveringen markeren als gezien";
+"tvDetail.markAllSeen.episodes" = "Als gezien gemarkeerde afleveringen";
+"tvDetail.markAllSeen.diary" = "Toegevoegde dagboekvermeldingen";
+"tvDetail.markAllSeenReversible" = "Omkeerbaar: je kunt losse afleveringen herstellen via het dagboek.";
+"tvDetail.seasonsCount" = "%d seizoenen";
+"tvDetail.episodesCount" = "%d afleveringen";
+"auth.changePasswordSubtitle" = "Voor je veiligheid loggen we je uit op je andere apparaten.";
+"auth.newPasswordPlaceholder" = "Nieuw wachtwoord";
+"auth.forgotCurrentPassword" = "Weet je je huidige niet meer?";
+"auth.show" = "Tonen";
+"auth.hide" = "Verbergen";
+"profile.feedback.subtitle" = "We lezen alles. Meestal antwoorden we binnen twee dagen.";
+"profile.feedback.keepUpdatedEmail" = "We schrijven je op %@";
+"profile.feedback.placeholder.bug" = "Wat ging er mis? Wat deed je vlak ervoor…";
+"profile.feedback.placeholder.suggest" = "Wat mis je? Beschrijf hoe je het zou gebruiken…";
+"profile.feedback.placeholder.other" = "Schrijf wat je ons wilt vertellen…";
+"profile.feedback.category.crash" = "Crash";
+"profile.feedback.category.import" = "Import uit TV Time";
+"profile.feedback.category.notifications" = "Meldingen";
+"profile.feedback.category.sync" = "Synchronisatie";
+"profile.feedback.category.ui" = "Weergave";
+"profile.feedback.category.other" = "Anders";
+
+
+// MARK: - Update forzato (Task 3)
+"update.required" = "UPDATE VEREIST";
+"update.fallbackTitle" = "Er is een nieuwe versie beschikbaar";
+"update.whatsChanged" = "WAT ER VERANDERT";
+"update.fullReleaseNotes" = "Volledige releaseopmerkingen";
+"update.cta" = "Bijwerken via de App Store";
+"update.versionFootnote" = "Versie %@";
+"update.dataSafe" = "Je bibliotheek en je gegevens blijven veilig.";
+
+
+// MARK: - Preferiti (Task 7)
+"favorites.subtitle" = "De 4 titels in de etalage van je profiel";
+"favorites.inYourFavorites" = "In je favorieten";
+"favorites.showcased" = "Te zien op je profiel";
+"favorites.addedToast" = "Toegevoegd aan favorieten";
+"favorites.removedToast" = "Verwijderd uit favorieten";
+
+
+// MARK: - Informazioni estese (Task 8)
+"movieDetail.releaseDate" = "Releasedatum";
+"movieDetail.status" = "Status";
+"movieDetail.productionCompanies" = "Productie";
+"movieDetail.budget" = "Budget";
+"movieDetail.revenue" = "Opbrengst";
+"movieDetail.originalLanguage" = "Oorspronkelijke taal";
+"movieDetail.tagline" = "Slogan";
+"tvDetail.firstAirDate" = "Eerste uitzending";
+"tvDetail.lastAirDate" = "Laatste uitzending";
+"tvDetail.seasonsEpisodes" = "Seizoenen";
+"tvDetail.network" = "Zender";
+"tvDetail.createdBy" = "Bedacht door";
+"mediaStatus.released" = "Uitgebracht";
+"mediaStatus.inProduction" = "In productie";
+"mediaStatus.postProduction" = "Postproductie";
+"mediaStatus.planned" = "Gepland";
+"mediaStatus.rumored" = "Gerucht";
+"mediaStatus.canceled" = "Geannuleerd";
+"mediaStatus.returningSeries" = "Lopend";
+"mediaStatus.ended" = "Afgelopen";
+"mediaStatus.pilot" = "Pilot";
+
+
+// MARK: - Piattaforme (Task 12+17)
+"platforms.active" = "actieve platforms";
+"platforms.activeCount" = "%d actief";
+"platforms.clear" = "Wissen";
+"platforms.coverage" = "Dekking van je watchlist";
+"platforms.libraryCount" = "%d titels in je bibliotheek";
+"platforms.recommended" = "AANBEVOLEN";
+"platforms.manage" = "Beheren";
+"platforms.empty" = "Nog geen platforms beschikbaar voor jouw land.";
+
+
+// MARK: - Preferiti nel profilo (Task 15)
+"favorites.sectionTitle" = "Je favorieten";
+"favorites.sectionCount" = "%1$d van %2$d";
+
+
+// MARK: - Ricerca (Task 16)
+"search.mostRelevant" = "Meest relevant";
+"common.movie" = "Film";
+"common.tvShow" = "Serie";
+
+
+// MARK: - Toast con fase di progresso (bug 7)
+"mediaDetail.toast.addingToWatchlist" = "Toevoegen aan je watchlist…";
+"mediaDetail.toast.removingFromWatchlist" = "Verwijderen uit je watchlist…";
+"mediaDetail.toast.liking" = "Toevoegen aan je likes…";
+"mediaDetail.toast.unliking" = "Verwijderen uit je likes…";
+"mediaDetail.toast.markingUnseen" = "Verwijderen uit gezien…";
+"mediaDetail.toast.disliking" = "Toevoegen aan je dislikes…";
+"mediaDetail.toast.undisliking" = "Verwijderen uit je dislikes…";
+"mediaDetail.toast.disliked" = "Toegevoegd aan je dislikes";
+"mediaDetail.toast.dislikeRemoved" = "Verwijderd uit je dislikes";
+"favorites.adding" = "Toevoegen aan favorieten…";
+"favorites.removing" = "Verwijderen uit favorieten…";
+
+
+// MARK: - Ricerca ridisegnata (bug 1)
+"search.scope.all" = "Alles";
+"search.scope.movies" = "Films";
+"search.scope.series" = "Series";
+"search.clear" = "Wissen";
+"search.trending.today" = "Vandaag";
+"search.trending.subtitle" = "Het meest gezocht in %@ in de afgelopen 24 uur.";
+"search.results.subtitle" = "Overeenkomsten voor ‘%@’, daarna verwante titels.";
+"search.resultsCount" = "%d titels";
+
+
+// MARK: - Ricerca piattaforme + esito notifica
+"platforms.search" = "Zoek een platform";
+"platforms.searchEmpty" = "Geen platform met die naam.";
+"mediaDetail.notifyMeFailed" = "We konden de melding niet inschakelen.";
+
+
+// MARK: - Report import ridisegnato
+"import.report.title" = "Importrapport";
+"import.report.sourcePeriod" = "%@ · %@ – %@";
+"import.report.success.title" = "Bibliotheek geïmporteerd";
+"import.report.success.subtitle" = "%d series en %d films gekoppeld aan de catalogus.";
+"import.report.success.subtitleWithRatings" = "%d series en %d films gekoppeld aan de catalogus, met kijkdata en beoordelingen.";
+"import.report.tile.episodes" = "Afleveringen";
+"import.report.tile.movies" = "Films";
+"import.report.leftOut.title" = "Buiten gebleven";
+"import.report.leftOut.subtitle" = "Voor deze titels is er geen zekere overeenkomst in de catalogus. Tik op een kaart om handmatig te zoeken.";
+"import.report.leftOut.excluded" = "Door jou uitgesloten";
+"import.report.leftOut.episodes" = "%d bekeken afleveringen";
+"import.report.leftOut.seenOn" = "bekeken op %@";
+"import.report.copyList" = "Kopieer de lijst";
+"import.report.copied" = "Lijst gekopieerd";
+"import.report.details" = "Details";
+
+
+// MARK: - Report import — dettagli
+"import.report.detail.period" = "Gedekte periode";
+"import.report.detail.years" = "%d jaar";
+"import.report.detail.oneYear" = "1 jaar";
+"import.report.detail.lessThanYear" = "minder dan een jaar";
+"import.report.detail.statuses" = "Herstelde seriestatussen";
+"import.report.detail.statuses.hint" = "Watchlist en archief zoals op TV Time";
+"import.report.detail.ratings" = "Overgezette beoordelingen";
+"import.report.detail.ratingsUnmatched" = "Niet-gekoppelde beoordelingen";
+"import.report.detail.ratingsUnmatched.hint" = "Beoordeelde afleveringen die niet in de catalogus staan";
+"import.report.detail.ratingsDeferred" = "Beoordelingen nog niet geïmporteerd";
+"import.report.detail.favorites" = "Herstelde favorieten";
+"import.report.detail.moviesSeen" = "Films gemarkeerd als gezien";
+"import.report.detail.moviesWatchlist" = "Films in de watchlist";
+"import.report.detail.statusesUnresolved" = "Niet-herstelde statussen";
+"import.report.detail.outOfStructure" = "Afleveringen zonder plek";
+"import.report.detail.outOfStructure.hint" = "Specials en uitgebreide versies buiten de structuur van de serie";
+"import.report.detail.favoriteMovies" = "Favoriete films niet geïmporteerd";
+
+
+// MARK: - Report import — titolo mancante
+"import.report.leftOut.untitled" = "Titel ontbreekt in de export";
+
+
+// MARK: - Generi TMDB
+// I nomi dei generi mostrati a schermo (titoli dei caroselli, grafico dei generi in Analytics).
+// TMDB li restituisce tradotti solo dentro la scheda di un film; nei caroselli il genere arriva
+// come id numerico, quindi il nome deve venire da qui. Da tradurre in ogni lingua.
+"genre.action" = "Actie";
+"genre.adventure" = "Avontuur";
+"genre.animation" = "Animatie";
+"genre.comedy" = "Komedie";
+"genre.crime" = "Misdaad";
+"genre.documentary" = "Documentaire";
+"genre.drama" = "Drama";
+"genre.family" = "Familie";
+"genre.fantasy" = "Fantasy";
+"genre.history" = "Geschiedenis";
+"genre.horror" = "Horror";
+"genre.music" = "Muziek";
+"genre.mystery" = "Mysterie";
+"genre.romance" = "Romantiek";
+"genre.scienceFiction" = "Sciencefiction";
+"genre.tvMovie" = "TV-film";
+"genre.thriller" = "Thriller";
+"genre.war" = "Oorlog";
+"genre.western" = "Western";
+"genre.actionAdventure" = "Actie & Avontuur";
+"genre.kids" = "Kinderen";
+"genre.news" = "Nieuws";
+"genre.reality" = "Realityshow";
+"genre.sciFiFantasy" = "Sci-Fi & Fantasy";
+"genre.soap" = "Soap";
+"genre.talk" = "Talkshow";
+"genre.warPolitics" = "Oorlog & Politiek";
+
+
+// MARK: - Mood
+// Vanno nel `%@` di "carousel.moodTonight" ("Vanavond: %@"). Sono SOSTANTIVI, non aggettivi: un
+// aggettivo dovrebbe concordare con una parola che nel template non c'è.
+"mood.happy" = "Feelgood";
+"mood.sad" = "Melancholie";
+"mood.excited" = "Spanning";
+"mood.relaxed" = "Ontspanning";
+"mood.scared" = "Kippenvel";
+"mood.thoughtful" = "Stof tot nadenken";
+"mood.romantic" = "Romantiek";
+"mood.adventurous" = "Avontuur";
+"mood.nostalgic" = "Nostalgie";
+"mood.energetic" = "Pure energie";
+
+
+// MARK: - Caroselli — argomenti e varianti senza genere
+// "%d" è l'anno d'inizio del decennio (2020). In inglese si dice "2020s", in olandese "jaren 2020":
+// il suffisso è grammatica, non un numero, e va tradotto. I template "carousel.decadeClassics" e
+// "carousel.throwback" portano l'articolo ("...uit de %@", "Terug naar de %@").
+"carousel.arg.decade" = "jaren %d";
+// Usati quando il profilo non ha ancora un genere preferito: non un fallback infilato nel "%@" del
+// titolo normale, ma una frase alternativa.
+"carousel.hiddenGems.generic" = "Verborgen pareltjes";
+"carousel.staffPicks.generic" = "Onze keuze voor jou";
+
+
+// MARK: - Analytics
+"analytics.noData" = "Geen gegevens";
+
+
+// MARK: - Statistiche e gamification (stringhe estratte dalle view)
+// Erano letterali dentro AnalyticsDashboardView / FloatingXPBadgeView / BadgeGalleryView /
+// LevelProgressView: non passando da `.localized` restavano in inglese in tutte e 20 le lingue.
+"stats.title" = "Jouw statistieken";
+"stats.yourActivity" = "Jouw activiteit";
+"stats.viewFull" = "Alle statistieken bekijken";
+"stats.loading" = "Statistieken laden…";
+"stats.errorTitle" = "Statistieken konden niet worden geladen";
+"stats.emptyTitle" = "Nog geen statistieken";
+"stats.emptySubtitle" = "Begin met kijken om je statistieken te zien!";
+"stats.genreDistribution" = "Verdeling per genre";
+"stats.genreEmpty" = "Nog geen genregegevens";
+"stats.whenActive" = "Wanneer je kijkt";
+"stats.topContent" = "Je meest bekeken titels";
+"stats.contentEmpty" = "Nog geen gegevens over titels";
+"stats.discoveryChannels" = "Hoe je titels vindt";
+"stats.discoveryEmpty" = "Nog geen gegevens over ontdekken";
+"stats.moodProfile" = "Moodprofiel";
+"stats.moodEmpty" = "Nog te weinig gegevens — blijf kijken om je moodprofiel te zien.";
+
+// "%d" è il numero del livello.
+"gamification.levelNumber" = "Niveau %d";
+// Versione corta per il badge in cima alla schermata, dove lo spazio è quello che è.
+"gamification.levelShort" = "Niv.%d";
+"gamification.bestStreak" = "Langste streak";
+"gamification.xpBonus" = "XP-bonus";
+"gamification.todaysChallenge" = "Uitdaging van vandaag";
+"gamification.completed" = "Voltooid!";
+"gamification.badgeUnlocked" = "Badge ontgrendeld!";
+"gamification.badges.collected" = "Verzamelde badges";
+"gamification.badges.unlocked" = "Ontgrendeld";
+// "%d" è il totale dei badge esistenti: compare come "12 van 40".
+"gamification.badges.ofTotal" = "van %d";
+"gamification.levels.progressTitle" = "Voortgang in niveaus";
+"gamification.allLevels" = "ALLE NIVEAUS";
+
+"common.progress" = "Voortgang";
+"tvDetail.seasonsTitle" = "Seizoenen";
+"tvDetail.episodesTitle" = "Afleveringen";

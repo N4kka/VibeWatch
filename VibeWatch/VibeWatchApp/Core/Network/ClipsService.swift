@@ -5,7 +5,7 @@ final class ClipsService {
     static let shared = ClipsService()
     
     private let tmdbService = TMDBService.shared
-    private let youtubeAPIKey = Config.youtubeApiKey  // Phase 5: Use Config instead of hardcoded key
+    // The YouTube key now lives only in YouTubeSearchClient, which owns the quota gate.
     private let session: URLSession
 
     // In-memory storage for likes (since you don't have a backend)
@@ -93,26 +93,13 @@ final class ClipsService {
     // MARK: - YouTube API
     
     private func searchYouTubeClips(query: String, maxResults: Int = 5) async throws -> [YouTubeSearchItem] {
-        guard var components = URLComponents(string: "https://www.googleapis.com/youtube/v3/search") else {
-            throw URLError(.badURL)
-        }
-        components.queryItems = [
-            URLQueryItem(name: "part", value: "snippet"),
-            URLQueryItem(name: "q", value: "\(query) official"), // Removed exclusions - show ALL content
-            URLQueryItem(name: "type", value: "video"),
-            URLQueryItem(name: "videoDuration", value: "short"),
-            URLQueryItem(name: "maxResults", value: "\(max(1, min(maxResults, 50)))"),
-            URLQueryItem(name: "key", value: youtubeAPIKey)
-        ]
-        
-        guard let url = components.url else {
-            throw URLError(.badURL)
-        }
-        let (data, _) = try await session.data(from: url)
-        let response = try JSONDecoder().decode(YouTubeSearchResponse.self, from: data)
-        
+        // Through YouTubeSearchClient: this call site decoded the body without checking the status,
+        // so an exhausted quota surfaced as a decoding error. See that type for the quota maths.
         // Return ALL content - no filtering!
-        return response.items
+        try await YouTubeSearchClient.shared.search(
+            query: "\(query) official",
+            maxResults: maxResults
+        )
     }
     
     // MARK: - Combine Results

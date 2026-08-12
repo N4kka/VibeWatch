@@ -18,6 +18,12 @@ enum SQLiteTable: String, CaseIterable {
     case lists
     case listItems = "list_items"
 
+    // Public lists (Fase 1)
+    case listFollows = "list_follows"
+    case userBlocks = "user_blocks"
+    case listReports = "list_reports"
+    case publicListsCache = "public_lists_cache"
+
     // User activity tables
     case userClipHistory = "user_clip_history"
     case userClipSignals = "user_clip_signals"
@@ -66,6 +72,35 @@ enum SQLiteTable: String, CaseIterable {
     case userNotificationPreferences = "user_notification_preferences"
     case notificationSubscriptions = "notification_subscriptions"
 
+    // Watch providers (created by migration 5, never whitelisted: every insert/update from
+    // LocalWatchProvidersRepository threw invalidTableName and died under a `try?`).
+    case watchProviders = "watch_providers"
+
+    // Tracking episodi (SPEC v3 §4).
+    case watchEvents = "watch_events"
+    case tvShowState = "tv_show_state"
+
+    // Blocco 9 (SPEC v3 §3.6): in produzione dal 2026-07-31, con RLS e rami in apply_mutations.
+    // `user_ratings` non ha id sintetico nemmeno qui: la chiave e' quella naturale, con
+    // season/episode a -1 quando non e' un episodio — lo stesso sentinello del
+    // `coalesce(season_number,-1)` dell'indice unico sul server.
+    case userFavorites = "user_favorites"
+    case userRatings = "user_ratings"
+
+    // Social (SPEC v3 §3.6, blocco 8). Chiave composta (follower_id, followee_id), come sul
+    // server: un follow e' la coppia, non una riga con un id suo.
+    case userFollows = "user_follows"
+
+    // Specchi locali delle viste della schermata Tracking (§9.2). Sono cache di righe gia'
+    // pronte per la UI, non tabelle di dominio: si popolano dal pull e non hanno un percorso di
+    // scrittura, perche' cio' che l'utente cambia sta in `tv_show_state` e `watch_events`.
+    case tvTracking = "tv_tracking"
+    case tvTimeline = "tv_timeline"
+
+    // Cache dei titoli nella lingua dell'app (migration 12): il catalogo condiviso (§1.5) parla
+    // una lingua sola, e §13.6 vieta la rete al primo fotogramma. Locale e basta, niente sync.
+    case localizedTitles = "localized_titles"
+
     /// All valid table names as a Set for O(1) lookup
     static let validTableNames: Set<String> = Set(SQLiteTable.allCases.map(\.rawValue))
 
@@ -97,29 +132,72 @@ final class SQLiteService: ObservableObject {
     /// Set synchronously at init() before any concurrent access begins.
     private(set) var hasPersonalizedDiscoveryCache: Bool = false
 
+    /// Bumped whenever the CREATE TABLE / CREATE INDEX scripts below change. `createTables()` is
+    /// on the launch path and runs on the main thread, so it re-runs only when this differs from
+    /// what is stored in app_metadata. Raised to 1.1.0 because until now every declared index was
+    /// being discarded (see executeScript), so existing installs need one more creation pass to
+    /// finally get them.
+    private static let schemaVersion = "1.1.0"
+
     // Wrappers to allow capturing dynamic SQLite values in @Sendable contexts.
     private struct SQLSendableValue: @unchecked Sendable { let raw: Any }
     private struct SQLSendableRecord: @unchecked Sendable { var raw: [String: Any] }
 
-    /// Validate table name to prevent SQL injection (Phase 5 Security)
+    /// Set to false only by the test that asserts the throw itself. See `validateTableName`.
+    static var trapsOnUnknownTable = true
+
+    /// Validate table name to prevent SQL injection (Phase 5 Security).
+    ///
+    /// P1: an unknown table is almost never an injection attempt — it is a table that exists in
+    /// SQLite but was never added to the whitelist, and the resulting throw kept dying under a
+    /// `try?` at the call site (`watch_providers` did exactly that: created by migration 5, absent
+    /// from the enum, every write lost with no log anyone read). Debug builds now trap, so a
+    /// missing whitelist entry surfaces on the first write during development instead of in
+    /// production as missing data.
     private func validateTableName(_ table: String) throws {
         guard SQLiteTable.isValid(table) else {
-            Logger.error("[SQLite] SQL injection attempt blocked: invalid table '\(table)'")
+            Logger.error("[SQLite] Rejected statement on non-whitelisted table '\(table)'. "
+                         + "If the table is legitimate, add it to SQLiteTable.")
+            if Self.trapsOnUnknownTable {
+                assertionFailure("[SQLite] non-whitelisted table '\(table)' — add it to SQLiteTable")
+            }
             throw SQLiteError.invalidTableName(table)
         }
     }
+
+    /// Phase 5 (1.10): a column name is a plain SQL identifier (letters, digits, underscore,
+    /// not starting with a digit). Column names from caller-provided dictionaries are
+    /// interpolated into SQL (the VALUES go through `?`), so they must be validated to keep
+    /// the `columns`/`setClause` fragments injection-proof. Pure function for testability.
+    nonisolated static func isValidColumnIdentifier(_ name: String) -> Bool {
+        name.range(of: "^[A-Za-z_][A-Za-z0-9_]*$", options: .regularExpression) != nil
+    }
+
+    /// Validate caller-provided column identifiers before interpolating them into SQL.
+    private func validateColumnNames(_ names: some Collection<String>) throws {
+        for name in names where !Self.isValidColumnIdentifier(name) {
+            Logger.error("[SQLite] SQL injection attempt blocked: invalid column '\(name)'")
+            throw SQLiteError.invalidColumnName(name)
+        }
+    }
     
-    private init() {
-        // Store in app's Documents directory
-        let fileManager = FileManager.default
-        let urls = fileManager.urls(for: .documentDirectory, in: .userDomainMask)
-        dbPath = urls[0].appendingPathComponent("vibewatch_local.sqlite").path
-        
+    /// Designated initializer. Tests can pass a temporary/isolated database file path
+    /// to exercise real persistence without touching the production store.
+    init(dbPath: String) {
+        self.dbPath = dbPath
+
         Logger.info("[SQLite] Database path: \(dbPath)")
-        
+
         openDatabase()
         createTables()
         checkInitialCacheState()
+    }
+
+    private convenience init() {
+        // Store in app's Documents directory
+        let fileManager = FileManager.default
+        let urls = fileManager.urls(for: .documentDirectory, in: .userDomainMask)
+        self.init(dbPath: urls[0].appendingPathComponent("vibewatch_local.sqlite").path)
     }
 
     deinit {
@@ -196,12 +274,12 @@ final class SQLiteService: ObservableObject {
     /// dbQueue re-entrancy. Safe to call from init() after createTables().
     private func checkInitialCacheState() {
         var stmt: OpaquePointer?
-        let sql = "SELECT COUNT(*) FROM personalized_discovery LIMIT 1"
+        // Only "does a row exist" is needed. COUNT(*) is an aggregate, so `LIMIT 1` bounded
+        // nothing and the whole table was scanned — on the main thread, at every launch.
+        let sql = "SELECT 1 FROM personalized_discovery LIMIT 1"
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return }
         defer { sqlite3_finalize(stmt) }
-        if sqlite3_step(stmt) == SQLITE_ROW {
-            hasPersonalizedDiscoveryCache = sqlite3_column_int(stmt, 0) > 0
-        }
+        hasPersonalizedDiscoveryCache = sqlite3_step(stmt) == SQLITE_ROW
     }
 
     /// Returns true when personalized_discovery table has at least one row.
@@ -276,6 +354,18 @@ final class SQLiteService: ObservableObject {
     // MARK: - Schema Creation
     
     private func createTables() {
+        // app_metadata has to exist before its own version marker can be read.
+        executeScript(createAppMetadataTable())
+
+        // The scripts below are idempotent but not free, and this runs on the main thread before
+        // the first frame on every single launch. Skip the whole pass once the stored schema
+        // version matches; migrations below stay outside the gate since they carry their own.
+        if readSchemaVersion() == Self.schemaVersion {
+            runMigrations()
+            runPersonalizationMigrations()
+            return
+        }
+
         // Read schema from file or create inline
         let tables = [
             createClipsTable(),
@@ -286,6 +376,10 @@ final class SQLiteService: ObservableObject {
             createProfilesTable(),
             createListsTable(),
             createListItemsTable(),
+            createListFollowsTable(),
+            createUserBlocksTable(),
+            createListReportsTable(),
+            createPublicListsCacheTable(),
             createUserClipHistoryTable(),
             createUserClipSignalsTable(),
             createUserPreferencesTable(),
@@ -308,25 +402,50 @@ final class SQLiteService: ObservableObject {
             createXPTransactionsTable()
         ]
         
+        // executeScript, not execute: each of these strings is a CREATE TABLE followed by its
+        // CREATE INDEX statements, and prepare_v2 would compile only the first of them.
         for table in tables {
-            execute(table)
+            executeScript(table)
         }
-        
+
         // Initialize metadata
         execute("""
             INSERT OR IGNORE INTO app_metadata (key_name, value_text) VALUES
             ('app_install_date', datetime('now')),
-            ('db_schema_version', '1.0.0'),
             ('last_full_sync', NULL)
         """)
-        
-        Logger.info("[SQLite] All tables created")
+
+        writeSchemaVersion(Self.schemaVersion)
+
+        Logger.info("[SQLite] Schema created (version \(Self.schemaVersion))")
 
         // Run migrations
         runMigrations()
 
         // Run personalization migrations (Phase 1)
         runPersonalizationMigrations()
+    }
+
+    /// Reads the stored schema marker directly, without going through the async query path:
+    /// this is called from init() on the launch path.
+    private func readSchemaVersion() -> String? {
+        var statement: OpaquePointer?
+        let sql = "SELECT value_text FROM app_metadata WHERE key_name = 'db_schema_version'"
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else { return nil }
+        defer { sqlite3_finalize(statement) }
+        guard sqlite3_step(statement) == SQLITE_ROW,
+              let value = sqlite3_column_text(statement, 0) else { return nil }
+        return String(cString: value)
+    }
+
+    private func writeSchemaVersion(_ version: String) {
+        execute(
+            """
+            INSERT INTO app_metadata (key_name, value_text) VALUES ('db_schema_version', ?)
+            ON CONFLICT(key_name) DO UPDATE SET value_text = excluded.value_text
+            """,
+            parameters: [version]
+        )
     }
     
     private func runMigrations() {
@@ -344,7 +463,7 @@ final class SQLiteService: ObservableObject {
         }
         
         let currentVersion = Int(migrationVersionString) ?? 0
-        let latestVersion = 5
+        let latestVersion = 9
         
         // Only run migrations if not already at latest version
         if currentVersion >= latestVersion {
@@ -470,12 +589,202 @@ final class SQLiteService: ObservableObject {
             }
         }
 
+        if currentVersion < 6 {
+            // Migration 6: collapse duplicate CORE lists (watchlist/seen/liked/disliked).
+            //
+            // Bug "gli item spariscono al riavvio": una nuova quaterna di liste core con UUID
+            // nuovi veniva sintetizzata quasi a ogni avvio (ensureCoreLists + ensureListsInDatabase
+            // + syncListsForAuthenticatedUser). loadListsFromSQLite ordina created_at DESC e la UI
+            // prende `.first` per tipo → la duplicata PIÙ RECENTE, che è VUOTA. Gli item reali
+            // restavano incagliati su una riga più vecchia → apparivano persi.
+            //
+            // Collapse NON distruttivo: per ogni (user_id, type) core si elegge una canonica
+            // (quella con più item, tie-break created_at più vecchio), vi si ri-puntano tutti gli
+            // item delle duplicate (soft-deletando i soli item realmente duplicati per evitare
+            // conflitti su UNIQUE(list_id, media_id, media_type)) e si soft-deletano le duplicate.
+            // Infine un indice univoco parziale impedisce strutturalmente nuove duplicate attive.
+            Logger.info("[SQLite] Migration 6: collapse duplicate core lists + guard index")
+
+            execute("DROP TABLE IF EXISTS _canon")
+            execute("""
+                CREATE TEMP TABLE _canon AS
+                SELECT user_id, type, id AS canon_id FROM (
+                  SELECT l.user_id, l.type, l.id,
+                    ROW_NUMBER() OVER (
+                      PARTITION BY l.user_id, l.type
+                      ORDER BY (SELECT count(*) FROM list_items i WHERE i.list_id = l.id AND i.deleted_at IS NULL) DESC,
+                               l.created_at ASC,
+                               l.id ASC
+                    ) AS rn
+                  FROM lists l
+                  WHERE l.type IN ('watchlist','seen','liked','disliked') AND l.deleted_at IS NULL
+                ) WHERE rn = 1
+            """)
+
+            execute("DROP TABLE IF EXISTS _listmap")
+            execute("""
+                CREATE TEMP TABLE _listmap AS
+                SELECT l.id AS old_id, c.canon_id AS new_id
+                FROM lists l
+                JOIN _canon c ON l.user_id = c.user_id AND l.type = c.type
+                WHERE l.type IN ('watchlist','seen','liked','disliked')
+                  AND l.deleted_at IS NULL
+                  AND l.id <> c.canon_id
+            """)
+
+            // Soft-delete duplicate items keyed by EFFECTIVE target list (canon if mover, else self)
+            // + media, keeping the earliest added_at. Prevents UNIQUE collisions when re-pointing.
+            execute("""
+                UPDATE list_items
+                SET deleted_at = datetime('now'), updated_at = datetime('now')
+                WHERE id IN (
+                  SELECT id FROM (
+                    SELECT li.id,
+                      ROW_NUMBER() OVER (
+                        PARTITION BY COALESCE((SELECT m.new_id FROM _listmap m WHERE m.old_id = li.list_id), li.list_id),
+                                     li.media_id, li.media_type
+                        ORDER BY li.added_at ASC, li.id ASC
+                      ) AS rn
+                    FROM list_items li
+                    WHERE li.deleted_at IS NULL
+                      AND COALESCE((SELECT m.new_id FROM _listmap m WHERE m.old_id = li.list_id), li.list_id)
+                          IN (SELECT canon_id FROM _canon)
+                  ) WHERE rn > 1
+                )
+            """)
+
+            // Re-point the remaining (now conflict-free) items to their canonical list.
+            execute("""
+                UPDATE list_items
+                SET list_id = (SELECT m.new_id FROM _listmap m WHERE m.old_id = list_items.list_id),
+                    updated_at = datetime('now')
+                WHERE deleted_at IS NULL
+                  AND list_id IN (SELECT old_id FROM _listmap)
+            """)
+
+            // Soft-delete the now-redundant non-canonical core lists.
+            execute("""
+                UPDATE lists
+                SET deleted_at = datetime('now'), updated_at = datetime('now')
+                WHERE id IN (SELECT old_id FROM _listmap)
+            """)
+
+            execute("DROP TABLE IF EXISTS _canon")
+            execute("DROP TABLE IF EXISTS _listmap")
+
+            // Structural guard: at most ONE active core list per (user_id, type) going forward.
+            // With this in place a stray INSERT OR IGNORE for a new-UUID core list is a no-op,
+            // and ListManager.reconcileCoreListIdentities() keeps the in-memory id canonical.
+            execute("""
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_lists_one_core_per_user_type
+                ON lists(user_id, type)
+                WHERE type IN ('watchlist','seen','liked','disliked') AND deleted_at IS NULL
+            """)
+
+            // Purge unrecoverable list_items outbox ops stuck on the legacy `created_at` column
+            // mismatch (Postgres 42703). The items themselves live locally; these ops only retry-fail.
+            execute("DELETE FROM sync_outbox WHERE table_name = 'list_items' AND last_error LIKE '%42703%'")
+        }
+
+        if currentVersion < 7 {
+            // Migration 7: Liste Pubbliche (Fase 1).
+            // - `is_public` su lists (mirror locale dello stato server; solo custom diventano pubbliche)
+            // - tabelle locali per outbox/offline: list_follows, user_blocks, list_reports
+            // - cache metadati per la tab "Followed" offline
+            Logger.info("[SQLite] Migration 7: public lists (is_public + follows/blocks/reports + cache)")
+            if !columnExists("lists", column: "is_public") {
+                execute("ALTER TABLE lists ADD COLUMN is_public INTEGER NOT NULL DEFAULT 0")
+            }
+            execute(createListFollowsTable())
+            execute(createUserBlocksTable())
+            execute(createListReportsTable())
+            execute(createPublicListsCacheTable())
+        }
+
+        if currentVersion < 8 {
+            // Migration 8: la cache dei dettagli conserva il modello INTERO.
+            //
+            // Le colonne una-per-campo perdevano generi, stato, tagline e paesi: da cache la
+            // sezione "Informazioni" mostrava meno righe che da rete, e i campi nuovi (budget,
+            // incassi, network, creatori) non avrebbero avuto dove stare. Una colonna JSON del
+            // modello Codable evita una colonna per ogni campo che TMDB aggiungerà.
+            Logger.info("[SQLite] Migration 8: detail_cache.model_json")
+            if !columnExists("detail_cache", column: "model_json") {
+                execute("ALTER TABLE detail_cache ADD COLUMN model_json TEXT")
+            }
+        }
+
+        if currentVersion < 9 {
+            // Migration 9: il legame fra una lista pubblica e la lista da cui è stata copiata.
+            //
+            // "Crea lista pubblica da questa" produceva uno snapshot morto: aggiungere un titolo
+            // alla watchlist non lo faceva comparire nella copia che gli amici seguono. Le due
+            // colonne dicono da dove viene la copia, e `ListManager` propaga le aggiunte e le
+            // rimozioni verso di essa.
+            Logger.info("[SQLite] Migration 9: lists.source_list_id / source_list_type")
+            if !columnExists("lists", column: "source_list_id") {
+                execute("ALTER TABLE lists ADD COLUMN source_list_id TEXT")
+            }
+            if !columnExists("lists", column: "source_list_type") {
+                execute("ALTER TABLE lists ADD COLUMN source_list_type TEXT")
+            }
+        }
+
         // Re-enable foreign keys
         execute("PRAGMA foreign_keys = ON")
-        
-        // Mark migration as complete
+
+        // STAB-003: only record the new version if the schema it promises is actually there.
+        // Every execute() above returns a Bool that the migration ignored, so a failed ALTER/CREATE
+        // used to be invisible and the version was bumped anyway — leaving a store permanently
+        // half-migrated (next launch sees version >= latest and skips, so it never heals). Instead
+        // of a transactional rewrite of this launch-critical path (high risk, no tests), we verify
+        // the distinctive artifact of each migration and refuse to claim the version until they're
+        // all present. A partial migration then simply retries on the next launch.
+        let missing = missingMigrationArtifacts()
+        guard missing.isEmpty else {
+            Logger.error("[SQLite] Migration incomplete — NOT recording version \(latestVersion). "
+                         + "Missing: \(missing.joined(separator: ", ")). Will retry next launch.")
+            return
+        }
+
         execute("INSERT OR REPLACE INTO app_metadata (key_name, value_text) VALUES ('migration_version', '\(latestVersion)')")
         Logger.info("[SQLite] Migrations complete - now at version \(latestVersion)")
+    }
+
+    /// Returns the labels of any expected end-state artifacts (columns, tables, indexes) that the
+    /// migrations 1–9 should have produced but didn't. Empty means the schema matches what the
+    /// latest version promises. Used to gate the version bump (STAB-003).
+    private func missingMigrationArtifacts() -> [String] {
+        var missing: [String] = []
+        func requireColumn(_ table: String, _ column: String) {
+            if !columnExists(table, column: column) { missing.append("\(table).\(column)") }
+        }
+        func requireObject(_ name: String) {
+            if !objectExists(name) { missing.append(name) }
+        }
+        requireColumn("clip_reactions", "updated_at")   // migration 2
+        requireColumn("clip_reactions", "synced_at")    // migration 3
+        requireColumn("user_ai_token_usage", "usage_day") // migration 4
+        requireObject("watch_providers")                // migration 5
+        requireColumn("detail_cache", "vote_count")     // migration 5
+        requireObject("idx_lists_one_core_per_user_type") // migration 6
+        requireColumn("lists", "is_public")             // migration 7
+        requireObject("list_follows")                   // migration 7
+        requireObject("public_lists_cache")             // migration 7
+        requireColumn("detail_cache", "model_json")     // migration 8
+        requireColumn("lists", "source_list_id")        // migration 9
+        requireColumn("lists", "source_list_type")      // migration 9
+        return missing
+    }
+
+    /// True if a table or index with this name exists. Sync, C-API, mirrors columnExists.
+    func objectExists(_ name: String) -> Bool {
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+        let sql = "SELECT 1 FROM sqlite_master WHERE type IN ('table','index') AND name = ? LIMIT 1"
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else { return false }
+        sqlite3_bind_text(statement, 1, (name as NSString).utf8String, -1, nil)
+        return sqlite3_step(statement) == SQLITE_ROW
     }
     
     func columnExists(_ table: String, column: String) -> Bool {
@@ -521,7 +830,7 @@ final class SQLiteService: ObservableObject {
 
             // Bind parameters
             for (index, param) in parameters.enumerated() {
-                bind(param, to: statement, at: Int32(index + 1))
+                Self.bindValue(param, to: statement, at: Int32(index + 1))
             }
 
             if sqlite3_step(statement) != SQLITE_DONE {
@@ -538,7 +847,82 @@ final class SQLiteService: ObservableObject {
 
         return success
     }
-    
+
+    /// Execute a multi-statement SQL script.
+    ///
+    /// `execute(_:)` above compiles with `sqlite3_prepare_v2`, which only ever compiles the FIRST
+    /// statement in the string — the rest is reachable solely through the `pzTail` out-parameter,
+    /// which is passed as nil. Every `createXTable()` returns a CREATE TABLE followed by its
+    /// CREATE INDEX statements in one string, so all 73 declared indexes were being silently
+    /// dropped: production databases only ever had the implicit PRIMARY KEY autoindexes.
+    ///
+    /// `sqlite3_exec` runs the whole script. Splitting on ";" would have been the obvious fix and
+    /// is wrong — it breaks on any semicolon inside a string literal or trigger body.
+    @discardableResult
+    func executeScript(_ sql: String) -> Bool {
+        var success = false
+
+        writerQueue.sync { [weak self] in
+            guard let self = self else { return }
+
+            var errorPointer: UnsafeMutablePointer<CChar>?
+            if sqlite3_exec(self.db, sql, nil, nil, &errorPointer) == SQLITE_OK {
+                success = true
+            } else {
+                let error = errorPointer.map { String(cString: $0) } ?? "unknown error"
+                Logger.error("[SQLite] Script failed: \(error). SQL: \(sql)")
+                DispatchQueue.main.async { [weak self] in
+                    self?.lastError = error
+                }
+            }
+            if let errorPointer { sqlite3_free(errorPointer) }
+        }
+
+        return success
+    }
+
+    /// Execute a write statement (INSERT/UPDATE/DELETE/REPLACE) on the writer connection.
+    /// Unlike `queryRaw`, whose connection is opened `SQLITE_OPEN_READONLY`, this can actually
+    /// write — and it throws on failure instead of returning an empty result set.
+    func executeWrite(_ sql: String, parameters: [Any] = []) async throws {
+        let safeParameters = parameters.map(SQLSendableValue.init(raw:))
+
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            writerQueue.async { [weak self, safeParameters] in
+                guard let self = self else {
+                    continuation.resume(throwing: SQLiteError.notConnected)
+                    return
+                }
+
+                var statement: OpaquePointer?
+
+                guard sqlite3_prepare_v2(self.db, sql, -1, &statement, nil) == SQLITE_OK else {
+                    let error = String(cString: sqlite3_errmsg(self.db))
+                    Logger.error("[SQLite] Write prepare failed: \(error). SQL: \(sql)")
+                    continuation.resume(throwing: SQLiteError.queryFailed(error))
+                    return
+                }
+
+                defer { sqlite3_finalize(statement) }
+
+                for (index, param) in safeParameters.enumerated() {
+                    Self.bindValue(param.raw, to: statement, at: Int32(index + 1))
+                }
+
+                // RETURNING clauses step to SQLITE_ROW; plain writes step to SQLITE_DONE.
+                let rc = sqlite3_step(statement)
+                guard rc == SQLITE_DONE || rc == SQLITE_ROW else {
+                    let error = String(cString: sqlite3_errmsg(self.db))
+                    Logger.error("[SQLite] Write failed (rc \(rc)): \(error). SQL: \(sql)")
+                    continuation.resume(throwing: SQLiteError.queryFailed(error))
+                    return
+                }
+
+                continuation.resume(returning: ())
+            }
+        }
+    }
+
     /// Query and return rows as dictionaries
     func queryRaw(_ sql: String, parameters: [Any] = []) async throws -> [[String: Any]] {
         let safeParameters = parameters.map(SQLSendableValue.init(raw:))
@@ -560,9 +944,31 @@ final class SQLiteService: ObservableObject {
 
                 defer { sqlite3_finalize(statement) }
 
+                // This connection is SQLITE_OPEN_READONLY: a write statement prepares fine but
+                // steps to SQLITE_READONLY, which the row loop below would swallow as an empty
+                // result — a silent no-op. Reroute it to the writer connection instead of losing it.
+                if sqlite3_stmt_readonly(statement) == 0 {
+                    sqlite3_finalize(statement)
+                    statement = nil  // defer above finalizes nil, which is a no-op
+                    Logger.error("[SQLite] Write statement passed to queryRaw; rerouted to the writer connection. Use executeWrite instead. SQL: \(sql)")
+                    Task { [weak self, safeParameters] in
+                        guard let self = self else {
+                            continuation.resume(throwing: SQLiteError.notConnected)
+                            return
+                        }
+                        do {
+                            try await self.executeWrite(sql, parameters: safeParameters.map(\.raw))
+                            continuation.resume(returning: [])
+                        } catch {
+                            continuation.resume(throwing: error)
+                        }
+                    }
+                    return
+                }
+
                 // Bind parameters
                 for (index, param) in safeParameters.enumerated() {
-                    self.bind(param.raw, to: statement, at: Int32(index + 1))
+                    Self.bindValue(param.raw, to: statement, at: Int32(index + 1))
                 }
 
                 var results: [SQLSendableRecord] = []
@@ -600,8 +1006,62 @@ final class SQLiteService: ObservableObject {
         return names
     }
 
-    /// REPLACE INTO upsert for arbitrary rows. Only columns existing in the table are written.
+    /// Cache of conflict targets per table, alongside `tableColumnsCache`.
+    private var tableConflictTargetsCache: [String: [[String]]] = [:]
+
+    /// The conflict targets usable in an `ON CONFLICT (…) DO UPDATE` clause for a table:
+    /// its PRIMARY KEY plus every non-partial UNIQUE index.
+    ///
+    /// Partial unique indexes are deliberately excluded. SQLite requires their WHERE clause to be
+    /// repeated verbatim in the conflict target, and reconstructing it from `sqlite_master` is more
+    /// fragile than it is worth: a collision on one of them raises instead, which is loud but safe.
+    private func conflictTargets(for table: String) async throws -> [[String]] {
+        try validateTableName(table)
+        if let cached = tableConflictTargetsCache[table] { return cached }
+
+        var targets: [[String]] = []
+
+        // PRIMARY KEY, in declaration order — `pk` is 1-based and identifies the position of the
+        // column within a composite key, so it doubles as the sort key.
+        let primaryKey = try await queryRaw("PRAGMA table_info(\(table))")
+            .compactMap { row -> (Int, String)? in
+                guard let position = row["pk"] as? Int, position > 0,
+                      let name = row["name"] as? String else { return nil }
+                return (position, name)
+            }
+            .sorted { $0.0 < $1.0 }
+            .map(\.1)
+        if !primaryKey.isEmpty { targets.append(primaryKey) }
+
+        for index in try await queryRaw("PRAGMA index_list(\(table))") {
+            guard let name = index["name"] as? String,
+                  index["unique"] as? Int == 1,
+                  index["partial"] as? Int ?? 0 == 0,
+                  index["origin"] as? String != "pk" else { continue }
+
+            let escaped = name.replacingOccurrences(of: "\"", with: "\"\"")
+            let indexColumns = try await queryRaw("PRAGMA index_info(\"\(escaped)\")")
+                .compactMap { $0["name"] as? String }
+
+            if !indexColumns.isEmpty, !targets.contains(indexColumns) {
+                targets.append(indexColumns)
+            }
+        }
+
+        tableConflictTargetsCache[table] = targets
+        return targets
+    }
+
+    /// Upsert arbitrary rows. Only columns existing in the table are written.
     /// If the table has a synced_at column and it's missing, it's set to now().
+    ///
+    /// This used to emit `REPLACE INTO`, which is not an upsert: on a constraint violation it
+    /// DELETEs the conflicting row and inserts a new one. With `PRAGMA foreign_keys = ON` — set in
+    /// `openDatabase()` — that delete runs the `ON DELETE CASCADE` actions, and 21 tables cascade
+    /// from `profiles(id)`. Since `profiles` is the first table the remote pull upserts, a single
+    /// `REPLACE INTO profiles` wiped the user's entire local database on every sync; the pull then
+    /// refilled 13 of those tables from the server and left the rest empty. `ON CONFLICT DO UPDATE`
+    /// mutates the existing row in place, so nothing cascades.
     @MainActor
     func upsert(table: String, rows: [[String: Any]]) async throws {
         try validateTableName(table)  // Phase 5: SQL injection prevention
@@ -612,6 +1072,7 @@ final class SQLiteService: ObservableObject {
 
         let hasSyncedAt = cols.contains("synced_at")
         let now = ISO8601DateFormatter().string(from: Date())
+        let targets = try await conflictTargets(for: table)
 
         for row in safeRows {
             var filtered: [String: Any] = [:]
@@ -629,9 +1090,24 @@ final class SQLiteService: ObservableObject {
 
             let placeholders = Array(repeating: "?", count: keys.count).joined(separator: ",")
             let colsJoined = keys.joined(separator: ",")
-            let sql = "REPLACE INTO \(table) (\(colsJoined)) VALUES (\(placeholders))"
+
+            // One clause per conflict target, so a row colliding on a natural key (say
+            // list_items' UNIQUE(list_id, media_id, media_type)) still converges instead of
+            // raising — which is what REPLACE used to buy us, without the delete.
+            var sql = "INSERT INTO \(table) (\(colsJoined)) VALUES (\(placeholders))"
+            for target in targets {
+                let assignments = keys
+                    .filter { !target.contains($0) }
+                    .map { "\($0)=excluded.\($0)" }
+                    .joined(separator: ",")
+                let onConflict = "ON CONFLICT(\(target.joined(separator: ",")))"
+                sql += assignments.isEmpty
+                    ? " \(onConflict) DO NOTHING"
+                    : " \(onConflict) DO UPDATE SET \(assignments)"
+            }
+
             let params = keys.map { filtered[$0] ?? NSNull() }
-            _ = try await queryRaw(sql, parameters: params)
+            try await executeWrite(sql, parameters: params)
         }
     }
     
@@ -643,15 +1119,37 @@ final class SQLiteService: ObservableObject {
     }
     
     // MARK: - Transaction Support
-    
-    func transaction(_ operations: @Sendable () async throws -> Void) async throws {
-        try await DatabaseUtilities.executeInTransaction {
-            self.execute("BEGIN TRANSACTION")
+
+    /// Runs `body` inside a single, genuinely atomic transaction (STAB-002).
+    ///
+    /// The old version was `async` and called `execute("BEGIN")`, then `await operations()`, then
+    /// `execute("COMMIT")` — three *separate* hops on the shared serial `writerQueue`, with `await`
+    /// suspension points between them. Because SQLite transactions are per-connection and every
+    /// other writer uses the same `db`, another task's write could be scheduled on the writer queue
+    /// *between* BEGIN and COMMIT, landing inside this transaction; and a ROLLBACK then either
+    /// undid their write too or, worse, the interleaving corrupted the boundaries — the demonstrated
+    /// "ROLLBACK non annulla nulla".
+    ///
+    /// Now BEGIN, the whole body, and COMMIT/ROLLBACK run in one `writerQueue.sync` block. The queue
+    /// is serial, so nothing else can interleave, and there are no suspension points inside. The
+    /// body is synchronous and writes through the passed `SQLiteTransaction`, whose statements run
+    /// directly on the writer thread (no re-dispatch, which would deadlock or escape the block).
+    func transaction(_ body: (SQLiteTransaction) throws -> Void) throws {
+        try writerQueue.sync {
+            guard let db = self.db else { throw SQLiteError.notConnected }
+
+            guard sqlite3_exec(db, "BEGIN", nil, nil, nil) == SQLITE_OK else {
+                throw SQLiteError.queryFailed(String(cString: sqlite3_errmsg(db)))
+            }
             do {
-                try await operations()
-                self.execute("COMMIT")
+                try body(SQLiteTransaction(db))
+                guard sqlite3_exec(db, "COMMIT", nil, nil, nil) == SQLITE_OK else {
+                    let commitError = String(cString: sqlite3_errmsg(db))
+                    sqlite3_exec(db, "ROLLBACK", nil, nil, nil)
+                    throw SQLiteError.queryFailed(commitError)
+                }
             } catch {
-                self.execute("ROLLBACK")
+                sqlite3_exec(db, "ROLLBACK", nil, nil, nil)
                 throw error
             }
         }
@@ -662,6 +1160,7 @@ final class SQLiteService: ObservableObject {
     /// Insert a record and return the rowid
     func insert(_ table: String, values: [String: Any]) async throws -> Int64 {
         try validateTableName(table)  // Phase 5: SQL injection prevention
+        try validateColumnNames(values.keys)  // Phase 5 (1.10): column identifiers
         let columns = values.keys.joined(separator: ", ")
         let placeholders = values.keys.map { _ in "?" }.joined(separator: ", ")
         let sql = "INSERT INTO \(table) (\(columns)) VALUES (\(placeholders))"
@@ -687,7 +1186,7 @@ final class SQLiteService: ObservableObject {
 
                 // Bind parameters
                 for (index, param) in parameters.enumerated() {
-                    self.bind(param.raw, to: statement, at: Int32(index + 1))
+                    Self.bindValue(param.raw, to: statement, at: Int32(index + 1))
                 }
 
                 if sqlite3_step(statement) == SQLITE_DONE {
@@ -704,13 +1203,14 @@ final class SQLiteService: ObservableObject {
     /// Update records
     func update(_ table: String, values: [String: Any], where condition: String, parameters: [Any] = []) async throws {
         try validateTableName(table)  // Phase 5: SQL injection prevention
+        try validateColumnNames(values.keys)  // Phase 5 (1.10): column identifiers
         let setClause = values.keys.map { "\($0) = ?" }.joined(separator: ", ")
         let sql = "UPDATE \(table) SET \(setClause) WHERE \(condition)"
         
         let valueParams = Array(values.values)
         let allParams = valueParams + parameters
-        
-        _ = try await queryRaw(sql, parameters: allParams)
+
+        try await executeWrite(sql, parameters: allParams)
     }
     
     /// Delete records (soft delete by default)
@@ -718,11 +1218,11 @@ final class SQLiteService: ObservableObject {
         try validateTableName(table)  // Phase 5: SQL injection prevention
         if hard {
             let sql = "DELETE FROM \(table) WHERE \(condition)"
-            _ = try await queryRaw(sql, parameters: parameters)
+            try await executeWrite(sql, parameters: parameters)
         } else {
             // Soft delete
             let sql = "UPDATE \(table) SET deleted_at = datetime('now') WHERE \(condition)"
-            _ = try await queryRaw(sql, parameters: parameters)
+            try await executeWrite(sql, parameters: parameters)
         }
     }
 
@@ -756,6 +1256,7 @@ final class SQLiteService: ObservableObject {
     
     /// Count records
     func count(_ table: String, where condition: String? = nil, parameters: [Any] = []) async throws -> Int {
+        try validateTableName(table)  // Phase 5: SQL injection prevention (gap: era non validato)
         var sql = "SELECT COUNT(*) as count FROM \(table)"
         
         if let condition = condition {
@@ -787,11 +1288,38 @@ final class SQLiteService: ObservableObject {
     @MainActor
     func performBatchInsert(table: String, records: [[String: Any]]) async -> Bool {
         guard !records.isEmpty else { return true }
-        
-        let columns = records[0].keys.joined(separator: ", ")
-        let placeholders = "(" + Array(repeating: "?", count: records[0].keys.count).joined(separator: ", ") + ")"
-        let query = "INSERT OR REPLACE INTO \(table) (\(columns)) VALUES \(placeholders)"
-        
+
+        // Phase 5 (1.10): table + column identifiers interpolati → valida prima.
+        // Questo metodo non è throwing: su input invalido logga e ritorna false.
+        guard SQLiteTable.isValid(table) else {
+            Logger.error("[SQLite] SQL injection attempt blocked: invalid table '\(table)'")
+            return false
+        }
+        guard records[0].keys.allSatisfy(Self.isValidColumnIdentifier) else {
+            Logger.error("[SQLite] SQL injection attempt blocked: invalid column in batch insert into '\(table)'")
+            return false
+        }
+
+        let recordCols = Array(records[0].keys)
+        let columns = recordCols.joined(separator: ", ")
+        let placeholders = "(" + Array(repeating: "?", count: recordCols.count).joined(separator: ", ") + ")"
+
+        // Was `INSERT OR REPLACE`, which deletes the conflicting row and re-inserts. On list_items
+        // that resurrected soft-deleted rows (the incoming record carries no deleted_at, so the
+        // fresh row defaults it to NULL) and, more dangerously in general, fires ON DELETE CASCADE.
+        // Same fix and same conflict-target derivation as `upsert()`: mutate in place, and never
+        // touch columns the caller didn't provide — so a soft-deleted item stays deleted.
+        let targets = (try? await conflictTargets(for: table)) ?? []
+        var query = "INSERT INTO \(table) (\(columns)) VALUES \(placeholders)"
+        for target in targets {
+            let assignments = recordCols
+                .filter { !target.contains($0) }
+                .map { "\($0)=excluded.\($0)" }
+                .joined(separator: ", ")
+            let onConflict = "ON CONFLICT(\(target.joined(separator: ", ")))"
+            query += assignments.isEmpty ? " \(onConflict) DO NOTHING" : " \(onConflict) DO UPDATE SET \(assignments)"
+        }
+
         let safeRecords = records.map(SQLSendableRecord.init(raw:))
         
         return await withCheckedContinuation { continuation in
@@ -835,7 +1363,7 @@ final class SQLiteService: ObservableObject {
                         for (index, key) in sortedKeys.enumerated() {
                             // Use existing helper to bind values
                             // index is 1-based in SQLite
-                            self.bind(record.raw[key] ?? NSNull(), to: statement, at: Int32(index + 1))
+                            Self.bindValue(record.raw[key] ?? NSNull(), to: statement, at: Int32(index + 1))
                         }
                         
                         if sqlite3_step(statement) != SQLITE_DONE {
@@ -868,7 +1396,7 @@ final class SQLiteService: ObservableObject {
 
     // MARK: - Helper Methods
     
-    private func bind(_ value: Any, to statement: OpaquePointer?, at index: Int32) {
+    nonisolated static func bindValue(_ value: Any, to statement: OpaquePointer?, at index: Int32) {
         switch value {
         case let val as String:
             sqlite3_bind_text(statement, index, (val as NSString).utf8String, -1, nil)
@@ -923,545 +1451,52 @@ final class SQLiteService: ObservableObject {
     }
 }
 
-// MARK: - Table Creation
 
-extension SQLiteService {
-    private func createClipsTable() -> String {
-        """
-        CREATE TABLE IF NOT EXISTS clips (
-          id TEXT PRIMARY KEY,
-          clip_id TEXT UNIQUE NOT NULL,
-          video_id TEXT NOT NULL,
-          title TEXT NOT NULL,
-          description TEXT,
-          video_url TEXT NOT NULL,
-          thumbnail_url TEXT,
-          movie_id INTEGER,
-          tv_show_id INTEGER,
-          media_type TEXT,
-          genres TEXT,
-          actors TEXT,
-          mood TEXT,
-          keywords TEXT,
-          likes INTEGER DEFAULT 0,
-          comments INTEGER DEFAULT 0,
-          views INTEGER DEFAULT 0,
-          youtube_views INTEGER,
-          tmdb_rating REAL,
-          quality_score REAL,
-          is_active INTEGER DEFAULT 1,
-          is_premium INTEGER DEFAULT 0,
-          created_at TEXT DEFAULT (datetime('now')),
-          fetched_at TEXT DEFAULT (datetime('now')),
-          last_served_at TEXT,
-          updated_at TEXT DEFAULT (datetime('now')),
-          deleted_at TEXT
-        );
-        CREATE INDEX IF NOT EXISTS idx_clips_active ON clips(is_active, deleted_at);
-        CREATE INDEX IF NOT EXISTS idx_clips_media_type ON clips(media_type);
-        CREATE INDEX IF NOT EXISTS idx_clips_quality ON clips(quality_score DESC);
-        CREATE INDEX IF NOT EXISTS idx_clips_created ON clips(created_at DESC);
-        """
-    }
-    
-    private func createDiscoveryCacheTable() -> String {
-        """
-        CREATE TABLE IF NOT EXISTS discovery_cache (
-          id TEXT PRIMARY KEY,
-          content_type TEXT NOT NULL,
-          tmdb_id INTEGER NOT NULL,
-          title TEXT NOT NULL,
-          overview TEXT,
-          poster_path TEXT,
-          backdrop_path TEXT,
-          vote_average REAL,
-          release_date TEXT,
-          genres TEXT,
-          cached_at TEXT DEFAULT (datetime('now')),
-          expires_at TEXT NOT NULL,
-          updated_at TEXT DEFAULT (datetime('now')),
-          deleted_at TEXT,
-          UNIQUE(content_type, tmdb_id)
-        );
-        CREATE INDEX IF NOT EXISTS idx_discovery_content_type ON discovery_cache(content_type);
-        CREATE INDEX IF NOT EXISTS idx_discovery_expires ON discovery_cache(expires_at);
-        """
-    }
-    
-    private func createMediaDetailsTable() -> String {
-        """
-        CREATE TABLE IF NOT EXISTS media_details_cache (
-          tmdb_id INTEGER NOT NULL,
-          media_type TEXT NOT NULL,
-          title TEXT NOT NULL,
-          overview TEXT,
-          poster_path TEXT,
-          backdrop_path TEXT,
-          cached_at TEXT DEFAULT (datetime('now')),
-          expires_at TEXT NOT NULL,
-          updated_at TEXT DEFAULT (datetime('now')),
-          deleted_at TEXT,
-          PRIMARY KEY (tmdb_id, media_type)
-        );
-        """
+// MARK: - Transaction Context
+
+/// The synchronous write surface handed to `SQLiteService.transaction(_:)`. Every call runs
+/// directly on the writer thread inside the transaction's single `writerQueue.sync` block, so the
+/// statements are part of the same atomic unit and nothing else can interleave (STAB-002).
+///
+/// It intentionally does NOT re-enter `writerQueue` (that would deadlock) and offers only the
+/// operations the five transaction call sites actually use: raw `execute`, `insert`, `delete`.
+final class SQLiteTransaction {
+    private let db: OpaquePointer
+
+    fileprivate init(_ db: OpaquePointer) { self.db = db }
+
+    /// Run a statement. Throws on prepare/step failure so the enclosing transaction rolls back.
+    func execute(_ sql: String, parameters: [Any] = []) throws {
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw SQLiteError.queryFailed(String(cString: sqlite3_errmsg(db)))
+        }
+        defer { sqlite3_finalize(statement) }
+        for (index, param) in parameters.enumerated() {
+            SQLiteService.bindValue(param, to: statement, at: Int32(index + 1))
+        }
+        guard sqlite3_step(statement) == SQLITE_DONE else {
+            throw SQLiteError.queryFailed(String(cString: sqlite3_errmsg(db)))
+        }
     }
 
-    private func createDetailCacheTable() -> String {
-        """
-        CREATE TABLE IF NOT EXISTS detail_cache (
-          id TEXT PRIMARY KEY,
-          media_id INTEGER NOT NULL,
-          media_type TEXT NOT NULL,
-          title TEXT NOT NULL,
-          overview TEXT,
-          poster_path TEXT,
-          backdrop_path TEXT,
-          release_date TEXT,
-          vote_average REAL,
-          runtime INTEGER,
-          genres TEXT,
-          credits_json TEXT,
-          videos_json TEXT,
-          providers_json TEXT,
-          similar_json TEXT,
-          imdb_id TEXT,
-          cached_at TEXT DEFAULT (datetime('now')),
-          expires_at TEXT NOT NULL,
-          updated_at TEXT DEFAULT (datetime('now')),
-          deleted_at TEXT,
-          UNIQUE(media_id, media_type)
-        );
-        CREATE INDEX IF NOT EXISTS idx_detail_cache_media ON detail_cache(media_id, media_type);
-        CREATE INDEX IF NOT EXISTS idx_detail_cache_expires ON detail_cache(expires_at);
-        """
-    }
-    
-    private func createTrailersTable() -> String {
-        """
-        CREATE TABLE IF NOT EXISTS trailers_cache (
-          tmdb_id INTEGER NOT NULL,
-          media_type TEXT NOT NULL,
-          youtube_id TEXT NOT NULL,
-          trailer_type TEXT,
-          name TEXT,
-          cached_at TEXT DEFAULT (datetime('now')),
-          updated_at TEXT DEFAULT (datetime('now')),
-          deleted_at TEXT,
-          PRIMARY KEY (tmdb_id, media_type, youtube_id)
-        );
-        """
-    }
-    
-    private func createProfilesTable() -> String {
-        """
-        CREATE TABLE IF NOT EXISTS profiles (
-          id TEXT PRIMARY KEY,
-          email TEXT UNIQUE,
-          display_name TEXT,
-          avatar_url TEXT,
-          created_at TEXT DEFAULT (datetime('now')),
-          updated_at TEXT DEFAULT (datetime('now')),
-          deleted_at TEXT,
-          synced_at TEXT
-        );
-        """
-    }
-    
-    private func createListsTable() -> String {
-        """
-        CREATE TABLE IF NOT EXISTS lists (
-          id TEXT PRIMARY KEY,
-          user_id TEXT NOT NULL,
-          name TEXT NOT NULL,
-          description TEXT,
-          type TEXT,
-          created_at TEXT DEFAULT (datetime('now')),
-          updated_at TEXT DEFAULT (datetime('now')),
-          deleted_at TEXT,
-          synced_at TEXT,
-          FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
-        );
-        CREATE INDEX IF NOT EXISTS idx_lists_user_id ON lists(user_id);
-        CREATE INDEX IF NOT EXISTS idx_lists_deleted ON lists(deleted_at);
-        """
-    }
-    
-    private func createListItemsTable() -> String {
-        """
-        CREATE TABLE IF NOT EXISTS list_items (
-          id TEXT PRIMARY KEY,
-          list_id TEXT NOT NULL,
-          user_id TEXT NOT NULL,
-          media_id INTEGER NOT NULL,
-          media_type TEXT NOT NULL,
-          title TEXT NOT NULL,
-          poster_path TEXT,
-          runtime INTEGER,
-          vote_average REAL,
-          vote_count INTEGER,
-          origin_country TEXT,
-          release_date TEXT,
-          genres TEXT,
-          overview TEXT,
-          added_at TEXT DEFAULT (datetime('now')),
-          updated_at TEXT DEFAULT (datetime('now')),
-          deleted_at TEXT,
-          synced_at TEXT,
-          UNIQUE(list_id, media_id, media_type),
-          FOREIGN KEY (list_id) REFERENCES lists(id) ON DELETE CASCADE,
-          FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
-        );
-        CREATE INDEX IF NOT EXISTS idx_list_items_list_id ON list_items(list_id);
-        CREATE INDEX IF NOT EXISTS idx_list_items_user_id ON list_items(user_id);
-        """
-    }
-    
-    private func createUserClipHistoryTable() -> String {
-        """
-        CREATE TABLE IF NOT EXISTS user_clip_history (
-          id TEXT PRIMARY KEY,
-          user_id TEXT NOT NULL,
-          device_id TEXT NOT NULL,
-          clip_id TEXT NOT NULL,
-          watched_at TEXT DEFAULT (datetime('now')),
-          watch_duration REAL,
-          total_duration REAL,
-          completion_rate REAL,
-          liked INTEGER DEFAULT 0,
-          commented INTEGER DEFAULT 0,
-          shared INTEGER DEFAULT 0,
-          added_to_list INTEGER DEFAULT 0,
-          engagement_score REAL,
-          updated_at TEXT DEFAULT (datetime('now')),
-          deleted_at TEXT,
-          synced_at TEXT,
-          UNIQUE(user_id, clip_id),
-          FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
-        );
-        CREATE INDEX IF NOT EXISTS idx_clip_history_user_id ON user_clip_history(user_id);
-        CREATE INDEX IF NOT EXISTS idx_clip_history_watched_at ON user_clip_history(watched_at DESC);
-        """
+    func insert(_ table: String, values: [String: Any]) throws {
+        guard SQLiteTable.isValid(table) else { throw SQLiteError.invalidTableName(table) }
+        for key in values.keys where !SQLiteService.isValidColumnIdentifier(key) {
+            throw SQLiteError.invalidColumnName(key)
+        }
+        let columns = values.keys.joined(separator: ", ")
+        let placeholders = values.keys.map { _ in "?" }.joined(separator: ", ")
+        try execute("INSERT INTO \(table) (\(columns)) VALUES (\(placeholders))",
+                    parameters: Array(values.values))
     }
 
-    private func createUserClipSignalsTable() -> String {
-        """
-        CREATE TABLE IF NOT EXISTS user_clip_signals (
-          id TEXT PRIMARY KEY,
-          user_id TEXT NOT NULL,
-          device_id TEXT NOT NULL,
-          clip_id TEXT NOT NULL,
-          signal_type TEXT NOT NULL,
-          signal_value REAL,
-          source TEXT,
-          position INTEGER,
-          session_id TEXT,
-          occurred_at TEXT DEFAULT (datetime('now')),
-          synced_at TEXT,
-          FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
-        );
-        CREATE INDEX IF NOT EXISTS idx_clip_signals_user_id ON user_clip_signals(user_id);
-        CREATE INDEX IF NOT EXISTS idx_clip_signals_clip_id ON user_clip_signals(clip_id);
-        """
-    }
-    
-    private func createUserPreferencesTable() -> String {
-        """
-        CREATE TABLE IF NOT EXISTS user_preferences (
-          id TEXT PRIMARY KEY,
-          user_id TEXT NOT NULL,
-          device_id TEXT NOT NULL,
-          preference_type TEXT NOT NULL,
-          preference_id TEXT NOT NULL,
-          preference_name TEXT,
-          score REAL DEFAULT 0,
-          updated_at TEXT DEFAULT (datetime('now')),
-          deleted_at TEXT,
-          synced_at TEXT,
-          UNIQUE(user_id, preference_type, preference_id),
-          FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
-        );
-        CREATE INDEX IF NOT EXISTS idx_preferences_user_id ON user_preferences(user_id);
-        """
-    }
-    
-    private func createUserDailyQuotaTable() -> String {
-        """
-        CREATE TABLE IF NOT EXISTS user_daily_quota (
-          id TEXT PRIMARY KEY,
-          user_id TEXT NOT NULL,
-          device_id TEXT NOT NULL,
-          clips_watched_today INTEGER DEFAULT 0,
-          last_reset_at TEXT DEFAULT (datetime('now')),
-          is_pro INTEGER DEFAULT 0,
-          created_at TEXT DEFAULT (datetime('now')),
-          updated_at TEXT DEFAULT (datetime('now')),
-          deleted_at TEXT,
-          synced_at TEXT,
-          UNIQUE(user_id, device_id),
-          FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
-        );
-        """
-    }
-    
-    private func createUserAITokenUsageTable() -> String {
-        """
-        CREATE TABLE IF NOT EXISTS user_ai_token_usage (
-          id TEXT,
-          user_id TEXT PRIMARY KEY,
-          tokens_used_today INTEGER DEFAULT 0,
-          last_reset_at TEXT,
-          usage_day TEXT,
-          updated_at TEXT DEFAULT (datetime('now')),
-          synced_at TEXT
-        );
-        """
-    }
-
-    
-    private func createSyncOutboxTable() -> String {
-        """
-        CREATE TABLE IF NOT EXISTS sync_outbox (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          operation_id TEXT UNIQUE NOT NULL,
-          user_id TEXT NOT NULL,
-          table_name TEXT NOT NULL,
-          operation_type TEXT NOT NULL,
-          record_id TEXT NOT NULL,
-          payload TEXT NOT NULL,
-          status TEXT DEFAULT 'pending',
-          attempts INTEGER DEFAULT 0,
-          max_attempts INTEGER DEFAULT 5,
-          created_at TEXT DEFAULT (datetime('now')),
-          next_retry_at TEXT,
-          synced_at TEXT,
-          last_error TEXT,
-          depends_on_id INTEGER,
-          FOREIGN KEY (depends_on_id) REFERENCES sync_outbox(id) ON DELETE SET NULL
-        );
-        CREATE INDEX IF NOT EXISTS idx_outbox_status ON sync_outbox(status, next_retry_at);
-        CREATE INDEX IF NOT EXISTS idx_outbox_user_id ON sync_outbox(user_id);
-        """
-    }
-    
-    private func createSyncLogTable() -> String {
-        """
-        CREATE TABLE IF NOT EXISTS sync_log (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          sync_batch_id TEXT NOT NULL,
-          operation_id TEXT NOT NULL,
-          user_id TEXT NOT NULL,
-          table_name TEXT NOT NULL,
-          operation_type TEXT NOT NULL,
-          status TEXT NOT NULL,
-          error_message TEXT,
-          synced_at TEXT DEFAULT (datetime('now'))
-        );
-        CREATE INDEX IF NOT EXISTS idx_sync_log_batch ON sync_log(sync_batch_id);
-        CREATE INDEX IF NOT EXISTS idx_sync_log_timestamp ON sync_log(synced_at DESC);
-        """
-    }
-    
-    private func createDeviceInfoTable() -> String {
-        """
-        CREATE TABLE IF NOT EXISTS device_info (
-          device_id TEXT PRIMARY KEY,
-          user_id TEXT,
-          device_name TEXT,
-          platform TEXT,
-          app_version TEXT,
-          last_sync_at TEXT,
-          created_at TEXT DEFAULT (datetime('now')),
-          updated_at TEXT DEFAULT (datetime('now'))
-        );
-        """
-    }
-    
-    private func createAppMetadataTable() -> String {
-        """
-        CREATE TABLE IF NOT EXISTS app_metadata (
-          key_name TEXT PRIMARY KEY,
-          value_text TEXT,
-          value_number REAL,
-          value_boolean INTEGER,
-          value_json TEXT,
-          updated_at TEXT DEFAULT (datetime('now'))
-        );
-        """
-    }
-    
-    // MARK: - Reactions & Comments Tables
-    
-    private func createMovieReactionsTable() -> String {
-        """
-        CREATE TABLE IF NOT EXISTS movie_reactions (
-          id TEXT PRIMARY KEY,
-          user_id TEXT NOT NULL,
-          media_id INTEGER NOT NULL,
-          media_type TEXT NOT NULL,
-          reaction_type TEXT NOT NULL,
-          created_at TEXT DEFAULT (datetime('now')),
-          updated_at TEXT DEFAULT (datetime('now')),
-          UNIQUE(user_id, media_id, media_type),
-          FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
-        );
-        CREATE INDEX IF NOT EXISTS idx_movie_reactions_user ON movie_reactions(user_id);
-        CREATE INDEX IF NOT EXISTS idx_movie_reactions_media ON movie_reactions(media_id, media_type);
-        """
-    }
-    
-    private func createMovieReactionCountsTable() -> String {
-        """
-        CREATE TABLE IF NOT EXISTS movie_reaction_counts (
-          media_id INTEGER NOT NULL,
-          media_type TEXT NOT NULL,
-          like_count INTEGER DEFAULT 0,
-          dislike_count INTEGER DEFAULT 0,
-          updated_at TEXT DEFAULT (datetime('now')),
-          PRIMARY KEY (media_id, media_type)
-        );
-        """
-    }
-    
-    private func createClipReactionsTable() -> String {
-        """
-        CREATE TABLE IF NOT EXISTS clip_reactions (
-          id TEXT PRIMARY KEY,
-          user_id TEXT NOT NULL,
-          clip_id TEXT NOT NULL,
-          reaction_type TEXT NOT NULL DEFAULT 'like',
-          created_at TEXT DEFAULT (datetime('now')),
-          updated_at TEXT DEFAULT (datetime('now')),
-          synced_at TEXT,
-          UNIQUE(user_id, clip_id, reaction_type),
-          FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
-        );
-        CREATE INDEX IF NOT EXISTS idx_clip_reactions_user ON clip_reactions(user_id);
-        CREATE INDEX IF NOT EXISTS idx_clip_reactions_clip ON clip_reactions(clip_id);
-        """
-    }
-    
-    private func createClipCommentsTable() -> String {
-        """
-        CREATE TABLE IF NOT EXISTS clip_comments (
-          id TEXT PRIMARY KEY,
-          clip_id TEXT NOT NULL,
-          user_id TEXT NOT NULL,
-          parent_comment_id TEXT,
-          content TEXT NOT NULL,
-          like_count INTEGER DEFAULT 0,
-          reply_count INTEGER DEFAULT 0,
-          created_at TEXT DEFAULT (datetime('now')),
-          updated_at TEXT DEFAULT (datetime('now')),
-          deleted_at TEXT,
-          synced_at TEXT,
-          FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE,
-          FOREIGN KEY (parent_comment_id) REFERENCES clip_comments(id) ON DELETE CASCADE
-        );
-        CREATE INDEX IF NOT EXISTS idx_clip_comments_clip ON clip_comments(clip_id, deleted_at);
-        CREATE INDEX IF NOT EXISTS idx_clip_comments_parent ON clip_comments(parent_comment_id);
-        CREATE INDEX IF NOT EXISTS idx_clip_comments_user ON clip_comments(user_id);
-        """
-    }
-    
-    private func createClipCommentLikesTable() -> String {
-        """
-        CREATE TABLE IF NOT EXISTS clip_comment_likes (
-          id TEXT PRIMARY KEY,
-          comment_id TEXT NOT NULL,
-          user_id TEXT NOT NULL,
-          created_at TEXT DEFAULT (datetime('now')),
-          synced_at TEXT,
-          UNIQUE(user_id, comment_id),
-          FOREIGN KEY (comment_id) REFERENCES clip_comments(id) ON DELETE CASCADE,
-          FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
-        );
-        CREATE INDEX IF NOT EXISTS idx_clip_comment_likes_comment ON clip_comment_likes(comment_id);
-        CREATE INDEX IF NOT EXISTS idx_clip_comment_likes_user ON clip_comment_likes(user_id);
-        CREATE INDEX IF NOT EXISTS idx_clip_comment_likes_user_comment ON clip_comment_likes(user_id, comment_id);
-        """
-    }
-
-    // MARK: - Gamification Tables
-
-    private func createUserGamificationTable() -> String {
-        """
-        CREATE TABLE IF NOT EXISTS user_gamification (
-          user_id TEXT PRIMARY KEY,
-          total_xp INTEGER DEFAULT 0,
-          current_level INTEGER DEFAULT 1,
-          current_streak INTEGER DEFAULT 0,
-          longest_streak INTEGER DEFAULT 0,
-          last_activity_date TEXT,
-          streak_freezes_remaining INTEGER DEFAULT 0,
-          streak_freezes_used_this_week INTEGER DEFAULT 0,
-          week_start_date TEXT,
-          updated_at TEXT DEFAULT (datetime('now')),
-          synced_at TEXT,
-          FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
-        );
-        """
-    }
-
-    private func createUserBadgesTable() -> String {
-        """
-        CREATE TABLE IF NOT EXISTS user_badges (
-          id TEXT PRIMARY KEY,
-          user_id TEXT NOT NULL,
-          badge_id TEXT NOT NULL,
-          progress INTEGER DEFAULT 0,
-          target INTEGER NOT NULL,
-          unlocked_at TEXT,
-          updated_at TEXT DEFAULT (datetime('now')),
-          synced_at TEXT,
-          UNIQUE(user_id, badge_id),
-          FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
-        );
-        CREATE INDEX IF NOT EXISTS idx_user_badges_user ON user_badges(user_id);
-        CREATE INDEX IF NOT EXISTS idx_user_badges_unlocked ON user_badges(unlocked_at);
-        """
-    }
-
-    private func createUserDailyChallengesTable() -> String {
-        """
-        CREATE TABLE IF NOT EXISTS user_daily_challenges (
-          id TEXT PRIMARY KEY,
-          user_id TEXT NOT NULL,
-          challenge_date TEXT NOT NULL,
-          challenge_type TEXT NOT NULL,
-          challenge_description TEXT,
-          target INTEGER NOT NULL,
-          progress INTEGER DEFAULT 0,
-          completed_at TEXT,
-          xp_reward INTEGER DEFAULT 0,
-          created_at TEXT DEFAULT (datetime('now')),
-          updated_at TEXT DEFAULT (datetime('now')),
-          synced_at TEXT,
-          UNIQUE(user_id, challenge_date),
-          FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
-        );
-        CREATE INDEX IF NOT EXISTS idx_daily_challenges_user ON user_daily_challenges(user_id);
-        CREATE INDEX IF NOT EXISTS idx_daily_challenges_date ON user_daily_challenges(challenge_date);
-        """
-    }
-
-    private func createXPTransactionsTable() -> String {
-        """
-        CREATE TABLE IF NOT EXISTS xp_transactions (
-          id TEXT PRIMARY KEY,
-          user_id TEXT NOT NULL,
-          action_type TEXT NOT NULL,
-          base_xp INTEGER NOT NULL,
-          multiplier REAL DEFAULT 1.0,
-          streak_bonus REAL DEFAULT 0.0,
-          total_xp INTEGER NOT NULL,
-          source TEXT,
-          created_at TEXT DEFAULT (datetime('now')),
-          FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
-        );
-        CREATE INDEX IF NOT EXISTS idx_xp_transactions_user ON xp_transactions(user_id);
-        CREATE INDEX IF NOT EXISTS idx_xp_transactions_created ON xp_transactions(created_at DESC);
-        CREATE INDEX IF NOT EXISTS idx_xp_transactions_action ON xp_transactions(action_type);
-        """
+    func delete(_ table: String, where condition: String, parameters: [Any] = [], hard: Bool = false) throws {
+        guard SQLiteTable.isValid(table) else { throw SQLiteError.invalidTableName(table) }
+        let sql = hard
+            ? "DELETE FROM \(table) WHERE \(condition)"
+            : "UPDATE \(table) SET deleted_at = datetime('now') WHERE \(condition)"
+        try execute(sql, parameters: parameters)
     }
 }
 
@@ -1499,6 +1534,7 @@ enum SQLiteError: LocalizedError {
     case invalidData
     case transactionFailed
     case invalidTableName(String)  // Phase 5: SQL injection prevention
+    case invalidColumnName(String) // Phase 5: SQL injection prevention
 
     var errorDescription: String? {
         switch self {
@@ -1512,6 +1548,8 @@ enum SQLiteError: LocalizedError {
             return "Transaction failed"
         case .invalidTableName(let table):
             return "Invalid table name: \(table)"
+        case .invalidColumnName(let column):
+            return "Invalid column name: \(column)"
         }
     }
 }

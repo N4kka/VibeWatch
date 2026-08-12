@@ -36,8 +36,9 @@
 // Lists
 "list.all" = "すべて";
 "list.movies" = "映画";
-"list.tvShows" = "TV";
+"list.tvShows" = "TVシリーズ";
 "lists.myLists" = "マイリスト";
+"lists.collections" = "コレクション";
 "lists.empty" = "まだリストがありません";
 "lists.emptyDescription" = "最初のウォッチリストを作成して、発見した映画やドラマを整理しましょう";
 "lists.noItems" = "まだ項目がありません";
@@ -127,6 +128,8 @@
 "clips.noClipsAvailable" = "クリップがありません";
 "clips.noClipsDescription" = "お気に入りの映画やドラマの名シーンは後でもう一度チェックしてください";
 "clips.addToList" = "リストに追加";
+"clips.card.addToWatchlist" = "＋ウォッチリスト";
+"clips.card.goToDetail" = "詳細を見る";
 "clips.createFirstList" = "お気に入りを保存するために最初のウォッチリストを作成しましょう";
 "clips.createNewList" = "新しいリストを作成";
 "clips.feed.craftingTitle" = "あなたにぴったりのフィードを作成中";
@@ -206,7 +209,6 @@
 // Platforms
 "platform.title" = "配信プラットフォーム";
 "platform.selectionCount" = "%d / %d 選択済み";
-"platforms.title" = "プラットフォーム";
 "platforms.streaming" = "配信";
 "platforms.rent" = "レンタル";
 "platforms.buy" = "購入";
@@ -242,6 +244,7 @@
 "auth.error.invalidResponse" = "サーバーからの応答が無効です。";
 "auth.error.userNotFound" = "ユーザーが見つかりません。";
 "auth.error.invalidCredentials" = "メールまたはパスワードが正しくありません。";
+"auth.error.tooManyAttempts" = "試行回数が多すぎます。しばらくしてからお試しください。";
 "auth.error.networkError" = "ネットワークエラー。接続を確認してください。";
 "auth.error.databaseError" = "プロフィール保存中にデータベースエラーが発生しました。もう一度お試しください。";
 "auth.error.signUpFailed" = "登録に失敗しました。もう一度お試しください。";
@@ -315,7 +318,7 @@
 "paywall.cta.skip" = "今はスキップ";
 "paywall.plan.monthly" = "月額";
 "paywall.plan.annual" = "年額";
-"paywall.discount.annual" = "33% OFF";
+"paywall.discount.annual" = "33%オフ";
 "paywall.price.perMonth" = "%@/月";
 "paywall.trial.badge" = "%@ 無料";
 "paywall.restore" = "購入を復元";
@@ -373,6 +376,8 @@
 "settings.redeemCode" = "コードを利用";
 "settings.redeemCode.description" = "プロモ／オファーコードを入力";
 "paywall.haveCode" = "プロモコードをお持ちですか？";
+"paywall.price.perYear" = "%@/年";
+"paywall.cancelAnytime" = "いつでも解約可能";
 
 // Help & Support - About Us
 "profile.aboutUs" = "私たちについて";
@@ -388,7 +393,56 @@
 "profile.termsOfUse" = "利用規約";
 "profile.terms" = "規約";
 "profile.sendFeedback" = "フィードバックを送信";
+"profile.share" = "プロフィールを共有";
+"profile.share.comingSoon" = "近日公開";
+"profile.importFrom" = "インポート元";
+"import.title" = "インポート";
+"import.source.tvtime" = "TV Time (.zip)";
+"import.source.tvtime.subtitle" = "TV Timeのデータエクスポート";
+"import.source.footer" = "TV Timeにデータエクスポート（GDPR）を申請し、ここで.zipファイルを選択してください。同じ形式でエクスポートするアプリにも対応しています。";
+"import.state.uploading" = "アップロード中…";
+"import.state.uploadingHint" = "ファイルのアップロード中はアプリを開いたままにしてください。";
+"import.canClose" = "視聴履歴をインポートしています。アプリを閉じても大丈夫です。完了したら通知でお知らせします。";
+"import.phase.queued" = "開始を待っています…";
+"import.phase.parsing" = "履歴を読み込んでいます…";
+"import.phase.resolving" = "番組とエピソードを照合しています…";
+"import.phase.writing" = "エピソードを保存しています…";
+"import.phase.finishing" = "仕上げ中…";
+"import.report.episodes" = "インポートしたエピソード";
+"import.report.shows" = "番組";
+"import.report.period" = "%@から%@まで";
+"import.report.ratingsDeferred" = "%d件の評価が見つかりました。まだインポートされていません。";
+"import.report.ratingsApplied" = "%d件の評価を星としてインポートしました。";
+"import.report.ratingsUnresolved" = "%d件の評価は照合できませんでした。";
+"import.report.favoritesApplied" = "%d件のお気に入りを空きスロットにインポートしました。";
+"import.report.favoriteMoviesUnsupported" = "%d件の映画のお気に入りはTV Timeからインポートできません。";
+"import.report.moviesApplied" = "%d本の映画を視聴日付きでインポートしました。";
+"import.report.moviesWatchlistApplied" = "%d本の映画をウォッチリストに追加しました。";
+"import.report.moviesUnresolved" = "%d本の映画を認識できませんでした（タイトルと年がTMDBと一致しません）。";
+"import.resolve.button" = "解決";
+"import.resolve.batchButton" = "%d件のタイトルを解決";
+"import.resolve.batchHint" = "各タイトルに対応するTMDBシリーズを検索してください。すべての候補を選ぶまでは何もインポートされず、その後1回のインポートでまとめて解決します。";
+"import.resolve.batchProgress" = "%d/%d件のタイトルを選択済み";
+"import.resolve.startBatch" = "1回のインポートを開始";
+"import.resolve.title" = "「%@」はどのシリーズですか？";
+"import.resolve.hint" = "エピソードは正確なTVDB IDで再確認されます。TMDBで確認できないものはレポートに残ります。";
+"import.resolve.searchPlaceholder" = "TMDBでシリーズを検索";
+"import.resolve.empty" = "結果がありません。";
+"import.resolve.failed" = "解決できませんでした：";
+"import.resolve.searchFailed" = "検索に失敗しました。";
+"import.report.statusesApplied" = "%d件のシリーズ状態を復元しました（ウォッチリストとアーカイブ）。";
+"import.report.statusesUnresolved" = "%d件のシリーズ状態を適用できませんでした。";
+"import.report.unresolvedTitle" = "%d件のエピソードを照合できませんでした";
+"import.report.unresolvedRow" = "%d話";
+"import.report.allResolved" = "すべて照合できました。";
+"import.error.failed" = "インポートがエラーで停止しました。";
+"import.error.network" = "現在インポートの状態を確認できません。";
+"import.error.uploadFailed" = "アップロードが完了しませんでした。";
+"import.error.startFailed" = "インポートを開始できませんでした。";
+"import.error.fileRead" = "そのファイルを読み込めませんでした。";
+"import.error.reportFailed" = "インポートは完了しましたが、レポートを読み込めませんでした。";
 
+"import.error.sessionExpired" = "セッションの有効期限が切れました。もう一度ログインして、インポートをやり直してください。";
 // Profile - Support & Feedback
 "profile.feedback.suggestFeature" = "機能を提案";
 "profile.feedback.suggestFeatureDescription" = "VibeWatchがもっと良くなるアイデアを教えてください。";
@@ -439,6 +493,13 @@
 "actor.biography.showMore" = "もっと見る";
 "actor.biography.showLess" = "閉じる";
 
+"actor.birthday" = "生年月日: %@";
+"actor.birthday.line" = "%@（%@歳）";
+"actor.known_for" = "代表作";
+"actor.search.placeholder" = "フィルモグラフィを検索…";
+"actor.search.noResults" = "検索結果なし：";
+"actor.filmography.empty" = "クレジットが見つかりません。";
+
 // Global Discovery Filters
 "filters.mediaType" = "メディア種別";
 "filters.movies" = "映画";
@@ -478,13 +539,13 @@
 
 // Personalized Carousels
 "carousel.dailyMix" = "今日のミックス";
-"carousel.trendingInGenre" = "%@ のトレンド";
-"carousel.becauseYouLiked" = "%@ が好きなら";
+"carousel.trendingInGenre" = "%@のトレンド";
+"carousel.becauseYouLiked" = "%@が好きなら";
 "carousel.hiddenGems" = "%@ の隠れた名作";
 "carousel.continueJourney" = "続きを見る";
 "carousel.fromSearches" = "検索履歴から";
 "carousel.topTVPicks" = "あなた向けTVおすすめ";
-"carousel.staffPicks" = "%@ 好きにスタッフのおすすめ";
+"carousel.staffPicks" = "%@好きへのスタッフおすすめ";
 "carousel.yearlyRewind" = "今年のまとめ";
 "carousel.hotThisWeek" = "今週の注目";
 "carousel.awardWinners" = "受賞作から厳選";
@@ -503,8 +564,8 @@
 "settings.notifications.description" = "新着コンテンツのパーソナル通知";
 
 // Onboarding Revamp
-"onboarding.welcome.title" = "あなたのvibeを発見";
-"onboarding.welcome.subtitle" = "AIがおすすめをあなた向けに最適化します。";
+"onboarding.welcome.title" = "VibeWatchへようこそ";
+"onboarding.welcome.subtitle" = "発見して、記録して、公開を見逃さない。映画もドラマも、これひとつで。";
 "onboarding.clips.title" = "読むより観る";
 "onboarding.clips.subtitle" = "短くて魅力的なクリップで映画体験。";
 "onboarding.lists.title" = "ウォッチリストはどこでも";
@@ -568,6 +629,16 @@
 "notifications.settingsSaved" = "設定を保存しました";
 "notifications.preferencesUpdated" = "通知設定が更新されました。";
 "notifications.typesFooter" = "受け取りたい通知を選択してください";
+"notifications.newAvailability" = "新着配信";
+"notifications.newAvailabilityDesc" = "ウォッチリストの作品がストリーミング、レンタル、購入で利用可能になったとき";
+"notifications.newRelease" = "新作リリース";
+"notifications.newReleaseDesc" = "「通知する」をタップした映画や番組が公開されたとき";
+"notifications.episodeAired" = "新着エピソード";
+"notifications.episodeAiredDesc" = "リスト内のテレビ番組で新しいエピソードが放送されたとき";
+"notifications.continueWatching" = "視聴を続ける";
+"notifications.continueWatchingDesc" = "視聴中のシリーズを再開するためのリマインダー";
+"notifications.listMilestone" = "リストのマイルストーン";
+"notifications.listMilestoneDesc" = "視聴のマイルストーン達成をお祝いします";
 "notifications.frequencyFooter" = "1日に受け取る通知の最大数";
 "notifications.favoriteActorsTitle" = "好きな俳優";
 "notifications.favoriteActorsFooter" = "これらの俳優の新作が出たら通知します";
@@ -583,3 +654,626 @@
 
 // Error Views
 "error.oops" = "おっと！";
+
+// TV Show Detail - Mark All Seen Confirmation
+"tvDetail.markAllSeenTitle" = "シリーズ全体を視聴済みにする";
+"tvDetail.markAllSeenDescription" = "この操作は、公開済みの全シーズン・全エピソードに適用されます。";
+"tvDetail.markAllSeenQuestion" = "続けますか？";
+"tvDetail.markAllSeenConfirm" = "はい、視聴済みにする";
+"tvDetail.markAllSeenCancel" = "いいえ、キャンセル";
+"tvDetail.seasonSeenShort" = "視聴済み";
+
+// Library section switcher
+"lists.section.myLists" = "マイリスト";
+"lists.section.tvTracking" = "TVシリーズのトラッキング";
+
+// TV Shows Tracking
+"tvTracking.continuing" = "続きを見る";
+"tvTracking.notStarted" = "未視聴";
+"tvTracking.upToDate" = "最新まで視聴済み";
+"tvTracking.emptyState" = "TVシリーズが見つかりません";
+"carousel.fromActor" = "%@の他の作品";
+"carousel.decadeClassics" = "%@の名作";
+"carousel.moodTonight" = "今夜は%@";
+"carousel.regionSpotlight" = "%@特集";
+"carousel.topInGenre" = "%@のトップ作品";
+"carousel.hotThisWeekInGenre" = "%@で今週話題";
+"carousel.quickWatches" = "さくっと観られる作品";
+"carousel.epicWatches" = "壮大な作品";
+"carousel.internationalPicks" = "海外のおすすめ";
+"carousel.throwback" = "懐かしの%@";
+"carousel.fromAIChat" = "AIチャットから";
+"carousel.comingSoon" = "近日公開";
+"carousel.trendingTVWeek" = "今週話題のテレビ";
+"carousel.criticallyAcclaimedRecent" = "批評家に高評価の%@";
+"carousel.returningTV" = "まもなく再開";
+"carousel.documentaries" = "あなた向けドキュメンタリー";
+"discovery.endOfFeed" = "すべてチェック済みです";
+/* MARK: - Public Lists (Fase 1) */
+"lists.section.publicLists" = "公開リスト";
+"lists.public.scope.explore" = "探す";
+"lists.public.scope.followed" = "フォロー中";
+"lists.public.searchPlaceholder" = "公開リストを検索";
+"lists.public.empty.explore" = "公開リストが見つかりません";
+"lists.public.empty.followed" = "まだどのリストもフォローしていません";
+"lists.public.follow" = "フォロー";
+"lists.public.following" = "フォロー中";
+"lists.public.unavailable" = "このリストは利用できなくなりました";
+"lists.public.report" = "リストを報告";
+"lists.public.report.confirm" = "このリストを不適切として報告しますか？";
+"lists.public.report.done" = "ありがとうございます。報告を受け付けました";
+"lists.public.block" = "ユーザーをブロック";
+"lists.public.block.confirm" = "このユーザーをブロックしますか？ このユーザーの公開リストは表示されなくなります。";
+"lists.public.createFromThis" = "これをもとに公開リストを作成";
+"lists.public.toggle" = "公開リスト";
+"lists.public.toggle.footer" = "公開リストは、ほかのユーザーが見つけてフォローできます。";
+"lists.public.profanity.title" = "不適切な内容";
+"lists.public.profanity" = "公開する前に、名前または説明から不適切な表現を削除してください。";
+"lists.public.guidelines.title" = "コミュニティガイドライン";
+"lists.public.guidelines.body" = "リストを公開すると、コミュニティガイドラインに同意したことになります。攻撃的・差別的・違法な内容は禁止です。違反したリストは非表示になり、報告されたユーザーは削除されることがあります。";
+"lists.public.guidelines.accept" = "同意して公開";
+"lists.duplicateName" = "%@ のコピー";
+/* MARK: - TV Tracking (card stile JustWatch) */
+"tvTracking.titlesCount" = "%d作品";
+"tvTracking.episodesRemaining" = "残り%d話";
+"tvTracking.lastSeen" = "最終視聴 %@";
+"tvTracking.soon" = "まもなく";
+"tvTracking.watchNow" = "今すぐ見る";
+
+/* SPEC v3 §9.2 — schermata Tracking */
+"tracking.title" = "トラッキング";
+"tracking.bucket.upNext" = "次に観る";
+"tracking.bucket.stale" = "しばらく観ていない";
+"tracking.bucket.forLater" = "あとで観る";
+"tracking.bucket.upToDate" = "最新まで視聴済み";
+"tracking.bucket.notStarted" = "未視聴";
+"tracking.bucket.dropped" = "視聴中止";
+"tracking.bucket.archived" = "アーカイブ済み";
+"tracking.timeline.today" = "本日配信";
+"tracking.timeline.tomorrow" = "明日";
+"tracking.timeline.thisWeek" = "今週";
+"tracking.timeline.thisMonth" = "今月";
+"tracking.action.watched" = "視聴済み";
+"tracking.action.later" = "あとで";
+"tracking.caughtUp" = "最新まで視聴済み";
+"tracking.unknownShow" = "不明なシリーズ";
+"tracking.special" = "スペシャル";
+"tracking.empty.title" = "まだ観るものがありません";
+"tracking.empty.subtitle" = "シリーズをフォローするか、TV Time の履歴をインポートすると、ここに表示されます。";
+"tracking.error.title" = "問題が発生しました";
+"tracking.error.notAuthenticated" = "サインインが必要です。";
+"tracking.error.showNotInCatalog" = "このシリーズはまだカタログにありません。しばらくしてからもう一度お試しください。";
+"tracking.error.noNextEpisode" = "このシリーズに次のエピソードはありません。";
+
+"tab.tracking" = "トラッキング";
+
+"common.close" = "閉じる";
+
+/* Chiavi chiamate dal codice e mai tradotte */
+"auth.error.invalidLink" = "このリンクは無効か、有効期限が切れています。";
+"clips.noListsYet" = "リストがまだありません";
+
+/* SPEC v3 §3.7 — scelta dello username */
+"username.confirm.title" = "ユーザー名を確認";
+"username.confirm.subtitle" = "お名前から候補を作りました。ほかの人はこの名前であなたを見つけます。このまま使うか、変更してください。";
+"username.confirm.action" = "確認";
+"username.choose.title" = "ユーザー名を選ぶ";
+"username.choose.subtitle" = "VibeWatch に表示されるために必要です。ほかの人はこの名前であなたのプロフィールとリストを見つけます。";
+"username.choose.action" = "続ける";
+"username.placeholder" = "ユーザー名";
+"username.hint" = "半角小文字・数字・_ の 3〜20 文字。";
+"username.checking" = "確認中…";
+"username.available" = "使えます";
+"username.later" = "あとで";
+"username.error.empty" = "ユーザー名を入力してください。";
+"username.error.tooShort" = "3 文字以上にしてください。";
+"username.error.tooLong" = "20 文字以内にしてください。";
+"username.error.invalidCharacters" = "半角小文字・数字・_ のみ使えます。";
+"username.error.taken" = "すでに使われています。";
+"username.error.checkFailed" = "確認できませんでした。もう一度お試しください。";
+"username.error.reserved" = "この名前は使用できません。";
+
+// Social (SPEC v3 blocco 8)
+"social.search.title" = "友達を探す";
+"social.search.placeholder" = "ユーザー名または名前";
+"social.search.prompt" = "ユーザー名または名前で検索して、プロフィールを見られます。";
+"social.search.noResults" = "見つかりませんでした。";
+"social.search.failed" = "検索に失敗しました。接続を確認してください。";
+"social.profile.followers" = "フォロワー";
+"social.profile.following" = "フォロー中";
+"social.follow" = "フォロー";
+"social.unfollow" = "フォロー解除";
+"social.followsYou" = "フォローされています";
+"social.profile.notFound" = "このプロフィールは存在しません。";
+"social.profile.you" = "自分のプロフィールです。";
+"social.profile.loadFailed" = "プロフィールを読み込めませんでした。";
+
+// Blocco 9 (SPEC v3 §3.6/§9.3): voti in stelle, favorites, stats
+"rating.title" = "あなたの評価";
+"rating.saveFailed" = "評価を保存できませんでした。もう一度お試しください。";
+"profile.favorites.movies" = "お気に入りの映画";
+"profile.favorites.shows" = "お気に入りの番組";
+"profile.lists.title" = "公開リスト";
+"profile.lists.loadFailed" = "公開リストを読み込めませんでした。";
+"profile.stats.title" = "あなたの統計";
+"profile.stats.watchTime" = "視聴時間";
+"profile.stats.movies" = "映画";
+"profile.stats.shows" = "番組";
+"profile.stats.episodes" = "エピソード";
+"profile.stats.loadFailed" = "統計を読み込めませんでした。";
+"profile.stats.advanced.title" = "詳細な統計";
+"profile.stats.advanced.byGenre" = "ジャンル別";
+"profile.stats.advanced.byDecade" = "年代別";
+"profile.stats.advanced.ratings" = "あなたの評価";
+"profile.stats.advanced.noGenre" = "ジャンル情報のないシリーズ: %d件";
+"profile.stats.advanced.proLocked" = "詳細な統計はProの機能です。";
+
+// Blocco 9, seconda meta' (§9.3): diario e modifica dei favorites
+"diary.title" = "日記";
+"diary.empty" = "まだ何もありません。視聴した作品がここに表示されます。";
+"diary.loadFailed" = "日記を読み込めませんでした。";
+"favorites.add" = "お気に入りに追加";
+"favorites.remove" = "お気に入りから削除";
+"favorites.slot" = "スロット%d";
+"favorites.saveFailed" = "お気に入りを更新できませんでした。もう一度お試しください。";
+
+// La pillola del Tracking: dove lo guardo (streaming > noleggio > acquisto)
+"tracking.watchOn" = "%@で視聴";
+"tracking.rentOn" = "%@でレンタル";
+"tracking.buyOn" = "%@で購入";
+
+// MARK: - Redesign 2.0 (tab Social, strip uscite, calendario, sottotitoli)
+"tab.social" = "ソーシャル";
+"social.subtitle" = "友達とフォロー中のリスト";
+"discovery.continueWatching" = "続きを見る";
+"discovery.strip.today" = "今日";
+"discovery.releases.title" = "配信予定";
+"discovery.releases.none" = "この日の配信はありません。";
+"discovery.releases.countOne" = "1件の配信";
+"discovery.releases.countMany" = "%d件の配信";
+"tracking.subtitle" = "今見ている作品";
+"lists.subtitle" = "アーカイブとコレクション";
+"profile.group.activity" = "アクティビティ";
+"profile.group.preferences" = "設定";
+"profile.group.account" = "アカウント";
+"profile.badgesLevels" = "バッジとレベル";
+"gamification.progress.title" = "あなたの進捗";
+"gamification.dayStreak" = "連続日数";
+"gamification.badges.title" = "バッジ";
+"gamification.levels.title" = "レベル";
+"gamification.challenge.none" = "今日のミッションはありません";
+"common.seeAll" = "すべて見る";
+"profile.stats.subtitle" = "ジャンル・ムード・視聴時間";
+"diary.subtitle" = "視聴したエピソードと映画の履歴";
+"profile.badgesLevels.subtitle" = "レベル%d · バッジ%d/%d";
+"notifications.row.subtitle" = "配信・新エピソード・通知オフ時間";
+"platforms.row.subtitle" = "配信・レンタル・購入";
+"platforms.footnote" = "選択したプラットフォームはアプリ全体の視聴先に反映されます。";
+"profile.languageCountry" = "言語と国";
+"profile.edit.title" = "プロフィールを編集";
+"profile.edit.information" = "情報";
+"profile.edit.name" = "名前";
+"profile.edit.bio" = "自己紹介";
+"profile.edit.bioPlaceholder" = "自己紹介を入力（任意）";
+"profile.edit.changePhoto" = "写真を変更";
+"profile.edit.publicProfile" = "公開プロフィール";
+"profile.edit.publicProfileSubtitle" = "ほかのユーザーがあなたを見つけ、公開リストをフォローできます";
+"profile.edit.saveError" = "プロフィールを保存できませんでした。もう一度お試しください。";
+"profile.imageCache" = "画像キャッシュ";
+"profile.imageCache.subtitle" = "プリロードはWiFiのみ";
+"common.on" = "オン";
+"common.off" = "オフ";
+"profile.privacyTerms" = "プライバシーと利用規約";
+"profile.footer.tmdb" = "本製品はTMDb APIを使用していますが、TMDbの承認・認定を受けていません。";
+"settings.cacheManagement.inUse" = "%d MB使用中";
+
+// MARK: - Onboarding 2.0
+"common.continue" = "続ける";
+"auth.fullNamePlaceholder" = "氏名";
+"onboarding.welcome.cta" = "はじめる";
+"onboarding.import.title" = "これまでの記録を持ってこよう";
+"onboarding.import.subtitle" = "シリーズ、視聴済みエピソード、ウォッチリストをインポート。完了すれば、アプリはすぐ使えます。";
+"onboarding.import.tvtime" = "TV Timeからインポート";
+"onboarding.import.tvtime.subtitle" = "シリーズ、視聴済みエピソード、ウォッチリスト、評価";
+"onboarding.import.other" = "他のアプリ";
+"onboarding.import.other.subtitle" = "Trakt、Letterboxd — 近日対応";
+"onboarding.import.skip" = "スキップしてゼロから始める";
+"onboarding.import.completed" = "インポート完了";
+"onboarding.import.stat.shows" = "シリーズ";
+"onboarding.import.stat.episodes" = "視聴エピソード";
+"onboarding.import.stat.movies" = "映画";
+"onboarding.import.stat.watchlist" = "ウォッチリスト";
+"onboarding.notifications.title" = "見逃しゼロへ";
+"onboarding.notifications.subtitle" = "通知はフォロー中の作品だけ — 新エピソード、ウォッチリスト作品の公開、配信開始のお知らせ。";
+"onboarding.notifications.row1" = "フォロー中のシリーズの新エピソード";
+"onboarding.notifications.row2" = "ウォッチリスト作品の公開";
+"onboarding.notifications.row3" = "作品が配信に登場したとき";
+"onboarding.notifications.enable" = "通知を有効にする";
+"onboarding.notifications.later" = "あとで";
+"onboarding.ready.title" = "準備完了";
+"onboarding.ready.subtitle" = "ライブラリの準備ができました。もう公開を見逃しません。上部の「視聴を続ける」からどうぞ。";
+"onboarding.ready.chip.shows" = "%dシリーズ";
+"onboarding.ready.chip.episodes" = "%dエピソード";
+"onboarding.ready.chip.notifications" = "通知オン";
+"onboarding.ready.cta" = "視聴をはじめる";
+
+"filters.myPlatforms" = "自分のサービス";
+"filters.platformScopeAll" = "すべて";
+"mediaDetail.forYou" = "あなた向け";
+"mediaDetail.watchOn" = "視聴する";
+"mediaDetail.notifyMe" = "通知を受け取る";
+"mediaDetail.notifyMeEnabling" = "オンにしています…";
+"mediaDetail.notifyMeEnabled" = "通知します";
+"mediaDetail.action.watchlist" = "ウォッチリスト";
+"mediaDetail.action.like" = "いいね";
+"mediaDetail.action.list" = "リストへ";
+"mediaDetail.toast.watchlistAdded" = "ウォッチリストに追加しました";
+"mediaDetail.toast.watchlistRemoved" = "ウォッチリストから削除しました";
+"mediaDetail.toast.markedSeen" = "視聴済みにしました";
+"mediaDetail.toast.markedUnseen" = "視聴済みから削除しました";
+"mediaDetail.toast.liked" = "「いいね」に追加しました";
+"mediaDetail.toast.likeRemoved" = "「いいね」から削除しました";
+"mediaDetail.why.cardTitle" = "なぜあなたにおすすめ？";
+"mediaDetail.why.title" = "おすすめの理由";
+"mediaDetail.why.affinity" = "あなたの好みとの相性";
+"mediaDetail.why.reason.mood" = "今の気分に合っています";
+"mediaDetail.why.reason.genres" = "好きなジャンル";
+"mediaDetail.why.reason.cast" = "知っているキャスト";
+"mediaDetail.why.helpful" = "参考になりましたか？";
+"mediaDetail.why.regenerate" = "再生成";
+"mediaDetail.why.quota" = "評価・気分・視聴履歴をもとに Vibe AI が生成しました。本日 %d/%d 回。";
+"settings.cacheManagement.clearCacheAction" = "キャッシュを削除";
+"gamification.missionsToday" = "今日のミッション";
+"gamification.xpToNext" = "次のレベルまで %d XP";
+"gamification.mission.openApp" = "アプリを開く";
+"gamification.mission.keepStreak" = "連続記録を続ける";
+"gamification.challenge.watch_3" = "クリップを3本見る";
+"gamification.challenge.like_5" = "クリップに5回いいねする";
+"gamification.challenge.list_2" = "リストに2作品追加する";
+"gamification.challenge.watch_new_genre" = "新しいジャンルのクリップを見る";
+"gamification.challenge.complete_5" = "クリップを5本、70%以上まで見る";
+
+// SeasonDetailView — conferme di marcatura episodi (2026-08-04)
+"season.confirmUnaired.title" = "まだ放送されていません";
+"season.confirmUnaired.message" = "S%dE%dはまだ放送されていません。それでも視聴済みにしますか？";
+"season.confirmUnaired.confirm" = "視聴済みにする";
+"season.confirmPrevious.title" = "前のエピソードも見ましたか？";
+"season.confirmPrevious.message" = "視聴済みになっていない前のエピソードが%d話あります。";
+"season.confirmPrevious.markAll" = "はい、すべて視聴済みにする";
+"season.confirmPrevious.onlyThis" = "これだけ";
+"season.confirmUnairedSeason.message" = "このシーズンの%d話はまだ放送されていません。それでも視聴済みにしますか？";
+"season.confirmUnairedSeason.markAll" = "すべて視聴済みにする";
+"season.confirmUnairedSeason.onlyAired" = "放送済みのみ";
+
+/* Import redesign 2.0 — banner, review inbox, onboarding options */
+"onboarding.import.durationHint" = "何年分もの履歴があるアーカイブは、数分かかることがあります。";
+"onboarding.import.meanwhile" = "その間に";
+"onboarding.import.wait" = "ここで待つ";
+"onboarding.import.wait.subtitle" = "ライブラリが完成した状態でアプリを始められます";
+"onboarding.import.background" = "オンボーディングを続ける";
+"onboarding.import.background.subtitle" = "インポートはバックグラウンドで続行され、完了したらお知らせします";
+"onboarding.import.waitingHint" = "ここでお待ちください。インポートが完了すると、確認画面が自動的に開きます。";
+"onboarding.import.manage" = "%d件のタイトルを管理";
+"import.banner.running" = "インポート中";
+"import.banner.episodes" = "%1$@ / %2$@ エピソード";
+"import.banner.completed" = "インポート完了";
+"import.banner.review" = "%2$@件中%1$d件のタイトルを要確認";
+"import.banner.manage" = "管理";
+"import.banner.ok" = "OK";
+"import.banner.summary" = "%1$@ 番組 · %2$@ エピソード · %3$@ 映画";
+"import.toast.imported" = "ライブラリをインポートしました";
+"import.toast.imported.review" = "ライブラリをインポートしました · 要確認のタイトル%d件";
+"import.review.title" = "確認が必要なタイトル";
+"import.review.remaining" = "残り %1$d / %2$d";
+"import.review.allResolved" = "すべて解決済み";
+"import.review.intro" = "TV Timeアーカイブのこれらのタイトルには、確実な一致が見つかりませんでした。正しいものを選ぶか、除外してください。";
+"import.review.episodesSeen" = "%d エピソード視聴済み";
+"import.review.searchManually" = "手動で検索";
+"import.review.exclude" = "除外";
+"import.review.later" = "後回しにする";
+"import.review.importCount" = "%d件のタイトルをインポート";
+"import.review.importOne" = "1件のタイトルをインポート";
+"import.review.libraryOk" = "ライブラリは問題なし";
+"import.review.libraryOk.subtitle" = "TV Timeアーカイブのすべてのタイトルが正しく照合されました。";
+"import.review.noCandidates" = "候補が見つかりません — 手動検索をお試しください。";
+"import.review.manualPick" = "手動で選択";
+"import.review.movieHint" = "一致しない映画は除外のみ可能です。";
+"import.review.seasons" = "%d シーズン";
+"import.review.reason.notFound" = "カタログに見つかりません";
+"import.review.reason.ambiguous" = "一致があいまい";
+"import.review.reason.conflict" = "シリーズの競合";
+"import.review.reason.yearMissing" = "年が欠落または不一致";
+"import.review.reason.missingId" = "エクスポートにシリーズIDがありません";
+
+"import.toast.mapping.partial" = "%1$d件のタイトルを解決 · 残り%2$d件を確認";
+"import.toast.mapping.done" = "%d件のタイトルを解決 · ライブラリは整理済み";
+
+"import.report.outOfStructure" = "%d件のエピソードは確認済みシリーズのTMDB構成に配置できませんでした。";
+
+
+// MARK: - Toast (Task 10)
+"mediaDetail.toast.markingSeen" = "視聴済みにしています…";
+"lists.toast.adding" = "追加しています…";
+"lists.toast.removing" = "削除しています…";
+"lists.toast.addedTo" = "%@ に追加しました";
+"lists.toast.removedFrom" = "%@ から削除しました";
+"lists.toast.removed" = "リストから削除しました";
+"lists.toast.failed" = "問題が発生しました";
+"lists.toast.creating" = "リストを作成しています…";
+"lists.toast.created" = "リストを作成しました";
+"tracking.toast.markingWatched" = "エピソードを記録しています…";
+"tracking.toast.markedWatched" = "エピソードを視聴済みにしました";
+"tracking.toast.snoozing" = "保留にしています…";
+"tracking.toast.snoozed" = "シリーズを保留にしました";
+"auth.error.recoveryLinkExpired" = "リンクが無効か期限切れです。パスワード再設定のリンクをもう一度リクエストしてください。";
+
+
+// MARK: - Regole password (Task 2)
+"auth.pwRule.length" = "8文字以上";
+"auth.pwRule.uppercase" = "大文字1つ";
+"auth.pwRule.lowercase" = "小文字1つ";
+"auth.pwRule.number" = "数字1つ";
+"auth.pwRule.symbol" = "記号1つ";
+"auth.accountCreated" = "アカウントを作成しました";
+
+
+// MARK: - Modali (Task 9+14)
+"tvDetail.markAllSeenSubtitle" = "公開済みの全シーズンの全エピソードに適用されます。";
+"tvDetail.markAllSeenCTA" = "%d 話を視聴済みにする";
+"tvDetail.markAllSeen.episodes" = "視聴済みにするエピソード";
+"tvDetail.markAllSeen.diary" = "日記に追加される項目";
+"tvDetail.markAllSeenReversible" = "元に戻せます: 日記から個々のエピソードを戻せます。";
+"tvDetail.seasonsCount" = "%d シーズン";
+"tvDetail.episodesCount" = "%d エピソード";
+"auth.changePasswordSubtitle" = "安全のため、他のデバイスからはサインアウトされます。";
+"auth.newPasswordPlaceholder" = "新しいパスワード";
+"auth.forgotCurrentPassword" = "現在のパスワードを忘れましたか？";
+"auth.show" = "表示";
+"auth.hide" = "非表示";
+"profile.feedback.subtitle" = "すべて読んでいます。通常2日以内に返信します。";
+"profile.feedback.keepUpdatedEmail" = "%@ に連絡します";
+"profile.feedback.placeholder.bug" = "何が起きましたか？ 直前に何をしていましたか…";
+"profile.feedback.placeholder.suggest" = "足りないものは？ どう使いたいか教えてください…";
+"profile.feedback.placeholder.other" = "伝えたいことを書いてください…";
+"profile.feedback.category.crash" = "クラッシュ";
+"profile.feedback.category.import" = "TV Time からの取り込み";
+"profile.feedback.category.notifications" = "通知";
+"profile.feedback.category.sync" = "同期";
+"profile.feedback.category.ui" = "表示";
+"profile.feedback.category.other" = "その他";
+
+
+// MARK: - Update forzato (Task 3)
+"update.required" = "アップデートが必要です";
+"update.fallbackTitle" = "新しいバージョンが利用できます";
+"update.whatsChanged" = "変更点";
+"update.fullReleaseNotes" = "リリースノート全文";
+"update.cta" = "App Store で更新";
+"update.versionFootnote" = "バージョン %@";
+"update.dataSafe" = "ライブラリとデータは安全なままです。";
+
+
+// MARK: - Preferiti (Task 7)
+"favorites.subtitle" = "プロフィールに並ぶ4作品";
+"favorites.inYourFavorites" = "お気に入りに入っています";
+"favorites.showcased" = "プロフィールに表示中";
+"favorites.addedToast" = "お気に入りに追加しました";
+"favorites.removedToast" = "お気に入りから削除しました";
+
+
+// MARK: - Informazioni estese (Task 8)
+"movieDetail.releaseDate" = "公開日";
+"movieDetail.status" = "ステータス";
+"movieDetail.productionCompanies" = "製作";
+"movieDetail.budget" = "製作費";
+"movieDetail.revenue" = "興行収入";
+"movieDetail.originalLanguage" = "原語";
+"movieDetail.tagline" = "キャッチコピー";
+"tvDetail.firstAirDate" = "初回放送";
+"tvDetail.lastAirDate" = "最新放送";
+"tvDetail.seasonsEpisodes" = "シーズン";
+"tvDetail.network" = "放送局";
+"tvDetail.createdBy" = "制作者";
+"mediaStatus.released" = "公開済み";
+"mediaStatus.inProduction" = "製作中";
+"mediaStatus.postProduction" = "ポストプロダクション";
+"mediaStatus.planned" = "企画中";
+"mediaStatus.rumored" = "噂段階";
+"mediaStatus.canceled" = "打ち切り";
+"mediaStatus.returningSeries" = "放送中";
+"mediaStatus.ended" = "完結";
+"mediaStatus.pilot" = "パイロット版";
+
+
+// MARK: - Piattaforme (Task 12+17)
+"platforms.active" = "有効なサービス";
+"platforms.activeCount" = "%d 件有効";
+"platforms.clear" = "クリア";
+"platforms.coverage" = "ウォッチリストのカバー率";
+"platforms.libraryCount" = "ライブラリの %d 作品";
+"platforms.recommended" = "おすすめ";
+"platforms.manage" = "管理";
+"platforms.empty" = "お住まいの国で利用できるサービスはまだありません。";
+
+
+// MARK: - Preferiti nel profilo (Task 15)
+"favorites.sectionTitle" = "お気に入り";
+"favorites.sectionCount" = "%2$d 件中 %1$d 件";
+
+
+// MARK: - Ricerca (Task 16)
+"search.mostRelevant" = "関連度が高い順";
+"common.movie" = "映画";
+"common.tvShow" = "テレビ番組";
+
+
+// MARK: - Toast con fase di progresso (bug 7)
+"mediaDetail.toast.addingToWatchlist" = "ウォッチリストに追加しています…";
+"mediaDetail.toast.removingFromWatchlist" = "ウォッチリストから削除しています…";
+"mediaDetail.toast.liking" = "「いいね」に追加しています…";
+"mediaDetail.toast.unliking" = "「いいね」から削除しています…";
+"mediaDetail.toast.markingUnseen" = "視聴済みから削除しています…";
+"mediaDetail.toast.disliking" = "「よくないね」に追加しています…";
+"mediaDetail.toast.undisliking" = "「よくないね」から削除しています…";
+"mediaDetail.toast.disliked" = "「よくないね」に追加しました";
+"mediaDetail.toast.dislikeRemoved" = "「よくないね」から削除しました";
+"favorites.adding" = "お気に入りに追加しています…";
+"favorites.removing" = "お気に入りから削除しています…";
+
+
+// MARK: - Ricerca ridisegnata (bug 1)
+"search.scope.all" = "すべて";
+"search.scope.movies" = "映画";
+"search.scope.series" = "シリーズ";
+"search.clear" = "消去";
+"search.trending.today" = "今日";
+"search.trending.subtitle" = "過去24時間に%@で最も検索された作品。";
+"search.results.subtitle" = "「%@」に一致、そのあとに関連作品。";
+"search.resultsCount" = "%d件";
+
+
+// MARK: - Ricerca piattaforme + esito notifica
+"platforms.search" = "プラットフォームを検索";
+"platforms.searchEmpty" = "その名前のプラットフォームはありません。";
+"mediaDetail.notifyMeFailed" = "通知をオンにできませんでした。";
+
+
+// MARK: - Report import ridisegnato
+"import.report.title" = "インポートレポート";
+"import.report.sourcePeriod" = "%@ · %@ – %@";
+"import.report.success.title" = "ライブラリを取り込みました";
+"import.report.success.subtitle" = "%d件のシリーズと%d件の映画をカタログと照合しました。";
+"import.report.success.subtitleWithRatings" = "%d件のシリーズと%d件の映画を、視聴日と評価つきでカタログと照合しました。";
+"import.report.tile.episodes" = "エピソード";
+"import.report.tile.movies" = "映画";
+"import.report.leftOut.title" = "取り込めなかった作品";
+"import.report.leftOut.subtitle" = "これらの作品はカタログ内で確実に一致するものがありません。カードをタップして手動で検索できます。";
+"import.report.leftOut.excluded" = "自分で除外しました";
+"import.report.leftOut.episodes" = "視聴済み%d話";
+"import.report.leftOut.seenOn" = "%@に視聴";
+"import.report.copyList" = "リストをコピー";
+"import.report.copied" = "リストをコピーしました";
+"import.report.details" = "詳細";
+
+
+// MARK: - Report import — dettagli
+"import.report.detail.period" = "対象期間";
+"import.report.detail.years" = "%d年";
+"import.report.detail.oneYear" = "1年";
+"import.report.detail.lessThanYear" = "1年未満";
+"import.report.detail.statuses" = "復元したシリーズの状態";
+"import.report.detail.statuses.hint" = "TV Time と同じウォッチリストとアーカイブ";
+"import.report.detail.ratings" = "引き継いだ評価";
+"import.report.detail.ratingsUnmatched" = "紐づかなかった評価";
+"import.report.detail.ratingsUnmatched.hint" = "カタログに存在しない、評価済みのエピソード";
+"import.report.detail.ratingsDeferred" = "まだ取り込んでいない評価";
+"import.report.detail.favorites" = "復元したお気に入り";
+"import.report.detail.moviesSeen" = "視聴済みにした映画";
+"import.report.detail.moviesWatchlist" = "ウォッチリストの映画";
+"import.report.detail.statusesUnresolved" = "復元できなかった状態";
+"import.report.detail.outOfStructure" = "配置できないエピソード";
+"import.report.detail.outOfStructure.hint" = "シリーズ構成の外にある特別編や拡張版";
+"import.report.detail.favoriteMovies" = "取り込めなかったお気に入りの映画";
+
+
+// MARK: - Report import — titolo mancante
+"import.report.leftOut.untitled" = "エクスポートにタイトルがありません";
+
+
+// MARK: - ジャンル (TMDB)
+// 画面に表示されるジャンル名（カルーセルのタイトル、分析のジャンルグラフ）。
+// TMDBは作品の詳細内でしか翻訳を返さない。カルーセルではジャンルが数値IDで届くため、名前はここから取る。
+"genre.action" = "アクション";
+"genre.adventure" = "アドベンチャー";
+"genre.animation" = "アニメーション";
+"genre.comedy" = "コメディ";
+"genre.crime" = "犯罪";
+"genre.documentary" = "ドキュメンタリー";
+"genre.drama" = "ドラマ";
+"genre.family" = "ファミリー";
+"genre.fantasy" = "ファンタジー";
+"genre.history" = "歴史";
+"genre.horror" = "ホラー";
+"genre.music" = "音楽";
+"genre.mystery" = "ミステリー";
+"genre.romance" = "ロマンス";
+"genre.scienceFiction" = "サイエンスフィクション";
+"genre.tvMovie" = "TVムービー";
+"genre.thriller" = "スリラー";
+"genre.war" = "戦争";
+"genre.western" = "西部劇";
+"genre.actionAdventure" = "アクション＆アドベンチャー";
+"genre.kids" = "キッズ";
+"genre.news" = "ニュース";
+"genre.reality" = "リアリティ";
+"genre.sciFiFantasy" = "SF＆ファンタジー";
+"genre.soap" = "ソープオペラ";
+"genre.talk" = "トークショー";
+"genre.warPolitics" = "戦争＆政治";
+
+
+// MARK: - 気分（ムード）
+// "carousel.moodTonight"（「今夜は%@」）の %@ に入る。形容詞ではなく名詞。
+"mood.happy" = "ハートウォーミング";
+"mood.sad" = "メランコリー";
+"mood.excited" = "スリル";
+"mood.relaxed" = "リラックス";
+"mood.scared" = "ゾクゾク";
+"mood.thoughtful" = "考えさせられる一本";
+"mood.romantic" = "ロマンス";
+"mood.adventurous" = "アドベンチャー";
+"mood.nostalgic" = "ノスタルジー";
+"mood.energetic" = "パワー全開";
+
+
+// MARK: - カルーセル — 引数とジャンルなしの代替タイトル
+// "%d" は年代の開始年（2020）。日本語では「2020年代」。
+"carousel.arg.decade" = "%d年代";
+// 好みのジャンルがまだない場合に使う代替タイトル（通常タイトルの %@ に入れる語ではない）。
+"carousel.hiddenGems.generic" = "隠れた名作";
+"carousel.staffPicks.generic" = "あなたへのスタッフおすすめ";
+
+
+// MARK: - 分析
+"analytics.noData" = "データなし";
+
+
+// MARK: - 統計とゲーミフィケーション（ビューから抽出した文字列）
+// AnalyticsDashboardView / FloatingXPBadgeView / BadgeGalleryView / LevelProgressView に
+// 直書きされていて `.localized` を通っていなかったため、全20言語で英語のままだったもの。
+"stats.title" = "あなたの統計";
+"stats.yourActivity" = "あなたのアクティビティ";
+"stats.viewFull" = "統計をすべて見る";
+"stats.loading" = "統計を読み込み中…";
+"stats.errorTitle" = "統計を読み込めませんでした";
+"stats.emptyTitle" = "まだ統計がありません";
+"stats.emptySubtitle" = "視聴を始めると統計が表示されます！";
+"stats.genreDistribution" = "ジャンル別の内訳";
+"stats.genreEmpty" = "ジャンルのデータはまだありません";
+"stats.whenActive" = "よく見る時間帯";
+"stats.topContent" = "あなたのトップ作品";
+"stats.contentEmpty" = "作品のデータはまだありません";
+"stats.discoveryChannels" = "作品との出会い方";
+"stats.discoveryEmpty" = "発見のデータはまだありません";
+"stats.moodProfile" = "ムードの傾向";
+"stats.moodEmpty" = "データがまだ足りません。視聴を続けるとムードの傾向が表示されます。";
+
+// "%d" はレベルの番号。
+"gamification.levelNumber" = "レベル%d";
+// 画面上部の狭いバッジ用の短縮形。
+"gamification.levelShort" = "Lv.%d";
+"gamification.bestStreak" = "最長連続日数";
+"gamification.xpBonus" = "XPボーナス";
+"gamification.todaysChallenge" = "今日のチャレンジ";
+"gamification.completed" = "達成！";
+"gamification.badgeUnlocked" = "バッジを獲得！";
+"gamification.badges.collected" = "獲得したバッジ";
+"gamification.badges.unlocked" = "獲得済み";
+// "%d" はバッジの総数。「12 / 40」のように数字のあとに続く。
+"gamification.badges.ofTotal" = "/ %d";
+"gamification.levels.progressTitle" = "レベルの進捗";
+"gamification.allLevels" = "すべてのレベル";
+
+"common.progress" = "進捗";
+"tvDetail.seasonsTitle" = "シーズン";
+"tvDetail.episodesTitle" = "エピソード";

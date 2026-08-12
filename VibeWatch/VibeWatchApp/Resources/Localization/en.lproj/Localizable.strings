@@ -38,6 +38,7 @@
 "list.movies" = "Movies";
 "list.tvShows" = "TV";
 "lists.myLists" = "My Lists";
+"lists.collections" = "Collections";
 "lists.empty" = "No Lists Yet";
 "lists.emptyDescription" = "Create your first watchlist to organize movies and shows you discover";
 "lists.noItems" = "No items yet";
@@ -127,10 +128,12 @@
 "clips.noClipsAvailable" = "No Clips Available";
 "clips.noClipsDescription" = "Check back later for exciting scenes from your favorite movies and shows";
 "clips.addToList" = "Add to List";
+"clips.card.addToWatchlist" = "+ Watchlist";
+"clips.card.goToDetail" = "View details";
 "clips.createFirstList" = "Create your first watchlist to save picks";
 "clips.createNewList" = "Create New List";
-"clips.feed.craftingTitle" = "Crafting Your Perfect Feed";
-"clips.feed.craftingSubtitle" = "We're handpicking the best clips just for you ✨";
+"clips.feed.craftingTitle" = "Crafting your feed";
+"clips.feed.craftingSubtitle" = "Hand-picking the best clips for you";
 "clips.comment" = "Comment";
 "clips.comments" = "Comments";
 "clips.noComments" = "No comments yet";
@@ -206,7 +209,6 @@
 // Platforms
 "platform.title" = "Streaming Platforms";
 "platform.selectionCount" = "%d of %d selected";
-"platforms.title" = "Platforms";
 "platforms.streaming" = "Streaming";
 "platforms.rent" = "Rent";
 "platforms.buy" = "Buy";
@@ -242,6 +244,7 @@
 "auth.error.invalidResponse" = "Invalid response from server.";
 "auth.error.userNotFound" = "User not found.";
 "auth.error.invalidCredentials" = "Invalid email or password.";
+"auth.error.tooManyAttempts" = "Too many attempts. Try again later.";
 "auth.error.networkError" = "Network error. Please check your connection.";
 "auth.error.databaseError" = "Database error saving user profile. Please try again.";
 "auth.error.signUpFailed" = "Sign up failed. Please try again.";
@@ -373,6 +376,8 @@
 "settings.redeemCode" = "Redeem Code";
 "settings.redeemCode.description" = "Enter a promo or offer code";
 "paywall.haveCode" = "Have a promo code?";
+"paywall.price.perYear" = "%@/year";
+"paywall.cancelAnytime" = "Cancel anytime";
 
 // Help & Support - About Us
 "profile.aboutUs" = "About us";
@@ -388,7 +393,56 @@
 "profile.termsOfUse" = "Terms Of Use";
 "profile.terms" = "Terms";
 "profile.sendFeedback" = "Send Feedback";
+"profile.share" = "Share profile";
+"profile.share.comingSoon" = "Coming soon";
+"profile.importFrom" = "Import from";
+"import.title" = "Import";
+"import.source.tvtime" = "TV Time (.zip)";
+"import.source.tvtime.subtitle" = "Your TV Time data export";
+"import.source.footer" = "Request your data export from TV Time (GDPR), then pick the .zip here. Apps that export the same format work too.";
+"import.state.uploading" = "Uploading…";
+"import.state.uploadingHint" = "Keep the app open while the file uploads.";
+"import.canClose" = "Your history is being imported. You can close the app — we'll send you a notification when it's done.";
+"import.phase.queued" = "Waiting to start…";
+"import.phase.parsing" = "Reading your history…";
+"import.phase.resolving" = "Matching shows and episodes…";
+"import.phase.writing" = "Saving your episodes…";
+"import.phase.finishing" = "Finishing up…";
+"import.report.episodes" = "Episodes imported";
+"import.report.shows" = "Shows";
+"import.report.period" = "From %@ to %@";
+"import.report.ratingsDeferred" = "%d ratings found — not imported yet.";
+"import.report.ratingsApplied" = "%d ratings imported as stars.";
+"import.report.ratingsUnresolved" = "%d ratings could not be matched.";
+"import.report.favoritesApplied" = "%d favorites imported into free slots.";
+"import.report.favoriteMoviesUnsupported" = "%d movie favorites can't be imported from TV Time.";
+"import.report.moviesApplied" = "%d movies imported with their watch dates.";
+"import.report.moviesWatchlistApplied" = "%d movies added to your watchlist.";
+"import.report.moviesUnresolved" = "%d movies not recognized (title and year don't match on TMDB).";
+"import.resolve.button" = "Resolve";
+"import.resolve.batchButton" = "Resolve %d titles";
+"import.resolve.batchHint" = "Find the matching TMDB series for every title. Nothing will be imported until all matches are selected; then one import will resolve them together.";
+"import.resolve.batchProgress" = "%d of %d titles matched";
+"import.resolve.startBatch" = "Start one import";
+"import.resolve.title" = "Which series is “%@”?";
+"import.resolve.hint" = "Episodes are checked again using their exact TVDB IDs. Anything TMDB cannot confirm will stay in the report.";
+"import.resolve.searchPlaceholder" = "Search the series on TMDB";
+"import.resolve.empty" = "No results.";
+"import.resolve.failed" = "Could not resolve:";
+"import.resolve.searchFailed" = "Search failed.";
+"import.report.statusesApplied" = "%d series statuses restored (watchlist and archive).";
+"import.report.statusesUnresolved" = "%d series statuses could not be applied.";
+"import.report.unresolvedTitle" = "%d episodes could not be matched";
+"import.report.unresolvedRow" = "%d episodes";
+"import.report.allResolved" = "Everything was matched.";
+"import.error.failed" = "The import stopped with an error.";
+"import.error.network" = "Can't check on the import right now.";
+"import.error.uploadFailed" = "The upload didn't complete.";
+"import.error.startFailed" = "The import couldn't start.";
+"import.error.fileRead" = "That file couldn't be read.";
+"import.error.reportFailed" = "The import finished, but the report couldn't be loaded.";
 
+"import.error.sessionExpired" = "Your session has expired. Sign in again, then retry the import.";
 // Profile - Support & Feedback
 "profile.feedback.suggestFeature" = "Suggest new feature";
 "profile.feedback.suggestFeatureDescription" = "Tell us what would make VibeWatch better for you.";
@@ -418,7 +472,7 @@
 "settings.deleteAccountWarningTitle" = "Delete account?";
 "settings.deleteAccountWarningMessage" = "This action is permanent and cannot be undone.";
 "settings.deleteAccountKeep" = "No, keep it";
-"settings.deleteAccountConfirm" = "Yes, delete my account";
+"settings.deleteAccountConfirm" = "Yes, permanently delete my account";
 "settings.deleteAccountFinalTitle" = "Delete account permanently";
 "settings.deleteAccountFinalMessage" = "Are you absolutely sure? This action cannot be undone.";
 "settings.deleteAccountError" = "Unable to delete account right now.";
@@ -438,6 +492,12 @@
 "actor.retry" = "Try again";
 "actor.biography.showMore" = "Show More";
 "actor.biography.showLess" = "Show Less";
+"actor.birthday" = "Born: %@";
+"actor.birthday.line" = "%@ (%@ years old)";
+"actor.known_for" = "Known For";
+"actor.search.placeholder" = "Search filmography…";
+"actor.search.noResults" = "No results for";
+"actor.filmography.empty" = "No credits found.";
 
 // Global Discovery Filters
 "filters.mediaType" = "Media Type";
@@ -503,8 +563,8 @@
 "settings.notifications.description" = "Personalized alerts for new content";
 
 // Onboarding Revamp
-"onboarding.welcome.title" = "Discover Your Vibe";
-"onboarding.welcome.subtitle" = "AI-powered recommendations tailored just for you.";
+"onboarding.welcome.title" = "Welcome to VibeWatch";
+"onboarding.welcome.subtitle" = "Discover, track and never miss a release. Movies and shows, all in one place.";
 "onboarding.clips.title" = "Watch, Don't Read";
 "onboarding.clips.subtitle" = "Experience movies through short, engaging clips.";
 "onboarding.lists.title" = "Your Watchlist, Everywhere";
@@ -568,6 +628,16 @@
 "notifications.settingsSaved" = "Settings Saved";
 "notifications.preferencesUpdated" = "Your notification preferences have been updated.";
 "notifications.typesFooter" = "Choose which notifications you'd like to receive";
+"notifications.newAvailability" = "New Availability";
+"notifications.newAvailabilityDesc" = "When items on your watchlist become available to stream, rent, or buy";
+"notifications.newRelease" = "New Releases";
+"notifications.newReleaseDesc" = "Movies and shows you tapped \"Notify me\" on when they come out";
+"notifications.episodeAired" = "New Episodes";
+"notifications.episodeAiredDesc" = "When a new episode airs for TV shows in your lists";
+"notifications.continueWatching" = "Continue Watching";
+"notifications.continueWatchingDesc" = "Reminders to pick up series you've been watching";
+"notifications.listMilestone" = "List Milestones";
+"notifications.listMilestoneDesc" = "Celebrate when you hit watching milestones";
 "notifications.frequencyFooter" = "Maximum number of notifications you'll receive per day";
 "notifications.favoriteActorsTitle" = "Your Favorite Actors";
 "notifications.favoriteActorsFooter" = "Get notified when these actors have new content";
@@ -583,3 +653,632 @@
 
 // Error Views
 "error.oops" = "Oops!";
+
+// TV Show Detail - Mark All Seen Confirmation
+"tvDetail.markAllSeenTitle" = "Mark the whole series as seen";
+"tvDetail.markAllSeenDescription" = "This action will apply to all episodes and seasons of the series available.";
+"tvDetail.markAllSeenQuestion" = "Do you want to continue?";
+"tvDetail.markAllSeenConfirm" = "Yes, mark as seen";
+"tvDetail.markAllSeenCancel" = "No, cancel";
+"tvDetail.seasonSeenShort" = "seen";
+
+// Library section switcher
+"lists.section.myLists" = "My Lists";
+"lists.section.tvTracking" = "TV Shows Tracking";
+
+// TV Shows Tracking
+"tvTracking.continuing" = "Continue Watching";
+"tvTracking.notStarted" = "Not Started";
+"tvTracking.upToDate" = "Up to Date";
+"tvTracking.emptyState" = "No TV shows found";
+
+// New Discovery Carousels
+"carousel.fromActor" = "More from %@";
+"carousel.decadeClassics" = "%@ Classics";
+"carousel.moodTonight" = "Tonight: %@";
+"carousel.regionSpotlight" = "%@ Spotlight";
+"carousel.topInGenre" = "Top in %@";
+"carousel.hotThisWeekInGenre" = "Hot This Week in %@";
+"carousel.quickWatches" = "Quick Watches";
+"carousel.epicWatches" = "Epic Watches";
+"carousel.internationalPicks" = "International Picks";
+"carousel.throwback" = "Throwback %@";
+"carousel.fromAIChat" = "From Your AI Chat";
+"carousel.comingSoon" = "Coming Soon";
+"carousel.trendingTVWeek" = "Trending TV This Week";
+"carousel.criticallyAcclaimedRecent" = "Critically Acclaimed %@";
+"carousel.returningTV" = "Returning Soon";
+"carousel.documentaries" = "Documentaries for You";
+"discovery.endOfFeed" = "You're all caught up";
+/* MARK: - Public Lists (Fase 1) */
+"lists.section.publicLists" = "Public Lists";
+"lists.public.scope.explore" = "Explore";
+"lists.public.scope.followed" = "Followed";
+"lists.public.searchPlaceholder" = "Search public lists";
+"lists.public.empty.explore" = "No public lists found";
+"lists.public.empty.followed" = "You're not following any list yet";
+"lists.public.follow" = "Follow";
+"lists.public.following" = "Following";
+"lists.public.unavailable" = "This list is no longer available";
+"lists.public.report" = "Report list";
+"lists.public.report.confirm" = "Report this list as inappropriate?";
+"lists.public.report.done" = "Thanks, your report has been received";
+"lists.public.block" = "Block user";
+"lists.public.block.confirm" = "Block this user? Their public lists will be hidden.";
+"lists.public.createFromThis" = "Create public list from this";
+"lists.public.toggle" = "Public list";
+"lists.public.toggle.footer" = "Public lists can be discovered and followed by other users.";
+"lists.public.profanity.title" = "Inappropriate content";
+"lists.public.profanity" = "Please remove inappropriate language from the name or description before publishing.";
+"lists.public.guidelines.title" = "Community guidelines";
+"lists.public.guidelines.body" = "By publishing a list you agree to our community guidelines: no offensive, hateful or illegal content. Lists that violate them may be hidden and reported users may be removed.";
+"lists.public.guidelines.accept" = "Accept and publish";
+"lists.duplicateName" = "Copy of %@";
+/* MARK: - TV Tracking (card stile JustWatch) */
+"tvTracking.titlesCount" = "%d titles";
+"tvTracking.episodesRemaining" = "%d episodes remaining";
+"tvTracking.lastSeen" = "LAST SEEN %@";
+"tvTracking.soon" = "soon";
+"tvTracking.watchNow" = "Watch now";
+
+/* SPEC v3 §9.2 — schermata Tracking */
+"tracking.title" = "Tracking";
+"tracking.bucket.upNext" = "Up next";
+"tracking.bucket.stale" = "Not watched in a while";
+"tracking.bucket.forLater" = "For later";
+"tracking.bucket.upToDate" = "All caught up";
+"tracking.bucket.notStarted" = "Not started";
+"tracking.bucket.dropped" = "Dropped";
+"tracking.bucket.archived" = "Archived";
+"tracking.timeline.today" = "Out today";
+"tracking.timeline.tomorrow" = "Tomorrow";
+"tracking.timeline.thisWeek" = "This week";
+"tracking.timeline.thisMonth" = "This month";
+"tracking.action.watched" = "Watched";
+"tracking.action.later" = "Later";
+"tracking.caughtUp" = "Up to date";
+"tracking.unknownShow" = "Unknown series";
+"tracking.special" = "SPECIAL";
+"tracking.empty.title" = "Nothing to watch yet";
+"tracking.empty.subtitle" = "Follow a series, or import your TV Time history, and it will show up here.";
+"tracking.error.title" = "Something went wrong";
+"tracking.error.notAuthenticated" = "You need to be signed in.";
+"tracking.error.showNotInCatalog" = "This series isn't in the catalog yet — try again in a moment.";
+"tracking.error.noNextEpisode" = "This series has no next episode.";
+
+"tab.tracking" = "Tracking";
+
+"common.close" = "Close";
+
+/* Chiavi chiamate dal codice e mai tradotte */
+"auth.error.invalidLink" = "This link is invalid or has expired.";
+"clips.noListsYet" = "No lists yet";
+
+/* SPEC v3 §3.7 — scelta dello username */
+"username.confirm.title" = "Confirm your username";
+"username.confirm.subtitle" = "We picked this one from your name. It's how other people will find you — keep it or choose another.";
+"username.confirm.action" = "Confirm";
+"username.choose.title" = "Choose your username";
+"username.choose.subtitle" = "You need one to appear on VibeWatch: it's how other people find your profile and your lists.";
+"username.choose.action" = "Continue";
+"username.placeholder" = "username";
+"username.hint" = "Lowercase letters, numbers and _ — 3 to 20 characters.";
+"username.checking" = "Checking…";
+"username.available" = "Available";
+"username.later" = "Not now";
+"username.error.empty" = "Pick a username.";
+"username.error.tooShort" = "At least 3 characters.";
+"username.error.tooLong" = "20 characters at most.";
+"username.error.invalidCharacters" = "Only lowercase letters, numbers and _.";
+"username.error.taken" = "Already taken.";
+"username.error.checkFailed" = "Couldn't check. Try again.";
+"username.error.reserved" = "This one is reserved.";
+
+// Social (SPEC v3 blocco 8)
+"social.search.title" = "Find friends";
+"social.search.placeholder" = "Username or name";
+"social.search.prompt" = "Search people by username or name to see their profile.";
+"social.search.noResults" = "No one found.";
+"social.search.failed" = "Search failed. Check your connection.";
+"social.profile.followers" = "Followers";
+"social.profile.following" = "Following";
+"social.follow" = "Follow";
+"social.unfollow" = "Unfollow";
+"social.followsYou" = "Follows you";
+"social.profile.notFound" = "This profile doesn't exist.";
+"social.profile.you" = "This is you.";
+"social.profile.loadFailed" = "Couldn't load this profile.";
+
+// Blocco 9 (SPEC v3 §3.6/§9.3): voti in stelle, favorites, stats
+"rating.title" = "Your rating";
+"rating.saveFailed" = "Couldn't save your rating. Try again.";
+"profile.favorites.movies" = "Favorite movies";
+"profile.favorites.shows" = "Favorite shows";
+"profile.lists.title" = "Public lists";
+"profile.lists.loadFailed" = "Public lists couldn't load.";
+"profile.stats.title" = "Your stats";
+"profile.stats.watchTime" = "Watch time";
+"profile.stats.movies" = "Movies";
+"profile.stats.shows" = "Shows";
+"profile.stats.episodes" = "Episodes";
+"profile.stats.loadFailed" = "Couldn't load stats.";
+"profile.stats.advanced.title" = "Advanced stats";
+"profile.stats.advanced.byGenre" = "By genre";
+"profile.stats.advanced.byDecade" = "By decade";
+"profile.stats.advanced.ratings" = "Your ratings";
+"profile.stats.advanced.noGenre" = "%d shows without genre info";
+"profile.stats.advanced.proLocked" = "Advanced stats are part of Pro.";
+
+// Blocco 9, seconda meta' (§9.3): diario e modifica dei favorites
+"diary.title" = "Diary";
+"diary.empty" = "Nothing here yet — what you watch will show up here.";
+"diary.loadFailed" = "Couldn't read the diary.";
+"favorites.add" = "Add to favorites";
+"favorites.remove" = "Remove from favorites";
+"favorites.slot" = "Slot %d";
+"favorites.saveFailed" = "Couldn't update favorites. Try again.";
+
+// La pillola del Tracking: dove lo guardo (streaming > noleggio > acquisto)
+"tracking.watchOn" = "Watch on %@";
+"tracking.rentOn" = "Rent on %@";
+"tracking.buyOn" = "Buy on %@";
+
+// MARK: - Redesign 2.0 (tab Social, strip uscite, calendario, sottotitoli)
+"tab.social" = "Social";
+"social.subtitle" = "Friends and the lists you follow";
+"discovery.continueWatching" = "Continue watching";
+"discovery.strip.today" = "Today";
+"discovery.releases.title" = "Releases";
+"discovery.releases.none" = "No releases on this day.";
+"discovery.releases.countOne" = "1 release";
+"discovery.releases.countMany" = "%d releases";
+"tracking.subtitle" = "What you're watching now";
+"lists.subtitle" = "Your archive and collections";
+"profile.group.activity" = "Activity";
+"profile.group.preferences" = "Preferences";
+"profile.group.account" = "Account";
+"profile.badgesLevels" = "Badges & levels";
+"gamification.progress.title" = "Your progress";
+"gamification.dayStreak" = "Day streak";
+"gamification.badges.title" = "Badges";
+"gamification.levels.title" = "Levels";
+"gamification.challenge.none" = "No mission today";
+"common.seeAll" = "See all";
+"profile.stats.subtitle" = "Genres, mood, watch time";
+"diary.subtitle" = "History of watched episodes and movies";
+"profile.badgesLevels.subtitle" = "Level %d · %d/%d badges";
+"notifications.row.subtitle" = "Releases, new episodes, quiet hours";
+"platforms.row.subtitle" = "Streaming, rent and buy";
+"platforms.footnote" = "Selected platforms filter where to watch across the whole app.";
+"profile.languageCountry" = "Language & country";
+"profile.edit.title" = "Edit profile";
+"profile.edit.information" = "Information";
+"profile.edit.name" = "Name";
+"profile.edit.bio" = "Bio";
+"profile.edit.bioPlaceholder" = "Tell people something about you (optional)";
+"profile.edit.changePhoto" = "Change photo";
+"profile.edit.publicProfile" = "Public profile";
+"profile.edit.publicProfileSubtitle" = "People can find you and follow your public lists";
+"profile.edit.saveError" = "We couldn't save your profile. Please try again.";
+"profile.imageCache" = "Image cache";
+"profile.imageCache.subtitle" = "Prefetch on WiFi only";
+"common.on" = "On";
+"common.off" = "Off";
+"profile.privacyTerms" = "Privacy & terms";
+"profile.footer.tmdb" = "This product uses the TMDb API but is not endorsed or certified by TMDb.";
+"settings.cacheManagement.inUse" = "%d MB in use";
+
+// MARK: - Onboarding 2.0
+"common.continue" = "Continue";
+"auth.fullNamePlaceholder" = "Full name";
+"onboarding.welcome.cta" = "Get Started";
+"onboarding.import.title" = "Bring your history with you";
+"onboarding.import.subtitle" = "Import your shows, watched episodes and watchlist. Once the import is done, the app is ready.";
+"onboarding.import.tvtime" = "Import from TV Time";
+"onboarding.import.tvtime.subtitle" = "Shows, watched episodes, watchlist and ratings";
+"onboarding.import.other" = "Other apps";
+"onboarding.import.other.subtitle" = "Trakt, Letterboxd — coming soon";
+"onboarding.import.skip" = "Skip, start from scratch";
+"onboarding.import.completed" = "Import completed";
+"onboarding.import.stat.shows" = "Shows";
+"onboarding.import.stat.episodes" = "Episodes watched";
+"onboarding.import.stat.movies" = "Movies";
+"onboarding.import.stat.watchlist" = "In watchlist";
+"onboarding.notifications.title" = "Never miss a thing";
+"onboarding.notifications.subtitle" = "We only alert you about what you follow — new episodes, watchlist releases and streaming availability.";
+"onboarding.notifications.row1" = "New episodes of shows you follow";
+"onboarding.notifications.row2" = "Releases of titles in your watchlist";
+"onboarding.notifications.row3" = "When a title arrives on streaming";
+"onboarding.notifications.enable" = "Enable notifications";
+"onboarding.notifications.later" = "Maybe later";
+"onboarding.ready.title" = "All set";
+"onboarding.ready.subtitle" = "Your library is ready and you won't miss a release. \"Continue Watching\" is waiting for you at the top.";
+"onboarding.ready.chip.shows" = "%d shows";
+"onboarding.ready.chip.episodes" = "%d episodes";
+"onboarding.ready.chip.notifications" = "Notifications on";
+"onboarding.ready.cta" = "Start watching";
+
+"filters.myPlatforms" = "Mine";
+"filters.platformScopeAll" = "All";
+"mediaDetail.forYou" = "for you";
+"mediaDetail.watchOn" = "Watch on";
+"mediaDetail.notifyMe" = "Notify me";
+"mediaDetail.notifyMeEnabling" = "Turning on…";
+"mediaDetail.notifyMeEnabled" = "We'll notify you";
+"mediaDetail.action.watchlist" = "Watchlist";
+"mediaDetail.action.like" = "Like";
+"mediaDetail.action.list" = "To list";
+"mediaDetail.toast.watchlistAdded" = "Added to your watchlist";
+"mediaDetail.toast.watchlistRemoved" = "Removed from your watchlist";
+"mediaDetail.toast.markedSeen" = "Marked as seen";
+"mediaDetail.toast.markedUnseen" = "Removed from seen";
+"mediaDetail.toast.liked" = "Added to your likes";
+"mediaDetail.toast.likeRemoved" = "Removed from your likes";
+"mediaDetail.why.cardTitle" = "Why is it right for you?";
+"mediaDetail.why.title" = "Why for you";
+"mediaDetail.why.affinity" = "Affinity with your tastes";
+"mediaDetail.why.reason.mood" = "In line with your mood";
+"mediaDetail.why.reason.genres" = "Genres you love";
+"mediaDetail.why.reason.cast" = "Cast you know";
+"mediaDetail.why.helpful" = "Was this helpful?";
+"mediaDetail.why.regenerate" = "Regenerate";
+"mediaDetail.why.quota" = "Generated by Vibe AI from ratings, mood and history. %d/%d requests today.";
+"settings.cacheManagement.clearCacheAction" = "Clear cache";
+"gamification.missionsToday" = "Today's missions";
+"gamification.xpToNext" = "%d XP to the next level";
+"gamification.mission.openApp" = "Open the app";
+"gamification.mission.keepStreak" = "Keep your daily streak";
+"gamification.challenge.watch_3" = "Watch 3 clips";
+"gamification.challenge.like_5" = "Like 5 clips";
+"gamification.challenge.list_2" = "Add 2 titles to a list";
+"gamification.challenge.watch_new_genre" = "Watch a clip from a new genre";
+"gamification.challenge.complete_5" = "Complete 5 clips (>70%)";
+
+// SeasonDetailView — conferme di marcatura episodi (2026-08-04)
+"season.confirmUnaired.title" = "Not aired yet";
+"season.confirmUnaired.message" = "S%dE%d has not aired yet. Mark it as watched anyway?";
+"season.confirmUnaired.confirm" = "Mark as watched";
+"season.confirmPrevious.title" = "Did you watch the previous episodes?";
+"season.confirmPrevious.message" = "There are %d earlier episodes not marked as watched.";
+"season.confirmPrevious.markAll" = "Yes, mark them all";
+"season.confirmPrevious.onlyThis" = "Only this one";
+"season.confirmUnairedSeason.message" = "%d episodes of this season have not aired yet. Mark them as watched anyway?";
+"season.confirmUnairedSeason.markAll" = "Mark them all";
+"season.confirmUnairedSeason.onlyAired" = "Only the aired ones";
+
+/* Import redesign 2.0 — banner, review inbox, onboarding options */
+"onboarding.import.durationHint" = "An archive with years of history can take several minutes.";
+"onboarding.import.meanwhile" = "In the meantime";
+"onboarding.import.wait" = "I'll stay and wait";
+"onboarding.import.wait.subtitle" = "Enter the app with your library already complete";
+"onboarding.import.background" = "Continue onboarding";
+"onboarding.import.background.subtitle" = "The import keeps running in the background — we'll notify you when it's done";
+"onboarding.import.waitingHint" = "We'll wait here: as soon as the import finishes, the review opens automatically.";
+"onboarding.import.manage" = "Manage %d titles";
+"import.banner.running" = "Import in progress";
+"import.banner.episodes" = "%1$@ of %2$@ episodes";
+"import.banner.completed" = "Import completed";
+"import.banner.review" = "%1$d titles to review out of %2$@";
+"import.banner.manage" = "Manage";
+"import.banner.ok" = "OK";
+"import.banner.summary" = "%1$@ shows · %2$@ episodes · %3$@ movies";
+"import.toast.imported" = "Library imported";
+"import.toast.imported.review" = "Library imported · %d titles to review";
+"import.review.title" = "Titles to review";
+"import.review.remaining" = "%1$d of %2$d left";
+"import.review.allResolved" = "All resolved";
+"import.review.intro" = "We couldn't find a confident match for these titles from your TV Time archive. Pick the right one or exclude it.";
+"import.review.episodesSeen" = "%d episodes watched";
+"import.review.searchManually" = "Search manually";
+"import.review.exclude" = "Exclude";
+"import.review.later" = "Postpone, I'll do it later";
+"import.review.importCount" = "Import %d titles";
+"import.review.importOne" = "Import 1 title";
+"import.review.libraryOk" = "Library in order";
+"import.review.libraryOk.subtitle" = "Every title from your TV Time archive has been matched correctly.";
+"import.review.noCandidates" = "No suggestions found — try a manual search.";
+"import.review.manualPick" = "Chosen manually";
+"import.review.movieHint" = "Movies without a match can only be excluded.";
+"import.review.seasons" = "%d seasons";
+"import.review.reason.notFound" = "not found in the catalog";
+"import.review.reason.ambiguous" = "ambiguous match";
+"import.review.reason.conflict" = "series conflict";
+"import.review.reason.yearMissing" = "missing or mismatched year";
+"import.review.reason.missingId" = "no series ID in the export";
+
+"import.toast.mapping.partial" = "%1$d titles resolved · %2$d still to review";
+"import.toast.mapping.done" = "%d titles resolved · library in order";
+
+"import.report.outOfStructure" = "%d episodes could not be placed in the TMDB structure of their confirmed show.";
+
+
+// MARK: - Toast (Task 10)
+"mediaDetail.toast.markingSeen" = "Marking as seen…";
+"lists.toast.adding" = "Adding…";
+"lists.toast.removing" = "Removing…";
+"lists.toast.addedTo" = "Added to %@";
+"lists.toast.removedFrom" = "Removed from %@";
+"lists.toast.removed" = "Removed from the list";
+"lists.toast.failed" = "Something went wrong";
+"lists.toast.creating" = "Creating list…";
+"lists.toast.created" = "List created";
+"tracking.toast.markingWatched" = "Marking episode…";
+"tracking.toast.markedWatched" = "Episode marked as watched";
+"tracking.toast.snoozing" = "Snoozing…";
+"tracking.toast.snoozed" = "Series snoozed";
+"auth.error.recoveryLinkExpired" = "Email link is invalid or has expired. Request a new password reset link.";
+
+
+// MARK: - Regole password (Task 2)
+"auth.pwRule.length" = "8+ characters";
+"auth.pwRule.uppercase" = "1 uppercase";
+"auth.pwRule.lowercase" = "1 lowercase";
+"auth.pwRule.number" = "1 number";
+"auth.pwRule.symbol" = "1 symbol";
+"auth.accountCreated" = "Account created";
+
+
+// MARK: - Modali (Task 9+14)
+"tvDetail.markAllSeenSubtitle" = "Applies to every episode of every season already released.";
+"tvDetail.markAllSeenCTA" = "Mark %d episodes as seen";
+"tvDetail.markAllSeen.episodes" = "Episodes marked as seen";
+"tvDetail.markAllSeen.diary" = "Entries added to the diary";
+"tvDetail.markAllSeenReversible" = "Reversible: you can restore single episodes from the diary.";
+"tvDetail.seasonsCount" = "%d seasons";
+"tvDetail.episodesCount" = "%d episodes";
+"auth.changePasswordSubtitle" = "For your security, we'll sign you out of your other devices.";
+"auth.newPasswordPlaceholder" = "New password";
+"auth.forgotCurrentPassword" = "Don't remember your current one?";
+"auth.show" = "Show";
+"auth.hide" = "Hide";
+"profile.feedback.subtitle" = "We read everything. We usually reply within two days.";
+"profile.feedback.keepUpdatedEmail" = "We'll write to %@";
+"profile.feedback.placeholder.bug" = "What went wrong? What were you doing just before…";
+"profile.feedback.placeholder.suggest" = "What's missing? Describe how you'd use it…";
+"profile.feedback.placeholder.other" = "Write whatever you want to tell us…";
+"profile.feedback.category.crash" = "Crash";
+"profile.feedback.category.import" = "TV Time import";
+"profile.feedback.category.notifications" = "Notifications";
+"profile.feedback.category.sync" = "Sync";
+"profile.feedback.category.ui" = "Layout";
+"profile.feedback.category.other" = "Other";
+
+
+// MARK: - Update forzato (Task 3)
+"update.required" = "UPDATE REQUIRED";
+"update.fallbackTitle" = "A new version is available";
+"update.whatsChanged" = "WHAT'S CHANGED";
+"update.fullReleaseNotes" = "Full release notes";
+"update.cta" = "Update from the App Store";
+"update.versionFootnote" = "Version %@";
+"update.dataSafe" = "Your library and your data stay safe.";
+
+
+// MARK: - Preferiti (Task 7)
+"favorites.subtitle" = "The 4 titles showcased on your profile";
+"favorites.inYourFavorites" = "In your favorites";
+"favorites.showcased" = "Showcased on your profile";
+"favorites.addedToast" = "Added to favorites";
+"favorites.removedToast" = "Removed from favorites";
+
+
+// MARK: - Informazioni estese (Task 8)
+"movieDetail.releaseDate" = "Release date";
+"movieDetail.status" = "Status";
+"movieDetail.productionCompanies" = "Production";
+"movieDetail.budget" = "Budget";
+"movieDetail.revenue" = "Box office";
+"movieDetail.originalLanguage" = "Original language";
+"movieDetail.tagline" = "Tagline";
+"tvDetail.firstAirDate" = "First aired";
+"tvDetail.lastAirDate" = "Last aired";
+"tvDetail.seasonsEpisodes" = "Seasons";
+"tvDetail.network" = "Network";
+"tvDetail.createdBy" = "Created by";
+"mediaStatus.released" = "Released";
+"mediaStatus.inProduction" = "In production";
+"mediaStatus.postProduction" = "Post-production";
+"mediaStatus.planned" = "Planned";
+"mediaStatus.rumored" = "Rumored";
+"mediaStatus.canceled" = "Canceled";
+"mediaStatus.returningSeries" = "Returning series";
+"mediaStatus.ended" = "Ended";
+"mediaStatus.pilot" = "Pilot";
+
+
+// MARK: - Piattaforme (Task 12+17)
+"platforms.active" = "active platforms";
+"platforms.activeCount" = "%d active";
+"platforms.clear" = "Clear";
+"platforms.coverage" = "Your watchlist coverage";
+"platforms.libraryCount" = "%d titles in your library";
+"platforms.recommended" = "RECOMMENDED";
+"platforms.manage" = "Manage";
+"platforms.empty" = "No platforms available for your country yet.";
+
+
+// MARK: - Preferiti nel profilo (Task 15)
+"favorites.sectionTitle" = "Your favorites";
+"favorites.sectionCount" = "%1$d of %2$d";
+
+
+// MARK: - Ricerca (Task 16)
+"search.mostRelevant" = "Most relevant";
+"common.movie" = "Movie";
+"common.tvShow" = "TV Show";
+
+
+// MARK: - Toast con fase di progresso (bug 7)
+"mediaDetail.toast.addingToWatchlist" = "Adding to your watchlist…";
+"mediaDetail.toast.removingFromWatchlist" = "Removing from your watchlist…";
+"mediaDetail.toast.liking" = "Adding to your likes…";
+"mediaDetail.toast.unliking" = "Removing from your likes…";
+"mediaDetail.toast.markingUnseen" = "Removing from seen…";
+"mediaDetail.toast.disliking" = "Adding to your dislikes…";
+"mediaDetail.toast.undisliking" = "Removing from your dislikes…";
+"mediaDetail.toast.disliked" = "Added to your dislikes";
+"mediaDetail.toast.dislikeRemoved" = "Removed from your dislikes";
+"favorites.adding" = "Adding to favourites…";
+"favorites.removing" = "Removing from favourites…";
+
+
+// MARK: - Ricerca ridisegnata (bug 1)
+"search.scope.all" = "All";
+"search.scope.movies" = "Movies";
+"search.scope.series" = "Series";
+"search.clear" = "Clear";
+"search.trending.today" = "Today";
+"search.trending.subtitle" = "The most searched titles in %@ over the last 24 hours.";
+"search.results.subtitle" = "Matches for “%@”, then related titles.";
+"search.resultsCount" = "%d titles";
+
+
+// MARK: - Ricerca piattaforme + esito notifica
+"platforms.search" = "Search for a platform";
+"platforms.searchEmpty" = "No platform with that name.";
+"mediaDetail.notifyMeFailed" = "We couldn't turn on the notification.";
+
+
+// MARK: - Report import ridisegnato
+"import.report.title" = "Import report";
+"import.report.sourcePeriod" = "%@ · %@ – %@";
+"import.report.success.title" = "Library imported";
+"import.report.success.subtitle" = "%d series and %d movies matched to the catalogue.";
+"import.report.success.subtitleWithRatings" = "%d series and %d movies matched to the catalogue, with watch dates and ratings.";
+"import.report.tile.episodes" = "Episodes";
+"import.report.tile.movies" = "Movies";
+"import.report.leftOut.title" = "Left out";
+"import.report.leftOut.subtitle" = "There's no certain match in the catalogue for these titles. Tap a card to search by hand.";
+"import.report.leftOut.excluded" = "Excluded by you";
+"import.report.leftOut.episodes" = "%d episodes watched";
+"import.report.leftOut.seenOn" = "watched on %@";
+"import.report.copyList" = "Copy the list";
+"import.report.copied" = "List copied";
+"import.report.details" = "Details";
+
+
+// MARK: - Report import — dettagli
+"import.report.detail.period" = "Period covered";
+"import.report.detail.years" = "%d years";
+"import.report.detail.oneYear" = "1 year";
+"import.report.detail.lessThanYear" = "less than a year";
+"import.report.detail.statuses" = "Series states restored";
+"import.report.detail.statuses.hint" = "Watchlist and archive as on TV Time";
+"import.report.detail.ratings" = "Ratings carried over";
+"import.report.detail.ratingsUnmatched" = "Unmatched ratings";
+"import.report.detail.ratingsUnmatched.hint" = "Rated episodes that don't exist in the catalogue";
+"import.report.detail.ratingsDeferred" = "Ratings not imported yet";
+"import.report.detail.favorites" = "Favourites restored";
+"import.report.detail.moviesSeen" = "Movies marked as seen";
+"import.report.detail.moviesWatchlist" = "Movies in the watchlist";
+"import.report.detail.statusesUnresolved" = "States not restored";
+"import.report.detail.outOfStructure" = "Episodes with no place";
+"import.report.detail.outOfStructure.hint" = "Specials and extended versions outside the show's structure";
+"import.report.detail.favoriteMovies" = "Favourite movies not imported";
+
+
+// MARK: - Report import — titolo mancante
+"import.report.leftOut.untitled" = "Title missing from the export";
+
+
+// MARK: - Generi TMDB
+// I nomi dei generi mostrati a schermo (titoli dei caroselli, grafico dei generi in Analytics).
+// TMDB li restituisce tradotti solo dentro la scheda di un film; nei caroselli il genere arriva
+// come id numerico, quindi il nome deve venire da qui. Da tradurre in ogni lingua.
+"genre.action" = "Action";
+"genre.adventure" = "Adventure";
+"genre.animation" = "Animation";
+"genre.comedy" = "Comedy";
+"genre.crime" = "Crime";
+"genre.documentary" = "Documentary";
+"genre.drama" = "Drama";
+"genre.family" = "Family";
+"genre.fantasy" = "Fantasy";
+"genre.history" = "History";
+"genre.horror" = "Horror";
+"genre.music" = "Music";
+"genre.mystery" = "Mystery";
+"genre.romance" = "Romance";
+"genre.scienceFiction" = "Science Fiction";
+"genre.tvMovie" = "TV Movie";
+"genre.thriller" = "Thriller";
+"genre.war" = "War";
+"genre.western" = "Western";
+"genre.actionAdventure" = "Action & Adventure";
+"genre.kids" = "Kids";
+"genre.news" = "News";
+"genre.reality" = "Reality";
+"genre.sciFiFantasy" = "Sci-Fi & Fantasy";
+"genre.soap" = "Soap";
+"genre.talk" = "Talk Show";
+"genre.warPolitics" = "War & Politics";
+
+
+// MARK: - Mood
+// Vanno nel `%@` di "carousel.moodTonight" ("Tonight: %@"). Sono SOSTANTIVI, non aggettivi: un
+// aggettivo dovrebbe concordare con una parola che nel template non c'è.
+"mood.happy" = "Feel-Good";
+"mood.sad" = "Melancholy";
+"mood.excited" = "Thrills";
+"mood.relaxed" = "Something Relaxing";
+"mood.scared" = "Chills";
+"mood.thoughtful" = "Food for Thought";
+"mood.romantic" = "Romance";
+"mood.adventurous" = "Adventure";
+"mood.nostalgic" = "Nostalgia";
+"mood.energetic" = "Pure Energy";
+
+
+// MARK: - Caroselli — argomenti e varianti senza genere
+// "%d" è l'anno d'inizio del decennio (2020). In inglese si dice "2020s", in italiano "anni 2020":
+// il suffisso è grammatica, non un numero, e va tradotto.
+"carousel.arg.decade" = "%ds";
+// Usati quando il profilo non ha ancora un genere preferito: non un fallback infilato nel "%@" del
+// titolo normale (che darebbe "Staff Picks for Your Favorites Fans"), ma una frase alternativa.
+"carousel.hiddenGems.generic" = "Hidden Gems";
+"carousel.staffPicks.generic" = "Staff Picks for You";
+
+
+// MARK: - Analytics
+"analytics.noData" = "No data";
+
+
+// MARK: - Statistiche e gamification (stringhe estratte dalle view)
+// Erano letterali dentro AnalyticsDashboardView / FloatingXPBadgeView / BadgeGalleryView /
+// LevelProgressView: non passando da `.localized` restavano in inglese in tutte e 20 le lingue.
+"stats.title" = "Your Stats";
+"stats.yourActivity" = "Your Activity";
+"stats.viewFull" = "View Full Stats";
+"stats.loading" = "Loading stats…";
+"stats.errorTitle" = "Couldn't load your stats";
+"stats.emptyTitle" = "No stats yet";
+"stats.emptySubtitle" = "Start watching to see your stats!";
+"stats.genreDistribution" = "Genre breakdown";
+"stats.genreEmpty" = "No genre data yet";
+"stats.whenActive" = "When you're active";
+"stats.topContent" = "Your top titles";
+"stats.contentEmpty" = "No title data yet";
+"stats.discoveryChannels" = "How you find titles";
+"stats.discoveryEmpty" = "No discovery data yet";
+"stats.moodProfile" = "Mood profile";
+"stats.moodEmpty" = "Not enough data yet — keep watching to see your mood profile.";
+
+// "%d" è il numero del livello.
+"gamification.levelNumber" = "Level %d";
+// Versione corta per il badge in cima alla schermata, dove lo spazio è quello che è.
+"gamification.levelShort" = "Lv.%d";
+"gamification.bestStreak" = "Best streak";
+"gamification.xpBonus" = "XP bonus";
+"gamification.todaysChallenge" = "Today's challenge";
+"gamification.completed" = "Completed!";
+"gamification.badgeUnlocked" = "Badge unlocked!";
+"gamification.badges.collected" = "Badges collected";
+"gamification.badges.unlocked" = "Unlocked";
+// "%d" è il totale dei badge esistenti: compare come "12 of 40".
+"gamification.badges.ofTotal" = "of %d";
+"gamification.levels.progressTitle" = "Level progress";
+"gamification.allLevels" = "ALL LEVELS";
+
+"common.progress" = "Progress";
+"tvDetail.seasonsTitle" = "Seasons";
+"tvDetail.episodesTitle" = "Episodes";

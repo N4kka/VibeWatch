@@ -184,20 +184,12 @@ final class QuickClipsService: ObservableObject {
         // Localized query construction
         let suffix = language == "en" ? "official clip scene trailer" : "trailer clip scena ufficiale"
         let query = "\(movie.title) \(suffix)"
-        
-        guard let encodedQuery = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else { return [] }
-        
-        // Rejection words (to avoid bad content)
-        // ... logic remains similar ...
-        
-        let urlString = "https://www.googleapis.com/youtube/v3/search?part=snippet&q=\(encodedQuery)&type=video&videoDuration=short&maxResults=1&key=\(Config.youtubeApiKey)&relevanceLanguage=\(language)"
 
-        guard let url = URL(string: urlString) else { return [] }
+        // Through YouTubeSearchClient: this call site used to decode the body without looking at
+        // the status, so an exhausted quota surfaced as a decoding failure.
+        let items = try await YouTubeSearchClient.shared.search(query: query, relevanceLanguage: language)
 
-        let (data, _) = try await URLSession.shared.data(from: url)
-        let searchResponse = try JSONDecoder().decode(YouTubeSearchResponse.self, from: data)
-
-        return searchResponse.items.map { item in
+        return items.map { item in
             Clip(
                 id: "\(movie.id)-yt-\(item.id.videoId)",
                 movieId: movie.id,
@@ -218,17 +210,11 @@ final class QuickClipsService: ObservableObject {
     private func searchYouTubeForTVShow(_ tvShow: TVShow, language: String = "en") async throws -> [Clip] {
         let suffix = language == "en" ? "official clip scene trailer" : "trailer clip scena ufficiale"
         let query = "\(tvShow.name) \(suffix)"
-        
-        guard let encodedQuery = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else { return [] }
-        
-        let urlString = "https://www.googleapis.com/youtube/v3/search?part=snippet&q=\(encodedQuery)&type=video&videoDuration=short&maxResults=1&key=\(Config.youtubeApiKey)&relevanceLanguage=\(language)"
 
-        guard let url = URL(string: urlString) else { return [] }
+        // See the movie variant above: same quota-blind decoding, same fix.
+        let items = try await YouTubeSearchClient.shared.search(query: query, relevanceLanguage: language)
 
-        let (data, _) = try await URLSession.shared.data(from: url)
-        let searchResponse = try JSONDecoder().decode(YouTubeSearchResponse.self, from: data)
-
-        return searchResponse.items.map { item in
+        return items.map { item in
             Clip(
                 id: "\(tvShow.id)-yt-\(item.id.videoId)",
                 movieId: nil,

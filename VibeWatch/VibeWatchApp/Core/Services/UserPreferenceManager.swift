@@ -17,35 +17,30 @@ class UserPreferenceManager: ObservableObject {
 
     private let sqliteService: SQLiteService
     private let supabaseClient: SupabaseService
+    private let authService: AuthStatusProviding
     private var syncEngine: SyncEngineProtocol?
 
     // MARK: - Constants
 
     private let deviceId: String
-    private let genreNames: [Int: String] = [
-        28: "Action", 12: "Adventure", 16: "Animation", 35: "Comedy", 80: "Crime",
-        99: "Documentary", 18: "Drama", 10751: "Family", 14: "Fantasy", 36: "History",
-        27: "Horror", 10402: "Music", 9648: "Mystery", 10749: "Romance", 878: "Science Fiction",
-        10770: "TV Movie", 53: "Thriller", 10752: "War", 37: "Western"
-    ]
+    /// I nomi qui dentro restano **inglesi** di proposito: `GenrePreference.genreName` finisce nei
+    /// prompt AI e nei log, dove il testo deve essere stabile. Chi mostra un genere a schermo passa
+    /// invece da `TMDBGenres.displayName(for:)`, che traduce.
+    private var genreNames: [Int: String] { TMDBGenres.idToName }
 
     // MARK: - Initialization
 
-    private init(
+    init(
         sqliteService: SQLiteService = .shared,
-        supabaseClient: SupabaseService = .shared
+        supabaseClient: SupabaseService = .shared,
+        authService: AuthStatusProviding = AuthService.shared
     ) {
         self.sqliteService = sqliteService
         self.supabaseClient = supabaseClient
+        self.authService = authService
 
         // Get or create device ID
-        if let savedDeviceId = UserDefaults.standard.string(forKey: "deviceIdentifier") {
-            self.deviceId = savedDeviceId
-        } else {
-            let newDeviceId = UUID().uuidString
-            UserDefaults.standard.set(newDeviceId, forKey: "deviceIdentifier")
-            self.deviceId = newDeviceId
-        }
+        self.deviceId = DeviceIdentity.installation
 
         Logger.info("[UserPreferenceManager] Initialized with device ID: \(deviceId)")
     }
@@ -62,7 +57,7 @@ class UserPreferenceManager: ObservableObject {
         isLoading = true
         defer { isLoading = false }
 
-        guard let userId = AuthService.shared.currentUser?.id else {
+        guard let userId = authService.currentUser?.id else {
             Logger.warning("[UserPreferenceManager] No authenticated user, returning empty profile")
             return UserProfile.empty
         }
@@ -135,27 +130,16 @@ class UserPreferenceManager: ObservableObject {
 
                 Logger.debug("[UserPreferenceManager] Recorded \(signals.count) signals from \(interaction.source)")
 
-                // Queue for cloud sync if engine is available
-                if let syncEngine = syncEngine {
+                // Queue for cloud sync. STAB-010: the old payload here was
+                // {category, id, name, weight, source} with a recordId of "category_id" — no
+                // user_id, none of the column names the table has, and a non-uuid id. So
+                // apply_mutations rejected every row (user_id_mismatch / table_not_handled) and
+                // unified_user_preferences stopped syncing. Now we push the *persisted local row*
+                // (real columns, real uuid, absolute accumulated scores), which the new
+                // apply_mutations branch upserts on the natural key.
+                if let userId = authService.currentUser?.id {
                     for signal in signals {
-                        let payload: [String: Any] = [
-                            "category": signal.category,
-                            "id": signal.id,
-                            "name": signal.name,
-                            "weight": signal.weight,
-                            "source": signal.source.rawValue
-                        ]
-                        do {
-                            try await syncEngine.queueOperation(
-                                table: "unified_user_preferences",
-                                operationType: "UPSERT",
-                                recordId: "\(signal.category)_\(signal.id)",
-                                payload: payload,
-                                dependsOn: nil
-                            )
-                        } catch {
-                            Logger.error("[UserPreferenceManager] Failed to queue preference sync: \(error)")
-                        }
+                        await queueUnifiedPreferenceSync(userId: userId, category: signal.category, id: signal.id)
                     }
                 }
             } catch {
@@ -172,7 +156,7 @@ class UserPreferenceManager: ObservableObject {
     ) async {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        guard let userId = AuthService.shared.currentUser?.id else { return }
+        guard let userId = authService.currentUser?.id else { return }
 
         let recordId = UUID().uuidString.lowercased()
         let now = ISO8601DateFormatter().string(from: Date())
@@ -217,7 +201,7 @@ class UserPreferenceManager: ObservableObject {
     ) async {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        guard let userId = AuthService.shared.currentUser?.id else { return }
+        guard let userId = authService.currentUser?.id else { return }
 
         let recordId = UUID().uuidString.lowercased()
         let now = ISO8601DateFormatter().string(from: Date())
@@ -273,7 +257,7 @@ class UserPreferenceManager: ObservableObject {
 
     /// Apply preference decay (run weekly via background task)
     func applyPreferenceDecay() async {
-        guard let userId = AuthService.shared.currentUser?.id else {
+        guard let userId = authService.currentUser?.id else {
             return
         }
 
@@ -400,23 +384,70 @@ class UserPreferenceManager: ObservableObject {
             activity.lastSearchQuery = query
         }
 
-        // Fetch watchlist
-        let watchlistSql = """
-            SELECT media_id, title, media_type FROM list_items
-            WHERE user_id = ? AND deleted_at IS NULL
-            LIMIT 10
+        // Fetch watchlist — dopo la fusione ListsView↔Tracking (punto 7 degli aperti) le serie
+        // TV di watchlist/seen vivono in `tv_tracking`: la personalizzazione le legge dalla
+        // STESSA derivazione di ListsView (`fusedListRows`), e da `list_items` prende il resto
+        // della watchlist (i film). L'`ORDER BY` prima non c'era: i 10 erano arbitrari.
+        let isAuthenticated = authService.currentUser != nil
+        var candidates: [(summary: MediaSummary, addedAt: TimeInterval)] = []
+        var derivedRows: [LocalTrackingRepository.FusedListRow]?
+
+        if isAuthenticated {
+            do {
+                derivedRows = try await LocalTrackingRepository(sqlite: sqliteService)
+                    .fusedListRows(userId: userId)
+            } catch {
+                Logger.error(
+                    "[UserPreferenceManager] Tracking mirror unavailable; using legacy TV watchlist",
+                    error: error
+                )
+            }
+        }
+
+        if let derived = derivedRows {
+            candidates = derived
+                .filter { !$0.isSeen }
+                .sorted { $0.addedAt > $1.addedAt }
+                .prefix(10)
+                .map {
+                    (
+                        MediaSummary(id: $0.showId, title: $0.title, mediaType: .tv),
+                        $0.addedAt.timeIntervalSince1970
+                    )
+                }
+        }
+
+        var watchlistSql = """
+            SELECT li.media_id, li.title, li.media_type,
+                   CAST(strftime('%s', li.added_at) AS INTEGER) AS added_at_epoch
+            FROM list_items li
+            JOIN lists l ON l.id = li.list_id
+            WHERE l.user_id = ?
+              AND l.type = 'watchlist'
+              AND l.deleted_at IS NULL
+              AND li.deleted_at IS NULL
         """
+        if isAuthenticated, derivedRows != nil {
+            // Le righe TV legacy sono quelle che ListsView nasconde: qui rientrerebbero doppie.
+            watchlistSql += " AND li.media_type != 'tv'"
+        }
+        watchlistSql += " ORDER BY li.added_at DESC LIMIT 10"
 
         if let watchlistRows = try? await sqliteService.queryRaw(watchlistSql, parameters: [userId]) {
-            activity.watchlist = watchlistRows.compactMap { row in
+            candidates += watchlistRows.compactMap { row in
                 guard let id = row["media_id"] as? Int,
                       let title = row["title"] as? String else {
                     return nil
                 }
                 let mediaType = MediaType(rawValue: row["media_type"] as? String ?? "movie") ?? .movie
-                return MediaSummary(id: id, title: title, mediaType: mediaType)
+                let addedAt = TimeInterval(row["added_at_epoch"] as? Int ?? 0)
+                return (MediaSummary(id: id, title: title, mediaType: mediaType), addedAt)
             }
         }
+        activity.watchlist = candidates
+            .sorted { $0.addedAt > $1.addedAt }
+            .prefix(10)
+            .map(\.summary)
 
         return activity
     }
@@ -500,7 +531,7 @@ class UserPreferenceManager: ObservableObject {
 
     /// Record a watch event with time-of-day tracking
     func recordWatchEvent(clipId: String, hour: Int, engagementScore: Double) async {
-        guard let userId = AuthService.shared.currentUser?.id else { return }
+        guard let userId = authService.currentUser?.id else { return }
 
         let timeOfDay: TimeOfDay
         switch hour {
@@ -618,6 +649,33 @@ class UserPreferenceManager: ObservableObject {
 
     // MARK: - Private Methods - Preference Updates
 
+    /// Queues the current persisted state of one preference row for cloud sync (STAB-010).
+    /// Reads the row back so the payload carries the real columns, the real uuid, and the absolute
+    /// accumulated scores — last-write-wins per device, which matches how the client accumulates.
+    private func queueUnifiedPreferenceSync(userId: String, category: String, id: String) async {
+        guard let syncEngine else { return }
+        let rows = (try? await sqliteService.queryRaw("""
+            SELECT id, user_id, device_id, preference_category, preference_id, preference_name,
+                   score, score_from_clips, score_from_discovery, score_from_search, score_from_ai,
+                   score_from_lists, interaction_count, last_interaction_at, updated_at
+            FROM unified_user_preferences
+            WHERE user_id = ? AND preference_category = ? AND preference_id = ?
+        """, parameters: [userId, category, id])) ?? []
+
+        guard let row = rows.first, let recordId = row["id"] as? String else { return }
+        do {
+            try await syncEngine.queueOperation(
+                table: "unified_user_preferences",
+                operationType: "UPSERT",
+                recordId: recordId,
+                payload: row,
+                dependsOn: nil
+            )
+        } catch {
+            Logger.error("[UserPreferenceManager] Failed to queue preference sync: \(error)")
+        }
+    }
+
     private func upsertUnifiedPreference(
         category: String,
         id: String,
@@ -625,7 +683,7 @@ class UserPreferenceManager: ObservableObject {
         scoreIncrement: Double,
         source: InteractionSource
     ) async throws {
-        guard let userId = AuthService.shared.currentUser?.id else {
+        guard let userId = authService.currentUser?.id else {
             throw PreferenceError.notAuthenticated
         }
 

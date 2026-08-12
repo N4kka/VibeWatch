@@ -21,11 +21,34 @@ VibeWatchApp/Scripts/.DS_Store
 # Local secrets
 VibeWatchApp/Config/Secrets.xcconfig
 
-# Local-only docs, scripts, and migrations
-docs/
-supabase/
+# Firebase config: tracciato di proposito (chiavi CLIENT, già presenti nella history e
+# negli altri branch). Tenerlo tracciato evita che `git checkout`/merge tra branch lo
+# cancellino dal disco rompendo FirebaseApp.configure(). Restringere comunque la API key
+# al bundle id iOS + App Check in Google Cloud Console (repo pubblico).
+
+# Local-only docs and scripts. `docs/*` and not `docs/`: git does not descend into an
+# excluded directory, so a negation for a subdir would be dead letter — same trap as the
+# supabase/ NOTE below. universal-links/ is a deliverable (AASA + checklist) that must
+# evolve with the client, not a local note.
+docs/*
+!docs/universal-links/
+# NOTE: `/supabase/` used to live here. The leading slash kept it from matching source dirs
+# like VibeWatchApp/Core/Supabase/ on a case-insensitive filesystem, but it also ignored the
+# whole supabase/ tree — so every new Edge Function and migration was invisible to git and had
+# to be force-added to be committed at all. The 12 functions already tracked predate the rule;
+# check-availability, added after it, never made it into the repo. Secrets and local CLI state
+# are ignored by the targeted rules above instead.
+# Deployment artifact: uploaded to Supabase Storage, not served from the repo.
+supabase/update.json
 VibeWatchApp/Scripts/
 VibeWatchApp/Config/
 *.md
 !.planning/**
+!docs/universal-links/**
 .mcp.json
+
+# macOS Finder metadata — after the !.planning/** un-ignore so it wins there too.
+.DS_Store
+
+# Python bytecode (build_oracle.py / test_oracle.py)
+__pycache__/

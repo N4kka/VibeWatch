@@ -22,7 +22,7 @@ enum AppConstants {
     
     enum AI {
         /// Daily request allowance by tier
-        static let proDailyRequestLimit = 20
+        static let proDailyRequestLimit = 10
         static let freeDailyRequestLimit = 5
     }
     

@@ -36,8 +36,9 @@
 // Lists
 "list.all" = "Alle";
 "list.movies" = "Film";
-"list.tvShows" = "TV";
+"list.tvShows" = "Serier";
 "lists.myLists" = "Mine lister";
+"lists.collections" = "Samlinger";
 "lists.empty" = "Ingen lister endnu";
 "lists.emptyDescription" = "Opret din første watchlist for at organisere film og serier, du opdager";
 "lists.noItems" = "Ingen elementer endnu";
@@ -127,6 +128,8 @@
 "clips.noClipsAvailable" = "Ingen klip tilgængelige";
 "clips.noClipsDescription" = "Kom tilbage senere for spændende scener fra dine yndlingsfilm og serier";
 "clips.addToList" = "Tilføj til liste";
+"clips.card.addToWatchlist" = "+ Watchlist";
+"clips.card.goToDetail" = "Vis detaljer";
 "clips.createFirstList" = "Opret din første watchlist for at gemme dine valg";
 "clips.createNewList" = "Opret ny liste";
 "clips.feed.craftingTitle" = "Vi laver dit perfekte feed";
@@ -206,7 +209,6 @@
 // Platforms
 "platform.title" = "Streaming-platforme";
 "platform.selectionCount" = "%d af %d valgt";
-"platforms.title" = "Platforme";
 "platforms.streaming" = "Streaming";
 "platforms.rent" = "Lej";
 "platforms.buy" = "Køb";
@@ -242,6 +244,7 @@
 "auth.error.invalidResponse" = "Ugyldigt svar fra serveren.";
 "auth.error.userNotFound" = "Bruger ikke fundet.";
 "auth.error.invalidCredentials" = "Ugyldig e-mail eller adgangskode.";
+"auth.error.tooManyAttempts" = "For mange forsøg. Prøv igen senere.";
 "auth.error.networkError" = "Netværksfejl. Tjek din forbindelse.";
 "auth.error.databaseError" = "Databasefejl ved lagring af brugerprofil. Prøv igen.";
 "auth.error.signUpFailed" = "Tilmelding mislykkedes. Prøv igen.";
@@ -331,7 +334,7 @@
 "paywall.feature.aiAssistant" = "🤖 AI-anbefalinger til film og tv";
 "paywall.feature.advancedFilters" = "🔎 Avancerede filtre for hurtigere valg";
 "paywall.feature.lists" = "📋 Op til 100 synkroniserede watchlister";
-"paywall.feature.offlineMode" = "📵 Offline-tilstand til gemte valg";
+"paywall.feature.offlineMode" = "📵 Offline-tilstand til gemte titler";
 "paywall.feature.releaseAlerts" = "🔔 Notifikationer når favoritter kan streames";
 
 // Common
@@ -373,6 +376,8 @@
 "settings.redeemCode" = "Indløs kode";
 "settings.redeemCode.description" = "Indtast en promo- eller tilbudskode";
 "paywall.haveCode" = "Har du en promokode?";
+"paywall.price.perYear" = "%@/år";
+"paywall.cancelAnytime" = "Opsig når som helst";
 
 // Help & Support - About Us
 "profile.aboutUs" = "Om os";
@@ -388,7 +393,56 @@
 "profile.termsOfUse" = "Brugsbetingelser";
 "profile.terms" = "Vilkår";
 "profile.sendFeedback" = "Send feedback";
+"profile.share" = "Del profil";
+"profile.share.comingSoon" = "Kommer snart";
+"profile.importFrom" = "Importér fra";
+"import.title" = "Importér";
+"import.source.tvtime" = "TV Time (.zip)";
+"import.source.tvtime.subtitle" = "Din dataeksport fra TV Time";
+"import.source.footer" = "Anmod om din dataeksport fra TV Time (GDPR), og vælg .zip-filen her. Apps, der eksporterer samme format, virker også.";
+"import.state.uploading" = "Uploader…";
+"import.state.uploadingHint" = "Hold appen åben, mens filen uploades.";
+"import.canClose" = "Din historik importeres. Du kan lukke appen – vi giver dig besked, når den er færdig.";
+"import.phase.queued" = "I kø, starter om lidt…";
+"import.phase.parsing" = "Læser din historik…";
+"import.phase.resolving" = "Matcher serier og afsnit…";
+"import.phase.writing" = "Gemmer dine afsnit…";
+"import.phase.finishing" = "Afslutter…";
+"import.report.episodes" = "Importerede afsnit";
+"import.report.shows" = "Serier";
+"import.report.period" = "Fra %@ til %@";
+"import.report.ratingsDeferred" = "%d bedømmelser fundet – ikke importeret endnu.";
+"import.report.ratingsApplied" = "%d bedømmelser importeret som stjerner.";
+"import.report.ratingsUnresolved" = "%d bedømmelser kunne ikke matches.";
+"import.report.favoritesApplied" = "%d favoritter importeret til ledige pladser.";
+"import.report.favoriteMoviesUnsupported" = "%d film-favoritter kan ikke importeres fra TV Time.";
+"import.report.moviesApplied" = "%d film importeret med deres visningsdatoer.";
+"import.report.moviesWatchlistApplied" = "%d film føjet til din watchlist.";
+"import.report.moviesUnresolved" = "%d film blev ikke genkendt (titel og år matcher ikke på TMDB).";
+"import.resolve.button" = "Match";
+"import.resolve.batchButton" = "Match %d titler";
+"import.resolve.batchHint" = "Find den matchende TMDB-serie for hver titel. Intet importeres, før alle matches er valgt; derefter løser én import dem samlet.";
+"import.resolve.batchProgress" = "%d af %d titler matchet";
+"import.resolve.startBatch" = "Start én import";
+"import.resolve.title" = "Hvilken serie er “%@”?";
+"import.resolve.hint" = "Afsnittene kontrolleres igen med deres præcise TVDB-id'er. Alt, som TMDB ikke kan bekræfte, forbliver i rapporten.";
+"import.resolve.searchPlaceholder" = "Søg efter serien på TMDB";
+"import.resolve.empty" = "Ingen resultater.";
+"import.resolve.failed" = "Kunne ikke matches:";
+"import.resolve.searchFailed" = "Søgningen mislykkedes.";
+"import.report.statusesApplied" = "%d seriestatusser gendannet (watchlist og arkiv).";
+"import.report.statusesUnresolved" = "%d seriestatusser kunne ikke anvendes.";
+"import.report.unresolvedTitle" = "%d afsnit kunne ikke matches";
+"import.report.unresolvedRow" = "%d afsnit";
+"import.report.allResolved" = "Alt blev matchet.";
+"import.error.failed" = "Importen stoppede med en fejl.";
+"import.error.network" = "Kan ikke tjekke importen lige nu.";
+"import.error.uploadFailed" = "Uploaden blev ikke fuldført.";
+"import.error.startFailed" = "Importen kunne ikke starte.";
+"import.error.fileRead" = "Filen kunne ikke læses.";
+"import.error.reportFailed" = "Importen er færdig, men rapporten kunne ikke indlæses.";
 
+"import.error.sessionExpired" = "Din session er udløbet. Log ind igen, og prøv importen igen.";
 // Profile - Support & Feedback
 "profile.feedback.suggestFeature" = "Foreslå en ny funktion";
 "profile.feedback.suggestFeatureDescription" = "Fortæl os, hvad der ville gøre VibeWatch bedre for dig.";
@@ -438,6 +492,13 @@
 "actor.retry" = "Prøv igen";
 "actor.biography.showMore" = "Vis mere";
 "actor.biography.showLess" = "Vis mindre";
+
+"actor.birthday" = "Født: %@";
+"actor.birthday.line" = "%@ (%@ år gammel)";
+"actor.known_for" = "Kendt for";
+"actor.search.placeholder" = "Søg i filmografi…";
+"actor.search.noResults" = "Ingen resultater for";
+"actor.filmography.empty" = "Ingen kreditter fundet.";
 
 // Global Discovery Filters
 "filters.mediaType" = "Medietype";
@@ -493,18 +554,18 @@
 "settings.privacy.title" = "Privatliv";
 "settings.analytics.title" = "Analyse";
 "settings.analytics.share" = "Del anonyme analyser";
-"settings.analytics.share.description" = "Hjælper os med at forstå, hvilke funktioner du bruger, og med at forbedre appen. Ingen annoncessporing.";
+"settings.analytics.share.description" = "Hjælper os med at forstå, hvilke funktioner du bruger, og med at forbedre appen. Ingen annoncesporing.";
 "settings.analytics.viewStats" = "Se dine statistikker";
 "settings.analytics.description" = "Se din historik og indsigter";
 
 // Settings - Notifications (Settings Screen)
 "settings.notifications.title" = "Notifikationer";
 "settings.notifications.manage" = "Administrer notifikationer";
-"settings.notifications.description" = "Personlige advarsler om nyt indhold";
+"settings.notifications.description" = "Personlige beskeder om nyt indhold";
 
 // Onboarding Revamp
-"onboarding.welcome.title" = "Opdag din vibe";
-"onboarding.welcome.subtitle" = "AI-drevne anbefalinger, der er skræddersyet til dig.";
+"onboarding.welcome.title" = "Velkommen til VibeWatch";
+"onboarding.welcome.subtitle" = "Opdag, følg og gå aldrig glip af en premiere. Film og serier — samlet ét sted.";
 "onboarding.clips.title" = "Se, ikke læs";
 "onboarding.clips.subtitle" = "Oplev film gennem korte, engagerende klip.";
 "onboarding.lists.title" = "Din watchlist, overalt";
@@ -523,7 +584,7 @@
 "auth.verificationPending" = "Venter stadig på bekræftelse...";
 
 // Gamification
-"gamification.levelUp" = "LEVEL UP!";
+"gamification.levelUp" = "NYT NIVEAU!";
 "gamification.level" = "Niveau";
 "gamification.rankAchieved" = "\"%@\" rang opnået";
 "gamification.xp.base" = "basis";
@@ -537,18 +598,18 @@
 "notifications.status" = "Status";
 "notifications.enabled" = "Notifikationer aktiveret";
 "notifications.disabled" = "Notifikationer deaktiveret";
-"notifications.enableDescription" = "Aktivér notifikationer for at få personlige advarsler om nye episoder, udgivelser og indhold, du vil elske.";
+"notifications.enableDescription" = "Slå notifikationer til for at få personlige beskeder om nye afsnit, premierer og indhold, du vil elske.";
 "notifications.enableButton" = "Aktivér notifikationer";
 "notifications.types" = "Notifikationstyper";
-"notifications.newEpisodes" = "Nye episoder";
-"notifications.newEpisodesDesc" = "Få besked, når nye episoder af serier du følger, er tilgængelige";
+"notifications.newEpisodes" = "Nye afsnit";
+"notifications.newEpisodesDesc" = "Få besked, når nye afsnit af serier du følger, er tilgængelige";
 "notifications.personalizedReleases" = "Personlige udgivelser";
 "notifications.personalizedReleasesDesc" = "Nye film og serier, der matcher din smag";
 "notifications.favoriteActors" = "Favoritskuespillere og -instruktører";
 "notifications.favoriteActorsDesc" = "Nyt indhold fra personer du elsker";
 "notifications.similarContent" = "Lignende indhold";
 "notifications.similarContentDesc" = "Anbefalinger baseret på det, du kunne lide";
-"notifications.watchlistAlerts" = "Watchlist-advarsler";
+"notifications.watchlistAlerts" = "Watchlist-notifikationer";
 "notifications.watchlistAlertsDesc" = "Når noget på din watchlist bliver tilgængeligt";
 "notifications.milestones" = "Milepæle og præstationer";
 "notifications.milestonesDesc" = "Fejr dine streaks og præstationer";
@@ -561,13 +622,23 @@
 "notifications.endTime" = "Sluttid";
 "notifications.quietHoursDesc" = "Der sendes ingen notifikationer i disse timer";
 "notifications.proFeatures" = "Pro-funktioner";
-"notifications.customActorAlerts" = "Tilpassede skuespiller-advarsler";
-"notifications.customGenreAlerts" = "Tilpassede genre-advarsler";
-"notifications.proFeaturesDesc" = "Få advarsler for specifikke skuespillere og genrer, du vælger";
+"notifications.customActorAlerts" = "Egne skuespiller-notifikationer";
+"notifications.customGenreAlerts" = "Egne genre-notifikationer";
+"notifications.proFeaturesDesc" = "Få besked om bestemte skuespillere og genrer, du vælger";
 "notifications.save" = "Gem";
 "notifications.settingsSaved" = "Indstillinger gemt";
 "notifications.preferencesUpdated" = "Dine notifikationsindstillinger er blevet opdateret.";
 "notifications.typesFooter" = "Vælg hvilke notifikationer du vil modtage";
+"notifications.newAvailability" = "Ny tilgængelighed";
+"notifications.newAvailabilityDesc" = "Når titler på din watchlist bliver tilgængelige til streaming, leje eller køb";
+"notifications.newRelease" = "Nye udgivelser";
+"notifications.newReleaseDesc" = "Film og serier, hvor du trykkede på \"Giv mig besked\", når de udkommer";
+"notifications.episodeAired" = "Nye afsnit";
+"notifications.episodeAiredDesc" = "Når et nyt afsnit sendes for tv-serier på dine lister";
+"notifications.continueWatching" = "Fortsæt med at se";
+"notifications.continueWatchingDesc" = "Påmindelser om at fortsætte serier, du har set";
+"notifications.listMilestone" = "Listemilepæle";
+"notifications.listMilestoneDesc" = "Fejr, når du når milepæle for visning";
 "notifications.frequencyFooter" = "Maksimalt antal notifikationer du modtager pr. dag";
 "notifications.favoriteActorsTitle" = "Dine favoritskuespillere";
 "notifications.favoriteActorsFooter" = "Få besked, når disse skuespillere har nyt indhold";
@@ -583,3 +654,633 @@
 
 // Error Views
 "error.oops" = "Ups!";
+
+// TV Show Detail - Mark All Seen Confirmation
+"tvDetail.markAllSeenTitle" = "Markér hele serien som set";
+"tvDetail.markAllSeenDescription" = "Denne handling gælder for alle tilgængelige afsnit og sæsoner i serien.";
+"tvDetail.markAllSeenQuestion" = "Vil du fortsætte?";
+"tvDetail.markAllSeenConfirm" = "Ja, markér som set";
+"tvDetail.markAllSeenCancel" = "Nej, annuller";
+"tvDetail.seasonSeenShort" = "set";
+
+// Library section switcher
+"lists.section.myLists" = "Mine lister";
+"lists.section.tvTracking" = "Tracking af TV-serier";
+
+// TV Shows Tracking
+"tvTracking.continuing" = "Fortsæt med at se";
+"tvTracking.notStarted" = "Ikke startet";
+"tvTracking.upToDate" = "Opdateret";
+"tvTracking.emptyState" = "Ingen TV-serier fundet";
+
+// New Discovery Carousels
+"carousel.fromActor" = "Mere fra %@";
+"carousel.decadeClassics" = "Klassikere fra %@";
+"carousel.moodTonight" = "I aften: %@";
+"carousel.regionSpotlight" = "%@ i fokus";
+"carousel.topInGenre" = "Top i %@";
+"carousel.hotThisWeekInGenre" = "Populært denne uge i %@";
+"carousel.quickWatches" = "Hurtige valg";
+"carousel.epicWatches" = "Episke valg";
+"carousel.internationalPicks" = "Internationale valg";
+"carousel.throwback" = "Tilbage til %@";
+"carousel.fromAIChat" = "Fra din AI-chat";
+"carousel.comingSoon" = "Kommer snart";
+"carousel.trendingTVWeek" = "Trendende TV denne uge";
+"carousel.criticallyAcclaimedRecent" = "Anmelderroste · %@";
+"carousel.returningTV" = "Vender snart tilbage";
+"carousel.documentaries" = "Dokumentarer til dig";
+"discovery.endOfFeed" = "Du er helt opdateret";
+/* MARK: - Public Lists (Fase 1) */
+"lists.section.publicLists" = "Offentlige lister";
+"lists.public.scope.explore" = "Udforsk";
+"lists.public.scope.followed" = "Fulgte";
+"lists.public.searchPlaceholder" = "Søg i offentlige lister";
+"lists.public.empty.explore" = "Ingen offentlige lister fundet";
+"lists.public.empty.followed" = "Du følger ikke nogen liste endnu";
+"lists.public.follow" = "Følg";
+"lists.public.following" = "Følger";
+"lists.public.unavailable" = "Denne liste er ikke længere tilgængelig";
+"lists.public.report" = "Anmeld liste";
+"lists.public.report.confirm" = "Vil du anmelde denne liste som upassende?";
+"lists.public.report.done" = "Tak, vi har modtaget din anmeldelse";
+"lists.public.block" = "Blokér bruger";
+"lists.public.block.confirm" = "Vil du blokere denne bruger? Brugerens offentlige lister bliver skjult.";
+"lists.public.createFromThis" = "Opret offentlig liste ud fra denne";
+"lists.public.toggle" = "Offentlig liste";
+"lists.public.toggle.footer" = "Offentlige lister kan findes og følges af andre brugere.";
+"lists.public.profanity.title" = "Upassende indhold";
+"lists.public.profanity" = "Fjern upassende sprog fra navnet eller beskrivelsen, før du udgiver listen.";
+"lists.public.guidelines.title" = "Retningslinjer for fællesskabet";
+"lists.public.guidelines.body" = "Når du udgiver en liste, accepterer du vores retningslinjer for fællesskabet: intet stødende, hadefuldt eller ulovligt indhold. Lister, der bryder dem, kan blive skjult, og anmeldte brugere kan blive fjernet.";
+"lists.public.guidelines.accept" = "Accepter og udgiv";
+"lists.duplicateName" = "Kopi af %@";
+/* MARK: - TV Tracking (card stile JustWatch) */
+"tvTracking.titlesCount" = "%d titler";
+"tvTracking.episodesRemaining" = "%d afsnit tilbage";
+"tvTracking.lastSeen" = "SIDST SET %@";
+"tvTracking.soon" = "snart";
+"tvTracking.watchNow" = "Se nu";
+
+/* SPEC v3 §9.2 — schermata Tracking */
+"tracking.title" = "Tracking";
+"tracking.bucket.upNext" = "Skal ses";
+"tracking.bucket.stale" = "Ikke set længe";
+"tracking.bucket.forLater" = "Til senere";
+"tracking.bucket.upToDate" = "Ajour";
+"tracking.bucket.notStarted" = "Ikke begyndt";
+"tracking.bucket.dropped" = "Droppet";
+"tracking.bucket.archived" = "Arkiveret";
+"tracking.timeline.today" = "Udkommer i dag";
+"tracking.timeline.tomorrow" = "I morgen";
+"tracking.timeline.thisWeek" = "Denne uge";
+"tracking.timeline.thisMonth" = "Denne måned";
+"tracking.action.watched" = "Set";
+"tracking.action.later" = "Senere";
+"tracking.caughtUp" = "Ajour";
+"tracking.unknownShow" = "Ukendt serie";
+"tracking.special" = "SPECIAL";
+"tracking.empty.title" = "Der er ikke noget at se endnu";
+"tracking.empty.subtitle" = "Følg en serie, eller importér din TV Time-historik, så dukker den op her.";
+"tracking.error.title" = "Noget gik galt";
+"tracking.error.notAuthenticated" = "Du skal være logget ind.";
+"tracking.error.showNotInCatalog" = "Serien er ikke i kataloget endnu — prøv igen om lidt.";
+"tracking.error.noNextEpisode" = "Denne serie har ikke noget næste afsnit.";
+
+"tab.tracking" = "Tracking";
+
+"common.close" = "Luk";
+
+/* Chiavi chiamate dal codice e mai tradotte */
+"auth.error.invalidLink" = "Dette link er ugyldigt eller udløbet.";
+"clips.noListsYet" = "Ingen lister endnu";
+
+/* SPEC v3 §3.7 — scelta dello username */
+"username.confirm.title" = "Bekræft dit brugernavn";
+"username.confirm.subtitle" = "Vi valgte det ud fra dit navn. Det er sådan andre finder dig — behold det, eller vælg et andet.";
+"username.confirm.action" = "Bekræft";
+"username.choose.title" = "Vælg dit brugernavn";
+"username.choose.subtitle" = "Du skal have et for at være med på VibeWatch: det er sådan andre finder din profil og dine lister.";
+"username.choose.action" = "Fortsæt";
+"username.placeholder" = "brugernavn";
+"username.hint" = "Små bogstaver, tal og _ — 3 til 20 tegn.";
+"username.checking" = "Tjekker…";
+"username.available" = "Ledigt";
+"username.later" = "Ikke nu";
+"username.error.empty" = "Vælg et brugernavn.";
+"username.error.tooShort" = "Mindst 3 tegn.";
+"username.error.tooLong" = "Højst 20 tegn.";
+"username.error.invalidCharacters" = "Kun små bogstaver, tal og _.";
+"username.error.taken" = "Allerede taget.";
+"username.error.checkFailed" = "Kunne ikke tjekke. Prøv igen.";
+"username.error.reserved" = "Dette er reserveret.";
+
+// Social (SPEC v3 blocco 8)
+"social.search.title" = "Find venner";
+"social.search.placeholder" = "Brugernavn eller navn";
+"social.search.prompt" = "Søg efter personer på brugernavn eller navn for at se deres profil.";
+"social.search.noResults" = "Ingen fundet.";
+"social.search.failed" = "Søgningen mislykkedes. Tjek din forbindelse.";
+"social.profile.followers" = "Følgere";
+"social.profile.following" = "Følger";
+"social.follow" = "Følg";
+"social.unfollow" = "Stop med at følge";
+"social.followsYou" = "Følger dig";
+"social.profile.notFound" = "Denne profil findes ikke.";
+"social.profile.you" = "Det er dig.";
+"social.profile.loadFailed" = "Profilen kunne ikke indlæses.";
+
+// Blocco 9 (SPEC v3 §3.6/§9.3): voti in stelle, favorites, stats
+"rating.title" = "Din vurdering";
+"rating.saveFailed" = "Vurderingen kunne ikke gemmes. Prøv igen.";
+"profile.favorites.movies" = "Yndlingsfilm";
+"profile.favorites.shows" = "Yndlingsserier";
+"profile.lists.title" = "Offentlige lister";
+"profile.lists.loadFailed" = "Offentlige lister kunne ikke indlæses.";
+"profile.stats.title" = "Din statistik";
+"profile.stats.watchTime" = "Seertid";
+"profile.stats.movies" = "Film";
+"profile.stats.shows" = "Serier";
+"profile.stats.episodes" = "Afsnit";
+"profile.stats.loadFailed" = "Statistikken kunne ikke indlæses.";
+"profile.stats.advanced.title" = "Avancerede statistikker";
+"profile.stats.advanced.byGenre" = "Efter genre";
+"profile.stats.advanced.byDecade" = "Efter årti";
+"profile.stats.advanced.ratings" = "Dine bedømmelser";
+"profile.stats.advanced.noGenre" = "%d serier uden genreoplysninger";
+"profile.stats.advanced.proLocked" = "Avancerede statistikker er en del af Pro.";
+
+// Blocco 9, seconda meta' (§9.3): diario e modifica dei favorites
+"diary.title" = "Dagbog";
+"diary.empty" = "Intet her endnu — det du ser, vises her.";
+"diary.loadFailed" = "Dagbogen kunne ikke læses.";
+"favorites.add" = "Føj til favoritter";
+"favorites.remove" = "Fjern fra favoritter";
+"favorites.slot" = "Plads %d";
+"favorites.saveFailed" = "Favoritterne kunne ikke opdateres. Prøv igen.";
+
+// La pillola del Tracking: dove lo guardo (streaming > noleggio > acquisto)
+"tracking.watchOn" = "Se på %@";
+"tracking.rentOn" = "Lej på %@";
+"tracking.buyOn" = "Køb på %@";
+
+// MARK: - Redesign 2.0 (tab Social, strip uscite, calendario, sottotitoli)
+"tab.social" = "Venner";
+"social.subtitle" = "Venner og lister du følger";
+"discovery.continueWatching" = "Fortsæt med at se";
+"discovery.strip.today" = "I dag";
+"discovery.releases.title" = "Udgivelser";
+"discovery.releases.none" = "Ingen udgivelser denne dag.";
+"discovery.releases.countOne" = "1 udgivelse";
+"discovery.releases.countMany" = "%d udgivelser";
+"tracking.subtitle" = "Det du ser lige nu";
+"lists.subtitle" = "Dit arkiv og dine samlinger";
+"profile.group.activity" = "Aktivitet";
+"profile.group.preferences" = "Præferencer";
+"profile.group.account" = "Konto";
+"profile.badgesLevels" = "Badges og niveauer";
+"gamification.progress.title" = "Dine fremskridt";
+"gamification.dayStreak" = "Dage i træk";
+"gamification.badges.title" = "Badges";
+"gamification.levels.title" = "Niveauer";
+"gamification.challenge.none" = "Ingen mission i dag";
+"common.seeAll" = "Se alle";
+"profile.stats.subtitle" = "Genrer, humør og timer";
+"diary.subtitle" = "Historik over sete afsnit og film";
+"profile.badgesLevels.subtitle" = "Niveau %d · %d/%d badges";
+"notifications.row.subtitle" = "Udgivelser, nye afsnit, stille timer";
+"platforms.row.subtitle" = "Streaming, leje og køb";
+"platforms.footnote" = "De valgte platforme filtrerer, hvor du kan se, i hele appen.";
+"profile.languageCountry" = "Sprog og land";
+"profile.edit.title" = "Rediger profil";
+"profile.edit.information" = "Oplysninger";
+"profile.edit.name" = "Navn";
+"profile.edit.bio" = "Biografi";
+"profile.edit.bioPlaceholder" = "Fortæl lidt om dig selv (valgfrit)";
+"profile.edit.changePhoto" = "Skift billede";
+"profile.edit.publicProfile" = "Offentlig profil";
+"profile.edit.publicProfileSubtitle" = "Andre kan finde dig og følge dine offentlige lister";
+"profile.edit.saveError" = "Vi kunne ikke gemme din profil. Prøv igen.";
+"profile.imageCache" = "Billedcache";
+"profile.imageCache.subtitle" = "Forudindlæsning kun via WiFi";
+"common.on" = "Til";
+"common.off" = "Fra";
+"profile.privacyTerms" = "Privatliv og vilkår";
+"profile.footer.tmdb" = "Dette produkt bruger TMDb-API'et, men er ikke godkendt eller certificeret af TMDb.";
+"settings.cacheManagement.inUse" = "%d MB i brug";
+
+// MARK: - Onboarding 2.0
+"common.continue" = "Fortsæt";
+"auth.fullNamePlaceholder" = "Fulde navn";
+"onboarding.welcome.cta" = "Kom i gang";
+"onboarding.import.title" = "Tag din historik med";
+"onboarding.import.subtitle" = "Importér serier, sete afsnit og watchlist. Når importen er færdig, er appen klar.";
+"onboarding.import.tvtime" = "Importér fra TV Time";
+"onboarding.import.tvtime.subtitle" = "Serier, sete afsnit, watchlist og bedømmelser";
+"onboarding.import.other" = "Andre apps";
+"onboarding.import.other.subtitle" = "Trakt, Letterboxd — på vej";
+"onboarding.import.skip" = "Spring over, jeg starter forfra";
+"onboarding.import.completed" = "Import fuldført";
+"onboarding.import.stat.shows" = "Serier";
+"onboarding.import.stat.episodes" = "Sete afsnit";
+"onboarding.import.stat.movies" = "Film";
+"onboarding.import.stat.watchlist" = "På watchlist";
+"onboarding.notifications.title" = "Gå ikke glip af noget";
+"onboarding.notifications.subtitle" = "Vi giver kun besked om det, du følger — nye afsnit, premierer fra din watchlist og streaming-tilgængelighed.";
+"onboarding.notifications.row1" = "Nye afsnit af serier, du følger";
+"onboarding.notifications.row2" = "Premierer på titler på din watchlist";
+"onboarding.notifications.row3" = "Når en titel lander på streaming";
+"onboarding.notifications.enable" = "Slå notifikationer til";
+"onboarding.notifications.later" = "Måske senere";
+"onboarding.ready.title" = "Alt er klar";
+"onboarding.ready.subtitle" = "Dit bibliotek er klar, og du går ikke glip af en premiere. \"Fortsæt med at se\" venter på dig øverst.";
+"onboarding.ready.chip.shows" = "%d serier";
+"onboarding.ready.chip.episodes" = "%d afsnit";
+"onboarding.ready.chip.notifications" = "Notifikationer slået til";
+"onboarding.ready.cta" = "Begynd at se";
+
+"filters.myPlatforms" = "Mine";
+"filters.platformScopeAll" = "Alle";
+"mediaDetail.forYou" = "til dig";
+"mediaDetail.watchOn" = "Se på";
+"mediaDetail.notifyMe" = "Giv mig besked";
+"mediaDetail.notifyMeEnabling" = "Aktiverer…";
+"mediaDetail.notifyMeEnabled" = "Vi giver dig besked";
+"mediaDetail.action.watchlist" = "Watchlist";
+"mediaDetail.action.like" = "Like";
+"mediaDetail.action.list" = "Til liste";
+"mediaDetail.toast.watchlistAdded" = "Tilføjet til din watchlist";
+"mediaDetail.toast.watchlistRemoved" = "Fjernet fra din watchlist";
+"mediaDetail.toast.markedSeen" = "Markeret som set";
+"mediaDetail.toast.markedUnseen" = "Fjernet fra sete";
+"mediaDetail.toast.liked" = "Tilføjet til dine likes";
+"mediaDetail.toast.likeRemoved" = "Fjernet fra dine likes";
+"mediaDetail.why.cardTitle" = "Hvorfor passer den til dig?";
+"mediaDetail.why.title" = "Hvorfor til dig";
+"mediaDetail.why.affinity" = "Match med din smag";
+"mediaDetail.why.reason.mood" = "Passer til dit humør";
+"mediaDetail.why.reason.genres" = "Genrer, du elsker";
+"mediaDetail.why.reason.cast" = "Skuespillere, du kender";
+"mediaDetail.why.helpful" = "Var det nyttigt?";
+"mediaDetail.why.regenerate" = "Generér igen";
+"mediaDetail.why.quota" = "Genereret af Vibe AI ud fra bedømmelser, humør og historik. %d/%d forespørgsler i dag.";
+"settings.cacheManagement.clearCacheAction" = "Ryd cache";
+"gamification.missionsToday" = "Dagens missioner";
+"gamification.xpToNext" = "%d XP til næste niveau";
+"gamification.mission.openApp" = "Åbn appen";
+"gamification.mission.keepStreak" = "Hold din daglige streak";
+"gamification.challenge.watch_3" = "Se 3 klip";
+"gamification.challenge.like_5" = "Like 5 klip";
+"gamification.challenge.list_2" = "Føj 2 titler til en liste";
+"gamification.challenge.watch_new_genre" = "Se et klip fra en ny genre";
+"gamification.challenge.complete_5" = "Se 5 klip færdigt (>70%)";
+
+// SeasonDetailView — conferme di marcatura episodi (2026-08-04)
+"season.confirmUnaired.title" = "Ikke sendt endnu";
+"season.confirmUnaired.message" = "S%dE%d er ikke sendt endnu. Markér som set alligevel?";
+"season.confirmUnaired.confirm" = "Markér som set";
+"season.confirmPrevious.title" = "Har du set de tidligere afsnit?";
+"season.confirmPrevious.message" = "Der er %d tidligere afsnit, som ikke er markeret som set.";
+"season.confirmPrevious.markAll" = "Ja, markér dem alle";
+"season.confirmPrevious.onlyThis" = "Kun dette";
+"season.confirmUnairedSeason.message" = "%d afsnit af denne sæson er ikke sendt endnu. Markér som set alligevel?";
+"season.confirmUnairedSeason.markAll" = "Markér dem alle";
+"season.confirmUnairedSeason.onlyAired" = "Kun de sendte";
+
+/* Import redesign 2.0 — banner, review inbox, onboarding options */
+"onboarding.import.durationHint" = "Et arkiv med flere års historik kan tage adskillige minutter.";
+"onboarding.import.meanwhile" = "I mellemtiden";
+"onboarding.import.wait" = "Jeg bliver og venter";
+"onboarding.import.wait.subtitle" = "Gå ind i appen med dit bibliotek allerede komplet";
+"onboarding.import.background" = "Fortsæt onboardingen";
+"onboarding.import.background.subtitle" = "Importen kører videre i baggrunden — vi giver dig besked, når den er færdig";
+"onboarding.import.waitingHint" = "Vi venter her: så snart importen er færdig, åbner gennemgangen automatisk.";
+"onboarding.import.manage" = "Administrer %d titler";
+"import.banner.running" = "Import i gang";
+"import.banner.episodes" = "%1$@ af %2$@ afsnit";
+"import.banner.completed" = "Import fuldført";
+"import.banner.review" = "%1$d titler at gennemgå ud af %2$@";
+"import.banner.manage" = "Administrer";
+"import.banner.ok" = "OK";
+"import.banner.summary" = "%1$@ serier · %2$@ afsnit · %3$@ film";
+"import.toast.imported" = "Bibliotek importeret";
+"import.toast.imported.review" = "Bibliotek importeret · %d titler at gennemgå";
+"import.review.title" = "Titler at gennemgå";
+"import.review.remaining" = "%1$d af %2$d tilbage";
+"import.review.allResolved" = "Alt er matchet";
+"import.review.intro" = "Vi kunne ikke finde et sikkert match for disse titler fra dit TV Time-arkiv. Vælg den rigtige, eller udeluk den.";
+"import.review.episodesSeen" = "%d afsnit set";
+"import.review.searchManually" = "Søg manuelt";
+"import.review.exclude" = "Udeluk";
+"import.review.later" = "Udskyd, jeg gør det senere";
+"import.review.importCount" = "Importér %d titler";
+"import.review.importOne" = "Importér 1 titel";
+"import.review.libraryOk" = "Biblioteket er i orden";
+"import.review.libraryOk.subtitle" = "Alle titler fra dit TV Time-arkiv er blevet matchet korrekt.";
+"import.review.noCandidates" = "Ingen forslag fundet — prøv en manuel søgning.";
+"import.review.manualPick" = "Valgt manuelt";
+"import.review.movieHint" = "Film uden match kan kun udelukkes.";
+"import.review.seasons" = "%d sæsoner";
+"import.review.reason.notFound" = "ikke fundet i kataloget";
+"import.review.reason.ambiguous" = "tvetydigt match";
+"import.review.reason.conflict" = "seriekonflikt";
+"import.review.reason.yearMissing" = "manglende eller uoverensstemmende år";
+"import.review.reason.missingId" = "intet serie-ID i eksporten";
+
+"import.toast.mapping.partial" = "%1$d titler matchet · %2$d mangler stadig gennemgang";
+"import.toast.mapping.done" = "%d titler matchet · biblioteket er i orden";
+
+"import.report.outOfStructure" = "%d afsnit kunne ikke placeres i seriens TMDB-struktur.";
+
+
+// MARK: - Toast (Task 10)
+"mediaDetail.toast.markingSeen" = "Markerer som set…";
+"lists.toast.adding" = "Tilføjer…";
+"lists.toast.removing" = "Fjerner…";
+"lists.toast.addedTo" = "Tilføjet til %@";
+"lists.toast.removedFrom" = "Fjernet fra %@";
+"lists.toast.removed" = "Fjernet fra listen";
+"lists.toast.failed" = "Noget gik galt";
+"lists.toast.creating" = "Opretter liste…";
+"lists.toast.created" = "Listen er oprettet";
+"tracking.toast.markingWatched" = "Markerer afsnit…";
+"tracking.toast.markedWatched" = "Afsnittet er markeret som set";
+"tracking.toast.snoozing" = "Sætter på pause…";
+"tracking.toast.snoozed" = "Serien er sat på pause";
+"auth.error.recoveryLinkExpired" = "Linket er ugyldigt eller udløbet. Anmod om et nyt link til nulstilling af adgangskoden.";
+
+
+// MARK: - Regole password (Task 2)
+"auth.pwRule.length" = "8+ tegn";
+"auth.pwRule.uppercase" = "1 stort bogstav";
+"auth.pwRule.lowercase" = "1 lille bogstav";
+"auth.pwRule.number" = "1 tal";
+"auth.pwRule.symbol" = "1 symbol";
+"auth.accountCreated" = "Kontoen er oprettet";
+
+
+// MARK: - Modali (Task 9+14)
+"tvDetail.markAllSeenSubtitle" = "Gælder alle afsnit i alle sæsoner, der allerede er udkommet.";
+"tvDetail.markAllSeenCTA" = "Markér %d afsnit som set";
+"tvDetail.markAllSeen.episodes" = "Afsnit markeret som set";
+"tvDetail.markAllSeen.diary" = "Poster tilføjet til dagbogen";
+"tvDetail.markAllSeenReversible" = "Kan fortrydes: du kan gendanne enkelte afsnit fra dagbogen.";
+"tvDetail.seasonsCount" = "%d sæsoner";
+"tvDetail.episodesCount" = "%d afsnit";
+"auth.changePasswordSubtitle" = "Af sikkerhedshensyn logger vi dig ud af dine andre enheder.";
+"auth.newPasswordPlaceholder" = "Ny adgangskode";
+"auth.forgotCurrentPassword" = "Kan du ikke huske den nuværende?";
+"auth.show" = "Vis";
+"auth.hide" = "Skjul";
+"profile.feedback.subtitle" = "Vi læser alt. Vi svarer som regel inden for to dage.";
+"profile.feedback.keepUpdatedEmail" = "Vi skriver til %@";
+"profile.feedback.placeholder.bug" = "Hvad gik galt? Hvad lavede du lige inden…";
+"profile.feedback.placeholder.suggest" = "Hvad mangler? Beskriv, hvordan du ville bruge det…";
+"profile.feedback.placeholder.other" = "Skriv, hvad du vil fortælle os…";
+"profile.feedback.category.crash" = "Nedbrud";
+"profile.feedback.category.import" = "Import fra TV Time";
+"profile.feedback.category.notifications" = "Notifikationer";
+"profile.feedback.category.sync" = "Synkronisering";
+"profile.feedback.category.ui" = "Layout";
+"profile.feedback.category.other" = "Andet";
+
+
+// MARK: - Update forzato (Task 3)
+"update.required" = "OPDATERING PÅKRÆVET";
+"update.fallbackTitle" = "En ny version er tilgængelig";
+"update.whatsChanged" = "HVAD ER NYT";
+"update.fullReleaseNotes" = "Fulde udgivelsesnoter";
+"update.cta" = "Opdatér fra App Store";
+"update.versionFootnote" = "Version %@";
+"update.dataSafe" = "Dit bibliotek og dine data er i sikkerhed.";
+
+
+// MARK: - Preferiti (Task 7)
+"favorites.subtitle" = "De 4 titler i udstillingsvinduet på din profil";
+"favorites.inYourFavorites" = "Blandt dine favoritter";
+"favorites.showcased" = "Vises på din profil";
+"favorites.addedToast" = "Tilføjet til favoritter";
+"favorites.removedToast" = "Fjernet fra favoritter";
+
+
+// MARK: - Informazioni estese (Task 8)
+"movieDetail.releaseDate" = "Udgivelsesdato";
+"movieDetail.status" = "Status";
+"movieDetail.productionCompanies" = "Produktion";
+"movieDetail.budget" = "Budget";
+"movieDetail.revenue" = "Indtjening";
+"movieDetail.originalLanguage" = "Originalsprog";
+"movieDetail.tagline" = "Slogan";
+"tvDetail.firstAirDate" = "Første sending";
+"tvDetail.lastAirDate" = "Seneste sending";
+"tvDetail.seasonsEpisodes" = "Sæsoner";
+"tvDetail.network" = "Kanal";
+"tvDetail.createdBy" = "Skabt af";
+"mediaStatus.released" = "Udgivet";
+"mediaStatus.inProduction" = "Under produktion";
+"mediaStatus.postProduction" = "Efterproduktion";
+"mediaStatus.planned" = "Planlagt";
+"mediaStatus.rumored" = "Rygte";
+"mediaStatus.canceled" = "Aflyst";
+"mediaStatus.returningSeries" = "Fortsætter";
+"mediaStatus.ended" = "Afsluttet";
+"mediaStatus.pilot" = "Pilot";
+
+
+// MARK: - Piattaforme (Task 12+17)
+"platforms.active" = "aktive platforme";
+"platforms.activeCount" = "%d aktive";
+"platforms.clear" = "Nulstil";
+"platforms.coverage" = "Dækning af din watchlist";
+"platforms.libraryCount" = "%d titler i dit bibliotek";
+"platforms.recommended" = "ANBEFALET";
+"platforms.manage" = "Administrér";
+"platforms.empty" = "Ingen platforme tilgængelige for dit land endnu.";
+
+
+// MARK: - Preferiti nel profilo (Task 15)
+"favorites.sectionTitle" = "Dine favoritter";
+"favorites.sectionCount" = "%1$d af %2$d";
+
+
+// MARK: - Ricerca (Task 16)
+"search.mostRelevant" = "Mest relevante";
+"common.movie" = "Film";
+"common.tvShow" = "Serie";
+
+
+// MARK: - Toast con fase di progresso (bug 7)
+"mediaDetail.toast.addingToWatchlist" = "Tilføjer til din watchlist…";
+"mediaDetail.toast.removingFromWatchlist" = "Fjerner fra din watchlist…";
+"mediaDetail.toast.liking" = "Tilføjer til dine likes…";
+"mediaDetail.toast.unliking" = "Fjerner fra dine likes…";
+"mediaDetail.toast.markingUnseen" = "Fjerner fra sete…";
+"mediaDetail.toast.disliking" = "Tilføjer til dine dislikes…";
+"mediaDetail.toast.undisliking" = "Fjerner fra dine dislikes…";
+"mediaDetail.toast.disliked" = "Tilføjet til dine dislikes";
+"mediaDetail.toast.dislikeRemoved" = "Fjernet fra dine dislikes";
+"favorites.adding" = "Tilføjer til favoritter…";
+"favorites.removing" = "Fjerner fra favoritter…";
+
+
+// MARK: - Ricerca ridisegnata (bug 1)
+"search.scope.all" = "Alle";
+"search.scope.movies" = "Film";
+"search.scope.series" = "Serier";
+"search.clear" = "Ryd";
+"search.trending.today" = "I dag";
+"search.trending.subtitle" = "Mest søgte i %@ de seneste 24 timer.";
+"search.results.subtitle" = "Match for «%@», derefter beslægtede titler.";
+"search.resultsCount" = "%d titler";
+
+
+// MARK: - Ricerca piattaforme + esito notifica
+"platforms.search" = "Søg efter en platform";
+"platforms.searchEmpty" = "Ingen platform med det navn.";
+"mediaDetail.notifyMeFailed" = "Vi kunne ikke aktivere notifikationen.";
+
+
+// MARK: - Report import ridisegnato
+"import.report.title" = "Importrapport";
+"import.report.sourcePeriod" = "%@ · %@ – %@";
+"import.report.success.title" = "Bibliotek importeret";
+"import.report.success.subtitle" = "%d serier og %d film blev matchet med kataloget.";
+"import.report.success.subtitleWithRatings" = "%d serier og %d film blev matchet med kataloget, med visningsdatoer og bedømmelser.";
+"import.report.tile.episodes" = "Afsnit";
+"import.report.tile.movies" = "Film";
+"import.report.leftOut.title" = "Faldt udenfor";
+"import.report.leftOut.subtitle" = "For disse titler findes der ikke et sikkert match i kataloget. Tryk på et kort for at søge manuelt.";
+"import.report.leftOut.excluded" = "Udelukket af dig";
+"import.report.leftOut.episodes" = "%d sete afsnit";
+"import.report.leftOut.seenOn" = "set den %@";
+"import.report.copyList" = "Kopiér listen";
+"import.report.copied" = "Listen er kopieret";
+"import.report.details" = "Detaljer";
+
+
+// MARK: - Report import — dettagli
+"import.report.detail.period" = "Dækket periode";
+"import.report.detail.years" = "%d år";
+"import.report.detail.oneYear" = "1 år";
+"import.report.detail.lessThanYear" = "under et år";
+"import.report.detail.statuses" = "Genskabte seriestatusser";
+"import.report.detail.statuses.hint" = "Watchlist og arkiv som på TV Time";
+"import.report.detail.ratings" = "Overførte bedømmelser";
+"import.report.detail.ratingsUnmatched" = "Ikke matchede bedømmelser";
+"import.report.detail.ratingsUnmatched.hint" = "Bedømte afsnit, der ikke findes i kataloget";
+"import.report.detail.ratingsDeferred" = "Bedømmelser endnu ikke importeret";
+"import.report.detail.favorites" = "Genskabte favoritter";
+"import.report.detail.moviesSeen" = "Film markeret som set";
+"import.report.detail.moviesWatchlist" = "Film på watchlisten";
+"import.report.detail.statusesUnresolved" = "Statusser ikke genskabt";
+"import.report.detail.outOfStructure" = "Afsnit uden plads";
+"import.report.detail.outOfStructure.hint" = "Specialafsnit og udvidede versioner uden for seriens struktur";
+"import.report.detail.favoriteMovies" = "Favoritfilm ikke importeret";
+
+
+// MARK: - Report import — titolo mancante
+"import.report.leftOut.untitled" = "Titel mangler i eksporten";
+
+
+// MARK: - Generi TMDB
+// I nomi dei generi mostrati a schermo (titoli dei caroselli, grafico dei generi in Analytics).
+// TMDB li restituisce tradotti solo dentro la scheda di un film; nei caroselli il genere arriva
+// come id numerico, quindi il nome deve venire da qui. Da tradurre in ogni lingua.
+"genre.action" = "Action";
+"genre.adventure" = "Eventyr";
+"genre.animation" = "Animation";
+"genre.comedy" = "Komedie";
+"genre.crime" = "Krimi";
+"genre.documentary" = "Dokumentar";
+"genre.drama" = "Drama";
+"genre.family" = "Familie";
+"genre.fantasy" = "Fantasy";
+"genre.history" = "Historie";
+"genre.horror" = "Gyser";
+"genre.music" = "Musik";
+"genre.mystery" = "Mysterium";
+"genre.romance" = "Romantik";
+"genre.scienceFiction" = "Science fiction";
+"genre.tvMovie" = "TV-film";
+"genre.thriller" = "Thriller";
+"genre.war" = "Krig";
+"genre.western" = "Western";
+"genre.actionAdventure" = "Action & eventyr";
+"genre.kids" = "Børn";
+"genre.news" = "Nyheder";
+"genre.reality" = "Reality";
+"genre.sciFiFantasy" = "Sci-fi & fantasy";
+"genre.soap" = "Soap";
+"genre.talk" = "Talkshow";
+"genre.warPolitics" = "Krig & politik";
+
+
+// MARK: - Mood
+// Vanno nel `%@` di "carousel.moodTonight" ("I aften: %@"). Sono SOSTANTIVI, non aggettivi: un
+// aggettivo dovrebbe concordare con una parola che nel template non c'è.
+"mood.happy" = "Godt humør";
+"mood.sad" = "Melankoli";
+"mood.excited" = "Spænding";
+"mood.relaxed" = "Afslapning";
+"mood.scared" = "Gys";
+"mood.thoughtful" = "Stof til eftertanke";
+"mood.romantic" = "Romantik";
+"mood.adventurous" = "Eventyr";
+"mood.nostalgic" = "Nostalgi";
+"mood.energetic" = "Ren energi";
+
+
+// MARK: - Caroselli — argomenti e varianti senza genere
+// "%d" è l'anno d'inizio del decennio (2020). In inglese si dice "2020s", in danese "2020'erne":
+// il suffisso è grammatica, non un numero, e va tradotto. I template "carousel.decadeClassics" e
+// "carousel.throwback" sono stati riscritti ("Klassikere fra %@", "Tilbage til %@").
+"carousel.arg.decade" = "%d'erne";
+// Usati quando il profilo non ha ancora un genere preferito: non un fallback infilato nel "%@" del
+// titolo normale, ma una frase alternativa.
+"carousel.hiddenGems.generic" = "Skjulte perler";
+"carousel.staffPicks.generic" = "Teamets valg til dig";
+
+
+// MARK: - Analytics
+"analytics.noData" = "Ingen data";
+
+
+// MARK: - Statistiche e gamification (stringhe estratte dalle view)
+// Erano letterali dentro AnalyticsDashboardView / FloatingXPBadgeView / BadgeGalleryView /
+// LevelProgressView: non passando da `.localized` restavano in inglese in tutte e 20 le lingue.
+"stats.title" = "Din statistik";
+"stats.yourActivity" = "Din aktivitet";
+"stats.viewFull" = "Se hele statistikken";
+"stats.loading" = "Indlæser statistik…";
+"stats.errorTitle" = "Statistikken kunne ikke indlæses";
+"stats.emptyTitle" = "Ingen statistik endnu";
+"stats.emptySubtitle" = "Begynd at se noget, så dukker din statistik op!";
+"stats.genreDistribution" = "Fordeling på genrer";
+"stats.genreEmpty" = "Ingen genredata endnu";
+"stats.whenActive" = "Hvornår du ser noget";
+"stats.topContent" = "Dine mest sete titler";
+"stats.contentEmpty" = "Ingen data om titler endnu";
+"stats.discoveryChannels" = "Sådan finder du titler";
+"stats.discoveryEmpty" = "Ingen data om opdagelser endnu";
+"stats.moodProfile" = "Humørprofil";
+"stats.moodEmpty" = "Ikke nok data endnu — bliv ved med at se, så får du din humørprofil.";
+
+// "%d" è il numero del livello.
+"gamification.levelNumber" = "Niveau %d";
+// Versione corta per il badge in cima alla schermata, dove lo spazio è quello che è.
+"gamification.levelShort" = "Niv.%d";
+"gamification.bestStreak" = "Længste streak";
+"gamification.xpBonus" = "XP-bonus";
+"gamification.todaysChallenge" = "Dagens udfordring";
+"gamification.completed" = "Fuldført!";
+"gamification.badgeUnlocked" = "Badge låst op!";
+"gamification.badges.collected" = "Badges samlet";
+"gamification.badges.unlocked" = "Låst op";
+// "%d" è il totale dei badge esistenti: compare come "12 af 40".
+"gamification.badges.ofTotal" = "af %d";
+"gamification.levels.progressTitle" = "Niveaufremskridt";
+"gamification.allLevels" = "ALLE NIVEAUER";
+
+"common.progress" = "Fremskridt";
+"tvDetail.seasonsTitle" = "Sæsoner";
+"tvDetail.episodesTitle" = "Afsnit";

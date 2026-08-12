@@ -422,19 +422,29 @@ final class ConflictResolverTests: XCTestCase {
     // MARK: - Level Calculation Tests
 
     func testLevelCalculation() {
-        // Test level thresholds
-        XCTAssertEqual(resolver.calculateLevel(from: 0), 1)      // Level 1: 0 XP
-        XCTAssertEqual(resolver.calculateLevel(from: 99), 1)     // Still level 1
-        XCTAssertEqual(resolver.calculateLevel(from: 100), 2)    // Level 2: 100 XP
-        XCTAssertEqual(resolver.calculateLevel(from: 200), 3)    // Level 3: 200 XP
-        XCTAssertEqual(resolver.calculateLevel(from: 400), 5)    // Level 5: 400 XP
-        XCTAssertEqual(resolver.calculateLevel(from: 500), 6)    // Level 6: 500 XP
-        XCTAssertEqual(resolver.calculateLevel(from: 2000), 11)  // Level 11: 2000 XP
-        XCTAssertEqual(resolver.calculateLevel(from: 5000), 16)  // Level 16: 5000 XP
-        XCTAssertEqual(resolver.calculateLevel(from: 10000), 21) // Level 21: 10000 XP
-        XCTAssertEqual(resolver.calculateLevel(from: 20000), 26) // Level 26: 20000 XP
-        XCTAssertEqual(resolver.calculateLevel(from: 40000), 31) // Level 31: 40000 XP
-        XCTAssertEqual(resolver.calculateLevel(from: 80000), 41) // Level 41: 80000 XP
+        // La curva è CUMULATIVA: `GamificationLeveling.threshold(for:)` è l'XP totale per
+        // RAGGIUNGERE quel livello (L6 = 500 + 1×300 = 800, non 500). Questo test assumeva
+        // che la soglia coincidesse col numero tondo ed era rosso da prima di SPEC v3;
+        // cambiarlo nel codice sposterebbe il livello di ogni utente (la stessa curva guida
+        // GamificationService e LevelProgressView), quindi la correzione sta QUI.
+        XCTAssertEqual(resolver.calculateLevel(from: 0), 1)      // L1 parte da 0
+        XCTAssertEqual(resolver.calculateLevel(from: 99), 1)     // sotto la soglia di L2
+        XCTAssertEqual(resolver.calculateLevel(from: 100), 2)    // L2 = 100
+        XCTAssertEqual(resolver.calculateLevel(from: 200), 3)    // L3 = 200
+        XCTAssertEqual(resolver.calculateLevel(from: 400), 5)    // L5 = 400
+        XCTAssertEqual(resolver.calculateLevel(from: 500), 5)    // L6 è a 800: 500 resta L5
+        XCTAssertEqual(resolver.calculateLevel(from: 799), 5)    // bordo sotto L6
+        XCTAssertEqual(resolver.calculateLevel(from: 800), 6)    // L6 = 500 + 300
+        XCTAssertEqual(resolver.calculateLevel(from: 2599), 10)  // bordo sotto L11
+        XCTAssertEqual(resolver.calculateLevel(from: 2600), 11)  // L11 = 2000 + 600
+        XCTAssertEqual(resolver.calculateLevel(from: 6000), 16)  // L16 = 5000 + 1000
+        XCTAssertEqual(resolver.calculateLevel(from: 12000), 21) // L21 = 10000 + 2000
+        XCTAssertEqual(resolver.calculateLevel(from: 24000), 26) // L26 = 20000 + 4000
+        XCTAssertEqual(resolver.calculateLevel(from: 44000), 31) // L31 = 40000 + 4000
+        XCTAssertEqual(resolver.calculateLevel(from: 85000), 41) // L41 = 80000 + 5000
+
+        // La sorgente unica e il delegato devono restare la stessa curva.
+        XCTAssertEqual(resolver.calculateLevel(from: 800), GamificationLeveling.level(forTotalXP: 800))
 
         print("Level calculation test passed")
     }

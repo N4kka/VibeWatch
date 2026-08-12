@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import ImageIO
 
 /// Service for caching images offline
 /// Uses URLCache for automatic caching with size limits and invalidation
@@ -67,33 +68,81 @@ class ImageCacheService: ImageCacheServiceProtocol {
         Logger.debug("[ImageCache] Initialized with \(maxMemorySize / 1024 / 1024)MB memory, \(preferredDiskSize / 1024 / 1024)MB disk")
     }
     
-    /// Load image from URL with caching
+    /// Load image from URL with caching.
     func loadImage(from urlString: String) async throws -> UIImage {
+        try await loadImage(from: urlString, maxPixelSize: nil)
+    }
+
+    /// Load image from URL with caching e downsampling opzionale (Fase 3 §2.2).
+    ///
+    /// `maxPixelSize` (in PIXEL): se valorizzato, l'immagine viene ridimensionata a quella
+    /// dimensione massima via ImageIO (`CGImageSourceCreateThumbnailAtIndex`) — così le griglie
+    /// di poster non tengono in RAM bitmap full-res. La cache su disco/URLCache conserva sempre
+    /// i Data originali, quindi la stessa immagine può essere ri-decodificata a dimensioni diverse.
+    /// Il decode/downsampling avviene OFF-MAIN (Task.detached), non sul main actor.
+    func loadImage(from urlString: String, maxPixelSize: CGFloat?) async throws -> UIImage {
         guard let url = URL(string: urlString) else {
             throw ImageCacheError.invalidURL
         }
-        
-        // Check if cached
+
         let request = URLRequest(url: url)
-        if let cachedResponse = cache.cachedResponse(for: request),
-           let image = UIImage(data: cachedResponse.data) {
+
+        // 1. Recupera i Data: da cache (URLCache) o rete.
+        let data: Data
+        let responseToStore: URLResponse?
+        if let cachedResponse = cache.cachedResponse(for: request) {
+            data = cachedResponse.data
+            responseToStore = nil
             Logger.debug("[ImageCache] Loaded from cache: \(url.lastPathComponent)")
-            return image
+        } else {
+            Logger.debug("[ImageCache] Downloading: \(url.lastPathComponent)")
+            let (downloaded, response) = try await session.data(from: url)
+            data = downloaded
+            responseToStore = response
         }
-        
-        // Download image
-        Logger.debug("[ImageCache] Downloading: \(url.lastPathComponent)")
-        let (data, response) = try await session.data(from: url)
-        
-        guard let image = UIImage(data: data) else {
-            throw ImageCacheError.invalidImageData
+
+        // 2. Decode/downsampling OFF-MAIN.
+        let image = try await Self.decodeImage(data: data, maxPixelSize: maxPixelSize)
+
+        // 3. Salva in cache i Data ORIGINALI (non il thumbnail) se appena scaricati.
+        if let responseToStore {
+            cache.storeCachedResponse(CachedURLResponse(response: responseToStore, data: data), for: request)
         }
-        
-        // Cache the response
-        let cachedResponse = CachedURLResponse(response: response, data: data)
-        cache.storeCachedResponse(cachedResponse, for: request)
-        
+
         return image
+    }
+
+    /// Decodifica (ed eventualmente ridimensiona) i Data fuori dal main thread.
+    nonisolated private static func decodeImage(data: Data, maxPixelSize: CGFloat?) async throws -> UIImage {
+        try await Task.detached(priority: .utility) {
+            if let maxPixelSize, maxPixelSize > 0,
+               let downsampled = downsample(data: data, maxPixelSize: maxPixelSize) {
+                return downsampled
+            }
+            guard let image = UIImage(data: data) else {
+                throw ImageCacheError.invalidImageData
+            }
+            return image
+        }.value
+    }
+
+    /// Downsampling via ImageIO: decodifica direttamente alla dimensione richiesta senza mai
+    /// materializzare il bitmap full-res. `maxPixelSize` è la dimensione massima (lato lungo) in pixel.
+    nonisolated static func downsample(data: Data, maxPixelSize: CGFloat) -> UIImage? {
+        let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
+        guard let source = CGImageSourceCreateWithData(data as CFData, sourceOptions) else {
+            return nil
+        }
+        let thumbnailOptions: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceShouldCacheImmediately: true,        // decode subito, qui (off-main)
+            kCGImageSourceCreateThumbnailWithTransform: true,  // rispetta l'orientamento EXIF
+            kCGImageSourceThumbnailMaxPixelSize: maxPixelSize
+        ]
+        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, thumbnailOptions as CFDictionary) else {
+            return nil
+        }
+        return UIImage(cgImage: cgImage)
     }
     
     /// Prefetch images for offline viewing (WiFi only)

@@ -13,12 +13,17 @@ class AnalyticsInsightsService: ObservableObject {
 
     // MARK: - Dependencies
 
-    private let sqliteService = SQLiteService.shared
-    private let authService = AuthService.shared
+    private let sqliteService: SQLiteService
+    private let authService: AuthStatusProviding
 
     // MARK: - Initialization
 
-    private init() {
+    init(
+        sqliteService: SQLiteService = .shared,
+        authService: AuthStatusProviding = AuthService.shared
+    ) {
+        self.sqliteService = sqliteService
+        self.authService = authService
         Logger.info("[AnalyticsInsightsService] Initialized")
     }
 
@@ -36,7 +41,6 @@ class AnalyticsInsightsService: ObservableObject {
             async let watchStats = calculateWatchStats(userId: userId, timeframe: timeframe)
             async let genreStats = calculateGenreDistribution(userId: userId, timeframe: timeframe)
             async let viewingPatterns = calculateViewingPatterns(userId: userId)
-            async let contentPerformance = calculateContentPerformance(userId: userId, timeframe: timeframe)
             async let moodStats = calculateMoodAnalysis(userId: userId, timeframe: timeframe)
             async let discoveryInsights = calculateDiscoveryInsights(userId: userId, timeframe: timeframe)
             async let milestones = detectMilestones(userId: userId)
@@ -45,7 +49,6 @@ class AnalyticsInsightsService: ObservableObject {
                 watchStats: await watchStats,
                 genreDistribution: await genreStats,
                 viewingPatterns: await viewingPatterns,
-                contentPerformance: await contentPerformance,
                 moodAnalysis: await moodStats,
                 discoveryInsights: await discoveryInsights,
                 milestones: await milestones,
@@ -68,254 +71,262 @@ class AnalyticsInsightsService: ObservableObject {
 
     // MARK: - Watch Statistics
 
+    // MARK: - Real data sources (ARCH-001, strada B)
+    //
+    // These analytics used to read `user_clip_history`, a table nothing writes (0 rows, verified in
+    // production) whose queries also named columns that don't exist — so every card silently
+    // returned zeros behind `try?`. Rebuilt on the data the app actually has: the user's "seen"
+    // list, the "watchlist", per-episode seen state (EpisodeSeenManager), and
+    // `user_discovery_interactions`. Two cards had NO honest source and were handled per product
+    // decision: Content Performance removed entirely; the viewing heatmap redefined on `added_at`
+    // (when you add to lists = activity) and relabelled in the UI, since no watch timestamp exists.
+
+    /// Dopo la fusione ListsView↔Tracking (2026-08-02) le serie TV di watchlist/seen vivono in
+    /// `tv_tracking`, non in `list_items`: leggere solo le liste legacy faceva vedere alle stats
+    /// meno serie di quelle che ListsView mostra (punto 7 degli aperti). La derivazione è la
+    /// STESSA di ListsView (`LocalTrackingRepository.fusedListRows`), mai una copia.
+    ///
+    /// Per un anonimo lo specchio è vuoto e le sue TV stanno ancora in `list_items`: si resta
+    /// sul percorso legacy, come fa `fuseTrackingItems`.
+    private var isAuthenticated: Bool { authService.currentUser != nil }
+
+    /// `nil` means the mirror could not be read and callers must keep the legacy TV rows as a
+    /// safety net. An empty array is different: the read succeeded and there really are no derived
+    /// TV rows, so legacy authenticated TV rows remain excluded to avoid double counting.
+    private func fusedTrackingRows(userId: String) async -> [LocalTrackingRepository.FusedListRow]? {
+        guard isAuthenticated else { return nil }
+        do {
+            return try await LocalTrackingRepository(sqlite: sqliteService)
+                .fusedListRows(userId: userId)
+        } catch {
+            Logger.error("[AnalyticsInsightsService] Tracking mirror unavailable; using legacy TV rows: \(error)")
+            return nil
+        }
+    }
+
+    /// Rows from the user's "seen" list: what they've actually marked watched.
+    /// Le TV derivate dal tracking arrivano senza runtime e senza generi (il catalogo condiviso
+    /// non li ha, §1.5): contano nei totali, non nel tempo di visione né nei generi.
+    private func fetchSeenItems(userId: String, since: Date? = nil) async -> [[String: Any]] {
+        let derivedRows = await fusedTrackingRows(userId: userId)
+        let usingTrackingMirror = isAuthenticated && derivedRows != nil
+
+        var sql = """
+            SELECT li.media_id, li.media_type, li.title, li.poster_path, li.runtime, li.genres, li.added_at
+            FROM list_items li
+            JOIN lists l ON l.id = li.list_id
+            WHERE l.user_id = ? AND l.type = 'seen'
+              AND l.deleted_at IS NULL AND li.deleted_at IS NULL
+        """
+        var params: [Any] = [userId]
+        if usingTrackingMirror {
+            // Le righe TV legacy sono le stesse che ListsView nasconde: contarle qui e ANCHE
+            // dal tracking significherebbe contarle due volte.
+            sql += " AND li.media_type != 'tv'"
+        }
+        if let since {
+            sql += " AND li.added_at >= ?"
+            params.append(since.ISO8601Format())
+        }
+        var rows = (try? await sqliteService.queryRaw(sql, parameters: params)) ?? []
+
+        let derivedSeen = (derivedRows ?? []).filter(\.isSeen)
+        for row in derivedSeen {
+            if let since, row.addedAt < since { continue }
+            rows.append([
+                "media_id": row.showId,
+                "media_type": "tv",
+                "title": row.title,
+                "poster_path": row.posterPath as Any,
+                "added_at": row.addedAt.ISO8601Format(),
+            ])
+        }
+        return rows
+    }
+
+    /// Count of live items in a given core list ("seen", "watchlist", ...).
+    /// Per watchlist e seen il conteggio TV arriva dal tracking, come in ListsView.
+    private func listItemCount(userId: String, type: String) async -> Int {
+        let fusedType = type == "seen" || type == "watchlist"
+        let derivedRows = fusedType && isAuthenticated
+            ? await fusedTrackingRows(userId: userId)
+            : nil
+        let usingTrackingMirror = fusedType && isAuthenticated && derivedRows != nil
+
+        var sql = """
+            SELECT COUNT(*) AS c
+            FROM list_items li
+            JOIN lists l ON l.id = li.list_id
+            WHERE l.user_id = ? AND l.type = ?
+              AND l.deleted_at IS NULL AND li.deleted_at IS NULL
+        """
+        if usingTrackingMirror {
+            sql += " AND li.media_type != 'tv'"
+        }
+        let rows = (try? await sqliteService.queryRaw(sql, parameters: [userId, type])) ?? []
+        var count = rows.first?["c"] as? Int ?? 0
+
+        if usingTrackingMirror {
+            count += (derivedRows ?? []).filter { $0.isSeen == (type == "seen") }.count
+        }
+        return count
+    }
+
+    private func parseGenreIds(_ raw: Any?) -> [Int] {
+        guard let json = raw as? String, let data = json.data(using: .utf8),
+              let arr = try? JSONSerialization.jsonObject(with: data) as? [Any] else { return [] }
+        return arr.compactMap { ($0 as? Int) ?? Int("\($0)") }
+    }
+
+    /// `.allTime` is sentinel epoch-0; treat it as "no lower bound" so we don't filter on `added_at`.
+    private func lowerBound(_ timeframe: Timeframe) -> Date? {
+        let start = timeframe.startDate
+        return start <= Date(timeIntervalSince1970: 1) ? nil : start
+    }
+
+    // MARK: - Watch Statistics
+
     func calculateWatchStats(userId: String, timeframe: Timeframe) async -> WatchStats {
-        let since = timeframe.startDate
+        let since = lowerBound(timeframe)
+        let seen = await fetchSeenItems(userId: userId, since: since)
 
-        // Query movies
-        let movieQuery = """
-            SELECT
-                COUNT(DISTINCT media_id) as count,
-                SUM(CASE WHEN watch_duration IS NOT NULL THEN watch_duration ELSE 0 END) as total_time
-            FROM user_clip_history
-            WHERE user_id = ? AND watched_at >= ? AND media_type = 'movie'
-        """
+        let movies = seen.filter { ($0["media_type"] as? String) == "movie" }
+        let totalMovies = Set(movies.compactMap { $0["media_id"] as? Int }).count
+        let movieMinutes = movies.reduce(0) { $0 + (($1["runtime"] as? Int) ?? 0) }
 
-        let movieRows = (try? await sqliteService.queryRaw(movieQuery, parameters: [userId, since.ISO8601Format()])) ?? []
-        let totalMovies = movieRows.first?["count"] as? Int ?? 0
-        let movieMinutes = movieRows.first?["total_time"] as? Int ?? 0
+        // Episodes come from EpisodeSeenManager (UserDefaults-backed). It has no per-episode
+        // timestamp, so episode counts are all-time regardless of `timeframe`. Episodes carry no
+        // runtime locally, so their watch-time uses a 30-min estimate — labelled as such.
+        let episodeCount = await MainActor.run { EpisodeSeenManager.shared.seenKeys.count }
+        let episodeMinutesEstimate = episodeCount * 30
 
-        // Query episodes
-        let episodeQuery = """
-            SELECT
-                COUNT(*) as count,
-                SUM(CASE WHEN watch_duration IS NOT NULL THEN watch_duration ELSE 0 END) as total_time
-            FROM user_clip_history
-            WHERE user_id = ? AND watched_at >= ? AND media_type = 'tv'
-        """
-
-        let episodeRows = (try? await sqliteService.queryRaw(episodeQuery, parameters: [userId, since.ISO8601Format()])) ?? []
-        let totalEpisodes = episodeRows.first?["count"] as? Int ?? 0
-        let episodeMinutes = episodeRows.first?["total_time"] as? Int ?? 0
-
-        // Calculate session average
-        let sessionQuery = """
-            SELECT AVG(session_duration) as avg_session
-            FROM (
-                SELECT SUM(watch_duration) as session_duration
-                FROM user_clip_history
-                WHERE user_id = ? AND watched_at >= ?
-                GROUP BY DATE(watched_at)
-            )
-        """
-
-        let sessionRows = (try? await sqliteService.queryRaw(sessionQuery, parameters: [userId, since.ISO8601Format()])) ?? []
-        let avgSession = sessionRows.first?["avg_session"] as? Int ?? 0
-
-        // Calculate completion rate
-        let completionQuery = """
-            SELECT AVG(CASE WHEN completion_percentage >= 90 THEN 1.0 ELSE 0.0 END) as completion_rate
-            FROM user_clip_history
-            WHERE user_id = ? AND watched_at >= ? AND completion_percentage IS NOT NULL
-        """
-
-        let completionRows = (try? await sqliteService.queryRaw(completionQuery, parameters: [userId, since.ISO8601Format()])) ?? []
-        let completionRate = completionRows.first?["completion_rate"] as? Double ?? 0.0
-
-        // Find longest session
-        let longestQuery = """
-            SELECT MAX(session_duration) as longest
-            FROM (
-                SELECT SUM(watch_duration) as session_duration
-                FROM user_clip_history
-                WHERE user_id = ? AND watched_at >= ?
-                GROUP BY DATE(watched_at)
-            )
-        """
-
-        let longestRows = (try? await sqliteService.queryRaw(longestQuery, parameters: [userId, since.ISO8601Format()])) ?? []
-        let longestSession = longestRows.first?["longest"] as? Int ?? 0
+        // "Completion" redefined (ARCH-001): the share of your tracked library you've cleared —
+        // items in "seen" over items in "seen" + "watchlist". Relabelled in the UI (it is no longer
+        // a per-title viewing completion rate, which the app has no data for).
+        let seenTotal = seen.count
+        let watchlistCount = await listItemCount(userId: userId, type: "watchlist")
+        let denominator = seenTotal + watchlistCount
+        let completion = denominator > 0 ? Double(seenTotal) / Double(denominator) : 0.0
 
         return WatchStats(
             totalMovies: totalMovies,
-            totalEpisodes: totalEpisodes,
-            totalWatchTimeMinutes: movieMinutes + episodeMinutes,
-            averageSessionMinutes: avgSession,
-            completionRate: completionRate,
-            longestSessionMinutes: longestSession
+            totalEpisodes: episodeCount,
+            totalWatchTimeMinutes: movieMinutes + episodeMinutesEstimate,
+            averageSessionMinutes: 0,   // no session data exists; not shown in the dashboard
+            completionRate: completion,
+            longestSessionMinutes: 0    // no session data exists; not shown in the dashboard
         )
     }
 
     // MARK: - Genre Distribution
 
     func calculateGenreDistribution(userId: String, timeframe: Timeframe) async -> GenreStats {
-        let since = timeframe.startDate
+        let seen = await fetchSeenItems(userId: userId, since: lowerBound(timeframe))
 
-        let query = """
-            SELECT
-                p.preference_id as genre_id,
-                p.preference_name as genre_name,
-                COUNT(DISTINCT h.media_id) as watch_count,
-                SUM(CASE WHEN h.watch_duration IS NOT NULL THEN h.watch_duration ELSE 0 END) as total_minutes
-            FROM unified_user_preferences p
-            INNER JOIN user_clip_history h ON h.user_id = p.user_id
-            WHERE p.user_id = ? AND p.preference_category = 'genre'
-                AND h.watched_at >= ?
-            GROUP BY p.preference_id, p.preference_name
-            ORDER BY watch_count DESC
-        """
+        var counts: [Int: Int] = [:]
+        var runtimeByGenre: [Int: Int] = [:]
+        for row in seen {
+            let runtime = (row["runtime"] as? Int) ?? 0
+            for gid in parseGenreIds(row["genres"]) {
+                counts[gid, default: 0] += 1
+                runtimeByGenre[gid, default: 0] += runtime
+            }
+        }
 
-        let rows = (try? await sqliteService.queryRaw(query, parameters: [userId, since.ISO8601Format()])) ?? []
-
-        let totalCount = rows.reduce(0) { $0 + (($1["watch_count"] as? Int) ?? 0) }
-
-        let distribution: [GenreDistribution] = rows.compactMap { row in
-            guard let genreId = Int((row["genre_id"] as? String) ?? ""),
-                  let genreName = row["genre_name"] as? String,
-                  let count = row["watch_count"] as? Int,
-                  let minutes = row["total_minutes"] as? Int else {
-                return nil
+        let totalCount = counts.values.reduce(0, +)
+        let distribution: [GenreDistribution] = counts
+            .sorted { $0.value > $1.value }
+            .map { gid, count in
+                GenreDistribution(
+                    genreId: gid,
+                    genreName: TMDBGenres.displayName(for: gid),
+                    count: count,
+                    percentage: totalCount > 0 ? Double(count) / Double(totalCount) : 0.0,
+                    watchTimeMinutes: runtimeByGenre[gid] ?? 0
+                )
             }
 
-            let percentage = totalCount > 0 ? Double(count) / Double(totalCount) : 0.0
-
-            return GenreDistribution(
-                genreId: genreId,
-                genreName: genreName,
-                count: count,
-                percentage: percentage,
-                watchTimeMinutes: minutes
-            )
-        }
-
-        // Get top genre
         let topGenre = distribution.first ?? GenreDistribution(
-            genreId: 0,
-            genreName: "No Data",
-            count: 0,
-            percentage: 0.0,
-            watchTimeMinutes: 0
+            genreId: 0, genreName: "analytics.noData".localized, count: 0, percentage: 0.0, watchTimeMinutes: 0
         )
-
-        // Detect emerging genre (genre with biggest growth in last month)
         let emergingGenre = await detectEmergingGenre(userId: userId)
 
-        return GenreStats(
-            distribution: distribution,
-            topGenre: topGenre,
-            emergingGenre: emergingGenre
-        )
+        return GenreStats(distribution: distribution, topGenre: topGenre, emergingGenre: emergingGenre)
     }
 
+    /// The genre that grew most in the last month vs the month before — measured on when items were
+    /// added to the "seen" list (`added_at`), since that's the only real activity timestamp.
     private func detectEmergingGenre(userId: String) async -> GenreDistribution? {
-        // Compare last month vs previous month
-        let lastMonthStart = Calendar.current.date(byAdding: .month, value: -1, to: Date())!
-        let twoMonthsStart = Calendar.current.date(byAdding: .month, value: -2, to: Date())!
+        let calendar = Calendar.current
+        let lastMonthStart = calendar.date(byAdding: .month, value: -1, to: Date())!
+        let twoMonthsStart = calendar.date(byAdding: .month, value: -2, to: Date())!
 
-        let query = """
-            SELECT
-                p.preference_id as genre_id,
-                p.preference_name as genre_name,
-                SUM(CASE WHEN h.watched_at >= ? THEN 1 ELSE 0 END) as last_month_count,
-                SUM(CASE WHEN h.watched_at >= ? AND h.watched_at < ? THEN 1 ELSE 0 END) as prev_month_count
-            FROM unified_user_preferences p
-            INNER JOIN user_clip_history h ON h.user_id = p.user_id
-            WHERE p.user_id = ? AND p.preference_category = 'genre'
-                AND h.watched_at >= ?
-            GROUP BY p.preference_id, p.preference_name
-            HAVING last_month_count > prev_month_count
-            ORDER BY (last_month_count - prev_month_count) DESC
-            LIMIT 1
-        """
+        let recent = await fetchSeenItems(userId: userId, since: twoMonthsStart)
+        let iso = ISO8601DateFormatter()
 
-        let rows = (try? await sqliteService.queryRaw(query, parameters: [
-            lastMonthStart.ISO8601Format(),
-            twoMonthsStart.ISO8601Format(),
-            lastMonthStart.ISO8601Format(),
-            userId,
-            twoMonthsStart.ISO8601Format()
-        ])) ?? []
-
-        guard let row = rows.first,
-              let genreId = Int((row["genre_id"] as? String) ?? ""),
-              let genreName = row["genre_name"] as? String,
-              let count = row["last_month_count"] as? Int else {
-            return nil
+        var lastMonth: [Int: Int] = [:]
+        var prevMonth: [Int: Int] = [:]
+        for row in recent {
+            guard let addedStr = row["added_at"] as? String, let added = iso.date(from: addedStr) else { continue }
+            let isLastMonth = added >= lastMonthStart
+            for gid in parseGenreIds(row["genres"]) {
+                if isLastMonth { lastMonth[gid, default: 0] += 1 } else { prevMonth[gid, default: 0] += 1 }
+            }
         }
 
+        let emerging = lastMonth
+            .filter { $0.value > (prevMonth[$0.key] ?? 0) }
+            .max { ($0.value - (prevMonth[$0.key] ?? 0)) < ($1.value - (prevMonth[$1.key] ?? 0)) }
+
+        guard let (gid, count) = emerging else { return nil }
         return GenreDistribution(
-            genreId: genreId,
-            genreName: genreName,
-            count: count,
-            percentage: 0.0,
-            watchTimeMinutes: 0
+            genreId: gid, genreName: TMDBGenres.displayName(for: gid),
+            count: count, percentage: 0.0, watchTimeMinutes: 0
         )
     }
 
-    // MARK: - Viewing Patterns
+    // MARK: - Activity Patterns (was "Viewing Patterns")
 
+    /// A 7×24 heatmap of when the user is *active* — i.e. when they add titles to their lists
+    /// (`added_at`). Renamed from "viewing" in the UI: the app stores no watch timestamp, so this
+    /// honestly measures activity, not viewing hours.
+    ///
+    /// Resta DELIBERATAMENTE su `list_items` anche dopo la fusione col tracking: `updated_at`
+    /// dello specchio `tv_tracking` cambia a ogni ricalcolo server, quindi usarlo come "attività"
+    /// fabbricherebbe presenze. Meglio un heatmap con meno righe che uno con righe inventate.
     func calculateViewingPatterns(userId: String) async -> ViewingPatterns {
-        // Build 7×24 heatmap
         var heatmap = Array(repeating: Array(repeating: 0, count: 24), count: 7)
 
-        let heatmapQuery = """
+        let sql = """
             SELECT
-                CAST(strftime('%w', watched_at) AS INTEGER) as day_of_week,
-                CAST(strftime('%H', watched_at) AS INTEGER) as hour,
-                SUM(CASE WHEN watch_duration IS NOT NULL THEN watch_duration ELSE 30 END) as total_minutes
-            FROM user_clip_history
-            WHERE user_id = ?
+                CAST(strftime('%w', added_at) AS INTEGER) AS day_of_week,
+                CAST(strftime('%H', added_at) AS INTEGER) AS hour,
+                COUNT(*) AS additions
+            FROM list_items li
+            JOIN lists l ON l.id = li.list_id
+            WHERE l.user_id = ? AND l.deleted_at IS NULL AND li.deleted_at IS NULL
+              AND li.added_at IS NOT NULL
             GROUP BY day_of_week, hour
         """
-
-        let rows = (try? await sqliteService.queryRaw(heatmapQuery, parameters: [userId])) ?? []
-
+        let rows = (try? await sqliteService.queryRaw(sql, parameters: [userId])) ?? []
+        var byDay: [String: [Int]] = [:]
+        let dayNames = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"]
         for row in rows {
             let day = row["day_of_week"] as? Int ?? 0
             let hour = row["hour"] as? Int ?? 0
-            let minutes = row["total_minutes"] as? Int ?? 0
-            heatmap[day][hour] = minutes
+            let n = row["additions"] as? Int ?? 0
+            guard (0..<7).contains(day), (0..<24).contains(hour) else { continue }
+            heatmap[day][hour] = n
+            byDay[dayNames[day], default: []].append(n)
         }
 
-        // Calculate average by day of week
-        let dayQuery = """
-            SELECT
-                CASE CAST(strftime('%w', watched_at) AS INTEGER)
-                    WHEN 0 THEN 'Sunday'
-                    WHEN 1 THEN 'Monday'
-                    WHEN 2 THEN 'Tuesday'
-                    WHEN 3 THEN 'Wednesday'
-                    WHEN 4 THEN 'Thursday'
-                    WHEN 5 THEN 'Friday'
-                    WHEN 6 THEN 'Saturday'
-                END as day_name,
-                AVG(daily_total) as avg_minutes
-            FROM (
-                SELECT
-                    DATE(watched_at) as watch_date,
-                    strftime('%w', watched_at) as day_of_week,
-                    SUM(CASE WHEN watch_duration IS NOT NULL THEN watch_duration ELSE 30 END) as daily_total
-                FROM user_clip_history
-                WHERE user_id = ?
-                GROUP BY watch_date
-            )
-            GROUP BY day_of_week
-        """
-
-        let dayRows = (try? await sqliteService.queryRaw(dayQuery, parameters: [userId])) ?? []
         var averageByDayOfWeek: [String: Int] = [:]
-
-        for row in dayRows {
-            if let dayName = row["day_name"] as? String,
-               let avgMinutes = row["avg_minutes"] as? Int {
-                averageByDayOfWeek[dayName] = avgMinutes
-            }
+        for (name, values) in byDay where !values.isEmpty {
+            averageByDayOfWeek[name] = values.reduce(0, +) / values.count
         }
 
-        // Determine preferred time of day
         let preferredTime = determinePreferredTimeOfDay(heatmap: heatmap)
-
-        // Calculate streaks
-        let (currentStreak, longestStreak) = await calculateWatchStreaks(userId: userId)
+        let (currentStreak, longestStreak) = await calculateActivityStreaks(userId: userId)
 
         return ViewingPatterns(
             heatmap: heatmap,
@@ -327,163 +338,67 @@ class AnalyticsInsightsService: ObservableObject {
     }
 
     private func determinePreferredTimeOfDay(heatmap: [[Int]]) -> TimeOfDay {
-        var totals: [TimeOfDay: Int] = [
-            .morning: 0,
-            .afternoon: 0,
-            .evening: 0,
-            .night: 0
-        ]
-
+        var totals: [TimeOfDay: Int] = [.morning: 0, .afternoon: 0, .evening: 0, .night: 0]
         for day in heatmap {
             totals[.morning]! += day[6...11].reduce(0, +)
             totals[.afternoon]! += day[12...17].reduce(0, +)
             totals[.evening]! += day[18...21].reduce(0, +)
             totals[.night]! += (day[22...23] + day[0...5]).reduce(0, +)
         }
-
         return totals.max(by: { $0.value < $1.value })?.key ?? .evening
     }
 
-    private func calculateWatchStreaks(userId: String) async -> (current: Int, longest: Int) {
-        let query = """
-            SELECT DISTINCT DATE(watched_at) as watch_date
-            FROM user_clip_history
-            WHERE user_id = ?
-            ORDER BY watch_date DESC
+    /// Consecutive-day streaks of *activity* (days on which the user added something to a list).
+    private func calculateActivityStreaks(userId: String) async -> (current: Int, longest: Int) {
+        let sql = """
+            SELECT DISTINCT DATE(added_at) AS activity_date
+            FROM list_items li
+            JOIN lists l ON l.id = li.list_id
+            WHERE l.user_id = ? AND l.deleted_at IS NULL AND li.deleted_at IS NULL
+              AND li.added_at IS NOT NULL
+            ORDER BY activity_date DESC
         """
-
-        let rows = (try? await sqliteService.queryRaw(query, parameters: [userId])) ?? []
-
+        let rows = (try? await sqliteService.queryRaw(sql, parameters: [userId])) ?? []
         guard !rows.isEmpty else { return (0, 0) }
 
         let dateFormatter = ISO8601DateFormatter()
         dateFormatter.formatOptions = [.withFullDate]
-
         let dates: [Date] = rows.compactMap { row in
-            guard let dateString = row["watch_date"] as? String else { return nil }
-            return dateFormatter.date(from: dateString + "T00:00:00Z")
+            guard let s = row["activity_date"] as? String else { return nil }
+            return dateFormatter.date(from: s + "T00:00:00Z")
         }
-
         guard !dates.isEmpty else { return (0, 0) }
-
-        var currentStreak = 1
-        var longestStreak = 1
-        var tempStreak = 1
 
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
 
-        // Check if current streak is alive
+        var currentStreak = 0
         if let mostRecent = dates.first,
            calendar.isDate(mostRecent, inSameDayAs: today) ||
            calendar.isDate(mostRecent, inSameDayAs: calendar.date(byAdding: .day, value: -1, to: today)!) {
-            // Streak is alive
+            currentStreak = 1
             for i in 1..<dates.count {
-                let daysDiff = calendar.dateComponents([.day], from: dates[i], to: dates[i-1]).day ?? 0
-                if daysDiff == 1 {
-                    tempStreak += 1
-                    longestStreak = max(longestStreak, tempStreak)
-                } else {
-                    break
-                }
+                let diff = calendar.dateComponents([.day], from: dates[i], to: dates[i-1]).day ?? 0
+                if diff == 1 { currentStreak += 1 } else { break }
             }
-            currentStreak = tempStreak
-        } else {
-            currentStreak = 0
         }
 
-        // Calculate longest streak
-        tempStreak = 1
+        var longestStreak = 1
+        var temp = 1
         for i in 1..<dates.count {
-            let daysDiff = calendar.dateComponents([.day], from: dates[i], to: dates[i-1]).day ?? 0
-            if daysDiff == 1 {
-                tempStreak += 1
-                longestStreak = max(longestStreak, tempStreak)
-            } else {
-                tempStreak = 1
-            }
+            let diff = calendar.dateComponents([.day], from: dates[i], to: dates[i-1]).day ?? 0
+            if diff == 1 { temp += 1; longestStreak = max(longestStreak, temp) } else { temp = 1 }
         }
 
         return (currentStreak, longestStreak)
     }
 
-    // MARK: - Content Performance
-
-    func calculateContentPerformance(userId: String, timeframe: Timeframe) async -> ContentPerformance {
-        let since = timeframe.startDate
-
-        // Highest rated
-        let ratedQuery = """
-            SELECT media_id, media_type, COUNT(*) as watch_count
-            FROM user_clip_history
-            WHERE user_id = ? AND watched_at >= ? AND user_rating >= 4
-            GROUP BY media_id, media_type
-            ORDER BY watch_count DESC, MAX(watched_at) DESC
-            LIMIT 5
-        """
-
-        let ratedRows = (try? await sqliteService.queryRaw(ratedQuery, parameters: [userId, since.ISO8601Format()])) ?? []
-        let highestRated = ratedRows.compactMap { MediaSummary(from: $0) }
-
-        // Most rewatched
-        let rewatchQuery = """
-            SELECT media_id, media_type, COUNT(*) as watch_count
-            FROM user_clip_history
-            WHERE user_id = ? AND watched_at >= ?
-            GROUP BY media_id, media_type
-            HAVING watch_count > 1
-            ORDER BY watch_count DESC
-            LIMIT 5
-        """
-
-        let rewatchRows = (try? await sqliteService.queryRaw(rewatchQuery, parameters: [userId, since.ISO8601Format()])) ?? []
-        let mostRewatched = rewatchRows.compactMap { MediaSummary(from: $0) }
-
-        // Fastest binged (TV shows watched in short time)
-        let bingeQuery = """
-            SELECT media_id, media_type, COUNT(*) as episode_count,
-                   JULIANDAY(MAX(watched_at)) - JULIANDAY(MIN(watched_at)) as days_to_complete
-            FROM user_clip_history
-            WHERE user_id = ? AND media_type = 'tv' AND watched_at >= ?
-            GROUP BY media_id
-            HAVING episode_count >= 5
-            ORDER BY (episode_count / NULLIF(days_to_complete, 0)) DESC
-            LIMIT 5
-        """
-
-        let bingeRows = (try? await sqliteService.queryRaw(bingeQuery, parameters: [userId, since.ISO8601Format()])) ?? []
-        let fastestBinged = bingeRows.compactMap { MediaSummary(from: $0) }
-
-        // Abandoned content (started but didn't finish)
-        let abandonedQuery = """
-            SELECT media_id, media_type, AVG(completion_percentage) as avg_completion
-            FROM user_clip_history
-            WHERE user_id = ? AND watched_at >= ? AND completion_percentage < 50
-            GROUP BY media_id, media_type
-            ORDER BY COUNT(*) DESC
-            LIMIT 5
-        """
-
-        let abandonedRows = (try? await sqliteService.queryRaw(abandonedQuery, parameters: [userId, since.ISO8601Format()])) ?? []
-        let abandoned = abandonedRows.compactMap { MediaSummary(from: $0) }
-
-        return ContentPerformance(
-            highestRated: highestRated,
-            mostRewatched: mostRewatched,
-            fastestBinged: fastestBinged,
-            abandoned: abandoned
-        )
-    }
-
     // MARK: - Mood Analysis
 
-    /// Compute mood distribution from user's genre viewing history.
-    /// Returns a non-nil MoodAnalysis with an empty moodDistribution when the user
-    /// has engaged with fewer than 5 distinct genres (placeholder state).
-    ///
-    /// Reads from user_preferences (genre scores written by UserEngagementTracker) rather
-    /// than user_clip_history, which is never written by the iOS app — it only receives
-    /// data via Supabase sync pull and has no genre_ids populated.
+    /// Mood distribution derived from the genres of what the user has actually seen (their "seen"
+    /// list), mapped through a genre→mood table. Previously read the local `user_preferences` table;
+    /// now uses the same real source as the rest of the dashboard so it can't diverge from it.
+    /// Returns an empty distribution (placeholder) below 5 distinct genres.
     private func calculateMoodAnalysis(userId: String, timeframe: Timeframe) async -> MoodAnalysis {
         let genreToMood: [Int: String] = [
             35: "Light", 16: "Light", 10751: "Light", 10402: "Light",
@@ -493,25 +408,19 @@ class AnalyticsInsightsService: ObservableObject {
             10749: "Romantic", 10770: "Romantic"
         ]
 
-        let sql = """
-            SELECT preference_id, score FROM user_preferences
-            WHERE user_id = ? AND preference_type = 'genre' AND score > 0 AND deleted_at IS NULL
-        """
-        let rows = (try? await sqliteService.queryRaw(sql, parameters: [userId])) ?? []
-
-        guard rows.count >= 5 else {
-            return MoodAnalysis(moodDistribution: [:], preferredMoodByTime: [:], emotionalJourney: [])
-        }
-
+        let seen = await fetchSeenItems(userId: userId, since: lowerBound(timeframe))
+        var distinctGenres = Set<Int>()
         var moodCounts: [String: Int] = [:]
-        for row in rows {
-            guard let genreIdStr = row["preference_id"] as? String,
-                  let genreId = Int(genreIdStr) else { continue }
-            if let mood = genreToMood[genreId] {
-                moodCounts[mood, default: 0] += 1
+        for row in seen {
+            for gid in parseGenreIds(row["genres"]) {
+                distinctGenres.insert(gid)
+                if let mood = genreToMood[gid] { moodCounts[mood, default: 0] += 1 }
             }
         }
 
+        guard distinctGenres.count >= 5 else {
+            return MoodAnalysis(moodDistribution: [:], preferredMoodByTime: [:], emotionalJourney: [])
+        }
         return MoodAnalysis(moodDistribution: moodCounts, preferredMoodByTime: [:], emotionalJourney: [])
     }
 
@@ -520,42 +429,38 @@ class AnalyticsInsightsService: ObservableObject {
     func calculateDiscoveryInsights(userId: String, timeframe: Timeframe) async -> DiscoveryInsights {
         let since = timeframe.startDate
 
-        let query = """
-            SELECT discovery_source, COUNT(*) as count
+        // Breakdown of interactions per carousel type — real columns of user_discovery_interactions.
+        let sql = """
+            SELECT carousel_type, COUNT(*) AS count
             FROM user_discovery_interactions
             WHERE user_id = ? AND interacted_at >= ?
-            GROUP BY discovery_source
+            GROUP BY carousel_type
         """
-
-        let rows = (try? await sqliteService.queryRaw(query, parameters: [userId, since.ISO8601Format()])) ?? []
-
+        let rows = (try? await sqliteService.queryRaw(sql, parameters: [userId, since.ISO8601Format()])) ?? []
         var sourceBreakdown: [String: Int] = [:]
         for row in rows {
-            if let source = row["discovery_source"] as? String,
-               let count = row["count"] as? Int {
+            if let source = row["carousel_type"] as? String, let count = row["count"] as? Int {
                 sourceBreakdown[source] = count
             }
         }
+        let mostSuccessful = sourceBreakdown.max(by: { $0.value < $1.value })?.key ?? "—"
 
-        let mostSuccessful = sourceBreakdown.max(by: { $0.value < $1.value })?.key ?? "clips"
-
-        // Calculate carousel click rates
-        let carouselQuery = """
-            SELECT carousel_id, SUM(clicked) as clicks, COUNT(*) as impressions
+        // "Click rate" per carousel = share of its interactions that are a tap/click (vs impression).
+        let rateSQL = """
+            SELECT carousel_type,
+                   SUM(CASE WHEN interaction_type IN ('click','tap','select','add_to_list') THEN 1 ELSE 0 END) AS clicks,
+                   COUNT(*) AS impressions
             FROM user_discovery_interactions
             WHERE user_id = ? AND interacted_at >= ?
-            GROUP BY carousel_id
+            GROUP BY carousel_type
         """
-
-        let carouselRows = (try? await sqliteService.queryRaw(carouselQuery, parameters: [userId, since.ISO8601Format()])) ?? []
-
+        let rateRows = (try? await sqliteService.queryRaw(rateSQL, parameters: [userId, since.ISO8601Format()])) ?? []
         var carouselClickRates: [String: Double] = [:]
-        for row in carouselRows {
-            if let carouselId = row["carousel_id"] as? String,
+        for row in rateRows {
+            if let carousel = row["carousel_type"] as? String,
                let clicks = row["clicks"] as? Int,
-               let impressions = row["impressions"] as? Int,
-               impressions > 0 {
-                carouselClickRates[carouselId] = Double(clicks) / Double(impressions)
+               let impressions = row["impressions"] as? Int, impressions > 0 {
+                carouselClickRates[carousel] = Double(clicks) / Double(impressions)
             }
         }
 
@@ -571,81 +476,41 @@ class AnalyticsInsightsService: ObservableObject {
     func detectMilestones(userId: String) async -> [Milestone] {
         var milestones: [Milestone] = []
 
-        // Watch count milestones
-        let countQuery = """
-            SELECT COUNT(DISTINCT media_id) as total_count
-            FROM user_clip_history
-            WHERE user_id = ? AND media_type = 'movie'
-        """
-
-        let countRows = (try? await sqliteService.queryRaw(countQuery, parameters: [userId])) ?? []
-        if let totalMovies = countRows.first?["total_count"] as? Int {
-            let watchMilestones = [10, 50, 100, 250, 500, 1000]
-            for milestone in watchMilestones {
-                if totalMovies >= milestone {
-                    milestones.append(Milestone(
-                        id: "watch_count_\(milestone)",
-                        type: .watchCount,
-                        title: "\(milestone) Movies Watched",
-                        description: "You've watched \(totalMovies) movies total!",
-                        achievedAt: Date(),
-                        icon: "film.fill"
-                    ))
-                }
-            }
-            // Return only the highest achieved milestone
-            milestones = Array(milestones.suffix(1))
+        // Movies-seen milestones, from the "seen" list.
+        let seen = await fetchSeenItems(userId: userId)
+        let totalMovies = Set(seen.filter { ($0["media_type"] as? String) == "movie" }
+                                  .compactMap { $0["media_id"] as? Int }).count
+        if let highest = [10, 50, 100, 250, 500, 1000].filter({ totalMovies >= $0 }).last {
+            milestones.append(Milestone(
+                id: "watch_count_\(highest)", type: .watchCount,
+                title: "\(highest) Movies Watched",
+                description: "You've marked \(totalMovies) movies as seen!",
+                achievedAt: Date(), icon: "film.fill"
+            ))
         }
 
-        // Streak milestones
-        let (_, longestStreak) = await calculateWatchStreaks(userId: userId)
-        let streakMilestones = [7, 14, 30, 60, 100]
-        var streakMilestoneList: [Milestone] = []
-        for milestone in streakMilestones {
-            if longestStreak >= milestone {
-                streakMilestoneList.append(Milestone(
-                    id: "streak_\(milestone)",
-                    type: .streak,
-                    title: "\(milestone)-Day Streak",
-                    description: "You watched content for \(milestone) days in a row!",
-                    achievedAt: Date(),
-                    icon: "flame.fill"
-                ))
-            }
-        }
-        // Return only the highest streak milestone
-        if let highest = streakMilestoneList.last {
-            milestones.append(highest)
+        // Activity-streak milestones.
+        let (_, longestStreak) = await calculateActivityStreaks(userId: userId)
+        if let highest = [7, 14, 30, 60, 100].filter({ longestStreak >= $0 }).last {
+            milestones.append(Milestone(
+                id: "streak_\(highest)", type: .streak,
+                title: "\(highest)-Day Streak",
+                description: "You were active \(highest) days in a row!",
+                achievedAt: Date(), icon: "flame.fill"
+            ))
         }
 
-        // Watch time milestones (in hours)
-        let timeQuery = """
-            SELECT SUM(CASE WHEN watch_duration IS NOT NULL THEN watch_duration ELSE 0 END) as total_minutes
-            FROM user_clip_history
-            WHERE user_id = ?
-        """
-
-        let timeRows = (try? await sqliteService.queryRaw(timeQuery, parameters: [userId])) ?? []
-        if let totalMinutes = timeRows.first?["total_minutes"] as? Int {
-            let totalHours = totalMinutes / 60
-            let timeMilestones = [10, 50, 100, 500, 1000]
-            var timeMilestoneList: [Milestone] = []
-            for milestone in timeMilestones {
-                if totalHours >= milestone {
-                    timeMilestoneList.append(Milestone(
-                        id: "watch_time_\(milestone)",
-                        type: .watchTime,
-                        title: "\(milestone) Hours Watched",
-                        description: "You've spent \(totalHours) hours watching content!",
-                        achievedAt: Date(),
-                        icon: "clock.fill"
-                    ))
-                }
-            }
-            // Return only the highest time milestone
-            if let highest = timeMilestoneList.last {
-                milestones.append(highest)
-            }
+        // Library-size milestones (total tracked titles across the two core lists).
+        let seenCount = await listItemCount(userId: userId, type: "seen")
+        let watchlistCount = await listItemCount(userId: userId, type: "watchlist")
+        let library = seenCount + watchlistCount
+        if let highest = [25, 100, 250, 500, 1000].filter({ library >= $0 }).last {
+            milestones.append(Milestone(
+                id: "library_\(highest)", type: .discovery,
+                title: "\(highest) Titles Tracked",
+                description: "Your library holds \(library) titles!",
+                achievedAt: Date(), icon: "square.stack.fill"
+            ))
         }
 
         return milestones
@@ -658,7 +523,9 @@ struct UserStatistics: Codable {
     let watchStats: WatchStats
     let genreDistribution: GenreStats
     let viewingPatterns: ViewingPatterns
-    let contentPerformance: ContentPerformance
+    // contentPerformance removed (ARCH-001): none of its four sub-lists (highest-rated,
+    // most-rewatched, fastest-binged, abandoned) had an honest data source — the app records no
+    // ratings, rewatch counts, watch durations, or abandon state.
     let moodAnalysis: MoodAnalysis?
     let discoveryInsights: DiscoveryInsights
     let milestones: [Milestone]

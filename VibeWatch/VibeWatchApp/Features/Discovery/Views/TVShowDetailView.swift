@@ -7,6 +7,7 @@ struct TVShowDetailView: View {
     @EnvironmentObject var quotaManager: DailyQuotaManager
     @StateObject private var viewModel: TVShowDetailViewModel
     @StateObject private var listManager = ListManager.shared
+    @StateObject private var episodeSeenManager = EpisodeSeenManager.shared
     @StateObject private var searchViewModel = SearchViewModel()
     @State private var showSavePanel = false
     @State private var showAuthGate = false
@@ -16,9 +17,9 @@ struct TVShowDetailView: View {
     @State private var isPreparingShare = false
     @State private var showReportBug = false
     @State private var selectedActor: Cast?
-    @State private var filmographySelection: FilmographySelection?
     @State private var showWhyForMeSheet = false
     @State private var showAIPaywall = false
+    @State private var showMarkAllSeenConfirmation = false
     
     init(tvShowId: Int) {
         _viewModel = StateObject(wrappedValue: TVShowDetailViewModel(tvShowId: tvShowId))
@@ -35,7 +36,7 @@ struct TVShowDetailView: View {
             voteAverage: tvShow.voteAverage,
             voteCount: tvShow.voteCount,
             genreIds: nil,
-            genres: nil,
+            genres: tvShow.genres,
             adult: false,
             originalLanguage: tvShow.originalLanguage,
             popularity: tvShow.popularity,
@@ -51,38 +52,98 @@ struct TVShowDetailView: View {
         !quotaManager.isProUser
     }
 
+    private var isAllSeasonsSeen: Bool {
+        guard let tvShow = viewModel.tvShow, !viewModel.displaySeasons.isEmpty else { return false }
+        if episodeSeenManager.seenShowIds.contains(tvShow.id) { return true }
+        return viewModel.displaySeasons.allSatisfy { season in
+            guard season.episodeCount > 0 else { return true }
+            return (1...season.episodeCount).allSatisfy { epNum in
+                episodeSeenManager.isEpisodeSeen(
+                    showId: tvShow.id,
+                    seasonNumber: season.seasonNumber,
+                    episodeNumber: epNum
+                )
+            }
+        }
+    }
+
     var body: some View {
         ZStack(alignment: .bottom) {
             ScrollView {
                 VStack(spacing: 0) {
                     if viewModel.isLoading {
-                        ProgressView()
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .padding(.top, 100)
+                        MediaDetailSkeletonView()
                     } else if let error = viewModel.error {
                         errorView(error)
                     } else if let tvShow = viewModel.tvShow {
                         let tvShowMovie = tvShowToMovie(tvShow)
 
-                        TVShowDetailHeaderView(
-                            tvShow: tvShow,
-                            onDismiss: { dismiss() },
-                            onSearch: { showSearch = true },
-                            onShare: {
-                                Task { await handleShare(tvShow: tvShow) }
-                            }
+                        MediaDetailHero(
+                            backdropURL: tvShow.backdropURL,
+                            title: tvShow.name,
+                            year: tvShow.airYearRange ?? tvShow.year,
+                            runtime: tvShow.formattedEpisodeRuntime,
+                            genres: tvShow.genres?.map(\.name) ?? [],
+                            rating: tvShow.rating,
+                            voteCount: tvShow.voteCount,
+                            affinityPercent: tvShow.ratingPercentage,
+                            onBack: { dismiss() },
+                            onShare: { Task { await handleShare(tvShow: tvShow) } }
                         )
 
-                        VStack(spacing: 24) {
-                            infoView(tvShow: tvShow)
+                        // Il margine sta sui singoli blocchi, non sul contenitore: le sezioni con
+                        // carosello portano già il proprio, e sommarli le rientrava del doppio.
+                        VStack(alignment: .leading, spacing: 20) {
+                            MediaProviderDisclosure(
+                                providerState: viewModel.watchProviderState,
+                                title: tvShow.name,
+                                mediaType: .tv,
+                                movie: tvShowMovie
+                            )
+                            .padding(.horizontal, 20)
 
-                            actionsView(tvShow: tvShow, movie: tvShowMovie)
-                            providersView
+                            MediaDetailActionStrip(
+                                mediaId: tvShow.id,
+                                mediaType: .tv,
+                                onWatchlist: { Task { await handleWatchlistTap(tvShow: tvShow, movie: tvShowMovie) } },
+                                onSeen: {
+                                    if listManager.isInList(
+                                        listId: listManager.seenList.id,
+                                        mediaId: tvShow.id,
+                                        mediaType: .tv
+                                    ) {
+                                        Task { await handleSeenTap(tvShow: tvShow, movie: tvShowMovie) }
+                                    } else {
+                                        showMarkAllSeenConfirmation = true
+                                    }
+                                },
+                                onLiked: { Task { await handleLikedTap(tvShow: tvShow, movie: tvShowMovie) } },
+                                onList: { showSavePanel = true }
+                            )
+                            .padding(.horizontal, 20)
+
+                            if !tvShow.overview.isEmpty {
+                                Text(tvShow.overview)
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.theme.textSecondary)
+                                    .lineSpacing(4)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .padding(.horizontal, 20)
+                            }
+
+                            MediaRatingFavoriteCard(mediaType: "tv", tmdbId: tvShow.id)
+                                .padding(.horizontal, 20)
+                            MediaWhyForMeCard { handleWhyForMeTap() }
+                                .padding(.horizontal, 20)
+
+                            if !viewModel.displaySeasons.isEmpty {
+                                seasonsView(tvShow: tvShow)
+                            }
+
                             trailerView
                             creditsView(tvShow: tvShow)
                             similarView
                         }
-                        .padding(.horizontal, 50)
                         .padding(.bottom, shouldShowAd ? 90 : 40)
                     }
                 }
@@ -92,6 +153,7 @@ struct TVShowDetailView: View {
                 BannerAdView(adUnitID: AppConstants.AdMob.bannerAdUnitID)
                     .frame(height: 50)
             }
+
         }
         .background(Color.theme.background.ignoresSafeArea())
         .navigationBarHidden(true)
@@ -106,6 +168,35 @@ struct TVShowDetailView: View {
                     .presentationBackground(Color.theme.background)
             }
         }
+        .sheet(isPresented: $showMarkAllSeenConfirmation) {
+            if let tvShow = viewModel.tvShow {
+                let movie = tvShowToMovie(tvShow)
+                MarkAllSeenConfirmationSheet(
+                    posterURL: tvShow.posterURL,
+                    showName: tvShow.name,
+                    seasonCount: viewModel.displaySeasons.count,
+                    episodeCount: viewModel.displaySeasons.reduce(0) { $0 + $1.episodeCount },
+                    onConfirm: {
+                        showMarkAllSeenConfirmation = false
+                        Task {
+                            let toastId = ToastCenter.shared.begin(
+                                message: "mediaDetail.toast.markingSeen".localized
+                            )
+                            await handleSeenTap(tvShow: tvShow, movie: movie, silent: true)
+                            EpisodeSeenManager.shared.markShowSeen(showId: tvShow.id)
+                            ToastCenter.shared.complete(
+                                toastId,
+                                message: "mediaDetail.toast.markedSeen".localized
+                            )
+                        }
+                    },
+                    onCancel: {
+                        showMarkAllSeenConfirmation = false
+                    }
+                )
+                .vwModalPresentation()
+            }
+        }
         .task {
             await viewModel.loadTVShowDetails()
         }
@@ -118,17 +209,13 @@ struct TVShowDetailView: View {
                     shareItems = []
                 }
         }
-        .sheet(item: $selectedActor) { actor in
+        .navigationDestination(item: $selectedActor) { actor in
             ActorDetailView(
                 actorId: actor.id,
                 initialName: actor.name,
-                initialProfileURL: actor.profileURL
-            ) { credit in
-                handleFilmographySelection(credit)
-            }
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
-                .presentationBackground(Color.theme.background)
+                initialProfileURL: actor.profileURL,
+                previousTitle: viewModel.tvShow?.name ?? ""
+            )
         }
         .fullScreenCover(isPresented: $showAuthGate) {
             AuthenticationGateView(isPresented: $showAuthGate)
@@ -137,7 +224,8 @@ struct TVShowDetailView: View {
         .sheet(isPresented: $showWhyForMeSheet) {
             WhyForMeSheetView(
                 title: "movieDetail.whyForMe".localized,
-                message: viewModel.whyForMeMessage,
+                affinityPercent: viewModel.tvShow?.ratingPercentage ?? 0,
+                analysis: viewModel.whyForMeAnalysis,
                 isLoading: viewModel.isWhyForMeLoading,
                 error: viewModel.whyForMeError
             ) {
@@ -150,14 +238,6 @@ struct TVShowDetailView: View {
                 paywallType: .aiQuota,
                 source: "why_for_me_quota"
             )
-        }
-        .fullScreenCover(item: $filmographySelection) { selection in
-            switch selection.mediaType {
-            case .movie:
-                MovieDetailView(movieId: selection.mediaId)
-            case .tv:
-                TVShowDetailView(tvShowId: selection.mediaId)
-            }
         }
         .overlay {
             if isPreparingShare {
@@ -173,6 +253,10 @@ struct TVShowDetailView: View {
         }
         .sheet(isPresented: $showReportBug) {
             FeedbackDetailSheet(type: .bug)
+        }
+        .onChange(of: isAllSeasonsSeen) { newValue in
+            guard newValue else { return }
+            Task { await syncShowSeen() }
         }
     }
     
@@ -212,49 +296,6 @@ struct TVShowDetailView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     
-    private func infoView(tvShow: TVShow) -> some View {
-        TVShowInfoSection(tvShow: tvShow)
-    }
-    
-    private func actionsView(tvShow: TVShow, movie: Movie) -> some View {
-                        VStack(spacing: 20) {
-                        ActionButtonsSection(
-                            movie: movie,
-                            mediaType: .tv,
-                            onSaveTap: {
-                                // Allow anonymous users to open save panel
-                                // They can save to watchlist without authentication
-                                // Auth gate will show when they try to create custom lists
-                                showSavePanel = true
-                            },
-                            onSeenTap: { Task { await handleSeenTap(tvShow: tvShow, movie: movie) } },
-                            onLikedTap: { Task { await handleLikedTap(tvShow: tvShow, movie: movie) } },
-                            onDislikedTap: { Task { await handleDislikedTap(tvShow: tvShow, movie: movie) } }
-                        )
-                        GoodFitSection(
-                            title: String(format: "movieDetail.goodFitTitle".localized, tvShow.name),
-                            subtitle: "movieDetail.goodFitSubtitle".localized,
-                            onWhyTap: { handleWhyForMeTap() }
-                        )
-                        }
-    }
-    
-    @ViewBuilder
-    private var providersView: some View {
-        if let tvShow = viewModel.tvShow {
-            let tvShowMovie = tvShowToMovie(tvShow)
-            WatchNowSection(
-                providers: viewModel.watchProviders,
-                mediaType: .tv,
-                title: tvShow.name,
-                year: tvShow.year,
-                imdbId: viewModel.imdbId,
-                movie: tvShowMovie,
-                onReportIssue: { showReportBug = true }
-            )
-        }
-    }
-    
     @ViewBuilder
     private var trailerView: some View {
         if let trailer = viewModel.trailer {
@@ -264,17 +305,30 @@ struct TVShowDetailView: View {
     
     @ViewBuilder
     private func creditsView(tvShow: TVShow) -> some View {
-        if !viewModel.mainCast.isEmpty {
-            TVShowCreditsSection(
-                cast: viewModel.mainCast,
-                tvShow: tvShow,
-                onActorTap: { actor in
-                    selectedActor = actor
-                }
-            )
-        }
+        TVShowCreditsSection(
+            director: viewModel.director,
+            cast: viewModel.mainCast,
+            tvShow: tvShow,
+            onActorTap: { actor in
+                selectedActor = actor
+            }
+        )
     }
     
+    @ViewBuilder
+    private func seasonsView(tvShow: TVShow) -> some View {
+        SeasonsCarouselSection(
+            seasons: viewModel.displaySeasons,
+            showId: tvShow.id,
+            showName: tvShow.name,
+            showBackdropPath: tvShow.backdropPath,
+            showPosterPath: tvShow.posterPath,
+            tvShow: tvShow,
+            cast: viewModel.mainCast,
+            director: viewModel.director
+        )
+    }
+
     @ViewBuilder
     private var similarView: some View {
         if !viewModel.similarShows.isEmpty {
@@ -283,26 +337,69 @@ struct TVShowDetailView: View {
     }
     
     // MARK: - Actions
+
+    private func handleWatchlistTap(tvShow: TVShow, movie: Movie) async {
+        let wasActive = listManager.isInList(
+            listId: listManager.watchlist.id,
+            mediaId: tvShow.id,
+            mediaType: .tv
+        )
+        await runWithFeedback(.watchlist, willBeActive: !wasActive, context: "Toggle Watchlist") {
+            if wasActive,
+               let item = listManager.watchlist.items.first(where: {
+                   $0.mediaId == tvShow.id && $0.mediaType == .tv
+               }) {
+                try await listManager.removeFromList(listId: listManager.watchlist.id, itemId: item.id)
+            } else if !wasActive {
+                try await listManager.addToList(listId: listManager.watchlist.id, movie: movie, mediaType: .tv)
+            }
+        }
+    }
     
-    private func handleSeenTap(tvShow: TVShow, movie: Movie) async {
+    private func syncShowSeen() async {
+        guard let tvShow = viewModel.tvShow else { return }
+        let movie = tvShowToMovie(tvShow)
         do {
-            if listManager.isInList(listId: listManager.seenList.id, mediaId: tvShow.id, mediaType: .tv) {
+            if !listManager.isInList(listId: listManager.seenList.id, mediaId: tvShow.id, mediaType: .tv) {
+                try await listManager.addToList(listId: listManager.seenList.id, movie: movie, mediaType: .tv)
+            }
+            if let item = listManager.watchlist.items.first(where: { $0.mediaId == tvShow.id && $0.mediaType == .tv }) {
+                try await listManager.removeFromList(listId: listManager.watchlist.id, itemId: item.id)
+            }
+        } catch {
+            // Non-critical background sync
+        }
+    }
+
+    private func handleSeenTap(tvShow: TVShow, movie: Movie, silent: Bool = false) async {
+        let wasActive = listManager.isInList(listId: listManager.seenList.id, mediaId: tvShow.id, mediaType: .tv)
+        let mutation: () async throws -> Void = {
+            if wasActive {
                 if let item = listManager.seenList.items.first(where: { $0.mediaId == tvShow.id && $0.mediaType == .tv }) {
                     try await listManager.removeFromList(listId: listManager.seenList.id, itemId: item.id)
+                    EpisodeSeenManager.shared.unmarkShowSeen(showId: tvShow.id)
                 }
             } else {
                 try await listManager.addToList(listId: listManager.seenList.id, movie: movie, mediaType: .tv)
             }
-        } catch {
-            ErrorHandler.shared.handle(error, context: "Toggle Seen")
         }
+
+        // "Segna tutta la serie" ha già il suo toast: qui non se ne apre un secondo.
+        guard !silent else {
+            do { try await mutation() } catch {
+                ErrorHandler.shared.handle(error, context: "Toggle Seen")
+            }
+            return
+        }
+
+        await runWithFeedback(.seen, willBeActive: !wasActive, context: "Toggle Seen", mutation)
     }
     
     private func handleLikedTap(tvShow: TVShow, movie: Movie) async {
-        do {
-            let isCurrentlyLiked = listManager.isInList(listId: listManager.likedList.id, mediaId: tvShow.id, mediaType: .tv)
-            let isCurrentlyDisliked = listManager.isInList(listId: listManager.dislikedList.id, mediaId: tvShow.id, mediaType: .tv)
-            
+        let isCurrentlyLiked = listManager.isInList(listId: listManager.likedList.id, mediaId: tvShow.id, mediaType: .tv)
+        let isCurrentlyDisliked = listManager.isInList(listId: listManager.dislikedList.id, mediaId: tvShow.id, mediaType: .tv)
+
+        await runWithFeedback(.liked, willBeActive: !isCurrentlyLiked, context: "Toggle Liked") {
             if isCurrentlyLiked {
                 // Remove like
                 if let item = listManager.likedList.items.first(where: { $0.mediaId == tvShow.id && $0.mediaType == .tv }) {
@@ -330,16 +427,37 @@ struct TVShowDetailView: View {
                     newReaction: .like
                 )
             }
+        }
+    }
+
+    /// Avvolge la mutazione nel ciclo del toast: fase in corso mentre l'operazione gira, poi
+    /// l'esito. Prima partiva un toast già terminale e la barra di avanzamento non si vedeva mai.
+    private func runWithFeedback(
+        _ action: MediaDetailFeedback.Action,
+        willBeActive: Bool,
+        context: String,
+        _ operation: () async throws -> Void
+    ) async {
+        let toastId = ToastCenter.shared.begin(
+            message: MediaDetailFeedback.progressKey(for: action, isActive: willBeActive).localized
+        )
+        do {
+            try await operation()
+            ToastCenter.shared.complete(
+                toastId,
+                message: MediaDetailFeedback.messageKey(for: action, isActive: willBeActive).localized
+            )
         } catch {
-            ErrorHandler.shared.handle(error, context: "Toggle Liked")
+            ToastCenter.shared.fail(toastId, message: "common.pleaseTryAgain".localized)
+            ErrorHandler.shared.handle(error, context: context)
         }
     }
     
     private func handleDislikedTap(tvShow: TVShow, movie: Movie) async {
-        do {
-            let isCurrentlyLiked = listManager.isInList(listId: listManager.likedList.id, mediaId: tvShow.id, mediaType: .tv)
-            let isCurrentlyDisliked = listManager.isInList(listId: listManager.dislikedList.id, mediaId: tvShow.id, mediaType: .tv)
-            
+        let isCurrentlyLiked = listManager.isInList(listId: listManager.likedList.id, mediaId: tvShow.id, mediaType: .tv)
+        let isCurrentlyDisliked = listManager.isInList(listId: listManager.dislikedList.id, mediaId: tvShow.id, mediaType: .tv)
+
+        await runWithFeedback(.disliked, willBeActive: !isCurrentlyDisliked, context: "Toggle Disliked") {
             if isCurrentlyDisliked {
                 // Remove dislike
                 if let item = listManager.dislikedList.items.first(where: { $0.mediaId == tvShow.id && $0.mediaType == .tv }) {
@@ -367,8 +485,6 @@ struct TVShowDetailView: View {
                     newReaction: .dislike
                 )
             }
-        } catch {
-            ErrorHandler.shared.handle(error, context: "Toggle Disliked")
         }
     }
     
@@ -420,11 +536,6 @@ struct TVShowDetailView: View {
         }
     }
     
-    private func handleFilmographySelection(_ credit: PersonCredit) {
-        selectedActor = nil
-        filmographySelection = FilmographySelection(mediaType: credit.mediaType, mediaId: credit.id)
-    }
-
     private func handleWhyForMeTap() {
         guard appState.isAuthenticated else {
             showAuthGate = true
@@ -439,7 +550,7 @@ struct TVShowDetailView: View {
         }
 
         showWhyForMeSheet = true
-        if viewModel.whyForMeMessage?.isEmpty != false {
+        if viewModel.whyForMeAnalysis == nil {
             Task { await viewModel.generateWhyForMe() }
         }
     }
@@ -518,18 +629,38 @@ struct TVShowDetailHeaderView: View {
 
 struct TVShowInfoSection: View {
     let tvShow: TVShow
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 16) {
-                if let year = tvShow.year {
-                    Text(year)
+            // Metadata row: seasons · year range | rating% (n ratings)
+            HStack(spacing: 0) {
+                if let count = tvShow.numberOfSeasons {
+                    Text("\(count) \(count == 1 ? "season" : "seasons")")
+                        .font(.system(size: 14))
+                        .foregroundColor(.theme.textSecondary)
+
+                    if let range = tvShow.airYearRange {
+                        Image(systemName: "circle.fill")
+                            .font(.system(size: 3))
+                            .foregroundColor(Color.white.opacity(0.4))
+                            .padding(.horizontal, 6)
+                        Text(range)
+                            .font(.system(size: 14))
+                            .foregroundColor(.theme.textSecondary)
+                    }
+                } else if let range = tvShow.airYearRange {
+                    Text(range)
                         .font(.system(size: 14))
                         .foregroundColor(.theme.textSecondary)
                 }
-                
+
+                Rectangle()
+                    .fill(Color.white.opacity(0.2))
+                    .frame(width: 1, height: 12)
+                    .padding(.horizontal, 10)
+
                 HStack(spacing: 4) {
-                    Text("\(Int(tvShow.voteAverage * 10))%")
+                    Text("\(tvShow.ratingPercentage)%")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(.theme.accentOrange)
                     Text("(\(tvShow.voteCount) \("movieDetail.ratings".localized))")
@@ -537,11 +668,11 @@ struct TVShowInfoSection: View {
                         .foregroundColor(.theme.textSecondary)
                 }
             }
-            
+
             Text(tvShow.name)
                 .font(.system(size: 28, weight: .bold))
                 .foregroundColor(.theme.textPrimary)
-            
+
             if !tvShow.overview.isEmpty {
                 Text(tvShow.overview)
                     .font(.system(size: 14))
@@ -555,40 +686,36 @@ struct TVShowInfoSection: View {
 }
 
 struct TVShowCreditsSection: View {
+    let director: Crew?
     let cast: [Cast]
     let tvShow: TVShow
     let onActorTap: (Cast) -> Void
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 16) {
                 Text("movieDetail.information".localized)
                     .font(.system(size: 20, weight: .bold))
                     .foregroundColor(.theme.textPrimary)
-                
+
                 VStack(alignment: .leading, spacing: 12) {
-                    InfoRow(title: "Rating", value: "\(Int(tvShow.voteAverage * 10))%")
-                    
-                    if let genres = tvShow.genres, !genres.isEmpty {
-                        InfoRow(title: "Genres", value: genres.map { $0.name }.joined(separator: ", "))
-                    }
-                    
-                    if let countries = tvShow.productionCountries, !countries.isEmpty {
-                        InfoRow(title: "Country", value: countries.first?.name ?? "")
+                    ForEach(TVShowCreditsInfoBuilder.rows(tvShow: tvShow, director: director), id: \.titleKey) { row in
+                        InfoRow(title: row.titleKey.localized, value: row.value, isItalic: row.isItalic)
                     }
                 }
             }
             .padding(.horizontal, 20)
-            
+
             if !cast.isEmpty {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("movieDetail.cast".localized)
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(.theme.textPrimary)
                         .padding(.horizontal, 20)
-                    
+
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 12) {
+                        // Pigro: il cast completo di una serie lunga sono centinaia di schede.
+                        LazyHStack(spacing: 12) {
                             ForEach(cast) { actor in
                                 CastMemberCard(actor: actor) {
                                     onActorTap(actor)
@@ -605,18 +732,21 @@ struct TVShowCreditsSection: View {
 
 struct SimilarTVShowsSection: View {
     let tvShows: [TVShow]
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("movieDetail.similar".localized)
                 .font(.system(size: 20, weight: .bold))
                 .foregroundColor(.theme.textPrimary)
                 .padding(.horizontal, 20)
-            
+
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
                     ForEach(tvShows) { show in
-                        TVShowCard(tvShow: show)
+                        NavigationLink(destination: TVShowDetailView(tvShowId: show.id)) {
+                            TVShowCard(tvShow: show)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
                 .padding(.horizontal, 20)
@@ -627,20 +757,20 @@ struct SimilarTVShowsSection: View {
 
 struct TVShowCard: View {
     let tvShow: TVShow
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            CachedAsyncImage(url: tvShow.posterURL)
+            CachedAsyncImage(url: tvShow.posterURL, maxPixelSize: 630)
                 .aspectRatio(contentMode: .fill)
                 .frame(width: 140, height: 210)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
-            
+
             Text(tvShow.name)
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(.theme.textPrimary)
                 .lineLimit(2)
                 .frame(width: 140, alignment: .leading)
-            
+
             HStack(spacing: 4) {
                 Image(systemName: "star.fill")
                     .font(.system(size: 10))
@@ -649,6 +779,199 @@ struct TVShowCard: View {
                     .font(.system(size: 12))
                     .foregroundColor(.theme.textSecondary)
             }
+        }
+    }
+}
+
+// MARK: - Seasons Carousel
+
+struct SeasonsCarouselSection: View {
+    let seasons: [Season]
+    let showId: Int
+    let showName: String
+    let showBackdropPath: String?
+    let showPosterPath: String?
+    let tvShow: TVShow?
+    let cast: [Cast]
+    let director: Crew?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("tvDetail.seasonsTitle".localized)
+                .font(.system(size: 20, weight: .bold))
+                .foregroundColor(.theme.textPrimary)
+                .padding(.horizontal, 20)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(seasons) { season in
+                        NavigationLink(destination: SeasonDetailView(
+                            showId: showId,
+                            seasonNumber: season.seasonNumber,
+                            showName: showName,
+                            showBackdropPath: showBackdropPath,
+                            showPosterPath: showPosterPath,
+                            tvShow: tvShow,
+                            cast: cast,
+                            director: director
+                        )) {
+                            SeasonCard(season: season)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 20)
+            }
+        }
+    }
+}
+
+// MARK: - Mark All Seen Confirmation
+
+struct MarkAllSeenConfirmationSheet: View {
+    let posterURL: URL?
+    let showName: String
+    let seasonCount: Int
+    let episodeCount: Int
+    let onConfirm: () -> Void
+    let onCancel: () -> Void
+
+    var body: some View {
+        VWModalSheet(
+            title: "tvDetail.markAllSeenTitle".localized,
+            subtitle: "tvDetail.markAllSeenSubtitle".localized,
+            onClose: onCancel,
+            primaryTitle: String(format: "tvDetail.markAllSeenCTA".localized, episodeCount),
+            primaryAction: onConfirm,
+            secondaryTitle: "common.cancel".localized,
+            secondaryAction: onCancel
+        ) {
+            VStack(spacing: 14) {
+                showCard
+                summaryCard
+                reversibleNote
+            }
+        }
+    }
+
+    private var showCard: some View {
+        HStack(spacing: 14) {
+            Group {
+                if let posterURL {
+                    CachedAsyncImage(url: posterURL, maxPixelSize: 300)
+                        .aspectRatio(contentMode: .fill)
+                } else {
+                    Color.white.opacity(0.08)
+                }
+            }
+            .frame(width: 52, height: 76)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(showName)
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundColor(.theme.textPrimary)
+                    .lineLimit(2)
+
+                Text(subtitleCounts)
+                    .font(.system(size: 14))
+                    .foregroundColor(.theme.textSecondary)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(14)
+        .background(RoundedRectangle(cornerRadius: 17).fill(Color.white.opacity(0.065)))
+        .overlay(
+            RoundedRectangle(cornerRadius: 17)
+                .stroke(Color.white.opacity(0.07), lineWidth: 1)
+        )
+    }
+
+    private var subtitleCounts: String {
+        let seasons = String(format: "tvDetail.seasonsCount".localized, seasonCount)
+        let episodes = String(format: "tvDetail.episodesCount".localized, episodeCount)
+        return "\(seasons) · \(episodes)"
+    }
+
+    private var summaryCard: some View {
+        // La riga "esperienza guadagnata" della reference non c'è: la gamification non espone
+        // un XP per episodio visto, e un numero inventato sarebbe peggio di una riga in meno.
+        VStack(spacing: 18) {
+            VWModalSummaryRow(
+                icon: "checkmark",
+                iconColor: .green,
+                title: "tvDetail.markAllSeen.episodes".localized,
+                value: "\(episodeCount)",
+                valueColor: .green
+            )
+            VWModalSummaryRow(
+                icon: "line.3.horizontal",
+                iconColor: .theme.textSecondary,
+                title: "tvDetail.markAllSeen.diary".localized,
+                value: String(format: "tvDetail.seasonsCount".localized, seasonCount)
+            )
+        }
+        .padding(16)
+        .background(RoundedRectangle(cornerRadius: 17).fill(Color.white.opacity(0.065)))
+    }
+
+    private var reversibleNote: some View {
+        HStack(spacing: 9) {
+            Image(systemName: "arrow.counterclockwise")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(.theme.textSecondary)
+            Text("tvDetail.markAllSeenReversible".localized)
+                .font(.system(size: 13))
+                .foregroundColor(.theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+        }
+    }
+}
+
+struct SeasonCard: View {
+    let season: Season
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ZStack(alignment: .topLeading) {
+                if let url = season.posterURL {
+                    CachedAsyncImage(url: url, maxPixelSize: 630)
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 140, height: 210)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                } else {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.theme.cardBackground)
+                        .frame(width: 140, height: 210)
+                        .overlay {
+                            Image(systemName: "tv")
+                                .font(.system(size: 32))
+                                .foregroundColor(.theme.textSecondary.opacity(0.5))
+                        }
+                }
+
+                Text("S\(season.seasonNumber)")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(.theme.accentOrange)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 4)
+                    .background(Color.theme.accentOrange.opacity(0.2))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .padding(8)
+            }
+
+            Text(season.name)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(.theme.textPrimary)
+                .lineLimit(1)
+                .frame(width: 140, alignment: .leading)
+
+            Text("\(season.episodeCount) episodes")
+                .font(.system(size: 11))
+                .foregroundColor(.theme.textSecondary)
+                .frame(width: 140, alignment: .leading)
         }
     }
 }

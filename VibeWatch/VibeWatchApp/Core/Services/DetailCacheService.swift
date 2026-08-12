@@ -36,11 +36,13 @@ class DetailCacheService {
         let videosJSON = try? JSONEncoder().encode(videos).base64EncodedString()
         let providersJSON = try? JSONEncoder().encode(watchProviders).base64EncodedString()
         let similarJSON = try? JSONEncoder().encode(similarMovies).base64EncodedString()
+        let modelJSON = try? JSONEncoder().encode(movie).base64EncodedString()
 
         let values: [String: Any] = [
             "id": UUID().uuidString,
             "media_id": movie.id,
             "media_type": "movie",
+            "model_json": modelJSON ?? "",
             "title": movie.title,
             "overview": movie.overview,
             "poster_path": movie.posterPath ?? "",
@@ -130,11 +132,13 @@ class DetailCacheService {
         let videosJSON = try? JSONEncoder().encode(videos).base64EncodedString()
         let providersJSON = try? JSONEncoder().encode(watchProviders).base64EncodedString()
         let similarJSON = try? JSONEncoder().encode(similarShows).base64EncodedString()
+        let modelJSON = try? JSONEncoder().encode(tvShow).base64EncodedString()
 
         let values: [String: Any] = [
             "id": UUID().uuidString,
             "media_id": tvShow.id,
             "media_type": "tv",
+            "model_json": modelJSON ?? "",
             "title": tvShow.name,
             "overview": tvShow.overview,
             "poster_path": tvShow.posterPath ?? "",
@@ -204,13 +208,26 @@ class DetailCacheService {
         return try parseCachedTVShowDetail(from: row)
     }
 
+    // MARK: - Cache Invalidation
+
+    /// Clears all cached detail entries. Called when the app language changes so the next
+    /// TMDB fetch returns titles and overviews in the new locale.
+    func clearAll() async {
+        _ = try? await db.delete("detail_cache", where: "1 = 1", parameters: [], hard: true)
+        Logger.debug("[DetailCache] Cleared all entries (locale change)")
+    }
+
     // MARK: - Parsing Helpers
 
     private func parseCachedMovieDetail(from row: [String: Any]) throws -> CachedMovieDetail {
         let genresString = row["genres"] as? String ?? ""
         let genreIds = genresString.split(separator: ",").compactMap { Int($0) }
 
-        let movie = Movie(
+        // Il modello intero, quando c'è: le righe scritte prima della migration 8 non ce l'hanno
+        // e ricadono sulla ricostruzione colonna per colonna (che perde i campi non colonnati).
+        let decoded = decodeFromBase64(row["model_json"] as? String, as: Movie.self)
+
+        let movie = decoded ?? Movie(
             id: row["media_id"] as? Int ?? 0,
             title: row["title"] as? String ?? "",
             overview: row["overview"] as? String ?? "",
@@ -252,7 +269,9 @@ class DetailCacheService {
         let genresString = row["genres"] as? String ?? ""
         let genreIds = genresString.split(separator: ",").compactMap { Int($0) }
 
-        let tvShow = TVShow(
+        let decoded = decodeFromBase64(row["model_json"] as? String, as: TVShow.self)
+
+        let tvShow = decoded ?? TVShow(
             id: row["media_id"] as? Int ?? 0,
             name: row["title"] as? String ?? "",
             overview: row["overview"] as? String ?? "",
@@ -268,7 +287,14 @@ class DetailCacheService {
             status: nil,
             tagline: nil,
             productionCountries: nil,
-            imdbId: row["imdb_id"] as? String
+            imdbId: row["imdb_id"] as? String,
+            numberOfSeasons: nil,
+            episodeRunTime: nil,
+            lastAirDate: nil,
+            numberOfEpisodes: nil,
+            inProduction: nil,
+            seasons: nil,
+            nextEpisodeToAir: nil
         )
 
         // Decode complex objects
@@ -297,12 +323,74 @@ class DetailCacheService {
         return try? JSONDecoder().decode(T.self, from: data)
     }
 
+    // MARK: - TV Season Cache
+
+    func cacheTVSeason(_ season: SeasonDetail, showId: Int, seasonNumber: Int) async throws {
+        let now = Date()
+        let expiresAt = now.addingTimeInterval(cacheExpiration)
+        let formatter = ISO8601DateFormatter()
+
+        let seasonJSON = try? JSONEncoder().encode(season).base64EncodedString()
+        let mediaType = "tv_season_\(seasonNumber)"
+
+        let values: [String: Any] = [
+            "id": UUID().uuidString,
+            "media_id": showId,
+            "media_type": mediaType,
+            "title": season.name,
+            "overview": season.overview,
+            "poster_path": season.posterPath ?? "",
+            "backdrop_path": "",
+            "release_date": season.airDate ?? "",
+            "vote_average": season.voteAverage,
+            "vote_count": season.episodeCount,
+            "runtime": seasonNumber,
+            "genres": "",
+            "credits_json": seasonJSON ?? "",
+            "videos_json": "",
+            "providers_json": "",
+            "similar_json": "",
+            "imdb_id": "",
+            "cached_at": formatter.string(from: now),
+            "expires_at": formatter.string(from: expiresAt)
+        ]
+
+        let existing = try await db.queryRaw("""
+            SELECT id FROM detail_cache
+            WHERE media_id = ? AND media_type = ?
+        """, parameters: [showId, mediaType])
+
+        if let existingId = existing.first?["id"] as? String {
+            var updateValues = values
+            updateValues["deleted_at"] = NSNull()
+            try await db.update("detail_cache", values: updateValues, where: "id = ?", parameters: [existingId])
+            Logger.debug("[DetailCache] Updated cached season \(seasonNumber) for show \(showId)")
+        } else {
+            _ = try await db.insert("detail_cache", values: values)
+            Logger.debug("[DetailCache] Cached season \(seasonNumber) for show \(showId)")
+        }
+    }
+
+    func getCachedTVSeason(showId: Int, seasonNumber: Int) async throws -> SeasonDetail? {
+        let now = ISO8601DateFormatter().string(from: Date())
+        let mediaType = "tv_season_\(seasonNumber)"
+
+        let rows = try await db.queryRaw("""
+            SELECT * FROM detail_cache
+            WHERE media_id = ? AND media_type = ?
+            AND expires_at > ? AND deleted_at IS NULL
+        """, parameters: [showId, mediaType, now])
+
+        guard let row = rows.first else { return nil }
+        return decodeFromBase64(row["credits_json"] as? String, as: SeasonDetail.self)
+    }
+
     // MARK: - Cache Management
 
     /// Clear expired cache entries
     func clearExpiredCache() async throws {
         let now = ISO8601DateFormatter().string(from: Date())
-        _ = try await db.queryRaw("""
+        try await db.executeWrite("""
             UPDATE detail_cache
             SET deleted_at = ?
             WHERE expires_at <= ? AND deleted_at IS NULL
@@ -314,7 +402,7 @@ class DetailCacheService {
     /// Clear all cached details
     func clearAllCache() async throws {
         let now = ISO8601DateFormatter().string(from: Date())
-        _ = try await db.queryRaw("""
+        try await db.executeWrite("""
             UPDATE detail_cache
             SET deleted_at = ?
             WHERE deleted_at IS NULL

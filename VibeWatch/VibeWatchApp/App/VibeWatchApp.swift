@@ -11,9 +11,18 @@ struct VibeWatchApp: App {
     @StateObject private var appNavigationManager = AppNavigationManager.shared
     @StateObject private var authService = AuthService.shared
     @StateObject private var quotaManager = DailyQuotaManager.shared
-    @StateObject private var dependencies = DependencyContainer.shared
     
     init() {
+        // Per prima cosa, prima di qualunque consumatore: una chiave mancante non si presenta come
+        // errore di configurazione ma come sintomo lontano — TMDB 401 e Scopri bianca, oppure
+        // RevenueCat "Invalid API Key" due righe piu' sotto. Elencarle qui e' la differenza fra
+        // cinque secondi e un pomeriggio.
+        //
+        // In Release questo non lascia traccia visibile: `Logger` e' interamente dentro
+        // `#if DEBUG`. Se un giorno serve accorgersene anche in produzione, il posto giusto e'
+        // qui, mandando `problems` a Crashlytics come non-fatal.
+        Config.validateAtLaunch()
+
         // Configure RevenueCat with appropriate log level
         RevenueCatService.shared.applyCurrentLogLevel()
         Purchases.configure(withAPIKey: Config.revenueCatAPIKey)
@@ -35,15 +44,18 @@ struct VibeWatchApp: App {
                 .environmentObject(appNavigationManager)
                 .environmentObject(authService)
                 .environmentObject(quotaManager)
-                .environmentObject(dependencies)
                 .preferredColorScheme(.dark)
                 .task {
                     // SyncEngine automatically handles periodic syncs via state machine
                     Logger.info("[App] SyncEngine initialized")
                 }
                 .onOpenURL { url in
-                    // Handle deep links from URL schemes (e.g., OAuth)
                     Logger.info("[App] Deep link received via URL (SwiftUI): \(url.absoluteString)")
+                    // SPEC v3 §9.4: gli universal link (https, host nostro) prima dello scheme
+                    // OAuth. `handle` risponde false senza effetti se l'URL non è una rotta
+                    // nostra, quindi il ramo OAuth vede esattamente ciò che vedeva prima.
+                    if appNavigationManager.handle(universalLink: url) { return }
+                    // Handle deep links from URL schemes (e.g., OAuth)
                     Task {
                         do {
                             try await AuthService.shared.handleAuthCallback(url: url)
@@ -57,6 +69,13 @@ struct VibeWatchApp: App {
                 .fullScreenCover(item: $appState.updateRequirement) { requirement in
                     UpdateRequiredView(requirement: requirement)
                 }
+                // §3.7: "richiesta di conferma al primo accesso". Uno `sheet` e non un
+                // `fullScreenCover`: chi rimanda deve poterla chiudere, e la ritrova al prossimo
+                // avvio. Una schermata da cui non si esce e' una trappola, e questa app ne ha gia'
+                // avuta una.
+                .sheet(isPresented: $appState.showUsernameSetup) {
+                    UsernameSetupView { appState.showUsernameSetup = false }
+                }
         }
     }
 }
@@ -67,12 +86,19 @@ class AppState: ObservableObject {
     
     @Published var isAuthenticated = false
     @Published var currentUser: User?
+    /// Deprecati: i toast passano dal `ToastCenter` (finestra dedicata, visibile sopra sheet e cover).
+    @available(*, deprecated, message: "Usa ToastCenter.shared")
     @Published var showSuccessToast = false
+    @available(*, deprecated, message: "Usa ToastCenter.shared")
     @Published var showErrorToast = false
+    @available(*, deprecated, message: "Usa ToastCenter.shared")
     @Published var toastMessage = ""
     @Published var isPreloading = true // Track splash state
     @Published var shouldShowSignIn = false // Trigger for redirecting to sign in flow
     @Published var updateRequirement: UpdateRequirement?
+    /// §3.7. Vero quando l'utente non ha uno username, oppure ne ha uno che gli abbiamo assegnato
+    /// noi col backfill e che non ha mai confermato.
+    @Published var showUsernameSetup = false
     
     private let authService: AuthService
     private let dataCoordinator = DataCoordinator.shared
@@ -119,8 +145,6 @@ class AppState: ObservableObject {
             // Check and execute daily prefetch for PRO users
             await DailyContentPrefetchService.shared.checkAndExecuteDailyPrefetch()
 
-            // Schedule smart notifications on app launch (background tasks are unreliable)
-            await scheduleSmartNotificationsIfNeeded()
         }
 
         NotificationCenter.default.addObserver(
@@ -134,9 +158,15 @@ class AppState: ObservableObject {
                 // CRITICAL: Sync user data when returning to foreground
                 await self?.performSyncOnForegroundResume()
 
-                // Also check for notifications when returning to foreground
-                await self?.scheduleSmartNotificationsIfNeeded()
             }
+        }
+
+        NotificationCenter.default.addObserver(
+            forName: .importJobCompleted,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { await self?.handleImportCompleted() }
         }
     }
 
@@ -161,9 +191,6 @@ class AppState: ObservableObject {
 
         Logger.info("[AppState] Performing full sync on app launch...")
 
-        // Check onboarding state from profile first
-        await checkOnboardingFromProfile()
-
         // Sync gamification state first (XP, level, streak, badges)
         await GamificationService.shared.loadUserState(userId: userId)
 
@@ -173,8 +200,22 @@ class AppState: ObservableObject {
         // Unblock any PGRST205-stuck operations from previous sessions before pushing
         SyncEngine.shared.unblockAndRetryBlockedOperations()
 
-        // Process any pending outbox operations
-        await SyncEngine.shared.pushPendingChanges()
+        // Push + PULL. Questo si chiama "full sync" da sempre ma faceva solo push: lo specchio
+        // locale (tracking, liste, eventi) si riempiva soltanto al sink del NetworkMonitor —
+        // di fatto una volta per processo, mai su richiesta. Il pull mette il tracking in
+        // testa e notifica le view appena quelle tabelle sono dentro.
+        await SyncEngine.shared.performFullSync(trigger: .appLaunch)
+
+        // SPEC v3 blocco 7: lo storico di chi usava VibeWatch prima del tracking nuovo vive in
+        // UserDefaults e nelle liste, e `watch_events` per lui e' vuota — cioe' la schermata
+        // Tracking e' vuota. Va dopo il sync delle liste, che e' una delle sorgenti che legge.
+        // Una tantum, con flag in app_metadata: dopo la prima volta costa una SELECT.
+        await LegacyTrackingMigration.shared.runIfNeeded(userId: userId)
+
+        // SPEC v3 §3.7. La domanda la fa il server: `username_confirmed_at` nullo significa
+        // "assegnato dal backfill e mai visto da chi lo porta". Un flag locale si perderebbe alla
+        // reinstallazione e la schermata ricomparirebbe a chi aveva gia' scelto.
+        showUsernameSetup = await UsernameSetupViewModel.isNeeded()
 
         Logger.info("[AppState] Full sync completed on app launch")
     }
@@ -204,69 +245,36 @@ class AppState: ObservableObject {
         // Sync lists
         await ListManager.shared.syncListsForAuthenticatedUser()
 
-        // Process pending outbox
-        await SyncEngine.shared.pushPendingChanges()
+        // Push + pull, come al lancio: un altro device (o un import concluso mentre l'app era
+        // in background) deve arrivare sullo schermo al rientro, non al prossimo cold start.
+        // Il throttle da 2 minuti qui sopra tiene il costo sotto controllo.
+        await SyncEngine.shared.performFullSync(trigger: .foregroundResume)
 
         Logger.info("[AppState] Foreground sync completed")
     }
 
-    /// Check if user completed onboarding on another device
-    private func checkOnboardingFromProfile() async {
-        guard isAuthenticated else { return }
-
-        // If already completed locally, sync to profile if needed
-        if UserDefaults.standard.bool(forKey: "hasCompletedOnboarding") {
-            // Ensure it's synced to profile
-            Task {
-                do {
-                    try await SupabaseService.shared.updateUserProfile([
-                        "onboarding_completed": true,
-                        "onboarding_completed_at": ISO8601DateFormatter().string(from: Date())
-                    ])
-                } catch {
-                    Logger.warning("[AppState] Failed to sync onboarding state: \(error)")
-                }
-            }
-            return
-        }
-
-        // Check if completed on another device
-        do {
-            if let profile = try await SupabaseService.shared.fetchUserProfile(),
-               let completed = profile["onboarding_completed"] as? Bool,
-               completed {
-                UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
-                Logger.info("[AppState] Onboarding already completed on another device")
-            }
-        } catch {
-            Logger.warning("[AppState] Failed to check onboarding from profile: \(error)")
-        }
+    /// Chiamata dopo un login riuscito (email, Apple o Google): stesso giro completo del
+    /// lancio. Un account appena entrato ha lo specchio locale vuoto — senza questo pull
+    /// immediato Tracking e Scopri restavano vuoti per minuti, finché un evento di rete
+    /// qualsiasi non faceva ripartire il sync.
+    func syncAfterSignIn() {
+        Task { await performFullSyncOnLaunch() }
     }
 
-    /// Schedule smart notifications when user is authenticated
-    /// Called on app launch and when returning to foreground
-    private func scheduleSmartNotificationsIfNeeded() async {
-        guard let userId = currentUser?.id else {
-            Logger.debug("[AppState] Skipping notification check - no authenticated user")
-            return
-        }
-
-        // Throttle: Only run once per 30 minutes
-        let lastRunKey = "lastSmartNotificationCheck"
-        let lastRun = UserDefaults.standard.double(forKey: lastRunKey)
-        let now = Date().timeIntervalSince1970
-        let thirtyMinutes: TimeInterval = 30 * 60
-
-        if now - lastRun < thirtyMinutes {
-            Logger.debug("[AppState] Skipping notification check - ran recently")
-            return
-        }
-
-        UserDefaults.standard.set(now, forKey: lastRunKey)
-        Logger.info("[AppState] Triggering smart notification check for user: \(userId)")
-
-        await NotificationBackgroundTask.shared.triggerImmediately()
+    /// Dopo un import concluso: pull immediato dello specchio locale e caroselli da rifare.
+    /// I caroselli di oggi sono stati generati su un profilo che lo storico appena importato
+    /// non lo aveva ancora — senza invalidazione resterebbero congelati fino a mezzanotte.
+    private func handleImportCompleted() async {
+        await SyncEngine.shared.performFullSync(trigger: .manualRefresh)
+        await DiscoveryPersonalizationService.shared.invalidateCache(userId: currentUser?.id)
     }
+
+    // P5 (SPEC v3): `checkOnboardingFromProfile()` lived here and pretended to sync the onboarding
+    // flag across devices. `profiles` has neither `onboarding_completed` nor
+    // `onboarding_completed_at`, so the write always failed into a Logger.warning and the read
+    // always returned nil. The real flag is UserDefaults["hasCompletedOnboarding"], per-device.
+    // Removed rather than fixed: cross-device onboarding is not a goal, and `profiles` gets
+    // reworked in this same spec (§3.6).
 
     private func checkForRequiredUpdate() async {
         updateRequirement = await UpdateCheckService.shared.checkForRequiredUpdate()
@@ -291,33 +299,21 @@ class AppState: ObservableObject {
         // Initialize app coordinator (background)
         await dataCoordinator.initializeApp()
 
-        // Refresh discovery content if stale (background)
-        if ContentCacheManager.shared.shouldUpdateDiscoveryContent() {
-            Logger.info("[AppState] Refreshing stale discovery content in background...")
-            do {
-                try await DiscoveryCacheService.shared.refreshContent()
-            } catch {
-                Logger.error("[AppState] Failed to refresh discovery content: \(error.localizedDescription)")
-            }
+        // Refresh discovery content in background
+        Logger.info("[AppState] Refreshing discovery content in background...")
+        do {
+            try await DiscoveryCacheService.shared.refreshContent()
+        } catch {
+            Logger.error("[AppState] Failed to refresh discovery content: \(error.localizedDescription)")
         }
 
         // Phase 4: Preload images for instant display
         await preloadDiscoveryImages()
 
-        // Pre-warm personalization cache (background, low priority)
-        Task(priority: .utility) { [self] in
-            guard !self.carouselsGeneratedThisLaunch else { return }
-            self.carouselsGeneratedThisLaunch = true
-            let profile = await UserPreferenceManager.shared.aggregatePreferences()
-            do {
-                _ = try await DiscoveryPersonalizationService.shared.generatePersonalizedCarousels(
-                    userProfile: profile,
-                    forceRefresh: false
-                )
-            } catch {
-                Logger.error("[AppState] Failed to generate personalized carousels: \(error.localizedDescription)")
-            }
-        }
+        // Niente pre-warm dei caroselli qui: la DiscoveryView è il tab 0 e parte comunque al
+        // lancio con lo stesso generatore. La seconda passata "di riscaldamento" non dedupava
+        // con quella della view (carouselsGeneratedThisLaunch proteggeva solo da se stessa):
+        // a cache scaduta erano ~100 richieste TMDB DOPPIE, in gara sullo stesso throttle.
     }
 
     // MARK: - Image Preloading (Phase 4)
@@ -336,24 +332,6 @@ class AppState: ObservableObject {
 
         // Collect poster URLs from cached content
         var posterURLs: [String] = []
-
-        // From cached movies
-        if let movies = ContentCacheManager.shared.getCachedDiscoveryMovies() {
-            let moviePosters = movies.prefix(20).compactMap { movie -> String? in
-                guard let posterPath = movie.posterPath else { return nil }
-                return "https://image.tmdb.org/t/p/w342\(posterPath)"
-            }
-            posterURLs.append(contentsOf: moviePosters)
-        }
-
-        // From cached TV shows
-        if let tvShows = ContentCacheManager.shared.getCachedDiscoveryTVShows() {
-            let tvPosters = tvShows.prefix(10).compactMap { show -> String? in
-                guard let posterPath = show.posterPath else { return nil }
-                return "https://image.tmdb.org/t/p/w342\(posterPath)"
-            }
-            posterURLs.append(contentsOf: tvPosters)
-        }
 
         // From cached clips (thumbnails)
         let clipThumbnails = ContentCacheManager.shared.cachedClips.prefix(10).compactMap { clip -> String? in

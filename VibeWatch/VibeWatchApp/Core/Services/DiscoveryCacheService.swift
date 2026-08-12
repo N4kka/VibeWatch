@@ -234,10 +234,17 @@ class DiscoveryCacheService {
             status: nil,
             tagline: nil,
             productionCountries: nil,
-            imdbId: nil
+            imdbId: nil,
+            numberOfSeasons: nil,
+            episodeRunTime: nil,
+            lastAirDate: nil,
+            numberOfEpisodes: nil,
+            inProduction: nil,
+            seasons: nil,
+            nextEpisodeToAir: nil
         )
     }
-    
+
     // MARK: - Daily Randomization Logic
     
     private func shouldRandomizeToday() -> Bool {
@@ -260,7 +267,7 @@ class DiscoveryCacheService {
         
         do {
             // Clear old cache first
-            _ = try await db.queryRaw("DELETE FROM discovery_cache")
+            try await db.executeWrite("DELETE FROM discovery_cache")
             Logger.debug("[DiscoveryCache] Cleared old local cache")
             
             // Helper to convert genre IDs array to JSON string
@@ -475,7 +482,14 @@ struct DiscoveryCacheRow: Codable {
             status: nil,
             tagline: nil,
             productionCountries: nil,
-            imdbId: nil
+            imdbId: nil,
+            numberOfSeasons: nil,
+            episodeRunTime: nil,
+            lastAirDate: nil,
+            numberOfEpisodes: nil,
+            inProduction: nil,
+            seasons: nil,
+            nextEpisodeToAir: nil
         )
     }
 }

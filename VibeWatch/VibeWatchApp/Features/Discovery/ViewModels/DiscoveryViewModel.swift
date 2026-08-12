@@ -11,9 +11,26 @@ class DiscoveryViewModel: ObservableObject {
     @Published var isRefreshing = false
     @Published var error: AppError?
     @Published var refreshToken = UUID()
-    
+    @Published var visibleCarouselCount: Int = 11  // hero + initial 10
+    @Published var hasMoreCarousels: Bool = false
+    @Published var isLoadingMore: Bool = false
+
+    private let pageSize = 10
+
+    var visibleCarousels: [PersonalizedCarousel] {
+        Array(personalizedCarousels.prefix(visibleCarouselCount))
+    }
+
     var hasNoContent: Bool {
         personalizedCarousels.isEmpty
+    }
+
+    func loadMoreCarousels() {
+        guard !isLoadingMore, visibleCarouselCount < personalizedCarousels.count else { return }
+        isLoadingMore = true
+        visibleCarouselCount = min(visibleCarouselCount + pageSize, personalizedCarousels.count)
+        hasMoreCarousels = visibleCarouselCount < personalizedCarousels.count
+        isLoadingMore = false
     }
     
     private let preferenceManager: UserPreferenceManager
@@ -33,6 +50,18 @@ class DiscoveryViewModel: ObservableObject {
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter
     }()
+
+    static func prioritizeCarouselOrder(_ carousels: [PersonalizedCarousel]) -> [PersonalizedCarousel] {
+        guard let dailyMixIndex = carousels.firstIndex(where: { $0.type == .dailyMix }),
+              dailyMixIndex != carousels.startIndex else {
+            return carousels
+        }
+
+        var orderedCarousels = carousels
+        let dailyMix = orderedCarousels.remove(at: dailyMixIndex)
+        orderedCarousels.insert(dailyMix, at: orderedCarousels.startIndex)
+        return orderedCarousels
+    }
 
     init(
         quotaManager: DailyQuotaManager = .shared,
@@ -73,11 +102,7 @@ class DiscoveryViewModel: ObservableObject {
     }
 
     func loadContentIfNeeded() async {
-        if shouldReloadForNewDay() {
-            await loadContent(forceRefresh: true)
-        } else {
-            await loadContent(forceRefresh: false)
-        }
+        await loadContent(forceRefresh: false)
     }
 
     /// Load content - uses database cache for instant loading!
@@ -89,9 +114,17 @@ class DiscoveryViewModel: ObservableObject {
             return
         }
 
-        isLoading = hasNoContent && !forceRefresh
+        // Full-screen spinner only on a true cold start with nothing cached (first install).
+        // When any cached rows exist we skip straight to instant paint — the stale-while-revalidate
+        // stream yields the cache immediately, so a spinner would just flash over content.
+        isLoading = hasNoContent && !sqliteService.hasCachedPersonalizedContent()
         isRefreshing = forceRefresh
         error = nil
+
+        // Reset pagination before the stream starts so the first emission renders correctly.
+        if forceRefresh {
+            visibleCarouselCount = 11
+        }
 
         let userId = AuthService.shared.currentUser?.id
         let profile = await preferenceManager.aggregatePreferences()
@@ -104,17 +137,40 @@ class DiscoveryViewModel: ObservableObject {
         ) {
             guard !carousels.isEmpty else { continue }
             generatedCarousels = carousels
-            self.personalizedCarousels = applyGlobalFilters(to: carousels)
+            // Animate only when swapping over existing content (stale → fresh).
+            // First paint (empty → cache) stays instant so cached items appear immediately.
+            let animate = !hasNoContent
+            withAnimation(animate ? .easeInOut(duration: 0.35) : nil) {
+                // MERGE, non sostituzione: la rigenerazione emette parziali (prima il solo
+                // Daily Mix, poi batch da 5) e rimpiazzare l'intera lista faceva collassare
+                // i caroselli in cache a UNO per poi rifarli comparire a ondate. Le parziali
+                // aggiornano/aggiungono; la potatura la fa l'emissione finale, sotto.
+                self.personalizedCarousels = Self.merging(
+                    applyGlobalFilters(to: carousels),
+                    into: self.personalizedCarousels
+                )
+            }
             hasLoadedOnce = true
             isLoading = false
             isRefreshing = false
-            Logger.debug("[DiscoveryViewModel] Loaded \(carousels.count) carousels")
+            hasMoreCarousels = personalizedCarousels.count > visibleCarouselCount
+            Logger.debug("[DiscoveryViewModel] Loaded \(carousels.count) carousels, visible: \(visibleCarouselCount), hasMore: \(hasMoreCarousels)")
+        }
+
+        // Fine dello stream: l'ultima emissione è la verità (stale-while-revalidate). Il merge
+        // qui sopra serviva solo a non far ballare la lista a metà rigenerazione; ora si potano
+        // i caroselli che la generazione finale ha lasciato cadere.
+        if !generatedCarousels.isEmpty {
+            personalizedCarousels = applyGlobalFilters(to: generatedCarousels)
         }
 
         markReloadedForToday()
         isLoading = false
         isRefreshing = false
-        if forceRefresh { refreshToken = UUID() }
+        hasMoreCarousels = personalizedCarousels.count > visibleCarouselCount
+        if forceRefresh {
+            refreshToken = UUID()
+        }
     }
 
     func applyFilters(_ filters: GlobalDiscoveryFilters) {
@@ -128,6 +184,7 @@ class DiscoveryViewModel: ObservableObject {
         globalFilters.save()
 
         personalizedCarousels = applyGlobalFilters(to: generatedCarousels)
+        hasMoreCarousels = personalizedCarousels.count > visibleCarouselCount
         refreshToken = UUID()
 
         Task {
@@ -168,28 +225,59 @@ class DiscoveryViewModel: ObservableObject {
     private func shouldReloadForNewDay() -> Bool {
         let userId = AuthService.shared.currentUser?.id.lowercased() ?? "anon"
         let key = "discovery_last_loaded_day_\(userId)"
-        let todayKey = Self.dayKeyFormatter.string(from: Date())
         let stored = userDefaults.string(forKey: key)
-        return stored != todayKey
+        return stored != todayLocaleKey
     }
 
     private func markReloadedForToday() {
         let userId = AuthService.shared.currentUser?.id.lowercased() ?? "anon"
         let key = "discovery_last_loaded_day_\(userId)"
-        let todayKey = Self.dayKeyFormatter.string(from: Date())
-        userDefaults.set(todayKey, forKey: key)
+        userDefaults.set(todayLocaleKey, forKey: key)
+    }
+
+    private var todayLocaleKey: String {
+        let date = Self.dayKeyFormatter.string(from: Date())
+        let lang = LocalizationManager.shared.currentLanguage.id
+        return "\(date)-\(lang)"
     }
     
+    // MARK: - Merging
+
+    /// Aggiorna/aggiunge i caroselli in arrivo senza rimuovere quelli già a schermo.
+    /// La chiave è tipo+titolo: `type` da solo non basta, due `trendingGenre` di generi
+    /// diversi sono caroselli diversi.
+    private static func merging(
+        _ incoming: [PersonalizedCarousel],
+        into current: [PersonalizedCarousel]
+    ) -> [PersonalizedCarousel] {
+        guard !current.isEmpty else { return incoming }
+        var result = current
+        for carousel in incoming {
+            let key = mergeKey(carousel)
+            if let index = result.firstIndex(where: { mergeKey($0) == key }) {
+                result[index] = carousel
+            } else {
+                result.append(carousel)
+            }
+        }
+        return result
+    }
+
+    private static func mergeKey(_ carousel: PersonalizedCarousel) -> String {
+        carousel.type.rawValue + "|" + carousel.title
+    }
+
     // MARK: - Filtering
 
     private func applyGlobalFilters(to carousels: [PersonalizedCarousel]) -> [PersonalizedCarousel] {
         var filteredCarousels: [PersonalizedCarousel] = []
 
+        let tvOnlyTypes: Set<CarouselType> = [.topTVPicks, .trendingTVWeek, .returningTV]
         for carousel in carousels {
-            if globalFilters.mediaType == .movies, carousel.type == .topTVPicks {
+            if globalFilters.mediaType == .movies, tvOnlyTypes.contains(carousel.type) {
                 continue
             }
-            if globalFilters.mediaType == .tvShows, carousel.type != .topTVPicks {
+            if globalFilters.mediaType == .tvShows, !tvOnlyTypes.contains(carousel.type) {
                 continue
             }
 
@@ -210,7 +298,7 @@ class DiscoveryViewModel: ObservableObject {
                 filteredCarousels.append(
                     PersonalizedCarousel(
                         type: carousel.type,
-                        title: carousel.title,
+                        titleSpec: carousel.titleSpec,
                         items: items,
                         descriptions: carousel.descriptions,
                         reason: carousel.reason
@@ -219,7 +307,7 @@ class DiscoveryViewModel: ObservableObject {
             }
         }
 
-        return filteredCarousels
+        return Self.prioritizeCarouselOrder(filteredCarousels)
     }
 
     private func applyItemFilters(_ items: [Movie]) -> [Movie] {
@@ -314,7 +402,7 @@ class DiscoveryViewModel: ObservableObject {
             return
         }
 
-        let deviceId = UserDefaults.standard.string(forKey: "deviceIdentifier") ?? "unknown"
+        let deviceId = DeviceIdentity.installation
         let now = ISO8601DateFormatter().string(from: Date())
         let recordId = UUID().uuidString
 
@@ -451,7 +539,7 @@ class DiscoveryViewModel: ObservableObject {
             return
         }
 
-        let deviceId = UserDefaults.standard.string(forKey: "deviceIdentifier") ?? "unknown"
+        let deviceId = DeviceIdentity.installation
         let now = ISO8601DateFormatter().string(from: Date())
 
         let mediaType: String? = {

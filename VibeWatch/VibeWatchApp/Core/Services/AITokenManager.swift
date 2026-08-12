@@ -3,7 +3,7 @@ import Combine
 import UIKit
 
 /// Manages AI request quotas and usage tracking.
-/// Enforces daily limits: 5 (Free) vs 20 (Pro).
+/// Enforces daily limits: 5 (Free) vs 10 (Pro).
 @MainActor
 final class AITokenManager: ObservableObject {
     static let shared = AITokenManager()
@@ -15,7 +15,7 @@ final class AITokenManager: ObservableObject {
     private let legacyStorageKey = "vibe_watch_ai_token_usage"
     
     // MARK: - State
-    @Published private(set) var tokensUsedToday: Int = 0
+    @Published private(set) var requestsUsedToday: Int = 0
     @Published private(set) var dailyLimit: Int = 5
     
     private var lastResetDate: Date = Date()
@@ -42,16 +42,16 @@ final class AITokenManager: ObservableObject {
     /// Checks if the user has enough remaining quota for a request.
     func canMakeRequest() -> Bool {
         checkAndResetDaily()
-        return tokensUsedToday < dailyLimit
+        return requestsUsedToday < dailyLimit
     }
     
     /// Updates tokens from a remote source.
-    func syncTokens(_ count: Int) {
+    func syncRequests(_ count: Int) {
         checkAndResetDaily()
         // If we just reset for a new day, ignore older remote counts that might be from "yesterday"
         // unless we know for sure they are for today. 
         // SupabaseService already handles the day boundary check, so we can trust it.
-        self.tokensUsedToday = count
+        self.requestsUsedToday = count
         saveUsage()
     }
     
@@ -59,37 +59,22 @@ final class AITokenManager: ObservableObject {
     func recordUsage(_ tokens: Int = 1) {
         checkAndResetDaily()
         
-        // We now treat each AI message as 1 "token" (request) for simplicity
-        // as requested: 0/5 for free, 0/20 for pro.
-        tokensUsedToday += 1
+        // We treat each AI message as one request for quota purposes.
+        // Remote usage is recorded by the Cerebras proxy after a successful response.
+        requestsUsedToday += 1
         saveUsage()
-        
-        // Sync to Supabase in background
-        if let user = SupabaseService.shared.currentUser {
-            let userIdString = "\(user.id)"
-            if let userId = UUID(uuidString: userIdString) {
-                Task {
-                    let newTotal = try? await SupabaseService.shared.logAITokenUsage(userId: userId, tokensConsumed: 1)
-                    if let newTotal {
-                        await MainActor.run {
-                            self.syncTokens(newTotal)
-                        }
-                    }
-                }
-            }
-        }
     }
     
     /// Returns the remaining requests for today.
-    var remainingTokens: Int {
-        return max(0, dailyLimit - tokensUsedToday)
+    var remainingRequests: Int {
+        return max(0, dailyLimit - requestsUsedToday)
     }
     
     /// Updates the daily limit based on subscription status.
     /// Call this when subscription state changes.
     func updateLimit() {
         let isPro = DailyQuotaManager.shared.isProUser
-        dailyLimit = isPro ? proLimit : freeLimit
+        dailyLimit = EntitlementPolicy.aiDailyLimit(for: isPro ? .pro : .free)
     }
     
     // MARK: - Internal Logic
@@ -111,7 +96,7 @@ final class AITokenManager: ObservableObject {
         let calendar = Calendar.current
         if !calendar.isDateInToday(lastResetDate) {
             Logger.info("[AITokenManager] New day detected. Resetting quota.")
-            tokensUsedToday = 0
+            requestsUsedToday = 0
             lastResetDate = Date()
             saveUsage()
         }
@@ -129,10 +114,14 @@ final class AITokenManager: ObservableObject {
         let userId = SupabaseService.shared.currentUser?.id ?? "anonymous"
         do {
             let sql = """
-                REPLACE INTO user_ai_token_usage (id, user_id, tokens_used_today, last_reset_at, updated_at)
+                INSERT INTO user_ai_token_usage (id, user_id, tokens_used_today, last_reset_at, updated_at)
                 VALUES (?, ?, ?, ?, datetime('now'))
+                ON CONFLICT(user_id) DO UPDATE SET
+                    tokens_used_today = excluded.tokens_used_today,
+                    last_reset_at = excluded.last_reset_at,
+                    updated_at = excluded.updated_at
             """
-            _ = try await db.queryRaw(sql, parameters: [
+            try await db.executeWrite(sql, parameters: [
                 userId, userId, decoded.tokens,
                 ISO8601DateFormatter().string(from: decoded.date)
             ])
@@ -151,7 +140,7 @@ final class AITokenManager: ObservableObject {
                 parameters: [userId]
             )
             if let row = result.first {
-                tokensUsedToday = row["tokens_used_today"] as? Int ?? 0
+                requestsUsedToday = row["tokens_used_today"] as? Int ?? 0
                 if let str = row["last_reset_at"] as? String,
                    let date = ISO8601DateFormatter().date(from: str) {
                     lastResetDate = date
@@ -170,11 +159,15 @@ final class AITokenManager: ObservableObject {
         do {
             let userId = SupabaseService.shared.currentUser?.id ?? "anonymous"
             let sql = """
-                REPLACE INTO user_ai_token_usage (id, user_id, tokens_used_today, last_reset_at, updated_at)
+                INSERT INTO user_ai_token_usage (id, user_id, tokens_used_today, last_reset_at, updated_at)
                 VALUES (?, ?, ?, ?, datetime('now'))
+                ON CONFLICT(user_id) DO UPDATE SET
+                    tokens_used_today = excluded.tokens_used_today,
+                    last_reset_at = excluded.last_reset_at,
+                    updated_at = excluded.updated_at
             """
-            _ = try await db.queryRaw(sql, parameters: [
-                userId, userId, tokensUsedToday,
+            try await db.executeWrite(sql, parameters: [
+                userId, userId, requestsUsedToday,
                 ISO8601DateFormatter().string(from: lastResetDate)
             ])
         } catch {

@@ -71,8 +71,7 @@ struct CheckEmailView: View {
                                 onVerified()
                             } else {
                                 // Maybe show a toast "Still waiting for verification..."
-                                AppState.shared.toastMessage = "auth.verificationPending".localized
-                                AppState.shared.showErrorToast = true
+                                ToastCenter.shared.show(error: "auth.verificationPending".localized)
                             }
                             isChecking = false
                         }
@@ -114,6 +113,14 @@ struct CheckEmailView: View {
                 .padding(.bottom, 40)
             }
         }
+        // Il deep link della mail di conferma stabilisce la sessione senza passare dal
+        // foreground: qui la schermata si chiude appena l'autenticazione diventa vera, invece
+        // di restare aperta fino al prossimo rientro nell'app.
+        .onChange(of: authService.isAuthenticated) { _, isAuthenticated in
+            if isAuthenticated { onVerified() }
+        }
+        // Il polling resta come rete di sicurezza: se il link è stato aperto su un altro
+        // dispositivo, la sessione arriva solo al rientro nell'app.
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
             Task {
                 await authService.checkAuthState()

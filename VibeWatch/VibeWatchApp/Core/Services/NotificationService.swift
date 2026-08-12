@@ -11,28 +11,31 @@ class NotificationService: ObservableObject { // Conform to ObservableObject
     @Published var notificationsEnabled: Bool = false
     @Published private(set) var authorizationStatus: UNAuthorizationStatus = .notDetermined
     private var cachedFCMToken: String?
-    
+    private var tokenObserver: NSObjectProtocol?
+
     private init() {
         Task {
             await refreshAuthorizationStatus()
         }
-    }
-    
-    /// Registers the device's current FCM token with the backend database.
-    /// This function should be called after a user successfully logs in
-    /// and whenever the FCM token is refreshed.
-    func registerDeviceToken() {
-        guard Messaging.messaging().apnsToken != nil else {
-            Logger.debug("[NotificationService] APNS token missing, skipping FCM fetch until available.")
-            return
+        // Observe FCM token refresh events so we re-register whenever the token rotates
+        tokenObserver = NotificationCenter.default.addObserver(
+            forName: Notification.Name("FIRMessagingRegistrationTokenRefreshNotification"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.registerDeviceToken()
         }
+    }
 
+    /// Registers the device's current FCM token with the backend.
+    /// Safe to call even before the APNs token is available — FCM will
+    /// queue the fetch internally and deliver via MessagingDelegate instead.
+    func registerDeviceToken() {
         Messaging.messaging().token { token, error in
             if let error = error {
-                Logger.error("[NotificationService] Error fetching FCM registration token: \(error)")
+                Logger.error("[NotificationService] Error fetching FCM token: \(error)")
                 return
             }
-
             Task { @MainActor in
                 self.processNewFCMToken(token)
             }
@@ -54,14 +57,27 @@ class NotificationService: ObservableObject { // Conform to ObservableObject
     }
 
     func enableNotifications() async -> Bool {
-        let granted = await requestAuthorization()
+        let granted = await requestAuthorizationDecision()
+        await completeNotificationEnablement(afterAuthorization: granted)
+        return granted
+    }
+
+    /// Returns as soon as the native authorization popup has produced a decision.
+    /// Onboarding uses this boundary to advance immediately.
+    func requestAuthorizationDecision() async -> Bool {
+        await requestAuthorization()
+    }
+
+    /// Finishes the non-UI work that follows the native authorization decision.
+    func completeNotificationEnablement(afterAuthorization granted: Bool) async {
         await refreshAuthorizationStatus()
 
         if granted {
             await registerForRemoteNotifications()
+            // Upsert the user's prefs row so the backend knows push is enabled
+            let prefs = NotificationPreferencesView.loadFromDefaults()
+            await syncPreferencesToSupabase(prefs)
         }
-
-        return granted
     }
 
     func disableNotifications() async {
@@ -75,7 +91,7 @@ class NotificationService: ObservableObject { // Conform to ObservableObject
         UIApplication.shared.open(url)
     }
 
-    private func refreshAuthorizationStatus() async {
+    func refreshAuthorizationStatus() async {
         let settings = await fetchNotificationSettings()
         authorizationStatus = settings.authorizationStatus
 
@@ -113,6 +129,59 @@ class NotificationService: ObservableObject { // Conform to ObservableObject
     private func unregisterForRemoteNotifications() async {
         await MainActor.run {
             UIApplication.shared.unregisterForRemoteNotifications()
+        }
+    }
+
+    // MARK: - Preferences sync
+
+    /// Upserts the user's notification preferences to Supabase so the backend
+    /// (process-notifications) can honour them when delivering push messages.
+    func syncPreferencesToSupabase(_ prefs: NotificationPreferences) async {
+        guard let userId = AuthService.shared.currentUser?.id else {
+            Logger.debug("[NotificationService] Not logged in, skipping prefs sync.")
+            return
+        }
+
+        struct PrefsPayload: Encodable {
+            let user_id: String
+            let push_enabled: Bool
+            let new_availability: Bool
+            let new_release: Bool
+            let episode_aired: Bool
+            let continue_watching: Bool
+            let list_milestone: Bool
+            let price_drop: Bool
+            let streak_reminder: Bool
+            let quiet_hours_start: String
+            let quiet_hours_end: String
+            let timezone: String
+            let updated_at: String
+        }
+
+        let payload = PrefsPayload(
+            user_id:           userId,
+            push_enabled:      notificationsEnabled,
+            new_availability:  prefs.enableNewAvailability,
+            new_release:       prefs.enableNewRelease,
+            episode_aired:     prefs.enableEpisodeAired,
+            continue_watching: prefs.enableContinueWatching,
+            list_milestone:    prefs.enableListMilestone,
+            price_drop:        false,
+            streak_reminder:   false,
+            quiet_hours_start: String(format: "%02d:00:00", prefs.quietHoursStart),
+            quiet_hours_end:   String(format: "%02d:00:00", prefs.quietHoursEnd),
+            timezone:          TimeZone.current.identifier,
+            updated_at:        ISO8601DateFormatter().string(from: Date())
+        )
+
+        do {
+            try await SupabaseService.shared.client?
+                .from("user_notification_preferences")
+                .upsert(payload, onConflict: "user_id")
+                .execute()
+            Logger.info("[NotificationService] Notification preferences synced to Supabase.")
+        } catch {
+            Logger.error("[NotificationService] Failed to sync prefs: \(error.localizedDescription)")
         }
     }
 

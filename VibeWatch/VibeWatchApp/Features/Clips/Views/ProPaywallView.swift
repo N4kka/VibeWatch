@@ -24,56 +24,33 @@ struct ProPaywallView: View {
     @State private var transactionListenerTask: Task<Void, Never>?
     
     private var accentColor: Color {
-        Color(red: 1, green: 0.55, blue: 0.2)
+        Color.theme.accentOrange
     }
 
     var body: some View {
-        ZStack(alignment: .topTrailing) {
-            LinearGradient(
-                colors: [
-                    Color(red: 30/255, green: 24/255, blue: 24/255),
-                    Color(red: 14/255, green: 14/255, blue: 16/255)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
-            
-            // Dark background matching new design
-            Color(red: 18/255, green: 18/255, blue: 20/255)
-                .ignoresSafeArea()
-                .onTapGesture { }
+        ZStack {
+            Color.theme.background.ignoresSafeArea()
 
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 0) {
-                    if !isOnboarding {
-                        // Drag indicator
-                        Capsule()
-                            .fill(Color.white.opacity(0.2))
-                            .frame(width: 46, height: 5)
-                            .padding(.top, 14)
-                            .padding(.bottom, 20)
-                    } else {
-                        // Spacer for onboarding to push content down slightly
-                        Color.clear.frame(height: 60)
-                    }
-                    
-                    hero
+                VStack(spacing: 16) {
+                    header
+                        .padding(.top, 8)
 
-                    featuresList
-                        .padding(.top, 24)
-                        .padding(.bottom, 32)
+                    heroCard
 
-                    pricingCards
-                        .padding(.bottom, 24)
+                    featuresCard
+
+                    pricingRow
+                        .padding(.top, 4)
 
                     continueButton
-                        .padding(.bottom, 24)
+                        .padding(.top, 4)
 
                     bottomLinks
-                        .padding(.bottom, 40)
+                        .padding(.top, 8)
+                        .padding(.bottom, 32)
                 }
-                .padding(.top, 20)
+                .padding(.horizontal, 20)
             }
             .offset(y: max(0, dragOffset))
             .simultaneousGesture(
@@ -96,34 +73,6 @@ struct ProPaywallView: View {
                         }
                     }
             )
-
-            // Close button
-            if isOnboarding {
-                Button {
-                    dismiss(action: "skip", logDismiss: true)
-                } label: {
-                    Text("paywall.cta.skip".localized)
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.white.opacity(0.7))
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 10)
-                        .background(Color.black.opacity(0.3))
-                        .clipShape(Capsule())
-                        .padding()
-                }
-            } else {
-                Button {
-                    dismiss(action: "close", logDismiss: true)
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(.white)
-                        .frame(width: 32, height: 32)
-                        .background(Color.white.opacity(0.15))
-                        .clipShape(Circle())
-                        .padding()
-                }
-            }
         }
         .task {
             await refreshOfferingsIfNeeded()
@@ -136,34 +85,67 @@ struct ProPaywallView: View {
         }
     }
 
+    // MARK: - Header
+
+    // Come nel prototipo: back circolare a sinistra e titolo centrato. In onboarding la porta
+    // è "Salta per ora" a destra, perché lì non c'è nessuna schermata a cui "tornare".
+    private var header: some View {
+        ZStack {
+            Text("VibeWatch Pro")
+                .font(.system(size: 19, weight: .heavy))
+                .foregroundColor(.theme.textPrimary)
+
+            HStack {
+                if isOnboarding {
+                    Spacer()
+                    Button {
+                        dismiss(action: "skip", logDismiss: true)
+                    } label: {
+                        Text("paywall.cta.skip".localized)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.white.opacity(0.7))
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background(Color.white.opacity(0.1))
+                            .clipShape(Capsule())
+                    }
+                } else {
+                    BackCircleButton { dismiss(action: "close", logDismiss: true) }
+                    Spacer()
+                }
+            }
+        }
+    }
+
     // MARK: - Hero
 
-    private var hero: some View {
-        VStack(spacing: 12) {
-            // Orange V logo
-            Image("paywall_logo")
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [accentColor, Color.orange],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-
-            // Title
-            Text("paywall.ensurePro".localized)
-                .font(.system(size: 24, weight: .bold))
-                .foregroundColor(.white)
+    private var heroCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("paywall.upgrade".localized)
+                .font(.system(size: 26, weight: .heavy))
+                .foregroundColor(.theme.textPrimary)
 
             Text("paywall.proDescription".localized)
-                .font(.system(size: 15, weight: .regular))
+                .font(.system(size: 14))
                 .foregroundColor(.white.opacity(0.75))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(20)
+        .background(
+            LinearGradient(
+                colors: [accentColor.opacity(0.28), accentColor.opacity(0.06)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(accentColor.opacity(0.45), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 20))
     }
-    
+
     private var featureKeys: [String] {
         [
             "paywall.feature.aiAssistant",
@@ -178,76 +160,59 @@ struct ProPaywallView: View {
 
     // MARK: - Features
 
-    private var featuresList: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("paywall.unlockUnlimited".localized)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(.white)
-                .padding(.bottom, 4)
-
-            VStack(spacing: 12) {
-                ForEach(featureKeys, id: \.self) { key in
-                    FeatureCheckRow(text: key.localized)
+    private var featuresCard: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(featureKeys.enumerated()), id: \.element) { index, key in
+                if index > 0 {
+                    Divider().background(Color.white.opacity(0.06))
                 }
+                FeatureCheckRow(text: cleanedFeatureText(key.localized))
             }
         }
-        .padding(20)
-        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.white.opacity(0.05))
-        .overlay(
-            RoundedRectangle(cornerRadius: 22)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
-        )
-        .cornerRadius(22)
-        .padding(.horizontal, 24)
+        .clipShape(RoundedRectangle(cornerRadius: 18))
+    }
+
+    /// Le stringhe delle feature hanno un'emoji davanti (le usa ancora il paywall della quota
+    /// giornaliera); qui il segno di spunta arancione fa già da icona.
+    private func cleanedFeatureText(_ text: String) -> String {
+        String(text.drop(while: { !($0.isLetter || $0.isNumber) }))
     }
 
     // MARK: - Pricing
 
-    private var pricingCards: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("paywall.cta.selectPlan".localized)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(.white.opacity(0.9))
-                .padding(.horizontal, 4)
-
-            // Annual plan
+    private var pricingRow: some View {
+        HStack(spacing: 12) {
             PlanOptionCard(
-                planName: "paywall.plan.annual".localized,
+                caption: "paywall.bestValue".localized,
                 price: annualPriceText,
-                pricePerMonth: annualPerMonthText,
-                discountBadge: annualDiscountBadge,
-                trialBadge: annualTrialBadge,
+                priceSuffix: priceSuffix(from: "paywall.price.perYear"),
+                subtitle: annualPerMonthText,
                 isSelected: selectedPackageID != nil && selectedPackageID == annualPackage?.identifier,
-                isPrimary: true,
                 accentColor: accentColor
             ) {
                 selectAnnualPackage()
             }
 
-            // Monthly plan
             PlanOptionCard(
-                planName: "paywall.plan.monthly".localized,
+                caption: "paywall.plan.monthly".localized.uppercased(),
                 price: monthlyPriceText,
-                pricePerMonth: monthlyPerMonthText,
-                discountBadge: nil,
-                trialBadge: monthlyTrialBadge,
+                priceSuffix: priceSuffix(from: "paywall.price.perMonth"),
+                subtitle: "paywall.cancelAnytime".localized,
                 isSelected: selectedPackageID != nil && selectedPackageID == monthlyPackage?.identifier,
-                isPrimary: false,
                 accentColor: accentColor
             ) {
                 selectMonthlyPackage()
             }
         }
-        .padding(18)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white.opacity(0.05))
-        .overlay(
-            RoundedRectangle(cornerRadius: 22)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
-        )
-        .cornerRadius(22)
-        .padding(.horizontal, 24)
+    }
+
+    /// Da "%@/anno" ricava "/anno": il prezzo grande e il suffisso piccolo sono due Text
+    /// distinti nel mock, ma la stringa localizzata resta una sola.
+    private func priceSuffix(from key: String) -> String {
+        key.localized
+            .replacingOccurrences(of: "%@", with: "")
+            .trimmingCharacters(in: .whitespaces)
     }
 
     private var annualPriceText: String? {
@@ -276,31 +241,6 @@ struct ProPaywallView: View {
         return monthly.storeProduct.localizedPriceString
     }
 
-    // MARK: - Trial badges
-    
-    private var annualTrialBadge: String? {
-        guard let annual = annualPackage,
-              let trial = revenueService.getTrialInfo(for: annual) else {
-            return nil
-        }
-        return String(format: "paywall.trial.badge".localized, trial.localizedDuration)
-    }
-    
-    private var monthlyTrialBadge: String? {
-        guard let monthly = monthlyPackage,
-              let trial = revenueService.getTrialInfo(for: monthly) else {
-            return nil
-        }
-        return String(format: "paywall.trial.badge".localized, trial.localizedDuration)
-    }
-    
-    private var annualDiscountBadge: String? {
-        // Only show discount badge if there's no trial
-        // (otherwise the card gets too crowded)
-        guard annualTrialBadge == nil else { return nil }
-        return "paywall.discount.annual".localized
-    }
-
     // MARK: - Continue button
 
     private var continueButton: some View {
@@ -308,27 +248,27 @@ struct ProPaywallView: View {
             ZStack {
                 if isPurchasing {
                     ProgressView()
-                        .tint(.white)
+                        .tint(Color.theme.background)
                 } else {
                     Text(continueButtonText)
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(.white)
+                        .font(.system(size: 17, weight: .bold))
+                        // Testo scuro su arancio: la stessa inversione del FAB e dello switcher.
+                        .foregroundColor(.theme.background)
                 }
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 60)
+            .frame(height: 56)
             .background(
                 LinearGradient(
-                    colors: [accentColor, Color.orange],
-                    startPoint: .leading,
-                    endPoint: .trailing
+                    colors: [accentColor, Color(hex: "e56a20")],
+                    startPoint: .top,
+                    endPoint: .bottom
                 )
             )
-            .cornerRadius(30)
-            .shadow(color: accentColor.opacity(0.35), radius: 12, x: 0, y: 8)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .shadow(color: accentColor.opacity(0.3), radius: 12, x: 0, y: 8)
         }
         .disabled(selectedPackage == nil || isPurchasing)
-        .padding(.horizontal, 24)
         .id(selectedPackageID)
     }
     
@@ -372,13 +312,13 @@ struct ProPaywallView: View {
                 }
                 .disabled(isRestoring)
 
-                Button(action: { /* Terms */ }) {
+                Link(destination: termsURL) {
                     Text("common.terms".localized)
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(Color.white.opacity(0.6))
                 }
 
-                Button(action: { /* Privacy */ }) {
+                Link(destination: privacyURL) {
                     Text("common.privacy".localized)
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(Color.white.opacity(0.6))
@@ -386,6 +326,9 @@ struct ProPaywallView: View {
             }
         }
     }
+
+    private var termsURL: URL { URL(string: "https://vibewatch.vercel.app/terms")! }
+    private var privacyURL: URL { URL(string: "https://vibewatch.vercel.app/privacy")! }
 
     /// Present Apple's native offer code redemption sheet
     private func presentOfferCodeRedemption() {
@@ -546,28 +489,6 @@ struct ProPaywallView: View {
 
     // MARK: - Purchase / restore
 
-    private var purchaseButtonTitle: String {
-        guard let package = selectedPackage else { return "Select a plan" }
-        if let trial = package.storeProduct.introductoryDiscount, trial.paymentMode == .freeTrial {
-            return "Start your free trial"
-        }
-        return "Continue with \(planLabel(for: package))"
-    }
-
-    private func planLabel(for package: Package) -> String {
-        guard let period = package.storeProduct.subscriptionPeriod else {
-            return package.storeProduct.localizedPriceString
-        }
-        switch period.unit {
-        case .month: return "Monthly"
-        case .year:  return "Yearly"
-        case .week:  return "Weekly"
-        case .day:   return "Daily"
-        @unknown default:
-            return package.storeProduct.localizedPriceString
-        }
-    }
-    
     private func formattedPerMonthPrice(for product: StoreProduct, months: Int) -> String {
         let divisor = NSDecimalNumber(value: months)
         let monthlyPriceDecimal = (product.price as NSDecimalNumber).dividing(by: divisor)
@@ -743,7 +664,8 @@ struct ProPaywallView: View {
 
 // MARK: - UI subviews
 
-/// Row with orange circular check + white text, like the mock.
+/// Riga della lista feature: spunta in cerchio tinto arancio + testo, separate da divider
+/// nella card, come nel prototipo.
 private struct FeatureCheckRow: View {
     let text: String
 
@@ -751,177 +673,74 @@ private struct FeatureCheckRow: View {
         HStack(alignment: .center, spacing: 12) {
             ZStack {
                 Circle()
-                    .fill(Color(red: 1, green: 0.55, blue: 0.2))
-                    .frame(width: 22, height: 22)
+                    .fill(Color.theme.accentOrange.opacity(0.15))
+                    .frame(width: 26, height: 26)
                 Image(systemName: "checkmark")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(.black)
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(.theme.accentOrange)
             }
 
             Text(text)
-                .font(.system(size: 15, weight: .regular))
-                .foregroundColor(.white)
+                .font(.system(size: 14.5, weight: .semibold))
+                .foregroundColor(.theme.textPrimary)
 
             Spacer()
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 13)
     }
 }
 
-/// Plan card matching the screenshot style.
+/// Card piano affiancate come nel prototipo: caption in alto, prezzo grande con suffisso
+/// piccolo, sottotitolo. La selezione è il bordo arancio + fondo tinto.
 private struct PlanOptionCard: View {
-    let planName: String
+    let caption: String
     let price: String?
-    let pricePerMonth: String
-    let discountBadge: String?
-    let trialBadge: String?
+    let priceSuffix: String
+    let subtitle: String
     let isSelected: Bool
-    let isPrimary: Bool
     let accentColor: Color
     let action: () -> Void
-    
-    private var badgeText: String? { trialBadge ?? discountBadge }
-    private var isTrialBadge: Bool { trialBadge != nil }
 
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .center, spacing: 12) {
-                    PlanRadio(isSelected: isSelected, accentColor: accentColor)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(caption)
+                    .font(.system(size: 11, weight: .heavy))
+                    .kerning(0.8)
+                    .foregroundColor(isSelected ? accentColor : Color(hex: "8a8b90"))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
 
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(planName)
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.white.opacity(0.9))
-
-                        if let price = price {
-                            Text(price)
-                                .font(.system(size: 18, weight: .bold))
-                                .foregroundColor(.white)
-                        }
-                    }
-
-                    Spacer()
-
-                    if let badge = badgeText {
-                        badgeView(text: badge, isTrial: isTrialBadge)
-                    }
+                HStack(alignment: .firstTextBaseline, spacing: 3) {
+                    Text(price ?? "—")
+                        .font(.system(size: 22, weight: .heavy))
+                        .foregroundColor(.theme.textPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                    Text(priceSuffix)
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(Color(hex: "8a8b90"))
                 }
-
-                HStack {
-                    if isPrimary {
-                        Text("paywall.bestValue".localized)
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundColor(.black)
-                            .padding(.vertical, 8)
-                            .padding(.horizontal, 12)
-                            .background(accentColor)
-                            .cornerRadius(12)
-                    }
-                    
-                    Spacer()
-                    
-                    Text(pricePerMonth)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.white.opacity(0.85))
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 12)
-                        .background(Color.white.opacity(0.06))
-                        .cornerRadius(12)
-                }
-            }
-            .padding(16)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(cardBackground)
-            .overlay(
-                RoundedRectangle(cornerRadius: 22)
-                    .stroke(borderColor, lineWidth: isSelected ? 2 : 1)
-            )
-            .cornerRadius(22)
-            .shadow(
-                color: isSelected ? accentColor.opacity(0.25) : Color.black.opacity(0.2),
-                radius: isSelected ? 12 : 8,
-                x: 0,
-                y: isSelected ? 10 : 6
-            )
-        }
-        .buttonStyle(.plain)
-        .opacity(isPrimary ? 1.0 : 0.98)
-    }
-
-    private var cardBackground: Color {
-        Color.white.opacity(isSelected ? 0.09 : 0.04)
-    }
-
-    private var borderColor: Color {
-        isSelected ? accentColor : Color.white.opacity(0.12)
-    }
-
-    private func badgeView(text: String, isTrial: Bool) -> some View {
-        Text(isTrial ? "🎁 \(text)" : text)
-            .font(.system(size: 12, weight: .bold))
-            .foregroundColor(isTrial ? .black : .white)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(
-                LinearGradient(
-                    colors: isTrial
-                    ? [Color.green.opacity(0.85), Color.green]
-                    : [accentColor.opacity(0.8), accentColor],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-            )
-            .cornerRadius(12)
-    }
-}
-
-private struct PlanRadio: View {
-    let isSelected: Bool
-    let accentColor: Color
-
-    var body: some View {
-        ZStack {
-            Circle()
-                .stroke(Color.gray.opacity(0.6), lineWidth: 2)
-                .frame(width: 22, height: 22)
-
-            if isSelected {
-                Circle()
-                    .fill(accentColor)
-                    .frame(width: 22, height: 22)
-
-                Image(systemName: "checkmark")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(.black)
-            }
-        }
-    }
-}
-
-// Existing PaywallFeatureRow kept (unused in new layout but may still be handy elsewhere)
-private struct PaywallFeatureRow: View {
-    let icon: String
-    let title: String
-    let subtitle: String
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 16) {
-            Image(systemName: icon)
-                .font(.system(size: 22, weight: .semibold))
-                .foregroundColor(.orange)
-                .frame(width: 30)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.white)
 
                 Text(subtitle)
-                    .font(.system(size: 14))
-                    .foregroundColor(.white.opacity(0.8))
+                    .font(.system(size: 12))
+                    .foregroundColor(Color(hex: "8a8b90"))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
-
-            Spacer()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(16)
+            .background(isSelected ? accentColor.opacity(0.08) : Color.white.opacity(0.05))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(
+                        isSelected ? accentColor : Color.white.opacity(0.1),
+                        lineWidth: isSelected ? 1.5 : 1
+                    )
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 16))
         }
+        .buttonStyle(.plain)
     }
 }

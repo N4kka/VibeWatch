@@ -13,7 +13,7 @@ class ClipsPrefetchService: ObservableObject {
     
     private let supabase = SupabaseService.shared
     private let tmdbService = TMDBService.shared
-    private let youtubeAPIKey = Config.youtubeApiKey  // Phase 5: Use Config instead of hardcoded key
+    // The YouTube key now lives only in YouTubeSearchClient, which owns the quota gate.
     
     private let userDefaults = UserDefaults.standard
     private let lastFetchKey = "lastClipsPrefetchDate"
@@ -27,17 +27,10 @@ class ClipsPrefetchService: ObservableObject {
     
     /// Validate if a YouTube video is playable and embeddable
     private func isVideoValid(videoId: String) async -> Bool {
-        let urlString = "https://www.googleapis.com/youtube/v3/videos?part=status,contentDetails&id=\(videoId)&key=\(youtubeAPIKey)"
-        
-        guard let url = URL(string: urlString) else {
-            return false
-        }
-        
         do {
-            let (data, _) = try await URLSession.shared.data(from: url)
-            let response = try JSONDecoder().decode(YouTubeVideoResponse.self, from: data)
-            
-            guard let video = response.items.first else {
+            // videos.list costs 1 unit, not 100 — but it shares the project budget, so it goes
+            // through the same gate. See YouTubeSearchClient.
+            guard let video = try await YouTubeSearchClient.shared.videoDetails(id: videoId) else {
                 Logger.warning("[Validation] Video \(videoId): Not found")
                 return false
             }
@@ -77,16 +70,39 @@ class ClipsPrefetchService: ObservableObject {
     
     // MARK: - Main Pre-fetch Function
     
+    /// Whether the heavy clip prefetch (YouTube validation + DB writes) is allowed to run.
+    ///
+    /// Fase 4 (3.1 — batteria): il prefetch gira SOLO su Wi-Fi e fuori da Low-Power Mode.
+    /// Funzione pura (no I/O) per testabilità; la composizione con l'ambiente reale
+    /// (NetworkMonitor + ProcessInfo) avviene in `prefetchClips`.
+    nonisolated static func isPrefetchAllowed(isWiFi: Bool, isLowPowerMode: Bool) -> Bool {
+        isWiFi && !isLowPowerMode
+    }
+
     /// Pre-fetch clips and store in Supabase
-    /// - Parameter targetCount: How many VALID clips to store in DB (default: 800)
+    /// - Parameter targetCount: How many VALID clips to store in DB (default: 100)
     /// - Returns: Number of clips successfully cached
+    ///
+    /// Fase 4 (3.1): target abbassato da 800 a 100 (incrementale: fetcha solo `target - currentDBCount`)
+    /// e gating Wi-Fi/Low-Power. Su pool vuoto valida ~100 invece di 800 (8× meno YouTube/TMDB);
+    /// su pool già pieno ritorna subito.
     @discardableResult
-    func prefetchClips(targetCount: Int = 800) async throws -> Int {
+    func prefetchClips(targetCount: Int = 100) async throws -> Int {
         guard !isFetching else {
             Logger.warning("[ClipsPrefetch] Already fetching, skipping...")
             return 0
         }
-        
+
+        // Gate batteria/rete: solo Wi-Fi + non Low-Power Mode.
+        let allowed = Self.isPrefetchAllowed(
+            isWiFi: await NetworkMonitor.shared.isOnWiFi(),
+            isLowPowerMode: ProcessInfo.processInfo.isLowPowerModeEnabled
+        )
+        guard allowed else {
+            Logger.info("[ClipsPrefetch] Skipping prefetch — not on Wi-Fi or Low-Power Mode enabled")
+            return 0
+        }
+
         Logger.info("[ClipsPrefetch] Starting pre-fetch - Target: \(targetCount) VALID clips in DB...")
         isFetching = true
         fetchProgress = 0.0
@@ -215,7 +231,7 @@ class ClipsPrefetchService: ObservableObject {
         let isToday = calendar.isDateInToday(lastFetch)
         
         // During first week: always return true if not fetched today
-        let installDate = getInstallDate()
+        let installDate = AppInstall.date
         let daysSinceInstall = calendar.dateComponents([.day], from: installDate, to: Date()).day ?? 1
         
         if daysSinceInstall <= 7 {
@@ -227,15 +243,6 @@ class ClipsPrefetchService: ObservableObject {
     }
     
     /// Get install date
-    private func getInstallDate() -> Date {
-        let key = "appInstallDate"
-        if let existing = UserDefaults.standard.object(forKey: key) as? Date {
-            return existing
-        }
-        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
-        UserDefaults.standard.set(yesterday, forKey: key)
-        return yesterday
-    }
     
     /// Check if we need a weekly refresh
     func shouldRefreshWeekly() -> Bool {
@@ -426,7 +433,7 @@ class ClipsPrefetchService: ObservableObject {
                 movieId: movie.id,
                 tvShowId: nil,
                 mediaType: "movie",
-                genres: movie.genreIds?.compactMap { genreIdToName($0) } ?? [],
+                genres: movie.genreIds?.compactMap { TMDBGenres.name(for: $0) } ?? [],
                 tmdbRating: movie.voteAverage,
                 youtubeViews: 0,
                 qualityScore: 0.5
@@ -472,7 +479,7 @@ class ClipsPrefetchService: ObservableObject {
                 movieId: nil,
                 tvShowId: tvShow.id,
                 mediaType: "tv",
-                genres: tvShow.genreIds?.compactMap { genreIdToName($0) } ?? [],
+                genres: tvShow.genreIds?.compactMap { TMDBGenres.name(for: $0) } ?? [],
                 tmdbRating: tvShow.voteAverage,
                 youtubeViews: 0,
                 qualityScore: 0.5
@@ -546,16 +553,6 @@ class ClipsPrefetchService: ObservableObject {
     
     // MARK: - Utilities
     
-    private func genreIdToName(_ id: Int) -> String? {
-        let genreMap: [Int: String] = [
-            28: "Action", 12: "Adventure", 16: "Animation", 35: "Comedy",
-            80: "Crime", 99: "Documentary", 18: "Drama", 10751: "Family",
-            14: "Fantasy", 36: "History", 27: "Horror", 10402: "Music",
-            9648: "Mystery", 10749: "Romance", 878: "Sci-Fi", 10770: "TV Movie",
-            53: "Thriller", 10752: "War", 37: "Western"
-        ]
-        return genreMap[id]
-    }
     
     private func loadLastFetchDate() {
         if let timestamp = userDefaults.object(forKey: lastFetchKey) as? Date {

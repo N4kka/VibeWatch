@@ -8,11 +8,11 @@
 // Onboarding
 "onboarding.page1.description" = "AI 电影和电视剧推荐贴合你的观影氛围，让你随时知道下一部看什么。";
 "onboarding.page1.title" = "更智能的 AI 观影推荐";
-"onboarding.page2.description" = "创建观影列表和情绪合集，整理你发现的所有电影和剧集。";
-"onboarding.page2.title" = "整理你的观影列表";
+"onboarding.page2.description" = "创建待看清单和心情合集，整理你发现的所有电影和剧集。";
+"onboarding.page2.title" = "整理你的待看清单";
 "onboarding.page3.description" = "观看预告片和剪辑，将喜欢的内容保存到列表以便稍后观看。";
 "onboarding.page3.title" = "发现预告片与剪辑";
-"onboarding.page4.description" = "创建账号以在所有设备间同步你的观影列表和偏好。";
+"onboarding.page4.description" = "创建账号以在所有设备间同步你的待看清单和偏好。";
 "onboarding.page4.skip" = "暂时跳过";
 "onboarding.page4.title" = "准备开始了吗？";
 
@@ -22,7 +22,7 @@
 "discovery.popular" = "热门";
 "discovery.topRated" = "高分";
 "discovery.trending" = "当前热播";
-"discovery.tvShows" = "电视剧";
+"discovery.tvShows" = "剧集";
 "discovery.upcoming" = "即将上线";
 "discovery.vibeWatch" = "VibeWatch";
 
@@ -30,7 +30,7 @@
 "browse.emptyMessage" = "点按筛选按钮浏览内容";
 "browse.movies" = "电影";
 "browse.title" = "浏览";
-"browse.tvShows" = "电视剧";
+"browse.tvShows" = "剧集";
 
 // Lists
 "list.all" = "全部";
@@ -44,7 +44,7 @@
 "lists.disliked" = "不喜欢";
 "lists.editList" = "编辑列表";
 "lists.empty" = "还没有列表";
-"lists.emptyDescription" = "创建你的第一个稍后观看列表，整理你发现的电影和剧集。";
+"lists.emptyDescription" = "创建你的第一个待看清单，整理你发现的电影和剧集。";
 "lists.error.authRequired" = "你需要登录才能创建自定义列表。";
 "lists.error.defaultImmutable" = "此列表无法修改";
 "lists.error.invalidName" = "请输入有效的列表名称";
@@ -58,12 +58,16 @@
 "lists.listName" = "列表名称";
 "lists.listNamePlaceholder" = "新列表";
 "lists.myLists" = "我的列表";
+"lists.collections" = "合集";
 "lists.noItems" = "还没有项目";
 "lists.searchPlaceholder" = "搜索此列表";
 "lists.seen" = "看过";
 "lists.softLimitWarning" = "“{name}” 已有 {limit} 个项目。建议新建一个列表来保持条理清晰。";
-"lists.watchlist" = "稍后观看";
-"lists.watchOn" = "观看平台";
+"lists.watchlist" = "待看清单";
+"lists.watchOn" = "在 %@ 观看";
+"lists.notifyMeTitle" = "通知我";
+"lists.notifyMeMessage" = "一旦“%@”可用于流媒体、租赁或购买，我们就会通知你。";
+"error.oops" = "哎呀！";
 
 // Movie Detail
 "movieDetail.cast" = "演员";
@@ -74,7 +78,7 @@
 "movieDetail.rating" = "评分";
 "movieDetail.ratings" = "条评分";
 "movieDetail.runtime" = "片长";
-"movieDetail.save" = "保存到稍后观看";
+"movieDetail.save" = "保存到待看清单";
 "movieDetail.seen" = "看过";
 "movieDetail.similar" = "喜欢这部的人也喜欢";
 "movieDetail.trailer" = "预告片";
@@ -83,7 +87,7 @@
 // Filters
 "filter.all" = "全部";
 "filter.movies" = "电影";
-"filter.tvSeries" = "电视剧";
+"filter.tvSeries" = "剧集";
 
 // Sort
 "sort.dateAdded" = "添加日期";
@@ -120,13 +124,15 @@
 // Clips
 "clips.title" = "剪辑";
 "clips.addToList" = "添加到列表";
+"clips.card.addToWatchlist" = "+ 待看清单";
+"clips.card.goToDetail" = "查看详情";
 "clips.beFirstToComment" = "抢先发表评论";
 "clips.comment" = "评论";
 "clips.comments" = "评论";
 "clips.comments.deleteConfirmation" = "确定要删除此评论吗？该操作无法撤销。";
 "clips.comments.loading" = "正在加载评论…";
 "clips.comments.replying" = "正在回复…";
-"clips.createFirstList" = "创建你的第一个稍后观看列表以保存内容";
+"clips.createFirstList" = "创建你的第一个待看清单来保存喜欢的内容";
 "clips.createNewList" = "创建新列表";
 "clips.feed.craftingSubtitle" = "我们正在为你精挑细选最精彩的剪辑 ✨";
 "clips.feed.craftingTitle" = "为你打造专属推荐流";
@@ -135,7 +141,6 @@
 "clips.noClipsAvailable" = "暂无剪辑";
 "clips.noClipsDescription" = "稍后再来看看你喜爱影视中的精彩片段吧";
 "clips.noComments" = "还没有评论";
-"clips.noListsYet" = "还没有列表";
 "clips.reply" = "回复";
 "clips.replies" = "条回复";
 "clips.replyingTo" = "正在回复";
@@ -236,6 +241,7 @@
 "auth.error.invalidResponse" = "服务器返回无效响应。";
 "auth.error.userNotFound" = "未找到用户。";
 "auth.error.invalidCredentials" = "电子邮件或密码无效。";
+"auth.error.tooManyAttempts" = "尝试次数过多。请稍后重试。";
 "auth.error.networkError" = "网络错误。请检查你的连接。";
 "auth.error.databaseError" = "保存用户资料时数据库出错。请重试。";
 "auth.error.signUpFailed" = "注册失败。请重试。";
@@ -250,7 +256,7 @@
 "ai.thinking" = "思考中...";
 "ai.editMessage" = "编辑消息";
 "ai.hardLimitMessage" = "你已用完今天的 AI 次数，请明天再来。";
-"ai.paywall.benefit.personalized" = "个性化观影清单";
+"ai.paywall.benefit.personalized" = "个性化待看清单";
 "ai.paywall.benefit.smarter" = "更智能的内容发现";
 "ai.paywall.benefit.unlimited" = "无限次 AI 推荐";
 "ai.paywall.goBack" = "返回";
@@ -282,12 +288,12 @@
 "paywall.ensurePro" = "锁定你的 Pro 方案！";
 "paywall.feature.advancedFilters" = "🔎 更高级的筛选，快速找到影片";
 "paywall.feature.aiAssistant" = "🤖 AI 电影与剧集推荐";
-"paywall.feature.lists" = "📋 最多 100 个同步观影列表";
+"paywall.feature.lists" = "📋 最多 100 个同步待看清单";
 "paywall.feature.noAds" = "❌ 无广告干扰剪辑";
 "paywall.feature.offlineMode" = "📵 离线模式，可查看已保存内容";
 "paywall.feature.releaseAlerts" = "🔔 收藏内容上线时提醒";
 "paywall.feature.unlimitedClips" = "▶️ 无限剪辑与预告片";
-"paywall.proDescription" = "Pro 解锁无限剪辑、AI 观影助手和同步观影列表。";
+"paywall.proDescription" = "Pro 解锁无限剪辑、AI 观影助手和同步待看清单。";
 "paywall.plan.annual" = "年度方案";
 "paywall.plan.monthly" = "月度方案";
 "paywall.price.perMonth" = "%@/月";
@@ -324,7 +330,7 @@
 "common.pleaseTryAgain" = "请重试。";
 
 // Misc
-"misc.language" = "英文";
+"misc.language" = "简体中文";
 "misc.letUsKnow" = "告诉我们";
 "misc.of" = "共";
 "misc.selected" = "已选";
@@ -349,6 +355,55 @@
 
 // Profile - Support & Feedback
 "profile.sendFeedback" = "发送反馈";
+"profile.share" = "分享个人资料";
+"profile.share.comingSoon" = "即将推出";
+"profile.importFrom" = "从…导入";
+"import.title" = "导入";
+"import.source.tvtime" = "TV Time (.zip)";
+"import.source.tvtime.subtitle" = "你的 TV Time 数据导出";
+"import.source.footer" = "向 TV Time 申请数据导出（GDPR），然后在此选择 .zip 文件。导出相同格式的其他应用也可以。";
+"import.state.uploading" = "上传中…";
+"import.state.uploadingHint" = "文件上传期间请保持应用打开。";
+"import.canClose" = "正在导入你的观看历史。可以关闭应用——完成后我们会发送通知。";
+"import.phase.queued" = "排队中，马上开始…";
+"import.phase.parsing" = "正在读取你的历史…";
+"import.phase.resolving" = "正在匹配剧集和单集…";
+"import.phase.writing" = "正在保存你的单集…";
+"import.phase.finishing" = "即将完成…";
+"import.report.episodes" = "已导入单集";
+"import.report.shows" = "剧集";
+"import.report.period" = "从 %@ 到 %@";
+"import.report.ratingsDeferred" = "找到 %d 条评分——尚未导入。";
+"import.report.ratingsApplied" = "已将 %d 条评分导入为星级。";
+"import.report.ratingsUnresolved" = "%d 条评分无法匹配。";
+"import.report.favoritesApplied" = "已将 %d 个收藏导入空余槽位。";
+"import.report.favoriteMoviesUnsupported" = "%d 个电影收藏无法从 TV Time 导入。";
+"import.report.moviesApplied" = "已导入 %d 部电影（含观看日期）。";
+"import.report.moviesWatchlistApplied" = "已将 %d 部电影加入待看清单。";
+"import.report.moviesUnresolved" = "%d 部电影未能识别（标题和年份与 TMDB 不匹配）。";
+"import.resolve.button" = "匹配";
+"import.resolve.batchButton" = "匹配%d个标题";
+"import.resolve.batchHint" = "请为每个标题查找对应的TMDB剧集。选择全部匹配项之前不会导入任何内容；之后只需一次导入即可统一解决。";
+"import.resolve.batchProgress" = "已匹配%d/%d个标题";
+"import.resolve.startBatch" = "开始一次导入";
+"import.resolve.title" = "“%@”是哪部剧集？";
+"import.resolve.hint" = "剧集将使用其准确的 TVDB ID 重新检查。TMDB 无法确认的内容会保留在报告中。";
+"import.resolve.searchPlaceholder" = "在 TMDB 上搜索剧集";
+"import.resolve.empty" = "没有结果。";
+"import.resolve.failed" = "匹配失败：";
+"import.resolve.searchFailed" = "搜索失败。";
+"import.report.statusesApplied" = "已恢复 %d 个剧集状态（待看清单与归档）。";
+"import.report.statusesUnresolved" = "%d 个剧集状态未能应用。";
+"import.report.unresolvedTitle" = "%d 个单集无法匹配";
+"import.report.unresolvedRow" = "%d 集";
+"import.report.allResolved" = "全部匹配成功。";
+"import.error.failed" = "导入因错误而停止。";
+"import.error.network" = "目前无法查看导入状态。";
+"import.error.uploadFailed" = "上传未完成。";
+"import.error.startFailed" = "导入无法开始。";
+"import.error.fileRead" = "无法读取该文件。";
+"import.error.reportFailed" = "导入已完成，但报告无法加载。";
+"import.error.sessionExpired" = "登录已过期。请重新登录后再试一次导入。";
 "profile.aboutUs" = "关于我们";
 "profile.aboutUsDetail" = "了解更多关于 VibeWatch 团队的信息，以及我们如何改善你的串流发现体验。";
 "profile.tmdbAttribution" = "本产品使用 TMDb API，但未获得 TMDb 的认可或认证。";
@@ -357,6 +412,7 @@
 "profile.faqDetail" = "快速找到关于账号、订阅和功能的常见问题解答。";
 "profile.privacyPolicy" = "隐私政策";
 "profile.termsOfUse" = "使用条款";
+"profile.terms" = "条款";
 "profile.feedback.suggestFeature" = "建议新功能";
 "profile.feedback.suggestFeatureDescription" = "告诉我们什么能让 VibeWatch 对你来说更好用。";
 "profile.feedback.reportBug" = "报告错误/问题";
@@ -389,10 +445,17 @@
 "actor.biography.loading" = "正在加载简介…";
 "actor.biography.unavailable" = "暂无简介。";
 "actor.filmography.movies" = "电影";
-"actor.filmography.tv" = "电视剧";
+"actor.filmography.tv" = "剧集";
 "actor.retry" = "重试";
 "actor.biography.showMore" = "显示更多";
 "actor.biography.showLess" = "收起";
+
+"actor.birthday" = "出生：%@";
+"actor.birthday.line" = "%@（%@ 岁）";
+"actor.known_for" = "代表作";
+"actor.search.placeholder" = "搜索作品…";
+"actor.search.noResults" = "没有结果：";
+"actor.filmography.empty" = "未找到作品。";
 
 "clips.search.placeholder" = "搜索剪辑、角色或台词";
 "clips.search.emptyTitle" = "找到你喜欢的剪辑";
@@ -401,11 +464,17 @@
 "clips.search.showcaseSubtitle" = "在上方搜索，找到你喜欢的电影和剧集中的剪辑";
 "clips.search.matched" = "匹配";
 "clips.search.recommended" = "推荐";
+"clips.search.quotes" = "台词";
+"clips.search.characters" = "角色";
+"clips.search.scenes" = "场景";
+"clips.search.popular" = "热门";
 
 // Redeem Code
 "settings.redeemCode" = "兑换代码";
 "settings.redeemCode.description" = "输入优惠码或促销码";
 "paywall.haveCode" = "有优惠码吗？";
+"paywall.price.perYear" = "%@/年";
+"paywall.cancelAnytime" = "随时取消";
 
 // Help & Support - About Us
 "profile.aboutUsDescription" = "我们是两个朋友，正在打造一种全新的电影/剧集伴侣。VibeWatch 源于对笨重追踪器的挫败：我们专注于现代的剪辑优先发现、快速的串流链接，以及帮助影迷和普通观众在不无限滚动的情况下找到完美选择的工具。";
@@ -413,7 +482,7 @@
 "profile.legal" = "法律信息";
 
 // FAQ Items
-"profile.faq.question1" = "Clips 如何帮我发现新片？";
+"profile.faq.question1" = "剪辑如何帮我发现新片？";
 "profile.faq.answer1" = "剪辑是匹配你品味的短竖屏预览，让你刷得过瘾又不觉得浪费时间。";
 "profile.faq.question2" = "我可以记录我看过的内容吗？";
 "profile.faq.answer2" = "可以。保存到列表，标记为已看/喜欢/不喜欢，并在电影和剧集间同步。";
@@ -422,7 +491,7 @@
 "profile.faq.question4" = "如果有什么不对呢？";
 "profile.faq.answer4" = "在任何标题上使用 \"告诉我们\" 来报告错误或坏链接，我们会尽快修复。";
 "profile.faq.question5" = "VibeWatch 适合普通观众吗？";
-"profile.faq.answer5" = "完全适合。我们会呈现简单的选择，比如和朋友的周六电影之夜，也有为影迷准备的深入佳作.";
+"profile.faq.answer5" = "完全适合。我们会呈现简单的选择，比如和朋友的周六电影之夜，也有为影迷准备的深入佳作。";
 "carousel.hotThisWeek" = "本周热门";
 "carousel.awardWinners" = "你会喜欢的获奖作品";
 
@@ -430,83 +499,766 @@
 "onboarding.page4.createAccount" = "创建账户";
 "filters.mediaType" = "媒体类型";
 "filters.movies" = "电影";
-"filters.tvShows" = "电视节目";
+"filters.tvShows" = "剧集";
 "filters.both" = "两者";
-"filters.rating" = "评级";
-"filters.releasePeriod" = "释放期";
-"filters.releasePeriodRecent" = "近期（2020 年以上）";
+"filters.rating" = "评分";
+"filters.releasePeriod" = "上映时间";
+"filters.releasePeriodRecent" = "近期（2020 年至今）";
 "filters.releasePeriodModern" = "现代（2010-2019）";
 "filters.releasePeriodClassic" = "经典 (<2010)";
 "filters.customRange" = "自定义范围";
 "filters.customYearRange" = "自定义年份范围";
 "filters.min" = "最小";
 "filters.max" = "最大";
-"filters.from" = "来自";
-"filters.to" = "至";
-"filters.custom" = "定制";
+"filters.from" = "起始";
+"filters.to" = "结束";
+"filters.custom" = "自定义";
 "filters.allCountries" = "所有国家";
-"filters.sortPopularityDesc" = "最受欢迎";
-"filters.sortPopularityAsc" = "最不受欢迎";
-"filters.sortRatingDesc" = "评级最高";
-"filters.sortRatingAsc" = "评级最低";
-"filters.sortReleaseDateDesc" = "最新最先";
-"filters.sortReleaseDateAsc" = "年龄最大者优先";
-"filters.proFilters" = "专业过滤器";
-"filters.hideWatched" = "隐藏监视";
-"filters.hideDisliked" = "隐藏 不喜欢";
-"filters.proTitle" = "解锁高级过滤器";
-"filters.proDescription" = "升级至专业版，可获得自定义范围、多国选择和高级筛选选项";
-"filters.upgradeToPro" = "升级至专业版";
-"filters.filtersActive" = "%d 过滤器处于活动状态";
-"carousel.dailyMix" = "您的每日搭配";
-"carousel.trendingInGenre" = "趋势 %@";
+"filters.sortPopularityDesc" = "人气从高到低";
+"filters.sortPopularityAsc" = "人气从低到高";
+"filters.sortRatingDesc" = "评分从高到低";
+"filters.sortRatingAsc" = "评分从低到高";
+"filters.sortReleaseDateDesc" = "从新到旧";
+"filters.sortReleaseDateAsc" = "从旧到新";
+"filters.proFilters" = "Pro 筛选";
+"filters.hideWatched" = "隐藏已看";
+"filters.hideDisliked" = "隐藏不喜欢";
+"filters.proTitle" = "解锁高级筛选";
+"filters.proDescription" = "升级到 Pro，解锁自定义年份范围、多国家选择和高级筛选选项";
+"filters.upgradeToPro" = "升级到 Pro";
+"filters.filtersActive" = "已启用 %d 个筛选条件";
+"carousel.dailyMix" = "你的每日精选";
+"carousel.trendingInGenre" = "%@ 热门趋势";
 "carousel.becauseYouLiked" = "因为你喜欢 %@";
-"carousel.hiddenGems" = "%@ 隐藏的宝石";
-"carousel.continueJourney" = "继续您的旅程";
-"carousel.fromSearches" = "来自您的搜索";
-"carousel.topTVPicks" = "为您推荐的热门电视";
-"carousel.staffPicks" = "员工为 %@ 粉丝精选";
-"carousel.yearlyRewind" = "您的年度回顾";
-"settings.privacy.title" = "隐私权";
+"carousel.hiddenGems" = "%@ 冷门佳作";
+"carousel.continueJourney" = "继续你的旅程";
+"carousel.fromSearches" = "来自你的搜索";
+"carousel.topTVPicks" = "为你推荐的热门剧集";
+"carousel.staffPicks" = "%@ 爱好者的编辑精选";
+"carousel.yearlyRewind" = "你的年度回顾";
+"settings.privacy.title" = "隐私";
 "settings.analytics.share" = "共享匿名分析结果";
-"settings.analytics.share.description" = "帮助我们了解您使用的功能并改进应用程序。无广告跟踪。";
+"settings.analytics.share.description" = "帮助我们了解你使用的功能并改进应用。不做广告追踪。";
 "settings.analytics.title" = "分析";
 "settings.analytics.viewStats" = "查看统计数据";
-"settings.analytics.description" = "查看您的手表历史和洞察力";
+"settings.analytics.description" = "查看你的观看记录与洞察";
 "settings.notifications.title" = "通知";
 "settings.notifications.manage" = "管理通知";
 "settings.notifications.description" = "新内容的个性化提醒";
-"onboarding.welcome.title" = "发现你的气质";
-"onboarding.welcome.subtitle" = "专为您量身定制的人工智能推荐。";
+"onboarding.welcome.title" = "欢迎来到 VibeWatch";
+"onboarding.welcome.subtitle" = "发现、记录，不错过任何上映。电影和剧集，尽在一处。";
 "onboarding.clips.title" = "观看，不要阅读";
 "onboarding.clips.subtitle" = "通过引人入胜的短片体验电影。";
-"onboarding.lists.title" = "您的观察清单，无处不在";
+"onboarding.lists.title" = "你的待看清单，随处可用";
 "onboarding.lists.subtitle" = "保存影片并在所有设备上同步。";
 "onboarding.account.title" = "保存个人资料";
-"onboarding.account.subtitle" = "创建一个账户，在不同设备间同步你的观察列表和偏好。";
+"onboarding.account.subtitle" = "创建账号，在不同设备间同步你的待看清单和偏好。";
 "onboarding.skip" = "暂时跳过";
 "paywall.cta.skip" = "暂时跳过";
 "filters.allPlatforms" = "所有平台";
 
 // --- Synced from en.lproj ---
-"filters.releasePeriodAny" = "任何";
-"common.next" = "下一页";
+"filters.releasePeriodAny" = "不限";
+"common.next" = "下一步";
 "ai.tryAsking" = "试着问...";
 
 // --- Synced from en.lproj ---
 "auth.checkEmailTitle" = "查看电子邮件";
-"auth.checkEmailMessage" = "我们已经向您发送了确认链接。请检查您的收件箱以验证您的账户。";
+"auth.checkEmailMessage" = "我们已经向你发送了确认链接。请查收邮件以验证你的账号。";
 
 // --- Synced from en.lproj ---
-"auth.openMailApp" = "打开邮件应用程序";
+"auth.openMailApp" = "打开邮件应用";
 "auth.iHaveVerified" = "我已验证";
 "auth.resendEmail" = "重新发送电子邮件";
 "auth.changeEmail" = "更改电子邮件";
-"auth.verificationPending" = "仍在等待验证...";
+"auth.verificationPending" = "仍在等待验证…";
+"gamification.levelUp" = "升级！";
+"gamification.level" = "等级";
+"gamification.rankAchieved" = "已达成“%@”段位";
+"gamification.xp.base" = "基础";
+"gamification.xp.proBoost" = "Pro 加成";
+"gamification.xp.streakBonus" = "连续奖励";
+"gamification.xp.total" = "XP 总计";
+"gamification.challengeComplete" = "挑战完成！";
+"notifications.title" = "通知";
+"notifications.status" = "状态";
+"notifications.enabled" = "通知已开启";
+"notifications.disabled" = "通知已关闭";
+"notifications.enableDescription" = "开启通知，获取关于新剧集、上线内容和你会喜欢的内容的个性化提醒。";
+"notifications.enableButton" = "开启通知";
+"notifications.types" = "通知类型";
+"notifications.newEpisodes" = "新剧集";
+"notifications.newEpisodesDesc" = "你正在观看的剧集有新集数可看时收到通知";
+"notifications.personalizedReleases" = "个性化上线提醒";
+"notifications.personalizedReleasesDesc" = "符合你口味的新电影和剧集";
+"notifications.favoriteActors" = "喜爱的演员和导演";
+"notifications.favoriteActorsDesc" = "你喜欢的人有新内容时提醒";
+"notifications.similarContent" = "相似内容";
+"notifications.similarContentDesc" = "根据你喜欢的内容推荐";
+"notifications.watchlistAlerts" = "待看清单提醒";
+"notifications.watchlistAlertsDesc" = "当你待看清单中的内容可观看时提醒";
+"notifications.milestones" = "里程碑与成就";
+"notifications.milestonesDesc" = "庆祝你的观看连续记录和成就";
+"notifications.frequency" = "频率";
+"notifications.dailyLimit" = "每日上限";
+"notifications.perDay" = "每天";
+"notifications.unlimited" = "不限";
+"notifications.quietHours" = "免打扰时段";
+"notifications.startTime" = "开始时间";
+"notifications.endTime" = "结束时间";
+"notifications.quietHoursDesc" = "这些时段内不会发送通知";
+"notifications.proFeatures" = "Pro 功能";
+"notifications.customActorAlerts" = "自定义演员提醒";
+"notifications.customGenreAlerts" = "自定义类型提醒";
+"notifications.proFeaturesDesc" = "接收你选择的特定演员和类型提醒";
+"notifications.save" = "保存";
+"notifications.settingsSaved" = "设置已保存";
+"notifications.preferencesUpdated" = "你的通知偏好已更新。";
+"notifications.typesFooter" = "选择你想接收的通知";
+"notifications.newAvailability" = "新可用内容";
+"notifications.newAvailabilityDesc" = "当你待看清单中的条目可供流媒体播放、租借或购买时";
+"notifications.newRelease" = "新上线";
+"notifications.newReleaseDesc" = "你点按“通知我”的电影和剧集上线时";
+"notifications.episodeAired" = "新剧集";
+"notifications.episodeAiredDesc" = "当你列表中的电视节目播出新一集时";
+"notifications.continueWatching" = "继续观看";
+"notifications.continueWatchingDesc" = "提醒你继续观看正在追的剧集";
+"notifications.listMilestone" = "列表里程碑";
+"notifications.listMilestoneDesc" = "当你达成观看里程碑时一起庆祝";
+"notifications.frequencyFooter" = "你每天最多会收到的通知数量";
+"notifications.favoriteActorsTitle" = "你喜爱的演员";
+"notifications.favoriteActorsFooter" = "这些演员有新内容时收到通知";
+"notifications.favoriteGenresTitle" = "你喜爱的类型";
+"notifications.favoriteGenresFooter" = "这些类型有新片上线时收到通知";
+"notifications.fromPreferences" = "来自你的偏好";
+"lists.notifyMe" = "通知我";
 
-"movieDetail.whyForMe" = "Why for me?";
+"movieDetail.whyForMe" = "为什么推荐给我？";
 
-"movieDetail.whyForMe.basedOnGenres" = "Based on your 3 favorite genres";
+"movieDetail.whyForMe.basedOnGenres" = "基于你最喜欢的 3 个类型";
 
-"movieDetail.goodFitTitle" = "Why %@ is a good fit for me?";
-"movieDetail.goodFitSubtitle" = "A quick, personalized take based on your taste.";
+"movieDetail.goodFitTitle" = "为什么 %@ 适合我？";
+"movieDetail.goodFitSubtitle" = "根据你的口味生成的简短个性化解读。";
+
+// TV Show Detail - Mark All Seen Confirmation
+"tvDetail.markAllSeenTitle" = "将整部剧标记为已看";
+"tvDetail.markAllSeenDescription" = "此操作将应用于该剧集已播出的所有季和所有集。";
+"tvDetail.markAllSeenQuestion" = "要继续吗？";
+"tvDetail.markAllSeenConfirm" = "是，标记为已看";
+"tvDetail.markAllSeenCancel" = "否，取消";
+"tvDetail.seasonSeenShort" = "已看";
+
+// Library section switcher
+"lists.section.myLists" = "我的列表";
+"lists.section.tvTracking" = "剧集追踪";
+
+// TV Shows Tracking
+"tvTracking.continuing" = "继续观看";
+"tvTracking.notStarted" = "未开始";
+"tvTracking.upToDate" = "已追完";
+"tvTracking.emptyState" = "未找到剧集";
+"carousel.fromActor" = "更多来自 %@";
+"carousel.decadeClassics" = "%@经典";
+"carousel.moodTonight" = "今晚，来点%@";
+"carousel.regionSpotlight" = "%@ 聚焦";
+"carousel.topInGenre" = "%@ 中的热门";
+"carousel.hotThisWeekInGenre" = "本周 %@ 热门";
+"carousel.quickWatches" = "一口气看完";
+"carousel.epicWatches" = "史诗巨制";
+"carousel.internationalPicks" = "国际精选";
+"carousel.throwback" = "重温 %@";
+"carousel.fromAIChat" = "来自你的 AI 聊天";
+"carousel.comingSoon" = "即将上线";
+"carousel.trendingTVWeek" = "本周热门剧集";
+"carousel.criticallyAcclaimedRecent" = "广受好评的 %@";
+"carousel.returningTV" = "即将回归";
+"carousel.documentaries" = "为你推荐的纪录片";
+"discovery.endOfFeed" = "你已经看完了";
+/* MARK: - Public Lists (Fase 1) */
+"lists.section.publicLists" = "公开列表";
+"lists.public.scope.explore" = "发现";
+"lists.public.scope.followed" = "已关注";
+"lists.public.searchPlaceholder" = "搜索公开列表";
+"lists.public.empty.explore" = "未找到公开列表";
+"lists.public.empty.followed" = "你还没有关注任何列表";
+"lists.public.follow" = "关注";
+"lists.public.following" = "已关注";
+"lists.public.unavailable" = "此列表已不可用";
+"lists.public.report" = "举报列表";
+"lists.public.report.confirm" = "举报此列表内容不当？";
+"lists.public.report.done" = "谢谢，我们已收到你的举报";
+"lists.public.block" = "屏蔽用户";
+"lists.public.block.confirm" = "屏蔽该用户？其公开列表将被隐藏。";
+"lists.public.createFromThis" = "以此创建公开列表";
+"lists.public.toggle" = "公开列表";
+"lists.public.toggle.footer" = "公开列表可以被其他用户发现和关注。";
+"lists.public.profanity.title" = "内容不当";
+"lists.public.profanity" = "发布前请从名称或描述中移除不当用语。";
+"lists.public.guidelines.title" = "社区准则";
+"lists.public.guidelines.body" = "发布列表即表示你同意我们的社区准则：不得包含攻击性、仇恨或违法内容。违反准则的列表可能被隐藏，被举报的用户可能被移除。";
+"lists.public.guidelines.accept" = "同意并发布";
+"lists.duplicateName" = "%@ 的副本";
+/* MARK: - TV Tracking (card stile JustWatch) */
+"tvTracking.titlesCount" = "%d 部作品";
+"tvTracking.episodesRemaining" = "还剩 %d 集";
+"tvTracking.lastSeen" = "上次观看 %@";
+"tvTracking.soon" = "即将";
+"tvTracking.watchNow" = "立即观看";
+
+/* SPEC v3 §9.2 — schermata Tracking */
+"tracking.title" = "追剧";
+"tracking.bucket.upNext" = "待观看";
+"tracking.bucket.stale" = "很久没看";
+"tracking.bucket.forLater" = "稍后再看";
+"tracking.bucket.upToDate" = "已追完";
+"tracking.bucket.notStarted" = "未开始";
+"tracking.bucket.dropped" = "已弃剧";
+"tracking.bucket.archived" = "已归档";
+"tracking.timeline.today" = "今天更新";
+"tracking.timeline.tomorrow" = "明天";
+"tracking.timeline.thisWeek" = "本周";
+"tracking.timeline.thisMonth" = "本月";
+"tracking.action.watched" = "已观看";
+"tracking.action.later" = "稍后";
+"tracking.caughtUp" = "已追完";
+"tracking.unknownShow" = "未知剧集";
+"tracking.special" = "特别篇";
+"tracking.empty.title" = "暂时没有可看的内容";
+"tracking.empty.subtitle" = "关注一部剧集，或导入你的 TV Time 记录，它就会出现在这里。";
+"tracking.error.title" = "出了点问题";
+"tracking.error.notAuthenticated" = "需要先登录。";
+"tracking.error.showNotInCatalog" = "该剧集尚未进入目录，请稍后重试。";
+"tracking.error.noNextEpisode" = "这部剧集没有下一集。";
+
+"tab.tracking" = "追剧";
+
+"common.close" = "关闭";
+
+/* Chiavi chiamate dal codice e mai tradotte */
+"auth.error.invalidLink" = "此链接无效或已过期。";
+"clips.noListsYet" = "还没有列表";
+
+/* SPEC v3 §3.7 — scelta dello username */
+"username.confirm.title" = "确认你的用户名";
+"username.confirm.subtitle" = "这是根据你的名字生成的。别人会用它找到你——保留它，或者换一个。";
+"username.confirm.action" = "确认";
+"username.choose.title" = "选择你的用户名";
+"username.choose.subtitle" = "你需要一个才能出现在 VibeWatch 上：别人用它找到你的主页和列表。";
+"username.choose.action" = "继续";
+"username.placeholder" = "用户名";
+"username.hint" = "小写字母、数字和 _ —— 3 到 20 个字符。";
+"username.checking" = "检查中…";
+"username.available" = "可以使用";
+"username.later" = "以后再说";
+"username.error.empty" = "请选择一个用户名。";
+"username.error.tooShort" = "至少 3 个字符。";
+"username.error.tooLong" = "最多 20 个字符。";
+"username.error.invalidCharacters" = "只能用小写字母、数字和 _。";
+"username.error.taken" = "已被占用。";
+"username.error.checkFailed" = "无法检查。请重试。";
+"username.error.reserved" = "该名称已被保留。";
+
+// Social (SPEC v3 blocco 8)
+"social.search.title" = "查找好友";
+"social.search.placeholder" = "用户名或姓名";
+"social.search.prompt" = "按用户名或姓名搜索，即可查看对方主页。";
+"social.search.noResults" = "没有找到任何人。";
+"social.search.failed" = "搜索失败。请检查网络连接。";
+"social.profile.followers" = "粉丝";
+"social.profile.following" = "关注";
+"social.follow" = "关注";
+"social.unfollow" = "取消关注";
+"social.followsYou" = "关注了你";
+"social.profile.notFound" = "该主页不存在。";
+"social.profile.you" = "这是你的主页。";
+"social.profile.loadFailed" = "无法加载该主页。";
+
+// Blocco 9 (SPEC v3 §3.6/§9.3): voti in stelle, favorites, stats
+"rating.title" = "我的评分";
+"rating.saveFailed" = "无法保存评分，请重试。";
+"profile.favorites.movies" = "最爱的电影";
+"profile.favorites.shows" = "最爱的剧集";
+"profile.lists.title" = "公开列表";
+"profile.lists.loadFailed" = "无法加载公开列表。";
+"profile.stats.title" = "我的统计";
+"profile.stats.watchTime" = "观看时长";
+"profile.stats.movies" = "电影";
+"profile.stats.shows" = "剧集";
+"profile.stats.episodes" = "集数";
+"profile.stats.loadFailed" = "无法加载统计数据。";
+"profile.stats.advanced.title" = "高级统计";
+"profile.stats.advanced.byGenre" = "按类型";
+"profile.stats.advanced.byDecade" = "按年代";
+"profile.stats.advanced.ratings" = "你的评分";
+"profile.stats.advanced.noGenre" = "%d 部剧集缺少类型信息";
+"profile.stats.advanced.proLocked" = "高级统计是 Pro 的一部分。";
+
+// Blocco 9, seconda meta' (§9.3): diario e modifica dei favorites
+"diary.title" = "日记";
+"diary.empty" = "这里还没有内容——你看过的内容会显示在这里。";
+"diary.loadFailed" = "无法读取日记。";
+"favorites.add" = "添加到收藏";
+"favorites.remove" = "从收藏中移除";
+"favorites.slot" = "位置%d";
+"favorites.saveFailed" = "无法更新收藏，请重试。";
+
+// La pillola del Tracking: dove lo guardo (streaming > noleggio > acquisto)
+"tracking.watchOn" = "在%@观看";
+"tracking.rentOn" = "在%@租借";
+"tracking.buyOn" = "在%@购买";
+
+// MARK: - Redesign 2.0 (tab Social, strip uscite, calendario, sottotitoli)
+"tab.social" = "社交";
+"social.subtitle" = "好友和你关注的列表";
+"discovery.continueWatching" = "继续观看";
+"discovery.strip.today" = "今天";
+"discovery.releases.title" = "上线日程";
+"discovery.releases.none" = "这一天没有上线内容。";
+"discovery.releases.countOne" = "1 部上线";
+"discovery.releases.countMany" = "%d 部上线";
+"tracking.subtitle" = "你正在看的内容";
+"lists.subtitle" = "你的存档与合集";
+"profile.group.activity" = "动态";
+"profile.group.preferences" = "偏好设置";
+"profile.group.account" = "账户";
+"profile.badgesLevels" = "徽章与等级";
+"gamification.progress.title" = "你的进度";
+"gamification.dayStreak" = "连续天数";
+"gamification.badges.title" = "徽章";
+"gamification.levels.title" = "等级";
+"gamification.challenge.none" = "今天没有任务";
+"common.seeAll" = "查看全部";
+"profile.stats.subtitle" = "类型、心情、观看时长";
+"diary.subtitle" = "已看剧集和电影的历史";
+"profile.badgesLevels.subtitle" = "等级 %d · 徽章 %d/%d";
+"notifications.row.subtitle" = "上线、新剧集、免打扰时段";
+"platforms.row.subtitle" = "流媒体、租赁与购买";
+"platforms.footnote" = "所选平台会在整个应用中筛选观看渠道。";
+"profile.languageCountry" = "语言与国家/地区";
+"profile.edit.title" = "编辑个人资料";
+"profile.edit.information" = "信息";
+"profile.edit.name" = "姓名";
+"profile.edit.bio" = "个人简介";
+"profile.edit.bioPlaceholder" = "介绍一下自己（可选）";
+"profile.edit.changePhoto" = "更换照片";
+"profile.edit.publicProfile" = "公开个人资料";
+"profile.edit.publicProfileSubtitle" = "其他人可以找到你并关注你的公开列表";
+"profile.edit.saveError" = "无法保存个人资料，请重试。";
+"profile.imageCache" = "图片缓存";
+"profile.imageCache.subtitle" = "仅在 WiFi 下预加载";
+"common.on" = "开";
+"common.off" = "关";
+"profile.privacyTerms" = "隐私与条款";
+"profile.footer.tmdb" = "本产品使用 TMDb API，但未获得 TMDb 的认可或认证。";
+"settings.cacheManagement.inUse" = "已用 %d MB";
+
+// MARK: - Onboarding 2.0
+"common.continue" = "继续";
+"auth.fullNamePlaceholder" = "全名";
+"onboarding.welcome.cta" = "开始使用";
+"onboarding.import.title" = "带上你的观看记录";
+"onboarding.import.subtitle" = "导入剧集、已看集数和待看清单。导入完成后，应用即刻可用。";
+"onboarding.import.tvtime" = "从 TV Time 导入";
+"onboarding.import.tvtime.subtitle" = "剧集、已看集数、待看清单和评分";
+"onboarding.import.other" = "其他应用";
+"onboarding.import.other.subtitle" = "Trakt、Letterboxd — 即将支持";
+"onboarding.import.skip" = "跳过，从零开始";
+"onboarding.import.completed" = "导入完成";
+"onboarding.import.stat.shows" = "剧集";
+"onboarding.import.stat.episodes" = "已看集数";
+"onboarding.import.stat.movies" = "电影";
+"onboarding.import.stat.watchlist" = "待看清单";
+"onboarding.notifications.title" = "不错过任何更新";
+"onboarding.notifications.subtitle" = "我们只提醒你关注的内容 — 新剧集、待看清单作品的上映和上线流媒体的消息。";
+"onboarding.notifications.row1" = "你追的剧集更新新集数";
+"onboarding.notifications.row2" = "待看清单中作品的上映";
+"onboarding.notifications.row3" = "作品上线流媒体时";
+"onboarding.notifications.enable" = "开启通知";
+"onboarding.notifications.later" = "以后再说";
+"onboarding.ready.title" = "一切就绪";
+"onboarding.ready.subtitle" = "你的片库已就绪，不会再错过任何上映。顶部的「继续观看」在等你。";
+"onboarding.ready.chip.shows" = "%d 部剧集";
+"onboarding.ready.chip.episodes" = "%d 集";
+"onboarding.ready.chip.notifications" = "通知已开启";
+"onboarding.ready.cta" = "开始观看";
+
+"filters.myPlatforms" = "我的平台";
+"filters.platformScopeAll" = "全部";
+"mediaDetail.forYou" = "与你契合";
+"mediaDetail.watchOn" = "观看渠道";
+"mediaDetail.notifyMe" = "通知我";
+"mediaDetail.notifyMeEnabling" = "正在开启…";
+"mediaDetail.notifyMeEnabled" = "我们会通知你";
+"mediaDetail.action.watchlist" = "待看清单";
+"mediaDetail.action.like" = "喜欢";
+"mediaDetail.action.list" = "加入列表";
+"mediaDetail.toast.watchlistAdded" = "已加入待看清单";
+"mediaDetail.toast.watchlistRemoved" = "已从待看清单移除";
+"mediaDetail.toast.markedSeen" = "已标记为已看";
+"mediaDetail.toast.markedUnseen" = "已从已看中移除";
+"mediaDetail.toast.liked" = "已加入喜欢";
+"mediaDetail.toast.likeRemoved" = "已从喜欢中移除";
+"mediaDetail.why.cardTitle" = "为什么适合你？";
+"mediaDetail.why.title" = "推荐理由";
+"mediaDetail.why.affinity" = "与你口味的契合度";
+"mediaDetail.why.reason.mood" = "符合你现在的心情";
+"mediaDetail.why.reason.genres" = "你喜爱的类型";
+"mediaDetail.why.reason.cast" = "你认识的演员";
+"mediaDetail.why.helpful" = "这有帮助吗？";
+"mediaDetail.why.regenerate" = "重新生成";
+"mediaDetail.why.quota" = "由 Vibe AI 根据评分、心情和观看记录生成。今日已用 %d/%d 次。";
+"settings.cacheManagement.clearCacheAction" = "清除缓存";
+"gamification.missionsToday" = "今日任务";
+"gamification.xpToNext" = "距离下一等级还差 %d XP";
+"gamification.mission.openApp" = "打开应用";
+"gamification.mission.keepStreak" = "保持每日连续记录";
+"gamification.challenge.watch_3" = "观看 3 个剪辑";
+"gamification.challenge.like_5" = "为 5 个剪辑点赞";
+"gamification.challenge.list_2" = "把 2 部作品加入列表";
+"gamification.challenge.watch_new_genre" = "观看一个新类型的剪辑";
+"gamification.challenge.complete_5" = "看完 5 个剪辑（超过 70%）";
+
+// SeasonDetailView — conferme di marcatura episodi (2026-08-04)
+"season.confirmUnaired.title" = "尚未播出";
+"season.confirmUnaired.message" = "S%dE%d尚未播出。仍要标记为已看吗？";
+"season.confirmUnaired.confirm" = "标记为已看";
+"season.confirmPrevious.title" = "之前的剧集也看过了吗？";
+"season.confirmPrevious.message" = "有%d集之前的剧集未标记为已看。";
+"season.confirmPrevious.markAll" = "是，全部标记";
+"season.confirmPrevious.onlyThis" = "仅此一集";
+"season.confirmUnairedSeason.message" = "本季有%d集尚未播出。仍要标记为已看吗？";
+"season.confirmUnairedSeason.markAll" = "全部标记";
+"season.confirmUnairedSeason.onlyAired" = "仅已播出的";
+
+/* Import redesign 2.0 — banner, review inbox, onboarding options */
+"onboarding.import.durationHint" = "包含多年记录的存档可能需要几分钟。";
+"onboarding.import.meanwhile" = "与此同时";
+"onboarding.import.wait" = "我留在这里等";
+"onboarding.import.wait.subtitle" = "进入应用时片库已完整就绪";
+"onboarding.import.background" = "继续引导流程";
+"onboarding.import.background.subtitle" = "导入会在后台继续进行——完成后我们会通知你";
+"onboarding.import.waitingHint" = "我们在这里等：导入一完成，核对页面会自动打开。";
+"onboarding.import.manage" = "管理 %d 个作品";
+"import.banner.running" = "正在导入";
+"import.banner.episodes" = "%1$@ / %2$@ 集";
+"import.banner.completed" = "导入完成";
+"import.banner.review" = "%2$@ 个作品中有 %1$d 个待核对";
+"import.banner.manage" = "管理";
+"import.banner.ok" = "确定";
+"import.banner.summary" = "%1$@ 部剧集 · %2$@ 集 · %3$@ 部电影";
+"import.toast.imported" = "片库已导入";
+"import.toast.imported.review" = "片库已导入 · %d 个作品待核对";
+"import.review.title" = "待核对的作品";
+"import.review.remaining" = "剩余 %1$d / %2$d";
+"import.review.allResolved" = "全部处理完毕";
+"import.review.intro" = "我们无法为你的 TV Time 存档中的这些作品找到确定的匹配。请选择正确的一项，或将其排除。";
+"import.review.episodesSeen" = "已看 %d 集";
+"import.review.searchManually" = "手动搜索";
+"import.review.exclude" = "排除";
+"import.review.later" = "先放一放，稍后处理";
+"import.review.importCount" = "导入 %d 个作品";
+"import.review.importOne" = "导入 1 个作品";
+"import.review.libraryOk" = "片库一切就绪";
+"import.review.libraryOk.subtitle" = "你的 TV Time 存档中的所有作品都已正确匹配。";
+"import.review.noCandidates" = "未找到建议——试试手动搜索。";
+"import.review.manualPick" = "手动选择";
+"import.review.movieHint" = "没有匹配的电影只能排除。";
+"import.review.seasons" = "%d 季";
+"import.review.reason.notFound" = "未在目录中找到";
+"import.review.reason.ambiguous" = "匹配不明确";
+"import.review.reason.conflict" = "剧集冲突";
+"import.review.reason.yearMissing" = "年份缺失或不一致";
+"import.review.reason.missingId" = "导出中没有剧集 ID";
+
+"import.toast.mapping.partial" = "已解决 %1$d 个标题 · 还有 %2$d 个待确认";
+"import.toast.mapping.done" = "已解决 %d 个标题 · 片库已整理";
+
+"import.report.outOfStructure" = "%d 集无法放入已确认剧集的 TMDB 结构中。";
+
+
+// MARK: - Toast (Task 10)
+"mediaDetail.toast.markingSeen" = "正在标记为已看…";
+"lists.toast.adding" = "正在添加…";
+"lists.toast.removing" = "正在移除…";
+"lists.toast.addedTo" = "已添加到 %@";
+"lists.toast.removedFrom" = "已从 %@ 移除";
+"lists.toast.removed" = "已从列表移除";
+"lists.toast.failed" = "出了点问题";
+"lists.toast.creating" = "正在创建列表…";
+"lists.toast.created" = "列表已创建";
+"tracking.toast.markingWatched" = "正在标记剧集…";
+"tracking.toast.markedWatched" = "剧集已标记为已看";
+"tracking.toast.snoozing" = "正在稍后再看…";
+"tracking.toast.snoozed" = "剧集已设为稍后再看";
+"auth.error.recoveryLinkExpired" = "链接无效或已过期。请重新申请密码重置链接。";
+
+
+// MARK: - Regole password (Task 2)
+"auth.pwRule.length" = "8 个以上字符";
+"auth.pwRule.uppercase" = "1 个大写字母";
+"auth.pwRule.lowercase" = "1 个小写字母";
+"auth.pwRule.number" = "1 个数字";
+"auth.pwRule.symbol" = "1 个符号";
+"auth.accountCreated" = "账号已创建";
+
+
+// MARK: - Modali (Task 9+14)
+"tvDetail.markAllSeenSubtitle" = "适用于已播出各季的每一集。";
+"tvDetail.markAllSeenCTA" = "将 %d 集标记为已看";
+"tvDetail.markAllSeen.episodes" = "标记为已看的剧集";
+"tvDetail.markAllSeen.diary" = "添加到日志的条目";
+"tvDetail.markAllSeenReversible" = "可撤销：你可以从日志中恢复单集。";
+"tvDetail.seasonsCount" = "%d 季";
+"tvDetail.episodesCount" = "%d 集";
+"auth.changePasswordSubtitle" = "出于安全考虑，我们会在你的其他设备上退出登录。";
+"auth.newPasswordPlaceholder" = "新密码";
+"auth.forgotCurrentPassword" = "忘记当前密码？";
+"auth.show" = "显示";
+"auth.hide" = "隐藏";
+"profile.feedback.subtitle" = "我们会看每一条，通常两天内回复。";
+"profile.feedback.keepUpdatedEmail" = "我们会发送到 %@";
+"profile.feedback.placeholder.bug" = "出了什么问题？出问题前你在做什么…";
+"profile.feedback.placeholder.suggest" = "缺少什么？说说你会怎么用…";
+"profile.feedback.placeholder.other" = "写下你想告诉我们的话…";
+"profile.feedback.category.crash" = "崩溃";
+"profile.feedback.category.import" = "TV Time 导入";
+"profile.feedback.category.notifications" = "通知";
+"profile.feedback.category.sync" = "同步";
+"profile.feedback.category.ui" = "界面";
+"profile.feedback.category.other" = "其他";
+
+
+// MARK: - Update forzato (Task 3)
+"update.required" = "需要更新";
+"update.fallbackTitle" = "新版本已发布";
+"update.whatsChanged" = "更新内容";
+"update.fullReleaseNotes" = "完整更新说明";
+"update.cta" = "前往 App Store 更新";
+"update.versionFootnote" = "版本 %@";
+"update.dataSafe" = "你的库和数据都会安全保留。";
+
+
+// MARK: - Preferiti (Task 7)
+"favorites.subtitle" = "在你个人主页展示的 4 部作品";
+"favorites.inYourFavorites" = "已在你的收藏中";
+"favorites.showcased" = "正在你的主页展示";
+"favorites.addedToast" = "已加入收藏";
+"favorites.removedToast" = "已从收藏中移除";
+
+
+// MARK: - Informazioni estese (Task 8)
+"movieDetail.releaseDate" = "上映日期";
+"movieDetail.status" = "状态";
+"movieDetail.productionCompanies" = "制作公司";
+"movieDetail.budget" = "预算";
+"movieDetail.revenue" = "票房";
+"movieDetail.originalLanguage" = "原始语言";
+"movieDetail.tagline" = "标语";
+"tvDetail.firstAirDate" = "首播";
+"tvDetail.lastAirDate" = "最近播出";
+"tvDetail.seasonsEpisodes" = "季数";
+"tvDetail.network" = "播出平台";
+"tvDetail.createdBy" = "主创";
+"mediaStatus.released" = "已上映";
+"mediaStatus.inProduction" = "制作中";
+"mediaStatus.postProduction" = "后期制作";
+"mediaStatus.planned" = "已立项";
+"mediaStatus.rumored" = "传闻";
+"mediaStatus.canceled" = "已取消";
+"mediaStatus.returningSeries" = "连载中";
+"mediaStatus.ended" = "已完结";
+"mediaStatus.pilot" = "试播集";
+
+
+// MARK: - Piattaforme (Task 12+17)
+"platforms.active" = "个已启用平台";
+"platforms.activeCount" = "%d 个已启用";
+"platforms.clear" = "清空";
+"platforms.coverage" = "你的待看清单覆盖率";
+"platforms.libraryCount" = "你的库中有 %d 部";
+"platforms.recommended" = "推荐";
+"platforms.manage" = "管理";
+"platforms.empty" = "你所在的国家/地区暂时没有可用平台。";
+
+
+// MARK: - Preferiti nel profilo (Task 15)
+"favorites.sectionTitle" = "你的收藏";
+"favorites.sectionCount" = "%2$d 个中的 %1$d 个";
+
+
+// MARK: - Ricerca (Task 16)
+"search.mostRelevant" = "最相关";
+"common.movie" = "电影";
+"common.tvShow" = "剧集";
+
+
+// MARK: - Toast con fase di progresso (bug 7)
+"mediaDetail.toast.addingToWatchlist" = "正在加入待看清单…";
+"mediaDetail.toast.removingFromWatchlist" = "正在从待看清单移除…";
+"mediaDetail.toast.liking" = "正在加入喜欢…";
+"mediaDetail.toast.unliking" = "正在从喜欢中移除…";
+"mediaDetail.toast.markingUnseen" = "正在从已看中移除…";
+"mediaDetail.toast.disliking" = "正在加入不喜欢…";
+"mediaDetail.toast.undisliking" = "正在从不喜欢中移除…";
+"mediaDetail.toast.disliked" = "已加入不喜欢";
+"mediaDetail.toast.dislikeRemoved" = "已从不喜欢中移除";
+"favorites.adding" = "正在加入收藏…";
+"favorites.removing" = "正在从收藏中移除…";
+
+
+// MARK: - Ricerca ridisegnata (bug 1)
+"search.scope.all" = "全部";
+"search.scope.movies" = "电影";
+"search.scope.series" = "剧集";
+"search.clear" = "清除";
+"search.trending.today" = "今天";
+"search.trending.subtitle" = "过去 24 小时在%@搜索最多的作品。";
+"search.results.subtitle" = "“%@”的匹配结果，之后是相关作品。";
+"search.resultsCount" = "%d 部";
+
+
+// MARK: - Ricerca piattaforme + esito notifica
+"platforms.search" = "搜索平台";
+"platforms.searchEmpty" = "没有该名称的平台。";
+"mediaDetail.notifyMeFailed" = "无法开启通知。";
+
+
+// MARK: - Report import ridisegnato
+"import.report.title" = "导入报告";
+"import.report.sourcePeriod" = "%@ · %@ – %@";
+"import.report.success.title" = "资料库已导入";
+"import.report.success.subtitle" = "已将 %d 部剧集和 %d 部电影与目录匹配。";
+"import.report.success.subtitleWithRatings" = "已将 %d 部剧集和 %d 部电影连同观看日期与评分与目录匹配。";
+"import.report.tile.episodes" = "剧集";
+"import.report.tile.movies" = "电影";
+"import.report.leftOut.title" = "未收录";
+"import.report.leftOut.subtitle" = "这些作品在目录中没有确定的匹配。点按卡片可手动搜索。";
+"import.report.leftOut.excluded" = "由你排除";
+"import.report.leftOut.episodes" = "已看 %d 集";
+"import.report.leftOut.seenOn" = "%@ 观看";
+"import.report.copyList" = "复制列表";
+"import.report.copied" = "已复制列表";
+"import.report.details" = "详情";
+
+
+// MARK: - Report import — dettagli
+"import.report.detail.period" = "覆盖时间段";
+"import.report.detail.years" = "%d 年";
+"import.report.detail.oneYear" = "1 年";
+"import.report.detail.lessThanYear" = "不到一年";
+"import.report.detail.statuses" = "已恢复的剧集状态";
+"import.report.detail.statuses.hint" = "与 TV Time 一致的待看清单与归档";
+"import.report.detail.ratings" = "已迁移的评分";
+"import.report.detail.ratingsUnmatched" = "未匹配的评分";
+"import.report.detail.ratingsUnmatched.hint" = "目录中不存在的已评分剧集";
+"import.report.detail.ratingsDeferred" = "尚未导入的评分";
+"import.report.detail.favorites" = "已恢复的收藏";
+"import.report.detail.moviesSeen" = "标记为已看的电影";
+"import.report.detail.moviesWatchlist" = "待看清单中的电影";
+"import.report.detail.statusesUnresolved" = "未恢复的状态";
+"import.report.detail.outOfStructure" = "无法归位的剧集";
+"import.report.detail.outOfStructure.hint" = "剧集结构之外的特别篇与加长版";
+"import.report.detail.favoriteMovies" = "未导入的收藏电影";
+
+
+// MARK: - Report import — titolo mancante
+"import.report.leftOut.untitled" = "导出文件中缺少标题";
+
+
+// MARK: - 影片类型（TMDB）
+// 界面上显示的类型名称（轮播标题、统计中的类型图表）。
+// TMDB 只在影片详情里返回已翻译的类型；轮播里类型是数字 ID，所以名称必须来自这里。
+"genre.action" = "动作";
+"genre.adventure" = "冒险";
+"genre.animation" = "动画";
+"genre.comedy" = "喜剧";
+"genre.crime" = "犯罪";
+"genre.documentary" = "纪录片";
+"genre.drama" = "剧情";
+"genre.family" = "家庭";
+"genre.fantasy" = "奇幻";
+"genre.history" = "历史";
+"genre.horror" = "恐怖";
+"genre.music" = "音乐";
+"genre.mystery" = "悬疑";
+"genre.romance" = "爱情";
+"genre.scienceFiction" = "科幻";
+"genre.tvMovie" = "电视电影";
+"genre.thriller" = "惊悚";
+"genre.war" = "战争";
+"genre.western" = "西部";
+"genre.actionAdventure" = "动作冒险";
+"genre.kids" = "儿童";
+"genre.news" = "新闻";
+"genre.reality" = "真人秀";
+"genre.sciFiFantasy" = "科幻奇幻";
+"genre.soap" = "肥皂剧";
+"genre.talk" = "脱口秀";
+"genre.warPolitics" = "战争与政治";
+
+
+// MARK: - 心情
+// 填入 "carousel.moodTonight"（“今晚，来点%@”）的 %@。是名词，不是形容词。
+"mood.happy" = "治愈";
+"mood.sad" = "伤感";
+"mood.excited" = "刺激";
+"mood.relaxed" = "轻松";
+"mood.scared" = "惊悚";
+"mood.thoughtful" = "深度";
+"mood.romantic" = "浪漫";
+"mood.adventurous" = "冒险";
+"mood.nostalgic" = "怀旧";
+"mood.energetic" = "活力";
+
+
+// MARK: - 轮播 —— 参数与无类型时的替代标题
+// "%d" 是年代的起始年份（2020）：中文写作“2020 年代”。
+"carousel.arg.decade" = "%d 年代";
+// 用户还没有偏好类型时使用的替代标题（不是塞进普通标题 %@ 里的词）。
+"carousel.hiddenGems.generic" = "冷门佳作";
+"carousel.staffPicks.generic" = "为你精选";
+
+
+// MARK: - 统计
+"analytics.noData" = "暂无数据";
+
+
+// MARK: - 统计与游戏化（从视图中提取的文案）
+// 这些文案原本硬编码在 AnalyticsDashboardView / FloatingXPBadgeView / BadgeGalleryView /
+// LevelProgressView 里，没有经过 `.localized`，所以在全部 20 种语言里都还是英文。
+"stats.title" = "我的统计";
+"stats.yourActivity" = "你的活跃度";
+"stats.viewFull" = "查看完整统计";
+"stats.loading" = "正在加载统计…";
+"stats.errorTitle" = "无法加载统计";
+"stats.emptyTitle" = "暂无统计";
+"stats.emptySubtitle" = "开始观看，就能看到你的统计！";
+"stats.genreDistribution" = "类型分布";
+"stats.genreEmpty" = "暂无类型数据";
+"stats.whenActive" = "你的观看时段";
+"stats.topContent" = "你看得最多的作品";
+"stats.contentEmpty" = "暂无作品数据";
+"stats.discoveryChannels" = "你发现作品的方式";
+"stats.discoveryEmpty" = "暂无发现数据";
+"stats.moodProfile" = "心情画像";
+"stats.moodEmpty" = "数据还不够——继续观看就能看到你的心情画像。";
+
+// "%d" 是等级数字。
+"gamification.levelNumber" = "等级 %d";
+// 顶部窄徽章用的简写版本。
+"gamification.levelShort" = "Lv.%d";
+"gamification.bestStreak" = "最长连续天数";
+"gamification.xpBonus" = "XP 奖励";
+"gamification.todaysChallenge" = "今日挑战";
+"gamification.completed" = "已完成！";
+"gamification.badgeUnlocked" = "解锁徽章！";
+"gamification.badges.collected" = "已收集徽章";
+"gamification.badges.unlocked" = "已解锁";
+// "%d" 是徽章总数，显示为“12 / 40”。
+"gamification.badges.ofTotal" = "/ %d";
+"gamification.levels.progressTitle" = "等级进度";
+"gamification.allLevels" = "全部等级";
+
+"common.progress" = "进度";
+"tvDetail.seasonsTitle" = "季";
+"tvDetail.episodesTitle" = "分集";

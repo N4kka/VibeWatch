@@ -1,26 +1,11 @@
 import Foundation
 
 enum DatabaseUtilities {
-    /// Executes a given asynchronous operation within a database transaction.
-    ///
-    /// - Parameter operation: The asynchronous operation to perform.
-    /// - Returns: The result of the operation.
-    /// - Throws: Any error thrown by the operation.
-    static func executeInTransaction<T>(
-        _ operation: @Sendable () async throws -> T
-    ) async rethrows -> T {
-        // Shared transaction logic (conceptual, actual implementation would depend on database library)
-        Logger.debug("BEGIN TRANSACTION (conceptual)")
-        do {
-            let result = try await operation()
-            Logger.debug("COMMIT TRANSACTION (conceptual)")
-            return result
-        } catch {
-            Logger.debug("ROLLBACK TRANSACTION (conceptual)")
-            throw error
-        }
-    }
-    
+    // `executeInTransaction` used to live here. It never opened a transaction — it logged
+    // "BEGIN TRANSACTION (conceptual)" and called the closure — so its one caller that actually
+    // relied on it for atomicity (DatabaseMigrationService.migrateDiscoveryCache) had none.
+    // Use `SQLiteService.transaction` instead, which issues real BEGIN/COMMIT/ROLLBACK.
+
     /// Retries an asynchronous operation a specified number of times if it fails.
     ///
     /// - Parameters:

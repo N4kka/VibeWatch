@@ -1,16 +1,38 @@
 import Foundation
 
+enum WatchProviderLoadState {
+    case loading
+    case available(CountryProviders)
+    case unavailable
+
+    var providers: CountryProviders? {
+        if case .available(let providers) = self { return providers }
+        return nil
+    }
+
+    var isLoading: Bool {
+        if case .loading = self { return true }
+        return false
+    }
+
+    var isUnavailable: Bool {
+        if case .unavailable = self { return true }
+        return false
+    }
+}
+
 @MainActor
 class MovieDetailViewModel: ObservableObject {
     @Published var movie: Movie?
     @Published var credits: Credits?
     @Published var videos: [Video] = []
     @Published var watchProviders: CountryProviders?
+    @Published var watchProviderState: WatchProviderLoadState = .loading
     @Published var similarMovies: [Movie] = []
     @Published var imdbId: String?
     @Published var isLoading = false
     @Published var error: AppError?
-    @Published var whyForMeMessage: String?
+    @Published var whyForMeAnalysis: WhyForMeAnalysis?
     @Published var isWhyForMeLoading = false
     @Published var whyForMeError: String?
     
@@ -40,6 +62,8 @@ class MovieDetailViewModel: ObservableObject {
     func loadMovieDetails() async {
         isLoading = true
         error = nil
+        watchProviders = nil
+        watchProviderState = .loading
         let region = LocalizationManager.shared.currentCountry.id
 
         // Stream 1: cache-first detail (instant on cache hit, background refresh after)
@@ -48,7 +72,13 @@ class MovieDetailViewModel: ObservableObject {
             for await providers in self.providersRepository.observeProviders(
                 mediaId: self.movieId, mediaType: .movie, region: region
             ) {
-                if let providers { self.watchProviders = providers }
+                if let providers, providers.hasUsableProviders {
+                    self.watchProviders = providers
+                    self.watchProviderState = .available(providers)
+                } else {
+                    self.watchProviders = nil
+                    self.watchProviderState = .unavailable
+                }
             }
         }
 
@@ -58,8 +88,6 @@ class MovieDetailViewModel: ObservableObject {
             self.videos = snapshot.videos
             self.similarMovies = snapshot.similarMovies
             self.imdbId = snapshot.movie.imdbId
-            // Seed providers from detail_cache legacy field only if not yet set by providersRepository
-            if self.watchProviders == nil, let p = snapshot.watchProviders { self.watchProviders = p }
             self.isLoading = false
             self.error = nil
         }
@@ -69,8 +97,13 @@ class MovieDetailViewModel: ObservableObject {
         credits?.crew.first { $0.job == "Director" }
     }
     
+    /// Il cast intero: il carosello è pigro, e tagliare a dieci nascondeva metà dei nomi che
+    /// l'utente cercava (i comprimari stanno spesso oltre il decimo posto).
     var mainCast: [Cast] {
-        Array(credits?.cast.prefix(10) ?? [])
+        // TMDB elenca due volte chi interpreta più ruoli: con `ForEach` su `id` sarebbero due
+        // schede identiche e un avviso di identità duplicata.
+        var visti = Set<Int>()
+        return (credits?.cast ?? []).filter { visti.insert($0.id).inserted }
     }
     
     var trailer: Video? {
@@ -95,12 +128,7 @@ class MovieDetailViewModel: ObservableObject {
                 languageName: language.nativeName,
                 languageCode: language.id
             )
-            if isInvalidWhyForMe(response) {
-                whyForMeMessage = nil
-                whyForMeError = "common.error".localized
-            } else {
-                whyForMeMessage = response
-            }
+            whyForMeAnalysis = response
             aiTokenManager.recordUsage()
         } catch {
             whyForMeError = error.localizedDescription
@@ -140,18 +168,6 @@ class MovieDetailViewModel: ObservableObject {
         )
     }
 
-    private func isInvalidWhyForMe(_ text: String) -> Bool {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.isEmpty { return true }
-        if trimmed == "..." || trimmed == "…" { return true }
-        if trimmed.count < 10 { return true }
-        let lower = trimmed.lowercased()
-        if lower.contains("analysis") || lower.contains("analyze") { return true }
-        if lower.contains("top genres") || lower.contains("genres:") { return true }
-        if lower.contains("cast:") || lower.contains("overview") { return true }
-        if trimmed.contains("**") { return true }
-        return false
-    }
 }
 
 @MainActor
@@ -160,11 +176,12 @@ class TVShowDetailViewModel: ObservableObject {
     @Published var credits: Credits?
     @Published var videos: [Video] = []
     @Published var watchProviders: CountryProviders?
+    @Published var watchProviderState: WatchProviderLoadState = .loading
     @Published var similarShows: [TVShow] = []
     @Published var imdbId: String?
     @Published var isLoading = false
     @Published var error: AppError?
-    @Published var whyForMeMessage: String?
+    @Published var whyForMeAnalysis: WhyForMeAnalysis?
     @Published var isWhyForMeLoading = false
     @Published var whyForMeError: String?
     
@@ -194,13 +211,21 @@ class TVShowDetailViewModel: ObservableObject {
     func loadTVShowDetails() async {
         isLoading = true
         error = nil
+        watchProviders = nil
+        watchProviderState = .loading
         let region = LocalizationManager.shared.currentCountry.id
 
         Task(priority: .utility) {
             for await providers in self.providersRepository.observeProviders(
                 mediaId: self.tvShowId, mediaType: .tv, region: region
             ) {
-                if let providers { self.watchProviders = providers }
+                if let providers, providers.hasUsableProviders {
+                    self.watchProviders = providers
+                    self.watchProviderState = .available(providers)
+                } else {
+                    self.watchProviders = nil
+                    self.watchProviderState = .unavailable
+                }
             }
         }
 
@@ -210,18 +235,32 @@ class TVShowDetailViewModel: ObservableObject {
             self.videos = snapshot.videos
             self.similarShows = snapshot.similarShows
             self.imdbId = snapshot.tvShow.imdbId
-            if self.watchProviders == nil, let p = snapshot.watchProviders { self.watchProviders = p }
             self.isLoading = false
             self.error = nil
         }
     }
     
-    var mainCast: [Cast] {
-        Array(credits?.cast.prefix(10) ?? [])
+    var director: Crew? {
+        credits?.crew.first { $0.job == "Director" }
     }
-    
+
+    /// Il cast intero: il carosello è pigro, e tagliare a dieci nascondeva metà dei nomi che
+    /// l'utente cercava (i comprimari stanno spesso oltre il decimo posto).
+    var mainCast: [Cast] {
+        // TMDB elenca due volte chi interpreta più ruoli: con `ForEach` su `id` sarebbero due
+        // schede identiche e un avviso di identità duplicata.
+        var visti = Set<Int>()
+        return (credits?.cast ?? []).filter { visti.insert($0.id).inserted }
+    }
+
     var trailer: Video? {
         videos.first
+    }
+
+    var displaySeasons: [Season] {
+        (tvShow?.seasons ?? [])
+            .filter { $0.seasonNumber > 0 }
+            .sorted { $0.seasonNumber > $1.seasonNumber }
     }
 
     func generateWhyForMe() async {
@@ -242,12 +281,7 @@ class TVShowDetailViewModel: ObservableObject {
                 languageName: language.nativeName,
                 languageCode: language.id
             )
-            if isInvalidWhyForMe(response) {
-                whyForMeMessage = nil
-                whyForMeError = "common.error".localized
-            } else {
-                whyForMeMessage = response
-            }
+            whyForMeAnalysis = response
             aiTokenManager.recordUsage()
         } catch {
             whyForMeError = error.localizedDescription
@@ -287,11 +321,4 @@ class TVShowDetailViewModel: ObservableObject {
         )
     }
 
-    private func isInvalidWhyForMe(_ text: String) -> Bool {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.isEmpty { return true }
-        if trimmed == "..." || trimmed == "…" { return true }
-        if trimmed.count < 10 { return true }
-        return false
-    }
 }

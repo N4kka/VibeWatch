@@ -11,6 +11,12 @@ struct CountryProviders: Codable {
     var rent: [Provider]?
     var buy: [Provider]?
     var link: String?
+
+    var hasUsableProviders: Bool {
+        flatrate?.contains(where: \.hasUsableLogo) == true ||
+        rent?.contains(where: \.hasUsableLogo) == true ||
+        buy?.contains(where: \.hasUsableLogo) == true
+    }
 }
 
 struct Provider: Codable, Identifiable, Hashable {
@@ -35,6 +41,14 @@ struct Provider: Codable, Identifiable, Hashable {
     }
     
     var id: Int { providerId }
+
+    var hasUsableLogo: Bool {
+        guard !logoPath.isEmpty else { return false }
+        let lowerLogo = logoPath.lowercased()
+        if lowerLogo.contains(".svg") { return false }
+        if lowerLogo.contains("logo-white") { return false }
+        return true
+    }
     
     var logoURL: URL {
         if logoPath.hasPrefix("http") {
@@ -85,3 +99,28 @@ struct PriceInfo: Codable, Hashable {
 }
 
 // Note: WatchmodeSource and WatchmodeResponse are defined in Core/Network/WatchmodeService.swift
+
+// MARK: - Elenco provider per regione (`/watch/providers/{movie|tv}`)
+
+/// La risposta dell'elenco completo dei provider di una regione. È una forma diversa da
+/// `WatchProvider` (che è "chi trasmette QUESTO titolo"): qui non c'è un titolo, c'è un catalogo.
+struct AvailableProvidersResponse: Codable {
+    let results: [AvailableProvider]
+}
+
+struct AvailableProvider: Codable {
+    let providerId: Int
+    let providerName: String
+    let logoPath: String?
+    /// Priorità globale; `displayPriorities` la specializza per regione.
+    let displayPriority: Int?
+    let displayPriorities: [String: Int]?
+
+    enum CodingKeys: String, CodingKey {
+        case providerId = "provider_id"
+        case providerName = "provider_name"
+        case logoPath = "logo_path"
+        case displayPriority = "display_priority"
+        case displayPriorities = "display_priorities"
+    }
+}

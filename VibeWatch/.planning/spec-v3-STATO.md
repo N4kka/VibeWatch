@@ -1,0 +1,1546 @@
+# SPEC v3 — stato del lavoro e ripresa
+
+> Aggiornato: 2026-08-02 notte (decima sessione). **LA CHECKLIST È COMPLETA: punti 1-5 tutti
+> chiusi.** Il batch è committato e pushato (`acf9acb`..), il server deployato e collaudato E2E
+> (vedi *Deploy della decima sessione*), e **il test unico su dispositivo è passato per intero**
+> (confermato dall'utente il 2026-08-02): universal link tap→app, liste pubbliche nel profilo
+> altrui, re-import dello ZIP, risoluzione a mano con la UI, stats avanzate Pro. **Il blocco 10
+> si dichiara CHIUSO.** Restano solo le decisioni di prodotto dichiarate in fondo alla lista
+> aperti (film nelle stats, reaction, lingua di user.csv, Year in Review).
+> Progetto Supabase: `rqhxhkijzhqivljivirq` (VibeWatch, eu-west-1, Postgres 17.6).
+> Repo: `/Users/nicola/Documents/StartingVibe/VibeWatch` (git root un livello sopra).
+
+**Il filo conduttore di queste sessioni, se ne va letto uno solo.** Ogni problema costato tempo era
+un fallimento *silenzioso*, non un errore: un `try?` che ingoiava un 401, un `?? ""` che rendeva
+una chiave mancante indistinguibile da una vuota, un parse fallito spacciato per "username già
+preso", un pulsante Segui sul proprio profilo il cui tap moriva come rifiuto muto. Nessuno di
+questi si vede leggendo il codice: si vedono **eseguendolo e provando a romperlo**. Quando un test
+passa al primo colpo, vale la pena rompere apposta ciò che dovrebbe coprire e controllare che
+fallisca — fatto anche in questa sessione sul `security definer` di `search_users`: rimesso
+`invoker`, la suite fallisce esattamente dove deve.
+
+## Dove siamo, e cosa resta — la lista unica per riprendere
+
+### Checkpoint della ripresa Codex — 2026-08-02
+
+Il batch lasciato aperto da Claude è stato mappato interamente alla SPEC prima di modificarlo. La
+baseline locale è verde: suite SQL completa con migration applicate due volte; parser import 35/35
+(1 test archivio privato ignorato); catalog-resolve 33/33; import-write 32/32; 134 test iOS mirati
+su import, liste/SQLite, analytics, social, Config, localizzazioni, conflitti e state machine.
+
+Prima tranche di correzioni completata con regressione:
+
+- `ListManager.reconcileCoreListIdentities` non può più perdere gli item unici quando un item della
+  lista locale collide con quello della lista canonica: deduplica, spostamento e cancellazione sono
+  ora un'unica transazione; test reale su SQLite aggiunto.
+- rimosso il byte NUL reale da `import-parse/parsing.ts` (Git lo trattava come binario), mantenendo
+  lo stesso separatore runtime tramite `\u0000`; tutti i 33 test del parser restano verdi.
+- `AnalyticsInsightsService` non esclude più le TV legacy prima di sapere che `tv_tracking` è
+  leggibile: in caso di errore logga e ripiega sui dati legacy, invece di mostrare zeri falsi; test
+  con mirror volutamente rimosso aggiunto.
+
+Seconda tranche completata e verificata localmente:
+
+- `UserPreferenceManager` ora fonde TV derivate e dati legacy distinguendo successo, vuoto ed
+  errore del mirror, limita dopo l'ordinamento globale per recenza e non lascia entrare liste
+  custom/seen nella watchlist; `Continue Journey` instrada separatamente film e serie. Quattro
+  regressioni dedicate verdi.
+- il timezone di `user.csv` viene scritto solo nello slot ancora nullo/assente, con esito fedele
+  anche sotto insert/update concorrenti; quattro test Deno verdi. La lingua resta validata e
+  dichiarata, ma non ha ancora una destinazione di prodotto.
+- i problemi di configurazione al lancio vengono segnalati in release come un unico non-fatal
+  tipizzato, oltre al fault locale; due test dedicati verdi.
+- `delete-user` inventaria gli oggetti Storage di qualunque bucket e il path `imports`, li elimina
+  via Storage API in batch da 100, pulisce le tabelle senza FK e i budget e non elimina l'utente
+  Auth se il cleanup è incompleto. Migration, 6 asserzioni SQL, 2 test Deno e type-check verdi;
+  restano deploy ed E2E HTTP.
+- il 401 anticipato di `import-parse` senza Bearer JWT è ora una regola pura coperta da test;
+  l'intera suite del parser è 35/35 (più 1 test archivio privato ignorato) e il type-check è verde.
+
+Verifica finale della ripresa: 52 test iOS selezionati sulle aree modificate, zero failure; 119
+test Deno complessivi, zero failure e 1 fixture privata ignorata; type-check delle tre Edge
+Function verdi; suite SQL completa verde con migration applicate due volte, comprese le prove del
+resolver manuale atomico e della mappa catalogo immutabile; `git diff --check` pulito.
+
+**Resolver manuale chiuso localmente e non ancora deployato:** dopo la scelta della sola serie,
+ogni episodio viene riconfermato con lookup esatto `tvdb_episode_id → tmdb_episode_id`, filtrato
+per la serie TMDB scelta; stagione e numero arrivano soltanto dalla risposta TMDB. La riapertura
+del job/staging è una singola transazione, i rating già mappati a un'altra serie non vengono
+riaperti e una mappa episodio `found` resta immutabile anche sotto resolver concorrenti. UI e copy
+nelle 20 lingue dichiarano che ciò che non è confermato resta nel report. Test Deno/SQL/iOS e
+type-check sono verdi; prima del deploy servono le migration `20260802240000` e `20260802250000`,
+poi le Edge Function e un E2E HTTP.
+
+### Verifica della ripresa Codex (Claude, 2026-08-02 sera) — TUTTO verde, più la verità di produzione
+
+Il batch di Codex è stato riverificato eseguendo, non rileggendo: **Deno 120/120** su tutte e 7
+le funzioni (import-parse 36/36 con lo ZIP vero), **SQL 385 asserzioni** su 8 suite con migration
+applicate due volte (comprese riapertura atomica, mappa immutabile, inventario Storage), **suite
+iOS COMPLETA 524/524** (compilazione reale verificata nel log, 96 SwiftCompile — non i 134 mirati:
+tutta), type-check 7/7, e l'audit di §6: zero riferimenti alla numerazione dell'export in tutto
+`import-manual-resolve`. Riletti i pezzi portanti (RPC atomica coi tre errcode VW, la corsa
+sull'indice one-open-job → `another_job_open`, `catalog_store_tvdb_map` che restituisce la riga
+VINCENTE, `validateManualEpisodeContext`, ripresa client da `resolving`): conformi al design.
+
+**Tre note dello checkpoint Codex erano stantie — la produzione è più avanti di quanto il
+worktree sapesse** (lavoro della sessione Claude, fatto PRIMA della ripresa Codex):
+
+- la migration del rifiuto liste (`20260802200000`, splice su prosrc md5 `54c9a842…`) è **GIÀ
+  applicata in produzione e collaudata** con transazione a rollback: ensure idempotente
+  (watchlist resta 1, rigioco 1, custom passa, zero rifiuti). Nessun dry-run da fare;
+- il `delete-user` **v1 (pre-Codex) è GIÀ deployato e collaudato E2E via HTTP** su utente
+  usa-e-getta: login vero, ZIP in `imports/{uid}/`, chiamata, residui ZERO su auth/profiles/
+  prefs/budget/storage. La versione RIVISTA da Codex (storage.ts, bucket-agnostici, niente
+  delete auth se cleanup incompleto) è migliore e NON deployata: va deployata sopra;
+- il **backfill dei generi è FATTO in produzione**: `tmdb_shows.genres` 471/471 (una sola
+  legittimamente vuota da TMDB), migration `20260802230000` (get_my_stats v2) applicata,
+  `catalog-resolve` deployato (versione pre-Codex) con `showRow` che li scrive.
+
+In produzione sono applicate anche `20260802210000` (report film) e `20260802220000`
+(`user_storage_objects`, proacl solo service — verificato). ~~NON applicate: `20260802240000` e
+`20260802250000`~~ — **APPLICATE nella decima sessione**, e le 7 Edge Function ora deployate
+sono le versioni del worktree (vedi *Deploy della decima sessione*).
+
+**Il test di resolve dal dispositivo (una serie) è girato contro la funzione VECCHIA deployata**,
+e l'impronta è misurata: l'utente ha scelto **X Factor → TMDB 16322, che È X Factor Italia**
+(origin IT, 19 stagioni, 2008 — scelta giusta); la vecchia funzione ha scritto **243 mappe
+episodio `method='manual'` dalla numerazione dell'export** e il job riaperto è tornato `done`
+(17:36 UTC) scrivendo gli eventi. Verifica empirica con `/find` esatto su TUTTI i 243 id TVDB:
+**TMDB non ne conosce nessuno** (risposta vuota). Quindi: (a) il resolver nuovo su questa serie
+avrebbe confermato ZERO episodi — è il costo dichiarato del design; (b) le 243 mappe sono sulla
+serie giusta e con stagioni plausibili (fino alla 19ª, che l'Italia ha), ma non verificabili per
+id. **DECISIONE PRESA (2026-08-02, decima sessione): si TENGONO** — unico modo di avere X Factor
+nel tracking; verificato dopo il deploy che le 243 mappe sono intatte.
+
+### Deploy della decima sessione (Claude, 2026-08-02 sera) — punti 1-2 della checklist CHIUSI
+
+- **Migration `20260802240000` e `20260802250000` APPLICATE in produzione** (via MCP,
+  `apply_migration`): le due RPC esistono, `proacl` esatto (`postgres` + `service_role` soltanto,
+  entrambe `security definer`), verificato su `pg_proc` prima e dopo.
+- **Le 7 Edge Function del worktree DEPLOYATE** (via MCP `deploy_edge_function`, `verify_jwt`
+  invariato a true per tutte): catalog-resolve v12, import-resolve v12, import-manual-resolve v2,
+  import-parse v9, import-write v9 (hash eszip IDENTICO alla v8: il worktree coincideva col
+  deployato), import-finalize v6, delete-user v33 (la revisione Codex). Nota: la CLI supabase era
+  bloccata dai permessi della sessione; la strada MCP ha funzionato passando i file coi loro
+  percorsi relativi (`supabase/functions/...`) così gli import `../_shared/` risolvono.
+- **Collaudo SQL in produzione con rollback** (`raise exception` finale, residui verificati zero):
+  `import_reopen_manual_resolution` — invalid_plan, riapertura riuscita (job→resolving/running,
+  staging→pending, mappa serie found manual), job_not_done, series_already_mapped con mappa
+  INTATTA, staging_changed con subtransazione che ripristina il job a done;
+  `catalog_store_tvdb_map` — un found NON si sovrascrive e la risposta riporta la riga vincente.
+- **E2E HTTP del resolver nuovo, in produzione**: utente usa-e-getta (signup + conferma via SQL +
+  password grant), job sintetico done con 3 righe `catalogo: not_found/ambiguous` sulla serie
+  tvdb 70327 (già `found`→TMDB 95 in mappa, quindi zero chiamate TMDB): `import-manual-resolve`
+  → `{ok: true, eventi_da_ritentare: 3, phase: resolving}`; `import-resolve` col contesto manuale
+  nel checkpoint → `{risolte: 3, irrisolte: 0}` e le righe annotate coi numeri DALLA MAPPA TMDB
+  (s1e1-e3). Smoke test di boot su tutte e 6 le funzioni import (400/404 sulle strade di guardia).
+- **`delete-user` rivista collaudata E2E due volte** sugli usa-e-getta: 200 `{status: deleted}`,
+  residui ZERO su auth/profiles/storage/api_proxy_budget, job+staging sintetici cascati.
+- La mappa condivisa non è stata toccata dai collaudi: 243 mappe X Factor e le 3 righe di 70327
+  identiche a prima.
+
+**Checklist per la prossima sessione, in ordine:**
+
+1. ~~decisione X Factor~~ — **PRESA: si tengono** (sopra);
+2. ~~apply migration + deploy 7 funzioni + E2E HTTP del resolver nuovo~~ — **FATTO e collaudato**
+   (vedi *Deploy della decima sessione*);
+3. ~~task 9 stats avanzate lato client~~ — **FATTO** (decima sessione): `TMDBGenres` esteso con
+   gli 8 generi TV (10759-10768), sezione `advancedStatsSection` in `AnalyticsDashboardView`
+   sotto la griglia dei totali (fuori dal selettore di periodo, stessi numeri server §13.7) —
+   Pro vede le tre ripartizioni a barre (genere/decade/voti, ordinamento del server,
+   `showsSenzaGenere` dichiarato), free vede la card col lucchetto che dichiara il gate (§10,
+   `isPro` già in view via `ClipQuotaService.checkIsProUser`); presentazione pura in
+   `AdvancedStatsPresentation` (nome genere con ripiego "#id", decade "1990s", stelle a mezzi
+   passi, "<1 h" mai "0 h" su un dato vero); 6 chiavi × 20 lingue; 4 test nuovi in
+   `FavoritesRatingsActionsTests` (file già nel pbxproj — niente registrazione). Verifica:
+   44/44 su simulatore (38 FavoritesRatingsActions + 6 LocalizationCoverage). NOTA flakiness:
+   al primo run a freddo su DerivedData nuovo `testUnTitoloSiRisolveUnaVoltaSola` è fallito per
+   l'init dell'app host interlacciato col test (visibile nel log); isolato e a caldo passa —
+   non è una rottura, è la corsa del primo avvio;
+4. ~~commit/push del batch~~ — **FATTO**: commit `acf9acb` (79 file, +5.271/-164), pushato su
+   origin;
+5. ~~il **test unico su dispositivo**~~ — **PASSATO PER INTERO, confermato dall'utente il
+   2026-08-02**: universal link tap→app; liste pubbliche nel profilo altrui; re-import dello ZIP
+   (favorites negli slot liberi + film visti/watchlist + timezone quiet hours nel report);
+   risoluzione a mano col resolver NUOVO su una serie che TMDB conosce; stats avanzate Pro.
+
+**I blocchi 0–9 di §12 sono chiusi e collaudati**, import TV Time compreso (18.577 episodi
+dall'export vero, re-import idempotente con 103/104 stati per-serie applicati) e **fusione
+ListsView↔Tracking compresa** (decisione di prodotto del 2026-08-02 che supera §11 — confermata
+funzionante dall'utente sul dispositivo). Del blocco 10 la parte app è fatta; manca solo il
+sito. L'audit di fine lavori (2026-08-02 sera, SPEC alla mano) non ha trovato nulla di
+strutturale: gli aperti, TUTTI, sono questi, in ordine sensato di priorità:
+
+1. **Il sito su `vibewatchapp.com` è IN PRODUZIONE** (2026-08-02, ottava sessione) — repo git
+   a sé in `/Users/nicola/Documents/StartingVibe/vibewatch-site`, Cloudflare Pages progetto
+   `vibewatch-site`, account `37b4d5564d5ba203750a3f0bb80b00ad`. AASA statica servita con
+   `Content-Type: application/json` su apex E www (domini custom entrambi attivi, mai
+   redirect), **verificata identica al file del repo e già sulla CDN di Apple**
+   (`app-site-association.cdn-apple.com/a/v1/vibewatchapp.com`). Rotte verificate in
+   produzione: `/@nakka` 200 (da `public_profiles`, chiave publishable `default`),
+   `/film/550` "Fight Club (1999)", profilo inesistente 404, it/en, 404≠503, Smart App
+   Banner (`id6755368352`). Secret `TMDB_API_KEY` impostato; deploy: `npx wrangler pages
+   deploy` dal repo del sito (checklist nel suo README). `ProfileView.shareProfileEnabled =
+   true` acceso lo stesso giorno, build verde. **Provato dall'utente sul dispositivo il
+   2026-08-02: il tap sul link apre la pagina web e la CTA porta allo store** — cioè il
+   percorso di chi NON ha l'app. L'altro percorso — tap → profilo NELL'app — con la build
+   dello store non poteva riuscire (la versione pubblicata precede gli entitlement
+   `applinks:`, e il dominio lo reclama il binario, non l'AASA da sola): **provato il
+   2026-08-02 con la build del branch da Xcode, il tap apre il profilo NELL'app — confermato
+   dall'utente. Il blocco 10 è CHIUSO.** Per gli utenti dello store il percorso in-app arriva
+   col prossimo rilascio; la pagina web + CTA funziona già per tutti.
+2. ~~**Pulizia del bucket `imports`**~~ — **FATTA e collaudata in produzione** (2026-08-02,
+   ottava sessione): `imports_stale_uploads` (SQL service-only, migration `20260802150000`,
+   esclude i file di job running/paused) + Edge Function `imports-cleanup` (cronAuth,
+   cancella via Storage API — mai DELETE su `storage.objects`: lascerebbe i byte orfani) +
+   cron giornaliero 04:40 UTC (`20260802160000`). Collaudo: oggetto sintetico di 8 giorni →
+   `deleted: 1` via `net.http_post` (la strada del cron), ZIP veri intatti, publishable key
+   respinta con 401, `proacl` solo service. 9 asserzioni in `imports_ttl_test.sql` (harness
+   esteso con `created_at`), provate rompendo la guardia sui job aperti: fallisce dove deve.
+3. ~~**I voti dell'import** (§7.5)~~ — **FATTO e deployato** (2026-08-02, ottava sessione):
+   la coda dei voti nella fase 4 (`import-write` v5, `scriviVoti` dopo `scriviStati`) scrive
+   le stelle in `user_ratings` via `apply_mutations` (ramo del blocco 9, `media_type:
+   'episode'`, numeri da TMDB via `tvdb_tmdb_map` — i voti NON passano dalla fase 3, si
+   agganciano per `tvdb_episode_id` alla mappa che gli eventi hanno riempito: zero chiamate
+   TMDB). Regole con test (22 Deno): **un voto già in app non si sovrascrive, lapidi
+   comprese** (un voto cancellato in app non risorge al re-import — stessa regola
+   dell'`active` degli stati, ed è ciò che rende il re-import idempotente); reaction
+   conservate mai convertite (lookup TV Time spenta); lo 0 di TV Time è fuori scala 1-10 e
+   si dichiara; doppioni nel lotto → passa il primo. Report (`import_report`, migration
+   `20260802170000`): `voti_importati` ora STRUTTURALE (ogni stella processata → true; un
+   job vecchio resta false da solo — verificato in produzione sul job vero: 295 stelle,
+   false, zeri veri nei campi nuovi, storici identici), più `voti_stelle_importati` /
+   `gia_in_app` / `non_risolti`. Client: 3 campi + 2 righe in ImportView, 2 chiavi × 20
+   lingue, 22 test simulatore verdi (16 ImportViewModel + 6 LocalizationCoverage). Suite
+   SQL 332 asserzioni. **COLLAUDATO end-to-end lo stesso giorno**: l'utente ha rifatto
+   l'import dall'app dopo il deploy (terzo job, 12:56 UTC, done in 2'42" guidato dal cron)
+   — 224 stelle scritte in `user_ratings` (scala 2-10, 71 serie), 34 `voto_gia_in_app`
+   (doppioni fra i 4 file ratings), 37 non risolte (gli episodi non riconosciuti di
+   sempre), stati di nuovo 103 = idempotente. Le **reaction** restano fuori da
+   `watch_events.external_ref` (§7.5.1): conservate in export e staging, contate nel
+   report — il pezzetto mancante è dichiarato qui.
+4. ~~**Liste pubbliche nel profilo altrui** (§9.3, ultimo bullet)~~ — **FATTO e deployato**
+   (2026-08-02, ottava sessione): `get_public_lists` ha il parametro `p_owner` (migration
+   `20260802180000`, drop+create nella stessa transazione — un replace avrebbe creato un
+   overload ambiguo per PostgREST; `NOTIFY pgrst` esplicito dopo il cambio di firma) e i
+   **blocchi ora escludono NEI DUE VERSI** — prima le liste di chi ti aveva bloccato
+   comparivano nel feed; la funzione era già definer, mancava la clausola (lezione di
+   `search_users`, provata rompendo: la suite fallisce esattamente lì). Client: sezione in
+   `PublicProfileView` con fase separata dal profilo (errore ≠ "nessuna lista", riprova
+   visibile; vuoto = niente sezione), card e dettaglio riusati dal feed
+   (`PublicListCard`/`PublicListDetailView`), follow di lista ottimistico con rollback.
+   2 chiavi × 20 lingue, 4 test nuovi in `SocialProfileTests`, 6 asserzioni SQL in
+   `social_test.sql` (harness esteso: lists con name/is_public, list_follows, list_reports).
+   Verificato in produzione: firma unica, grant identici, feed invariato, il profilo di
+   `nakka` risponde 1 lista. Prova a occhio sul dispositivo: **fatta, ok** (2026-08-02).
+5. **Favorites da `lists-prod-lists.csv`** (§7.1): la parte SERIE è **FATTA e deployata**
+   (2026-08-02, ottava sessione — import-parse v6, import-resolve v9, import-write v6,
+   report `20260802190000`): `parseFavorites` decodifica la slice Go di `objects`
+   (87 serie sull'export vero, ordinate per data di preferenza), risoluzione nella coda
+   serie della fase 3, scrittura SOLO negli slot LIBERI di `user_favorites` (deciso
+   dall'utente: una riga esistente — viva o lapide — non si tocca; una serie già favorita
+   non si duplica; il resto è `slot_pieni`, dichiarato). Report + client (2 chiavi × 20
+   lingue) + 9 test Deno nuovi + 7 asserzioni SQL. **Collaudo end-to-end: FATTO col re-import
+   dello ZIP del 2026-08-02 (punto 5), ok.** I **favorite-movies** si dichiarano non supportati (contati nel
+   report): i film di TV Time non hanno id TVDB — solo uuid interni e NOMI (anche
+   giapponesi). I **film dell'export** (5 visti + 3 watchlist sull'export vero, righe v1
+   `entity_type=movie`) hanno la destinazione DECISA dall'utente (2026-08-02:
+   `watch_events` media_type movie con le date + lista legacy "visti"). **IMPLEMENTAZIONE LOCALE
+   IN CORSO, NON DEPLOYATA:** parser, risoluzione exact titolo+anno, scrittura, report e UI esistono
+   nel worktree e i test puri/SQL passano; manca collaudo integrato/deploy. `user.csv` ora viene
+   letto e validato: il timezone viene applicato con update/insert condizionale solo se la
+   preferenza è ancora nulla o assente, senza sovrascrivere una scelta concorrente (4 test Deno);
+   la lingua è per ora soltanto dichiarata nei totals e non ha ancora una destinazione di prodotto.
+6. ~~**Risoluzione a mano dei non riconosciuti** (§7.4)~~ — **DEPLOYATA E COLLAUDATA E2E in
+   produzione** (decima sessione, vedi *Deploy della decima sessione*). La scelta della serie
+   vincola lookup esatti per `tvdb_episode_id`; i numeri dell'export non partecipano alla
+   corrispondenza. Riapertura atomica, mappe `found` immutabili, conflitti e parziali conservati
+   nel report. Prova dal dispositivo con la UI su una serie che TMDB conosce: **fatta, ok**
+   (2026-08-02, punto 5).
+7. ~~**Consumatori legacy di `list_items` per le TV**~~ — **CHIUSO LOCALMENTE E TESTATO**:
+   `AnalyticsInsightsService` e `UserPreferenceManager` distinguono successo/vuoto/errore del
+   mirror e conservano il fallback legacy; watchlist e Continue Journey sono coperti anche per
+   tipo media, tipo lista e ordinamento globale. Restano naturalmente nel batch non deployato.
+8. ~~**Stats avanzate** genere/decade/distribuzione voti (§9.3)~~ — **FATTE anche lato client**
+   (decima sessione, punto 3 della checklist): UI dashboard con gate Pro, generi TV in
+   `TMDBGenres`, chiavi ×20, test verdi. Resta la decisione sull'inclusione dei film (nessun
+   catalogo film server-side; il server oggi ripartisce solo TV e la UI mostra ciò che arriva).
+   Il **Year in Review** di §10 non esiste (non era un blocco). Prova a occhio su dispositivo:
+   **fatta, ok** (2026-08-02, punto 5).
+9. Dei **debiti pre-esistenti** in fondo al documento, Config e il 401 di `import-parse` sono
+   chiusi e coperti. `delete-user`: la revisione Codex (v33) è **DEPLOYATA e collaudata E2E due
+   volte** nella decima sessione (residui zero, Storage e budget compresi). La correzione server
+   del rifiuto liste (`20260802200000`) è GIÀ applicata e collaudata in produzione con rollback —
+   nessun dry-run da fare (vedi *Verifica della ripresa Codex*). I vecchi test
+   ConflictResolver/SyncStateMachine sono verdi nella suite completa (524/524). Il batch resta
+   non committato; le Edge Function deployate sono ORA le versioni del worktree.
+
+## L'import in app (blocco 6 chiuso) — 2026-08-02, in produzione e collaudato ad app chiusa
+
+**Il flusso intero funziona senza client**: ZIP su Storage → `create_import_job` → il cron
+(ogni minuto) invoca `import-driver` che fa avanzare le fasi 2-6 → report in `totals` →
+push `import_done` in coda. Collaudato in produzione con utente usa-e-getta e ZIP sintetico
+(3 episodi di The Walking Dead, tvdb id già in mappa → zero chiamate TMDB): dopo la creazione
+del job **nessun client ha più toccato niente** — il job è arrivato a `done` da solo, report
+3/1/0 non riconosciuti, `tv_show_state` 3/177, push accodata. Residui zero (catalogo TWD
+rimasto: è §1.5). Gli esiti negativi provati via REST: `bad_path` (cartella altrui),
+`upload_not_found`, `already_running`.
+
+Com'è fatto, in breve (il perché sta nei commenti di migration e funzioni):
+
+- **`create_import_job(p_storage_path)`** (definer, solo authenticated): unica scrittura
+  client su `import_jobs` — un solo .zip nella PROPRIA cartella, file esistente e proprio
+  (`storage.objects.owner`), un solo job aperto per utente (indice unico parziale, la corsa
+  la chiude l'indice come in `set_username`). **`retry_import_job`**: failed → running,
+  fase e checkpoint intatti.
+- **`import-driver`** (Edge Function, solo service via `cronAuth`; cron ogni minuto con
+  guardia `where exists(... running)` — a riposo zero HTTP): claim con lease
+  (`locked_until`), loop di chiamate di fase a budget (100 s), verità riletta dalla riga,
+  push in `notifications` quando finalize dice done. **Se il claim va in errore procede
+  senza lease, dicendolo**: checkpoint + `dedup_key` rendono i replay sicuri (criterio 2
+  di §13), il lease è un'ottimizzazione — la lezione della replica stantia, sotto.
+- **`import_apply_mutations(p_user, batch)`** (definer, SOLO `service_role`, proacl
+  verificato): la fase 4 ad app chiusa. `apply_mutations` esige `auth.uid()`; il wrapper
+  imposta l'identità del proprietario del job (dalla riga, mai dalla richiesta) per la
+  durata della transazione e delega — ogni guardia resta al suo posto.
+- Le 4 funzioni di fase accettano il **service caller** (`isServiceCaller` → lookup da
+  admin); per gli utenti decide la RLS come prima. `catalog-resolve` col service key +
+  `job_id` valido intesta il budget `import:{proprietario}` (i contatori separati esistono
+  perché import e prewarm non si affamino a vicenda).
+- **Client iOS**: riga "Importa da" in ProfileView → `ImportView` (sorgenti: solo TV Time
+  .zip, il resto è una riga futura) → fileImporter → upload → RPC → **polling** (il client
+  è un oblò: le fasi sono del server) → report §7.4 con l'elenco dei non riconosciuti →
+  retry. `ImportViewModel` con backend a protocollo, 14 test; stati tutti distinti, la
+  soglia dei 5 errori di polling consecutivi rende visibile la linea persa senza fermare
+  il job. 26 chiavi nelle 20 lingue. CHECK di `notifications` allargato a `import_done`
+  (stessa forma di `api_proxy_budget`: ogni tipo nuovo è una migration).
+
+**Il primo import vero ha trovato TRE buchi che il collaudo non poteva vedere** (2026-08-02,
+mattina) — tutti sulla strada di `catalog-resolve`, che col sintetico già in mappa non veniva
+mai percorsa:
+
+1. **Chiavi in conflitto**: `import-resolve` guidata dal driver inoltrava la chiave service
+   come `Authorization` accanto all'`apikey` anon → 401 del gateway. Corretto: ramo service
+   con la stessa chiave su entrambi gli header.
+2. **Fragilità al transitorio**: dopo ~400 chiamate buone, UN 500 marcava `failed` un import
+   da 21.000 righe e chiedeva un dito umano — il contrario di §7.2. Ora `import-resolve`
+   conta gli errori CONSECUTIVI nel checkpoint (azzerati al primo giro buono), risponde
+   `retry: true` e il driver fa backoff al tick dopo; solo 30 giri di fila (≈30 min di guasto
+   vero) diventano `failed`.
+3. **La valanga senza lease**: col claim rotto dalla replica PostgREST stantia, due giri di
+   cron sovrapposti hanno tenuto ~20 chiamate TMDB simultanee per 9 minuti — e TMDB ha
+   risposto con ~30 minuti di 500: il "ban da scraper" contro cui metteva in guardia il
+   commento di `FIND_CONCURRENCY`. Cura strutturale: `RUN_BUDGET_MS = 40 s` — un giro del
+   driver finisce prima del tick successivo, quindi UN flusso solo anche senza lease.
+
+Nel mezzo, l'utente ha chiesto di **fermare e svuotare** il primo tentativo (era sul profilo
+principale): job + staging + zip rimossi, zero eventi scritti (la fase 4 non era mai partita),
+liste intatte — l'import non le tocca in nessuna fase. Il secondo tentativo (altro account)
+è ripartito dal checkpoint coi fix deployati.
+
+**L'export vero è arrivato in fondo** (2026-08-02, ore 05:26 UTC, dopo il quarto fix —
+`sanitizeFind`): **18.577 episodi da 409 serie**, storico 2015→2026, in 69 minuti guidati dal
+cron con l'app chiusa. Dichiarati nel report: 2.767 episodi su 92 serie non riconosciuti
+(X Factor IT, MasterChef Italia, i `not_found`/`ambiguous` che l'oracolo aveva previsto),
+15.906 duplicati v1 scartati (identico all'oracolo), 380 voti rinviati. Push accodata.
+
+**Aperto dell'import**: sull'import già eseguito i **voti** restano rinviati
+(`voti_importati: false` nel report). Il collegamento rating e la risoluzione manuale §7.4 con
+identità TVDB esatta sono **deployati e collaudati E2E** dalla decima sessione; la push per un
+utente senza device registrati muore in `no-live-token` (giusto così).
+
+**Tre buchi trovati il 2026-08-02 partendo da una segnalazione dell'utente** ("post import mi
+aspettavo le liste aggiornate"). Le liste legacy di ListsView restano intatte **di proposito**
+(§11 esclude il rifacimento di ListsView; la migrazione legacy è andata nella direzione opposta,
+liste → `watch_events`, e una doppia scrittura ricreerebbe il "due posti, due numeri" delle
+stats). Ma la segnalazione ha scoperto che tre pezzi di §7.1 non erano implementati:
+
+1. ~~**`user_show_special_status.csv` → `for_later` e `followed_tv_show.csv` → `archived`**~~ —
+   **FATTO nella stessa sessione, deployato in produzione** (import-parse v5, import-resolve v8,
+   import-write v4, migration `20260802110000`). Il parser leggeva solo
+   `watch-episode`/`rewatch-episode` e i voti; ora `parseSeriesStatuses` unisce le TRE sorgenti
+   (flag di `user-series` in v2 ∪ i due CSV — nessuna contiene l'altra: 57 vs 51 archived) e
+   emette righe `row_kind='status'` in staging. Regole con test: **archived vince su for_later**;
+   **`active` si emette solo per le serie seguite senza eventi** (le "mai iniziate", la watchlist
+   vera: 19 sull'export dell'utente — Prison Break, The Orville…) e **non sovrascrive** una riga
+   già esistente, mentre for_later/archived sì — è lo stato che si sta importando. Risoluzione
+   per `tvdb_id` di serie (`catalog-resolve` con `entity_type: 'series'`, coda della fase 3),
+   scrittura come upsert `tv_show_state` via `apply_mutations` (coda della fase 4, stessi
+   controlli sui rifiuti). Sull'export vero la regola emette **104 stati: 57 archived, 28
+   for_later, 19 active** — fissato in un test contro `oracle_fixture.json` e nel test
+   sull'archivio reale (`TVTIME_ZIP`). Report esteso (stati applicati / lasciati in app / non
+   risolti con elenco, `stati_supportati` per i job vecchi) + riga nel client (2 chiavi × 20
+   lingue). Verde: 21 test import-parse, 16 import-write, suite SQL intera, 15 ImportViewModelTests
+   + 6 LocalizationCoverageTests su simulatore. Verificato in produzione che il report del job
+   vecchio resta identico nei campi storici e dichiara zeri veri nei nuovi.
+   **Per portare dentro la watchlist dell'account già importato: rifare l'import dello stesso
+   ZIP dall'app.** È idempotente per costruzione (criterio 2 di §13): gli episodi finiscono in
+   `already_present`, gli stati si applicano. NON collaudato end-to-end con un giro vero della
+   pipeline: il primo re-import è quel collaudo, e il report dirà se gli stati sono arrivati.
+2. **`lists-prod-lists.csv`** (favorite-series/movies → candidati Favorites, §7.1): mai parsato,
+   e ora `user_favorites` esiste. Da fare.
+3. **I film**: la pipeline è solo episodi. Il report almeno lo dichiara
+   (`film_importati: 0, film_supportati: false`), quindi non è una perdita muta — ma i film
+   dell'export non hanno una destinazione (il tracking v3 è solo TV; sarebbero l'unico caso in
+   cui le liste legacy sono la casa naturale). Da decidere prima che da fare.
+
+## La fusione ListsView ↔ Tracking — 2026-08-02, decisione di prodotto
+
+**L'utente ha deciso di superare il confine di §11** ("niente rifacimento di ListsView"):
+ListsView è l'archivio di TUTTO ciò che si aggiunge via VibeWatch, e per le serie TV non deve
+duplicare il tracking — deve **leggerlo**, e le sue scritture TV devono **andarci**. Two-way,
+un solo sistema. Le tre scelte semantiche, decise dall'utente:
+
+| | |
+|---|---|
+| Seen TV | serie **in pari o completata** (bucket `up_to_date`) — una serie a metà è "in corso", vive nel Tracking |
+| Aggiunta a watchlist | stato `active`, cioè **"Da iniziare"** (stessa semantica dell'import per le seguite mai iniziate) |
+| Archiviate | **solo nel Tracking**, ListsView non le mostra |
+
+Com'è fatta (tutta la logica in `ListManager`, i chiamanti non cambiano):
+
+- **Lettura derivata**: `fuseTrackingItems` in `loadListsFromSQLite` — le sezioni TV di
+  watchlist (`not_started` ∪ `for_later`) e seen (`up_to_date`) si sintetizzano dallo specchio
+  locale `tv_tracking` (stessa fonte della tab Tracking, zero rete, JOIN sui titoli
+  localizzati); i film restano su `list_items`, che possiede anche liked/disliked/custom. Gli
+  item derivati hanno id `tracking:{showId}`. Le righe TV legacy di watchlist/seen **non si
+  mostrano più** (restano in tabella, nessuna cancellazione). Se una lista core manca in SQLite
+  ma il tracking ha materiale, si crea dal default. ListManager rideriva a ogni
+  `syncEngineCompleted`. Solo per autenticati: un anonimo non ha tracking server e resta sul
+  percorso legacy.
+- **Scrittura instradata**: in `addToList`/`removeFromList`, per media TV su watchlist/seen →
+  `TrackingActions`: aggiungi = upsert `tv_show_state` `active`; rimuovi da watchlist =
+  `dropped` (mai cancellare una riga derivata); "vista tutta" = `warmCatalog` +
+  `expand_seen_shows_to_watch_events` (la macchina della migrazione legacy — zero episodi per
+  catalogo assente è un ERRORE visibile, `tracking.error.showNotInCatalog`, 20 lingue); togli
+  da seen = RPC **`unsee_tv_show`** (migration `20260802130000`): lapide su tutti gli eventi
+  della serie + `dropped` in un colpo solo — senza il dropped il ricalcolo la farebbe
+  ricomparire come "Da iniziare", e centinaia di DELETE via outbox non erano una strada.
+- **Backfill** (stessa migration): `backfill_watchlist_tracking()` — le serie TV nelle
+  watchlist legacy → `tv_show_state` `active`, `on conflict do nothing` (uno stato già scelto,
+  in app o dall'import, non si tocca). **Girato in produzione: 19 righe nuove (474 → 493),
+  secondo giro 0 (idempotente), grant solo service.** Il verso "seen legacy → eventi" resta al
+  client (`LegacyTrackingMigration`, già in produzione).
+
+Test: sezione "fusione" in `tracking_test.sql` (unsee: lapidi/dropped/no-op/guardia
+unauthenticated/proacl; backfill: 4 esiti + idempotenza) e `ListsTrackingFusionTests` (8 test:
+derivazione, anonimo, instradamento add/remove, film sul percorso legacy, errore catalogo).
+La suite iOS COMPLETA è stata girata come regressione: 505 test, 10 fail — **tutti
+pre-esistenti, verificato rieseguendoli su un worktree di HEAD pulito: identici**. Sono
+`ConflictResolverTests` (livelli XP e badge, roba di gamification), `DatabaseMigrationTests`
+(artifact sullo schema reale) e `SyncStateMachineTests.testIdleToIdle` — un debito che precede
+queste sessioni, registrato qui perché nessuno lo scambi per una rottura nuova.
+
+**Aperto della fusione**: i consumatori legacy che leggono ancora `list_items` per le TV
+(`AnalyticsInsightsService`, `UserPreferenceManager`/Discovery personalization) ora vedono meno
+serie di quelle in ListsView — da migrare alla stessa derivazione; il tasto Seen/watchlist nei
+dettagli serie passa già da `ListManager` (instradato), ma `EpisodeSeenManager` (flag locali
+legacy) resta in piedi per gli anonimi; la prova su dispositivo.
+
+## Il blocco 10 (universal links) — resta il sito
+
+**Il blocco 9 è CHIUSO, coda compresa** — dati, stats server, UI intera (stelle, favorites con
+scelta slot, diario, stats nella dashboard), **provato sul dispositivo il 2026-08-01** (voto,
+favorite, diario, stats) e la coda dell'ultima notte — nomi episodio localizzati nel Tracking
+(`localized_titles`, migration SQLite 13) e pillola "dove lo guardo" sulla card
+(`WatchProviderPill`) — **confermata ok dall'utente sul dispositivo il 2026-08-02**.
+
+**Il blocco 10 (§9.4) ha la parte client FATTA** (quinta sessione, 2026-08-01): tutto ciò che
+non richiede il sito è scritto, verde, e provato rompendo. Il dominio è **deciso nella stessa
+sessione: `vibewatchapp.com`** — già dentro `UniversalLinks.host` e nei due entitlement, apex
+**e** www (gli `applinks:` distinguono i sottodomini; il parser accetta entrambi, perché un
+link che apre l'app e poi cade nel vuoto è il fallimento muto di sempre). Com'è fatto:
+
+- **`UniversalLinks`** (`Core/Utilities/UniversalLinks.swift`): l'host in **un punto solo** e il
+  parser puro delle due rotte di §9.4 — `/@{username}` (forma di `UsernameRules`, maiuscole
+  abbassate perché `username` è citext) e `/film/{id}`. Host ammessi: apex e `www.`; tutto il
+  resto **cade** — nessuna destinazione di ripiego, un link sbagliato non deve sembrare
+  funzionante.
+- **`AppNavigationManager.handle(universalLink:)`**: profilo → `profileLinkTarget` (sheet in
+  `MainTabView` con porta esplicita, riusa `PublicProfileView(username:)`), film →
+  `deepLinkTarget` (la stessa strada delle notifiche push). Risponde `false` **senza effetti**
+  per gli URL non nostri: l'`onOpenURL` di `VibeWatchApp.swift` prova prima questa strada, e il
+  ramo OAuth vede esattamente ciò che vedeva prima.
+- **Entitlement** `applinks:vibewatchapp.com` + `applinks:www.vibewatchapp.com` in entrambi i
+  file (dev e Release) e **AASA pronto** in `docs/universal-links/` (appID prod e beta del team
+  `3V97GU3CCY`, percorsi `/@*` e `/film/*` — elenca percorsi, non host, quindi non dipende dal
+  dominio). Il README accanto dice cosa resta e come si collauda.
+- **Il lato che i link li produce** (2026-08-02): riga "Condividi profilo" in `ProfileView`,
+  `ShareLink` su `UniversalLinks.profileURL(username:)` — l'inverso dichiarato di `route(for:)`,
+  con un test round-trip che li tiene inversi. Lo username sta solo sul server (lo specchio
+  locale di `profiles` non ce l'ha), quindi la riga ha **quattro stati distinti**: pronto /
+  in caricamento / fallito con riprova visibile / senza username (i 19 del backfill: vuoto
+  vero, la riga non esiste — un errore di rete invece la lascia lì con la freccia di riprova).
+  Chiave `profile.share` nelle 20 lingue. **Dal 2026-08-02 la riga è SPENTA dietro
+  `ProfileView.shareProfileEnabled = false`** (badge "Coming soon", nessun tap, nessun giro di
+  rete): senza il sito il link aprirebbe una pagina vuota, e in review una feature che porta nel
+  vuoto è una bocciatura (guideline 2.1). Deciso dall'utente. Per riattivare: flag a `true` —
+  gli stati sono già pronti e coperti; la chiave `profile.share.comingSoon` (20 lingue) resta.
+- **19 test in `UniversalLinksTests`** (pbxproj, i soliti 4 punti; `SwiftCompile` dei file nuovi
+  verificata nel log — il bundle non era stantio). Il test di coerenza entitlement↔host è la
+  cosa che rende sicuro il "si cambia in un punto solo", ed è **provato rompendo due volte**:
+  dominio sbagliato nell'entitlement Release, e poi voce www manomessa dopo il cambio di
+  dominio — fallisce esattamente lì in entrambi i casi. Il cambio segnaposto → dominio vero è
+  stata la prova d'uso del meccanismo: due file, il test a fare da guida.
+
+**Cosa resta del blocco 10, e dipende tutto dal sito, non dall'app:** servire l'AASA su
+`https://vibewatchapp.com/.well-known/apple-app-site-association` (e su www — un redirect
+www → apex per l'AASA non vale, requisiti nel README); le pagine vere sulle due rotte; e la
+prova sul dispositivo — il criterio pratico resta un link `/@{username}` toccato in
+Note/Messaggi che apre il profilo giusto nell'app. Senza AASA servita il tap su un link **non
+può** aprire l'app, quindi non c'è niente da provare a mano oggi: non è un guasto, è l'ordine
+delle cose. Nota per il primo giro sul dispositivo: la CDN di Apple scarica l'AASA
+all'installazione, per iterare c'è `?mode=developer` (README).
+
+## Il blocco 9, com'è finito (per riferimento)
+
+La metà dati (2026-07-31, terza sessione): `user_favorites` e `user_ratings` in produzione con
+RLS e rami in `apply_mutations`, e il client che le sincronizza (specchi SQLite, pull,
+conflitti, `RatingActions`/`FavoritesActions`) — le decisioni stanno in *Il blocco 9, il pezzo
+dati* più sotto. Il resto, in ordine di arrivo:
+
+~~1. **Stats §9.3 lato server**~~ — **fatto** (migration `20260801190000`): `get_my_stats()`
+   (invoker, runtime reali con ripiego sul catalogo, rewatch nel tempo ma non negli episodi
+   distinti) e `get_public_profile` v2 coi favorites. Le stats avanzate restano Pro (§10) e
+   **aspettano il dato sui generi**, che il catalogo non ha; le stats altrui restano chiuse
+   (scelta di privacy, la spec non chiede di pubblicarle). Collaudato in produzione, residui
+   zero; il prosrc di `get_public_profile` verificato con md5 prima e dopo.
+~~2. **UI, prima metà**~~ — **fatto**: `StarRatingSection` sui due dettagli (mezzi passi, intero
+   1-10, stato in volo, errore che riporta lo stato vero), favorites nel profilo pubblico
+   (`FavoritePosterTile`, poster dal catalogo via client), `ProfileStatsSection` sul proprio
+   profilo (tre stati distinti). 10 chiavi nuove nelle 20 lingue; 16 test nel file
+   `FavoritesRatingsActionsTests`.
+
+~~3. **Diario e modifica dei favorites**~~ — **fatti** (quarta sessione): `DiaryView` dal proprio
+   profilo (cache locale, pagine da 100 con ordine totale, date dedotte marcate con `≈`, tre
+   stati distinti) e `FavoriteButton` sui dettagli film/serie (lo slot si sceglie da un dialog
+   coi 4 slot, gli occupati segnati **prima** del tap). Altre 7 chiavi nelle 20 lingue, 23 test
+   nel file `FavoritesRatingsActionsTests`.
+
+### La prova su dispositivo (2026-08-01): quattro trovati, tutti chiusi
+
+1. **I titoli delle serie erano in inglese** con l'app in italiano — nel diario e poi, per la
+   stessa ragione, nella schermata Tracking: il nome nello specchio è quello del **catalogo
+   condiviso** (§1.5), che parla una lingua sola. La soluzione ha due pezzi, perché il Tracking
+   ha il vincolo di §13.6 (zero rete al primo fotogramma): la tabella locale `localized_titles`
+   (migration SQLite 12, **non** sincronizzata: ogni dispositivo nella propria lingua) letta in
+   JOIN dal repository, e `LocalizedTitleStore` che riempie i buchi via TMDB **dopo** il
+   disegno. Il contratto anti-rincorsa: un fetch fallito non scrive e risponde `false`, quindi
+   il ViewModel non ricarica a vuoto. Il titolo del catalogo resta il ripiego: un titolo vero
+   in una lingua sbagliata batte un buco. Il diario usa lo stesso store, quindi ora i suoi
+   titoli persistono anche offline. **Secondo giro della stessa segnalazione**: i titoli delle
+   serie erano tradotti ma i *nomi degli episodi* no — stessa causa, stessa cura (migration 13:
+   la chiave della cache cresce di stagione/episodio, riempimento per stagione, contratto
+   anti-rincorsa anche quando TMDB non ha l'episodio cercato, §6). Ne è uscita anche una
+   flakiness latente: il DB del simulatore persiste fra i run, e i test che scrivono nella
+   cache ora puliscono le proprie righe.
+2. **Lo sheet del diario non aveva una porta**: solo swipe. Pulsante "Fine", pattern di
+   UserSearchView (lezione del pannello AI del blocco 7).
+3. **Le stats erano in due posti con due numeri diversi.** La dashboard di Impostazioni sommava
+   dal client: film dalla lista "visti", episodi da UserDefaults **legacy** × 30 minuti
+   **stimati** — vietato da §13.7, e destinato a restare indietro perché il tracking nuovo non
+   scrive più lì. Deciso con l'utente: **un posto solo, la dashboard**, coi totali del server
+   (`get_my_stats`) in una griglia FUORI dal selettore di periodo — sono numeri di tutti i
+   tempi, e fingere che seguano "questa settimana" sarebbe una bugia di layout. La barra sul
+   profilo è stata tolta; "Library" resta locale (metrica di backlog, non di tempo).
+
+4. **Le stats erano anche sotto la mail del profilo**, oltre che in Impostazioni — vedi il
+   punto 3: ora c'è un posto solo.
+
+**Confermato dall'utente il 2026-08-01: "funziona tutto"** — voto a 5 stelle, favorite,
+diario e stats visti sul dispositivo. Il giro voto → server → pull → schermo è verificato.
+
+**La checklist per ogni tabella nuova, distillata dal blocco 8** (l'ordine è quello giusto):
+
+1. migration server: tabella + RLS + grant, revoke a PUBLIC *e* anon/authenticated, fa fede
+   `proacl`; asserzioni in `supabase/tests/` (whitelist di `run.sh`!) e collaudo in produzione
+   dentro un `do $$ … raise exception` (rollback, zero residui);
+2. ramo in `apply_mutations` **per splice sul `prosrc` reale** con guardie md5 — mai dal file in
+   cartella; attenzione al cancello d'identità se la colonna non si chiama `user_id`;
+3. client: whitelist `SQLiteTable`, migration SQLite (`SQLiteMigrations.swift`, versione++),
+   pull-list del `SyncEngine`, `TableConflictMapping` (mai lasciare il `default`), e chiave
+   composita in `getKeyColumns` se la PK non è `id`;
+4. le azioni di scrittura in una classe sola che riempie l'identità (modello `TrackingActions` /
+   `SocialActions`), e dopo ogni scrittura **si rilegge dal server**;
+5. UI: stati errore distinti da "vuoto" (mai un errore travestito da risposta), chiavi in **tutte
+   e 20 le lingue** (`LocalizationCoverageTests` rompe altrimenti), test in un file che per il
+   target test va **registrato a mano nel pbxproj in 4 punti**;
+6. per le stats di §9.3: il tempo di visione totale è un **aggregato server** (§13.7) — in cache
+   c'è solo un anno di eventi; e le stats avanzate sono Pro (§10).
+
+## Il blocco 9, il pezzo dati — in produzione dal 2026-07-31
+
+Migration `20260801170000` (tabelle) e `20260801180000` (`apply_mutations`), entrambe applicate e
+collaudate in produzione dentro transazioni fatte fallire (residui verificati a zero, due volte).
+
+**Due aggiunte al DDL di §3.6, entrambe additive e col perché scritto nella migration:**
+`deleted_at` su `user_favorites` (il pull fa solo upsert: senza lapide uno slot svuotato non
+arriva mai agli altri dispositivi) e il CHECK di forma su `user_ratings` (famiglia di
+`watch_events_shape`: un voto a episodio senza numeri si rifiuta alla nascita, dove si vede).
+
+**`user_ratings` non ha id sintetico, e questo decide tutto il resto.** L'indice unico è
+**parziale** (`where deleted_at is null`, come da spec), quindi `ON CONFLICT` non vede la riga
+già cancellata: il ramo in `apply_mutations` fa **update-or-insert sulla chiave naturale** —
+l'UPDATE rianima la lapide riusando la riga, l'INSERT nasce solo se della chiave non c'è traccia.
+Collaudato: dopo lapide e re-voto le righe totali sono **1**, non 2. Un insert cieco avrebbe
+fatto divergere i dispositivi a ogni re-voto.
+
+**I grant sono esatti e c'è una lezione nuova:** revocare a PUBLIC e ad anon **non basta nemmeno
+per authenticated** — i default privileges gli regalano DELETE alla creazione della tabella, e il
+modello qui è la lapide. Terzo revoke esplicito, poi il grant: `authenticated=arw` su `relacl`,
+niente `d`. Il collaudo verifica che la DELETE fisica risponda `42501`.
+
+**Nello specchio SQLite stagione/episodio sono `NOT NULL DEFAULT -1`.** Una PK SQLite con una
+colonna NULL considera ogni NULL diverso dagli altri: lo stesso voto a un film arriverebbe due
+volte come due righe. Il -1 è lo stesso sentinello del `coalesce(season_number,-1)` dell'indice
+remoto; la conversione NULL → -1 sta in `normalizeRow` (solo pull — le azioni parlano al server
+coi NULL). Senza, `fetchLocalRecord` non ritroverebbe mai la riga e la risoluzione dei conflitti
+verrebbe saltata in silenzio.
+
+**L'ordinamento di pagina ora deriva da `getKeyColumns`**: tutte le colonne della chiave, per
+qualunque tabella a chiave composta, senza un `if` per-tabella da ricordare (§5).
+
+**Le azioni** (`RatingActions`/`FavoritesActions`, modello `SocialActions`): identità riempita lì
+e solo lì, forma fuori regola = errore vero **prima** di accodare, e dopo ogni scrittura
+`pullProfileContent()` — mirato, due tabelle, non venti. La DELETE dell'outbox porta la chiave
+naturale **nel record** (la chiave non entra in `id`); un record senza chiave è un rifiuto
+registrato, mai un no-op muto.
+
+**Test:** 30 asserzioni SQL nuove (`favorites_ratings_test.sql`, nel giro di `run.sh`), 9 in
+`FavoritesRatingsActionsTests` (pbxproj, i soliti 4 punti). Provati rompendo: senza CHECK di
+forma, senza revoke ad authenticated, senza rilettura post-scrittura — falliscono dove devono.
+Il test di `TrackingSyncTests` che teneva le due tabelle FUORI dalla whitelist fissava una
+premessa scaduta: ora fissa il positivo (dentro, `lastWriteWins` esplicito).
+
+## §13.6 è soddisfatto — misurato sul dispositivo, 2026-07-31
+
+Il blocco 7 è chiuso. Due misure su dispositivo, entrambe dentro il budget:
+
+| Percorso | Totale | di cui lettura | Budget |
+|---|---:|---:|---:|
+| **A freddo** — tap, lettura da SQLite, contenuto a schermo | **208,9 ms** | 34,1 ms | 300 ms |
+| A schermata già popolata — il disegno da solo | 147,5 ms | — | 300 ms |
+
+**Il numero che conta è 208,9 ms**: è il percorso che §13.6 descrive — "renderizza da cache locale,
+zero chiamate di rete, sotto i 300 ms". Margine ~30%. Il secondo caso capita perché il ViewModel si
+ricarica anche su `syncEngineCompleted`, quindi aprendo la tab le sezioni possono esserci già: è
+una misura valida ma risponde a una domanda più facile, e va letta come tale.
+
+**Dove sta il tempo.** La lettura è 34 ms, il disegno gli altri 175. Il collo di bottiglia **non è
+SQLite**: è SwiftUI. Se un giorno servisse margine, è lì che va cercato — non nella query, che era
+già stata misurata a 0,66 ms di mediana su un DB seminato (i 34 ms sul dispositivo sono la stessa
+query a freddo, con la cache delle pagine vuota).
+
+**Cosa questi numeri non dicono.** Sono due campioni, non una distribuzione, e su un dispositivo
+solo. Se servisse una misura ripetibile c'è già l'aggancio: `XCTOSSignpostMetric(subsystem:
+"com.vibewatch.app", category: "Tracking", name: "TrackingFirstFrame")`. Se le misure fossero state
+prese in DEBUG il numero è conservativo — Swift non ottimizzato è più lento, quindi in Release il
+margine è maggiore, mai minore.
+
+### Come rifarla
+
+Console.app col telefono collegato, filtro su sottosistema `com.vibewatch.app` e categoria
+`TrackingPerf`; poi si apre la tab Tracking. Il log passa da `os.Logger` e non dal `Logger` del
+progetto proprio per questo: quello è tutto dentro `#if DEBUG` e in Release non stampa una riga.
+In alternativa Instruments, template *Points of Interest*, intervallo `TrackingFirstFrame`.
+
+Per il caso a freddo va chiusa l'app e aperto il Tracking come prima cosa; altrimenti si misura il
+disegno e basta. **Se compare `misura abbandonata`**, l'intervallo è troppo lungo per essere un
+fotogramma — di solito un rientro sulla tab molto dopo — e non c'è nessun numero da credere.
+
+## La schermata username, provata sul server vero — chiusa il 2026-07-31
+
+Entrambe le modalità verificate sul dispositivo (account `feicaccaunt777@gmail.com`, id
+`9b339294-6f14-49a6-b977-693213ae89fb`):
+
+- **conferma**: schermata comparsa perché `confirmed_at` era null, `nakka` precompilato dal
+  backfill, la conferma ha scritto `username_confirmed_at` lasciando `username_changed_at` a null
+  (confermare il nome invariato non è un cambio);
+- **scelta** (dopo l'`update … set username = null, username_confirmed_at = null`): comparsa
+  giusta, `nakka` riscelto e salvato; stavolta `username_changed_at` è valorizzato, perché
+  null → `nakka` è un cambio vero.
+
+**Due difetti trovati usandola, entrambi corretti e coperti (17 test in `UsernameSetupTests`):**
+
+1. **Ogni nome risultava "già preso".** Non era il server: `username_available` restituisce
+   `boolean`, e PostgREST lo serializza come `true`/`false` **nudo** — un frammento JSON di primo
+   livello, che `JSONSerialization.jsonObject` senza `.fragmentsAllowed` rifiuta. Il `try?`
+   ingoiava il parse fallito e il `?? false` lo spacciava per "occupato", anche sui `true`. Stessa
+   famiglia dei fallimenti silenziosi in testa a questo documento, e **i test coi doppi erano verdi
+   col difetto dentro**: il `Fake` non passa dal parse. Corretto su due strati:
+   `SupabaseService.parseBooleanRPCResponse` (frammento ammesso; una risposta illeggibile **lancia**
+   `unexpectedResponse` invece di diventare un "no") e il ViewModel, dove un errore di verifica ora
+   mostra `username.error.checkFailed` (chiave nuova, tradotta in tutte e 20 le lingue) invece di
+   "già preso". Gli altri `callRPC` sono salvi perché ricevono oggetti jsonb, non scalari.
+2. **Oltre i 20 caratteri diceva "disponibile".** `normalizeTyping` tagliava a 20 con `.prefix`,
+   quindi si verificava — e si sarebbe salvato — il prefisso: un nome mai digitato, col
+   suggerimento a fianco che diceva "da 3 a 20". Era la stessa riscrittura muta che il commento
+   della funzione dichiara di non fare per i caratteri. Tolto il taglio: il 21° carattere resta nel
+   campo e diventa un `.tooLong` visibile, pulsante spento, niente giro di rete.
+
+## `user_follows` + `search_users` — in produzione dal 2026-07-31
+
+Migration `20260801130000_user_follows_and_search.sql`, applicata e verificata (`proacl`, grant,
+trigger, ricerca di fumo su `nakka`). Il commento in testa alla migration spiega i due perché;
+qui il riassunto:
+
+| | |
+|---|---|
+| `user_follows` | forma di §3.6: PK `(follower_id, followee_id)`, niente id sintetico, soft delete come `user_blocks` |
+| RLS | si vedono le righe in cui si è uno dei due capi; **scrive solo il follower** (insert e soft delete) |
+| Indici | la PK copre "chi seguo", `user_follows_followee` (parziale) copre "chi mi segue" |
+| `search_users(p_query, p_limit)` | legge da `public_profiles`, `ilike` sugli indici GIN trigram esistenti, similarità solo per l'**ordine**; `%`/`_`/`\` nella query sono caratteri, non jolly |
+| Blocchi | esclusi **nei due versi** dalla ricerca, e — lezione di `username_reserved` — anche in **scrittura**: il trigger `user_follows_blocked` rifiuta il follow attraverso un blocco |
+| Chi chiama | `search_users` solo `authenticated` (verificato su `proacl`); la funzione del trigger nessun ruolo client |
+
+**Perché `security definer`, due volte.** `user_blocks` ha `blocks_select_own`: il verso "mi ha
+bloccato" è invisibile al chiamante per costruzione. Un invoker vedrebbe metà dei blocchi — nella
+ricerca mostrerebbe a B chi l'ha bloccato, e nel trigger lascerebbe passare il follow. **Provato
+rompendo**: rimessi invoker, la suite fallisce su "a non segue chi l'ha bloccato".
+
+**27 asserzioni nuove in `social_test.sql` (82 → 109).** Il harness ora ricrea anche
+`user_blocks` (la sua migration precede il repo, forma verificata su `pg_policy` in produzione)
+e `run.sh` ha la migration nuova nella whitelist.
+
+## Il pezzo client — scritto e **provato sul dispositivo** il 2026-07-31
+
+Follow e unfollow verificati fra due account veri (`nakka` → `nicola_sarli_23`): sul server una
+riga sola, creata e poi soft-cancellata — stessa riga riusata, union end-to-end via outbox, zero
+duplicati.
+
+**Il collaudo ha trovato il terzo difetto della giornata, e ha la stessa forma degli altri due.**
+Il proprio profilo, raggiungibile dalla ricerca (e va bene così: "come appaio?" merita risposta),
+mostrava il pulsante "Segui". Il tap accodava un self-follow; il CHECK `follower <> followee` lo
+respingeva **come rifiuto muto** in `sync_rejected_mutations` (`constraint_23514`, registrato
+alle 18:32:23 — è la prova, ed è spiegato); la schermata tornava com'era. Fallimento invisibile
+che invita a ripremere. Tre correzioni: sul proprio profilo il pulsante **non esiste** (al suo
+posto "Sei tu.", chiave nuova nelle 20 lingue), `isOwnProfile` fa da guardia anche in
+`toggleFollow`, e `SocialActions` rifiuta il self-follow con un errore vero **prima** di
+accodare — la difesa in profondità per ogni chiamante futuro. Due test lo fissano.
+
+**Il sync di `user_follows`, con le sue tre specificità:**
+
+- whitelist `SQLiteTable` + migration SQLite **10** (chiave = la coppia, niente id sintetico) +
+  pull-list + `TableConflictMapping` a **`union`** (mai nel `default`, lezione delle viste);
+- il filtro del pull non è `user_id` (che non esiste): `or(follower_id.eq.X,followee_id.eq.X)`;
+- l'ordinamento di pagina usa **entrambe** le colonne della coppia — nessuna da sola è unica nel
+  sottoinsieme dell'utente, e un ordine non totale fa sovrapporre le pagine (§5);
+- la risoluzione dei conflitti cerca la riga locale per **chiave composita**
+  (`getKeyColumns`/`fetchLocalRecord(table:row:)`): cercare per il solo `follower_id`
+  confronterebbe follow diversi fra loro.
+
+**Il ramo `user_follows` in `apply_mutations` è in produzione** (migration `20260801140000`),
+applicato per **splice sul `prosrc` reale** con tre guardie md5 — mai col file in cartella. Il
+cancello d'identità ora confronta la colonna giusta per tabella (`follower_id`, non `user_id`).
+Collaudato con transazione fatta fallire: follow, rigioco idempotente, unfollow soft, forgiato
+respinto, bloccato respinto dal trigger (`constraint_23514`), DELETE col followee in `id`.
+
+**La UI:** `UserSearchView` (tre stati distinti: invito / nessuno / **ricerca fallita con
+riprova** — mai schiacciati l'uno sull'altro), `PublicProfileView` (header §9.3, contatori dal
+server via `get_public_profile`, pulsante segui con stato in volo e rilettura dopo la scrittura —
+la metà che si dimentica), `SocialActions` (l'unico posto che scrive `follower_id`, come
+`TrackingActions` per `user_id`), ingresso da `ProfileView` ("Trova amici"). 12 chiavi nuove
+tradotte nelle 20 lingue. 11 test in `SocialProfileTests` (file **registrato a mano nel
+pbxproj**, nei soliti quattro punti).
+
+Il blocco 8 è **chiuso** (manca solo la prova su dispositivo del login con username, sotto). Il
+prossimo blocco è il **9** (favorites, rating in stelle, stats, diario), che si appoggia a
+`get_public_profile` per la parte pubblica.
+
+### Il login con username — chiuso il 2026-07-31, Edge Function `login-with-username`
+
+La strada vecchia era doppiamente indifendibile: `getEmailFromUsername` cercava `profiles.email`
+con un **ilike fuzzy su `display_name`** — un endpoint di raccolta indirizzi, se la RLS non
+l'avesse bloccato facendo fallire ogni login con username. Rimossa.
+
+Ora risoluzione e autenticazione sono **atomiche** nella funzione (`verify_jwt` spento al deploy:
+il chiamante non ha ancora una sessione, è il login): username → email con la chiave di servizio →
+grant password verso GoTrue → la sessione torna al client, che la installa con `setSession`.
+L'email non lascia mai il server senza la password giusta. Tre difese, ciascuna col suo perché:
+
+1. **ogni fallimento di credenziali risponde `invalid_credentials`, identico** — distinguere
+   "username inesistente" da "password sbagliata" sarebbe un oracolo sugli username (uno username
+   fuori forma pure: è una credenziale sbagliata, non una richiesta malformata);
+2. **per uno username inesistente il giro verso GoTrue si fa comunque**, con un'email esca su TLD
+   `.invalid` (RFC 2606) — senza, la latenza direbbe quali username esistono;
+3. **tetto per IP** (30/ora, provider `auth_login` in `api_proxy_budget`, migration
+   `20260801160000`): GoTrue da dietro la funzione vede l'IP della funzione, non del client,
+   quindi il suo rate limiting sul brute force non basta più. Il 429 al client dice "troppi
+   tentativi" (`auth.error.tooManyAttempts`, 20 lingue): non rivela niente e non confonde.
+
+**Collaudato via HTTP in produzione** su utente usa-e-getta (creato con `crypt` e colonne token a
+`''`, cancellato alla fine, residui zero): credenziali giuste → sessione **spendibile** (REST
+sotto RLS risponde con la propria riga); maiuscole e spazi normalizzati; password sbagliata e
+username inesistente → **corpi identici**; campo mancante → `invalid_request`; senza chiave →
+401; il budget conta i tentativi di credenziali e **non** le richieste malformate. Nota emersa:
+la **legacy anon key è disabilitata** sul progetto — la funzione parla con GoTrue con la chiave
+dell'ambiente e funziona, ma qualsiasi codice che si aspetti una anon key JWT valida è già rotto
+oggi.
+
+6 test Deno sulla logica pura (`deno test supabase/functions/login-with-username/`).
+**Provato anche sul dispositivo il 2026-07-31: funziona.** (Vale per gli account email; gli
+account OAuth una password non ce l'hanno — per loro il campo resta email o niente.)
+
+## Il blocco 8, quello che è già in produzione
+
+Tre migration applicate e verificate: schema (`20260801100000`), backfill (`20260801110000`),
+`set_username` (`20260801120000`). Più il pezzo iOS.
+
+| | |
+|---|---|
+| `profiles` | `username` (citext), `bio`, `is_profile_public`, `username_changed_at`, `username_confirmed_at` |
+| Unicità | indice **parziale**: un profilo cancellato non tiene occupato il nome per sempre |
+| `public_profiles` | sei colonne — `id, username, display_name, avatar_url, bio, created_at`. Niente email, niente `fcm_token`, niente billing |
+| Generazione | `username_seed` (pura), `username_available` (l'unica che il client può chiamare), `suggest_username` |
+| Scrittura | `set_username(text)` → `jsonb`: `{ok, username, changed}` oppure `{ok:false, reason}` con `taken` / `reserved` / `invalid_format` |
+| `username_reserved` | 64 nomi, RLS senza policy: l'elenco non si legge dal client |
+| Backfill | **295 assegnati, 19 lasciati null, 295 univoci, zero fuori formato, zero già datati** |
+| iOS | `UsernameRules` (pura), `UsernameSetupViewModel`, `UsernameSetupView`, sheet agganciato in `VibeWatchApp.swift` dopo il sync di avvio |
+
+**`username_confirmed_at` è il segnale che fa comparire la schermata**, e sta sul server apposta:
+un flag locale si perderebbe alla reinstallazione e la schermata ricomparirebbe a chi aveva già
+scelto. Nullo significa "assegnato dal backfill e mai visto da chi lo porta".
+
+**I riservati valevano solo per chi li chiedeva gentilmente.** `username_reserved` la consultavano
+`username_available` e `suggest_username`, cioè le due funzioni che *propongono*. Niente la
+consultava in **scrittura**: `profiles_update_own` permette al proprietario di aggiornare la
+propria riga, e il CHECK sul formato non sa niente dei nomi riservati — un PATCH diretto su
+`profiles.username = 'admin'` passava tutto e si prendeva `@admin`. Ora lo ferma il trigger
+`profiles_username_changed`, che è l'unico punto non scavalcabile: un CHECK non può leggere
+un'altra tabella. C'è un test che, rimettendo il difetto, fallisce.
+
+**Perché `set_username` è un'RPC e non un PATCH.** Tre ragioni pratiche: il client non può leggere
+`username_reserved` (e non deve), quindi da solo mostrerebbe "occupato" al posto di "riservato";
+fra il controllo di disponibilità e la scrittura c'è una finestra in cui un altro può prendere lo
+stesso nome, e qui la chiude l'indice unico restituendo un esito invece di un `23505` da
+interpretare; e `username_confirmed_at` si scrive lì e solo lì, insieme al nome.
+
+**Cosa il client duplica e cosa no.** Duplica la **forma** (`UsernameRules.pattern`, identica al
+CHECK) per rispondere mentre si digita senza un giro di rete per carattere. **Non** duplica
+l'elenco dei riservati: non può leggerlo, e indovinarlo sarebbe la copia che diverge davvero.
+`normalizeTyping` abbassa le maiuscole e toglie gli spazi ai bordi — errori di battitura — ma non
+sostituisce il resto: trasformare `mario.rossi` in `mario_rossi` di nascosto darebbe all'utente un
+nome che non ha scelto. Quello lo fa `username_seed`, che serve a *proporre*.
+
+**La simulazione prima della scrittura ha trovato una fuga.** Derivare lo username dalla parte
+locale dell'email sembrava il ripiego ovvio per chi ha un nome non riducibile a `[a-z0-9_]` (nomi
+cinesi, cirillici). Sui dati veri: dei 18 profili che ci sarebbero ricaduti, **9 hanno un indirizzo
+`@privaterelay.appleid.com`** — la parte locale è il token di relay di Apple, e pubblicarla come
+`@8xp9vsbgxm` ricostruisce un indirizzo contattabile — e 3 hanno un locale che è un **numero di
+telefono** (`@qq.com`, `@139.com`). Tutta §3.7 esiste per tenere l'email fuori dalla superficie
+pubblica; farcela rientrare dal ripiego sarebbe stato il modo più silenzioso di annullarla.
+`suggest_username` esiste come funzione che **non scrive** proprio per rendere possibile quella
+simulazione.
+
+**Il trigger avrebbe annullato la propria correzione.** Il backfill data 295 profili come "username
+appena cambiato", il che è vero alla lettera e falso nella sostanza — quel nome non l'ha scelto
+l'utente. Con un futuro limite di frequenza, i 295 nascerebbero bloccati proprio sulla conferma che
+§3.7 pretende. Rimetterlo a null con una UPDATE **non funziona**: `profiles_username_changed` è
+`before update` e sul ramo "username invariato" riscrive il vecchio valore sopra il null. Il
+backfill spegne il trigger, e c'è un test che documenta perché.
+
+### La sonda ha sbagliato due volte, e la seconda l'ha trovata l'esecuzione
+
+**Primo giro.** La sentinella stava fuori dalla condizione sul contenuto, quindi la sequenza era:
+`begin()`, `isLoading = true`, SwiftUI ridisegna, la `List` compare **vuota** — i dati sono ancora
+dentro l'`await` — e il capolinea scattava lì. Il `61,9 ms` era stato attribuito all'account senza
+storico; era invece strutturale, e avrebbe mentito anche con 24 serie. Corretto mettendo la
+sentinella dentro `if !sections.isEmpty` e aggiungendo una guardia che scartava la misura se
+`dataReady` non era ancora arrivato.
+
+**La guardia era sbagliata, e l'esecuzione l'ha detto subito:**
+
+```
+§13.6 misura scartata: primo fotogramma prima dei dati, sarebbe stata su schermata vuota
+§13.6 dati pronti in 133.5 ms (24 righe)
+§13.6 OLTRE IL BUDGET: totale 40500.6 ms (dati + disegno 40367.1 ms) — budget 300 ms
+```
+
+Due cose insieme, ed entrambe contavano:
+
+1. **Il capolinea prima di `dataReady` non è un errore.** Il ViewModel si ricarica anche su
+   `syncEngineCompleted`, quindi quando l'utente apre la tab le sezioni **possono esserci già**.
+   In quel caso il contenuto è a schermo subito e la risposta giusta di §13.6 è "quasi zero": la
+   guardia scartava proprio la misura buona. `dataReady` è tornato a essere informativo.
+2. **Scartare senza disarmare è peggio che non scartare.** Il cronometro restava armato, e
+   quaranta secondi dopo — rientrando sulla tab — un secondo `onAppear` lo chiudeva stampando
+   `40500.6 ms` come se fosse un tempo di disegno. Un numero assurdo è peggio di nessun numero,
+   perché qualcuno potrebbe crederci.
+
+Ora: si **disarma sempre**, e c'è una soglia (`abandonAfterMs = 5 s`) che scarta ciò che non può
+essere un fotogramma. Larga di proposito — deve buttare l'assurdo, non arbitrare fra "lento" e
+"molto lento": un 900 ms vero va visto, e c'è un test che lo verifica.
+
+**Il primo test del disarmo passava anche col difetto rimesso.** Chiamava due volte
+`firstFrameRendered()` con lo stesso istante: la seconda veniva scartata di nuovo dalla soglia, e
+la guardia mancante non cambiava niente. Riscritto per chiudere con un intervallo *plausibile* —
+se il cronometro fosse rimasto armato tornerebbe 50 ms. È lo stesso errore contro cui mette in
+guardia la testa di questo documento, commesso mentre lo si applicava.
+
+### La migrazione è girata, sul dispositivo dell'autore
+
+```
+[LegacyMigration] 4 episodi, 22 serie viste per intero, 24 serie da riscaldare — tentativo 1
+[LegacyMigration] 4 episodi + 967 da espansione, completata=true
+```
+
+**967 episodi da 22 serie**, primo tentativo, nessuna serie rimasta senza catalogo. Il rapporto
+4:967 è la conferma pratica del punto centrale del progetto: quasi tutto lo storico di questo
+utente stava in `seenShowIds` e nella lista `seen`, cioè nella forma che **non dice quali
+episodi**. La strada "scrivo solo `user_status`" avrebbe migrato 4 episodi su 971 e messo 22 serie
+finite fra le "Da iniziare".
+
+`completata=false` con un elenco di serie senza catalogo resta un esito **previsto**, non un
+guasto: il riscaldamento può essere tagliato dal budget o dalla deadline di `catalog-resolve`, e il
+prossimo avvio riprova (3 tentativi, poi si chiude).
+
+### Il difetto trovato subito dopo: "visto" non faceva niente
+
+Premere il segno di spunta scriveva l'evento in produzione e **non cambiava niente sullo schermo**.
+Non era il tap: era che `TrackingActions` accodava la mutazione e la spingeva, ma il progresso lo
+ricalcola il server (§1.1) e la schermata legge lo specchio locale `tv_tracking`, **che solo un
+pull aggiorna**. `queueOperation` fa `pushPendingChanges()` e basta. Quindi `viewModel.load()`
+rileggeva righe identiche.
+
+È la forma di guasto peggiore fra quelle di questa sessione: non un errore, non un log, e l'invito
+implicito a premere di nuovo — cioè a marcare due episodi.
+
+Tre correzioni:
+
+1. **`SyncEngine.pullTrackingState()`**, mirato su `tv_show_state` + le due viste. Un
+   `pullFromRemote()` qui sarebbe 19 tabelle per un tocco. Lo chiamano `markNextWatched` e
+   `setStatus` dopo aver accodato.
+2. **`v_tv_tracking` e `v_tv_timeline` erano nel `default` di `TableConflictMapping`**, cioè
+   `lastWriteWins`, che confronta per `updated_at` — e `v_tv_timeline` un `updated_at` non ce l'ha.
+   Sono specchi che nessuno scrive in locale: ora `serverWins`, come `tv_show_state`.
+3. **Stato "in volo" sulla card.** Fra il tap e la card aggiornata c'è un giro di rete: il pulsante
+   mostra un indicatore e si disabilita, e un'azione per volta.
+
+**Nota su cosa è disabilitato di proposito:** su una serie in pari il segno di spunta è pieno e
+verde e **non fa niente**, perché non c'è un prossimo episodio da marcare. Dopo la migrazione sono
+22 serie su 24, quindi è la condizione più comune. Se dovesse sembrare un guasto, è lì che va
+guardata la UI — non il percorso di scrittura.
+
+### Il collaudo in produzione, 2026-07-31 — fatto
+
+**Prima parte, in SQL, dentro un `do $$ … $$` chiuso da `raise exception 'REPORT %'`**: catalogo
+finto, utente usa-e-getta, tutto portato via dal rollback (residui verificati a zero). Esito: 5
+eventi sui 7 episodi (fuori il futuro e lo speciale), rigioco **0**, `watched_at_precision`
+`inferred` su tutte le righe, runtime 2520 s = 42 minuti dal catalogo, `tv_show_state` 5/5/6 con
+`backlog_since` nullo e **`bucket = up_to_date`**, `show_name` presente nella vista, e `anon`
+respinto con `42501`.
+
+**Seconda parte, via HTTP** (serve un JWT vero, quindi niente rollback: utente cancellato a mano
+alla fine, residui verificati a zero). Su **Breaking Bad**, che prima del collaudo non era in
+catalogo:
+
+| Passo | Esito |
+|---|---|
+| `catalog-resolve` con `{"show_ids":[1399]}` — serie già fresca | 0 chiamate a TMDB, 0 popolate: il TTL regge |
+| `catalog-resolve` con `{"show_ids":[1396]}` — serie assente | **71 episodi scritti** |
+| `{}` e `{"show_ids":[0]}` | 400 con messaggio, non 500 |
+| `entities` da solo, e `entities` + `show_ids` insieme | invariati: la strada TVDB dell'import non si è mossa |
+| `apply_mutations` con 2 eventi legacy | 2 righe, zero rifiuti |
+| espansione sopra quei 2 eventi | **60** nuove righe, non 62 |
+| rigioco dell'espansione | 0 |
+| `v_tv_tracking` letta col JWT dell'utente | `Breaking Bad`, `up_to_date`, **62/62/62** |
+
+**Quel 60 è la cosa da non perdere di vista.** Le due sorgenti — episodi singoli dal client ed
+espansione dal catalogo — hanno scritto 62 righe in totale, non 64: convergono sulla stessa
+`dedup_key`. È la verifica pratica che la sovrapposizione voluta nel piano non costa niente.
+
+Il catalogo di Breaking Bad **è rimasto**, di proposito: è §1.5, è condiviso, e il prossimo utente
+che ce l'ha in lista lo trova già pronto.
+
+### Com'è fatta la migrazione
+
+Il difetto era visibile solo eseguendo: pull a posto, 19 tabelle su 19, e schermata vuota, perché
+per quell'utente il server non aveva niente. `Loaded 6 lists with 429 items from SQLite` — i dati
+c'erano, nel vecchio sistema.
+
+| | |
+|---|---|
+| **Sorgente** | `EpisodeSeenManager.seenKeys` (`"{showId}_{season}_{episode}"`), `seenShowIds`, e le serie nella lista `seen` — le ultime due **unite**, non scelte: `markShowSeen` scrive in UserDefaults, e un'installazione nuova ha la lista ma non il flag |
+| **Destinazione** | un `watch_events` per episodio, via `apply_mutations` in lotti da 200 |
+| **`watched_at_precision`** | **`inferred`** sempre. C'è un test che rompe se diventa `exact` |
+| **`watched_at`** | la **data di aggiunta alla lista** quando c'è (`MIN(list_items.added_at)`), `now()` altrimenti. Non è estetica: con `now()` su tutto, `backlog_since = greatest(next.air_date, last_watched_at)` metterebbe ogni serie arretrata in cima nello stesso istante e "Non visti da tempo" resterebbe vuota per sempre |
+| **`dedup_key`** | `legacy:{show}:{season}:{episode}`, identica nelle due strade |
+| **`user_id`** | nel record, sempre. `LegacyTrackingPlan.record` è l'unico posto che lo scrive |
+| **`is_special`** | dalla stagione, mai da un flag (§1.3) |
+| **Una tantum** | `legacy_tracking_migration_version` in `app_metadata`, più un contatore di tentativi con tetto a 3 |
+
+**`seenShowIds` non si risolve lato client, e la strada "onesta" del piano precedente era
+sbagliata.** Scrivere il solo `user_status` lascia `watched_count = 0`, e
+`tv_tracking_bucket(...)` con `watched_count = 0` risponde **`not_started`**: una serie finita
+finirebbe fra le "Da iniziare". Quindi l'espansione si fa dove c'è il catalogo, cioè in Postgres:
+`expand_seen_shows_to_watch_events(p_shows jsonb)` scrive un evento per ogni episodio **già
+uscito** e non speciale che `tmdb_episodes` conosce, e restituisce le serie che il catalogo non
+conosce ancora perché il chiamante riprovi. Verificato: la serie finisce in `up_to_date`.
+
+**Gli episodi singoli di una serie vista per intero restano nel piano**, anche se l'espansione li
+riscriverebbe: l'espansione conosce solo ciò che sta nel catalogo, e l'oracolo documenta 41 serie
+su 430 in cui la numerazione dell'utente e quella di TMDB non coincidono. La `dedup_key` fa sì che
+la sovrapposizione non costi niente.
+
+**Serviva anche un modo di popolare il catalogo per `tmdb_show_id`,** e non esisteva: tutto
+`catalog-resolve` era costruito attorno agli id TVDB dell'export. Chi usa VibeWatch da prima non ha
+mai visto un id TVDB. Senza, la migrazione avrebbe prodotto card senza nome, senza poster e senza
+prossimo episodio — la vista è `LEFT JOIN`, quindi le serie compaiono comunque, vuote. Ora
+`catalog-resolve` accetta anche `{"show_ids": [...]}`, fino a 50, e il client lo chiama prima di
+scrivere.
+
+**Perché non passa dall'outbox.** `SyncEngine.queueOperation` fa **una chiamata HTTP per
+operazione** e ne processa 50 per sync: qualche centinaio di episodi vorrebbe dire altrettanti
+round-trip spalmati su decine di avvii. `apply_mutations` accetta un lotto — è così che lo usa
+l'import — e la durabilità che l'outbox darebbe la dà la `dedup_key`. Per la stessa ragione il
+ripiego per riga di `applyMutations` è **spento** su questo percorso (`allowClientSideFallback:
+false`): risolve i conflitti su `id`, non su `dedup_key`, quindi su un rigioco andrebbe a sbattere
+sull'indice unico una riga alla volta.
+
+**Cosa succede se qualcosa fallisce:** non si segna niente come fatto. Il prossimo avvio rigioca, e
+la `dedup_key` impedisce i duplicati. Dopo 3 tentativi si chiude comunque, perché una serie che
+TMDB non conosce più non si risolverà mai e un ciclo a ogni avvio è la forma di guasto che nessuno
+nota.
+
+### Il resto del blocco 7
+
+- ~~**§13.6 non è ancora verificato**~~ — **fatto**, 208,9 ms a freddo contro 300 di budget. Vedi
+  in cima.
+- ~~**18 lingue**~~ — **fatto.** Le 20 lingue hanno le stesse 597 chiavi, zero duplicate, zero
+  valori vuoti, segnaposto identici all'inglese, e `LocalizationCoverageTests` (6 test) impedisce
+  che il disallineamento torni. Vedi *Le traduzioni* più sotto: l'allineamento ha scoperto altri
+  tre difetti, di cui uno grosso.
+
+## Stato dei blocchi di §12
+
+| # | Blocco | Stato |
+|---|---|---|
+| 0 | Prerequisiti P1-P5 | **fatto**, in repo. P2/P3 non verificabili senza un build reale |
+| 1 | Oracolo + fixture + harness | **fatto**. 31 test Python verdi, baseline 389/41/37, **zero divergenze senza spiegazione** |
+| 2 | Catalogo + `catalog-resolve` | **fatto e in produzione**, verificato end-to-end su Game of Thrones |
+| 3 | `watch_events` + `tv_show_state` | **fatto e in produzione**. Harness SQL, 64 asserzioni verdi |
+| — | `apply_mutations` (§4, §7.2) | **fatto e in produzione**, collaudato su utente usa-e-getta |
+| 4 | Paginazione del pull | **fatto e verificato**. `SyncPagination`, 8 test verdi + pull reale sul dispositivo, nessun `Failed to pull` |
+| 5 | Integrazione client | **fatto per la lettura**. SQLite + whitelist + pull + conflitti verificati su dati veri; il percorso di scrittura è cablato ma senza chiamanti (arrivano col blocco 7) |
+| 6 | Pipeline import + report | **chiuso** (2026-08-02): tutte le fasi + `import-driver` + UI in app deployate e collaudate end-to-end in produzione **ad app chiusa** (cron→driver→fasi→report→push). Manca solo la prova su dispositivo con l'export vero |
+| 7 | UI Tracking | **chiuso.** Schermata, tab bar e migrazione dello storico in produzione; 971 episodi migrati sul dispositivo dell'autore al primo tentativo; §13.6 misurato a **208,9 ms** su 300; 20 lingue allineate |
+| 8 | Username, `public_profiles`, ricerca, follow | **chiuso, tutto in produzione e provato sul dispositivo**: schema, backfill, schermata di scelta, `user_follows`, `search_users`, `get_public_profile`, ramo in `apply_mutations`, sync client, UI social e login con username via Edge Function |
+| 9 | Favorites, rating, stats, diario | **chiuso**: tutto in produzione, 20 lingue, provato sul dispositivo il 2026-08-01 (voto, favorite, diario, stats). Unica coda: i titoli localizzati del Tracking non ancora rivisti sul dispositivo |
+| 10 | Universal links | **parte app fatta** (2026-08-02): parser, routing, sheet profilo, "Condividi profilo" in ProfileView, entitlement con `vibewatchapp.com` (apex+www), AASA in `docs/universal-links/`, 19 test. Il resto aspetta il **sito** che serva l'AASA — requisiti nel README |
+
+## Cosa gira in produzione adesso
+
+- `tmdb_shows`, `tmdb_episodes`, `tvdb_tmdb_map`, `watch_events`, `tv_show_state` — tutte con RLS,
+  zero policy di scrittura sul catalogo, `user_status` unica colonna scrivibile dal client su
+  `tv_show_state`.
+- `recompute_tv_show_state`, `refresh_backlog_since`, `user_today`, `user_counts_specials`,
+  `is_special_episode`, `tv_tracking_bucket`, vista `v_tv_tracking`, 2 trigger statement-level.
+- `apply_mutations` con 17 rami, inclusi `watch_events` e `tv_show_state`. Il collaudo (utente
+  usa-e-getta dentro una transazione fatta fallire apposta, quindi zero residui in produzione) ha
+  verificato: 2 eventi atterrano e il trigger scrive `tv_show_state` 2/73/73 con `next=S1E3`; lo
+  **stesso batch rigiocato** non duplica e non produce rifiuti (criterio 2 di §13); un client che
+  manda `watched_count: 999` si vede tenere i contatori del server e cambiare solo `user_status`
+  (§4 `serverWins`); una DELETE fa soft-delete e il ricalcolo riporta `next` a S1E2. Zero righe in
+  `sync_rejected_mutations` in tutti e quattro i passaggi.
+- Job `pg_cron` `refresh-backlog` alle 05:00 UTC.
+- Edge Function `catalog-resolve`, `verify_jwt` attivo. Job `pg_cron` `catalog-prewarm` alle 03:30 UTC.
+  Dal 2026-07-31 accetta anche `{"show_ids": [...]}` (max 50): riscalda il catalogo per serie già
+  identificate su TMDB, senza passare da `/find`. È la strada del client, che id TVDB non ne ha mai
+  visti.
+- `expand_seen_shows_to_watch_events(jsonb)`, `security definer`, `proacl` verificato:
+  `postgres=X, service_role=X, authenticated=X` — **niente `anon`**.
+- **`user_follows`** (RLS, trigger `user_follows_blocked` che applica i blocchi in scrittura) e
+  **`search_users`** (`security definer`, solo `authenticated`, `proacl` verificato). Dal
+  2026-07-31, migration `20260801130000`. Più **`get_public_profile`** (`20260801150000`) e il
+  ramo `user_follows` in `apply_mutations` (`20260801140000`, splice sul `prosrc` reale).
+- Edge Function **`login-with-username`**, `verify_jwt` spento, con budget per IP
+  (provider `auth_login`, 30/ora, migration `20260801160000`).
+- **`user_favorites`** e **`user_ratings`** (blocco 9, migration `20260801170000`): RLS
+  owner-only, `authenticated=arw` senza DELETE (si toglie con la lapide), CHECK di forma sui
+  voti, indice unico parziale sulla chiave naturale. Rami in `apply_mutations`
+  (`20260801180000`, splice sul prosrc reale con tre guardie md5; il ramo voti fa
+  update-or-insert con revive della lapide).
+- **Import**: tabelle `import_jobs` e `import_staging` (RLS con sole policy di lettura: le fasi le
+  muove il server), bucket privato `imports` con policy che confinano ogni utente alla propria
+  cartella, Edge Function `import-parse` (fase 2, **versione 3**), `import-resolve` (fase 3) e
+  `import-write` (fase 4). Nessun `import_jobs` residuo: lo staging dei collaudi è stato cancellato.
+- Droppati: `tv_tracking`, `tv_episode_progress`, `v_tv_tracking_buckets`,
+  `get_tv_tracking_buckets()` (erano a 0 righe, verificato subito prima).
+- Catalogo: **46 serie e 4.155 episodi** al 2026-07-31 (erano 1.912 episodi dopo il collaudo
+  dell'import; il resto lo ha aggiunto `catalog-prewarm` di notte, che è il suo mestiere). Residuo
+  *voluto*: è §1.5, il primo che importa paga e tutti gli altri trovano la serie già risolta.
+
+## La finestra a 12 mesi, verificata
+
+Collaudo del 2026-07-31 su utente usa-e-getta (transazione fatta fallire, zero residui): 5 eventi
+scritti fra il 2015 e il 2026, di cui 3 fuori finestra. Risultato:
+
+- il client ne ritira **2**, i soli dentro i 12 mesi — il filtro funziona sotto RLS, letto col ruolo
+  `authenticated`;
+- `tv_show_state` conta **5/73/73**: i contatori restano completi anche sugli eventi che il client
+  non scaricherà mai. È il punto centrale dell'opzione B — il progresso non si degrada;
+- tre pagine da una riga danno `[5][4][vuota]`: righe distinte, nessuna sovrapposizione, e la
+  pagina vuota chiude la camminata come `SyncPagination` si aspetta.
+
+## L'import, collaudato sull'export vero
+
+Lo ZIP reale (`gdpr-data.zip`, **non** in repo: è l'archivio GDPR di una persona) è stato caricato
+su Storage e fatto passare per le fasi 2 e 3. Numeri, identici a quelli di `build_oracle.py` sullo
+stesso archivio:
+
+```
+21.344 eventi · 380 voti · 21.724 righe di staging · 21.344 dedup_key distinte
+v1 inutilizzabili: 139 · v1 scartati come duplicati: 15.906
+6 invocazioni di import-parse, checkpoint 0→4000→…→21724, fase finale `resolving`
+```
+
+Quel 15.906 è la conferma pratica di §7.3: il file legacy contiene quasi gli stessi eventi di v2, e
+fonderli per `(stagione, episodio)` invece che per `tvdb_episode_id` avrebbe inventato migliaia di
+visioni.
+
+**Due difetti trovati eseguendo, non leggendo** — entrambi corretti:
+
+1. **IDOR in `import-parse`**: cercava il job con la chiave di servizio e selezionava `user_id`
+   senza confrontarlo mai. Un utente autenticato poteva passare il `job_id` di un altro, far
+   rielaborare il suo import, leggerne i totali e marcarglielo come fallito. Riprodotto fra due
+   utenti prima di chiuderlo. La correzione non aggiunge un `if` — la lettura passa dal JWT del
+   chiamante, quindi decide la policy. **Fare lo stesso in ogni funzione nuova.**
+2. **`zip.js` decomprime su web worker e non li chiude**: in una Edge Function sarebbero worker che
+   sopravvivono alla risposta. Risolto con `configure({ useWebWorkers: false })` e
+   `terminateWorkers()` nel `finally`. L'ha trovato il rilevatore di leak dei test.
+
+## Il collaudo end-to-end delle fasi 2-4 (2026-07-31)
+
+Utente usa-e-getta, ZIP vero caricato su Storage col JWT dell'utente, pipeline intera, **tutti i
+dati utente cancellati alla fine** (verificato a zero); il catalogo risolto è rimasto, ed è il
+punto di §1.5: 1.912 episodi e 592 voci di mappa che il prossimo import trova già fatte.
+
+**Cosa ha funzionato.** La fase 2 ha prodotto esattamente i numeri di `build_oracle.py` (21.344
+eventi, 380 voti, 21.724 righe, 139 v1 inutilizzabili, 15.906 scartati) e le regole nuove sono
+atterrate nello staging identiche all'oracolo: **195 numerazioni perse, 613 speciali tutti in
+stagione 0, zero eventi con specialità non derivata dalla stagione, 128 flag in disaccordo**.
+La fase 4 ha scritto 558 eventi su 14 serie con zero rifiuti. **Criterio 2 di §13 verificato su
+dati veri**: rigiocando lo stesso lotto restano 558 eventi e zero rifiuti. **Criterio 1 sul
+sottoinsieme**: delle 14 serie, 8 sono state importate per intero e **8 su 8 riproducono il
+progresso dell'oracolo**.
+
+**Tre problemi trovati, di cui uno grosso.**
+
+1. ~~Un import reale richiede ~35 ore~~ — **risolto**, vedi la sezione qui sotto.
+2. ~~`import-resolve` si impianta a budget esaurito~~ — **risolto**: quando non può più chiedere,
+   annota comunque le righe già risolvibili invece di girare a vuoto.
+3. ~~`ROWS_PER_INVOCATION = 4000` è una costante che mente~~ — **risolto**: portata a 1000, che è
+   quanto PostgREST restituisce davvero, con il perché scritto accanto.
+
+**Un difetto mio, corretto subito:** `totals.written` contava le mutazioni *costruite*, non le
+righe nate. Dopo il rigioco dichiarava 1116 episodi importati con 558 in tabella. Ora conta gli
+inserimenti veri e tiene `already_present` separato — un report che gonfia i numeri è
+esattamente ciò che §7.4 vieta.
+
+
+## Le 35 ore dell'import, e come sono diventate minuti
+
+Il problema non era uno ma due, indipendenti, e **nessuno dei due era TMDB**: misurato, TMDB non
+restituisce header di rate limit e accetta 30 chiamate in parallelo senza un solo 429.
+
+**Tutti i numeri qui sotto sono cronometrati sull'export vero, non stimati** — e servivano,
+perché ogni stima fatta in questa sessione è stata smentita dalla misura almeno una volta.
+
+| Collo di bottiglia | Prima | Dopo |
+|---|---|---|
+| `CALLER_CALLS_PER_HOUR = 600` — un tetto nostro | 35 ore | tetto da import dedicato |
+| ciclo `/find` **sequenziale** (258 ms l'una) | ~13 s per 50 episodi | **3-5 s** |
+| annotazione dello staging, una UPDATE per riga | **47 s** per 1000 righe | **1,0 s** |
+
+**Un import completo: da ~35 ore a ~31 minuti.** Misurato su un blocco reale da 1000 righe:
+85,6 s (20 chiamate di risoluzione + 1 di annotazione) × 22 blocchi.
+
+Il terzo collo di bottiglia è comparso solo dopo aver sistemato il secondo: parallelizzate le
+`/find`, il tempo si era spostato tutto sull'annotazione, che costava più di tutte le chiamate a
+TMDB dello stesso blocco messe insieme. **Il posto dove si perde tempo si sposta appena si sistema
+il precedente**, e l'unico modo di saperlo è cronometrare.
+
+**Dove sta il tempo adesso, se qualcuno volesse spingere oltre.** I 4 s per 50 episodi non sono
+TMDB: con 10 chiamate in parallelo a 258 ms il pavimento sarebbe ~1,3 s. La differenza è il budget,
+che fa **due RPC a Postgres prima di ogni chiamata** (`trySpend` per lo scope del chiamante e per
+quello globale) — 100 round-trip al database per invocazione. Si risolverebbe prenotando N unità in
+una volta e restituendo quelle non spese. Non è stato fatto: 31 minuti in background con una push
+alla fine sono già ciò che §7.2 promette, e il resto è rendimento decrescente.
+
+Quattro interventi, tutti in repo:
+
+1. **`FIND_CONCURRENCY = 10` in `catalog-resolve`.** Il ciclo era `for … await`, quindi 50 entità
+   per richiesta erano ~13 s — quasi tutta la deadline da 20 s — per una funzione che in locale non
+   fa nulla. È il fattore 10, e non tocca nessuna policy. Deliberatamente modesto: la ragione per
+   stare bassi non è il limite di TMDB ma che una chiave condivisa bannata perché sembra uno
+   scraper costerebbe molto più dei minuti risparmiati.
+2. **Uno scope di budget per l'import.** `CALLER_CALLS_PER_HOUR` resta 600 per l'uso normale;
+   `IMPORT_CALLS_PER_HOUR = 30.000` si sblocca **solo presentando un `import_jobs` proprio e in
+   fase `resolving`**. Il permesso non è un flag nella richiesta: è l'esistenza di un import vero,
+   che nessuno può fabbricare perché su `import_jobs` non c'è policy di scrittura. Gli scope sono
+   separati (`user:` / `import:` / `prewarm`) apposta: con un contatore solo, l'import affamerebbe
+   l'app proprio mentre l'utente guarda la barra.
+3. **`GLOBAL_CALLS_PER_DAY` da 50.000 a 500.000.** A 50.000 l'intera base utenti poteva fare 2,3
+   import al giorno — il vincolo vero per una funzione di acquisizione (§10). 500.000 sono ~23
+   primi import al giorno e, mediati sulle 24 ore, 5,8 richieste al secondo verso TMDB.
+4. **`catalog-prewarm` + cron alle 03:30 UTC.** Prende la coda che gli import hanno lasciato
+   indietro e la risolve di notte, con un tetto (`PREWARM_CALLS_PER_HOUR = 10.000`) **sotto**
+   quello da import: se il budget globale è conteso deve perdere il lavoro che nessuno sta
+   aspettando. È il fix di prodotto vero — la mappa è globale (§1.5), quindi il secondo utente che
+   importa una serie popolare non paga niente.
+
+**Cosa NON è stato fatto, di proposito:** agganciare gli episodi per `(stagione, episodio)` invece
+che per `tvdb_episode_id`. Risparmierebbe circa il 57% delle chiamate ed è l'unica scorciatoia che
+§6 vieta esplicitamente — Digimon ha 253 id distinti su 107 coppie, quindi il match per numero
+assegnerebbe l'episodio sbagliato **in silenzio**.
+
+## Il blocco 7, cosa c'e' e cosa manca
+
+> **Provato sul dispositivo il 2026-07-31.** Compila e gira. Tre difetti trovati usandolo, tutti
+> corretti tranne il primo, che è aperto e sta in cima a questo documento:
+> 1. schermata vuota per un utente esistente → **manca la migrazione**;
+> 2. il FAB derivava in diagonale — era l'animazione `repeatForever` che ci avevo messo io: dentro
+>    lo stack della tab bar il layout la raccoglie e il pulsante si sposta. Tolta;
+> 3. il pannello AI era un `fullScreenCover` senza pulsante di chiusura, cioè una stanza senza
+>    porta. Ora è un `sheet` (swipe verso il basso) con anche un pulsante esplicito.
+
+
+**Fatto.** `v_tv_tracking` e `v_tv_timeline` (catalogo incluso) -> pull -> tabelle SQLite
+`tv_tracking` e `tv_timeline` (migration 9) -> `LocalTrackingRepository`, che restituisce sezioni
+gia' ordinate e in bucket. `TVTrackingCard` non calcola piu' niente: le sessanta righe di computed
+properties e la chiamata TMDB per card sono **eliminate**, non spostate (§1.1). La barra e'
+`Discovery · Clips · Tracking · Liste` con l'AI su un pulsante flottante persistente, e il
+Tracking non e' piu' una sezione dentro Liste.
+
+**Misurato, ma solo in parte.** La query da 430 serie — il caso peggiore reale — costa **0,66 ms**
+di mediana su un SQLite seminato con dati realistici, contro i 300 ms di budget di §13.6. È il
+pezzo dominante ma **non e' tutto**: manca il rendering SwiftUI e il tempo di apertura della tab,
+che si misurano solo sul dispositivo con un utente vero. **Il requisito di §13.6 non e' ancora
+verificato**, e in questa sessione ogni numero stimato invece che misurato e' stato smentito
+almeno una volta.
+
+## Le traduzioni, e i tre difetti che l'allineamento ha scoperto
+
+Le 20 lingue hanno ora le **stesse 597 chiavi**: `en` e `it` erano già identiche (595 chiavi), le
+altre 18 erano indietro di 24 — tutta la schermata Tracking. Aggiunte e tradotte, non copiate
+dall'inglese. `LocalizationCoverageTests` blocca la deriva: stesse chiavi, nessun duplicato,
+nessun valore vuoto, segnaposto identici a `en`, ogni `"chiave".localized` del codice esiste in
+`en`, e nessun file è la copia di un altro. Tutti e sei provati rompendo apposta il caso che
+coprono.
+
+**1. `platforms.title` era definita due volte in 11 lingue**, con valori diversi ("Platforms" e
+"Streaming Platforms"). Il caricatore di `.strings` non protesta: tiene l'ultima, in silenzio.
+Tolta la prima, così ciò che si vede oggi non cambia.
+
+**2. Il portoghese mostrava un `ai.placeholder` troncato a metà frase.** Stessa causa, effetto
+opposto: la seconda definizione vinceva ed era rotta — `"Por exemplo, \"Ficção científica com uma
+reviravolta no enredo` — virgoletta aperta e mai chiusa. Tolta quella, torna visibile la prima,
+corretta.
+
+**3. Due chiavi che il codice chiama non esistevano in nessuna lingua**: `clips.noListsYet` e
+`auth.error.invalidLink`. `.localized` restituisce la chiave quando la traduzione manca, quindi
+sullo schermo compariva letteralmente `auth.error.invalidLink`. Scritte in tutte e 20.
+
+### `nl.lproj` conteneva polacco — risolto
+
+**Il difetto peggiore trovato in questo giro, ed era preesistente.** `nl.lproj` era una copia di
+`pl.lproj`: differivano per **14 stringhe su 571**. Un utente olandese apriva l'app e leggeva
+`"Odkrywaj"`, `"Listy"`, `"Anuluj"`. Verificato che era l'unico caso: le altre 18 lingue sono
+coerenti con sé stesse (controllate su `tab.discovery`, `tab.lists`, `common.cancel`,
+`common.save`, `lists.watchlist`).
+
+**Tutte e 571 tradotte in olandese.** Struttura, commenti e ordine del file restano quelli di
+prima: si sono sostituiti i valori, non le righe, così il confronto con gli altri `.lproj` resta
+leggibile. Le 15 stringhe che dopo la traduzione risultano ancora identiche al polacco sono
+prestiti e simboli che nelle due lingue coincidono davvero (`AI`, `TV`, `OK`, `PRO`, `FAQ`,
+`Min`, `Max`, `Status`, `JustWatch`, `{count}/{limit}`, `< 90 min`…).
+
+**Perché nessun controllo se ne era accorto, e cosa c'è ora.** Il file esisteva, aveva tutte le
+chiavi giuste e passava ogni verifica di completezza: la sola cosa che lo distingueva da una
+traduzione vera era il **contenuto**. `testNessunaLinguaEUnaCopiaDiUnAltra` confronta i valori a
+coppie e fallisce sopra l'85% di uguaglianza — `nl`/`pl` stava al 97%, la coppia più simile fra
+lingue diverse sta al **24%**. L'unica eccezione dichiarata è `nb`/`no`, che sono la stessa lingua
+con due codici e si somigliano al 73% per costruzione. Provato rimettendo la copia: fallisce.
+
+## Due cose da sapere prima del blocco 7
+
+- **Chi accoda una mutazione su `watch_events` deve mettere `user_id` nel record.**
+  `apply_mutations` confronta `rec->>'user_id'` con `auth.uid()` e, se non combacia o manca,
+  scrive `user_id_mismatch` in `sync_rejected_mutations` e va avanti: nessun errore visibile al
+  client. `normalizedMutationRecord` riempie `id` ma non `user_id`.
+- **Il totale di tempo di visione (§13.7) non può più essere sommato dal client**, perché in cache
+  c'è solo un anno di eventi. Deve arrivare dal server come aggregato — coerente con §1.1, e serve
+  comunque alle stats del blocco 9.
+- **`applyMutations` ha un ripiego che risolve i conflitti sulla chiave sbagliata.** Se l'RPC
+  risponde 404 *oppure* il corpo dell'errore contiene la stringa `apply_mutations`, il client
+  ripiega su una upsert REST per riga con `on_conflict=id`. Per una tabella con una chiave di
+  idempotenza diversa da `id` — `watch_events` e la sua `dedup_key` — quel ripiego non deduplica.
+  Ora è disattivabile (`allowClientSideFallback: false`) e la migrazione lo disattiva; **ogni
+  percorso di scrittura in blocco che nasce da qui deve fare lo stesso.**
+
+## Cose imparate che risparmiano tempo
+
+- **Una colonna nuova non esiste finché OGNI replica di PostgREST non ricarica la schema cache**
+  (2026-08-02). Dopo l'`alter table` di `locked_until`, il claim del driver rispondeva 42703 "la
+  colonna non esiste" — su una colonna che `information_schema` mostrava — mentre la stessa
+  identica richiesta da fuori passava: repliche diverse, cache diverse, e `notify pgrst` non ha
+  raggiunto quella stantia per **quasi mezz'ora**. Due trappole dentro la trappola: la prima
+  diagnosi (le virgolette nell'`or=`) era una coincidenza confermata dalla lotteria delle
+  repliche — stessa richiesta, 400 e poi 204 a secondi di distanza; e l'esito del driver
+  schiacciava "claim in errore" e "lease occupato" in un messaggio solo, nascondendo il 42703.
+  La difesa che è rimasta nel codice: il driver **procede senza lease dicendolo** — può farlo
+  solo perché checkpoint e `dedup_key` rendono i replay sicuri per costruzione. Se un giorno
+  serve forzare il reload: `notify pgrst, 'reload schema'` e, se non basta, riavviare PostgREST
+  dal dashboard.
+- **I test iOS di questa clone sparano HTTP veri verso produzione.** La raffica di
+  `apply_mutations` 401 e di POST su tabelle finte (`table_a`, `tbl_x`) nei log api delle 03:19
+  era la suite del simulatore: i segreti segnaposto la fanno respingere (401), ma il rumore nei
+  log di produzione c'è. Prima di indagare un attacco, controllare l'orario dei propri test.
+
+- **"Non inventare nulla" e "non mentire" non sono la stessa regola, e la prima da sola sbaglia.**
+  Per le serie marcate viste per intero, la strada che sembrava più onesta era scrivere il solo
+  `user_status` e lasciare i contatori al ricalcolo: non inventa episodi. Ma
+  `tv_tracking_bucket(...)` con `watched_count = 0` risponde `not_started`, quindi una serie finita
+  sarebbe finita fra le "Da iniziare" — un'affermazione falsa prodotta dal rifiuto di affermare
+  qualcosa. La scelta giusta era spostare il lavoro dove c'è il dato (il catalogo, cioè Postgres) e
+  dichiarare esplicitamente ciò che resta ignoto (`shows_without_catalog` torna al chiamante).
+- **`security invoker` non è sempre la scelta più stretta.** Il primo tentativo di
+  `expand_seen_shows_to_watch_events` era invoker, per farsi garantire l'isolamento dalla RLS invece
+  che da un `where` scritto a mano. Non funziona: la funzione legge `user_counts_specials`, che al
+  client **non è chiamabile apposta** — è una delle cose che il test di §1.1 verifica. Definer,
+  allora, ma il punto che conta non è l'etichetta: è che **non esiste un parametro con l'identità**.
+  L'IDOR di `import-parse` aveva la forma opposta, un id preso dalla richiesta e mai confrontato.
+- **Server-authoritative vuol dire che dopo una scrittura bisogna ricordarsi di rileggere.** §1.1
+  toglie il calcolo dal client, e questa è la metà che si dimentica: se la schermata legge uno
+  specchio che solo il pull aggiorna, una scrittura riuscita non produce **niente di visibile**.
+  `queueOperation` spinge e basta. Ogni azione nuova sul tracking deve chiudersi con un
+  `pullTrackingState()`, e ogni azione che tarda più di mezzo secondo deve dirlo sullo schermo,
+  altrimenti l'utente la ripete.
+- **Il `default` di una mappa di strategie è una decisione, anche quando non la si prende.** Le due
+  viste di §9.2 sono finite in `lastWriteWins` per omissione, che le confronta per `updated_at` —
+  che una delle due non ha. Aggiungere una tabella al pull significa aggiungerla anche a
+  `TableConflictMapping`, sempre.
+- **Simulare prima di scrivere ha trovato più difetti che rileggere il codice.** Nel blocco 8 due
+  su due: la fuga del relay Apple (`suggest_username` non scrive niente **apposta**, così il
+  backfill su 314 profili veri si prova con una SELECT) e il trigger che avrebbe annullato la
+  propria correzione. Nessuno dei due si vedeva leggendo. Vale la pena costruire le funzioni in
+  modo che una prova a vuoto sia possibile, anche quando costa una firma più scomoda.
+- **Una lista di eccezioni va applicata dove si scrive, non dove si propone.** `username_reserved`
+  era consultata da `username_available` e `suggest_username` — le funzioni che *suggeriscono* — e
+  da nessuna parte in scrittura. Chi passava dalla porta principale (un PATCH su `profiles`) si
+  prendeva `@admin`. La regola generale: se un vincolo non è esprimibile come CHECK, il posto è un
+  trigger, non la funzione gentile che qualcuno *dovrebbe* chiamare.
+- **Una nuova strada in una funzione vecchia richiede un ingresso nuovo, non un adattatore.**
+  `catalog-resolve` era interamente costruita attorno agli id TVDB dell'export. Il client ha id
+  TMDB da sempre, e per lui `/find` non è inutile: è impossibile. Costruire un id TVDB finto per
+  poterci passare sarebbe stato il modo sbagliato; `show_ids` è quindici righe e riusa
+  `populateShow` e `filterShowsNeedingRefresh` così com'erano.
+
+- **Un oracolo che combacia troppo sta misurando la cosa sbagliata.** Le 4 divergenze "da
+  risolvere" erano in realtà 2 difetti del parser, presenti sia in `build_oracle.py` sia in
+  `parsing.ts`. (a) `is_special` veniva letto dal flag dell'export invece che dalla stagione: TV
+  Time lo popola solo sui record recenti, quindi 128 eventi lo hanno in disaccordo con la propria
+  stagione, **in entrambe le direzioni**. (b) `episode_number = 0` veniva preso per "episodio
+  zero" quando invece significa "TV Time ha perso la numerazione" (`ep_no: 0`, `runtime: 0`,
+  `updated_at` 2023): 195 eventi su 12 serie, che venivano fusi su un'unica coppia — Mario perdeva
+  16 episodi distinti dentro uno. Il sintomo era **il contrario di un fallimento**: la baseline
+  diceva 399/31, e 10 di quelle coincidenze erano false perche' l'oracolo replicava il criterio di
+  TV Time invece di quello di §1.3. Game of Thrones e' il caso di controllo: l'oracolo diceva 74,
+  `recompute_tv_show_state` dice 73. Baseline corretta: **389/41, zero divergenze inspiegate**.
+- **Una causa di divergenza si assegna sommando termini misurati, non scegliendo una categoria.**
+  Ogni divergenza porta ora un campo `explained_by` con la combinazione che chiude lo scarto: e' la
+  prova aritmetica, e permette di rivalutarla senza rifare l'analisi. I termini sugli speciali sono
+  **due** (per stagione e per flag) perche' `ep_watch_count` e' un contatore incrementato per un
+  decennio da versioni diverse dell'app e le due ere hanno lasciato entrambe il segno: Spartacus e
+  Doctor Who contano per stagione, Naruto e X Factor per flag.
+- **Un'ipotesi che spiega la serie che stai guardando va provata su tutte le altre.** Per
+  Billionaires' Bunker (2 vs 8) l'ipotesi ovvia era "TV Time non conta i `fill-previous`": provata
+  sull'export intero, **131 serie su 132 li contano**. Ristretta alla forma esatta del caso (il
+  backfill precede la nascita della riga contatore), 14 su 15 li contano. E' un'eccezione — un
+  contatore nato a 1 invece che a 7 — non una regola, e il test lo verifica.
+- **Questa clone non aveva i segreti.** `VibeWatchApp/Config/Secrets.xcconfig` è gitignored ed era
+  nato come placeholder vuoto "perché il progetto compilasse e i test girassero": 6 chiavi su 8
+  senza valore. I valori veri stanno nella clone dell'audit,
+  `/Users/nicola/Documents/VibeWatch/VibeWatch/`. Conseguenza a runtime: TMDB 401, Scopri bianca,
+  RevenueCat "Invalid API Key" — e **build e test tutti verdi**, perché nessuno dei due percorsi
+  tocca la rete reale. Escluse di proposito `RAPIDAPI_KEY` e `YOUTUBE_API_KEY`, che
+  `audit/04-dependencies.md` aveva rimosso.
+- **Negli URL dentro xcconfig le barre si scrivono `https:\/\/host`.** Scrivere `https:$()//host`
+  **tronca il valore a `https:`**: xcconfig toglie i commenti *prima* di espandere le variabili,
+  quindi vede il `//` letterale. Era il caso di `SUPABASE_URL`, cioè ogni chiamata a Supabase
+  partiva verso un URL spazzatura. `Config.string(for:)` ripara `https:/` → `https://`, ma su
+  `https:` non c'è niente da riparare. **Verificare l'`Info.plist` del bundle costruito**, non il
+  file sorgente: `PlistBuddy -c "Print :SUPABASE_URL" .../VibeWatchApp.app/Info.plist`.
+- **Lo schema gira in Release e `Logger` è interamente dentro `#if DEBUG`.** In Release l'app non
+  stampa una riga: nessun `[SyncEngine]`, nessun `[DiscoveryViewModel]`. Prima di chiedere un log a
+  qualcuno, controllare che quel log possa esistere.
+- **Tre fallimenti silenziosi in un giorno, stesso schema**: `try?` nel pull (introdotto e
+  corretto), `try?` in `LiveDiscoveryRepository` (preesistente, ora logga), `?? ""` in
+  `Config.string(for:)` (ancora lì). Il costo non è il bug, è la diagnosi: un segreto mancante si è
+  presentato come una schermata bianca e ha portato a sospettare prima il blocco 4, poi una VPN.
+
+- **Il `DA VERIFICARE` di §5 era vero**: il pull faceva `select("*")` senza `range()` *e* senza
+  `order()`. Il tetto di questo progetto però non è PostgREST — `pgrst.db_max_rows` non è impostato
+  (verificato il 2026-07-31 su `pg_db_role_setting`) — ma lo **`statement_timeout = 8s` del ruolo
+  `authenticated`**: 20.000 righe in una richiesta sola non tornavano troncate in silenzio, non
+  tornavano affatto. Il troncamento silenzioso resta però a un `ALTER ROLE` di distanza.
+  > **CORREZIONE del 2026-07-31, misurata:** il tetto PostgREST **c'è ed è 1000 righe.**
+  > `pgrst.db_max_rows` è davvero nullo sul ruolo — guardare lì è ciò che aveva portato alla
+  > conclusione sbagliata — ma il limite sta nella configurazione PostgREST del progetto, dove
+  > `pg_db_role_setting` non lo vede. Scoperto perché `import-resolve` chiede `.limit(4000)` e ne
+  > riceve 1000: sull'export vero le prime 4.000 righe contengono 3.994 episodi distinti, e la
+  > funzione ne vedeva 994. **Ogni `.limit()` sopra 1000 in questo progetto è già troncato oggi**,
+  > in silenzio: `SyncPagination` è salvo solo perché pagina a 1000 esatti.
+- **`order()` non è cosmetico quando si pagina.** Senza `ORDER BY` Postgres può restituire le righe
+  in ordine diverso a ogni richiesta, e due finestre sulla stessa tabella riescono a sovrapporsi e a
+  saltare righe contemporaneamente. Si ordina per chiave primaria, che è unica dentro l'insieme
+  filtrato.
+- **Il target `VibeWatchAppTests` non è un gruppo sincronizzato col filesystem, il target app sì.**
+  Un file nuovo sotto `VibeWatchApp/` viene compilato da solo; uno nuovo sotto `VibeWatchAppTests/`
+  va aggiunto a mano al `project.pbxproj` in quattro punti (`PBXBuildFile`, `PBXFileReference`,
+  figli del gruppo, fase `Sources`), altrimenti `xcodebuild test -only-testing:` risponde
+  **"Executed 0 tests"** e conclude **TEST SUCCEEDED**. Un test che non esiste non fallisce mai.
+- **"Compilato da solo" non vuol dire "compilato adesso"** (2026-08-01): dopo aver creato
+  `LocalizedTitleStore.swift` nel target app, `xcodebuild test` ha dichiarato TEST SUCCEEDED
+  **tre volte di fila su un bundle stantio** — il build system considerava il target app
+  aggiornato, non ricompilava niente, e i test giravano sulla versione precedente: 25 eseguiti
+  su 28, e "Executed 0 tests" sul singolo test nuovo, sempre con SUCCEEDED. La prova che vale
+  non è l'esito del run: è che **il log di build contenga la `SwiftCompile` del file nuovo**.
+  Se non c'è, `touch` dei file toccati e si ricompila. Il sintomo che ha svelato tutto: il
+  conteggio dei test eseguiti non tornava col `grep -c "func test"` sul sorgente.
+
+- **L'ordine dei file di migration non è l'ordine con cui sono stati applicati.** `movie_reactions`
+  e `unified_user_preferences` erano stati aggiunti ad `apply_mutations` per *splice* sul `prosrc`
+  reale, ma i due file che riscrivono la funzione intera (`_complete`, `_per_item_isolation`) hanno
+  un nome che li mette **dopo**. In produzione l'ordine vero era l'inverso e i due rami c'erano;
+  riscrivere la funzione partendo dal file `_per_item_isolation` li avrebbe cancellati in silenzio,
+  mandando ogni reaction e ogni preferenza in `table_not_handled` — la stessa perdita di dati contro
+  cui la migration si proponeva di proteggere. **Prima di un `create or replace` su una funzione
+  vecchia, confrontare con il `prosrc` reale, non con l'ultimo file in cartella.** Il confronto
+  costa poco: `md5` del `prosrc` normalizzato (commenti via, spazi collassati) contro lo stesso
+  calcolo fatto in locale.
+- **Un collaudo in produzione si può fare senza lasciare residui**: tutto dentro un `do $$ ... $$`
+  che finisce con `raise exception 'REPORT %', rep`. Il messaggio dell'errore torna indietro come
+  output, e il rollback porta via utente di prova e righe. Niente da ricordarsi di cancellare.
+
+- **I revoke sulle funzioni vanno fatti a `PUBLIC` *e* ad `anon`/`authenticated`.** La prima
+  metà era già scritta qui e da sola porta fuori strada: Postgres concede EXECUTE a PUBLIC di
+  default, ma su Supabase c'è **anche** un `ALTER DEFAULT PRIVILEGES` che lo concede in modo
+  **esplicito** ai due ruoli client. Revocare solo a PUBLIC non toglie i grant espliciti e
+  `has_function_privilege` continua a rispondere `true` — verificato il 2026-07-31 su
+  `import_touched_shows`, che è `security definer` e prende un `job_id` arbitrario: sarebbe
+  bastato per farsi dire quali serie ha importato un altro utente. **Il controllo che vale è
+  `proacl`**, non il revoke che si è scritto: se ci si legge `anon=X/postgres`, il revoke non ha
+  fatto niente.
+- **Postgres rifiuta una transition table insieme a una lista di colonne**: `after update of
+  deleted_at ... referencing old table` non si può scrivere. Il filtro sulla colonna va dentro la
+  funzione del trigger.
+- **`api_proxy_budget` ha un CHECK che enumera i provider**: ogni nuovo proxy richiede una
+  migration, altrimenti `trySpend` fallisce chiuso e la funzione rifiuta tutto.
+- **`/find` di TMDB restituisce spesso hit in più bucket per lo stesso id** (Game of Thrones:
+  `tv: 1, tv_episode: 1`). Decide solo il bucket richiesto; considerare ambigua ogni collisione
+  mandava alla pila manuale la maggior parte di un import.
+- **Il fuso**: il job gira in UTC ma il ricalcolo usa `user_today`, quindi il filtro del job ha un
+  giorno di margine (`current_date + 1`), o chi vive a UTC+14 vede l'episodio con 24 ore di ritardo.
+- **312 utenti, 98 con identità email**: due terzi entrano con Apple o Google. Conta per il blocco
+  8 — assegnare uno username agli utenti OAuth è il pezzo centrale, non il login con username.
+- **Game of Thrones ha 300 speciali su 373 episodi in TMDB.** È la conferma pratica di §1.3: se
+  gli speciali entrassero nel progresso, una serie finita mostrerebbe 73/373.
+
+## Come si collauda
+
+```bash
+supabase/tests/run.sh                      # Postgres usa-e-getta, migration x2
+                                           # tracking_test 80 asserzioni + social_test 126
+python3 test_oracle.py                     # oracolo, 31 test
+cd supabase/functions/catalog-resolve && deno test            # logica pura, 28 test
+cd supabase/functions/login-with-username && deno test        # login con username, 6 test
+cd supabase/functions/import-parse   && deno test --allow-env   # parser, 33 test + archivio privato ignorato
+
+# Il 15° test del parser (l'apertura dell'archivio) gira solo se gli si dà l'export vero,
+# che non è in repo — senza `--allow-env` la suite fallisce sul permesso, non sul codice:
+TVTIME_ZIP=~/Downloads/gdpr-data.zip deno test --allow-read --allow-env
+
+# iOS: se la config è incompleta, l'app si ferma all'avvio in DEBUG con l'elenco
+# delle chiavi mancanti (Config.validateAtLaunch). Non è un bug: sono i segreti.
+xcodebuild test -project VibeWatchApp.xcodeproj -scheme VibeWatchApp \
+  -destination 'id=601C4430-6213-49E3-8A4D-3564B2B57E2A'   # suite completa; la ripresa ne ha eseguiti 134 mirati
+
+# Deploy di una Edge Function: dalla radice del repo, non da supabase/
+supabase functions deploy import-parse --project-ref rqhxhkijzhqivljivirq
+```
+
+I 3 test iOS storicamente rotti (`ConflictResolverTests` x2,
+`SyncStateMachineTests.testIdleToIdle`) sono verdi nel worktree della ripresa; fanno parte dei 134
+test mirati passati. La suite iOS completa va comunque rilanciata prima di separare/committare il
+batch, quindi non usare questo dato per dichiarare verde tutto il target.
+
+**Un file nuovo sotto `VibeWatchAppTests/` non viene compilato da solo**: va aggiunto al
+`project.pbxproj` in quattro punti (`PBXBuildFile`, `PBXFileReference`, figli del gruppo, fase
+`Sources`). Altrimenti `-only-testing:` risponde "Executed 0 tests" e conclude TEST SUCCEEDED.
+
+### Collaudare in produzione senza lasciare residui
+
+Due modi, entrambi già usati:
+
+- **Solo SQL** — tutto dentro un `do $$ … $$` che finisce con `raise exception 'REPORT %', rep`: il
+  messaggio torna indietro come output e il rollback porta via utente di prova e righe.
+- **Con HTTP** (serve un JWT vero, quindi niente rollback) — creare l'utente con
+  `crypt('password', gen_salt('bf'))` e **valorizzare a `''` le colonne token** di `auth.users`
+  (`confirmation_token`, `recovery_token`, `email_change*`, `phone_change*`,
+  `reauthentication_token`): a `NULL` GoTrue risponde *"Database error querying schema"* e il login
+  fallisce. Alla fine cancellare **prima** la riga in `public.profiles` e poi l'utente: la FK
+  `profiles_id_fkey` non ha `ON DELETE CASCADE`.
+
+## Documenti di riferimento
+
+- `SPEC v3.md` — la spec (gitignored, sta solo sul disco)
+- `.planning/spec-v3-oracle.md` — le 31 divergenze dell'oracolo, 4 ancora da risolvere
+- `.planning/spec-v3-blocco2-catalogo.md` — catalogo e risoluzione TVDB→TMDB
+- `.planning/spec-v3-blocco3-tracking.md` — eventi, stato, trigger, cron
+- `supabase/tests/social_test.sql` — le 126 asserzioni del blocco 8. Il commento in testa a ogni
+  migration di `supabase/supabase/migrations/2026080*` spiega **perché**, non cosa: è lì che stanno
+  le ragioni che questo documento riassume
+- `audit/HANDOFF.md` — l'audit del 2026-07-23. **Attenzione: parla di un'altra clone**
+  (`/Users/nicola/Documents/VibeWatch/VibeWatch/`), ed è da lì che vengono i segreti. Il §3b elenca
+  bug preesistenti mai chiusi; quello sul `readerDb` readonly è già risolto (verificato: `upsert`
+  passa da `executeWrite`), gli altri no.
+- `build_oracle.py` — **la specifica eseguibile del parsing**. Le regole dell'import stanno lì
+  prima che nella spec: se una regola sembra arbitraria, è perché un export reale l'ha resa tale.
+
+## Registro storico degli aperti — non usare per la prossima ripresa
+
+> Questa sezione conserva l'audit precedente e contiene voci successivamente chiuse o avviate.
+> Lo stato operativo autorevole è la **lista unica per riprendere** in testa al documento, aggiornata
+> nel checkpoint Codex del 2026-08-02.
+
+0. ~~**L'import di TV Time non ha nessun ingresso in app**~~ — **CHIUSO il 2026-08-02** (vedi
+   *L'import in app* in testa). Restano due code sue: i **voti** dell'import ancora rinviati
+   (`ratings_deferred`) ora che `user_ratings` esiste, e la **prova su dispositivo** con
+   l'export vero.
+1. **`Config.string(for:)` restituisce `""` in silenzio** per una chiave mancante. Ora c'è
+   `validateAtLaunch` che elenca le chiavi vuote o malformate, ma **in Release non lascia traccia**
+   perché `Logger` è tutto dentro `#if DEBUG`. Il posto dove agganciare Crashlytics è segnato nel
+   punto di chiamata.
+2. **`import-parse` risponde 500 senza JWT valido** (`Expected 3 parts in JWT`). Fallisce chiuso,
+   quindi non è un buco, ma un 401 sarebbe più onesto e non farebbe scattare i retry del client.
+3. **Rifiuti veri in `sync_rejected_mutations`**, ancora aperti al 2026-07-31: `lists` con
+   `constraint_23505` su `idx_lists_one_active_default_per_user_type` (4 occorrenze oggi, 6 fra il
+   27 e il 29 luglio) — il client prova a ricreare una lista di default che esiste già — e
+   **`list_items` con `list_not_owned`** (1 occorrenza), che è il ramo aggiunto da
+   `apply_mutations_list_ownership` e che nessuno ha ancora guardato. Nessuno dei due riguarda il
+   tracking: dopo il collaudo della migrazione, `watch_events` e `tv_show_state` non compaiono in
+   quella tabella.
+4. **`delete-user` cancella 5 tabelle su ~30** (audit §3b) e `profiles.id` non ha
+   `ON DELETE CASCADE`: cancellare un utente fallisce se non si toglie prima il profilo. È materia
+   GDPR.
+5. **Trovati dall'audit di fine lavori (2026-08-02), mai registrati prima:**
+   - §7.2 dice "bucket privato `imports`, TTL 7 giorni" ma **nessuno cancella gli ZIP**: né una
+     policy di storage né un cron. Oggi nel bucket restano gli archivi già importati — sono
+     dati personali (export GDPR di terzi) e la pulizia è dovuta, non estetica;
+   - §7.1 elenca **`user.csv` (language, timezone)** fra i file da leggere: l'import non lo
+     apre affatto. Costo piccolo, valore piccolo (il fuso serve alle quiet hours, che oggi
+     leggono `user_notification_preferences`);
+   - §9.3 chiude il profilo con "**Liste pubbliche dell'utente**": `PublicProfileView` mostra
+     header, favorites e contatori ma **non le liste pubbliche** (esistono `get_public_lists`
+     e `PublicListsView`, manca solo la sezione nel profilo altrui).

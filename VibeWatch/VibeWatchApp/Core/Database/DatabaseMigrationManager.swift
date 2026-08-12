@@ -9,6 +9,11 @@ import SQLite3
 final class DatabaseMigrationManager {
     static let shared = DatabaseMigrationManager()
 
+    nonisolated static let listItemsPaginationIndexSQL = """
+        CREATE INDEX IF NOT EXISTS idx_list_items_list_added_unified
+        ON list_items(list_id, added_at DESC) WHERE deleted_at IS NULL
+    """
+
     private let db = SQLiteService.shared
     private let supabase = SupabaseService.shared
 
@@ -16,7 +21,7 @@ final class DatabaseMigrationManager {
     private let versionKey = "unified_migration_version"
 
     /// Current latest migration version
-    private let latestVersion = 4
+    private let latestVersion = 6
 
     private init() {}
 
@@ -81,6 +86,20 @@ final class DatabaseMigrationManager {
                 description: "Add genre_ids to user_clip_history for mood analysis (BUG-04)",
                 type: .schema,
                 execute: migration4_AddGenreIdsToClipHistory
+            ),
+            Migration(
+                version: 5,
+                name: "personalized_discovery_order_columns",
+                description: "Add carousel_order and batch_index to personalized_discovery for stable ordering",
+                type: .schema,
+                execute: migration5_AddCarouselOrderColumns
+            ),
+            Migration(
+                version: 6,
+                name: "carousel_title_spec",
+                description: "Add carousel_title_spec column so titles re-localize at render time on language change",
+                type: .schema,
+                execute: migration6_AddCarouselTitleSpec
             )
         ]
     }
@@ -136,11 +155,8 @@ final class DatabaseMigrationManager {
             ON movie_reactions(user_id, media_id, media_type)
         """)
 
-        // 6. Lists pagination index
-        db.execute("""
-            CREATE INDEX IF NOT EXISTS idx_list_items_list_position
-            ON list_items(list_id, position ASC) WHERE deleted_at IS NULL
-        """)
+        // 6. Lists pagination index. list_items has added_at, not position.
+        db.execute(Self.listItemsPaginationIndexSQL)
 
         Logger.info("[Migration 1] Performance indexes added successfully")
     }
@@ -172,7 +188,7 @@ final class DatabaseMigrationManager {
             Logger.info("[Migration 2] Added created_at to user_daily_challenges")
         }
 
-        // 4. user_clip_history: media_id, season_number, episode_number (queried by SmartNotificationService)
+        // 4. user_clip_history: media_id, season_number, episode_number
         if !db.columnExists("user_clip_history", column: "media_id") {
             db.execute("ALTER TABLE user_clip_history ADD COLUMN media_id INTEGER")
             Logger.info("[Migration 2] Added media_id to user_clip_history")
@@ -197,6 +213,28 @@ final class DatabaseMigrationManager {
             Logger.info("[Migration 3] Added updated_at to clip_comments")
         } else {
             Logger.info("[Migration 3] updated_at column already exists in clip_comments — skipping")
+        }
+    }
+
+    /// Migration 5: Add carousel_order + batch_index to personalized_discovery for stable sort
+    private func migration5_AddCarouselOrderColumns() async throws {
+        if !db.columnExists("personalized_discovery", column: "carousel_order") {
+            db.execute("ALTER TABLE personalized_discovery ADD COLUMN carousel_order INTEGER DEFAULT 999")
+            Logger.info("[Migration 5] Added carousel_order to personalized_discovery")
+        }
+        if !db.columnExists("personalized_discovery", column: "batch_index") {
+            db.execute("ALTER TABLE personalized_discovery ADD COLUMN batch_index INTEGER DEFAULT 0")
+            Logger.info("[Migration 5] Added batch_index to personalized_discovery")
+        }
+    }
+
+    /// Migration 6: Add carousel_title_spec for language-aware carousel titles
+    private func migration6_AddCarouselTitleSpec() async throws {
+        if !db.columnExists("personalized_discovery", column: "carousel_title_spec") {
+            db.execute("ALTER TABLE personalized_discovery ADD COLUMN carousel_title_spec TEXT")
+            Logger.info("[Migration 6] Added carousel_title_spec to personalized_discovery")
+        } else {
+            Logger.info("[Migration 6] carousel_title_spec already exists — skipping")
         }
     }
 

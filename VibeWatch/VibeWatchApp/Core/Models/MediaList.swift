@@ -51,14 +51,49 @@ struct MediaList: Identifiable, Codable {
     let type: ListType
     let createdAt: Date
     var items: [MediaListItem]
+    /// Visibilità pubblica (solo liste custom). Mirror locale dello stato server (Liste Pubbliche, Fase 1).
+    var isPublic: Bool
+    /// La lista custom da cui questa è stata copiata ("Crea lista pubblica da questa").
+    var sourceListId: String?
+    /// Se la sorgente era una lista core (watchlist/seen/liked/disliked), il suo tipo: le core
+    /// hanno un id diverso su ogni installazione, il tipo no.
+    var sourceListType: ListType?
 
-    init(id: String = UUID().uuidString, name: String, description: String? = nil, type: ListType, createdAt: Date = Date(), items: [MediaListItem] = []) {
+    var displayName: String {
+        switch type {
+        case .watchlist: return "lists.watchlist".localized
+        case .seen: return "lists.seen".localized
+        case .liked: return "lists.liked".localized
+        case .disliked: return "lists.disliked".localized
+        case .custom: return name
+        }
+    }
+
+    init(id: String = UUID().uuidString, name: String, description: String? = nil, type: ListType, createdAt: Date = Date(), items: [MediaListItem] = [], isPublic: Bool = false, sourceListId: String? = nil, sourceListType: ListType? = nil) {
         self.id = id
         self.name = name
         self.description = description
         self.type = type
         self.createdAt = createdAt
         self.items = items
+        self.isPublic = isPublic
+        self.sourceListId = sourceListId
+        self.sourceListType = sourceListType
+    }
+
+    // Decodifica tollerante: `isPublic` è opzionale nel JSON storico (es. vecchia migrazione
+    // da UserDefaults) → assente ⇒ false, senza rompere la decodifica delle liste esistenti.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(String.self, forKey: .id)
+        self.name = try c.decode(String.self, forKey: .name)
+        self.description = try c.decodeIfPresent(String.self, forKey: .description)
+        self.type = try c.decode(ListType.self, forKey: .type)
+        self.createdAt = try c.decode(Date.self, forKey: .createdAt)
+        self.items = try c.decodeIfPresent([MediaListItem].self, forKey: .items) ?? []
+        self.isPublic = try c.decodeIfPresent(Bool.self, forKey: .isPublic) ?? false
+        self.sourceListId = try c.decodeIfPresent(String.self, forKey: .sourceListId)
+        self.sourceListType = try c.decodeIfPresent(ListType.self, forKey: .sourceListType)
     }
 }
 
@@ -110,6 +145,11 @@ struct MediaListItem: Identifiable, Codable {
     }
 }
 
+struct MediaListItemSubtitleComponent: Equatable {
+    let text: String
+    let showsRatingStar: Bool
+}
+
 enum SortOption: String, CaseIterable {
     case dateAdded = "sort.dateAdded"
     case title = "sort.title"
@@ -134,6 +174,94 @@ enum FilterOption: String, CaseIterable {
 // MARK: - SQLite Dictionary Conversion
 
 extension MediaListItem {
+    func displayOverview(fallback: String?) -> String? {
+        if let overview = normalizedOverview(overview) {
+            return overview
+        }
+
+        return normalizedOverview(fallback)
+    }
+
+    func subtitle(seasonCount: Int? = nil, duration: Int? = nil) -> String? {
+        let parts = subtitleComponents(seasonCount: seasonCount, duration: duration).map(\.text)
+        return parts.isEmpty ? nil : parts.joined(separator: " | ")
+    }
+
+    func subtitleComponents(seasonCount: Int? = nil, duration: Int? = nil) -> [MediaListItemSubtitleComponent] {
+        let resolvedDuration = duration ?? runtime
+        var parts: [MediaListItemSubtitleComponent] = []
+
+        if mediaType == .tv, let seasonCount, seasonCount > 0 {
+            parts.append(MediaListItemSubtitleComponent(
+                text: "\(seasonCount) \(seasonCount == 1 ? "season" : "seasons")",
+                showsRatingStar: false
+            ))
+        }
+
+        if let releaseDate, releaseDate.count >= 4 {
+            parts.append(MediaListItemSubtitleComponent(
+                text: String(releaseDate.prefix(4)),
+                showsRatingStar: false
+            ))
+        }
+
+        if let voteAverage, voteAverage > 0 {
+            parts.append(MediaListItemSubtitleComponent(
+                text: String(format: "%.1f", voteAverage),
+                showsRatingStar: true
+            ))
+        }
+
+        if let resolvedDuration, resolvedDuration > 0 {
+            parts.append(MediaListItemSubtitleComponent(
+                text: Self.formatDuration(resolvedDuration),
+                showsRatingStar: false
+            ))
+        }
+
+        return parts
+    }
+
+    func asMovie() -> Movie {
+        Movie(
+            id: mediaId,
+            title: title,
+            overview: overview ?? "",
+            posterPath: posterPath,
+            backdropPath: nil,
+            releaseDate: releaseDate,
+            voteAverage: voteAverage ?? 0.0,
+            voteCount: voteCount ?? 0,
+            genreIds: genres,
+            genres: nil,
+            adult: false,
+            originalLanguage: "",
+            popularity: 0.0,
+            runtime: runtime,
+            status: nil,
+            tagline: nil,
+            productionCountries: nil,
+            imdbId: nil
+        )
+    }
+
+    private func normalizedOverview(_ overview: String?) -> String? {
+        guard let overview else { return nil }
+        let trimmed = overview.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private static func formatDuration(_ minutes: Int) -> String {
+        let hours = minutes / 60
+        let remainder = minutes % 60
+
+        if hours > 0 {
+            return "\(hours)h \(remainder)m"
+        }
+
+        return "\(minutes)m"
+    }
+
     /// Create a MediaListItem from a SQLite row dictionary
     static func from(dictionary row: [String: Any]) -> MediaListItem? {
         guard let id = row["id"] as? String,
