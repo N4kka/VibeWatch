@@ -168,7 +168,10 @@ final class TrackingSyncTests: XCTestCase {
     func testSegnareUnEpisodioDallaListaScriveLEventoERitiraLoStato() async throws {
         let sync = MockSyncEngine()
         let mirror = FakeWatchEventMirror()
-        let actions = TrackingActions(syncEngine: sync, currentUserId: { "u-1" }, mirror: mirror)
+        let actions = TrackingActions(
+            syncEngine: sync, currentUserId: { "u-1" },
+            seenBackend: MockSeenBackend(), mirror: mirror,
+            showHasCatalog: { _ in true })
 
         try await actions.markEpisodesWatched(showId: 1396, episodes: [(2, 1)])
 
@@ -188,13 +191,68 @@ final class TrackingSyncTests: XCTestCase {
     func testSegnareIPrecedentiAccodaUnEventoPerEpisodioEUnSoloPull() async throws {
         let sync = MockSyncEngine()
         let actions = TrackingActions(
-            syncEngine: sync, currentUserId: { "u-1" }, mirror: FakeWatchEventMirror())
+            syncEngine: sync, currentUserId: { "u-1" },
+            seenBackend: MockSeenBackend(), mirror: FakeWatchEventMirror(),
+            showHasCatalog: { _ in true })
 
         try await actions.markEpisodesWatched(showId: 1396, episodes: [(2, 1), (2, 2), (2, 3)])
 
         XCTAssertEqual(sync.queued.count, 3)
         XCTAssertEqual(sync.queued.map { $0.payload["episode_number"] as? Int }, [1, 2, 3])
         XCTAssertEqual(sync.trackingPulls, 1, "un pull per il lotto, non uno per episodio")
+    }
+
+    /// Marcare un episodio di una serie che il server non ha ancora in catalogo produceva una
+    /// riga di stato con zero episodi totali: nessun prossimo episodio, bucket `up_to_date`, e
+    /// quindi né in "Continua a guardare" né in cima al Tracking. Dall'esterno: "l'ho segnato
+    /// visto in SeasonView e non si è mosso niente". Il warm precede l'evento, come in
+    /// `addToWatchlist`.
+    @MainActor
+    func testSegnareUnEpisodioRiscaldaIlCatalogoSeIlServerNonConosceLaSerie() async throws {
+        let sync = MockSyncEngine()
+        let backend = MockSeenBackend()
+        let actions = TrackingActions(
+            syncEngine: sync, currentUserId: { "u-1" },
+            seenBackend: backend, mirror: FakeWatchEventMirror(),
+            showHasCatalog: { _ in false })
+
+        try await actions.markEpisodesWatched(showId: 1396, episodes: [(3, 1)])
+
+        XCTAssertEqual(backend.warmed, [[1396]])
+        XCTAssertEqual(sync.queued.count, 1, "e l'evento parte lo stesso")
+    }
+
+    /// Il contrario: per una serie già tracciata il catalogo c'è, e un giro di rete a ogni tap
+    /// sulla lista episodi sarebbe solo latenza.
+    @MainActor
+    func testSegnareUnEpisodioNonRiscaldaSeIlCatalogoCeGia() async throws {
+        let sync = MockSyncEngine()
+        let backend = MockSeenBackend()
+        let actions = TrackingActions(
+            syncEngine: sync, currentUserId: { "u-1" },
+            seenBackend: backend, mirror: FakeWatchEventMirror(),
+            showHasCatalog: { _ in true })
+
+        try await actions.markEpisodesWatched(showId: 1396, episodes: [(3, 1)])
+
+        XCTAssertTrue(backend.warmed.isEmpty)
+    }
+
+    /// L'ordine conta: il progresso lo ricalcola il server, quindi ritirarlo prima che l'evento
+    /// sia arrivato riscrive la card com'era. Era il difetto dei "primi due o tre tap a vuoto"
+    /// appena aperta l'app — `pushPendingChanges` esce in silenzio mentre il sync di avvio tiene
+    /// occupata la macchina a stati, il pull invece parte comunque.
+    @MainActor
+    func testIlPushPrecedeSempreIlPullDelTracking() async throws {
+        let sync = MockSyncEngine()
+        let actions = TrackingActions(
+            syncEngine: sync, currentUserId: { "u-1" },
+            seenBackend: MockSeenBackend(), mirror: FakeWatchEventMirror(),
+            showHasCatalog: { _ in true })
+
+        try await actions.markNextWatched(rigaConProssimoEpisodio())
+
+        XCTAssertEqual(sync.calls, ["push", "pullTracking"])
     }
 
     /// Lo smarcamento mette la lapide su OGNI evento noto di quell'episodio (rewatch compresi):
@@ -424,5 +482,122 @@ final class TrackingSyncTests: XCTestCase {
         XCTAssertGreaterThan(TrackingPerformanceProbe.abandonAfterMs,
                              TrackingPerformanceProbe.budgetMs,
                              "la soglia di abbandono deve stare sopra il budget, o nasconderebbe i fallimenti veri")
+    }
+}
+
+// MARK: - Il self-heal delle righe senza catalogo
+
+/// Una riga di tracking senza catalogo (zero episodi totali) non è disegnabile: niente prossimo
+/// episodio, niente copertina, un progresso su un denominatore che non esiste. Il ViewModel la
+/// ripara da sé — e il punto di questi test è **quali** righe considera rotte.
+@MainActor
+final class TrackingSelfHealTests: XCTestCase {
+
+    /// Il caso che il filtro precedente (`bucket != .upToDate`) lasciava fuori, ed era il
+    /// peggiore: una serie con episodi visti ma senza catalogo finisce proprio in `up_to_date`
+    /// — sezione chiusa di default — quindi nessuno la vedeva e nessuno la riparava. È lo stato
+    /// in cui finiva una serie marcata dalla lista episodi di SeasonView prima del fix.
+    func testUnaRigaSenzaCatalogoSiRiparaAncheSeIlBucketDiceInPari() async {
+        let riparate = await righeRiparate(da: riga(bucket: .upToDate, totalCount: 0))
+        XCTAssertEqual(riparate.map(\.showId), [1396])
+    }
+
+    func testUnaRigaSenzaCatalogoSiRiparaAncheDaIniziare() async {
+        let riparate = await righeRiparate(da: riga(bucket: .notStarted, totalCount: 0))
+        XCTAssertEqual(riparate.map(\.showId), [1396])
+    }
+
+    /// Una serie davvero finita ha un catalogo: `total_count > 0`. Ripararla vorrebbe dire un
+    /// giro di rete e un ricalcolo a ogni apertura della schermata, per niente.
+    func testUnaSerieFinitaDavveroNonSiRipara() async {
+        let riparate = await righeRiparate(
+            da: riga(bucket: .upToDate, totalCount: 62), attendendoRiparazione: false)
+        XCTAssertTrue(riparate.isEmpty)
+    }
+
+    /// La riparazione parte una volta per sessione: se il catalogo resta irrisolvibile (una serie
+    /// che TMDB non ha) non si riprova a ogni ricarica.
+    func testLaRiparazioneNonSiRipeteAOgniRicarica() async {
+        let raccolte = Raccoglitore()
+        let chiesta = expectation(description: "riparazione chiesta")
+        let viewModel = viewModel(righe: [riga(bucket: .upToDate, totalCount: 0)]) { rows in
+            raccolte.aggiungi(rows)
+            chiesta.fulfill()
+        }
+
+        await viewModel.load()
+        await fulfillment(of: [chiesta], timeout: 2)
+        await viewModel.load()
+        await quiescenza()
+
+        XCTAssertEqual(raccolte.chiamate.count, 1)
+    }
+
+    // MARK: - Impalcatura
+
+    /// - Parameter attendendoRiparazione: `false` quando il test si aspetta che NON parta —
+    ///   lì non c'è un evento da attendere, si lascia solo il tempo di sbagliare.
+    private func righeRiparate(
+        da riga: TrackingRow,
+        attendendoRiparazione: Bool = true
+    ) async -> [(showId: Int, userStatus: String)] {
+        let raccolte = Raccoglitore()
+        let chiesta = expectation(description: "riparazione chiesta")
+        chiesta.isInverted = !attendendoRiparazione
+        let viewModel = viewModel(righe: [riga]) { rows in
+            raccolte.aggiungi(rows)
+            chiesta.fulfill()
+        }
+
+        await viewModel.load()
+        // La riparazione parte in un Task figlio: si aspetta l'evento, non un giro di runloop.
+        await fulfillment(of: [chiesta], timeout: attendendoRiparazione ? 2 : 0.5)
+
+        return raccolte.chiamate.flatMap { $0 }
+    }
+
+    private func viewModel(
+        righe: [TrackingRow],
+        repairCatalog: @escaping @MainActor ([(showId: Int, userStatus: String)]) -> Void
+    ) -> TVShowsTrackingViewModel {
+        TVShowsTrackingViewModel(
+            repository: FakeTrackingRepository(sections: righe.map { ($0.bucket, [$0]) }),
+            refreshTitles: { _ in false },
+            refreshEpisodeNames: { _ in false },
+            repairCatalog: { rows in await MainActor.run { repairCatalog(rows) } })
+    }
+
+    /// Il tempo perché una seconda riparazione, se ci fosse, arrivi.
+    private func quiescenza() async {
+        try? await Task.sleep(nanoseconds: 200_000_000)
+    }
+
+    private func riga(bucket: TrackingBucket, totalCount: Int) -> TrackingRow {
+        TrackingRow(
+            showId: 1396, userStatus: "active", bucket: bucket,
+            watchedCount: totalCount == 0 ? 3 : totalCount,
+            airedCount: totalCount, totalCount: totalCount,
+            nextSeason: nil, nextEpisode: nil, nextEpisodeName: nil,
+            nextAirDate: nil, isNextAvailable: false,
+            backlogSince: nil, lastWatchedAt: nil,
+            showName: "Breaking Bad", posterPath: nil, nextStillPath: nil
+        )
+    }
+
+    private struct FakeTrackingRepository: TrackingRepositoryProtocol {
+        let sections: [(bucket: TrackingBucket, rows: [TrackingRow])]
+
+        func fetchSections() async throws -> TrackingSections {
+            var result = TrackingSections()
+            result.sections = sections
+            return result
+        }
+    }
+
+    /// Le riparazioni chieste, raccolte fuori dal ViewModel.
+    @MainActor
+    private final class Raccoglitore {
+        private(set) var chiamate: [[(showId: Int, userStatus: String)]] = []
+        func aggiungi(_ rows: [(showId: Int, userStatus: String)]) { chiamate.append(rows) }
     }
 }

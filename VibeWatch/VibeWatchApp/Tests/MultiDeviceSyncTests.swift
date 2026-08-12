@@ -354,11 +354,17 @@ final class MockSyncEngine: SyncEngineProtocol, @unchecked Sendable {
     }
     private(set) var trackingPulls = 0
     private(set) var profileContentPulls = 0
+    /// L'ordine in cui sono arrivate le chiamate: dopo un "visto" il push deve precedere il pull,
+    /// o si ritira uno stato server che l'evento non ha ancora ricevuto.
+    private(set) var calls: [String] = []
 
     func performFullSync(trigger: SyncTrigger) async {}
-    func pushPendingChanges() async {}
+    func pushPendingChanges() async { calls.append("push") }
     func pullFromRemote() async {}
-    func pullTrackingState() async { trackingPulls += 1 }
+    func pullTrackingState() async {
+        trackingPulls += 1
+        calls.append("pullTracking")
+    }
     func pullProfileContent() async { profileContentPulls += 1 }
 }
 
