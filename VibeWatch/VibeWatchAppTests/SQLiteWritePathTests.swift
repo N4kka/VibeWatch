@@ -59,6 +59,74 @@ final class SQLiteWritePathTests: XCTestCase {
             "a second upsert on the same id must overwrite the row")
     }
 
+    /// Un NULL esplicito è un valore, non un dato mancante: deve svuotare la colonna.
+    ///
+    /// Finché non lo faceva, lo specchio del pull sapeva solo riempire campi. La riga di
+    /// `v_tv_tracking` di una serie finita arriva con `next_season` NULL e in locale restava il
+    /// vecchio prossimo episodio: la serie non risultava mai vista né "In pari".
+    func testUpsertClearsColumnsTheRecordExplicitlyNulls() async throws {
+        let userId = "nulls-\(UUID().uuidString)"
+        try await service.upsert(table: "tv_tracking", rows: [[
+            "user_id": userId, "tmdb_show_id": 77, "bucket": "up_next",
+            "next_season": 4, "next_episode": 9, "show_name": "Quasi finita"
+        ]])
+
+        try await service.upsert(table: "tv_tracking", rows: [[
+            "user_id": userId, "tmdb_show_id": 77, "bucket": "up_to_date",
+            "next_season": NSNull(), "next_episode": NSNull(), "show_name": "Quasi finita"
+        ]])
+
+        let rows = try await service.queryRaw(
+            "SELECT next_season, next_episode, bucket FROM tv_tracking WHERE user_id = ? AND tmdb_show_id = ?",
+            parameters: [userId, 77]
+        )
+        XCTAssertEqual(rows.count, 1)
+        XCTAssertNil(rows.first?["next_season"], "un NULL in arrivo deve svuotare la colonna")
+        XCTAssertNil(rows.first?["next_episode"])
+        XCTAssertEqual(rows.first?["bucket"] as? String, "up_to_date")
+    }
+
+    /// Il rovescio: una colonna che il record non nomina resta com'era. È la semantica su cui
+    /// contano i chiamanti che passano record parziali (le azioni locali, non il pull).
+    func testUpsertLeavesColumnsTheRecordDoesNotMention() async throws {
+        let userId = "partial-\(UUID().uuidString)"
+        try await service.upsert(table: "tv_tracking", rows: [[
+            "user_id": userId, "tmdb_show_id": 78, "bucket": "up_next",
+            "next_season": 2, "show_name": "In corso"
+        ]])
+
+        try await service.upsert(table: "tv_tracking", rows: [[
+            "user_id": userId, "tmdb_show_id": 78, "bucket": "stale"
+        ]])
+
+        let rows = try await service.queryRaw(
+            "SELECT next_season, show_name FROM tv_tracking WHERE user_id = ? AND tmdb_show_id = ?",
+            parameters: [userId, 78]
+        )
+        XCTAssertEqual(rows.first?["next_season"] as? Int, 2,
+                       "una colonna assente dal record non va toccata")
+        XCTAssertEqual(rows.first?["show_name"] as? String, "In corso")
+    }
+
+    /// Una NOT NULL resta fuori: un NULL in arrivo su di lei non è un'informazione ma un errore,
+    /// e scriverlo farebbe fallire l'intera pagina del pull invece della sola riga malformata.
+    func testUpsertIgnoresNullOnNotNullColumns() async throws {
+        let userId = "notnull-\(UUID().uuidString)"
+        try await service.upsert(table: "tv_tracking", rows: [[
+            "user_id": userId, "tmdb_show_id": 79, "bucket": "up_next", "watched_count": 12
+        ]])
+
+        try await service.upsert(table: "tv_tracking", rows: [[
+            "user_id": userId, "tmdb_show_id": 79, "bucket": "up_next", "watched_count": NSNull()
+        ]])
+
+        let rows = try await service.queryRaw(
+            "SELECT watched_count FROM tv_tracking WHERE user_id = ? AND tmdb_show_id = ?",
+            parameters: [userId, 79]
+        )
+        XCTAssertEqual(rows.first?["watched_count"] as? Int, 12)
+    }
+
     func testUpdatePersists() async throws {
         let id = "writepath-\(UUID().uuidString)"
         try await service.upsert(table: "profiles", rows: [["id": id, "display_name": "before"]])
