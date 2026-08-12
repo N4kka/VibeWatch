@@ -410,6 +410,24 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
         // Get current user ID
         let userId = AuthService.shared.currentUser?.id ?? "anonymous"
 
+        // Un UPSERT è l'intento COMPLETO sul record: quello nuovo rende obsoleto ogni intento
+        // precedente non ancora spedito. Non è un'ottimizzazione — un op fallito aspetta il
+        // proprio retry con backoff fino a 4 ore, e se nel frattempo l'utente ha cambiato idea
+        // il retry vince sull'intenzione più recente. In produzione: serie segnata vista →
+        // `active` applicato → 14 minuti dopo il retry di un `dropped` del mattino la
+        // ri-nasconde da tutte le liste. `superseded` è terminale: nessuna sweep di recovery
+        // lo rimette in `pending` (quelle toccano pending/failed/blocked/stuck).
+        if operationType == "UPSERT" {
+            _ = sqliteService.execute(
+                """
+                UPDATE sync_outbox SET status = 'superseded'
+                 WHERE table_name = ? AND record_id = ? AND operation_type = 'UPSERT'
+                   AND status IN ('pending', 'failed', 'blocked', 'stuck')
+                """,
+                parameters: [table, recordId]
+            )
+        }
+
         // Build SQL with optional depends_on_id
         let sql: String
         let parameters: [Any]
@@ -1336,10 +1354,14 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
 
     /// Clear completed operations older than specified days
     public func clearOldCompletedOperations(olderThanDays: Int = 7) async {
+        // `superseded` (un UPSERT rimpiazzato da uno più recente sullo stesso record) è terminale
+        // come `completed`, ma non ha `synced_at`: non è mai partito. Si pulisce per `created_at`.
         let sql = """
             DELETE FROM sync_outbox
-            WHERE status = 'completed'
-              AND synced_at < datetime('now', '-\(olderThanDays) days')
+            WHERE (status = 'completed'
+                   AND synced_at < datetime('now', '-\(olderThanDays) days'))
+               OR (status = 'superseded'
+                   AND created_at < datetime('now', '-\(olderThanDays) days'))
         """
         _ = sqliteService.execute(sql)
         Logger.info("[SyncEngine] Cleared completed operations older than \(olderThanDays) days")

@@ -258,6 +258,64 @@ final class SyncEngineTests: XCTestCase {
         XCTAssertEqual(blockedStatus, "blocked", "'blocked' (schema-missing) op must be left to its own recovery")
     }
 
+    // MARK: - Supersede degli UPSERT
+
+    /// Un UPSERT è l'intento completo sul record: accodarne uno nuovo deve superare quelli non
+    /// ancora spediti sullo stesso record. Senza, un op in attesa del proprio retry (backoff fino
+    /// a 4 ore) riparte DOPO l'intento più recente e lo sovrascrive — in produzione un `dropped`
+    /// del mattino ha ribaltato l'`active` di una serie appena segnata vista, 14 minuti dopo.
+    func testUnNuovoUpsertSuperaQuelliInCodaSulloStessoRecord() async throws {
+        let recordId = "supersede-\(UUID().uuidString)"
+
+        // Il vecchio intento, fallito e in attesa del retry: inserito diretto, non via
+        // queueOperation, per non innescare push di rete sul singleton condiviso.
+        _ = sqliteService.execute("""
+            INSERT INTO sync_outbox (operation_id, user_id, table_name, operation_type, record_id, payload, status, attempts, next_retry_at)
+            VALUES (?, 'u', 'tv_show_state', 'UPSERT', ?, '{"user_status":"dropped"}', 'failed', 2, datetime('now', '+1 hour'))
+        """, parameters: ["op-old-\(recordId)", recordId])
+
+        try await syncEngine.queueOperation(
+            table: "tv_show_state",
+            operationType: "UPSERT",
+            recordId: recordId,
+            payload: ["user_status": "active"],
+            dependsOn: nil
+        )
+
+        let rows = try await sqliteService.queryRaw(
+            "SELECT operation_id, status FROM sync_outbox WHERE record_id = ? ORDER BY id ASC",
+            parameters: [recordId])
+        XCTAssertEqual(rows.first?["status"] as? String, "superseded",
+                       "l'intento vecchio non deve poter ripartire col suo retry")
+        XCTAssertEqual(rows.last?["status"] as? String, "pending",
+                       "quello nuovo è l'unico vivo")
+    }
+
+    /// Record diversi non si toccano, e gli INSERT (eventi, append-only) non si superano mai.
+    func testIlSupersedeNonToccaAltriRecordNeGliInsert() async throws {
+        let a = "supersede-a-\(UUID().uuidString)"
+        let b = "supersede-b-\(UUID().uuidString)"
+        _ = sqliteService.execute("""
+            INSERT INTO sync_outbox (operation_id, user_id, table_name, operation_type, record_id, payload, status)
+            VALUES (?, 'u', 'tv_show_state', 'UPSERT', ?, '{}', 'pending')
+        """, parameters: ["op-\(b)", b])
+        _ = sqliteService.execute("""
+            INSERT INTO sync_outbox (operation_id, user_id, table_name, operation_type, record_id, payload, status)
+            VALUES (?, 'u', 'watch_events', 'INSERT', ?, '{}', 'pending')
+        """, parameters: ["op-ins-\(a)", a])
+
+        try await syncEngine.queueOperation(
+            table: "tv_show_state", operationType: "UPSERT",
+            recordId: a, payload: ["user_status": "active"], dependsOn: nil)
+
+        let statoB = await getOperationStatus(recordId: b)
+        XCTAssertEqual(statoB, "pending", "un record diverso resta com'era")
+        let insert = try await sqliteService.queryRaw(
+            "SELECT status FROM sync_outbox WHERE operation_id = ?", parameters: ["op-ins-\(a)"])
+        XCTAssertEqual(insert.first?["status"] as? String, "pending",
+                       "gli INSERT sono eventi: non esiste un 'intento più recente' che li sostituisce")
+    }
+
     // MARK: - Sync State Tests
 
     func testIsSyncingFlag() async throws {
