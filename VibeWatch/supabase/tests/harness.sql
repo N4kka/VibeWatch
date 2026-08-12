@@ -88,6 +88,7 @@ create table if not exists public.lists (
   description text,
   type        text not null,
   is_public   boolean not null default false,
+  created_at  timestamptz default now(),
   updated_at  timestamptz default now(),
   deleted_at  timestamptz
 );

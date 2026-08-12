@@ -17,6 +17,12 @@ const RUN_BUDGET_MS = 100_000
 // collapsed into one digest push; if even that does not fit, the rows wait for the window to
 // reopen. Before this cap a single morning cron run delivered 27 separate banners to one user.
 const DAILY_PUSH_CAP = 2
+// Social pushes ("X started following you") are the strongest re-engagement signal the app has
+// and are rare by construction, so they get their own budget instead of competing with episode
+// reminders inside the general cap — where they would almost always land cold, inside a digest.
+// The two budgets are counted separately via notification_delivery_log.category.
+const SOCIAL_DAILY_PUSH_CAP = 3
+const SOCIAL_TYPES = new Set(['new_follower', 'activity_liked', 'activity_commented'])
 // A user who reinstalls or reinstates permissions accumulates a new user_devices row every time
 // FCM rotates the token, and nothing ever prunes them (one account had 66). Sending to all of
 // them means the same handset can be hit several times for one notification.
@@ -61,6 +67,9 @@ type NotificationPreferences = {
   streak_reminder: boolean
   list_milestone: boolean
   price_drop: boolean
+  new_follower: boolean
+  activity_liked: boolean
+  activity_commented: boolean
   quiet_hours_start: string | null
   quiet_hours_end: string | null
   timezone: string | null
@@ -186,6 +195,7 @@ const DIGEST_COPY: Record<string, (count: number) => string> = {
   new_availability: (n) => `${n} titles from your list are now streaming.`,
   episode_aired: (n) => `${n} series you follow have new episodes.`,
   continue_watching: (n) => `${n} series are waiting for you.`,
+  new_follower: (n) => `${n} people started following you on VibeWatch.`,
 }
 
 // One push standing in for several queued rows. It carries no media_id on purpose: the client
@@ -432,17 +442,21 @@ serve(async (req) => {
     }
 
     // How much of each user's 24h budget is already spent. One query for the whole batch.
+    // Two ledgers: social deliveries burn their own budget, everything else (including rows
+    // logged before the category column existed) burns the general one.
     const windowStart = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
     const spentByUser = new Map<string, number>()
+    const socialSpentByUser = new Map<string, number>()
     if (eligibleByUser.size > 0) {
       const { data: recentDeliveries } = await supabaseClient
         .from('notification_delivery_log')
-        .select('user_id')
+        .select('user_id, category')
         .in('user_id', [...eligibleByUser.keys()])
         .gte('delivered_at', windowStart)
 
-      recentDeliveries?.forEach((row: { user_id: string }) => {
-        spentByUser.set(row.user_id, (spentByUser.get(row.user_id) ?? 0) + 1)
+      recentDeliveries?.forEach((row: { user_id: string; category?: string | null }) => {
+        const ledger = row.category === 'social' ? socialSpentByUser : spentByUser
+        ledger.set(row.user_id, (ledger.get(row.user_id) ?? 0) + 1)
       })
     }
 
@@ -487,25 +501,45 @@ serve(async (req) => {
         break
       }
 
-      const remaining = DAILY_PUSH_CAP - (spentByUser.get(userId) ?? 0)
+      // Two independent buckets per user: social rows never displace episode reminders from the
+      // general budget, and vice versa.
+      const buckets = [
+        {
+          rows: rows.filter((row) => !SOCIAL_TYPES.has(row.notification_type)),
+          cap: DAILY_PUSH_CAP,
+          spent: spentByUser.get(userId) ?? 0,
+          category: null as string | null,
+        },
+        {
+          rows: rows.filter((row) => SOCIAL_TYPES.has(row.notification_type)),
+          cap: SOCIAL_DAILY_PUSH_CAP,
+          spent: socialSpentByUser.get(userId) ?? 0,
+          category: 'social' as string | null,
+        },
+      ]
+
+      for (const bucket of buckets) {
+      if (bucket.rows.length === 0) continue
+
+      const remaining = bucket.cap - bucket.spent
 
       if (remaining <= 0) {
         // Budget spent. Hold the rows — they are not lost, they go out (collapsed) once the
         // rolling window reopens, or get retired by the staleness rule if nobody cares by then.
-        cappedCount += rows.length
+        cappedCount += bucket.rows.length
         await supabaseClient
           .from('notifications')
           .update({ next_retry_at: new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString() })
-          .in('id', rows.map((row) => row.id))
+          .in('id', bucket.rows.map((row) => row.id))
         continue
       }
 
       // Within budget: each item keeps its own banner and its own deep link. Over budget: one
       // digest for the lot, which costs a single unit of budget.
-      const asDigest = rows.length > remaining
+      const asDigest = bucket.rows.length > remaining
       const batches = asDigest
-        ? [{ payload: digestPayload(userId, rows), rows }]
-        : rows.map((row) => ({ payload: payloadForNotification(row), rows: [row] }))
+        ? [{ payload: digestPayload(userId, bucket.rows), rows: bucket.rows }]
+        : bucket.rows.map((row) => ({ payload: payloadForNotification(row), rows: [row] }))
 
       for (const batch of batches) {
         const result = await sendPush(
@@ -544,7 +578,9 @@ serve(async (req) => {
           user_id: userId,
           kind: asDigest ? 'digest' : 'single',
           notification_count: batch.rows.length,
+          category: bucket.category,
         })
+      }
       }
     }
 
