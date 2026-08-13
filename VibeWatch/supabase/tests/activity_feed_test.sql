@@ -407,6 +407,83 @@ select t.eq((select activity_id from feed_p2 limit 1),
             'e riparte esattamente dalla card successiva');
 
 \echo ''
+\echo '=== M3: rimuovi dal feed (hidden_at) e card per id'
+
+set local request.jwt.claim.sub = 'eeeeeeee-0000-0000-0000-000000000001';
+
+create temp table cap_hidden as
+  select id from public.activities
+   where user_id = 'eeeeeeee-0000-0000-0000-000000000001'
+     and group_key = 'watch:tv:100:2026-08-10';
+
+select t.is_true(exists(select 1 from public.get_activity_feed('community', null, null, null, 50) f
+                         where f.activity_id = (select id from cap_hidden)),
+            'prima di nasconderla la card c''e''');
+
+select t.is_true(public.hide_activity((select id from cap_hidden)),
+            'hide_activity sulla propria card risponde true');
+select t.is_true(not exists(select 1 from public.get_activity_feed('community', null, null, null, 50) f
+                             where f.activity_id = (select id from cap_hidden)),
+            'e sparisce dal feed, anche a chi l''ha nascosta');
+select t.is_true(not exists(select 1 from public.get_activity_feed('user',
+                              'eeeeeeee-0000-0000-0000-000000000001', null, null, 50) f
+                             where f.activity_id = (select id from cap_hidden)),
+            'nemmeno nell''attivita'' del proprio profilo');
+
+select t.is_true(public.hide_activity((select id from cap_hidden)),
+            'idempotente: la seconda chiamata risponde ancora true');
+
+-- Il motivo per cui hidden_at non e'' deleted_at: un altro episodio quel giorno fa ripartire
+-- l''upsert del trigger, che azzera deleted_at. Se la rimozione vivesse li'', la card tornerebbe.
+create temp table cap_hidden_at as
+  select hidden_at from public.activities where id = (select id from cap_hidden);
+
+insert into public.watch_events (user_id, media_type, tmdb_show_id, season_number, episode_number,
+                                 watched_at) values
+  ('eeeeeeee-0000-0000-0000-000000000001', 'tv', 100, 1, 6, '2026-08-10 15:00+00');
+
+select t.is_true((select a.deleted_at is null and a.hidden_at = c.hidden_at
+                    from public.activities a, cap_hidden_at c
+                   where a.id = (select id from cap_hidden)),
+            'il ricalcolo riscrive la riga ma non tocca hidden_at');
+select t.is_true(not exists(select 1 from public.get_activity_feed('community', null, null, null, 50) f
+                             where f.activity_id = (select id from cap_hidden)),
+            'e la card resta fuori dal feed dopo il ricalcolo');
+
+-- Una card altrui non si nasconde, e la risposta non distingue "non e'' tua" da "non esiste".
+create temp table cap_anna_rated as
+  select id from public.activities
+   where user_id = 'eeeeeeee-0000-0000-0000-000000000001'
+     and group_key = 'rated:movie:777';
+
+set local request.jwt.claim.sub = 'eeeeeeee-0000-0000-0000-000000000002';
+select t.is_true(not public.hide_activity((select id from cap_anna_rated)),
+            'hide_activity su una card altrui risponde false');
+select t.is_true(not public.hide_activity('cafe0000-0000-0000-0000-000000000000'),
+            'e su una card inesistente risponde lo stesso false');
+select t.is_true(exists(select 1 from public.get_activity_feed('community', null, null, null, 50) f
+                         where f.activity_id = (select id from cap_anna_rated)),
+            'la card altrui e'' ancora li''');
+
+-- p_activity_id: la card del deep link salta scope e cursore, non il cancello.
+set local request.jwt.claim.sub = 'eeeeeeee-0000-0000-0000-000000000003';
+select t.eq((select count(*) from public.get_activity_feed('following', null, null, null, 20,
+                                                           (select id from cap_anna_rated))),
+            1::bigint,
+            'per id si apre anche la card di chi non seguo');
+select t.is_true(not exists(select 1 from public.get_activity_feed('following', null, null, null, 20,
+                                                                   (select id from cap_hidden))),
+            'ma non una nascosta');
+
+-- carla ha il feed spento (sezione consenso): la sua card per id non si apre a nessun altro.
+set local request.jwt.claim.sub = 'eeeeeeee-0000-0000-0000-000000000002';
+select t.is_true(not exists(select 1 from public.get_activity_feed('community', null, null, null, 20,
+                             (select id from public.activities
+                               where user_id = 'eeeeeeee-0000-0000-0000-000000000003'
+                                 and group_key = 'watch:movie:888:0'))),
+            'e il cancello dell''autore vale anche sulla card per id');
+
+\echo ''
 \echo '=== get_public_lists: l''autore'
 
 -- La lista di anna e'' nascosta dai report per gli altri: la si guarda da proprietaria.

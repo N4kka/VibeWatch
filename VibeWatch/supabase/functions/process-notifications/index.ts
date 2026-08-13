@@ -269,6 +269,12 @@ async function sendPush(
           notification_type: payload.notificationType,
           media_id: String(payload.mediaId ?? ''),
           media_type: String(payload.mediaType ?? ''),
+          // Social feed M3: le push social non hanno un media, hanno una CARD. L'id sta già in
+          // thread_id (`social:{activity_id}`, la chiave con cui i trigger deduplicano) e da
+          // qui il client ci apre sopra. Nell'aps c'è come `thread-id`, ma leggerlo da lì
+          // vorrebbe dire frugare nel dizionario di sistema: si dichiara nei data, dove il
+          // client legge già tutto il resto.
+          thread_id: String(payload.threadId ?? ''),
         },
         apns: {
           headers: {
