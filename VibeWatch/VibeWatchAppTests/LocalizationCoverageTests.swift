@@ -190,7 +190,7 @@ final class LocalizationCoverageTests: XCTestCase {
     /// lingue europee e in nessuna asiatica. Ogni voce qui è una scelta, non una dimenticanza:
     /// se una riga sparisce da questa mappa il test la segnala, ed è esattamente quello che serve.
     private static let prestitiPerLingua: [String: Set<String>] = [
-        // da: 28
+        // da: 31
         "da": [
             "auth.pwRule.symbol",
             "clips.card.addToWatchlist",
@@ -213,16 +213,23 @@ final class LocalizationCoverageTests: XCTestCase {
             "movieDetail.information",
             "movieDetail.status",
             "movieDetail.trailer",
+            // "Likes" è il termine corrente danese sui social (come mediaDetail.action.like).
+            "notifications.activityLiked",
             "notifications.status",
             "platforms.streaming",
             "profile.feedback.category.ui",
             "profile.feedback.sendButton",
             // Il formato Instagram: in danese si dice "story", "historie" suonerebbe da fiaba.
             "shareCard.format.story",
+            // Il bottone like del feed, come mediaDetail.action.like già in lista.
+            "social.card.like",
+            // "Send" è l'imperativo danese di "sende": identico all'inglese per parentela,
+            // non per dimenticanza (come profile.feedback.sendButton già in lista).
+            "social.comments.send",
             "tracking.special",
             "update.versionFootnote",
         ],
-        // de: 32
+        // de: 34
         "de": [
             // "Details" è tedesco corretto (come import.report.details già in lista).
             "ai.card.details",
@@ -248,18 +255,22 @@ final class LocalizationCoverageTests: XCTestCase {
             "movieDetail.genres",
             "movieDetail.status",
             "movieDetail.trailer",
+            // "Likes" è tedesco corrente sui social (come mediaDetail.action.like già in lista).
+            "notifications.activityLiked",
             "notifications.status",
             "platforms.streaming",
             "profile.edit.bio",
             "profile.edit.name",
             // "Story" e "Community" sono tedesco corrente (Instagram tedesco usa entrambi).
             "shareCard.format.story",
+            // Il bottone like del feed: "Like" come mediaDetail.action.like.
+            "social.card.like",
             "social.segment.community",
             "tab.clips",
             "tracking.special",
             "update.versionFootnote",
         ],
-        // es: 15
+        // es: 16
         "es": [
             "clips.title",
             "common.error",
@@ -270,6 +281,8 @@ final class LocalizationCoverageTests: XCTestCase {
             "mood.nostalgic",
             "mood.romantic",
             "movieDetail.director",
+            // "Social" come tab.social e social.settings.title, già in lista.
+            "notifications.social",
             "platforms.streaming",
             "profile.legal",
             "search.scope.series",
@@ -284,7 +297,7 @@ final class LocalizationCoverageTests: XCTestCase {
             "genre.western",
             "mood.nostalgic",
         ],
-        // fr: 30
+        // fr: 31
         "fr": [
             "clips.card.addToWatchlist",
             "clips.title",
@@ -305,6 +318,8 @@ final class LocalizationCoverageTests: XCTestCase {
             "movieDetail.budget",
             "movieDetail.genres",
             "movieDetail.productionCompanies",
+            // "Social" come tab.social e social.settings.title, già in lista.
+            "notifications.social",
             "notifications.title",
             "platforms.streaming",
             "profile.edit.bio",
@@ -319,7 +334,7 @@ final class LocalizationCoverageTests: XCTestCase {
             "tab.social",
             "update.versionFootnote",
         ],
-        // it: 28
+        // it: 29
         "it": [
             // "watchlist" è un prestito consolidato in tutta l'app italiana (vedi
             // mediaDetail.action.watchlist): "2 in watchlist" è come parla l'utente.
@@ -340,6 +355,8 @@ final class LocalizationCoverageTests: XCTestCase {
             "movieDetail.budget",
             "movieDetail.cast",
             "movieDetail.trailer",
+            // "Social" come tab.social e social.settings.title, già in lista.
+            "notifications.social",
             "onboarding.import.stat.watchlist",
             "platforms.cinema",
             "platforms.streaming",
@@ -354,7 +371,7 @@ final class LocalizationCoverageTests: XCTestCase {
             "tab.social",
             "username.placeholder",
         ],
-        // nb: 17
+        // nb: 18
         "nb": [
             "auth.pwRule.symbol",
             "clips.card.addToWatchlist",
@@ -374,8 +391,10 @@ final class LocalizationCoverageTests: XCTestCase {
             "notifications.status",
             // Il formato Instagram: anche in norvegese si dice "story".
             "shareCard.format.story",
+            // "Send" è l'imperativo norvegese di "sende": identico all'inglese per parentela.
+            "social.comments.send",
         ],
-        // nl: 43
+        // nl: 45
         "nl": [
             // "Details" è olandese corretto e "watchlist" un prestito consolidato
             // (come import.report.details e lists.watchlist già in lista).
@@ -413,6 +432,8 @@ final class LocalizationCoverageTests: XCTestCase {
             "movieDetail.genres",
             "movieDetail.status",
             "movieDetail.trailer",
+            // "Likes" è olandese corrente sui social (come mediaDetail.action.like già in lista).
+            "notifications.activityLiked",
             "notifications.status",
             "profile.edit.bio",
             "profile.feedback.category.crash",
@@ -421,12 +442,14 @@ final class LocalizationCoverageTests: XCTestCase {
             // "Story", "Post" e "Community" sono olandese corrente sui social.
             "shareCard.format.post",
             "shareCard.format.story",
+            // Il bottone like del feed: "Like" come mediaDetail.action.like.
+            "social.card.like",
             "social.segment.community",
             "tab.clips",
             "tracking.action.later",
             "tracking.special",
         ],
-        // no: 17
+        // no: 18
         "no": [
             "auth.pwRule.symbol",
             "clips.card.addToWatchlist",
@@ -446,6 +469,8 @@ final class LocalizationCoverageTests: XCTestCase {
             "notifications.status",
             // Come in nb: il formato Instagram resta "story".
             "shareCard.format.story",
+            // Come in nb: "Send" è l'imperativo norvegese di "sende".
+            "social.comments.send",
         ],
         // pl: 12
         "pl": [
@@ -463,7 +488,7 @@ final class LocalizationCoverageTests: XCTestCase {
             // "Post" è polacco corrente; la story invece è "relacja".
             "shareCard.format.post",
         ],
-        // pt: 16
+        // pt: 17
         "pt": [
             "clips.title",
             "common.item",
@@ -474,6 +499,8 @@ final class LocalizationCoverageTests: XCTestCase {
             "mood.nostalgic",
             "mood.romantic",
             "movieDetail.trailer",
+            // "Social" come tab.social e social.settings.title, già in lista.
+            "notifications.social",
             "platforms.cinema",
             "platforms.streaming",
             // "Story" e "post" sono correnti nel portoghese brasiliano; "Social" come tab.social.
