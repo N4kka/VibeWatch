@@ -32,9 +32,30 @@ serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
     const today = new Date().toISOString().slice(0, 10)
 
+    // Opt-in list first. This used to queue a row for every user with a live streak — 1701 rows
+    // in a month, ~92% of everything the system produced — and the dispatcher then dropped most
+    // of them against the preference gate. Rows nobody wants are cheaper never enqueued: the
+    // queue stays readable, and one loud producer can no longer push real news into a digest.
+    const { data: optedIn, error: prefsError } = await supabase
+      .from('user_notification_preferences')
+      .select('user_id')
+      .eq('streak_reminder', true)
+      .eq('push_enabled', true)
+
+    if (prefsError) throw prefsError
+
+    const wanted = (optedIn ?? []).map((row: { user_id: string }) => row.user_id)
+    if (wanted.length === 0) {
+      return new Response(JSON.stringify({ created: 0, optedIn: 0 }), {
+        headers: { 'Content-Type': 'application/json' },
+        status: 200,
+      })
+    }
+
     const { data: users, error } = await supabase
       .from('user_gamification')
       .select('user_id, current_streak, last_activity_date')
+      .in('user_id', wanted)
       .gt('current_streak', 0)
       .or(`last_activity_date.is.null,last_activity_date.neq.${today}`)
 
@@ -47,17 +68,20 @@ serve(async (req) => {
         .insert({
           user_id: user.user_id,
           notification_type: 'streak_reminder',
+          // English fallback; the dispatcher renders template_key in the user's language.
           title: 'Keep your streak',
           body: `Your ${user.current_streak}-day streak is waiting.`,
           is_sent: false,
           category: 'streak_reminder',
           thread_id: 'streak',
+          template_key: 'streak_reminder',
+          template_params: { days: user.current_streak },
         })
 
       if (!insertError) created += 1
     }
 
-    return new Response(JSON.stringify({ created }), {
+    return new Response(JSON.stringify({ created, optedIn: wanted.length }), {
       headers: { 'Content-Type': 'application/json' },
       status: 200,
     })

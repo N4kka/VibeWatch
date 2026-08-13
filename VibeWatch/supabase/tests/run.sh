@@ -93,6 +93,10 @@ for file in "$MIGRATIONS"/*.sql; do
     20260813120000_get_activity_feed_counts.sql) ;;
     20260813130000_social_interaction_notifications.sql) ;;
     20260814100000_activity_hide_and_lookup.sql) ;;
+    20260815100000_notification_prefs_v2.sql) ;;
+    20260815101000_notifications_localizable.sql) ;;
+    20260815102000_release_alerts_auto_enrollment.sql) ;;
+    20260815103000_email_send_log.sql) ;;
     *) continue ;;
   esac
   [ "$pass" = 1 ] && echo "   $(basename "$file")"
@@ -108,6 +112,9 @@ run -f "$HERE/social_test.sql"
 
 echo "→ test: favorites e rating"
 run -f "$HERE/favorites_ratings_test.sql"
+
+echo "→ test: auto-iscrizione agli avvisi"
+run -f "$HERE/release_alerts_test.sql"
 
 echo "→ test: feed di attivita'"
 run -f "$HERE/activity_feed_test.sql"

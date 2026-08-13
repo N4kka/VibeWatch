@@ -67,6 +67,7 @@ final class LocalizationManager: ObservableObject {
 
         localeDidChange.toggle()
         objectWillChange.send()
+        syncLocaleToNotificationBackend()
 
         Logger.debug("[Localization] Country changed to: \(country.name)")
     }
@@ -84,8 +85,18 @@ final class LocalizationManager: ObservableObject {
                 AnalyticsService.shared.logLanguageChanged(from: previousLanguageId, to: language.id)
             }
         }
+        syncLocaleToNotificationBackend()
 
         Logger.debug("[Localization] Language changed to: \(language.name)")
+    }
+
+    /// Push and email copy is rendered server-side, in the language stored alongside the user's
+    /// notification preferences — so a language change in the app has to reach that row, or the
+    /// next notification arrives in the language the user just left.
+    private func syncLocaleToNotificationBackend() {
+        Task { @MainActor in
+            await NotificationService.shared.syncPreferencesToSupabase(NotificationPreferencesStore.load())
+        }
     }
 
     // Opt out of main-actor isolation for this pure lookup method.

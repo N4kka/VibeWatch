@@ -2,6 +2,23 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { SignJWT, importPKCS8 } from 'https://esm.sh/jose@v5.2.3'
 import { rejectIfNotServiceCaller } from '../_shared/cronAuth.ts'
+import { renderFallbackEmail } from '../_shared/emailTemplates.ts'
+import { emailsSentToday, sendEmailWithBudget } from '../_shared/resendBudget.ts'
+import {
+  capFor,
+  classifyFcmError,
+  digestPayload,
+  isInQuietHours,
+  localizedCopy,
+  NotificationPreferences,
+  NotificationRow,
+  payloadForNotification,
+  preferenceAllows,
+  PushPayload,
+  retryDelayMinutes,
+  SOCIAL_DAILY_PUSH_CAP,
+  SOCIAL_TYPES,
+} from './logic.ts'
 
 console.log('🚀 process-notifications function booting up...')
 
@@ -12,17 +29,6 @@ const BATCH_SIZE = 25
 // Stop issuing new sends past this point and return normally. Being killed mid-loop is what
 // used to strand delivered pushes in an unsent state.
 const RUN_BUDGET_MS = 100_000
-
-// How many pushes a single user may receive in any rolling 24 hours. Anything beyond this is
-// collapsed into one digest push; if even that does not fit, the rows wait for the window to
-// reopen. Before this cap a single morning cron run delivered 27 separate banners to one user.
-const DAILY_PUSH_CAP = 2
-// Social pushes ("X started following you") are the strongest re-engagement signal the app has
-// and are rare by construction, so they get their own budget instead of competing with episode
-// reminders inside the general cap — where they would almost always land cold, inside a digest.
-// The two budgets are counted separately via notification_delivery_log.category.
-const SOCIAL_DAILY_PUSH_CAP = 3
-const SOCIAL_TYPES = new Set(['new_follower', 'activity_liked', 'activity_commented'])
 // A user who reinstalls or reinstates permissions accumulates a new user_devices row every time
 // FCM rotates the token, and nothing ever prunes them (one account had 66). Sending to all of
 // them means the same handset can be hit several times for one notification.
@@ -30,50 +36,6 @@ const MAX_DEVICES_PER_USER = 10
 // Queued content that nobody delivered in a week is noise, not news. Retire it rather than
 // dumping a backlog the moment the pipeline recovers.
 const MAX_QUEUE_AGE_MS = 7 * 24 * 60 * 60 * 1000
-
-type NotificationRow = {
-  id: string
-  user_id: string
-  notification_type: string
-  title: string
-  body: string
-  media_id?: number | string | null
-  media_type?: string | null
-  retry_count?: number | null
-  category?: string | null
-  thread_id?: string | null
-  created_at?: string | null
-}
-
-// What actually goes to FCM. A digest has no backing notifications row, so delivery is described
-// separately from the queue rows it settles.
-type PushPayload = {
-  dataId: string
-  notificationType: string
-  title: string
-  body: string
-  mediaId?: number | string | null
-  mediaType?: string | null
-  category: string
-  threadId: string
-  collapseId: string
-}
-
-type NotificationPreferences = {
-  push_enabled: boolean
-  new_availability: boolean
-  new_release: boolean
-  episode_aired: boolean
-  streak_reminder: boolean
-  list_milestone: boolean
-  price_drop: boolean
-  new_follower: boolean
-  activity_liked: boolean
-  activity_commented: boolean
-  quiet_hours_start: string | null
-  quiet_hours_end: string | null
-  timezone: string | null
-}
 
 type PushResult = {
   sent: boolean
@@ -119,104 +81,6 @@ async function getFirebaseAccessToken(serviceAccount: any) {
 
   const data = await response.json()
   return data.access_token
-}
-
-function preferenceAllows(notification: NotificationRow, preferences?: NotificationPreferences | null) {
-  if (!preferences) return true
-  if (!preferences.push_enabled) return false
-
-  const key = notification.notification_type as keyof NotificationPreferences
-  const value = preferences[key]
-  return typeof value === 'boolean' ? value : true
-}
-
-function localTimeParts(timezone: string) {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: timezone,
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).formatToParts(new Date())
-
-  const hour = Number(parts.find((part) => part.type === 'hour')?.value ?? '0')
-  const minute = Number(parts.find((part) => part.type === 'minute')?.value ?? '0')
-  return hour * 60 + minute
-}
-
-function parseHHMM(value: string) {
-  const [hour, minute] = value.split(':').map((part) => Number(part))
-  return hour * 60 + minute
-}
-
-function isInQuietHours(preferences?: NotificationPreferences | null) {
-  if (!preferences?.quiet_hours_start || !preferences?.quiet_hours_end || !preferences.timezone) {
-    return false
-  }
-
-  const now = localTimeParts(preferences.timezone)
-  const start = parseHHMM(preferences.quiet_hours_start)
-  const end = parseHHMM(preferences.quiet_hours_end)
-
-  if (start === end) return false
-  if (start < end) return now >= start && now < end
-  return now >= start || now < end
-}
-
-function classifyFcmError(status: number, body: string) {
-  const permanent = body.includes('UNREGISTERED') || body.includes('INVALID_ARGUMENT')
-  const retryable = status === 429 || status >= 500
-  return {
-    permanent,
-    retryable: !permanent && retryable,
-    error: body,
-  }
-}
-
-function retryDelayMinutes(retryCount: number) {
-  return Math.min(60, Math.pow(2, Math.max(0, retryCount))) // 1,2,4... max 60 min
-}
-
-function payloadForNotification(notification: NotificationRow): PushPayload {
-  return {
-    dataId: String(notification.id),
-    notificationType: notification.notification_type,
-    title: notification.title,
-    body: notification.body,
-    mediaId: notification.media_id,
-    mediaType: notification.media_type,
-    category: notification.category ?? notification.notification_type,
-    threadId: notification.thread_id ?? notification.notification_type,
-    collapseId: `${notification.notification_type}:${notification.media_type ?? 'none'}:${notification.media_id ?? notification.id}`,
-  }
-}
-
-const DIGEST_COPY: Record<string, (count: number) => string> = {
-  new_release: (n) => `${n} titles from your list are out now.`,
-  new_availability: (n) => `${n} titles from your list are now streaming.`,
-  episode_aired: (n) => `${n} series you follow have new episodes.`,
-  continue_watching: (n) => `${n} series are waiting for you.`,
-  new_follower: (n) => `${n} people started following you on VibeWatch.`,
-}
-
-// One push standing in for several queued rows. It carries no media_id on purpose: the client
-// falls back to the Discovery tab (AppNavigationManager) rather than deep-linking to an
-// arbitrary one of the collapsed items.
-function digestPayload(userId: string, rows: NotificationRow[]): PushPayload {
-  const types = new Set(rows.map((row) => row.notification_type))
-  const singleType = types.size === 1 ? [...types][0] : null
-  const copy = singleType ? DIGEST_COPY[singleType] : undefined
-
-  return {
-    dataId: rows[0].id,
-    notificationType: singleType ?? 'digest',
-    title: 'VibeWatch',
-    body: copy ? copy(rows.length) : `You have ${rows.length} new updates.`,
-    mediaId: null,
-    mediaType: null,
-    category: 'digest',
-    threadId: 'digest',
-    collapseId: `digest:${userId}`,
-  }
 }
 
 async function sendPush(
@@ -327,33 +191,6 @@ async function sendPush(
   }
 }
 
-// Fallback channel only. This used to fire after *every* delivered push, so the 27-push morning
-// was also 27 emails. It now runs solely when the user has no device we can reach.
-async function sendEmail(
-  supabaseClient: SupabaseClient,
-  userId: string,
-  payload: PushPayload,
-  resendApiKey: string,
-  fromEmail: string
-) {
-  const { data: { user }, error: userError } = await supabaseClient.auth.admin.getUserById(userId)
-  if (userError || !user?.email) return
-
-  await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${resendApiKey}`,
-    },
-    body: JSON.stringify({
-      from: fromEmail,
-      to: user.email,
-      subject: payload.title,
-      html: `<p>${payload.body}</p><p>Log in to VibeWatch to see more.</p>`,
-    }),
-  })
-}
-
 serve(async (req) => {
   // Cron/service callers only: this used to run for anyone holding the app's publishable
   // key. See _shared/cronAuth.ts.
@@ -414,6 +251,9 @@ serve(async (req) => {
     })
 
     const firebaseAccessToken = await getFirebaseAccessToken(firebaseServiceAccount)
+    // Read once per run: the fallback path shares the day's provider budget with the digest and
+    // the weekly recap, and re-counting per notification would be a query per row.
+    let emailsSpentToday = await emailsSentToday(supabaseClient)
 
     // Rows that never reach a device, so batching their bookkeeping to the end of the run is
     // safe: if the invocation dies first, nothing was sent and nothing is duplicated.
@@ -507,12 +347,16 @@ serve(async (req) => {
         break
       }
 
+      const preferences = preferencesByUser.get(userId)
+      const language = preferences?.language ?? null
+
       // Two independent buckets per user: social rows never displace episode reminders from the
-      // general budget, and vice versa.
+      // general budget, and vice versa. The general cap is the user's own setting; the social one
+      // is a safety rail against a burst on a single card, not a volume preference.
       const buckets = [
         {
           rows: rows.filter((row) => !SOCIAL_TYPES.has(row.notification_type)),
-          cap: DAILY_PUSH_CAP,
+          cap: capFor(preferences),
           spent: spentByUser.get(userId) ?? 0,
           category: null as string | null,
         },
@@ -541,11 +385,12 @@ serve(async (req) => {
       }
 
       // Within budget: each item keeps its own banner and its own deep link. Over budget: one
-      // digest for the lot, which costs a single unit of budget.
+      // digest for the lot, which costs a single unit of budget. With an uncapped preference
+      // `remaining` is Infinity, so this is never a digest.
       const asDigest = bucket.rows.length > remaining
       const batches = asDigest
-        ? [{ payload: digestPayload(userId, bucket.rows), rows: bucket.rows }]
-        : bucket.rows.map((row) => ({ payload: payloadForNotification(row), rows: [row] }))
+        ? [{ payload: digestPayload(userId, bucket.rows, language), rows: bucket.rows }]
+        : bucket.rows.map((row) => ({ payload: payloadForNotification(row, language), rows: [row] }))
 
       for (const batch of batches) {
         const result = await sendPush(
@@ -571,7 +416,23 @@ serve(async (req) => {
 
         if (result.outcome === 'never-registered') {
           // Email is the delivery here, not a duplicate of it.
-          await sendEmail(supabaseClient, userId, batch.payload, resendApiKey, fromEmail)
+          const { data: { user } } = await supabaseClient.auth.admin.getUserById(userId)
+          if (user?.email) {
+            const copy = asDigest
+              ? { title: batch.payload.title, body: batch.payload.body }
+              : localizedCopy(batch.rows[0], language)
+            const document = renderFallbackEmail(language, copy)
+            const outcome = await sendEmailWithBudget(supabaseClient, {
+              userId,
+              to: user.email,
+              subject: document.subject,
+              html: document.html,
+              text: document.text,
+              emailType: 'fallback',
+              itemCount: batch.rows.length,
+            }, { resendApiKey, fromEmail, spentToday: emailsSpentToday })
+            if (outcome.sent) emailsSpentToday += 1
+          }
           emailedCount += batch.rows.length
         } else {
           deliveredCount += batch.rows.length

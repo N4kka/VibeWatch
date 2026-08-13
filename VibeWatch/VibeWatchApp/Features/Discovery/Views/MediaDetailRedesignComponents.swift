@@ -375,18 +375,15 @@ struct MediaProviderDisclosure: View {
             guard notificationState == .idle else { return }
             notificationState = .enabling
             Task {
-                if !listManager.isInList(listId: listManager.watchlist.id, mediaId: movie.id, mediaType: mediaType) {
-                    try? await listManager.addToList(listId: listManager.watchlist.id, movie: movie, mediaType: mediaType)
-                }
                 do {
-                    try await LiveNotificationRepository.shared.toggleAlert(
-                        mediaId: movie.id,
+                    // Stessa iscrizione del bottone condiviso (NotifyMeButton): qui cambia solo
+                    // il vestito, perché la CTA convive con "Guarda su …".
+                    enrollmentData = try await MediaNotificationEnroller.enroll(
+                        movie: movie,
                         mediaType: mediaType,
-                        enabled: true
+                        enrollmentData: enrollmentData,
+                        userId: authService.currentUser?.id
                     )
-                    var enrolled = MediaNotificationEnrollmentCodec.decode(enrollmentData)
-                    enrolled.insert(notificationEnrollmentKey)
-                    enrollmentData = try MediaNotificationEnrollmentCodec.encode(enrolled)
                     notificationState = .enabled
                     showNotifyConfirmation = true
                 } catch {

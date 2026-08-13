@@ -67,11 +67,6 @@ enum SQLiteTable: String, CaseIterable {
     case cerebrasJobMetrics = "cerebras_job_metrics"
     case userTimePatterns = "user_time_patterns"
 
-    // Notifications
-    case notificationHistory = "notification_history"
-    case userNotificationPreferences = "user_notification_preferences"
-    case notificationSubscriptions = "notification_subscriptions"
-
     // Watch providers (created by migration 5, never whitelisted: every insert/update from
     // LocalWatchProvidersRepository threw invalidTableName and died under a `try?`).
     case watchProviders = "watch_providers"

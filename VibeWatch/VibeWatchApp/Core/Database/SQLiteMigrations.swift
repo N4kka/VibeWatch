@@ -174,25 +174,33 @@ extension SQLiteService {
         Logger.info("[SQLite] Migration 4 complete - Time pattern tracking enabled")
     }
 
-    // MARK: - Migration 5: Smart Notifications
+    // MARK: - Migration 5: Smart Notifications (retired)
 
+    /// `notification_history` and `user_notification_preferences` were created here for a
+    /// notification screen that was designed and never built: no Swift code has ever read or
+    /// written either table, and the real preferences live in UserDefaults and in Postgres.
+    /// The migration stays in the sequence — removing a step would renumber the ones after it —
+    /// and now only drops what it used to create.
     private func migration5_AddSmartNotifications() {
-        Logger.info("[SQLite] Migration 5: Creating smart notification tables")
+        Logger.info("[SQLite] Migration 5: Dropping unused smart-notification tables")
 
-        executeScript(createNotificationHistoryTable())
-        executeScript(createUserNotificationPreferencesTable())
+        executeScript("""
+        DROP TABLE IF EXISTS notification_history;
+        DROP TABLE IF EXISTS user_notification_preferences;
+        """)
 
-        Logger.info("[SQLite] Migration 5 complete - Smart notifications enabled")
+        Logger.info("[SQLite] Migration 5 complete")
     }
 
-    // MARK: - Migration 6: Notification Subscriptions (Pro Feature)
+    // MARK: - Migration 6: Notification Subscriptions (retired)
 
+    /// Per-actor and per-genre alerts, a Pro feature that never shipped. Same story as 5.
     private func migration6_AddNotificationSubscriptions() {
-        Logger.info("[SQLite] Migration 6: Creating notification subscriptions table for Pro features")
+        Logger.info("[SQLite] Migration 6: Dropping unused notification-subscription table")
 
-        executeScript(createNotificationSubscriptionsTable())
+        executeScript("DROP TABLE IF EXISTS notification_subscriptions;")
 
-        Logger.info("[SQLite] Migration 6 complete - Pro notification subscriptions enabled")
+        Logger.info("[SQLite] Migration 6 complete")
     }
 
     // MARK: - Migration 7: Backfill indexes lost to prepare_v2
@@ -216,9 +224,6 @@ extension SQLiteService {
         executeScript(createUserBehaviorInsightsTable())
         executeScript(createCerebrasJobMetricsTable())
         executeScript(createUserTimePatternsTable())
-        executeScript(createNotificationHistoryTable())
-        executeScript(createUserNotificationPreferencesTable())
-        executeScript(createNotificationSubscriptionsTable())
 
         Logger.info("[SQLite] Migration 7 complete - indexes backfilled")
     }
@@ -744,63 +749,6 @@ extension SQLiteService {
         );
         CREATE INDEX IF NOT EXISTS idx_time_patterns_user ON user_time_patterns(user_id, time_of_day);
         CREATE INDEX IF NOT EXISTS idx_time_patterns_recorded ON user_time_patterns(recorded_at DESC);
-        """
-    }
-
-    private func createNotificationHistoryTable() -> String {
-        """
-        CREATE TABLE IF NOT EXISTS notification_history (
-            id TEXT PRIMARY KEY,
-            user_id TEXT NOT NULL,
-            notification_type TEXT NOT NULL,
-            content_id TEXT NOT NULL,
-            sent_at TEXT NOT NULL,
-            clicked INTEGER DEFAULT 0,
-            dismissed INTEGER DEFAULT 0,
-            UNIQUE(user_id, notification_type, content_id)
-        );
-        CREATE INDEX IF NOT EXISTS idx_notification_history_user ON notification_history(user_id, sent_at DESC);
-        CREATE INDEX IF NOT EXISTS idx_notification_history_type ON notification_history(notification_type, sent_at DESC);
-        """
-    }
-
-    private func createUserNotificationPreferencesTable() -> String {
-        """
-        CREATE TABLE IF NOT EXISTS user_notification_preferences (
-            user_id TEXT PRIMARY KEY,
-            enable_new_episodes INTEGER DEFAULT 1,
-            enable_release_alerts INTEGER DEFAULT 1,
-            enable_actor_alerts INTEGER DEFAULT 1,
-            enable_similar_content INTEGER DEFAULT 1,
-            enable_watchlist_alerts INTEGER DEFAULT 1,
-            enable_milestones INTEGER DEFAULT 1,
-            max_daily_notifications INTEGER DEFAULT 3,
-            quiet_hours_start INTEGER DEFAULT 22,
-            quiet_hours_end INTEGER DEFAULT 8,
-            custom_actor_alerts TEXT,
-            custom_genre_alerts TEXT,
-            updated_at TEXT NOT NULL
-        );
-        """
-    }
-
-    private func createNotificationSubscriptionsTable() -> String {
-        """
-        CREATE TABLE IF NOT EXISTS notification_subscriptions (
-            id TEXT PRIMARY KEY,
-            user_id TEXT NOT NULL,
-            actor_id INTEGER,
-            genre_id INTEGER,
-            type TEXT NOT NULL CHECK (type IN ('actor_alert', 'genre_alert')),
-            created_at TEXT NOT NULL,
-            synced_at TEXT,
-            FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
-        );
-        CREATE INDEX IF NOT EXISTS idx_notification_subscriptions_user ON notification_subscriptions(user_id, type);
-        CREATE INDEX IF NOT EXISTS idx_notification_subscriptions_actor ON notification_subscriptions(actor_id) WHERE actor_id IS NOT NULL;
-        CREATE INDEX IF NOT EXISTS idx_notification_subscriptions_genre ON notification_subscriptions(genre_id) WHERE genre_id IS NOT NULL;
-        CREATE UNIQUE INDEX IF NOT EXISTS idx_notification_subscriptions_user_actor ON notification_subscriptions(user_id, actor_id, type) WHERE actor_id IS NOT NULL;
-        CREATE UNIQUE INDEX IF NOT EXISTS idx_notification_subscriptions_user_genre ON notification_subscriptions(user_id, genre_id, type) WHERE genre_id IS NOT NULL;
         """
     }
 

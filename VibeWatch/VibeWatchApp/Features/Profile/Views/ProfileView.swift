@@ -485,7 +485,7 @@ struct ProfileView: View {
         }
         .sheet(isPresented: $showNotificationPrefs) {
             NavigationView {
-                NotificationPreferencesView(userId: appState.currentUser?.id ?? "")
+                NotificationPreferencesView()
             }
         }
         .sheet(isPresented: $showLanguageSelector) {

@@ -74,7 +74,23 @@ create table if not exists public.unified_user_preferences (
 -- Il fuso dell'utente, gia' usato in produzione dalle quiet hours di process-notifications.
 create table if not exists public.user_notification_preferences (
   user_id  uuid primary key references auth.users on delete cascade,
-  timezone text
+  timezone text,
+  -- Le colonne base, come in produzione: precedono il repo, e le migration successive le
+  -- alterano invece di crearle (i default a true sono quelli veri, non una comodita' del test).
+  push_enabled      boolean default true,
+  new_availability  boolean default true,
+  new_release       boolean default true,
+  episode_aired     boolean default true,
+  continue_watching boolean default true,
+  streak_reminder   boolean default true,
+  list_milestone    boolean default false,
+  price_drop        boolean default false,
+  quiet_hours_start time,
+  quiet_hours_end   time,
+  updated_at        timestamptz default now(),
+  -- `country` e' cio' che l'auto-iscrizione copia su release_alerts: senza, ogni titolo salvato
+  -- verrebbe controllato sull'Italia, che e' esattamente il difetto che il refactoring toglie.
+  country  text not null default 'IT'
 );
 
 -- Le liste legacy, in forma minima: le colonne che leggono `backfill_watchlist_tracking`
@@ -102,6 +118,44 @@ create table if not exists public.list_items (
   added_at    timestamptz not null default now(),
   deleted_at  timestamptz
 );
+
+-- Le iscrizioni agli avvisi. In produzione precede il repo; qui serve intera perche' e' cio' che
+-- l'auto-iscrizione (20260815102000) crea, riattiva e ritira a ogni movimento di list_items.
+create table if not exists public.release_alerts (
+  id               uuid primary key default gen_random_uuid(),
+  user_id          uuid not null references auth.users on delete cascade,
+  media_id         integer not null,
+  media_type       text not null check (media_type in ('movie','tv')),
+  source           text not null default 'notify_me'
+                     check (source in ('notify_me','watchlist','release_calendar','custom_list')),
+  is_active        boolean default true,
+  country_code     text,
+  alert_on_stream  boolean default true,
+  alert_on_rent    boolean default false,
+  alert_on_buy     boolean default false,
+  last_notified_at timestamptz,
+  created_at       timestamptz default now(),
+  unique (user_id, media_id, media_type)
+);
+
+-- Il trigger che l'auto-iscrizione sostituisce: senza, la migration droppa il nulla e il test
+-- non direbbe niente sul fatto che la watchlist ha smesso di essere l'unica sorgente.
+create or replace function public.trg_create_alert_on_watchlist()
+returns trigger language plpgsql security definer set search_path = public as $legacy$
+declare v_list_type text;
+begin
+  select type into v_list_type from public.lists where id = new.list_id;
+  if v_list_type = 'watchlist' and new.deleted_at is null then
+    insert into public.release_alerts(user_id, media_id, media_type, source, is_active)
+    values (new.user_id, new.media_id, new.media_type, 'watchlist', true)
+    on conflict (user_id, media_id, media_type) do update
+      set is_active = true, source = 'watchlist';
+  end if;
+  return new;
+end $legacy$;
+drop trigger if exists list_items_create_alert on public.list_items;
+create trigger list_items_create_alert after insert on public.list_items
+  for each row execute function public.trg_create_alert_on_watchlist();
 -- Follow e report delle liste pubbliche: solo ciò che `get_public_lists` consulta.
 create table if not exists public.list_follows (
   id         uuid primary key default gen_random_uuid(),
@@ -186,6 +240,8 @@ create table if not exists public.notifications (
   is_sent           boolean default false,
   category          text,
   thread_id         text,
+  template_key      text,
+  template_params   jsonb,
   created_at        timestamptz default now()
 );
 create table if not exists public.notification_delivery_log (

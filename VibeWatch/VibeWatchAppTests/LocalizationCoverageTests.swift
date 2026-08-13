@@ -271,6 +271,12 @@ final class LocalizationCoverageTests: XCTestCase {
             "update.versionFootnote",
         ],
         // es: 16
+        // el: 1
+        "el": [
+            // "Email" si scrive così anche in greco: la forma tradotta ("Ηλεκτρονικό
+            // ταχυδρομείο") è burocratica e non entra in un'intestazione di sezione.
+            "notifications.email",
+        ],
         "es": [
             "clips.title",
             "common.error",
@@ -339,6 +345,9 @@ final class LocalizationCoverageTests: XCTestCase {
             // "watchlist" è un prestito consolidato in tutta l'app italiana (vedi
             // mediaDetail.action.watchlist): "2 in watchlist" è come parla l'utente.
             "ai.history.inWatchlist",
+            // "Email" è la parola italiana: "posta elettronica" in un'intestazione di sezione
+            // suonerebbe come un modulo della pubblica amministrazione.
+            "notifications.email",
             "auth.passwordPlaceholder",
             "clips.card.addToWatchlist",
             "favorites.slot",
