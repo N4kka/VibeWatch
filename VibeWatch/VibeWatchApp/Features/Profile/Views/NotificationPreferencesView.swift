@@ -18,6 +18,7 @@ struct NotificationPreferencesView: View {
 
             if notificationService.notificationsEnabled {
                 notificationTypesSection
+                socialNotificationsSection
                 quietHoursSection
             }
         }
@@ -124,6 +125,36 @@ struct NotificationPreferencesView: View {
         } footer: {
             Text("notifications.typesFooter".localized)
                 .font(.caption)
+        }
+    }
+
+    // Social feed M2: gli interruttori delle notifiche sociali. Stessa strada delle altre
+    // preferenze — binding ottimistico su UserDefaults + upsert su Supabase in persist() —
+    // così il backend (process-notifications) le rispetta senza un percorso nuovo da testare.
+    private var socialNotificationsSection: some View {
+        Section {
+            NotificationToggleRow(
+                icon: "person.badge.plus",
+                title: "notifications.newFollower".localized,
+                subtitle: "notifications.newFollowerDesc".localized,
+                isOn: binding(for: \.enableNewFollower)
+            )
+
+            NotificationToggleRow(
+                icon: "heart",
+                title: "notifications.activityLiked".localized,
+                subtitle: "notifications.activityLikedDesc".localized,
+                isOn: binding(for: \.enableActivityLiked)
+            )
+
+            NotificationToggleRow(
+                icon: "bubble.left",
+                title: "notifications.activityCommented".localized,
+                subtitle: "notifications.activityCommentedDesc".localized,
+                isOn: binding(for: \.enableActivityCommented)
+            )
+        } header: {
+            Text("notifications.social".localized)
         }
     }
 

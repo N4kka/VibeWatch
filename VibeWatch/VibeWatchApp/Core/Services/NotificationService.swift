@@ -152,6 +152,11 @@ class NotificationService: ObservableObject { // Conform to ObservableObject
             let list_milestone: Bool
             let price_drop: Bool
             let streak_reminder: Bool
+            // Social feed M2: le tre colonne sociali (default true lato server; qui viaggiano
+            // sempre, così l'upsert non lascia mai una preferenza sociale ambigua).
+            let new_follower: Bool
+            let activity_liked: Bool
+            let activity_commented: Bool
             let quiet_hours_start: String
             let quiet_hours_end: String
             let timezone: String
@@ -168,6 +173,9 @@ class NotificationService: ObservableObject { // Conform to ObservableObject
             list_milestone:    prefs.enableListMilestone,
             price_drop:        false,
             streak_reminder:   false,
+            new_follower:      prefs.enableNewFollower,
+            activity_liked:    prefs.enableActivityLiked,
+            activity_commented: prefs.enableActivityCommented,
             quiet_hours_start: String(format: "%02d:00:00", prefs.quietHoursStart),
             quiet_hours_end:   String(format: "%02d:00:00", prefs.quietHoursEnd),
             timezone:          TimeZone.current.identifier,

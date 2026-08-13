@@ -29,8 +29,17 @@ final class PublicProfileViewModel: ObservableObject {
     @Published private(set) var phase: Phase = .loading
     @Published private(set) var listsPhase: ListsPhase = .loading
     @Published private(set) var isTogglingFollow = false
+    /// Moderazione M2: vero se ESISTE una riga attiva di `user_blocks` verso questo profilo.
+    /// In pratica diventa vero solo bloccando da questa schermata: un profilo già bloccato il
+    /// server non lo fa nemmeno caricare (`get_public_profile` → notFound, per scelta).
+    @Published private(set) var isBlocked = false
+    @Published private(set) var isTogglingBlock = false
 
     let username: String
+
+    /// L'id della lapide su cui lavora lo sblocco (il DELETE di `apply_mutations` è per id
+    /// riga). Lo conosce solo il server: si memorizza qui quando lo si incontra.
+    private var blockRowId: String?
 
     private let load: (String) async throws -> PublicProfileDetail?
     private let follow: (String) async throws -> Void
@@ -39,6 +48,9 @@ final class PublicProfileViewModel: ObservableObject {
     private let followList: (String) async throws -> Void
     private let unfollowList: (String) async throws -> Void
     private let currentUserId: @MainActor () -> String?
+    private let blockUser: (String) async throws -> Void
+    private let unblockUser: (String) async throws -> Void
+    private let fetchBlockId: (String) async throws -> String?
 
     init(username: String,
          load: ((String) async throws -> PublicProfileDetail?)? = nil,
@@ -47,7 +59,10 @@ final class PublicProfileViewModel: ObservableObject {
          loadLists: ((String) async throws -> [PublicList])? = nil,
          followList: ((String) async throws -> Void)? = nil,
          unfollowList: ((String) async throws -> Void)? = nil,
-         currentUserId: (@MainActor () -> String?)? = nil) {
+         currentUserId: (@MainActor () -> String?)? = nil,
+         blockUser: ((String) async throws -> Void)? = nil,
+         unblockUser: ((String) async throws -> Void)? = nil,
+         fetchBlockId: ((String) async throws -> String?)? = nil) {
         self.username = username
         self.load = load ?? { try await SupabaseService.shared.publicProfile(username: $0) }
         self.follow = follow ?? { try await SocialActions.shared.follow(userId: $0) }
@@ -59,6 +74,11 @@ final class PublicProfileViewModel: ObservableObject {
         self.followList = followList ?? { try await ListManager.shared.followList(listId: $0) }
         self.unfollowList = unfollowList ?? { try await ListManager.shared.unfollowList(listId: $0) }
         self.currentUserId = currentUserId ?? { SupabaseService.shared.currentUser?.id }
+        self.blockUser = blockUser ?? { try await SupabaseService.shared.blockUser(userId: $0) }
+        self.unblockUser = unblockUser ?? { try await ListManager.shared.unblockUser(blockId: $0) }
+        self.fetchBlockId = fetchBlockId ?? {
+            try await SupabaseService.shared.activeBlockId(against: $0)
+        }
     }
 
     /// Il proprio profilo si può guardare — "come appaio?" merita risposta — ma non seguire.
@@ -71,10 +91,23 @@ final class PublicProfileViewModel: ObservableObject {
         return detail.profile.id == currentUserId()
     }
 
+    /// Il menu "…" esiste solo su un profilo carico e altrui: bloccare sé stessi morirebbe sul
+    /// CHECK del server come rifiuto muto — stessa lezione del pulsante segui.
+    var canModerate: Bool {
+        guard case .loaded = phase else { return false }
+        return !isOwnProfile
+    }
+
     func loadProfile() async {
         do {
             if let detail = try await load(username) {
                 phase = .loaded(detail)
+                // Best effort: un profilo bloccato di norma non arriva fin qui (il server lo
+                // nasconde), quindi un errore su questa lettura non deve costare la schermata —
+                // al massimo il menu dirà "Blocca" a chi ha già bloccato, e il server riuserà
+                // la lapide senza duplicarla.
+                blockRowId = try? await fetchBlockId(detail.profile.id)
+                isBlocked = blockRowId != nil
                 await loadPublicLists(ownerId: detail.profile.id)
             } else {
                 phase = .notFound
@@ -141,6 +174,55 @@ final class PublicProfileViewModel: ObservableObject {
         } catch {
             // La scrittura è fallita: lo stato resta quello vero, e ricaricare lo conferma.
             await loadProfile()
+        }
+    }
+
+    /// Blocca: RPC `block_user` (lapide riusata, follow potati dal trigger, tutto lato server).
+    ///
+    /// Ritorna l'esito perché toast e dismiss sono affari della view: qui NON si rilegge il
+    /// profilo apposta — dopo il blocco il server risponderebbe notFound e la schermata
+    /// sparirebbe sotto il dito prima del toast.
+    func blockProfile() async -> Bool {
+        guard case .loaded(let detail) = phase, !isTogglingBlock, !isOwnProfile else {
+            return false
+        }
+        isTogglingBlock = true
+        defer { isTogglingBlock = false }
+        do {
+            try await blockUser(detail.profile.id)
+            // L'id della lapide serve solo a un eventuale sblocco da questa stessa schermata:
+            // se il recupero fallisce, blockProfile resta riuscito e lo sblocco lo richiederà.
+            blockRowId = try? await fetchBlockId(detail.profile.id)
+            isBlocked = true
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    /// Sblocca: soft delete client-synced della lapide (via outbox, `ListManager.unblockUser`).
+    /// I follow NON tornano: rifolloware è una scelta, non un ripristino — come sul server.
+    func unblockProfile() async -> Bool {
+        guard case .loaded(let detail) = phase, !isTogglingBlock, isBlocked else { return false }
+        isTogglingBlock = true
+        defer { isTogglingBlock = false }
+        do {
+            // L'id può mancare (recupero fallito dopo il blocco): lo si richiede, e se il
+            // server dice che la lapide attiva non c'è più lo sblocco è già vero.
+            let rowId: String?
+            if let cached = blockRowId {
+                rowId = cached
+            } else {
+                rowId = try await fetchBlockId(detail.profile.id)
+            }
+            if let rowId {
+                try await unblockUser(rowId)
+            }
+            blockRowId = nil
+            isBlocked = false
+            return true
+        } catch {
+            return false
         }
     }
 }
