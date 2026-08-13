@@ -7,13 +7,12 @@
 	<key>NSPrivacyTracking</key>
 	<true/>
 
-	<!-- Tracking domains the app itself connects to. Google Mobile Ads ships its own privacy
-	     manifest declaring its domains, and Apple aggregates across all manifests, so those are
-	     not duplicated here. PostHog now comes in via the official SDK (which carries its own
-	     manifest) and is first-party analytics, not tracking under Apple's definition — listing
-	     its host here would make iOS BLOCK it whenever the user denies ATT. -->
-	<key>NSPrivacyTrackingDomains</key>
-	<array/>
+	<!-- NSPrivacyTrackingDomains is deliberately absent, not an empty array: Apple's validator
+	     rejects manifests whose tracking keys are inconsistent (ITMS-91064), and the documented
+	     guidance is to omit the key rather than ship it empty. The app itself connects to no
+	     tracking domain — AdMob and the UMP SDK declare their own manifests, and PostHog is
+	     first-party analytics, not tracking; listing its host would make iOS BLOCK ingestion
+	     whenever the user denies ATT. -->
 
 	<key>NSPrivacyCollectedDataTypes</key>
 	<array>
