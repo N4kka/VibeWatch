@@ -300,18 +300,18 @@
 "ai.tryAsking" = "Vraag bijvoorbeeld…";
 
 // AI Paywall
-"ai.paywall.title" = "Ontgrendel je AI-filmmaatje";
-"ai.paywall.description" = "Krijg slimmere AI-aanbevelingen voor films en series en vind precies wat je zoekt.";
-"ai.paywall.benefit.unlimited" = "Onbeperkte AI-aanbevelingen";
-"ai.paywall.benefit.smarter" = "Slimmer content ontdekken";
-"ai.paywall.benefit.personalized" = "Persoonlijke watchlists";
+"ai.paywall.title" = "Meer ruimte voor je Vibe AI";
+"ai.paywall.description" = "Gratis krijg je 8 AI-gesprekken per dag. Pro maakt er 20 van en haalt de limieten overal weg.";
+"ai.paywall.benefit.unlimited" = "20 AI-gesprekken per dag in plaats van 8";
+"ai.paywall.benefit.smarter" = "Door AI geschreven redenen in Ontdekken";
+"ai.paywall.benefit.personalized" = "Onbeperkt clips, en geen advertenties";
 "ai.paywall.unlockAI" = "AI-chat ontgrendelen";
 "ai.paywall.goBack" = "Terug";
 
 // Paywall
 "paywall.bestValue" = "BESTE KEUZE";
 "paywall.ensurePro" = "Zorg voor je Pro-abonnement!";
-"paywall.proDescription" = "Pro geeft je onbeperkte clips, een AI-filmmaatje en gesynchroniseerde watchlists.";
+"paywall.proDescription" = "Pro haalt de daglimieten weg: onbeperkt clips, geen advertenties en meer ruimte voor AI en lijsten.";
 "paywall.cta.selectPlan" = "Kies een abonnement";
 "paywall.cta.continue" = "Doorgaan";
 "paywall.cta.startTrial" = "Start %@ gratis proefperiode";
@@ -322,6 +322,7 @@
 "paywall.price.perMonth" = "%@/mnd";
 "paywall.trial.badge" = "%@ gratis";
 "paywall.restore" = "Aankopen herstellen";
+"paywall.autoRenew" = "De betaling wordt bij bevestiging van de aankoop van je Apple-account afgeschreven. Het abonnement wordt automatisch verlengd tenzij je het minstens 24 uur voor het einde van de lopende periode opzegt. Je beheert of stopt het in de instellingen van je Apple-account.";
 "paywall.upgrade" = "Upgraden naar Pro";
 "paywall.unlockUnlimited" = "Ontgrendel onbeperkte clips";
 "paywall.daily.title" = "Kom morgen terug";

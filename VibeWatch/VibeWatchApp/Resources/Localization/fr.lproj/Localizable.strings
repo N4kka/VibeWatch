@@ -300,18 +300,18 @@
 "ai.tryAsking" = "Essayez de demander...";
 
 // AI Paywall
-"ai.paywall.title" = "Débloquez votre compagnon cinéma IA";
-"ai.paywall.description" = "Obtenez des recommandations IA plus intelligentes pour films et séries afin de trouver votre prochain coup de cœur.";
-"ai.paywall.benefit.unlimited" = "Recommandations IA illimitées";
-"ai.paywall.benefit.smarter" = "Découverte de contenu plus intelligente";
-"ai.paywall.benefit.personalized" = "Watchlists personnalisées";
+"ai.paywall.title" = "Plus de place pour votre Vibe AI";
+"ai.paywall.description" = "La version gratuite inclut 8 discussions IA par jour. Pro passe à 20 et lève les limites partout ailleurs.";
+"ai.paywall.benefit.unlimited" = "20 discussions IA par jour au lieu de 8";
+"ai.paywall.benefit.smarter" = "Des raisons écrites par l'IA dans Découvrir";
+"ai.paywall.benefit.personalized" = "Clips illimités, et aucune publicité";
 "ai.paywall.unlockAI" = "Débloquer le chat IA";
 "ai.paywall.goBack" = "Retour";
 
 // Paywall
 "paywall.bestValue" = "MEILLEURE OFFRE";
 "paywall.ensurePro" = "Sécurisez votre offre Pro !";
-"paywall.proDescription" = "Pro débloque clips illimités, compagnon IA et watchlists synchronisées.";
+"paywall.proDescription" = "Pro lève les limites quotidiennes : clips illimités, sans publicité, et plus de place pour l'IA et les listes.";
 "paywall.cta.selectPlan" = "Choisir une offre";
 "paywall.cta.continue" = "Continuer";
 "paywall.cta.startTrial" = "Commencer l’essai gratuit de %@";
@@ -322,6 +322,7 @@
 "paywall.price.perMonth" = "%@/mois";
 "paywall.trial.badge" = "%@ gratuit";
 "paywall.restore" = "Restaurer les achats";
+"paywall.autoRenew" = "Le paiement est débité de votre compte Apple à la confirmation de l'achat. L'abonnement se renouvelle automatiquement sauf résiliation au moins 24 heures avant la fin de la période en cours. Vous pouvez le gérer ou le résilier dans les réglages de votre compte Apple.";
 "paywall.upgrade" = "Passer à Pro";
 "paywall.unlockUnlimited" = "Débloquer les clips illimités";
 "paywall.daily.title" = "Revenez demain";

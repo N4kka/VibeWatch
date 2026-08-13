@@ -300,18 +300,18 @@
 "ai.tryAsking" = "Δοκίμασε να ρωτήσεις...";
 
 // AI Paywall
-"ai.paywall.title" = "Ξεκλείδωσε τον AI σύντροφό σου για ταινίες";
-"ai.paywall.description" = "Απόκτησε πιο έξυπνες AI προτάσεις για ταινίες και σειρές για να βρεις το ιδανικό σου.";
-"ai.paywall.benefit.unlimited" = "Απεριόριστες AI προτάσεις";
-"ai.paywall.benefit.smarter" = "Πιο έξυπνη ανακάλυψη περιεχομένου";
-"ai.paywall.benefit.personalized" = "Εξατομικευμένες λίστες προβολής";
+"ai.paywall.title" = "Περισσότερος χώρος για το Vibe AI";
+"ai.paywall.description" = "Η δωρεάν έκδοση δίνει 8 συνομιλίες AI την ημέρα. Το Pro τις ανεβάζει στις 20 και αφαιρεί τα όρια παντού αλλού.";
+"ai.paywall.benefit.unlimited" = "20 συνομιλίες AI την ημέρα αντί για 8";
+"ai.paywall.benefit.smarter" = "Αιτιολογήσεις γραμμένες από AI στην Ανακάλυψη";
+"ai.paywall.benefit.personalized" = "Απεριόριστα κλιπ, και καμία διαφήμιση";
 "ai.paywall.unlockAI" = "Ξεκλείδωσε τη συνομιλία AI";
 "ai.paywall.goBack" = "Πίσω";
 
 // Paywall
 "paywall.bestValue" = "ΚΑΛΥΤΕΡΗ ΕΠΙΛΟΓΗ";
 "paywall.ensurePro" = "Εξασφάλισε το Pro πλάνο σου!";
-"paywall.proDescription" = "Το Pro ξεκλειδώνει απεριόριστα κλιπ, τον AI σύντροφό σου για ταινίες και συγχρονισμένες λίστες.";
+"paywall.proDescription" = "Το Pro αφαιρεί τα ημερήσια όρια: απεριόριστα κλιπ, καμία διαφήμιση και περισσότερος χώρος για AI και λίστες.";
 "paywall.cta.selectPlan" = "Επιλογή πλάνου";
 "paywall.cta.continue" = "Συνέχεια";
 "paywall.cta.startTrial" = "Ξεκίνα %@ δωρεάν δοκιμή";
@@ -322,6 +322,7 @@
 "paywall.price.perMonth" = "%@/μήνα";
 "paywall.trial.badge" = "%@ δωρεάν";
 "paywall.restore" = "Επαναφορά αγορών";
+"paywall.autoRenew" = "Η πληρωμή χρεώνεται στον Λογαριασμό Apple σου κατά την επιβεβαίωση της αγοράς. Η συνδρομή ανανεώνεται αυτόματα εκτός αν την ακυρώσεις τουλάχιστον 24 ώρες πριν από το τέλος της τρέχουσας περιόδου. Μπορείς να τη διαχειριστείς ή να την ακυρώσεις στις ρυθμίσεις του Λογαριασμού Apple.";
 "paywall.upgrade" = "Αναβάθμιση σε Pro";
 "paywall.unlockUnlimited" = "Ξεκλείδωσε απεριόριστα κλιπ";
 "paywall.daily.title" = "Έλα ξανά αύριο";

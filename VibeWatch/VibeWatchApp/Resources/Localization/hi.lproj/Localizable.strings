@@ -300,18 +300,18 @@
 "ai.tryAsking" = "पूछने का प्रयास करें...";
 
 // AI Paywall
-"ai.paywall.title" = "अपने AI मूवी साथी को अनलॉक करें";
-"ai.paywall.description" = "अपनी पसंद के मुताबिक सही कंटेंट खोजने के लिए और भी स्मार्ट AI फ़िल्म और टीवी अनुशंसाएँ पाएं।";
-"ai.paywall.benefit.unlimited" = "असीमित AI अनुशंसाएँ";
-"ai.paywall.benefit.smarter" = "स्मार्ट सामग्री खोज";
-"ai.paywall.benefit.personalized" = "व्यक्तिगत वॉचलिस्ट";
+"ai.paywall.title" = "आपकी Vibe AI के लिए और जगह";
+"ai.paywall.description" = "मुफ़्त में रोज़ 8 AI चैट मिलती हैं। Pro इसे 20 कर देता है और बाकी हर जगह की सीमाएँ हटा देता है।";
+"ai.paywall.benefit.unlimited" = "8 की जगह रोज़ 20 AI चैट";
+"ai.paywall.benefit.smarter" = "खोजें में AI की लिखी वजहें";
+"ai.paywall.benefit.personalized" = "असीमित क्लिप, और कोई विज्ञापन नहीं";
 "ai.paywall.unlockAI" = "AI चैट अनलॉक करें";
 "ai.paywall.goBack" = "वापस";
 
 // Paywall
 "paywall.bestValue" = "सबसे बेहतर मूल्य";
 "paywall.ensurePro" = "अपनी Pro योजना सुनिश्चित करें!";
-"paywall.proDescription" = "Pro असीमित क्लिप, AI मूवी बडी और सिंक की गई वॉचलिस्ट को अनलॉक करता है।";
+"paywall.proDescription" = "Pro रोज़ की सीमाएँ हटा देता है: असीमित क्लिप, कोई विज्ञापन नहीं, और AI तथा सूचियों के लिए ज़्यादा जगह।";
 "paywall.cta.selectPlan" = "प्लान चुनें";
 "paywall.cta.continue" = "जारी रखें";
 "paywall.cta.startTrial" = "%@ मुफ़्त ट्रायल शुरू करें";
@@ -322,6 +322,7 @@
 "paywall.price.perMonth" = "%@/माह";
 "paywall.trial.badge" = "%@ मुफ़्त";
 "paywall.restore" = "खरीदारी पुनर्स्थापित करें";
+"paywall.autoRenew" = "खरीद की पुष्टि पर भुगतान आपके Apple खाते से लिया जाता है। यदि आप मौजूदा अवधि खत्म होने से कम से कम 24 घंटे पहले रद्द नहीं करते, तो सदस्यता अपने आप नवीनीकृत हो जाती है। इसे Apple खाता सेटिंग्स में प्रबंधित या रद्द किया जा सकता है।";
 "paywall.upgrade" = "Pro में अपग्रेड करें";
 "paywall.unlockUnlimited" = "असीमित क्लिप्स अनलॉक करें";
 "paywall.daily.title" = "कल वापस आइए";

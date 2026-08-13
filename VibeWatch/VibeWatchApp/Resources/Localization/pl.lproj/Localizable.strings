@@ -300,18 +300,18 @@
 "ai.tryAsking" = "Spróbuj zapytać...";
 
 // AI Paywall
-"ai.paywall.title" = "Odblokuj swojego filmowego kumpla AI";
-"ai.paywall.description" = "Zdobądź mądrzejsze rekomendacje AI filmów i seriali, aby znaleźć idealne pozycje.";
-"ai.paywall.benefit.unlimited" = "Nielimitowane rekomendacje AI";
-"ai.paywall.benefit.smarter" = "Mądrzejsze odkrywanie treści";
-"ai.paywall.benefit.personalized" = "Spersonalizowane listy do obejrzenia";
+"ai.paywall.title" = "Więcej miejsca dla Vibe AI";
+"ai.paywall.description" = "W wersji darmowej masz 8 rozmów z AI dziennie. Pro podnosi to do 20 i znosi limity we wszystkim innym.";
+"ai.paywall.benefit.unlimited" = "20 rozmów z AI dziennie zamiast 8";
+"ai.paywall.benefit.smarter" = "Uzasadnienia pisane przez AI w Odkrywaj";
+"ai.paywall.benefit.personalized" = "Nielimitowane klipy i brak reklam";
 "ai.paywall.unlockAI" = "Odblokuj czat AI";
 "ai.paywall.goBack" = "Wróć";
 
 // Paywall
 "paywall.bestValue" = "NAJLEPSZA OFERTA";
 "paywall.ensurePro" = "Zabezpiecz swój plan Pro!";
-"paywall.proDescription" = "Pro odblokowuje nielimitowane klipy, filmowego kumpla AI i synchronizowane listy.";
+"paywall.proDescription" = "Pro znosi dzienne limity: nielimitowane klipy, brak reklam i więcej miejsca na AI oraz listy.";
 "paywall.cta.selectPlan" = "Wybierz plan";
 "paywall.cta.continue" = "Kontynuuj";
 "paywall.cta.startTrial" = "Rozpocznij %@ darmowy okres próbny";
@@ -322,6 +322,7 @@
 "paywall.price.perMonth" = "%@/mies.";
 "paywall.trial.badge" = "%@ za darmo";
 "paywall.restore" = "Przywróć zakupy";
+"paywall.autoRenew" = "Płatność zostanie pobrana z Twojego konta Apple w chwili potwierdzenia zakupu. Subskrypcja odnawia się automatycznie, o ile nie anulujesz jej co najmniej 24 godziny przed końcem bieżącego okresu. Możesz nią zarządzać lub ją anulować w ustawieniach konta Apple.";
 "paywall.upgrade" = "Przejdź na Pro";
 "paywall.unlockUnlimited" = "Odblokuj nielimitowane klipy";
 "paywall.daily.title" = "Wróć jutro";

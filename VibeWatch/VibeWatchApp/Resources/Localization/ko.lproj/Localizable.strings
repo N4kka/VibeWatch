@@ -300,18 +300,18 @@
 "ai.tryAsking" = "이렇게 물어보세요...";
 
 // AI Paywall
-"ai.paywall.title" = "AI 영화 버디 잠금 해제";
-"ai.paywall.description" = "더 똑똑한 AI 영화·TV 추천으로 다음 최애작을 찾아보세요.";
-"ai.paywall.benefit.unlimited" = "무제한 AI 추천";
-"ai.paywall.benefit.smarter" = "더 스마트한 콘텐츠 탐색";
-"ai.paywall.benefit.personalized" = "개인화 시청 목록";
+"ai.paywall.title" = "Vibe AI를 더 넉넉하게";
+"ai.paywall.description" = "무료는 하루 8번의 AI 대화를 제공합니다. Pro는 20번으로 늘리고 나머지 제한도 없앱니다.";
+"ai.paywall.benefit.unlimited" = "AI 대화가 하루 8번에서 20번으로";
+"ai.paywall.benefit.smarter" = "발견 탭에 AI가 쓴 추천 이유";
+"ai.paywall.benefit.personalized" = "무제한 클립, 그리고 광고 없음";
 "ai.paywall.unlockAI" = "AI 채팅 잠금 해제";
 "ai.paywall.goBack" = "뒤로";
 
 // Paywall
 "paywall.bestValue" = "베스트 밸류";
 "paywall.ensurePro" = "Pro 플랜을 확보하세요!";
-"paywall.proDescription" = "Pro로 무제한 클립, AI 영화 버디, 동기화된 시청 목록을 해제하세요.";
+"paywall.proDescription" = "Pro는 하루 제한을 없앱니다. 무제한 클립, 광고 없음, AI와 목록에 더 넉넉한 공간.";
 "paywall.cta.selectPlan" = "요금제 선택";
 "paywall.cta.continue" = "계속";
 "paywall.cta.startTrial" = "%@ 무료 체험 시작";
@@ -322,6 +322,7 @@
 "paywall.price.perMonth" = "%@/월";
 "paywall.trial.badge" = "%@ 무료";
 "paywall.restore" = "구매 내역 복원";
+"paywall.autoRenew" = "구매를 확인하면 Apple 계정으로 결제됩니다. 현재 기간이 끝나기 최소 24시간 전에 취소하지 않으면 구독이 자동으로 갱신됩니다. Apple 계정 설정에서 관리하거나 취소할 수 있습니다.";
 "paywall.upgrade" = "Pro로 업그레이드";
 "paywall.unlockUnlimited" = "무제한 클립 잠금 해제";
 "paywall.daily.title" = "내일 다시 오세요";

@@ -300,18 +300,18 @@
 "ai.tryAsking" = "例として聞いてみよう…";
 
 // AI Paywall
-"ai.paywall.title" = "AI映画バディを解放";
-"ai.paywall.description" = "映画やドラマのより賢いAIおすすめで、次のお気に入りを見つけよう。";
-"ai.paywall.benefit.unlimited" = "無制限のAIおすすめ";
-"ai.paywall.benefit.smarter" = "よりスマートな発見";
-"ai.paywall.benefit.personalized" = "パーソナルなウォッチリスト";
+"ai.paywall.title" = "Vibe AI をもっと使う";
+"ai.paywall.description" = "無料では1日8回のAIチャットが使えます。Proなら20回になり、ほかの制限もなくなります。";
+"ai.paywall.benefit.unlimited" = "AIチャットが1日8回から20回に";
+"ai.paywall.benefit.smarter" = "見つけるタブにAIが書いたおすすめ理由";
+"ai.paywall.benefit.personalized" = "クリップ無制限、広告なし";
 "ai.paywall.unlockAI" = "AIチャットを解放";
 "ai.paywall.goBack" = "戻る";
 
 // Paywall
 "paywall.bestValue" = "ベストバリュー";
 "paywall.ensurePro" = "Proプランを確保！";
-"paywall.proDescription" = "Proで無制限クリップ、AI映画バディ、同期ウォッチリストが解放されます。";
+"paywall.proDescription" = "Proは1日の上限をなくします。クリップ無制限、広告なし、AIとリストにもっと余裕を。";
 "paywall.cta.selectPlan" = "プランを選択";
 "paywall.cta.continue" = "続行";
 "paywall.cta.startTrial" = "%@ の無料トライアルを開始";
@@ -322,6 +322,7 @@
 "paywall.price.perMonth" = "%@/月";
 "paywall.trial.badge" = "%@ 無料";
 "paywall.restore" = "購入を復元";
+"paywall.autoRenew" = "購入の確定時にApple アカウントへ課金されます。現在の期間が終わる24時間以上前に解約しない限り、サブスクリプションは自動的に更新されます。管理と解約はApple アカウントの設定から行えます。";
 "paywall.upgrade" = "Proにアップグレード";
 "paywall.unlockUnlimited" = "無制限クリップを解放";
 "paywall.daily.title" = "明日また来てね";

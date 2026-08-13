@@ -300,18 +300,18 @@
 "ai.tryAsking" = "Prøv at spørge...";
 
 // AI Paywall
-"ai.paywall.title" = "Lås din AI-filmven op";
-"ai.paywall.description" = "Få smartere AI-anbefalinger til film og tv, så du kan finde det perfekte at se.";
-"ai.paywall.benefit.unlimited" = "Ubegrænsede AI-anbefalinger";
-"ai.paywall.benefit.smarter" = "Smartere indholdsopdagelse";
-"ai.paywall.benefit.personalized" = "Personlige watchlister";
+"ai.paywall.title" = "Mere plads til din Vibe AI";
+"ai.paywall.description" = "Gratis giver 8 AI-samtaler om dagen. Pro hæver det til 20 og fjerner grænserne alle andre steder.";
+"ai.paywall.benefit.unlimited" = "20 AI-samtaler om dagen i stedet for 8";
+"ai.paywall.benefit.smarter" = "AI-skrevne begrundelser i Opdag";
+"ai.paywall.benefit.personalized" = "Ubegrænsede klip, og ingen reklamer";
 "ai.paywall.unlockAI" = "Lås AI-chat op";
 "ai.paywall.goBack" = "Gå tilbage";
 
 // Paywall
 "paywall.bestValue" = "BEDSTE VÆRDI";
 "paywall.ensurePro" = "Sikr dig din Pro-plan!";
-"paywall.proDescription" = "Pro låser op for ubegrænsede klip, AI-filmven og synkroniserede watchlister.";
+"paywall.proDescription" = "Pro fjerner de daglige grænser: ubegrænsede klip, ingen reklamer og mere plads til AI og lister.";
 "paywall.cta.selectPlan" = "Vælg plan";
 "paywall.cta.continue" = "Fortsæt";
 "paywall.cta.startTrial" = "Start %@ gratis prøveperiode";
@@ -322,6 +322,7 @@
 "paywall.price.perMonth" = "%@/md";
 "paywall.trial.badge" = "%@ gratis";
 "paywall.restore" = "Gendan køb";
+"paywall.autoRenew" = "Betalingen trækkes på din Apple-konto, når købet bekræftes. Abonnementet fornys automatisk, medmindre du opsiger det senest 24 timer før den aktuelle periode slutter. Du kan administrere eller opsige det i indstillingerne for din Apple-konto.";
 "paywall.upgrade" = "Opgrader til Pro";
 "paywall.unlockUnlimited" = "Lås op for ubegrænsede klip";
 "paywall.daily.title" = "Kom tilbage i morgen";

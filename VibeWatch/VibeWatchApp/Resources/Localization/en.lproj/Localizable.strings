@@ -300,18 +300,18 @@
 "ai.tryAsking" = "Try asking...";
 
 // AI Paywall
-"ai.paywall.title" = "Unlock your AI movie buddy";
-"ai.paywall.description" = "Get smarter AI movie and TV recommendations to find your perfect watch.";
-"ai.paywall.benefit.unlimited" = "Unlimited AI recommendations";
-"ai.paywall.benefit.smarter" = "Smarter content discovery";
-"ai.paywall.benefit.personalized" = "Personalized watchlists";
+"ai.paywall.title" = "More room for your AI movie buddy";
+"ai.paywall.description" = "Free includes 8 AI chats a day. Pro raises it to 20 and lifts the limits everywhere else.";
+"ai.paywall.benefit.unlimited" = "20 AI chats a day, up from 8";
+"ai.paywall.benefit.smarter" = "AI-written reasons across Discovery";
+"ai.paywall.benefit.personalized" = "Unlimited clips, and no ads";
 "ai.paywall.unlockAI" = "Unlock AI Chat";
 "ai.paywall.goBack" = "Go back";
 
 // Paywall
 "paywall.bestValue" = "BEST VALUE";
 "paywall.ensurePro" = "Ensure your Pro Plan!";
-"paywall.proDescription" = "Pro unlocks unlimited clips, AI movie buddy, and synced watchlists.";
+"paywall.proDescription" = "Pro lifts the daily limits: unlimited clips, no ads, and more room for AI and lists.";
 "paywall.cta.selectPlan" = "Select a plan";
 "paywall.cta.continue" = "Continue";
 "paywall.cta.startTrial" = "Start %@ Free Trial";
@@ -322,6 +322,7 @@
 "paywall.price.perMonth" = "%@/mo";
 "paywall.trial.badge" = "%@ free";
 "paywall.restore" = "Restore purchases";
+"paywall.autoRenew" = "Payment is charged to your Apple Account at confirmation of purchase. The subscription renews automatically unless you cancel at least 24 hours before the end of the current period. Manage or cancel it in your Apple Account settings.";
 "paywall.upgrade" = "Upgrade to Pro";
 "paywall.unlockUnlimited" = "Unlock unlimited clips";
 "paywall.daily.title" = "Come back tomorrow";

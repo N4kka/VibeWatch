@@ -301,18 +301,18 @@
 "ai.tryAsking" = "Versuch zu fragen...";
 
 // AI Paywall
-"ai.paywall.title" = "Schalte deinen KI-Film-Buddy frei";
-"ai.paywall.description" = "Erhalte intelligentere KI-Empfehlungen für Filme und Serien, damit du genau das Richtige findest.";
-"ai.paywall.benefit.unlimited" = "Unbegrenzte KI-Empfehlungen";
-"ai.paywall.benefit.smarter" = "Intelligenteres Entdecken von Inhalten";
-"ai.paywall.benefit.personalized" = "Personalisierte Watchlists";
+"ai.paywall.title" = "Mehr Platz für deine Vibe AI";
+"ai.paywall.description" = "Gratis sind 8 KI-Chats pro Tag. Pro macht 20 daraus und hebt die Limits überall sonst auf.";
+"ai.paywall.benefit.unlimited" = "20 KI-Chats pro Tag statt 8";
+"ai.paywall.benefit.smarter" = "KI-geschriebene Begründungen in Entdecken";
+"ai.paywall.benefit.personalized" = "Unbegrenzte Clips, und keine Werbung";
 "ai.paywall.unlockAI" = "KI-Chat freischalten";
 "ai.paywall.goBack" = "Zurück";
 
 // Paywall
 "paywall.bestValue" = "BESTES ANGEBOT";
 "paywall.ensurePro" = "Sichere dir deinen Pro-Tarif!";
-"paywall.proDescription" = "Pro schaltet unbegrenzte Clips, KI-Film-Buddy und synchronisierte Watchlists frei.";
+"paywall.proDescription" = "Pro hebt die Tageslimits auf: unbegrenzte Clips, keine Werbung und mehr Platz für KI und Listen.";
 "paywall.cta.selectPlan" = "Tarif auswählen";
 "paywall.cta.continue" = "Weiter";
 "paywall.cta.startTrial" = "%@ Gratis-Test starten";
@@ -323,6 +323,7 @@
 "paywall.price.perMonth" = "%@/Monat";
 "paywall.trial.badge" = "%@ gratis";
 "paywall.restore" = "Käufe wiederherstellen";
+"paywall.autoRenew" = "Die Zahlung wird bei Kaufbestätigung deinem Apple-Account belastet. Das Abo verlängert sich automatisch, sofern du es nicht mindestens 24 Stunden vor Ende des laufenden Zeitraums kündigst. Du kannst es in den Einstellungen deines Apple-Accounts verwalten oder kündigen.";
 "paywall.upgrade" = "Upgrade auf Pro";
 "paywall.unlockUnlimited" = "Unbegrenzte Clips freischalten";
 "paywall.daily.title" = "Komm morgen wieder";

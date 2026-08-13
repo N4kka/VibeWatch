@@ -298,20 +298,32 @@ struct DailyLimitPaywallView: View {
     }
 
     private struct BenefitList: View {
-        let paywallType: PaywallType // New property
+        let paywallType: PaywallType
+
+        /// Le stesse chiavi del paywall principale (PaywallCopy): prima qui c'erano tre stringhe
+        /// inglesi scritte a mano, che le altre 18 lingue leggevano in inglese, e due delle tre
+        /// promettevano cose senza un gate dietro.
+        private var keys: [String] {
+            switch paywallType {
+            case .clipsQuota: return PaywallCopy.clipsQuotaKeys
+            case .aiQuota:    return PaywallCopy.aiQuotaKeys
+            }
+        }
+
+        private var icons: [String] {
+            switch paywallType {
+            case .clipsQuota: return ["infinity", "hand.raised.slash", "square.stack.3d.up"]
+            case .aiQuota:    return ["brain.head.profile", "sparkles.tv", "infinity"]
+            }
+        }
 
         var body: some View {
             VStack(alignment: .leading, spacing: 14) {
-                // Benefits are dynamic based on paywallType
-                switch paywallType {
-                case .clipsQuota:
-                    BenefitRow(icon: "infinity", text: "Unlimited clips every day")
-                    BenefitRow(icon: "wand.and.stars", text: "Personalized watchlists")
-                    BenefitRow(icon: "sparkles", text: "Early feature access")
-                case .aiQuota:
-                    BenefitRow(icon: "brain.head.profile", text: "ai.paywall.benefit.unlimited".localized)
-                    BenefitRow(icon: "sparkles.tv", text: "ai.paywall.benefit.smarter".localized)
-                    BenefitRow(icon: "wand.and.stars", text: "ai.paywall.benefit.personalized".localized)
+                ForEach(Array(keys.enumerated()), id: \.element) { index, key in
+                    BenefitRow(
+                        icon: icons.indices.contains(index) ? icons[index] : "checkmark",
+                        text: PaywallCopy.plain(key)
+                    )
                 }
             }
         }

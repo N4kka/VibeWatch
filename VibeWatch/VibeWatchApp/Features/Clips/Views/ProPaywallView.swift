@@ -146,20 +146,7 @@ struct ProPaywallView: View {
         .clipShape(RoundedRectangle(cornerRadius: 20))
     }
 
-    // `paywall.feature.releaseAlerts` non è più in elenco: gli avvisi di uscita e disponibilità
-    // non hanno mai avuto un gate su isPro, e da quando salvare un titolo vale come iscrizione
-    // (auto-enrollment, vedi NOTIFICATIONS.md) arrivano a tutti automaticamente. Prometterli
-    // come esclusiva Pro è una funzione che l'utente ha già.
-    private var featureKeys: [String] {
-        [
-            "paywall.feature.aiAssistant",
-            "paywall.feature.unlimitedClips",
-            "paywall.feature.offlineMode",
-            "paywall.feature.lists",
-            "paywall.feature.advancedFilters",
-            "paywall.feature.noAds"
-        ]
-    }
+    private var featureKeys: [String] { PaywallCopy.proFeatureKeys }
 
     // MARK: - Features
 
@@ -169,17 +156,11 @@ struct ProPaywallView: View {
                 if index > 0 {
                     Divider().background(Color.white.opacity(0.06))
                 }
-                FeatureCheckRow(text: cleanedFeatureText(key.localized))
+                FeatureCheckRow(text: PaywallCopy.plain(key))
             }
         }
         .background(Color.white.opacity(0.05))
         .clipShape(RoundedRectangle(cornerRadius: 18))
-    }
-
-    /// Le stringhe delle feature hanno un'emoji davanti (le usa ancora il paywall della quota
-    /// giornaliera); qui il segno di spunta arancione fa già da icona.
-    private func cleanedFeatureText(_ text: String) -> String {
-        String(text.drop(while: { !($0.isLetter || $0.isNumber) }))
     }
 
     // MARK: - Pricing
@@ -327,6 +308,17 @@ struct ProPaywallView: View {
                         .foregroundColor(Color.white.opacity(0.6))
                 }
             }
+
+            // Il rinnovo automatico va dichiarato dove si compra, non solo sull'App Store: il
+            // paywall mostrava durata, prezzo, termini e privacy, ma non diceva da nessuna parte
+            // che l'abbonamento si rinnova da solo. "Cancel anytime" sotto il piano mensile non
+            // è la stessa informazione — dice che puoi uscire, non che altrimenti resti dentro.
+            Text("paywall.autoRenew".localized)
+                .font(.system(size: 11))
+                .foregroundColor(Color.white.opacity(0.45))
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 8)
         }
     }
 

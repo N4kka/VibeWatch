@@ -300,18 +300,18 @@
 "ai.tryAsking" = "Kokeile kysyä...";
 
 // AI Paywall
-"ai.paywall.title" = "Avaa AI-elokuvakaverisi";
-"ai.paywall.description" = "Saat fiksummat AI-suositukset elokuville ja sarjoille, jotta löydät täydellisen katsottavan.";
-"ai.paywall.benefit.unlimited" = "Rajattomat AI-suositukset";
-"ai.paywall.benefit.smarter" = "Fiksumpi sisällön löytäminen";
-"ai.paywall.benefit.personalized" = "Personoidut katselulistat";
+"ai.paywall.title" = "Lisää tilaa Vibe AI:lle";
+"ai.paywall.description" = "Ilmaisversiossa on 8 tekoälykeskustelua päivässä. Pro nostaa määrän 20:een ja poistaa rajat muualta.";
+"ai.paywall.benefit.unlimited" = "20 tekoälykeskustelua päivässä, ei 8";
+"ai.paywall.benefit.smarter" = "Tekoälyn kirjoittamat perustelut Löydä-osiossa";
+"ai.paywall.benefit.personalized" = "Rajattomasti klippejä, eikä mainoksia";
 "ai.paywall.unlockAI" = "Avaa AI-chat";
 "ai.paywall.goBack" = "Takaisin";
 
 // Paywall
 "paywall.bestValue" = "PARAS ARVO";
 "paywall.ensurePro" = "Varmista Pro-tilauksesi!";
-"paywall.proDescription" = "Pro avaa rajattomat klipit, AI-elokuvakaverin ja synkronoidut katselulistat.";
+"paywall.proDescription" = "Pro poistaa päivittäiset rajat: rajattomasti klippejä, ei mainoksia ja enemmän tilaa tekoälylle ja listoille.";
 "paywall.cta.selectPlan" = "Valitse tilaus";
 "paywall.cta.continue" = "Jatka";
 "paywall.cta.startTrial" = "Aloita %@ ilmainen kokeilu";
@@ -322,6 +322,7 @@
 "paywall.price.perMonth" = "%@/kk";
 "paywall.trial.badge" = "%@ ilmainen";
 "paywall.restore" = "Palauta ostot";
+"paywall.autoRenew" = "Maksu veloitetaan Apple-tililtäsi oston vahvistuksen yhteydessä. Tilaus uusitaan automaattisesti, ellet peruuta sitä vähintään 24 tuntia ennen kuluvan jakson päättymistä. Voit hallita tai peruuttaa sen Apple-tilisi asetuksissa.";
 "paywall.upgrade" = "Päivitä Pro-versioon";
 "paywall.unlockUnlimited" = "Avaa rajattomat klipit";
 "paywall.daily.title" = "Tule huomenna uudelleen";
