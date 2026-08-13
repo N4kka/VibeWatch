@@ -335,7 +335,6 @@
 "paywall.feature.advancedFilters" = "🔎 빠른 선택을 위한 고급 필터";
 "paywall.feature.lists" = "📋 최대 100개의 동기화된 시청 목록";
 "paywall.feature.offlineMode" = "📵 저장된 선택에 대한 오프라인 모드";
-"paywall.feature.releaseAlerts" = "🔔 즐겨찾기 스트리밍 시작 알림";
 
 // Common
 "common.ok" = "확인";

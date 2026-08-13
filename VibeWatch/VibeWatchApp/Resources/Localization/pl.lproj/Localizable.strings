@@ -335,7 +335,6 @@
 "paywall.feature.advancedFilters" = "🔎 Zaawansowane filtry do szybszych wyborów";
 "paywall.feature.lists" = "📋 Do 100 synchronizowanych list";
 "paywall.feature.offlineMode" = "📵 Tryb offline dla zapisanych wyborów";
-"paywall.feature.releaseAlerts" = "🔔 Powiadomienia gdy ulubione są dostępne";
 
 // Common
 "common.ok" = "OK";

@@ -335,7 +335,6 @@
 "paywall.feature.advancedFilters" = "🔎 Geavanceerde filters om sneller te kiezen";
 "paywall.feature.lists" = "📋 Tot 100 gesynchroniseerde watchlists";
 "paywall.feature.offlineMode" = "📵 Offlinemodus voor bewaarde titels";
-"paywall.feature.releaseAlerts" = "🔔 Meldingen als je favorieten te streamen zijn";
 
 // Common
 "common.ok" = "OK";

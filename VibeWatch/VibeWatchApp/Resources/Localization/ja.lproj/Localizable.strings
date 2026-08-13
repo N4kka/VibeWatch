@@ -335,7 +335,6 @@
 "paywall.feature.advancedFilters" = "🔎 すばやく選べる高度なフィルター";
 "paywall.feature.lists" = "📋 最大100件の同期ウォッチリスト";
 "paywall.feature.offlineMode" = "📵 保存した作品をオフラインで";
-"paywall.feature.releaseAlerts" = "🔔 お気に入りが配信開始したら通知";
 
 // Common
 "common.ok" = "OK";

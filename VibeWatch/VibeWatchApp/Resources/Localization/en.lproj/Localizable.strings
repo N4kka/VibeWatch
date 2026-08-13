@@ -335,7 +335,6 @@
 "paywall.feature.advancedFilters" = "🔎 Advanced filters for faster picks";
 "paywall.feature.lists" = "📋 Up to 100 synced watchlists";
 "paywall.feature.offlineMode" = "📵 Offline mode for saved picks";
-"paywall.feature.releaseAlerts" = "🔔 Alerts when favorites stream";
 
 // Common
 "common.ok" = "OK";

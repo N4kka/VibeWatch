@@ -335,7 +335,6 @@
 "paywall.feature.advancedFilters" = "🔎 तेज़ चयन के लिए उन्नत फ़िल्टर";
 "paywall.feature.lists" = "📋 अधिकतम 100 सिंक की गई वॉचलिस्ट";
 "paywall.feature.offlineMode" = "📵 सहेजे गए चयन के लिए ऑफ़लाइन मोड";
-"paywall.feature.releaseAlerts" = "🔔 पसंदीदा उपलब्ध होने पर अलर्ट";
 
 // Common
 "common.ok" = "OK";

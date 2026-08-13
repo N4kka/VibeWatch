@@ -335,7 +335,6 @@
 "paywall.feature.advancedFilters" = "🔎 Edistyneet suodattimet nopeampiin valintoihin";
 "paywall.feature.lists" = "📋 Jopa 100 synkronoitua katselulistaa";
 "paywall.feature.offlineMode" = "📵 Offline-tila tallennetuille valinnoille";
-"paywall.feature.releaseAlerts" = "🔔 Ilmoitukset, kun suosikit tulevat katsottaviksi";
 
 // Common
 "common.ok" = "OK";

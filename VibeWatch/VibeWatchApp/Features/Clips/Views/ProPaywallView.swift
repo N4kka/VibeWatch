@@ -146,6 +146,10 @@ struct ProPaywallView: View {
         .clipShape(RoundedRectangle(cornerRadius: 20))
     }
 
+    // `paywall.feature.releaseAlerts` non è più in elenco: gli avvisi di uscita e disponibilità
+    // non hanno mai avuto un gate su isPro, e da quando salvare un titolo vale come iscrizione
+    // (auto-enrollment, vedi NOTIFICATIONS.md) arrivano a tutti automaticamente. Prometterli
+    // come esclusiva Pro è una funzione che l'utente ha già.
     private var featureKeys: [String] {
         [
             "paywall.feature.aiAssistant",
@@ -153,8 +157,7 @@ struct ProPaywallView: View {
             "paywall.feature.offlineMode",
             "paywall.feature.lists",
             "paywall.feature.advancedFilters",
-            "paywall.feature.noAds",
-            "paywall.feature.releaseAlerts"
+            "paywall.feature.noAds"
         ]
     }
 

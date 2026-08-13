@@ -336,7 +336,6 @@
 "paywall.feature.advancedFilters" = "🔎 Erweiterte Filter für schnellere Auswahl";
 "paywall.feature.lists" = "📋 Bis zu 100 synchronisierte Watchlists";
 "paywall.feature.offlineMode" = "📵 Offline-Modus für gespeicherte Titel";
-"paywall.feature.releaseAlerts" = "🔔 Benachrichtigungen, wenn Favoriten verfügbar sind";
 
 // Common
 "common.ok" = "OK";

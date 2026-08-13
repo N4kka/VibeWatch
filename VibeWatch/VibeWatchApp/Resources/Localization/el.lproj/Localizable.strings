@@ -335,7 +335,6 @@
 "paywall.feature.advancedFilters" = "🔎 Προηγμένα φίλτρα για γρηγορότερες επιλογές";
 "paywall.feature.lists" = "📋 Έως 100 συγχρονισμένες λίστες";
 "paywall.feature.offlineMode" = "📵 Λειτουργία εκτός σύνδεσης για αποθηκευμένες επιλογές";
-"paywall.feature.releaseAlerts" = "🔔 Ειδοποιήσεις όταν τα αγαπημένα είναι διαθέσιμα";
 
 // Common
 "common.ok" = "OK";

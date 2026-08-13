@@ -335,7 +335,6 @@
 "paywall.feature.advancedFilters" = "🔎 Avancerede filtre for hurtigere valg";
 "paywall.feature.lists" = "📋 Op til 100 synkroniserede watchlister";
 "paywall.feature.offlineMode" = "📵 Offline-tilstand til gemte titler";
-"paywall.feature.releaseAlerts" = "🔔 Notifikationer når favoritter kan streames";
 
 // Common
 "common.ok" = "OK";

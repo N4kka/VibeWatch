@@ -336,7 +336,6 @@
 "paywall.feature.advancedFilters" = "🔎 Filtri avanzati per scelte più rapide";
 "paywall.feature.lists" = "📋 Fino a 100 watchlist sincronizzate";
 "paywall.feature.offlineMode" = "📵 Modalità offline per i contenuti salvati";
-"paywall.feature.releaseAlerts" = "🔔 Avvisi quando i preferiti sono in streaming";
 "paywall.haveCode" = "Hai un codice promozionale?";
 "paywall.price.perYear" = "%@/anno";
 "paywall.cancelAnytime" = "Disdici quando vuoi";

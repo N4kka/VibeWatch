@@ -335,7 +335,6 @@
 "paywall.feature.advancedFilters" = "🔎 Filtres avancés pour des choix plus rapides";
 "paywall.feature.lists" = "📋 Jusqu’à 100 watchlists synchronisées";
 "paywall.feature.offlineMode" = "📵 Mode hors ligne pour les choix enregistrés";
-"paywall.feature.releaseAlerts" = "🔔 Alertes quand vos favoris sont disponibles";
 
 // Common
 "common.ok" = "OK";
