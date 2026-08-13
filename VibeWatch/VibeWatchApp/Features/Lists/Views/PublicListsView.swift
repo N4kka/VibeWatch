@@ -467,6 +467,9 @@ struct PublicListDetailView: View {
                 Button { Task { await toggleFollow() } } label: {
                     Image(systemName: isFollowing ? "bookmark.fill" : "bookmark")
                 }
+                // M3 — anche una lista altrui si condivide, e la card porta la firma del suo
+                // autore: chi la vede deve sapere di chi è la lista, non di chi l'ha girata.
+                ListShareButton(source: .init(publicList: list))
                 Menu {
                     Button(role: .destructive) { showReportConfirm = true } label: {
                         Label("lists.public.report".localized, systemImage: "flag")

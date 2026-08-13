@@ -34,6 +34,7 @@
 		A1B2C3D4000AE5F600000101 /* UpdateConfigLocalizationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000AE5F600000102 /* UpdateConfigLocalizationTests.swift */; };
 		A1B2C3D4000BE5F600000001 /* UsernameSetupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000BE5F600000002 /* UsernameSetupTests.swift */; };
 		A1B2C3D4000BE5F600000003 /* SocialProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000BE5F600000004 /* SocialProfileTests.swift */; };
+		A1B2C3D4000BE5F600000007 /* WrapUpBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000BE5F600000008 /* WrapUpBuilderTests.swift */; };
 		A1B2C3D4000BE5F600000005 /* FavoritesRatingsActionsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000BE5F600000006 /* FavoritesRatingsActionsTests.swift */; };
 		A1B2C3D4000CE5F600000001 /* UniversalLinksTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000CE5F600000002 /* UniversalLinksTests.swift */; };
 		A1B2C3D4000DE5F600000001 /* ImportViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000DE5F600000002 /* ImportViewModelTests.swift */; };
@@ -102,6 +103,7 @@
 		A1B2C3D4000AE5F600000102 /* UpdateConfigLocalizationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateConfigLocalizationTests.swift; sourceTree = "<group>"; };
 		A1B2C3D4000BE5F600000002 /* UsernameSetupTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsernameSetupTests.swift; sourceTree = "<group>"; };
 		A1B2C3D4000BE5F600000004 /* SocialProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialProfileTests.swift; sourceTree = "<group>"; };
+		A1B2C3D4000BE5F600000008 /* WrapUpBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WrapUpBuilderTests.swift; sourceTree = "<group>"; };
 		A1B2C3D4000BE5F600000006 /* FavoritesRatingsActionsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesRatingsActionsTests.swift; sourceTree = "<group>"; };
 		A1B2C3D4000CE5F600000002 /* UniversalLinksTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UniversalLinksTests.swift; sourceTree = "<group>"; };
 		A1B2C3D4000DE5F600000002 /* ImportViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportViewModelTests.swift; sourceTree = "<group>"; };
@@ -196,6 +198,7 @@
 				A1B2C3D40005E5F600000002 /* SyncPaginationTests.swift */,
 				A1B2C3D4000BE5F600000002 /* UsernameSetupTests.swift */,
 				A1B2C3D4000BE5F600000004 /* SocialProfileTests.swift */,
+				A1B2C3D4000BE5F600000008 /* WrapUpBuilderTests.swift */,
 				A1B2C3D4000BE5F600000006 /* FavoritesRatingsActionsTests.swift */,
 				A1B2C3D4000CE5F600000002 /* UniversalLinksTests.swift */,
 				A1B2C3D4000DE5F600000002 /* ImportViewModelTests.swift */,
@@ -434,6 +437,7 @@
 				A1B2C3D40005E5F600000001 /* SyncPaginationTests.swift in Sources */,
 				A1B2C3D4000BE5F600000001 /* UsernameSetupTests.swift in Sources */,
 				A1B2C3D4000BE5F600000003 /* SocialProfileTests.swift in Sources */,
+				A1B2C3D4000BE5F600000007 /* WrapUpBuilderTests.swift in Sources */,
 				A1B2C3D4000BE5F600000005 /* FavoritesRatingsActionsTests.swift in Sources */,
 				A1B2C3D4000CE5F600000001 /* UniversalLinksTests.swift in Sources */,
 				A1B2C3D4000DE5F600000001 /* ImportViewModelTests.swift in Sources */,

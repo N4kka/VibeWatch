@@ -68,7 +68,7 @@ struct TVTrackingCard: View {
             TVShowDetailView(tvShowId: row.showId)
         }
         .sheet(item: $shareItem) { item in
-            ShareCardSheet(content: item.content, onClose: { shareItem = nil })
+            ShareCardSheet(content: item.content, link: item.link, onClose: { shareItem = nil })
         }
         // §9.2: swipe → segna visto, ← rimanda.
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
@@ -142,14 +142,17 @@ struct TVTrackingCard: View {
         isPreparingShare = true
         Task {
             let poster = await ShareCardRenderer.posterImage(path: row.posterPath)
-            let username = await ShareCardIdentity.username()
-            shareItem = CompletedShareItem(content: .showCompleted(.init(
-                title: row.showName ?? "tracking.unknownShow".localized,
-                episodesWatched: row.watchedCount,
-                totalHours: nil,
-                username: username,
-                poster: poster
-            )))
+            let identity = await ShareCardIdentity.current()
+            shareItem = CompletedShareItem(
+                content: .showCompleted(.init(
+                    title: row.showName ?? "tracking.unknownShow".localized,
+                    episodesWatched: row.watchedCount,
+                    totalHours: nil,
+                    username: identity.handle,
+                    profileLink: identity.drawnLink,
+                    poster: poster
+                )),
+                link: identity.profileURL)
             isPreparingShare = false
         }
     }
@@ -158,6 +161,8 @@ struct TVTrackingCard: View {
     fileprivate struct CompletedShareItem: Identifiable {
         let id = UUID()
         let content: ShareCardContent
+        /// L'indirizzo del profilo che accompagna la card nella share sheet.
+        let link: URL?
     }
 
     private var markButton: some View {

@@ -39,6 +39,8 @@ struct RatedTitleShareCard: View {
         var rating: Int
         var review: String?
         var username: String
+        /// L'indirizzo pubblico da stampare al posto della sola chiocciola (nil = niente indirizzo).
+        var profileLink: String? = nil
         var poster: UIImage?
     }
 
@@ -80,7 +82,7 @@ struct RatedTitleShareCard: View {
                         .padding(.top, isStory ? 16 : 10)
                 }
 
-                ShareCardUsernameTag(username: model.username)
+                ShareCardUsernameTag(username: model.username, link: model.profileLink)
                     .padding(.top, isStory ? 18 : 12)
 
                 Spacer(minLength: 12)
@@ -105,6 +107,8 @@ struct ShowCompletedShareCard: View {
         /// Ore totali già arrotondate; nil quando il runtime non è noto — la riga si accorcia.
         var totalHours: Int?
         var username: String
+        /// L'indirizzo pubblico da stampare al posto della sola chiocciola (nil = niente indirizzo).
+        var profileLink: String? = nil
         var poster: UIImage?
     }
 
@@ -157,7 +161,7 @@ struct ShowCompletedShareCard: View {
                     .foregroundColor(.theme.accentOrange)
                     .padding(.top, isStory ? 10 : 7)
 
-                ShareCardUsernameTag(username: model.username)
+                ShareCardUsernameTag(username: model.username, link: model.profileLink)
                     .padding(.top, isStory ? 18 : 12)
 
                 Spacer(minLength: 12)
@@ -185,6 +189,8 @@ struct ProfileShareCard: View {
     struct Model {
         var displayName: String
         var username: String
+        /// L'indirizzo pubblico da stampare al posto della sola chiocciola (nil = niente indirizzo).
+        var profileLink: String? = nil
         var avatar: UIImage?
         var favoriteMovies: [FavoriteItem]
         var favoriteShows: [FavoriteItem]
@@ -214,9 +220,13 @@ struct ProfileShareCard: View {
                     .minimumScaleFactor(0.7)
                     .padding(.top, isStory ? 14 : 9)
 
-                Text("@\(model.username)")
+                // Sulla card del profilo l'indirizzo prende il posto della chiocciola: è la card
+                // che serve proprio a farsi trovare, e "@nicola" da solo non dice dove cercare.
+                Text(model.profileLink ?? "@\(model.username)")
                     .font(.system(size: isStory ? 14.5 : 13, weight: .semibold))
-                    .foregroundColor(.theme.textSecondary)
+                    .foregroundColor(model.profileLink == nil ? .theme.textSecondary : .theme.accentOrange)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
                     .padding(.top, 3)
 
                 if let followers = model.followerCount {
@@ -258,6 +268,223 @@ struct ProfileShareCard: View {
                     ForEach(Array(items.prefix(4).enumerated()), id: \.offset) { _, item in
                         ShareCardPoster(image: item.poster, title: item.title,
                                         width: tileWidth, plain: true)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Card: wrap-up del periodo
+
+/// Il riepilogo di un mese o di un anno: i numeri grandi in mezzo, i quattro titoli che hanno
+/// occupato il periodo sotto. Le cifre arrivano già contate da `WrapUpBuilder` — la card non
+/// somma, non arrotonda e non riempie: una statistica che non c'è (le ore senza runtime) sparisce
+/// dalla griglia invece di comparire come zero.
+struct WrapUpShareCard: View {
+    struct Model {
+        var periodLabel: String
+        var movies: Int
+        var episodes: Int
+        /// nil quando i runtime non sono noti: la griglia si accorcia da tre a due riquadri.
+        var hours: Int?
+        var activeDays: Int
+        var username: String
+        /// L'indirizzo pubblico da stampare al posto della sola chiocciola (nil = niente indirizzo).
+        var profileLink: String? = nil
+        /// Fino a quattro poster, già scaricati. Meno di quattro va benissimo: la fila si stringe.
+        var posters: [UIImage?]
+        /// I titoli in chiaro, allineati ai poster: servono al ripiego quando l'immagine manca.
+        var titles: [String]
+    }
+
+    let model: Model
+    var format: ShareCardFormat = .story
+
+    private var isStory: Bool { format == .story }
+
+    private var stats: [(value: String, label: String)] {
+        var entries: [(String, String)] = []
+        if model.movies > 0 {
+            entries.append(("\(model.movies)", "shareCard.wrapUp.movies".localized))
+        }
+        if model.episodes > 0 {
+            entries.append(("\(model.episodes)", "shareCard.wrapUp.episodes".localized))
+        }
+        if let hours = model.hours, hours > 0 {
+            entries.append(("\(hours)", "shareCard.wrapUp.hours".localized))
+        }
+        if model.activeDays > 0 {
+            entries.append(("\(model.activeDays)", "shareCard.wrapUp.days".localized))
+        }
+        // Quattro riquadri stanno stretti anche sulla story: si tengono i primi tre, che sono
+        // già ordinati dal più raccontabile.
+        return Array(entries.prefix(3))
+    }
+
+    var body: some View {
+        ZStack {
+            ShareCardBackdrop(image: model.posters.compactMap { $0 }.first)
+
+            VStack(spacing: 0) {
+                Spacer(minLength: 12)
+
+                Text("shareCard.wrapUp.eyebrow".localized.uppercased())
+                    .font(.system(size: 11, weight: .heavy))
+                    .kerning(1.6)
+                    .foregroundColor(.theme.accentOrange)
+
+                Text(model.periodLabel)
+                    .font(.system(size: isStory ? 30 : 25, weight: .heavy))
+                    .foregroundColor(.theme.textPrimary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.7)
+                    .padding(.top, isStory ? 8 : 5)
+
+                HStack(spacing: isStory ? 12 : 9) {
+                    ForEach(Array(stats.enumerated()), id: \.offset) { _, entry in
+                        statTile(value: entry.value, label: entry.label)
+                    }
+                }
+                .padding(.top, isStory ? 26 : 16)
+
+                if !model.posters.isEmpty {
+                    HStack(spacing: 9) {
+                        ForEach(Array(model.posters.prefix(4).enumerated()), id: \.offset) { index, poster in
+                            ShareCardPoster(
+                                image: poster,
+                                title: index < model.titles.count ? model.titles[index] : "",
+                                width: isStory ? 70 : 58,
+                                plain: true)
+                        }
+                    }
+                    .padding(.top, isStory ? 30 : 18)
+                }
+
+                ShareCardUsernameTag(username: model.username, link: model.profileLink)
+                    .padding(.top, isStory ? 24 : 14)
+
+                Spacer(minLength: 12)
+
+                ShareCardWordmark(iconSize: isStory ? 21 : 18)
+                    .padding(.bottom, isStory ? 26 : 18)
+            }
+            .padding(.horizontal, 26)
+        }
+        .frame(width: format.size.width, height: format.size.height)
+    }
+
+    private func statTile(value: String, label: String) -> some View {
+        VStack(spacing: 3) {
+            Text(value)
+                .font(.system(size: isStory ? 30 : 24, weight: .heavy))
+                .foregroundColor(.theme.accentOrange)
+            Text(label.uppercased())
+                .font(.system(size: 9.5, weight: .heavy))
+                .kerning(0.9)
+                .foregroundColor(.theme.textSecondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(minWidth: isStory ? 82 : 68)
+        .padding(.vertical, isStory ? 14 : 10)
+        .background(RoundedRectangle(cornerRadius: 14).fill(Color.white.opacity(0.07)))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.10), lineWidth: 1))
+    }
+}
+
+// MARK: - Card: lista
+
+/// La copertina di una lista: nome, quanti titoli, i primi quattro poster in griglia 2x2 come
+/// su `PublicListCard`. La descrizione compare solo se c'è — una riga vuota sotto il titolo
+/// farebbe sembrare la card tagliata.
+struct ListShareCard: View {
+    struct Model {
+        var name: String
+        var itemCount: Int
+        var description: String?
+        var username: String
+        /// L'indirizzo pubblico da stampare al posto della sola chiocciola (nil = niente indirizzo).
+        var profileLink: String? = nil
+        var posters: [UIImage?]
+        var titles: [String]
+    }
+
+    let model: Model
+    var format: ShareCardFormat = .story
+
+    private var isStory: Bool { format == .story }
+    private var tileWidth: CGFloat { isStory ? 92 : 74 }
+
+    var body: some View {
+        ZStack {
+            ShareCardBackdrop(image: model.posters.compactMap { $0 }.first)
+
+            VStack(spacing: 0) {
+                Spacer(minLength: 12)
+
+                HStack(spacing: 6) {
+                    Image(systemName: "list.bullet")
+                        .font(.system(size: 11, weight: .heavy))
+                    Text("shareCard.list.eyebrow".localized.uppercased())
+                        .font(.system(size: 11, weight: .heavy))
+                        .kerning(1.4)
+                }
+                .foregroundColor(.theme.accentOrange)
+
+                Text(model.name)
+                    .font(.system(size: isStory ? 28 : 23, weight: .heavy))
+                    .foregroundColor(.theme.textPrimary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.7)
+                    .padding(.top, isStory ? 10 : 6)
+
+                Text(String(format: "shareCard.list.count".localized, model.itemCount))
+                    .font(.system(size: isStory ? 14 : 12.5, weight: .bold))
+                    .foregroundColor(.theme.accentOrange)
+                    .padding(.top, isStory ? 8 : 5)
+
+                if let description = model.description, !description.isEmpty {
+                    Text(description)
+                        .font(.system(size: isStory ? 13.5 : 12, weight: .medium))
+                        .foregroundColor(.theme.textSecondary)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .padding(.top, isStory ? 10 : 6)
+                }
+
+                if !model.posters.isEmpty {
+                    posterGrid
+                        .padding(.top, isStory ? 26 : 14)
+                }
+
+                ShareCardUsernameTag(username: model.username, link: model.profileLink)
+                    .padding(.top, isStory ? 24 : 14)
+
+                Spacer(minLength: 12)
+
+                ShareCardWordmark(iconSize: isStory ? 21 : 18)
+                    .padding(.bottom, isStory ? 26 : 18)
+            }
+            .padding(.horizontal, 28)
+        }
+        .frame(width: format.size.width, height: format.size.height)
+    }
+
+    /// Due per riga: con quattro poster è la griglia della card lista, con due o tre la fila
+    /// resta comunque bilanciata invece di lasciare un buco a destra.
+    private var posterGrid: some View {
+        let items = Array(model.posters.prefix(4).enumerated())
+        return VStack(spacing: 9) {
+            ForEach(Array(stride(from: 0, to: items.count, by: 2)), id: \.self) { start in
+                HStack(spacing: 9) {
+                    ForEach(items[start..<min(start + 2, items.count)], id: \.offset) { index, poster in
+                        ShareCardPoster(
+                            image: poster,
+                            title: index < model.titles.count ? model.titles[index] : "",
+                            width: tileWidth,
+                            plain: true)
                     }
                 }
             }
@@ -442,13 +669,20 @@ private struct ShareCardStarRow: View {
 }
 
 /// La firma dell'autore della card, in capsula discreta.
+///
+/// Con un `link` la capsula porta l'indirizzo per esteso (`vibewatchapp.com/@nicola`) invece
+/// della sola chiocciola: dentro un'immagine niente è toccabile, ma un indirizzo scritto per
+/// intero si legge e si digita — ed è lo stesso che viaggia come link vero nella share sheet.
 private struct ShareCardUsernameTag: View {
     let username: String
+    var link: String?
 
     var body: some View {
-        Text("@\(username)")
+        Text(link ?? "@\(username)")
             .font(.system(size: 13, weight: .semibold))
-            .foregroundColor(.theme.textSecondary)
+            .foregroundColor(link == nil ? .theme.textSecondary : .theme.accentOrange)
+            .lineLimit(1)
+            .minimumScaleFactor(0.75)
             .padding(.horizontal, 13)
             .padding(.vertical, 6)
             .background(Capsule().fill(Color.white.opacity(0.08)))

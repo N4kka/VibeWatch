@@ -60,6 +60,8 @@ struct ProfileView: View {
     struct ProfileShareCardItem: Identifiable {
         let id = UUID()
         let content: ShareCardContent
+        /// L'indirizzo del profilo che accompagna la card nella share sheet.
+        let link: URL?
     }
     @State private var showChangePassword = false
     @State private var showHelpSupport = false
@@ -212,16 +214,22 @@ struct ProfileView: View {
 
             let avatar = await ShareCardRenderer.remoteImage(urlString: appState.currentUser?.avatarURL)
 
-            profileShareCard = ProfileShareCardItem(content: .profile(.init(
-                displayName: displayNameOrEmail,
-                username: username,
-                avatar: avatar,
-                favoriteMovies: Array(movies.prefix(4)),
-                favoriteShows: Array(shows.prefix(4)),
-                // I follower sono già in memoria se l'header li ha caricati; niente fetch
-                // apposta per un numero secondario della card.
-                followerCount: socialCounts?.followers
-            )))
+            // Qui lo username è certo (la guardia sopra), quindi l'indirizzo c'è sempre: è la
+            // card che serve proprio a farsi trovare.
+            let identity = ShareCardIdentity.Identity.other(username: username)
+            profileShareCard = ProfileShareCardItem(
+                content: .profile(.init(
+                    displayName: displayNameOrEmail,
+                    username: username,
+                    profileLink: identity.drawnLink,
+                    avatar: avatar,
+                    favoriteMovies: Array(movies.prefix(4)),
+                    favoriteShows: Array(shows.prefix(4)),
+                    // I follower sono già in memoria se l'header li ha caricati; niente fetch
+                    // apposta per un numero secondario della card.
+                    followerCount: socialCounts?.followers
+                )),
+                link: identity.profileURL)
             isPreparingShareCard = false
         }
     }
@@ -456,7 +464,7 @@ struct ProfileView: View {
             NavigationView { AnalyticsDashboardView() }
         }
         .sheet(item: $profileShareCard) { item in
-            ShareCardSheet(content: item.content, onClose: { profileShareCard = nil })
+            ShareCardSheet(content: item.content, link: item.link, onClose: { profileShareCard = nil })
         }
         .sheet(item: $selectedFavorite) { entry in
             NavigationStack {
