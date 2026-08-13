@@ -172,6 +172,29 @@ exception
   when others then raise notice 'ok    %  (% )', label, sqlstate;
 end $$;
 
+-- `notifications` e il suo delivery log, in forma minima: le colonne che la migration
+-- 20260812190000 altera (CHECK sui tipi, colonna category) e che i trigger social scrivono e
+-- rileggono per la dedupe. La coda vera la consuma process-notifications, che qui non gira.
+create table if not exists public.notifications (
+  id                uuid primary key default gen_random_uuid(),
+  user_id           uuid not null references auth.users on delete cascade,
+  notification_type text not null,
+  title             text not null,
+  body              text not null,
+  media_id          integer,
+  media_type        text,
+  is_sent           boolean default false,
+  category          text,
+  thread_id         text,
+  created_at        timestamptz default now()
+);
+create table if not exists public.notification_delivery_log (
+  user_id            uuid not null,
+  kind               text,
+  notification_count integer,
+  delivered_at       timestamptz not null default now()
+);
+
 -- `profiles` come in produzione, con le sole colonne che il blocco 8 tocca. Ricreata qui perche'
 -- la sua migration precede questo repo (per anni supabase/ e' stato gitignorato). Le colonne di
 -- billing ci sono apposta: sono cio' che `public_profiles` non deve esporre, e un test che le
