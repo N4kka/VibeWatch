@@ -7,6 +7,8 @@ import SwiftUI
 /// (`/@{username}` la aggancerà con gli universal links del blocco 10).
 struct PublicProfileView: View {
     @StateObject private var viewModel: PublicProfileViewModel
+    @Environment(\.dismiss) private var dismiss
+    @State private var showBlockConfirm = false
 
     init(username: String) {
         _viewModel = StateObject(wrappedValue: PublicProfileViewModel(username: username))
@@ -19,7 +21,72 @@ struct PublicProfileView: View {
         }
         .navigationTitle("@\(viewModel.username)")
         .navigationBarTitleDisplayMode(.inline)
+        // Moderazione M2: il menu "…" con blocca/sblocca. Solo su un profilo carico e altrui —
+        // un'azione che il server rifiuterebbe non merita un pulsante (lezione del self-follow).
+        .toolbar {
+            if viewModel.canModerate {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    moderationMenu
+                }
+            }
+        }
+        // Il blocco chiede conferma spiegando le conseguenze: è un'azione a tre effetti
+        // (visibilità nei due versi + follow rimossi) e nessuno dei tre si vede da qui.
+        .confirmationDialog(
+            String(format: "social.block.confirmTitle".localized, viewModel.username),
+            isPresented: $showBlockConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("social.block.confirm".localized, role: .destructive) {
+                Task { await performBlock() }
+            }
+            Button("common.cancel".localized, role: .cancel) {}
+        } message: {
+            Text("social.block.consequences".localized)
+        }
         .task { await viewModel.loadProfile() }
+    }
+
+    private var moderationMenu: some View {
+        Menu {
+            if viewModel.isBlocked {
+                Button {
+                    Task { await performUnblock() }
+                } label: {
+                    Label(String(format: "social.unblockUser".localized, viewModel.username),
+                          systemImage: "hand.raised.slash")
+                }
+            } else {
+                Button(role: .destructive) {
+                    showBlockConfirm = true
+                } label: {
+                    Label(String(format: "social.blockUser".localized, viewModel.username),
+                          systemImage: "hand.raised")
+                }
+            }
+        } label: {
+            Image(systemName: "ellipsis.circle")
+        }
+        .disabled(viewModel.isTogglingBlock)
+    }
+
+    /// Toast e poi via dalla schermata: dopo il blocco il server nasconde il profilo nei due
+    /// versi, e restare su una pagina che al prossimo refresh direbbe "non esiste" è bugiardo.
+    private func performBlock() async {
+        if await viewModel.blockProfile() {
+            ToastCenter.shared.show(success: "social.block.done".localized)
+            dismiss()
+        } else {
+            ToastCenter.shared.show(error: "common.error".localized)
+        }
+    }
+
+    private func performUnblock() async {
+        if await viewModel.unblockProfile() {
+            ToastCenter.shared.show(success: "social.unblock.done".localized)
+        } else {
+            ToastCenter.shared.show(error: "common.error".localized)
+        }
     }
 
     @ViewBuilder

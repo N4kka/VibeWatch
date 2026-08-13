@@ -1351,6 +1351,168 @@ extension SupabaseService {
     }
 }
 
+// MARK: - Interazioni del feed (Social feed M2)
+
+/// L'esito di un toggle come lo racconta il server: lo stato VERO dopo l'operazione.
+/// È la fonte con cui il client riconcilia l'ottimismo — mai il contrario.
+struct ActivityInteractionToggle: Decodable {
+    let liked: Bool
+    let likeCount: Int
+
+    enum CodingKeys: String, CodingKey {
+        case liked
+        case likeCount = "like_count"
+    }
+}
+
+/// Una riga di `get_activity_comments`: autore denormalizzato (il client non conosce i profili
+/// altrui), lapidi con `content` nullo, contatori calcolati dal server.
+struct ActivityCommentRow: Decodable {
+    let commentId: UUID
+    let userId: UUID
+    let username: String?
+    let displayName: String?
+    let avatarUrl: String?
+    let parentId: UUID?
+    let content: String?
+    let isDeleted: Bool
+    let createdAt: Date
+    let likeCount: Int
+    let likedByMe: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case commentId = "comment_id"
+        case userId = "user_id"
+        case username
+        case displayName = "display_name"
+        case avatarUrl = "avatar_url"
+        case parentId = "parent_id"
+        case content
+        case isDeleted = "is_deleted"
+        case createdAt = "created_at"
+        case likeCount = "like_count"
+        case likedByMe = "liked_by_me"
+    }
+}
+
+/// I due tipi che `report_content` accetta. Enum chiuso per costruzione: un content_type
+/// sbagliato è un 500 evitabile a compile time.
+enum ReportableContentType: String {
+    case review
+    case activityComment = "activity_comment"
+}
+
+extension SupabaseService {
+    /// I toggle tornano da PostgREST come array di una riga (`returns table`). Un array vuoto
+    /// è una risposta che non si capisce: errore, mai un default inventato.
+    private func decodeToggle(_ rows: [ActivityInteractionToggle]) throws -> ActivityInteractionToggle {
+        guard let row = rows.first else {
+            throw SupabaseError.unexpectedResponse(body: "empty toggle response")
+        }
+        return row
+    }
+
+    /// Like/unlike su una card. `p_like_id` conta solo alla prima insert (idempotenza del
+    /// re-like: il server rianima la stessa riga), quindi l'id va generato una volta per
+    /// (attività, utente) e riusato — mai un UUID nuovo a ogni tap.
+    func toggleActivityLike(activityId: UUID, likeId: UUID) async throws -> ActivityInteractionToggle {
+        guard let client else { throw SupabaseError.notConfigured }
+        struct Params: Encodable {
+            let p_activity_id: String
+            let p_like_id: String
+        }
+        let rows: [ActivityInteractionToggle] = try await client
+            .rpc("toggle_activity_like", params: Params(
+                p_activity_id: activityId.uuidString.lowercased(),
+                p_like_id: likeId.uuidString.lowercased()))
+            .execute()
+            .value
+        return try decodeToggle(rows)
+    }
+
+    /// Nuovo commento (o reply, un livello solo). L'id lo genera il CLIENT: un retry con lo
+    /// stesso `p_comment_id` è un upsert, quindi il replay offline non duplica mai.
+    func addActivityComment(activityId: UUID, content: String,
+                            commentId: UUID, parentId: UUID?) async throws -> UUID {
+        var payload: [String: Any] = [
+            "p_activity_id": activityId.uuidString.lowercased(),
+            "p_content": content,
+            "p_comment_id": commentId.uuidString.lowercased()
+        ]
+        if let parentId { payload["p_parent_id"] = parentId.uuidString.lowercased() }
+
+        let data = try await callRPC(function: "add_activity_comment", payload: payload)
+        // `returns uuid` arriva come frammento JSON di primo livello ("una-stringa"):
+        // stessa lezione di parseBooleanRPCResponse.
+        guard let raw = (try? JSONSerialization.jsonObject(
+                with: data, options: [.fragmentsAllowed])) as? String,
+              let id = UUID(uuidString: raw) else {
+            throw SupabaseError.unexpectedResponse(
+                body: String(data: data.prefix(300), encoding: .utf8) ?? "<non-UTF8>")
+        }
+        return id
+    }
+
+    /// Cancella un commento: il server accetta il proprietario del commento O quello della
+    /// card (moderazione di casa propria) — qui non si replica quella logica, la si invoca.
+    func deleteActivityComment(commentId: UUID) async throws {
+        _ = try await callRPC(function: "delete_activity_comment",
+                              payload: ["p_comment_id": commentId.uuidString.lowercased()])
+    }
+
+    /// Like/unlike su un commento, stessa disciplina del like alla card.
+    func toggleActivityCommentLike(commentId: UUID, likeId: UUID) async throws -> ActivityInteractionToggle {
+        guard let client else { throw SupabaseError.notConfigured }
+        struct Params: Encodable {
+            let p_comment_id: String
+            let p_like_id: String
+        }
+        let rows: [ActivityInteractionToggle] = try await client
+            .rpc("toggle_activity_comment_like", params: Params(
+                p_comment_id: commentId.uuidString.lowercased(),
+                p_like_id: likeId.uuidString.lowercased()))
+            .execute()
+            .value
+        return try decodeToggle(rows)
+    }
+
+    /// Il filo dei commenti: ordine cronologico ASCENDENTE con cursore in avanti
+    /// (created_at, comment_id) — stessa disciplina keyset di `fetchActivityFeed`,
+    /// frazionali inclusi per non saltare righe al confronto.
+    func fetchActivityComments(activityId: UUID, after: (Date, UUID)?,
+                               limit: Int) async throws -> [ActivityCommentRow] {
+        guard let client else { throw SupabaseError.notConfigured }
+        let cursorFormatter = ISO8601DateFormatter()
+        cursorFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        struct Params: Encodable {
+            let p_activity_id: String
+            let p_limit: Int
+            let p_after: String?
+            let p_after_id: String?
+        }
+        let rows: [ActivityCommentRow] = try await client
+            .rpc("get_activity_comments", params: Params(
+                p_activity_id: activityId.uuidString.lowercased(),
+                p_limit: limit,
+                p_after: after.map { cursorFormatter.string(from: $0.0) },
+                p_after_id: after.map { $0.1.uuidString.lowercased() }))
+            .execute()
+            .value
+        return rows
+    }
+
+    /// Segnalazione contenuti. Idempotente sul server (ON CONFLICT DO NOTHING): ri-segnalare
+    /// non è un errore, quindi qui non serve nessuno stato locale.
+    func reportContent(type: ReportableContentType, id: UUID, reason: String? = nil) async throws {
+        var payload: [String: Any] = [
+            "p_content_type": type.rawValue,
+            "p_content_id": id.uuidString.lowercased()
+        ]
+        if let reason, !reason.isEmpty { payload["p_reason"] = reason }
+        _ = try await callRPC(function: "report_content", payload: payload)
+    }
+}
+
 private struct ActivityFeedParams: Encodable {
     let p_scope: String
     let p_user: String?

@@ -8,16 +8,28 @@ import SwiftUI
 /// stack di presentazione.
 struct ActivityCardView: View {
     let item: ActivityItem
-    /// Card dell'utente in sessione: solo lì compare lo share (M1 — like e commenti in M2,
-    /// quindi qui non esistono ancora bottoni morti da premere a vuoto).
+    /// Card dell'utente in sessione: solo lì compare lo share; la moderazione dei commenti
+    /// e il "segnala review" si decidono anche da qui.
     let isOwnCard: Bool
     var onOpenProfile: (String) -> Void
     var onOpenDetail: () -> Void
     var onShare: () -> Void
+    /// M2 — il like esce per closure come le altre azioni: l'ottimismo, la riconciliazione e
+    /// il rollback vivono nel ViewModel, la card disegna soltanto lo stato che le arriva.
+    var onToggleLike: () -> Void = {}
+    /// Il foglio commenti riporta fuori il conteggio aggiornato quando cambia: il feed
+    /// aggiorna la riga senza rifare la pagina.
+    var onCommentCountChanged: (Int) -> Void = { _ in }
+    /// Conferma già raccolta (il dialog è della card): al chiamante resta solo la RPC.
+    var onReportReview: () -> Void = {}
 
     /// Lo spoiler si rivela per card e per sessione: un flag persistente sarebbe memoria
     /// di troppo per un gesto che costa un tap.
     @State private var spoilerRevealed = false
+    /// Il foglio commenti si presenta da qui: la card è l'unica a sapere di quale attività
+    /// si parla, e il feed non deve trascinarsi un target in più.
+    @State private var showComments = false
+    @State private var showReportConfirm = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -50,13 +62,30 @@ struct ActivityCardView: View {
                 onOpenDetail()
             }
 
-            if isOwnCard && shareableContentExists {
-                shareRow
-            }
+            actionRow
         }
         .padding(12)
         .background(Color.white.opacity(0.05))
         .clipShape(RoundedRectangle(cornerRadius: 16))
+        .sheet(isPresented: $showComments) {
+            ActivityCommentsSheet(
+                activityId: item.id,
+                activityOwnerId: item.userId,
+                initialCommentCount: item.commentCount,
+                onCommentCountChanged: onCommentCountChanged)
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+        }
+        .confirmationDialog(
+            "social.report.confirmTitle".localized,
+            isPresented: $showReportConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("social.report.confirm".localized, role: .destructive) {
+                onReportReview()
+            }
+            Button("common.cancel".localized, role: .cancel) {}
+        }
     }
 
     // MARK: - Autore
@@ -289,9 +318,20 @@ struct ActivityCardView: View {
                     onOpenDetail()
                 }
             }
+            // Segnalabile solo la review ALTRUI: il proprio contenuto non si segnala (il
+            // server risponderebbe con un no-op, ma il tasto non deve proprio esserci).
+            .contextMenu {
+                if !isOwnCard, item.reviewId != nil {
+                    Button {
+                        showReportConfirm = true
+                    } label: {
+                        Label("social.report.review".localized, systemImage: "flag")
+                    }
+                }
+            }
     }
 
-    // MARK: - Azioni (M1: solo share, solo card proprie)
+    // MARK: - Azioni (M2: like e commenti su tutte le card, share solo sulle proprie)
 
     private var shareableContentExists: Bool {
         switch item.activityType {
@@ -301,23 +341,67 @@ struct ActivityCardView: View {
         }
     }
 
-    private var shareRow: some View {
-        HStack {
-            Spacer()
-            Button(action: onShare) {
-                HStack(spacing: 6) {
-                    Image(systemName: "square.and.arrow.up")
-                        .font(.system(size: 13, weight: .semibold))
-                    Text("social.card.share".localized)
-                        .font(.system(size: 13, weight: .semibold))
+    /// La fila resta calma: icone piccole, contatori solo quando c'è qualcosa da contare.
+    private var actionRow: some View {
+        HStack(spacing: 20) {
+            Button(action: handleLikeTap) {
+                HStack(spacing: 5) {
+                    Image(systemName: item.likedByMe ? "heart.fill" : "heart")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(item.likedByMe ? .theme.accentOrange : .theme.textSecondary)
+                    if item.likeCount > 0 {
+                        Text("\(item.likeCount)")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.theme.textSecondary)
+                            .contentTransition(.numericText())
+                    }
                 }
-                .foregroundColor(.theme.textSecondary)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(Capsule().fill(Color.white.opacity(0.08)))
             }
             .buttonStyle(PlainButtonStyle())
+            .accessibilityLabel(Text("social.card.like".localized))
+
+            Button {
+                showComments = true
+            } label: {
+                HStack(spacing: 5) {
+                    Image(systemName: "bubble.right")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.theme.textSecondary)
+                    if item.commentCount > 0 {
+                        Text("\(item.commentCount)")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.theme.textSecondary)
+                            .contentTransition(.numericText())
+                    }
+                }
+            }
+            .buttonStyle(PlainButtonStyle())
+            .accessibilityLabel(Text("social.card.comments".localized))
+
+            Spacer()
+
+            if isOwnCard && shareableContentExists {
+                Button(action: onShare) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.system(size: 13, weight: .semibold))
+                        Text("social.card.share".localized)
+                            .font(.system(size: 13, weight: .semibold))
+                    }
+                    .foregroundColor(.theme.textSecondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Capsule().fill(Color.white.opacity(0.08)))
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
         }
+    }
+
+    private func handleLikeTap() {
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.impactOccurred()
+        onToggleLike()
     }
 
     /// Condiviso e statico: un formatter per card sarebbe un'allocazione per riga di feed.

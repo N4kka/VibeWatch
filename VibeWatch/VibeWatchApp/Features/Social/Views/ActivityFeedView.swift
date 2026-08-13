@@ -78,7 +78,10 @@ struct ActivityFeedView: View {
                         isOwnCard: viewModel.isOwnCard(item),
                         onOpenProfile: { username in profileTarget = FeedProfileTarget(username: username) },
                         onOpenDetail: { openDetail(for: item) },
-                        onShare: { share(item) }
+                        onShare: { share(item) },
+                        onToggleLike: { Task { await viewModel.toggleLike(for: item) } },
+                        onCommentCountChanged: { count in viewModel.setCommentCount(count, for: item.id) },
+                        onReportReview: { reportReview(item) }
                     )
                     .task { await viewModel.loadMoreIfNeeded(current: item) }
 
@@ -100,6 +103,21 @@ struct ActivityFeedView: View {
     private func openDetail(for item: ActivityItem) {
         guard let tmdbId = item.tmdbId, let mediaType = item.mediaType else { return }
         detailTarget = FeedDetailTarget(mediaType: mediaType, tmdbId: tmdbId)
+    }
+
+    /// Segnala la review della card (conferma già raccolta dal dialog della card). La RPC è
+    /// idempotente sul server: se fallisce si dice e basta — ripremerla non duplica niente.
+    private func reportReview(_ item: ActivityItem) {
+        guard let reviewId = item.reviewId else { return }
+        Task {
+            do {
+                try await ActivityInteractionService.shared.report(
+                    type: .review, contentId: reviewId)
+                ToastCenter.shared.show(success: "social.report.done".localized)
+            } catch {
+                ToastCenter.shared.show(error: "social.report.failed".localized)
+            }
+        }
     }
 
     /// Costruisce il modello della share card e apre il foglio. Il poster si scarica prima

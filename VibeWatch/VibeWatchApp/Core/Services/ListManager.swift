@@ -1509,6 +1509,28 @@ class ListManager: ObservableObject {
         )
     }
 
+    /// Sblocca un utente: il soft delete della riga È lo sblocco, come per l'unfollow (ramo
+    /// DELETE di `apply_mutations`, che lavora per id riga e non ricuce i follow potati).
+    ///
+    /// `blockId` arriva dal server (`fetchBlockedUsers`/`activeBlockId`): i blocchi fatti via
+    /// RPC nello specchio locale non esistono, quindi l'UPDATE qui sotto può toccare zero righe
+    /// — va bene così, lo specchio si corregge solo se ha qualcosa da correggere.
+    func unblockUser(blockId: String) async throws {
+        guard authService.currentUser != nil else { throw ListError.authenticationRequired }
+        let now = ISO8601DateFormatter().string(from: Date())
+        _ = db.execute(
+            "UPDATE user_blocks SET deleted_at = ?, updated_at = ? WHERE id = ?",
+            parameters: [now, now, blockId]
+        )
+        try await sync.queueOperation(
+            table: "user_blocks",
+            operationType: "DELETE",
+            recordId: blockId,
+            payload: ["id": blockId, "user_id": userId],
+            dependsOn: nil
+        )
+    }
+
     /// Segnala una lista pubblica. Idempotente per (utente, lista); oltre soglia il server la nasconde.
     func reportList(listId: String, reason: String? = nil) async throws {
         guard authService.currentUser != nil else { throw ListError.authenticationRequired }
