@@ -25,6 +25,15 @@ struct ProfileLinkTarget: Identifiable, Equatable {
     var id: String { username }
 }
 
+// MARK: - ActivityLinkTarget
+
+/// Social feed M3 — la card che ha ricevuto un like o un commento.
+/// `id` è l'id dell'attività: due push sulla stessa card sono la stessa destinazione.
+struct ActivityLinkTarget: Identifiable, Equatable {
+    let activityId: UUID
+    var id: UUID { activityId }
+}
+
 // MARK: - AppNavigationManager
 
 /// Manages deep link navigation state across the app.
@@ -35,6 +44,10 @@ class AppNavigationManager: ObservableObject {
     /// SPEC v3 §9.4: il profilo da presentare per un universal link `/@{username}`.
     /// Lo osserva `MainTabView`, che lo presenta come sheet.
     @Published var profileLinkTarget: ProfileLinkTarget? = nil
+
+    /// Social feed M3: la card da aprire dopo il tap su una push di like/commento.
+    /// La osserva `MainTabView`, che la presenta come sheet.
+    @Published var activityLinkTarget: ActivityLinkTarget? = nil
 
     @Published var deepLinkTarget: DeepLinkTarget? = nil {
         didSet {
@@ -62,6 +75,26 @@ class AppNavigationManager: ObservableObject {
             NotificationCenter.default.post(name: .navigateToDiscoveryTab, object: nil)
             Task { @MainActor in
                 ImportStatusCenter.shared.handleImportPushTap()
+            }
+            return
+        }
+
+        // Social feed M3: le push social non hanno un media, hanno una CARD (like, commento) o
+        // nessuna destinazione precisa (il "ti segue": l'attore non viaggia nel payload). L'id
+        // della card sta in `thread_id`, nella forma `social:{activity_id}` — la stessa chiave
+        // con cui i trigger deduplicano, quindi non c'è un secondo campo da tenere allineato.
+        if let type = userInfo["notification_type"] as? String, Self.socialTypes.contains(type) {
+            if let thread = userInfo["thread_id"] as? String,
+               thread.hasPrefix("social:"),
+               let activityId = UUID(uuidString: String(thread.dropFirst("social:".count))) {
+                Logger.info("[AppNavigationManager] push social → card \(activityId)")
+                activityLinkTarget = ActivityLinkTarget(activityId: activityId)
+            } else {
+                // Digest, "ti segue", o una versione del server che non manda ancora il thread:
+                // il tab Social è la destinazione onesta — è lì che vive tutto ciò di cui la
+                // notifica parlava. Discovery (il ripiego generico) sarebbe un cambio di discorso.
+                Logger.info("[AppNavigationManager] push social senza card → tab Social")
+                NotificationCenter.default.post(name: .navigateToSocialTab, object: nil)
             }
             return
         }
@@ -122,6 +155,18 @@ class AppNavigationManager: ObservableObject {
             deepLinkTarget = DeepLinkTarget(mediaId: id, mediaType: "movie")
         }
         return true
+    }
+
+    /// I tipi che il server marca come categoria `social` (vedi SOCIAL_TYPES in
+    /// process-notifications): l'elenco vive in due posti perché sono due sistemi, ma è corto
+    /// e cambia insieme alle migration che aggiungono un tipo.
+    private static let socialTypes: Set<String> = [
+        "new_follower", "activity_liked", "activity_commented",
+    ]
+
+    /// Clears the activity link target after the sheet has been dismissed.
+    func clearActivityLinkTarget() {
+        self.activityLinkTarget = nil
     }
 
     /// Clears the profile link target after the sheet has been dismissed.

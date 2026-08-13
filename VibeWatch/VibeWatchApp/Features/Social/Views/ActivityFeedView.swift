@@ -54,7 +54,7 @@ struct ActivityFeedView: View {
             }
         }
         .sheet(item: $shareTarget) { target in
-            ShareCardSheet(content: target.content, onClose: { shareTarget = nil })
+            ShareCardSheet(content: target.content, link: target.link, onClose: { shareTarget = nil })
         }
         .navigationDestination(item: $detailTarget) { target in
             if target.mediaType == "movie" {
@@ -81,7 +81,8 @@ struct ActivityFeedView: View {
                         onShare: { share(item) },
                         onToggleLike: { Task { await viewModel.toggleLike(for: item) } },
                         onCommentCountChanged: { count in viewModel.setCommentCount(count, for: item.id) },
-                        onReportReview: { reportReview(item) }
+                        onReportReview: { reportReview(item) },
+                        onHide: { Task { await viewModel.hide(item) } }
                     )
                     .task { await viewModel.loadMoreIfNeeded(current: item) }
 
@@ -126,8 +127,11 @@ struct ActivityFeedView: View {
     private func share(_ item: ActivityItem) {
         Task {
             let poster = await ShareCardRenderer.posterImage(path: item.posterPath)
-            let username = item.username ?? ""
             let title = item.title ?? "social.card.unknownTitle".localized
+            // Lo username arriva dal server insieme alla card, quindi l'indirizzo è costruibile
+            // senza una seconda lettura. Manca solo su un profilo senza username: firma sì,
+            // link no — mai un indirizzo che non risponde.
+            let identity = item.username.map(ShareCardIdentity.Identity.other(username:))
 
             let content: ShareCardContent
             switch item.activityType {
@@ -136,17 +140,19 @@ struct ActivityFeedView: View {
                     title: title,
                     episodesWatched: item.episodeCount ?? 0,
                     totalHours: nil,
-                    username: username,
+                    username: identity?.handle ?? "",
+                    profileLink: identity?.drawnLink,
                     poster: poster))
             default:
                 content = .ratedTitle(.init(
                     title: title,
                     rating: item.rating ?? 0,
                     review: item.reviewContent,
-                    username: username,
+                    username: identity?.handle ?? "",
+                    profileLink: identity?.drawnLink,
                     poster: poster))
             }
-            shareTarget = FeedShareTarget(content: content)
+            shareTarget = FeedShareTarget(content: content, link: identity?.profileURL)
         }
     }
 
@@ -281,6 +287,8 @@ private struct FeedDetailTarget: Identifiable, Hashable {
 private struct FeedShareTarget: Identifiable {
     let id = UUID()
     let content: ShareCardContent
+    /// L'indirizzo del profilo che accompagna la card nella share sheet.
+    let link: URL?
 }
 
 // MARK: - Preview

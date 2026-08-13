@@ -11,9 +11,13 @@ struct ActivityCardView: View {
     /// Card dell'utente in sessione: solo lì compare lo share; la moderazione dei commenti
     /// e il "segnala review" si decidono anche da qui.
     let isOwnCard: Bool
+    /// Fila delle azioni (like, commenti, share). Si spegne dove non c'è un ViewModel che sappia
+    /// riconciliarle — l'attività recente del profilo, per esempio: un cuore che si colora e
+    /// basta è peggio di un cuore che non c'è.
+    var showsInteractions: Bool = true
     var onOpenProfile: (String) -> Void
     var onOpenDetail: () -> Void
-    var onShare: () -> Void
+    var onShare: () -> Void = {}
     /// M2 — il like esce per closure come le altre azioni: l'ottimismo, la riconciliazione e
     /// il rollback vivono nel ViewModel, la card disegna soltanto lo stato che le arriva.
     var onToggleLike: () -> Void = {}
@@ -22,6 +26,9 @@ struct ActivityCardView: View {
     var onCommentCountChanged: (Int) -> Void = { _ in }
     /// Conferma già raccolta (il dialog è della card): al chiamante resta solo la RPC.
     var onReportReview: () -> Void = {}
+    /// M3 — "rimuovi dal feed" sulla propria card (conferma già raccolta qui dentro). Di
+    /// default non fa niente: le anteprime e il profilo altrui non hanno una via d'uscita.
+    var onHide: (() -> Void)?
 
     /// Lo spoiler si rivela per card e per sessione: un flag persistente sarebbe memoria
     /// di troppo per un gesto che costa un tap.
@@ -30,6 +37,7 @@ struct ActivityCardView: View {
     /// si parla, e il feed non deve trascinarsi un target in più.
     @State private var showComments = false
     @State private var showReportConfirm = false
+    @State private var showHideConfirm = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -62,11 +70,31 @@ struct ActivityCardView: View {
                 onOpenDetail()
             }
 
-            actionRow
+            if showsInteractions {
+                actionRow
+            }
         }
         .padding(12)
         .background(Color.white.opacity(0.05))
         .clipShape(RoundedRectangle(cornerRadius: 16))
+        // M3 — la via d'uscita dal feed sta dove ci si aspetta di trovarla su iOS: long-press
+        // sulla card. Solo sulle proprie, e solo dove il chiamante sa cosa farne (nel profilo
+        // altrui la closure non c'è, quindi il menu nemmeno).
+        .contextMenu { cardMenuItems }
+        // Conferma perché è irreversibile dall'app: il server non ha un "rimetti nel feed", e
+        // una card tolta per sbaglio non si recupera da nessuna schermata.
+        .confirmationDialog(
+            "social.hide.confirmTitle".localized,
+            isPresented: $showHideConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("social.hide.confirm".localized, role: .destructive) {
+                onHide?()
+            }
+            Button("common.cancel".localized, role: .cancel) {}
+        } message: {
+            Text("social.hide.consequences".localized)
+        }
         .sheet(isPresented: $showComments) {
             ActivityCommentsSheet(
                 activityId: item.id,
@@ -318,17 +346,33 @@ struct ActivityCardView: View {
                     onOpenDetail()
                 }
             }
-            // Segnalabile solo la review ALTRUI: il proprio contenuto non si segnala (il
-            // server risponderebbe con un no-op, ma il tasto non deve proprio esserci).
-            .contextMenu {
-                if !isOwnCard, item.reviewId != nil {
-                    Button {
-                        showReportConfirm = true
-                    } label: {
-                        Label("social.report.review".localized, systemImage: "flag")
-                    }
+            // Lo stesso menu della card: il long-press sulla review è pur sempre un long-press
+            // sulla card, e due menu diversi a due centimetri di distanza sono una trappola.
+            .contextMenu { cardMenuItems }
+    }
+
+    // MARK: - Menu contestuale
+
+    /// Le voci del long-press, per proprietà: la review altrui si segnala, la propria card si
+    /// toglie dal feed. Mai entrambe — sono le due facce della stessa domanda ("questa card non
+    /// dovrebbe stare qui"), poste da chi ha titolo a porsela.
+    @ViewBuilder
+    private var cardMenuItems: some View {
+        if isOwnCard {
+            if onHide != nil {
+                Button(role: .destructive) {
+                    showHideConfirm = true
+                } label: {
+                    Label("social.hide.action".localized, systemImage: "eye.slash")
                 }
             }
+        } else if item.reviewId != nil, item.reviewContent?.isEmpty == false {
+            Button {
+                showReportConfirm = true
+            } label: {
+                Label("social.report.review".localized, systemImage: "flag")
+            }
+        }
     }
 
     // MARK: - Azioni (M2: like e commenti su tutte le card, share solo sulle proprie)

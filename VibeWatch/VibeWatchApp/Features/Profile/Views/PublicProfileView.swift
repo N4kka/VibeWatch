@@ -9,6 +9,9 @@ struct PublicProfileView: View {
     @StateObject private var viewModel: PublicProfileViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var showBlockConfirm = false
+    /// Il titolo di una card dell'attività recente: naviga nello stack del profilo, come le
+    /// liste pubbliche qui sotto.
+    @State private var activityDetailTarget: ProfileActivityDetailTarget?
 
     init(username: String) {
         _viewModel = StateObject(wrappedValue: PublicProfileViewModel(username: username))
@@ -43,6 +46,13 @@ struct PublicProfileView: View {
             Button("common.cancel".localized, role: .cancel) {}
         } message: {
             Text("social.block.consequences".localized)
+        }
+        .navigationDestination(item: $activityDetailTarget) { target in
+            if target.mediaType == "movie" {
+                MovieDetailView(movieId: target.tmdbId)
+            } else {
+                TVShowDetailView(tvShowId: target.tmdbId)
+            }
         }
         .task { await viewModel.loadProfile() }
     }
@@ -137,11 +147,62 @@ struct PublicProfileView: View {
                         favoritesRow(titleKey: "profile.favorites.shows",
                                      slots: detail.favoriteShows, mediaType: "tv")
                     }
+                    recentActivitySection
                     publicListsSection
                 }
                 .padding(.vertical, 24)
             }
         }
+    }
+
+    /// M3 — "Attività recente": le ultime card di questo profilo, dalla stessa RPC del feed
+    /// (scope `user`). Sono card di sola lettura: like e commenti restano nel tab Social, dove
+    /// c'è il ViewModel che sa riconciliarli — qui replicarli sarebbe un secondo stato da tenere
+    /// allineato in cambio di niente. Il vuoto non si mostra: un profilo che non ha ancora dato
+    /// il consenso al feed (o che non ha attività) non è un profilo rotto.
+    @ViewBuilder
+    private var recentActivitySection: some View {
+        switch viewModel.activityPhase {
+        case .loading:
+            EmptyView()
+        case .failed:
+            VStack(spacing: 6) {
+                Text("profile.activity.loadFailed".localized)
+                    .font(.system(size: 13))
+                    .foregroundColor(.theme.textSecondary)
+                Button("common.retry".localized) {
+                    Task { await viewModel.retryActivity() }
+                }
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(.theme.accentOrange)
+            }
+            .padding(.horizontal, 24)
+        case .loaded(let items):
+            if !items.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("profile.activity.title".localized)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.theme.textSecondary)
+                    ForEach(items) { item in
+                        ActivityCardView(
+                            item: item,
+                            isOwnCard: viewModel.isOwnProfile,
+                            showsInteractions: false,
+                            // L'autore è già questa schermata: il tap sull'intestazione non
+                            // deve riaprire il profilo su cui si è già.
+                            onOpenProfile: { _ in },
+                            onOpenDetail: { openDetail(for: item) })
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 24)
+            }
+        }
+    }
+
+    private func openDetail(for item: ActivityItem) {
+        guard let tmdbId = item.tmdbId, let mediaType = item.mediaType else { return }
+        activityDetailTarget = ProfileActivityDetailTarget(mediaType: mediaType, tmdbId: tmdbId)
     }
 
     /// §9.3, ultimo bullet: le liste pubbliche dell'utente. Tre stati e nessuna finzione:
@@ -294,6 +355,14 @@ struct PublicProfileView: View {
                 .font(.system(size: 36, weight: .semibold))
                 .foregroundColor(.theme.textSecondary)
         }
+    }
+
+    /// Wrapper Identifiable per `navigationDestination(item:)`: la coppia (tipo, id) da sola
+    /// non è una destinazione, e due card sullo stesso titolo sono la stessa destinazione.
+    private struct ProfileActivityDetailTarget: Identifiable, Hashable {
+        let mediaType: String
+        let tmdbId: Int
+        var id: String { "\(mediaType)-\(tmdbId)" }
     }
 
     private func message(icon: String, textKey: String) -> some View {

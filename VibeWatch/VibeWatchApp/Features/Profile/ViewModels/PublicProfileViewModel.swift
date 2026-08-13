@@ -26,8 +26,18 @@ final class PublicProfileViewModel: ObservableObject {
         case failed
     }
 
+    /// M3 — "Attività recente": terza chiamata, terza fase. Stessa regola delle liste: un errore
+    /// qui non deve travestirsi da profilo senza attività, e il consenso mai dato (o il feed
+    /// spento) è un vuoto legittimo, non un guasto — il server risponde semplicemente niente.
+    enum ActivityPhase: Equatable {
+        case loading
+        case loaded([ActivityItem])
+        case failed
+    }
+
     @Published private(set) var phase: Phase = .loading
     @Published private(set) var listsPhase: ListsPhase = .loading
+    @Published private(set) var activityPhase: ActivityPhase = .loading
     @Published private(set) var isTogglingFollow = false
     /// Moderazione M2: vero se ESISTE una riga attiva di `user_blocks` verso questo profilo.
     /// In pratica diventa vero solo bloccando da questa schermata: un profilo già bloccato il
@@ -45,6 +55,7 @@ final class PublicProfileViewModel: ObservableObject {
     private let follow: (String) async throws -> Void
     private let unfollow: (String) async throws -> Void
     private let loadLists: (String) async throws -> [PublicList]
+    private let loadActivity: (UUID) async throws -> [ActivityItem]
     private let followList: (String) async throws -> Void
     private let unfollowList: (String) async throws -> Void
     private let currentUserId: @MainActor () -> String?
@@ -57,6 +68,7 @@ final class PublicProfileViewModel: ObservableObject {
          follow: ((String) async throws -> Void)? = nil,
          unfollow: ((String) async throws -> Void)? = nil,
          loadLists: ((String) async throws -> [PublicList])? = nil,
+         loadActivity: ((UUID) async throws -> [ActivityItem])? = nil,
          followList: ((String) async throws -> Void)? = nil,
          unfollowList: ((String) async throws -> Void)? = nil,
          currentUserId: (@MainActor () -> String?)? = nil,
@@ -70,6 +82,11 @@ final class PublicProfileViewModel: ObservableObject {
         self.loadLists = loadLists ?? { ownerId in
             try await SupabaseService.shared.fetchPublicLists(
                 search: nil, scope: .explore, limit: 50, offset: 0, ownerId: ownerId)
+        }
+        self.loadActivity = loadActivity ?? { userId in
+            let page = try await ActivityFeedRepository().fetchFeed(
+                scope: .user, userId: userId, before: nil, limit: Self.activityPageSize)
+            return await ActivityMovieEnricher.enrich(page)
         }
         self.followList = followList ?? { try await ListManager.shared.followList(listId: $0) }
         self.unfollowList = unfollowList ?? { try await ListManager.shared.unfollowList(listId: $0) }
@@ -109,6 +126,7 @@ final class PublicProfileViewModel: ObservableObject {
                 blockRowId = try? await fetchBlockId(detail.profile.id)
                 isBlocked = blockRowId != nil
                 await loadPublicLists(ownerId: detail.profile.id)
+                await loadRecentActivity(ownerId: detail.profile.id)
             } else {
                 phase = .notFound
             }
@@ -133,6 +151,31 @@ final class PublicProfileViewModel: ObservableObject {
         listsPhase = .loading
         await loadPublicLists(ownerId: detail.profile.id)
     }
+
+    /// M3 — l'attività recente del profilo, dalla stessa RPC del feed con scope `user`. L'id
+    /// arriva come stringa dal profilo e come uuid alla RPC: un id malformato non è un errore
+    /// di rete, è una sezione che non ha niente da mostrare.
+    func loadRecentActivity(ownerId: String) async {
+        guard let userId = UUID(uuidString: ownerId) else {
+            activityPhase = .loaded([])
+            return
+        }
+        do {
+            activityPhase = .loaded(try await loadActivity(userId))
+        } catch {
+            activityPhase = .failed
+        }
+    }
+
+    func retryActivity() async {
+        guard case .loaded(let detail) = phase else { return }
+        activityPhase = .loading
+        await loadRecentActivity(ownerId: detail.profile.id)
+    }
+
+    /// Quante card mostrare sul profilo: un assaggio, non un secondo feed. Chi vuole tutto
+    /// scorre il tab Social — qui la sezione deve restare sotto le liste senza schiacciarle.
+    private static let activityPageSize = 5
 
     /// Segui/smetti su una lista del profilo: ottimistico con rollback, come nel feed
     /// (`PublicListsViewModel.toggleFollow`) — un tap che non cambia niente a schermo

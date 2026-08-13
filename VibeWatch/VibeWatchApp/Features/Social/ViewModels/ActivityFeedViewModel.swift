@@ -126,6 +126,34 @@ final class ActivityFeedViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Rimuovi dal feed (M3)
+
+    /// Toglie una PROPRIA card dal feed. La riga sparisce subito e torna al suo posto se il
+    /// server dice di no: l'inverso (aspettare la risposta con la card ancora lì) farebbe
+    /// sembrare che il gesto non abbia funzionato, e il secondo tap arriverebbe comunque.
+    ///
+    /// L'ordine di prima si conserva con l'indice: reinserire in coda sposterebbe una card
+    /// vecchia in cima al feed, che è un secondo errore sopra al primo.
+    func hide(_ item: ActivityItem) async {
+        guard let index = items.firstIndex(where: { $0.id == item.id }) else { return }
+        let removed = items.remove(at: index)
+
+        do {
+            let hidden = try await repository.hideActivity(id: item.id)
+            if hidden {
+                ToastCenter.shared.show(success: "social.hide.done".localized)
+            } else {
+                // Il server non l'ha nascosta (non è nostra, o non esiste più): rimetterla dov'era
+                // è l'unica risposta onesta — sparire lo stesso fingerebbe un esito mai avvenuto.
+                items.insert(removed, at: min(index, items.count))
+                ToastCenter.shared.show(error: "social.hide.failed".localized)
+            }
+        } catch {
+            items.insert(removed, at: min(index, items.count))
+            ToastCenter.shared.show(error: "social.hide.failed".localized)
+        }
+    }
+
     /// L'aggancio del foglio commenti: alla chiusura (o a ogni post/delete) il conteggio della
     /// card si riallinea senza rifare la pagina del feed.
     func setCommentCount(_ count: Int, for activityId: UUID) {
@@ -165,61 +193,14 @@ final class ActivityFeedViewModel: ObservableObject {
 
     // MARK: - Arricchimento film
 
-    /// Le righe dei film arrivano senza titolo né poster (il server non ha un catalogo film):
-    /// si risolvono qui, prima dalla cache dettagli e poi da TMDB. In batch e a prova di
-    /// fallimento — una card senza poster resta una card, non un errore.
+    /// Le righe dei film arrivano senza titolo né poster: le riempie `ActivityMovieEnricher`,
+    /// che è condiviso con l'attività recente del profilo — un solo posto che sa come si fa.
     private func enrichMovies(_ page: [ActivityItem]) async -> [ActivityItem] {
-        let missingIds = Set(page.compactMap { item -> Int? in
-            guard item.mediaType == "movie", let tmdbId = item.tmdbId,
-                  item.title == nil || item.posterPath == nil else { return nil }
-            return tmdbId
-        })
-        guard !missingIds.isEmpty else { return page }
-
-        var resolved: [Int: (title: String, posterPath: String?)] = [:]
-        await withTaskGroup(of: (Int, (title: String, posterPath: String?)?).self) { group in
-            for movieId in missingIds {
-                group.addTask {
-                    // Cache-first: se il dettaglio è già passato di qui, zero rete.
-                    if let cached = try? await DetailCacheService.shared.getCachedMovieDetails(movieId: movieId) {
-                        return (movieId, (cached.movie.title, cached.movie.posterPath))
-                    }
-                    if let movie = try? await TMDBService.shared.getMovieDetails(id: movieId) {
-                        return (movieId, (movie.title, movie.posterPath))
-                    }
-                    return (movieId, nil)
-                }
-            }
-            for await (movieId, details) in group {
-                if let details { resolved[movieId] = details }
-            }
-        }
-        guard !resolved.isEmpty else { return page }
-
-        return page.map { item in
-            guard item.mediaType == "movie", let tmdbId = item.tmdbId,
-                  let details = resolved[tmdbId],
-                  item.title == nil || item.posterPath == nil else { return item }
-            return item.filling(title: details.title, posterPath: details.posterPath)
-        }
+        await ActivityMovieEnricher.enrich(page)
     }
 }
 
 private extension ActivityItem {
-    /// Copia con titolo/poster risolti: i campi sono `let` di proposito (la riga è del server),
-    /// l'arricchimento riempie solo i buchi che il server dichiara di non saper riempire.
-    func filling(title newTitle: String?, posterPath newPosterPath: String?) -> ActivityItem {
-        ActivityItem(
-            id: id, userId: userId, username: username, displayName: displayName,
-            avatarUrl: avatarUrl, activityType: activityType, mediaType: mediaType,
-            tmdbId: tmdbId, episodeCount: episodeCount, rating: rating, reviewId: reviewId,
-            reviewContent: reviewContent, containsSpoilers: containsSpoilers, listId: listId,
-            listName: listName, listCoverPosterPaths: listCoverPosterPaths,
-            title: title ?? newTitle, posterPath: posterPath ?? newPosterPath,
-            occurredAt: occurredAt, likeCount: likeCount, commentCount: commentCount,
-            likedByMe: likedByMe)
-    }
-
     /// Copia con i contatori sociali aggiornati — l'unica parte della riga che il client ha
     /// il diritto di toccare, e solo per specchiare ciò che il server ha già deciso (o sta
     /// per decidere, nell'attimo ottimistico prima della riconciliazione).
