@@ -919,7 +919,7 @@ struct ProfileView: View {
 
             // L'attribuzione TMDb in fondo, come nel prototipo (ed è una condizione d'uso
             // dell'API, non un vezzo).
-            Text("VibeWatch 2.0 · \("profile.footer.tmdb".localized)")
+            Text("VibeWatch 2.8 · \("profile.footer.tmdb".localized)")
                 .font(.system(size: 11))
                 .foregroundColor(Color(hex: "55565c"))
                 .multilineTextAlignment(.center)
