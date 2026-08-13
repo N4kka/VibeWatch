@@ -5,6 +5,11 @@ enum ActivityFeedScope: String, CaseIterable {
     case following
     case community
     case user
+
+    /// La fotografia offline è per i due feed del tab Social, che sono sempre gli stessi due.
+    /// `user` no: la cache è indicizzata per scope, e una sola riga "user" finirebbe per servire
+    /// l'attività di Anna sul profilo di Bruno — un errore peggiore del vuoto che eviterebbe.
+    var isCacheable: Bool { self != .user }
 }
 
 /// I tipi di card che il server aggrega in `activities`. L'enum è chiuso di proposito: un tipo

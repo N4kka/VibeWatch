@@ -1232,6 +1232,9 @@ struct CustomListDetailView: View {
                     Image(systemName: "globe")
                         .foregroundColor(.theme.accentOrange)
                 }
+                // M3 — la card della lista: la copertina che si posta, non un link a una
+                // schermata che chi la riceve non ha.
+                ListShareButton(source: .init(list: currentList))
                 Button {
                     showEditSheet = true
                 } label: {
@@ -1399,6 +1402,9 @@ struct CreateListView: View {
     @State private var listName = ""
     @State private var listDescription = ""
     @State private var isPublic = false
+    /// Il default si calcola una volta sola: ricalcolarlo a ogni ricomparsa della task
+    /// riscriverebbe una scelta che l'utente ha appena fatto a mano.
+    @State private var hasPreparedVisibility = false
     @State private var showGuidelines = false
     @State private var showProfanityError = false
     @State private var error: AppError?
@@ -1480,6 +1486,16 @@ struct CreateListView: View {
                         Text("lists.public.toggle.footer".localized)
                             .font(.system(size: 12))
                             .foregroundColor(.theme.textSecondary)
+                    }
+                    // M3, nudge liste: chi ha ACCESO il feed trova il toggle già alzato — le sue
+                    // liste sono la parte del profilo che il feed non sa mostrare da sola. Chi ha
+                    // risposto "resto privato" (o non ha ancora risposto) no: pre-alzare un
+                    // interruttore di pubblicazione a chi ha appena detto di no sarebbe il dark
+                    // pattern che l'annuncio del consenso esiste per evitare.
+                    .task {
+                        guard !hasPreparedVisibility else { return }
+                        hasPreparedVisibility = true
+                        isPublic = await SocialFeedConsent.isFeedActive()
                     }
                 }
                 .padding(20)

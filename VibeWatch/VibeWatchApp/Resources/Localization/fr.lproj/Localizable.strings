@@ -1443,3 +1443,29 @@
 "notifications.activityLikedDesc" = "Quand quelqu’un aime votre activité";
 "notifications.activityCommented" = "Commentaires";
 "notifications.activityCommentedDesc" = "Quand quelqu’un commente votre activité";
+
+// MARK: - Social feed M3 (rimuovi dal feed, card singola, attività sul profilo, share card)
+"social.hide.action" = "Retirer du fil";
+"social.hide.confirmTitle" = "Retirer cette activité ?";
+"social.hide.consequences" = "Elle disparaît de ton fil et de celui des autres. C'est irréversible.";
+"social.hide.confirm" = "Retirer";
+"social.hide.done" = "Retirée du fil";
+"social.hide.failed" = "Impossible de retirer l'activité";
+"social.activity.title" = "Activité";
+"social.activity.unavailable" = "Cette activité n'est plus disponible.";
+"social.activity.loadFailed" = "Impossible de charger l'activité.";
+"social.activity.openComments" = "Voir les commentaires";
+"profile.activity.title" = "Activité récente";
+"profile.activity.loadFailed" = "Impossible de charger l'activité récente";
+"shareCard.wrapUp.eyebrow" = "Mon bilan";
+"shareCard.wrapUp.movies" = "Films";
+"shareCard.wrapUp.episodes" = "Épisodes";
+"shareCard.wrapUp.hours" = "Heures";
+"shareCard.wrapUp.days" = "Jours";
+"shareCard.wrapUp.action" = "Partager ton bilan";
+"shareCard.wrapUp.pickPeriod" = "Quelle période ?";
+"shareCard.wrapUp.empty" = "Rien à résumer pour cette période";
+"shareCard.list.eyebrow" = "Liste";
+"shareCard.list.count" = "%d titres";
+"shareCard.list.action" = "Partager la liste";
+"shareCard.list.empty" = "Une liste vide n'a rien à montrer";

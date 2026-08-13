@@ -54,6 +54,16 @@ final class TVShowsTrackingViewModel: ObservableObject {
             .debounce(for: .milliseconds(300), scheduler: DispatchQueue.main)
             .sink { [weak self] _ in Task { await self?.load() } }
             .store(in: &cancellables)
+
+        // Cambio di account: le sezioni in memoria sono ancora quelle di chi è uscito. Il `.task`
+        // della view non rigira su un tab già montato, quindi la ricarica va chiesta qui.
+        NotificationCenter.default.publisher(for: .localUserDataDidReset)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.sections = TrackingSections()
+                Task { await self?.load() }
+            }
+            .store(in: &cancellables)
     }
 
     /// - Parameter measuring: se `true`, cronometra il percorso per §13.6. Lo fa solo la prima

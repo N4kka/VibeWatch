@@ -6,6 +6,8 @@ enum ShareCardContent {
     case ratedTitle(RatedTitleShareCard.Model)
     case showCompleted(ShowCompletedShareCard.Model)
     case profile(ProfileShareCard.Model)
+    case wrapUp(WrapUpShareCard.Model)
+    case list(ListShareCard.Model)
 }
 
 /// Il foglio di condivisione: anteprima dal vivo della card, scelta del taglio (story/post)
@@ -16,6 +18,11 @@ enum ShareCardContent {
 /// `vwModalPresentation` è già applicata qui dentro.
 struct ShareCardSheet: View {
     let content: ShareCardContent
+    /// L'indirizzo del profilo a cui la card rimanda. Viaggia **accanto** all'immagine nella
+    /// share sheet di sistema: dentro un PNG niente è toccabile, ma su WhatsApp o in Messaggi
+    /// chi riceve si ritrova un link vero, e quel link apre l'app sul profilo giusto
+    /// (universal link §9.4). `nil` quando non c'è uno username: meglio nessun link che uno rotto.
+    var link: URL?
     var onClose: () -> Void
 
     @State private var format: ShareCardFormat = .story
@@ -56,7 +63,10 @@ struct ShareCardSheet: View {
         .vwModalPresentation()
         .onAppear { instagramAvailable = InstagramStoriesSharer.canShare }
         .sheet(item: $systemShareImage) { item in
-            ShareSheet(items: [item.image])
+            // Immagine e link insieme: le app che sanno gestire entrambi (Messaggi, WhatsApp,
+            // Mail) mostrano la card E il link cliccabile; quelle che ne prendono uno solo
+            // scelgono l'immagine, che è comunque la parte che si guarda.
+            ShareSheet(items: [item.image] + (link.map { [$0] } ?? []))
         }
     }
 
@@ -89,6 +99,10 @@ struct ShareCardSheet: View {
             ShowCompletedShareCard(model: model, format: format)
         case .profile(let model):
             ProfileShareCard(model: model, format: format)
+        case .wrapUp(let model):
+            WrapUpShareCard(model: model, format: format)
+        case .list(let model):
+            ListShareCard(model: model, format: format)
         }
     }
 
@@ -114,7 +128,7 @@ struct ShareCardSheet: View {
 
     private func shareToInstagram() {
         guard let image = renderedCard() else { return }
-        if InstagramStoriesSharer.share(image: image) {
+        if InstagramStoriesSharer.share(image: image, contentURL: link) {
             UINotificationFeedbackGenerator().notificationOccurred(.success)
             // Il foglio ha finito il suo compito: l'utente sta passando a Instagram e al
             // ritorno non deve ritrovarsi la modale aperta.

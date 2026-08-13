@@ -125,6 +125,11 @@ struct DiaryView: View {
             ToolbarItem(placement: .navigationBarLeading) {
                 BackCircleButton { dismiss() }
             }
+            // M3 — il diario è l'altro posto dove si guarda indietro: il wrap-up del mese esce
+            // anche da qui, con la stessa trafila di Analytics.
+            ToolbarItem(placement: .navigationBarTrailing) {
+                WrapUpShareButton()
+            }
         }
         .task { await viewModel.load() }
     }

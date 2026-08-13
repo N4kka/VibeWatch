@@ -1438,3 +1438,29 @@
 "notifications.activityLikedDesc" = "누군가 내 활동에 좋아요를 누르면";
 "notifications.activityCommented" = "댓글";
 "notifications.activityCommentedDesc" = "누군가 내 활동에 댓글을 남기면";
+
+// MARK: - Social feed M3 (rimuovi dal feed, card singola, attività sul profilo, share card)
+"social.hide.action" = "피드에서 삭제";
+"social.hide.confirmTitle" = "이 활동을 삭제할까요?";
+"social.hide.consequences" = "내 피드와 다른 모든 사람의 피드에서 사라집니다. 되돌릴 수 없습니다.";
+"social.hide.confirm" = "삭제";
+"social.hide.done" = "피드에서 삭제했습니다";
+"social.hide.failed" = "활동을 삭제하지 못했습니다";
+"social.activity.title" = "활동";
+"social.activity.unavailable" = "이 활동은 더 이상 볼 수 없습니다.";
+"social.activity.loadFailed" = "활동을 불러오지 못했습니다.";
+"social.activity.openComments" = "댓글 보기";
+"profile.activity.title" = "최근 활동";
+"profile.activity.loadFailed" = "최근 활동을 불러오지 못했습니다";
+"shareCard.wrapUp.eyebrow" = "내 결산";
+"shareCard.wrapUp.movies" = "영화";
+"shareCard.wrapUp.episodes" = "에피소드";
+"shareCard.wrapUp.hours" = "시간";
+"shareCard.wrapUp.days" = "일";
+"shareCard.wrapUp.action" = "결산 공유하기";
+"shareCard.wrapUp.pickPeriod" = "어느 기간?";
+"shareCard.wrapUp.empty" = "그 기간에는 결산할 내용이 없습니다";
+"shareCard.list.eyebrow" = "리스트";
+"shareCard.list.count" = "%d개 작품";
+"shareCard.list.action" = "리스트 공유하기";
+"shareCard.list.empty" = "빈 리스트는 보여줄 것이 없습니다";

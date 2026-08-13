@@ -1438,3 +1438,29 @@
 "notifications.activityLikedDesc" = "誰かがあなたのアクティビティにいいねしたとき";
 "notifications.activityCommented" = "コメント";
 "notifications.activityCommentedDesc" = "誰かがあなたのアクティビティにコメントしたとき";
+
+// MARK: - Social feed M3 (rimuovi dal feed, card singola, attività sul profilo, share card)
+"social.hide.action" = "フィードから削除";
+"social.hide.confirmTitle" = "このアクティビティを削除しますか？";
+"social.hide.consequences" = "自分のフィードからも、ほかの全員のフィードからも消えます。元には戻せません。";
+"social.hide.confirm" = "削除";
+"social.hide.done" = "フィードから削除しました";
+"social.hide.failed" = "アクティビティを削除できませんでした";
+"social.activity.title" = "アクティビティ";
+"social.activity.unavailable" = "このアクティビティはもう利用できません。";
+"social.activity.loadFailed" = "アクティビティを読み込めませんでした。";
+"social.activity.openComments" = "コメントを見る";
+"profile.activity.title" = "最近のアクティビティ";
+"profile.activity.loadFailed" = "最近のアクティビティを読み込めませんでした";
+"shareCard.wrapUp.eyebrow" = "わたしのまとめ";
+"shareCard.wrapUp.movies" = "映画";
+"shareCard.wrapUp.episodes" = "エピソード";
+"shareCard.wrapUp.hours" = "時間";
+"shareCard.wrapUp.days" = "日";
+"shareCard.wrapUp.action" = "まとめをシェア";
+"shareCard.wrapUp.pickPeriod" = "どの期間？";
+"shareCard.wrapUp.empty" = "その期間にまとめるものがありません";
+"shareCard.list.eyebrow" = "リスト";
+"shareCard.list.count" = "%d 作品";
+"shareCard.list.action" = "リストをシェア";
+"shareCard.list.empty" = "空のリストには見せるものがありません";

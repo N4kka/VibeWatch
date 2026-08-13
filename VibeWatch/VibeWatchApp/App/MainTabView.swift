@@ -253,6 +253,10 @@ struct MainTabView: View {
             withAnimation { selectedTab = 1 }
             Logger.debug("[MainTabView] Navigated to Tracking tab")
         }
+        .onReceive(NotificationCenter.default.publisher(for: .navigateToSocialTab)) { _ in
+            withAnimation { selectedTab = 2 }
+            Logger.debug("[MainTabView] Navigated to Social tab")
+        }
         // `sheet` e non `fullScreenCover`: il primo si chiude con lo swipe verso il basso, il
         // secondo non si chiude affatto se dentro non c'e' un pulsante — ed e' com'era, un
         // pannello senza uscita. Il pulsante c'e' lo stesso, perche' lo swipe non si vede.
@@ -277,6 +281,13 @@ struct MainTabView: View {
                         }
                     }
             }
+        }
+        // Social feed M3: la push di like/commento apre la card di cui parla, non un tab generico.
+        // Stessa forma del profilo qui sopra — sheet con NavigationStack proprio e porta esplicita.
+        .sheet(item: $navigationManager.activityLinkTarget) { target in
+            ActivityCardDetailView(
+                activityId: target.activityId,
+                onClose: { navigationManager.clearActivityLinkTarget() })
         }
         .onReceive(NotificationCenter.default.publisher(for: .presentProPaywall)) { notification in
             let source = (notification.userInfo?["source"] as? String) ?? "unknown"

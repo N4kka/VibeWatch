@@ -297,7 +297,7 @@ struct SignUpView: View {
         errorMessage = nil
         
         do {
-            let user = try await authService.signInWithApple()
+            let user = try await authService.signInWithApple(intent: .signUp)
             appState.currentUser = user
             appState.isAuthenticated = true
             appState.syncAfterSignIn()
@@ -316,7 +316,7 @@ struct SignUpView: View {
         errorMessage = nil
         
         do {
-            let user = try await authService.signInWithGoogle()
+            let user = try await authService.signInWithGoogle(intent: .signUp)
             appState.currentUser = user
             appState.isAuthenticated = true
             appState.syncAfterSignIn()

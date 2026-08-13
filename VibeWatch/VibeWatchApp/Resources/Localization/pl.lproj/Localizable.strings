@@ -1444,3 +1444,29 @@
 "notifications.activityLikedDesc" = "Gdy ktoś polubi Twoją aktywność";
 "notifications.activityCommented" = "Komentarze";
 "notifications.activityCommentedDesc" = "Gdy ktoś skomentuje Twoją aktywność";
+
+// MARK: - Social feed M3 (rimuovi dal feed, card singola, attività sul profilo, share card)
+"social.hide.action" = "Usuń z kanału";
+"social.hide.confirmTitle" = "Usunąć tę aktywność?";
+"social.hide.consequences" = "Zniknie z Twojego kanału i z kanałów wszystkich innych. Tego nie można cofnąć.";
+"social.hide.confirm" = "Usuń";
+"social.hide.done" = "Usunięto z kanału";
+"social.hide.failed" = "Nie udało się usunąć aktywności";
+"social.activity.title" = "Aktywność";
+"social.activity.unavailable" = "Ta aktywność nie jest już dostępna.";
+"social.activity.loadFailed" = "Nie udało się wczytać aktywności.";
+"social.activity.openComments" = "Zobacz komentarze";
+"profile.activity.title" = "Ostatnia aktywność";
+"profile.activity.loadFailed" = "Nie udało się wczytać ostatniej aktywności";
+"shareCard.wrapUp.eyebrow" = "Moje podsumowanie";
+"shareCard.wrapUp.movies" = "Filmy";
+"shareCard.wrapUp.episodes" = "Odcinki";
+"shareCard.wrapUp.hours" = "Godziny";
+"shareCard.wrapUp.days" = "Dni";
+"shareCard.wrapUp.action" = "Udostępnij podsumowanie";
+"shareCard.wrapUp.pickPeriod" = "Który okres?";
+"shareCard.wrapUp.empty" = "Nie ma czego podsumować w tym okresie";
+"shareCard.list.eyebrow" = "Lista";
+"shareCard.list.count" = "%d tytułów";
+"shareCard.list.action" = "Udostępnij listę";
+"shareCard.list.empty" = "Pusta lista nie ma czego pokazać";

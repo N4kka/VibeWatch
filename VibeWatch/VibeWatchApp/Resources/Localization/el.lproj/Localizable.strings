@@ -1444,3 +1444,29 @@
 "notifications.activityLikedDesc" = "Όταν σε κάποιον αρέσει η δραστηριότητά σου";
 "notifications.activityCommented" = "Σχόλια";
 "notifications.activityCommentedDesc" = "Όταν κάποιος σχολιάζει τη δραστηριότητά σου";
+
+// MARK: - Social feed M3 (rimuovi dal feed, card singola, attività sul profilo, share card)
+"social.hide.action" = "Αφαίρεση από τη ροή";
+"social.hide.confirmTitle" = "Να αφαιρεθεί αυτή η δραστηριότητα;";
+"social.hide.consequences" = "Εξαφανίζεται από τη ροή σου και από τη ροή όλων. Δεν αναιρείται.";
+"social.hide.confirm" = "Αφαίρεση";
+"social.hide.done" = "Αφαιρέθηκε από τη ροή";
+"social.hide.failed" = "Δεν ήταν δυνατή η αφαίρεση της δραστηριότητας";
+"social.activity.title" = "Δραστηριότητα";
+"social.activity.unavailable" = "Αυτή η δραστηριότητα δεν είναι πλέον διαθέσιμη.";
+"social.activity.loadFailed" = "Δεν ήταν δυνατή η φόρτωση της δραστηριότητας.";
+"social.activity.openComments" = "Δες τα σχόλια";
+"profile.activity.title" = "Πρόσφατη δραστηριότητα";
+"profile.activity.loadFailed" = "Δεν ήταν δυνατή η φόρτωση της πρόσφατης δραστηριότητας";
+"shareCard.wrapUp.eyebrow" = "Η ανασκόπησή μου";
+"shareCard.wrapUp.movies" = "Ταινίες";
+"shareCard.wrapUp.episodes" = "Επεισόδια";
+"shareCard.wrapUp.hours" = "Ώρες";
+"shareCard.wrapUp.days" = "Ημέρες";
+"shareCard.wrapUp.action" = "Μοιράσου την ανασκόπηση";
+"shareCard.wrapUp.pickPeriod" = "Ποια περίοδος;";
+"shareCard.wrapUp.empty" = "Δεν υπάρχει τίποτα για ανασκόπηση σε αυτή την περίοδο";
+"shareCard.list.eyebrow" = "Λίστα";
+"shareCard.list.count" = "%d τίτλοι";
+"shareCard.list.action" = "Μοιράσου τη λίστα";
+"shareCard.list.empty" = "Μια άδεια λίστα δεν έχει τίποτα να δείξει";

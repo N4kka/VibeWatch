@@ -52,6 +52,11 @@ struct AnalyticsDashboardView: View {
             ToolbarItem(placement: .navigationBarLeading) {
                 BackCircleButton { dismiss() }
             }
+            // M3 — il wrap-up del mese o dell'anno esce da qui: è la pagina dove i numeri
+            // vivono, e condividerli è il gesto naturale subito dopo averli guardati.
+            ToolbarItem(placement: .navigationBarTrailing) {
+                WrapUpShareButton()
+            }
         }
         .sheet(isPresented: $showLevelProgress) {
             LevelProgressView(gamificationService: gamificationService)

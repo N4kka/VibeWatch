@@ -826,6 +826,63 @@ final class ListManagerSyncCharacterizationTests: XCTestCase {
         XCTAssertTrue(remote.createListCalls.isEmpty)
         XCTAssertTrue(sync.queued.filter { $0.table == "lists" }.isEmpty)
     }
+
+    // MARK: - Adozione dei dati anonimi (utente anonimo che si registra)
+
+    /// Le liste CORE create da anonimo non avevano nessuna strada per arrivare sul server: le
+    /// custom venivano ricostruite, watchlist e visti no. Restavano in SQLite intestate al
+    /// deviceId, invisibili a ogni lettura successiva.
+    func test_adozione_caricaGliItemDelleListeCore() async throws {
+        let visto = MediaListItem(mediaId: 603, mediaType: .movie, title: "Matrix", posterPath: nil)
+        let daVedere = MediaListItem(mediaId: 550, mediaType: .movie, title: "Fight Club", posterPath: nil)
+        manager.lists = [
+            MediaList(id: "wl-anon", name: ListType.watchlist.rawValue, type: .watchlist, items: [daVedere]),
+            MediaList(id: "seen-anon", name: ListType.seen.rawValue, type: .seen, items: [visto])
+        ]
+        remote.remoteLists = []
+
+        await manager.adoptAnonymousLocalData(newOwnerId: "user-1")
+        await manager.syncListsForAuthenticatedUser()
+
+        let itemInserts = sync.queued.filter { $0.table == "list_items" && $0.operationType == "INSERT" }
+        XCTAssertEqual(itemInserts.count, 2, "gli item delle liste core adottate devono essere accodati")
+        XCTAssertTrue(itemInserts.allSatisfy { $0.payload["user_id"] as? String == "user-1" },
+                      "devono viaggiare col nuovo proprietario: apply_mutations scarta ogni user_id diverso da auth.uid()")
+        XCTAssertEqual(Set(itemInserts.compactMap { $0.payload["media_id"] as? Int }), [603, 550])
+    }
+
+    /// L'adozione vale una volta sola: a ogni login successivo watchlist e visti viaggiano
+    /// sull'outbox come qualsiasi altra modifica, e riaccodarli sarebbe lavoro doppio.
+    func test_senzaAdozione_gliItemCoreNonVengonoRiaccodati() async throws {
+        let visto = MediaListItem(mediaId: 603, mediaType: .movie, title: "Matrix", posterPath: nil)
+        manager.lists = [
+            MediaList(id: "seen-local", name: ListType.seen.rawValue, type: .seen, items: [visto])
+        ]
+        remote.remoteLists = []
+
+        await manager.syncListsForAuthenticatedUser()
+
+        XCTAssertTrue(sync.queued.filter { $0.table == "list_items" }.isEmpty,
+                      "senza adozione in corso il login non ri-carica gli item delle liste core")
+    }
+
+    /// Seconda sincronizzazione dopo l'adozione: il flag è stato consumato, niente doppioni.
+    func test_adozione_nonSiRipeteAlSecondoSync() async throws {
+        let visto = MediaListItem(mediaId: 603, mediaType: .movie, title: "Matrix", posterPath: nil)
+        manager.lists = [
+            MediaList(id: "seen-anon", name: ListType.seen.rawValue, type: .seen, items: [visto])
+        ]
+        remote.remoteLists = []
+
+        await manager.adoptAnonymousLocalData(newOwnerId: "user-1")
+        await manager.syncListsForAuthenticatedUser()
+        let dopoIlPrimo = sync.queued.filter { $0.table == "list_items" }.count
+
+        await manager.syncListsForAuthenticatedUser()
+
+        XCTAssertEqual(sync.queued.filter { $0.table == "list_items" }.count, dopoIlPrimo,
+                       "il secondo sync non deve riaccodare gli stessi item")
+    }
 }
 
 // MARK: - TMDBRequestBudget (Fase 2 task #7 — 4.1 budget richieste TMDB)

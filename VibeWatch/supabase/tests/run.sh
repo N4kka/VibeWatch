@@ -92,6 +92,7 @@ for file in "$MIGRATIONS"/*.sql; do
     20260813110000_content_reports_and_block_user.sql) ;;
     20260813120000_get_activity_feed_counts.sql) ;;
     20260813130000_social_interaction_notifications.sql) ;;
+    20260814100000_activity_hide_and_lookup.sql) ;;
     *) continue ;;
   esac
   [ "$pass" = 1 ] && echo "   $(basename "$file")"

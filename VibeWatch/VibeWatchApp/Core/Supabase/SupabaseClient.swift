@@ -1349,6 +1349,34 @@ extension SupabaseService {
         _ = try await callRPC(function: "set_activity_feed_visibility",
                               payload: ["p_enabled": enabled])
     }
+
+    /// M3 — una card sola, per id: la porta del deep link dalle notifiche social. È la stessa
+    /// RPC del feed (stessi cancelli: profilo pubblico, consenso, blocchi, velo sui report), non
+    /// una seconda strada più permissiva. `nil` quando la card non è (più) visibile al chiamante.
+    func fetchActivity(id: UUID) async throws -> ActivityItem? {
+        guard let client = client else { throw SupabaseError.notConfigured }
+        let rows: [ActivityItem] = try await client
+            .rpc("get_activity_feed", params: ActivityFeedParams(
+                p_scope: ActivityFeedScope.community.rawValue,
+                p_user: nil,
+                p_before: nil,
+                p_before_id: nil,
+                p_limit: 1,
+                p_activity_id: id.uuidString.lowercased()
+            ))
+            .execute()
+            .value
+        return rows.first
+    }
+
+    /// M3 — "rimuovi dal feed". Il server risponde `false` sia per una card altrui sia per una
+    /// che non esiste: la distinzione la conosce solo il proprietario, ed è giusto così.
+    @discardableResult
+    func hideActivity(id: UUID) async throws -> Bool {
+        let response = try await callRPC(function: "hide_activity",
+                                         payload: ["p_activity_id": id.uuidString.lowercased()])
+        return (try? JSONDecoder().decode(Bool.self, from: response)) ?? false
+    }
 }
 
 // MARK: - Interazioni del feed (Social feed M2)
@@ -1519,6 +1547,9 @@ private struct ActivityFeedParams: Encodable {
     let p_before: String?
     let p_before_id: String?
     let p_limit: Int
+    /// M3 — la card singola del deep link: valorizzato, salta scope e cursore (ma non i
+    /// cancelli). Nil sparisce dal JSON (come p_user e il cursore) e la RPC usa il suo default.
+    var p_activity_id: String? = nil
 }
 
 private struct PublicListsParams: Encodable {

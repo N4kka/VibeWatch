@@ -48,6 +48,7 @@ class AIRecommendationViewModel: ObservableObject {
     private let contextBuilder: AIContextBuilder
     private let conversationMemory: ConversationMemoryManager
     private var timeChangeObserver: NSObjectProtocol?
+    private var localDataResetObserver: NSObjectProtocol?
     private let userDefaults = UserDefaults.standard
 
     private static let dayKeyFormatter: DateFormatter = {
@@ -90,11 +91,31 @@ class AIRecommendationViewModel: ObservableObject {
             // Sync with AITokenManager
             await syncWithTokenManager()
         }
+
+        // Il pannello AI vive quanto l'app: senza questo, la conversazione dell'account precedente
+        // resterebbe leggibile — e riutilizzata come contesto — dopo un cambio utente.
+        localDataResetObserver = NotificationCenter.default.addObserver(
+            forName: .localUserDataDidReset,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.messages = []
+                self.prompt = ""
+                self.activeFilters = []
+                self.error = nil
+                await self.conversationMemory.resetSession()
+            }
+        }
     }
 
     deinit {
         if let timeChangeObserver {
             NotificationCenter.default.removeObserver(timeChangeObserver)
+        }
+        if let localDataResetObserver {
+            NotificationCenter.default.removeObserver(localDataResetObserver)
         }
     }
 

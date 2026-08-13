@@ -189,7 +189,7 @@ struct StarRatingSection: View {
             )
         }
         .sheet(item: $shareItem) { item in
-            ShareCardSheet(content: item.content, onClose: { shareItem = nil })
+            ShareCardSheet(content: item.content, link: item.link, onClose: { shareItem = nil })
         }
     }
 
@@ -308,17 +308,20 @@ struct StarRatingSection: View {
         isPreparingShare = true
         Task {
             let poster = await ShareCardRenderer.posterImage(path: posterPath)
-            let username = await ShareCardIdentity.username()
+            let identity = await ShareCardIdentity.current()
             // Una review segnata spoiler non finisce su una card pubblica: la card resta
             // voto+poster, che non rovinano niente a nessuno.
             let quote = (review?.containsSpoilers == false) ? review?.content : nil
-            shareItem = RatedTitleShareItem(content: .ratedTitle(.init(
-                title: title,
-                rating: viewModel.rating,
-                review: quote,
-                username: username,
-                poster: poster
-            )))
+            shareItem = RatedTitleShareItem(
+                content: .ratedTitle(.init(
+                    title: title,
+                    rating: viewModel.rating,
+                    review: quote,
+                    username: identity.handle,
+                    profileLink: identity.drawnLink,
+                    poster: poster
+                )),
+                link: identity.profileURL)
             isPreparingShare = false
         }
     }
@@ -393,6 +396,8 @@ struct StarRatingSection: View {
     fileprivate struct RatedTitleShareItem: Identifiable {
         let id = UUID()
         let content: ShareCardContent
+        /// L'indirizzo del profilo che accompagna la card nella share sheet.
+        let link: URL?
     }
 
     private func starView(_ star: Int) -> some View {
