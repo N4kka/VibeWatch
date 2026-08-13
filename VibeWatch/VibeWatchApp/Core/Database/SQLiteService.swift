@@ -108,6 +108,14 @@ enum SQLiteTable: String, CaseIterable {
     case userReviews = "user_reviews"
     case activityFeedCache = "activity_feed_cache"
 
+    // Social feed M2: le interazioni. Scrittura RPC-only verso il server (apply_mutations non ha
+    // rami per queste tabelle: NIENTE sync_outbox); in locale sono lo specchio ottimistico più
+    // la coda di replay delle sole operazioni idempotenti (mai i toggle).
+    case activityLikes = "activity_likes"
+    case activityComments = "activity_comments"
+    case activityCommentLikes = "activity_comment_likes"
+    case activityPendingOps = "activity_pending_ops"
+
     /// All valid table names as a Set for O(1) lookup
     static let validTableNames: Set<String> = Set(SQLiteTable.allCases.map(\.rawValue))
 

@@ -8,7 +8,7 @@ extension SQLiteService {
     /// Run personalization migrations (Phase 1)
     func runPersonalizationMigrations() {
         let currentVersion = getPersonalizationMigrationVersion()
-        let latestVersion = 15
+        let latestVersion = 16
 
         guard currentVersion < latestVersion else {
             Logger.info("[SQLite] Personalization migrations already applied (version \(currentVersion))")
@@ -68,6 +68,9 @@ extension SQLiteService {
             }
             if currentVersion < 15 {
                 migration15_AddFeedConsentToProfiles()
+            }
+            if currentVersion < 16 {
+                migration16_AddActivityInteractionTables()
             }
 
             // Update migration version
@@ -357,7 +360,95 @@ extension SQLiteService {
         Logger.info("[SQLite] Migration 15 complete")
     }
 
+    /// Social feed M2 — le interazioni del feed (like e commenti) e la loro coda di replay.
+    ///
+    /// Queste tabelle NON passano da `sync_outbox`: `apply_mutations` non ha un ramo per loro e
+    /// una scrittura accodata lì morirebbe in silenzio in `sync_rejected_mutations`. Il percorso
+    /// di scrittura è RPC-only (`toggle_activity_like` & co.), e questi sono specchi:
+    ///
+    /// - `activity_likes` / `activity_comment_likes`: il MIO like, una riga per bersaglio. L'id
+    ///   lo genera il client e resta stabile per (bersaglio, utente): il server rianima la
+    ///   stessa riga al re-like, quindi l'id va ricordato, non rigenerato.
+    /// - `activity_comments`: la fotografia di `get_activity_comments` (autore denormalizzato:
+    ///   i profili degli altri non abitano lo specchio `profiles`), più i commenti composti
+    ///   offline in attesa di replay (`synced_at` NULL).
+    /// - `activity_pending_ops`: la coda di replay, SOLO per le operazioni idempotenti
+    ///   (add/delete commento, che viaggiano con id client). I toggle NON entrano mai qui:
+    ///   un toggle ritentato alla cieca inverte l'intento invece di confermarlo — al fallimento
+    ///   si torna indietro, non si riprova.
+    private func migration16_AddActivityInteractionTables() {
+        Logger.info("[SQLite] Migration 16: Adding activity interaction tables")
+
+        executeScript(createActivityLikesTable())
+        executeScript(createActivityCommentsMirrorTable())
+        executeScript(createActivityCommentLikesTable())
+        executeScript(createActivityPendingOpsTable())
+
+        Logger.info("[SQLite] Migration 16 complete")
+    }
+
     // MARK: - Table Creation Methods
+
+    private func createActivityLikesTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS activity_likes (
+            id TEXT PRIMARY KEY,
+            activity_id TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            created_at TEXT,
+            synced_at TEXT,
+            UNIQUE(activity_id, user_id)
+        );
+        """
+    }
+
+    private func createActivityCommentsMirrorTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS activity_comments (
+            id TEXT PRIMARY KEY,
+            activity_id TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            parent_id TEXT,
+            content TEXT,
+            username TEXT,
+            display_name TEXT,
+            avatar_url TEXT,
+            like_count INTEGER NOT NULL DEFAULT 0,
+            liked_by_me INTEGER NOT NULL DEFAULT 0,
+            is_deleted INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            synced_at TEXT
+        );
+        -- La lettura calda: il filo di un'attività in ordine cronologico ascendente.
+        CREATE INDEX IF NOT EXISTS idx_activity_comments_activity
+            ON activity_comments(activity_id, created_at);
+        """
+    }
+
+    private func createActivityCommentLikesTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS activity_comment_likes (
+            id TEXT PRIMARY KEY,
+            comment_id TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            created_at TEXT,
+            synced_at TEXT,
+            UNIQUE(comment_id, user_id)
+        );
+        """
+    }
+
+    private func createActivityPendingOpsTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS activity_pending_ops (
+            op_id TEXT PRIMARY KEY,
+            op_type TEXT NOT NULL,
+            payload_json TEXT NOT NULL,
+            attempts INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL
+        );
+        """
+    }
 
     private func createUserReviewsTable() -> String {
         """

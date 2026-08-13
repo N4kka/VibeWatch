@@ -13,6 +13,15 @@ struct PopularFeedTitle: Identifiable, Equatable {
     var id: String { "\(mediaType)-\(tmdbId)" }
 }
 
+/// La sola porta del ViewModel verso le interazioni: il toggle del like. Protocollo minimo
+/// (come `ActivityFeedProviding`) per testare l'ottimismo e il rollback senza rete né SQLite.
+@MainActor
+protocol ActivityLikeToggling {
+    func toggleActivityLike(activityId: UUID) async throws -> (liked: Bool, likeCount: Int)
+}
+
+extension ActivityInteractionService: ActivityLikeToggling {}
+
 /// ViewModel del feed attività, sulla falsariga di `PublicListsViewModel`: stati onesti
 /// (caricamento / errore / vuoto / righe), paginazione dal repository, niente placeholder finti.
 /// La differenza è il cursore: keyset (occurred_at, activity_id) dell'ultima riga mostrata,
@@ -26,8 +35,13 @@ final class ActivityFeedViewModel: ObservableObject {
     let scope: ActivityFeedScope
 
     private let repository: ActivityFeedProviding
+    private let interactions: ActivityLikeToggling
     private let pageSize = 20
     private var canLoadMore = true
+
+    /// Un toggle per card alla volta: il secondo tap durante il volo del primo non parte —
+    /// due toggle in corsa si annullerebbero a vicenda sul server.
+    private var likesInFlight: Set<UUID> = []
 
     /// Iniettabile nei test come il repository: id dell'utente in sessione, per decidere
     /// quali card sono "mie" (share) senza interrogare la rete.
@@ -35,9 +49,11 @@ final class ActivityFeedViewModel: ObservableObject {
 
     init(scope: ActivityFeedScope,
          repository: ActivityFeedProviding? = nil,
+         interactions: ActivityLikeToggling? = nil,
          currentUserId: @escaping @MainActor () -> String? = { SupabaseService.shared.currentUser?.id }) {
         self.scope = scope
         self.repository = repository ?? ActivityFeedRepository()
+        self.interactions = interactions ?? ActivityInteractionService.shared
         self.currentUserId = currentUserId
     }
 
@@ -74,6 +90,47 @@ final class ActivityFeedViewModel: ObservableObject {
             canLoadMore = next.count == pageSize
         } catch { /* feed parziale: silenzioso, retry allo scroll successivo */ }
         isLoading = false
+    }
+
+    // MARK: - Interazioni (M2)
+
+    /// Toggle del like con ottimismo e riconciliazione: la card cambia SUBITO, poi la risposta
+    /// del server — (liked, like_count) veri — sovrascrive la stima. Al fallimento si torna
+    /// alla riga di prima e lo si dice con un toast: MAI un retry cieco, un toggle ritentato
+    /// alla cieca inverte l'intento invece di confermarlo.
+    func toggleLike(for item: ActivityItem) async {
+        guard !likesInFlight.contains(item.id),
+              let index = items.firstIndex(where: { $0.id == item.id }) else { return }
+        likesInFlight.insert(item.id)
+        defer { likesInFlight.remove(item.id) }
+
+        let original = items[index]
+        items[index] = original.updating(
+            likeCount: max(0, original.likeCount + (original.likedByMe ? -1 : 1)),
+            likedByMe: !original.likedByMe)
+
+        do {
+            let result = try await interactions.toggleActivityLike(activityId: item.id)
+            if let idx = items.firstIndex(where: { $0.id == item.id }) {
+                items[idx] = items[idx].updating(
+                    likeCount: result.likeCount, likedByMe: result.liked)
+            }
+        } catch {
+            if let idx = items.firstIndex(where: { $0.id == item.id }) {
+                items[idx] = original
+            }
+            ToastCenter.shared.show(
+                error: ActivityInteractionService.isContentUnavailable(error)
+                    ? "social.comments.unavailable".localized
+                    : "social.error.likeFailed".localized)
+        }
+    }
+
+    /// L'aggancio del foglio commenti: alla chiusura (o a ogni post/delete) il conteggio della
+    /// card si riallinea senza rifare la pagina del feed.
+    func setCommentCount(_ count: Int, for activityId: UUID) {
+        guard let index = items.firstIndex(where: { $0.id == activityId }) else { return }
+        items[index] = items[index].updating(commentCount: max(0, count))
     }
 
     // MARK: - Popolari questa settimana (solo community)
@@ -161,5 +218,24 @@ private extension ActivityItem {
             title: title ?? newTitle, posterPath: posterPath ?? newPosterPath,
             occurredAt: occurredAt, likeCount: likeCount, commentCount: commentCount,
             likedByMe: likedByMe)
+    }
+
+    /// Copia con i contatori sociali aggiornati — l'unica parte della riga che il client ha
+    /// il diritto di toccare, e solo per specchiare ciò che il server ha già deciso (o sta
+    /// per decidere, nell'attimo ottimistico prima della riconciliazione).
+    func updating(likeCount newLikeCount: Int? = nil,
+                  likedByMe newLikedByMe: Bool? = nil,
+                  commentCount newCommentCount: Int? = nil) -> ActivityItem {
+        ActivityItem(
+            id: id, userId: userId, username: username, displayName: displayName,
+            avatarUrl: avatarUrl, activityType: activityType, mediaType: mediaType,
+            tmdbId: tmdbId, episodeCount: episodeCount, rating: rating, reviewId: reviewId,
+            reviewContent: reviewContent, containsSpoilers: containsSpoilers, listId: listId,
+            listName: listName, listCoverPosterPaths: listCoverPosterPaths,
+            title: title, posterPath: posterPath,
+            occurredAt: occurredAt,
+            likeCount: newLikeCount ?? likeCount,
+            commentCount: newCommentCount ?? commentCount,
+            likedByMe: newLikedByMe ?? likedByMe)
     }
 }
