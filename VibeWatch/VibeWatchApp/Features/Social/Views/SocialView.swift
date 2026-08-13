@@ -96,6 +96,7 @@ struct SocialView: View {
             .interactiveDismissDisabled()
         }
         .task(id: appState.isAuthenticated) {
+            AnalyticsService.shared.logScreenView(screenName: "Social")
             await presentAnnouncementIfNeeded()
         }
     }

@@ -36,6 +36,17 @@ struct ShareCardSheet: View {
     /// vincolo comune il foglio salterebbe di altezza a ogni cambio di formato.
     private let previewHeight: CGFloat = 300
 
+    /// Il tipo di card, nel vocabolario degli eventi share_started/share_completed.
+    private var analyticsContentType: String {
+        switch content {
+        case .ratedTitle: return "media_card"
+        case .showCompleted: return "show_completed"
+        case .profile: return "profile"
+        case .wrapUp: return "wrap_up"
+        case .list: return "list"
+        }
+    }
+
     var body: some View {
         VWModalSheet(
             title: "shareCard.sheet.title".localized,
@@ -61,7 +72,10 @@ struct ShareCardSheet: View {
             }
         }
         .vwModalPresentation()
-        .onAppear { instagramAvailable = InstagramStoriesSharer.canShare }
+        .onAppear {
+            instagramAvailable = InstagramStoriesSharer.canShare
+            AnalyticsService.shared.track(.shareStarted(contentType: analyticsContentType, mediaType: nil))
+        }
         .sheet(item: $systemShareImage) { item in
             // Immagine e link insieme: le app che sanno gestire entrambi (Messaggi, WhatsApp,
             // Mail) mostrano la card E il link cliccabile; quelle che ne prendono uno solo
@@ -129,6 +143,8 @@ struct ShareCardSheet: View {
     private func shareToInstagram() {
         guard let image = renderedCard() else { return }
         if InstagramStoriesSharer.share(image: image, contentURL: link) {
+            AnalyticsService.shared.track(.shareCompleted(
+                contentType: analyticsContentType, destination: "instagram_stories", success: true))
             UINotificationFeedbackGenerator().notificationOccurred(.success)
             // Il foglio ha finito il suo compito: l'utente sta passando a Instagram e al
             // ritorno non deve ritrovarsi la modale aperta.
@@ -141,6 +157,9 @@ struct ShareCardSheet: View {
 
     private func presentSystemShare() {
         guard let image = renderedCard() else { return }
+        // "Consegnata alla share sheet di sistema": l'esito dentro la sheet non è osservabile.
+        AnalyticsService.shared.track(.shareCompleted(
+            contentType: analyticsContentType, destination: "system_sheet", success: true))
         systemShareImage = SystemShareImage(image: image)
     }
 }

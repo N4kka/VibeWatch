@@ -115,6 +115,8 @@ final class ActivityFeedViewModel: ObservableObject {
                 items[idx] = items[idx].updating(
                     likeCount: result.likeCount, likedByMe: result.liked)
             }
+            AnalyticsService.shared.track(.activityLiked(
+                activityType: item.activityType.rawValue, added: result.liked))
         } catch {
             if let idx = items.firstIndex(where: { $0.id == item.id }) {
                 items[idx] = original
@@ -141,6 +143,7 @@ final class ActivityFeedViewModel: ObservableObject {
         do {
             let hidden = try await repository.hideActivity(id: item.id)
             if hidden {
+                AnalyticsService.shared.track(.activityHidden(activityType: item.activityType.rawValue))
                 ToastCenter.shared.show(success: "social.hide.done".localized)
             } else {
                 // Il server non l'ha nascosta (non è nostra, o non esiste più): rimetterla dov'era

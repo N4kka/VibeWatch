@@ -182,7 +182,8 @@ final class ClipQuotaService: ObservableObject {
 
             // Analytics
             Task { @MainActor in
-                AnalyticsService.shared.logEvent("subscription_expired", parameters: [:])
+                AnalyticsService.shared.track(.subscriptionExpired)
+                AnalyticsService.shared.setPersonProperties(["subscription_tier": "free"])
             }
 
             // Sync to database
@@ -195,7 +196,8 @@ final class ClipQuotaService: ObservableObject {
 
             // Analytics
             Task { @MainActor in
-                AnalyticsService.shared.logEvent("subscription_activated", parameters: [:])
+                AnalyticsService.shared.track(.subscriptionActivated)
+                AnalyticsService.shared.setPersonProperties(["subscription_tier": "pro"])
             }
 
             // Sync to database

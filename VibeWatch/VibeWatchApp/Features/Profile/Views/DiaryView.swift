@@ -131,7 +131,10 @@ struct DiaryView: View {
                 WrapUpShareButton()
             }
         }
-        .task { await viewModel.load() }
+        .task {
+            AnalyticsService.shared.logScreenView(screenName: "Diary")
+            await viewModel.load()
+        }
     }
 
     @ViewBuilder

@@ -9,7 +9,7 @@ final class ActorDetailViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var error: AppError?
 
-    private let personId: Int
+    let personId: Int
     private let tmdbService: any TMDBServiceProtocol
 
     init(personId: Int, tmdbService: any TMDBServiceProtocol = TMDBService.shared) {

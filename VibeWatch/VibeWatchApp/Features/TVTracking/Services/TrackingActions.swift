@@ -151,6 +151,8 @@ final class TrackingActions {
         }
 
         try await queueWatchEvent(userId: userId, showId: row.showId, season: season, episode: episode)
+        AnalyticsService.shared.track(.episodeMarkedWatched(
+            showId: row.showId, seasonNumber: season, episodeNumber: episode, method: "single"))
 
         // Il ponte verso la lista episodi: SeasonDetailView legge EpisodeSeenManager per i
         // tap fatti lì dentro, e senza questa riga un "visto" dalle card non vi compariva
@@ -190,10 +192,13 @@ final class TrackingActions {
             try? await seenBackend.warmCatalog(showIds: [showId])
         }
 
+        let markMethod = episodes.count == 1 ? "single" : "season_bulk"
         for ep in episodes {
             try await queueWatchEvent(userId: userId, showId: showId, season: ep.season, episode: ep.episode)
             EpisodeSeenManager.shared.markEpisodeSeen(
                 showId: showId, seasonNumber: ep.season, episodeNumber: ep.episode)
+            AnalyticsService.shared.track(.episodeMarkedWatched(
+                showId: showId, seasonNumber: ep.season, episodeNumber: ep.episode, method: markMethod))
         }
 
         await syncEngine.flushAndPullTrackingState()
@@ -227,6 +232,8 @@ final class TrackingActions {
             EpisodeSeenManager.shared.unmarkEpisode(
                 showId: showId, seasonNumber: ep.season, episodeNumber: ep.episode,
                 allEpisodeNumbersInSeason: allEpisodeNumbersInSeason)
+            AnalyticsService.shared.track(.episodeMarkedUnwatched(
+                showId: showId, seasonNumber: ep.season, episodeNumber: ep.episode))
         }
 
         await syncEngine.flushAndPullTrackingState()
@@ -321,6 +328,7 @@ final class TrackingActions {
     func addToWatchlist(showId: Int) async throws {
         try? await seenBackend.warmCatalog(showIds: [showId])
         try await setStatus(showId: showId, to: "active")
+        AnalyticsService.shared.track(.showTrackingStarted(showId: showId))
     }
 
     /// Ripara le righe di tracking nate senza catalogo (una serie in "Da iniziare" senza poster
@@ -394,6 +402,7 @@ final class TrackingActions {
         // l'unico stato in cui i contatori significano qualcosa. `setStatus` porta con sé
         // push, pull e annuncio, quindi da qui la schermata si riallinea da sé.
         try await setStatus(showId: showId, to: "active")
+        AnalyticsService.shared.track(.showMarkedWatched(showId: showId, episodesCount: outcome.eventsWritten))
     }
 
     /// Il contraltare: lapide su tutti gli eventi della serie + `dropped`, in un'unica RPC —

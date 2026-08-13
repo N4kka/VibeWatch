@@ -490,7 +490,10 @@ struct PublicListDetailView: View {
             Button("lists.public.block".localized, role: .destructive) { Task { await blockOwner() } }
             Button("common.cancel".localized, role: .cancel) {}
         }
-        .task { await loadItems() }
+        .task {
+            AnalyticsService.shared.track(.communityListOpened(listId: list.id))
+            await loadItems()
+        }
         .onChange(of: filters) { _, _ in itemsLimit = 100 }
         .onChange(of: searchText) { _, _ in itemsLimit = 100 }
     }

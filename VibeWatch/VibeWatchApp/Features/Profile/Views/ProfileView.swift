@@ -370,6 +370,7 @@ struct ProfileView: View {
             }
         }
         .onAppear {
+            AnalyticsService.shared.logScreenView(screenName: "Profile")
             if appState.shouldShowSignIn {
                 Logger.info("[ProfileView] Auto-opening Sign In sheet")
                 showSignIn = true

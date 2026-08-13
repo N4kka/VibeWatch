@@ -7,14 +7,13 @@
 	<key>NSPrivacyTracking</key>
 	<true/>
 
-	<!-- Tracking domains the app itself connects to. Firebase and Google Mobile Ads ship their
-	     own privacy manifests declaring their domains, and Apple aggregates across all manifests,
-	     so those are not duplicated here. PostHog is a hand-rolled client (no SDK, no manifest of
-	     its own), so its ingestion host must be declared here. -->
+	<!-- Tracking domains the app itself connects to. Google Mobile Ads ships its own privacy
+	     manifest declaring its domains, and Apple aggregates across all manifests, so those are
+	     not duplicated here. PostHog now comes in via the official SDK (which carries its own
+	     manifest) and is first-party analytics, not tracking under Apple's definition — listing
+	     its host here would make iOS BLOCK it whenever the user denies ATT. -->
 	<key>NSPrivacyTrackingDomains</key>
-	<array>
-		<string>eu.posthog.com</string>
-	</array>
+	<array/>
 
 	<key>NSPrivacyCollectedDataTypes</key>
 	<array>

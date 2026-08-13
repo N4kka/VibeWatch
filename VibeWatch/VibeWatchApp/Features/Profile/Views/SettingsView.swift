@@ -432,6 +432,7 @@ struct SettingsView: View {
         }
         .navigationBarHidden(true)
         .onAppear {
+            AnalyticsService.shared.logScreenView(screenName: "Settings")
             currentUser = authService.currentUser
             // Load cache preferences from UserDefaults
             selectedCacheSize = ImageCacheService.shared.getCurrentCacheSizePreference()

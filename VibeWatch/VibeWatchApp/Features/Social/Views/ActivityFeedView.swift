@@ -103,6 +103,9 @@ struct ActivityFeedView: View {
 
     private func openDetail(for item: ActivityItem) {
         guard let tmdbId = item.tmdbId, let mediaType = item.mediaType else { return }
+        let position = viewModel.items.firstIndex(where: { $0.id == item.id })
+        AnalyticsService.shared.track(.feedCardOpened(
+            activityType: item.activityType.rawValue, position: position))
         detailTarget = FeedDetailTarget(mediaType: mediaType, tmdbId: tmdbId)
     }
 

@@ -103,6 +103,9 @@ final class ReviewActions {
             payload: record,
             dependsOn: nil
         )
+        AnalyticsService.shared.track(.reviewAdded(
+            mediaType: mediaType, mediaId: tmdbId,
+            containsSpoilers: containsSpoilers, textLength: trimmed.count))
         await syncEngine.pullProfileContent()
     }
 
@@ -128,6 +131,7 @@ final class ReviewActions {
             payload: ["id": id],
             dependsOn: nil
         )
+        AnalyticsService.shared.track(.reviewDeleted(mediaType: mediaType, mediaId: tmdbId))
         await syncEngine.pullProfileContent()
     }
 

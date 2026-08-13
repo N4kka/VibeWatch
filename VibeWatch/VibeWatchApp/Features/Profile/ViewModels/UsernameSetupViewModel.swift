@@ -96,6 +96,7 @@ final class UsernameSetupViewModel: ObservableObject {
             let outcome = try await backend.save(typed)
             switch outcome {
             case .saved:
+                AnalyticsService.shared.setPersonProperties(["username": typed])
                 return true
             case .taken, .reserved, .invalidFormat:
                 // Il server ha l'ultima parola e può dire cose che il client non sa: "riservato"

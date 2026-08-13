@@ -100,7 +100,8 @@ struct ActivityCardView: View {
                 activityId: item.id,
                 activityOwnerId: item.userId,
                 initialCommentCount: item.commentCount,
-                onCommentCountChanged: onCommentCountChanged)
+                onCommentCountChanged: onCommentCountChanged,
+                analyticsActivityType: item.activityType.rawValue)
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
         }

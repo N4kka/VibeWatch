@@ -274,24 +274,24 @@ struct DailyLimitPaywallView: View {
 
     private func restorePurchases() async {
         do {
-            AnalyticsService.shared.logEvent("restore_started", parameters: [:])
+            AnalyticsService.shared.track(.restoreStarted(properties: [:]))
             let info = try await Purchases.shared.restorePurchases()
             await MainActor.run {
                 if info.entitlements["StartingVibe Pro"]?.isActive == true {
                     quotaManager.upgradeToPro()
                     Task { await ClipQuotaService.shared.checkIsProUser() }
-                    AnalyticsService.shared.logEvent("restore_succeeded", parameters: [:])
+                    AnalyticsService.shared.track(.restoreSucceeded(properties: [:]))
                     dismiss(action: "restore_success", logDismiss: false)
                 } else {
-                    AnalyticsService.shared.logEvent("restore_no_active_subscription", parameters: [:])
+                    AnalyticsService.shared.track(.restoreNoActiveSubscription(properties: [:]))
                     presentAlert(title: "No Subscription Found", message: "We couldn’t find an active subscription for this Apple ID.")
                 }
             }
         } catch {
             await MainActor.run {
-                AnalyticsService.shared.logEvent("restore_failed", parameters: [
+                AnalyticsService.shared.track(.restoreFailed(properties: [
                     "error": (error as NSError).localizedDescription
-                ])
+                ]))
                 presentAlert(title: "Restore Failed", message: error.localizedDescription)
             }
         }

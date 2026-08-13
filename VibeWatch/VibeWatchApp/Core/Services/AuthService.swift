@@ -541,7 +541,7 @@ class AuthService: AuthServiceProtocol {
 
             // Analytics: Track account creation
             AnalyticsService.shared.logAccountCreated(method: "email")
-            AnalyticsService.shared.setUserId(user.id)
+            AnalyticsService.shared.setUserId(user.id, signedUpAt: user.createdAt)
 
             return user
         } catch let error as AppAuthError {
@@ -593,7 +593,7 @@ class AuthService: AuthServiceProtocol {
 
         // Analytics: Track sign in
         AnalyticsService.shared.logSignIn(method: "email")
-        AnalyticsService.shared.setUserId(user.id)
+        AnalyticsService.shared.setUserId(user.id, signedUpAt: user.createdAt)
 
         return user
     }
@@ -623,8 +623,9 @@ class AuthService: AuthServiceProtocol {
 
         await syncRevenueCatUser(with: nil, forceReset: force)
 
-        // Analytics: Clear user ID
-        AnalyticsService.shared.setUserId(nil)
+        // Analytics: back to a fresh anonymous identity (new distinct id, super
+        // properties re-registered) so the next account can't inherit this one's events.
+        AnalyticsService.shared.reset()
 
         // The local SQLite store is not scoped per account, so leaving it in place let the next
         // user to sign in on this device read the previous one's lists, history and preferences —
@@ -737,7 +738,7 @@ class AuthService: AuthServiceProtocol {
         }
 
         AnalyticsService.shared.logSignIn(method: "apple")
-        AnalyticsService.shared.setUserId(user.id)
+        AnalyticsService.shared.setUserId(user.id, signedUpAt: user.createdAt)
 
         Logger.info("[Auth] Apple Sign In successful")
         return user
@@ -773,7 +774,7 @@ class AuthService: AuthServiceProtocol {
         }
 
         AnalyticsService.shared.logSignIn(method: "google")
-        AnalyticsService.shared.setUserId(user.id)
+        AnalyticsService.shared.setUserId(user.id, signedUpAt: user.createdAt)
 
         Logger.info("[Auth] Google Sign In successful")
         return user

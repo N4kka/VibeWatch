@@ -175,6 +175,15 @@ class SearchViewModel: ObservableObject {
         let query = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return }
 
+        let position = searchResults.firstIndex(where: { $0.id == result.id && $0.mediaType == result.mediaType }) ?? -1
+        AnalyticsService.shared.logSearchResultSelected(
+            query: query,
+            mediaId: result.id,
+            mediaType: result.mediaType,
+            position: position,
+            resultCount: searchResults.count
+        )
+
         Task {
             await preferenceManager.recordSearchClick(
                 query: query,
@@ -198,6 +207,13 @@ class SearchViewModel: ObservableObject {
 
         lastLoggedQuery = normalized
         lastLoggedAt = Date()
+
+        // Una per query stabilizzata (debounce + dedup sopra), mai per keystroke.
+        AnalyticsService.shared.track(.searchPerformed(
+            query: normalized,
+            resultCount: resultCount,
+            source: "search_tab"
+        ))
 
         await preferenceManager.recordSearchQuery(
             query: normalized,

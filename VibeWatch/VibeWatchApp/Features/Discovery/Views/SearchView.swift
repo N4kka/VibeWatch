@@ -112,6 +112,7 @@ struct SearchView: View {
             }
         }
         .onAppear {
+            AnalyticsService.shared.logScreenView(screenName: "Search")
             isSearchFocused = true
             Task { await viewModel.loadLatestVisitedItems() }
         }

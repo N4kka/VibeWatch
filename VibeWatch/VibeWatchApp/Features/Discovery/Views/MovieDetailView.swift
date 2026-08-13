@@ -156,6 +156,12 @@ struct MovieDetailView: View {
         }
         .task {
             await viewModel.loadMovieDetails()
+            AnalyticsService.shared.logScreenView(screenName: "MovieDetail")
+            if let movie = viewModel.movie {
+                AnalyticsService.shared.track(.mediaDetailViewed(
+                    mediaType: "movie", mediaId: movie.id, title: movie.title
+                ))
+            }
         }
         .sheet(isPresented: $showSearch) {
             SearchView(viewModel: searchViewModel)
@@ -371,6 +377,7 @@ struct MovieDetailView: View {
     }
     
     private func handleShare(movie: Movie) async {
+        AnalyticsService.shared.track(.shareStarted(contentType: "media_link", mediaType: "movie"))
         isPreparingShare = true
         await prepareShareItems(movie: movie)
         if !shareItems.isEmpty {

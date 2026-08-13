@@ -58,9 +58,7 @@ final class PaywallTriggerService {
 
     private func showProPaywall(source: String) {
         UserDefaults.standard.set(Date(), forKey: Keys.lastAutoPaywallShownAt)
-        AnalyticsService.shared.logEvent("paywall_auto_triggered", parameters: [
-            "source": source
-        ])
+        AnalyticsService.shared.track(.paywallAutoTriggered(source: source))
         NotificationCenter.default.post(name: .presentProPaywall, object: nil, userInfo: ["source": source])
     }
 }

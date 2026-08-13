@@ -461,13 +461,13 @@ class GamificationService: ObservableObject {
         recentXPEvent = event
 
         // Track analytics
-        AnalyticsService.shared.logEvent("xp_earned", parameters: [
-            "action_type": action.rawValue,
-            "base_xp": result.baseXP,
-            "multiplier": result.multiplier,
-            "streak_bonus": result.streakBonus,
-            "total_xp": result.totalXP
-        ])
+        AnalyticsService.shared.track(.xpEarned(
+            actionType: action.rawValue,
+            baseXP: result.baseXP,
+            multiplier: Double(result.multiplier),
+            streakBonus: Double(result.streakBonus),
+            totalXP: result.totalXP
+        ))
 
         return event
     }
@@ -800,11 +800,11 @@ class GamificationService: ObservableObject {
     private func onBadgeUnlocked(userId: String, badge: BadgeDefinition) async {
         Logger.info("[GamificationService] Badge unlocked: \(badge.name)")
 
-        AnalyticsService.shared.logEvent("badge_unlocked", parameters: [
-            "badge_id": badge.id,
-            "badge_name": badge.name,
-            "category": badge.category.rawValue
-        ])
+        AnalyticsService.shared.track(.badgeUnlocked(
+            badgeId: badge.id,
+            badgeName: badge.name,
+            category: badge.category.rawValue
+        ))
     }
 
     private func onLevelUp(userId: String, oldLevel: Int, newLevel: Int) async {
@@ -820,11 +820,7 @@ class GamificationService: ObservableObject {
             timestamp: Date()
         )
 
-        AnalyticsService.shared.logEvent("level_up", parameters: [
-            "old_level": oldLevel,
-            "new_level": newLevel,
-            "rank_name": newRank.name
-        ])
+        AnalyticsService.shared.track(.levelUp(oldLevel: oldLevel, newLevel: newLevel, rankName: newRank.name))
     }
 
     private func loadOrCreateDailyChallenge(userId: String) async {
@@ -926,10 +922,10 @@ class GamificationService: ObservableObject {
                 isPro: await ClipQuotaService.shared.checkIsProUser()
             )
 
-            AnalyticsService.shared.logEvent("daily_challenge_completed", parameters: [
-                "challenge_type": challenge.type.id,
-                "xp_reward": challenge.type.xpReward
-            ])
+            AnalyticsService.shared.track(.dailyChallengeCompleted(
+                challengeType: challenge.type.id,
+                xpReward: challenge.type.xpReward
+            ))
         } else {
             let sql = """
                 UPDATE user_daily_challenges

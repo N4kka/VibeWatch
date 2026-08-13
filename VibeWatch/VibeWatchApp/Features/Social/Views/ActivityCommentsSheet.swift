@@ -18,6 +18,8 @@ struct ActivityCommentsSheet: View {
     /// resta giusto anche quando il filo non è caricato per intero.
     let initialCommentCount: Int
     var onCommentCountChanged: ((Int) -> Void)? = nil
+    /// Solo per analytics: il tipo della card (rated/watched/...), se chi apre il foglio lo sa.
+    var analyticsActivityType: String? = nil
 
     @Environment(\.dismiss) private var dismiss
 
@@ -376,6 +378,8 @@ struct ActivityCommentsSheet: View {
         do {
             let comment = try await ActivityInteractionService.shared.addComment(
                 activityId: activityId, content: text, parentId: parentId)
+            AnalyticsService.shared.track(.activityCommentAdded(
+                activityType: analyticsActivityType ?? "unknown"))
             withAnimation(.easeOut(duration: 0.2)) {
                 insertPosted(comment)
             }

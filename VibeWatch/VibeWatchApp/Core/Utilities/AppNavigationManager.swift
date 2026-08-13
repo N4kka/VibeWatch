@@ -148,10 +148,16 @@ class AppNavigationManager: ObservableObject {
         switch route {
         case .profile(let username):
             Logger.info("[AppNavigationManager] Universal link → profilo @\(username)")
+            Task { @MainActor in
+                AnalyticsService.shared.track(.deepLinkOpened(route: "profile", source: "universal_link"))
+            }
             profileLinkTarget = ProfileLinkTarget(username: username)
         case .film(let id):
             // Stessa strada delle notifiche push: `MainTabView` sa già aprire un film da qui.
             Logger.info("[AppNavigationManager] Universal link → film \(id)")
+            Task { @MainActor in
+                AnalyticsService.shared.track(.deepLinkOpened(route: "film", source: "universal_link"))
+            }
             deepLinkTarget = DeepLinkTarget(mediaId: id, mediaType: "movie")
         }
         return true

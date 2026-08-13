@@ -52,6 +52,7 @@ struct AIRecommendationsView: View {
             }
         }
         .onAppear {
+            AnalyticsService.shared.logScreenView(screenName: "AIRecommendations")
             viewModel.updateRequestLimit(isProUser: quotaManager.isProUser)
             presentAccessGate()
             Task { await viewModel.fetchDailyRequestUsage() }
@@ -181,7 +182,13 @@ struct AIRecommendationsView: View {
                                     isLastAssistantMessage: message.id == lastAssistantMessageId,
                                     isInWatchlist: { viewModel.isCardInWatchlist($0) },
                                     onAddCard: { card in Task { await viewModel.addCardToWatchlist(card) } },
-                                    onCardDetails: { detailCard = $0 },
+                                    onCardDetails: { card in
+                                        AnalyticsService.shared.track(.aiRecommendationOpened(
+                                            position: 0,
+                                            mediaType: card.mediaType == .tv ? "tv" : "movie",
+                                            mediaId: card.tmdbId))
+                                        detailCard = card
+                                    },
                                     onThumb: { positive in viewModel.recordFeedback(for: message.id, positive: positive) },
                                     onMore: { Task { await viewModel.requestMore() } },
                                     onRegenerate: { newContent in

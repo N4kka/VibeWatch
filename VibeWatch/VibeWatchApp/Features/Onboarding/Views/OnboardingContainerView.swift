@@ -73,7 +73,7 @@ struct OnboardingContainerView: View {
             }
         }
         .onAppear {
-            viewModel.trackStepViewed(step: .welcome)
+            viewModel.trackStarted()
         }
         // Niente stopPolling alla dismiss: il ViewModel è condiviso e il polling deve
         // sopravvivere all'onboarding — è ciò che alimenta il banner in home. Si spegne da

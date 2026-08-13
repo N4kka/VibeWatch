@@ -84,22 +84,20 @@ class MovieReactionService: ObservableObject {
 
         // Analytics
         if let new = newReaction {
-            AnalyticsService.shared.logEvent(
-                "reaction_added",
-                parameters: [
+            AnalyticsService.shared.track(
+                .reactionAdded(properties: [
                     "media_id": mediaId,
                     "media_type": mediaType.rawValue,
                     "reaction_type": new.rawValue
-                ]
+                ])
             )
         } else if let old = oldReaction {
-            AnalyticsService.shared.logEvent(
-                "reaction_removed",
-                parameters: [
+            AnalyticsService.shared.track(
+                .reactionRemoved(properties: [
                     "media_id": mediaId,
                     "media_type": mediaType.rawValue,
                     "reaction_type": old.rawValue
-                ]
+                ])
             )
         }
         
