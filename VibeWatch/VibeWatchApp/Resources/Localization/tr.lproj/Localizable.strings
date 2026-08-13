@@ -1434,3 +1434,29 @@
 "notifications.activityLikedDesc" = "Biri etkinliğini beğendiğinde";
 "notifications.activityCommented" = "Yorumlar";
 "notifications.activityCommentedDesc" = "Biri etkinliğine yorum yaptığında";
+
+// MARK: - Social feed M3 (rimuovi dal feed, card singola, attività sul profilo, share card)
+"social.hide.action" = "Akıştan kaldır";
+"social.hide.confirmTitle" = "Bu etkinlik kaldırılsın mı?";
+"social.hide.consequences" = "Senin akışından ve herkesin akışından kaybolur. Bu geri alınamaz.";
+"social.hide.confirm" = "Kaldır";
+"social.hide.done" = "Akıştan kaldırıldı";
+"social.hide.failed" = "Etkinlik kaldırılamadı";
+"social.activity.title" = "Etkinlik";
+"social.activity.unavailable" = "Bu etkinlik artık kullanılabilir değil.";
+"social.activity.loadFailed" = "Etkinlik yüklenemedi.";
+"social.activity.openComments" = "Yorumları gör";
+"profile.activity.title" = "Son etkinlikler";
+"profile.activity.loadFailed" = "Son etkinlikler yüklenemedi";
+"shareCard.wrapUp.eyebrow" = "Özetim";
+"shareCard.wrapUp.movies" = "Film";
+"shareCard.wrapUp.episodes" = "Bölüm";
+"shareCard.wrapUp.hours" = "Saat";
+"shareCard.wrapUp.days" = "Gün";
+"shareCard.wrapUp.action" = "Özetini paylaş";
+"shareCard.wrapUp.pickPeriod" = "Hangi dönem?";
+"shareCard.wrapUp.empty" = "O dönem için özetlenecek bir şey yok";
+"shareCard.list.eyebrow" = "Liste";
+"shareCard.list.count" = "%d başlık";
+"shareCard.list.action" = "Listeyi paylaş";
+"shareCard.list.empty" = "Boş bir listenin gösterecek bir şeyi yok";

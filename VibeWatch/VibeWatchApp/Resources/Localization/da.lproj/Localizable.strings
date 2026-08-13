@@ -1445,3 +1445,29 @@
 "notifications.activityLikedDesc" = "Når nogen liker din aktivitet";
 "notifications.activityCommented" = "Kommentarer";
 "notifications.activityCommentedDesc" = "Når nogen kommenterer din aktivitet";
+
+// MARK: - Social feed M3 (rimuovi dal feed, card singola, attività sul profilo, share card)
+"social.hide.action" = "Fjern fra feedet";
+"social.hide.confirmTitle" = "Vil du fjerne denne aktivitet?";
+"social.hide.consequences" = "Den forsvinder fra dit feed og fra alle andres. Det kan ikke fortrydes.";
+"social.hide.confirm" = "Fjern";
+"social.hide.done" = "Fjernet fra feedet";
+"social.hide.failed" = "Aktiviteten kunne ikke fjernes";
+"social.activity.title" = "Aktivitet";
+"social.activity.unavailable" = "Denne aktivitet er ikke længere tilgængelig.";
+"social.activity.loadFailed" = "Aktiviteten kunne ikke indlæses.";
+"social.activity.openComments" = "Se kommentarer";
+"profile.activity.title" = "Seneste aktivitet";
+"profile.activity.loadFailed" = "Seneste aktivitet kunne ikke indlæses";
+"shareCard.wrapUp.eyebrow" = "Mit tilbageblik";
+"shareCard.wrapUp.movies" = "Film";
+"shareCard.wrapUp.episodes" = "Afsnit";
+"shareCard.wrapUp.hours" = "Timer";
+"shareCard.wrapUp.days" = "Dage";
+"shareCard.wrapUp.action" = "Del dit tilbageblik";
+"shareCard.wrapUp.pickPeriod" = "Hvilken periode?";
+"shareCard.wrapUp.empty" = "Der er intet at opsummere for den periode";
+"shareCard.list.eyebrow" = "Liste";
+"shareCard.list.count" = "%d titler";
+"shareCard.list.action" = "Del listen";
+"shareCard.list.empty" = "En tom liste har intet at vise";

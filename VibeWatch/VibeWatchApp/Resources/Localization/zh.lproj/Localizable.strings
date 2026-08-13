@@ -1423,3 +1423,29 @@
 "notifications.activityLikedDesc" = "有人给你的活动点赞时";
 "notifications.activityCommented" = "评论";
 "notifications.activityCommentedDesc" = "有人评论你的活动时";
+
+// MARK: - Social feed M3 (rimuovi dal feed, card singola, attività sul profilo, share card)
+"social.hide.action" = "从动态中移除";
+"social.hide.confirmTitle" = "要移除这条动态吗？";
+"social.hide.consequences" = "它会从你的动态和所有人的动态中消失，无法撤销。";
+"social.hide.confirm" = "移除";
+"social.hide.done" = "已从动态中移除";
+"social.hide.failed" = "无法移除该动态";
+"social.activity.title" = "动态";
+"social.activity.unavailable" = "这条动态已不可用。";
+"social.activity.loadFailed" = "无法加载该动态。";
+"social.activity.openComments" = "查看评论";
+"profile.activity.title" = "近期动态";
+"profile.activity.loadFailed" = "无法加载近期动态";
+"shareCard.wrapUp.eyebrow" = "我的回顾";
+"shareCard.wrapUp.movies" = "电影";
+"shareCard.wrapUp.episodes" = "剧集";
+"shareCard.wrapUp.hours" = "小时";
+"shareCard.wrapUp.days" = "天";
+"shareCard.wrapUp.action" = "分享你的回顾";
+"shareCard.wrapUp.pickPeriod" = "选择时间段";
+"shareCard.wrapUp.empty" = "该时间段没有可回顾的内容";
+"shareCard.list.eyebrow" = "片单";
+"shareCard.list.count" = "%d 部作品";
+"shareCard.list.action" = "分享片单";
+"shareCard.list.empty" = "空片单没有可展示的内容";

@@ -1449,3 +1449,29 @@
 "notifications.activityLikedDesc" = "जब किसी को आपकी गतिविधि पसंद आती है";
 "notifications.activityCommented" = "कमेंट";
 "notifications.activityCommentedDesc" = "जब कोई आपकी गतिविधि पर कमेंट करता है";
+
+// MARK: - Social feed M3 (rimuovi dal feed, card singola, attività sul profilo, share card)
+"social.hide.action" = "फ़ीड से हटाएँ";
+"social.hide.confirmTitle" = "यह गतिविधि हटाएँ?";
+"social.hide.consequences" = "यह आपकी फ़ीड से और सबकी फ़ीड से गायब हो जाएगी। इसे वापस नहीं लाया जा सकता।";
+"social.hide.confirm" = "हटाएँ";
+"social.hide.done" = "फ़ीड से हटा दी गई";
+"social.hide.failed" = "गतिविधि हटाई नहीं जा सकी";
+"social.activity.title" = "गतिविधि";
+"social.activity.unavailable" = "यह गतिविधि अब उपलब्ध नहीं है।";
+"social.activity.loadFailed" = "गतिविधि लोड नहीं हो सकी।";
+"social.activity.openComments" = "टिप्पणियाँ देखें";
+"profile.activity.title" = "हाल की गतिविधि";
+"profile.activity.loadFailed" = "हाल की गतिविधि लोड नहीं हो सकी";
+"shareCard.wrapUp.eyebrow" = "मेरा सारांश";
+"shareCard.wrapUp.movies" = "फ़िल्में";
+"shareCard.wrapUp.episodes" = "एपिसोड";
+"shareCard.wrapUp.hours" = "घंटे";
+"shareCard.wrapUp.days" = "दिन";
+"shareCard.wrapUp.action" = "अपना सारांश साझा करें";
+"shareCard.wrapUp.pickPeriod" = "कौन-सी अवधि?";
+"shareCard.wrapUp.empty" = "उस अवधि के लिए सारांश में कुछ नहीं है";
+"shareCard.list.eyebrow" = "सूची";
+"shareCard.list.count" = "%d शीर्षक";
+"shareCard.list.action" = "सूची साझा करें";
+"shareCard.list.empty" = "खाली सूची के पास दिखाने को कुछ नहीं है";

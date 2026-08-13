@@ -1443,3 +1443,29 @@
 "notifications.activityLikedDesc" = "Wanneer iemand je activiteit liket";
 "notifications.activityCommented" = "Reacties";
 "notifications.activityCommentedDesc" = "Wanneer iemand op je activiteit reageert";
+
+// MARK: - Social feed M3 (rimuovi dal feed, card singola, attività sul profilo, share card)
+"social.hide.action" = "Uit feed verwijderen";
+"social.hide.confirmTitle" = "Deze activiteit verwijderen?";
+"social.hide.consequences" = "Ze verdwijnt uit jouw feed en die van iedereen. Dit kan niet ongedaan worden gemaakt.";
+"social.hide.confirm" = "Verwijderen";
+"social.hide.done" = "Uit de feed verwijderd";
+"social.hide.failed" = "Kon de activiteit niet verwijderen";
+"social.activity.title" = "Activiteit";
+"social.activity.unavailable" = "Deze activiteit is niet meer beschikbaar.";
+"social.activity.loadFailed" = "Kon de activiteit niet laden.";
+"social.activity.openComments" = "Reacties bekijken";
+"profile.activity.title" = "Recente activiteit";
+"profile.activity.loadFailed" = "Kon recente activiteit niet laden";
+"shareCard.wrapUp.eyebrow" = "Mijn terugblik";
+"shareCard.wrapUp.movies" = "Films";
+"shareCard.wrapUp.episodes" = "Afleveringen";
+"shareCard.wrapUp.hours" = "Uren";
+"shareCard.wrapUp.days" = "Dagen";
+"shareCard.wrapUp.action" = "Deel je terugblik";
+"shareCard.wrapUp.pickPeriod" = "Welke periode?";
+"shareCard.wrapUp.empty" = "Niets samen te vatten voor die periode";
+"shareCard.list.eyebrow" = "Lijst";
+"shareCard.list.count" = "%d titels";
+"shareCard.list.action" = "Lijst delen";
+"shareCard.list.empty" = "Een lege lijst heeft niets te tonen";

@@ -1444,3 +1444,29 @@
 "notifications.activityLikedDesc" = "Kun joku tykkää toiminnastasi";
 "notifications.activityCommented" = "Kommentit";
 "notifications.activityCommentedDesc" = "Kun joku kommentoi toimintaasi";
+
+// MARK: - Social feed M3 (rimuovi dal feed, card singola, attività sul profilo, share card)
+"social.hide.action" = "Poista syötteestä";
+"social.hide.confirmTitle" = "Poistetaanko tämä toiminta?";
+"social.hide.consequences" = "Se katoaa sinun syötteestäsi ja kaikkien muiden syötteestä. Tätä ei voi perua.";
+"social.hide.confirm" = "Poista";
+"social.hide.done" = "Poistettu syötteestä";
+"social.hide.failed" = "Toimintaa ei voitu poistaa";
+"social.activity.title" = "Toiminta";
+"social.activity.unavailable" = "Tämä toiminta ei ole enää saatavilla.";
+"social.activity.loadFailed" = "Toimintaa ei voitu ladata.";
+"social.activity.openComments" = "Näytä kommentit";
+"profile.activity.title" = "Viimeaikainen toiminta";
+"profile.activity.loadFailed" = "Viimeaikaista toimintaa ei voitu ladata";
+"shareCard.wrapUp.eyebrow" = "Oma koosteeni";
+"shareCard.wrapUp.movies" = "Elokuvat";
+"shareCard.wrapUp.episodes" = "Jaksot";
+"shareCard.wrapUp.hours" = "Tunnit";
+"shareCard.wrapUp.days" = "Päivät";
+"shareCard.wrapUp.action" = "Jaa koosteesi";
+"shareCard.wrapUp.pickPeriod" = "Mikä jakso?";
+"shareCard.wrapUp.empty" = "Tälle ajanjaksolle ei ole mitään koostettavaa";
+"shareCard.list.eyebrow" = "Lista";
+"shareCard.list.count" = "%d nimikettä";
+"shareCard.list.action" = "Jaa lista";
+"shareCard.list.empty" = "Tyhjällä listalla ei ole mitään näytettävää";

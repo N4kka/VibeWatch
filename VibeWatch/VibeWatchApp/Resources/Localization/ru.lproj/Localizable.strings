@@ -1428,3 +1428,29 @@
 "notifications.activityLikedDesc" = "Когда кому-то нравится ваша активность";
 "notifications.activityCommented" = "Комментарии";
 "notifications.activityCommentedDesc" = "Когда кто-то комментирует вашу активность";
+
+// MARK: - Social feed M3 (rimuovi dal feed, card singola, attività sul profilo, share card)
+"social.hide.action" = "Убрать из ленты";
+"social.hide.confirmTitle" = "Убрать эту активность?";
+"social.hide.consequences" = "Она исчезнет из вашей ленты и из лент всех остальных. Отменить нельзя.";
+"social.hide.confirm" = "Убрать";
+"social.hide.done" = "Убрано из ленты";
+"social.hide.failed" = "Не удалось убрать активность";
+"social.activity.title" = "Активность";
+"social.activity.unavailable" = "Эта активность больше недоступна.";
+"social.activity.loadFailed" = "Не удалось загрузить активность.";
+"social.activity.openComments" = "Смотреть комментарии";
+"profile.activity.title" = "Недавняя активность";
+"profile.activity.loadFailed" = "Не удалось загрузить недавнюю активность";
+"shareCard.wrapUp.eyebrow" = "Мои итоги";
+"shareCard.wrapUp.movies" = "Фильмы";
+"shareCard.wrapUp.episodes" = "Эпизоды";
+"shareCard.wrapUp.hours" = "Часы";
+"shareCard.wrapUp.days" = "Дни";
+"shareCard.wrapUp.action" = "Поделиться итогами";
+"shareCard.wrapUp.pickPeriod" = "Какой период?";
+"shareCard.wrapUp.empty" = "За этот период нечего подводить";
+"shareCard.list.eyebrow" = "Список";
+"shareCard.list.count" = "%d наименований";
+"shareCard.list.action" = "Поделиться списком";
+"shareCard.list.empty" = "Пустому списку нечего показать";

@@ -1432,3 +1432,29 @@
 "notifications.activityLikedDesc" = "När någon gillar din aktivitet";
 "notifications.activityCommented" = "Kommentarer";
 "notifications.activityCommentedDesc" = "När någon kommenterar din aktivitet";
+
+// MARK: - Social feed M3 (rimuovi dal feed, card singola, attività sul profilo, share card)
+"social.hide.action" = "Ta bort från flödet";
+"social.hide.confirmTitle" = "Ta bort den här aktiviteten?";
+"social.hide.consequences" = "Den försvinner från ditt flöde och från allas andras. Det går inte att ångra.";
+"social.hide.confirm" = "Ta bort";
+"social.hide.done" = "Borttagen från flödet";
+"social.hide.failed" = "Det gick inte att ta bort aktiviteten";
+"social.activity.title" = "Aktivitet";
+"social.activity.unavailable" = "Den här aktiviteten är inte längre tillgänglig.";
+"social.activity.loadFailed" = "Det gick inte att läsa in aktiviteten.";
+"social.activity.openComments" = "Visa kommentarer";
+"profile.activity.title" = "Senaste aktivitet";
+"profile.activity.loadFailed" = "Det gick inte att läsa in senaste aktivitet";
+"shareCard.wrapUp.eyebrow" = "Min sammanfattning";
+"shareCard.wrapUp.movies" = "Filmer";
+"shareCard.wrapUp.episodes" = "Avsnitt";
+"shareCard.wrapUp.hours" = "Timmar";
+"shareCard.wrapUp.days" = "Dagar";
+"shareCard.wrapUp.action" = "Dela din sammanfattning";
+"shareCard.wrapUp.pickPeriod" = "Vilken period?";
+"shareCard.wrapUp.empty" = "Inget att sammanfatta för den perioden";
+"shareCard.list.eyebrow" = "Lista";
+"shareCard.list.count" = "%d titlar";
+"shareCard.list.action" = "Dela listan";
+"shareCard.list.empty" = "En tom lista har inget att visa";
