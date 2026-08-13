@@ -75,8 +75,7 @@ class NotificationService: ObservableObject { // Conform to ObservableObject
         if granted {
             await registerForRemoteNotifications()
             // Upsert the user's prefs row so the backend knows push is enabled
-            let prefs = NotificationPreferencesView.loadFromDefaults()
-            await syncPreferencesToSupabase(prefs)
+            await syncPreferencesToSupabase(NotificationPreferencesStore.load())
         }
     }
 
@@ -142,6 +141,8 @@ class NotificationService: ObservableObject { // Conform to ObservableObject
             return
         }
 
+        // `list_milestone` and `price_drop` are deliberately absent: neither ever had a producer,
+        // and the columns are being dropped server-side once this build is the common one.
         struct PrefsPayload: Encodable {
             let user_id: String
             let push_enabled: Bool
@@ -149,20 +150,26 @@ class NotificationService: ObservableObject { // Conform to ObservableObject
             let new_release: Bool
             let episode_aired: Bool
             let continue_watching: Bool
-            let list_milestone: Bool
-            let price_drop: Bool
             let streak_reminder: Bool
             // Social feed M2: le tre colonne sociali (default true lato server; qui viaggiano
             // sempre, così l'upsert non lascia mai una preferenza sociale ambigua).
             let new_follower: Bool
             let activity_liked: Bool
             let activity_commented: Bool
+            let email_digest_enabled: Bool
+            let weekly_recap_enabled: Bool
+            let max_daily_notifications: Int
             let quiet_hours_start: String
             let quiet_hours_end: String
             let timezone: String
+            // Push and email copy is rendered server-side at send time, so the backend needs the
+            // language and the streaming region the user actually reads and browses in.
+            let language: String
+            let country: String
             let updated_at: String
         }
 
+        let localization = LocalizationManager.shared
         let payload = PrefsPayload(
             user_id:           userId,
             push_enabled:      notificationsEnabled,
@@ -170,15 +177,18 @@ class NotificationService: ObservableObject { // Conform to ObservableObject
             new_release:       prefs.enableNewRelease,
             episode_aired:     prefs.enableEpisodeAired,
             continue_watching: prefs.enableContinueWatching,
-            list_milestone:    prefs.enableListMilestone,
-            price_drop:        false,
-            streak_reminder:   false,
+            streak_reminder:   prefs.enableStreakReminder,
             new_follower:      prefs.enableNewFollower,
             activity_liked:    prefs.enableActivityLiked,
             activity_commented: prefs.enableActivityCommented,
+            email_digest_enabled: prefs.enableEmailDigest,
+            weekly_recap_enabled: prefs.enableWeeklyRecap,
+            max_daily_notifications: prefs.dailyCap.rawValue,
             quiet_hours_start: String(format: "%02d:00:00", prefs.quietHoursStart),
             quiet_hours_end:   String(format: "%02d:00:00", prefs.quietHoursEnd),
             timezone:          TimeZone.current.identifier,
+            language:          localization.currentLanguage.id,
+            country:           localization.currentCountry.id,
             updated_at:        ISO8601DateFormatter().string(from: Date())
         )
 

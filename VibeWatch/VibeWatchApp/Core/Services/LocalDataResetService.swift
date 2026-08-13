@@ -60,7 +60,11 @@ final class LocalDataResetService {
         "lastDailyPrefetchDate",
 
         // Notifiche
+        "notificationPreferences_v3",
         "notificationPreferences_v2",
+        // Iscrizioni "Avvisami" già confermate: sono per-account nella chiave, ma restare qui
+        // significherebbe che il nuovo utente trova bottoni già spenti sui titoli del vecchio.
+        "enabledMediaAvailabilityAlerts",
 
         // Sync: un timestamp ereditato dall'account precedente farebbe partire il primo pull del
         // nuovo utente da una data che per lui non significa niente, saltando tutto lo storico.

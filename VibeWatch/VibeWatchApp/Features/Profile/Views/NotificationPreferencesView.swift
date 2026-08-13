@@ -3,14 +3,7 @@ import SwiftUI
 struct NotificationPreferencesView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var notificationService = NotificationService.shared
-    @State private var preferences: NotificationPreferences = Self.loadFromDefaults()
-    @State private var isSyncing = false
-
-    private let userId: String
-
-    init(userId: String) {
-        self.userId = userId
-    }
+    @State private var preferences: NotificationPreferences = NotificationPreferencesStore.load()
 
     var body: some View {
         Form {
@@ -18,9 +11,14 @@ struct NotificationPreferencesView: View {
 
             if notificationService.notificationsEnabled {
                 notificationTypesSection
+                dailyLimitSection
                 socialNotificationsSection
                 quietHoursSection
             }
+
+            // Email is a channel of its own: it works whether or not push is authorised, so it
+            // stays visible even when the permission section is asking for the prompt.
+            emailSection
         }
         .navigationTitle("notifications.title".localized)
         .navigationBarTitleDisplayMode(.inline)
@@ -115,15 +113,62 @@ struct NotificationPreferencesView: View {
             )
 
             NotificationToggleRow(
-                icon: "trophy",
-                title: "notifications.listMilestone".localized,
-                subtitle: "notifications.listMilestoneDesc".localized,
-                isOn: binding(for: \.enableListMilestone)
+                icon: "flame",
+                title: "notifications.streakReminder".localized,
+                subtitle: "notifications.streakReminderDesc".localized,
+                isOn: binding(for: \.enableStreakReminder)
             )
         } header: {
             Text("notifications.types".localized)
         } footer: {
             Text("notifications.typesFooter".localized)
+                .font(.caption)
+        }
+    }
+
+    // Il tetto giornaliero non è più una costante del server: tre preset, dove "Essential" è il
+    // comportamento storico (2 al giorno, il resto raccolto in un digest) e "Everything" toglie
+    // del tutto il digest, così ogni notifica conserva il proprio deep link.
+    private var dailyLimitSection: some View {
+        Section {
+            Picker(selection: Binding(
+                get: { preferences.dailyCap },
+                set: { preferences.dailyCap = $0; persist() }
+            )) {
+                ForEach(DailyNotificationCap.allCases, id: \.self) { cap in
+                    Text(cap.titleKey.localized).tag(cap)
+                }
+            } label: {
+                EmptyView()
+            }
+            .pickerStyle(.segmented)
+        } header: {
+            Text("notifications.dailyLimit".localized)
+        } footer: {
+            Text(preferences.dailyCap.footerKey.localized)
+                .font(.caption)
+        }
+    }
+
+    private var emailSection: some View {
+        Section {
+            NotificationToggleRow(
+                icon: "envelope",
+                title: "notifications.emailDigest".localized,
+                subtitle: "notifications.emailDigestDesc".localized,
+                isOn: binding(for: \.enableEmailDigest)
+            )
+
+            NotificationToggleRow(
+                icon: "calendar",
+                title: "notifications.weeklyRecap".localized,
+                subtitle: "notifications.weeklyRecapDesc".localized,
+                isOn: binding(for: \.enableWeeklyRecap)
+            )
+        } header: {
+            Text("notifications.email".localized)
+        } footer: {
+            Text("notifications.emailFooter".localized)
                 .font(.caption)
         }
     }
@@ -195,7 +240,7 @@ struct NotificationPreferencesView: View {
     }
 
     private func persist() {
-        Self.saveToDefaults(preferences)
+        NotificationPreferencesStore.save(preferences)
         Task {
             await NotificationService.shared.syncPreferencesToSupabase(preferences)
         }
@@ -208,22 +253,6 @@ struct NotificationPreferencesView: View {
         return formatter.string(from: date)
     }
 
-    // MARK: - UserDefaults persistence
-
-    private static let defaultsKey = "notificationPreferences_v2"
-
-    static func loadFromDefaults() -> NotificationPreferences {
-        guard let data = UserDefaults.standard.data(forKey: defaultsKey),
-              let prefs = try? JSONDecoder().decode(NotificationPreferences.self, from: data)
-        else { return NotificationPreferences() }
-        return prefs
-    }
-
-    static func saveToDefaults(_ prefs: NotificationPreferences) {
-        if let data = try? JSONEncoder().encode(prefs) {
-            UserDefaults.standard.set(data, forKey: defaultsKey)
-        }
-    }
 }
 
 // MARK: - Notification Toggle Row
@@ -262,6 +291,6 @@ struct NotificationToggleRow: View {
 
 #Preview {
     NavigationView {
-        NotificationPreferencesView(userId: "preview-user-123")
+        NotificationPreferencesView()
     }
 }

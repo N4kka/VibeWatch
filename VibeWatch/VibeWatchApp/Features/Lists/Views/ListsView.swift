@@ -531,7 +531,6 @@ struct MediaItemRow: View {
     @State private var navigateToDetail = false
     @State private var isLoadingProviders = false
     @State private var providerLookupCompleted = false
-    @State private var showNotifyMeAlert = false
     @State private var offset: CGFloat = 0
     @State private var isSwiping = false
     @State private var cardWidth: CGFloat = 0
@@ -692,23 +691,11 @@ struct MediaItemRow: View {
                             .overlay(Capsule().stroke(Color.white.opacity(0.07), lineWidth: 1))
                         }
                     } else {
-                        Button {
-                            handleNotifyMe()
-                        } label: {
-                            HStack(spacing: 5) {
-                                Image(systemName: "bell")
-                                    .font(.system(size: 12, weight: .semibold))
-                                Text("lists.notifyMe".localized)
-                                    .font(.system(size: 12.5, weight: .semibold))
-                                    .lineLimit(1)
-                            }
-                            .foregroundColor(.theme.textSecondary)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 9)
-                            .background(Color.white.opacity(0.07))
-                            .clipShape(Capsule())
-                            .overlay(Capsule().stroke(Color.white.opacity(0.07), lineWidth: 1))
-                        }
+                        NotifyMeButton(
+                            movie: item.asMovie(),
+                            mediaType: item.mediaType,
+                            title: item.title
+                        )
                     }
                 }
                 
@@ -838,11 +825,6 @@ struct MediaItemRow: View {
         .task(id: item.posterPath) {
             await loadAmbientTint()
         }
-        .alert("lists.notifyMeTitle".localized, isPresented: $showNotifyMeAlert) {
-            Button("common.ok".localized, role: .cancel) { }
-        } message: {
-            Text(String(format: "lists.notifyMeMessage".localized, item.title))
-        }
     }
     
     /// Quiet placeholder shown while streaming availability is still being looked up —
@@ -877,18 +859,6 @@ struct MediaItemRow: View {
         if let image = try? await ImageCacheService.shared.loadImage(from: key, maxPixelSize: 120) {
             let tint = PosterTint.compute(from: image, key: key)
             await MainActor.run { ambientTint = tint }
-        }
-    }
-
-    private func handleNotifyMe() {
-        showNotifyMeAlert = true
-
-        // Ensure it's in watchlist
-        Task {
-            if !listManager.isInList(listId: listManager.watchlist.id, mediaId: item.mediaId, mediaType: item.mediaType) {
-                try? await listManager.addToList(listId: listManager.watchlist.id, movie: item.asMovie(), mediaType: item.mediaType)
-            }
-            try? await LiveNotificationRepository.shared.toggleAlert(mediaId: item.mediaId, mediaType: item.mediaType, enabled: true)
         }
     }
 

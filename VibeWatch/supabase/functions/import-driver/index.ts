@@ -165,6 +165,8 @@ serve(async (req: Request) => {
           is_sent: false,
           category: 'import_done',
           thread_id: 'import',
+          template_key: 'import_done',
+          template_params: { episodes: episodi, shows: serie, pending: irrisolti },
         })
         if (pushError) console.error(`[import-driver] push non accodata per ${corrente.id}: ${pushError.message}`)
         break

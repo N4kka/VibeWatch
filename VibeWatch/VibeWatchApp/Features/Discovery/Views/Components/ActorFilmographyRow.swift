@@ -195,19 +195,14 @@ struct ActorFilmographyRow: View {
                 .clipShape(RoundedRectangle(cornerRadius: 8))
             }
         } else {
-            Button { showNotifyMeAlert = true } label: {
-                HStack(spacing: 4) {
-                    Text("lists.notifyMe".localized)
-                        .font(.system(size: 12, weight: .bold))
-                    Text("🔔")
-                        .font(.system(size: 12))
-                }
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                .background(Color.theme.accentOrange)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-            }
+            // Prima questo bottone mostrava la conferma e non scriveva niente: prometteva una
+            // notifica che nessuno avrebbe mai mandato. Ora è la stessa iscrizione degli altri.
+            NotifyMeButton(
+                movie: credit.asMovie(),
+                mediaType: credit.mediaType,
+                title: credit.title,
+                style: .prominent
+            )
         }
     }
 

@@ -1958,30 +1958,6 @@ final class MoviePosterShareURLBuilderTests: XCTestCase {
     }
 }
 
-// MARK: - MovieUnavailableNotificationCopyBuilder (copy notify-me estratto da MovieDetailView)
-
-final class MovieUnavailableNotificationCopyBuilderTests: XCTestCase {
-
-    func test_unavailableMessageIncludesTitle() {
-        XCTAssertEqual(
-            MovieUnavailableNotificationCopyBuilder.unavailableMessage(title: "Dune"),
-            "Unluckily Dune isn't currently available."
-        )
-    }
-
-    func test_staticQuestionButtonAndAlertTitleMatchCurrentCopy() {
-        XCTAssertEqual(MovieUnavailableNotificationCopyBuilder.notificationQuestion, "Would you like to be notified?")
-        XCTAssertEqual(MovieUnavailableNotificationCopyBuilder.notifyButtonTitle, "Notify Me")
-        XCTAssertEqual(MovieUnavailableNotificationCopyBuilder.alertTitle, "Notify Me")
-    }
-
-    func test_alertMessageIncludesQuotedTitle() {
-        XCTAssertEqual(
-            MovieUnavailableNotificationCopyBuilder.alertMessage(title: "Dune"),
-            "We'll send you a notification as soon as 'Dune' is available for streaming, rent, or buy."
-        )
-    }
-}
 
 // MARK: - SupabasePullRowNormalizer (normalizzazione righe remote estratta da SupabaseClient)
 

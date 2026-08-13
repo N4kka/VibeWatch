@@ -160,7 +160,7 @@ struct SettingsView: View {
                                     .padding(.top, 12)
 
                                 NavigationLink {
-                                    NotificationPreferencesView(userId: userId)
+                                    NotificationPreferencesView()
                                 } label: {
                                     HStack(spacing: 16) {
                                         ZStack {

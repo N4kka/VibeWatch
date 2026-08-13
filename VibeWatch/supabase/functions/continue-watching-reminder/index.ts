@@ -96,6 +96,8 @@ serve(async (req) => {
           is_sent: false,
           category: 'continue_watching',
           thread_id: `continue:${pick.media_id}`,
+          template_key: 'continue_watching',
+          template_params: { show: showName },
         })
 
       if (!insertError) created += 1
