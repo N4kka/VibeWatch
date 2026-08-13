@@ -121,7 +121,8 @@ struct ActivityCardDetailView: View {
                         if case .loaded(let current) = phase {
                             phase = .loaded(current.updatingCommentCount(max(0, count)))
                         }
-                    })
+                    },
+                    analyticsActivityType: item.activityType.rawValue)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
             }

@@ -542,9 +542,9 @@ struct ProPaywallView: View {
         guard let package = selectedPackage, !isPurchasing else { return }
         isPurchasing = true
         AnalyticsService.shared.logPaywallCTAClicked(source: source, cta: "continue")
-        AnalyticsService.shared.logEvent("purchase_started", parameters: [
+        AnalyticsService.shared.track(.purchaseStarted(properties: [
             "product_id": package.storeProduct.productIdentifier
-        ])
+        ]))
         Task {
             do {
                 let result = try await Purchases.shared.purchase(package: package)
@@ -593,9 +593,9 @@ struct ProPaywallView: View {
             } catch {
                 await MainActor.run {
                     isPurchasing = false
-                    AnalyticsService.shared.logEvent("purchase_failed", parameters: [
+                    AnalyticsService.shared.track(.purchaseFailed(properties: [
                         "error": (error as NSError).localizedDescription
-                    ])
+                    ]))
                     handlePurchaseError(error)
                 }
             }
@@ -605,7 +605,7 @@ struct ProPaywallView: View {
     private func restorePurchases() {
         guard !isRestoring else { return }
         isRestoring = true
-        AnalyticsService.shared.logEvent("restore_started", parameters: [:])
+        AnalyticsService.shared.track(.restoreStarted(properties: [:]))
         Task {
             do {
                 let info = try await Purchases.shared.restorePurchases()
@@ -615,10 +615,10 @@ struct ProPaywallView: View {
                         didCompletePurchaseOrRestore = true
                         quotaManager.upgradeToPro()
                         onPurchased?()
-                        AnalyticsService.shared.logEvent("restore_succeeded", parameters: [:])
+                        AnalyticsService.shared.track(.restoreSucceeded(properties: [:]))
                         dismiss(logDismiss: false)
                     } else {
-                        AnalyticsService.shared.logEvent("restore_no_active_subscription", parameters: [:])
+                        AnalyticsService.shared.track(.restoreNoActiveSubscription(properties: [:]))
                         presentAlert(
                             title: "No Subscription Found",
                             message: "We couldn't find an active subscription for this Apple ID."
@@ -628,9 +628,9 @@ struct ProPaywallView: View {
             } catch {
                 await MainActor.run {
                     isRestoring = false
-                    AnalyticsService.shared.logEvent("restore_failed", parameters: [
+                    AnalyticsService.shared.track(.restoreFailed(properties: [
                         "error": (error as NSError).localizedDescription
-                    ])
+                    ]))
                     presentAlert(title: "Restore Failed", message: error.localizedDescription)
                 }
             }

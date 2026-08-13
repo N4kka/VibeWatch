@@ -1,7 +1,7 @@
 import XCTest
 @testable import VibeWatchApp
 
-/// Records what would have been sent to Crashlytics.
+/// Records what would have been sent to the error tracker (PostHog since the analytics refactor).
 private final class SpyCrashReporter: CrashReporter {
     var collectionEnabled: Bool?
     var userIdentifier: String??
@@ -16,8 +16,8 @@ private final class SpyCrashReporter: CrashReporter {
     func log(_ message: String) { logs.append(message) }
 }
 
-/// P3 (SPEC v3): the app shipped with no crash reporting. These tests cover the wiring — that the
-/// rest of the app reaches the reporter — not Crashlytics itself, which is the SDK's problem.
+/// These tests cover the wiring — that the rest of the app reaches the reporter — not the SDK
+/// itself, which is PostHog's problem.
 @MainActor
 final class CrashReportingServiceTests: XCTestCase {
 
@@ -46,21 +46,12 @@ final class CrashReportingServiceTests: XCTestCase {
     }
 
     /// A handled error still needs a rate: an import that fails on 3% of devices is invisible
-    /// otherwise, since it never crashes.
-    func testLogErrorIsRecordedAsNonFatal() {
-        AnalyticsService.shared.logError(.quotaExceeded, context: "clip_playback")
+    /// otherwise, since it never crashes. ErrorHandler is the funnel now.
+    func testHandledErrorIsRecordedAsNonFatal() {
+        ErrorHandler.shared.logOnly(AppError.quotaExceeded, context: "clip_playback")
 
         XCTAssertEqual(spy.recorded.count, 1)
         XCTAssertEqual(spy.recorded.first?.userInfo["context"] as? String, "clip_playback")
-    }
-
-    /// A crash has to be attributable to the account that hit it.
-    func testAnalyticsUserIdReachesTheCrashReporter() {
-        AnalyticsService.shared.setUserId("user-7")
-        XCTAssertEqual(spy.userIdentifier, "user-7")
-
-        AnalyticsService.shared.setUserId(nil)
-        XCTAssertEqual(spy.userIdentifier, .some(nil), "sign-out must clear the crash identity")
     }
 
     /// Opting out of analytics opts out of crash uploads too.

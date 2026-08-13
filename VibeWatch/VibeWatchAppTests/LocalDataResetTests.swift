@@ -80,14 +80,15 @@ final class LocalDataResetTests: XCTestCase {
     }
 
     /// Gli store degli SDK di terze parti vivono negli stessi UserDefaults: un wipe per esclusione
-    /// avrebbe portato via anche la coda di eventi non ancora spedita.
+    /// avrebbe portato via anche lo stato non ancora sincronizzato (es. l'identità RevenueCat o
+    /// lo storage dell'SDK PostHog).
     func testClearKeepsThirdPartyState() {
-        defaults.set(["evento"], forKey: "posthog.queue.v2")
+        defaults.set("anon-id", forKey: "com.posthog.sdk.anonymousId")
         defaults.set("rc-user", forKey: "com.revenuecat.userdefaults.appUserID")
 
         sut.clearUserScopedDefaults()
 
-        XCTAssertNotNil(defaults.object(forKey: "posthog.queue.v2"))
+        XCTAssertNotNil(defaults.object(forKey: "com.posthog.sdk.anonymousId"))
         XCTAssertNotNil(defaults.object(forKey: "com.revenuecat.userdefaults.appUserID"))
     }
 }

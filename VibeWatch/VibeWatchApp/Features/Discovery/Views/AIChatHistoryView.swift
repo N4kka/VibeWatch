@@ -85,6 +85,7 @@ struct AIChatHistoryView: View {
             }
         }
         .task {
+            AnalyticsService.shared.logScreenView(screenName: "AIChatHistory")
             await viewModel.loadSessions()
         }
         .confirmationDialog(

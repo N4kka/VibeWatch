@@ -128,11 +128,12 @@ class ErrorHandler: ObservableObject {
         let contextStr = context.isEmpty ? "" : " [\(context)]"
         // Use the localized description from the AppError itself.
         Logger.error("[ErrorHandler]\(contextStr) \(appError.localizedDescription)")
-        
-        // Log to analytics
-        AnalyticsService.shared.logEvent("error_handled", parameters: [
-            "error_type": String(describing: appError),
-            "context": context
-        ])
+
+        // A handled error becomes a $exception in PostHog error tracking (grouped by type, with
+        // stack context) — replaces the old flat `error_handled` event.
+        CrashReportingService.record(originalError, context: context.isEmpty ? String(describing: appError) : context)
+
+        // An error makes the session worth watching: start recording from here.
+        AnalyticsService.shared.replay.trigger(.errorHandled)
     }
 }

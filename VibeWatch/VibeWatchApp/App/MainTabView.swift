@@ -511,15 +511,8 @@ extension MainTabView {
                     }
                 }
 
-                if newPhase == .background || newPhase == .inactive {
-                    Task {
-                        do {
-                            try await PostHogClient.shared.flush()
-                        } catch {
-                            Logger.error("[MainTabView] Failed to flush PostHog events: \(error.localizedDescription)")
-                        }
-                    }
-                }
+                // Niente flush manuale su background: l'SDK PostHog persiste la coda su disco
+                // e gestisce da sé il flush (flushAt/flushInterval + lifecycle).
             }
     }
 }

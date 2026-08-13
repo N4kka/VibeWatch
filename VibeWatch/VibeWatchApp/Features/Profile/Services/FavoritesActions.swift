@@ -68,6 +68,7 @@ final class FavoritesActions {
             payload: record,
             dependsOn: nil
         )
+        AnalyticsService.shared.track(.mediaFavorited(mediaType: mediaType, mediaId: tmdbId, added: true))
         await syncEngine.pullProfileContent()
     }
 
@@ -91,6 +92,7 @@ final class FavoritesActions {
             payload: ["media_type": mediaType, "slot": slot],
             dependsOn: nil
         )
+        AnalyticsService.shared.track(.mediaFavorited(mediaType: mediaType, mediaId: 0, added: false))
         await syncEngine.pullProfileContent()
     }
 }

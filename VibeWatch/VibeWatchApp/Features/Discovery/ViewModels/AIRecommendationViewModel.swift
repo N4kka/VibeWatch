@@ -213,6 +213,9 @@ class AIRecommendationViewModel: ObservableObject {
         
         do {
             let classification = queryClassifier.classify(query: query)
+            AnalyticsService.shared.track(.aiChatMessageSent(
+                queryType: classification.type.analyticsName,
+                conversationLength: messages.count))
             let profile = await preferenceManager.aggregatePreferences()
 
             let detectedLangCode = languageDetector.detectLanguage(for: query)

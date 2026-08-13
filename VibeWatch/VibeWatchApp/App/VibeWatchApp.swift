@@ -217,6 +217,13 @@ class AppState: ObservableObject {
         // reinstallazione e la schermata ricomparirebbe a chi aveva gia' scelto.
         showUsernameSetup = await UsernameSetupViewModel.isNeeded()
 
+        // Person property per segmentare gli utenti per volume di contenuti tracciati.
+        // Una volta per lancio, dopo il pull: prima il conteggio sarebbe quello di ieri.
+        if let trackedCount = try? await SQLiteService.shared.count(
+            "watch_events", where: "deleted_at IS NULL") {
+            AnalyticsService.shared.setPersonProperties(["tracked_items_count": trackedCount])
+        }
+
         Logger.info("[AppState] Full sync completed on app launch")
     }
 

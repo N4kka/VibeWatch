@@ -26,6 +26,7 @@
 		A1B2C3D40002E5F600000001 /* LocalTitleSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40002E5F600000002 /* LocalTitleSearchTests.swift */; };
 		A1B2C3D40003E5F600000001 /* SQLiteTableWhitelistTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40003E5F600000002 /* SQLiteTableWhitelistTests.swift */; };
 		A1B2C3D40004E5F600000001 /* CrashReportingServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40004E5F600000002 /* CrashReportingServiceTests.swift */; };
+		A11A11A11A11A11A11A11A01 /* AnalyticsServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11A11A11A11A11A11A11A02 /* AnalyticsServiceTests.swift */; };
 		A1B2C3D40005E5F600000001 /* SyncPaginationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40005E5F600000002 /* SyncPaginationTests.swift */; };
 		A1B2C3D40006E5F600000001 /* ConfigValidationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40006E5F600000002 /* ConfigValidationTests.swift */; };
 		A1B2C3D40007E5F600000001 /* TrackingSyncTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40007E5F600000002 /* TrackingSyncTests.swift */; };
@@ -45,15 +46,13 @@
 		B318DCEE2EC6939A00DB1A9A /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = B318DCED2EC6939A00DB1A9A /* Auth */; };
 		B31D2C442EFFA4020091F030 /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = B31D2C432EFFA4020091F030 /* GoogleMobileAds */; };
 		B32F71142ED399B5001779C5 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = B32F71132ED399B5001779C5 /* RevenueCat */; };
+		B3A0F0032F20AA0100000003 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = B3A0F0022F20AA0100000002 /* PostHog */; };
 		B3DF8FA82ED5CEC3007FD5D0 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = B3DF8FA72ED5CEC3007FD5D0 /* FirebaseCore */; };
 		B3DF8FAA2ED5CEC3007FD5D0 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = B3DF8FA92ED5CEC3007FD5D0 /* FirebaseMessaging */; };
-		B3DF8FB12ED5CEC3007FD5D0 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = B3DF8FB02ED5CEC3007FD5D0 /* FirebaseAnalytics */; };
-		B3DF8FC12ED5CEC3007FD5D0 /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = B3DF8FC02ED5CEC3007FD5D0 /* FirebaseCrashlytics */; };
 		B3E30E142ECCB7AA008A3B6C /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = B3E30E132ECCB7AA008A3B6C /* Supabase */; };
 		B3F2F7E02F14A10000D1A004 /* YouTubeiOSPlayerHelper in Frameworks */ = {isa = PBXBuildFile; productRef = B3F2F7E32F14A10000D1A003 /* YouTubeiOSPlayerHelper */; };
 		C3D4E5F6A1B2C3D4 /* PerformanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3D4E5F6A1B2C3D5 /* PerformanceTests.swift */; };
 		C6877C53B7A3455F88CAEEA9 /* AnalyticsInsightsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C9EEC77D8F045818BF4B264 /* AnalyticsInsightsTests.swift */; };
-		CF1EE317BD6A461DA9DC12F3 /* PostHogClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7288DBFF0484707BB5CD260 /* PostHogClientTests.swift */; };
 		D4E5F6A1B2C3D4E5 /* MultiDeviceSyncTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E5F6A1B2C3D4E6 /* MultiDeviceSyncTests.swift */; };
 		E7D6C5B4A392817060504030 /* DiscoveryCarouselOrderingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7D6C5B4A392817060504031 /* DiscoveryCarouselOrderingTests.swift */; };
 		E8A7B6C5D4E3F20123456789 /* WatchProvidersRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8A7B6C5D4E3F2012345678A /* WatchProvidersRepositoryTests.swift */; };
@@ -96,6 +95,7 @@
 		A1B2C3D40002E5F600000002 /* LocalTitleSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalTitleSearchTests.swift; sourceTree = "<group>"; };
 		A1B2C3D40003E5F600000002 /* SQLiteTableWhitelistTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteTableWhitelistTests.swift; sourceTree = "<group>"; };
 		A1B2C3D40004E5F600000002 /* CrashReportingServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrashReportingServiceTests.swift; sourceTree = "<group>"; };
+		A11A11A11A11A11A11A11A02 /* AnalyticsServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsServiceTests.swift; sourceTree = "<group>"; };
 		A1B2C3D40005E5F600000002 /* SyncPaginationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncPaginationTests.swift; sourceTree = "<group>"; };
 		A1B2C3D40006E5F600000002 /* ConfigValidationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigValidationTests.swift; sourceTree = "<group>"; };
 		A1B2C3D40007E5F600000002 /* TrackingSyncTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackingSyncTests.swift; sourceTree = "<group>"; };
@@ -118,7 +118,6 @@
 		D06ECE77A8DA440E92022CE7 /* AppNavigationManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppNavigationManagerTests.swift; sourceTree = "<group>"; };
 		D4E5F6A1B2C3D4E6 /* MultiDeviceSyncTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MultiDeviceSyncTests.swift; path = VibeWatchApp/Tests/MultiDeviceSyncTests.swift; sourceTree = SOURCE_ROOT; };
 		D914D0452F884693941FF37D /* SyncEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncEngineTests.swift; sourceTree = "<group>"; };
-		E7288DBFF0484707BB5CD260 /* PostHogClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostHogClientTests.swift; sourceTree = "<group>"; };
 		E7D6C5B4A392817060504031 /* DiscoveryCarouselOrderingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoveryCarouselOrderingTests.swift; sourceTree = "<group>"; };
 		E8A7B6C5D4E3F2012345678A /* WatchProvidersRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchProvidersRepositoryTests.swift; sourceTree = "<group>"; };
 		E8A7B6C5D4E3F2012345678C /* WatchProviderLoadStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchProviderLoadStateTests.swift; sourceTree = "<group>"; };
@@ -163,9 +162,8 @@
 				B31D2C442EFFA4020091F030 /* GoogleMobileAds in Frameworks */,
 				B318DCEE2EC6939A00DB1A9A /* Auth in Frameworks */,
 				B3DF8FA82ED5CEC3007FD5D0 /* FirebaseCore in Frameworks */,
-				B3DF8FB12ED5CEC3007FD5D0 /* FirebaseAnalytics in Frameworks */,
-				B3DF8FC12ED5CEC3007FD5D0 /* FirebaseCrashlytics in Frameworks */,
 				B3E30E142ECCB7AA008A3B6C /* Supabase in Frameworks */,
+				B3A0F0032F20AA0100000003 /* PostHog in Frameworks */,
 				B3F2F7E02F14A10000D1A004 /* YouTubeiOSPlayerHelper in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -194,7 +192,6 @@
 				366C7C7DF006577DF7663E8E /* StarRatingDragTests.swift */,
 				627A081A25AC290DD0B625CB /* ValidationHelperTests.swift */,
 				F4E26C8A72A558A9EA3835E1 /* ToastCenterTests.swift */,
-				E7288DBFF0484707BB5CD260 /* PostHogClientTests.swift */,
 				D914D0452F884693941FF37D /* SyncEngineTests.swift */,
 				A1B2C3D40007E5F600000002 /* TrackingSyncTests.swift */,
 				A1B2C3D40006E5F600000002 /* ConfigValidationTests.swift */,
@@ -215,6 +212,7 @@
 				A1B2C3D40001E5F600000002 /* SQLiteWritePathTests.swift */,
 				A1B2C3D40003E5F600000002 /* SQLiteTableWhitelistTests.swift */,
 				A1B2C3D40004E5F600000002 /* CrashReportingServiceTests.swift */,
+				A11A11A11A11A11A11A11A02 /* AnalyticsServiceTests.swift */,
 				A1B2C3D40001E5F600000202 /* YouTubeSearchClientTests.swift */,
 				A1B2C3D40001E5F600000102 /* UpsertCascadeTests.swift */,
 				A1B2C3D40002E5F600000002 /* LocalTitleSearchTests.swift */,
@@ -299,7 +297,7 @@
 				B318DC862EC6920500DB1A9A /* Sources */,
 				B318DC872EC6920500DB1A9A /* Frameworks */,
 				B318DC882EC6920500DB1A9A /* Resources */,
-				B3DF8FC22ED5CEC3007FD5D0 /* Upload dSYMs to Crashlytics */,
+				B3DF8FC22ED5CEC3007FD5D0 /* Upload dSYMs to PostHog */,
 			);
 			buildRules = (
 			);
@@ -314,9 +312,8 @@
 				B3E30E132ECCB7AA008A3B6C /* Supabase */,
 				B32F71132ED399B5001779C5 /* RevenueCat */,
 				B3DF8FA72ED5CEC3007FD5D0 /* FirebaseCore */,
-				B3DF8FB02ED5CEC3007FD5D0 /* FirebaseAnalytics */,
-				B3DF8FC02ED5CEC3007FD5D0 /* FirebaseCrashlytics */,
 				B3DF8FA92ED5CEC3007FD5D0 /* FirebaseMessaging */,
+				B3A0F0022F20AA0100000002 /* PostHog */,
 				B3F2F7E32F14A10000D1A003 /* YouTubeiOSPlayerHelper */,
 				B31D2C432EFFA4020091F030 /* GoogleMobileAds */,
 			);
@@ -376,6 +373,7 @@
 				B3DC12CA2ED5CB0400B5A429 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 				B3F2F7E22F14A10000D1A002 /* XCRemoteSwiftPackageReference "youtube-ios-player-helper" */,
 				B31D2C422EFFA4020091F030 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */,
+				B3A0F0012F20AA0100000001 /* XCRemoteSwiftPackageReference "posthog-ios" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = B318DC8B2EC6920500DB1A9A /* Products */;
@@ -406,7 +404,7 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		B3DF8FC22ED5CEC3007FD5D0 /* Upload dSYMs to Crashlytics */ = {
+		B3DF8FC22ED5CEC3007FD5D0 /* Upload dSYMs to PostHog */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -414,17 +412,14 @@
 			);
 			inputPaths = (
 				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${TARGET_NAME}",
-				"$(BUILT_PRODUCTS_DIR)/$(INFOPLIST_PATH)",
-				"$(BUILD_DIR)/../../SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run",
-				"$(BUILD_DIR)/../../SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/upload-symbols",
-				"$(SRCROOT)/VibeWatchApp/GoogleService-Info.plist",
+				"$(BUILD_DIR)/../../SourcePackages/checkouts/posthog-ios/build-tools/upload-symbols.sh",
 			);
-			name = "Upload dSYMs to Crashlytics";
+			name = "Upload dSYMs to PostHog";
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# Crashlytics needs the dSYMs to symbolicate a crash. Without this phase the\n# reports arrive as raw addresses. The script is a no-op when the checkout is absent\n# (a clean CI machine that has not resolved packages yet) instead of failing the build.\nRUN_SCRIPT=\"${BUILD_DIR%/Build/*}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run\"\nif [ -f \"$RUN_SCRIPT\" ]; then\n  \"$RUN_SCRIPT\" -gsp \"${SRCROOT}/VibeWatchApp/GoogleService-Info.plist\" -p ios\nelse\n  echo \"warning: Crashlytics run script not found at $RUN_SCRIPT; dSYMs not uploaded.\"\nfi\n";
+			shellScript = "# PostHog error tracking needs the dSYMs to symbolicate a crash. The SDK ships the\n# upload script (it skips non-Release configurations by itself and needs posthog-cli,\n# see VibeWatchTools/upload-dsyms.sh for auth). No-op when the checkout is absent\n# (a clean CI machine that has not resolved packages yet) instead of failing the build.\nRUN_SCRIPT=\"${BUILD_DIR%/Build/*}/SourcePackages/checkouts/posthog-ios/build-tools/upload-symbols.sh\"\nif [ -f \"$RUN_SCRIPT\" ]; then\n  \"$RUN_SCRIPT\" || echo \"warning: PostHog dSYM upload failed (posthog-cli mancante o non autenticato?); build not blocked.\"\nelse\n  echo \"warning: PostHog upload-symbols.sh not found at $RUN_SCRIPT; dSYMs not uploaded.\"\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -433,7 +428,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				CF1EE317BD6A461DA9DC12F3 /* PostHogClientTests.swift in Sources */,
 				04DE3D44BE064990BC929352 /* SyncEngineTests.swift in Sources */,
 				A1B2C3D40007E5F600000001 /* TrackingSyncTests.swift in Sources */,
 				A1B2C3D40006E5F600000001 /* ConfigValidationTests.swift in Sources */,
@@ -454,6 +448,7 @@
 				A1B2C3D40001E5F600000001 /* SQLiteWritePathTests.swift in Sources */,
 				A1B2C3D40003E5F600000001 /* SQLiteTableWhitelistTests.swift in Sources */,
 				A1B2C3D40004E5F600000001 /* CrashReportingServiceTests.swift in Sources */,
+				A11A11A11A11A11A11A11A01 /* AnalyticsServiceTests.swift in Sources */,
 				A1B2C3D40001E5F600000201 /* YouTubeSearchClientTests.swift in Sources */,
 				A1B2C3D40001E5F600000101 /* UpsertCascadeTests.swift in Sources */,
 				A1B2C3D40002E5F600000001 /* LocalTitleSearchTests.swift in Sources */,
@@ -540,7 +535,7 @@
 				DEVELOPMENT_TEAM = 3V97GU3CCY;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -604,7 +599,7 @@
 				DEVELOPMENT_TEAM = 3V97GU3CCY;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -807,6 +802,14 @@
 				minimumVersion = 5.49.0;
 			};
 		};
+		B3A0F0012F20AA0100000001 /* XCRemoteSwiftPackageReference "posthog-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/PostHog/posthog-ios.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.56.0;
+			};
+		};
 		B3DC12CA2ED5CB0400B5A429 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
@@ -841,6 +844,11 @@
 			package = B32F71122ED399B5001779C5 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
 			productName = RevenueCat;
 		};
+		B3A0F0022F20AA0100000002 /* PostHog */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B3A0F0012F20AA0100000001 /* XCRemoteSwiftPackageReference "posthog-ios" */;
+			productName = PostHog;
+		};
 		B3DF8FA72ED5CEC3007FD5D0 /* FirebaseCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = B3DC12CA2ED5CB0400B5A429 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
@@ -850,16 +858,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = B3DC12CA2ED5CB0400B5A429 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseMessaging;
-		};
-		B3DF8FB02ED5CEC3007FD5D0 /* FirebaseAnalytics */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = B3DC12CA2ED5CB0400B5A429 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseAnalytics;
-		};
-		B3DF8FC02ED5CEC3007FD5D0 /* FirebaseCrashlytics */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = B3DC12CA2ED5CB0400B5A429 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseCrashlytics;
 		};
 		B3E30E132ECCB7AA008A3B6C /* Supabase */ = {
 			isa = XCSwiftPackageProductDependency;

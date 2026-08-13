@@ -14,11 +14,15 @@ class AppDelegate: NSObject, UIApplicationDelegate, @MainActor UNUserNotificatio
         CerebrasBackendBackgroundScheduler.shared.scheduleNextRun()
         UserPreferenceManager.shared.setSyncEngine(SyncEngine.shared)
 
-        // Initialize Firebase
+        // Analytics + error tracking + session replay: one pipeline (PostHog). Before Firebase,
+        // so the first lifecycle events and any early crash are captured.
+        AnalyticsService.bootstrap()
+
+        // Initialize Firebase (push notifications only — Analytics/Crashlytics are gone)
         FirebaseApp.configure()
 
-        // Crash reporting (P3): Crashlytics starts with Firebase, but collection has to follow the
-        // analytics opt-out, and the install id makes a crash traceable before sign-in.
+        // Crash reporting rides the PostHog backend installed by bootstrap(); collection follows
+        // the analytics opt-out, and the install id makes a crash traceable before sign-in.
         CrashReportingService.start(
             isEnabled: UserDefaults.standard.object(forKey: "analytics.isEnabled") as? Bool ?? true,
             installId: InstallIDService.getOrCreateInstallId()
@@ -114,9 +118,13 @@ class AppDelegate: NSObject, UIApplicationDelegate, @MainActor UNUserNotificatio
         // Print full message.
         Logger.debug("[AppDelegate] didReceive notification userInfo: \(userInfo)")
 
+        AnalyticsService.shared.track(
+            .notificationOpened(notificationType: userInfo["notification_type"] as? String)
+        )
+
         // Handle deep link if present
         AppNavigationManager.shared.handle(userInfo: userInfo)
-        
+
         completionHandler()
     }
     

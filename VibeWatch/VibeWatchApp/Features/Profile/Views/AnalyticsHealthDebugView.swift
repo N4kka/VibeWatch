@@ -3,21 +3,17 @@ import SwiftUI
 
 struct AnalyticsHealthDebugView: View {
     @State private var events: [AnalyticsService.EventSnapshot] = []
-    @State private var diagnostics: PostHogClient.Diagnostics?
+    @State private var diagnostics: AnalyticsService.Diagnostics?
     @State private var lastFlushStatus: String?
-    @State private var isFlushing = false
 
     var body: some View {
         List {
             Section("PostHog") {
                 if let diagnostics {
                     row(label: "Configured", value: diagnostics.isConfigured ? "yes" : "NO — events dropped")
-                    row(label: "Dropped (unconfigured)", value: "\(diagnostics.droppedUnconfiguredCount)")
-                    row(label: "Queue count", value: "\(diagnostics.queueCount)")
-                    row(label: "Flushing", value: diagnostics.isFlushing ? "yes" : "no")
-                    row(label: "Flush attempts", value: "\(diagnostics.flushAttemptCount)")
-                    row(label: "Last error", value: diagnostics.lastFlushErrorDescription ?? "none")
-                    row(label: "Last error at", value: diagnostics.lastFlushErrorAt?.description ?? "—")
+                    row(label: "Enabled (opt-in)", value: diagnostics.isEnabled ? "yes" : "no")
+                    row(label: "Distinct ID", value: diagnostics.distinctId ?? "—")
+                    row(label: "Replay recording", value: diagnostics.isReplayActive ? "yes" : "no")
                 } else {
                     Text("No diagnostics yet.")
                         .foregroundColor(.secondary)
@@ -27,10 +23,11 @@ struct AnalyticsHealthDebugView: View {
                     row(label: "Last flush", value: lastFlushStatus)
                 }
 
-                Button(isFlushing ? "Flushing..." : "Flush Now") {
-                    Task { await flushNow() }
+                Button("Flush Now") {
+                    AnalyticsService.shared.flushNow()
+                    lastFlushStatus = "Requested at \(Date().formatted(date: .omitted, time: .standard))"
+                    refresh()
                 }
-                .disabled(isFlushing)
             }
 
             Section("Recent Events") {
@@ -60,33 +57,18 @@ struct AnalyticsHealthDebugView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button("Refresh") {
-                    Task { await refresh() }
+                    refresh()
                 }
             }
         }
-        .task {
-            await refresh()
+        .onAppear {
+            refresh()
         }
     }
 
-    private func refresh() async {
-        await MainActor.run {
-            events = AnalyticsService.shared.recentEvents(limit: 50).reversed()
-        }
-        diagnostics = await PostHogClient.shared.diagnostics()
-    }
-
-    private func flushNow() async {
-        isFlushing = true
-        defer { isFlushing = false }
-
-        do {
-            try await PostHogClient.shared.flush()
-            lastFlushStatus = "Success"
-        } catch {
-            lastFlushStatus = "Failed: \(error)"
-        }
-        diagnostics = await PostHogClient.shared.diagnostics()
+    private func refresh() {
+        events = AnalyticsService.shared.recentEvents(limit: 50).reversed()
+        diagnostics = AnalyticsService.shared.diagnostics()
     }
 
     private func row(label: String, value: String) -> some View {
