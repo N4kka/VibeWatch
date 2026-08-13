@@ -261,6 +261,16 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
         setupStateMachineObserver()
     }
 
+    /// Azzera il punto di ripartenza del sync. Un `lastSyncAt` ereditato dall'account precedente
+    /// farebbe chiedere al server solo le modifiche successive a quella data: per il nuovo utente
+    /// tutto lo storico più vecchio non arriverebbe mai.
+    public func resetLocalSyncState() {
+        lastSyncAt = nil
+        lastError = nil
+        pendingOperationsCount = 0
+        UserDefaults.standard.removeObject(forKey: "SyncEngine.lastSyncTimestamp")
+    }
+
     // MARK: - Setup
 
     private func setupNetworkObserver() {

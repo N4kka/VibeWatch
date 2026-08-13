@@ -59,6 +59,8 @@ class ListManager: ObservableObject {
     private let trackingActionsOverride: TrackingActions?
     private var trackingActions: TrackingActions { trackingActionsOverride ?? .shared }
     private var cancellables = Set<AnyCancellable>()
+    /// C'è un patrimonio anonimo appena adottato che il prossimo sync deve caricare sul server.
+    private var pendingAnonymousUpload = false
     private var userId: String {
         authService.currentUser?.id ?? DeviceIdentity.installation
     }
@@ -201,6 +203,28 @@ class ListManager: ObservableObject {
                 Logger.info("[ListManager] Queued local custom list '\(localList.name)' (\(localList.items.count) items) for remote sync.")
             }
 
+            // 4-bis. Le liste CORE non si creano qui — esistono già per ogni utente, e l'id
+            //        canonico lo risolve `addItemToSQLite` — ma i loro item, se l'account è appena
+            //        nato da una sessione anonima, sul server non ci sono mai stati. Solo alla
+            //        prima sincronizzazione dopo l'adozione: dopo, watchlist e visti viaggiano
+            //        normalmente sull'outbox e riaccodarli sarebbe lavoro doppio a ogni login.
+            if pendingAnonymousUpload {
+                pendingAnonymousUpload = false
+                for localList in localListsBeforeSync where localList.type != .custom {
+                    // Gli item TV derivati dal tracking hanno un id sintetico e nessuna riga in
+                    // `list_items`: accodarli significherebbe inventare record che non esistono.
+                    let ownItems = localList.items.filter {
+                        !$0.id.hasPrefix(Self.trackingItemPrefix)
+                    }
+                    guard !ownItems.isEmpty else { continue }
+                    for item in ownItems {
+                        await addItemToSQLite(item, listId: localList.id)
+                    }
+                    didEnqueueLocalUploads = true
+                    Logger.info("[ListManager] Queued \(ownItems.count) anonymous items from '\(localList.name)' for remote sync.")
+                }
+            }
+
             // 5. Update local state with the merged lists
             applyLists(remoteLists)
             // Il pull può aver portato in memoria liste core con un id REMOTO diverso dalla
@@ -237,6 +261,43 @@ class ListManager: ObservableObject {
         await loadListsFromSQLite()
     }
     
+    /// Passa al nuovo account tutto ciò che l'utente aveva creato da anonimo su questo device.
+    ///
+    /// Le righe locali sono scritte con `user_id = DeviceIdentity.installation`, e ogni lettura
+    /// filtra per l'id di chi è loggato: senza questa riassegnazione, appena l'account nasce la
+    /// watchlist "sparisce" — resta in SQLite ma intestata a un id che nessuno interroga più.
+    /// Le liste custom avevano già una loro strada (venivano ricostruite in `sync...`), le core
+    /// no: è il buco che questo chiude.
+    ///
+    /// Va chiamato PRIMA che `currentUser` diventi visibile, così il sync che parte subito dopo
+    /// trova le righe già intestate a chi le deve caricare.
+    func adoptAnonymousLocalData(newOwnerId: String) async {
+        let deviceId = DeviceIdentity.installation
+        guard newOwnerId != deviceId else { return }
+
+        await ensureProfileInSQLite(userId: newOwnerId)
+
+        // `synced_at = NULL` le rimette nello stato "mai viste dal server", che è la verità: sul
+        // server non sono mai arrivate.
+        _ = db.execute(
+            "UPDATE lists SET user_id = ?, synced_at = NULL WHERE user_id = ?",
+            parameters: [newOwnerId, deviceId])
+        _ = db.execute(
+            "UPDATE list_items SET user_id = ?, synced_at = NULL WHERE user_id = ?",
+            parameters: [newOwnerId, deviceId])
+
+        // L'outbox accumulata da anonimo porta `user_id` del device dentro il payload, e
+        // `apply_mutations` scarta ogni record il cui user_id non è `auth.uid()`
+        // (`user_id_mismatch`): quelle operazioni non possono che essere rifiutate. Si buttano e
+        // si riaccoda tutto sotto il nuovo proprietario al primo sync.
+        _ = db.execute(
+            "DELETE FROM sync_outbox WHERE user_id = ? OR user_id = 'anonymous'",
+            parameters: [deviceId])
+
+        pendingAnonymousUpload = true
+        Logger.info("[ListManager] Dati anonimi adottati da \(newOwnerId.prefix(8))...")
+    }
+
     // Call this when user logs out
     func resetListsForLoggedOutUser() {
         Logger.info("[ListManager] Resetting lists for logged out user.")
@@ -666,6 +727,10 @@ class ListManager: ObservableObject {
     
     /// Ensure device profile exists in SQLite (required for foreign key constraint)
     private func ensureDeviceProfileInSQLite() async {
+        await ensureProfileInSQLite(userId: userId)
+    }
+
+    private func ensureProfileInSQLite(userId: String) async {
         // `profiles.email` ha un vincolo UNIQUE. Usare una email fissa ("device@local") per
         // OGNI profilo significa che, dopo il login, l'INSERT OR IGNORE del profilo dell'utente
         // autenticato collide sull'email del profilo-device già esistente e viene SALTATO in

@@ -20,6 +20,7 @@ class SearchViewModel: ObservableObject {
 
     private var searchTask: Task<Void, Never>?
     private var loadMoreTask: Task<Void, Never>?
+    private var cancellables = Set<AnyCancellable>()
     private var currentPage = 1
     private var totalPages = 1
     /// `"mediaType:id"` di ciò che è già in lista: TMDB ripete gli stessi titoli fra le pagine.
@@ -44,6 +45,19 @@ class SearchViewModel: ObservableObject {
         Logger.debug("[SearchViewModel] init() called")
         self.loadTrendingSearches()
         Task { await self.loadLatestVisitedItems() }
+
+        // La SearchView sta in un tab e sopravvive al cambio di account: senza questo, gli ultimi
+        // visitati dell'utente uscito restavano a schermo anche dopo che UserDefaults era stato
+        // ripulito, fino al riavvio dell'app.
+        NotificationCenter.default.publisher(for: .localUserDataDidReset)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                guard let self else { return }
+                self.latestVisitedItems = []
+                self.searchQuery = ""
+                self.searchResults = []
+            }
+            .store(in: &cancellables)
     }
 
     deinit {

@@ -1,6 +1,14 @@
 import Foundation
 import Combine
 
+/// Con Apple e Google lo stesso pulsante fa login e registrazione: solo la schermata da cui parte
+/// dice quale delle due sta succedendo. Serve a decidere se i dati locali dell'utente anonimo
+/// diventano il patrimonio di partenza del nuovo account o vanno buttati.
+enum AuthFlowIntent {
+    case signIn
+    case signUp
+}
+
 /// Protocol defining the authentication service interface.
 /// Enables testability through dependency injection and mocking.
 @MainActor
@@ -18,8 +26,8 @@ protocol AuthServiceProtocol: AnyObject, ObservableObject {
     func signUp(username: String, email: String, password: String) async throws -> User
     func signIn(emailOrUsername: String, password: String) async throws -> User
     func signOut(force: Bool) async throws
-    func signInWithApple() async throws -> User
-    func signInWithGoogle() async throws -> User
+    func signInWithApple(intent: AuthFlowIntent) async throws -> User
+    func signInWithGoogle(intent: AuthFlowIntent) async throws -> User
 
     // MARK: - Password Management
 
