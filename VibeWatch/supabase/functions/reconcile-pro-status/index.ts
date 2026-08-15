@@ -3,7 +3,12 @@
 // definitiva e l'entitlement NON è attivo, mette is_pro=false. Su errore/secret mancante
 // NON demota (conservativo: non si toglie il Pro per un glitch transitorio).
 //
-// Auth: header Authorization == REVENUECAT_WEBHOOK_SECRET (op amministrativa).
+// Auth: solo il chiamante di servizio (_shared/cronAuth.ts), come ogni altra funzione che
+// esiste per il cron. C'era anche un secondo controllo — Authorization == REVENUECAT_WEBHOOK_SECRET
+// — nato prima di cronAuth, quando questa funzione si lanciava a mano: quel valore non e' piu'
+// leggibile da nessuna parte (i segreti Supabase sono write-only), quindi lo scheduler non
+// avrebbe potuto presentarlo e la funzione sarebbe rimasta senza cron, che e' come e' stata per
+// mesi. Il servizio che chiama e' gia' autenticato dalla chiave di servizio.
 // Gira come service_role -> il trigger trg_enforce_is_pro lascia passare la scrittura.
 import { serve } from 'https://deno.land/std@0.131.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -17,22 +22,10 @@ const SUPABASE_SERVICE_ROLE_KEY = (() => {
   if (s) { try { const k = JSON.parse(s)?.default; if (k) return k as string } catch { /* fall back */ } }
   return Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 })()
-const ADMIN_SECRET = Deno.env.get('REVENUECAT_WEBHOOK_SECRET') ?? ''
 const REVENUECAT_API_KEY = Deno.env.get('REVENUECAT_API_KEY') ?? ''
 const PRO_ENTITLEMENT_ID = Deno.env.get('PRO_ENTITLEMENT_ID') ?? 'StartingVibe Pro'
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
-
-function authorized(header: string | null): boolean {
-  if (!header || !ADMIN_SECRET) return false
-  const provided = header.startsWith('Bearer ') ? header.slice(7) : header
-  const a = new TextEncoder().encode(provided)
-  const b = new TextEncoder().encode(ADMIN_SECRET)
-  if (a.length !== b.length) return false
-  let d = 0
-  for (let i = 0; i < a.length; i++) d |= a[i] ^ b[i]
-  return d === 0
-}
 
 function isEntitlementActive(e: { expires_date?: string | null } | undefined): boolean {
   if (!e) return false
@@ -63,10 +56,6 @@ serve(async (req) => {
   // key. See _shared/cronAuth.ts.
   const unauthorized = rejectIfNotServiceCaller(req)
   if (unauthorized) return unauthorized
-
-  if (!authorized(req.headers.get('Authorization'))) {
-    return new Response('Unauthorized', { status: 401 })
-  }
 
   const { data: rows, error } = await supabase
     .from('user_daily_quota')
