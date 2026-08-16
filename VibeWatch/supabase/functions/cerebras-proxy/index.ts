@@ -11,6 +11,8 @@ import {
   usageCountForToday,
   usageDayKey,
 } from './quota.ts'
+import { withCors } from '../_shared/cors.ts'
+import { fetchIsProFromRevenueCat } from '../_shared/revenuecat.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 // Client-facing (low-priv) key: prefer new publishable key, fall back to legacy anon.
@@ -49,14 +51,9 @@ function jsonResponse(body: Record<string, unknown>, status: number) {
   })
 }
 
-function isEntitlementActive(entitlement: { expires_date?: string | null } | undefined): boolean {
-  if (!entitlement) return false
-  // expires_date null => entitlement a vita (lifetime). Altrimenti deve essere nel futuro.
-  if (entitlement.expires_date == null) return true
-  return new Date(entitlement.expires_date).getTime() > Date.now()
-}
-
 // Verifica lo stato Pro interrogando RevenueCat (autorevole), con cache breve.
+// La lookup prova entrambe le grafie dell'app_user_id (vedi _shared/revenuecat.ts:
+// iOS registra l'uuid in maiuscolo, qui arriva minuscolo dal JWT).
 // In caso di errore/secret mancante NON si ricade sul DB forgiabile: si usa l'ultimo
 // stato noto in cache (se presente) o, in assenza, il tier Free (default sicuro).
 async function isProUser(userId: string): Promise<boolean> {
@@ -66,31 +63,14 @@ async function isProUser(userId: string): Promise<boolean> {
     return cached.isPro
   }
 
-  if (!REVENUECAT_API_KEY) {
-    console.warn('REVENUECAT_API_KEY non configurata; uso ultimo stato noto / Free')
+  const lookup = await fetchIsProFromRevenueCat(userId, REVENUECAT_API_KEY, PRO_ENTITLEMENT_ID)
+  if (lookup === null) {
+    console.warn('Stato Pro indeterminato; uso ultimo stato noto / Free')
     return cached?.isPro ?? false
   }
 
-  try {
-    const resp = await fetch(
-      `https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(userId)}`,
-      { headers: { Authorization: `Bearer ${REVENUECAT_API_KEY}` } },
-    )
-
-    if (!resp.ok) {
-      console.warn(`RevenueCat lookup fallita (${resp.status}); uso ultimo stato noto / Free`)
-      return cached?.isPro ?? false
-    }
-
-    const json = await resp.json()
-    const entitlement = json?.subscriber?.entitlements?.[PRO_ENTITLEMENT_ID]
-    const isPro = isEntitlementActive(entitlement)
-    proStatusCache.set(userId, { isPro, expiresAt: now + PRO_CACHE_TTL_MS })
-    return isPro
-  } catch (error) {
-    console.warn('Errore lookup RevenueCat; uso ultimo stato noto / Free:', error)
-    return cached?.isPro ?? false
-  }
+  proStatusCache.set(userId, { isPro: lookup, expiresAt: now + PRO_CACHE_TTL_MS })
+  return lookup
 }
 
 async function requestsUsedToday(
@@ -186,7 +166,7 @@ async function recordGlobalTokens(adminSupabase: SupabaseAdminClient, tokens: nu
   }
 }
 
-serve(async (req) => {
+serve(withCors(async (req) => {
   try {
     // 1. Require Authorization header
     const authHeader = req.headers.get('Authorization')
@@ -311,4 +291,4 @@ serve(async (req) => {
     console.error('cerebras-proxy error:', error)
     return jsonResponse({ error: 'Internal server error' }, 500)
   }
-})
+}))

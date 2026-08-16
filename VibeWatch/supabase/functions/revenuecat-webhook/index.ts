@@ -60,13 +60,26 @@ serve(async (req) => {
 
   console.log(`RevenueCat event: ${event.type} for ${appUserId.slice(0, 8)}…`)
 
-  // 2. Stato autorevole: rileggi il subscriber da RevenueCat (non fidarsi del payload).
+  // 2. L'evento va in archivio prima di essere elaborato (vedi logEvent).
+  const logId = await logEvent(event)
+
+  // Il TEST del dashboard RevenueCat non è un fatto di fatturazione: porta un app_user_id
+  // inventato (`test_product`, uno store a caso) e non descrive nessun abbonamento reale.
+  // Trattarlo come gli altri significa scrivere righe di quota per utenti che non esistono —
+  // successo il 2026-08-16 alle 16:20, riga poi rimossa a mano. Si archivia e basta: serve a
+  // provare che il webhook arriva, ed è esattamente quello che continua a provare.
+  if (event.type === 'TEST') {
+    await markProcessed(logId)
+    return new Response('OK', { status: 200 })
+  }
+
+  // 3. Stato autorevole: rileggi il subscriber da RevenueCat (non fidarsi del payload).
   const isPro = await fetchIsProFromRevenueCat(appUserId)
 
-  // 3. Scrivi is_pro (service_role -> il trigger lascia passare).
+  // 4. Scrivi is_pro (service_role -> il trigger lascia passare).
   await upsertIsPro(appUserId, isPro)
 
-  // 4. La data di cancellazione sta accanto allo stato dell'abbonamento, non sul profilo.
+  // 5. La data di cancellazione sta accanto allo stato dell'abbonamento, non sul profilo.
   //    `profiles.subscription_canceled_at` era `timestamp` senza fuso — l'unica colonna così
   //    dello schema — e RevenueCat manda ISO 8601 con offset: Postgres lo troncava in silenzio.
   //    `user_entitlements.canceled_at` è timestamptz. La riga esiste già: la crea `upsertIsPro`.
@@ -75,14 +88,17 @@ serve(async (req) => {
   //    qui scriverebbe "non Pro" mentre una cancellazione lascia l'accesso attivo fino a fine
   //    periodo. Se la riga manca è perché `fetchIsProFromRevenueCat` ha fallito, e allora non
   //    c'è uno stato da annotare — ma lo si dice, invece di non fare nulla in silenzio.
-  if (event.type === 'CANCELLATION' && event.cancellation_date) {
+  const canceledAt = cancellationTimestamp(event)
+  if (canceledAt !== undefined) {
     const { error, count } = await supabase
       .from('user_entitlements')
-      .update({ canceled_at: event.cancellation_date }, { count: 'exact' })
+      .update({ canceled_at: canceledAt }, { count: 'exact' })
       .eq('user_id', appUserId)
     if (error) console.error('Errore update canceled_at:', error.message)
     else if (!count) console.warn(`canceled_at non scritto: nessun entitlement per ${appUserId.slice(0, 8)}…`)
   }
+
+  await markProcessed(logId)
 
   return new Response('OK', { status: 200 })
 })
@@ -92,7 +108,39 @@ interface RCEvent {
   type?: string
   product_id?: string
   purchased_at?: string
+  /** Quando RevenueCat ha registrato l'evento. È l'unica data che i CANCELLATION portano. */
+  event_timestamp_ms?: number
+  /** Storico: nessun evento osservato lo contiene. Vedi `cancellationTimestamp`. */
   cancellation_date?: string
+  // Il resto del payload viaggia con l'evento e finisce in archivio così com'è.
+  [key: string]: unknown
+}
+
+/**
+ * Quando l'abbonamento è stato disdetto — o `null` per dire "non più", o `undefined`
+ * quando l'evento non parla di disdette e la colonna non va toccata.
+ *
+ * **Perché non `cancellation_date`.** È il campo che questa funzione ha cercato per un anno,
+ * e nei payload di RevenueCat non esiste: un CANCELLATION porta `event_timestamp_ms` e
+ * `cancel_reason`, nient'altro sul tempo. Il ramo non è mai scattato e `canceled_at` è
+ * rimasto NULL per ogni disdetta di ogni utente — verificato il 2026-08-16 su un acquisto
+ * web di prova, disdetto dal portale: RevenueCat segnava `unsubscribe_detected_at`, la
+ * colonna no. Il campo resta letto per primo se un giorno comparisse davvero.
+ *
+ * UNCANCELLATION è la disdetta ritirata prima della scadenza: la data va tolta, altrimenti
+ * un abbonamento di nuovo vivo resta marcato come disdetto per sempre.
+ */
+function cancellationTimestamp(event: RCEvent): string | null | undefined {
+  if (event.type === 'CANCELLATION') {
+    if (typeof event.cancellation_date === 'string') return event.cancellation_date
+    if (typeof event.event_timestamp_ms === 'number') {
+      return new Date(event.event_timestamp_ms).toISOString()
+    }
+    // Un evento senza data è comunque una disdetta: meglio "adesso" che nessuna traccia.
+    return new Date().toISOString()
+  }
+  if (event.type === 'UNCANCELLATION') return null
+  return undefined
 }
 
 /**
@@ -151,6 +199,60 @@ async function fetchIsProFromRevenueCat(userId: string): Promise<boolean | null>
   } catch (error) {
     console.warn('Errore lookup RevenueCat; nessuna scrittura is_pro:', error)
     return null
+  }
+}
+
+/**
+ * L'evento, com'è arrivato, in `revenuecat_webhook_logs`.
+ *
+ * È l'unica memoria che esiste di cosa RevenueCat ha detto e quando: i log della funzione
+ * durano giorni, questa tabella dura fino alla potatura settimanale (`clean_old_webhook_logs`).
+ * Serve a rispondere alla domanda che si fa sempre — "questo utente ha pagato o no, e cosa è
+ * successo dopo" — senza dover chiedere al dashboard.
+ *
+ * Ha smesso di essere scritta il 2026-06-02, con l'esito che il 2026-08-16 una tabella vuota
+ * si leggeva come "non arriva più nessun evento" mentre gli eventi arrivavano: un archivio
+ * che tace è peggio di uno che non c'è.
+ *
+ * Scritto **prima** dell'elaborazione, con `processed: false`: un evento che fa cadere la
+ * funzione a metà è esattamente quello che si vuole poter ritrovare. Nessun errore qui può
+ * fermare il webhook — l'archivio è utile, l'entitlement è essenziale.
+ */
+async function logEvent(event: RCEvent): Promise<string | null> {
+  try {
+    const { data, error } = await supabase
+      .from('revenuecat_webhook_logs')
+      .insert({
+        event_type: event.type ?? 'UNKNOWN',
+        app_user_id: event.app_user_id,
+        product_id: event.product_id ?? null,
+        payload: event,
+        processed: false,
+      })
+      .select('id')
+      .single()
+    if (error) {
+      console.warn('Evento non archiviato:', error.message)
+      return null
+    }
+    return (data?.id as string) ?? null
+  } catch (error) {
+    console.warn('Evento non archiviato:', error)
+    return null
+  }
+}
+
+/** Chiude la riga aperta da `logEvent`: si è arrivati in fondo. */
+async function markProcessed(logId: string | null): Promise<void> {
+  if (!logId) return
+  try {
+    const { error } = await supabase
+      .from('revenuecat_webhook_logs')
+      .update({ processed: true })
+      .eq('id', logId)
+    if (error) console.warn('Evento non marcato come elaborato:', error.message)
+  } catch (error) {
+    console.warn('Evento non marcato come elaborato:', error)
   }
 }
 
