@@ -26,6 +26,7 @@ import {
   trySpend,
   writeCache,
 } from '../_shared/proxy.ts'
+import { withCors } from '../_shared/cors.ts'
 
 const RAPIDAPI_KEY = Deno.env.get('RAPIDAPI_KEY') ?? ''
 const RAPIDAPI_HOST = 'streaming-availability.p.rapidapi.com'
@@ -44,7 +45,7 @@ interface ProvidersRequest {
   region?: string
 }
 
-serve(async (req: Request) => {
+serve(withCors(async (req: Request) => {
   if (req.method !== 'POST') {
     return jsonResponse({ error: 'Method not allowed' }, 405)
   }
@@ -156,7 +157,7 @@ serve(async (req: Request) => {
 
   await writeCache(supabase, PROVIDER, cacheKey, parsed, TTL_SECONDS)
   return jsonResponse({ show: parsed, cached: false }, 200)
-})
+}))
 
 function caller_scope(req: Request): string {
   return callerKey(req)

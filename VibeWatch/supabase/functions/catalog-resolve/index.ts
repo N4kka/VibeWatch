@@ -25,6 +25,7 @@ import {
   refund,
   trySpend,
 } from '../_shared/proxy.ts'
+import { withCors } from '../_shared/cors.ts'
 import {
   EntityType,
   episodeRowsFromSeasons,
@@ -164,7 +165,12 @@ interface Body {
 
 const ENTITY_TYPES: EntityType[] = ['series', 'episode', 'movie']
 
-serve(async (req: Request) => {
+// `withCors` come le altre funzioni chiamate dal browser (M0). Qui mancava, e si
+// vede solo da M3 in poi: la web app la chiama prima di seguire una serie e prima
+// di "vista tutta", perché senza catalogo `recompute_tv_show_state` produce solo
+// zeri e la serie resta ferma. Le app native non sono toccate — senza header
+// `Origin` non viene aggiunta nessuna intestazione.
+serve(withCors(async (req: Request) => {
   // Il cinto di sicurezza attorno a tutto: un'eccezione non gestita usciva come "Internal
   // Server Error" nudo, e chi sta a monte (import-resolve, e in ultima analisi il report di
   // §7.4) non aveva NIENTE da mostrare. La ragione, qualunque sia, deve viaggiare nel corpo.
@@ -175,7 +181,7 @@ serve(async (req: Request) => {
     console.error(`[catalog-resolve] eccezione non gestita: ${message}`)
     return jsonResponse({ error: 'internal', detail: message.slice(0, 400) }, 500)
   }
-})
+}))
 
 async function handle(req: Request): Promise<Response> {
   if (req.method !== 'POST') {

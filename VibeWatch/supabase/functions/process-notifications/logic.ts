@@ -156,6 +156,40 @@ export function payloadForNotification(
   }
 }
 
+/** Dove atterra chi tocca la notifica sul web. Il default e' l'indirizzo di produzione. */
+export const WEB_APP_ORIGIN = 'https://vibewatchapp.com'
+
+/**
+ * L'equivalente web del deep link che su iOS e' `notification_type` + `media_id`.
+ *
+ * Su iOS il client interpreta i `data` e decide dove andare; un browser non ha quel client,
+ * ha un URL: `webpush.fcm_options.link` e' l'unico posto dove la destinazione puo' essere
+ * scritta, e la scrive il mittente. Le rotte qui sono quelle di `app/routes.ts` del sito, non
+ * un indovinello: un percorso sbagliato non fallisce, apre la pagina "qui non c'e' niente".
+ *
+ * Quando la notifica non ha un media (digest, streak, social) si va sulla schermata che la
+ * riguarda, mai su uno dei titoli accorpati scelto a caso.
+ */
+export function webLink(payload: PushPayload, origin: string = WEB_APP_ORIGIN): string {
+  const type = payload.notificationType
+
+  if (SOCIAL_TYPES.has(type)) return `${origin}/social`
+  if (type === 'streak_reminder') return `${origin}/gamification`
+  if (type === 'import_done') return `${origin}/import`
+
+  const mediaId = payload.mediaId
+  if (mediaId !== null && mediaId !== undefined && String(mediaId).length > 0) {
+    const mediaType = String(payload.mediaType ?? '').toLowerCase()
+    if (mediaType === 'movie' || mediaType === 'film') return `${origin}/film/${mediaId}`
+    if (mediaType === 'tv' || mediaType === 'show' || mediaType === 'series') {
+      return `${origin}/show/${mediaId}`
+    }
+  }
+
+  // Digest, tipi senza media, tipi nuovi non ancora mappati: la home dell'app.
+  return `${origin}/discover`
+}
+
 const DIGEST_KEY_BY_TYPE: Record<string, string> = {
   new_release: 'digest.new_release',
   new_availability: 'digest.new_availability',

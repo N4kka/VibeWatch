@@ -13,7 +13,8 @@
 //
 // Three guards, in order: the user's `email_digest_enabled`, the per-type preferences (an email
 // never mentions a category the user muted for push), and one row per user per day in
-// `email_send_log`, which also makes a second cron firing a no-op.
+// `notification_delivery_log` with `channel = 'email'`, which also makes a second cron firing
+// a no-op.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -50,11 +51,12 @@ async function alreadySentToday(supabase: SupabaseClient, userIds: string[]): Pr
   since.setUTCHours(0, 0, 0, 0)
 
   const { data } = await supabase
-    .from('email_send_log')
+    .from('notification_delivery_log')
     .select('user_id')
-    .eq('email_type', 'digest')
+    .eq('channel', 'email')
+    .eq('kind', 'digest')
     .in('user_id', userIds)
-    .gte('sent_at', since.toISOString())
+    .gte('delivered_at', since.toISOString())
 
   return new Set((data ?? []).map((row: { user_id: string }) => row.user_id))
 }

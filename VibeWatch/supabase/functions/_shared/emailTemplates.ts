@@ -11,7 +11,10 @@
 
 import { t } from './i18n.ts'
 
-const APP_LINK = 'https://vibe-watch.com'
+// Dal cutover (2026-08-16) e' questo il sito, non piu' la vecchia landing su
+// vibe-watch.com: il bottone dice "apri VibeWatch" e adesso c'e' un VibeWatch da
+// aprire. Stessa origine che il dispatcher scrive in `webpush.fcm_options.link`.
+const APP_LINK = 'https://vibewatchapp.com'
 const POSTER_BASE = 'https://image.tmdb.org/t/p/w154'
 
 export type EmailItem = {

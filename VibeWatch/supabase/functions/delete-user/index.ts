@@ -1,8 +1,9 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8'
 import { storageRemovalBatches, type UserStorageObject } from './storage.ts'
+import { withCors } from '../_shared/cors.ts'
 
-serve(async (req) => {
+serve(withCors(async (req) => {
   if (req.method !== 'POST' && req.method !== 'DELETE') {
     return new Response('Method not allowed', { status: 405 })
   }
@@ -40,13 +41,18 @@ serve(async (req) => {
   // Most user-owned tables carry an ON DELETE CASCADE foreign key to auth.users, so
   // auth.admin.deleteUser below clears them — inventario riverificato su pg_constraint il
   // 2026-08-02: OGNI tabella pubblica con una colonna utente cascata da auth.users o da
-  // profiles, tranne quelle qui sotto. These do not: user_daily_quota, user_clip_history
-  // and user_preferences have no foreign key at all, and profiles references auth.users with
-  // NO ACTION — which also means it has to go before the auth user, or that delete is rejected.
+  // profiles, tranne quelle qui sotto. These do not: user_daily_quota has no foreign key at
+  // all, and profiles references auth.users with NO ACTION — which also means it has to go
+  // before the auth user, or that delete is rejected.
   // (user_ai_token_usage and user_clip_signals cascade from profiles.)
+  //
+  // `user_clip_history` e `user_preferences` erano in questo elenco. In F0.d sono diventate
+  // viste sempre vuote (le tabelle erano a 0 righe, tenute in vita solo perché il pull iOS
+  // <= v2.8 le richiede). Una DELETE su una vista senza trigger INSTEAD OF è un errore, non
+  // un no-op: lasciarle qui avrebbe fatto riportare due failures a ogni cancellazione account.
   const failures: string[] = []
 
-  const tables = ['user_daily_quota', 'user_ai_token_usage', 'user_clip_history', 'user_preferences', 'profiles']
+  const tables = ['user_daily_quota', 'user_ai_token_usage', 'profiles']
   for (const table of tables) {
     const { error } = await adminClient.from(table).delete().eq(table === 'profiles' ? 'id' : 'user_id', userId)
     if (error) {
@@ -134,4 +140,4 @@ serve(async (req) => {
     headers: { 'Content-Type': 'application/json' },
     status: 200,
   })
-})
+}))

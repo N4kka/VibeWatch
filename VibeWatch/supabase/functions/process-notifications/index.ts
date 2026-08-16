@@ -18,6 +18,8 @@ import {
   retryDelayMinutes,
   SOCIAL_DAILY_PUSH_CAP,
   SOCIAL_TYPES,
+  WEB_APP_ORIGIN,
+  webLink,
 } from './logic.ts'
 
 console.log('🚀 process-notifications function booting up...')
@@ -94,7 +96,7 @@ async function sendPush(
   // "device died"; only the live ones are actually sent to.
   const { data: devices, error: deviceError } = await supabaseClient
     .from('user_devices')
-    .select('fcm_token')
+    .select('fcm_token, platform')
     .eq('user_id', userId)
     // Newest first: stale rows left behind by token rotation sit at the bottom and are dropped.
     .order('updated_at', { ascending: false })
@@ -108,7 +110,9 @@ async function sendPush(
     return { sent: true, retryable: false, permanent: false, outcome: 'never-registered' }
   }
 
-  const liveDevices = devices.filter((device: { fcm_token: string | null }) => device.fcm_token)
+  const liveDevices = devices.filter(
+    (device: { fcm_token: string | null; platform: string | null }) => device.fcm_token
+  )
   if (liveDevices.length === 0) {
     return { sent: true, retryable: false, permanent: false, outcome: 'no-live-token' }
   }
@@ -120,6 +124,7 @@ async function sendPush(
   for (const device of liveDevices) {
     const fcmToken = device.fcm_token
     const priority = payload.notificationType === 'streak_reminder' ? '5' : '10'
+    const isWeb = device.platform === 'web'
 
     const message = {
       message: {
@@ -140,20 +145,49 @@ async function sendPush(
           // client legge già tutto il resto.
           thread_id: String(payload.threadId ?? ''),
         },
-        apns: {
-          headers: {
-            'apns-priority': priority,
-            'apns-collapse-id': payload.collapseId,
-          },
-          payload: {
-            aps: {
-              sound: 'default',
-              badge: 1,
-              category: payload.category,
-              'thread-id': payload.threadId,
-            },
-          },
-        },
+        // Lo stesso contenuto, due involucri. Il ramo apns resta identico a com'era: il
+        // web si aggiunge accanto, non al posto. Un browser non ha ne' badge ne'
+        // categorie di azioni, e soprattutto non ha un client che interpreti i `data`
+        // per decidere dove andare — la destinazione va scritta come URL, qui.
+        ...(isWeb
+          ? {
+              webpush: {
+                headers: {
+                  // Quattro ore: oltre, la notizia e' vecchia e il browser magari
+                  // non si e' piu' collegato. Meglio niente che un "e' uscito!" di ieri.
+                  TTL: '14400',
+                  Urgency: priority === '5' ? 'low' : 'high',
+                },
+                notification: {
+                  title: payload.title,
+                  body: payload.body,
+                  icon: `${WEB_APP_ORIGIN}/icons/icon-192.png`,
+                  badge: `${WEB_APP_ORIGIN}/icons/badge-72.png`,
+                  // Stesso ruolo di apns-collapse-id: la seconda notifica sullo stesso
+                  // soggetto sostituisce la prima invece di impilarcisi sopra.
+                  tag: payload.collapseId,
+                },
+                fcm_options: {
+                  link: webLink(payload, WEB_APP_ORIGIN),
+                },
+              },
+            }
+          : {
+              apns: {
+                headers: {
+                  'apns-priority': priority,
+                  'apns-collapse-id': payload.collapseId,
+                },
+                payload: {
+                  aps: {
+                    sound: 'default',
+                    badge: 1,
+                    category: payload.category,
+                    'thread-id': payload.threadId,
+                  },
+                },
+              },
+            }),
       },
     }
 

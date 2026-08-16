@@ -5,8 +5,10 @@
 // confirm their address is a lost account, a missing digest is a missing digest. So the notified
 // mail budget stops well short of the ceiling and leaves the rest as headroom.
 //
-// The counter is `email_send_log`, not an in-memory variable: the digest and the recap are two
-// separate invocations, and the dispatcher's fallback path is a third.
+// The counter is `notification_delivery_log` filtered to `channel = 'email'`, not an in-memory
+// variable: the digest and the recap are two separate invocations, and the dispatcher's fallback
+// path is a third. (It used to be a separate `email_send_log` table; both were the same ledger —
+// a delivery to a user — differing only in channel, so they were merged in F0.d-bis.)
 
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -21,9 +23,10 @@ export async function emailsSentToday(supabase: SupabaseClient): Promise<number>
   since.setUTCHours(0, 0, 0, 0)
 
   const { count, error } = await supabase
-    .from('email_send_log')
+    .from('notification_delivery_log')
     .select('id', { count: 'exact', head: true })
-    .gte('sent_at', since.toISOString())
+    .eq('channel', 'email')
+    .gte('delivered_at', since.toISOString())
 
   if (error) {
     // Failing closed here would silence a whole day of email over a transient read error, and
@@ -80,10 +83,11 @@ export async function sendEmailWithBudget(
 
   // Logged after the send: a row here means a message left, so a crash costs at most one
   // uncounted email instead of silently burning budget on sends that never happened.
-  const { error } = await supabase.from('email_send_log').insert({
+  const { error } = await supabase.from('notification_delivery_log').insert({
     user_id: email.userId,
-    email_type: email.emailType,
-    item_count: email.itemCount ?? 1,
+    channel: 'email',
+    kind: email.emailType,
+    notification_count: email.itemCount ?? 1,
   })
   if (error) console.error('[resendBudget] send succeeded but the ledger insert failed:', error.message)
 

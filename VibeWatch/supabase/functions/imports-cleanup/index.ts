@@ -36,6 +36,25 @@ serve(async (req: Request) => {
 
   const admin = adminClient()
 
+  // Prima dei file, le righe. `import_staging` era la tabella più grossa del
+  // database (185 MB, il 57%, per 9 import già chiusi) e non serve più una volta
+  // che il job è finito — tranne che a `import_report`, che ne calcola quasi
+  // ogni campo, elenchi dei non riconosciuti compresi. Per questo
+  // `imports_prune_staging` congela il report in `import_jobs.report_snapshot` e
+  // solo dopo cancella, nella stessa transazione: `import_report` continua a
+  // rispondere identico.
+  //
+  // Un fallimento qui non ferma la pulizia dello storage: sono due retention
+  // indipendenti, e la seconda è quella con obblighi verso terzi.
+  const { data: pruned, error: pruneError } = await admin.rpc('imports_prune_staging', {
+    p_older_than: `${olderThanDays} days`,
+  })
+  if (pruneError) {
+    console.error(`[imports-cleanup] staging prune failed: ${pruneError.message}`)
+  } else if (pruned?.[0]?.rows_deleted) {
+    console.log('[imports-cleanup] staging pruned', JSON.stringify(pruned[0]))
+  }
+
   const { data: stale, error: rpcError } = await admin.rpc('imports_stale_uploads', {
     p_older_than: `${olderThanDays} days`,
   })

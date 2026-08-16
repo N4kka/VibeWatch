@@ -9,6 +9,7 @@ import {
   payloadForNotification,
   preferenceAllows,
   retryDelayMinutes,
+  webLink,
 } from './logic.ts'
 
 function prefs(overrides: Partial<NotificationPreferences> = {}): NotificationPreferences {
@@ -153,4 +154,39 @@ Deno.test('retry backoff doubles and stops at an hour', () => {
   assertEquals(retryDelayMinutes(0), 1)
   assertEquals(retryDelayMinutes(3), 8)
   assertEquals(retryDelayMinutes(20), 60)
+})
+
+Deno.test('il link web di una notifica su un film porta alla pagina del film', () => {
+  const payload = payloadForNotification(row({ media_id: 438631, media_type: 'movie' }), 'en')
+  assertEquals(webLink(payload, 'https://example.test'), 'https://example.test/film/438631')
+})
+
+Deno.test('una serie porta a /show, non a /film', () => {
+  const payload = payloadForNotification(
+    row({ notification_type: 'episode_aired', media_id: 1399, media_type: 'tv' }),
+    'en'
+  )
+  assertEquals(webLink(payload, 'https://example.test'), 'https://example.test/show/1399')
+})
+
+Deno.test('le notifiche social vanno al feed, quelle senza media alla home', () => {
+  const liked = payloadForNotification(
+    row({ notification_type: 'activity_liked', media_id: null, media_type: null }),
+    'en'
+  )
+  assertEquals(webLink(liked, 'https://example.test'), 'https://example.test/social')
+
+  const streak = payloadForNotification(
+    row({ notification_type: 'streak_reminder', media_id: null, media_type: null }),
+    'en'
+  )
+  assertEquals(webLink(streak, 'https://example.test'), 'https://example.test/gamification')
+
+  const digest = digestPayload('user-1', [row(), row({ id: 'row-2' })], 'en')
+  assertEquals(webLink(digest, 'https://example.test'), 'https://example.test/discover')
+})
+
+Deno.test('un media_type sconosciuto non inventa una rotta', () => {
+  const payload = payloadForNotification(row({ media_id: 7, media_type: 'person' }), 'en')
+  assertEquals(webLink(payload, 'https://example.test'), 'https://example.test/discover')
 })
