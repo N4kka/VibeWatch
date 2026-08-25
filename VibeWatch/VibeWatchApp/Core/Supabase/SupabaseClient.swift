@@ -372,27 +372,77 @@ class SupabaseService: ObservableObject {
     /// trovano pronta gli altri. Serve un JWT utente, non la chiave anonima.
     func warmCatalog(showIds: [Int]) async throws {
         guard !showIds.isEmpty else { return }
+        _ = try await callEdgeFunction("catalog-resolve", body: ["show_ids": showIds])
+    }
+
+    // MARK: - Edge Function con JWT utente
+
+    /// Una chiamata a Edge Function firmata con la sessione dell'utente, e la sola risposta
+    /// sensata a un 401.
+    ///
+    /// Un 401 qui non vuol dire "non sei loggato": vuol dire che il server ha rifiutato QUESTO
+    /// token. Capita a chi è regolarmente dentro — un access token ancora integro la cui sessione
+    /// GoTrue non esiste più, per esempio dopo un logout su un altro device — e da solo il client
+    /// non se ne accorge mai: `auth.session` restituisce il token cacheato finché non scade, e
+    /// tutto il resto dell'app (PostgREST) lo accetta senza storie. Il risultato era un'ora di
+    /// `Supabase HTTP 401: {"error":"invalid_token"}` su "vista tutta" e sui consigli AI, con
+    /// liste e voti che intanto funzionavano.
+    ///
+    /// Quindi: si forza un refresh e si riprova una volta. Se il refresh passa, era solo un token
+    /// stantio e l'utente non vede niente. Se viene respinto, la sessione è morta davvero — e
+    /// allora si dice, invece di ripetere lo stesso errore a ogni tap.
+    private func callEdgeFunction(_ name: String, body: [String: Any]) async throws -> Data {
         guard let url = URL(string: Config.supabaseURL.replacingOccurrences(
-            of: ".supabase.co", with: ".functions.supabase.co") + "/catalog-resolve")
+            of: ".supabase.co", with: ".functions.supabase.co") + "/" + name)
         else { throw SupabaseError.notConfigured }
 
         guard let client, let session = try? await client.auth.session else {
             throw SupabaseError.notAuthenticated
         }
 
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
-        request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
-        request.httpBody = try JSONSerialization.data(withJSONObject: ["show_ids": showIds])
+        let payload = try JSONSerialization.data(withJSONObject: body, options: [])
 
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse else { throw SupabaseError.networkError }
+        func send(_ accessToken: String) async throws -> (Data, HTTPURLResponse) {
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.setValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
+            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+            request.httpBody = payload
+
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse else { throw SupabaseError.networkError }
+            return (data, http)
+        }
+
+        var (data, http) = try await send(session.accessToken)
+
+        if http.statusCode == 401 {
+            let renewedAccessToken: String
+            do {
+                renewedAccessToken = try await client.auth.refreshSession().accessToken
+            } catch {
+                // Il refresh token è stato revocato insieme alla sessione: non c'è niente da
+                // riprovare. Restare "loggati" qui vorrebbe dire ripetere questo 401 fino alla
+                // scadenza del token, cioè fino a un'ora di tap che non fanno niente.
+                Logger.error("[Supabase] \(name): 401 e refresh respinto — sessione da rifare")
+                await AuthService.shared.handleRejectedSession()
+                throw SupabaseError.sessionExpired
+            }
+            (data, http) = try await send(renewedAccessToken)
+            if http.statusCode == 401 {
+                Logger.error("[Supabase] \(name): 401 anche con un token appena rinnovato")
+                await AuthService.shared.handleRejectedSession()
+                throw SupabaseError.sessionExpired
+            }
+        }
+
         guard (200...299).contains(http.statusCode) else {
             throw SupabaseError.httpError(
                 statusCode: http.statusCode, body: String(data: data, encoding: .utf8) ?? "")
         }
+
+        return data
     }
 
     // MARK: - Username (SPEC v3 §3.7)
@@ -660,32 +710,12 @@ class SupabaseService: ObservableObject {
     /// l'utente davanti a un pulsante che "non fa niente".
     func manualResolveImport(jobId: String,
                              resolutions: [ImportManualResolution]) async throws {
-        guard let url = URL(string: Config.supabaseURL.replacingOccurrences(
-            of: ".supabase.co", with: ".functions.supabase.co") + "/import-manual-resolve")
-        else { throw SupabaseError.notConfigured }
-
-        guard let client, let session = try? await client.auth.session else {
-            throw SupabaseError.notAuthenticated
-        }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
-        request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
-        request.httpBody = try JSONSerialization.data(withJSONObject: [
+        _ = try await callEdgeFunction("import-manual-resolve", body: [
             "job_id": jobId,
             "resolutions": resolutions.map {
                 ["tvdb_series_id": $0.tvdbSeriesId, "tmdb_show_id": $0.tmdbShowId] as [String: Any]
             },
         ])
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse else { throw SupabaseError.networkError }
-        guard (200...299).contains(http.statusCode) else {
-            throw SupabaseError.httpError(
-                statusCode: http.statusCode, body: String(data: data, encoding: .utf8) ?? "")
-        }
     }
 
     /// Il report di §7.4, calcolato dal server (`import_report`, security invoker: decide la

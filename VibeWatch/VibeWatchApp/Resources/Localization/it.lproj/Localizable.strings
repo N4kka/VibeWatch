@@ -247,6 +247,7 @@
 "auth.error.invalidCredentials" = "Email o password non validi.";
 "auth.error.tooManyAttempts" = "Troppi tentativi. Riprova più tardi.";
 "auth.error.networkError" = "Errore di rete. Controlla la tua connessione.";
+"auth.error.sessionExpired" = "La sessione è scaduta. Accedi di nuovo per continuare.";
 "auth.error.databaseError" = "Errore del database durante il salvataggio del profilo. Riprova.";
 "auth.error.signUpFailed" = "Registrazione fallita. Riprova.";
 "auth.error.passwordResetFailed" = "Non siamo riusciti a inviare l'email di reset. Riprova.";

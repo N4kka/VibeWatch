@@ -246,6 +246,7 @@
 "auth.error.invalidCredentials" = "Nieprawidłowy e-mail lub hasło.";
 "auth.error.tooManyAttempts" = "Zbyt wiele prób. Spróbuj ponownie później.";
 "auth.error.networkError" = "Błąd sieci. Sprawdź połączenie.";
+"auth.error.sessionExpired" = "Twoja sesja wygasła. Zaloguj się ponownie, aby kontynuować.";
 "auth.error.databaseError" = "Błąd bazy danych przy zapisie profilu. Spróbuj ponownie.";
 "auth.error.signUpFailed" = "Rejestracja nie powiodła się. Spróbuj ponownie.";
 "auth.error.passwordResetFailed" = "Nie udało się wysłać e-maila resetującego. Spróbuj ponownie.";

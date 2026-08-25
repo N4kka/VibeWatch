@@ -443,6 +443,26 @@ class AuthService: AuthServiceProtocol {
         }
     }
 
+    /// Il server ha rifiutato una sessione che l'app credeva valida.
+    ///
+    /// Non è `signOut()`: quello fa un push finale e cancella il database locale, e qui nessuna
+    /// delle due cose serve — anzi, lo specchio locale è proprio ciò che un nuovo accesso con lo
+    /// stesso account deve ritrovare. Si azzera solo lo stato di autenticazione, esattamente come
+    /// fa `checkAuthState` quando il refresh viene respinto.
+    ///
+    /// Serve perché un token può essere rifiutato dal server mentre `auth.session` continua a
+    /// restituirlo senza fiatare: finché non scade, il client non ha modo di accorgersene da
+    /// solo. Chi scopre il rifiuto (una Edge Function che risponde 401) lo dice da qui, e l'app
+    /// chiede un nuovo accesso invece di ripetere lo stesso errore a ogni tap.
+    func handleRejectedSession() async {
+        Logger.error("[Auth] Sessione rifiutata dal server — serve un nuovo accesso")
+        try? await client?.auth.signOut(scope: .local)
+        self.currentUser = nil
+        self.isAuthenticated = false
+        clearCachedAuthState()
+        await syncRevenueCatUser(with: nil)
+    }
+
     /// Distingue "sono offline" da "il server ha rifiutato la sessione". Gli errori di
     /// trasporto (URLError) mantengono la cache offline com'è sempre stato; un AuthError
     /// locale (`sessionMissing`) o una risposta 4xx del GoTrue (refresh token revocato,
@@ -614,7 +634,13 @@ class AuthService: AuthServiceProtocol {
             }
         }
 
-        try await client.auth.signOut()
+        // `scope: .local`, non il globale che GoTrue applica per default. `POST /logout` senza
+        // scope cancella TUTTE le sessioni dell'account, su ogni device: uscire dal telefono
+        // buttava fuori anche il web e il secondo device. E lo faceva in modo invisibile — là
+        // l'access token resta valido fino a un'ora (PostgREST guarda firma e scadenza, non la
+        // sessione), quindi l'app continuava a sembrare loggata mentre le Edge Function che
+        // interrogano GoTrue rispondevano 401. Da qui esce questo device e basta.
+        try await client.auth.signOut(scope: .local)
 
         self.currentUser = nil
         self.isAuthenticated = false

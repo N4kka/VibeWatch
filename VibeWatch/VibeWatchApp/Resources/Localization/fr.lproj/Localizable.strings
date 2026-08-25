@@ -246,6 +246,7 @@
 "auth.error.invalidCredentials" = "E-mail ou mot de passe invalide.";
 "auth.error.tooManyAttempts" = "Trop de tentatives. Réessayez plus tard.";
 "auth.error.networkError" = "Erreur réseau. Vérifiez votre connexion.";
+"auth.error.sessionExpired" = "Votre session a expiré. Reconnectez-vous pour continuer.";
 "auth.error.databaseError" = "Erreur de base de données lors de l’enregistrement du profil. Réessayez.";
 "auth.error.signUpFailed" = "Inscription échouée. Réessayez.";
 "auth.error.passwordResetFailed" = "Impossible d’envoyer l’e-mail de réinitialisation. Réessayez.";

@@ -244,6 +244,7 @@
 "auth.error.invalidCredentials" = "Geçersiz e-posta veya şifre.";
 "auth.error.tooManyAttempts" = "Çok fazla deneme. Daha sonra tekrar dene.";
 "auth.error.networkError" = "Ağ hatası. Bağlantını kontrol et.";
+"auth.error.sessionExpired" = "Oturumun süresi doldu. Devam etmek için yeniden giriş yap.";
 "auth.error.databaseError" = "Profil kaydedilirken veritabanı hatası. Tekrar dene.";
 "auth.error.signUpFailed" = "Kayıt başarısız. Tekrar dene.";
 "auth.error.passwordResetFailed" = "Sıfırlama e-postası gönderilemedi. Tekrar dene.";

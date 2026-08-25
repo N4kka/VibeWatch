@@ -246,6 +246,7 @@
 "auth.error.invalidCredentials" = "Ugyldig e-mail eller adgangskode.";
 "auth.error.tooManyAttempts" = "For mange forsøg. Prøv igen senere.";
 "auth.error.networkError" = "Netværksfejl. Tjek din forbindelse.";
+"auth.error.sessionExpired" = "Din session er udløbet. Log ind igen for at fortsætte.";
 "auth.error.databaseError" = "Databasefejl ved lagring af brugerprofil. Prøv igen.";
 "auth.error.signUpFailed" = "Tilmelding mislykkedes. Prøv igen.";
 "auth.error.passwordResetFailed" = "Vi kunne ikke sende nulstillingsmailen. Prøv igen.";

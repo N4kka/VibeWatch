@@ -246,6 +246,7 @@
 "auth.error.invalidCredentials" = "メールまたはパスワードが正しくありません。";
 "auth.error.tooManyAttempts" = "試行回数が多すぎます。しばらくしてからお試しください。";
 "auth.error.networkError" = "ネットワークエラー。接続を確認してください。";
+"auth.error.sessionExpired" = "セッションの有効期限が切れました。続けるにはもう一度ログインしてください。";
 "auth.error.databaseError" = "プロフィール保存中にデータベースエラーが発生しました。もう一度お試しください。";
 "auth.error.signUpFailed" = "登録に失敗しました。もう一度お試しください。";
 "auth.error.passwordResetFailed" = "リセットメールを送信できませんでした。もう一度お試しください。";

@@ -244,6 +244,7 @@
 "auth.error.invalidCredentials" = "Ogiltig e-post eller lösenord.";
 "auth.error.tooManyAttempts" = "För många försök. Försök igen senare.";
 "auth.error.networkError" = "Nätverksfel. Kontrollera din anslutning.";
+"auth.error.sessionExpired" = "Din session har gått ut. Logga in igen för att fortsätta.";
 "auth.error.databaseError" = "Databasfel när användarprofilen sparades. Försök igen.";
 "auth.error.signUpFailed" = "Registrering misslyckades. Försök igen.";
 "auth.error.passwordResetFailed" = "Vi kunde inte skicka återställningsmejlet. Försök igen.";

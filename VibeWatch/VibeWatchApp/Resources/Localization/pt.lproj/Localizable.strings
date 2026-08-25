@@ -244,6 +244,7 @@
 "auth.error.invalidCredentials" = "Email ou senha inválidos.";
 "auth.error.tooManyAttempts" = "Muitas tentativas. Tente novamente mais tarde.";
 "auth.error.networkError" = "Erro de rede. Por favor, verifique sua conexão.";
+"auth.error.sessionExpired" = "Sua sessão expirou. Entre novamente para continuar.";
 "auth.error.databaseError" = "Erro de banco de dados ao salvar o perfil. Por favor, tente novamente.";
 "auth.error.signUpFailed" = "Cadastro falhou. Por favor, tente novamente.";
 "auth.error.passwordResetFailed" = "Não conseguimos enviar o email de redefinição. Por favor, tente novamente.";

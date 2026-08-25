@@ -246,6 +246,7 @@
 "auth.error.invalidCredentials" = "अमान्य ईमेल या पासवर्ड।";
 "auth.error.tooManyAttempts" = "बहुत अधिक प्रयास। बाद में फिर से कोशिश करें।";
 "auth.error.networkError" = "नेटवर्क त्रुटि। कृपया अपना कनेक्शन जांचें।";
+"auth.error.sessionExpired" = "आपका सेशन समाप्त हो गया है। जारी रखने के लिए दोबारा साइन इन करें।";
 "auth.error.databaseError" = "प्रोफ़ाइल सहेजते समय डेटाबेस त्रुटि। कृपया पुनः प्रयास करें।";
 "auth.error.signUpFailed" = "साइन अप विफल हुआ। कृपया पुनः प्रयास करें।";
 "auth.error.passwordResetFailed" = "हम रीसेट ईमेल नहीं भेज सके। कृपया पुनः प्रयास करें।";

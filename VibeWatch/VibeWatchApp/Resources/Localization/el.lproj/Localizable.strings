@@ -246,6 +246,7 @@
 "auth.error.invalidCredentials" = "Λάθος email ή κωδικός.";
 "auth.error.tooManyAttempts" = "Πολλές προσπάθειες. Δοκίμασε ξανά αργότερα.";
 "auth.error.networkError" = "Σφάλμα δικτύου. Έλεγξε τη σύνδεσή σου.";
+"auth.error.sessionExpired" = "Η συνεδρία σου έληξε. Συνδέσου ξανά για να συνεχίσεις.";
 "auth.error.databaseError" = "Σφάλμα βάσης δεδομένων κατά την αποθήκευση προφίλ. Δοκίμασε ξανά.";
 "auth.error.signUpFailed" = "Η εγγραφή απέτυχε. Δοκίμασε ξανά.";
 "auth.error.passwordResetFailed" = "Δεν μπορέσαμε να στείλουμε το email επαναφοράς. Δοκίμασε ξανά.";

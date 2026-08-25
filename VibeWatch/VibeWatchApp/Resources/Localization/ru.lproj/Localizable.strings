@@ -244,6 +244,7 @@
 "auth.error.invalidCredentials" = "Неверный email или пароль.";
 "auth.error.tooManyAttempts" = "Слишком много попыток. Попробуйте позже.";
 "auth.error.networkError" = "Ошибка сети. Проверьте подключение.";
+"auth.error.sessionExpired" = "Ваша сессия истекла. Войдите снова, чтобы продолжить.";
 "auth.error.databaseError" = "Ошибка базы данных при сохранении профиля. Попробуйте снова.";
 "auth.error.signUpFailed" = "Ошибка регистрации. Попробуйте снова.";
 "auth.error.passwordResetFailed" = "Не удалось отправить письмо для сброса. Попробуйте снова.";

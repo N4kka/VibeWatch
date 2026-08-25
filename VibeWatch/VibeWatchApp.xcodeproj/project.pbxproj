@@ -40,6 +40,7 @@
 		A1B2C3D4000CE5F600000001 /* UniversalLinksTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000CE5F600000002 /* UniversalLinksTests.swift */; };
 		A1B2C3D4000DE5F600000001 /* ImportViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000DE5F600000002 /* ImportViewModelTests.swift */; };
 		A1B2C3D4E5F6A1B2 /* KeychainStorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A1B3 /* KeychainStorageTests.swift */; };
+		A1B2C3D4E5F6C0010001 /* SessionExpiryFeedbackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6C0010002 /* SessionExpiryFeedbackTests.swift */; };
 		A1B2C3D4E5F6A1B4 /* AuthMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A1B5 /* AuthMigrationTests.swift */; };
 		A1B2C3D4E5F6B0010002 /* LocalDataResetTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6B0010001 /* LocalDataResetTests.swift */; };
 		B276FBD367C144A78E0A9217 /* SyncStateMachineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C39F30EEBCD42B48EC2203D /* SyncStateMachineTests.swift */; };
@@ -110,6 +111,7 @@
 		A1B2C3D4000CE5F600000002 /* UniversalLinksTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UniversalLinksTests.swift; sourceTree = "<group>"; };
 		A1B2C3D4000DE5F600000002 /* ImportViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportViewModelTests.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F6A1B3 /* KeychainStorageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStorageTests.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F6C0010002 /* SessionExpiryFeedbackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionExpiryFeedbackTests.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F6A1B5 /* AuthMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthMigrationTests.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F6B0010001 /* LocalDataResetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalDataResetTests.swift; sourceTree = "<group>"; };
 		B318DC8A2EC6920500DB1A9A /* VibeWatchApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VibeWatchApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -229,6 +231,7 @@
 				E8B7C6D5A4F3920123456795 /* DetailLayoutTests.swift */,
 				F00D00000000000000000002 /* RedesignPresentationTests.swift */,
 				A1B2C3D4E5F6A1B3 /* KeychainStorageTests.swift */,
+				A1B2C3D4E5F6C0010002 /* SessionExpiryFeedbackTests.swift */,
 				A1B2C3D4E5F6A1B5 /* AuthMigrationTests.swift */,
 				C3D4E5F6A1B2C3D5 /* PerformanceTests.swift */,
 				D4E5F6A1B2C3D4E6 /* MultiDeviceSyncTests.swift */,
@@ -477,6 +480,7 @@
 				234238D00F54312B9CCBB78A /* ValidationHelperTests.swift in Sources */,
 				1E06B7AE1160AE2531D5E0BB /* ToastCenterTests.swift in Sources */,
 				A1B2C3D4E5F6A1B2 /* KeychainStorageTests.swift in Sources */,
+				A1B2C3D4E5F6C0010001 /* SessionExpiryFeedbackTests.swift in Sources */,
 				A1B2C3D4E5F6A1B4 /* AuthMigrationTests.swift in Sources */,
 				C3D4E5F6A1B2C3D4 /* PerformanceTests.swift in Sources */,
 				D4E5F6A1B2C3D4E5 /* MultiDeviceSyncTests.swift in Sources */,

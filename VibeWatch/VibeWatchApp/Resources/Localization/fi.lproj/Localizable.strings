@@ -246,6 +246,7 @@
 "auth.error.invalidCredentials" = "Virheellinen sähköposti tai salasana.";
 "auth.error.tooManyAttempts" = "Liikaa yrityksiä. Yritä myöhemmin uudelleen.";
 "auth.error.networkError" = "Verkkovirhe. Tarkista yhteytesi.";
+"auth.error.sessionExpired" = "Istuntosi on vanhentunut. Kirjaudu sisään uudelleen jatkaaksesi.";
 "auth.error.databaseError" = "Tietokantavirhe käyttäjäprofiilin tallennuksessa. Yritä uudelleen.";
 "auth.error.signUpFailed" = "Rekisteröityminen epäonnistui. Yritä uudelleen.";
 "auth.error.passwordResetFailed" = "Palautusviestiä ei voitu lähettää. Yritä uudelleen.";

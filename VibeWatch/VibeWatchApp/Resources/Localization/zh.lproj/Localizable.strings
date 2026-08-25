@@ -243,6 +243,7 @@
 "auth.error.invalidCredentials" = "电子邮件或密码无效。";
 "auth.error.tooManyAttempts" = "尝试次数过多。请稍后重试。";
 "auth.error.networkError" = "网络错误。请检查你的连接。";
+"auth.error.sessionExpired" = "登录已过期。请重新登录后继续。";
 "auth.error.databaseError" = "保存用户资料时数据库出错。请重试。";
 "auth.error.signUpFailed" = "注册失败。请重试。";
 "auth.error.passwordResetFailed" = "我们无法发送重置邮件。请重试。";

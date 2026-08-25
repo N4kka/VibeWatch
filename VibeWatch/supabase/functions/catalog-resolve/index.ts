@@ -26,6 +26,7 @@ import {
   trySpend,
 } from '../_shared/proxy.ts'
 import { withCors } from '../_shared/cors.ts'
+import { authenticatedUserId } from '../_shared/userToken.ts'
 import {
   EntityType,
   episodeRowsFromSeasons,
@@ -209,11 +210,15 @@ async function handle(req: Request): Promise<Response> {
 
   let userId = 'prewarm'
   if (!daServizio) {
-    const { data: userResult, error: userError } = await supabase.auth.getUser(token)
-    if (userError || !userResult?.user) {
+    // `authenticatedUserId` e non `getUser` diretto: quest'ultimo pretende che la SESSIONE
+    // GoTrue esista ancora, che è più stretto di quanto chieda tutto il resto dell'API. Il
+    // perché sta in `_shared/userToken.ts`, ed è il motivo per cui "vista tutta" rispondeva
+    // `invalid_token` a chi era regolarmente loggato.
+    const authenticated = await authenticatedUserId(supabase, token)
+    if (!authenticated) {
       return jsonResponse({ error: 'invalid_token' }, 401)
     }
-    userId = userResult.user.id
+    userId = authenticated
   }
 
   let body: Body

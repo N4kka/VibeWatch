@@ -246,6 +246,7 @@
 "auth.error.invalidCredentials" = "Invalid email or password.";
 "auth.error.tooManyAttempts" = "Too many attempts. Try again later.";
 "auth.error.networkError" = "Network error. Please check your connection.";
+"auth.error.sessionExpired" = "Your session has expired. Sign in again to continue.";
 "auth.error.databaseError" = "Database error saving user profile. Please try again.";
 "auth.error.signUpFailed" = "Sign up failed. Please try again.";
 "auth.error.passwordResetFailed" = "We couldn't send the reset email. Please try again.";

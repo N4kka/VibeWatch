@@ -30,9 +30,29 @@ enum MarkShowSeen {
             ToastCenter.shared.complete(
                 toastId, message: "mediaDetail.toast.markedSeen".localized)
         } catch {
-            ToastCenter.shared.fail(toastId, message: error.localizedDescription)
+            ToastCenter.shared.fail(toastId, message: message(for: error))
             ErrorHandler.shared.handle(error, context: "Mark show seen")
         }
+    }
+
+    /// Il testo del toast quando qualcosa va storto.
+    ///
+    /// `localizedDescription` di `SupabaseError.httpError` è la risposta del server per intero:
+    /// va bene nei log, ma su uno schermo diventava `Supabase HTTP 401: {"error":"invalid_token"}`
+    /// sopra un dialogo che diceva "An unexpected error occurred". Una sessione da rifare ha una
+    /// frase sua, ed è l'unica che dice cosa fare.
+    static func message(for error: Error) -> String {
+        if let supabase = error as? SupabaseError {
+            switch supabase {
+            case .sessionExpired, .notAuthenticated, .authenticationFailed:
+                return "auth.error.sessionExpired".localized
+            case .networkError:
+                return "auth.error.networkError".localized
+            default:
+                break
+            }
+        }
+        return error.localizedDescription
     }
 }
 

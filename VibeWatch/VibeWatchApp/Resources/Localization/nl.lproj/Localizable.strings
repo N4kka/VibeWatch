@@ -246,6 +246,7 @@
 "auth.error.invalidCredentials" = "Ongeldig e-mailadres of wachtwoord.";
 "auth.error.tooManyAttempts" = "Te veel pogingen. Probeer het later opnieuw.";
 "auth.error.networkError" = "Netwerkfout. Controleer je verbinding.";
+"auth.error.sessionExpired" = "Je sessie is verlopen. Log opnieuw in om verder te gaan.";
 "auth.error.databaseError" = "Databasefout bij het opslaan van je profiel. Probeer het opnieuw.";
 "auth.error.signUpFailed" = "Registreren is mislukt. Probeer het opnieuw.";
 "auth.error.passwordResetFailed" = "We konden de herstelmail niet versturen. Probeer het opnieuw.";

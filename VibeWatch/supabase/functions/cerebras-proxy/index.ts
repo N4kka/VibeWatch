@@ -13,6 +13,7 @@ import {
 } from './quota.ts'
 import { withCors } from '../_shared/cors.ts'
 import { fetchIsProFromRevenueCat } from '../_shared/revenuecat.ts'
+import { authenticatedUserId } from '../_shared/userToken.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 // Client-facing (low-priv) key: prefer new publishable key, fall back to legacy anon.
@@ -179,8 +180,11 @@ serve(withCors(async (req) => {
       global: { headers: { Authorization: authHeader } }
     })
     const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    if (authError || !user) {
+    // `authenticatedUserId` e non `getUser` diretto: quest'ultimo pretende che la SESSIONE
+    // GoTrue esista ancora, e un logout globale su un altro device la cancella lasciando
+    // l'access token valido per un'altra ora. Vedi `_shared/userToken.ts`.
+    const userId = await authenticatedUserId(supabase, token)
+    if (!userId) {
       return jsonResponse({ error: 'Invalid or expired session' }, 401)
     }
 
@@ -204,8 +208,8 @@ serve(withCors(async (req) => {
 
     const adminSupabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
     const todayKey = usageDayKey()
-    const isPro = await isProUser(user.id)
-    const usedToday = await requestsUsedToday(adminSupabase, user.id, todayKey, bucket)
+    const isPro = await isProUser(userId)
+    const usedToday = await requestsUsedToday(adminSupabase, userId, todayKey, bucket)
     const dailyLimit = dailyLimitForTier(isPro, bucket)
 
     if (hasReachedDailyLimit(usedToday, isPro, bucket)) {
@@ -254,7 +258,7 @@ serve(withCors(async (req) => {
     }
 
     // 5. Count one successful request on the right bucket + feed the global token ledger.
-    await recordSuccessfulRequest(adminSupabase, user.id, bucket)
+    await recordSuccessfulRequest(adminSupabase, userId, bucket)
 
     // 6. Return the Cerebras response with the authoritative usage embedded in the body
     // (vw_usage): gli header custom possono essere filtrati dai gateway, il body no.
