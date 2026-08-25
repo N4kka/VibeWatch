@@ -51,6 +51,7 @@
 		B3DF8FAA2ED5CEC3007FD5D0 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = B3DF8FA92ED5CEC3007FD5D0 /* FirebaseMessaging */; };
 		B3E30E142ECCB7AA008A3B6C /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = B3E30E132ECCB7AA008A3B6C /* Supabase */; };
 		B3F2F7E02F14A10000D1A004 /* YouTubeiOSPlayerHelper in Frameworks */ = {isa = PBXBuildFile; productRef = B3F2F7E32F14A10000D1A003 /* YouTubeiOSPlayerHelper */; };
+		B3A0F1022F30AA0100000003 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = B3A0F1012F30AA0100000002 /* GoogleSignIn */; };
 		C3D4E5F6A1B2C3D4 /* PerformanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3D4E5F6A1B2C3D5 /* PerformanceTests.swift */; };
 		C6877C53B7A3455F88CAEEA9 /* AnalyticsInsightsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C9EEC77D8F045818BF4B264 /* AnalyticsInsightsTests.swift */; };
 		D4E5F6A1B2C3D4E5 /* MultiDeviceSyncTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E5F6A1B2C3D4E6 /* MultiDeviceSyncTests.swift */; };
@@ -165,6 +166,7 @@
 				B3E30E142ECCB7AA008A3B6C /* Supabase in Frameworks */,
 				B3A0F0032F20AA0100000003 /* PostHog in Frameworks */,
 				B3F2F7E02F14A10000D1A004 /* YouTubeiOSPlayerHelper in Frameworks */,
+				B3A0F1022F30AA0100000003 /* GoogleSignIn in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -316,6 +318,7 @@
 				B3A0F0022F20AA0100000002 /* PostHog */,
 				B3F2F7E32F14A10000D1A003 /* YouTubeiOSPlayerHelper */,
 				B31D2C432EFFA4020091F030 /* GoogleMobileAds */,
+				B3A0F1012F30AA0100000002 /* GoogleSignIn */,
 			);
 			productName = VibeWatchApp;
 			productReference = B318DC8A2EC6920500DB1A9A /* VibeWatchApp.app */;
@@ -374,6 +377,7 @@
 				B3F2F7E22F14A10000D1A002 /* XCRemoteSwiftPackageReference "youtube-ios-player-helper" */,
 				B31D2C422EFFA4020091F030 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */,
 				B3A0F0012F20AA0100000001 /* XCRemoteSwiftPackageReference "posthog-ios" */,
+				B3A0F1002F30AA0100000001 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = B318DC8B2EC6920500DB1A9A /* Products */;
@@ -826,6 +830,14 @@
 				minimumVersion = 1.0.0;
 			};
 		};
+		B3A0F1002F30AA0100000001 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 8.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -868,6 +880,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = B3F2F7E22F14A10000D1A002 /* XCRemoteSwiftPackageReference "youtube-ios-player-helper" */;
 			productName = YouTubeiOSPlayerHelper;
+		};
+		B3A0F1012F30AA0100000002 /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B3A0F1002F30AA0100000001 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

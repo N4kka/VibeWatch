@@ -2,6 +2,7 @@ import Foundation
 import Supabase
 import Auth
 import AuthenticationServices
+import GoogleSignIn
 import CryptoKit
 import RevenueCat
 import UIKit
@@ -744,6 +745,30 @@ class AuthService: AuthServiceProtocol {
         return user
     }
 
+    /// Il client OAuth iOS e' legato a un bundle id preciso, e la configurazione Debug gira
+    /// come `.beta`: serve un secondo client, altrimenti Google rifiuta il consenso in
+    /// sviluppo. Non e' un segreto, sta in Info.plist accanto al reversed URL scheme.
+    private static let googleClientID: String = {
+        let isBeta = (Bundle.main.bundleIdentifier ?? "").contains(".beta")
+        let key = isBeta ? "GIDClientIDBeta" : "GIDClientID"
+        return Bundle.main.object(forInfoDictionaryKey: key) as? String ?? ""
+    }()
+
+    /// Il view controller da cui presentare il consenso Google. La key window ha spesso uno
+    /// sheet davanti (SignInView e SignUpView sono presentate cosi'): presentare dal root
+    /// fallirebbe con "already presenting".
+    private static func topViewController() -> UIViewController? {
+        var controller = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows)
+            .first { $0.isKeyWindow }?
+            .rootViewController
+        while let presented = controller?.presentedViewController {
+            controller = presented
+        }
+        return controller
+    }
+
     func signInWithGoogle(intent: AuthFlowIntent = .signIn) async throws -> User {
         guard let client = client else {
             throw AppAuthError.notConfigured
@@ -753,21 +778,48 @@ class AuthService: AuthServiceProtocol {
         userDefaults.set(false, forKey: expectingPasswordResetKey)
         userDefaults.set(intent == .signUp, forKey: pendingSignUpMigrationKey)
 
-        Logger.debug("[Auth] Starting Google Sign In...")
+        Logger.debug("[Auth] Starting native Google Sign In...")
 
-        // prompt=select_account: senza, Google riusa la sessione del browser e non lascia
-        // scegliere tra più account.
-        try await client.auth.signInWithOAuth(
-            provider: .google,
-            redirectTo: authCallbackURL,
-            queryParams: [(name: "prompt", value: "select_account")]
+        // Flusso nativo (GoogleSignIn + signInWithIdToken) invece del redirect OAuth: quello
+        // tornava sul callback di Supabase, e Google nomina sempre l'host del callback nella
+        // schermata di consenso ("Continua su <project>.supabase.co"). Con l'id token il
+        // consenso nomina l'app. Nessun nonce: AppAuth (dentro GoogleSignIn) ne mette uno nel
+        // token e non lo espone, e GoTrue confronta il claim con l'SHA-256 di quello che gli
+        // passi — non combacera' mai. Per questo il provider Google del progetto ha
+        // "Skip nonce check" attivo, come prescrive la doc Supabase per l'SDK nativo.
+        guard !Self.googleClientID.isEmpty else {
+            Logger.error("[Auth] No Google client ID for bundle \(Bundle.main.bundleIdentifier ?? "?")")
+            throw AppAuthError.notConfigured
+        }
+        GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: Self.googleClientID)
+
+        guard let presenter = Self.topViewController() else {
+            Logger.error("[Auth] No view controller available to present Google Sign In")
+            throw AppAuthError.invalidResponse
+        }
+
+        let result: GIDSignInResult
+        do {
+            result = try await GIDSignIn.sharedInstance.signIn(withPresenting: presenter)
+        } catch let error as GIDSignInError where error.code == .canceled {
+            // Le view distinguono "annullato" da "fallito" solo sul CancellationError.
+            throw CancellationError()
+        }
+
+        guard let idToken = result.user.idToken?.tokenString else {
+            Logger.error("[Auth] Google credential missing identity token")
+            throw AppAuthError.invalidResponse
+        }
+
+        let session = try await client.auth.signInWithIdToken(
+            credentials: OpenIDConnectCredentials(
+                provider: .google,
+                idToken: idToken,
+                accessToken: result.user.accessToken.tokenString
+            )
         )
 
-        // Wait for auth to complete
-        try await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
-
-        // Check auth state and fetch profile
-        await checkAuthState()
+        await fetchUserProfile(userId: session.user.id.uuidString)
 
         guard let user = currentUser else {
             throw AppAuthError.userNotFound

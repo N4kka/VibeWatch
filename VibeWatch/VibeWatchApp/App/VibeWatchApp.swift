@@ -1,4 +1,5 @@
 import SwiftUI
+import GoogleSignIn
 import RevenueCat
 
 @main
@@ -55,6 +56,9 @@ struct VibeWatchApp: App {
                     // OAuth. `handle` risponde false senza effetti se l'URL non è una rotta
                     // nostra, quindi il ramo OAuth vede esattamente ciò che vedeva prima.
                     if appNavigationManager.handle(universalLink: url) { return }
+                    // Il callback del consenso Google, quando torna via URL scheme invece che
+                    // dentro la sessione web. `handle` risponde false su tutto il resto.
+                    if GIDSignIn.sharedInstance.handle(url) { return }
                     // Handle deep links from URL schemes (e.g., OAuth)
                     Task {
                         do {
