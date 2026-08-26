@@ -258,6 +258,7 @@
 "ai.thinking" = "Düşünüyor...";
 "ai.editMessage" = "Mesajı düzenle";
 "ai.hardLimitMessage" = "Bugünkü AI limitine ulaştın. Yarın tekrar gel.";
+"ai.serviceUnavailable" = "Yapay zekâ servisi şu anda kullanılamıyor. Daha sonra tekrar dene.";
 "ai.paywall.benefit.personalized" = "Sınırsız klip ve hiç reklam yok";
 "ai.paywall.benefit.smarter" = "Keşfet'te AI'nın yazdığı gerekçeler";
 "ai.paywall.benefit.unlimited" = "8 yerine günde 20 AI sohbeti";

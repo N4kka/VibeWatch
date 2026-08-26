@@ -293,6 +293,7 @@
 "ai.requestsUsage" = "일일 요청 %d/%d";
 "ai.softLimitMessage" = "오늘의 AI 한도에 가까워요. 메시지를 짧게 유지해 주세요.";
 "ai.hardLimitMessage" = "오늘의 AI 한도에 도달했어요. 내일 다시 와 주세요.";
+"ai.serviceUnavailable" = "AI 서비스를 현재 이용할 수 없습니다. 잠시 후 다시 시도해 주세요.";
 "ai.proRequired" = "AI 채팅은 Pro 회원 전용입니다.";
 "ai.suggestion.chips1" = "💖 아늑한 로맨스, AI 선택";
 "ai.suggestion.chips2" = "💥 80년대 액션 코미디, AI 추천";

@@ -258,6 +258,7 @@
 "ai.thinking" = "Думаем...";
 "ai.editMessage" = "Редактировать сообщение";
 "ai.hardLimitMessage" = "Вы достигли дневного лимита AI. Приходите завтра.";
+"ai.serviceUnavailable" = "Сервис ИИ временно недоступен. Попробуйте позже.";
 "ai.paywall.benefit.personalized" = "Безлимитные клипы и никакой рекламы";
 "ai.paywall.benefit.smarter" = "Пояснения от ИИ в разделе «Обзор»";
 "ai.paywall.benefit.unlimited" = "20 чатов с ИИ в день вместо 8";

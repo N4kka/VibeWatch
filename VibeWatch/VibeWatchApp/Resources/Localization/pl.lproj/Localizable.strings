@@ -293,6 +293,7 @@
 "ai.requestsUsage" = "%d/%d dziennych zapytań";
 "ai.softLimitMessage" = "Zbliżasz się do dziennego limitu AI. Zachowaj krótkie, konkretne zapytania.";
 "ai.hardLimitMessage" = "Osiągnąłeś(-aś) dzienny limit AI. Wróć jutro.";
+"ai.serviceUnavailable" = "Usługa AI jest chwilowo niedostępna. Spróbuj ponownie później.";
 "ai.proRequired" = "Czat AI jest dostępny tylko dla użytkowników Pro.";
 "ai.suggestion.chips1" = "💖 Przytulny romans, wybrany przez AI";
 "ai.suggestion.chips2" = "💥 Komedia akcji z lat 80., AI poleca";

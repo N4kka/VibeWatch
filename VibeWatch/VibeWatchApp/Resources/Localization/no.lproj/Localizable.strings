@@ -228,6 +228,7 @@
 "ai.thinking" = "Tenker...";
 "ai.editMessage" = "Rediger melding";
 "ai.hardLimitMessage" = "Du har nådd dagens AI-grense. Kom tilbake i morgen.";
+"ai.serviceUnavailable" = "AI-tjenesten er midlertidig utilgjengelig. Prøv igjen senere.";
 "ai.paywall.benefit.personalized" = "Ubegrenset med klipp, og ingen annonser";
 "ai.paywall.benefit.smarter" = "AI-skrevne begrunnelser i Oppdag";
 "ai.paywall.benefit.unlimited" = "20 AI-samtaler om dagen i stedet for 8";

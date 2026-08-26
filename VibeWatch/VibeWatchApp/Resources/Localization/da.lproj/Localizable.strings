@@ -293,6 +293,7 @@
 "ai.requestsUsage" = "%d/%d daglige forespørgsler";
 "ai.softLimitMessage" = "Du nærmer dig dagens AI-grænse. Hold dine beskeder korte.";
 "ai.hardLimitMessage" = "Du har nået dagens AI-grænse. Kom tilbage i morgen.";
+"ai.serviceUnavailable" = "AI-tjenesten er midlertidigt utilgængelig. Prøv igen senere.";
 "ai.proRequired" = "AI-chat er kun tilgængelig for Pro-medlemmer.";
 "ai.suggestion.chips1" = "💖 Hyggeromance, udvalgt af AI til mig";
 "ai.suggestion.chips2" = "💥 80’er actionkomedie, AI anbefaler";

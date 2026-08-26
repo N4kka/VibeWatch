@@ -285,6 +285,13 @@ class AIRecommendationViewModel: ObservableObject {
                 await syncWithTokenManager()
             }
             self.error = "ai.hardLimitMessage".localized
+
+        } catch CerebrasError.serviceUnavailable {
+            // Il servizio a monte e' spento per tutti: non e' un limite dell'utente e non si
+            // sblocca a mezzanotte, quindi non deve leggere "torna domani".
+            Logger.error("[AIRecommendationViewModel] AI upstream esaurito (402 upstream_capacity)")
+            self.error = "ai.serviceUnavailable".localized
+
         } catch {
             Logger.error("[AIRecommendationViewModel] AI Error", error: error)
             self.error = "Failed to get recommendations. Please try again."

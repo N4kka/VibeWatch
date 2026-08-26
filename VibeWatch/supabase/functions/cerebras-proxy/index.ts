@@ -247,9 +247,19 @@ serve(withCors(async (req) => {
     const respBody = await cerebrasResp.text()
 
     if (!cerebrasResp.ok) {
-      // 502 esplicito, NON il passthrough dello status: un 429 di Cerebras arrivava al client
-      // identico al nostro 429 di quota e veniva mostrato come "limite giornaliero raggiunto".
       console.error(`Cerebras request failed (${cerebrasResp.status}):`, respBody.slice(0, 500))
+
+      // Il 402 di Cerebras (`payment_required`, quota dell'account esaurita) esce con un codice
+      // suo. È l'unico stato a monte che non si risolve riprovando e che non riguarda in nulla
+      // l'utente che ha davanti lo schermo: appiattito su 502 diventava "riprova più tardi", e
+      // l'app restava muta sul fatto che il servizio fosse semplicemente spento per tutti.
+      if (cerebrasResp.status === 402) {
+        return jsonResponse({ error: 'upstream_capacity' }, 402)
+      }
+
+      // Tutto il resto resta 502, NON il passthrough dello status: un 429 di Cerebras arrivava
+      // al client identico al nostro 429 di quota e veniva mostrato come "limite giornaliero
+      // raggiunto" addosso a chi non aveva speso una singola richiesta.
       return jsonResponse({
         error: 'upstream_error',
         status: cerebrasResp.status,

@@ -294,6 +294,7 @@
 "ai.requestsUsage" = "%d/%d tägliche Anfragen";
 "ai.softLimitMessage" = "Du näherst dich dem heutigen KI-Limit. Halte deine Anfragen kurz.";
 "ai.hardLimitMessage" = "Du hast das heutige KI-Limit erreicht. Schau morgen wieder vorbei.";
+"ai.serviceUnavailable" = "Der KI-Dienst ist derzeit nicht verfügbar. Versuche es später erneut.";
 "ai.proRequired" = "KI-Chat ist nur für Pro-Mitglieder verfügbar.";
 "ai.suggestion.chips1" = "💖 Gemütliche Romanze, von KI ausgewählt";
 "ai.suggestion.chips2" = "💥 80er Action-Komödie, KI empfiehlt";

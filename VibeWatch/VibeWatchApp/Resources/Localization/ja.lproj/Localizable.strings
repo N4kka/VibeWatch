@@ -293,6 +293,7 @@
 "ai.requestsUsage" = "1日 %d/%d リクエスト";
 "ai.softLimitMessage" = "本日のAI上限に近づいています。メッセージは短めにしてください。";
 "ai.hardLimitMessage" = "本日のAI上限に達しました。明日もう一度お試しください。";
+"ai.serviceUnavailable" = "AIサービスは現在利用できません。しばらくしてからお試しください。";
 "ai.proRequired" = "AIチャットはProメンバー限定です。";
 "ai.suggestion.chips1" = "💖 ほっこりロマンス（AIが厳選）";
 "ai.suggestion.chips2" = "💥 80年代アクションコメディ（AIおすすめ）";

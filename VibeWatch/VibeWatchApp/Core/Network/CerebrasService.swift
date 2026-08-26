@@ -7,6 +7,12 @@ enum CerebrasError: Error {
     case serverError(String)
     /// Quota giornaliera raggiunta; se il server ha allegato il conteggio, e' qui.
     case quotaExceeded(serverUsage: AIServerUsage?)
+    /// Il servizio a monte è esaurito per tutti (402 `upstream_capacity` da cerebras-proxy).
+    ///
+    /// Distinto da `quotaExceeded` perché non è la quota di chi sta chiedendo: dirgli "hai
+    /// raggiunto il limite, torna domani" sarebbe falso due volte — non ha speso niente, e
+    /// domani sarà spento uguale finché non si ricarica l'account.
+    case serviceUnavailable
     case unknown
 }
 
@@ -373,7 +379,12 @@ class CerebrasService {
         }
 
         guard (200...299).contains(httpResponse.statusCode) else {
-            if httpResponse.statusCode == 402 || httpResponse.statusCode == 429 {
+            // 402 e 429 vogliono dire due cose opposte e vanno tenute separate: il 402 e il
+            // servizio spento per tutti, il 429 e la quota di questo utente.
+            if httpResponse.statusCode == 402 {
+                throw CerebrasError.serviceUnavailable
+            }
+            if httpResponse.statusCode == 429 {
                 // Il body del 429 del proxy contiene il conteggio autorevole: lo si propaga
                 // cosi il badge si riallinea anche quando il limite scatta lato server.
                 throw CerebrasError.quotaExceeded(serverUsage: AIServerUsage(quotaErrorBody: data))
@@ -603,7 +614,10 @@ class CerebrasService {
         }
 
         guard (200...299).contains(httpResponse.statusCode) else {
-            if httpResponse.statusCode == 402 || httpResponse.statusCode == 429 {
+            if httpResponse.statusCode == 402 {
+                throw CerebrasError.serviceUnavailable
+            }
+            if httpResponse.statusCode == 429 {
                 throw CerebrasError.quotaExceeded(serverUsage: AIServerUsage(quotaErrorBody: data))
             }
             if let errorString = String(data: data, encoding: .utf8) {

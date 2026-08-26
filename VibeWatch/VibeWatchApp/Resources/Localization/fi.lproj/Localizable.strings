@@ -293,6 +293,7 @@
 "ai.requestsUsage" = "%d/%d päivittäistä pyyntöä";
 "ai.softLimitMessage" = "Lähestyt päivän AI-rajaa. Pidä pyynnöt ytimekkäinä.";
 "ai.hardLimitMessage" = "Olet saavuttanut päivän AI-rajan. Tule huomenna uudelleen.";
+"ai.serviceUnavailable" = "Tekoälypalvelu ei ole juuri nyt käytettävissä. Yritä myöhemmin uudelleen.";
 "ai.proRequired" = "AI-chat on saatavilla vain Pro-jäsenille.";
 "ai.suggestion.chips1" = "💖 Lämminhenkinen romanssi, AI:n valitsema";
 "ai.suggestion.chips2" = "💥 80-luvun toiminta-komedia, AI suosittelee";

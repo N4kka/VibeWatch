@@ -293,6 +293,7 @@
 "ai.requestsUsage" = "%d/%d verzoeken vandaag";
 "ai.softLimitMessage" = "Je nadert de AI-limiet van vandaag. Houd je vragen kort.";
 "ai.hardLimitMessage" = "Je hebt de AI-limiet van vandaag bereikt. Kom morgen terug.";
+"ai.serviceUnavailable" = "De AI-dienst is tijdelijk niet beschikbaar. Probeer het later opnieuw.";
 "ai.proRequired" = "AI-chat is alleen beschikbaar voor Pro-leden.";
 "ai.suggestion.chips1" = "💖 Knusse romance, door AI gekozen";
 "ai.suggestion.chips2" = "💥 Actiekomedie uit de jaren 80, AI raadt aan";

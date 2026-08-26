@@ -258,6 +258,7 @@
 "ai.thinking" = "Tänker...";
 "ai.editMessage" = "Redigera meddelande";
 "ai.hardLimitMessage" = "Du har nått dagens AI-gräns. Kom tillbaka imorgon.";
+"ai.serviceUnavailable" = "AI-tjänsten är tillfälligt otillgänglig. Försök igen senare.";
 "ai.paywall.benefit.personalized" = "Obegränsat med klipp, och inga annonser";
 "ai.paywall.benefit.smarter" = "AI-skrivna motiveringar i Utforska";
 "ai.paywall.benefit.unlimited" = "20 AI-chattar per dag i stället för 8";

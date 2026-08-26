@@ -294,6 +294,7 @@
 "ai.requestsUsage" = "%d/%d richieste giornaliere";
 "ai.softLimitMessage" = "Sei vicino al limite giornaliero per l'AI. Mantieni i prompt concisi.";
 "ai.hardLimitMessage" = "Hai raggiunto il limite giornaliero per l'AI. Ritorna domani.";
+"ai.serviceUnavailable" = "Il servizio AI non è al momento disponibile. Riprova più tardi.";
 "ai.proRequired" = "La chat AI è disponibile solo per i membri Pro.";
 "ai.suggestion.chips1" = "💖 Romance accogliente, scelto dall'AI";
 "ai.suggestion.chips2" = "💥 Action-comedy anni '80, consigliato dall'AI";

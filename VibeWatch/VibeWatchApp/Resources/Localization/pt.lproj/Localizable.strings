@@ -258,6 +258,7 @@
 "ai.thinking" = "Pensando...";
 "ai.editMessage" = "Editar mensagem";
 "ai.hardLimitMessage" = "Você atingiu o limite de IA de hoje. Volte amanhã.";
+"ai.serviceUnavailable" = "O serviço de IA está temporariamente indisponível. Tenta mais tarde.";
 "ai.paywall.benefit.personalized" = "Clips ilimitados e sem publicidade";
 "ai.paywall.benefit.smarter" = "Motivos escritos pela IA em Descobrir";
 "ai.paywall.benefit.unlimited" = "20 conversas de IA por dia em vez de 8";
