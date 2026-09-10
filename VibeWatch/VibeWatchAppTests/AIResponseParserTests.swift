@@ -121,6 +121,26 @@ final class AIResponseParserTests: XCTestCase {
         XCTAssertEqual(parsed.text, raw)
     }
 
+    /// Successo davvero il 2026-08-28: col system prompt che documenta i marker ma senza i dati
+    /// nel turno, il modello si e' inventato un blocco `[skip]`/`[watch]`/`[saved]` e l'ha
+    /// stampato nella bolla. Il prompt glielo vieta, ma a reasoning effort minimo un divieto non
+    /// e' una garanzia.
+    func testEchoedContextMarkersNeverReachTheBubble() {
+        let raw = """
+        [skip] Coherence, Locke, Primer.
+        [saved] Locke (85 min, "Watchlist"), Primer (77 min, "Watchlist").
+
+        Dalla tua lista Locke e' perfetto: novanta minuti tiratissimi.
+        """
+        let parsed = AIResponseParser.parse(raw)
+        XCTAssertEqual(parsed.text, "Dalla tua lista Locke e' perfetto: novanta minuti tiratissimi.")
+    }
+
+    func testBracketsInsideASentenceAreLeftAlone() {
+        let raw = "Il finale [quello vero] e' un capolavoro."
+        XCTAssertEqual(AIResponseParser.parse(raw).text, raw)
+    }
+
     func testEmptyRecommendationsKeepTextWhenBlockHasNoItems() {
         let raw = """
         Nessun titolo stavolta.

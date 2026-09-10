@@ -174,6 +174,52 @@ final class RedesignPresentationTests: XCTestCase {
         XCTAssertTrue(prompt.localizedCaseInsensitiveContains("insufficient"))
     }
 
+    /// Il bug che ha originato lo split fra `[skip]` e `[saved]`: watchlist e visti finivano
+    /// fusi in un unico "mai consigliare questi", quindi "consigliami qualcosa dalla mia
+    /// watchlist" tornava con tre titoli di fuori — l'unica risposta coerente col prompt.
+    func testUserTurnKeepsSavedTitlesOutOfTheSkipList() {
+        let turn = AIContextBuilder.shared.buildUserTurn(
+            query: "qualcosa da 90 minuti dalla watchlist",
+            userProfile: nil,
+            seenTitles: ["Heat"],
+            savedEntries: [
+                .init(tmdbId: 242582, mediaType: .movie, title: "Nightcrawler", year: 2014, runtime: 117, listName: nil),
+                .init(tmdbId: 1091, mediaType: .movie, title: "The Thing", year: 1982, runtime: 109, listName: "horror"),
+                .init(tmdbId: 154385, mediaType: .tv, title: "Beef", year: 2023, runtime: nil, listName: nil)
+            ]
+        )
+
+        XCTAssertTrue(turn.contains("[skip] Heat"))
+        XCTAssertFalse(turn.contains("[skip] Heat, Nightcrawler"))
+        // La durata viene dalla riga di lista in locale: e' cio' che permette di rispondere
+        // a "massimo 90 minuti" senza chiederlo a TMDB e senza farlo ricordare al modello.
+        XCTAssertTrue(turn.contains("[saved] Nightcrawler (2014) · 117min; The Thing (1982) · 109min · horror; Beef (2023)"))
+        XCTAssertTrue(turn.hasSuffix("\n\nqualcosa da 90 minuti dalla watchlist"))
+    }
+
+    /// Successo il 2026-09-11: "The Hunt" (2013) ha agganciato un cortometraggio omonimo da otto
+    /// minuti — primo risultato con anno compatibile, tre voti, nessun poster — e la card che ne
+    /// e' uscita sembrava un film vero.
+    @MainActor
+    func testAmbiguousTitleResolvesToTheFilmPeopleActuallyMean() {
+        struct Candidate { let id: Int; let year: String?; let votes: Int }
+        let short = Candidate(id: 1, year: "2013", votes: 3)
+        let real = Candidate(id: 2, year: "2012", votes: 4200)
+
+        let pick = { (results: [Candidate], year: Int?) in
+            AIRecommendationViewModel.pickBestMatch(
+                results, year: year, yearOf: { $0.year }, votesOf: { $0.votes })
+        }
+
+        // Anno compatibile per entrambi (±1): decide il numero di voti, non l'ordine.
+        XCTAssertEqual(pick([short, real], 2013)?.id, real.id)
+        // Senza anno resta l'ordine di TMDB, che e' gia' per popolarita'.
+        XCTAssertEqual(pick([short, real], nil)?.id, short.id)
+        // Nessun compatibile: si ripiega sul primo, non si inventa niente.
+        XCTAssertEqual(pick([short], 1980)?.id, short.id)
+        XCTAssertNil(pick([], 2013))
+    }
+
     func testFAQIdentityIsStableAcrossReconstruction() {
         let first = HelpFAQItem(questionKey: "profile.faq.question1", answerKey: "profile.faq.answer1")
         let second = HelpFAQItem(questionKey: "profile.faq.question1", answerKey: "profile.faq.answer1")

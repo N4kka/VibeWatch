@@ -13,354 +13,212 @@ class AIContextBuilder {
 
     // MARK: - Public Methods
 
-    /// Build system prompt for AI based on user profile and query type
-    func buildSystemPrompt(
+    /// The volatile half of every chat request: what the model must not be asked to remember.
+    ///
+    /// It lives in the user turn, never in the system prompt: context caching matches on a
+    /// prefix, so anything that changes per request would stop every request from ever hitting
+    /// the cache. The persona, the format and the vibe-json contract are the stable half and
+    /// live in the gateway (`cerebras-proxy/quota.ts`), identical byte for byte on every call.
+    ///
+    /// The markers are terse on purpose. With a low reasoning effort the model follows data far
+    /// better than it follows prose, and the measured failures were all missing data, not
+    /// missing instructions: without `[title]` it got the release year wrong every time and
+    /// credited a director with other people's films; without `[reply in]` it never switched
+    /// language on its own.
+    func buildUserTurn(
+        query: String,
         userProfile: UserProfile?,
-        queryType: QueryType
+        seenTitles: [String] = [],
+        savedEntries: [SavedEntry] = [],
+        activeFilters: [AIChatFilter] = [],
+        media: (details: MovieDetails, kind: MediaType)? = nil,
+        availability: String? = nil,
+        languageName: String? = nil
     ) -> String {
-        var prompt = baseSystemPrompt()
-
-        if let profile = userProfile {
-            prompt += "\n\n" + buildUserProfileSection(profile)
-        }
-
-        prompt += "\n\n" + buildTaskSection(queryType: queryType)
-
-        return prompt
-    }
-
-    /// System prompt unificato della chat "movie buddy": persona + contratto vibe-json + profilo
-    /// + titoli esclusi + filtri attivi. Sostituisce il vecchio prompt per-query-type nel flusso
-    /// chat (le task section restano solo per i prompt non-chat).
-    func buildChatSystemPrompt(
-        userProfile: UserProfile?,
-        excludedTitles: [String] = [],
-        activeFilters: [AIChatFilter] = []
-    ) -> String {
-        var prompt = baseSystemPrompt()
-
-        if let profile = userProfile {
-            prompt += "\n\n" + buildUserProfileSection(profile)
-        }
-
-        if !excludedTitles.isEmpty {
-            prompt += "\n\n" + buildExclusionSection(excludedTitles)
-        }
-
-        if !activeFilters.isEmpty {
-            prompt += "\n\n" + buildActiveFiltersSection(activeFilters)
-        }
-
-        return prompt
-    }
-
-    /// Titoli già visti o salvati: il modello non deve riproporli. Cap per non gonfiare il prompt.
-    func buildExclusionSection(_ titles: [String], cap: Int = 40) -> String {
-        let capped = titles.prefix(cap)
-        return "EXCLUDED TITLES (already watched or saved by the user — NEVER recommend these):\n"
-            + capped.map { "- \($0)" }.joined(separator: "\n")
-    }
-
-    /// Vincoli derivati dalle chip filtro attive nella chat.
-    func buildActiveFiltersSection(_ filters: [AIChatFilter]) -> String {
         var lines: [String] = []
-        for filter in filters {
-            switch filter {
-            case .myPlatforms(let names):
-                let list = names.joined(separator: ", ")
-                lines.append("- Only recommend titles currently streaming on: \(list). If you are not reasonably sure a title is available there, pick another one.")
-            case .recent:
-                lines.append("- Only recommend titles first released in the last 3 years.")
-            case .shorter:
-                lines.append("- Only recommend movies under ~100 minutes or shows with at most 2 seasons.")
-            case .hiddenGems:
-                lines.append("- Only recommend well-rated but lesser-known titles; avoid mainstream blockbusters everyone has seen.")
+
+        if let profile = userProfile {
+            // Names only: the numeric genre scores were noise the model had to parse and never
+            // used, and they cost tokens on every single request.
+            let loves = profile.topGenres.prefix(3).map(\.genreName)
+                + profile.topActors.prefix(2).map(\.name)
+            if !loves.isEmpty {
+                lines.append("[you know] loves: \(loves.joined(separator: ", "))")
+            }
+
+            let watched = profile.recentActivity.watchedMedia.prefix(3).map(\.title)
+            if !watched.isEmpty {
+                lines.append("[you know] just watched: \(watched.joined(separator: ", "))")
             }
         }
-        return "ACTIVE FILTERS (every recommendation MUST satisfy ALL of these):\n"
-            + lines.joined(separator: "\n")
-    }
 
-    /// Build user context for AI prompt
-    func buildUserContext(userProfile: UserProfile) -> String {
-        var context = "USER CONTEXT:\n"
-
-        // Top Genres
-        if !userProfile.topGenres.isEmpty {
-            let genres = userProfile.topGenres.prefix(5).map { $0.genreName }.joined(separator: ", ")
-            context += "- Favorite Genres: \(genres)\n"
+        // A hint, not the guard. The hard exclusion is applied in code when the cards are
+        // resolved, which is why the list can be short instead of forty titles long.
+        if !seenTitles.isEmpty {
+            lines.append("[skip] \(seenTitles.prefix(seenTitlesHint).joined(separator: ", "))")
         }
 
-        // Recently Watched
-        if !userProfile.recentActivity.watchedMedia.isEmpty {
-            let watched = userProfile.recentActivity.watchedMedia
+        // Deliberately NOT merged into [skip], which is where it used to live. What the user
+        // saved and has not watched yet is the opposite of an exclusion: answering "what should
+        // I watch tonight" out of their own watchlist is the best answer there is, and merging
+        // the two lists is why "recommend something from my watchlist" came back with three
+        // titles from nowhere — the only reply consistent with what we had told the model.
+        if !savedEntries.isEmpty {
+            let entries = savedEntries.prefix(savedEntriesCap).map(savedLine)
+            lines.append("[saved] \(entries.joined(separator: "; "))")
+        }
+
+        if let media {
+            lines.append("[title] \(mediaLine(media.details, kind: media.kind))")
+        }
+
+        if let availability, !availability.isEmpty {
+            lines.append("[watch] \(availability)")
+        }
+
+        for filter in activeFilters {
+            lines.append("[only] \(filterLine(filter))")
+        }
+
+        if let languageName {
+            lines.append("[reply in] \(languageName)")
+        }
+
+        guard !lines.isEmpty else { return query }
+        return lines.joined(separator: "\n") + "\n\n" + query
+    }
+
+    /// How many already-seen titles are worth naming. The model only needs enough to steer away
+    /// from the obvious repeats; `resolveCards` drops the rest for real.
+    private let seenTitlesHint = 12
+
+    /// Saved titles are the opposite: they are the answer, not a filter, so the cap is what the
+    /// model can actually choose from. Twenty-five entries with runtime cost ~150 tokens.
+    private let savedEntriesCap = 25
+
+    /// One entry of the user's own curation: watchlist plus custom lists.
+    ///
+    /// `tmdbId` e `mediaType` non finiscono mai nel prompt — servono al codice: se il modello
+    /// nomina un titolo che sta qui, la card si costruisce con questo id invece di cercarlo su
+    /// TMDB per nome, che su un titolo ambiguo aggancia il film sbagliato.
+    struct SavedEntry {
+        let tmdbId: Int
+        let mediaType: MediaType
+        let title: String
+        let year: Int?
+        /// Movies only — for a show the per-episode runtime would answer the wrong question.
+        let runtime: Int?
+        /// Nil for the watchlist (the default, left untagged to save tokens); the list name for
+        /// a custom list, so "recommend from my horror list" has something to match on.
+        let listName: String?
+    }
+
+    private func savedLine(_ entry: SavedEntry) -> String {
+        var line = entry.year.map { "\(entry.title) (\($0))" } ?? entry.title
+        if let runtime = entry.runtime, runtime > 0 { line += " · \(runtime)min" }
+        if let listName = entry.listName { line += " · \(listName)" }
+        return line
+    }
+
+    private func mediaLine(_ details: MovieDetails, kind: MediaType) -> String {
+        var parts: [String] = []
+
+        let year = details.releaseDate?.prefix(4)
+        parts.append(year.map { "\(details.title) (\($0))" } ?? details.title)
+        parts.append(kind == .tv ? "tv" : "movie")
+
+        if let director = details.credits?.crew?.first(where: { $0.job == "Director" }) {
+            parts.append(director.name)
+        }
+        if let genres = details.genres?.prefix(3).map(\.name), !genres.isEmpty {
+            parts.append(genres.joined(separator: ", "))
+        }
+        if details.voteCount > 0 {
+            parts.append(String(format: "%.1f/10", details.voteAverage))
+        }
+        if let runtime = details.runtime, runtime > 0 {
+            parts.append("\(runtime) min")
+        }
+        if let cast = details.credits?.cast?.prefix(4).map(\.name), !cast.isEmpty {
+            parts.append("cast: \(cast.joined(separator: ", "))")
+        }
+
+        return parts.joined(separator: " · ")
+    }
+
+    private func filterLine(_ filter: AIChatFilter) -> String {
+        switch filter {
+        case .myPlatforms(let names):
+            return "titles streaming on \(names.joined(separator: ", "))"
+        case .recent:
+            return "titles released in the last 3 years"
+        case .shorter:
+            return "movies under 100 minutes, or shows with at most 2 seasons"
+        case .hiddenGems:
+            return "well-rated but lesser-known titles, no mainstream blockbusters"
+        }
+    }
+
+    /// Il profilo in forma discorsiva, usato dai prompt aux (loglines, why-for-me, nudge).
+    /// La chat NON passa piu' di qui: li' il profilo e' una riga secca nel turno utente.
+    private func buildUserProfileSection(_ profile: UserProfile) -> String {
+        var section = "USER PROFILE:"
+
+        if !profile.topGenres.isEmpty {
+            let genres = profile.topGenres.prefix(5)
+                .map { "\($0.genreName) (score: \(String(format: "%.1f", $0.totalScore)))" }
+                .joined(separator: ", ")
+            section += "\n- Top Genres: \(genres)"
+        }
+
+        if !profile.topActors.isEmpty {
+            let actors = profile.topActors.prefix(5)
+                .map { "\($0.name) (score: \(String(format: "%.1f", $0.score)))" }
+                .joined(separator: ", ")
+            section += "\n- Top Actors: \(actors)"
+        }
+
+        if !profile.preferredMoods.isEmpty {
+            let moods = profile.preferredMoods.prefix(5)
+                .map(\.rawValue)
+                .joined(separator: ", ")
+            section += "\n- Preferred Moods: \(moods)"
+        }
+
+        if !profile.recentActivity.watchedMedia.isEmpty {
+            let watched = profile.recentActivity.watchedMedia
                 .prefix(5)
                 .map { "\($0.title)\($0.year.map { " (\($0))" } ?? "")" }
                 .joined(separator: ", ")
-            context += "- Recently Watched: \(watched)\n"
+            section += "\n- Recently Watched: \(watched)"
         }
 
-        // Liked Media
-        if !userProfile.recentActivity.likedMedia.isEmpty {
-            let liked = userProfile.recentActivity.likedMedia
+        if !profile.recentActivity.likedMedia.isEmpty {
+            let liked = profile.recentActivity.likedMedia
                 .prefix(3)
                 .map { $0.title }
                 .joined(separator: ", ")
-            context += "- Liked Movies/Shows: \(liked)\n"
+            section += "\n- Liked: \(liked)"
         }
 
-        // Top Actors
-        if !userProfile.topActors.isEmpty {
-            let actors = userProfile.topActors.prefix(5).map { $0.name }.joined(separator: ", ")
-            context += "- Favorite Actors: \(actors)\n"
+        if let lastSearch = profile.recentActivity.lastSearchQuery {
+            section += "\n- Last Search: \"\(lastSearch)\""
         }
 
-        // Watch Patterns
-        if let preferredTime = userProfile.watchPatterns.preferredTimeOfDay {
-            context += "- Watch Time Preference: \(preferredTime)\n"
+        if !profile.recentActivity.discoveryClicks.isEmpty {
+            let clicks = profile.recentActivity.discoveryClicks
+                .prefix(3)
+                .map { $0.title }
+                .joined(separator: ", ")
+            section += "\n- Recently Explored: \(clicks)"
         }
 
-        // Content Type Preference
-        let moviePercentage = Int(userProfile.contentTypePreference.movieRatio * 100)
-        let tvPercentage = Int(userProfile.contentTypePreference.tvRatio * 100)
-        context += "- Content Preference: Movies \(moviePercentage)% | TV Shows \(tvPercentage)%\n"
-
-        // Moods
-        if !userProfile.preferredMoods.isEmpty {
-            let moods = userProfile.preferredMoods.map { $0.displayName }.joined(separator: ", ")
-            context += "- Preferred Moods: \(moods)\n"
+        if profile.watchPatterns.completionRate > 0 {
+            let completionPercentage = Int(profile.watchPatterns.completionRate * 100)
+            section += "\n- Watch Completion Rate: \(completionPercentage)%"
         }
 
-        return context
-    }
-
-    /// Build enhanced prompt for specific media query
-    func buildSpecificMediaPrompt(
-        title: String,
-        movieDetails: MovieDetails? = nil,
-        userProfile: UserProfile?,
-        userReaction: String? = nil,
-        hasWatched: Bool = false
-    ) -> String {
-        var prompt = """
-        The user is asking about ONE specific title: \(title).
-        Answer the question about this title directly. Do NOT add extra recommendations unless the user asked for them.
-        """
-
-        if let details = movieDetails {
-            prompt += """
-
-            MEDIA DATA:
-            - Title: \(details.title) (\(details.releaseDate?.prefix(4) ?? "N/A"))
-            - Genres: \(details.genres?.map { $0.name }.joined(separator: ", ") ?? "N/A")
-            - Rating: \(String(format: "%.1f", details.voteAverage))/10 (\(details.voteCount) votes)
-            - Overview: \(details.overview ?? "No overview available")
-            """
-            if let runtime = details.runtime, runtime > 0 {
-                prompt += "\n- Runtime: \(runtime) minutes"
-            }
-
-            if let cast = details.credits?.cast?.prefix(5) {
-                let castNames = cast.map { $0.name }.joined(separator: ", ")
-                prompt += "\n- Cast: \(castNames)"
-            }
-
-            if let director = details.credits?.crew?.first(where: { $0.job == "Director" }) {
-                prompt += "\n- Director: \(director.name)"
-            }
-        }
-
-        if let profile = userProfile {
-            let topGenres = profile.topGenres.prefix(3).map { $0.genreName }.joined(separator: ", ")
-            prompt += """
-
-            USER CONTEXT:
-            - User's Favorite Genres: \(topGenres)
-            """
-        }
-
-        if let reaction = userReaction {
-            prompt += "\n- User's Previous Reaction: \(reaction)"
-        }
-
-        if hasWatched {
-            prompt += "\n- User Has Already Watched This"
-        }
-
-        prompt += """
-
-        TASK:
-        1. Summarize the plot in 2-3 engaging sentences (avoid spoilers)
-        2. Highlight what makes it unique or notable
-        3. Explain why this user might (or might not) enjoy it based on their preferences
-        4. Only mention similar titles if the user explicitly asked for "similar/in stile/like"
-
-        Be conversational, friendly, and cozy. Keep it tight (under ~180 words).
-        """
-
-        return prompt
-    }
-
-    /// Build prompt for recommendation query
-    func buildRecommendationPrompt(
-        context: String?,
-        userProfile: UserProfile?,
-        conversationHistory: [AIChatMessage] = []
-    ) -> String {
-        var prompt = "RECOMMENDATION REQUEST:\n"
-
-        if let context = context {
-            prompt += "User Query Context: \(context)\n"
-        } else {
-            prompt += "User wants general recommendations\n"
-        }
-
-        if let profile = userProfile {
-            prompt += "\n" + buildUserContext(userProfile: profile)
-        }
-
-        if !conversationHistory.isEmpty {
-            prompt += "\nCONVERSATION HISTORY:\n"
-            let recentHistory = conversationHistory.suffix(5)
-            for message in recentHistory {
-                let role = message.role == .user ? "User" : "Assistant"
-                let content = message.content.prefix(100)
-                prompt += "- \(role): \(content)\(message.content.count > 100 ? "..." : "")\n"
-            }
-        }
-
-        prompt += """
-
-        INSTRUCTIONS:
-        - Recommend 3-5 movies or TV shows personalized to this user's taste
-        - For each recommendation provide:
-          1. Title and Year
-          2. Why it matches their preferences (reference their liked genres/movies)
-          3. One-sentence hook to entice them
-
-        - Prioritize diversity in recommendations (different genres, decades, styles)
-        - Avoid movies they've already watched or disliked
-        - Be enthusiastic and conversational
-
-        Format each recommendation as:
-        [Title] ([Year])
-        [One-sentence pitch]
-        Why: [Personalized reason based on user profile]
-        """
-
-        return prompt
-    }
-
-    /// Build prompt for mood-based query
-    func buildMoodPrompt(
-        mood: Mood,
-        userProfile: UserProfile?
-    ) -> String {
-        var prompt = """
-        MOOD-BASED RECOMMENDATION:
-        User is feeling: \(mood.displayName)
-        """
-
-        if let profile = userProfile {
-            let topGenres = profile.topGenres.prefix(3).map { $0.genreName }.joined(separator: ", ")
-            prompt += """
-
-            USER PREFERENCES:
-            - Favorite Genres: \(topGenres)
-            - Content Type: \(profile.contentTypePreference.movieRatio > 0.6 ? "Prefers Movies" : profile.contentTypePreference.tvRatio > 0.6 ? "Prefers TV Shows" : "Balanced")
-            """
-        }
-
-        prompt += """
-
-        TASK:
-        Recommend 3-5 movies or TV shows that match the user's current mood: \(mood.rawValue).
-
-        Consider:
-        - The emotional tone they're seeking
-        - Their genre preferences (but adapt to mood)
-        - Mix of familiar comfort content and fresh discoveries
-
-        For each recommendation:
-        1. Title and Year
-        2. Why it fits the mood
-        3. Emotional benefit (e.g., "Will lift your spirits", "Perfect for a cozy night")
-
-        Be empathetic and understanding of their emotional state.
-        """
-
-        return prompt
-    }
-
-    /// Build prompt for comparison query
-    func buildComparisonPrompt(
-        items: [String],
-        userProfile: UserProfile?
-    ) -> String {
-        var prompt = """
-        COMPARISON REQUEST:
-        Compare: \(items.joined(separator: " vs "))
-        """
-
-        if let profile = userProfile {
-            let topGenres = profile.topGenres.prefix(3).map { $0.genreName }.joined(separator: ", ")
-            prompt += """
-
-            USER PREFERENCES:
-            - Favorite Genres: \(topGenres)
-            """
-        }
-
-        prompt += """
-
-        TASK:
-        Provide a balanced comparison of these movies/shows:
-
-        For each item:
-        1. Brief description
-        2. Strengths and unique qualities
-        3. Target audience
-
-        Then provide:
-        - Similarities between them
-        - Key differences
-        - Personal recommendation based on user's taste (if profile available)
-
-        Be objective but helpful. Keep response under 250 words.
-        """
-
-        return prompt
-    }
-
-    /// Build prompt for availability query
-    func buildAvailabilityPrompt(
-        title: String,
-        region: String?
-    ) -> String {
-        var prompt = """
-        AVAILABILITY QUERY:
-        User wants to know where to watch: \(title)
-        """
-
-        if let region = region {
-            prompt += "\nRegion: \(region)"
-        }
-
-        prompt += """
-
-        TASK:
-        Unfortunately, as an AI I don't have real-time access to streaming availability data.
-
-        Provide a helpful response that:
-        1. Acknowledges you can't check live availability
-        2. Suggests common platforms where this type of content is typically found
-        3. Recommends using JustWatch.com or similar services to check current availability
-        4. Optionally mention if it's a recent release, classic, or platform exclusive (if you know)
-
-        Keep response friendly and helpful despite the limitation.
-        """
-
-        return prompt
+        return section
     }
 
     // MARK: - New Personalization Prompts
@@ -496,167 +354,6 @@ class AIContextBuilder {
         return prompt
     }
 
-    // MARK: - Private Methods
-
-    private func baseSystemPrompt() -> String {
-        """
-        You are Vibe AI, the user's movie buddy inside the VibeWatch app — a friend who lives and breathes movies and TV shows.
-
-        PERSONALITY:
-        - Talk like a close friend chatting about movies: warm, casual, enthusiastic, never pretentious.
-        - Keep conversational text SHORT: one to three sentences. Answer the user's actual question first.
-        - Plain text only: NEVER use asterisks, markdown headers, or bullet lists. Emojis sparingly. No reasoning or <think> tags.
-
-        LANGUAGE:
-        - Respond ONLY in the user's language (a separate rule tells you which one). All conversational text and every "reason" value must be in that language. JSON keys stay in English.
-
-        WHEN TO RECOMMEND:
-        - Output recommendations ONLY when the user is asking for something to watch — explicitly ("recommend", "what should I watch", "something like X") or clearly implied (describing a mood, exploring a director/actor/genre where picks would help).
-        - For pure information, opinions, comparisons, or availability questions: reply with text only and DO NOT output the JSON block.
-
-        RECOMMENDATION FORMAT (STRICT — the app parses this):
-        When you recommend, structure the reply exactly as:
-        1. A short plain-text intro (1-2 sentences), e.g. a quick take on the topic followed by "here are three must-watches for you".
-        2. A single fenced code block tagged vibe-json containing ONLY a JSON array of 3 to 5 items:
-        ```vibe-json
-        [{"title":"...","year":2014,"type":"movie","reason":"...","confidence":87}]
-        ```
-        - "title": the original international release title, exact official spelling.
-        - "year": first release year, as a number.
-        - "type": "movie" or "tv", nothing else.
-        - "reason": ONE short sentence (max 18 words), personalized to THIS user's profile, in the user's language.
-        - "confidence": integer 55-97 — your honest estimate of how well this title fits this specific user.
-        - Valid JSON only. No comments, no trailing text after the block, never more than one block.
-
-        GROUNDING:
-        - Only recommend real, released movies and TV shows you are certain exist. Never invent or misremember titles.
-        - NEVER recommend anything listed in EXCLUDED TITLES (the user already watched or saved them).
-        - When an ACTIVE FILTERS section is present, every recommendation MUST satisfy those constraints.
-        - Use the USER PROFILE to personalize picks and reasons, but keep some variety — don't lock into a single genre.
-
-        HONESTY:
-        - Be upfront about limits (you can't check live streaming catalogs in real time).
-        - Never claim the user knows or likes an actor unless the profile supports it.
-        """
-    }
-
-    private func buildUserProfileSection(_ profile: UserProfile) -> String {
-        var section = "USER PROFILE:"
-
-        if !profile.topGenres.isEmpty {
-            let genres = profile.topGenres.prefix(5)
-                .map { "\($0.genreName) (score: \(String(format: "%.1f", $0.totalScore)))" }
-                .joined(separator: ", ")
-            section += "\n- Top Genres: \(genres)"
-        }
-
-        if !profile.topActors.isEmpty {
-            let actors = profile.topActors.prefix(5)
-                .map { "\($0.name) (score: \(String(format: "%.1f", $0.score)))" }
-                .joined(separator: ", ")
-            section += "\n- Top Actors: \(actors)"
-        }
-
-        if !profile.preferredMoods.isEmpty {
-            let moods = profile.preferredMoods.prefix(5)
-                .map(\.rawValue)
-                .joined(separator: ", ")
-            section += "\n- Preferred Moods: \(moods)"
-        }
-
-        if !profile.recentActivity.watchedMedia.isEmpty {
-            let watched = profile.recentActivity.watchedMedia
-                .prefix(5)
-                .map { "\($0.title)\($0.year.map { " (\($0))" } ?? "")" }
-                .joined(separator: ", ")
-            section += "\n- Recently Watched: \(watched)"
-        }
-
-        if !profile.recentActivity.likedMedia.isEmpty {
-            let liked = profile.recentActivity.likedMedia
-                .prefix(3)
-                .map { $0.title }
-                .joined(separator: ", ")
-            section += "\n- Liked: \(liked)"
-        }
-
-        if let lastSearch = profile.recentActivity.lastSearchQuery {
-            section += "\n- Last Search: \"\(lastSearch)\""
-        }
-
-        if !profile.recentActivity.discoveryClicks.isEmpty {
-            let clicks = profile.recentActivity.discoveryClicks
-                .prefix(3)
-                .map { $0.title }
-                .joined(separator: ", ")
-            section += "\n- Recently Explored: \(clicks)"
-        }
-
-        // Watch patterns
-        if profile.watchPatterns.completionRate > 0 {
-            let completionPercentage = Int(profile.watchPatterns.completionRate * 100)
-            section += "\n- Watch Completion Rate: \(completionPercentage)%"
-        }
-
-        return section
-    }
-
-    private func buildTaskSection(queryType: QueryType) -> String {
-        switch queryType {
-        case .specificMedia:
-            return """
-            TASK: Provide detailed information about a specific movie/show
-            - Be informative and engaging
-            - Highlight why it's notable
-            - Personalize based on user's taste
-            - Avoid spoilers unless asked
-            - Do NOT recommend other titles unless explicitly requested
-            """
-
-        case .informational:
-            return """
-            TASK: Answer a specific question about movies/shows
-            - Be accurate and concise
-            - Provide context if helpful
-            - Cite specific examples
-            - Do NOT include extra recommendations unless asked
-            """
-
-        case .comparison:
-            return """
-            TASK: Compare movies/shows objectively
-            - Highlight strengths of each
-            - Point out key differences
-            - Provide personalized recommendation
-            """
-
-        case .recommendation:
-            return """
-            TASK: Recommend personalized content
-            - Suggest 3-5 options
-            - Explain why each fits user's taste
-            - Ensure diversity in recommendations
-            - Be enthusiastic but honest
-            """
-
-        case .moodBased:
-            return """
-            TASK: Recommend content matching user's mood
-            - Consider emotional tone
-            - Balance user preferences with mood fit
-            - Provide emotional benefit explanation
-            - Be empathetic and understanding
-            """
-
-        case .availability:
-            return """
-            TASK: Help user find where to watch content
-            - Acknowledge limitation (no live data)
-            - Suggest checking platforms/services
-            - Provide helpful alternatives
-            """
-        }
-    }
 }
 
 // MARK: - Supporting Models

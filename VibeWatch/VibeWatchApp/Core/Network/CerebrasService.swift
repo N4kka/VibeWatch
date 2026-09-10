@@ -193,36 +193,6 @@ class CerebrasService {
         return descriptions
     }
 
-    /// Generate a compact semantic embedding for a movie (for local similarity scoring).
-    /// Returns a JSON-parsed array of `dimensions` floats.
-    func generateMovieEmbedding(movie: Movie, dimensions: Int = 64) async throws -> [Double] {
-        let prompt = """
-        Create a compact semantic embedding vector for this movie.
-
-        Title: \(movie.title)
-        Overview: \(movie.overview)
-        Genres: \(movie.genreIds?.map(String.init).joined(separator: ", ") ?? "")
-        Release: \(movie.releaseDate ?? "")
-
-        Requirements:
-        - Output MUST be a JSON array of exactly \(dimensions) numbers (floats).
-        - Each number should be between -1.0 and 1.0.
-        - Make it deterministic and stable.
-        - Only return the JSON array, no other text.
-        """
-
-        let response = try await generateText(prompt: prompt, maxTokens: 600, temperature: 0.0)
-
-        guard let data = response.data(using: .utf8),
-              let vector = try? JSONDecoder().decode([Double].self, from: data) else {
-            throw CerebrasError.decodingError
-        }
-
-        if vector.count == dimensions { return vector }
-        if vector.count > dimensions { return Array(vector.prefix(dimensions)) }
-        return vector + Array(repeating: 0.0, count: max(0, dimensions - vector.count))
-    }
-
     /// Generate metadata for clips
     func generateClipMetadata(clip: Clip, movieContext: Movie) async throws -> ClipMetadata {
         let prompt = """
@@ -319,15 +289,17 @@ class CerebrasService {
     // MARK: - Core API Methods
 
     /// interactive chat for user-facing features
+    ///
+    /// Nessun system prompt: lo possiede il gateway, che lo antepone identico byte per byte a
+    /// ogni richiesta (e' cio' che permette al context caching di agganciare il prefisso). Il
+    /// contesto volatile viaggia dentro `prompt`, vedi `AIContextBuilder.buildUserTurn`.
     /// - Parameters:
     ///   - history: Previous messages in the conversation
     ///   - prompt: The new user message
-    ///   - systemPrompt: Optional system override
     /// - Returns: Tuple of (response text, token usage, authoritative server-side quota usage)
     func chat(
         history: [AIChatMessage],
-        prompt: String,
-        systemPrompt: String? = nil
+        prompt: String
     ) async throws -> (content: String, tokens: Int, serverUsage: AIServerUsage?) {
         
         guard let url = URL(string: baseURL) else {
@@ -335,17 +307,13 @@ class CerebrasService {
         }
 
         var messages: [CerebrasMessage] = []
-        
-        // 1. System Prompt
-        let systemContent = systemPrompt ?? "You are a helpful assistant for a movie and TV show discovery app called VibeWatch."
-        messages.append(CerebrasMessage(role: "system", content: systemContent))
-        
-        // 2. History
+
+        // 1. History
         for msg in history {
             messages.append(CerebrasMessage(role: msg.role == .user ? "user" : "assistant", content: msg.content))
         }
         
-        // 3. New Prompt
+        // 2. New Prompt
         messages.append(CerebrasMessage(role: "user", content: prompt))
 
         var request = URLRequest(url: url)

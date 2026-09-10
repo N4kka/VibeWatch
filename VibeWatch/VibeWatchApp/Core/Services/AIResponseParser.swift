@@ -25,7 +25,7 @@ enum AIResponseParser {
     static let confidenceRange = 55...97
 
     static func parse(_ raw: String) -> ParsedAIReply {
-        let cleaned = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleaned = strippingContextMarkers(raw.trimmingCharacters(in: .whitespacesAndNewlines))
 
         // 1. Blocchi fenced ```vibe-json / ```json / ``` — vince l'ultimo che decodifica.
         if let (range, recs) = lastDecodableFencedBlock(in: cleaned), !recs.isEmpty {
@@ -38,6 +38,35 @@ enum AIResponseParser {
         }
 
         return ParsedAIReply(text: cleaned, recommendations: [])
+    }
+
+    // MARK: - Context markers
+
+    /// Le righe di contesto che il gateway descrive nel system prompt (`[saved]`, `[skip]`,
+    /// `[title]`, …) sono input, non output. Il modello le ha ristampate in risposta — e con un
+    /// reasoning effort basso "non citarle mai" resta un'istruzione, non una garanzia. Qui è una
+    /// garanzia.
+    ///
+    /// Solo in testa: una parentesi quadra a metà frase è roba che ha scritto lui apposta, e
+    /// cancellarla sarebbe peggio del problema che risolve.
+    private static func strippingContextMarkers(_ text: String) -> String {
+        var lines = text.components(separatedBy: "\n")
+        var dropped = false
+
+        while let first = lines.first {
+            let trimmed = first.trimmingCharacters(in: .whitespaces)
+            if trimmed.range(of: "^\\[[A-Za-z][A-Za-z ]{0,15}\\]", options: .regularExpression) != nil {
+                lines.removeFirst()
+                dropped = true
+            } else if dropped && trimmed.isEmpty {
+                lines.removeFirst()
+            } else {
+                break
+            }
+        }
+
+        guard dropped else { return text }
+        return lines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     // MARK: - Fenced blocks

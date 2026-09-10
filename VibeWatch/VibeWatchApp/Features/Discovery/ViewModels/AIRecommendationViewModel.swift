@@ -218,35 +218,31 @@ class AIRecommendationViewModel: ObservableObject {
                 conversationLength: messages.count))
             let profile = await preferenceManager.aggregatePreferences()
 
-            let detectedLangCode = languageDetector.detectLanguage(for: query)
-            let languageInstruction = buildLanguageInstruction(detectedLangCode: detectedLangCode)
+            let seenTitles = seenTitlesForPrompt()
+            let savedEntries = savedEntriesForPrompt(seenTitles: seenTitles)
 
-            let systemPrompt = contextBuilder.buildChatSystemPrompt(
-                userProfile: profile.userId.isEmpty ? nil : profile,
-                excludedTitles: excludedTitlesForPrompt(),
-                activeFilters: activeFilters
-            ) + "\n\n" + languageInstruction
-
-            let history = conversationHistoryForModel(filteredTo: detectedLangCode)
-
+            // Persona, formato e contratto vibe-json stanno nel gateway, identici a ogni
+            // richiesta: qui si manda solo cio' che cambia (profilo, esclusi, titolo, lingua),
+            // attaccato al turno utente perche' il caching aggancia per prefisso.
             let (prompt, metadata) = try await buildPromptAndMetadata(
                 query: query,
                 classification: classification,
                 userProfile: profile,
-                conversationHistory: history
+                seenTitles: seenTitles,
+                savedEntries: savedEntries,
+                languageName: englishLanguageName(for: query)
             )
 
-            // Switch to Cerebras
+            let history = conversationHistoryForModel()
             let (content, tokens, serverUsage) = try await cerebrasService.chat(
                 history: history,
-                prompt: prompt,
-                systemPrompt: systemPrompt
+                prompt: prompt
             )
 
             // Contratto ibrido: testo conversazionale + eventuale blocco vibe-json di titoli,
             // risolti via TMDB in card. Se il parse fallisce si degrada a bolla di solo testo.
             let parsed = AIResponseParser.parse(content)
-            let cards = await resolveCards(parsed.recommendations)
+            let cards = await resolveCards(parsed.recommendations, excluding: seenTitles, saved: savedEntries)
 
             let aiMessage = AIMessage(
                 content: content,
@@ -459,21 +455,53 @@ class AIRecommendationViewModel: ObservableObject {
         }
     }
 
-    /// Titoli già visti o in watchlist: passati come EXCLUDED TITLES nel system prompt.
-    private func excludedTitlesForPrompt() -> [String] {
-        let listManager = ListManager.shared
-        let seen = listManager.seenList.items.map { $0.title }
-        let saved = listManager.watchlist.items.map { $0.title }
+    /// Solo i visti: il vincolo duro "non riproporre". La watchlist stava qui dentro e non ci
+    /// doveva stare — vedi `savedEntriesForPrompt`.
+    private func seenTitlesForPrompt() -> [String] {
         var unique: [String] = []
         var known = Set<String>()
-        for title in seen + saved {
+        for title in ListManager.shared.seenList.items.map(\.title) {
             let key = title.lowercased()
-            if !known.contains(key) {
-                known.insert(key)
-                unique.append(title)
-            }
+            if known.insert(key).inserted { unique.append(title) }
         }
         return unique
+    }
+
+    /// Cio' che l'utente si e' scelto da solo e non ha ancora visto: watchlist + liste custom.
+    /// Non e' un'esclusione ma un bacino da cui pescare, quindi porta anche la durata (che sta
+    /// gia' in locale, `MediaListItem.runtime`) e il nome della lista di provenienza.
+    /// Ordine per data di aggiunta decrescente: se il cap taglia, taglia le cose piu' vecchie.
+    private func savedEntriesForPrompt(seenTitles: [String]) -> [AIContextBuilder.SavedEntry] {
+        let listManager = ListManager.shared
+        let seen = Set(seenTitles.map { $0.lowercased() })
+
+        let sources: [(list: MediaList, tag: String?)] = [(listManager.watchlist, nil)]
+            + listManager.lists.filter { $0.type == .custom }.map { ($0, $0.name) }
+
+        var entries: [(entry: AIContextBuilder.SavedEntry, addedAt: Date)] = []
+        var known = Set<String>()
+
+        for source in sources {
+            for item in source.list.items {
+                let key = item.title.lowercased()
+                // Un titolo gia' visto non e' piu' "da vedere", anche se la riga di lista e'
+                // rimasta li: proporglielo come novita' sarebbe il bug di prima al contrario.
+                guard !seen.contains(key), known.insert(key).inserted else { continue }
+                entries.append((
+                    AIContextBuilder.SavedEntry(
+                        tmdbId: item.mediaId,
+                        mediaType: item.mediaType,
+                        title: item.title,
+                        year: item.releaseDate.flatMap { Int($0.prefix(4)) },
+                        runtime: item.mediaType == .movie ? item.runtime : nil,
+                        listName: source.tag
+                    ),
+                    item.addedAt
+                ))
+            }
+        }
+
+        return entries.sorted { $0.addedAt > $1.addedAt }.map(\.entry)
     }
 
     // MARK: - Card resolution
@@ -481,14 +509,33 @@ class AIRecommendationViewModel: ObservableObject {
     /// Risolve le raccomandazioni del modello in card via ricerca TMDB. Match sull'anno ±1 quando
     /// disponibile, altrimenti primo risultato; i titoli irrisolvibili vengono scartati in
     /// silenzio (guardia anti-allucinazione: mai una card col poster sbagliato).
-    private func resolveCards(_ recommendations: [AIParsedRecommendation]) async -> [AIRecommendationCardModel] {
+    /// - Parameter excludedTitles: il vincolo duro "mai riproporre cio' che ha gia' visto".
+    ///   Al prompt ne va solo un assaggio (12 titoli): la lista intera la applica il codice, qui,
+    ///   dove costa un Set e il modello non puo' discutere. **Solo i visti**: filtrare anche la
+    ///   watchlist cancellava le card giuste quando l'utente chiedeva un consiglio proprio da li.
+    ///   Vuota in re-hydration, altrimenti una card sparirebbe da una chat vecchia solo perche'
+    ///   nel frattempo quel titolo e' finito tra i visti.
+    /// - Parameter saved: le liste dell'utente. Un titolo che compare qui non si cerca per nome:
+    ///   l'id ce l'abbiamo gia', ed e' l'unico modo per avere la certezza che la card sia
+    ///   proprio quel film e non un omonimo.
+    private func resolveCards(
+        _ recommendations: [AIParsedRecommendation],
+        excluding seenTitles: [String] = [],
+        saved: [AIContextBuilder.SavedEntry] = []
+    ) async -> [AIRecommendationCardModel] {
         guard !recommendations.isEmpty else { return [] }
+
+        let excluded = Set(seenTitles.map { $0.lowercased() })
+        let allowed = recommendations.filter { !excluded.contains($0.title.lowercased()) }
+        guard !allowed.isEmpty else { return [] }
+
+        let knownByTitle = Dictionary(saved.map { ($0.title.lowercased(), $0) }) { first, _ in first }
 
         var resolved: [(Int, AIRecommendationCardModel)] = []
         await withTaskGroup(of: (Int, AIRecommendationCardModel?).self) { group in
-            for (index, rec) in recommendations.prefix(5).enumerated() {
+            for (index, rec) in allowed.prefix(5).enumerated() {
                 group.addTask { [weak self] in
-                    (index, await self?.resolveCard(rec))
+                    (index, await self?.resolveCard(rec, known: knownByTitle[rec.title.lowercased()]))
                 }
             }
             for await (index, card) in group {
@@ -498,56 +545,82 @@ class AIRecommendationViewModel: ObservableObject {
         return resolved.sorted { $0.0 < $1.0 }.map { $0.1 }
     }
 
-    private func resolveCard(_ rec: AIParsedRecommendation) async -> AIRecommendationCardModel? {
-        switch rec.mediaType {
+    private func resolveCard(
+        _ rec: AIParsedRecommendation,
+        known: AIContextBuilder.SavedEntry?
+    ) async -> AIRecommendationCardModel? {
+        // Il tipo lo decide la lista quando il titolo viene da li: e' un dato, non una previsione.
+        switch known?.mediaType ?? rec.mediaType {
         case .movie:
-            guard let results = try? await tmdbService.searchMovies(query: rec.title, page: 1).results,
-                  let match = pickByYear(results, year: rec.year, yearOf: { $0.year }) else { return nil }
-            let details = try? await tmdbService.getMovieDetails(id: match.id)
+            let id: Int
+            if let known {
+                id = known.tmdbId
+            } else {
+                guard let results = try? await tmdbService.searchMovies(query: rec.title, page: 1).results,
+                      let match = Self.pickBestMatch(results, year: rec.year, yearOf: { $0.year }, votesOf: { $0.voteCount })
+                else { return nil }
+                id = match.id
+            }
+            guard let details = try? await tmdbService.getMovieDetails(id: id) else { return nil }
+
             return AIRecommendationCardModel(
-                tmdbId: match.id,
+                tmdbId: details.id,
                 mediaType: .movie,
-                title: match.title,
-                year: match.year,
-                posterPath: details?.posterPath ?? match.posterPath,
+                title: details.title,
+                year: details.year,
+                posterPath: details.posterPath,
                 matchPercent: rec.confidence,
                 reason: rec.reason,
-                seasonsOrRuntime: details?.formattedRuntime,
-                country: localizedCountry(details?.productionCountries)
+                seasonsOrRuntime: details.formattedRuntime,
+                country: localizedCountry(details.productionCountries)
             )
 
         case .tv:
-            guard let results = try? await tmdbService.searchTVShows(query: rec.title, page: 1).results,
-                  let match = pickByYear(results, year: rec.year, yearOf: { $0.year }) else { return nil }
-            let details = try? await tmdbService.getTVShowDetails(id: match.id)
-            let seasons = details?.numberOfSeasons.map { count in
+            let id: Int
+            if let known {
+                id = known.tmdbId
+            } else {
+                guard let results = try? await tmdbService.searchTVShows(query: rec.title, page: 1).results,
+                      let match = Self.pickBestMatch(results, year: rec.year, yearOf: { $0.year }, votesOf: { $0.voteCount })
+                else { return nil }
+                id = match.id
+            }
+            guard let details = try? await tmdbService.getTVShowDetails(id: id) else { return nil }
+
+            let seasons = details.numberOfSeasons.map { count in
                 count == 1
                     ? "ai.card.oneSeason".localized
                     : String(format: "ai.card.seasonCount".localized, count)
             }
             return AIRecommendationCardModel(
-                tmdbId: match.id,
+                tmdbId: details.id,
                 mediaType: .tv,
-                title: match.name,
-                year: match.year,
-                posterPath: details?.posterPath ?? match.posterPath,
+                title: details.name,
+                year: details.year,
+                posterPath: details.posterPath,
                 matchPercent: rec.confidence,
                 reason: rec.reason,
                 seasonsOrRuntime: seasons,
-                country: localizedCountry(details?.productionCountries)
+                country: localizedCountry(details.productionCountries)
             )
         }
     }
 
-    /// Primo risultato il cui anno dista al più 1 da quello del modello; senza anno o senza match
-    /// compatibile, il primo risultato della ricerca.
-    private func pickByYear<T>(_ results: [T], year: Int?, yearOf: (T) -> String?) -> T? {
+    /// Fra i risultati con anno compatibile vince quello con piu' voti, non il primo che capita.
+    /// Su un titolo ambiguo il primo compatibile puo' essere un omonimo qualunque: "The Hunt"
+    /// (2013) agganciava un cortometraggio da 8 minuti, e la card che ne usciva sembrava vera.
+    static func pickBestMatch<T>(
+        _ results: [T],
+        year: Int?,
+        yearOf: (T) -> String?,
+        votesOf: (T) -> Int
+    ) -> T? {
         guard let year else { return results.first }
-        let compatible = results.first { item in
+        let compatible = results.filter { item in
             guard let itemYear = yearOf(item).flatMap({ Int($0) }) else { return false }
             return abs(itemYear - year) <= 1
         }
-        return compatible ?? results.first
+        return compatible.max { votesOf($0) < votesOf($1) } ?? results.first
     }
 
     private func localizedCountry(_ countries: [ProductionCountry]?) -> String? {
@@ -565,35 +638,16 @@ class AIRecommendationViewModel: ObservableObject {
         return historical
     }
 
-    private func conversationHistoryForModel(filteredTo languageCode: String?) -> [AIChatMessage] {
-        let base = conversationHistoryForModel()
-        guard let languageCode else { return base }
-
-        return base.filter { message in
-            if message.role == .system { return true }
-            guard let detected = languageDetector.detectLanguage(for: message.content) else { return false }
-            return detected == languageCode
-        }
-    }
-
-    private func buildLanguageInstruction(detectedLangCode: String?) -> String {
-        let detectedLanguageDescription: String
-        // Il nome della lingua va in inglese perché finisce dentro un prompt in inglese: con
-        // `Locale.current` l'istruzione diventava "You MUST respond ONLY in italiano (it)".
-        if let langCode = detectedLangCode,
-           let localizedName = Locale(identifier: "en_US").localizedString(forLanguageCode: langCode) {
-            detectedLanguageDescription = "\(localizedName) (\(langCode))"
-        } else {
-            detectedLanguageDescription = "the user's last input language"
-        }
-
-        return """
-        CRITICAL LANGUAGE RULE:
-        - You MUST respond ONLY in \(detectedLanguageDescription).
-        - Match the user's CURRENT input language exactly.
-        - NEVER switch to a different language unless the user does so first in their latest message.
-        - If the user's input is in \(detectedLanguageDescription), your entire response MUST be in \(detectedLanguageDescription).
-        """
+    /// Il marker `[reply in]` del turno utente. Con un reasoning effort basso il modello non
+    /// cambia lingua da solo — 0 volte su 10 senza il marker, 5 su 5 con. Il nome della lingua e'
+    /// in inglese perche' finisce dentro un prompt in inglese: con `Locale.current` la riga
+    /// diventava "[reply in] italiano".
+    ///
+    /// NB: la cronologia NON si filtra piu' per lingua. Lo faceva, e cambiare lingua a meta'
+    /// conversazione cancellava tutto il contesto precedente.
+    private func englishLanguageName(for query: String) -> String? {
+        guard let code = languageDetector.detectLanguage(for: query) else { return nil }
+        return Locale(identifier: "en_US").localizedString(forLanguageCode: code)
     }
 
     private func sanitizeUserPrompt(_ text: String) -> String {
@@ -623,76 +677,82 @@ class AIRecommendationViewModel: ObservableObject {
         let mentionedGenres: [String]
     }
 
+    /// Il turno utente: la query grezza preceduta dal solo contesto volatile. Nessun template di
+    /// task per tipo di query — imponevano formati in conflitto col contratto del gateway (era il
+    /// motivo per cui "e' uscito nel 2026?" tornava in tre paragrafi invece che in una riga).
     private func buildPromptAndMetadata(
         query: String,
         classification: QueryClassification,
         userProfile: UserProfile,
-        conversationHistory: [AIChatMessage]
+        seenTitles: [String],
+        savedEntries: [AIContextBuilder.SavedEntry],
+        languageName: String?
     ) async throws -> (String, PromptMetadata) {
+        let profile = userProfile.userId.isEmpty ? nil : userProfile
+
+        func turn(media: (MovieDetails, MediaType)? = nil, availability: String? = nil) -> String {
+            contextBuilder.buildUserTurn(
+                query: query,
+                userProfile: profile,
+                seenTitles: seenTitles,
+                savedEntries: savedEntries,
+                activeFilters: activeFilters,
+                media: media,
+                availability: availability,
+                languageName: languageName
+            )
+        }
+
         switch classification.type {
         case .specificMedia(let title, let mediaTypeHint):
-            let (details, mediaId) = try await fetchMediaDetailsForTitle(title, mediaTypeHint: mediaTypeHint)
-            let prompt = contextBuilder.buildSpecificMediaPrompt(
-                title: title,
-                movieDetails: details,
-                userProfile: userProfile.userId.isEmpty ? nil : userProfile
-            )
+            let (details, kind, mediaId) = try await fetchMediaDetailsForTitle(title, mediaTypeHint: mediaTypeHint)
             return (
-                prompt,
+                turn(media: details.map { ($0, kind) }),
                 PromptMetadata(queryTypeKey: "specific_media", mentionedMediaIds: mediaId.map { [$0] } ?? [], mentionedGenres: [])
             )
 
-        // Nei casi senza arricchimento TMDB il prompt utente resta la query grezza: formato e
-        // comportamento (incluso quando emettere il blocco vibe-json) sono già nel system prompt,
-        // e i vecchi template imponevano formati di output in conflitto col contratto.
         case .informational:
-            return (query, PromptMetadata(queryTypeKey: "informational", mentionedMediaIds: [], mentionedGenres: []))
+            return (turn(), PromptMetadata(queryTypeKey: "informational", mentionedMediaIds: [], mentionedGenres: []))
 
         case .comparison:
-            return (query, PromptMetadata(queryTypeKey: "comparison", mentionedMediaIds: [], mentionedGenres: []))
+            return (turn(), PromptMetadata(queryTypeKey: "comparison", mentionedMediaIds: [], mentionedGenres: []))
 
         case .recommendation:
-            return (query, PromptMetadata(queryTypeKey: "recommendation", mentionedMediaIds: [], mentionedGenres: []))
+            return (turn(), PromptMetadata(queryTypeKey: "recommendation", mentionedMediaIds: [], mentionedGenres: []))
 
         case .moodBased(let mood):
-            return (query, PromptMetadata(queryTypeKey: "mood_based", mentionedMediaIds: [], mentionedGenres: [mood.rawValue]))
+            return (turn(), PromptMetadata(queryTypeKey: "mood_based", mentionedMediaIds: [], mentionedGenres: [mood.rawValue]))
 
         case .availability(let title, _):
             let region = await MainActor.run { LocalizationManager.shared.currentLanguageAndRegion().1 }
             let availability = try? await fetchAvailabilitySummary(title: title, region: region)
             return (
-                """
-                Help the user find where to watch: "\(title)" (region: \(region))
-
-                Known provider info (may be incomplete): \(availability ?? "N/A")
-
-                Provide a helpful answer and suggest what to check if it's not available.
-                """,
+                turn(availability: availability.map { "\(title) (\(region)): \($0)" }),
                 PromptMetadata(queryTypeKey: "availability", mentionedMediaIds: [], mentionedGenres: [])
             )
         }
     }
 
-    private func fetchMediaDetailsForTitle(_ title: String, mediaTypeHint: MediaType?) async throws -> (MovieDetails?, Int?) {
-        switch mediaTypeHint {
-        case .tv:
+    /// Restituisce anche il tipo risolto, non solo l'hint: la riga `[title]` del turno utente
+    /// dice al modello "movie" o "tv", ed e' quello che poi finisce nel campo type della card.
+    private func fetchMediaDetailsForTitle(
+        _ title: String,
+        mediaTypeHint: MediaType?
+    ) async throws -> (MovieDetails?, MediaType, Int?) {
+        if mediaTypeHint == .tv {
             if let tv = try? await fetchTVShowDetailsForTitle(title) {
-                return tv
+                return (tv.0, .tv, tv.1)
             }
-            return try await fetchMovieDetailsForTitle(title)
-
-        case .movie:
-            if let movie = try? await fetchMovieDetailsForTitle(title) {
-                return movie
-            }
-            return try await fetchTVShowDetailsForTitle(title)
-
-        case .none:
-            if let movie = try? await fetchMovieDetailsForTitle(title) {
-                return movie
-            }
-            return try await fetchTVShowDetailsForTitle(title)
+            let movie = try await fetchMovieDetailsForTitle(title)
+            return (movie.0, .movie, movie.1)
         }
+
+        // Senza hint si prova prima film: e' il caso piu' frequente, e il fallback copre l'altro.
+        if let movie = try? await fetchMovieDetailsForTitle(title) {
+            return (movie.0, .movie, movie.1)
+        }
+        let tv = try await fetchTVShowDetailsForTitle(title)
+        return (tv.0, .tv, tv.1)
     }
 
     private func fetchMovieDetailsForTitle(_ title: String) async throws -> (MovieDetails?, Int?) {
