@@ -1,13 +1,16 @@
 import { serve } from 'https://deno.land/std@0.131.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { SignJWT, importPKCS8 } from 'https://esm.sh/jose@v5.2.3'
 import {
   GLOBAL_DAILY_TOKEN_BUDGET,
   QuotaBucket,
   bucketForRequest,
   dailyLimitForTier,
   hasReachedDailyLimit,
+  isRetryable,
+  isUpstreamCapacity,
   parseRequestBody,
-  requestBodyForCerebras,
+  requestBodyForUpstream,
   usageCountForToday,
   usageDayKey,
 } from './quota.ts'
@@ -28,8 +31,14 @@ const SUPABASE_SERVICE_ROLE_KEY = (() => {
   if (s) { try { const k = JSON.parse(s)?.default; if (k) return k as string } catch { /* fall back */ } }
   return Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 })()
-const CEREBRAS_API_KEY = Deno.env.get('CEREBRAS_API_KEY') ?? ''
-const CEREBRAS_ENDPOINT = 'https://api.cerebras.ai/v1/chat/completions'
+// Vertex AI, endpoint OpenAI-compatibile. Auth con OAuth token da service account, NON con
+// una API key: e' lo stesso meccanismo che process-notifications usa per FCM.
+// La location e' "global" apposta — evita di legare la capacita' a una singola regione.
+const VERTEX_SERVICE_ACCOUNT = Deno.env.get('VERTEX_SERVICE_ACCOUNT') ?? ''
+const VERTEX_PROJECT_ID = Deno.env.get('VERTEX_PROJECT_ID') ?? ''
+const VERTEX_ENDPOINT =
+  `https://aiplatform.googleapis.com/v1beta1/projects/${VERTEX_PROJECT_ID}` +
+  '/locations/global/endpoints/openapi/chat/completions'
 
 // RevenueCat REST API: fonte autorevole dello stato Pro.
 // NB: il client puo forgiare user_daily_quota.is_pro (RLS owner-scoped), quindi quel
@@ -44,6 +53,76 @@ const PRO_CACHE_TTL_MS = 5 * 60 * 1000
 const proStatusCache = new Map<string, { isPro: boolean; expiresAt: number }>()
 
 type SupabaseAdminClient = any
+
+// Il token OAuth vale un'ora: su un'istanza calda si riusa invece di firmare un JWT nuovo a
+// ogni richiesta. Cinque minuti di margine per non usarne uno scaduto in volo.
+let cachedAccessToken: { token: string; expiresAt: number } | null = null
+
+async function vertexAccessToken(): Promise<string> {
+  const now = Date.now()
+  if (cachedAccessToken && cachedAccessToken.expiresAt > now) {
+    return cachedAccessToken.token
+  }
+
+  const serviceAccount = JSON.parse(VERTEX_SERVICE_ACCOUNT)
+  const privateKey = await importPKCS8(serviceAccount.private_key.replace(/\\n/g, '\n'), 'RS256')
+
+  const jwt = await new SignJWT({
+    iss: serviceAccount.client_email,
+    sub: serviceAccount.client_email,
+    aud: 'https://oauth2.googleapis.com/token',
+    scope: 'https://www.googleapis.com/auth/cloud-platform',
+  })
+    .setProtectedHeader({ alg: 'RS256', typ: 'JWT' })
+    .setIssuedAt()
+    .setExpirationTime('1h')
+    .sign(privateKey)
+
+  const response = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+      assertion: jwt,
+    }),
+  })
+
+  if (!response.ok) {
+    throw new Error(`Vertex token request failed: ${response.status} ${await response.text()}`)
+  }
+
+  const data = await response.json()
+  cachedAccessToken = { token: data.access_token, expiresAt: now + 55 * 60 * 1000 }
+  return data.access_token
+}
+
+// Due tentativi in piu, brevi: 429/503/5xx a monte sono quasi sempre picchi di capacita' che
+// passano in un paio di secondi. Le attese restano corte apposta — dall'altra parte c'e' un
+// utente fermo sullo spinner, e un backoff lungo su un upstream che fallisce lento sfonda il
+// timeout del client invece di salvarlo.
+const RETRY_DELAYS_MS = [1000, 3000]
+
+async function callVertex(body: string): Promise<Response> {
+  const accessToken = await vertexAccessToken()
+
+  for (let attempt = 0; ; attempt++) {
+    const response = await fetch(VERTEX_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body,
+    })
+
+    if (response.ok || !isRetryable(response.status) || attempt >= RETRY_DELAYS_MS.length) {
+      return response
+    }
+
+    console.warn(`Vertex ${response.status}, retry ${attempt + 1}/${RETRY_DELAYS_MS.length}`)
+    await new Promise((resolve) => setTimeout(resolve, RETRY_DELAYS_MS[attempt]))
+  }
+}
 
 function jsonResponse(body: Record<string, unknown>, status: number) {
   return new Response(JSON.stringify(body), {
@@ -136,8 +215,8 @@ async function recordSuccessfulRequest(
   }
 }
 
-// Circuit breaker sul budget giornaliero della key Cerebras (1M token/day): oltre la soglia il
-// proxy smette di inoltrare. Fail-open: se la lettura fallisce non si blocca il traffico.
+// Circuit breaker sul budget giornaliero di token (vedi GLOBAL_DAILY_TOKEN_BUDGET): oltre la
+// soglia il proxy smette di inoltrare. Fail-open: se la lettura fallisce non si blocca il traffico.
 async function globalTokensUsedToday(adminSupabase: SupabaseAdminClient): Promise<number> {
   try {
     const { data, error } = await adminSupabase.rpc('get_ai_global_tokens_today')
@@ -188,8 +267,8 @@ serve(withCors(async (req) => {
       return jsonResponse({ error: 'Invalid or expired session' }, 401)
     }
 
-    if (!CEREBRAS_API_KEY) {
-      return jsonResponse({ error: 'Cerebras API key is not configured' }, 500)
+    if (!VERTEX_SERVICE_ACCOUNT || !VERTEX_PROJECT_ID) {
+      return jsonResponse({ error: 'Vertex AI credentials are not configured' }, 500)
     }
 
     if (!SUPABASE_SERVICE_ROLE_KEY) {
@@ -222,8 +301,8 @@ serve(withCors(async (req) => {
       }, 429)
     }
 
-    // Circuit breaker: la key Cerebras ha ~1M token/day; oltre la soglia si smette di inoltrare
-    // per tutti, a prescindere dalle quote individuali.
+    // Circuit breaker sul credito Vertex: oltre la soglia si smette di inoltrare per tutti,
+    // a prescindere dalle quote individuali.
     const globalTokens = await globalTokensUsedToday(adminSupabase)
     if (globalTokens > GLOBAL_DAILY_TOKEN_BUDGET) {
       return jsonResponse({
@@ -232,37 +311,24 @@ serve(withCors(async (req) => {
       }, 429)
     }
 
-    // 4. Forward request to Cerebras with gateway-owned model selection.
-    const cerebrasBody = JSON.stringify(requestBodyForCerebras(parsedBody))
+    // 4. Forward request upstream, con model e system prompt scelti dal gateway.
+    const upstreamResp = await callVertex(JSON.stringify(requestBodyForUpstream(parsedBody, bucket)))
+    const respBody = await upstreamResp.text()
 
-    const cerebrasResp = await fetch(CEREBRAS_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${CEREBRAS_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: cerebrasBody
-    })
+    if (!upstreamResp.ok) {
+      console.error(`Vertex request failed (${upstreamResp.status}):`, respBody.slice(0, 500))
 
-    const respBody = await cerebrasResp.text()
-
-    if (!cerebrasResp.ok) {
-      console.error(`Cerebras request failed (${cerebrasResp.status}):`, respBody.slice(0, 500))
-
-      // Il 402 di Cerebras (`payment_required`, quota dell'account esaurita) esce con un codice
-      // suo. È l'unico stato a monte che non si risolve riprovando e che non riguarda in nulla
-      // l'utente che ha davanti lo schermo: appiattito su 502 diventava "riprova più tardi", e
-      // l'app restava muta sul fatto che il servizio fosse semplicemente spento per tutti.
-      if (cerebrasResp.status === 402) {
+      // 402 (credito finito), 429 e 503 (capacita' del servizio) dicono tutti la stessa cosa a
+      // chi ha lo schermo davanti: l'AI e' spenta, non e' colpa sua e non si sblocca a
+      // mezzanotte. Il 429 in particolare NON puo' uscire come 429 nostro, che il client
+      // mostra come "hai raggiunto il limite giornaliero" — addosso a chi non ha speso nulla.
+      if (isUpstreamCapacity(upstreamResp.status)) {
         return jsonResponse({ error: 'upstream_capacity' }, 402)
       }
 
-      // Tutto il resto resta 502, NON il passthrough dello status: un 429 di Cerebras arrivava
-      // al client identico al nostro 429 di quota e veniva mostrato come "limite giornaliero
-      // raggiunto" addosso a chi non aveva speso una singola richiesta.
       return jsonResponse({
         error: 'upstream_error',
-        status: cerebrasResp.status,
+        status: upstreamResp.status,
         details: respBody,
       }, 502)
     }
@@ -270,7 +336,7 @@ serve(withCors(async (req) => {
     // 5. Count one successful request on the right bucket + feed the global token ledger.
     await recordSuccessfulRequest(adminSupabase, userId, bucket)
 
-    // 6. Return the Cerebras response with the authoritative usage embedded in the body
+    // 6. Return the upstream response with the authoritative usage embedded in the body
     // (vw_usage): gli header custom possono essere filtrati dai gateway, il body no.
     // Gli header X-AI-* restano come canale secondario.
     let outBody = respBody
@@ -292,7 +358,7 @@ serve(withCors(async (req) => {
     }
 
     return new Response(outBody, {
-      status: cerebrasResp.status,
+      status: upstreamResp.status,
       headers: {
         'Content-Type': 'application/json',
         'X-AI-Bucket': bucket,
