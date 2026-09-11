@@ -77,6 +77,12 @@ final class BudgetedTMDBService: TMDBServiceProtocol {
         }
     }
 
+    func discoverReleases(from: String, to: String, theatrical: Bool) async throws -> TMDBResponse<Movie> {
+        try await budget.run(key: "discoverReleases:\(from):\(to):\(theatrical)") { [wrapped] in
+            try await wrapped.discoverReleases(from: from, to: to, theatrical: theatrical)
+        }
+    }
+
     func searchMovies(query: String, page: Int) async throws -> TMDBResponse<Movie> {
         try await budget.run(key: "searchMovies:\(query):\(page)") { [wrapped] in
             try await wrapped.searchMovies(query: query, page: page)
@@ -87,6 +93,10 @@ final class BudgetedTMDBService: TMDBServiceProtocol {
         try await budget.run(key: "movieDetails:\(id)") { [wrapped] in
             try await wrapped.getMovieDetails(id: id)
         }
+    }
+
+    func getEnglishOverview(id: Int, mediaType: MediaType) async -> String? {
+        await wrapped.getEnglishOverview(id: id, mediaType: mediaType)
     }
 
     func getMovieCredits(id: Int) async throws -> Credits {

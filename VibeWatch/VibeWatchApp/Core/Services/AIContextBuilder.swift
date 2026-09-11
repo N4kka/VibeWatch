@@ -33,6 +33,7 @@ class AIContextBuilder {
         activeFilters: [AIChatFilter] = [],
         media: (details: MovieDetails, kind: MediaType)? = nil,
         availability: String? = nil,
+        releases: String? = nil,
         languageName: String? = nil
     ) -> String {
         var lines: [String] = []
@@ -74,6 +75,11 @@ class AIContextBuilder {
 
         if let availability, !availability.isEmpty {
             lines.append("[watch] \(availability)")
+        }
+
+        // Without it "what's out in cinemas in September" got "I don't have real-time data".
+        if let releases {
+            lines.append("[releases] \(releases)")
         }
 
         for filter in activeFilters {

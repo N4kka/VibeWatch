@@ -1570,7 +1570,16 @@ class DiscoveryPersonalizationService: ObservableObject {
 
     /// Load personalized carousels from database cache
     /// Returns nil if cache is expired or doesn't exist (unless ignoreExpiry is true)
+    /// The AI descriptions are written in the app language: a cache built in another one is not
+    /// served (it kept showing English descriptions until midnight, or forever after a switch).
+    private static let cacheLocaleKey = "discovery.carouselCacheLocale"
+
+    private var cacheMatchesAppLocale: Bool {
+        UserDefaults.standard.string(forKey: Self.cacheLocaleKey) == LocalizationManager.shared.appLocale.identifier
+    }
+
     private func loadFromCache(userId: String, ignoreExpiry: Bool = false) async throws -> [PersonalizedCarousel]? {
+        guard cacheMatchesAppLocale else { return nil }
         let now = Date()
         let isoFormatter = ISO8601DateFormatter()
         let nowString = isoFormatter.string(from: now)
@@ -1639,6 +1648,7 @@ class DiscoveryPersonalizationService: ObservableObject {
 
     /// Load personalized carousels from database cache using device id.
     private func loadFromCache(deviceId: String, ignoreExpiry: Bool = false) async throws -> [PersonalizedCarousel]? {
+        guard cacheMatchesAppLocale else { return nil }
         let now = Date()
         let isoFormatter = ISO8601DateFormatter()
         let nowString = isoFormatter.string(from: now)
@@ -1747,6 +1757,7 @@ class DiscoveryPersonalizationService: ObservableObject {
             }
         }
 
+        UserDefaults.standard.set(LocalizationManager.shared.appLocale.identifier, forKey: Self.cacheLocaleKey)
         Logger.debug("[DiscoveryPersonalizationService] Cached \(carousels.count) carousels to database")
     }
 

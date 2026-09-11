@@ -11,7 +11,13 @@ protocol TMDBWatchProvidersServiceProtocol: Sendable {
     func getAvailableWatchProviders(mediaType: String, region: String) async throws -> [Provider]
 }
 
+extension TMDBServiceProtocol {
+    /// Stubs that don't implement it simply have no English fallback.
+    func getEnglishOverview(id: Int, mediaType: MediaType) async -> String? { nil }
+}
+
 protocol TMDBServiceProtocol: TMDBWatchProvidersServiceProtocol, TVSeasonProviding, Sendable {
+    func getEnglishOverview(id: Int, mediaType: MediaType) async -> String?
     func getTrendingMovies(timeWindow: TimeWindow, page: Int) async throws -> TMDBResponse<Movie>
     func getPopularMovies(page: Int) async throws -> TMDBResponse<Movie>
     func getTopRatedMovies(page: Int) async throws -> TMDBResponse<Movie>
@@ -27,6 +33,8 @@ protocol TMDBServiceProtocol: TMDBWatchProvidersServiceProtocol, TVSeasonProvidi
         releaseDateLte: String?,
         country: String?
     ) async throws -> TMDBResponse<Movie>
+    /// Movies released in the app's country between two `yyyy-MM-dd` days, most popular first.
+    func discoverReleases(from: String, to: String, theatrical: Bool) async throws -> TMDBResponse<Movie>
     func searchMovies(query: String, page: Int) async throws -> TMDBResponse<Movie>
     func getTrendingTVShows(timeWindow: TimeWindow, page: Int) async throws -> TMDBResponse<TVShow>
     func getPopularTVShows(page: Int) async throws -> TMDBResponse<TVShow>
@@ -122,7 +130,10 @@ actor TMDBService: TMDBServiceProtocol {
         // Combine language and region in TMDb format (e.g., "it-IT", "en-US")
         let languageParam = "\(language)-\(region)"
 
-        items.append(URLQueryItem(name: "language", value: languageParam))
+        // A caller that asks for a specific language (see `getEnglishOverview`) keeps it.
+        if !items.contains(where: { $0.name == "language" }) {
+            items.append(URLQueryItem(name: "language", value: languageParam))
+        }
         items.append(URLQueryItem(name: "region", value: region))
 
         components.queryItems = items
@@ -242,7 +253,21 @@ actor TMDBService: TMDBServiceProtocol {
         
         return try await request("/discover/movie", queryItems: items)
     }
-    
+
+    func discoverReleases(from: String, to: String, theatrical: Bool) async throws -> TMDBResponse<Movie> {
+        // `release_date.*` (not `primary_release_date.*`) plus the `region` that `request` adds
+        // filters on the country's own release dates, not the earliest one anywhere.
+        var items = [
+            URLQueryItem(name: "sort_by", value: "popularity.desc"),
+            URLQueryItem(name: "release_date.gte", value: from),
+            URLQueryItem(name: "release_date.lte", value: to)
+        ]
+        if theatrical {
+            items.append(URLQueryItem(name: "with_release_type", value: "2|3"))
+        }
+        return try await request("/discover/movie", queryItems: items)
+    }
+
     func searchMovies(query: String, page: Int = 1) async throws -> TMDBResponse<Movie> {
         try await request("/search/movie", queryItems: [
             URLQueryItem(name: "query", value: query),
@@ -333,9 +358,22 @@ actor TMDBService: TMDBServiceProtocol {
     // MARK: - Movie Details
     
     func getMovieDetails(id: Int) async throws -> Movie {
-        try await request("/movie/\(id)")
+        // release_dates: the top-level date is the worldwide first one, not the user's country.
+        try await request("/movie/\(id)", queryItems: [
+            URLQueryItem(name: "append_to_response", value: "release_dates")
+        ])
     }
     
+    /// TMDB often has no plot in the app language for a title months from release; English
+    /// almost always does, and an English plot beats an empty row.
+    func getEnglishOverview(id: Int, mediaType: MediaType) async -> String? {
+        let english = [URLQueryItem(name: "language", value: "en-US")]
+        let overview: String? = mediaType == .tv
+            ? (try? await request("/tv/\(id)", queryItems: english) as TVShow)?.overview
+            : (try? await request("/movie/\(id)", queryItems: english) as Movie)?.overview
+        return overview?.isEmpty == false ? overview : nil
+    }
+
     func getMovieCredits(id: Int) async throws -> Credits {
         try await request("/movie/\(id)/credits")
     }

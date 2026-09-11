@@ -73,6 +73,15 @@ class AIQueryClassifier {
 
         Logger.debug("[AIQueryClassifier] Classifying query: '\(query)'")
 
+        // First: "what's coming out in theaters" would otherwise match "what's" as a title query.
+        if let window = releaseWindow(in: lowercased) {
+            return QueryClassification(
+                type: .releases(from: window.from, to: window.to, theatrical: window.theatrical),
+                confidence: 0.85,
+                extractedEntities: [:]
+            )
+        }
+
         // Check for specific media queries (e.g., "Tell me about Inception")
         if let mediaQuery = detectSpecificMediaQuery(lowercased) {
             return mediaQuery
@@ -110,6 +119,87 @@ class AIQueryClassifier {
             confidence: 0.5,
             extractedEntities: extractEntities(from: query)
         )
+    }
+
+    // MARK: - Release questions
+
+    struct ReleaseWindow: Equatable {
+        let from: String
+        let to: String
+        let theatrical: Bool
+    }
+
+    private static let theaterPhrases = [
+        "al cinema", "nelle sale", "in theaters", "in theatres", "in cinemas", "at the cinema"
+    ]
+    /// Asking for a list of releases on their own.
+    private static let listingPhrases = [
+        "in uscita", "uscite", "upcoming", "new releases", "coming soon", "coming out"
+    ]
+    /// Only a release question with a time next to them: "quando esce Dune 3?" is about a title.
+    private static let releaseVerbs = ["escono", "esce", "usciranno", "uscirà", "releas", "come out", "comes out"]
+    private static let months: [[String]] = [
+        ["gennaio", "january"], ["febbraio", "february"], ["marzo", "march"], ["aprile", "april"],
+        ["maggio", "may"], ["giugno", "june"], ["luglio", "july"], ["agosto", "august"],
+        ["settembre", "september"], ["ottobre", "october"], ["novembre", "november"], ["dicembre", "december"]
+    ]
+
+    /// The dates a release question is about, or nil when it isn't one.
+    ///
+    /// ponytail: keyword matching, Italian and English only; other app languages fall through
+    /// to a plain recommendation. Add their phrases here when they need it.
+    func releaseWindow(
+        in query: String,
+        now: Date = Date(),
+        calendar: Calendar = Calendar(identifier: .gregorian)
+    ) -> ReleaseWindow? {
+        let query = query.lowercased()
+        let words = Set(query.components(separatedBy: CharacterSet.letters.inverted))
+        let theatrical = Self.theaterPhrases.contains { query.contains($0) }
+        let month = Self.months.firstIndex { $0.contains { words.contains($0) } }.map { $0 + 1 }
+
+        let today = calendar.startOfDay(for: now)
+        let currentMonth = calendar.component(.month, from: today)
+        let currentYear = calendar.component(.year, from: today)
+        var from = today
+        var to = calendar.date(byAdding: .day, value: 30, to: today)!
+        var hasTime = true
+
+        func wholeMonth(_ month: Int, _ year: Int) {
+            from = calendar.date(from: DateComponents(year: year, month: month, day: 1))!
+            to = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: from)!
+        }
+
+        if let month {
+            let explicitYear = query.range(of: "\\b20\\d{2}\\b", options: .regularExpression)
+                .flatMap { Int(query[$0]) }
+            // "a marzo" asked in September means next March.
+            wholeMonth(month, explicitYear ?? (month < currentMonth ? currentYear + 1 : currentYear))
+        } else if query.contains("questo mese") || query.contains("this month") {
+            wholeMonth(currentMonth, currentYear)
+        } else if query.contains("prossimo mese") || query.contains("next month") {
+            let next = calendar.date(byAdding: .month, value: 1, to: today)!
+            wholeMonth(calendar.component(.month, from: next), calendar.component(.year, from: next))
+        } else if query.contains("prossima settimana") || query.contains("next week") {
+            from = calendar.date(byAdding: .day, value: 7, to: today)!
+            to = calendar.date(byAdding: .day, value: 13, to: today)!
+        } else if query.contains("questa settimana") || query.contains("this week") {
+            to = calendar.date(byAdding: .day, value: 6, to: today)!
+        } else {
+            hasTime = false
+        }
+
+        let isRelease = theatrical
+            || Self.listingPhrases.contains { query.contains($0) }
+            || (hasTime && Self.releaseVerbs.contains { query.contains($0) })
+        guard isRelease else { return nil }
+
+        let formatter = DateFormatter()
+        formatter.calendar = calendar
+        formatter.timeZone = calendar.timeZone
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return ReleaseWindow(from: formatter.string(from: from), to: formatter.string(from: to), theatrical: theatrical)
     }
 
     // MARK: - Private Methods - Query Detection
@@ -496,10 +586,13 @@ enum QueryType {
     case recommendation(context: String?)
     case moodBased(mood: Mood)
     case availability(title: String, region: String?)
+    /// `yyyy-MM-dd` days, inclusive.
+    case releases(from: String, to: String, theatrical: Bool)
 
     /// Il nome piatto per la proprietà query_type di ai_chat_message_sent.
     var analyticsName: String {
         switch self {
+        case .releases: return "releases"
         case .specificMedia: return "specific_media"
         case .informational: return "informational"
         case .comparison: return "comparison"
@@ -523,6 +616,8 @@ enum QueryType {
             return "Mood-based query (\(mood.rawValue))"
         case .availability(let title, _):
             return "Availability query for '\(title)'"
+        case .releases(let from, let to, _):
+            return "Releases from \(from) to \(to)"
         }
     }
 }
