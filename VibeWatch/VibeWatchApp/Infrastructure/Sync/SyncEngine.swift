@@ -119,6 +119,9 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
     /// Il recupero armato da `flushAndPullTrackingState` quando il push non è passato. Uno solo
     /// alla volta: N tap durante il sync di avvio non devono lasciare N attese in giro.
     private var trackingCatchUpTask: Task<Void, Never>?
+    /// True while an outbox push is in flight, whoever started it. Two pushes must never overlap
+    /// (both would read and send the same operations).
+    private var isPushingOutbox = false
 
     /// Maximum number of retry attempts before marking an operation as stuck
     private let maxRetries = 5
@@ -617,6 +620,10 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
     @discardableResult
     private func pushPendingChangesInternal() async -> SyncOutcome {
         var outcome = SyncOutcome()
+        // The push already running will send whatever is in the outbox.
+        guard !isPushingOutbox else { return outcome }
+        isPushingOutbox = true
+        defer { isPushingOutbox = false }
 
         do {
             // Unblock previously blocked schema-missing operations
@@ -758,21 +765,29 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
     /// spinto e l'outbox è vuota, quindi si va dritti al pull. L'attesa serve solo alla finestra
     /// del sync di avvio, ha un tetto corto (una rotella lunga è peggio di una card in ritardo) e
     /// se scade non si molla il colpo: si riaggancia alla fine del sync in corso.
+    ///
+    /// Waiting for the whole launch sync was still not enough: its pull phase (21 paginated
+    /// tables) routinely outlasts the 8 s cap, the push was skipped again and the pull wrote the
+    /// old state back — first tap slow, card stuck on the same episode. The full sync's push
+    /// phase is over within its first second, so the outbox can go out while the sync is still
+    /// pulling; only an overlapping push has to be waited for.
     public func flushAndPullTrackingState() async {
         if pendingOperationsCount > 0 {
-            await waitForPushSlot(timeout: 8)
-            await pushPendingChanges()
+            await waitWhilePushingOutbox(timeout: 8)
+            if stateMachine.canTransition(to: .syncing(.push)) {
+                await pushPendingChanges()
+            } else if networkMonitor.isConnected, AuthService.shared.currentUser != nil {
+                // A full sync holds the state machine but is past its own push.
+                await pushPendingChangesInternal()
+            }
         }
         await pullTrackingState()
         if pendingOperationsCount > 0 { scheduleTrackingCatchUp() }
     }
 
-    /// Attende che la macchina a stati accetti un push. L'unico stato che lo vieta è `.syncing`:
-    /// da `.offline` la transizione è ammessa e sarà `pushPendingChanges` a fermarsi sulla rete,
-    /// quindi qui non si aspetta mai per una mancanza di connessione.
-    private func waitForPushSlot(timeout: TimeInterval) async {
+    private func waitWhilePushingOutbox(timeout: TimeInterval) async {
         let deadline = Date().addingTimeInterval(timeout)
-        while !stateMachine.canTransition(to: .syncing(.push)), Date() < deadline {
+        while isPushingOutbox, Date() < deadline {
             try? await Task.sleep(nanoseconds: 150_000_000)
         }
     }
