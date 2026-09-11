@@ -42,10 +42,12 @@ final class SocialActions {
 
     func follow(userId followeeId: String) async throws {
         try await write(followeeId: followeeId, deletedAt: nil)
+        AnalyticsService.shared.track(.userFollowed(source: "profile"))
     }
 
     func unfollow(userId followeeId: String) async throws {
         try await write(followeeId: followeeId, deletedAt: ISO8601DateFormatter().string(from: Date()))
+        AnalyticsService.shared.track(.userUnfollowed(source: "profile"))
     }
 
     /// Follow e unfollow sono la stessa scrittura con `deleted_at` diverso: il soft delete è

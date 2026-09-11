@@ -146,6 +146,8 @@ serve(async (req) => {
           is_sent: false,
           category: 'episode_aired',
           thread_id: `episode:${row.tmdb_show_id}`,
+          template_key: 'episode_aired',
+          template_params: { show: name, episode: label },
         })
 
       if (!insertError) created += 1

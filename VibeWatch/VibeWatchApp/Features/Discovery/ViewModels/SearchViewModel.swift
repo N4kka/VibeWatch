@@ -20,6 +20,7 @@ class SearchViewModel: ObservableObject {
 
     private var searchTask: Task<Void, Never>?
     private var loadMoreTask: Task<Void, Never>?
+    private var cancellables = Set<AnyCancellable>()
     private var currentPage = 1
     private var totalPages = 1
     /// `"mediaType:id"` di ciò che è già in lista: TMDB ripete gli stessi titoli fra le pagine.
@@ -44,6 +45,19 @@ class SearchViewModel: ObservableObject {
         Logger.debug("[SearchViewModel] init() called")
         self.loadTrendingSearches()
         Task { await self.loadLatestVisitedItems() }
+
+        // La SearchView sta in un tab e sopravvive al cambio di account: senza questo, gli ultimi
+        // visitati dell'utente uscito restavano a schermo anche dopo che UserDefaults era stato
+        // ripulito, fino al riavvio dell'app.
+        NotificationCenter.default.publisher(for: .localUserDataDidReset)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                guard let self else { return }
+                self.latestVisitedItems = []
+                self.searchQuery = ""
+                self.searchResults = []
+            }
+            .store(in: &cancellables)
     }
 
     deinit {
@@ -161,6 +175,15 @@ class SearchViewModel: ObservableObject {
         let query = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return }
 
+        let position = searchResults.firstIndex(where: { $0.id == result.id && $0.mediaType == result.mediaType }) ?? -1
+        AnalyticsService.shared.logSearchResultSelected(
+            query: query,
+            mediaId: result.id,
+            mediaType: result.mediaType,
+            position: position,
+            resultCount: searchResults.count
+        )
+
         Task {
             await preferenceManager.recordSearchClick(
                 query: query,
@@ -184,6 +207,13 @@ class SearchViewModel: ObservableObject {
 
         lastLoggedQuery = normalized
         lastLoggedAt = Date()
+
+        // Una per query stabilizzata (debounce + dedup sopra), mai per keystroke.
+        AnalyticsService.shared.track(.searchPerformed(
+            query: normalized,
+            resultCount: resultCount,
+            source: "search_tab"
+        ))
 
         await preferenceManager.recordSearchQuery(
             query: normalized,

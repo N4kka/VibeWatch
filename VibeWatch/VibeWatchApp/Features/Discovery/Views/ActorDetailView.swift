@@ -59,7 +59,13 @@ struct ActorDetailView: View {
         .background(Color.theme.background.ignoresSafeArea())
         .navigationBarHidden(true)
         .swipeBackGesture { dismiss() }
-        .task { await viewModel.loadDetails() }
+        .task {
+            await viewModel.loadDetails()
+            AnalyticsService.shared.logScreenView(screenName: "ActorDetail")
+            AnalyticsService.shared.track(.mediaDetailViewed(
+                mediaType: "person", mediaId: viewModel.personId, title: initialName
+            ))
+        }
     }
 
     private var filmographyList: [PersonCredit] {

@@ -274,44 +274,56 @@ struct DailyLimitPaywallView: View {
 
     private func restorePurchases() async {
         do {
-            AnalyticsService.shared.logEvent("restore_started", parameters: [:])
+            AnalyticsService.shared.track(.restoreStarted(properties: [:]))
             let info = try await Purchases.shared.restorePurchases()
             await MainActor.run {
                 if info.entitlements["StartingVibe Pro"]?.isActive == true {
                     quotaManager.upgradeToPro()
                     Task { await ClipQuotaService.shared.checkIsProUser() }
-                    AnalyticsService.shared.logEvent("restore_succeeded", parameters: [:])
+                    AnalyticsService.shared.track(.restoreSucceeded(properties: [:]))
                     dismiss(action: "restore_success", logDismiss: false)
                 } else {
-                    AnalyticsService.shared.logEvent("restore_no_active_subscription", parameters: [:])
+                    AnalyticsService.shared.track(.restoreNoActiveSubscription(properties: [:]))
                     presentAlert(title: "No Subscription Found", message: "We couldn’t find an active subscription for this Apple ID.")
                 }
             }
         } catch {
             await MainActor.run {
-                AnalyticsService.shared.logEvent("restore_failed", parameters: [
+                AnalyticsService.shared.track(.restoreFailed(properties: [
                     "error": (error as NSError).localizedDescription
-                ])
+                ]))
                 presentAlert(title: "Restore Failed", message: error.localizedDescription)
             }
         }
     }
 
     private struct BenefitList: View {
-        let paywallType: PaywallType // New property
+        let paywallType: PaywallType
+
+        /// Le stesse chiavi del paywall principale (PaywallCopy): prima qui c'erano tre stringhe
+        /// inglesi scritte a mano, che le altre 18 lingue leggevano in inglese, e due delle tre
+        /// promettevano cose senza un gate dietro.
+        private var keys: [String] {
+            switch paywallType {
+            case .clipsQuota: return PaywallCopy.clipsQuotaKeys
+            case .aiQuota:    return PaywallCopy.aiQuotaKeys
+            }
+        }
+
+        private var icons: [String] {
+            switch paywallType {
+            case .clipsQuota: return ["infinity", "hand.raised.slash", "square.stack.3d.up"]
+            case .aiQuota:    return ["brain.head.profile", "sparkles.tv", "infinity"]
+            }
+        }
 
         var body: some View {
             VStack(alignment: .leading, spacing: 14) {
-                // Benefits are dynamic based on paywallType
-                switch paywallType {
-                case .clipsQuota:
-                    BenefitRow(icon: "infinity", text: "Unlimited clips every day")
-                    BenefitRow(icon: "wand.and.stars", text: "Personalized watchlists")
-                    BenefitRow(icon: "sparkles", text: "Early feature access")
-                case .aiQuota:
-                    BenefitRow(icon: "brain.head.profile", text: "ai.paywall.benefit.unlimited".localized)
-                    BenefitRow(icon: "sparkles.tv", text: "ai.paywall.benefit.smarter".localized)
-                    BenefitRow(icon: "wand.and.stars", text: "ai.paywall.benefit.personalized".localized)
+                ForEach(Array(keys.enumerated()), id: \.element) { index, key in
+                    BenefitRow(
+                        icon: icons.indices.contains(index) ? icons[index] : "checkmark",
+                        text: PaywallCopy.plain(key)
+                    )
                 }
             }
         }

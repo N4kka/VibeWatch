@@ -30,6 +30,7 @@ struct ClipsSearchView: View {
             dismiss()
         }
         .onAppear {
+            AnalyticsService.shared.logScreenView(screenName: "ClipsSearch")
             if let initialQuery, !initialQuery.isEmpty {
                 viewModel.query = initialQuery
                 viewModel.updateQuery(initialQuery)

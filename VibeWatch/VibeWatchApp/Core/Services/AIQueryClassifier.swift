@@ -497,6 +497,18 @@ enum QueryType {
     case moodBased(mood: Mood)
     case availability(title: String, region: String?)
 
+    /// Il nome piatto per la proprietà query_type di ai_chat_message_sent.
+    var analyticsName: String {
+        switch self {
+        case .specificMedia: return "specific_media"
+        case .informational: return "informational"
+        case .comparison: return "comparison"
+        case .recommendation: return "recommendation"
+        case .moodBased: return "mood_based"
+        case .availability: return "availability"
+        }
+    }
+
     var description: String {
         switch self {
         case .specificMedia(let title, _):

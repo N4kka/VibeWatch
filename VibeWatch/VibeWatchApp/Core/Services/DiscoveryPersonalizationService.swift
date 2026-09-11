@@ -1499,7 +1499,13 @@ class DiscoveryPersonalizationService: ObservableObject {
 
     // MARK: - Private Methods - Embedding Similarity
 
-    private var embeddingModelName: String { "zai-glm-4.7" }
+    // Il nome del modello e' anche la chiave di cache in media_embeddings, quindi cambiarlo
+    // invalida da solo le righe vecchie senza migration. Serve: i vettori salvati finora li
+    // scriveva un modello di chat a cui era stato chiesto di "inventare 64 float" — numeri
+    // senza alcuna proprieta' geometrica, su cui la similarita' coseno e' rumore ordinato.
+    // Finche' nessuno scrive embedding veri, questa lettura non trova nulla e il re-rank
+    // restituisce i candidati nell'ordine in cui sono arrivati (vedi il guard qui sotto).
+    private var embeddingModelName: String { "gemini-embedding-2" }
 
     private func rerankSimilarMovies(seedMovieId: Int, candidates: [Movie]) async -> [Movie] {
         guard candidates.count >= 3 else { return candidates }

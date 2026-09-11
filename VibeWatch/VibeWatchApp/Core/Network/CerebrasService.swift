@@ -5,7 +5,14 @@ enum CerebrasError: Error {
     case noData
     case decodingError
     case serverError(String)
-    case quotaExceeded
+    /// Quota giornaliera raggiunta; se il server ha allegato il conteggio, e' qui.
+    case quotaExceeded(serverUsage: AIServerUsage?)
+    /// Il servizio a monte è esaurito per tutti (402 `upstream_capacity` da cerebras-proxy).
+    ///
+    /// Distinto da `quotaExceeded` perché non è la quota di chi sta chiedendo: dirgli "hai
+    /// raggiunto il limite, torna domani" sarebbe falso due volte — non ha speso niente, e
+    /// domani sarà spento uguale finché non si ricarica l'account.
+    case serviceUnavailable
     case unknown
 }
 
@@ -16,6 +23,8 @@ struct CerebrasChatRequest: Codable {
     let maxTokens: Int?
     let temperature: Double?
     let stream: Bool
+    /// Quota bucket tag consumed by cerebras-proxy ("chat" or "aux"); stripped before forwarding.
+    let feature: String
 
     enum CodingKeys: String, CodingKey {
         case model
@@ -23,6 +32,54 @@ struct CerebrasChatRequest: Codable {
         case maxTokens = "max_tokens"
         case temperature
         case stream
+        case feature
+    }
+}
+
+/// Authoritative usage snapshot returned by cerebras-proxy: nel body della risposta come campo
+/// `vw_usage` (canale primario, i gateway non lo filtrano) e negli header X-AI-* (fallback).
+struct AIServerUsage: Codable {
+    let bucket: String
+    let requestsUsed: Int
+    let dailyLimit: Int
+    let isPro: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case bucket
+        case requestsUsed = "requests_used"
+        case dailyLimit = "daily_limit"
+        case isPro = "is_pro"
+    }
+
+    init(bucket: String, requestsUsed: Int, dailyLimit: Int, isPro: Bool) {
+        self.bucket = bucket
+        self.requestsUsed = requestsUsed
+        self.dailyLimit = dailyLimit
+        self.isPro = isPro
+    }
+
+    init?(httpResponse: HTTPURLResponse) {
+        guard
+            let usedString = httpResponse.value(forHTTPHeaderField: "X-AI-Requests-Used"),
+            let limitString = httpResponse.value(forHTTPHeaderField: "X-AI-Daily-Limit"),
+            let used = Int(usedString),
+            let limit = Int(limitString)
+        else { return nil }
+        self.requestsUsed = used
+        self.dailyLimit = limit
+        self.bucket = httpResponse.value(forHTTPHeaderField: "X-AI-Bucket") ?? "chat"
+        self.isPro = httpResponse.value(forHTTPHeaderField: "X-AI-Is-Pro") == "true"
+    }
+
+    /// Estrae il conteggio dal body di un 429 del proxy ({requestsUsedToday, dailyLimit, ...}).
+    init?(quotaErrorBody data: Data) {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let used = json["requestsUsedToday"] as? Int,
+              let limit = json["dailyLimit"] as? Int else { return nil }
+        self.requestsUsed = used
+        self.dailyLimit = limit
+        self.bucket = json["bucket"] as? String ?? "chat"
+        self.isPro = json["isPro"] as? Bool ?? false
     }
 }
 
@@ -52,6 +109,13 @@ struct CerebrasChatResponse: Codable {
     let model: String
     let choices: [CerebrasChoice]
     let usage: CerebrasUsage?
+    /// Iniettato da cerebras-proxy: conteggio quota autorevole del server.
+    let vwUsage: AIServerUsage?
+
+    enum CodingKeys: String, CodingKey {
+        case id, object, created, model, choices, usage
+        case vwUsage = "vw_usage"
+    }
 }
 
 struct CerebrasChoice: Codable {
@@ -89,11 +153,12 @@ class CerebrasService {
         let host = base.replacingOccurrences(of: ".supabase.co", with: ".functions.supabase.co")
         return "\(host)/cerebras-proxy"
     }()
-    // User-facing chatbot model for Cerebras-backed requests.
-    private let defaultModel = "llama3.1-8b"
+    // Placeholder: il model effettivo lo decide cerebras-proxy (quota.ts CHATBOT_MODEL),
+    // che sovrascrive sempre questo campo.
+    private let defaultModel = "gateway-managed"
 
     private init() {
-        Logger.info("[CerebrasService] Initialized with model: \(defaultModel)")
+        Logger.info("[CerebrasService] Initialized (model selection is gateway-owned)")
     }
 
     // MARK: - Content Enhancement
@@ -126,36 +191,6 @@ class CerebrasService {
         }
 
         return descriptions
-    }
-
-    /// Generate a compact semantic embedding for a movie (for local similarity scoring).
-    /// Returns a JSON-parsed array of `dimensions` floats.
-    func generateMovieEmbedding(movie: Movie, dimensions: Int = 64) async throws -> [Double] {
-        let prompt = """
-        Create a compact semantic embedding vector for this movie.
-
-        Title: \(movie.title)
-        Overview: \(movie.overview)
-        Genres: \(movie.genreIds?.map(String.init).joined(separator: ", ") ?? "")
-        Release: \(movie.releaseDate ?? "")
-
-        Requirements:
-        - Output MUST be a JSON array of exactly \(dimensions) numbers (floats).
-        - Each number should be between -1.0 and 1.0.
-        - Make it deterministic and stable.
-        - Only return the JSON array, no other text.
-        """
-
-        let response = try await generateText(prompt: prompt, maxTokens: 600, temperature: 0.0)
-
-        guard let data = response.data(using: .utf8),
-              let vector = try? JSONDecoder().decode([Double].self, from: data) else {
-            throw CerebrasError.decodingError
-        }
-
-        if vector.count == dimensions { return vector }
-        if vector.count > dimensions { return Array(vector.prefix(dimensions)) }
-        return vector + Array(repeating: 0.0, count: max(0, dimensions - vector.count))
     }
 
     /// Generate metadata for clips
@@ -254,33 +289,31 @@ class CerebrasService {
     // MARK: - Core API Methods
 
     /// interactive chat for user-facing features
+    ///
+    /// Nessun system prompt: lo possiede il gateway, che lo antepone identico byte per byte a
+    /// ogni richiesta (e' cio' che permette al context caching di agganciare il prefisso). Il
+    /// contesto volatile viaggia dentro `prompt`, vedi `AIContextBuilder.buildUserTurn`.
     /// - Parameters:
     ///   - history: Previous messages in the conversation
     ///   - prompt: The new user message
-    ///   - systemPrompt: Optional system override
-    /// - Returns: Tuple of (response text, token usage)
+    /// - Returns: Tuple of (response text, token usage, authoritative server-side quota usage)
     func chat(
         history: [AIChatMessage],
-        prompt: String,
-        systemPrompt: String? = nil
-    ) async throws -> (content: String, tokens: Int) {
+        prompt: String
+    ) async throws -> (content: String, tokens: Int, serverUsage: AIServerUsage?) {
         
         guard let url = URL(string: baseURL) else {
             throw CerebrasError.invalidURL
         }
 
         var messages: [CerebrasMessage] = []
-        
-        // 1. System Prompt
-        let systemContent = systemPrompt ?? "You are a helpful assistant for a movie and TV show discovery app called VibeWatch."
-        messages.append(CerebrasMessage(role: "system", content: systemContent))
-        
-        // 2. History
+
+        // 1. History
         for msg in history {
             messages.append(CerebrasMessage(role: msg.role == .user ? "user" : "assistant", content: msg.content))
         }
         
-        // 3. New Prompt
+        // 2. New Prompt
         messages.append(CerebrasMessage(role: "user", content: prompt))
 
         var request = URLRequest(url: url)
@@ -297,7 +330,8 @@ class CerebrasService {
             messages: messages,
             maxTokens: 1024,
             temperature: 0.7,
-            stream: false
+            stream: false,
+            feature: "chat"
         )
 
         do {
@@ -313,8 +347,15 @@ class CerebrasService {
         }
 
         guard (200...299).contains(httpResponse.statusCode) else {
-            if httpResponse.statusCode == 402 || httpResponse.statusCode == 429 {
-                throw CerebrasError.quotaExceeded
+            // 402 e 429 vogliono dire due cose opposte e vanno tenute separate: il 402 e il
+            // servizio spento per tutti, il 429 e la quota di questo utente.
+            if httpResponse.statusCode == 402 {
+                throw CerebrasError.serviceUnavailable
+            }
+            if httpResponse.statusCode == 429 {
+                // Il body del 429 del proxy contiene il conteggio autorevole: lo si propaga
+                // cosi il badge si riallinea anche quando il limite scatta lato server.
+                throw CerebrasError.quotaExceeded(serverUsage: AIServerUsage(quotaErrorBody: data))
             }
             if let errorString = String(data: data, encoding: .utf8) {
                 throw CerebrasError.serverError(errorString)
@@ -325,14 +366,16 @@ class CerebrasService {
         do {
             let decodedResponse = try JSONDecoder().decode(CerebrasChatResponse.self, from: data)
             var content = decodedResponse.choices.first?.message.responseText ?? ""
-            
+
             // Clean content: remove <think>...</think> or similar reasoning tags if present
             content = cleanAIResponse(content)
-            
+
             let tokens = decodedResponse.usage?.totalTokens ?? 0
-            
-            Logger.debug("[CerebrasService] Chat generated \(tokens) tokens")
-            return (content, tokens)
+            // Usage: prima il body (vw_usage, immune ai gateway che filtrano header), poi header.
+            let serverUsage = decodedResponse.vwUsage ?? AIServerUsage(httpResponse: httpResponse)
+
+            Logger.debug("[CerebrasService] Chat generated \(tokens) tokens (serverUsage: \(serverUsage.map { "\($0.requestsUsed)/\($0.dailyLimit)" } ?? "assente"))")
+            return (content, tokens, serverUsage)
         } catch {
             Logger.error("[CerebrasService] Decoding Error: \(error.localizedDescription)")
             throw CerebrasError.decodingError
@@ -522,7 +565,8 @@ class CerebrasService {
             messages: messages,
             maxTokens: 1024,
             temperature: 0.7,
-            stream: false
+            stream: false,
+            feature: "aux"
         )
 
         do {
@@ -538,8 +582,11 @@ class CerebrasService {
         }
 
         guard (200...299).contains(httpResponse.statusCode) else {
-            if httpResponse.statusCode == 402 || httpResponse.statusCode == 429 {
-                throw CerebrasError.quotaExceeded
+            if httpResponse.statusCode == 402 {
+                throw CerebrasError.serviceUnavailable
+            }
+            if httpResponse.statusCode == 429 {
+                throw CerebrasError.quotaExceeded(serverUsage: AIServerUsage(quotaErrorBody: data))
             }
             if let errorString = String(data: data, encoding: .utf8) {
                 throw CerebrasError.serverError(errorString)

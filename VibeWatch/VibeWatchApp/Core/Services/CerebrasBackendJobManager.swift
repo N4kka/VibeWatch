@@ -7,7 +7,6 @@ final class CerebrasBackendJobManager {
     enum JobType: String {
         case generateCarouselDescriptions = "generate_carousel_descriptions"
         case enhanceClipMetadata = "enhance_clip_metadata"
-        case generateEmbeddings = "generate_embeddings"
         case analyzeUserBehavior = "analyze_user_behavior"
     }
 
@@ -97,8 +96,6 @@ final class CerebrasBackendJobManager {
     private let cerebrasService: CerebrasService
     private let tmdbService: TMDBServiceProtocol
 
-    private let embeddingModel = "zai-glm-4.7"
-    private let embeddingDimensions = 64
 
     private init(
         sqliteService: SQLiteService = .shared,
@@ -122,8 +119,7 @@ final class CerebrasBackendJobManager {
         let jobsToEnqueue: [(JobType, Int)] = [
             (.generateCarouselDescriptions, 30),
             (.enhanceClipMetadata, 20),
-            (.generateEmbeddings, 10),
-            (.analyzeUserBehavior, 5)
+                (.analyzeUserBehavior, 5)
         ]
 
         for (type, priority) in jobsToEnqueue {
@@ -193,8 +189,6 @@ final class CerebrasBackendJobManager {
             try await generateCarouselDescriptions()
         case .enhanceClipMetadata:
             try await enhanceClipMetadata()
-        case .generateEmbeddings:
-            try await generateEmbeddings()
         case .analyzeUserBehavior:
             try await analyzeUserBehavior()
         }
@@ -302,40 +296,6 @@ final class CerebrasBackendJobManager {
         }
 
         Logger.debug("[CerebrasBackendJobManager] Enhanced clip metadata: \(rows.count)")
-    }
-
-    private func generateEmbeddings() async throws {
-        guard let userId = AuthService.shared.currentUser?.id else { return }
-        let profile = await UserPreferenceManager.shared.aggregatePreferences()
-
-        let liked = Array(profile.recentActivity.likedMedia.prefix(2))
-        guard !liked.isEmpty else { return }
-
-        for likedMedia in liked where likedMedia.mediaType == .movie {
-            guard let seedMovie = try? await tmdbService.getMovieDetails(id: likedMedia.id) else { continue }
-
-            if (try? await fetchEmbedding(mediaType: "movie", mediaId: seedMovie.id)) == nil {
-                if let vector = try? await cerebrasService.generateMovieEmbedding(
-                    movie: seedMovie,
-                    dimensions: embeddingDimensions
-                ) {
-                    try? await upsertEmbedding(mediaType: "movie", mediaId: seedMovie.id, vector: vector)
-                }
-            }
-
-            let similar = (try? await tmdbService.getSimilarMovies(id: seedMovie.id, page: 1).results) ?? []
-            for movie in similar.prefix(10) {
-                if (try? await fetchEmbedding(mediaType: "movie", mediaId: movie.id)) != nil { continue }
-                if let vector = try? await cerebrasService.generateMovieEmbedding(
-                    movie: movie,
-                    dimensions: embeddingDimensions
-                ) {
-                    try? await upsertEmbedding(mediaType: "movie", mediaId: movie.id, vector: vector)
-                }
-            }
-        }
-
-        Logger.debug("[CerebrasBackendJobManager] Generated embeddings for liked+similar")
     }
 
     private func analyzeUserBehavior() async throws {
@@ -549,35 +509,6 @@ final class CerebrasBackendJobManager {
         }
 
         return nil
-    }
-
-    // MARK: - Embeddings
-
-    private func fetchEmbedding(mediaType: String, mediaId: Int) async throws -> [Double]? {
-        let rows = try await sqliteService.queryRaw("""
-            SELECT vector_json
-            FROM media_embeddings
-            WHERE media_type = ? AND media_id = ? AND model = ?
-            LIMIT 1
-        """, parameters: [mediaType, mediaId, embeddingModel])
-
-        guard let json = rows.first?["vector_json"] as? String else { return nil }
-        return try JSONDecoder().decode([Double].self, from: Data(json.utf8))
-    }
-
-    private func upsertEmbedding(mediaType: String, mediaId: Int, vector: [Double]) async throws {
-        let nowISO = ISO8601DateFormatter().string(from: Date())
-        let json = (try? String(data: JSONEncoder().encode(vector), encoding: .utf8)) ?? "[]"
-
-        try await sqliteService.upsert(table: "media_embeddings", rows: [[
-            "media_type": mediaType,
-            "media_id": mediaId,
-            "model": embeddingModel,
-            "dimensions": vector.count,
-            "vector_json": json,
-            "created_at": nowISO,
-            "updated_at": nowISO
-        ]])
     }
 
     // MARK: - app_metadata Helpers

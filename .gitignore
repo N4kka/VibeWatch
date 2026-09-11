@@ -68,5 +68,13 @@ open_xcode.sh
 .claude/
 ElevateYourMood/
 
-# Il sito (repo git a sé, deploy su Cloudflare Pages — non fa parte dell'app)
+# Il sito (repo git a sé, servito dal Worker su vibewatchapp.com — non fa parte dell'app).
+# `vibewatch-site/` era il nome della cartella prima del cutover; la copia di lavoro oggi si
+# chiama `VibeWatchWeb/`, e senza questa riga un `git add -A` se la porta dentro come gitlink:
+# la radice di questo repo è la cartella che contiene entrambi i progetti.
 vibewatch-site/
+VibeWatchWeb/
+
+# Stato locale della CLI Supabase: a quale progetto è agganciata questa copia e con quali
+# versioni dei servizi. Cambia da sé a ogni comando, non è codice da condividere.
+VibeWatch/supabase/supabase/.temp/

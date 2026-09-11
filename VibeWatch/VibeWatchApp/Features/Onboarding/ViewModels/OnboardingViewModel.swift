@@ -81,16 +81,22 @@ class OnboardingViewModel: ObservableObject {
             try? await Task.sleep(nanoseconds: 100_000_000)
             withAnimation { self.showOnboarding = false }
         }
-        AnalyticsService.shared.logEvent("onboarding_complete")
+        AnalyticsService.shared.track(.onboardingCompleted)
+        AnalyticsService.shared.setPersonProperties(["onboarding_completed": true])
     }
 
     // Analytics
+    func trackStarted() {
+        AnalyticsService.shared.track(.onboardingStarted)
+        trackStepViewed(step: .welcome)
+    }
+
     func trackStepViewed(step: OnboardingStep) {
-        AnalyticsService.shared.logEvent("onboarding_step_viewed", parameters: ["step": stepName(step)])
+        AnalyticsService.shared.track(.onboardingStepViewed(stepName: stepName(step), stepIndex: step.rawValue))
     }
 
     func trackStepSkipped(step: OnboardingStep) {
-        AnalyticsService.shared.logEvent("onboarding_skipped", parameters: ["step": stepName(step)])
+        AnalyticsService.shared.track(.onboardingSkipped(stepName: stepName(step)))
     }
 
     private func stepName(_ step: OnboardingStep) -> String {

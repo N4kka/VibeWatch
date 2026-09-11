@@ -53,6 +53,10 @@ class ErrorHandler: ObservableObject {
         if let listError = error as? ListError {
             return handleListError(listError)
         }
+
+        if let supabaseError = error as? SupabaseError {
+            return handleSupabaseServiceError(supabaseError)
+        }
         
         if let rcError = error as? RevenueCat.ErrorCode {
             return handleRevenueCatError(rcError)
@@ -115,6 +119,23 @@ class ErrorHandler: ObservableObject {
         }
     }
     
+    /// `SupabaseError` è un enum Swift, non un `NSError` con dominio "supabase": senza questo
+    /// ramo cadeva in `.unknown`, e una sessione da rifare compariva come "An unexpected error
+    /// occurred" — la diagnosi peggiore possibile, perché non dice l'unica cosa che l'utente
+    /// può fare.
+    private func handleSupabaseServiceError(_ error: SupabaseError) -> AppError {
+        switch error {
+        case .notAuthenticated, .sessionExpired, .authenticationFailed:
+            return .unauthorized
+        case .networkError:
+            return .network(error)
+        case .httpError(let statusCode, _) where statusCode == 401 || statusCode == 403:
+            return .unauthorized
+        case .notConfigured, .httpError, .unexpectedResponse:
+            return .database(error)
+        }
+    }
+
     private func handleSupabaseError(_ error: NSError) -> AppError {
         if error.code == 401 || error.code == 403 {
             return .unauthorized
@@ -128,11 +149,12 @@ class ErrorHandler: ObservableObject {
         let contextStr = context.isEmpty ? "" : " [\(context)]"
         // Use the localized description from the AppError itself.
         Logger.error("[ErrorHandler]\(contextStr) \(appError.localizedDescription)")
-        
-        // Log to analytics
-        AnalyticsService.shared.logEvent("error_handled", parameters: [
-            "error_type": String(describing: appError),
-            "context": context
-        ])
+
+        // A handled error becomes a $exception in PostHog error tracking (grouped by type, with
+        // stack context) — replaces the old flat `error_handled` event.
+        CrashReportingService.record(originalError, context: context.isEmpty ? String(describing: appError) : context)
+
+        // An error makes the session worth watching: start recording from here.
+        AnalyticsService.shared.replay.trigger(.errorHandled)
     }
 }

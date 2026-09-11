@@ -7,6 +7,11 @@ import SwiftUI
 /// (`/@{username}` la aggancerà con gli universal links del blocco 10).
 struct PublicProfileView: View {
     @StateObject private var viewModel: PublicProfileViewModel
+    @Environment(\.dismiss) private var dismiss
+    @State private var showBlockConfirm = false
+    /// Il titolo di una card dell'attività recente: naviga nello stack del profilo, come le
+    /// liste pubbliche qui sotto.
+    @State private var activityDetailTarget: ProfileActivityDetailTarget?
 
     init(username: String) {
         _viewModel = StateObject(wrappedValue: PublicProfileViewModel(username: username))
@@ -19,7 +24,79 @@ struct PublicProfileView: View {
         }
         .navigationTitle("@\(viewModel.username)")
         .navigationBarTitleDisplayMode(.inline)
+        // Moderazione M2: il menu "…" con blocca/sblocca. Solo su un profilo carico e altrui —
+        // un'azione che il server rifiuterebbe non merita un pulsante (lezione del self-follow).
+        .toolbar {
+            if viewModel.canModerate {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    moderationMenu
+                }
+            }
+        }
+        // Il blocco chiede conferma spiegando le conseguenze: è un'azione a tre effetti
+        // (visibilità nei due versi + follow rimossi) e nessuno dei tre si vede da qui.
+        .confirmationDialog(
+            String(format: "social.block.confirmTitle".localized, viewModel.username),
+            isPresented: $showBlockConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("social.block.confirm".localized, role: .destructive) {
+                Task { await performBlock() }
+            }
+            Button("common.cancel".localized, role: .cancel) {}
+        } message: {
+            Text("social.block.consequences".localized)
+        }
+        .navigationDestination(item: $activityDetailTarget) { target in
+            if target.mediaType == "movie" {
+                MovieDetailView(movieId: target.tmdbId)
+            } else {
+                TVShowDetailView(tvShowId: target.tmdbId)
+            }
+        }
         .task { await viewModel.loadProfile() }
+    }
+
+    private var moderationMenu: some View {
+        Menu {
+            if viewModel.isBlocked {
+                Button {
+                    Task { await performUnblock() }
+                } label: {
+                    Label(String(format: "social.unblockUser".localized, viewModel.username),
+                          systemImage: "hand.raised.slash")
+                }
+            } else {
+                Button(role: .destructive) {
+                    showBlockConfirm = true
+                } label: {
+                    Label(String(format: "social.blockUser".localized, viewModel.username),
+                          systemImage: "hand.raised")
+                }
+            }
+        } label: {
+            Image(systemName: "ellipsis.circle")
+        }
+        .disabled(viewModel.isTogglingBlock)
+    }
+
+    /// Toast e poi via dalla schermata: dopo il blocco il server nasconde il profilo nei due
+    /// versi, e restare su una pagina che al prossimo refresh direbbe "non esiste" è bugiardo.
+    private func performBlock() async {
+        if await viewModel.blockProfile() {
+            ToastCenter.shared.show(success: "social.block.done".localized)
+            dismiss()
+        } else {
+            ToastCenter.shared.show(error: "common.error".localized)
+        }
+    }
+
+    private func performUnblock() async {
+        if await viewModel.unblockProfile() {
+            ToastCenter.shared.show(success: "social.unblock.done".localized)
+        } else {
+            ToastCenter.shared.show(error: "common.error".localized)
+        }
     }
 
     @ViewBuilder
@@ -70,11 +147,62 @@ struct PublicProfileView: View {
                         favoritesRow(titleKey: "profile.favorites.shows",
                                      slots: detail.favoriteShows, mediaType: "tv")
                     }
+                    recentActivitySection
                     publicListsSection
                 }
                 .padding(.vertical, 24)
             }
         }
+    }
+
+    /// M3 — "Attività recente": le ultime card di questo profilo, dalla stessa RPC del feed
+    /// (scope `user`). Sono card di sola lettura: like e commenti restano nel tab Social, dove
+    /// c'è il ViewModel che sa riconciliarli — qui replicarli sarebbe un secondo stato da tenere
+    /// allineato in cambio di niente. Il vuoto non si mostra: un profilo che non ha ancora dato
+    /// il consenso al feed (o che non ha attività) non è un profilo rotto.
+    @ViewBuilder
+    private var recentActivitySection: some View {
+        switch viewModel.activityPhase {
+        case .loading:
+            EmptyView()
+        case .failed:
+            VStack(spacing: 6) {
+                Text("profile.activity.loadFailed".localized)
+                    .font(.system(size: 13))
+                    .foregroundColor(.theme.textSecondary)
+                Button("common.retry".localized) {
+                    Task { await viewModel.retryActivity() }
+                }
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(.theme.accentOrange)
+            }
+            .padding(.horizontal, 24)
+        case .loaded(let items):
+            if !items.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("profile.activity.title".localized)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.theme.textSecondary)
+                    ForEach(items) { item in
+                        ActivityCardView(
+                            item: item,
+                            isOwnCard: viewModel.isOwnProfile,
+                            showsInteractions: false,
+                            // L'autore è già questa schermata: il tap sull'intestazione non
+                            // deve riaprire il profilo su cui si è già.
+                            onOpenProfile: { _ in },
+                            onOpenDetail: { openDetail(for: item) })
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 24)
+            }
+        }
+    }
+
+    private func openDetail(for item: ActivityItem) {
+        guard let tmdbId = item.tmdbId, let mediaType = item.mediaType else { return }
+        activityDetailTarget = ProfileActivityDetailTarget(mediaType: mediaType, tmdbId: tmdbId)
     }
 
     /// §9.3, ultimo bullet: le liste pubbliche dell'utente. Tre stati e nessuna finzione:
@@ -227,6 +355,14 @@ struct PublicProfileView: View {
                 .font(.system(size: 36, weight: .semibold))
                 .foregroundColor(.theme.textSecondary)
         }
+    }
+
+    /// Wrapper Identifiable per `navigationDestination(item:)`: la coppia (tipo, id) da sola
+    /// non è una destinazione, e due card sullo stesso titolo sono la stessa destinazione.
+    private struct ProfileActivityDetailTarget: Identifiable, Hashable {
+        let mediaType: String
+        let tmdbId: Int
+        var id: String { "\(mediaType)-\(tmdbId)" }
     }
 
     private func message(icon: String, textKey: String) -> some View {

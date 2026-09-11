@@ -31,6 +31,7 @@ import {
   trySpend,
   writeCache,
 } from '../_shared/proxy.ts'
+import { withCors } from '../_shared/cors.ts'
 
 const YOUTUBE_API_KEY = Deno.env.get('YOUTUBE_API_KEY') ?? ''
 const PROVIDER = 'youtube'
@@ -57,7 +58,7 @@ interface SearchRequest {
   videoId?: string
 }
 
-serve(async (req: Request) => {
+serve(withCors(async (req: Request) => {
   if (req.method !== 'POST') {
     return jsonResponse({ error: 'Method not allowed' }, 405)
   }
@@ -87,7 +88,7 @@ serve(async (req: Request) => {
     return await handleVideoDetails(supabase, body, caller, now)
   }
   return await handleSearch(supabase, body, caller, now)
-})
+}))
 
 async function handleSearch(
   supabase: ReturnType<typeof adminClient>,

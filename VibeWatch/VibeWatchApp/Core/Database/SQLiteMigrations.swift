@@ -8,7 +8,7 @@ extension SQLiteService {
     /// Run personalization migrations (Phase 1)
     func runPersonalizationMigrations() {
         let currentVersion = getPersonalizationMigrationVersion()
-        let latestVersion = 13
+        let latestVersion = 16
 
         guard currentVersion < latestVersion else {
             Logger.info("[SQLite] Personalization migrations already applied (version \(currentVersion))")
@@ -62,6 +62,15 @@ extension SQLiteService {
             }
             if currentVersion < 13 {
                 migration13_LocalizedTitlesLearnEpisodes()
+            }
+            if currentVersion < 14 {
+                migration14_AddSocialFeedTables()
+            }
+            if currentVersion < 15 {
+                migration15_AddFeedConsentToProfiles()
+            }
+            if currentVersion < 16 {
+                migration16_AddActivityInteractionTables()
             }
 
             // Update migration version
@@ -165,25 +174,33 @@ extension SQLiteService {
         Logger.info("[SQLite] Migration 4 complete - Time pattern tracking enabled")
     }
 
-    // MARK: - Migration 5: Smart Notifications
+    // MARK: - Migration 5: Smart Notifications (retired)
 
+    /// `notification_history` and `user_notification_preferences` were created here for a
+    /// notification screen that was designed and never built: no Swift code has ever read or
+    /// written either table, and the real preferences live in UserDefaults and in Postgres.
+    /// The migration stays in the sequence — removing a step would renumber the ones after it —
+    /// and now only drops what it used to create.
     private func migration5_AddSmartNotifications() {
-        Logger.info("[SQLite] Migration 5: Creating smart notification tables")
+        Logger.info("[SQLite] Migration 5: Dropping unused smart-notification tables")
 
-        executeScript(createNotificationHistoryTable())
-        executeScript(createUserNotificationPreferencesTable())
+        executeScript("""
+        DROP TABLE IF EXISTS notification_history;
+        DROP TABLE IF EXISTS user_notification_preferences;
+        """)
 
-        Logger.info("[SQLite] Migration 5 complete - Smart notifications enabled")
+        Logger.info("[SQLite] Migration 5 complete")
     }
 
-    // MARK: - Migration 6: Notification Subscriptions (Pro Feature)
+    // MARK: - Migration 6: Notification Subscriptions (retired)
 
+    /// Per-actor and per-genre alerts, a Pro feature that never shipped. Same story as 5.
     private func migration6_AddNotificationSubscriptions() {
-        Logger.info("[SQLite] Migration 6: Creating notification subscriptions table for Pro features")
+        Logger.info("[SQLite] Migration 6: Dropping unused notification-subscription table")
 
-        executeScript(createNotificationSubscriptionsTable())
+        executeScript("DROP TABLE IF EXISTS notification_subscriptions;")
 
-        Logger.info("[SQLite] Migration 6 complete - Pro notification subscriptions enabled")
+        Logger.info("[SQLite] Migration 6 complete")
     }
 
     // MARK: - Migration 7: Backfill indexes lost to prepare_v2
@@ -207,9 +224,6 @@ extension SQLiteService {
         executeScript(createUserBehaviorInsightsTable())
         executeScript(createCerebrasJobMetricsTable())
         executeScript(createUserTimePatternsTable())
-        executeScript(createNotificationHistoryTable())
-        executeScript(createUserNotificationPreferencesTable())
-        executeScript(createNotificationSubscriptionsTable())
 
         Logger.info("[SQLite] Migration 7 complete - indexes backfilled")
     }
@@ -313,7 +327,166 @@ extension SQLiteService {
         Logger.info("[SQLite] Migration 13 complete")
     }
 
+    /// Social feed M1 — lo specchio locale di `user_reviews` e la cache del feed.
+    ///
+    /// `user_reviews` e' `lastWriteWins` come `user_ratings`, ma con una differenza voluta:
+    /// l'id sintetico esiste e lo genera il CLIENT (report e `activities.review_id` lo
+    /// referenziano sul server). L'unicita' per titolo e' dell'indice unico parziale remoto:
+    /// qui basta l'indice di lookup, la convergenza multi-device la fa `apply_mutations`
+    /// mettendo la lapide alle altre righe vive della stessa chiave naturale.
+    ///
+    /// `activity_feed_cache` e' il gemello di `public_lists_cache`: righe gia' pronte per la
+    /// UI, mai una tabella di dominio. Si popola dalla prima pagina del feed per scope e si
+    /// legge offline — nessun percorso di scrittura verso il server, quindi niente outbox.
+    private func migration14_AddSocialFeedTables() {
+        Logger.info("[SQLite] Migration 14: Adding user_reviews and activity_feed_cache")
+
+        executeScript(createUserReviewsTable())
+        executeScript(createActivityFeedCacheTable())
+
+        Logger.info("[SQLite] Migration 14 complete")
+    }
+
+    /// Social feed M1: il consenso al feed sullo specchio `profiles`. Il pull dei profili fa
+    /// `SELECT *` e l'upsert filtra sulle colonne LOCALI — senza queste due, il timbro del
+    /// server (`feed_activated_at`) e il flag (`activity_feed_enabled`) verrebbero scartati
+    /// in silenzio a ogni sync, e l'annuncio si ripresenterebbe per sempre su ogni device.
+    /// Nullable di proposito: NULL = "mai risposto", che è un'informazione, non un default.
+    private func migration15_AddFeedConsentToProfiles() {
+        Logger.info("[SQLite] Migration 15: Adding feed consent columns to profiles")
+
+        if !columnExists("profiles", column: "activity_feed_enabled") {
+            execute("ALTER TABLE profiles ADD COLUMN activity_feed_enabled INTEGER")
+        }
+        if !columnExists("profiles", column: "feed_activated_at") {
+            execute("ALTER TABLE profiles ADD COLUMN feed_activated_at TEXT")
+        }
+
+        Logger.info("[SQLite] Migration 15 complete")
+    }
+
+    /// Social feed M2 — le interazioni del feed (like e commenti) e la loro coda di replay.
+    ///
+    /// Queste tabelle NON passano da `sync_outbox`: `apply_mutations` non ha un ramo per loro e
+    /// una scrittura accodata lì morirebbe in silenzio in `sync_rejected_mutations`. Il percorso
+    /// di scrittura è RPC-only (`toggle_activity_like` & co.), e questi sono specchi:
+    ///
+    /// - `activity_likes` / `activity_comment_likes`: il MIO like, una riga per bersaglio. L'id
+    ///   lo genera il client e resta stabile per (bersaglio, utente): il server rianima la
+    ///   stessa riga al re-like, quindi l'id va ricordato, non rigenerato.
+    /// - `activity_comments`: la fotografia di `get_activity_comments` (autore denormalizzato:
+    ///   i profili degli altri non abitano lo specchio `profiles`), più i commenti composti
+    ///   offline in attesa di replay (`synced_at` NULL).
+    /// - `activity_pending_ops`: la coda di replay, SOLO per le operazioni idempotenti
+    ///   (add/delete commento, che viaggiano con id client). I toggle NON entrano mai qui:
+    ///   un toggle ritentato alla cieca inverte l'intento invece di confermarlo — al fallimento
+    ///   si torna indietro, non si riprova.
+    private func migration16_AddActivityInteractionTables() {
+        Logger.info("[SQLite] Migration 16: Adding activity interaction tables")
+
+        executeScript(createActivityLikesTable())
+        executeScript(createActivityCommentsMirrorTable())
+        executeScript(createActivityCommentLikesTable())
+        executeScript(createActivityPendingOpsTable())
+
+        Logger.info("[SQLite] Migration 16 complete")
+    }
+
     // MARK: - Table Creation Methods
+
+    private func createActivityLikesTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS activity_likes (
+            id TEXT PRIMARY KEY,
+            activity_id TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            created_at TEXT,
+            synced_at TEXT,
+            UNIQUE(activity_id, user_id)
+        );
+        """
+    }
+
+    private func createActivityCommentsMirrorTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS activity_comments (
+            id TEXT PRIMARY KEY,
+            activity_id TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            parent_id TEXT,
+            content TEXT,
+            username TEXT,
+            display_name TEXT,
+            avatar_url TEXT,
+            like_count INTEGER NOT NULL DEFAULT 0,
+            liked_by_me INTEGER NOT NULL DEFAULT 0,
+            is_deleted INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            synced_at TEXT
+        );
+        -- La lettura calda: il filo di un'attività in ordine cronologico ascendente.
+        CREATE INDEX IF NOT EXISTS idx_activity_comments_activity
+            ON activity_comments(activity_id, created_at);
+        """
+    }
+
+    private func createActivityCommentLikesTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS activity_comment_likes (
+            id TEXT PRIMARY KEY,
+            comment_id TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            created_at TEXT,
+            synced_at TEXT,
+            UNIQUE(comment_id, user_id)
+        );
+        """
+    }
+
+    private func createActivityPendingOpsTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS activity_pending_ops (
+            op_id TEXT PRIMARY KEY,
+            op_type TEXT NOT NULL,
+            payload_json TEXT NOT NULL,
+            attempts INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL
+        );
+        """
+    }
+
+    private func createUserReviewsTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS user_reviews (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            media_type TEXT NOT NULL,
+            tmdb_id INTEGER NOT NULL,
+            content TEXT NOT NULL,
+            contains_spoilers INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT,
+            updated_at TEXT,
+            deleted_at TEXT,
+            synced_at TEXT
+        );
+        -- La lettura calda: la review viva di UN titolo (ReviewActions.review(for:)).
+        CREATE INDEX IF NOT EXISTS idx_user_reviews_title
+            ON user_reviews(user_id, media_type, tmdb_id);
+        """
+    }
+
+    private func createActivityFeedCacheTable() -> String {
+        """
+        CREATE TABLE IF NOT EXISTS activity_feed_cache (
+            scope TEXT NOT NULL,
+            activity_id TEXT NOT NULL,
+            position INTEGER NOT NULL,
+            payload_json TEXT NOT NULL,
+            cached_at TEXT DEFAULT (datetime('now')),
+            PRIMARY KEY (scope, activity_id)
+        );
+        """
+    }
 
     private func createLocalizedTitlesTable() -> String {
         """
@@ -576,63 +749,6 @@ extension SQLiteService {
         );
         CREATE INDEX IF NOT EXISTS idx_time_patterns_user ON user_time_patterns(user_id, time_of_day);
         CREATE INDEX IF NOT EXISTS idx_time_patterns_recorded ON user_time_patterns(recorded_at DESC);
-        """
-    }
-
-    private func createNotificationHistoryTable() -> String {
-        """
-        CREATE TABLE IF NOT EXISTS notification_history (
-            id TEXT PRIMARY KEY,
-            user_id TEXT NOT NULL,
-            notification_type TEXT NOT NULL,
-            content_id TEXT NOT NULL,
-            sent_at TEXT NOT NULL,
-            clicked INTEGER DEFAULT 0,
-            dismissed INTEGER DEFAULT 0,
-            UNIQUE(user_id, notification_type, content_id)
-        );
-        CREATE INDEX IF NOT EXISTS idx_notification_history_user ON notification_history(user_id, sent_at DESC);
-        CREATE INDEX IF NOT EXISTS idx_notification_history_type ON notification_history(notification_type, sent_at DESC);
-        """
-    }
-
-    private func createUserNotificationPreferencesTable() -> String {
-        """
-        CREATE TABLE IF NOT EXISTS user_notification_preferences (
-            user_id TEXT PRIMARY KEY,
-            enable_new_episodes INTEGER DEFAULT 1,
-            enable_release_alerts INTEGER DEFAULT 1,
-            enable_actor_alerts INTEGER DEFAULT 1,
-            enable_similar_content INTEGER DEFAULT 1,
-            enable_watchlist_alerts INTEGER DEFAULT 1,
-            enable_milestones INTEGER DEFAULT 1,
-            max_daily_notifications INTEGER DEFAULT 3,
-            quiet_hours_start INTEGER DEFAULT 22,
-            quiet_hours_end INTEGER DEFAULT 8,
-            custom_actor_alerts TEXT,
-            custom_genre_alerts TEXT,
-            updated_at TEXT NOT NULL
-        );
-        """
-    }
-
-    private func createNotificationSubscriptionsTable() -> String {
-        """
-        CREATE TABLE IF NOT EXISTS notification_subscriptions (
-            id TEXT PRIMARY KEY,
-            user_id TEXT NOT NULL,
-            actor_id INTEGER,
-            genre_id INTEGER,
-            type TEXT NOT NULL CHECK (type IN ('actor_alert', 'genre_alert')),
-            created_at TEXT NOT NULL,
-            synced_at TEXT,
-            FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
-        );
-        CREATE INDEX IF NOT EXISTS idx_notification_subscriptions_user ON notification_subscriptions(user_id, type);
-        CREATE INDEX IF NOT EXISTS idx_notification_subscriptions_actor ON notification_subscriptions(actor_id) WHERE actor_id IS NOT NULL;
-        CREATE INDEX IF NOT EXISTS idx_notification_subscriptions_genre ON notification_subscriptions(genre_id) WHERE genre_id IS NOT NULL;
-        CREATE UNIQUE INDEX IF NOT EXISTS idx_notification_subscriptions_user_actor ON notification_subscriptions(user_id, actor_id, type) WHERE actor_id IS NOT NULL;
-        CREATE UNIQUE INDEX IF NOT EXISTS idx_notification_subscriptions_user_genre ON notification_subscriptions(user_id, genre_id, type) WHERE genre_id IS NOT NULL;
         """
     }
 

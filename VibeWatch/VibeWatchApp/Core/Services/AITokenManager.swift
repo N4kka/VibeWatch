@@ -45,6 +45,15 @@ final class AITokenManager: ObservableObject {
         return requestsUsedToday < dailyLimit
     }
     
+    /// Applies the authoritative usage snapshot returned by cerebras-proxy (X-AI-* headers).
+    /// Overwrites the local counter: the server is the single source of truth after each request.
+    func applyServerUsage(used: Int, limit: Int) {
+        checkAndResetDaily()
+        requestsUsedToday = used
+        dailyLimit = limit
+        saveUsage()
+    }
+
     /// Updates tokens from a remote source.
     func syncRequests(_ count: Int) {
         checkAndResetDaily()

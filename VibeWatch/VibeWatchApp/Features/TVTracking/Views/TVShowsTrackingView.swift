@@ -62,6 +62,7 @@ struct TVShowsTrackingView: View {
                 ProfileView()
             }
             .task {
+                AnalyticsService.shared.logScreenView(screenName: "TVTracking")
                 let first = !hasMeasured
                 hasMeasured = true
                 await viewModel.load(measuring: first)

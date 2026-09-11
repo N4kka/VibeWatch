@@ -25,6 +25,7 @@ import {
   jsonResponse,
 } from '../_shared/proxy.ts'
 import { decoyEmail, INVALID_CREDENTIALS, parseLoginRequest } from './logic.ts'
+import { withCors } from '../_shared/cors.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
@@ -48,7 +49,7 @@ async function trySpendLogin(req: Request): Promise<boolean> {
   return data === true
 }
 
-serve(async (req: Request) => {
+serve(withCors(async (req: Request) => {
   if (req.method !== 'POST') {
     return jsonResponse({ error: 'method_not_allowed' }, 405)
   }
@@ -78,21 +79,22 @@ serve(async (req: Request) => {
     return jsonResponse(INVALID_CREDENTIALS, 400)
   }
 
-  // La risoluzione, con la chiave di servizio: profiles ha la RLS chiusa apposta. Il profilo
-  // deve essere vivo; niente altro filtro — anche un profilo privato puo' fare login.
+  // La risoluzione, con la chiave di servizio. L'email non sta piu' su `profiles`: era una
+  // copia di `auth.users.email` e finche' restava li' impediva di rendere `public_profiles`
+  // una vista security_invoker senza esporre gli indirizzi di tutti i profili pubblici.
+  // `resolve_login_email` fa il join in UNA query — un secondo roundtrip solo per gli username
+  // esistenti avrebbe rimesso in piedi l'oracolo di latenza che la difesa n. 2 elimina.
+  // Il profilo deve essere vivo; niente altro filtro — anche un profilo privato puo' fare login.
   const supabase = adminClient()
-  const { data: rows, error } = await supabase
-    .from('profiles')
-    .select('email')
-    .eq('username', parsed.username)
-    .is('deleted_at', null)
-    .limit(1)
+  const { data: resolved, error } = await supabase.rpc('resolve_login_email', {
+    p_username: parsed.username,
+  })
   if (error) {
     console.error(`[login-with-username] lookup failed: ${error.message}`)
     return jsonResponse({ error: 'internal_error' }, 500)
   }
 
-  const email: string = rows?.[0]?.email ?? decoyEmail()
+  const email: string = (resolved as string | null) ?? decoyEmail()
 
   const grant = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
     method: 'POST',
@@ -116,4 +118,4 @@ serve(async (req: Request) => {
     status: 200,
     headers: { 'Content-Type': 'application/json' },
   })
-})
+}))

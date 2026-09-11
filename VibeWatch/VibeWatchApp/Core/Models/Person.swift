@@ -118,4 +118,29 @@ struct PersonCredit: Codable, Identifiable, Hashable {
         guard let releaseDate, let year = releaseDate.split(separator: "-").first else { return nil }
         return String(year)
     }
+
+    /// Il minimo che serve per salvare in watchlist o iscriversi agli avvisi da una filmografia:
+    /// una scheda credito non porta con sé backdrop, generi o runtime.
+    func asMovie() -> Movie {
+        Movie(
+            id: id,
+            title: title,
+            overview: overview ?? "",
+            posterPath: posterPath,
+            backdropPath: nil,
+            releaseDate: releaseDate,
+            voteAverage: voteAverage ?? 0.0,
+            voteCount: 0,
+            genreIds: nil,
+            genres: nil,
+            adult: false,
+            originalLanguage: "",
+            popularity: popularity ?? 0.0,
+            runtime: nil,
+            status: nil,
+            tagline: nil,
+            productionCountries: nil,
+            imdbId: nil
+        )
+    }
 }

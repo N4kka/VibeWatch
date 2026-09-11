@@ -104,6 +104,52 @@ struct SettingsView: View {
                             AnalyticsService.shared.setEnabled(newValue)
                         }
 
+                        // Social feed M1: visibilità nel feed attività. La sezione è
+                        // autocontenuta (Features/Social) — qui solo l'aggancio, e solo per
+                        // chi ha una sessione: il flag vive sul profilo remoto.
+                        if authService.currentUser != nil {
+                            SocialSettingsSection()
+
+                            // Moderazione M2: la porta verso gli utenti bloccati. La riga vive
+                            // qui e non dentro SocialSettingsSection perché quella sezione è di
+                            // Features/Social (proprietario diverso); il linguaggio visivo è
+                            // quello delle altre righe di questa schermata.
+                            NavigationLink {
+                                BlockedUsersView()
+                            } label: {
+                                HStack(spacing: 16) {
+                                    ZStack {
+                                        Circle()
+                                            .fill(Color.theme.accentOrange.opacity(0.2))
+                                            .frame(width: 44, height: 44)
+
+                                        Image(systemName: "hand.raised.fill")
+                                            .font(.system(size: 20))
+                                            .foregroundColor(.theme.accentOrange)
+                                    }
+
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("settings.blockedUsers.title".localized)
+                                            .font(.system(size: 16, weight: .semibold))
+                                            .foregroundColor(.theme.textPrimary)
+
+                                        Text("settings.blockedUsers.description".localized)
+                                            .font(.system(size: 14))
+                                            .foregroundColor(.theme.textSecondary)
+                                    }
+
+                                    Spacer()
+
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 14))
+                                        .foregroundColor(.theme.textSecondary)
+                                }
+                                .padding(16)
+                                .background(Color.white.opacity(0.05))
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                            }
+                        }
+
                         // Notifications Section
                         if let userId = authService.currentUser?.id {
                             VStack(spacing: 16) {
@@ -114,7 +160,7 @@ struct SettingsView: View {
                                     .padding(.top, 12)
 
                                 NavigationLink {
-                                    NotificationPreferencesView(userId: userId)
+                                    NotificationPreferencesView()
                                 } label: {
                                     HStack(spacing: 16) {
                                         ZStack {
@@ -386,6 +432,7 @@ struct SettingsView: View {
         }
         .navigationBarHidden(true)
         .onAppear {
+            AnalyticsService.shared.logScreenView(screenName: "Settings")
             currentUser = authService.currentUser
             // Load cache preferences from UserDefaults
             selectedCacheSize = ImageCacheService.shared.getCurrentCacheSizePreference()

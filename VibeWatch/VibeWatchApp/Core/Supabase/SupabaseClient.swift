@@ -372,27 +372,77 @@ class SupabaseService: ObservableObject {
     /// trovano pronta gli altri. Serve un JWT utente, non la chiave anonima.
     func warmCatalog(showIds: [Int]) async throws {
         guard !showIds.isEmpty else { return }
+        _ = try await callEdgeFunction("catalog-resolve", body: ["show_ids": showIds])
+    }
+
+    // MARK: - Edge Function con JWT utente
+
+    /// Una chiamata a Edge Function firmata con la sessione dell'utente, e la sola risposta
+    /// sensata a un 401.
+    ///
+    /// Un 401 qui non vuol dire "non sei loggato": vuol dire che il server ha rifiutato QUESTO
+    /// token. Capita a chi è regolarmente dentro — un access token ancora integro la cui sessione
+    /// GoTrue non esiste più, per esempio dopo un logout su un altro device — e da solo il client
+    /// non se ne accorge mai: `auth.session` restituisce il token cacheato finché non scade, e
+    /// tutto il resto dell'app (PostgREST) lo accetta senza storie. Il risultato era un'ora di
+    /// `Supabase HTTP 401: {"error":"invalid_token"}` su "vista tutta" e sui consigli AI, con
+    /// liste e voti che intanto funzionavano.
+    ///
+    /// Quindi: si forza un refresh e si riprova una volta. Se il refresh passa, era solo un token
+    /// stantio e l'utente non vede niente. Se viene respinto, la sessione è morta davvero — e
+    /// allora si dice, invece di ripetere lo stesso errore a ogni tap.
+    private func callEdgeFunction(_ name: String, body: [String: Any]) async throws -> Data {
         guard let url = URL(string: Config.supabaseURL.replacingOccurrences(
-            of: ".supabase.co", with: ".functions.supabase.co") + "/catalog-resolve")
+            of: ".supabase.co", with: ".functions.supabase.co") + "/" + name)
         else { throw SupabaseError.notConfigured }
 
         guard let client, let session = try? await client.auth.session else {
             throw SupabaseError.notAuthenticated
         }
 
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
-        request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
-        request.httpBody = try JSONSerialization.data(withJSONObject: ["show_ids": showIds])
+        let payload = try JSONSerialization.data(withJSONObject: body, options: [])
 
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse else { throw SupabaseError.networkError }
+        func send(_ accessToken: String) async throws -> (Data, HTTPURLResponse) {
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.setValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
+            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+            request.httpBody = payload
+
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse else { throw SupabaseError.networkError }
+            return (data, http)
+        }
+
+        var (data, http) = try await send(session.accessToken)
+
+        if http.statusCode == 401 {
+            let renewedAccessToken: String
+            do {
+                renewedAccessToken = try await client.auth.refreshSession().accessToken
+            } catch {
+                // Il refresh token è stato revocato insieme alla sessione: non c'è niente da
+                // riprovare. Restare "loggati" qui vorrebbe dire ripetere questo 401 fino alla
+                // scadenza del token, cioè fino a un'ora di tap che non fanno niente.
+                Logger.error("[Supabase] \(name): 401 e refresh respinto — sessione da rifare")
+                await AuthService.shared.handleRejectedSession()
+                throw SupabaseError.sessionExpired
+            }
+            (data, http) = try await send(renewedAccessToken)
+            if http.statusCode == 401 {
+                Logger.error("[Supabase] \(name): 401 anche con un token appena rinnovato")
+                await AuthService.shared.handleRejectedSession()
+                throw SupabaseError.sessionExpired
+            }
+        }
+
         guard (200...299).contains(http.statusCode) else {
             throw SupabaseError.httpError(
                 statusCode: http.statusCode, body: String(data: data, encoding: .utf8) ?? "")
         }
+
+        return data
     }
 
     // MARK: - Username (SPEC v3 §3.7)
@@ -660,32 +710,12 @@ class SupabaseService: ObservableObject {
     /// l'utente davanti a un pulsante che "non fa niente".
     func manualResolveImport(jobId: String,
                              resolutions: [ImportManualResolution]) async throws {
-        guard let url = URL(string: Config.supabaseURL.replacingOccurrences(
-            of: ".supabase.co", with: ".functions.supabase.co") + "/import-manual-resolve")
-        else { throw SupabaseError.notConfigured }
-
-        guard let client, let session = try? await client.auth.session else {
-            throw SupabaseError.notAuthenticated
-        }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
-        request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
-        request.httpBody = try JSONSerialization.data(withJSONObject: [
+        _ = try await callEdgeFunction("import-manual-resolve", body: [
             "job_id": jobId,
             "resolutions": resolutions.map {
                 ["tvdb_series_id": $0.tvdbSeriesId, "tmdb_show_id": $0.tmdbShowId] as [String: Any]
             },
         ])
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse else { throw SupabaseError.networkError }
-        guard (200...299).contains(http.statusCode) else {
-            throw SupabaseError.httpError(
-                statusCode: http.statusCode, body: String(data: data, encoding: .utf8) ?? "")
-        }
     }
 
     /// Il report di §7.4, calcolato dal server (`import_report`, security invoker: decide la
@@ -1301,7 +1331,11 @@ extension SupabaseService {
                 coverPosterPaths: row.cover_poster_paths ?? [],
                 followerCount: row.follower_count,
                 updatedAt: row.updated_at,
-                isFollowing: row.is_following
+                isFollowing: row.is_following,
+                ownerId: row.owner_id,
+                ownerUsername: row.owner_username,
+                ownerDisplayName: row.owner_display_name,
+                ownerAvatarUrl: row.owner_avatar_url
             )
         }
     }
@@ -1310,6 +1344,242 @@ extension SupabaseService {
     func blockListOwner(listId: String) async throws {
         _ = try await callRPC(function: "block_list_owner", payload: ["p_list_id": listId])
     }
+}
+
+// MARK: - Activity Feed (Social feed M1)
+
+extension SupabaseService {
+    /// Il feed attività via RPC `get_activity_feed`. La RPC applica già privacy (opt-out),
+    /// blocchi nei due versi e lo scope; la paginazione è keyset su (occurred_at, activity_id):
+    /// `before` è la coda dell'ultima pagina, mai un offset — le card nuove in testa non fanno
+    /// scivolare le pagine successive.
+    func fetchActivityFeed(scope: ActivityFeedScope, userId: UUID?,
+                           before: (Date, UUID)?, limit: Int) async throws -> [ActivityItem] {
+        guard let client = client else { throw SupabaseError.notConfigured }
+        // Il cursore viaggia come stringa ISO8601 con i frazionali: l'encoder di default
+        // troncherebbe ai secondi e il confronto `occurred_at < p_before` salterebbe righe.
+        let cursorFormatter = ISO8601DateFormatter()
+        cursorFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let rows: [ActivityItem] = try await client
+            .rpc("get_activity_feed", params: ActivityFeedParams(
+                p_scope: scope.rawValue,
+                p_user: userId?.uuidString.lowercased(),
+                p_before: before.map { cursorFormatter.string(from: $0.0) },
+                p_before_id: before.map { $0.1.uuidString.lowercased() },
+                p_limit: limit
+            ))
+            .execute()
+            .value
+        return rows
+    }
+
+    /// Opt-out (e rientro) dal feed: `set_activity_feed_visibility` scrive il flag sul profilo
+    /// lato server — nessuna colonna da conoscere qui, nessuna RLS da rilassare.
+    func setActivityFeedVisibility(_ enabled: Bool) async throws {
+        _ = try await callRPC(function: "set_activity_feed_visibility",
+                              payload: ["p_enabled": enabled])
+    }
+
+    /// M3 — una card sola, per id: la porta del deep link dalle notifiche social. È la stessa
+    /// RPC del feed (stessi cancelli: profilo pubblico, consenso, blocchi, velo sui report), non
+    /// una seconda strada più permissiva. `nil` quando la card non è (più) visibile al chiamante.
+    func fetchActivity(id: UUID) async throws -> ActivityItem? {
+        guard let client = client else { throw SupabaseError.notConfigured }
+        let rows: [ActivityItem] = try await client
+            .rpc("get_activity_feed", params: ActivityFeedParams(
+                p_scope: ActivityFeedScope.community.rawValue,
+                p_user: nil,
+                p_before: nil,
+                p_before_id: nil,
+                p_limit: 1,
+                p_activity_id: id.uuidString.lowercased()
+            ))
+            .execute()
+            .value
+        return rows.first
+    }
+
+    /// M3 — "rimuovi dal feed". Il server risponde `false` sia per una card altrui sia per una
+    /// che non esiste: la distinzione la conosce solo il proprietario, ed è giusto così.
+    @discardableResult
+    func hideActivity(id: UUID) async throws -> Bool {
+        let response = try await callRPC(function: "hide_activity",
+                                         payload: ["p_activity_id": id.uuidString.lowercased()])
+        return (try? JSONDecoder().decode(Bool.self, from: response)) ?? false
+    }
+}
+
+// MARK: - Interazioni del feed (Social feed M2)
+
+/// L'esito di un toggle come lo racconta il server: lo stato VERO dopo l'operazione.
+/// È la fonte con cui il client riconcilia l'ottimismo — mai il contrario.
+struct ActivityInteractionToggle: Decodable {
+    let liked: Bool
+    let likeCount: Int
+
+    enum CodingKeys: String, CodingKey {
+        case liked
+        case likeCount = "like_count"
+    }
+}
+
+/// Una riga di `get_activity_comments`: autore denormalizzato (il client non conosce i profili
+/// altrui), lapidi con `content` nullo, contatori calcolati dal server.
+struct ActivityCommentRow: Decodable {
+    let commentId: UUID
+    let userId: UUID
+    let username: String?
+    let displayName: String?
+    let avatarUrl: String?
+    let parentId: UUID?
+    let content: String?
+    let isDeleted: Bool
+    let createdAt: Date
+    let likeCount: Int
+    let likedByMe: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case commentId = "comment_id"
+        case userId = "user_id"
+        case username
+        case displayName = "display_name"
+        case avatarUrl = "avatar_url"
+        case parentId = "parent_id"
+        case content
+        case isDeleted = "is_deleted"
+        case createdAt = "created_at"
+        case likeCount = "like_count"
+        case likedByMe = "liked_by_me"
+    }
+}
+
+/// I due tipi che `report_content` accetta. Enum chiuso per costruzione: un content_type
+/// sbagliato è un 500 evitabile a compile time.
+enum ReportableContentType: String {
+    case review
+    case activityComment = "activity_comment"
+}
+
+extension SupabaseService {
+    /// I toggle tornano da PostgREST come array di una riga (`returns table`). Un array vuoto
+    /// è una risposta che non si capisce: errore, mai un default inventato.
+    private func decodeToggle(_ rows: [ActivityInteractionToggle]) throws -> ActivityInteractionToggle {
+        guard let row = rows.first else {
+            throw SupabaseError.unexpectedResponse(body: "empty toggle response")
+        }
+        return row
+    }
+
+    /// Like/unlike su una card. `p_like_id` conta solo alla prima insert (idempotenza del
+    /// re-like: il server rianima la stessa riga), quindi l'id va generato una volta per
+    /// (attività, utente) e riusato — mai un UUID nuovo a ogni tap.
+    func toggleActivityLike(activityId: UUID, likeId: UUID) async throws -> ActivityInteractionToggle {
+        guard let client else { throw SupabaseError.notConfigured }
+        struct Params: Encodable {
+            let p_activity_id: String
+            let p_like_id: String
+        }
+        let rows: [ActivityInteractionToggle] = try await client
+            .rpc("toggle_activity_like", params: Params(
+                p_activity_id: activityId.uuidString.lowercased(),
+                p_like_id: likeId.uuidString.lowercased()))
+            .execute()
+            .value
+        return try decodeToggle(rows)
+    }
+
+    /// Nuovo commento (o reply, un livello solo). L'id lo genera il CLIENT: un retry con lo
+    /// stesso `p_comment_id` è un upsert, quindi il replay offline non duplica mai.
+    func addActivityComment(activityId: UUID, content: String,
+                            commentId: UUID, parentId: UUID?) async throws -> UUID {
+        var payload: [String: Any] = [
+            "p_activity_id": activityId.uuidString.lowercased(),
+            "p_content": content,
+            "p_comment_id": commentId.uuidString.lowercased()
+        ]
+        if let parentId { payload["p_parent_id"] = parentId.uuidString.lowercased() }
+
+        let data = try await callRPC(function: "add_activity_comment", payload: payload)
+        // `returns uuid` arriva come frammento JSON di primo livello ("una-stringa"):
+        // stessa lezione di parseBooleanRPCResponse.
+        guard let raw = (try? JSONSerialization.jsonObject(
+                with: data, options: [.fragmentsAllowed])) as? String,
+              let id = UUID(uuidString: raw) else {
+            throw SupabaseError.unexpectedResponse(
+                body: String(data: data.prefix(300), encoding: .utf8) ?? "<non-UTF8>")
+        }
+        return id
+    }
+
+    /// Cancella un commento: il server accetta il proprietario del commento O quello della
+    /// card (moderazione di casa propria) — qui non si replica quella logica, la si invoca.
+    func deleteActivityComment(commentId: UUID) async throws {
+        _ = try await callRPC(function: "delete_activity_comment",
+                              payload: ["p_comment_id": commentId.uuidString.lowercased()])
+    }
+
+    /// Like/unlike su un commento, stessa disciplina del like alla card.
+    func toggleActivityCommentLike(commentId: UUID, likeId: UUID) async throws -> ActivityInteractionToggle {
+        guard let client else { throw SupabaseError.notConfigured }
+        struct Params: Encodable {
+            let p_comment_id: String
+            let p_like_id: String
+        }
+        let rows: [ActivityInteractionToggle] = try await client
+            .rpc("toggle_activity_comment_like", params: Params(
+                p_comment_id: commentId.uuidString.lowercased(),
+                p_like_id: likeId.uuidString.lowercased()))
+            .execute()
+            .value
+        return try decodeToggle(rows)
+    }
+
+    /// Il filo dei commenti: ordine cronologico ASCENDENTE con cursore in avanti
+    /// (created_at, comment_id) — stessa disciplina keyset di `fetchActivityFeed`,
+    /// frazionali inclusi per non saltare righe al confronto.
+    func fetchActivityComments(activityId: UUID, after: (Date, UUID)?,
+                               limit: Int) async throws -> [ActivityCommentRow] {
+        guard let client else { throw SupabaseError.notConfigured }
+        let cursorFormatter = ISO8601DateFormatter()
+        cursorFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        struct Params: Encodable {
+            let p_activity_id: String
+            let p_limit: Int
+            let p_after: String?
+            let p_after_id: String?
+        }
+        let rows: [ActivityCommentRow] = try await client
+            .rpc("get_activity_comments", params: Params(
+                p_activity_id: activityId.uuidString.lowercased(),
+                p_limit: limit,
+                p_after: after.map { cursorFormatter.string(from: $0.0) },
+                p_after_id: after.map { $0.1.uuidString.lowercased() }))
+            .execute()
+            .value
+        return rows
+    }
+
+    /// Segnalazione contenuti. Idempotente sul server (ON CONFLICT DO NOTHING): ri-segnalare
+    /// non è un errore, quindi qui non serve nessuno stato locale.
+    func reportContent(type: ReportableContentType, id: UUID, reason: String? = nil) async throws {
+        var payload: [String: Any] = [
+            "p_content_type": type.rawValue,
+            "p_content_id": id.uuidString.lowercased()
+        ]
+        if let reason, !reason.isEmpty { payload["p_reason"] = reason }
+        _ = try await callRPC(function: "report_content", payload: payload)
+    }
+}
+
+private struct ActivityFeedParams: Encodable {
+    let p_scope: String
+    let p_user: String?
+    let p_before: String?
+    let p_before_id: String?
+    let p_limit: Int
+    /// M3 — la card singola del deep link: valorizzato, salta scope e cursore (ma non i
+    /// cancelli). Nil sparisce dal JSON (come p_user e il cursore) e la RPC usa il suo default.
+    var p_activity_id: String? = nil
 }
 
 private struct PublicListsParams: Encodable {
@@ -1330,6 +1600,12 @@ private struct PublicListRow: Decodable {
     let cover_poster_paths: [String]?
     let follower_count: Int
     let is_following: Bool
+    // Social feed M1: l'autore esce dall'anonimato. Optional non per pigrizia: un server non
+    // ancora migrato non manda le colonne, e il feed liste deve continuare a decodificarsi.
+    let owner_id: String?
+    let owner_username: String?
+    let owner_display_name: String?
+    let owner_avatar_url: String?
 }
 
 private struct ListItemsWithProvidersParams: Encodable {

@@ -87,6 +87,8 @@ final class RatingActions {
             payload: record,
             dependsOn: nil
         )
+        AnalyticsService.shared.track(.mediaRated(
+            mediaType: mediaType, mediaId: tmdbId, rating: Double(rating) / 2.0, previousRating: nil))
         await syncEngine.pullProfileContent()
     }
 
@@ -118,6 +120,7 @@ final class RatingActions {
             payload: record,
             dependsOn: nil
         )
+        AnalyticsService.shared.track(.mediaRatingRemoved(mediaType: mediaType, mediaId: tmdbId))
         await syncEngine.pullProfileContent()
     }
 

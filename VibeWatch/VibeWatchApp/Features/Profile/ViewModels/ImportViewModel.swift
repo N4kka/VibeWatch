@@ -495,9 +495,45 @@ final class ImportViewModel: ObservableObject {
         /// server, mostrata piccola ma mostrata (§7.4: non si abbellisce). `retryJobId` nullo
         /// = fallito prima che il job esistesse: si riparte dalla scelta del file.
         case failed(messageKey: String, detail: String?, retryJobId: String?)
+
+        var isDone: Bool { if case .done = self { return true }; return false }
+
+        /// Il nome della fase per l'evento import_failed.
+        var analyticsStageName: String {
+            switch self {
+            case .sources: return "sources"
+            case .uploading: return "uploading"
+            case .running(_, let phase): return phase
+            case .done: return "done"
+            case .failed: return "failed"
+            }
+        }
     }
 
-    @Published private(set) var state: FlowState = .sources
+    @Published private(set) var state: FlowState = .sources {
+        didSet { trackImportTransition(from: oldValue, to: state) }
+    }
+
+    /// Analytics sulle transizioni di stato, in un punto solo: partenza (upload), esito
+    /// (report) e fallimento, qualunque ramo le abbia prodotte. `uploading → uploading` e i
+    /// re-poll di `running` non emettono niente.
+    private func trackImportTransition(from oldValue: FlowState, to newValue: FlowState) {
+        switch (oldValue, newValue) {
+        case (.sources, .uploading):
+            AnalyticsService.shared.track(.importStarted(source: "tvtime_zip"))
+        case (_, .done(let report)):
+            guard !oldValue.isDone else { return }
+            AnalyticsService.shared.track(.importCompleted(
+                itemsImported: report.episodiImportati,
+                itemsFailed: report.nonRiconosciutiEpisodi))
+        case (_, .failed(let messageKey, _, _)):
+            if case .failed = oldValue { return }
+            AnalyticsService.shared.track(.importFailed(
+                errorType: messageKey, stage: oldValue.analyticsStageName))
+        default:
+            break
+        }
+    }
 
     /// Il progresso reale (contatori delle fasi) dell'ultimo giro di polling. Vive accanto a
     /// `state` e non dentro: lo stato è il contratto storico (e dei test), il progresso è

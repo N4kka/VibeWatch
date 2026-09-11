@@ -145,6 +145,90 @@ final class FavoritesRatingsActionsTests: XCTestCase {
         XCTAssertEqual(engine.profileContentPulls, 1)
     }
 
+    // MARK: - Review (social feed M1)
+
+    private func reviews(userId: String? = "u1") -> ReviewActions {
+        ReviewActions(syncEngine: engine, sqlite: .shared, currentUserId: { userId })
+    }
+
+    /// Il DB del simulatore persiste fra i run: senza pulizia il "riuso dell'id" troverebbe
+    /// la riga del run precedente.
+    private func purgeReviews(tmdbId: Int) async {
+        try? await SQLiteService.shared.executeWrite(
+            "DELETE FROM user_reviews WHERE tmdb_id = ?", parameters: [tmdbId])
+    }
+
+    func testUnaReviewVuotaOTroppoLungaNonParte() async {
+        for fuori in ["", "   \n ", String(repeating: "a", count: 281)] {
+            do {
+                try await reviews().setReview(mediaType: "movie", tmdbId: 603, content: fuori)
+                XCTFail("il contenuto doveva essere rifiutato")
+            } catch ReviewActions.ActionError.invalidContent {
+            } catch { XCTFail("errore sbagliato: \(error)") }
+        }
+        XCTAssertTrue(engine.queued.isEmpty, "niente in coda: sarebbe morto sul CHECK del server")
+        XCTAssertEqual(engine.profileContentPulls, 0)
+    }
+
+    func testUnaReviewEUnFilmOUnaSerie() async {
+        do {
+            try await reviews().setReview(mediaType: "episode", tmdbId: 1399, content: "ok")
+            XCTFail("'episode' doveva essere rifiutato")
+        } catch ReviewActions.ActionError.invalidMediaType {
+        } catch { XCTFail("errore sbagliato: \(error)") }
+        XCTAssertTrue(engine.queued.isEmpty)
+    }
+
+    func testLaReviewRiempieLIdentitaTrimmaERiusaLId() async throws {
+        await purgeReviews(tmdbId: 777001)
+
+        try await reviews().setReview(mediaType: "movie", tmdbId: 777001,
+                                      content: "  Capolavoro assoluto.  ",
+                                      containsSpoilers: true)
+        let op = try XCTUnwrap(engine.queued.first)
+        XCTAssertEqual(op.table, "user_reviews")
+        XCTAssertEqual(op.operationType, "UPSERT")
+        XCTAssertEqual(op.payload["user_id"] as? String, "u1",
+                       "l'identità la riempie l'azione: senza, user_id_mismatch muto")
+        XCTAssertEqual(op.payload["content"] as? String, "Capolavoro assoluto.",
+                       "il contenuto viaggia trimmato, come lo conta il CHECK")
+        XCTAssertEqual(op.payload["contains_spoilers"] as? Bool, true)
+        let id = try XCTUnwrap(op.payload["id"] as? String)
+        XCTAssertEqual(op.recordId, id)
+
+        // Il re-write è la STESSA review: report e activities referenziano l'id, che non cambia.
+        try await reviews().setReview(mediaType: "movie", tmdbId: 777001, content: "Rivisto: mah.")
+        XCTAssertEqual(engine.queued.last?.payload["id"] as? String, id,
+                       "riscrivere riusa l'id della riga viva, non ne genera un secondo")
+        XCTAssertEqual(engine.profileContentPulls, 2, "dopo ogni scrittura si rilegge")
+
+        let local = await reviews().review(for: "movie", tmdbId: 777001)
+        XCTAssertEqual(local?.content, "Rivisto: mah.")
+    }
+
+    func testTogliereLaReviewViaggiaComeDeleteConLId() async throws {
+        await purgeReviews(tmdbId: 777002)
+        try await reviews().setReview(mediaType: "tv", tmdbId: 777002, content: "Da vedere")
+        let id = try XCTUnwrap(engine.queued.first?.payload["id"] as? String)
+
+        try await reviews().removeReview(mediaType: "tv", tmdbId: 777002)
+        let op = try XCTUnwrap(engine.queued.last)
+        XCTAssertEqual(op.operationType, "DELETE",
+                       "il ramo DELETE del server scrive deleted_at: la DELETE fisica non ha grant")
+        XCTAssertEqual(op.payload["id"] as? String, id,
+                       "il ramo DELETE cerca la riga per id: il record lo deve portare")
+
+        let local = await reviews().review(for: "tv", tmdbId: 777002)
+        XCTAssertNil(local, "la lapide locale è immediata: la UI non mostra una review tolta")
+    }
+
+    func testTogliereUnaReviewCheNonCEsisteNonInventaMutazioni() async throws {
+        await purgeReviews(tmdbId: 777003)
+        try await reviews().removeReview(mediaType: "movie", tmdbId: 777003)
+        XCTAssertTrue(engine.queued.isEmpty)
+        XCTAssertEqual(engine.profileContentPulls, 0)
+    }
+
     // MARK: - Parsing (§9.3)
 
     func testIlProfiloPortaIFavorites() {

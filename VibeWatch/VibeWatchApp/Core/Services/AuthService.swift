@@ -2,6 +2,7 @@ import Foundation
 import Supabase
 import Auth
 import AuthenticationServices
+import GoogleSignIn
 import CryptoKit
 import RevenueCat
 import UIKit
@@ -35,6 +36,15 @@ class AuthService: AuthServiceProtocol {
     private let cachedUserKey = "auth_cached_user"
     private let cachedAuthStateKey = "auth_cached_is_authenticated"
     private let expectingPasswordResetKey = "auth_expecting_password_reset"
+    /// A chi appartengono i dati che stanno adesso sul device (nil = utente anonimo).
+    private let localDataOwnerKey = "auth_local_data_owner_id"
+    /// Segna che il seeding una tantum di `localDataOwnerKey` è già avvenuto: senza, chi aggiorna
+    /// l'app da una versione precedente sarebbe letto come "dati anonimi" e si vedrebbe cancellare
+    /// il proprio device al primo refresh del profilo.
+    private let localDataOwnerSeededKey = "auth_local_data_owner_seeded"
+    /// L'utente ha appena avviato la creazione di un account: i dati anonimi di questo device
+    /// diventano il suo punto di partenza invece di essere buttati.
+    private let pendingSignUpMigrationKey = "auth_pending_signup_migration"
     private let userDefaults = UserDefaults.standard
 
     // Keychain storage for encrypted auth token persistence
@@ -43,6 +53,7 @@ class AuthService: AuthServiceProtocol {
     private init() {
         AuthService._migrateUserDefaultsToKeychain(from: UserDefaults.standard, to: KeychainStorage())
         loadCachedAuthState()
+        seedLocalDataOwnerIfNeeded()
         setupClient()
         Logger.info("[Auth] AuthService initialized with real Supabase")
     }
@@ -229,6 +240,88 @@ class AuthService: AuthServiceProtocol {
         }
     }
 
+    // MARK: - Proprietà dei dati locali
+
+    /// Prima installazione della versione che tiene traccia del proprietario dei dati: chi era già
+    /// loggato adotta i propri dati, chi non lo era resta anonimo. Gira una sola volta, all'avvio
+    /// e fuori da qualsiasi flusso di login, così un utente aggiornato non finisce nel ramo
+    /// "dati di un altro account" e non si vede azzerare il device.
+    private func seedLocalDataOwnerIfNeeded() {
+        guard !userDefaults.bool(forKey: localDataOwnerSeededKey) else { return }
+
+        // Il Keychain non risponde quando l'app parte in background prima del primo sblocco dopo
+        // un riavvio. Lì "nessun utente in cache" non vuol dire "device anonimo": si rimanda al
+        // prossimo avvio invece di registrare una risposta che non abbiamo.
+        do {
+            _ = try keychainStorage.retrieve(key: cachedUserKey)
+        } catch {
+            Logger.warning("[Auth] Keychain non leggibile all'avvio: seeding della proprietà dei dati rimandato")
+            return
+        }
+
+        userDefaults.set(true, forKey: localDataOwnerSeededKey)
+
+        if isAuthenticated, let userId = currentUser?.id {
+            userDefaults.set(userId, forKey: localDataOwnerKey)
+            Logger.debug("[Auth] Local data ownership seeded for \(userId.prefix(8))...")
+        } else {
+            userDefaults.removeObject(forKey: localDataOwnerKey)
+        }
+    }
+
+    /// Decide se i dati già presenti sul device possono restare a `userId`.
+    ///
+    /// Tre casi, in ordine:
+    /// 1. sono già i suoi → non si tocca niente;
+    /// 2. sono di un altro account → si cancella tutto, o l'account che entra si troverebbe in
+    ///    casa cronologia, liste e gusti di chi c'era prima (e li ri-caricherebbe sul server come
+    ///    propri al primo sync);
+    /// 3. sono anonimi → si cancellano, tranne quando questo login *è* la nascita dell'account:
+    ///    lì la continuità è il comportamento voluto, l'utente si porta dentro quello che ha
+    ///    guardato e cercato da anonimo.
+    private func reconcileLocalDataOwnership(for userId: String) async {
+        // Nessun seeding riuscito prima di questo login: di chi siano i dati sul device non lo
+        // sappiamo, e per un utente che era già dentro cancellarli sarebbe una perdita secca.
+        // Si adotta e da qui in poi la traccia c'è.
+        guard userDefaults.bool(forKey: localDataOwnerSeededKey) else {
+            userDefaults.set(true, forKey: localDataOwnerSeededKey)
+            userDefaults.set(userId, forKey: localDataOwnerKey)
+            userDefaults.set(false, forKey: pendingSignUpMigrationKey)
+            return
+        }
+
+        let owner = userDefaults.string(forKey: localDataOwnerKey)
+        guard owner != userId else { return }
+
+        let pendingSignUp = userDefaults.bool(forKey: pendingSignUpMigrationKey)
+        userDefaults.set(false, forKey: pendingSignUpMigrationKey)
+
+        let isNewAccount = pendingSignUp ? true : await isFreshlyCreatedAccount()
+        if owner == nil, isNewAccount {
+            Logger.info("[Auth] Nuovo account da utente anonimo: i dati locali restano e passano a \(userId.prefix(8))...")
+            // Restare sul device non basta: le righe sono intestate all'id del device e ogni
+            // lettura filtra per l'utente loggato. Vanno riassegnate adesso, prima che il sync
+            // parta, o il nuovo account nascerebbe con le liste vuote.
+            await ListManager.shared.adoptAnonymousLocalData(newOwnerId: userId)
+            userDefaults.set(userId, forKey: localDataOwnerKey)
+            return
+        }
+
+        Logger.info("[Auth] I dati locali sono di \(owner?.prefix(8) ?? "un utente anonimo") — reset prima di entrare come \(userId.prefix(8))...")
+        await LocalDataResetService.shared.wipeUserScopedData()
+        userDefaults.set(userId, forKey: localDataOwnerKey)
+    }
+
+    /// Un account creato in questo stesso momento. Copre il "Continua con Google/Apple" che di
+    /// fatto registra: lì non c'è un pulsante di registrazione da cui dedurre l'intenzione. La
+    /// finestra è stretta apposta — su un secondo device, dove i dati locali sono di una sessione
+    /// anonima diversa, due minuti dopo la registrazione altrove non è un caso da assecondare.
+    private func isFreshlyCreatedAccount() async -> Bool {
+        guard let client = client,
+              let session = try? await client.auth.session else { return false }
+        return Date().timeIntervalSince(session.user.createdAt) < 120
+    }
+
     /// Clear cached authentication state
     private func clearCachedAuthState() {
         try? keychainStorage.remove(key: cachedUserKey)
@@ -350,6 +443,26 @@ class AuthService: AuthServiceProtocol {
         }
     }
 
+    /// Il server ha rifiutato una sessione che l'app credeva valida.
+    ///
+    /// Non è `signOut()`: quello fa un push finale e cancella il database locale, e qui nessuna
+    /// delle due cose serve — anzi, lo specchio locale è proprio ciò che un nuovo accesso con lo
+    /// stesso account deve ritrovare. Si azzera solo lo stato di autenticazione, esattamente come
+    /// fa `checkAuthState` quando il refresh viene respinto.
+    ///
+    /// Serve perché un token può essere rifiutato dal server mentre `auth.session` continua a
+    /// restituirlo senza fiatare: finché non scade, il client non ha modo di accorgersene da
+    /// solo. Chi scopre il rifiuto (una Edge Function che risponde 401) lo dice da qui, e l'app
+    /// chiede un nuovo accesso invece di ripetere lo stesso errore a ogni tap.
+    func handleRejectedSession() async {
+        Logger.error("[Auth] Sessione rifiutata dal server — serve un nuovo accesso")
+        try? await client?.auth.signOut(scope: .local)
+        self.currentUser = nil
+        self.isAuthenticated = false
+        clearCachedAuthState()
+        await syncRevenueCatUser(with: nil)
+    }
+
     /// Distingue "sono offline" da "il server ha rifiutato la sessione". Gli errori di
     /// trasporto (URLError) mantengono la cache offline com'è sempre stato; un AuthError
     /// locale (`sessionMissing`) o una risposta 4xx del GoTrue (refresh token revocato,
@@ -374,6 +487,11 @@ class AuthService: AuthServiceProtocol {
 
         // Clear reset expectation since this is an explicit action
         userDefaults.set(false, forKey: expectingPasswordResetKey)
+
+        // Un anonimo che si registra si porta dentro quello che ha già fatto su questo device.
+        // Il flag serve perché fra qui e il primo profilo può passare una conferma via email:
+        // quando l'utente torna dal deep link, la sola data di creazione non basterebbe più.
+        userDefaults.set(true, forKey: pendingSignUpMigrationKey)
 
         do {
             Logger.debug("[Auth] Attempting to sign up user: [REDACTED]")
@@ -444,7 +562,7 @@ class AuthService: AuthServiceProtocol {
 
             // Analytics: Track account creation
             AnalyticsService.shared.logAccountCreated(method: "email")
-            AnalyticsService.shared.setUserId(user.id)
+            AnalyticsService.shared.setUserId(user.id, signedUpAt: user.createdAt)
 
             return user
         } catch let error as AppAuthError {
@@ -465,6 +583,9 @@ class AuthService: AuthServiceProtocol {
 
         // Clear reset expectation since this is an explicit action
         userDefaults.set(false, forKey: expectingPasswordResetKey)
+        // Una registrazione fallita non deve lasciare in giro il permesso di migrare: qui si entra
+        // in un account che esiste già, i dati anonimi del device non lo riguardano.
+        userDefaults.set(false, forKey: pendingSignUpMigrationKey)
 
         // Email diretta a GoTrue; username alla Edge Function, che fa risoluzione e
         // autenticazione in un colpo solo: l'email non lascia mai il server senza la password
@@ -493,7 +614,7 @@ class AuthService: AuthServiceProtocol {
 
         // Analytics: Track sign in
         AnalyticsService.shared.logSignIn(method: "email")
-        AnalyticsService.shared.setUserId(user.id)
+        AnalyticsService.shared.setUserId(user.id, signedUpAt: user.createdAt)
 
         return user
     }
@@ -513,7 +634,13 @@ class AuthService: AuthServiceProtocol {
             }
         }
 
-        try await client.auth.signOut()
+        // `scope: .local`, non il globale che GoTrue applica per default. `POST /logout` senza
+        // scope cancella TUTTE le sessioni dell'account, su ogni device: uscire dal telefono
+        // buttava fuori anche il web e il secondo device. E lo faceva in modo invisibile — là
+        // l'access token resta valido fino a un'ora (PostgREST guarda firma e scadenza, non la
+        // sessione), quindi l'app continuava a sembrare loggata mentre le Edge Function che
+        // interrogano GoTrue rispondevano 401. Da qui esce questo device e basta.
+        try await client.auth.signOut(scope: .local)
 
         self.currentUser = nil
         self.isAuthenticated = false
@@ -523,8 +650,9 @@ class AuthService: AuthServiceProtocol {
 
         await syncRevenueCatUser(with: nil, forceReset: force)
 
-        // Analytics: Clear user ID
-        AnalyticsService.shared.setUserId(nil)
+        // Analytics: back to a fresh anonymous identity (new distinct id, super
+        // properties re-registered) so the next account can't inherit this one's events.
+        AnalyticsService.shared.reset()
 
         // The local SQLite store is not scoped per account, so leaving it in place let the next
         // user to sign in on this device read the previous one's lists, history and preferences —
@@ -593,13 +721,14 @@ class AuthService: AuthServiceProtocol {
 
     private let appleSignInCoordinator = AppleSignInCoordinator()
 
-    func signInWithApple() async throws -> User {
+    func signInWithApple(intent: AuthFlowIntent = .signIn) async throws -> User {
         guard let client = client else {
             throw AppAuthError.notConfigured
         }
 
         // Clear reset expectation since this is an explicit action
         userDefaults.set(false, forKey: expectingPasswordResetKey)
+        userDefaults.set(intent == .signUp, forKey: pendingSignUpMigrationKey)
 
         Logger.debug("[Auth] Starting native Apple Sign In...")
 
@@ -636,42 +765,94 @@ class AuthService: AuthServiceProtocol {
         }
 
         AnalyticsService.shared.logSignIn(method: "apple")
-        AnalyticsService.shared.setUserId(user.id)
+        AnalyticsService.shared.setUserId(user.id, signedUpAt: user.createdAt)
 
         Logger.info("[Auth] Apple Sign In successful")
         return user
     }
 
-    func signInWithGoogle() async throws -> User {
+    /// Il client OAuth iOS e' legato a un bundle id preciso, e la configurazione Debug gira
+    /// come `.beta`: serve un secondo client, altrimenti Google rifiuta il consenso in
+    /// sviluppo. Non e' un segreto, sta in Info.plist accanto al reversed URL scheme.
+    private static let googleClientID: String = {
+        let isBeta = (Bundle.main.bundleIdentifier ?? "").contains(".beta")
+        let key = isBeta ? "GIDClientIDBeta" : "GIDClientID"
+        return Bundle.main.object(forInfoDictionaryKey: key) as? String ?? ""
+    }()
+
+    /// Il view controller da cui presentare il consenso Google. La key window ha spesso uno
+    /// sheet davanti (SignInView e SignUpView sono presentate cosi'): presentare dal root
+    /// fallirebbe con "already presenting".
+    private static func topViewController() -> UIViewController? {
+        var controller = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows)
+            .first { $0.isKeyWindow }?
+            .rootViewController
+        while let presented = controller?.presentedViewController {
+            controller = presented
+        }
+        return controller
+    }
+
+    func signInWithGoogle(intent: AuthFlowIntent = .signIn) async throws -> User {
         guard let client = client else {
             throw AppAuthError.notConfigured
         }
 
         // Clear reset expectation since this is an explicit action
         userDefaults.set(false, forKey: expectingPasswordResetKey)
+        userDefaults.set(intent == .signUp, forKey: pendingSignUpMigrationKey)
 
-        Logger.debug("[Auth] Starting Google Sign In...")
+        Logger.debug("[Auth] Starting native Google Sign In...")
 
-        // prompt=select_account: senza, Google riusa la sessione del browser e non lascia
-        // scegliere tra più account.
-        try await client.auth.signInWithOAuth(
-            provider: .google,
-            redirectTo: authCallbackURL,
-            queryParams: [(name: "prompt", value: "select_account")]
+        // Flusso nativo (GoogleSignIn + signInWithIdToken) invece del redirect OAuth: quello
+        // tornava sul callback di Supabase, e Google nomina sempre l'host del callback nella
+        // schermata di consenso ("Continua su <project>.supabase.co"). Con l'id token il
+        // consenso nomina l'app. Nessun nonce: AppAuth (dentro GoogleSignIn) ne mette uno nel
+        // token e non lo espone, e GoTrue confronta il claim con l'SHA-256 di quello che gli
+        // passi — non combacera' mai. Per questo il provider Google del progetto ha
+        // "Skip nonce check" attivo, come prescrive la doc Supabase per l'SDK nativo.
+        guard !Self.googleClientID.isEmpty else {
+            Logger.error("[Auth] No Google client ID for bundle \(Bundle.main.bundleIdentifier ?? "?")")
+            throw AppAuthError.notConfigured
+        }
+        GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: Self.googleClientID)
+
+        guard let presenter = Self.topViewController() else {
+            Logger.error("[Auth] No view controller available to present Google Sign In")
+            throw AppAuthError.invalidResponse
+        }
+
+        let result: GIDSignInResult
+        do {
+            result = try await GIDSignIn.sharedInstance.signIn(withPresenting: presenter)
+        } catch let error as GIDSignInError where error.code == .canceled {
+            // Le view distinguono "annullato" da "fallito" solo sul CancellationError.
+            throw CancellationError()
+        }
+
+        guard let idToken = result.user.idToken?.tokenString else {
+            Logger.error("[Auth] Google credential missing identity token")
+            throw AppAuthError.invalidResponse
+        }
+
+        let session = try await client.auth.signInWithIdToken(
+            credentials: OpenIDConnectCredentials(
+                provider: .google,
+                idToken: idToken,
+                accessToken: result.user.accessToken.tokenString
+            )
         )
 
-        // Wait for auth to complete
-        try await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
-
-        // Check auth state and fetch profile
-        await checkAuthState()
+        await fetchUserProfile(userId: session.user.id.uuidString)
 
         guard let user = currentUser else {
             throw AppAuthError.userNotFound
         }
 
         AnalyticsService.shared.logSignIn(method: "google")
-        AnalyticsService.shared.setUserId(user.id)
+        AnalyticsService.shared.setUserId(user.id, signedUpAt: user.createdAt)
 
         Logger.info("[Auth] Google Sign In successful")
         return user
@@ -684,6 +865,12 @@ class AuthService: AuthServiceProtocol {
                 Logger.error("[Auth] Client not configured in fetchUserProfile")
                 return
             }
+
+            // Prima di rendere visibile l'utente: questo è l'unico punto attraversato da ogni
+            // percorso di autenticazione (email, username, Apple, Google, ripristino sessione,
+            // deep link). Metterlo nei singoli metodi avrebbe lasciato scoperto l'OAuth, dove la
+            // sessione arriva dallo stream authStateChanges e non dal valore di ritorno.
+            await reconcileLocalDataOwnership(for: userId)
 
             Logger.debug("[Auth] Fetching profile for user ID: \(userId.prefix(8))...")
 
@@ -993,15 +1180,11 @@ class AuthService: AuthServiceProtocol {
     }
 
     private func cleanupLocalUserData() async {
-        ListManager.shared.resetListsForLoggedOutUser()
-        DailyQuotaManager.shared.resetQuota()
-        DailyQuotaManager.shared.downgradeToFree()
-        ClipQuotaService.shared.resetAll()
-        ContentCacheManager.shared.clearAllCaches()
-        // In-memory, so wiping the database alone would leave the previous user's
-        // personalization live until the process restarts.
-        DiscoveryPersonalizationService.shared.clearMemoryCache()
-        SQLiteService.shared.resetDatabase()
+        // Il device torna anonimo: nessun account possiede più quello che c'è qui sopra.
+        userDefaults.removeObject(forKey: localDataOwnerKey)
+        userDefaults.set(false, forKey: pendingSignUpMigrationKey)
+
+        await LocalDataResetService.shared.wipeUserScopedData()
 
         // Clear any cached auth state
         await AppState.shared.checkAuthState()

@@ -43,7 +43,10 @@ struct ImportView: View {
                     }
                 }
             }
-            .task { await viewModel.loadExisting() }
+            .task {
+                AnalyticsService.shared.logScreenView(screenName: "Import")
+                await viewModel.loadExisting()
+            }
             .fileImporter(isPresented: $showPicker,
                           allowedContentTypes: [.zip]) { result in
                 if case .success(let url) = result {

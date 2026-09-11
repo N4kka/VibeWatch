@@ -25,6 +25,13 @@ final class TrackingSyncTests: XCTestCase {
         XCTAssertEqual(TableConflictMapping.strategy(for: "user_favorites"), .lastWriteWins)
     }
 
+    /// Social feed M1: la review breve entra nel sync come i voti — whitelist e `lastWriteWins`
+    /// esplicita, mai nel `default`, che è una decisione non presa.
+    func testLeReviewSonoInWhitelistEInLastWriteWins() {
+        XCTAssertTrue(SQLiteTable.isValid("user_reviews"))
+        XCTAssertEqual(TableConflictMapping.strategy(for: "user_reviews"), .lastWriteWins)
+    }
+
     /// §3.6: la coppia (follower, followee) si sincronizza come `union` — un follow non si perde.
     func testIFollowSonoInWhitelistEInUnion() {
         XCTAssertTrue(SQLiteTable.isValid("user_follows"))

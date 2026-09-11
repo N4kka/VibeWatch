@@ -151,7 +151,13 @@ struct SeasonDetailView: View {
         }
         .navigationBarHidden(true)
         .swipeBackGesture { dismiss() }
-        .task { await viewModel.loadSeasonDetails() }
+        .task {
+            await viewModel.loadSeasonDetails()
+            AnalyticsService.shared.logScreenView(screenName: "SeasonDetail")
+            AnalyticsService.shared.track(.mediaDetailViewed(
+                mediaType: "season", mediaId: showId, title: showName
+            ))
+        }
         // Un "visto" tappato sulle card del Tracking arriva nello specchio locale via pull:
         // quando il sync lo annuncia, la lista episodi si riallinea da sola.
         .onReceive(NotificationCenter.default.publisher(for: .syncEngineCompleted)) { _ in

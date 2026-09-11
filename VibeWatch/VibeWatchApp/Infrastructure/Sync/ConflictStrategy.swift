@@ -125,6 +125,12 @@ public enum TableConflictMapping {
         case "user_favorites", "user_ratings":
             return .lastWriteWins
 
+        // Social feed M1: la review e' l'ultimo intento come il voto, confrontata su
+        // updated_at. Sul server la convergenza fra id diversi per lo stesso titolo la fa
+        // apply_mutations (lapide alle altre righe vive); qui basta l'ultima scrittura.
+        case "user_reviews":
+            return .lastWriteWins
+
         // Default fallback for unknown tables
         default:
             return .lastWriteWins

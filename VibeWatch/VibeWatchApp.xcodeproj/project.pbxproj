@@ -20,6 +20,7 @@
 		6041113C7B15457BB8A1B4EB /* ConflictResolverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75B51919D2BF4686B686EDCA /* ConflictResolverTests.swift */; };
 		6B9C049650D750B89FD9B9F2 /* ListLinkPropagationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68062B980287B6E0B3BFDC37 /* ListLinkPropagationTests.swift */; };
 		6FEEC1D69AB33E76E15D097B /* StarRatingDragTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 366C7C7DF006577DF7663E8E /* StarRatingDragTests.swift */; };
+		A11A11A11A11A11A11A11A01 /* AnalyticsServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11A11A11A11A11A11A11A02 /* AnalyticsServiceTests.swift */; };
 		A1B2C3D40001E5F600000001 /* SQLiteWritePathTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40001E5F600000002 /* SQLiteWritePathTests.swift */; };
 		A1B2C3D40001E5F600000101 /* UpsertCascadeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40001E5F600000102 /* UpsertCascadeTests.swift */; };
 		A1B2C3D40001E5F600000201 /* YouTubeSearchClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40001E5F600000202 /* YouTubeSearchClientTests.swift */; };
@@ -35,23 +36,25 @@
 		A1B2C3D4000BE5F600000001 /* UsernameSetupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000BE5F600000002 /* UsernameSetupTests.swift */; };
 		A1B2C3D4000BE5F600000003 /* SocialProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000BE5F600000004 /* SocialProfileTests.swift */; };
 		A1B2C3D4000BE5F600000005 /* FavoritesRatingsActionsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000BE5F600000006 /* FavoritesRatingsActionsTests.swift */; };
+		A1B2C3D4000BE5F600000007 /* WrapUpBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000BE5F600000008 /* WrapUpBuilderTests.swift */; };
 		A1B2C3D4000CE5F600000001 /* UniversalLinksTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000CE5F600000002 /* UniversalLinksTests.swift */; };
 		A1B2C3D4000DE5F600000001 /* ImportViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000DE5F600000002 /* ImportViewModelTests.swift */; };
 		A1B2C3D4E5F6A1B2 /* KeychainStorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A1B3 /* KeychainStorageTests.swift */; };
+		A1B2C3D4E5F6C0010001 /* SessionExpiryFeedbackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6C0010002 /* SessionExpiryFeedbackTests.swift */; };
 		A1B2C3D4E5F6A1B4 /* AuthMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A1B5 /* AuthMigrationTests.swift */; };
+		A1B2C3D4E5F6B0010002 /* LocalDataResetTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6B0010001 /* LocalDataResetTests.swift */; };
 		B276FBD367C144A78E0A9217 /* SyncStateMachineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C39F30EEBCD42B48EC2203D /* SyncStateMachineTests.swift */; };
 		B318DCEE2EC6939A00DB1A9A /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = B318DCED2EC6939A00DB1A9A /* Auth */; };
 		B31D2C442EFFA4020091F030 /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = B31D2C432EFFA4020091F030 /* GoogleMobileAds */; };
 		B32F71142ED399B5001779C5 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = B32F71132ED399B5001779C5 /* RevenueCat */; };
+		B3A0F0032F20AA0100000003 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = B3A0F0022F20AA0100000002 /* PostHog */; };
 		B3DF8FA82ED5CEC3007FD5D0 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = B3DF8FA72ED5CEC3007FD5D0 /* FirebaseCore */; };
 		B3DF8FAA2ED5CEC3007FD5D0 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = B3DF8FA92ED5CEC3007FD5D0 /* FirebaseMessaging */; };
-		B3DF8FB12ED5CEC3007FD5D0 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = B3DF8FB02ED5CEC3007FD5D0 /* FirebaseAnalytics */; };
-		B3DF8FC12ED5CEC3007FD5D0 /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = B3DF8FC02ED5CEC3007FD5D0 /* FirebaseCrashlytics */; };
 		B3E30E142ECCB7AA008A3B6C /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = B3E30E132ECCB7AA008A3B6C /* Supabase */; };
 		B3F2F7E02F14A10000D1A004 /* YouTubeiOSPlayerHelper in Frameworks */ = {isa = PBXBuildFile; productRef = B3F2F7E32F14A10000D1A003 /* YouTubeiOSPlayerHelper */; };
+		B3A0F1022F30AA0100000003 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = B3A0F1012F30AA0100000002 /* GoogleSignIn */; };
 		C3D4E5F6A1B2C3D4 /* PerformanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3D4E5F6A1B2C3D5 /* PerformanceTests.swift */; };
 		C6877C53B7A3455F88CAEEA9 /* AnalyticsInsightsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C9EEC77D8F045818BF4B264 /* AnalyticsInsightsTests.swift */; };
-		CF1EE317BD6A461DA9DC12F3 /* PostHogClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7288DBFF0484707BB5CD260 /* PostHogClientTests.swift */; };
 		D4E5F6A1B2C3D4E5 /* MultiDeviceSyncTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E5F6A1B2C3D4E6 /* MultiDeviceSyncTests.swift */; };
 		E7D6C5B4A392817060504030 /* DiscoveryCarouselOrderingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7D6C5B4A392817060504031 /* DiscoveryCarouselOrderingTests.swift */; };
 		E8A7B6C5D4E3F20123456789 /* WatchProvidersRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8A7B6C5D4E3F2012345678A /* WatchProvidersRepositoryTests.swift */; };
@@ -59,6 +62,7 @@
 		E8B7C6D5A4F3920123456790 /* AIQuotaConfigurationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8B7C6D5A4F3920123456791 /* AIQuotaConfigurationTests.swift */; };
 		E8B7C6D5A4F3920123456792 /* MediaListItemTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8B7C6D5A4F3920123456793 /* MediaListItemTests.swift */; };
 		E8B7C6D5A4F3920123456794 /* DetailLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8B7C6D5A4F3920123456795 /* DetailLayoutTests.swift */; };
+		E8B7C6D5A4F39201234567A0 /* AIResponseParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8B7C6D5A4F39201234567A1 /* AIResponseParserTests.swift */; };
 		F00D00000000000000000001 /* RedesignPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00D00000000000000000002 /* RedesignPresentationTests.swift */; };
 		F1B8335685BB87A8B708A7AD /* SearchRankingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B519B2E2C310348ACDE6108 /* SearchRankingTests.swift */; };
 /* End PBXBuildFile section */
@@ -87,6 +91,7 @@
 		75B51919D2BF4686B686EDCA /* ConflictResolverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConflictResolverTests.swift; sourceTree = "<group>"; };
 		7C39F30EEBCD42B48EC2203D /* SyncStateMachineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncStateMachineTests.swift; sourceTree = "<group>"; };
 		9FBD15ABB0BF4418879D52D9 /* VibeWatchAppTests/Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = VibeWatchAppTests/Info.plist; sourceTree = "<group>"; };
+		A11A11A11A11A11A11A11A02 /* AnalyticsServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsServiceTests.swift; sourceTree = "<group>"; };
 		A1B2C3D40001E5F600000002 /* SQLiteWritePathTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteWritePathTests.swift; sourceTree = "<group>"; };
 		A1B2C3D40001E5F600000102 /* UpsertCascadeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpsertCascadeTests.swift; sourceTree = "<group>"; };
 		A1B2C3D40001E5F600000202 /* YouTubeSearchClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YouTubeSearchClientTests.swift; sourceTree = "<group>"; };
@@ -102,10 +107,13 @@
 		A1B2C3D4000BE5F600000002 /* UsernameSetupTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsernameSetupTests.swift; sourceTree = "<group>"; };
 		A1B2C3D4000BE5F600000004 /* SocialProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialProfileTests.swift; sourceTree = "<group>"; };
 		A1B2C3D4000BE5F600000006 /* FavoritesRatingsActionsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesRatingsActionsTests.swift; sourceTree = "<group>"; };
+		A1B2C3D4000BE5F600000008 /* WrapUpBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WrapUpBuilderTests.swift; sourceTree = "<group>"; };
 		A1B2C3D4000CE5F600000002 /* UniversalLinksTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UniversalLinksTests.swift; sourceTree = "<group>"; };
 		A1B2C3D4000DE5F600000002 /* ImportViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportViewModelTests.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F6A1B3 /* KeychainStorageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStorageTests.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F6C0010002 /* SessionExpiryFeedbackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionExpiryFeedbackTests.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F6A1B5 /* AuthMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthMigrationTests.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F6B0010001 /* LocalDataResetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalDataResetTests.swift; sourceTree = "<group>"; };
 		B318DC8A2EC6920500DB1A9A /* VibeWatchApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VibeWatchApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B3F0F1A92F2A1B1C00AA1111 /* VibeWatchApp/Config/Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = VibeWatchApp/Config/Secrets.xcconfig; sourceTree = "<group>"; };
 		BEEB52E23A200F995FDDD6F0 /* FavoritePosterResolverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritePosterResolverTests.swift; sourceTree = "<group>"; };
@@ -113,13 +121,13 @@
 		D06ECE77A8DA440E92022CE7 /* AppNavigationManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppNavigationManagerTests.swift; sourceTree = "<group>"; };
 		D4E5F6A1B2C3D4E6 /* MultiDeviceSyncTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MultiDeviceSyncTests.swift; path = VibeWatchApp/Tests/MultiDeviceSyncTests.swift; sourceTree = SOURCE_ROOT; };
 		D914D0452F884693941FF37D /* SyncEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncEngineTests.swift; sourceTree = "<group>"; };
-		E7288DBFF0484707BB5CD260 /* PostHogClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostHogClientTests.swift; sourceTree = "<group>"; };
 		E7D6C5B4A392817060504031 /* DiscoveryCarouselOrderingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoveryCarouselOrderingTests.swift; sourceTree = "<group>"; };
 		E8A7B6C5D4E3F2012345678A /* WatchProvidersRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchProvidersRepositoryTests.swift; sourceTree = "<group>"; };
 		E8A7B6C5D4E3F2012345678C /* WatchProviderLoadStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchProviderLoadStateTests.swift; sourceTree = "<group>"; };
 		E8B7C6D5A4F3920123456791 /* AIQuotaConfigurationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIQuotaConfigurationTests.swift; sourceTree = "<group>"; };
 		E8B7C6D5A4F3920123456793 /* MediaListItemTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaListItemTests.swift; sourceTree = "<group>"; };
 		E8B7C6D5A4F3920123456795 /* DetailLayoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailLayoutTests.swift; sourceTree = "<group>"; };
+		E8B7C6D5A4F39201234567A1 /* AIResponseParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIResponseParserTests.swift; sourceTree = "<group>"; };
 		F00D00000000000000000002 /* RedesignPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RedesignPresentationTests.swift; sourceTree = "<group>"; };
 		F4E26C8A72A558A9EA3835E1 /* ToastCenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastCenterTests.swift; sourceTree = "<group>"; };
 		F849736129F54FA8BD1D3247 /* DatabaseMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseMigrationTests.swift; sourceTree = "<group>"; };
@@ -157,10 +165,10 @@
 				B31D2C442EFFA4020091F030 /* GoogleMobileAds in Frameworks */,
 				B318DCEE2EC6939A00DB1A9A /* Auth in Frameworks */,
 				B3DF8FA82ED5CEC3007FD5D0 /* FirebaseCore in Frameworks */,
-				B3DF8FB12ED5CEC3007FD5D0 /* FirebaseAnalytics in Frameworks */,
-				B3DF8FC12ED5CEC3007FD5D0 /* FirebaseCrashlytics in Frameworks */,
 				B3E30E142ECCB7AA008A3B6C /* Supabase in Frameworks */,
+				B3A0F0032F20AA0100000003 /* PostHog in Frameworks */,
 				B3F2F7E02F14A10000D1A004 /* YouTubeiOSPlayerHelper in Frameworks */,
+				B3A0F1022F30AA0100000003 /* GoogleSignIn in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -178,6 +186,7 @@
 			isa = PBXGroup;
 			children = (
 				9FBD15ABB0BF4418879D52D9 /* VibeWatchAppTests/Info.plist */,
+				A1B2C3D4E5F6B0010001 /* LocalDataResetTests.swift */,
 				BEEB52E23A200F995FDDD6F0 /* FavoritePosterResolverTests.swift */,
 				654D2653621D661D13865DB4 /* SearchPaginationTests.swift */,
 				4B519B2E2C310348ACDE6108 /* SearchRankingTests.swift */,
@@ -187,13 +196,13 @@
 				366C7C7DF006577DF7663E8E /* StarRatingDragTests.swift */,
 				627A081A25AC290DD0B625CB /* ValidationHelperTests.swift */,
 				F4E26C8A72A558A9EA3835E1 /* ToastCenterTests.swift */,
-				E7288DBFF0484707BB5CD260 /* PostHogClientTests.swift */,
 				D914D0452F884693941FF37D /* SyncEngineTests.swift */,
 				A1B2C3D40007E5F600000002 /* TrackingSyncTests.swift */,
 				A1B2C3D40006E5F600000002 /* ConfigValidationTests.swift */,
 				A1B2C3D40005E5F600000002 /* SyncPaginationTests.swift */,
 				A1B2C3D4000BE5F600000002 /* UsernameSetupTests.swift */,
 				A1B2C3D4000BE5F600000004 /* SocialProfileTests.swift */,
+				A1B2C3D4000BE5F600000008 /* WrapUpBuilderTests.swift */,
 				A1B2C3D4000BE5F600000006 /* FavoritesRatingsActionsTests.swift */,
 				A1B2C3D4000CE5F600000002 /* UniversalLinksTests.swift */,
 				A1B2C3D4000DE5F600000002 /* ImportViewModelTests.swift */,
@@ -207,6 +216,7 @@
 				A1B2C3D40001E5F600000002 /* SQLiteWritePathTests.swift */,
 				A1B2C3D40003E5F600000002 /* SQLiteTableWhitelistTests.swift */,
 				A1B2C3D40004E5F600000002 /* CrashReportingServiceTests.swift */,
+				A11A11A11A11A11A11A11A02 /* AnalyticsServiceTests.swift */,
 				A1B2C3D40001E5F600000202 /* YouTubeSearchClientTests.swift */,
 				A1B2C3D40001E5F600000102 /* UpsertCascadeTests.swift */,
 				A1B2C3D40002E5F600000002 /* LocalTitleSearchTests.swift */,
@@ -216,10 +226,12 @@
 				E8A7B6C5D4E3F2012345678A /* WatchProvidersRepositoryTests.swift */,
 				E8A7B6C5D4E3F2012345678C /* WatchProviderLoadStateTests.swift */,
 				E8B7C6D5A4F3920123456791 /* AIQuotaConfigurationTests.swift */,
+				E8B7C6D5A4F39201234567A1 /* AIResponseParserTests.swift */,
 				E8B7C6D5A4F3920123456793 /* MediaListItemTests.swift */,
 				E8B7C6D5A4F3920123456795 /* DetailLayoutTests.swift */,
 				F00D00000000000000000002 /* RedesignPresentationTests.swift */,
 				A1B2C3D4E5F6A1B3 /* KeychainStorageTests.swift */,
+				A1B2C3D4E5F6C0010002 /* SessionExpiryFeedbackTests.swift */,
 				A1B2C3D4E5F6A1B5 /* AuthMigrationTests.swift */,
 				C3D4E5F6A1B2C3D5 /* PerformanceTests.swift */,
 				D4E5F6A1B2C3D4E6 /* MultiDeviceSyncTests.swift */,
@@ -290,7 +302,7 @@
 				B318DC862EC6920500DB1A9A /* Sources */,
 				B318DC872EC6920500DB1A9A /* Frameworks */,
 				B318DC882EC6920500DB1A9A /* Resources */,
-				B3DF8FC22ED5CEC3007FD5D0 /* Upload dSYMs to Crashlytics */,
+				B3DF8FC22ED5CEC3007FD5D0 /* Upload dSYMs to PostHog */,
 			);
 			buildRules = (
 			);
@@ -305,11 +317,11 @@
 				B3E30E132ECCB7AA008A3B6C /* Supabase */,
 				B32F71132ED399B5001779C5 /* RevenueCat */,
 				B3DF8FA72ED5CEC3007FD5D0 /* FirebaseCore */,
-				B3DF8FB02ED5CEC3007FD5D0 /* FirebaseAnalytics */,
-				B3DF8FC02ED5CEC3007FD5D0 /* FirebaseCrashlytics */,
 				B3DF8FA92ED5CEC3007FD5D0 /* FirebaseMessaging */,
+				B3A0F0022F20AA0100000002 /* PostHog */,
 				B3F2F7E32F14A10000D1A003 /* YouTubeiOSPlayerHelper */,
 				B31D2C432EFFA4020091F030 /* GoogleMobileAds */,
+				B3A0F1012F30AA0100000002 /* GoogleSignIn */,
 			);
 			productName = VibeWatchApp;
 			productReference = B318DC8A2EC6920500DB1A9A /* VibeWatchApp.app */;
@@ -367,6 +379,8 @@
 				B3DC12CA2ED5CB0400B5A429 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 				B3F2F7E22F14A10000D1A002 /* XCRemoteSwiftPackageReference "youtube-ios-player-helper" */,
 				B31D2C422EFFA4020091F030 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */,
+				B3A0F0012F20AA0100000001 /* XCRemoteSwiftPackageReference "posthog-ios" */,
+				B3A0F1002F30AA0100000001 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = B318DC8B2EC6920500DB1A9A /* Products */;
@@ -397,7 +411,7 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		B3DF8FC22ED5CEC3007FD5D0 /* Upload dSYMs to Crashlytics */ = {
+		B3DF8FC22ED5CEC3007FD5D0 /* Upload dSYMs to PostHog */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -405,17 +419,14 @@
 			);
 			inputPaths = (
 				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${TARGET_NAME}",
-				"$(BUILT_PRODUCTS_DIR)/$(INFOPLIST_PATH)",
-				"$(BUILD_DIR)/../../SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run",
-				"$(BUILD_DIR)/../../SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/upload-symbols",
-				"$(SRCROOT)/VibeWatchApp/GoogleService-Info.plist",
+				"$(BUILD_DIR)/../../SourcePackages/checkouts/posthog-ios/build-tools/upload-symbols.sh",
 			);
-			name = "Upload dSYMs to Crashlytics";
+			name = "Upload dSYMs to PostHog";
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# Crashlytics needs the dSYMs to symbolicate a crash. Without this phase the\n# reports arrive as raw addresses. The script is a no-op when the checkout is absent\n# (a clean CI machine that has not resolved packages yet) instead of failing the build.\nRUN_SCRIPT=\"${BUILD_DIR%/Build/*}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run\"\nif [ -f \"$RUN_SCRIPT\" ]; then\n  \"$RUN_SCRIPT\" -gsp \"${SRCROOT}/VibeWatchApp/GoogleService-Info.plist\" -p ios\nelse\n  echo \"warning: Crashlytics run script not found at $RUN_SCRIPT; dSYMs not uploaded.\"\nfi\n";
+			shellScript = "# PostHog error tracking needs the dSYMs to symbolicate a crash. The SDK ships the\n# upload script (it skips non-Release configurations by itself and needs posthog-cli,\n# see VibeWatchTools/upload-dsyms.sh for auth). No-op when the checkout is absent\n# (a clean CI machine that has not resolved packages yet) instead of failing the build.\nRUN_SCRIPT=\"${BUILD_DIR%/Build/*}/SourcePackages/checkouts/posthog-ios/build-tools/upload-symbols.sh\"\nif [ -f \"$RUN_SCRIPT\" ]; then\n  \"$RUN_SCRIPT\" || echo \"warning: PostHog dSYM upload failed (posthog-cli mancante o non autenticato?); build not blocked.\"\nelse\n  echo \"warning: PostHog upload-symbols.sh not found at $RUN_SCRIPT; dSYMs not uploaded.\"\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -424,13 +435,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				CF1EE317BD6A461DA9DC12F3 /* PostHogClientTests.swift in Sources */,
 				04DE3D44BE064990BC929352 /* SyncEngineTests.swift in Sources */,
 				A1B2C3D40007E5F600000001 /* TrackingSyncTests.swift in Sources */,
 				A1B2C3D40006E5F600000001 /* ConfigValidationTests.swift in Sources */,
 				A1B2C3D40005E5F600000001 /* SyncPaginationTests.swift in Sources */,
 				A1B2C3D4000BE5F600000001 /* UsernameSetupTests.swift in Sources */,
 				A1B2C3D4000BE5F600000003 /* SocialProfileTests.swift in Sources */,
+				A1B2C3D4000BE5F600000007 /* WrapUpBuilderTests.swift in Sources */,
 				A1B2C3D4000BE5F600000005 /* FavoritesRatingsActionsTests.swift in Sources */,
 				A1B2C3D4000CE5F600000001 /* UniversalLinksTests.swift in Sources */,
 				A1B2C3D4000DE5F600000001 /* ImportViewModelTests.swift in Sources */,
@@ -444,6 +455,7 @@
 				A1B2C3D40001E5F600000001 /* SQLiteWritePathTests.swift in Sources */,
 				A1B2C3D40003E5F600000001 /* SQLiteTableWhitelistTests.swift in Sources */,
 				A1B2C3D40004E5F600000001 /* CrashReportingServiceTests.swift in Sources */,
+				A11A11A11A11A11A11A11A01 /* AnalyticsServiceTests.swift in Sources */,
 				A1B2C3D40001E5F600000201 /* YouTubeSearchClientTests.swift in Sources */,
 				A1B2C3D40001E5F600000101 /* UpsertCascadeTests.swift in Sources */,
 				A1B2C3D40002E5F600000001 /* LocalTitleSearchTests.swift in Sources */,
@@ -453,9 +465,11 @@
 				E8A7B6C5D4E3F20123456789 /* WatchProvidersRepositoryTests.swift in Sources */,
 				E8A7B6C5D4E3F2012345678B /* WatchProviderLoadStateTests.swift in Sources */,
 				E8B7C6D5A4F3920123456790 /* AIQuotaConfigurationTests.swift in Sources */,
+				E8B7C6D5A4F39201234567A0 /* AIResponseParserTests.swift in Sources */,
 				E8B7C6D5A4F3920123456792 /* MediaListItemTests.swift in Sources */,
 				E8B7C6D5A4F3920123456794 /* DetailLayoutTests.swift in Sources */,
 				F00D00000000000000000001 /* RedesignPresentationTests.swift in Sources */,
+				A1B2C3D4E5F6B0010002 /* LocalDataResetTests.swift in Sources */,
 				07CB9D210EB8E29B1438A690 /* FavoritePosterResolverTests.swift in Sources */,
 				032012297317BFBF7B93C56E /* SearchPaginationTests.swift in Sources */,
 				F1B8335685BB87A8B708A7AD /* SearchRankingTests.swift in Sources */,
@@ -466,6 +480,7 @@
 				234238D00F54312B9CCBB78A /* ValidationHelperTests.swift in Sources */,
 				1E06B7AE1160AE2531D5E0BB /* ToastCenterTests.swift in Sources */,
 				A1B2C3D4E5F6A1B2 /* KeychainStorageTests.swift in Sources */,
+				A1B2C3D4E5F6C0010001 /* SessionExpiryFeedbackTests.swift in Sources */,
 				A1B2C3D4E5F6A1B4 /* AuthMigrationTests.swift in Sources */,
 				C3D4E5F6A1B2C3D4 /* PerformanceTests.swift in Sources */,
 				D4E5F6A1B2C3D4E5 /* MultiDeviceSyncTests.swift in Sources */,
@@ -528,7 +543,7 @@
 				DEVELOPMENT_TEAM = 3V97GU3CCY;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -592,7 +607,7 @@
 				DEVELOPMENT_TEAM = 3V97GU3CCY;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -623,7 +638,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = "";
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = 3V97GU3CCY;
 				ENABLE_PREVIEWS = YES;
@@ -641,7 +656,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.7;
+				MARKETING_VERSION = 2.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.vibewatch.VibeWatchApp.beta;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -667,7 +682,7 @@
 				CODE_SIGN_ENTITLEMENTS = VibeWatchApp/VibeWatchAppRelease.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = 3V97GU3CCY;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -684,7 +699,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.7;
+				MARKETING_VERSION = 2.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.vibewatch.VibeWatchApp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -795,6 +810,14 @@
 				minimumVersion = 5.49.0;
 			};
 		};
+		B3A0F0012F20AA0100000001 /* XCRemoteSwiftPackageReference "posthog-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/PostHog/posthog-ios.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.56.0;
+			};
+		};
 		B3DC12CA2ED5CB0400B5A429 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
@@ -809,6 +832,14 @@
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 1.0.0;
+			};
+		};
+		B3A0F1002F30AA0100000001 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 8.0.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
@@ -829,6 +860,11 @@
 			package = B32F71122ED399B5001779C5 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
 			productName = RevenueCat;
 		};
+		B3A0F0022F20AA0100000002 /* PostHog */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B3A0F0012F20AA0100000001 /* XCRemoteSwiftPackageReference "posthog-ios" */;
+			productName = PostHog;
+		};
 		B3DF8FA72ED5CEC3007FD5D0 /* FirebaseCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = B3DC12CA2ED5CB0400B5A429 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
@@ -839,16 +875,6 @@
 			package = B3DC12CA2ED5CB0400B5A429 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseMessaging;
 		};
-		B3DF8FB02ED5CEC3007FD5D0 /* FirebaseAnalytics */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = B3DC12CA2ED5CB0400B5A429 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseAnalytics;
-		};
-		B3DF8FC02ED5CEC3007FD5D0 /* FirebaseCrashlytics */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = B3DC12CA2ED5CB0400B5A429 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseCrashlytics;
-		};
 		B3E30E132ECCB7AA008A3B6C /* Supabase */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = B318DCEC2EC6939A00DB1A9A /* XCRemoteSwiftPackageReference "supabase-swift" */;
@@ -858,6 +884,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = B3F2F7E22F14A10000D1A002 /* XCRemoteSwiftPackageReference "youtube-ios-player-helper" */;
 			productName = YouTubeiOSPlayerHelper;
+		};
+		B3A0F1012F30AA0100000002 /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B3A0F1002F30AA0100000001 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

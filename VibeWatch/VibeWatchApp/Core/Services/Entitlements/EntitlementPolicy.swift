@@ -75,7 +75,8 @@ enum EntitlementPolicy {
 
     // MARK: - Richieste AI giornaliere
 
-    /// Limite richieste AI/giorno per tier (Free/anonimo 5, Pro 10).
+    /// Limite richieste chat AI/giorno per tier (Free/anonimo 8, Pro 20). Solo chat: le altre
+    /// feature AI hanno un bucket separato gestito dal proxy.
     static func aiDailyLimit(for tier: UserTier) -> Int {
         switch tier {
         case .anonymous, .free: return AppConstants.AI.freeDailyRequestLimit

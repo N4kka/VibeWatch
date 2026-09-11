@@ -1,4 +1,5 @@
 import SwiftUI
+import GoogleSignIn
 import RevenueCat
 
 @main
@@ -55,6 +56,9 @@ struct VibeWatchApp: App {
                     // OAuth. `handle` risponde false senza effetti se l'URL non è una rotta
                     // nostra, quindi il ramo OAuth vede esattamente ciò che vedeva prima.
                     if appNavigationManager.handle(universalLink: url) { return }
+                    // Il callback del consenso Google, quando torna via URL scheme invece che
+                    // dentro la sessione web. `handle` risponde false su tutto il resto.
+                    if GIDSignIn.sharedInstance.handle(url) { return }
                     // Handle deep links from URL schemes (e.g., OAuth)
                     Task {
                         do {
@@ -216,6 +220,13 @@ class AppState: ObservableObject {
         // "assegnato dal backfill e mai visto da chi lo porta". Un flag locale si perderebbe alla
         // reinstallazione e la schermata ricomparirebbe a chi aveva gia' scelto.
         showUsernameSetup = await UsernameSetupViewModel.isNeeded()
+
+        // Person property per segmentare gli utenti per volume di contenuti tracciati.
+        // Una volta per lancio, dopo il pull: prima il conteggio sarebbe quello di ieri.
+        if let trackedCount = try? await SQLiteService.shared.count(
+            "watch_events", where: "deleted_at IS NULL") {
+            AnalyticsService.shared.setPersonProperties(["tracked_items_count": trackedCount])
+        }
 
         Logger.info("[AppState] Full sync completed on app launch")
     }

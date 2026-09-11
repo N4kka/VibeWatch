@@ -131,6 +131,18 @@ final class EpisodeSeenManager: ObservableObject {
         persistEpisodes()
     }
 
+    // MARK: - Reset
+
+    /// Dimentica episodi e serie viste su questo device. Lo stato sta in UserDefaults con chiavi
+    /// globali, quindi senza questo passaggio il diario dell'utente uscito resterebbe visibile a
+    /// chi entra dopo.
+    func resetLocalState() {
+        seenKeys = []
+        seenShowIds = []
+        UserDefaults.standard.removeObject(forKey: episodesDefaultsKey)
+        UserDefaults.standard.removeObject(forKey: showsDefaultsKey)
+    }
+
     // MARK: - Private
 
     private func makeKey(showId: Int, season: Int, episode: Int) -> String {

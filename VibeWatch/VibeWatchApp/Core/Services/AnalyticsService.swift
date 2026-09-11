@@ -1,10 +1,14 @@
 import Foundation
-#if canImport(FirebaseAnalytics)
-import FirebaseAnalytics
-#endif
 
-/// Centralized analytics tracking service
-/// Tracks key user events for product insights
+/// Centralized analytics facade.
+///
+/// Call sites talk to this class only; the actual delivery goes through `AnalyticsBackend`
+/// (PostHog SDK in production, a spy in tests). Event names and properties live in one place —
+/// the `AnalyticsEvent` catalog — so the taxonomy can't drift per call site.
+///
+/// Consent: `analytics.isEnabled` (default true, opt-out) is the single gate. It maps to the
+/// SDK's own `optIn()/optOut()`, which also stops replay and exception capture. `setUserId` is
+/// guarded too, so an opted-out user never produces an `$identify`.
 @MainActor
 class AnalyticsService {
     static let shared = AnalyticsService()
@@ -16,17 +20,30 @@ class AnalyticsService {
         let timestamp: Date
     }
 
-    private var isEnabled: Bool
+    struct Diagnostics {
+        let isConfigured: Bool
+        let isEnabled: Bool
+        let distinctId: String?
+        let isReplayActive: Bool
+    }
+
+    private(set) var isEnabled: Bool
     private var userId: String?
     private var events: [(name: String, parameters: [String: Any]?, timestamp: Date)] = []
     private let installId: String
 
+    private(set) var backend: AnalyticsBackend?
+    private(set) var replay: SessionReplayController
+
     private enum DefaultsKeys {
         static let isEnabled = "analytics.isEnabled"
         static let firstOpenTracked = "analytics.firstOpenTracked"
-        static let lastIdentifiedUserId = "analytics.lastIdentifiedUserId"
+        // Chiavi dell'era PostHogClient fatto in casa, da ripulire sui device esistenti.
+        static let legacyQueueV1 = "posthog.queue.v1"
+        static let legacyQueueV2 = "posthog.queue.v2"
+        static let legacyLastIdentifiedUserId = "analytics.lastIdentifiedUserId"
     }
-    
+
     private init() {
         self.installId = InstallIDService.getOrCreateInstallId()
 
@@ -34,253 +51,208 @@ class AnalyticsService {
             UserDefaults.standard.set(true, forKey: DefaultsKeys.isEnabled)
         }
         self.isEnabled = UserDefaults.standard.bool(forKey: DefaultsKeys.isEnabled)
+        self.replay = SessionReplayController(backend: nil)
+
+        // The hand-rolled client's queue is not replayed into the SDK: at most 200 stale events
+        // of the deprecated taxonomy, not worth the migration surface.
+        UserDefaults.standard.removeObject(forKey: DefaultsKeys.legacyQueueV1)
+        UserDefaults.standard.removeObject(forKey: DefaultsKeys.legacyQueueV2)
+        // Identify dedup is the SDK's job now.
+        UserDefaults.standard.removeObject(forKey: DefaultsKeys.legacyLastIdentifiedUserId)
 
         Logger.info("[Analytics] Service initialized (enabled=\(isEnabled))")
+    }
 
-        // Log diagnostics on startup to help debug production issues
+    // MARK: - Bootstrap
+
+    /// Call once from `AppDelegate.didFinishLaunchingWithOptions`, before anything can capture.
+    /// Sets up the PostHog SDK, wires the replay controller, and swaps the crash reporter onto
+    /// the same backend so events, errors and replays share one pipeline.
+    static func bootstrap() {
+        shared.bootstrapBackend()
+    }
+
+    private func bootstrapBackend() {
+        guard backend == nil else { return }
+        guard let realBackend = PostHogAnalyticsBackend.bootstrap(isEnabled: isEnabled, installId: installId) else {
+            return
+        }
+        backend = realBackend
+        replay = SessionReplayController(backend: realBackend)
+        CrashReportingService.reporter = PostHogCrashReporter(backend: realBackend)
         logDiagnostics()
     }
-    
-    /// Set user ID for analytics
-    func setUserId(_ userId: String?) {
-        let previousUserId = self.userId
+
+    // MARK: - Identity & consent
+
+    /// Identify the signed-in user (Supabase user id). Person properties carry the non-PII
+    /// profile snapshot — no email by design.
+    func setUserId(_ userId: String?, signedUpAt: Date? = nil) {
         self.userId = userId
 
-        #if canImport(FirebaseAnalytics)
-        Analytics.setUserID(userId)
-        #endif
-
-        // Same identity on the crash reports, so a crash can be traced to an account.
-        CrashReportingService.setUserId(userId)
-
-        if let userId, userId != previousUserId {
-            let lastIdentified = UserDefaults.standard.string(forKey: DefaultsKeys.lastIdentifiedUserId)
-            if lastIdentified != userId {
-                UserDefaults.standard.set(userId, forKey: DefaultsKeys.lastIdentifiedUserId)
-                Logger.info("[Analytics] Identifying user in PostHog: \(userId) (anonymous: \(installId))")
-                Task.detached {
-                    await PostHogClient.shared.identify(
-                        newDistinctId: userId,
-                        anonymousDistinctId: InstallIDService.getOrCreateInstallId()
-                    )
-                    Logger.info("[Analytics] User identification event sent to PostHog")
-                }
-            } else {
-                Logger.info("[Analytics] User \(userId) already identified, skipping PostHog identify call")
-            }
-        }
-
-        if let userId = userId {
-            Logger.info("[Analytics] User ID set: \(userId)")
-        } else {
+        guard let userId else {
             Logger.info("[Analytics] User ID cleared (anonymous mode)")
+            return
         }
+
+        // Consent gate: an opted-out user must not produce an $identify (the SDK would ignore it
+        // too, but the guard keeps intent explicit and the log honest).
+        guard isEnabled else {
+            Logger.info("[Analytics] Identify skipped (analytics disabled)")
+            return
+        }
+
+        var setOnce: [String: Any] = [:]
+        if let signedUpAt {
+            setOnce["signed_up_at"] = ISO8601DateFormatter().string(from: signedUpAt)
+        }
+        backend?.identify(
+            userId,
+            userProperties: currentPersonProperties(),
+            userPropertiesSetOnce: setOnce.isEmpty ? nil : setOnce
+        )
+        Logger.info("[Analytics] Identified user: \(userId)")
     }
-    
-    /// Set user properties
-    func setUserProperty(_ value: String?, forName name: String) {
-        #if canImport(FirebaseAnalytics)
-        Analytics.setUserProperty(value, forName: name)
-        #endif
-        
-        Logger.debug("[Analytics] User property set: \(name) = \(value ?? "nil")")
+
+    /// Sign-out: back to a fresh anonymous identity. `reset()` clears the SDK's distinct id,
+    /// super properties and session — re-register what must survive.
+    func reset() {
+        userId = nil
+        backend?.reset()
+        backend?.register([
+            "install_id": installId,
+            "schema_version": PostHogAnalyticsBackend.schemaVersion,
+        ])
+        Logger.info("[Analytics] Reset to anonymous identity")
     }
-    
-    /// Enable/disable analytics
+
+    /// Update person properties for the identified user (no-op while anonymous or disabled).
+    func setPersonProperties(_ properties: [String: Any]) {
+        guard isEnabled, userId != nil, !properties.isEmpty else { return }
+        backend?.capture("$set", properties: nil, userProperties: properties)
+    }
+
+    /// Enable/disable analytics. Single gate for events, replay, and error tracking.
     func setEnabled(_ enabled: Bool) {
         isEnabled = enabled
         UserDefaults.standard.set(enabled, forKey: DefaultsKeys.isEnabled)
-        
-        #if canImport(FirebaseAnalytics)
-        Analytics.setAnalyticsCollectionEnabled(enabled)
-        #endif
 
-        // Crash reporting follows the same opt-out.
+        if enabled {
+            backend?.optIn()
+        } else {
+            replay.stopIfActive()
+            backend?.optOut()
+        }
+
+        // Kept for the CrashReporter abstraction; the PostHog reporter no-ops here because the
+        // SDK opt-out above already covers exception capture.
         CrashReportingService.setCollectionEnabled(enabled)
 
         Logger.debug("[Analytics] \(enabled ? "Enabled" : "Disabled")")
     }
 
-    // MARK: - Event Tracking
+    private func currentPersonProperties() -> [String: Any] {
+        var props: [String: Any] = [:]
+        props["preferred_language"] = LocalizationManager.shared.currentLanguage.id
+        if let region = Locale.current.region?.identifier {
+            props["country"] = region
+        }
+        let onboardingCompleted = UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
+        props["onboarding_completed"] = onboardingCompleted
+        return props
+    }
+
+    // MARK: - Core tracking
+
+    /// The only path to the wire: logs locally for the debug view, forwards to the backend, and
+    /// starts session replay when the event is one of the core-action triggers.
+    func track(_ event: AnalyticsEvent, context: AnalyticsContext? = nil) {
+        guard isEnabled else { return }
+
+        let properties = mergedParameters(event.properties, context: context)
+        logEventLocal(event.name, parameters: properties)
+        backend?.capture(event.name, properties: properties, userProperties: nil)
+
+        if let trigger = event.replayTrigger {
+            replay.trigger(.coreAction(trigger))
+        }
+    }
+
+    /// Escape hatch for dynamic event names. Prefer `track(_:)` with a catalog case.
+    func logEvent(_ name: String, parameters: [String: Any]? = nil) {
+        track(.legacy(name: name, properties: parameters))
+    }
+
+    func logEventWithContext(
+        _ name: String,
+        parameters: [String: Any]?,
+        context: AnalyticsContext?
+    ) {
+        track(.legacy(name: name, properties: parameters), context: context)
+    }
 
     func trackAppOpen() {
         guard isEnabled else { return }
 
-        var eventsToCapture: [(name: String, parameters: [String: Any]?)] = []
-
         if !UserDefaults.standard.bool(forKey: DefaultsKeys.firstOpenTracked) {
+            // Il flag locale, non l'evento nativo "Application Installed": quello riscatterebbe
+            // per tutti gli utenti esistenti al primo aggiornamento a questa versione.
             UserDefaults.standard.set(true, forKey: DefaultsKeys.firstOpenTracked)
-            let params: [String: Any] = [
-                "install_id": installId
-            ]
-            logEventLocal("app_first_open", parameters: params)
-            eventsToCapture.append((name: "app_first_open", parameters: params))
+            track(.appFirstOpen(installId: installId))
         }
-
-        let openParams: [String: Any] = [
-            "install_id": installId
-        ]
-        logEventLocal("app_open", parameters: openParams)
-        eventsToCapture.append((name: "app_open", parameters: openParams))
-
-        Task {
-            for event in eventsToCapture {
-                await captureToPostHog(name: event.name, parameters: event.parameters)
-            }
-            try? await PostHogClient.shared.flush()
-        }
+        track(.appOpen(installId: installId))
     }
-    
-    /// Track generic event
-    func logEvent(_ name: String, parameters: [String: Any]? = nil) {
+
+    // MARK: - Screen tracking
+
+    /// Emits both the legacy `screen_view` (continuity with existing charts) and the native
+    /// `$screen` (feeds PostHog screen analytics and replay timelines).
+    func logScreenView(screenName: String, screenClass: String? = nil) {
         guard isEnabled else { return }
-
-        logEventLocal(name, parameters: parameters)
-
-        Task {
-            await captureToPostHog(name: name, parameters: parameters)
-        }
+        track(.screenView(screenName: screenName, screenClass: screenClass))
+        backend?.screen(screenName, properties: nil)
     }
-    
-    // MARK: - Authentication Events
-    
-    /// User created account
+
+    // MARK: - Typed helpers (existing call sites keep their signatures)
+
     func logAccountCreated(method: String) {
-        #if canImport(FirebaseAnalytics)
-        logEvent(AnalyticsEventSignUp, parameters: [
-            AnalyticsParameterMethod: method // "email", "apple", "google"
-        ])
-        #else
-        logEvent("sign_up", parameters: [
-            "method": method
-        ])
-        #endif
-        
-        // Set user property
-        setUserProperty(method, forName: "signup_method")
+        track(.signUp(method: method))
+        setPersonProperties(["login_provider": method])
     }
-    
-    /// User signed in
+
     func logSignIn(method: String) {
-        #if canImport(FirebaseAnalytics)
-        logEvent(AnalyticsEventLogin, parameters: [
-            AnalyticsParameterMethod: method
-        ])
-        #else
-        logEvent("login", parameters: [
-            "method": method
-        ])
-        #endif
+        track(.login(method: method))
     }
-    
-    // MARK: - Subscription Events
-    
-    /// Trial started
+
     func logTrialStarted(productId: String, price: Double, currency: String = "EUR") {
-        logEvent("trial_started", parameters: [
-            "product_id": productId,
-            "price": price,
-            "currency": currency
-        ])
-        
-        setUserProperty("true", forName: "has_trial")
-    }
-    
-    /// Subscription purchased
-    func logSubscriptionPurchased(
-        productId: String,
-        price: Double,
-        currency: String = "EUR"
-    ) {
-        #if canImport(FirebaseAnalytics)
-        logEvent(AnalyticsEventPurchase, parameters: [
-            "product_id": productId,
-            AnalyticsParameterPrice: price,
-            AnalyticsParameterCurrency: currency
-        ])
-        #else
-        logEvent("purchase", parameters: [
-            "product_id": productId,
-            "price": price,
-            "currency": currency
-        ])
-        #endif
-
-        setUserProperty("pro", forName: "subscription_tier")
-    }
-    
-    /// Subscription canceled
-    func logSubscriptionCanceled(productId: String, reason: String? = nil) {
-        var params: [String: Any] = ["product_id": productId]
-        if let reason = reason {
-            params["reason"] = reason
-        }
-        
-        logEvent("subscription_canceled", parameters: params)
-        setUserProperty("canceled", forName: "subscription_tier")
-    }
-    
-    /// Subscription renewed
-    func logSubscriptionRenewed(productId: String, price: Double) {
-        logEvent("subscription_renewed", parameters: [
-            "product_id": productId,
-            "price": price
-        ])
-    }
-    
-    /// Restore purchases
-    func logPurchasesRestored(count: Int) {
-        logEvent("purchases_restored", parameters: [
-            "count": count
-        ])
-    }
-    
-    // MARK: - Content Events
-    
-    /// Clip viewed
-    func logClipViewed(clipId: String, mediaId: Int, duration: Double) {
-        logEvent("clip_viewed", parameters: [
-            "clip_id": clipId,
-            "media_id": mediaId,
-            "duration": duration
-        ])
-    }
-    
-    /// Clip skipped
-    func logClipSkipped(clipId: String, mediaId: Int, watchedDuration: Double) {
-        logEvent("clip_skipped", parameters: [
-            "clip_id": clipId,
-            "media_id": mediaId,
-            "watched_duration": watchedDuration
-        ])
+        track(.trialStarted(productId: productId, price: price, currency: currency))
     }
 
-    /// Clip impression
+    func logSubscriptionPurchased(productId: String, price: Double, currency: String = "EUR") {
+        track(.purchase(productId: productId, price: price, currency: currency))
+        setPersonProperties(["subscription_tier": "pro"])
+    }
+
     func logClipImpression(clip: Clip, context: AnalyticsContext? = nil) {
         var params: [String: Any] = [
             "clip_id": clip.id,
             "video_id": clip.videoId,
             "duration_seconds": clip.duration,
             "media_type": clip.inferredMediaType.rawValue,
-            "is_segment": clip.isSegment
+            "is_segment": clip.isSegment,
         ]
-
         if let mediaId = clip.movieId ?? clip.tvShowId {
             params["media_id"] = mediaId
         }
-
         if let originalClipId = clip.originalClipId {
             params["original_clip_id"] = originalClipId
         }
-
         if let segmentIndex = clip.segmentIndex {
             params["segment_index"] = segmentIndex
         }
-
-        logEventWithContext("clip_impression", parameters: params, context: context)
+        track(.clipImpression(properties: params), context: context)
     }
 
-    /// Clip completion metrics
     func logClipCompletion(clip: Clip, watchedSeconds: Double, context: AnalyticsContext? = nil) {
         let totalSeconds = Double(max(clip.duration, 0))
         let completionRatio = AnalyticsContext.completionRatio(watched: watchedSeconds, total: totalSeconds)
@@ -290,121 +262,45 @@ class AnalyticsService {
             "media_type": clip.inferredMediaType.rawValue,
             "watched_seconds": watchedSeconds,
             "total_seconds": totalSeconds,
-            "completion_ratio": completionRatio
+            "completion_ratio": completionRatio,
         ]
-
         if let mediaId = clip.movieId ?? clip.tvShowId {
             params["media_id"] = mediaId
         }
+        track(.clipCompletion(properties: params), context: context)
+    }
 
-        logEventWithContext("clip_completion", parameters: params, context: context)
-    }
-    
-    /// Movie/show viewed
-    func logContentViewed(mediaId: Int, mediaType: String, title: String) {
-        logEvent("view_item", parameters: [
-            "media_id": mediaId,
-            "media_type": mediaType,
-            "title": title
-        ])
-    }
-    
-    /// Search performed
-    func logSearch(query: String, resultCount: Int) {
-        logEvent("search", parameters: [
-            "search_term": query,
-            "result_count": resultCount
-        ])
-    }
-    
-    // MARK: - List Events
-    
-    /// List created
     func logListCreated(listType: String, listName: String) {
-        logEvent("list_created", parameters: [
-            "list_type": listType, // "custom", "watchlist", etc.
-            "list_name": listName
-        ])
+        track(.listCreated(listType: listType, listName: listName))
     }
-    
-    /// List deleted
+
     func logListDeleted(listType: String) {
-        logEvent("list_deleted", parameters: [
-            "list_type": listType
-        ])
+        track(.listDeleted(listType: listType))
     }
-    
-    /// Item added to list
-    func logItemAddedToList(
-        listType: String,
-        mediaType: String,
-        context: AnalyticsContext? = nil
-    ) {
-        logEventWithContext(
-            "add_to_wishlist",
-            parameters: [
-                "list_type": listType,
-                "media_type": mediaType
-            ],
-            context: context
-        )
+
+    func logItemAddedToList(listType: String, mediaType: String, context: AnalyticsContext? = nil) {
+        track(.addToWishlist(listType: listType, mediaType: mediaType), context: context)
     }
-    
-    /// Item removed from list
-    func logItemRemovedFromList(listType: String, mediaType: String) {
-        logEvent("item_removed_from_list", parameters: [
-            "list_type": listType,
-            "media_type": mediaType
-        ])
-    }
-    
-    // MARK: - Paywall Events
-    
-    /// Paywall viewed
+
     func logPaywallViewed(source: String, type: String) {
-        logEvent("paywall_viewed", parameters: [
-            "source": source, // "clips_limit", "account_gate", "list_limit", etc.
-            "type": type // "daily_limit", "account_creation", "pro_features"
-        ])
+        track(.paywallViewed(source: source, type: type))
     }
-    
-    /// Paywall dismissed
+
     func logPaywallDismissed(source: String, action: String) {
-        logEvent("paywall_dismissed", parameters: [
-            "source": source,
-            "action": action // "close", "come_back_tomorrow", etc.
-        ])
+        track(.paywallDismissed(source: source, action: action))
     }
-    
-    /// CTA clicked on paywall
+
     func logPaywallCTAClicked(source: String, cta: String) {
-        logEvent("paywall_cta_clicked", parameters: [
-            "source": source,
-            "cta": cta // "upgrade", "start_trial", "sign_up"
-        ])
+        track(.paywallCTAClicked(source: source, cta: cta))
     }
-    
-    // MARK: - Feature Usage
-    
-    /// Filter applied
+
     func logFilterApplied(
         filterType: String,
         value: String,
         context: AnalyticsContext? = nil,
         extra: [String: Any]? = nil
     ) {
-        var params: [String: Any] = [
-            "filter_type": filterType, // "genre", "country", "duration", etc.
-            "value": value
-        ]
-
-        if let extra {
-            for (key, value) in extra {
-                params[key] = value
-            }
-        }
-
-        logEventWithContext("filter_applied", parameters: params, context: context)
+        track(.filterApplied(filterType: filterType, value: value, extra: extra), context: context)
     }
 
     func logSearchResultSelected(
@@ -415,234 +311,82 @@ class AnalyticsService {
         resultCount: Int?,
         context: AnalyticsContext? = nil
     ) {
-        var params: [String: Any] = [
-            "query": query,
-            "media_id": mediaId,
-            "media_type": mediaType,
-            "position": position
-        ]
-
-        if let resultCount {
-            params["result_count"] = resultCount
-        }
-
-        logEventWithContext("search_result_selected", parameters: params, context: context)
+        track(
+            .searchResultSelected(
+                query: query,
+                mediaId: mediaId,
+                mediaType: mediaType,
+                position: position,
+                resultCount: resultCount
+            ),
+            context: context
+        )
     }
-    
-    /// Platform selected
-    func logPlatformSelected(platform: String) {
-        logEvent("platform_selected", parameters: [
-            "platform": platform // "netflix", "disney", etc.
-        ])
-    }
-    
-    /// Language changed
+
     func logLanguageChanged(from: String, to: String) {
-        logEvent("language_changed", parameters: [
-            "from": from,
-            "to": to
-        ])
-        
-        setUserProperty(to, forName: "preferred_language")
-    }
-    
-    // MARK: - Onboarding
-    
-    /// Onboarding started
-    func logOnboardingStarted() {
-        logEvent("onboarding_started", parameters: nil)
-    }
-    
-    /// Onboarding completed
-    func logOnboardingCompleted() {
-        logEvent("onboarding_completed", parameters: nil)
-        setUserProperty("true", forName: "onboarding_completed")
-    }
-    
-    /// Onboarding skipped
-    func logOnboardingSkipped(step: Int) {
-        logEvent("onboarding_skipped", parameters: [
-            "step": step
-        ])
-    }
-    
-    // MARK: - Error Tracking
-    
-    /// Log error for analytics
-    func logError(_ error: AppError, context: String) {
-        logEvent("error_occurred", parameters: [
-            "error_type": String(describing: error),
-            "error_message": error.localizedDescription,
-            "context": context
-        ])
-
-        // Also a non-fatal in Crashlytics: an error that never crashes still needs a rate.
-        CrashReportingService.record(error, context: context)
-    }
-    
-    // MARK: - Screen Tracking
-
-    /// Track screen view
-    func logScreenView(screenName: String, screenClass: String? = nil) {
-        logEvent("screen_view", parameters: [
-            "screen_name": screenName,
-            "screen_class": screenClass ?? screenName
-        ])
-    }
-
-    // MARK: - Social & Engagement Events
-
-    /// Content shared
-    func logShareContent(mediaId: Int, mediaType: String, shareDestination: String) {
-        logEvent("share_content", parameters: [
-            "media_id": mediaId,
-            "media_type": mediaType,
-            "share_destination": shareDestination
-        ])
-    }
-
-    /// Comment posted
-    func logCommentPosted(clipId: String, mediaId: Int?, isReply: Bool) {
-        var params: [String: Any] = [
-            "clip_id": clipId,
-            "is_reply": isReply
-        ]
-        if let mediaId = mediaId {
-            params["media_id"] = mediaId
-        }
-        logEvent("comment_posted", parameters: params)
-    }
-
-    /// Clip liked/unliked
-    func logClipReaction(clipId: String, mediaId: Int?, reactionType: String, added: Bool) {
-        var params: [String: Any] = [
-            "clip_id": clipId,
-            "reaction_type": reactionType,
-            "added": added
-        ]
-        if let mediaId = mediaId {
-            params["media_id"] = mediaId
-        }
-        logEvent("clip_reaction", parameters: params)
-    }
-
-    // MARK: - Gamification Events
-
-    /// XP earned event
-    func logXPEarned(actionType: String, baseXP: Int, multiplier: Double, streakBonus: Double, totalXP: Int) {
-        logEvent("xp_earned", parameters: [
-            "action_type": actionType,
-            "base_xp": baseXP,
-            "multiplier": multiplier,
-            "streak_bonus": streakBonus,
-            "total_xp": totalXP
-        ])
-    }
-
-    /// Level up event
-    func logLevelUp(oldLevel: Int, newLevel: Int, rankName: String) {
-        logEvent("level_up", parameters: [
-            "old_level": oldLevel,
-            "new_level": newLevel,
-            "rank_name": rankName
-        ])
-    }
-
-    /// Badge unlocked
-    func logBadgeUnlocked(badgeId: String, badgeName: String, category: String) {
-        logEvent("badge_unlocked", parameters: [
-            "badge_id": badgeId,
-            "badge_name": badgeName,
-            "category": category
-        ])
-    }
-
-    /// Streak milestone
-    func logStreakMilestone(streakDays: Int, bonusPercentage: Int) {
-        logEvent("streak_milestone", parameters: [
-            "streak_days": streakDays,
-            "bonus_percentage": bonusPercentage
-        ])
-    }
-
-    /// Daily challenge completed
-    func logDailyChallengeCompleted(challengeType: String, xpReward: Int) {
-        logEvent("daily_challenge_completed", parameters: [
-            "challenge_type": challengeType,
-            "xp_reward": xpReward
-        ])
+        track(.languageChanged(from: from, to: to))
+        setPersonProperties(["preferred_language": to])
     }
 
     // MARK: - Diagnostics
 
-    /// Log analytics status for debugging production issues
+    func diagnostics() -> Diagnostics {
+        Diagnostics(
+            isConfigured: backend != nil,
+            isEnabled: isEnabled,
+            distinctId: backend?.distinctId(),
+            isReplayActive: backend?.isSessionReplayActive() ?? false
+        )
+    }
+
+    func flushNow() {
+        backend?.flush()
+    }
+
     func logDiagnostics() {
         Logger.info("[Analytics] Status check:")
         Logger.info("[Analytics]   - Enabled: \(isEnabled)")
         Logger.info("[Analytics]   - User ID: \(userId ?? "anonymous")")
         Logger.info("[Analytics]   - Install ID: \(installId)")
-        Logger.info("[Analytics]   - PostHog API Key present: \(!Config.posthogApiKey.isEmpty)")
+        Logger.info("[Analytics]   - Backend configured: \(backend != nil)")
         Logger.info("[Analytics]   - PostHog Host: \(Config.posthogHost.isEmpty ? "MISSING" : Config.posthogHost)")
-
-        Task {
-            let diagnostics = await PostHogClient.shared.diagnostics()
-            await MainActor.run {
-                Logger.info("[Analytics]   - PostHog queue count: \(diagnostics.queueCount)")
-                Logger.info("[Analytics]   - PostHog is flushing: \(diagnostics.isFlushing)")
-                Logger.info("[Analytics]   - PostHog flush attempts: \(diagnostics.flushAttemptCount)")
-                if let lastError = diagnostics.lastFlushErrorDescription {
-                    Logger.error("[Analytics]   - PostHog last error: \(lastError)")
-                }
-            }
-        }
-    }
-
-    // MARK: - Internal Helpers
-
-    private func logEventLocal(_ name: String, parameters: [String: Any]?) {
-        // Store locally for debugging
-        events.append((name, parameters, Date()))
-        if events.count > 100 {
-            events.removeFirst()
-        }
-
-        #if canImport(FirebaseAnalytics)
-        Analytics.logEvent(name, parameters: parameters)
-        #endif
-
-        Logger.debug("[Analytics] Event: \(name) \(parameters != nil ? "with params" : "")")
-    }
-
-    func logEventWithContext(
-        _ name: String,
-        parameters: [String: Any]?,
-        context: AnalyticsContext?
-    ) {
-        logEvent(name, parameters: mergedParameters(parameters, context: context))
-    }
-
-    private func mergedParameters(
-        _ parameters: [String: Any]?,
-        context: AnalyticsContext?
-    ) -> [String: Any]? {
-        guard let context else { return parameters }
-        var merged = parameters ?? [:]
-        for (key, value) in context.properties() {
-            merged[key] = value
-        }
-        return merged.isEmpty ? nil : merged
-    }
-
-    private func captureToPostHog(name: String, parameters: [String: Any]?) async {
-        let distinctId = userId ?? installId
-        await PostHogClient.shared.capture(
-            event: name,
-            distinctId: distinctId,
-            properties: parameters
-        )
     }
 
     func recentEvents(limit: Int) -> [EventSnapshot] {
         events.suffix(limit).map { EventSnapshot(name: $0.name, parameters: $0.parameters, timestamp: $0.timestamp) }
     }
+
+    // MARK: - Internal helpers
+
+    private func logEventLocal(_ name: String, parameters: [String: Any]?) {
+        events.append((name, parameters, Date()))
+        if events.count > 100 {
+            events.removeFirst()
+        }
+        Logger.debug("[Analytics] Event: \(name) \(parameters?.isEmpty == false ? "with params" : "")")
+    }
+
+    private func mergedParameters(
+        _ parameters: [String: Any],
+        context: AnalyticsContext?
+    ) -> [String: Any]? {
+        var merged = parameters
+        if let context {
+            for (key, value) in context.properties() {
+                merged[key] = value
+            }
+        }
+        return merged.isEmpty ? nil : merged
+    }
+
+    #if DEBUG
+    /// Test hook: inject a spy backend and reset consent state.
+    func _setBackendForTesting(_ backend: AnalyticsBackend?, enabled: Bool = true) {
+        self.backend = backend
+        self.replay = SessionReplayController(backend: backend)
+        self.isEnabled = enabled
+        self.userId = nil
+        self.events.removeAll()
+    }
+    #endif
 }

@@ -146,17 +146,7 @@ struct ProPaywallView: View {
         .clipShape(RoundedRectangle(cornerRadius: 20))
     }
 
-    private var featureKeys: [String] {
-        [
-            "paywall.feature.aiAssistant",
-            "paywall.feature.unlimitedClips",
-            "paywall.feature.offlineMode",
-            "paywall.feature.lists",
-            "paywall.feature.advancedFilters",
-            "paywall.feature.noAds",
-            "paywall.feature.releaseAlerts"
-        ]
-    }
+    private var featureKeys: [String] { PaywallCopy.proFeatureKeys }
 
     // MARK: - Features
 
@@ -166,17 +156,11 @@ struct ProPaywallView: View {
                 if index > 0 {
                     Divider().background(Color.white.opacity(0.06))
                 }
-                FeatureCheckRow(text: cleanedFeatureText(key.localized))
+                FeatureCheckRow(text: PaywallCopy.plain(key))
             }
         }
         .background(Color.white.opacity(0.05))
         .clipShape(RoundedRectangle(cornerRadius: 18))
-    }
-
-    /// Le stringhe delle feature hanno un'emoji davanti (le usa ancora il paywall della quota
-    /// giornaliera); qui il segno di spunta arancione fa già da icona.
-    private func cleanedFeatureText(_ text: String) -> String {
-        String(text.drop(while: { !($0.isLetter || $0.isNumber) }))
     }
 
     // MARK: - Pricing
@@ -324,6 +308,17 @@ struct ProPaywallView: View {
                         .foregroundColor(Color.white.opacity(0.6))
                 }
             }
+
+            // Il rinnovo automatico va dichiarato dove si compra, non solo sull'App Store: il
+            // paywall mostrava durata, prezzo, termini e privacy, ma non diceva da nessuna parte
+            // che l'abbonamento si rinnova da solo. "Cancel anytime" sotto il piano mensile non
+            // è la stessa informazione — dice che puoi uscire, non che altrimenti resti dentro.
+            Text("paywall.autoRenew".localized)
+                .font(.system(size: 11))
+                .foregroundColor(Color.white.opacity(0.45))
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 8)
         }
     }
 
@@ -542,9 +537,9 @@ struct ProPaywallView: View {
         guard let package = selectedPackage, !isPurchasing else { return }
         isPurchasing = true
         AnalyticsService.shared.logPaywallCTAClicked(source: source, cta: "continue")
-        AnalyticsService.shared.logEvent("purchase_started", parameters: [
+        AnalyticsService.shared.track(.purchaseStarted(properties: [
             "product_id": package.storeProduct.productIdentifier
-        ])
+        ]))
         Task {
             do {
                 let result = try await Purchases.shared.purchase(package: package)
@@ -593,9 +588,9 @@ struct ProPaywallView: View {
             } catch {
                 await MainActor.run {
                     isPurchasing = false
-                    AnalyticsService.shared.logEvent("purchase_failed", parameters: [
+                    AnalyticsService.shared.track(.purchaseFailed(properties: [
                         "error": (error as NSError).localizedDescription
-                    ])
+                    ]))
                     handlePurchaseError(error)
                 }
             }
@@ -605,7 +600,7 @@ struct ProPaywallView: View {
     private func restorePurchases() {
         guard !isRestoring else { return }
         isRestoring = true
-        AnalyticsService.shared.logEvent("restore_started", parameters: [:])
+        AnalyticsService.shared.track(.restoreStarted(properties: [:]))
         Task {
             do {
                 let info = try await Purchases.shared.restorePurchases()
@@ -615,10 +610,10 @@ struct ProPaywallView: View {
                         didCompletePurchaseOrRestore = true
                         quotaManager.upgradeToPro()
                         onPurchased?()
-                        AnalyticsService.shared.logEvent("restore_succeeded", parameters: [:])
+                        AnalyticsService.shared.track(.restoreSucceeded(properties: [:]))
                         dismiss(logDismiss: false)
                     } else {
-                        AnalyticsService.shared.logEvent("restore_no_active_subscription", parameters: [:])
+                        AnalyticsService.shared.track(.restoreNoActiveSubscription(properties: [:]))
                         presentAlert(
                             title: "No Subscription Found",
                             message: "We couldn't find an active subscription for this Apple ID."
@@ -628,9 +623,9 @@ struct ProPaywallView: View {
             } catch {
                 await MainActor.run {
                     isRestoring = false
-                    AnalyticsService.shared.logEvent("restore_failed", parameters: [
+                    AnalyticsService.shared.track(.restoreFailed(properties: [
                         "error": (error as NSError).localizedDescription
-                    ])
+                    ]))
                     presentAlert(title: "Restore Failed", message: error.localizedDescription)
                 }
             }

@@ -19,6 +19,7 @@ import {
   normalizeManualResolutions,
   RetryStagingRow,
 } from './retry.ts'
+import { withCors } from '../_shared/cors.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
@@ -33,7 +34,7 @@ function callerClient(req: Request) {
   })
 }
 
-serve(async (req: Request) => {
+serve(withCors(async (req: Request) => {
   try {
     return await handle(req)
   } catch (err) {
@@ -41,7 +42,7 @@ serve(async (req: Request) => {
     console.error(`[import-manual-resolve] eccezione non gestita: ${message}`)
     return jsonResponse({ error: 'internal', detail: message.slice(0, 400) }, 500)
   }
-})
+}))
 
 async function handle(req: Request): Promise<Response> {
   if (req.method !== 'POST') return jsonResponse({ error: 'method_not_allowed' }, 405)

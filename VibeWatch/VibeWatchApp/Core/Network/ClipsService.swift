@@ -184,6 +184,14 @@ final class ClipsService {
     
     // MARK: - Persistence
     
+    /// Butta i like alle clip: sono attività dell'account, non del device.
+    func resetLocalLikes() {
+        likedClips = []
+        clipLikeCounts = [:]
+        UserDefaults.standard.removeObject(forKey: "likedClips")
+        UserDefaults.standard.removeObject(forKey: "clipLikeCounts")
+    }
+
     private func loadLikedClips() {
         if let savedLikes = UserDefaults.standard.array(forKey: "likedClips") as? [String] {
             likedClips = Set(savedLikes)

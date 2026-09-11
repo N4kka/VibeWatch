@@ -2,19 +2,17 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- The app requests App Tracking Transparency and serves personalized AdMob ads, both of
-	     which are tracking under Apple's definition, so this is true. -->
+	<!-- False, with NSPrivacyTrackingDomains absent, because this manifest only describes what
+	     the app's own code does — Apple aggregates it with every SDK manifest in the bundle.
+	     The tracking that does happen is AdMob's: GoogleMobileAds.framework already declares
+	     NSPrivacyCollectedDataTypeDeviceID with tracking=true in its own manifest, so it stays
+	     declared without us restating it. Setting this to true would force a non-empty
+	     NSPrivacyTrackingDomains (the validator rejects true-without-domains, ITMS-91064), and
+	     any host listed there gets BLOCKED by iOS whenever the user denies ATT — which for the
+	     ad domains would kill non-personalized ads too, and for PostHog would kill first-party
+	     analytics ingestion. -->
 	<key>NSPrivacyTracking</key>
-	<true/>
-
-	<!-- Tracking domains the app itself connects to. Firebase and Google Mobile Ads ship their
-	     own privacy manifests declaring their domains, and Apple aggregates across all manifests,
-	     so those are not duplicated here. PostHog is a hand-rolled client (no SDK, no manifest of
-	     its own), so its ingestion host must be declared here. -->
-	<key>NSPrivacyTrackingDomains</key>
-	<array>
-		<string>eu.posthog.com</string>
-	</array>
+	<false/>
 
 	<key>NSPrivacyCollectedDataTypes</key>
 	<array>
@@ -86,20 +84,9 @@
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
 			</array>
 		</dict>
-		<!-- IDFA / device identifier used by AdMob for personalized advertising; this is the
-		     tracking surface behind the ATT prompt. -->
-		<dict>
-			<key>NSPrivacyCollectedDataType</key>
-			<string>NSPrivacyCollectedDataTypeDeviceID</string>
-			<key>NSPrivacyCollectedDataTypeLinked</key>
-			<true/>
-			<key>NSPrivacyCollectedDataTypeTracking</key>
-			<true/>
-			<key>NSPrivacyCollectedDataTypePurposes</key>
-			<array>
-				<string>NSPrivacyCollectedDataTypePurposeThirdPartyAdvertising</string>
-			</array>
-		</dict>
+		<!-- The IDFA behind the ATT prompt is collected by AdMob, not by this app's code, and
+		     GoogleMobileAds.framework already declares it (DeviceID, linked, tracking=true) in
+		     its own manifest — restating it here is what forced NSPrivacyTracking to true. -->
 	</array>
 
 	<key>NSPrivacyAccessedAPITypes</key>

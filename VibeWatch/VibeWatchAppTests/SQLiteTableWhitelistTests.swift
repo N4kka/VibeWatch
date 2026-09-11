@@ -89,6 +89,79 @@ final class SQLiteTableWhitelistTests: XCTestCase {
             "watch_providers must be writable through the whitelisted CRUD layer")
     }
 
+    /// Social feed M1: le due tabelle nuove sono scrivibili dal primo giorno — la lezione di
+    /// watch_providers (creata ma mai whitelisted, cache muta per mesi), non ripetuta.
+    func testSocialFeedTablesArePersistable() async throws {
+        _ = try await service.insert("user_reviews", values: [
+            "id": "r-1",
+            "user_id": "u1",
+            "media_type": "movie",
+            "tmdb_id": 603,
+            "content": "Una review",
+            "contains_spoilers": 0,
+            "updated_at": "2026-08-12T00:00:00Z"
+        ])
+        let reviews = try await service.queryRaw(
+            "SELECT content FROM user_reviews WHERE id = ?", parameters: ["r-1"])
+        XCTAssertEqual(reviews.first?["content"] as? String, "Una review")
+
+        _ = try await service.insert("activity_feed_cache", values: [
+            "scope": "following",
+            "activity_id": "a-1",
+            "position": 0,
+            "payload_json": "{}"
+        ])
+        let cached = try await service.queryRaw(
+            "SELECT payload_json FROM activity_feed_cache WHERE scope = ?",
+            parameters: ["following"])
+        XCTAssertEqual(cached.first?["payload_json"] as? String, "{}")
+    }
+
+    /// Social feed M2: gli specchi delle interazioni (like, commenti, coda di replay) sono
+    /// scrivibili dal primo giorno — stessa lezione di watch_providers dei test qui sopra.
+    func testActivityInteractionTablesArePersistable() async throws {
+        _ = try await service.insert("activity_likes", values: [
+            "id": "l-1",
+            "activity_id": "a-1",
+            "user_id": "u1",
+            "created_at": "2026-08-13T00:00:00Z"
+        ])
+        let likes = try await service.queryRaw(
+            "SELECT activity_id FROM activity_likes WHERE id = ?", parameters: ["l-1"])
+        XCTAssertEqual(likes.first?["activity_id"] as? String, "a-1")
+
+        _ = try await service.insert("activity_comments", values: [
+            "id": "c-1",
+            "activity_id": "a-1",
+            "user_id": "u1",
+            "content": "Un commento",
+            "created_at": "2026-08-13T00:00:00Z"
+        ])
+        let comments = try await service.queryRaw(
+            "SELECT content FROM activity_comments WHERE id = ?", parameters: ["c-1"])
+        XCTAssertEqual(comments.first?["content"] as? String, "Un commento")
+
+        _ = try await service.insert("activity_comment_likes", values: [
+            "id": "cl-1",
+            "comment_id": "c-1",
+            "user_id": "u1",
+            "created_at": "2026-08-13T00:00:00Z"
+        ])
+        let commentLikes = try await service.queryRaw(
+            "SELECT comment_id FROM activity_comment_likes WHERE id = ?", parameters: ["cl-1"])
+        XCTAssertEqual(commentLikes.first?["comment_id"] as? String, "c-1")
+
+        _ = try await service.insert("activity_pending_ops", values: [
+            "op_id": "op-1",
+            "op_type": "comment_add",
+            "payload_json": "{}",
+            "created_at": "2026-08-13T00:00:00Z"
+        ])
+        let ops = try await service.queryRaw(
+            "SELECT op_type FROM activity_pending_ops WHERE op_id = ?", parameters: ["op-1"])
+        XCTAssertEqual(ops.first?["op_type"] as? String, "comment_add")
+    }
+
     // MARK: - Helpers
 
     /// Table names present in the freshly created database, minus SQLite's own bookkeeping and the

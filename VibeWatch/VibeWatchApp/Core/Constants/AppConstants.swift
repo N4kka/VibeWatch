@@ -21,9 +21,11 @@ enum AppConstants {
     }
     
     enum AI {
-        /// Daily request allowance by tier
-        static let proDailyRequestLimit = 10
-        static let freeDailyRequestLimit = 5
+        /// Daily CHAT request allowance by tier. Counts only Vibe AI chat messages: the other AI
+        /// features (why-for-me, loglines, ...) live in a separate "aux" bucket owned by the
+        /// cerebras-proxy. Must stay in sync with supabase/functions/cerebras-proxy/quota.ts.
+        static let proDailyRequestLimit = 20
+        static let freeDailyRequestLimit = 8
     }
     
     enum Debug {

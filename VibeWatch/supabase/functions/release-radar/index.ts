@@ -12,12 +12,15 @@ const SUPABASE_SERVICE_ROLE_KEY = (() => {
 })()
 const TMDB_API_KEY = Deno.env.get('TMDB_API_KEY') ?? ''
 
-// Only alerts the user explicitly asked for. `watchlist` rows are created by the
-// list_items_create_alert trigger for *every* item added to a watchlist — they exist so
-// check-availability knows who to tell when a title reaches streaming, not so we can announce
-// that a decades-old catalogue title "is out now". Including them here is what produced the
-// 2026-07-23 storm ("The Shawshank Redemption is out now").
-const NOTIFIABLE_SOURCES = ['notify_me', 'release_calendar']
+// Every live subscription, however it was created: an explicit "Notify me", the release
+// calendar, or simply saving the title to a list (watchlist or custom).
+//
+// Automatic sources were excluded after the 2026-07-23 storm that announced decades-old
+// catalogue titles as new releases ("The Shawshank Redemption is out now"). The source filter
+// was never what fixed that, though — the window below is. A back-catalogue title has a release
+// date outside the last RELEASE_WINDOW_DAYS and is skipped no matter who subscribed to it, and
+// `last_notified_at is null` means each title is announced at most once, ever.
+const NOTIFIABLE_SOURCES = ['notify_me', 'release_calendar', 'watchlist', 'custom_list']
 
 // A release is news for a couple of days, not forever. The window absorbs a missed cron run
 // without ever reaching back into the catalogue.
@@ -42,25 +45,60 @@ serve(async (req) => {
       .from('release_alerts')
       .select('user_id, media_id, media_type, country_code, last_notified_at')
       .eq('is_active', true)
+      .is('deleted_at', null) // the title left every list: stop watching it
       .is('last_notified_at', null) // a release happens once; never re-announce it
       .in('source', NOTIFIABLE_SOURCES)
 
     if (error) throw error
 
-    let created = 0
-    for (const alert of alerts ?? []) {
-      const region = alert.country_code ?? 'US'
-      const url = `https://api.themoviedb.org/3/${alert.media_type}/${alert.media_id}?api_key=${TMDB_API_KEY}&language=en-US&region=${region}`
-      const response = await fetch(url)
-      if (!response.ok) continue
+    // Auto-enrollment turned a handful of subscriptions into one per saved title, so the daily
+    // pass is now hundreds of TMDB lookups instead of a dozen. One title is looked up once even
+    // when several people saved it, and the lookups run a few at a time: sequentially, the loop
+    // would spend most of a run's wall clock waiting on a network round trip it already made.
+    type Details = { releaseDate: string | null; title: string }
+    const detailsCache = new Map<string, Details | null>()
 
-      const details = await response.json()
-      const releaseDate = alert.media_type === 'tv' ? details.first_air_date : details.release_date
+    const lookup = async (mediaType: string, mediaId: number, region: string): Promise<Details | null> => {
+      const key = `${mediaType}:${mediaId}:${region}`
+      const cached = detailsCache.get(key)
+      if (cached !== undefined) return cached
+
+      const url = `https://api.themoviedb.org/3/${mediaType}/${mediaId}?api_key=${TMDB_API_KEY}&language=en-US&region=${region}`
+      const response = await fetch(url)
+      if (!response.ok) {
+        detailsCache.set(key, null)
+        return null
+      }
+      const payload = await response.json()
+      const details: Details = {
+        releaseDate: (mediaType === 'tv' ? payload.first_air_date : payload.release_date) ?? null,
+        title: payload.title ?? payload.name ?? 'New release',
+      }
+      detailsCache.set(key, details)
+      return details
+    }
+
+    const pending = alerts ?? []
+    const LOOKUP_CONCURRENCY = 8
+    for (let i = 0; i < pending.length; i += LOOKUP_CONCURRENCY) {
+      await Promise.all(pending.slice(i, i + LOOKUP_CONCURRENCY).map((alert) =>
+        lookup(alert.media_type, alert.media_id, alert.country_code ?? 'US')
+      ))
+    }
+
+    let created = 0
+    for (const alert of pending) {
+      const region = alert.country_code ?? 'US'
+      const details = await lookup(alert.media_type, alert.media_id, region)
+      if (!details) continue
+
+      const releaseDate = details.releaseDate
       // Out in the last RELEASE_WINDOW_DAYS days only. The old check was `releaseDate > today`,
-      // which skipped future releases and announced everything already released.
+      // which skipped future releases and announced everything already released. This is also
+      // what keeps automatic subscriptions safe: a catalogue title never falls in the window.
       if (!releaseDate || releaseDate > today || releaseDate < windowStart) continue
 
-      const title = details.title ?? details.name ?? 'New release'
+      const title = details.title
       const { error: insertError } = await supabase
         .from('notifications')
         .insert({
@@ -73,6 +111,8 @@ serve(async (req) => {
           is_sent: false,
           category: 'new_release',
           thread_id: `release:${alert.media_type}:${alert.media_id}`,
+          template_key: 'new_release',
+          template_params: { title },
         })
 
       if (!insertError) {

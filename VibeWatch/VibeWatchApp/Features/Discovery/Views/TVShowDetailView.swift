@@ -140,7 +140,8 @@ struct TVShowDetailView: View {
                                     .padding(.horizontal, 20)
                             }
 
-                            MediaRatingFavoriteCard(mediaType: "tv", tmdbId: tvShow.id)
+                            MediaRatingFavoriteCard(mediaType: "tv", tmdbId: tvShow.id,
+                                                    title: tvShow.name, posterPath: tvShow.posterPath)
                                 .padding(.horizontal, 20)
                             MediaWhyForMeCard { handleWhyForMeTap() }
                                 .padding(.horizontal, 20)
@@ -215,6 +216,12 @@ struct TVShowDetailView: View {
         }
         .task {
             await viewModel.loadTVShowDetails()
+            AnalyticsService.shared.logScreenView(screenName: "TVShowDetail")
+            if let tvShow = viewModel.tvShow {
+                AnalyticsService.shared.track(.mediaDetailViewed(
+                    mediaType: "tv", mediaId: tvShow.id, title: tvShow.name
+                ))
+            }
         }
         .sheet(isPresented: $showSearch) {
             SearchView(viewModel: searchViewModel)
@@ -500,6 +507,7 @@ struct TVShowDetailView: View {
     // MARK: - Sharing
     
     private func handleShare(tvShow: TVShow) async {
+        AnalyticsService.shared.track(.shareStarted(contentType: "media_link", mediaType: "tv"))
         isPreparingShare = true
         await prepareShareItems(tvShow: tvShow)
         if !shareItems.isEmpty {
