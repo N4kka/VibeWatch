@@ -96,18 +96,33 @@ final class ListLinkPropagationTests: XCTestCase {
                        "la copia pubblica deve seguire la lista di origine")
     }
 
-    func testLAggiuntaPropagataFinisceSullOutbox() async throws {
+    /// The shared watchlist owns no rows: the server resolves it to the watchlist (list_items_for).
+    func testLaWatchlistCondivisaNonScriveRigheProprie() async throws {
         let copia = try await copiaDellaWatchlist()
-        let prima = sync.queued.filter { $0.table == "list_items" }.count
 
         try await manager.addToList(listId: watchlistId, movie: Self.movie(id: 43), mediaType: .movie)
 
-        let inserimenti = sync.queued.filter {
-            $0.table == "list_items" && $0.operationType == "INSERT"
-                && $0.payload["list_id"] as? String == copia.id
+        let righeDellaCopia = sync.queued.filter {
+            $0.table == "list_items" && $0.payload["list_id"] as? String == copia.id
         }
-        XCTAssertEqual(inserimenti.count, 1, "anche la riga della copia va spinta al server")
-        XCTAssertGreaterThan(sync.queued.filter { $0.table == "list_items" }.count, prima)
+        XCTAssertTrue(righeDellaCopia.isEmpty)
+        XCTAssertEqual(manager.lists.first { $0.id == copia.id }?.items.map(\.mediaId), [43])
+    }
+
+    func testLaWatchlistSiCondivideUnaVoltaSola() async throws {
+        let prima = try await copiaDellaWatchlist()
+        let seconda = try await copiaDellaWatchlist()
+
+        XCTAssertEqual(prima.id, seconda.id, "a second tap reopens the same list")
+        XCTAssertEqual(manager.lists.filter { $0.type == .custom }.count, 1)
+    }
+
+    func testRinominareNonScollegaLaWatchlistCondivisa() async throws {
+        let copia = try await copiaDellaWatchlist()
+
+        try await manager.updateList(id: copia.id, name: "Nico's watchlist")
+
+        XCTAssertEqual(manager.lists.first { $0.id == copia.id }?.sourceListType, .watchlist)
     }
 
     func testUnaRimozioneDallaSorgenteArrivaNellaCopia() async throws {
@@ -144,14 +159,13 @@ final class ListLinkPropagationTests: XCTestCase {
                        "la copia della lista 'viste' non c'entra con un'aggiunta alla watchlist")
     }
 
-    /// Un titolo già presente nella copia non deve far fallire l'aggiunta sulla sorgente.
-    func testUnItemGiaPresenteNellaCopiaNonRompeLAggiunta() async throws {
+    /// Adding to the shared watchlist is adding to the watchlist.
+    func testAggiungereAllaWatchlistCondivisaScriveNellaWatchlist() async throws {
         let copia = try await copiaDellaWatchlist()
+
         try await manager.addToList(listId: copia.id, movie: Self.movie(id: 47), mediaType: .movie)
 
-        try await manager.addToList(listId: watchlistId, movie: Self.movie(id: 47), mediaType: .movie)
-
-        XCTAssertEqual(manager.lists.first { $0.id == copia.id }?.items.count, 1,
-                       "l'item resta uno solo, e nessun errore risale al chiamante")
+        XCTAssertEqual(manager.lists.first { $0.id == watchlistId }?.items.map(\.mediaId), [47])
+        XCTAssertEqual(manager.lists.first { $0.id == copia.id }?.items.map(\.mediaId), [47])
     }
 }
