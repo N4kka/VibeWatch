@@ -135,7 +135,8 @@ final class LocalTrackingRepository: TrackingRepositoryProtocol {
         let sql = """
             SELECT t.tmdb_show_id, t.bucket, t.next_season,
                    COALESCE(lt.title, t.show_name) AS title,
-                   t.show_poster_path, t.updated_at, t.completed_at, t.last_watched_at
+                   t.show_poster_path, t.updated_at, t.completed_at, t.last_watched_at,
+                   t.watchlist_since
               FROM tv_tracking t
               LEFT JOIN localized_titles lt
                 ON lt.media_type = 'tv' AND lt.tmdb_id = t.tmdb_show_id AND lt.language = ?
@@ -163,7 +164,10 @@ final class LocalTrackingRepository: TrackingRepositoryProtocol {
                     ?? Self.date(row["updated_at"])
                     ?? Date()
             } else {
-                addedAt = Self.date(row["updated_at"]) ?? Date()
+                // `updated_at` moves on every server recompute (an episode marked, a new one
+                // aired), which pushed the show to the top of the watchlist each time.
+                // `watchlist_since` only moves when the show (re)enters the list.
+                addedAt = Self.date(row["watchlist_since"]) ?? Self.date(row["updated_at"]) ?? Date()
             }
 
             return FusedListRow(
