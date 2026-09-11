@@ -25,6 +25,9 @@ struct Movie: Codable, Identifiable, Hashable, Sendable {
     var revenue: Int? = nil
     var productionCompanies: [ProductionCompany]? = nil
     var spokenLanguages: [SpokenLanguage]? = nil
+    /// Per-country dates (`append_to_response=release_dates`, details only). `releaseDate` is
+    /// TMDB's primary date — the earliest anywhere in the world, not the user's.
+    var releaseDates: ReleaseDates? = nil
 
     /// Il tipo con cui navigare quando questo Movie fa da item di `navigationDestination`
     /// (il modello fa da contenitore anche per le serie, con il solo id valorizzato).
@@ -48,18 +51,34 @@ struct Movie: Codable, Identifiable, Hashable, Sendable {
         case budget, revenue
         case productionCompanies = "production_companies"
         case spokenLanguages = "spoken_languages"
+        case releaseDates = "release_dates"
     }
-    
+
+    /// The date the film comes out in `region` ("yyyy-MM-dd"), premieres (type 1: festivals,
+    /// red carpets) excluded. Nil when the country has none.
+    ///
+    /// Theatrical dates (types 2–3) win, and the LATEST one: TMDB keeps a postponed date next to
+    /// the new one (Exit 8 in Italy: 2026-04-23 and 2026-09-24), and a re-release for an
+    /// anniversary is the release that matters now. Without a theatrical run, the earliest
+    /// digital/physical/TV date — the latest would be a Blu-ray months after streaming.
+    func releaseDate(in region: String) -> String? {
+        let dates = (releaseDates?.results.first { $0.iso == region }?.releaseDates ?? [])
+            .filter { $0.type != 1 }
+            .compactMap { entry in entry.releaseDate.map { (day: String($0.prefix(10)), type: entry.type) } }
+        let theatrical = dates.filter { $0.type == 2 || $0.type == 3 }.map(\.day)
+        return theatrical.max() ?? dates.map(\.day).min()
+    }
+
     var posterURL: URL? {
         guard let posterPath = posterPath else { return nil }
         return URL(string: "https://image.tmdb.org/t/p/w500\(posterPath)")
     }
-    
+
     var backdropURL: URL? {
         guard let backdropPath = backdropPath else { return nil }
         return URL(string: "https://image.tmdb.org/t/p/w1280\(backdropPath)")
     }
-    
+
     var year: String? {
         guard let releaseDate = releaseDate else { return nil }
         return String(releaseDate.prefix(4))
@@ -81,6 +100,31 @@ struct Movie: Codable, Identifiable, Hashable, Sendable {
             return "\(hours)h \(minutes)m"
         } else {
             return "\(minutes)m"
+        }
+    }
+}
+
+/// TMDB `release_dates`: one entry per country, each with its theatrical/digital/… dates.
+struct ReleaseDates: Codable, Hashable, Sendable {
+    let results: [Country]
+
+    struct Country: Codable, Hashable, Sendable {
+        let iso: String
+        let releaseDates: [Entry]
+
+        enum CodingKeys: String, CodingKey {
+            case iso = "iso_3166_1"
+            case releaseDates = "release_dates"
+        }
+    }
+
+    struct Entry: Codable, Hashable, Sendable {
+        let releaseDate: String?
+        let type: Int?
+
+        enum CodingKeys: String, CodingKey {
+            case releaseDate = "release_date"
+            case type
         }
     }
 }

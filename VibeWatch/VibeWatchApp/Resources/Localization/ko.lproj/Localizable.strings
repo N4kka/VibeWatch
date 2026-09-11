@@ -1450,3 +1450,5 @@
 "shareCard.list.count" = "%d개 작품";
 "shareCard.list.action" = "리스트 공유하기";
 "shareCard.list.empty" = "빈 리스트는 보여줄 것이 없습니다";
+"movieDetail.originalReleaseDate" = "최초 개봉";
+"mediaStatus.upcoming" = "개봉 예정";

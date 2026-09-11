@@ -1443,3 +1443,5 @@
 "shareCard.list.count" = "%d títulos";
 "shareCard.list.action" = "Partilhar a lista";
 "shareCard.list.empty" = "Uma lista vazia não tem nada para mostrar";
+"movieDetail.originalReleaseDate" = "Estreia original";
+"mediaStatus.upcoming" = "Em breve";

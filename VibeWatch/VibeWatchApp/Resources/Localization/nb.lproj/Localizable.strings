@@ -1382,3 +1382,5 @@
 "shareCard.list.count" = "%d titler";
 "shareCard.list.action" = "Del lista";
 "shareCard.list.empty" = "En tom liste har ingenting å vise";
+"movieDetail.originalReleaseDate" = "Opprinnelig utgivelse";
+"mediaStatus.upcoming" = "Kommer snart";

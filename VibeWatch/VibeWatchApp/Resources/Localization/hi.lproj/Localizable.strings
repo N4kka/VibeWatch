@@ -1461,3 +1461,5 @@
 "shareCard.list.count" = "%d शीर्षक";
 "shareCard.list.action" = "सूची साझा करें";
 "shareCard.list.empty" = "खाली सूची के पास दिखाने को कुछ नहीं है";
+"movieDetail.originalReleaseDate" = "मूल रिलीज़";
+"mediaStatus.upcoming" = "जल्द आ रहा है";

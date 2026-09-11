@@ -1456,3 +1456,5 @@
 "shareCard.list.count" = "%d tytułów";
 "shareCard.list.action" = "Udostępnij listę";
 "shareCard.list.empty" = "Pusta lista nie ma czego pokazać";
+"movieDetail.originalReleaseDate" = "Pierwotna premiera";
+"mediaStatus.upcoming" = "Wkrótce";

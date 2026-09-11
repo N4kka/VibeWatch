@@ -1435,3 +1435,5 @@
 "shareCard.list.count" = "%d 部作品";
 "shareCard.list.action" = "分享片单";
 "shareCard.list.empty" = "空片单没有可展示的内容";
+"movieDetail.originalReleaseDate" = "首映日期";
+"mediaStatus.upcoming" = "即将上映";

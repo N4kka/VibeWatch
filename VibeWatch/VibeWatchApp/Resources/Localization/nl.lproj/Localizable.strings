@@ -1455,3 +1455,5 @@
 "shareCard.list.count" = "%d titels";
 "shareCard.list.action" = "Lijst delen";
 "shareCard.list.empty" = "Een lege lijst heeft niets te tonen";
+"movieDetail.originalReleaseDate" = "Oorspronkelijke release";
+"mediaStatus.upcoming" = "Binnenkort";

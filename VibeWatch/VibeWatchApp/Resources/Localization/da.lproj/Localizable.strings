@@ -1457,3 +1457,5 @@
 "shareCard.list.count" = "%d titler";
 "shareCard.list.action" = "Del listen";
 "shareCard.list.empty" = "En tom liste har intet at vise";
+"movieDetail.originalReleaseDate" = "Original udgivelse";
+"mediaStatus.upcoming" = "Kommer snart";

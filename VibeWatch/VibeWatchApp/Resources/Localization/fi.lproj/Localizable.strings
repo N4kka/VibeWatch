@@ -1456,3 +1456,5 @@
 "shareCard.list.count" = "%d nimikettä";
 "shareCard.list.action" = "Jaa lista";
 "shareCard.list.empty" = "Tyhjällä listalla ei ole mitään näytettävää";
+"movieDetail.originalReleaseDate" = "Alkuperäinen julkaisu";
+"mediaStatus.upcoming" = "Tulossa";

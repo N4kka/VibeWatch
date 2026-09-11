@@ -1440,3 +1440,5 @@
 "shareCard.list.count" = "%d наименований";
 "shareCard.list.action" = "Поделиться списком";
 "shareCard.list.empty" = "Пустому списку нечего показать";
+"movieDetail.originalReleaseDate" = "Первоначальный выход";
+"mediaStatus.upcoming" = "Скоро";

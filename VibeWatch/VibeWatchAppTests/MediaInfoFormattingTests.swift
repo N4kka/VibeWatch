@@ -32,6 +32,53 @@ final class MediaInfoFormattingTests: XCTestCase {
         XCTAssertNil(MediaInfoFormatting.formatCurrencyCompact(-1))
     }
 
+    // MARK: - Data di uscita del paese
+
+    func testLaDataDiUscitaEQuellaDelPaeseDellUtente() throws {
+        MediaInfoFormatting.localeOverride = Locale(identifier: "it_IT")
+        defer { MediaInfoFormatting.localeOverride = nil }
+        let json = """
+        {"id":1,"title":"Exit 8","overview":"","adult":false,"popularity":1,"original_language":"ja",
+         "vote_average":7,"vote_count":1,"release_date":"2025-08-01","status":"Released",
+         "release_dates":{"results":[{"iso_3166_1":"IT","release_dates":[
+           {"release_date":"2026-08-30T00:00:00.000Z","type":1},
+           {"release_date":"2026-09-23T00:00:00.000Z","type":3}]}]}}
+        """
+        let movie = try JSONDecoder().decode(Movie.self, from: Data(json.utf8))
+
+        XCTAssertEqual(movie.releaseDate(in: "IT"), "2026-09-23", "the premiere doesn't count")
+        XCTAssertNil(movie.releaseDate(in: "FR"))
+
+        let now = try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-09-11T12:00:00Z"))
+        let rows = MovieCreditsInfoBuilder.rows(movie: movie, director: nil, now: now)
+        let value = { (key: String) in rows.first { $0.titleKey == key }?.value }
+        XCTAssertEqual(value("movieDetail.releaseDate"), MediaInfoFormatting.formatDate("2026-09-23"))
+        XCTAssertEqual(value("movieDetail.originalReleaseDate"), MediaInfoFormatting.formatDate("2025-08-01"))
+        XCTAssertEqual(value("movieDetail.status"), "mediaStatus.upcoming".localized,
+                       "out in Japan, not yet here")
+    }
+
+    /// A postponed date stays on TMDB next to the new one; the latest theatrical date wins.
+    /// Without a theatrical run, the first digital/TV date — not a Blu-ray months later.
+    func testUnaDataRinviataNonVinceSuQuellaNuova() throws {
+        let json = """
+        {"id":1,"title":"Exit 8","overview":"","adult":false,"popularity":1,"original_language":"ja",
+         "vote_average":7,"vote_count":1,"release_date":"2025-08-01",
+         "release_dates":{"results":[
+           {"iso_3166_1":"IT","release_dates":[
+             {"release_date":"2026-04-23T00:00:00.000Z","type":3},
+             {"release_date":"2026-09-24T00:00:00.000Z","type":3},
+             {"release_date":"2026-12-01T00:00:00.000Z","type":4}]},
+           {"iso_3166_1":"US","release_dates":[
+             {"release_date":"2026-05-01T00:00:00.000Z","type":4},
+             {"release_date":"2026-08-01T00:00:00.000Z","type":5}]}]}}
+        """
+        let movie = try JSONDecoder().decode(Movie.self, from: Data(json.utf8))
+
+        XCTAssertEqual(movie.releaseDate(in: "IT"), "2026-09-24")
+        XCTAssertEqual(movie.releaseDate(in: "US"), "2026-05-01")
+    }
+
     // MARK: - Date
 
     func testUnaDataTMDBDiventaUnaDataLeggibile() {

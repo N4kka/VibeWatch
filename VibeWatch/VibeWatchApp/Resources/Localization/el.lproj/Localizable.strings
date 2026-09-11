@@ -1456,3 +1456,5 @@
 "shareCard.list.count" = "%d τίτλοι";
 "shareCard.list.action" = "Μοιράσου τη λίστα";
 "shareCard.list.empty" = "Μια άδεια λίστα δεν έχει τίποτα να δείξει";
+"movieDetail.originalReleaseDate" = "Αρχική κυκλοφορία";
+"mediaStatus.upcoming" = "Προσεχώς";

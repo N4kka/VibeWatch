@@ -13,7 +13,7 @@ enum MovieCreditsInfoBuilder {
         var isItalic: Bool = false
     }
 
-    static func rows(movie: Movie, director: Crew?) -> [Row] {
+    static func rows(movie: Movie, director: Crew?, now: Date = Date()) -> [Row] {
         var rows: [Row] = []
 
         if movie.ratingPercentage > 0 {
@@ -28,11 +28,27 @@ enum MovieCreditsInfoBuilder {
             rows.append(Row(titleKey: "movieDetail.runtime", value: runtime))
         }
 
-        if let released = MediaInfoFormatting.formatDate(movie.releaseDate) {
+        // The user's country first: TMDB's `release_date` is the earliest anywhere in the world
+        // (Exit 8 said "3 agosto 2025" — Japan — for a film that reaches Italy in September 2026).
+        let localDate = MediaInfoFormatting.displayLocale.region.flatMap { movie.releaseDate(in: $0.identifier) }
+        if let released = MediaInfoFormatting.formatDate(localDate ?? movie.releaseDate) {
             rows.append(Row(titleKey: "movieDetail.releaseDate", value: released))
         }
+        if let localDate, localDate != movie.releaseDate,
+           let original = MediaInfoFormatting.formatDate(movie.releaseDate) {
+            rows.append(Row(titleKey: "movieDetail.originalReleaseDate", value: original))
+        }
 
-        if let status = MediaInfoFormatting.localizedStatus(movie.status) {
+        // "Released" is worldwide too: out in Japan, still weeks away here.
+        let today: String = {
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.dateFormat = "yyyy-MM-dd"
+            return formatter.string(from: now)
+        }()
+        if let localDate, localDate > today, movie.status?.lowercased() == "released" {
+            rows.append(Row(titleKey: "movieDetail.status", value: "mediaStatus.upcoming".localized))
+        } else if let status = MediaInfoFormatting.localizedStatus(movie.status) {
             rows.append(Row(titleKey: "movieDetail.status", value: status))
         }
 

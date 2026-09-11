@@ -1444,3 +1444,5 @@
 "shareCard.list.count" = "%d titlar";
 "shareCard.list.action" = "Dela listan";
 "shareCard.list.empty" = "En tom lista har inget att visa";
+"movieDetail.originalReleaseDate" = "Ursprunglig premiär";
+"mediaStatus.upcoming" = "Kommer snart";
