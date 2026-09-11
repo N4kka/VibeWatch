@@ -50,11 +50,20 @@ struct ListsView: View {
     
     /// Crea una lista pubblicabile a partire dalla lista core attualmente visualizzata
     /// (snapshot scollegato): apre l'editor sulla nuova lista per rinominarla e renderla pubblica.
+    /// The copy takes seconds before the editor opens; a second tap used to make a second list.
+    @State private var isDuplicating = false
+
     private func duplicateCurrentCoreList() {
+        guard !isDuplicating else { return }
         guard appState.isAuthenticated else { showAuthGate = true; return }
         guard let source = currentLists.first else { return }
-        guard viewModel.canCreateList() else { showingPaywall = true; return }
+        // Reopening the existing shared watchlist doesn't create a list, so no limit applies.
+        let reusesWatchlistView = source.type == .watchlist
+            && ListManager.shared.lists.contains(where: \.isWatchlistView)
+        guard reusesWatchlistView || viewModel.canCreateList() else { showingPaywall = true; return }
+        isDuplicating = true
         Task {
+            defer { isDuplicating = false }
             let copyName = String(format: "lists.duplicateName".localized, source.displayName)
             if let newList = try? await ListManager.shared.duplicateAsNewList(from: source.id, name: copyName) {
                 await MainActor.run { forkedList = newList }
@@ -164,10 +173,13 @@ struct ListsView: View {
     private var myListsContent: some View {
         VStack(spacing: 0) {
             HStack(alignment: .center, spacing: 0) {
-                ListTypeSwitcher(selectedType: $selectedListType)
-                    .padding(.leading, 20)
-
-                Spacer()
+                // Scrolls instead of squeezing: with the "..." menu shown the chips no longer fit
+                // and "Da Vedere" wrapped onto two lines.
+                ScrollView(.horizontal, showsIndicators: false) {
+                    ListTypeSwitcher(selectedType: $selectedListType)
+                        .padding(.leading, 20)
+                        .padding(.trailing, 8)
+                }
 
                 if selectedListType != .myLists {
                     Menu {
@@ -539,6 +551,9 @@ struct MediaItemRow: View {
     @State private var fallbackDuration: Int?
     @State private var localizedTitle: String?
     @State private var localizedOverview: String?
+    /// The row stores the poster seen when the title was added; for a film months from release
+    /// TMDB swaps the teaser for the real poster later, and the row kept the old one forever.
+    @State private var freshPosterPath: String?
     @State private var ambientTint: Color = .clear
 
     /// Card geometry — tighter than before so ~3–4 cards breathe per screen.
@@ -595,7 +610,7 @@ struct MediaItemRow: View {
 
             HStack(alignment: .top, spacing: 14) {
                 // Poster image - left side
-                if let posterPath = item.posterPath,
+                if let posterPath = freshPosterPath ?? item.posterPath,
                    let url = URL(string: "https://image.tmdb.org/t/p/w342\(posterPath)") {
                     CachedAsyncImage(url: url, maxPixelSize: 630) { image in
                         image
@@ -698,6 +713,10 @@ struct MediaItemRow: View {
                         )
                     }
                 }
+                // Without this the column is only as wide as its widest line: a wrapped overview
+                // leaves slack, the HStack comes out narrower than the card and gets centered,
+                // shifting the poster right on some rows.
+                .frame(maxWidth: .infinity, alignment: .leading)
                 
                 // Checkmark button - top right
                 if !isReadOnly {
@@ -900,6 +919,11 @@ struct MediaItemRow: View {
                 applyTVDisplayFallback(tvShow)
             }
         }
+
+        if localizedOverview == nil, item.displayOverview(fallback: fallbackOverview) == nil,
+           let english = await TMDBService.shared.getEnglishOverview(id: item.mediaId, mediaType: item.mediaType) {
+            fallbackOverview = english
+        }
     }
 
     private var needsMovieNetworkFallback: Bool {
@@ -918,6 +942,9 @@ struct MediaItemRow: View {
         if !movie.title.isEmpty {
             localizedTitle = movie.title
         }
+        if let posterPath = movie.posterPath, posterPath != item.posterPath {
+            freshPosterPath = posterPath
+        }
         if !movie.overview.isEmpty {
             localizedOverview = movie.overview
         }
@@ -935,6 +962,9 @@ struct MediaItemRow: View {
     private func applyTVDisplayFallback(_ tvShow: TVShow) {
         if !tvShow.name.isEmpty {
             localizedTitle = tvShow.name
+        }
+        if let posterPath = tvShow.posterPath, posterPath != item.posterPath {
+            freshPosterPath = posterPath
         }
         if !tvShow.overview.isEmpty {
             localizedOverview = tvShow.overview

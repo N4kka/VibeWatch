@@ -157,4 +157,11 @@ extension String {
     nonisolated func localizedMainSafe() -> String {
         LocalizationManager.shared.localized(self)
     }
+
+    /// "1 stagione" / "4 stagioni" in the in-app language.
+    nonisolated static func seasonCount(_ count: Int) -> String {
+        count == 1
+            ? "ai.card.oneSeason".localized
+            : String(format: "ai.card.seasonCount".localized, count)
+    }
 }
