@@ -1325,7 +1325,6 @@
 "shareCard.completedBadge" = "Completed";
 "shareCard.stats.episodes" = "%d episodes";
 "shareCard.stats.hours" = "%d hours";
-"shareCard.followers" = "%d followers";
 "shareCard.favoriteMovies" = "Favorite movies";
 "shareCard.favoriteShows" = "Favorite TV shows";
 "shareCard.toast.renderFailed" = "Couldn't create the image";
@@ -1455,3 +1454,5 @@
 "shareCard.list.count" = "%d titles";
 "shareCard.list.action" = "Share the list";
 "shareCard.list.empty" = "An empty list has nothing to show";
+"movieDetail.originalReleaseDate" = "Original release";
+"mediaStatus.upcoming" = "Upcoming";

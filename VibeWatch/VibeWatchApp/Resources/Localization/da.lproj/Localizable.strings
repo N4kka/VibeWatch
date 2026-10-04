@@ -1327,7 +1327,6 @@
 "shareCard.completedBadge" = "Fuldført";
 "shareCard.stats.episodes" = "%d afsnit";
 "shareCard.stats.hours" = "%d timer";
-"shareCard.followers" = "%d følgere";
 "shareCard.favoriteMovies" = "Yndlingsfilm";
 "shareCard.favoriteShows" = "Yndlingsserier";
 "shareCard.toast.renderFailed" = "Billedet kunne ikke oprettes";
@@ -1457,3 +1456,5 @@
 "shareCard.list.count" = "%d titler";
 "shareCard.list.action" = "Del listen";
 "shareCard.list.empty" = "En tom liste har intet at vise";
+"movieDetail.originalReleaseDate" = "Original udgivelse";
+"mediaStatus.upcoming" = "Kommer snart";

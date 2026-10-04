@@ -34,6 +34,8 @@ struct ListTypeSwitcher: View {
                 } label: {
                     Text(type.displayName)
                         .font(.system(size: 12.5, weight: .bold))
+                        .lineLimit(1)
+                        .fixedSize()
                         .foregroundColor(isSelected ? .theme.accentOrange : .theme.textSecondary)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 8)

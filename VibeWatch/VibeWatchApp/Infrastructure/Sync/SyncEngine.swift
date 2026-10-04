@@ -119,6 +119,9 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
     /// Il recupero armato da `flushAndPullTrackingState` quando il push non è passato. Uno solo
     /// alla volta: N tap durante il sync di avvio non devono lasciare N attese in giro.
     private var trackingCatchUpTask: Task<Void, Never>?
+    /// True while an outbox push is in flight, whoever started it. Two pushes must never overlap
+    /// (both would read and send the same operations).
+    private var isPushingOutbox = false
 
     /// Maximum number of retry attempts before marking an operation as stuck
     private let maxRetries = 5
@@ -617,6 +620,10 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
     @discardableResult
     private func pushPendingChangesInternal() async -> SyncOutcome {
         var outcome = SyncOutcome()
+        // The push already running will send whatever is in the outbox.
+        guard !isPushingOutbox else { return outcome }
+        isPushingOutbox = true
+        defer { isPushingOutbox = false }
 
         do {
             // Unblock previously blocked schema-missing operations
@@ -758,21 +765,29 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
     /// spinto e l'outbox è vuota, quindi si va dritti al pull. L'attesa serve solo alla finestra
     /// del sync di avvio, ha un tetto corto (una rotella lunga è peggio di una card in ritardo) e
     /// se scade non si molla il colpo: si riaggancia alla fine del sync in corso.
+    ///
+    /// Waiting for the whole launch sync was still not enough: its pull phase (21 paginated
+    /// tables) routinely outlasts the 8 s cap, the push was skipped again and the pull wrote the
+    /// old state back — first tap slow, card stuck on the same episode. The full sync's push
+    /// phase is over within its first second, so the outbox can go out while the sync is still
+    /// pulling; only an overlapping push has to be waited for.
     public func flushAndPullTrackingState() async {
         if pendingOperationsCount > 0 {
-            await waitForPushSlot(timeout: 8)
-            await pushPendingChanges()
+            await waitWhilePushingOutbox(timeout: 8)
+            if stateMachine.canTransition(to: .syncing(.push)) {
+                await pushPendingChanges()
+            } else if networkMonitor.isConnected, AuthService.shared.currentUser != nil {
+                // A full sync holds the state machine but is past its own push.
+                await pushPendingChangesInternal()
+            }
         }
         await pullTrackingState()
         if pendingOperationsCount > 0 { scheduleTrackingCatchUp() }
     }
 
-    /// Attende che la macchina a stati accetti un push. L'unico stato che lo vieta è `.syncing`:
-    /// da `.offline` la transizione è ammessa e sarà `pushPendingChanges` a fermarsi sulla rete,
-    /// quindi qui non si aspetta mai per una mancanza di connessione.
-    private func waitForPushSlot(timeout: TimeInterval) async {
+    private func waitWhilePushingOutbox(timeout: TimeInterval) async {
         let deadline = Date().addingTimeInterval(timeout)
-        while !stateMachine.canTransition(to: .syncing(.push)), Date() < deadline {
+        while isPushingOutbox, Date() < deadline {
             try? await Task.sleep(nanoseconds: 150_000_000)
         }
     }
@@ -924,6 +939,15 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
         let keyColumn = getPrimaryKeyColumn(for: name)
         var totalConflictsResolved = 0
 
+        // Una riga con una mutazione ancora in coda è più nuova di qualunque cosa il server
+        // abbia: riscriverla col pull la riporta indietro. È così che un film segnato visto
+        // tornava fra quelli da vedere — la sua riga di watchlist viene soft-deletata e la DELETE
+        // messa in outbox, ma se un pull passa prima che la push sia andata (o la push esce in
+        // silenzio perché la macchina a stati è occupata) la riga ritorna con `deleted_at` NULL.
+        // L'upsert converge anche sulla chiave naturale, quindi non serve nemmeno lo stesso id.
+        // Appena la mutazione è pushata l'id esce dalla coda e il pull torna autorevole.
+        let pendingIds = await pendingOutboxRecordIds(table: name)
+
         let rowsPulled = try await SyncPagination.walk(
             table: name,
             fetchPage: { offset, limit in
@@ -973,7 +997,11 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
                 return rows
             },
             handlePage: { remoteRows in
-                let resolved = await self.resolvePage(remoteRows, table: name)
+                let fresh = pendingIds.isEmpty ? remoteRows : remoteRows.filter { row in
+                    guard let id = row[keyColumn] else { return true }
+                    return !pendingIds.contains(String(describing: id))
+                }
+                let resolved = await self.resolvePage(fresh, table: name)
                 totalConflictsResolved += resolved.conflictsResolved
 
                 if !resolved.rows.isEmpty {
@@ -989,6 +1017,20 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
         }
 
         Logger.debug("[SyncEngine] Pulled \(rowsPulled) rows from \(name)")
+    }
+
+    /// Gli id delle righe di `table` con una mutazione locale ancora da spedire.
+    ///
+    /// Gli stessi stati che `pushPendingChanges` raccoglie, più `blocked` che aspetta solo la sua
+    /// dipendenza. `stuck` no: quella mutazione non partirà mai, e tenerla qui vorrebbe dire
+    /// rendere il pull cieco su quella riga per sempre — lì il server torna a essere autorevole.
+    private func pendingOutboxRecordIds(table: String) async -> Set<String> {
+        let sql = """
+            SELECT record_id FROM sync_outbox
+            WHERE table_name = ? AND status IN ('pending', 'failed', 'blocked')
+        """
+        let rows = (try? await sqliteService.queryRaw(sql, parameters: [table])) ?? []
+        return Set(rows.compactMap { $0["record_id"] as? String })
     }
 
     /// Applies conflict resolution to one page of remote rows.

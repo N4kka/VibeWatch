@@ -652,7 +652,7 @@ struct TVShowInfoSection: View {
             // Metadata row: seasons · year range | rating% (n ratings)
             HStack(spacing: 0) {
                 if let count = tvShow.numberOfSeasons {
-                    Text("\(count) \(count == 1 ? "season" : "seasons")")
+                    Text(String.seasonCount(count))
                         .font(.system(size: 14))
                         .foregroundColor(.theme.textSecondary)
 

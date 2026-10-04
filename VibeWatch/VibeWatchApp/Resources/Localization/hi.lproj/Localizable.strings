@@ -1331,7 +1331,6 @@
 "shareCard.completedBadge" = "पूरा किया";
 "shareCard.stats.episodes" = "%d एपिसोड";
 "shareCard.stats.hours" = "%d घंटे";
-"shareCard.followers" = "%d फ़ॉलोअर";
 "shareCard.favoriteMovies" = "पसंदीदा फ़िल्में";
 "shareCard.favoriteShows" = "पसंदीदा टीवी शो";
 "shareCard.toast.renderFailed" = "इमेज नहीं बन सकी";
@@ -1461,3 +1460,5 @@
 "shareCard.list.count" = "%d शीर्षक";
 "shareCard.list.action" = "सूची साझा करें";
 "shareCard.list.empty" = "खाली सूची के पास दिखाने को कुछ नहीं है";
+"movieDetail.originalReleaseDate" = "मूल रिलीज़";
+"mediaStatus.upcoming" = "जल्द आ रहा है";

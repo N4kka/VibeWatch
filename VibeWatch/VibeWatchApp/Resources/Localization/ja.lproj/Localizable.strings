@@ -1320,7 +1320,6 @@
 "shareCard.completedBadge" = "完走";
 "shareCard.stats.episodes" = "%d話";
 "shareCard.stats.hours" = "%d時間";
-"shareCard.followers" = "フォロワー%d人";
 "shareCard.favoriteMovies" = "お気に入りの映画";
 "shareCard.favoriteShows" = "お気に入りの番組";
 "shareCard.toast.renderFailed" = "画像を作成できませんでした";
@@ -1450,3 +1449,5 @@
 "shareCard.list.count" = "%d 作品";
 "shareCard.list.action" = "リストをシェア";
 "shareCard.list.empty" = "空のリストには見せるものがありません";
+"movieDetail.originalReleaseDate" = "初公開日";
+"mediaStatus.upcoming" = "公開予定";

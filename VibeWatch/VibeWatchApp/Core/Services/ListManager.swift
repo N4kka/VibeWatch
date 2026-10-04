@@ -40,7 +40,36 @@ class ListManager: ObservableObject {
     static let maxItemsPerList = 1000
     static let softLimitWarningThreshold = 500
     
-    @Published var lists: [MediaList] = []
+    @Published var lists: [MediaList] = [] {
+        // A list linked to the watchlist is a live view of it, not a copy: whatever path
+        // changed `lists`, its items are the watchlist's. The server resolves it the same way
+        // (`list_items_for`), so what the owner sees is what everyone else sees.
+        didSet { mirrorWatchlistIntoLinkedLists() }
+    }
+
+    /// Writing `lists` from its own didSet goes back through the @Published setter: without this
+    /// guard the mirror re-entered itself until the stack overflowed.
+    private var isMirroringWatchlist = false
+
+    private func mirrorWatchlistIntoLinkedLists() {
+        guard !isMirroringWatchlist,
+              lists.contains(where: \.isWatchlistView),
+              let items = lists.first(where: { $0.type == .watchlist })?.items else { return }
+        isMirroringWatchlist = true
+        defer { isMirroringWatchlist = false }
+        var mirrored = lists
+        for index in mirrored.indices where mirrored[index].isWatchlistView {
+            mirrored[index].items = items
+        }
+        lists = mirrored
+    }
+
+    /// Writes aimed at a watchlist view land on the watchlist itself.
+    private func resolvedListId(_ listId: String) -> String {
+        guard lists.first(where: { $0.id == listId })?.isWatchlistView == true,
+              let watchlistId = lists.first(where: { $0.type == .watchlist })?.id else { return listId }
+        return watchlistId
+    }
     @Published var watchlist: MediaList
     @Published var seenList: MediaList
     @Published var likedList: MediaList
@@ -821,7 +850,8 @@ class ListManager: ObservableObject {
     private func saveListsToSQLite() async {
         for list in lists {
             await ensureListInSQLite(list)
-            if !list.items.isEmpty {
+            // A watchlist view's items are the watchlist's: saving them would duplicate its rows.
+            if !list.items.isEmpty, !list.isWatchlistView {
                 await saveItemsToSQLite(list.items, listId: list.id)
             }
         }
@@ -933,7 +963,10 @@ class ListManager: ObservableObject {
             items: existing.items,
             // Preserva la visibilità: senza questo, rinominare una lista pubblica la riportava
             // a privata in memoria (toggle che "non resta attivo").
-            isPublic: existing.isPublic
+            isPublic: existing.isPublic,
+            // Same for the link: dropping it here unlinked the shared watchlist on every rename.
+            sourceListId: existing.sourceListId,
+            sourceListType: existing.sourceListType
         )
         lists[index] = updated
         updateDefaultReferences(from: lists)
@@ -1013,6 +1046,7 @@ class ListManager: ObservableObject {
         mediaType: MediaType,
         analyticsContext: AnalyticsContext? = nil
     ) async throws {
+        let listId = resolvedListId(listId)
         guard let index = lists.firstIndex(where: { $0.id == listId }) else {
             throw ListError.listNotFound
         }
@@ -1199,6 +1233,7 @@ class ListManager: ObservableObject {
     }
 
     func removeFromList(listId: String, itemId: String) async throws {
+        let listId = resolvedListId(listId)
         guard let listIndex = lists.firstIndex(where: { $0.id == listId }) else {
             throw ListError.listNotFound
         }
@@ -1380,22 +1415,25 @@ class ListManager: ObservableObject {
         )
 
         let existing = lists[index]
+        var payload: [String: Any] = [
+            "id": listId,
+            "user_id": userId,
+            "name": existing.name,
+            "description": existing.description ?? "",
+            "type": existing.type.rawValue,
+            "is_public": isPublic,
+            "created_at": ISO8601DateFormatter().string(from: existing.createdAt),
+            "updated_at": now
+        ]
+        // Only a link we know about is sent: a missing key keeps the server's, while "" erased it
+        // whenever memory had lost the link (the remote list fetch doesn't decode it).
+        if let sourceId = existing.sourceListId { payload["source_list_id"] = sourceId }
+        if let sourceType = existing.sourceListType { payload["source_list_type"] = sourceType.rawValue }
         try await sync.queueOperation(
             table: "lists",
             operationType: "UPDATE",
             recordId: listId,
-            payload: [
-                "id": listId,
-                "user_id": userId,
-                "name": existing.name,
-                "description": existing.description ?? "",
-                "type": existing.type.rawValue,
-                "is_public": isPublic,
-                "source_list_id": existing.sourceListId ?? "",
-                "source_list_type": existing.sourceListType?.rawValue ?? "",
-                "created_at": ISO8601DateFormatter().string(from: existing.createdAt),
-                "updated_at": now
-            ],
+            payload: payload,
             dependsOn: nil
         )
     }
@@ -1409,14 +1447,20 @@ class ListManager: ObservableObject {
         guard let source = lists.first(where: { $0.id == sourceListId }) else {
             throw ListError.listNotFound
         }
+        // The watchlist is shared as a live view: one per user, reused, with no items of its own.
+        if source.type == .watchlist, let existing = lists.first(where: \.isWatchlistView) {
+            return existing
+        }
         let trimmed = name?.trimmingCharacters(in: .whitespacesAndNewlines)
         let newName = (trimmed?.isEmpty == false ? trimmed! : source.displayName)
         let newList = try await createList(name: newName, description: source.description)
         // Il filo con la sorgente: da qui in poi le aggiunte e le rimozioni sulla lista di
         // origine arrivano anche qui, invece di lasciare uno snapshot che invecchia.
         await linkList(newList.id, toSource: source)
-        for item in source.items {
-            try? await addToList(listId: newList.id, movie: item.asMovie(), mediaType: item.mediaType)
+        if source.type != .watchlist {
+            for item in source.items {
+                try? await addToList(listId: newList.id, movie: item.asMovie(), mediaType: item.mediaType)
+            }
         }
         return lists.first(where: { $0.id == newList.id }) ?? newList
     }
@@ -1468,7 +1512,7 @@ class ListManager: ObservableObject {
 
     /// Le copie che seguono questa lista. Solo custom: una core non copia nessuno.
     private func linkedLists(forSource list: MediaList) -> [MediaList] {
-        lists.filter { $0.type == .custom && $0.id != list.id &&
+        lists.filter { $0.type == .custom && $0.id != list.id && !$0.isWatchlistView &&
             ($0.sourceListId == list.id ||
              ($0.sourceListType != nil && $0.sourceListType == list.type && list.type != .custom)) }
     }

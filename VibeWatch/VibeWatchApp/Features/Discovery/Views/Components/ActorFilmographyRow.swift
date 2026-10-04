@@ -111,7 +111,7 @@ struct ActorFilmographyRow: View {
         if credit.mediaType == .tv {
             // TV: N seasons | year | ★ rating  (matches ListsView pattern)
             if let s = seasonCount, s > 0 {
-                parts.append(SubtitlePart(text: "\(s) \(s == 1 ? "season" : "seasons")", isStar: false))
+                parts.append(SubtitlePart(text: .seasonCount(s), isStar: false))
             }
             if let year = credit.year {
                 parts.append(SubtitlePart(text: year, isStar: false))

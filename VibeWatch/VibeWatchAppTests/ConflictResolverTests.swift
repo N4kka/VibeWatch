@@ -77,8 +77,7 @@ final class ConflictResolverTests: XCTestCase {
 
     // MARK: - Union Strategy Tests
 
-    func testUnionStrategy_ListItems_PreservesNonDeleted() {
-        // Local is not deleted, remote is deleted
+    func testUnionStrategy_RemoteDeletionNewerThanLocalEdit_Wins() {
         let local: [String: Any] = [
             "id": "item-1",
             "media_id": 123,
@@ -88,18 +87,36 @@ final class ConflictResolverTests: XCTestCase {
         let remote: [String: Any] = [
             "id": "item-1",
             "media_id": 123,
-            "deleted_at": "2024-01-02T10:00:00Z",
-            "updated_at": "2024-01-02T10:00:00Z"
+            // Postgres format, fractional seconds included: the comparison must still happen.
+            "deleted_at": "2024-01-02T10:00:00.528128+00:00",
+            "updated_at": "2024-01-02T10:00:00.528128+00:00"
         ]
 
         let result = resolver.resolve(table: "list_items", local: local, remote: remote)
 
         XCTAssertEqual(result.strategyUsed, .union)
-        XCTAssertEqual(result.source, .local, "Should prefer non-deleted local record")
-        XCTAssertTrue(result.wasModified)
-        XCTAssertTrue(result.record["deleted_at"] is NSNull, "Local should not be deleted")
+        XCTAssertEqual(result.source, .remote, "a deletion made elsewhere must reach this device")
+        XCTAssertFalse(result.record["deleted_at"] is NSNull)
+    }
 
-        print("Union strategy preserves non-deleted test passed")
+    func testUnionStrategy_LocalEditAfterRemoteDeletion_KeepsLocal() {
+        let local: [String: Any] = [
+            "id": "item-1",
+            "media_id": 123,
+            "deleted_at": NSNull(),
+            "updated_at": "2024-01-03T10:00:00Z"
+        ]
+        let remote: [String: Any] = [
+            "id": "item-1",
+            "media_id": 123,
+            "deleted_at": "2024-01-02T10:00:00.528128+00:00",
+            "updated_at": "2024-01-02T10:00:00.528128+00:00"
+        ]
+
+        let result = resolver.resolve(table: "list_items", local: local, remote: remote)
+
+        XCTAssertEqual(result.source, .local, "an edit made after the deletion is not lost")
+        XCTAssertTrue(result.record["deleted_at"] is NSNull)
     }
 
     func testUnionStrategy_Badges_MergesProgress() {

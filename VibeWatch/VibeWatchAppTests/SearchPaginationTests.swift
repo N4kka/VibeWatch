@@ -237,6 +237,9 @@ private final class StubTMDBSearchService: TMDBServiceProtocol, @unchecked Senda
         minRating: Double?, maxRating: Double?, releaseDateGte: String?, releaseDateLte: String?,
         country: String?
     ) async throws -> TMDBResponse<Movie> { nonServe() }
+    func discoverReleases(from: String, to: String, theatrical: Bool) async throws -> TMDBResponse<Movie> {
+        nonServe()
+    }
     func searchMovies(query: String, page: Int) async throws -> TMDBResponse<Movie> { nonServe() }
     func getPopularTVShows(page: Int) async throws -> TMDBResponse<TVShow> { nonServe() }
     func getTopRatedTVShows(page: Int) async throws -> TMDBResponse<TVShow> { nonServe() }

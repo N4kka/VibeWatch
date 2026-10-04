@@ -1316,7 +1316,6 @@
 "shareCard.completedBadge" = "Tamamlandı";
 "shareCard.stats.episodes" = "%d bölüm";
 "shareCard.stats.hours" = "%d saat";
-"shareCard.followers" = "%d takipçi";
 "shareCard.favoriteMovies" = "Favori filmler";
 "shareCard.favoriteShows" = "Favori diziler";
 "shareCard.toast.renderFailed" = "Görsel oluşturulamadı";
@@ -1446,3 +1445,5 @@
 "shareCard.list.count" = "%d başlık";
 "shareCard.list.action" = "Listeyi paylaş";
 "shareCard.list.empty" = "Boş bir listenin gösterecek bir şeyi yok";
+"movieDetail.originalReleaseDate" = "İlk gösterim";
+"mediaStatus.upcoming" = "Yakında";

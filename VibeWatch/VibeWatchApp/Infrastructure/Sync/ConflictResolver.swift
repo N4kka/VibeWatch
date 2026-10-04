@@ -165,7 +165,19 @@ public final class ConflictResolver: ConflictResolverProtocol {
                 source: .remote
             )
         } else if !localDeleted && remoteDeleted {
-            // Local is not deleted, use local
+            // A deletion made elsewhere (another device, the web) wins, unless this device edited
+            // the row after it. Keeping the live local row unconditionally meant a deleted list
+            // lived on here forever, and a title removed on the web never left the phone.
+            let deletedAt = parseDate(remote["deleted_at"])
+            let localUpdatedAt = parseDate(local["updated_at"])
+            guard let deletedAt, let localUpdatedAt, localUpdatedAt > deletedAt else {
+                return ResolvedRecord(
+                    record: remote,
+                    strategyUsed: .union,
+                    wasModified: false,
+                    source: .remote
+                )
+            }
             return ResolvedRecord(
                 record: local,
                 strategyUsed: .union,
@@ -446,6 +458,12 @@ public final class ConflictResolver: ConflictResolverProtocol {
 
         // Try ISO8601 first
         let iso = ISO8601DateFormatter()
+        if let date = iso.date(from: string) {
+            return date
+        }
+        // Postgres timestamps carry fractional seconds ("…08.528128+00:00"), which the default
+        // options reject.
+        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         if let date = iso.date(from: string) {
             return date
         }

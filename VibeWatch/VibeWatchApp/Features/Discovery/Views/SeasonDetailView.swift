@@ -634,7 +634,6 @@ struct EpisodeRow: View {
                 Text(episode.overview)
                     .font(.system(size: 13))
                     .foregroundColor(.theme.textSecondary)
-                    .lineLimit(3)
                     .lineSpacing(3)
             }
         }

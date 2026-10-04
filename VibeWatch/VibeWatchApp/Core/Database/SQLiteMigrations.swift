@@ -8,7 +8,7 @@ extension SQLiteService {
     /// Run personalization migrations (Phase 1)
     func runPersonalizationMigrations() {
         let currentVersion = getPersonalizationMigrationVersion()
-        let latestVersion = 16
+        let latestVersion = 17
 
         guard currentVersion < latestVersion else {
             Logger.info("[SQLite] Personalization migrations already applied (version \(currentVersion))")
@@ -72,6 +72,9 @@ extension SQLiteService {
             if currentVersion < 16 {
                 migration16_AddActivityInteractionTables()
             }
+            if currentVersion < 17 {
+                migration17_TrackingWatchlistSince()
+            }
 
             // Update migration version
             execute("""
@@ -89,6 +92,13 @@ extension SQLiteService {
 
         // Re-enable foreign keys
         execute("PRAGMA foreign_keys = ON")
+    }
+
+    /// `v_tv_tracking.watchlist_since`: when a series (re)entered the watchlist. The lists sort by
+    /// it instead of `updated_at`, which every server recompute moves.
+    private func migration17_TrackingWatchlistSince() {
+        Logger.info("[SQLite] Migration 17: tv_tracking.watchlist_since")
+        executeScript("ALTER TABLE tv_tracking ADD COLUMN watchlist_since TEXT;")
     }
 
     private func getPersonalizationMigrationVersion() -> Int {

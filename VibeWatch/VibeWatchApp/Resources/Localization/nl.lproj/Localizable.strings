@@ -1325,7 +1325,6 @@
 "shareCard.completedBadge" = "Voltooid";
 "shareCard.stats.episodes" = "%d afleveringen";
 "shareCard.stats.hours" = "%d uur";
-"shareCard.followers" = "%d volgers";
 "shareCard.favoriteMovies" = "Favoriete films";
 "shareCard.favoriteShows" = "Favoriete series";
 "shareCard.toast.renderFailed" = "Afbeelding kon niet worden gemaakt";
@@ -1455,3 +1454,5 @@
 "shareCard.list.count" = "%d titels";
 "shareCard.list.action" = "Lijst delen";
 "shareCard.list.empty" = "Een lege lijst heeft niets te tonen";
+"movieDetail.originalReleaseDate" = "Oorspronkelijke release";
+"mediaStatus.upcoming" = "Binnenkort";

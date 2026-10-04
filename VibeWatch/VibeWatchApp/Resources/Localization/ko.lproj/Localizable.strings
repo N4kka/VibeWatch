@@ -1320,7 +1320,6 @@
 "shareCard.completedBadge" = "시청 완료";
 "shareCard.stats.episodes" = "%d개 에피소드";
 "shareCard.stats.hours" = "%d시간";
-"shareCard.followers" = "팔로워 %d명";
 "shareCard.favoriteMovies" = "좋아하는 영화";
 "shareCard.favoriteShows" = "좋아하는 시리즈";
 "shareCard.toast.renderFailed" = "이미지를 만들지 못했습니다";
@@ -1450,3 +1449,5 @@
 "shareCard.list.count" = "%d개 작품";
 "shareCard.list.action" = "리스트 공유하기";
 "shareCard.list.empty" = "빈 리스트는 보여줄 것이 없습니다";
+"movieDetail.originalReleaseDate" = "최초 개봉";
+"mediaStatus.upcoming" = "개봉 예정";

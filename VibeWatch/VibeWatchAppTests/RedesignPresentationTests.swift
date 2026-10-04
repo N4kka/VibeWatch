@@ -174,6 +174,34 @@ final class RedesignPresentationTests: XCTestCase {
         XCTAssertTrue(prompt.localizedCaseInsensitiveContains("insufficient"))
     }
 
+    /// "Film al cinema a settembre 2026" got "I don't have real-time data": the question has to
+    /// resolve to real dates so the app can hand TMDB's releases to the model.
+    func testReleaseQuestionsResolveToTheDatesAsked() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Europe/Rome")!
+        let now = calendar.date(from: DateComponents(year: 2026, month: 9, day: 11))!
+        func window(_ query: String) -> AIQueryClassifier.ReleaseWindow? {
+            AIQueryClassifier.shared.releaseWindow(in: query, now: now, calendar: calendar)
+        }
+
+        XCTAssertEqual(
+            window("Fammi un elenco dei film che escono al cinema a settembre 2026"),
+            .init(from: "2026-09-01", to: "2026-09-30", theatrical: true))
+        // A month already past means next year's.
+        XCTAssertEqual(
+            window("what comes out in march?"),
+            .init(from: "2027-03-01", to: "2027-03-31", theatrical: false))
+        XCTAssertEqual(
+            window("film in uscita la prossima settimana"),
+            .init(from: "2026-09-18", to: "2026-09-24", theatrical: false))
+        XCTAssertEqual(
+            window("cosa danno al cinema?"),
+            .init(from: "2026-09-11", to: "2026-10-11", theatrical: true))
+        // About one title, not a list of releases.
+        XCTAssertNil(window("quando esce Dune 3?"))
+        XCTAssertNil(window("consigliami un horror"))
+    }
+
     /// Il bug che ha originato lo split fra `[skip]` e `[saved]`: watchlist e visti finivano
     /// fusi in un unico "mai consigliare questi", quindi "consigliami qualcosa dalla mia
     /// watchlist" tornava con tre titoli di fuori — l'unica risposta coerente col prompt.

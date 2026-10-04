@@ -1326,7 +1326,6 @@
 "shareCard.completedBadge" = "Ukończone";
 "shareCard.stats.episodes" = "%d odcinków";
 "shareCard.stats.hours" = "%d godzin";
-"shareCard.followers" = "%d obserwujących";
 "shareCard.favoriteMovies" = "Ulubione filmy";
 "shareCard.favoriteShows" = "Ulubione seriale";
 "shareCard.toast.renderFailed" = "Nie udało się utworzyć obrazu";
@@ -1456,3 +1455,5 @@
 "shareCard.list.count" = "%d tytułów";
 "shareCard.list.action" = "Udostępnij listę";
 "shareCard.list.empty" = "Pusta lista nie ma czego pokazać";
+"movieDetail.originalReleaseDate" = "Pierwotna premiera";
+"mediaStatus.upcoming" = "Wkrótce";

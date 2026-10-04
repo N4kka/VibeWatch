@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { rejectIfNotServiceCaller } from '../_shared/cronAuth.ts'
+import { countryReleaseDays } from './releaseDate.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 // Prefer the new secret key (sb_secret_..., auto-injected as SUPABASE_SECRET_KEYS json),
@@ -55,7 +56,7 @@ serve(async (req) => {
     // pass is now hundreds of TMDB lookups instead of a dozen. One title is looked up once even
     // when several people saved it, and the lookups run a few at a time: sequentially, the loop
     // would spend most of a run's wall clock waiting on a network round trip it already made.
-    type Details = { releaseDate: string | null; title: string }
+    type Details = { releaseDays: string[]; title: string }
     const detailsCache = new Map<string, Details | null>()
 
     const lookup = async (mediaType: string, mediaId: number, region: string): Promise<Details | null> => {
@@ -63,7 +64,8 @@ serve(async (req) => {
       const cached = detailsCache.get(key)
       if (cached !== undefined) return cached
 
-      const url = `https://api.themoviedb.org/3/${mediaType}/${mediaId}?api_key=${TMDB_API_KEY}&language=en-US&region=${region}`
+      const extra = mediaType === 'movie' ? '&append_to_response=release_dates' : ''
+      const url = `https://api.themoviedb.org/3/${mediaType}/${mediaId}?api_key=${TMDB_API_KEY}&language=en-US${extra}`
       const response = await fetch(url)
       if (!response.ok) {
         detailsCache.set(key, null)
@@ -71,7 +73,13 @@ serve(async (req) => {
       }
       const payload = await response.json()
       const details: Details = {
-        releaseDate: (mediaType === 'tv' ? payload.first_air_date : payload.release_date) ?? null,
+        // The country's own dates when TMDB has them; the primary date otherwise.
+        releaseDays: mediaType === 'tv'
+          ? [payload.first_air_date].filter(Boolean)
+          : (() => {
+            const days = countryReleaseDays(payload.release_dates, region)
+            return days.length > 0 ? days : [payload.release_date].filter(Boolean)
+          })(),
         title: payload.title ?? payload.name ?? 'New release',
       }
       detailsCache.set(key, details)
@@ -92,11 +100,10 @@ serve(async (req) => {
       const details = await lookup(alert.media_type, alert.media_id, region)
       if (!details) continue
 
-      const releaseDate = details.releaseDate
       // Out in the last RELEASE_WINDOW_DAYS days only. The old check was `releaseDate > today`,
       // which skipped future releases and announced everything already released. This is also
       // what keeps automatic subscriptions safe: a catalogue title never falls in the window.
-      if (!releaseDate || releaseDate > today || releaseDate < windowStart) continue
+      if (!details.releaseDays.some((day) => day >= windowStart && day <= today)) continue
 
       const title = details.title
       const { error: insertError } = await supabase

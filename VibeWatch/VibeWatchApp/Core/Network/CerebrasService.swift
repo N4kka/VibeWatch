@@ -651,8 +651,13 @@ class CerebrasService {
             prompt += "\n\nUser prefers: \(topGenres)"
         }
 
+        // Without an explicit language the model answered in English even with the app in Italian.
+        let code = LocalizationManager.shared.appLocale.language.languageCode?.identifier ?? "en"
+        let language = Locale(identifier: "en").localizedString(forLanguageCode: code) ?? "English"
+
         prompt += """
 
+        Write every description in \(language).
         Return as JSON: {"movieId": "description"}
         Only return the JSON object, no other text.
         """

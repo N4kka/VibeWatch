@@ -25,7 +25,9 @@ enum AIResponseParser {
     static let confidenceRange = 55...97
 
     static func parse(_ raw: String) -> ParsedAIReply {
-        let cleaned = strippingContextMarkers(raw.trimmingCharacters(in: .whitespacesAndNewlines))
+        let cleaned = strippingEmphasis(
+            strippingContextMarkers(raw.trimmingCharacters(in: .whitespacesAndNewlines))
+        )
 
         // 1. Blocchi fenced ```vibe-json / ```json / ``` — vince l'ultimo che decodifica.
         if let (range, recs) = lastDecodableFencedBlock(in: cleaned), !recs.isEmpty {
@@ -67,6 +69,12 @@ enum AIResponseParser {
 
         guard dropped else { return text }
         return lines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// "Plain text, no asterisks" is in the prompt, and a minimal-effort model still wraps
+    /// titles in *…* — which the bubble shows literally.
+    private static func strippingEmphasis(_ text: String) -> String {
+        text.replacingOccurrences(of: "\\*{1,2}([^*\\n]+?)\\*{1,2}", with: "$1", options: .regularExpression)
     }
 
     // MARK: - Fenced blocks

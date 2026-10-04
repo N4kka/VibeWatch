@@ -10,6 +10,11 @@ final class AIResponseParserTests: XCTestCase {
         XCTAssertTrue(parsed.recommendations.isEmpty)
     }
 
+    func testMarkdownEmphasisIsStripped() {
+        let parsed = AIResponseParser.parse("Al cinema arrivano *Coyote vs. Acme* e **Exit 8**, 3 * 2 resta.")
+        XCTAssertEqual(parsed.text, "Al cinema arrivano Coyote vs. Acme e Exit 8, 3 * 2 resta.")
+    }
+
     func testFencedVibeJsonBlockIsExtracted() {
         let raw = """
         Scorsese è una garanzia. Di suo ti consiglio questi tre must-watch:

@@ -1326,7 +1326,6 @@
 "shareCard.completedBadge" = "Katsottu loppuun";
 "shareCard.stats.episodes" = "%d jaksoa";
 "shareCard.stats.hours" = "%d tuntia";
-"shareCard.followers" = "%d seuraajaa";
 "shareCard.favoriteMovies" = "Lempielokuvat";
 "shareCard.favoriteShows" = "Lempisarjat";
 "shareCard.toast.renderFailed" = "Kuvan luonti epäonnistui";
@@ -1456,3 +1455,5 @@
 "shareCard.list.count" = "%d nimikettä";
 "shareCard.list.action" = "Jaa lista";
 "shareCard.list.empty" = "Tyhjällä listalla ei ole mitään näytettävää";
+"movieDetail.originalReleaseDate" = "Alkuperäinen julkaisu";
+"mediaStatus.upcoming" = "Tulossa";

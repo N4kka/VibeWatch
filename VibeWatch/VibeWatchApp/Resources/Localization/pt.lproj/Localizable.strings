@@ -1313,7 +1313,6 @@
 "shareCard.completedBadge" = "Concluída";
 "shareCard.stats.episodes" = "%d episódios";
 "shareCard.stats.hours" = "%d horas";
-"shareCard.followers" = "%d seguidores";
 "shareCard.favoriteMovies" = "Filmes favoritos";
 "shareCard.favoriteShows" = "Séries favoritas";
 "shareCard.toast.renderFailed" = "Não foi possível criar a imagem";
@@ -1443,3 +1442,5 @@
 "shareCard.list.count" = "%d títulos";
 "shareCard.list.action" = "Partilhar a lista";
 "shareCard.list.empty" = "Uma lista vazia não tem nada para mostrar";
+"movieDetail.originalReleaseDate" = "Estreia original";
+"mediaStatus.upcoming" = "Em breve";

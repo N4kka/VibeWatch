@@ -222,12 +222,12 @@ struct ProfileView: View {
                     displayName: displayNameOrEmail,
                     username: username,
                     profileLink: identity.drawnLink,
+                    // La frase del profilo al posto dei follower: è già in memoria
+                    // (`loadOwnProfileDetails`), e dice di te quello che un numero non dice.
+                    bio: profileBio,
                     avatar: avatar,
                     favoriteMovies: Array(movies.prefix(4)),
-                    favoriteShows: Array(shows.prefix(4)),
-                    // I follower sono già in memoria se l'header li ha caricati; niente fetch
-                    // apposta per un numero secondario della card.
-                    followerCount: socialCounts?.followers
+                    favoriteShows: Array(shows.prefix(4))
                 )),
                 link: identity.profileURL)
             isPreparingShareCard = false

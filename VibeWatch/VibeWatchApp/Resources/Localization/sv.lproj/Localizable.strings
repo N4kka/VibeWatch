@@ -1314,7 +1314,6 @@
 "shareCard.completedBadge" = "Avslutad";
 "shareCard.stats.episodes" = "%d avsnitt";
 "shareCard.stats.hours" = "%d timmar";
-"shareCard.followers" = "%d följare";
 "shareCard.favoriteMovies" = "Favoritfilmer";
 "shareCard.favoriteShows" = "Favoritserier";
 "shareCard.toast.renderFailed" = "Bilden kunde inte skapas";
@@ -1444,3 +1443,5 @@
 "shareCard.list.count" = "%d titlar";
 "shareCard.list.action" = "Dela listan";
 "shareCard.list.empty" = "En tom lista har inget att visa";
+"movieDetail.originalReleaseDate" = "Ursprunglig premiär";
+"mediaStatus.upcoming" = "Kommer snart";

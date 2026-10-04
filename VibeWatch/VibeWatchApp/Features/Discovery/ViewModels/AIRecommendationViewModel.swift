@@ -533,7 +533,9 @@ class AIRecommendationViewModel: ObservableObject {
 
         var resolved: [(Int, AIRecommendationCardModel)] = []
         await withTaskGroup(of: (Int, AIRecommendationCardModel?).self) { group in
-            for (index, rec) in allowed.prefix(5).enumerated() {
+            // 15, not 5: a release list ("al cinema a settembre") is one card per release, and
+            // the gateway prompt caps every other answer at five on its own.
+            for (index, rec) in allowed.prefix(15).enumerated() {
                 group.addTask { [weak self] in
                     (index, await self?.resolveCard(rec, known: knownByTitle[rec.title.lowercased()]))
                 }
@@ -587,11 +589,7 @@ class AIRecommendationViewModel: ObservableObject {
             }
             guard let details = try? await tmdbService.getTVShowDetails(id: id) else { return nil }
 
-            let seasons = details.numberOfSeasons.map { count in
-                count == 1
-                    ? "ai.card.oneSeason".localized
-                    : String(format: "ai.card.seasonCount".localized, count)
-            }
+            let seasons = details.numberOfSeasons.map(String.seasonCount)
             return AIRecommendationCardModel(
                 tmdbId: details.id,
                 mediaType: .tv,
@@ -690,7 +688,11 @@ class AIRecommendationViewModel: ObservableObject {
     ) async throws -> (String, PromptMetadata) {
         let profile = userProfile.userId.isEmpty ? nil : userProfile
 
-        func turn(media: (MovieDetails, MediaType)? = nil, availability: String? = nil) -> String {
+        func turn(
+            media: (MovieDetails, MediaType)? = nil,
+            availability: String? = nil,
+            releases: String? = nil
+        ) -> String {
             contextBuilder.buildUserTurn(
                 query: query,
                 userProfile: profile,
@@ -699,11 +701,32 @@ class AIRecommendationViewModel: ObservableObject {
                 activeFilters: activeFilters,
                 media: media,
                 availability: availability,
+                releases: releases,
                 languageName: languageName
             )
         }
 
         switch classification.type {
+        case .releases(let from, let to, let theatrical):
+            // A failed lookup sends no line at all: "none found" would be a lie.
+            guard let movies = try? await tmdbService.discoverReleases(from: from, to: to, theatrical: theatrical)
+                .results.prefix(releasesCap) else {
+                return (turn(), PromptMetadata(queryTypeKey: "releases", mentionedMediaIds: [], mentionedGenres: []))
+            }
+            let region = await MainActor.run { LocalizationManager.shared.currentLanguageAndRegion().1 }
+            let titles = movies.map { movie in
+                // TMDB returns the worldwide primary date here, not the country's: shown only
+                // when it falls inside the window, so it never contradicts the filter.
+                guard let date = movie.releaseDate, date >= from, date <= to else { return movie.title }
+                return "\(movie.title) (\(date))"
+            }
+            let scope = theatrical ? "in cinemas" : "released"
+            let list = titles.isEmpty ? "none found" : titles.joined(separator: "; ")
+            return (
+                turn(releases: "\(scope) in \(region), \(from) to \(to): \(list)"),
+                PromptMetadata(queryTypeKey: "releases", mentionedMediaIds: movies.map(\.id), mentionedGenres: [])
+            )
+
         case .specificMedia(let title, let mediaTypeHint):
             let (details, kind, mediaId) = try await fetchMediaDetailsForTitle(title, mediaTypeHint: mediaTypeHint)
             return (
@@ -732,6 +755,9 @@ class AIRecommendationViewModel: ObservableObject {
             )
         }
     }
+
+    /// Enough to answer "what's out in September" without flooding the user turn.
+    private let releasesCap = 15
 
     /// Restituisce anche il tipo risolto, non solo l'hint: la riga `[title]` del turno utente
     /// dice al modello "movie" o "tv", ed e' quello che poi finisce nel campo type della card.

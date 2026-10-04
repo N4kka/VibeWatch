@@ -1326,7 +1326,6 @@
 "shareCard.completedBadge" = "Ολοκληρωμένη";
 "shareCard.stats.episodes" = "%d επεισόδια";
 "shareCard.stats.hours" = "%d ώρες";
-"shareCard.followers" = "%d ακόλουθοι";
 "shareCard.favoriteMovies" = "Αγαπημένες ταινίες";
 "shareCard.favoriteShows" = "Αγαπημένες σειρές";
 "shareCard.toast.renderFailed" = "Δεν ήταν δυνατή η δημιουργία της εικόνας";
@@ -1456,3 +1455,5 @@
 "shareCard.list.count" = "%d τίτλοι";
 "shareCard.list.action" = "Μοιράσου τη λίστα";
 "shareCard.list.empty" = "Μια άδεια λίστα δεν έχει τίποτα να δείξει";
+"movieDetail.originalReleaseDate" = "Αρχική κυκλοφορία";
+"mediaStatus.upcoming" = "Προσεχώς";

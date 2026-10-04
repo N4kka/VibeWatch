@@ -59,6 +59,9 @@ struct MediaList: Identifiable, Codable {
     /// hanno un id diverso su ogni installazione, il tipo no.
     var sourceListType: ListType?
 
+    /// The shared watchlist: a custom list with no items of its own (see `list_items_for`).
+    var isWatchlistView: Bool { type == .custom && sourceListType == .watchlist }
+
     var displayName: String {
         switch type {
         case .watchlist: return "lists.watchlist".localized
@@ -193,7 +196,7 @@ extension MediaListItem {
 
         if mediaType == .tv, let seasonCount, seasonCount > 0 {
             parts.append(MediaListItemSubtitleComponent(
-                text: "\(seasonCount) \(seasonCount == 1 ? "season" : "seasons")",
+                text: .seasonCount(seasonCount),
                 showsRatingStar: false
             ))
         }
