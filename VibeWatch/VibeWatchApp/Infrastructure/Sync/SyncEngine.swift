@@ -939,6 +939,15 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
         let keyColumn = getPrimaryKeyColumn(for: name)
         var totalConflictsResolved = 0
 
+        // Una riga con una mutazione ancora in coda è più nuova di qualunque cosa il server
+        // abbia: riscriverla col pull la riporta indietro. È così che un film segnato visto
+        // tornava fra quelli da vedere — la sua riga di watchlist viene soft-deletata e la DELETE
+        // messa in outbox, ma se un pull passa prima che la push sia andata (o la push esce in
+        // silenzio perché la macchina a stati è occupata) la riga ritorna con `deleted_at` NULL.
+        // L'upsert converge anche sulla chiave naturale, quindi non serve nemmeno lo stesso id.
+        // Appena la mutazione è pushata l'id esce dalla coda e il pull torna autorevole.
+        let pendingIds = await pendingOutboxRecordIds(table: name)
+
         let rowsPulled = try await SyncPagination.walk(
             table: name,
             fetchPage: { offset, limit in
@@ -988,7 +997,11 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
                 return rows
             },
             handlePage: { remoteRows in
-                let resolved = await self.resolvePage(remoteRows, table: name)
+                let fresh = pendingIds.isEmpty ? remoteRows : remoteRows.filter { row in
+                    guard let id = row[keyColumn] else { return true }
+                    return !pendingIds.contains(String(describing: id))
+                }
+                let resolved = await self.resolvePage(fresh, table: name)
                 totalConflictsResolved += resolved.conflictsResolved
 
                 if !resolved.rows.isEmpty {
@@ -1004,6 +1017,20 @@ public final class SyncEngine: ObservableObject, SyncEngineProtocol {
         }
 
         Logger.debug("[SyncEngine] Pulled \(rowsPulled) rows from \(name)")
+    }
+
+    /// Gli id delle righe di `table` con una mutazione locale ancora da spedire.
+    ///
+    /// Gli stessi stati che `pushPendingChanges` raccoglie, più `blocked` che aspetta solo la sua
+    /// dipendenza. `stuck` no: quella mutazione non partirà mai, e tenerla qui vorrebbe dire
+    /// rendere il pull cieco su quella riga per sempre — lì il server torna a essere autorevole.
+    private func pendingOutboxRecordIds(table: String) async -> Set<String> {
+        let sql = """
+            SELECT record_id FROM sync_outbox
+            WHERE table_name = ? AND status IN ('pending', 'failed', 'blocked')
+        """
+        let rows = (try? await sqliteService.queryRaw(sql, parameters: [table])) ?? []
+        return Set(rows.compactMap { $0["record_id"] as? String })
     }
 
     /// Applies conflict resolution to one page of remote rows.
