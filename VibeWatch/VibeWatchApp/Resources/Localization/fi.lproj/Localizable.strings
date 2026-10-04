@@ -1326,7 +1326,6 @@
 "shareCard.completedBadge" = "Katsottu loppuun";
 "shareCard.stats.episodes" = "%d jaksoa";
 "shareCard.stats.hours" = "%d tuntia";
-"shareCard.followers" = "%d seuraajaa";
 "shareCard.favoriteMovies" = "Lempielokuvat";
 "shareCard.favoriteShows" = "Lempisarjat";
 "shareCard.toast.renderFailed" = "Kuvan luonti epäonnistui";

@@ -1325,7 +1325,6 @@
 "shareCard.completedBadge" = "Voltooid";
 "shareCard.stats.episodes" = "%d afleveringen";
 "shareCard.stats.hours" = "%d uur";
-"shareCard.followers" = "%d volgers";
 "shareCard.favoriteMovies" = "Favoriete films";
 "shareCard.favoriteShows" = "Favoriete series";
 "shareCard.toast.renderFailed" = "Afbeelding kon niet worden gemaakt";

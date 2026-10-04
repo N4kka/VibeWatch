@@ -1252,7 +1252,6 @@
 "shareCard.completedBadge" = "Fullført";
 "shareCard.stats.episodes" = "%d episoder";
 "shareCard.stats.hours" = "%d timer";
-"shareCard.followers" = "%d følgere";
 "shareCard.favoriteMovies" = "Favorittfilmer";
 "shareCard.favoriteShows" = "Favorittserier";
 "shareCard.toast.renderFailed" = "Kunne ikke lage bildet";

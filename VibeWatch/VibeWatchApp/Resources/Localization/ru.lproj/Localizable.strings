@@ -1310,7 +1310,6 @@
 "shareCard.completedBadge" = "Завершено";
 "shareCard.stats.episodes" = "%d эпизодов";
 "shareCard.stats.hours" = "%d часов";
-"shareCard.followers" = "%d подписчиков";
 "shareCard.favoriteMovies" = "Любимые фильмы";
 "shareCard.favoriteShows" = "Любимые сериалы";
 "shareCard.toast.renderFailed" = "Не удалось создать изображение";

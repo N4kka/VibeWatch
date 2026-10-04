@@ -177,9 +177,13 @@ struct ShowCompletedShareCard: View {
 
 // MARK: - Card: profilo
 
-/// La card del profilo: identità in alto, i 4 film e le 4 serie preferite come due file di
-/// poster. Le liste arrivano già limitate a 4 dal chiamante ma qui c'è comunque un `prefix`:
-/// una quinta copertina romperebbe la griglia calcolata sulla larghezza fissa della card.
+/// La card del profilo: una riga d'identità in alto (foto a sinistra, nome/indirizzo/bio in
+/// colonna accanto) e sotto le due file di poster, che sono la parte che si guarda davvero.
+/// Fondo nero pieno, senza i bagliori delle altre card: qui non c'è un poster da cui ereditare
+/// una palette, e il nero fa risaltare le copertine.
+///
+/// Le liste arrivano già limitate a 4 dal chiamante ma qui c'è comunque un `prefix`: una quinta
+/// copertina romperebbe la griglia calcolata sulla larghezza fissa della card.
 struct ProfileShareCard: View {
     struct FavoriteItem {
         var title: String
@@ -191,86 +195,107 @@ struct ProfileShareCard: View {
         var username: String
         /// L'indirizzo pubblico da stampare al posto della sola chiocciola (nil = niente indirizzo).
         var profileLink: String? = nil
+        /// La frase del profilo. Ha preso il posto dei follower: un numero piccolo sminuisce e uno
+        /// grande non dice niente di chi guarda cosa, la frase invece è l'unica riga scritta da te.
+        var bio: String? = nil
         var avatar: UIImage?
         var favoriteMovies: [FavoriteItem]
         var favoriteShows: [FavoriteItem]
-        var followerCount: Int?
     }
 
     let model: Model
     var format: ShareCardFormat = .story
 
     private var isStory: Bool { format == .story }
-    private var tileWidth: CGFloat { isStory ? 66 : 58 }
+    /// Quattro poster più tre spazi dentro la larghezza della card meno i margini: è il massimo
+    /// che ci sta, ed è la misura che rende leggibile una copertina dentro una story.
+    private var tileWidth: CGFloat { isStory ? 78 : 72 }
+    private var tileSpacing: CGFloat { 6 }
+    private var sideMargin: CGFloat { 14 }
 
     var body: some View {
         ZStack {
-            ShareCardBackdrop(image: nil)
+            Color.black
 
+            // Un solo Spacer sopra e uno sotto il blocco dei poster, con l'identità ancorata in
+            // alto: così le due file finiscono al centro ottico della card invece di galleggiare
+            // con un buco sopra e uno sotto.
             VStack(spacing: 0) {
-                Spacer(minLength: 10)
+                identityRow
+                    .padding(.horizontal, sideMargin)
+                    .padding(.top, isStory ? 30 : 20)
 
-                ShareCardAvatar(image: model.avatar, name: model.displayName,
-                                diameter: isStory ? 84 : 60)
-
-                Text(model.displayName)
-                    .font(.system(size: isStory ? 24 : 20, weight: .heavy))
-                    .foregroundColor(.theme.textPrimary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                    .padding(.top, isStory ? 14 : 9)
-
-                // Sulla card del profilo l'indirizzo prende il posto della chiocciola: è la card
-                // che serve proprio a farsi trovare, e "@nicola" da solo non dice dove cercare.
-                Text(model.profileLink ?? "@\(model.username)")
-                    .font(.system(size: isStory ? 14.5 : 13, weight: .semibold))
-                    .foregroundColor(model.profileLink == nil ? .theme.textSecondary : .theme.accentOrange)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-                    .padding(.top, 3)
-
-                if let followers = model.followerCount {
-                    Text(String(format: "shareCard.followers".localized, followers))
-                        .font(.system(size: isStory ? 13 : 12, weight: .bold))
-                        .foregroundColor(.theme.accentOrange)
-                        .padding(.top, isStory ? 7 : 5)
-                }
-
-                Spacer(minLength: 8)
+                Spacer(minLength: 16)
 
                 favoritesSection(label: "shareCard.favoriteMovies".localized,
                                  items: model.favoriteMovies)
 
                 favoritesSection(label: "shareCard.favoriteShows".localized,
                                  items: model.favoriteShows)
-                    .padding(.top, isStory ? 22 : 12)
+                    .padding(.top, isStory ? 30 : 18)
 
-                Spacer(minLength: 10)
+                Spacer(minLength: 16)
 
-                ShareCardWordmark(iconSize: isStory ? 21 : 18)
-                    .padding(.bottom, isStory ? 26 : 16)
+                ShareCardWordmark(iconSize: isStory ? 34 : 28)
+                    .padding(.bottom, isStory ? 30 : 20)
             }
-            .padding(.horizontal, 28)
         }
         .frame(width: format.size.width, height: format.size.height)
+    }
+
+    /// Identità su UNA riga: foto a sinistra, e accanto in colonna nome, indirizzo e frase. In
+    /// verticale occupava mezza card per tre righe di testo, e i poster — la parte che si
+    /// guarda — finivano schiacciati in fondo.
+    private var identityRow: some View {
+        HStack(spacing: 14) {
+            ShareCardAvatar(image: model.avatar, name: model.displayName,
+                            diameter: isStory ? 76 : 60)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(model.displayName)
+                    .font(.system(size: isStory ? 23 : 19, weight: .heavy))
+                    .foregroundColor(.theme.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+
+                // Sulla card del profilo l'indirizzo prende il posto della chiocciola: è la card
+                // che serve proprio a farsi trovare, e "@nicola" da solo non dice dove cercare.
+                Text(model.profileLink ?? "@\(model.username)")
+                    .font(.system(size: isStory ? 13.5 : 12, weight: .semibold))
+                    .foregroundColor(model.profileLink == nil ? .theme.textSecondary : .theme.accentOrange)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+
+                if let bio = model.bio?.trimmingCharacters(in: .whitespacesAndNewlines), !bio.isEmpty {
+                    Text(bio)
+                        .font(.system(size: isStory ? 12.5 : 11.5, weight: .medium))
+                        .foregroundColor(.theme.textSecondary)
+                        .lineLimit(2)
+                        .lineSpacing(2)
+                        .padding(.top, 2)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 
     @ViewBuilder
     private func favoritesSection(label: String, items: [FavoriteItem]) -> some View {
         if !items.isEmpty {
-            VStack(spacing: isStory ? 10 : 7) {
+            VStack(spacing: isStory ? 12 : 8) {
                 Text(label.uppercased())
-                    .font(.system(size: 11, weight: .heavy))
+                    .font(.system(size: isStory ? 12.5 : 11, weight: .heavy))
                     .kerning(1.3)
                     .foregroundColor(.theme.textSecondary)
 
-                HStack(spacing: 10) {
+                HStack(spacing: tileSpacing) {
                     ForEach(Array(items.prefix(4).enumerated()), id: \.offset) { _, item in
                         ShareCardPoster(image: item.poster, title: item.title,
                                         width: tileWidth, plain: true)
                     }
                 }
             }
+            .padding(.horizontal, sideMargin)
         }
     }
 }
@@ -537,7 +562,9 @@ private struct ShareCardWordmark: View {
 
     var body: some View {
         HStack(spacing: 7) {
-            Image("logo_56x56")
+            // `paywall_logo` e non `logo_56x56`: quest'ultimo è un JPEG, quindi porta con sé un
+            // quadrato opaco che sul nero pieno della card del profilo si vede tutto.
+            Image("paywall_logo")
                 .resizable()
                 .scaledToFit()
                 .frame(width: iconSize, height: iconSize)
@@ -734,6 +761,7 @@ private struct ShareCardUsernameTag: View {
         model: .init(
             displayName: "Nicola",
             username: "nicola",
+            bio: "Se non finisce con una stretta di cuore non l'ho guardato davvero.",
             avatar: nil,
             favoriteMovies: [
                 .init(title: "Interstellar", poster: nil),
@@ -746,8 +774,7 @@ private struct ShareCardUsernameTag: View {
                 .init(title: "Dark", poster: nil),
                 .init(title: "Severance", poster: nil),
                 .init(title: "The Bear", poster: nil)
-            ],
-            followerCount: 128
+            ]
         ),
         format: .story
     )
@@ -758,6 +785,7 @@ private struct ShareCardUsernameTag: View {
         model: .init(
             displayName: "Nicola",
             username: "nicola",
+            bio: "Se non finisce con una stretta di cuore non l'ho guardato davvero.",
             avatar: nil,
             favoriteMovies: [
                 .init(title: "Interstellar", poster: nil),
@@ -766,8 +794,7 @@ private struct ShareCardUsernameTag: View {
             favoriteShows: [
                 .init(title: "Breaking Bad", poster: nil),
                 .init(title: "Dark", poster: nil)
-            ],
-            followerCount: nil
+            ]
         ),
         format: .post
     )

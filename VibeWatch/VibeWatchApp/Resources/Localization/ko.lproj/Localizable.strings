@@ -1320,7 +1320,6 @@
 "shareCard.completedBadge" = "시청 완료";
 "shareCard.stats.episodes" = "%d개 에피소드";
 "shareCard.stats.hours" = "%d시간";
-"shareCard.followers" = "팔로워 %d명";
 "shareCard.favoriteMovies" = "좋아하는 영화";
 "shareCard.favoriteShows" = "좋아하는 시리즈";
 "shareCard.toast.renderFailed" = "이미지를 만들지 못했습니다";

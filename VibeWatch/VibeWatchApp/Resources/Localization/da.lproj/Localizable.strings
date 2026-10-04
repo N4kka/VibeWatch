@@ -1327,7 +1327,6 @@
 "shareCard.completedBadge" = "Fuldført";
 "shareCard.stats.episodes" = "%d afsnit";
 "shareCard.stats.hours" = "%d timer";
-"shareCard.followers" = "%d følgere";
 "shareCard.favoriteMovies" = "Yndlingsfilm";
 "shareCard.favoriteShows" = "Yndlingsserier";
 "shareCard.toast.renderFailed" = "Billedet kunne ikke oprettes";

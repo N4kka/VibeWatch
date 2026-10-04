@@ -1305,7 +1305,6 @@
 "shareCard.completedBadge" = "已看完";
 "shareCard.stats.episodes" = "%d 集";
 "shareCard.stats.hours" = "%d 小时";
-"shareCard.followers" = "%d 位粉丝";
 "shareCard.favoriteMovies" = "最爱的电影";
 "shareCard.favoriteShows" = "最爱的剧集";
 "shareCard.toast.renderFailed" = "无法生成图片";

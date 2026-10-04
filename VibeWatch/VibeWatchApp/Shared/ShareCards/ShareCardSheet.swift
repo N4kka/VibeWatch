@@ -195,6 +195,7 @@ private struct SystemShareImage: Identifiable {
                 content: .profile(.init(
                     displayName: "Nicola",
                     username: "nicola",
+                    bio: "Se non finisce con una stretta di cuore non l'ho guardato davvero.",
                     avatar: nil,
                     favoriteMovies: [
                         .init(title: "Interstellar", poster: nil),
@@ -207,8 +208,7 @@ private struct SystemShareImage: Identifiable {
                         .init(title: "Dark", poster: nil),
                         .init(title: "Severance", poster: nil),
                         .init(title: "The Bear", poster: nil)
-                    ],
-                    followerCount: 128
+                    ]
                 )),
                 onClose: {}
             )

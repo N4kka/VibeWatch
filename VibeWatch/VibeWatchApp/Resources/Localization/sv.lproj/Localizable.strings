@@ -1314,7 +1314,6 @@
 "shareCard.completedBadge" = "Avslutad";
 "shareCard.stats.episodes" = "%d avsnitt";
 "shareCard.stats.hours" = "%d timmar";
-"shareCard.followers" = "%d följare";
 "shareCard.favoriteMovies" = "Favoritfilmer";
 "shareCard.favoriteShows" = "Favoritserier";
 "shareCard.toast.renderFailed" = "Bilden kunde inte skapas";

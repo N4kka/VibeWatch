@@ -1316,7 +1316,6 @@
 "shareCard.completedBadge" = "Tamamlandı";
 "shareCard.stats.episodes" = "%d bölüm";
 "shareCard.stats.hours" = "%d saat";
-"shareCard.followers" = "%d takipçi";
 "shareCard.favoriteMovies" = "Favori filmler";
 "shareCard.favoriteShows" = "Favori diziler";
 "shareCard.toast.renderFailed" = "Görsel oluşturulamadı";

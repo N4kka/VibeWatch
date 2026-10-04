@@ -1331,7 +1331,6 @@
 "shareCard.completedBadge" = "पूरा किया";
 "shareCard.stats.episodes" = "%d एपिसोड";
 "shareCard.stats.hours" = "%d घंटे";
-"shareCard.followers" = "%d फ़ॉलोअर";
 "shareCard.favoriteMovies" = "पसंदीदा फ़िल्में";
 "shareCard.favoriteShows" = "पसंदीदा टीवी शो";
 "shareCard.toast.renderFailed" = "इमेज नहीं बन सकी";

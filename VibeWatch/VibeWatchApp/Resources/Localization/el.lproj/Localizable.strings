@@ -1326,7 +1326,6 @@
 "shareCard.completedBadge" = "Ολοκληρωμένη";
 "shareCard.stats.episodes" = "%d επεισόδια";
 "shareCard.stats.hours" = "%d ώρες";
-"shareCard.followers" = "%d ακόλουθοι";
 "shareCard.favoriteMovies" = "Αγαπημένες ταινίες";
 "shareCard.favoriteShows" = "Αγαπημένες σειρές";
 "shareCard.toast.renderFailed" = "Δεν ήταν δυνατή η δημιουργία της εικόνας";

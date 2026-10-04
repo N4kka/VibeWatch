@@ -1325,7 +1325,6 @@
 "shareCard.completedBadge" = "Terminée";
 "shareCard.stats.episodes" = "%d épisodes";
 "shareCard.stats.hours" = "%d heures";
-"shareCard.followers" = "%d abonnés";
 "shareCard.favoriteMovies" = "Films préférés";
 "shareCard.favoriteShows" = "Séries préférées";
 "shareCard.toast.renderFailed" = "Impossible de créer l’image";
