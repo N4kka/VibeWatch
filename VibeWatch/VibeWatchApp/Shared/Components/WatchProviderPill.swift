@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// La pillola "dove lo guardo" sulla card del Tracking — l'erede di quella del vecchio
 /// tracking dentro ListsView, con in più l'etichetta dello scaffale.
@@ -27,6 +28,8 @@ struct WatchProviderPill: View {
 
     @State private var phase: Phase = .checking
     @State private var showNotifyAlert = false
+    /// Cambia per far ripartire `load()` sullo stesso titolo.
+    @State private var recheck = 0
 
     var body: some View {
         Group {
@@ -39,7 +42,16 @@ struct WatchProviderPill: View {
                 notifyChip
             }
         }
-        .task(id: "\(mediaType.rawValue)-\(mediaId)") { await load() }
+        .task(id: "\(mediaType.rawValue)-\(mediaId)-\(recheck)") { await load() }
+        // "Avvisami" è una risposta del momento, non un verdetto. La card nasce una volta e la
+        // home può restare viva per giorni con l'app in background: una serie salvata prima
+        // dell'uscita restava su "Avvisami" anche quando era ormai su Apple TV, perché nessuno
+        // tornava a chiedere. Al rientro in primo piano si richiede solo per chi non ha trovato
+        // niente: un provider già trovato non sfarfalla, e la cache da 24h fa il resto.
+        .onReceive(NotificationCenter.default.publisher(
+            for: UIApplication.willEnterForegroundNotification)) { _ in
+            if phase == .none { recheck += 1 }
+        }
         .alert("lists.notifyMeTitle".localized, isPresented: $showNotifyAlert) {
             Button("common.ok".localized, role: .cancel) {}
         } message: {
