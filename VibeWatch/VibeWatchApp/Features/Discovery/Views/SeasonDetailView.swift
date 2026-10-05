@@ -139,9 +139,12 @@ struct SeasonDetailView: View {
                 }
             }
         }
-        .overlay(alignment: .top) {
+        .safeAreaInset(edge: .top, spacing: 0) {
             // Fuori dalla ScrollView: il back button resta a portata anche in fondo alla lista
             // episodi, che è lunga quanto la stagione.
+            // Inset e non overlay: con l'overlay la striscia opaca copriva i primi ~60pt del
+            // banner, che sembrava tagliato dall'header. Così il contenuto parte sotto la barra
+            // e ci scorre sotto solo quando si scrolla.
             StickyDetailNavBar(
                 title: viewModel.season.map { "\(showName) – \($0.name)" } ?? showName,
                 scrollOffset: scrollOffset,
