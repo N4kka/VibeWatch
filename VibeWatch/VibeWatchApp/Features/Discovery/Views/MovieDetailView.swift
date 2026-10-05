@@ -132,8 +132,11 @@ struct MovieDetailView: View {
             }
 
         }
-        .overlay(alignment: .top) {
+        .safeAreaInset(edge: .top, spacing: 0) {
             // Fuori dalla ScrollView: è ciò che la tiene ferma mentre il contenuto scorre.
+            // Inset e non overlay: con l'overlay la striscia opaca copriva i primi ~60pt del
+            // banner, che sembrava tagliato dall'header. Così il contenuto parte sotto la barra
+            // e ci scorre sotto solo quando si scrolla.
             StickyDetailNavBar(
                 title: viewModel.movie?.title ?? "",
                 scrollOffset: scrollOffset,

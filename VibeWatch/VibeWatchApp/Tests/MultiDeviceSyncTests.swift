@@ -2936,6 +2936,22 @@ final class ListsTrackingFusionTests: XCTestCase {
         }
     }
 
+    /// La DELETE porta la chiave naturale letta dalla riga persistita: se l'id locale e quello
+    /// remoto sono divergenti, il server cancella comunque la riga giusta.
+    func test_rimuovereFilm_laDeletePortaLaChiaveNaturale() async throws {
+        seedLegacyWatchlist(withTV: 900, movie: 500)
+        await manager.loadListsFromSQLite()
+        let item = try XCTUnwrap(manager.watchlist.items.first { $0.mediaId == 500 })
+
+        try await manager.removeFromList(listId: manager.watchlist.id, itemId: item.id)
+
+        let delete = try XCTUnwrap(sync.queued.last { $0.table == "list_items" })
+        XCTAssertEqual(delete.payload["id"] as? String, "it-mv")
+        XCTAssertEqual(delete.payload["list_id"] as? String, "wl-1")
+        XCTAssertEqual((delete.payload["media_id"] as? NSNumber)?.intValue, 500)
+        XCTAssertEqual(delete.payload["media_type"] as? String, "movie")
+    }
+
     func test_rimuovereSerieDaSeen_chiamaUnsee() async throws {
         seedTracking(802, bucket: "up_to_date", name: "In Pari",
                      completedAt: "2026-07-30T20:00:00Z")

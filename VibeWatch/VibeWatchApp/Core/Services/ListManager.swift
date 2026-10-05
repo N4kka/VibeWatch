@@ -1297,12 +1297,27 @@ class ListManager: ObservableObject {
                 throw SQLiteError.queryFailed("Failed to soft-delete list item")
             }
             
+            // La DELETE porta anche la chiave naturale, letta dalla riga persistita (il list_id
+            // che il server conosce, non quello in memoria). Se l'id locale e quello remoto sono
+            // divergenti — un INSERT rifiutato per `list_items_list_id_media_id_media_type_key` —
+            // cancellare per id sul server non tocca niente, e il pull riporta la riga: è il film
+            // segnato visto che ricompare in watchlist. `apply_mutations` usa la chiave se c'è.
+            var payload: [String: Any] = ["id": itemId]
+            let rows = (try? await db.queryRaw(
+                "SELECT list_id, media_id, media_type FROM list_items WHERE id = ?",
+                parameters: [itemId])) ?? []
+            if let row = rows.first {
+                payload["list_id"] = row["list_id"]
+                payload["media_id"] = row["media_id"]
+                payload["media_type"] = row["media_type"]
+            }
+
             // Queue for sync
             try await sync.queueOperation(
                 table: "list_items",
                 operationType: "DELETE",
                 recordId: itemId,
-                payload: ["id": itemId],
+                payload: payload,
                 dependsOn: nil
             )
             
