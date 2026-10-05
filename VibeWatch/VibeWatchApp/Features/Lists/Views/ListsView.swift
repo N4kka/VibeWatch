@@ -1408,6 +1408,9 @@ struct CreateListView: View {
     @State private var showGuidelines = false
     @State private var showProfanityError = false
     @State private var error: AppError?
+    /// Il foglio si chiude solo quando `createList` torna: senza questo, un secondo tap nel
+    /// frattempo creava una seconda lista identica (ogni chiamata genera un id nuovo).
+    @State private var isCreating = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -1511,10 +1514,10 @@ struct CreateListView: View {
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
-                        .background(listName.isEmpty || !listManager.canCreateList() ? Color.gray.opacity(0.3) : Color.theme.accentOrange)
+                        .background(listName.isEmpty || isCreating || !listManager.canCreateList() ? Color.gray.opacity(0.3) : Color.theme.accentOrange)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
-                .disabled(listName.isEmpty || !listManager.canCreateList())
+                .disabled(listName.isEmpty || isCreating || !listManager.canCreateList())
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)
             }
@@ -1557,6 +1560,9 @@ struct CreateListView: View {
     }
 
     private func performCreate() async {
+        guard !isCreating else { return }
+        isCreating = true
+        defer { isCreating = false }
         let toastId = ToastCenter.shared.begin(message: "lists.toast.creating".localized)
         do {
             let newList = try await listManager.createList(name: listName, description: listDescription.isEmpty ? nil : listDescription)
