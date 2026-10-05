@@ -14,6 +14,7 @@ const SUPABASE_SERVICE_ROLE_KEY = (() => {
 // A nudge is a suggestion, so it is worth exactly one notification. The old version queued one
 // per series, which meant a user with nine shows got nine pushes in four seconds and then the
 // same nine together again a week later.
+// Days without watching anything of the show before it is worth a nudge.
 const REMINDER_AGE_DAYS = 3
 // Cooldown on the *user*, not on the pair (user, series). This is what stops the burst.
 const USER_COOLDOWN_DAYS = 7
@@ -24,8 +25,15 @@ type ListItem = {
   user_id: string
   media_id: number
   title: string | null
-  created_at: string
 }
+
+type TrackingRow = {
+  user_id: string
+  tmdb_show_id: number
+  show_name: string | null
+}
+
+const PAGE = 1000
 
 serve(async (req) => {
   // Cron/service callers only: this used to run for anyone holding the app's publishable
@@ -36,21 +44,32 @@ serve(async (req) => {
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
     const now = Date.now()
-    const addedBefore = new Date(now - REMINDER_AGE_DAYS * 24 * 60 * 60 * 1000).toISOString()
+    const idleSince = new Date(now - REMINDER_AGE_DAYS * 24 * 60 * 60 * 1000).toISOString()
     const seriesCooldownStart = new Date(now - SERIES_COOLDOWN_DAYS * 24 * 60 * 60 * 1000).toISOString()
     const userCooldownStart = new Date(now - USER_COOLDOWN_DAYS * 24 * 60 * 60 * 1000).toISOString()
 
-    // Most recently added first: whatever the user saved last is the best guess at what they
-    // still mean to watch. `title` is denormalised onto the row, so no TMDB round trip is needed.
-    const { data: items, error } = await supabase
-      .from('list_items')
-      .select('user_id, media_id, title, created_at')
-      .eq('media_type', 'tv')
-      .is('deleted_at', null) // removed items must stop nagging
-      .lte('created_at', addedBefore)
-      .order('created_at', { ascending: false })
-
-    if (error) throw error
+    // Candidates come from tracking, not from list rows: a series "to continue" is one the user
+    // started and has an episode ready for (up_next), or left idle (stale). List rows said
+    // nothing of the sort — a legacy TV row in Seen nudged people about shows they had finished.
+    // Most recently watched first: the show they were last into is the best guess. Paged, since
+    // PostgREST stops at 1000 rows without saying so.
+    const items: ListItem[] = []
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await supabase
+        .from('v_tv_tracking')
+        .select('user_id, tmdb_show_id, show_name')
+        .in('bucket', ['up_next', 'stale'])
+        .lte('last_watched_at', idleSince)
+        .order('last_watched_at', { ascending: false })
+        .order('user_id')
+        .order('tmdb_show_id')
+        .range(from, from + PAGE - 1)
+      if (error) throw error
+      for (const row of (data ?? []) as TrackingRow[]) {
+        items.push({ user_id: row.user_id, media_id: row.tmdb_show_id, title: row.show_name })
+      }
+      if (!data || data.length < PAGE) break
+    }
 
     // One pass over the recent nudges instead of a count query per candidate.
     const { data: recentNudges, error: nudgeError } = await supabase
@@ -69,7 +88,7 @@ serve(async (req) => {
     }
 
     const candidatesByUser = new Map<string, ListItem[]>()
-    for (const item of (items ?? []) as ListItem[]) {
+    for (const item of items) {
       if (usersInCooldown.has(item.user_id)) continue
       const bucket = candidatesByUser.get(item.user_id)
       if (bucket) bucket.push(item)
