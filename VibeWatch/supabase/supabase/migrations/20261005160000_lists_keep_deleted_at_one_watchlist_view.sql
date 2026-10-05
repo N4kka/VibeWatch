@@ -5,7 +5,7 @@
 --    INSERT/UPDATE (deletes go through op DELETE). So any write to a list deleted elsewhere — iOS
 --    re-inserting at login the custom lists it still holds locally but did not find in the
 --    (deleted_at IS NULL) fetch, a rename or visibility toggle from a device that missed the
---    delete — brought the list back. Same splice as the source_list_* one (20260911120000):
+--    delete — brought the list back. Same splice as the source_list_* one (20260911004701):
 --    a key the record doesn't carry keeps the stored value.
 --
 -- 2. Every "duplicate the watchlist" tap on old iOS builds made a new live copy; there was no
@@ -13,7 +13,7 @@
 --    system list per type: a second copy is a silent no-op inside apply_mutations, not a failed
 --    batch (a failed batch would be poison to the clients' outboxes).
 --
--- No md5 guard on the source: this follows 20261005120000 and the live hash after it was not
+-- No md5 guard on the source: this follows 20261005101828 and the live hash after it was not
 -- recorded. The anchor is checked to occur exactly once instead, and the splice is idempotent.
 -- Spliced onto the live prosrc, never rewritten (see the deploy notes).
 
