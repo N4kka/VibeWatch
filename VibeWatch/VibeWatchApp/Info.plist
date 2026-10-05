@@ -9,8 +9,6 @@
 		<string>com.vibewatch.refresh-carousels</string>
 		<string>com.vibewatch.cerebras-backend-processing</string>
 	</array>
-	<key>CFBundleShortVersionString</key>
-	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -34,8 +32,6 @@
 			</array>
 		</dict>
 	</array>
-	<key>CFBundleVersion</key>
-	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>GADApplicationIdentifier</key>
 	<string>ca-app-pub-7584278391945422~2884392634</string>
 	<key>GIDClientID</key>
@@ -50,8 +46,6 @@
 		<string>readdle-spark</string>
 		<string>ymail</string>
 	</array>
-	<key>NSUserTrackingUsageDescription</key>
-	<string>We use tracking to understand what works, improve the app experience, and measure marketing performance.</string>
 	<key>POSTHOG_API_KEY</key>
 	<string>$(POSTHOG_API_KEY)</string>
 	<key>POSTHOG_HOST</key>
