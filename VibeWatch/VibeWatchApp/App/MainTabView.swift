@@ -1,4 +1,5 @@
 import SwiftUI
+import UserNotifications
 
 struct MainTabView: View {
     @EnvironmentObject var appState: AppState // Injected from App
@@ -503,6 +504,9 @@ extension MainTabView {
         Color.clear
             .onChange(of: scenePhase) { oldPhase, newPhase in
                 if newPhase == .active && oldPhase != .active {
+                    // The server sends `badge: 1` with every push; opening the app is what clears it.
+                    // Local only: no notification is sent, delivered ones stay in Notification Center.
+                    UNUserNotificationCenter.current().setBadgeCount(0)
                     Logger.debug("[App] App became active - checking subscription status")
                     Task {
                         AnalyticsService.shared.trackAppOpen()
