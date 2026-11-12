@@ -9578,6 +9578,8 @@ revoke truncate on table "public"."sync_rejected_mutations" from "authenticated"
 revoke update on table "public"."sync_rejected_mutations" from "authenticated";
 revoke insert on table "public"."tv_show_state" from "authenticated";
 revoke update on table "public"."tv_show_state" from "authenticated";
+-- A table-level revoke also drops column grants: restore the client's columns, as in production.
+grant insert ("user_id", "tmdb_show_id", "user_status"), update ("user_status") on table "public"."tv_show_state" to "authenticated";
 revoke delete on table "public"."user_entitlements" from "anon";
 revoke insert on table "public"."user_entitlements" from "anon";
 revoke truncate on table "public"."user_entitlements" from "anon";
