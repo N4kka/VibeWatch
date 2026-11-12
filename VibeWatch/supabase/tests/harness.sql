@@ -1,198 +1,87 @@
--- Impalcatura per far girare le migration su un Postgres vuoto.
+-- Platform scaffolding for running the migrations on a plain Postgres.
 --
--- Ricrea il minimo indispensabile di cio' che su Supabase esiste gia' ma la cui migration
--- PRECEDE questo repo (per anni l'intero albero supabase/ e' stato gitignorato, vedi il commento
--- in .gitignore). Non e' uno stub "per far passare i test": e' la parte di produzione che i test
--- devono poter presupporre.
+-- Recreates only what Supabase provides and the baseline assumes: roles, the auth/storage/vault
+-- schemas, the pg_net and pg_cron entry points. Every public table comes from the migrations.
 
--- Ruoli di Supabase. Servono ai grant per colonna e alle prove di RLS. `service_role` e'
--- arrivato con l'import (blocco §7.2): `import_apply_mutations` e' eseguibile solo da lui,
--- e i test devono poterlo impersonare per provarlo.
 do $$
 begin
-  if not exists (select 1 from pg_roles where rolname = 'anon') then
-    create role anon nologin;
-  end if;
-  if not exists (select 1 from pg_roles where rolname = 'authenticated') then
-    create role authenticated nologin;
-  end if;
-  if not exists (select 1 from pg_roles where rolname = 'service_role') then
-    create role service_role nologin;
-  end if;
+  if not exists (select 1 from pg_roles where rolname = 'anon') then create role anon nologin; end if;
+  if not exists (select 1 from pg_roles where rolname = 'authenticated') then create role authenticated nologin; end if;
+  if not exists (select 1 from pg_roles where rolname = 'service_role') then create role service_role nologin bypassrls; end if;
 end $$;
 
 grant usage on schema public to anon, authenticated, service_role;
-alter default privileges in schema public
-  grant select, insert, update, delete on tables to authenticated;
-alter default privileges in schema public grant select on tables to anon;
+-- Table and sequence defaults as on Supabase. Functions keep the built-in default (EXECUTE to
+-- PUBLIC), which is what the baseline's `REVOKE ... FROM PUBLIC` lines are written against.
+alter default privileges in schema public grant select, insert, update, delete on tables to anon, authenticated;
+alter default privileges in schema public grant all on tables to service_role;
+alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
 
--- Lo schema in cui Supabase installa le estensioni. Qui non esiste di default.
 create schema if not exists extensions;
+grant usage on schema extensions to anon, authenticated, service_role;
 
--- `storage.objects`, ridotto alle sole colonne che `create_import_job` e
--- `imports_stale_uploads` consultano: esistenza/owner per la prima, `created_at` per il TTL
--- della seconda. In produzione lo schema e' di Supabase Storage; qui basta la forma. `owner`
--- (uuid, deprecato) e `owner_id` (text) esistono entrambi in produzione, e la funzione li
--- accetta entrambi — il test li prova uno per volta.
+-- auth: users table and the JWT helpers. Tests drive the caller with
+-- `set local request.jwt.claim.sub = '<uuid>'` (and `request.jwt.claim.role`).
+create schema if not exists auth;
+grant usage on schema auth to anon, authenticated, service_role;
+create table if not exists auth.users (
+  id    uuid primary key default gen_random_uuid(),
+  email text
+);
+create or replace function auth.uid() returns uuid language sql stable as $$
+  select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid;
+$$;
+create or replace function auth.role() returns text language sql stable as $$
+  select coalesce(nullif(current_setting('request.jwt.claim.role', true), ''), current_user::text);
+$$;
+
+-- storage: the columns the migrations and policies touch.
 create schema if not exists storage;
+grant usage on schema storage to anon, authenticated, service_role;
+create table if not exists storage.buckets (
+  id                 text primary key,
+  name               text not null,
+  public             boolean default false,
+  file_size_limit    bigint,
+  allowed_mime_types text[]
+);
 create table if not exists storage.objects (
+  id         uuid primary key default gen_random_uuid(),
   bucket_id  text not null,
   name       text not null,
   owner      uuid,
   owner_id   text,
   created_at timestamptz not null default now()
 );
-grant usage on schema extensions to anon, authenticated;
-
--- Schema auth: solo cio' che le migration referenziano (FK su auth.users, auth.uid()).
-create schema if not exists auth;
-
-create table if not exists auth.users (
-  id    uuid primary key default gen_random_uuid(),
-  email text
-);
-
--- Su Supabase legge il claim `sub` del JWT. Qui lo pilota il test con
--- `set local request.jwt.claim.sub = '<uuid>'`.
-create or replace function auth.uid() returns uuid
-language sql stable as $$
-  select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid;
+alter table storage.objects enable row level security;
+create or replace function storage.foldername(name text) returns text[] language sql immutable as $$
+  select (string_to_array(name, '/'))[1:array_length(string_to_array(name, '/'), 1) - 1];
 $$;
 
--- In produzione Supabase concede USAGE su `auth` ai ruoli client, ed e' cio' che permette a una
--- funzione `security invoker` chiamata dal client (get_my_stats) di leggere auth.uid(). Le
--- policy RLS non lo richiedono (girano col proprietario della tabella), quindi la mancanza si
--- vede solo alla prima funzione invoker che tocca auth — meglio qui che in un FAIL criptico.
-grant usage on schema auth to anon, authenticated, service_role;
+-- pg_net and vault: cron jobs and triggers call them; here nothing leaves the box.
+create schema if not exists net;
+create or replace function net.http_post(
+  url text, body jsonb default '{}'::jsonb, params jsonb default '{}'::jsonb,
+  headers jsonb default '{}'::jsonb, timeout_milliseconds integer default 5000
+) returns bigint language sql as $$ select 0::bigint $$;
+create schema if not exists cron;
+create table if not exists cron.job (
+  jobid bigserial primary key, jobname text unique, schedule text, command text, active boolean default true
+);
+create or replace function cron.schedule(job_name text, schedule text, command text) returns bigint
+language sql as $$
+  insert into cron.job (jobname, schedule, command) values (job_name, schedule, command)
+  on conflict (jobname) do update set schedule = excluded.schedule, command = excluded.command
+  returning jobid;
+$$;
+create or replace function cron.unschedule(job_name text) returns boolean language sql as $$
+  with d as (delete from cron.job where jobname = job_name returning 1) select exists (select 1 from d);
+$$;
+create schema if not exists vault;
+create table if not exists vault.decrypted_secrets (name text primary key, decrypted_secret text);
 
--- Preferenze: la colonna count_specials_in_progress la aggiunge la migration di §1.3.
-create table if not exists public.unified_user_preferences (
-  user_id    uuid primary key references auth.users on delete cascade,
-  updated_at timestamptz not null default now()
-);
-
--- Il fuso dell'utente, gia' usato in produzione dalle quiet hours di process-notifications.
-create table if not exists public.user_notification_preferences (
-  user_id  uuid primary key references auth.users on delete cascade,
-  timezone text,
-  -- Le colonne base, come in produzione: precedono il repo, e le migration successive le
-  -- alterano invece di crearle (i default a true sono quelli veri, non una comodita' del test).
-  push_enabled      boolean default true,
-  new_availability  boolean default true,
-  new_release       boolean default true,
-  episode_aired     boolean default true,
-  continue_watching boolean default true,
-  streak_reminder   boolean default true,
-  list_milestone    boolean default false,
-  price_drop        boolean default false,
-  quiet_hours_start time,
-  quiet_hours_end   time,
-  updated_at        timestamptz default now(),
-  -- `country` e' cio' che l'auto-iscrizione copia su release_alerts: senza, ogni titolo salvato
-  -- verrebbe controllato sull'Italia, che e' esattamente il difetto che il refactoring toglie.
-  country  text not null default 'IT'
-);
-
--- Le liste legacy, in forma minima: le colonne che leggono `backfill_watchlist_tracking`
--- (fusione ListsView-Tracking) e `get_public_lists` (feed + profilo, §9.3). Tipi verificati
--- sulla produzione; i default su name/is_public esistono solo qui, per non costringere i
--- test più vecchi — che inserivano senza queste colonne — a conoscerle.
-create table if not exists public.lists (
-  id          uuid primary key default gen_random_uuid(),
-  user_id     uuid not null references auth.users on delete cascade,
-  name        text not null default '',
-  description text,
-  type        text not null,
-  is_public   boolean not null default false,
-  created_at  timestamptz default now(),
-  updated_at  timestamptz default now(),
-  deleted_at  timestamptz
-);
-create table if not exists public.list_items (
-  id          uuid primary key default gen_random_uuid(),
-  list_id     uuid not null references public.lists on delete cascade,
-  user_id     uuid not null,
-  media_id    integer,
-  media_type  text,
-  poster_path text,
-  added_at    timestamptz not null default now(),
-  deleted_at  timestamptz
-);
-
--- Le iscrizioni agli avvisi. In produzione precede il repo; qui serve intera perche' e' cio' che
--- l'auto-iscrizione (20260815102000) crea, riattiva e ritira a ogni movimento di list_items.
-create table if not exists public.release_alerts (
-  id               uuid primary key default gen_random_uuid(),
-  user_id          uuid not null references auth.users on delete cascade,
-  media_id         integer not null,
-  media_type       text not null check (media_type in ('movie','tv')),
-  source           text not null default 'notify_me'
-                     check (source in ('notify_me','watchlist','release_calendar','custom_list')),
-  is_active        boolean default true,
-  country_code     text,
-  alert_on_stream  boolean default true,
-  alert_on_rent    boolean default false,
-  alert_on_buy     boolean default false,
-  last_notified_at timestamptz,
-  created_at       timestamptz default now(),
-  unique (user_id, media_id, media_type)
-);
-
--- Il trigger che l'auto-iscrizione sostituisce: senza, la migration droppa il nulla e il test
--- non direbbe niente sul fatto che la watchlist ha smesso di essere l'unica sorgente.
-create or replace function public.trg_create_alert_on_watchlist()
-returns trigger language plpgsql security definer set search_path = public as $legacy$
-declare v_list_type text;
-begin
-  select type into v_list_type from public.lists where id = new.list_id;
-  if v_list_type = 'watchlist' and new.deleted_at is null then
-    insert into public.release_alerts(user_id, media_id, media_type, source, is_active)
-    values (new.user_id, new.media_id, new.media_type, 'watchlist', true)
-    on conflict (user_id, media_id, media_type) do update
-      set is_active = true, source = 'watchlist';
-  end if;
-  return new;
-end $legacy$;
-drop trigger if exists list_items_create_alert on public.list_items;
-create trigger list_items_create_alert after insert on public.list_items
-  for each row execute function public.trg_create_alert_on_watchlist();
--- Follow e report delle liste pubbliche: solo ciò che `get_public_lists` consulta.
-create table if not exists public.list_follows (
-  id         uuid primary key default gen_random_uuid(),
-  user_id    uuid not null,
-  list_id    uuid not null references public.lists on delete cascade,
-  deleted_at timestamptz
-);
-create table if not exists public.list_reports (
-  id      uuid primary key default gen_random_uuid(),
-  user_id uuid not null,
-  list_id uuid not null references public.lists on delete cascade,
-  reason  text
-);
-
--- Lo schema morto che la migration 20260730030000 deve rimuovere: senza queste, il drop
--- passerebbe per il solo fatto che non c'e' niente da droppare.
-create table if not exists public.tv_tracking (
-  user_id    uuid not null,
-  tv_show_id integer not null,
-  status     text,
-  primary key (user_id, tv_show_id)
-);
-create table if not exists public.tv_episode_progress (
-  user_id        uuid not null,
-  tv_show_id     integer not null,
-  season_number  integer not null,
-  episode_number integer not null,
-  primary key (user_id, tv_show_id, season_number, episode_number)
-);
-create or replace view public.v_tv_tracking_buckets as
-  select user_id, tv_show_id, 'Continuing'::text as bucket from public.tv_tracking;
-create or replace function public.get_tv_tracking_buckets()
-returns setof public.v_tv_tracking_buckets
-language sql stable security definer as $$ select * from public.v_tv_tracking_buckets; $$;
-
--- Asserzioni. Una fallita alza un'eccezione: con ON_ERROR_STOP il runner esce diverso da zero.
--- Accessibili anche da `authenticated`, perche' una parte dei test gira impersonando il client.
+-- Assertions. A failure raises: with ON_ERROR_STOP the runner exits non-zero. Executable by the
+-- client roles because part of the tests impersonates the client.
 create schema if not exists t;
 grant usage on schema t to anon, authenticated, service_role;
 alter default privileges in schema t grant execute on functions to anon, authenticated, service_role;
@@ -201,7 +90,7 @@ create or replace function t.eq(actual anyelement, expected anyelement, label te
 returns void language plpgsql as $$
 begin
   if actual is distinct from expected then
-    raise exception 'FAIL  %  (atteso %, ottenuto %)', label, expected, actual;
+    raise exception 'FAIL  %  (expected %, got %)', label, expected, actual;
   end if;
   raise notice 'ok    %', label;
 end $$;
@@ -210,99 +99,17 @@ create or replace function t.is_true(actual boolean, label text)
 returns void language plpgsql as $$
 begin
   if actual is not true then
-    raise exception 'FAIL  %  (atteso true, ottenuto %)', label, actual;
+    raise exception 'FAIL  %  (expected true, got %)', label, actual;
   end if;
   raise notice 'ok    %', label;
 end $$;
 
-/* Esegue uno statement e verifica che venga rifiutato. */
 create or replace function t.rejects(statement text, label text)
 returns void language plpgsql as $$
 begin
   execute statement;
-  raise exception 'FAIL  %  (lo statement e'' passato, doveva essere rifiutato)', label;
+  raise exception 'FAIL  %  (statement passed, should have been rejected)', label;
 exception
   when raise_exception then raise;
   when others then raise notice 'ok    %  (% )', label, sqlstate;
 end $$;
-
--- `notifications` e il suo delivery log, in forma minima: le colonne che la migration
--- 20260812190000 altera (CHECK sui tipi, colonna category) e che i trigger social scrivono e
--- rileggono per la dedupe. La coda vera la consuma process-notifications, che qui non gira.
-create table if not exists public.notifications (
-  id                uuid primary key default gen_random_uuid(),
-  user_id           uuid not null references auth.users on delete cascade,
-  notification_type text not null,
-  title             text not null,
-  body              text not null,
-  media_id          integer,
-  media_type        text,
-  is_sent           boolean default false,
-  category          text,
-  thread_id         text,
-  template_key      text,
-  template_params   jsonb,
-  created_at        timestamptz default now()
-);
-create table if not exists public.notification_delivery_log (
-  user_id            uuid not null,
-  kind               text,
-  notification_count integer,
-  delivered_at       timestamptz not null default now()
-);
-
--- `profiles` come in produzione, con le sole colonne che il blocco 8 tocca. Ricreata qui perche'
--- la sua migration precede questo repo (per anni supabase/ e' stato gitignorato). Le colonne di
--- billing ci sono apposta: sono cio' che `public_profiles` non deve esporre, e un test che le
--- cerca deve poterle trovare nella tabella per dimostrare che nella vista non ci sono.
-create table if not exists public.profiles (
-  id           uuid primary key references auth.users on delete cascade,
-  email        text not null,
-  display_name text,
-  avatar_url   text,
-  created_at   timestamptz not null default now(),
-  updated_at   timestamptz not null default now(),
-  deleted_at   timestamptz,
-  synced_at    timestamptz,
-  fcm_token    text,
-  is_on_trial  boolean default false
-);
-
-alter table public.profiles enable row level security;
-
-drop policy if exists profiles_select_own on public.profiles;
-create policy profiles_select_own on public.profiles
-  for select using ((select auth.uid()) = id);
-drop policy if exists profiles_update_own on public.profiles;
-create policy profiles_update_own on public.profiles
-  for update using ((select auth.uid()) = id) with check ((select auth.uid()) = id);
-
--- `user_blocks` come in produzione (verificato su pg_policy il 2026-07-31): la sua migration
--- precede questo repo. La forma conta per due ragioni: `blocks_select_own` e' cio' che rende
--- necessario il `security definer` di `search_users` (il verso "mi ha bloccato" e' invisibile al
--- chiamante), e il trigger di `user_follows` la legge in scrittura. In produzione il default di
--- `id` e' uuid_generate_v4() (uuid-ossp); qui gen_random_uuid(), che e' builtin — cambia il
--- generatore, non il comportamento.
-create table if not exists public.user_blocks (
-  id              uuid primary key default gen_random_uuid(),
-  user_id         uuid not null references auth.users on delete cascade,
-  blocked_user_id uuid not null references auth.users on delete cascade,
-  created_at      timestamptz default now(),
-  deleted_at      timestamptz,
-  synced_at       timestamptz
-);
-
-alter table public.user_blocks enable row level security;
-
-drop policy if exists blocks_select_own on public.user_blocks;
-create policy blocks_select_own on public.user_blocks
-  for select using ((select auth.uid()) = user_id);
-drop policy if exists blocks_insert_own on public.user_blocks;
-create policy blocks_insert_own on public.user_blocks
-  for insert with check ((select auth.uid()) = user_id);
-drop policy if exists blocks_update_own on public.user_blocks;
-create policy blocks_update_own on public.user_blocks
-  for update using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
-drop policy if exists blocks_delete_own on public.user_blocks;
-create policy blocks_delete_own on public.user_blocks
-  for delete using ((select auth.uid()) = user_id);

@@ -11,17 +11,20 @@
 begin;
 set local timezone = 'UTC';
 
+-- Reference data: the baseline is schema-only, production holds the full list.
+insert into public.username_reserved (name) values ('admin'), ('vibewatch') on conflict do nothing;
+
 insert into auth.users (id, email) values
   ('aaaaaaaa-0000-0000-0000-000000000001', 'a@test'),
   ('aaaaaaaa-0000-0000-0000-000000000002', 'b@test'),
   ('aaaaaaaa-0000-0000-0000-000000000003', 'c@test'),
   ('aaaaaaaa-0000-0000-0000-000000000004', 'd@test');
 
-insert into public.profiles (id, email, display_name, fcm_token, is_on_trial) values
-  ('aaaaaaaa-0000-0000-0000-000000000001', 'a@test', 'Anna Rossi',  'token-a', true),
-  ('aaaaaaaa-0000-0000-0000-000000000002', 'b@test', 'anna rossi',  'token-b', false),
-  ('aaaaaaaa-0000-0000-0000-000000000003', 'c@test', 'Jo',          'token-c', false),
-  ('aaaaaaaa-0000-0000-0000-000000000004', 'd@test', 'Zed',         'token-d', false);
+insert into public.profiles (id, email, display_name) values
+  ('aaaaaaaa-0000-0000-0000-000000000001', 'a@test', 'Anna Rossi'),
+  ('aaaaaaaa-0000-0000-0000-000000000002', 'b@test', 'anna rossi'),
+  ('aaaaaaaa-0000-0000-0000-000000000003', 'c@test', 'Jo'),
+  ('aaaaaaaa-0000-0000-0000-000000000004', 'd@test', 'Zed');
 
 \echo ''
 \echo '=== §3.6 username_seed: una regola sola, tre chiamanti'
@@ -76,48 +79,12 @@ select t.eq(public.username_available('anna_rossi'), false, 'ora e'' preso');
 select t.eq(public.username_available('ANNA_ROSSI'), false,
             'e lo e'' anche cambiando le maiuscole (citext): altrimenti impersonare e'' banale');
 
-\echo ''
-\echo '=== §3.7 suggest_username: suffisso numerico in caso di collisione'
-
-select t.eq(public.suggest_username('Zed Zulu'), 'zed_zulu', 'nessuna collisione: il nome cosi'' com''e''');
-select t.eq(public.suggest_username('Anna Rossi'), 'anna_rossi2', 'collisione -> suffisso');
-
+-- Usernames that later blocks rely on (suggest_username, which these used to exercise, was
+-- dropped as dead code in F0.d).
 update public.profiles set username = 'anna_rossi2'
  where id = 'aaaaaaaa-0000-0000-0000-000000000002';
-select t.eq(public.suggest_username('Anna Rossi'), 'anna_rossi3', 'e il suffisso avanza');
-
-select t.eq(public.suggest_username('admin'), 'admin2',
-            'un nome riservato non blocca la registrazione, ne'' propone uno libero');
-
--- Il suffisso non deve sfondare i 20 caratteri: si accorcia la base. Il nome di prova occupa
--- tutti e 20 i caratteri **senza** finire su un separatore, altrimenti la potatura lascerebbe
--- spazio libero e il caso limite non verrebbe provato.
 update public.profiles set username = 'abcdefghijklmnopqrst'
  where id = 'aaaaaaaa-0000-0000-0000-000000000003';
-select t.eq(public.suggest_username('abcdefghijklmnopqrstuvwxyz'), 'abcdefghijklmnopqrs2',
-            'il suffisso entra dentro i 20, accorciando la base');
-select t.is_true(length(public.suggest_username('abcdefghijklmnopqrstuvwxyz')) <= 20,
-            'e il risultato rispetta sempre il vincolo');
-select t.eq(public.username_available(public.suggest_username('abcdefghijklmnopqrstuvwxyz')),
-            true, 'e cio'' che propone e'' davvero libero');
-
--- Un nome inutilizzabile non diventa uno username inventato addosso all'utente.
---
--- `user2` e non `user`: il ripiego generico sta di proposito anche fra i riservati, cosi' nessuno
--- si ritrova `@user` nudo. Il nome brutto e' voluto — §3.7 chiede la conferma al primo accesso, e
--- uno username brutto e' cio' che fa venire voglia di cambiarlo.
-select t.eq(public.suggest_username('Jo'), 'user2', 'troppo corto -> ripiego numerato');
-select t.eq(public.suggest_username(null), 'user2', 'nessun nome -> idem');
-select t.eq(public.suggest_username('!!!', 'mario_b'), 'mario_b',
-            'ma un ripiego esplicito migliore vince');
--- Il ripiego NON deve essere l'email. Sui dati veri: 9 profili su 314 hanno un indirizzo
--- @privaterelay.appleid.com, e la parte locale e' il token di relay di Apple — `@8xp9vsbgxm`
--- ricostruisce un indirizzo contattabile. Altri 3 hanno un locale che e' un numero di telefono.
--- Il test non puo' impedire a un chiamante di passarla, ma fissa il caso che ci si aspetta.
-select t.eq(public.suggest_username('bz', '8xp9vsbgxm'), '8xp9vsbgxm',
-            'la funzione usa il ripiego che le si da'': la scelta di NON dargli l''email sta in chi chiama');
-select t.eq(public.suggest_username('Jo', '!!!'), 'user2',
-            'e un ripiego inutilizzabile ricade sul generico invece di esplodere');
 
 \echo ''
 \echo '=== §3.7 public_profiles espone il minimo'
@@ -254,8 +221,6 @@ select t.eq((select count(*)::integer from public.profiles), 0,
 -- Le funzioni: un anonimo non deve poter enumerare gli username altrui ne'' i riservati.
 select t.eq(has_function_privilege('public.username_available(text)', 'execute'), false,
             'anon non puo'' nemmeno sondare la disponibilita'': e'' un oracolo su chi esiste');
-select t.eq(has_function_privilege('public.suggest_username(text, text)', 'execute'), false,
-            'ne'' farsi proporre uno username');
 select t.eq(has_function_privilege('public.username_seed(text)', 'execute'), false,
             'ne'' chiamare la funzione di normalizzazione');
 
@@ -264,8 +229,6 @@ set local request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
 
 select t.eq(has_function_privilege('public.username_available(text)', 'execute'), true,
             'un utente autenticato si: la schermata di scelta deve poter dire libero');
-select t.eq(has_function_privilege('public.suggest_username(text, text)', 'execute'), false,
-            'ma non farsi proporre nomi: e'' il backfill a usarla, non il client');
 select t.eq((select count(*)::integer from public.profiles), 1,
             'e continua a vedere solo la propria riga di profiles');
 
@@ -557,8 +520,8 @@ reset role;
 
 select t.eq((select count(*)::integer from pg_proc p
               where p.proname = 'get_public_profile'
-                and array_to_string(p.proacl, ',') like '%anon=X%'), 0,
-            'get_public_profile non e'' chiamabile da anon');
+                and array_to_string(p.proacl, ',') like '%anon=X%'), 1,
+            'get_public_profile e'' chiamabile da anon: la pagina pubblica del web (m0)');
 select t.is_true((select array_to_string(p.proacl, ',') like '%authenticated=X%'
                     from pg_proc p where p.proname = 'get_public_profile'),
             'ma lo e'' da authenticated');
@@ -595,6 +558,8 @@ insert into public.lists (id, user_id, name, type, is_public, deleted_at) values
    'Pubblica di D',  'custom', true,  null);
 
 -- D blocca A. Nessun blocco nell'altro verso: e' esattamente il caso che prima sfuggiva.
+-- One live block per pair (uq_user_blocks_pair): start from a clean slate.
+delete from public.user_blocks;
 insert into public.user_blocks (user_id, blocked_user_id) values
   ('aaaaaaaa-0000-0000-0000-000000000004', 'aaaaaaaa-0000-0000-0000-000000000001');
 

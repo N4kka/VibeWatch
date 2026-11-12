@@ -31,18 +31,18 @@ insert into public.lists (id, user_id, name, type) values
 \echo ''
 \echo '=== salvare un titolo crea l''iscrizione, in qualunque lista'
 
-insert into public.list_items (id, list_id, user_id, media_id, media_type) values
+insert into public.list_items (id, list_id, user_id, media_id, media_type, title) values
   ('dddddddd-0000-0000-0000-000000000001', 'cccccccc-0000-0000-0000-000000000001',
-   'bbbbbbbb-0000-0000-0000-000000000001', 101, 'movie');
+   'bbbbbbbb-0000-0000-0000-000000000001', 101, 'movie', 'Title 101');
 
 select t.eq(
   (select source from public.release_alerts
     where user_id = 'bbbbbbbb-0000-0000-0000-000000000001' and media_id = 101),
   'watchlist', 'un item in watchlist si iscrive come watchlist');
 
-insert into public.list_items (id, list_id, user_id, media_id, media_type) values
+insert into public.list_items (id, list_id, user_id, media_id, media_type, title) values
   ('dddddddd-0000-0000-0000-000000000002', 'cccccccc-0000-0000-0000-000000000002',
-   'bbbbbbbb-0000-0000-0000-000000000001', 202, 'tv');
+   'bbbbbbbb-0000-0000-0000-000000000001', 202, 'tv', 'Title 202');
 
 select t.eq(
   (select source from public.release_alerts
@@ -62,9 +62,9 @@ select t.eq(
 \echo ''
 \echo '=== un utente senza preferenze ricade su IT, come faceva il codice prima'
 
-insert into public.list_items (id, list_id, user_id, media_id, media_type) values
+insert into public.list_items (id, list_id, user_id, media_id, media_type, title) values
   ('dddddddd-0000-0000-0000-000000000003', 'cccccccc-0000-0000-0000-000000000003',
-   'bbbbbbbb-0000-0000-0000-000000000002', 303, 'movie');
+   'bbbbbbbb-0000-0000-0000-000000000002', 303, 'movie', 'Title 303');
 
 select t.eq(
   (select country_code from public.release_alerts
@@ -74,9 +74,9 @@ select t.eq(
 \echo ''
 \echo '=== lo stesso titolo in due liste si ritira solo quando esce da entrambe'
 
-insert into public.list_items (id, list_id, user_id, media_id, media_type) values
+insert into public.list_items (id, list_id, user_id, media_id, media_type, title) values
   ('dddddddd-0000-0000-0000-000000000004', 'cccccccc-0000-0000-0000-000000000002',
-   'bbbbbbbb-0000-0000-0000-000000000001', 101, 'movie');
+   'bbbbbbbb-0000-0000-0000-000000000001', 101, 'movie', 'Title 101');
 
 -- Rimozione soft, come la scrive apply_mutations quando il client sincronizza una rimozione.
 update public.list_items set deleted_at = now()
@@ -103,9 +103,9 @@ select t.is_true(
 \echo ''
 \echo '=== ri-salvare un titolo ritirato lo riattiva'
 
-insert into public.list_items (id, list_id, user_id, media_id, media_type) values
-  ('dddddddd-0000-0000-0000-000000000005', 'cccccccc-0000-0000-0000-000000000001',
-   'bbbbbbbb-0000-0000-0000-000000000001', 101, 'movie');
+-- The soft-deleted row is revived, as the client's upsert does (one row per list and title).
+update public.list_items set deleted_at = null
+ where id = 'dddddddd-0000-0000-0000-000000000001';
 
 select t.is_true(
   (select is_active and deleted_at is null from public.release_alerts
@@ -118,9 +118,9 @@ select t.is_true(
 insert into public.release_alerts (user_id, media_id, media_type, source, is_active, country_code)
 values ('bbbbbbbb-0000-0000-0000-000000000001', 404, 'movie', 'notify_me', true, 'DE');
 
-insert into public.list_items (id, list_id, user_id, media_id, media_type) values
+insert into public.list_items (id, list_id, user_id, media_id, media_type, title) values
   ('dddddddd-0000-0000-0000-000000000006', 'cccccccc-0000-0000-0000-000000000002',
-   'bbbbbbbb-0000-0000-0000-000000000001', 404, 'movie');
+   'bbbbbbbb-0000-0000-0000-000000000001', 404, 'movie', 'Title 404');
 
 select t.eq(
   (select source from public.release_alerts

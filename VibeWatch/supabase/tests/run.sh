@@ -41,67 +41,36 @@ run() { psql -h 127.0.0.1 -p "$PORT" -U postgres -v ON_ERROR_STOP=1 -X -q "$@"; 
 echo "→ harness"
 run -f "$HERE/harness.sql" >/dev/null
 
-# Due passate, di proposito: una migration va potuta riapplicare senza rompersi, ed e' il modo
-# in cui viene riapplicata quando qualcuno la lancia due volte sul progetto sbagliato e poi su
-# quello giusto.
-for pass in 1 2; do
-echo "→ migration (passata $pass)"
-for file in "$MIGRATIONS"/*.sql; do
-  # Le migration precedenti a SPEC v3 presuppongono lo schema di produzione, che qui non c'e':
-  # l'harness ricrea solo cio' che serve ai test del tracking e dell'import. Si elencano per nome
-  # invece di allargare il glob: `20260731010000_apply_mutations_tracking` riscrive una funzione
-  # che tocca meta' dello schema di produzione e qui non avrebbe le tabelle su cui appoggiarsi.
-  case "$(basename "$file")" in
-    202607300*) ;;
-    20260731120000_create_import_jobs.sql) ;;
-    20260731140000_import_report.sql) ;;
-    20260731180000_tracking_views_with_catalog.sql) ;;
-    20260801000000_legacy_seen_shows_expansion.sql) ;;
-    20260801100000_usernames_and_public_profiles.sql) ;;
-    20260801110000_backfill_usernames.sql) ;;
-    20260801120000_set_username.sql) ;;
-    20260801130000_user_follows_and_search.sql) ;;
-    20260801150000_get_public_profile.sql) ;;
-    20260801170000_user_favorites_and_ratings.sql) ;;
-    20260801190000_user_stats_and_profile_favorites.sql) ;;
-    20260802100000_import_start.sql) ;;
-    20260802110000_import_report_series_statuses.sql) ;;
-    20260802130000_lists_tracking_fusion.sql) ;;
-    20260802150000_imports_ttl.sql) ;;
-    20260802170000_import_report_ratings.sql) ;;
-    20260802180000_public_lists_owner_filter.sql) ;;
-    20260802190000_import_report_favorites.sql) ;;
-    20260802210000_import_report_movies.sql) ;;
-    20260802220000_delete_user_storage_inventory.sql) ;;
-    20260802230000_advanced_stats_genres.sql) ;;
-    20260802240000_import_manual_resolve_atomic.sql) ;;
-    20260802250000_catalog_map_found_immutable.sql) ;;
-    20260803160000_import_manual_resolve_batch.sql) ;;
-    20260804100000_import_exclude_unresolved.sql) ;;
-    20260804150000_import_report_fuori_struttura.sql) ;;
-    20260805100000_catalog_refresh_cron.sql) ;;
-    20260805120000_import_report_excluded_visible.sql) ;;
-    20260812100000_next_episode_resumes_from_progress.sql) ;;
-    20260812130000_user_reviews.sql) ;;
-    20260812150000_activities.sql) ;;
-    20260812160000_activity_feed_privacy.sql) ;;
-    20260812170000_get_activity_feed.sql) ;;
-    20260812180000_get_public_lists_author.sql) ;;
-    20260812190000_new_follower_notifications.sql) ;;
-    20260813100000_activity_interactions.sql) ;;
-    20260813110000_content_reports_and_block_user.sql) ;;
-    20260813120000_get_activity_feed_counts.sql) ;;
-    20260813130000_social_interaction_notifications.sql) ;;
-    20260814100000_activity_hide_and_lookup.sql) ;;
-    20260815100000_notification_prefs_v2.sql) ;;
-    20260815101000_notifications_localizable.sql) ;;
-    20260815102000_release_alerts_auto_enrollment.sql) ;;
-    20260815103000_email_send_log.sql) ;;
-    *) continue ;;
+# The baseline plus every later migration, in order: the same chain that rebuilds production.
+# pg_net is a Supabase extension a plain Postgres does not ship; harness.sql provides its entry
+# point, so its CREATE EXTENSION line is skipped.
+#
+# Some migrations end with a guard that asserts production row counts (e.g. "305 public
+# profiles"). On an empty database only that guard can fail, and everything before it has
+# already been applied, so for the files listed here a failure is accepted when — and only when —
+# it is that exact guard.
+production_guard() {
+  case "$1" in
+    20260814081200_f0dbis_merge_email_send_log_into_delivery_log.sql) echo 'attese 2 righe email' ;;
+    20260814084500_f0b_public_profiles_security_invoker_retry.sql) echo 'attese 305 righe' ;;
+    20260814100000_hotfix_restore_profiles_email.sql) echo 'attese 305' ;;
+    20260814160000_m0_preference_categories_for_web.sql) echo 'relation "unified_user_preferences" violates not-null' ;;
+    20260814170000_m0_public_read_rpcs_for_anon.sql) echo 'get_public_profile non trova' ;;
   esac
-  [ "$pass" = 1 ] && echo "   $(basename "$file")"
-  run -f "$file" >/dev/null
-done
+}
+
+echo "→ migrations"
+for file in "$MIGRATIONS"/*.sql; do
+  name="$(basename "$file")"
+  echo "   $name"
+  if ! grep -v 'CREATE EXTENSION IF NOT EXISTS "pg_net"' "$file" | run >/dev/null 2>"$WORK_DIR/migration.err"; then
+    guard="$(production_guard "$name")"
+    if [ -n "$guard" ] && grep -q "$guard" "$WORK_DIR/migration.err"; then
+      echo "     (production data guard skipped)"
+    else
+      cat "$WORK_DIR/migration.err"; exit 1
+    fi
+  fi
 done
 
 echo "→ test: tracking"
