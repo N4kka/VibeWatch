@@ -200,8 +200,12 @@ class ListManager: ObservableObject {
             //    N chiamate dirette supabase.createList + supabase.addItemToList (burst N+1 al
             //    login). Accodiamo lista + item sull'outbox (persistendoli anche localmente) e
             //    li flushiamo in coda con UNA singola apply_mutations batch.
+            //    Solo subito dopo l'adozione dei dati anonimi: una lista creata da autenticato
+            //    viaggia già sull'outbox, e una che manca da `remoteLists` (filtrata su
+            //    deleted_at IS NULL) è quasi sempre una lista eliminata altrove — ri-accodarla
+            //    la resuscitava a ogni login.
             var didEnqueueLocalUploads = false
-            for localList in localListsBeforeSync where localList.type == .custom {
+            for localList in localListsBeforeSync where pendingAnonymousUpload && localList.type == .custom {
                 guard !remoteLists.contains(where: { $0.id == localList.id }) else { continue }
 
                 await ensureListInSQLite(localList)

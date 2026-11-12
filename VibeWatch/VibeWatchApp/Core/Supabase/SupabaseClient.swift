@@ -902,10 +902,19 @@ class SupabaseService: ObservableObject {
             let description: String?
             let type: String
             let createdAt: Date
-            
+            // Senza questi tre, una sync azzerava in memoria il legame con la watchlist (e il
+            // controllo "esiste già la copia condivisa?" creava una copia in più) e la
+            // visibilità pubblica, fino al successivo `loadListsFromSQLite`.
+            let isPublic: Bool?
+            let sourceListId: String?
+            let sourceListType: String?
+
             enum CodingKeys: String, CodingKey {
                 case id, name, description, type
                 case createdAt = "created_at"
+                case isPublic = "is_public"
+                case sourceListId = "source_list_id"
+                case sourceListType = "source_list_type"
             }
         }
         
@@ -930,7 +939,10 @@ class SupabaseService: ObservableObject {
                         description: listData.description,
                         type: listType,
                         createdAt: listData.createdAt,
-                        items: items
+                        items: items,
+                        isPublic: listData.isPublic ?? false,
+                        sourceListId: listData.sourceListId,
+                        sourceListType: listData.sourceListType.flatMap(ListType.init(databaseValue:))
                     )
                 }
             }

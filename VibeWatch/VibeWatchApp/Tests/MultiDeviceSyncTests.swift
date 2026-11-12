@@ -712,6 +712,7 @@ final class ListManagerSyncCharacterizationTests: XCTestCase {
         manager.lists = [local]
         remote.remoteLists = []   // il server non ha questa lista
 
+        await manager.adoptAnonymousLocalData(newOwnerId: "user-1")
         await manager.syncListsForAuthenticatedUser()
 
         // Nessuna scrittura remota diretta: l'upload passa per l'outbox.
@@ -726,6 +727,21 @@ final class ListManagerSyncCharacterizationTests: XCTestCase {
 
         let itemInserts = sync.queued.filter { $0.table == "list_items" && $0.operationType == "INSERT" }
         XCTAssertEqual(itemInserts.count, 2, "deve accodare un INSERT list_items per ogni item")
+    }
+
+    /// Una lista custom che il server non restituisce, fuori dall'adozione, è una lista eliminata
+    /// altrove (il fetch filtra deleted_at IS NULL): ri-accodarla la resuscitava a ogni login.
+    func test_syncForAuthenticatedUser_listDeletedElsewhere_isNotResurrected() async throws {
+        let local = MediaList(id: "deleted-on-web", name: "🇮🇹 Movies", type: .custom, items: [])
+        manager.lists = [local]
+        remote.remoteLists = []
+
+        await manager.syncListsForAuthenticatedUser()
+
+        XCTAssertTrue(sync.queued.filter { $0.table == "lists" }.isEmpty,
+                      "senza adozione in corso una lista assente dal remoto non va ri-inserita")
+        XCTAssertFalse(manager.lists.contains { $0.id == "deleted-on-web" },
+                       "la lista eliminata altrove deve sparire anche qui")
     }
 
     /// Una lista già presente sul remoto non viene ri-accodata (no upload duplicato).
