@@ -472,6 +472,13 @@ class GamificationService: ObservableObject {
         return event
     }
 
+    /// Counts only a share the user actually sent, not opening the share sheet.
+    func recordShare() async {
+        guard let userId = AuthService.shared.currentUser?.id else { return }
+        let isPro = await ClipQuotaService.shared.checkIsProUser()
+        _ = await awardXP(userId: userId, action: .shareContent, isPro: isPro)
+    }
+
     /// Record a clip watch (updates streak and awards XP)
     func recordClipWatch(userId: String, clipId: String, completionRate: Double, isPro: Bool) async {
         let today = dateString(for: Date())
