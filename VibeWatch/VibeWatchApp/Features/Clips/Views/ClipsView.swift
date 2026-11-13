@@ -619,6 +619,7 @@ struct ClipPlayerView: View {
             activityItems: [URL(string: clip.videoURL)!],
             applicationActivities: nil
         )
+        ShareSheet.recordShareOnCompletion(of: activityVC)
         
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
            let rootVC = windowScene.windows.first?.rootViewController {
