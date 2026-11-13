@@ -17,6 +17,7 @@ struct MovieDetailView: View {
     @State private var isPreparingShare = false
     @State private var showReportBug = false
     @State private var selectedActor: Cast?
+    @State private var selectedDirector: Crew?
     @State private var showWhyForMeSheet = false
     @State private var showAIPaywall = false
     /// Quanto si è scrollato: lo legge la barra fissa per decidere quando comparire.
@@ -100,13 +101,16 @@ struct MovieDetailView: View {
                                 TrailerSection(trailer: trailer)
                             }
 
-                            if !viewModel.mainCast.isEmpty || viewModel.director != nil {
+                            if !viewModel.mainCast.isEmpty || !viewModel.directors.isEmpty {
                                 MovieCreditsSection(
-                                    director: viewModel.director,
+                                    directors: viewModel.directors,
                                     cast: viewModel.mainCast,
                                     movie: movie,
                                     onActorTap: { actor in
                                         selectedActor = actor
+                                    },
+                                    onDirectorTap: { director in
+                                        selectedDirector = director
                                     }
                                 )
                             }
@@ -180,6 +184,14 @@ struct MovieDetailView: View {
                 actorId: actor.id,
                 initialName: actor.name,
                 initialProfileURL: actor.profileURL,
+                previousTitle: viewModel.movie?.title ?? ""
+            )
+        }
+        .navigationDestination(item: $selectedDirector) { director in
+            ActorDetailView(
+                actorId: director.id,
+                initialName: director.name,
+                initialProfileURL: director.profileURL,
                 previousTitle: viewModel.movie?.title ?? ""
             )
         }
@@ -929,26 +941,29 @@ struct WhyForMeSheetView: View {
 }
 
 struct MovieCreditsSection: View {
-    let director: Crew?
+    let directors: [Crew]
     let cast: [Cast]
     let movie: Movie
     let onActorTap: (Cast) -> Void
-    
+    let onDirectorTap: (Crew) -> Void
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 16) {
                 Text("movieDetail.information".localized)
                     .font(.system(size: 20, weight: .bold))
                     .foregroundColor(.theme.textPrimary)
-                
+
                 VStack(alignment: .leading, spacing: 12) {
-                    ForEach(MovieCreditsInfoBuilder.rows(movie: movie, director: director), id: \.titleKey) { row in
+                    ForEach(MovieCreditsInfoBuilder.rows(movie: movie), id: \.titleKey) { row in
                         InfoRow(title: row.titleKey.localized, value: row.value, isItalic: row.isItalic)
                     }
                 }
             }
             .padding(.horizontal, 20)
-            
+
+            DirectorsSection(directors: directors) { onDirectorTap($0) }
+
             if !cast.isEmpty {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("movieDetail.cast".localized)
@@ -999,29 +1014,74 @@ struct InfoRow: View {
 struct CastMemberCard: View {
     let actor: Cast
     var onTap: (() -> Void)? = nil
-    
+
+    var body: some View {
+        PersonCard(
+            name: actor.name,
+            subtitle: actor.character,
+            profileURL: actor.profileURL,
+            onTap: onTap
+        )
+    }
+}
+
+struct PersonCard: View {
+    let name: String
+    var subtitle: String? = nil
+    let profileURL: URL?
+    var onTap: (() -> Void)? = nil
+
     var body: some View {
         Button {
             onTap?()
         } label: {
             VStack(spacing: 8) {
-                CachedAsyncImage(url: actor.profileURL, maxPixelSize: 240)
+                CachedAsyncImage(url: profileURL, maxPixelSize: 240)
                     .aspectRatio(contentMode: .fill)
                     .frame(width: 80, height: 80)
                     .clipShape(Circle())
-                
+
                 VStack(spacing: 2) {
-                    Text(actor.name)
+                    Text(name)
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.theme.textPrimary)
                         .lineLimit(1)
-                    
-                    Text(actor.character)
-                        .font(.system(size: 10))
-                        .foregroundColor(.theme.textSecondary)
-                        .lineLimit(1)
+
+                    if let subtitle {
+                        Text(subtitle)
+                            .font(.system(size: 10))
+                            .foregroundColor(.theme.textSecondary)
+                            .lineLimit(1)
+                    }
                 }
                 .frame(width: 80)
+            }
+        }
+    }
+}
+
+struct DirectorsSection: View {
+    let directors: [Crew]
+    let onTap: (Crew) -> Void
+
+    var body: some View {
+        if !directors.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(DirectorCredits.sectionTitle(for: directors))
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.theme.textPrimary)
+                    .padding(.horizontal, 20)
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(directors) { director in
+                            PersonCard(name: director.name, profileURL: director.profileURL) {
+                                onTap(director)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                }
             }
         }
     }

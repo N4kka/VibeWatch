@@ -38,6 +38,7 @@ struct PersonDetails: Codable {
 
 struct PersonCombinedCredits: Codable {
     let cast: [PersonCredit]
+    let crew: [PersonCredit]?
 }
 
 struct PersonCredit: Codable, Identifiable, Hashable {
@@ -50,6 +51,8 @@ struct PersonCredit: Codable, Identifiable, Hashable {
     let popularity: Double?
     let voteAverage: Double?
     let overview: String?
+    /// Crew credits only; mutable because several jobs on one title are merged.
+    var job: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -62,6 +65,7 @@ struct PersonCredit: Codable, Identifiable, Hashable {
         case popularity
         case voteAverage = "vote_average"
         case overview
+        case job
     }
 
     init(from decoder: Decoder) throws {
@@ -82,6 +86,7 @@ struct PersonCredit: Codable, Identifiable, Hashable {
         popularity = try container.decodeIfPresent(Double.self, forKey: .popularity)
         voteAverage = try container.decodeIfPresent(Double.self, forKey: .voteAverage)
         overview = try container.decodeIfPresent(String.self, forKey: .overview)
+        job = try container.decodeIfPresent(String.self, forKey: .job)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -93,6 +98,7 @@ struct PersonCredit: Codable, Identifiable, Hashable {
         try container.encodeIfPresent(popularity, forKey: .popularity)
         try container.encodeIfPresent(voteAverage, forKey: .voteAverage)
         try container.encodeIfPresent(overview, forKey: .overview)
+        try container.encodeIfPresent(job, forKey: .job)
 
         switch mediaType {
         case .movie:
@@ -102,6 +108,18 @@ struct PersonCredit: Codable, Identifiable, Hashable {
             try container.encode(title, forKey: .name)
             try container.encodeIfPresent(releaseDate, forKey: .firstAirDate)
         }
+    }
+
+    /// TMDB sends jobs in English only: just "Director" has a localized label.
+    var roleText: String? {
+        if let character, !character.isEmpty { return character }
+        guard let job, !job.isEmpty else { return nil }
+        return job
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+            .map { $0 == "Director" ? "movieDetail.director".localized : $0 }
+            .joined(separator: ", ")
     }
 
     var posterURL: URL? {

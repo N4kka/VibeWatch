@@ -16,6 +16,14 @@ final class SearchRankingTests: XCTestCase {
         )
     }
 
+    private func person(id: Int, name: String, popularity: Double = 0, votes: Int = 0) -> SearchResult {
+        SearchResult(
+            id: id, mediaType: "person", title: nil, name: name, overview: nil,
+            posterPath: nil, backdropPath: nil, releaseDate: nil, firstAirDate: nil,
+            voteAverage: nil, voteCount: votes, popularity: popularity
+        )
+    }
+
     // MARK: - Livelli del punteggio testuale
 
     func testEsattoBattePrefisso() {
@@ -124,6 +132,36 @@ final class SearchRankingTests: XCTestCase {
         let ordinati = SearchRanking.rank(items, query: "titolo")
         XCTAssertEqual(Set(ordinati.map(\.id)), Set(items.map(\.id)))
         XCTAssertEqual(ordinati.count, items.count)
+    }
+
+    // MARK: - People
+
+    func testPeopleScopeMatchesOnlyPeople() {
+        XCTAssertTrue(SearchScope.people.matches("person"))
+        XCTAssertFalse(SearchScope.people.matches("movie"))
+        XCTAssertFalse(SearchScope.people.matches("tv"))
+        XCTAssertTrue(SearchScope.all.matches("person"))
+    }
+
+    func testPersonDecodesDepartmentAndProfilePhoto() throws {
+        let json = """
+        {"id":42,"media_type":"person","name":"Jane Doe",
+         "profile_path":"/abc.jpg","known_for_department":"Directing"}
+        """
+        let person = try JSONDecoder().decode(SearchResult.self, from: Data(json.utf8))
+
+        XCTAssertEqual(person.knownForDepartment, "Directing")
+        XCTAssertEqual(person.posterURL?.absoluteString,
+                       "https://image.tmdb.org/t/p/w500/abc.jpg")
+    }
+
+    func testExactPersonNameRanksAboveTitleContainingIt() {
+        let alien = person(id: 1, name: "Alien")
+        let title = result(id: 2, title: "The Alien Case")
+
+        let ranked = SearchRanking.rank([title, alien], query: "Alien")
+        XCTAssertEqual(ranked.first?.id, 1)
+        XCTAssertEqual(ranked.first?.mediaType, "person")
     }
 
     // MARK: - Evidenziazione nel titolo

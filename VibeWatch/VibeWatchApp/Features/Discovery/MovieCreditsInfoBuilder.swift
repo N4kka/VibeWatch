@@ -13,7 +13,7 @@ enum MovieCreditsInfoBuilder {
         var isItalic: Bool = false
     }
 
-    static func rows(movie: Movie, director: Crew?, now: Date = Date()) -> [Row] {
+    static func rows(movie: Movie, now: Date = Date()) -> [Row] {
         var rows: [Row] = []
 
         if movie.ratingPercentage > 0 {
@@ -57,10 +57,6 @@ enum MovieCreditsInfoBuilder {
             rows.append(Row(titleKey: "movieDetail.country", value: name))
         }
 
-        if let director {
-            rows.append(Row(titleKey: "movieDetail.director", value: director.name))
-        }
-
         if let companies = movie.productionCompanies, !companies.isEmpty {
             rows.append(Row(
                 titleKey: "movieDetail.productionCompanies",
@@ -92,7 +88,7 @@ enum MovieCreditsInfoBuilder {
 /// divergevano da quelle dei film senza che nessun test se ne accorgesse.
 enum TVShowCreditsInfoBuilder {
 
-    static func rows(tvShow: TVShow, director: Crew?) -> [MovieCreditsInfoBuilder.Row] {
+    static func rows(tvShow: TVShow) -> [MovieCreditsInfoBuilder.Row] {
         typealias Row = MovieCreditsInfoBuilder.Row
         var rows: [Row] = []
 
@@ -136,8 +132,6 @@ enum TVShowCreditsInfoBuilder {
 
         if let creators = tvShow.createdBy, !creators.isEmpty {
             rows.append(Row(titleKey: "tvDetail.createdBy", value: creators.map(\.name).joined(separator: ", ")))
-        } else if let director {
-            rows.append(Row(titleKey: "movieDetail.director", value: director.name))
         }
 
         if let country = tvShow.productionCountries?.first,
@@ -150,6 +144,52 @@ enum TVShowCreditsInfoBuilder {
         }
 
         return rows
+    }
+}
+
+enum DirectorCredits {
+
+    static func directors(in crew: [Crew]) -> [Crew] {
+        var seen = Set<Int>()
+        return crew.filter { $0.job == "Director" && seen.insert($0.id).inserted }
+    }
+
+    /// Most episodes directed first; ties keep the order of first appearance.
+    static func seasonDirectors(_ episodes: [Episode]) -> [Crew] {
+        var people: [Int: Crew] = [:]
+        var episodeCounts: [Int: Int] = [:]
+        var firstAppearance: [Int] = []
+
+        for episode in episodes {
+            for director in directors(in: episode.crew ?? []) {
+                if people[director.id] == nil {
+                    people[director.id] = director
+                    firstAppearance.append(director.id)
+                }
+                episodeCounts[director.id, default: 0] += 1
+            }
+        }
+
+        return firstAppearance
+            .enumerated()
+            .sorted { lhs, rhs in
+                let lhsCount = episodeCounts[lhs.element] ?? 0
+                let rhsCount = episodeCounts[rhs.element] ?? 0
+                if lhsCount != rhsCount { return lhsCount > rhsCount }
+                return lhs.offset < rhs.offset
+            }
+            .compactMap { people[$0.element] }
+    }
+
+    /// Names up to two directors; beyond that the title would not fit, so only the role.
+    static func sectionTitle(for directors: [Crew]) -> String {
+        guard (1...2).contains(directors.count) else { return "movieDetail.directing".localized }
+
+        let formatter = ListFormatter()
+        formatter.locale = MediaInfoFormatting.displayLocale
+        let names = directors.map(\.name)
+        let list = formatter.string(from: names) ?? names.joined(separator: ", ")
+        return String(format: "movieDetail.directedBy".localized, list)
     }
 }
 

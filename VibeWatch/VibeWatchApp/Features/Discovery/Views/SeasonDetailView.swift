@@ -13,10 +13,10 @@ struct SeasonDetailView: View {
     let showPosterPath: String?
     let tvShow: TVShow?
     let cast: [Cast]
-    let director: Crew?
 
     @State private var showSavePanel = false
     @State private var selectedActor: Cast?
+    @State private var selectedDirector: Crew?
     /// I due popup del tap "visto": conferma per un episodio non ancora uscito, e il
     /// "hai visto anche i precedenti?" alla TV Time. Un solo stato: non possono coesistere.
     @State private var markPrompt: EpisodeMarkPrompt?
@@ -34,7 +34,7 @@ struct SeasonDetailView: View {
         case unairedSeason(unseen: [Episode], aired: [Episode])
     }
 
-    init(showId: Int, seasonNumber: Int, showName: String, showBackdropPath: String?, showPosterPath: String? = nil, tvShow: TVShow? = nil, cast: [Cast] = [], director: Crew? = nil) {
+    init(showId: Int, seasonNumber: Int, showName: String, showBackdropPath: String?, showPosterPath: String? = nil, tvShow: TVShow? = nil, cast: [Cast] = []) {
         _viewModel = StateObject(wrappedValue: SeasonDetailViewModel(showId: showId, seasonNumber: seasonNumber))
         self.showId = showId
         self.showName = showName
@@ -42,7 +42,6 @@ struct SeasonDetailView: View {
         self.showPosterPath = showPosterPath
         self.tvShow = tvShow
         self.cast = cast
-        self.director = director
     }
 
     private var heroURL: URL? {
@@ -243,6 +242,14 @@ struct SeasonDetailView: View {
                 previousTitle: showName
             )
         }
+        .navigationDestination(item: $selectedDirector) { director in
+            ActorDetailView(
+                actorId: director.id,
+                initialName: director.name,
+                initialProfileURL: director.profileURL,
+                previousTitle: showName
+            )
+        }
     }
 
     // MARK: - Sections
@@ -320,13 +327,11 @@ struct SeasonDetailView: View {
                        let name = MediaInfoFormatting.localizedCountry(iso: country.iso, fallback: country.name) {
                         InfoRow(title: "movieDetail.country".localized, value: name)
                     }
-
-                    if let director = director {
-                        InfoRow(title: "movieDetail.director".localized, value: director.name)
-                    }
                 }
             }
             .padding(.horizontal, 20)
+
+            DirectorsSection(directors: viewModel.directors) { selectedDirector = $0 }
 
             if !cast.isEmpty {
                 VStack(alignment: .leading, spacing: 12) {

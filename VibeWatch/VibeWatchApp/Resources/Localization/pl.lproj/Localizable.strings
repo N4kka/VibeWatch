@@ -70,6 +70,8 @@
 "movieDetail.information" = "Informacje";
 "movieDetail.cast" = "Obsada";
 "movieDetail.director" = "Reżyser";
+"movieDetail.directedBy" = "Reżyseria: %@";
+"movieDetail.directing" = "Reżyseria";
 "movieDetail.country" = "Kraj";
 "movieDetail.genres" = "Gatunki";
 "movieDetail.runtime" = "Czas trwania";
@@ -163,7 +165,7 @@
 // Search
 "search.latestVisited" = "Ostatnio odwiedzane";
 "search.trendingSearches" = "Popularne wyszukiwania";
-"search.placeholder" = "Znajdź gdzie obejrzeć film lub serial...";
+"search.placeholder" = "Szukaj filmów, seriali lub osób...";
 "search.results" = "Wyniki";
 "search.noResultsFound" = "Nie znaleziono wyników";
 
@@ -1111,11 +1113,14 @@
 "search.scope.all" = "Wszystko";
 "search.scope.movies" = "Filmy";
 "search.scope.series" = "Seriale";
+"search.scope.people" = "Osoby";
+"search.person" = "Osoba";
+"search.people.hint" = "Wyszukaj aktora, reżysera lub kogokolwiek, kto pracował nad tytułem.";
 "search.clear" = "Wyczyść";
 "search.trending.today" = "Dziś";
 "search.trending.subtitle" = "Najczęściej wyszukiwane w %@ w ciągu ostatnich 24 godzin.";
 "search.results.subtitle" = "Dopasowania do „%@”, potem podobne tytuły.";
-"search.resultsCount" = "%d tytułów";
+"search.resultsCount" = "%d wyników";
 
 
 // MARK: - Ricerca piattaforme + esito notifica

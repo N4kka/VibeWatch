@@ -72,6 +72,8 @@ struct Episode: Codable, Identifiable, Hashable, Sendable {
     let voteAverage: Double
     let voteCount: Int
     let stillPath: String?
+    /// Optional: seasons cached before this field existed have no crew.
+    var crew: [Crew]? = nil
 
     enum CodingKeys: String, CodingKey {
         case id, name, overview, runtime
@@ -81,6 +83,7 @@ struct Episode: Codable, Identifiable, Hashable, Sendable {
         case voteAverage = "vote_average"
         case voteCount = "vote_count"
         case stillPath = "still_path"
+        case crew
     }
 
     var stillURL: URL? {

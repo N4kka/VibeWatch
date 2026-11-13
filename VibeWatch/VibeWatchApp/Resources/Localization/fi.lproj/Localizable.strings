@@ -70,6 +70,8 @@
 "movieDetail.information" = "Tiedot";
 "movieDetail.cast" = "Näyttelijät";
 "movieDetail.director" = "Ohjaaja";
+"movieDetail.directedBy" = "Ohjaus: %@";
+"movieDetail.directing" = "Ohjaus";
 "movieDetail.country" = "Maa";
 "movieDetail.genres" = "Genret";
 "movieDetail.runtime" = "Kesto";
@@ -163,7 +165,7 @@
 // Search
 "search.latestVisited" = "Viimeksi katsotut";
 "search.trendingSearches" = "Suositut haut";
-"search.placeholder" = "Etsi, mistä voit katsoa elokuvan tai sarjan...";
+"search.placeholder" = "Hae elokuvia, sarjoja tai henkilöitä...";
 "search.results" = "Tulokset";
 "search.noResultsFound" = "Tuloksia ei löytynyt";
 
@@ -1111,11 +1113,14 @@
 "search.scope.all" = "Kaikki";
 "search.scope.movies" = "Elokuvat";
 "search.scope.series" = "Sarjat";
+"search.scope.people" = "Henkilöt";
+"search.person" = "Henkilö";
+"search.people.hint" = "Hae näyttelijää, ohjaajaa tai ketä tahansa, joka on työskennellyt nimikkeen parissa.";
 "search.clear" = "Tyhjennä";
 "search.trending.today" = "Tänään";
 "search.trending.subtitle" = "Haetuimmat maassa %@ viimeisen 24 tunnin aikana.";
 "search.results.subtitle" = "Osumat haulle ”%@”, sitten aiheeseen liittyvät.";
-"search.resultsCount" = "%d nimikettä";
+"search.resultsCount" = "%d tulosta";
 
 
 // MARK: - Ricerca piattaforme + esito notifica

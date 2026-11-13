@@ -70,6 +70,8 @@
 "movieDetail.information" = "जानकारी";
 "movieDetail.cast" = "कलाकार";
 "movieDetail.director" = "निर्देशक";
+"movieDetail.directedBy" = "निर्देशन: %@";
+"movieDetail.directing" = "निर्देशन";
 "movieDetail.country" = "देश";
 "movieDetail.genres" = "शैलियाँ";
 "movieDetail.runtime" = "अवधि";
@@ -163,7 +165,7 @@
 // Search
 "search.latestVisited" = "हाल ही में देखा गया";
 "search.trendingSearches" = "ट्रेंडिंग खोजें";
-"search.placeholder" = "किसी फ़िल्म या शो को कहाँ देखें, खोजें...";
+"search.placeholder" = "फ़िल्में, शो या लोग खोजें...";
 "search.results" = "परिणाम";
 "search.noResultsFound" = "कोई परिणाम नहीं मिला";
 
@@ -1111,11 +1113,14 @@
 "search.scope.all" = "सभी";
 "search.scope.movies" = "फ़िल्में";
 "search.scope.series" = "सीरीज़";
+"search.scope.people" = "लोग";
+"search.person" = "व्यक्ति";
+"search.people.hint" = "किसी अभिनेता, निर्देशक या किसी शीर्षक पर काम करने वाले किसी भी व्यक्ति को खोजें।";
 "search.clear" = "साफ़ करें";
 "search.trending.today" = "आज";
 "search.trending.subtitle" = "%@ में पिछले 24 घंटों में सबसे ज़्यादा खोजे गए।";
 "search.results.subtitle" = "«%@» के मिलान, फिर मिलते-जुलते शीर्षक।";
-"search.resultsCount" = "%d शीर्षक";
+"search.resultsCount" = "%d परिणाम";
 
 
 // MARK: - Ricerca piattaforme + esito notifica

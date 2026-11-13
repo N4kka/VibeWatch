@@ -66,30 +66,53 @@ final class ActorDetailViewModel: ObservableObject {
         do {
             let (details, credits) = try await (detailsTask, creditsTask)
             person = details
-
-            // Deduplicate by composite key (mediaType + id), keeping highest popularity
-            var seen: [String: PersonCredit] = [:]
-            for credit in credits.cast {
-                let key = "\(credit.mediaType.rawValue)-\(credit.id)"
-                if let existing = seen[key] {
-                    if (credit.popularity ?? 0) > (existing.popularity ?? 0) {
-                        seen[key] = credit
-                    }
-                } else {
-                    seen[key] = credit
-                }
-            }
-
-            allCredits = Array(seen.values).sorted {
-                let popL = $0.popularity ?? 0
-                let popR = $1.popularity ?? 0
-                if popL != popR { return popL > popR }
-                return ($0.releaseDate ?? "") > ($1.releaseDate ?? "")
-            }
+            allCredits = Self.mergedCredits(cast: credits.cast, crew: credits.crew ?? [])
         } catch {
             self.error = AppError.network(error)
         }
 
         isLoading = false
+    }
+
+    /// One row per title: a cast credit wins over crew ones, and several crew jobs on the same
+    /// title collapse into one credit with the jobs joined.
+    nonisolated static func mergedCredits(cast: [PersonCredit], crew: [PersonCredit]) -> [PersonCredit] {
+        var castByTitle: [String: PersonCredit] = [:]
+        for credit in cast {
+            let key = "\(credit.mediaType.rawValue)-\(credit.id)"
+            if let existing = castByTitle[key] {
+                if (credit.popularity ?? 0) > (existing.popularity ?? 0) {
+                    castByTitle[key] = credit
+                }
+            } else {
+                castByTitle[key] = credit
+            }
+        }
+
+        var crewByTitle: [String: PersonCredit] = [:]
+        var jobsByTitle: [String: [String]] = [:]
+        for credit in crew {
+            let key = "\(credit.mediaType.rawValue)-\(credit.id)"
+            guard castByTitle[key] == nil else { continue }
+            if let job = credit.job, !job.isEmpty {
+                var jobs = jobsByTitle[key] ?? []
+                if !jobs.contains(job) { jobs.append(job) }
+                jobsByTitle[key] = jobs
+            }
+            if crewByTitle[key] == nil { crewByTitle[key] = credit }
+        }
+
+        var merged = Array(castByTitle.values)
+        for (key, var credit) in crewByTitle {
+            credit.job = jobsByTitle[key]?.joined(separator: ", ")
+            merged.append(credit)
+        }
+
+        return merged.sorted {
+            let popL = $0.popularity ?? 0
+            let popR = $1.popularity ?? 0
+            if popL != popR { return popL > popR }
+            return ($0.releaseDate ?? "") > ($1.releaseDate ?? "")
+        }
     }
 }
