@@ -1184,6 +1184,9 @@ class AuthService: AuthServiceProtocol {
         userDefaults.removeObject(forKey: localDataOwnerKey)
         userDefaults.set(false, forKey: pendingSignUpMigrationKey)
 
+        // Not awaited: a slow network must not hold up signing out.
+        Task { await NotificationService.shared.discardDeviceToken() }
+
         await LocalDataResetService.shared.wipeUserScopedData()
 
         // Clear any cached auth state
