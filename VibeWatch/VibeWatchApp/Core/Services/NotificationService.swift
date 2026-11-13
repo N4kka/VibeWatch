@@ -42,6 +42,17 @@ class NotificationService: ObservableObject { // Conform to ObservableObject
         }
     }
 
+    /// Kills this handset's FCM token, so the account that just left stops receiving pushes here
+    /// even if nobody signs in after it. The next account registers the fresh token.
+    func discardDeviceToken() async {
+        cachedFCMToken = nil
+        do {
+            try await Messaging.messaging().deleteToken()
+        } catch {
+            Logger.warning("[NotificationService] FCM token not deleted: \(error)")
+        }
+    }
+
     func processNewFCMToken(_ token: String?) {
         guard let token = token else {
             Logger.debug("[NotificationService] Received nil FCM token.")

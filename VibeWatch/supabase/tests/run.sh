@@ -105,3 +105,6 @@ run -f "$HERE/import_manual_resolve_test.sql"
 
 echo "→ test: immutabilita' della mappa catalogo"
 run -f "$HERE/catalog_map_test.sql"
+
+echo "→ test: device token ownership across accounts"
+run -f "$HERE/register_device_test.sql"
