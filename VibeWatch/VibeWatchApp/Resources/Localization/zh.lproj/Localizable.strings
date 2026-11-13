@@ -73,6 +73,8 @@
 "movieDetail.cast" = "演员";
 "movieDetail.country" = "国家";
 "movieDetail.director" = "导演";
+"movieDetail.directedBy" = "导演：%@";
+"movieDetail.directing" = "导演";
 "movieDetail.genres" = "类型";
 "movieDetail.information" = "信息";
 "movieDetail.rating" = "评分";

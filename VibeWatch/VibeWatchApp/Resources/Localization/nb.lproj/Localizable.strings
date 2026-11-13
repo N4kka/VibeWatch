@@ -68,6 +68,8 @@
 "movieDetail.cast" = "Rolleliste";
 "movieDetail.country" = "Land";
 "movieDetail.director" = "Regissør";
+"movieDetail.directedBy" = "Regi: %@";
+"movieDetail.directing" = "Regi";
 "movieDetail.genres" = "Sjangre";
 "movieDetail.information" = "Informasjon";
 "movieDetail.rating" = "Vurdering";

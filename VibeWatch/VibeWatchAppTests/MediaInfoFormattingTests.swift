@@ -50,7 +50,7 @@ final class MediaInfoFormattingTests: XCTestCase {
         XCTAssertNil(movie.releaseDate(in: "FR"))
 
         let now = try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-09-11T12:00:00Z"))
-        let rows = MovieCreditsInfoBuilder.rows(movie: movie, director: nil, now: now)
+        let rows = MovieCreditsInfoBuilder.rows(movie: movie, now: now)
         let value = { (key: String) in rows.first { $0.titleKey == key }?.value }
         XCTAssertEqual(value("movieDetail.releaseDate"), MediaInfoFormatting.formatDate("2026-09-23"))
         XCTAssertEqual(value("movieDetail.originalReleaseDate"), MediaInfoFormatting.formatDate("2025-08-01"))
@@ -127,14 +127,14 @@ final class MediaInfoFormattingTests: XCTestCase {
     }
 
     func testSenzaBudgetNonCEUnaRigaBudget() {
-        let rows = MovieCreditsInfoBuilder.rows(movie: movie(), director: nil)
+        let rows = MovieCreditsInfoBuilder.rows(movie: movie())
         XCTAssertFalse(rows.contains { $0.titleKey == "movieDetail.budget" })
         XCTAssertFalse(rows.contains { $0.titleKey == "movieDetail.revenue" })
     }
 
     func testConBudgetEIncassiLeRigheCiSono() {
         let rows = MovieCreditsInfoBuilder.rows(
-            movie: movie(budget: 8_000_000, revenue: 213_900_000), director: nil)
+            movie: movie(budget: 8_000_000, revenue: 213_900_000))
         XCTAssertEqual(rows.first { $0.titleKey == "movieDetail.budget" }?.value, "$8M")
         XCTAssertEqual(rows.first { $0.titleKey == "movieDetail.revenue" }?.value, "$213.9M")
     }
@@ -144,26 +144,24 @@ final class MediaInfoFormattingTests: XCTestCase {
             movie: movie(companies: [
                 ProductionCompany(id: 1, name: "Miramax", logoPath: nil),
                 ProductionCompany(id: 2, name: "A Band Apart", logoPath: nil)
-            ]),
-            director: nil)
+            ]))
         XCTAssertEqual(rows.first { $0.titleKey == "movieDetail.productionCompanies" }?.value,
                        "Miramax, A Band Apart")
     }
 
     func testLaTaglineEInCorsivoEStaInFondo() {
-        let rows = MovieCreditsInfoBuilder.rows(movie: movie(tagline: "Just because you are…"),
-                                                director: nil)
+        let rows = MovieCreditsInfoBuilder.rows(movie: movie(tagline: "Just because you are…"))
         XCTAssertEqual(rows.last?.titleKey, "movieDetail.tagline")
         XCTAssertEqual(rows.last?.isItalic, true)
     }
 
     func testUnaTaglineDiSoliSpaziNonFaRiga() {
-        let rows = MovieCreditsInfoBuilder.rows(movie: movie(tagline: "   "), director: nil)
+        let rows = MovieCreditsInfoBuilder.rows(movie: movie(tagline: "   "))
         XCTAssertFalse(rows.contains { $0.titleKey == "movieDetail.tagline" })
     }
 
     func testLoStatoDelFilmDiventaUnaRiga() {
-        let rows = MovieCreditsInfoBuilder.rows(movie: movie(status: "Released"), director: nil)
+        let rows = MovieCreditsInfoBuilder.rows(movie: movie(status: "Released"))
         XCTAssertEqual(rows.first { $0.titleKey == "movieDetail.status" }?.value,
                        "mediaStatus.released".localized)
     }
@@ -189,50 +187,45 @@ final class MediaInfoFormattingTests: XCTestCase {
     }
 
     func testStagioniEdEpisodiStannoSullaStessaRiga() {
-        let rows = TVShowCreditsInfoBuilder.rows(tvShow: show(seasons: 9, episodes: 191), director: nil)
+        let rows = TVShowCreditsInfoBuilder.rows(tvShow: show(seasons: 9, episodes: 191))
         let value = rows.first { $0.titleKey == "tvDetail.seasonsEpisodes" }?.value
         XCTAssertEqual(value, "\(String(format: "tvDetail.seasonsCount".localized, 9)) · "
                        + "\(String(format: "tvDetail.episodesCount".localized, 191))")
     }
 
     func testSenzaStagioniNonCELaRiga() {
-        let rows = TVShowCreditsInfoBuilder.rows(tvShow: show(), director: nil)
+        let rows = TVShowCreditsInfoBuilder.rows(tvShow: show())
         XCTAssertFalse(rows.contains { $0.titleKey == "tvDetail.seasonsEpisodes" })
     }
 
-    func testICreatoriHannoLaPrecedenzaSulRegista() {
-        let regista = Crew(id: 9, name: "Regista", job: "Director", department: "Directing", profilePath: nil)
+    func testCreatorsStayInCreatedByRow() {
         let rows = TVShowCreditsInfoBuilder.rows(
-            tvShow: show(creators: [Creator(id: 3, name: "Tite Kubo")]), director: regista)
+            tvShow: show(creators: [Creator(id: 3, name: "Tite Kubo")]))
         XCTAssertEqual(rows.first { $0.titleKey == "tvDetail.createdBy" }?.value, "Tite Kubo")
         XCTAssertFalse(rows.contains { $0.titleKey == "movieDetail.director" })
     }
 
-    func testSenzaCreatoriRestaIlRegista() {
-        let regista = Crew(id: 9, name: "Regista", job: "Director", department: "Directing", profilePath: nil)
-        let rows = TVShowCreditsInfoBuilder.rows(tvShow: show(), director: regista)
-        XCTAssertEqual(rows.first { $0.titleKey == "movieDetail.director" }?.value, "Regista")
+    func testWithoutCreatorsThereIsNoDirectorRow() {
+        let rows = TVShowCreditsInfoBuilder.rows(tvShow: show())
+        XCTAssertFalse(rows.contains { $0.titleKey == "movieDetail.director" })
     }
 
     func testIlNetworkDiventaUnaRiga() {
         let rows = TVShowCreditsInfoBuilder.rows(
-            tvShow: show(networks: [ProductionCompany(id: 4, name: "TV Tokyo", logoPath: nil)]),
-            director: nil)
+            tvShow: show(networks: [ProductionCompany(id: 4, name: "TV Tokyo", logoPath: nil)]))
         XCTAssertEqual(rows.first { $0.titleKey == "tvDetail.network" }?.value, "TV Tokyo")
     }
 
     /// `ForEach(..., id: \.titleKey)` disegna le righe: una chiave ripetuta ne farebbe sparire una.
     func testLeChiaviDelleRigheSonoUniche() {
         let movieRows = MovieCreditsInfoBuilder.rows(
-            movie: movie(budget: 1_000_000, revenue: 2_000_000, tagline: "x", status: "Released"),
-            director: Crew(id: 1, name: "QT", job: "Director", department: "Directing", profilePath: nil))
+            movie: movie(budget: 1_000_000, revenue: 2_000_000, tagline: "x", status: "Released"))
         XCTAssertEqual(Set(movieRows.map(\.titleKey)).count, movieRows.count)
 
         let showRows = TVShowCreditsInfoBuilder.rows(
             tvShow: show(seasons: 9, episodes: 191,
                          networks: [ProductionCompany(id: 4, name: "TV Tokyo", logoPath: nil)],
-                         creators: [Creator(id: 3, name: "Tite Kubo")], status: "Ended"),
-            director: nil)
+                         creators: [Creator(id: 3, name: "Tite Kubo")], status: "Ended"))
         XCTAssertEqual(Set(showRows.map(\.titleKey)).count, showRows.count)
     }
 }

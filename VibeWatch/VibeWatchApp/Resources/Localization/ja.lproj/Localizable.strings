@@ -70,6 +70,8 @@
 "movieDetail.information" = "情報";
 "movieDetail.cast" = "キャスト";
 "movieDetail.director" = "監督";
+"movieDetail.directedBy" = "監督: %@";
+"movieDetail.directing" = "監督";
 "movieDetail.country" = "国";
 "movieDetail.genres" = "ジャンル";
 "movieDetail.runtime" = "上映時間";

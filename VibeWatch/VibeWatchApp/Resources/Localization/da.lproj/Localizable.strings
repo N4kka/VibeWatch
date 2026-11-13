@@ -70,6 +70,8 @@
 "movieDetail.information" = "Information";
 "movieDetail.cast" = "Medvirkende";
 "movieDetail.director" = "Instruktør";
+"movieDetail.directedBy" = "Instrueret af %@";
+"movieDetail.directing" = "Instruktion";
 "movieDetail.country" = "Land";
 "movieDetail.genres" = "Genrer";
 "movieDetail.runtime" = "Spilletid";

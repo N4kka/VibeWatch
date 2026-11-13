@@ -43,8 +43,8 @@ struct ActorFilmographyRow: View {
                         .lineLimit(1)
                     }
 
-                    if let character = credit.character, !character.isEmpty {
-                        Text(character)
+                    if let role = credit.roleText, !role.isEmpty {
+                        Text(role)
                             .font(.system(size: 13))
                             .foregroundColor(.theme.textSecondary)
                             .lineLimit(1)

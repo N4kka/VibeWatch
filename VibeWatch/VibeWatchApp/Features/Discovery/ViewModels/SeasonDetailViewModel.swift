@@ -64,6 +64,10 @@ class SeasonDetailViewModel: ObservableObject {
         }
     }
 
+    var directors: [Crew] {
+        DirectorCredits.seasonDirectors(season?.episodes ?? [])
+    }
+
     func loadSeasonDetails() async {
         isLoading = true
         error = nil

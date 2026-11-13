@@ -74,6 +74,8 @@
 "movieDetail.cast" = "Rollista";
 "movieDetail.country" = "Land";
 "movieDetail.director" = "Regissör";
+"movieDetail.directedBy" = "Regi: %@";
+"movieDetail.directing" = "Regi";
 "movieDetail.genres" = "Genrer";
 "movieDetail.information" = "Information";
 "movieDetail.rating" = "Betyg";

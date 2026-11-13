@@ -70,6 +70,8 @@
 "movieDetail.information" = "Πληροφορίες";
 "movieDetail.cast" = "Ηθοποιοί";
 "movieDetail.director" = "Σκηνοθέτης";
+"movieDetail.directedBy" = "Σκηνοθεσία: %@";
+"movieDetail.directing" = "Σκηνοθεσία";
 "movieDetail.country" = "Χώρα";
 "movieDetail.genres" = "Είδη";
 "movieDetail.runtime" = "Διάρκεια";

@@ -17,6 +17,7 @@ struct TVShowDetailView: View {
     @State private var isPreparingShare = false
     @State private var showReportBug = false
     @State private var selectedActor: Cast?
+    @State private var selectedDirector: Crew?
     @State private var showWhyForMeSheet = false
     @State private var showAIPaywall = false
     @State private var showMarkAllSeenConfirmation = false
@@ -243,6 +244,14 @@ struct TVShowDetailView: View {
                 previousTitle: viewModel.tvShow?.name ?? ""
             )
         }
+        .navigationDestination(item: $selectedDirector) { director in
+            ActorDetailView(
+                actorId: director.id,
+                initialName: director.name,
+                initialProfileURL: director.profileURL,
+                previousTitle: viewModel.tvShow?.name ?? ""
+            )
+        }
         .fullScreenCover(isPresented: $showAuthGate) {
             AuthenticationGateView(isPresented: $showAuthGate)
                 .presentationBackground(.clear)
@@ -332,15 +341,18 @@ struct TVShowDetailView: View {
     @ViewBuilder
     private func creditsView(tvShow: TVShow) -> some View {
         TVShowCreditsSection(
-            director: viewModel.director,
+            directors: viewModel.directors,
             cast: viewModel.mainCast,
             tvShow: tvShow,
             onActorTap: { actor in
                 selectedActor = actor
+            },
+            onDirectorTap: { director in
+                selectedDirector = director
             }
         )
     }
-    
+
     @ViewBuilder
     private func seasonsView(tvShow: TVShow) -> some View {
         SeasonsCarouselSection(
@@ -350,8 +362,7 @@ struct TVShowDetailView: View {
             showBackdropPath: tvShow.backdropPath,
             showPosterPath: tvShow.posterPath,
             tvShow: tvShow,
-            cast: viewModel.mainCast,
-            director: viewModel.director
+            cast: viewModel.mainCast
         )
     }
 
@@ -706,10 +717,11 @@ struct TVShowInfoSection: View {
 }
 
 struct TVShowCreditsSection: View {
-    let director: Crew?
+    let directors: [Crew]
     let cast: [Cast]
     let tvShow: TVShow
     let onActorTap: (Cast) -> Void
+    let onDirectorTap: (Crew) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -719,12 +731,14 @@ struct TVShowCreditsSection: View {
                     .foregroundColor(.theme.textPrimary)
 
                 VStack(alignment: .leading, spacing: 12) {
-                    ForEach(TVShowCreditsInfoBuilder.rows(tvShow: tvShow, director: director), id: \.titleKey) { row in
+                    ForEach(TVShowCreditsInfoBuilder.rows(tvShow: tvShow), id: \.titleKey) { row in
                         InfoRow(title: row.titleKey.localized, value: row.value, isItalic: row.isItalic)
                     }
                 }
             }
             .padding(.horizontal, 20)
+
+            DirectorsSection(directors: directors) { onDirectorTap($0) }
 
             if !cast.isEmpty {
                 VStack(alignment: .leading, spacing: 12) {
@@ -813,7 +827,6 @@ struct SeasonsCarouselSection: View {
     let showPosterPath: String?
     let tvShow: TVShow?
     let cast: [Cast]
-    let director: Crew?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -832,8 +845,7 @@ struct SeasonsCarouselSection: View {
                             showBackdropPath: showBackdropPath,
                             showPosterPath: showPosterPath,
                             tvShow: tvShow,
-                            cast: cast,
-                            director: director
+                            cast: cast
                         )) {
                             SeasonCard(season: season)
                         }

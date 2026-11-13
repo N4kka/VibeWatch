@@ -2116,9 +2116,7 @@ final class MovieCreditsInfoBuilderTests: XCTestCase {
     /// L'ordine è quello della sezione "Informazioni": la data di uscita e la lingua originale si
     /// sono aggiunte alle cinque righe storiche, che restano dove erano e con gli stessi valori.
     func test_rowsPreserveCurrentOrderAndValues() {
-        let director = Crew(id: 10, name: "Denis Villeneuve", job: "Director", department: "Directing", profilePath: nil)
-
-        let rows = MovieCreditsInfoBuilder.rows(movie: movie(), director: director)
+        let rows = MovieCreditsInfoBuilder.rows(movie: movie())
 
         XCTAssertEqual(rows.map(\.titleKey), [
             "movieDetail.rating",
@@ -2126,14 +2124,12 @@ final class MovieCreditsInfoBuilderTests: XCTestCase {
             "movieDetail.runtime",
             "movieDetail.releaseDate",
             "movieDetail.country",
-            "movieDetail.director",
             "movieDetail.originalLanguage"
         ])
         XCTAssertEqual(rows.first(where: { $0.titleKey == "movieDetail.rating" })?.value, "84%")
         XCTAssertEqual(rows.first(where: { $0.titleKey == "movieDetail.genres" })?.value, "Drama, Sci-Fi")
         XCTAssertEqual(rows.first(where: { $0.titleKey == "movieDetail.runtime" })?.value, "2h 35m")
         XCTAssertEqual(rows.first(where: { $0.titleKey == "movieDetail.country" })?.value, "United States")
-        XCTAssertEqual(rows.first(where: { $0.titleKey == "movieDetail.director" })?.value, "Denis Villeneuve")
         XCTAssertNotNil(rows.first(where: { $0.titleKey == "movieDetail.releaseDate" })?.value)
     }
 
@@ -2141,8 +2137,7 @@ final class MovieCreditsInfoBuilderTests: XCTestCase {
     /// (la data di uscita e la lingua originale, che non sono opzionali in `Movie`).
     func test_rowsOmitEmptyOptionalInformation() {
         let rows = MovieCreditsInfoBuilder.rows(
-            movie: movie(voteAverage: 0, genres: [], runtime: nil, countries: []),
-            director: nil
+            movie: movie(voteAverage: 0, genres: [], runtime: nil, countries: [])
         )
 
         XCTAssertEqual(Set(rows.map(\.titleKey)),
@@ -2159,8 +2154,7 @@ final class MovieCreditsInfoBuilderTests: XCTestCase {
             movie: movie(countries: [
                 ProductionCountry(iso: "CA", name: "Canada"),
                 ProductionCountry(iso: "US", name: "United States")
-            ]),
-            director: nil
+            ])
         )
 
         XCTAssertEqual(rows.first(where: { $0.titleKey == "movieDetail.country" })?.value, "Canada")
@@ -2173,8 +2167,7 @@ final class MovieCreditsInfoBuilderTests: XCTestCase {
         MediaInfoFormatting.localeOverride = Locale(identifier: "it_IT")
 
         let rows = MovieCreditsInfoBuilder.rows(
-            movie: movie(countries: [ProductionCountry(iso: "GB", name: "United Kingdom")]),
-            director: nil
+            movie: movie(countries: [ProductionCountry(iso: "GB", name: "United Kingdom")])
         )
 
         XCTAssertEqual(rows.first(where: { $0.titleKey == "movieDetail.country" })?.value, "Regno Unito")
@@ -2184,7 +2177,7 @@ final class MovieCreditsInfoBuilderTests: XCTestCase {
     func test_originalLanguageFollowsSelectedLanguage() {
         MediaInfoFormatting.localeOverride = Locale(identifier: "it_IT")
 
-        let rows = MovieCreditsInfoBuilder.rows(movie: movie(), director: nil)
+        let rows = MovieCreditsInfoBuilder.rows(movie: movie())
 
         XCTAssertEqual(rows.first(where: { $0.titleKey == "movieDetail.originalLanguage" })?.value, "Inglese")
     }
@@ -2194,11 +2187,168 @@ final class MovieCreditsInfoBuilderTests: XCTestCase {
         MediaInfoFormatting.localeOverride = Locale(identifier: "it_IT")
 
         let rows = MovieCreditsInfoBuilder.rows(
-            movie: movie(countries: [ProductionCountry(iso: "", name: "United Kingdom")]),
-            director: nil
+            movie: movie(countries: [ProductionCountry(iso: "", name: "United Kingdom")])
         )
 
         XCTAssertEqual(rows.first(where: { $0.titleKey == "movieDetail.country" })?.value, "United Kingdom")
+    }
+}
+
+// MARK: - DirectorCredits
+
+final class DirectorCreditsTests: XCTestCase {
+
+    override func setUp() {
+        super.setUp()
+        MediaInfoFormatting.localeOverride = Locale(identifier: "en_US")
+    }
+
+    override func tearDown() {
+        MediaInfoFormatting.localeOverride = nil
+        super.tearDown()
+    }
+
+    private func person(_ id: Int, _ name: String, job: String = "Director") -> Crew {
+        Crew(id: id, name: name, job: job, department: "Directing", profilePath: nil)
+    }
+
+    private func episode(_ id: Int, _ crew: [Crew]) -> Episode {
+        Episode(id: id, name: "E\(id)", overview: "", episodeNumber: id, seasonNumber: 1,
+                airDate: nil, runtime: nil, voteAverage: 0, voteCount: 0, stillPath: nil,
+                crew: crew)
+    }
+
+    func test_directorsKeepOnlyDirectorsDeduplicatedInTmdbOrder() {
+        let crew = [
+            person(1, "One"),
+            person(2, "Two", job: "Writer"),
+            person(1, "One"),
+            person(3, "Three")
+        ]
+
+        XCTAssertEqual(DirectorCredits.directors(in: crew).map(\.id), [1, 3])
+    }
+
+    func test_seasonDirectorsCountEpisodesAndDeduplicate() {
+        let episodes = [
+            episode(1, [person(1, "One"), person(2, "Two")]),
+            episode(2, [person(1, "One")]),
+            episode(3, [person(3, "Three")]),
+            episode(4, [person(3, "Three")])
+        ]
+
+        XCTAssertEqual(DirectorCredits.seasonDirectors(episodes).map(\.id), [1, 3, 2])
+    }
+
+    func test_seasonDirectorsBreakTiesByFirstAppearance() {
+        let episodes = [
+            episode(1, [person(1, "One"), person(2, "Two")]),
+            episode(2, [person(1, "One")]),
+            episode(3, [person(3, "Three")])
+        ]
+
+        XCTAssertEqual(DirectorCredits.seasonDirectors(episodes).map(\.id), [1, 2, 3])
+    }
+
+    func test_sectionTitleNamesOneOrTwoDirectors() {
+        let one = DirectorCredits.sectionTitle(for: [person(1, "A")])
+        XCTAssertEqual(one, String(format: "movieDetail.directedBy".localized, "A"))
+
+        let two = DirectorCredits.sectionTitle(for: [person(1, "A"), person(2, "B")])
+        XCTAssertEqual(two, String(format: "movieDetail.directedBy".localized, "A and B"))
+    }
+
+    func test_sectionTitleUsesPlainLabelFromThreeDirectorsOn() {
+        let three = DirectorCredits.sectionTitle(for: [
+            person(1, "A"), person(2, "B"), person(3, "C")
+        ])
+
+        XCTAssertEqual(three, "movieDetail.directing".localized)
+    }
+}
+
+// MARK: - PersonCredit merge
+
+final class PersonCreditMergeTests: XCTestCase {
+
+    private func credit(
+        id: Int,
+        mediaType: String = "movie",
+        title: String = "Title",
+        character: String? = nil,
+        job: String? = nil
+    ) throws -> PersonCredit {
+        var json: [String: Any] = [
+            "id": id,
+            "media_type": mediaType,
+            "popularity": 1.0
+        ]
+        json[mediaType == "tv" ? "name" : "title"] = title
+        if let character { json["character"] = character }
+        if let job { json["job"] = job }
+        return try JSONDecoder().decode(
+            PersonCredit.self, from: try JSONSerialization.data(withJSONObject: json))
+    }
+
+    func test_crewOnlyTitleIsAdded() throws {
+        let merged = ActorDetailViewModel.mergedCredits(
+            cast: [try credit(id: 1, title: "With cast")],
+            crew: [try credit(id: 2, title: "Crew only", job: "Director")]
+        )
+
+        XCTAssertEqual(merged.count, 2)
+        XCTAssertEqual(merged.first { $0.id == 2 }?.job, "Director")
+    }
+
+    func test_castWinsOverCrewOnTheSameTitle() throws {
+        let merged = ActorDetailViewModel.mergedCredits(
+            cast: [try credit(id: 1, title: "Title", character: "Lead")],
+            crew: [try credit(id: 1, title: "Title", job: "Director")]
+        )
+
+        XCTAssertEqual(merged.count, 1)
+        XCTAssertEqual(merged.first?.character, "Lead")
+        XCTAssertNil(merged.first?.job)
+    }
+
+    func test_twoCrewJobsOnTheSameTitleBecomeOneRow() throws {
+        let merged = ActorDetailViewModel.mergedCredits(
+            cast: [],
+            crew: [
+                try credit(id: 7, title: "Title", job: "Director"),
+                try credit(id: 7, title: "Title", job: "Writer")
+            ]
+        )
+
+        XCTAssertEqual(merged.count, 1)
+        XCTAssertEqual(merged.first?.job, "Director, Writer")
+    }
+
+    func test_roleTextPrefersTheCharacter() throws {
+        let credit = try self.credit(id: 1, character: "Lead", job: "Director")
+
+        XCTAssertEqual(credit.roleText, "Lead")
+    }
+
+    func test_roleTextLocalizesTheDirectorJob() throws {
+        let credit = try self.credit(id: 1, job: "Director")
+
+        XCTAssertEqual(credit.roleText, "movieDetail.director".localized)
+    }
+
+    func test_roleTextKeepsOtherJobsInEnglish() throws {
+        let credit = try self.credit(id: 1, job: "Writer")
+
+        XCTAssertEqual(credit.roleText, "Writer")
+    }
+
+    func test_personCombinedCreditsDecodesWithoutCrewKey() throws {
+        let json = #"{"cast":[{"id":1,"media_type":"movie","title":"Title"}]}"#
+        let credits = try JSONDecoder().decode(
+            PersonCombinedCredits.self, from: Data(json.utf8))
+
+        XCTAssertEqual(credits.cast.count, 1)
+        XCTAssertNil(credits.crew)
     }
 }
 

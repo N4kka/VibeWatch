@@ -74,6 +74,8 @@
 "movieDetail.cast" = "В ролях";
 "movieDetail.country" = "Страна";
 "movieDetail.director" = "Режиссёр";
+"movieDetail.directedBy" = "Режиссура: %@";
+"movieDetail.directing" = "Режиссура";
 "movieDetail.genres" = "Жанры";
 "movieDetail.information" = "Информация";
 "movieDetail.rating" = "Рейтинг";

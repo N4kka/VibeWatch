@@ -70,6 +70,8 @@
 "movieDetail.information" = "Informatie";
 "movieDetail.cast" = "Cast";
 "movieDetail.director" = "Regisseur";
+"movieDetail.directedBy" = "Geregisseerd door %@";
+"movieDetail.directing" = "Regie";
 "movieDetail.country" = "Land";
 "movieDetail.genres" = "Genres";
 "movieDetail.runtime" = "Speelduur";

@@ -70,6 +70,8 @@
 "movieDetail.information" = "जानकारी";
 "movieDetail.cast" = "कलाकार";
 "movieDetail.director" = "निर्देशक";
+"movieDetail.directedBy" = "निर्देशन: %@";
+"movieDetail.directing" = "निर्देशन";
 "movieDetail.country" = "देश";
 "movieDetail.genres" = "शैलियाँ";
 "movieDetail.runtime" = "अवधि";

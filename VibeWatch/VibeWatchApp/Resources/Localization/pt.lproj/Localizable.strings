@@ -74,6 +74,8 @@
 "movieDetail.cast" = "Elenco";
 "movieDetail.country" = "País";
 "movieDetail.director" = "Diretor";
+"movieDetail.directedBy" = "Dirigido por %@";
+"movieDetail.directing" = "Direção";
 "movieDetail.genres" = "Gêneros";
 "movieDetail.information" = "Informações";
 "movieDetail.rating" = "Avaliação";

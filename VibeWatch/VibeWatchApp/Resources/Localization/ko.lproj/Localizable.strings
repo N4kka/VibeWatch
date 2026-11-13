@@ -70,6 +70,8 @@
 "movieDetail.information" = "정보";
 "movieDetail.cast" = "출연";
 "movieDetail.director" = "감독";
+"movieDetail.directedBy" = "감독: %@";
+"movieDetail.directing" = "감독";
 "movieDetail.country" = "국가";
 "movieDetail.genres" = "장르";
 "movieDetail.runtime" = "러닝타임";

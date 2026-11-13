@@ -201,10 +201,15 @@ struct Crew: Codable, Identifiable, Hashable {
     let job: String
     let department: String
     let profilePath: String?
-    
+
     enum CodingKeys: String, CodingKey {
         case id, name, job, department
         case profilePath = "profile_path"
+    }
+
+    var profileURL: URL? {
+        guard let profilePath else { return nil }
+        return URL(string: "https://image.tmdb.org/t/p/w185\(profilePath)")
     }
 }
 

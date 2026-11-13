@@ -70,6 +70,8 @@
 "movieDetail.information" = "Tiedot";
 "movieDetail.cast" = "Näyttelijät";
 "movieDetail.director" = "Ohjaaja";
+"movieDetail.directedBy" = "Ohjaus: %@";
+"movieDetail.directing" = "Ohjaus";
 "movieDetail.country" = "Maa";
 "movieDetail.genres" = "Genret";
 "movieDetail.runtime" = "Kesto";

@@ -74,6 +74,8 @@
 "movieDetail.cast" = "Oyuncular";
 "movieDetail.country" = "Ülke";
 "movieDetail.director" = "Yönetmen";
+"movieDetail.directedBy" = "Yönetmen: %@";
+"movieDetail.directing" = "Yönetmenler";
 "movieDetail.genres" = "Türler";
 "movieDetail.information" = "Bilgiler";
 "movieDetail.rating" = "Puan";

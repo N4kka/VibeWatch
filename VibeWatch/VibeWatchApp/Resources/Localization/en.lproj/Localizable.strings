@@ -70,6 +70,8 @@
 "movieDetail.information" = "Information";
 "movieDetail.cast" = "Cast";
 "movieDetail.director" = "Director";
+"movieDetail.directedBy" = "Directed by %@";
+"movieDetail.directing" = "Directed by";
 "movieDetail.country" = "Country";
 "movieDetail.genres" = "Genres";
 "movieDetail.runtime" = "Runtime";

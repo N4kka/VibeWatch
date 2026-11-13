@@ -93,10 +93,10 @@ class MovieDetailViewModel: ObservableObject {
         }
     }
     
-    var director: Crew? {
-        credits?.crew.first { $0.job == "Director" }
+    var directors: [Crew] {
+        DirectorCredits.directors(in: credits?.crew ?? [])
     }
-    
+
     /// Il cast intero: il carosello è pigro, e tagliare a dieci nascondeva metà dei nomi che
     /// l'utente cercava (i comprimari stanno spesso oltre il decimo posto).
     var mainCast: [Cast] {
@@ -240,8 +240,8 @@ class TVShowDetailViewModel: ObservableObject {
         }
     }
     
-    var director: Crew? {
-        credits?.crew.first { $0.job == "Director" }
+    var directors: [Crew] {
+        DirectorCredits.directors(in: credits?.crew ?? [])
     }
 
     /// Il cast intero: il carosello è pigro, e tagliare a dieci nascondeva metà dei nomi che
