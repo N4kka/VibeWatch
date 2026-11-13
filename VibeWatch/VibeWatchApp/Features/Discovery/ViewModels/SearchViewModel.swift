@@ -33,6 +33,7 @@ class SearchViewModel: ObservableObject {
     private let maxVisitedItems = 10
     private var lastLoggedQuery: String?
     private var lastLoggedAt: Date?
+    private static let searchableTypes: Set<String> = ["movie", "tv", "person"]
 
     init(
         tmdbService: any TMDBServiceProtocol = TMDBService.shared,
@@ -104,9 +105,9 @@ class SearchViewModel: ObservableObject {
                 let response = try await tmdbService.searchMulti(query: currentQuery, page: 1)
                 if !Task.isCancelled {
                     let filtered = response.results.filter { result in
-                        result.mediaType == "movie" || result.mediaType == "tv"
+                        Self.searchableTypes.contains(result.mediaType)
                     }
-                    seenKeys = Set(filtered.map(Self.key))
+                    seenKeys = Set(filtered.map(\.resultKey))
                     currentPage = response.page
                     totalPages = response.totalPages
                     searchResults = SearchRanking.rank(filtered, query: currentQuery)
@@ -130,7 +131,7 @@ class SearchViewModel: ObservableObject {
         guard !isLoadingMore, currentPage < totalPages else { return }
         // Solo quando l'item è fra gli ultimi cinque: caricare a metà lista è banda sprecata.
         let soglia = max(0, searchResults.count - 5)
-        guard let index = searchResults.firstIndex(where: { Self.key($0) == Self.key(currentItem) }),
+        guard let index = searchResults.firstIndex(where: { $0.resultKey == currentItem.resultKey }),
               index >= soglia else { return }
 
         let query = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -149,8 +150,8 @@ class SearchViewModel: ObservableObject {
                 guard searchQuery.trimmingCharacters(in: .whitespacesAndNewlines) == query else { return }
 
                 let nuovi = response.results
-                    .filter { $0.mediaType == "movie" || $0.mediaType == "tv" }
-                    .filter { seenKeys.insert(Self.key($0)).inserted }
+                    .filter { Self.searchableTypes.contains($0.mediaType) }
+                    .filter { seenKeys.insert($0.resultKey).inserted }
 
                 currentPage = response.page
                 totalPages = response.totalPages
@@ -165,12 +166,12 @@ class SearchViewModel: ObservableObject {
         }
     }
 
-    private static func key(_ result: SearchResult) -> String {
-        "\(result.mediaType):\(result.id)"
-    }
-
     func handleResultTap(_ result: SearchResult) {
-        saveVisitedItem(id: result.id, mediaType: result.mediaType)
+        // People are not titles: Latest visited and the search history feeding Discover expect titles.
+        let isPerson = result.mediaType == "person"
+        if !isPerson {
+            saveVisitedItem(id: result.id, mediaType: result.mediaType)
+        }
 
         let query = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return }
@@ -184,6 +185,7 @@ class SearchViewModel: ObservableObject {
             resultCount: searchResults.count
         )
 
+        guard !isPerson else { return }
         Task {
             await preferenceManager.recordSearchClick(
                 query: query,

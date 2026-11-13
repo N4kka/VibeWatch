@@ -131,6 +131,29 @@ final class SearchPaginationTests: XCTestCase {
                        "il match esatto sta in cima, anche se è meno popolare")
     }
 
+    // MARK: - People
+
+    func testPersonResultIsKept() async {
+        tmdb.pages = [1: (results: [Self.person(id: 42, name: "Jane Doe")], totalPages: 1)]
+        viewModel.searchQuery = "jane"
+        viewModel.search()
+        await attendi("the person") { self.viewModel.searchResults.count == 1 }
+
+        XCTAssertEqual(viewModel.searchResults.first?.mediaType, "person")
+        XCTAssertEqual(viewModel.searchResults.first?.resultKey, "person:42")
+    }
+
+    /// Movie and person ids overlap: dedup must key on type and id, or one of them disappears.
+    func testMovieAndPersonWithSameIdAreBothKept() async {
+        tmdb.pages = [1: (results: [Self.result(id: 7, title: "Alien"),
+                                    Self.person(id: 7, name: "Alien")], totalPages: 1)]
+        viewModel.searchQuery = "alien"
+        viewModel.search()
+        await attendi("movie and person") { self.viewModel.searchResults.count == 2 }
+
+        XCTAssertEqual(Set(viewModel.searchResults.map(\.resultKey)), ["movie:7", "person:7"])
+    }
+
     // MARK: - Aiutanti
 
     private static func result(
@@ -140,6 +163,14 @@ final class SearchPaginationTests: XCTestCase {
             id: id, mediaType: "movie", title: title, name: nil, overview: nil,
             posterPath: nil, backdropPath: nil, releaseDate: nil, firstAirDate: nil,
             voteAverage: 7, voteCount: votes, popularity: popularity
+        )
+    }
+
+    private static func person(id: Int, name: String, popularity: Double = 1) -> SearchResult {
+        SearchResult(
+            id: id, mediaType: "person", title: nil, name: name, overview: nil,
+            posterPath: nil, backdropPath: nil, releaseDate: nil, firstAirDate: nil,
+            voteAverage: nil, voteCount: 0, popularity: popularity
         )
     }
 

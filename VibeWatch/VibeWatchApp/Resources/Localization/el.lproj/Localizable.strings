@@ -165,7 +165,7 @@
 // Search
 "search.latestVisited" = "Τελευταία προβολές";
 "search.trendingSearches" = "Δημοφιλείς αναζητήσεις";
-"search.placeholder" = "Βρες πού μπορείς να δεις μια ταινία ή σειρά...";
+"search.placeholder" = "Αναζήτησε ταινίες, σειρές ή πρόσωπα...";
 "search.results" = "Αποτελέσματα";
 "search.noResultsFound" = "Δεν βρέθηκαν αποτελέσματα";
 
@@ -1113,11 +1113,14 @@
 "search.scope.all" = "Όλα";
 "search.scope.movies" = "Ταινίες";
 "search.scope.series" = "Σειρές";
+"search.scope.people" = "Πρόσωπα";
+"search.person" = "Πρόσωπο";
+"search.people.hint" = "Αναζήτησε έναν ηθοποιό, έναν σκηνοθέτη ή οποιονδήποτε δούλεψε σε έναν τίτλο.";
 "search.clear" = "Εκκαθάριση";
 "search.trending.today" = "Σήμερα";
 "search.trending.subtitle" = "Οι πιο αναζητημένοι τίτλοι τις τελευταίες 24 ώρες. Χώρα: %@";
 "search.results.subtitle" = "Αντιστοιχίες για «%@», μετά συναφείς τίτλοι.";
-"search.resultsCount" = "%d τίτλοι";
+"search.resultsCount" = "%d αποτελέσματα";
 
 
 // MARK: - Ricerca piattaforme + esito notifica

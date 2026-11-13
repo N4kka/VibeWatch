@@ -152,7 +152,7 @@
 // Search
 "search.latestVisited" = "Недавно просмотренные";
 "search.noResultsFound" = "Ничего не найдено";
-"search.placeholder" = "Найдите, где посмотреть фильм или сериал...";
+"search.placeholder" = "Ищите фильмы, сериалы или людей...";
 "search.results" = "Результаты";
 "search.trendingSearches" = "Популярные запросы";
 
@@ -1101,11 +1101,14 @@
 "search.scope.all" = "Все";
 "search.scope.movies" = "Фильмы";
 "search.scope.series" = "Сериалы";
+"search.scope.people" = "Люди";
+"search.person" = "Персона";
+"search.people.hint" = "Найдите актёра, режиссёра или любого, кто работал над фильмом или сериалом.";
 "search.clear" = "Очистить";
 "search.trending.today" = "Сегодня";
 "search.trending.subtitle" = "Что ищут чаще всего за последние 24 часа. Страна: %@";
 "search.results.subtitle" = "Совпадения по «%@», затем похожие.";
-"search.resultsCount" = "%d назв.";
+"search.resultsCount" = "%d результ.";
 
 
 // MARK: - Ricerca piattaforme + esito notifica

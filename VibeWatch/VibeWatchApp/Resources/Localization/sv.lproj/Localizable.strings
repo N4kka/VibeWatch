@@ -152,7 +152,7 @@
 // Search
 "search.latestVisited" = "Senast besökta";
 "search.noResultsFound" = "Inga resultat hittades";
-"search.placeholder" = "Hitta var du kan se en film eller serie...";
+"search.placeholder" = "Sök filmer, serier eller personer...";
 "search.results" = "Resultat";
 "search.trendingSearches" = "Trendande sökningar";
 
@@ -1101,11 +1101,14 @@
 "search.scope.all" = "Alla";
 "search.scope.movies" = "Filmer";
 "search.scope.series" = "Serier";
+"search.scope.people" = "Personer";
+"search.person" = "Person";
+"search.people.hint" = "Sök efter en skådespelare, en regissör eller någon som har arbetat med en titel.";
 "search.clear" = "Rensa";
 "search.trending.today" = "I dag";
 "search.trending.subtitle" = "Mest sökta i %@ det senaste dygnet.";
 "search.results.subtitle" = "Träffar för ”%@”, sedan närliggande titlar.";
-"search.resultsCount" = "%d titlar";
+"search.resultsCount" = "%d resultat";
 
 
 // MARK: - Ricerca piattaforme + esito notifica

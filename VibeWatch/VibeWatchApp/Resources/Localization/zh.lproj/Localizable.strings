@@ -151,7 +151,7 @@
 // Search
 "search.latestVisited" = "最近访问";
 "search.noResultsFound" = "未找到结果";
-"search.placeholder" = "查找观看电影或剧集的平台…";
+"search.placeholder" = "搜索电影、剧集或人物…";
 "search.results" = "结果";
 "search.trendingSearches" = "热门搜索";
 
@@ -1098,11 +1098,14 @@
 "search.scope.all" = "全部";
 "search.scope.movies" = "电影";
 "search.scope.series" = "剧集";
+"search.scope.people" = "人物";
+"search.person" = "人物";
+"search.people.hint" = "搜索演员、导演或参与过作品的任何人。";
 "search.clear" = "清除";
 "search.trending.today" = "今天";
 "search.trending.subtitle" = "过去 24 小时在%@搜索最多的作品。";
 "search.results.subtitle" = "“%@”的匹配结果，之后是相关作品。";
-"search.resultsCount" = "%d 部";
+"search.resultsCount" = "%d 个结果";
 
 
 // MARK: - Ricerca piattaforme + esito notifica

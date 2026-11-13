@@ -152,7 +152,7 @@
 // Search
 "search.latestVisited" = "Son görüntülenenler";
 "search.noResultsFound" = "Sonuç bulunamadı";
-"search.placeholder" = "Film veya dizi nerede izlenir bul...";
+"search.placeholder" = "Film, dizi veya kişi ara...";
 "search.results" = "Sonuçlar";
 "search.trendingSearches" = "Trend aramalar";
 
@@ -1101,11 +1101,14 @@
 "search.scope.all" = "Tümü";
 "search.scope.movies" = "Filmler";
 "search.scope.series" = "Diziler";
+"search.scope.people" = "Kişiler";
+"search.person" = "Kişi";
+"search.people.hint" = "Bir oyuncu, yönetmen ya da bir yapımda çalışmış herhangi birini ara.";
 "search.clear" = "Temizle";
 "search.trending.today" = "Bugün";
 "search.trending.subtitle" = "Son 24 saatte %@ ülkesinde en çok aranan yapımlar.";
 "search.results.subtitle" = "«%@» eşleşmeleri, ardından benzer yapımlar.";
-"search.resultsCount" = "%d yapım";
+"search.resultsCount" = "%d sonuç";
 
 
 // MARK: - Ricerca piattaforme + esito notifica

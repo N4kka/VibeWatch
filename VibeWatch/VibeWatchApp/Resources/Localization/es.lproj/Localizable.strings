@@ -165,7 +165,7 @@
 // Search
 "search.latestVisited" = "Últimas visitas";
 "search.trendingSearches" = "Búsquedas populares";
-"search.placeholder" = "Encuentra dónde ver una película o serie...";
+"search.placeholder" = "Busca películas, series o personas...";
 "search.results" = "Resultados";
 "search.noResultsFound" = "No se encontraron resultados";
 
@@ -1111,11 +1111,14 @@
 "search.scope.all" = "Todos";
 "search.scope.movies" = "Películas";
 "search.scope.series" = "Series";
+"search.scope.people" = "Personas";
+"search.person" = "Persona";
+"search.people.hint" = "Busca un actor, un director o cualquier persona que haya trabajado en un título.";
 "search.clear" = "Borrar";
 "search.trending.today" = "Hoy";
 "search.trending.subtitle" = "Lo más buscado en %@ en las últimas 24 horas.";
 "search.results.subtitle" = "Coincidencias con «%@» y luego títulos afines.";
-"search.resultsCount" = "%d títulos";
+"search.resultsCount" = "%d resultados";
 
 
 // MARK: - Ricerca piattaforme + esito notifica

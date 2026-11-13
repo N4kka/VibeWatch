@@ -165,7 +165,7 @@
 // Search
 "search.latestVisited" = "Senest besøgt";
 "search.trendingSearches" = "Trendende søgninger";
-"search.placeholder" = "Find hvor du kan se en film eller serie...";
+"search.placeholder" = "Søg efter film, serier eller personer...";
 "search.results" = "Resultater";
 "search.noResultsFound" = "Ingen resultater fundet";
 
@@ -1115,11 +1115,14 @@
 "search.scope.all" = "Alle";
 "search.scope.movies" = "Film";
 "search.scope.series" = "Serier";
+"search.scope.people" = "Personer";
+"search.person" = "Person";
+"search.people.hint" = "Søg efter en skuespiller, en instruktør eller alle, der har arbejdet på en titel.";
 "search.clear" = "Ryd";
 "search.trending.today" = "I dag";
 "search.trending.subtitle" = "Mest søgte i %@ de seneste 24 timer.";
 "search.results.subtitle" = "Match for «%@», derefter beslægtede titler.";
-"search.resultsCount" = "%d titler";
+"search.resultsCount" = "%d resultater";
 
 
 // MARK: - Ricerca piattaforme + esito notifica

@@ -165,7 +165,7 @@
 // Search
 "search.latestVisited" = "Laatst bekeken";
 "search.trendingSearches" = "Populaire zoekopdrachten";
-"search.placeholder" = "Vind waar je een film of serie kunt kijken…";
+"search.placeholder" = "Zoek films, series of personen…";
 "search.results" = "Resultaten";
 "search.noResultsFound" = "Geen resultaten gevonden";
 
@@ -1113,11 +1113,14 @@
 "search.scope.all" = "Alles";
 "search.scope.movies" = "Films";
 "search.scope.series" = "Series";
+"search.scope.people" = "Personen";
+"search.person" = "Persoon";
+"search.people.hint" = "Zoek een acteur, een regisseur of iemand die aan een titel heeft meegewerkt.";
 "search.clear" = "Wissen";
 "search.trending.today" = "Vandaag";
 "search.trending.subtitle" = "Het meest gezocht in %@ in de afgelopen 24 uur.";
 "search.results.subtitle" = "Overeenkomsten voor ‘%@’, daarna verwante titels.";
-"search.resultsCount" = "%d titels";
+"search.resultsCount" = "%d resultaten";
 
 
 // MARK: - Ricerca piattaforme + esito notifica

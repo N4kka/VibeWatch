@@ -136,7 +136,7 @@
 "clips.viewReplies" = "Vis";
 "search.latestVisited" = "Sist besøkt";
 "search.noResultsFound" = "Ingen resultater funnet";
-"search.placeholder" = "Finn ut hvor du kan se en film eller serie...";
+"search.placeholder" = "Søk etter filmer, serier eller personer...";
 "search.results" = "Resultater";
 "search.trendingSearches" = "Populære søk";
 "profile.cancel" = "Avbryt";
@@ -1039,11 +1039,14 @@
 "search.scope.all" = "Alle";
 "search.scope.movies" = "Filmer";
 "search.scope.series" = "Serier";
+"search.scope.people" = "Personer";
+"search.person" = "Person";
+"search.people.hint" = "Søk etter en skuespiller, en regissør eller noen som har jobbet med en tittel.";
 "search.clear" = "Tøm";
 "search.trending.today" = "I dag";
 "search.trending.subtitle" = "Mest søkt i %@ de siste 24 timene.";
 "search.results.subtitle" = "Treff for «%@», deretter beslektede titler.";
-"search.resultsCount" = "%d titler";
+"search.resultsCount" = "%d resultater";
 
 
 // MARK: - Ricerca piattaforme + esito notifica

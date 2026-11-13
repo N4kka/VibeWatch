@@ -538,7 +538,11 @@ struct SearchResult: Codable, Identifiable, Hashable {
     /// Serve all'ordinamento per rilevanza (`SearchRanking`): a parità di match testuale è ciò
     /// che distingue Spider-Man da un omonimo che nessuno ha visto.
     var popularity: Double?
-    
+    /// People have a profile photo instead of a poster.
+    var profilePath: String?
+    /// TMDB sends it in English only ("Acting", "Directing").
+    var knownForDepartment: String?
+
     enum CodingKeys: String, CodingKey {
         case id, overview, title, name, popularity
         case mediaType = "media_type"
@@ -548,6 +552,8 @@ struct SearchResult: Codable, Identifiable, Hashable {
         case firstAirDate = "first_air_date"
         case voteAverage = "vote_average"
         case voteCount = "vote_count"
+        case profilePath = "profile_path"
+        case knownForDepartment = "known_for_department"
     }
     
     var displayTitle: String {
@@ -564,9 +570,12 @@ struct SearchResult: Codable, Identifiable, Hashable {
     }
     
     var posterURL: URL? {
-        guard let posterPath = posterPath else { return nil }
-        return URL(string: "https://image.tmdb.org/t/p/w500\(posterPath)")
+        guard let path = posterPath ?? profilePath else { return nil }
+        return URL(string: "https://image.tmdb.org/t/p/w500\(path)")
     }
+
+    /// Movie, TV and person ids overlap, so `id` alone is not unique in a mixed list.
+    var resultKey: String { "\(mediaType):\(id)" }
     
     var rating: String {
         guard let voteAverage = voteAverage else { return "N/A" }

@@ -6,6 +6,7 @@ enum SearchScope: String, CaseIterable, Identifiable {
     case all
     case movies
     case series
+    case people
 
     var id: String { rawValue }
 
@@ -14,6 +15,7 @@ enum SearchScope: String, CaseIterable, Identifiable {
         case .all: return "search.scope.all"
         case .movies: return "search.scope.movies"
         case .series: return "search.scope.series"
+        case .people: return "search.scope.people"
         }
     }
 
@@ -22,6 +24,7 @@ enum SearchScope: String, CaseIterable, Identifiable {
         case .all: return true
         case .movies: return mediaType == "movie"
         case .series: return mediaType == "tv"
+        case .people: return mediaType == "person"
         }
     }
 }
@@ -68,7 +71,6 @@ struct SearchView: View {
                     }
 
                     scopeChips
-                        .padding(.horizontal, 20)
                         .padding(.bottom, 6)
 
                     ScrollView {
@@ -82,10 +84,17 @@ struct SearchView: View {
                             }
 
                             if trimmedQuery.isEmpty {
-                                TrendingSearchesSection(
-                                    results: trendingItems,
-                                    onTap: { saveAndNavigate(result: $0) }
-                                )
+                                if scope == .people {
+                                    Text("search.people.hint".localized)
+                                        .font(.system(size: 14.5))
+                                        .foregroundColor(.theme.textSecondary)
+                                        .padding(.horizontal, 20)
+                                } else {
+                                    TrendingSearchesSection(
+                                        results: trendingItems,
+                                        onTap: { saveAndNavigate(result: $0) }
+                                    )
+                                }
                             } else {
                                 SearchResultsSection(
                                     results: results,
@@ -104,9 +113,17 @@ struct SearchView: View {
                 }
             }
             .navigationDestination(item: $selectedResult) { result in
-                if result.mediaType == "movie" {
+                switch result.mediaType {
+                case "movie":
                     MovieDetailView(movieId: result.id)
-                } else {
+                case "person":
+                    ActorDetailView(
+                        actorId: result.id,
+                        initialName: result.displayTitle,
+                        initialProfileURL: result.posterURL,
+                        previousTitle: "common.search".localized
+                    )
+                default:
                     TVShowDetailView(tvShowId: result.id)
                 }
             }
@@ -119,38 +136,40 @@ struct SearchView: View {
     }
 
     private var scopeChips: some View {
-        HStack(spacing: 10) {
-            ForEach(SearchScope.allCases) { item in
-                Button {
-                    scope = item
-                } label: {
-                    Text(item.titleKey.localized)
-                        .font(.system(size: 15.5, weight: .semibold))
-                        .foregroundColor(scope == item ? .black : .theme.textPrimary)
-                        .padding(.horizontal, 20)
-                        .frame(height: 38)
-                        .background(
-                            Capsule().fill(scope == item
-                                           ? Color.theme.accentOrange
-                                           : Color.white.opacity(0.045))
-                        )
-                        .overlay(
-                            Capsule().stroke(
-                                scope == item ? Color.clear : Color.white.opacity(0.14),
-                                lineWidth: 1
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                ForEach(SearchScope.allCases) { item in
+                    Button {
+                        scope = item
+                    } label: {
+                        Text(item.titleKey.localized)
+                            .font(.system(size: 15.5, weight: .semibold))
+                            .foregroundColor(scope == item ? .black : .theme.textPrimary)
+                            .padding(.horizontal, 20)
+                            .frame(height: 38)
+                            .background(
+                                Capsule().fill(scope == item
+                                               ? Color.theme.accentOrange
+                                               : Color.white.opacity(0.045))
                             )
-                        )
+                            .overlay(
+                                Capsule().stroke(
+                                    scope == item ? Color.clear : Color.white.opacity(0.14),
+                                    lineWidth: 1
+                                )
+                            )
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
-            Spacer(minLength: 0)
+            .padding(.horizontal, 20)
         }
     }
 
     /// Con un filtro attivo l'ultimo elemento mostrato può stare a metà della lista vera: chi
     /// arriva in fondo a quel che vede deve comunque far scattare la pagina successiva.
     private func handleItemAppear(_ result: SearchResult) {
-        if result.id == results.last?.id, let ultimo = viewModel.searchResults.last {
+        if result.resultKey == results.last?.resultKey, let ultimo = viewModel.searchResults.last {
             viewModel.loadMoreIfNeeded(currentItem: ultimo)
         } else {
             viewModel.loadMoreIfNeeded(currentItem: result)
@@ -340,7 +359,7 @@ struct TrendingSearchesSection: View {
             }
 
             LazyVStack(spacing: 12) {
-                ForEach(Array(results.enumerated()), id: \.element.id) { index, result in
+                ForEach(Array(results.enumerated()), id: \.element.resultKey) { index, result in
                     SearchRankedRow(result: result, rank: index + 1)
                         .onTapGesture { onTap(result) }
                 }
@@ -419,7 +438,7 @@ struct SearchResultsSection: View {
                 .padding(.horizontal, 20)
 
                 LazyVStack(spacing: 12) {
-                    ForEach(Array(results.enumerated()), id: \.element.id) { index, result in
+                    ForEach(Array(results.enumerated()), id: \.element.resultKey) { index, result in
                         SearchRankedRow(result: result, rank: index + 1, query: query)
                             .onTapGesture { onTap(result) }
                             .onAppear { onItemAppear(result) }
@@ -439,7 +458,11 @@ struct SearchResultsSection: View {
 
 enum MediaKindLabel {
     static func text(for mediaType: String) -> String {
-        (mediaType == "movie" ? "common.movie" : "common.tvShow").localized
+        switch mediaType {
+        case "person": return "search.person".localized
+        case "movie": return "common.movie".localized
+        default: return "common.tvShow".localized
+        }
     }
 }
 
@@ -477,10 +500,12 @@ struct SearchRankedRow: View {
                         .frame(height: 24)
                         .background(Capsule().fill(Color.white.opacity(0.08)))
 
-                    Text(metaLine)
-                        .font(.system(size: 13.5))
-                        .foregroundColor(.theme.textSecondary)
-                        .lineLimit(1)
+                    if !metaLine.isEmpty {
+                        Text(metaLine)
+                            .font(.system(size: 13.5))
+                            .foregroundColor(.theme.textSecondary)
+                            .lineLimit(1)
+                    }
                 }
             }
 
@@ -499,6 +524,7 @@ struct SearchRankedRow: View {
     }
 
     private var metaLine: String {
+        if result.mediaType == "person" { return result.knownForDepartment ?? "" }
         var parts: [String] = []
         if let year = result.year { parts.append(year) }
         parts.append("★ \(result.rating)")

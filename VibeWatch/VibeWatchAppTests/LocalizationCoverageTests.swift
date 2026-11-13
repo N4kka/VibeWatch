@@ -213,6 +213,8 @@ final class LocalizationCoverageTests: XCTestCase {
             "movieDetail.information",
             "movieDetail.status",
             "movieDetail.trailer",
+            // "Person" is the native word here too, not a missing translation.
+            "search.person",
             // "Likes" è il termine corrente danese sui social (come mediaDetail.action.like).
             "notifications.activityLiked",
             "notifications.status",
@@ -255,6 +257,8 @@ final class LocalizationCoverageTests: XCTestCase {
             "movieDetail.genres",
             "movieDetail.status",
             "movieDetail.trailer",
+            // "Person" is the native word here too, not a missing translation.
+            "search.person",
             // "Likes" è tedesco corrente sui social (come mediaDetail.action.like già in lista).
             "notifications.activityLiked",
             "notifications.status",
@@ -397,6 +401,8 @@ final class LocalizationCoverageTests: XCTestCase {
             "mediaDetail.action.watchlist",
             "movieDetail.status",
             "movieDetail.trailer",
+            // "Person" is the native word here too, not a missing translation.
+            "search.person",
             "notifications.status",
             // Il formato Instagram: anche in norvegese si dice "story".
             "shareCard.format.story",
@@ -475,6 +481,8 @@ final class LocalizationCoverageTests: XCTestCase {
             "mediaDetail.action.watchlist",
             "movieDetail.status",
             "movieDetail.trailer",
+            // "Person" is the native word here too, not a missing translation.
+            "search.person",
             "notifications.status",
             // Come in nb: il formato Instagram resta "story".
             "shareCard.format.story",
@@ -535,6 +543,8 @@ final class LocalizationCoverageTests: XCTestCase {
             "movieDetail.information",
             "movieDetail.status",
             "movieDetail.trailer",
+            // "Person" is the native word here too, not a missing translation.
+            "search.person",
             "notifications.status",
             "platforms.streaming",
             "profile.edit.information",
