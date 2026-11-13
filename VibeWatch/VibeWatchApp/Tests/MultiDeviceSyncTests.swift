@@ -454,6 +454,31 @@ final class DatabaseMigrationIndexTests: XCTestCase {
             "L'indice list_items della unified migration deve usare colonne esistenti nello schema locale"
         )
     }
+
+    private func personalizationVersion() async throws -> String? {
+        let rows = try await db.queryRaw(
+            "SELECT value_text FROM app_metadata WHERE key_name = 'personalization_migration_version'"
+        )
+        return rows.first?["value_text"] as? String
+    }
+
+    func test_freshDatabaseAppliesEveryPersonalizationMigration() async throws {
+        let version = try await personalizationVersion()
+        XCTAssertEqual(version, "17")
+    }
+
+    func test_failedPersonalizationStepIsNotRecordedAsApplied() async throws {
+        // Migration 17 alters tv_tracking: without the table, that step fails.
+        XCTAssertTrue(db.execute("DROP TABLE tv_tracking"))
+        XCTAssertTrue(db.execute(
+            "UPDATE app_metadata SET value_text = '16' WHERE key_name = 'personalization_migration_version'"
+        ))
+
+        db.runPersonalizationMigrations()
+
+        let version = try await personalizationVersion()
+        XCTAssertEqual(version, "16", "a failed step must be retried on the next launch")
+    }
 }
 
 // MARK: - ListManager Write Characterization (Fase 2 — rete pre #6 dual-write)

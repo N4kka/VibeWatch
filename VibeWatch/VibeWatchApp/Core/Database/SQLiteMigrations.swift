@@ -25,59 +25,59 @@ extension SQLiteService {
 
         do {
             if currentVersion < 1 {
-                migration1_CreatePersonalizationTables()
+                try migration1_CreatePersonalizationTables()
             }
             if currentVersion < 2 {
-                migration2_AddCerebrasJobQueueAndEmbeddings()
+                try migration2_AddCerebrasJobQueueAndEmbeddings()
             }
             if currentVersion < 3 {
-                migration3_AddJobMetrics()
+                try migration3_AddJobMetrics()
             }
             if currentVersion < 4 {
-                migration4_AddTimeOfDayPatterns()
+                try migration4_AddTimeOfDayPatterns()
             }
             if currentVersion < 5 {
-                migration5_AddSmartNotifications()
+                try migration5_AddSmartNotifications()
             }
             if currentVersion < 6 {
-                migration6_AddNotificationSubscriptions()
+                try migration6_AddNotificationSubscriptions()
             }
             if currentVersion < 7 {
-                migration7_BackfillMissingIndexes()
+                try migration7_BackfillMissingIndexes()
             }
             if currentVersion < 8 {
-                migration8_AddTrackingTables()
+                try migration8_AddTrackingTables()
             }
             if currentVersion < 9 {
-                migration9_AddTrackingViewMirrors()
+                try migration9_AddTrackingViewMirrors()
             }
             if currentVersion < 10 {
-                migration10_AddUserFollows()
+                try migration10_AddUserFollows()
             }
             if currentVersion < 11 {
-                migration11_AddFavoritesAndRatings()
+                try migration11_AddFavoritesAndRatings()
             }
             if currentVersion < 12 {
-                migration12_AddLocalizedTitles()
+                try migration12_AddLocalizedTitles()
             }
             if currentVersion < 13 {
-                migration13_LocalizedTitlesLearnEpisodes()
+                try migration13_LocalizedTitlesLearnEpisodes()
             }
             if currentVersion < 14 {
-                migration14_AddSocialFeedTables()
+                try migration14_AddSocialFeedTables()
             }
             if currentVersion < 15 {
-                migration15_AddFeedConsentToProfiles()
+                try migration15_AddFeedConsentToProfiles()
             }
             if currentVersion < 16 {
-                migration16_AddActivityInteractionTables()
+                try migration16_AddActivityInteractionTables()
             }
             if currentVersion < 17 {
-                migration17_TrackingWatchlistSince()
+                try migration17_TrackingWatchlistSince()
             }
 
             // Update migration version
-            execute("""
+            try migrate("""
                 INSERT OR REPLACE INTO app_metadata (key_name, value_text)
                 VALUES ('personalization_migration_version', '\(latestVersion)')
             """)
@@ -94,11 +94,19 @@ extension SQLiteService {
         execute("PRAGMA foreign_keys = ON")
     }
 
+    /// Throws on failure, so a broken step rolls the batch back and is retried on the next launch
+    /// instead of being recorded as applied.
+    private func migrate(_ sql: String) throws {
+        guard executeScript(sql) else {
+            throw SQLiteError.queryFailed("personalization migration step failed")
+        }
+    }
+
     /// `v_tv_tracking.watchlist_since`: when a series (re)entered the watchlist. The lists sort by
     /// it instead of `updated_at`, which every server recompute moves.
-    private func migration17_TrackingWatchlistSince() {
+    private func migration17_TrackingWatchlistSince() throws {
         Logger.info("[SQLite] Migration 17: tv_tracking.watchlist_since")
-        executeScript("ALTER TABLE tv_tracking ADD COLUMN watchlist_since TEXT;")
+        try migrate("ALTER TABLE tv_tracking ADD COLUMN watchlist_since TEXT;")
     }
 
     private func getPersonalizationMigrationVersion() -> Int {
@@ -119,67 +127,67 @@ extension SQLiteService {
 
     // MARK: - Migration 1: User Preferences & Personalization Tables
 
-    private func migration1_CreatePersonalizationTables() {
+    private func migration1_CreatePersonalizationTables() throws {
         Logger.info("[SQLite] Migration 1: Creating user preferences & personalization tables")
 
         // 1. user_search_history
-        executeScript(createUserSearchHistoryTable())
+        try migrate(createUserSearchHistoryTable())
 
         // 2. user_discovery_interactions
-        executeScript(createUserDiscoveryInteractionsTable())
+        try migrate(createUserDiscoveryInteractionsTable())
 
         // 3. unified_user_preferences (CRITICAL)
-        executeScript(createUnifiedUserPreferencesTable())
+        try migrate(createUnifiedUserPreferencesTable())
 
         // 4. personalized_discovery
-        executeScript(createPersonalizedDiscoveryTable())
+        try migrate(createPersonalizedDiscoveryTable())
 
         // 5. ai_conversation_history
-        executeScript(createAIConversationHistoryTable())
+        try migrate(createAIConversationHistoryTable())
 
         // 6. global_discovery_filters
-        executeScript(createGlobalDiscoveryFiltersTable())
+        try migrate(createGlobalDiscoveryFiltersTable())
 
         // 7. Modify existing user_preferences table
-        migrateExistingUserPreferences()
+        try migrateExistingUserPreferences()
 
         // 8. Modify existing user_clip_history table
-        migrateExistingUserClipHistory()
+        try migrateExistingUserClipHistory()
 
         // 9. Modify existing clips table
-        migrateExistingClipsTable()
+        try migrateExistingClipsTable()
 
         Logger.info("[SQLite] Migration 1 complete - all personalization tables created")
     }
 
     // MARK: - Migration 2: Cerebras Backend Jobs + Embeddings
 
-    private func migration2_AddCerebrasJobQueueAndEmbeddings() {
+    private func migration2_AddCerebrasJobQueueAndEmbeddings() throws {
         Logger.info("[SQLite] Migration 2: Creating Cerebras job queue + embeddings tables")
 
-        executeScript(createCerebrasJobQueueTable())
-        executeScript(createMediaEmbeddingsTable())
-        executeScript(createUserBehaviorInsightsTable())
+        try migrate(createCerebrasJobQueueTable())
+        try migrate(createMediaEmbeddingsTable())
+        try migrate(createUserBehaviorInsightsTable())
 
         Logger.info("[SQLite] Migration 2 complete - Cerebras backend tables created")
     }
 
     // MARK: - Migration 3: Job Metrics & Monitoring
 
-    private func migration3_AddJobMetrics() {
+    private func migration3_AddJobMetrics() throws {
         Logger.info("[SQLite] Migration 3: Creating job metrics table for monitoring")
 
-        executeScript(createCerebrasJobMetricsTable())
+        try migrate(createCerebrasJobMetricsTable())
 
         Logger.info("[SQLite] Migration 3 complete - Job metrics table created")
     }
 
     // MARK: - Migration 4: Time-of-Day Pattern Detection
 
-    private func migration4_AddTimeOfDayPatterns() {
+    private func migration4_AddTimeOfDayPatterns() throws {
         Logger.info("[SQLite] Migration 4: Creating time-of-day pattern tracking table")
 
-        executeScript(createUserTimePatternsTable())
+        try migrate(createUserTimePatternsTable())
 
         Logger.info("[SQLite] Migration 4 complete - Time pattern tracking enabled")
     }
@@ -191,10 +199,10 @@ extension SQLiteService {
     /// written either table, and the real preferences live in UserDefaults and in Postgres.
     /// The migration stays in the sequence — removing a step would renumber the ones after it —
     /// and now only drops what it used to create.
-    private func migration5_AddSmartNotifications() {
+    private func migration5_AddSmartNotifications() throws {
         Logger.info("[SQLite] Migration 5: Dropping unused smart-notification tables")
 
-        executeScript("""
+        try migrate("""
         DROP TABLE IF EXISTS notification_history;
         DROP TABLE IF EXISTS user_notification_preferences;
         """)
@@ -205,10 +213,10 @@ extension SQLiteService {
     // MARK: - Migration 6: Notification Subscriptions (retired)
 
     /// Per-actor and per-genre alerts, a Pro feature that never shipped. Same story as 5.
-    private func migration6_AddNotificationSubscriptions() {
+    private func migration6_AddNotificationSubscriptions() throws {
         Logger.info("[SQLite] Migration 6: Dropping unused notification-subscription table")
 
-        executeScript("DROP TABLE IF EXISTS notification_subscriptions;")
+        try migrate("DROP TABLE IF EXISTS notification_subscriptions;")
 
         Logger.info("[SQLite] Migration 6 complete")
     }
@@ -220,20 +228,20 @@ extension SQLiteService {
     /// discarded, so these tables have run without indexes since they were introduced. The scripts
     /// are re-run through `executeScript`; every statement in them is IF NOT EXISTS, so existing
     /// tables and data are untouched and only the missing indexes get built.
-    private func migration7_BackfillMissingIndexes() {
+    private func migration7_BackfillMissingIndexes() throws {
         Logger.info("[SQLite] Migration 7: Backfilling indexes dropped by prepare_v2")
 
-        executeScript(createUserSearchHistoryTable())
-        executeScript(createUserDiscoveryInteractionsTable())
-        executeScript(createUnifiedUserPreferencesTable())
-        executeScript(createPersonalizedDiscoveryTable())
-        executeScript(createAIConversationHistoryTable())
-        executeScript(createGlobalDiscoveryFiltersTable())
-        executeScript(createCerebrasJobQueueTable())
-        executeScript(createMediaEmbeddingsTable())
-        executeScript(createUserBehaviorInsightsTable())
-        executeScript(createCerebrasJobMetricsTable())
-        executeScript(createUserTimePatternsTable())
+        try migrate(createUserSearchHistoryTable())
+        try migrate(createUserDiscoveryInteractionsTable())
+        try migrate(createUnifiedUserPreferencesTable())
+        try migrate(createPersonalizedDiscoveryTable())
+        try migrate(createAIConversationHistoryTable())
+        try migrate(createGlobalDiscoveryFiltersTable())
+        try migrate(createCerebrasJobQueueTable())
+        try migrate(createMediaEmbeddingsTable())
+        try migrate(createUserBehaviorInsightsTable())
+        try migrate(createCerebrasJobMetricsTable())
+        try migrate(createUserTimePatternsTable())
 
         Logger.info("[SQLite] Migration 7 complete - indexes backfilled")
     }
@@ -243,11 +251,11 @@ extension SQLiteService {
     /// `watch_events` è append-only e la strategia di conflitto è `union`: non si perde mai una
     /// visione. `tv_show_state` è derivato e il server è autorevole (§1.1), quindi in locale è solo
     /// una cache di lettura — ciò che il client può cambiare è `user_status`, e passa dall'outbox.
-    private func migration8_AddTrackingTables() {
+    private func migration8_AddTrackingTables() throws {
         Logger.info("[SQLite] Migration 8: Adding watch_events and tv_show_state")
 
-        executeScript(createWatchEventsTable())
-        executeScript(createTVShowStateTable())
+        try migrate(createWatchEventsTable())
+        try migrate(createTVShowStateTable())
 
         Logger.info("[SQLite] Migration 8 complete")
     }
@@ -261,11 +269,11 @@ extension SQLiteService {
     ///
     /// Il motivo per cui esistono è §13.6: la schermata deve disegnarsi da qui, senza rete, sotto
     /// i 300 ms. Se per mostrare la lista servisse una chiamata, il lavoro sarebbe sbagliato.
-    private func migration9_AddTrackingViewMirrors() {
+    private func migration9_AddTrackingViewMirrors() throws {
         Logger.info("[SQLite] Migration 9: Adding tv_tracking and tv_timeline mirrors")
 
-        executeScript(createTVTrackingMirrorTable())
-        executeScript(createTVTimelineMirrorTable())
+        try migrate(createTVTrackingMirrorTable())
+        try migrate(createTVTimelineMirrorTable())
 
         Logger.info("[SQLite] Migration 9 complete")
     }
@@ -276,10 +284,10 @@ extension SQLiteService {
     /// server — niente id sintetico. La scrittura passa dall'outbox (`apply_mutations` ha il suo
     /// ramo dal 2026-07-31); il pull riporta indietro anche le righe in cui si e' il followee,
     /// che servono a "chi mi segue".
-    private func migration10_AddUserFollows() {
+    private func migration10_AddUserFollows() throws {
         Logger.info("[SQLite] Migration 10: Adding user_follows")
 
-        executeScript(createUserFollowsTable())
+        try migrate(createUserFollowsTable())
 
         Logger.info("[SQLite] Migration 10 complete")
     }
@@ -296,11 +304,11 @@ extension SQLiteService {
     /// sentinello del `coalesce(season_number,-1)` nell'indice unico del server — la chiave
     /// locale e quella remota coincidono per costruzione. La conversione NULL → -1 la fa
     /// `normalizeRow` nel pull; il percorso di scrittura (le azioni) parla al server con i NULL.
-    private func migration11_AddFavoritesAndRatings() {
+    private func migration11_AddFavoritesAndRatings() throws {
         Logger.info("[SQLite] Migration 11: Adding user_favorites and user_ratings")
 
-        executeScript(createUserFavoritesTable())
-        executeScript(createUserRatingsTable())
+        try migrate(createUserFavoritesTable())
+        try migrate(createUserRatingsTable())
 
         Logger.info("[SQLite] Migration 11 complete")
     }
@@ -313,10 +321,10 @@ extension SQLiteService {
     /// una JOIN locale (titolo localizzato se c'è, quello del catalogo altrimenti), e un task in
     /// background riempie i buchi via TMDB nella lingua dell'app. Cache locale e basta: niente
     /// sync, niente pull-list — ogni dispositivo se la riempie da sé nella propria lingua.
-    private func migration12_AddLocalizedTitles() {
+    private func migration12_AddLocalizedTitles() throws {
         Logger.info("[SQLite] Migration 12: Adding localized_titles")
 
-        executeScript(createLocalizedTitlesTable())
+        try migrate(createLocalizedTitlesTable())
 
         Logger.info("[SQLite] Migration 12 complete")
     }
@@ -328,11 +336,11 @@ extension SQLiteService {
     /// come nello specchio di user_ratings) e SQLite non sa allargare una PK: si butta e si
     /// ricrea. È una cache pura, rigenerabile per costruzione: perderla costa un giro di
     /// riempimento, non un dato.
-    private func migration13_LocalizedTitlesLearnEpisodes() {
+    private func migration13_LocalizedTitlesLearnEpisodes() throws {
         Logger.info("[SQLite] Migration 13: localized_titles learns episodes")
 
-        executeScript("DROP TABLE IF EXISTS localized_titles;")
-        executeScript(createLocalizedTitlesTable())
+        try migrate("DROP TABLE IF EXISTS localized_titles;")
+        try migrate(createLocalizedTitlesTable())
 
         Logger.info("[SQLite] Migration 13 complete")
     }
@@ -348,11 +356,11 @@ extension SQLiteService {
     /// `activity_feed_cache` e' il gemello di `public_lists_cache`: righe gia' pronte per la
     /// UI, mai una tabella di dominio. Si popola dalla prima pagina del feed per scope e si
     /// legge offline — nessun percorso di scrittura verso il server, quindi niente outbox.
-    private func migration14_AddSocialFeedTables() {
+    private func migration14_AddSocialFeedTables() throws {
         Logger.info("[SQLite] Migration 14: Adding user_reviews and activity_feed_cache")
 
-        executeScript(createUserReviewsTable())
-        executeScript(createActivityFeedCacheTable())
+        try migrate(createUserReviewsTable())
+        try migrate(createActivityFeedCacheTable())
 
         Logger.info("[SQLite] Migration 14 complete")
     }
@@ -362,14 +370,14 @@ extension SQLiteService {
     /// server (`feed_activated_at`) e il flag (`activity_feed_enabled`) verrebbero scartati
     /// in silenzio a ogni sync, e l'annuncio si ripresenterebbe per sempre su ogni device.
     /// Nullable di proposito: NULL = "mai risposto", che è un'informazione, non un default.
-    private func migration15_AddFeedConsentToProfiles() {
+    private func migration15_AddFeedConsentToProfiles() throws {
         Logger.info("[SQLite] Migration 15: Adding feed consent columns to profiles")
 
         if !columnExists("profiles", column: "activity_feed_enabled") {
-            execute("ALTER TABLE profiles ADD COLUMN activity_feed_enabled INTEGER")
+            try migrate("ALTER TABLE profiles ADD COLUMN activity_feed_enabled INTEGER")
         }
         if !columnExists("profiles", column: "feed_activated_at") {
-            execute("ALTER TABLE profiles ADD COLUMN feed_activated_at TEXT")
+            try migrate("ALTER TABLE profiles ADD COLUMN feed_activated_at TEXT")
         }
 
         Logger.info("[SQLite] Migration 15 complete")
@@ -391,13 +399,13 @@ extension SQLiteService {
     ///   (add/delete commento, che viaggiano con id client). I toggle NON entrano mai qui:
     ///   un toggle ritentato alla cieca inverte l'intento invece di confermarlo — al fallimento
     ///   si torna indietro, non si riprova.
-    private func migration16_AddActivityInteractionTables() {
+    private func migration16_AddActivityInteractionTables() throws {
         Logger.info("[SQLite] Migration 16: Adding activity interaction tables")
 
-        executeScript(createActivityLikesTable())
-        executeScript(createActivityCommentsMirrorTable())
-        executeScript(createActivityCommentLikesTable())
-        executeScript(createActivityPendingOpsTable())
+        try migrate(createActivityLikesTable())
+        try migrate(createActivityCommentsMirrorTable())
+        try migrate(createActivityCommentLikesTable())
+        try migrate(createActivityPendingOpsTable())
 
         Logger.info("[SQLite] Migration 16 complete")
     }
@@ -911,25 +919,25 @@ extension SQLiteService {
 
     // MARK: - Existing Table Migrations
 
-    private func migrateExistingUserPreferences() {
+    private func migrateExistingUserPreferences() throws {
         // Add new columns to user_preferences if they don't exist
         if !columnExists("user_preferences", column: "source") {
-            execute("ALTER TABLE user_preferences ADD COLUMN source TEXT")
+            try migrate("ALTER TABLE user_preferences ADD COLUMN source TEXT")
             Logger.info("[SQLite] Added 'source' column to user_preferences")
         }
 
         if !columnExists("user_preferences", column: "interaction_count") {
-            execute("ALTER TABLE user_preferences ADD COLUMN interaction_count INTEGER DEFAULT 0")
+            try migrate("ALTER TABLE user_preferences ADD COLUMN interaction_count INTEGER DEFAULT 0")
             Logger.info("[SQLite] Added 'interaction_count' column to user_preferences")
         }
 
         if !columnExists("user_preferences", column: "last_decay_at") {
-            execute("ALTER TABLE user_preferences ADD COLUMN last_decay_at TEXT")
+            try migrate("ALTER TABLE user_preferences ADD COLUMN last_decay_at TEXT")
             Logger.info("[SQLite] Added 'last_decay_at' column to user_preferences")
         }
 
         // Migrate existing data to unified_user_preferences
-        execute("""
+        try migrate("""
             INSERT OR IGNORE INTO unified_user_preferences (
                 id, user_id, device_id, preference_category, preference_id,
                 preference_name, score, score_from_clips, interaction_count,
@@ -954,23 +962,23 @@ extension SQLiteService {
         Logger.info("[SQLite] Migrated existing user_preferences to unified_user_preferences")
     }
 
-    private func migrateExistingUserClipHistory() {
+    private func migrateExistingUserClipHistory() throws {
         if !columnExists("user_clip_history", column: "session_id") {
-            execute("ALTER TABLE user_clip_history ADD COLUMN session_id TEXT")
+            try migrate("ALTER TABLE user_clip_history ADD COLUMN session_id TEXT")
             Logger.info("[SQLite] Added 'session_id' column to user_clip_history")
         }
 
         // Note: synced_at already exists in user_clip_history
     }
 
-    private func migrateExistingClipsTable() {
+    private func migrateExistingClipsTable() throws {
         if !columnExists("clips", column: "ai_description") {
-            execute("ALTER TABLE clips ADD COLUMN ai_description TEXT")
+            try migrate("ALTER TABLE clips ADD COLUMN ai_description TEXT")
             Logger.info("[SQLite] Added 'ai_description' column to clips")
         }
 
         if !columnExists("clips", column: "mood_tags") {
-            execute("ALTER TABLE clips ADD COLUMN mood_tags TEXT")
+            try migrate("ALTER TABLE clips ADD COLUMN mood_tags TEXT")
             Logger.info("[SQLite] Added 'mood_tags' column to clips")
         }
     }
